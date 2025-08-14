@@ -1,0 +1,23 @@
+# Nix
+result
+result-*
+.direnv/
+
+# Secrets
+*.key
+*.pem
+secrets/keys/*
+!secrets/keys/.gitkeep
+
+# Backups
+*.backup
+*.bak
+*.old
+
+# Temporary
+*.tmp
+*.swp
+.DS_Store
+
+# Archive
+.archive/
