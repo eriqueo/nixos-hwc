@@ -1,0 +1,4 @@
+*.nix linguist-language=Nix
+*.yaml linguist-language=YAML
+secrets/*.yaml filter=git-crypt diff=git-crypt
+secrets/**/*.yaml filter=git-crypt diff=git-crypt
