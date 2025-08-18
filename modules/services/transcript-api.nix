@@ -2,6 +2,7 @@
 let
   cfg = config.hwc.services.transcriptApi;
   paths = config.hwc.paths;
+  scriptPath = "${paths.root}/etc/nixos/scripts/yt_transcript.py";
 in {
   options.hwc.services.transcriptApi = {
     enable = lib.mkEnableOption "YouTube transcript API";
@@ -37,7 +38,7 @@ in {
       };
       
       serviceConfig = {
-        ExecStart = "${pkgs.python3}/bin/python /etc/nixos/scripts/yt_transcript.py";
+        ExecStart = "${pkgs.python3}/bin/python ${scriptPath}";
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
         DynamicUser = true;
