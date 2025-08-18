@@ -132,7 +132,7 @@ in {
         };
       };
       
-      "ai-bible/prompts".source = ./modules/ai-bible/prompts;
+      "ai-bible/prompts".source = ../ai-bible/prompts;
     };
     
     # User and permissions
