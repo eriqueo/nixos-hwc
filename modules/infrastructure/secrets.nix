@@ -43,18 +43,18 @@ in {
   };
 
   config = lib.mkMerge [
-    (lib.mkIf (cfg.enable && cfg.provider == "sops" && (config ? sops)) {
-      sops = {
-        defaultSopsFile = ./secrets/secrets.yaml;
-        age.keyFile = cfg.sops.keyFile;
-        secrets = cfg.sops.secrets;
-      };
+#    (lib.mkIf (cfg.enable && cfg.provider == "sops" && (config ? sops)) {
+ #     sops = {
+  #      defaultSopsFile = ./secrets/secrets.yaml;
+  #      age.keyFile = cfg.sops.keyFile;
+  #      secrets = cfg.sops.secrets;
+  #    };
 
-      # Ensure key directory exists
-      systemd.tmpfiles.rules = [
-        "d /var/lib/sops-nix 0755 root root -"
-      ];
-    })
+   #   # Ensure key directory exists
+   #   systemd.tmpfiles.rules = [
+   #     "d /var/lib/sops-nix 0755 root root -"
+   #   ];
+   # })
 
     (lib.mkIf (cfg.enable && cfg.provider == "vault") {
       services.vault = {

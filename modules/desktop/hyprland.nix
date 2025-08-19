@@ -114,7 +114,6 @@
            bind = $mainMod, Q, exec, kitty
            bind = $mainMod, C, killactive,
            bind = $mainMod, M, exit,
-           bind = $mainMod, E, exec, dolphin
            bind = $mainMod, V, togglefloating,
            bind = $mainMod, R, exec, rofi -show drun
            bind = $mainMod, P, pseudo,
@@ -153,7 +152,6 @@
            hypridle
            hyprlock
            kitty
-           dolphin
            grim
            slurp
            wl-clipboard
