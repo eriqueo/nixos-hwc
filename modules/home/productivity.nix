@@ -49,18 +49,6 @@
        };
 
        config = lib.mkIf cfg.enable {
-         # Browsers
-         programs.firefox = lib.mkIf cfg.browsers.firefox {
-           enable = true;
-
-           profiles.default = {
-             settings = {
-               "browser.startup.homepage" = "about:home";
-               "privacy.trackingprotection.enabled" = true;
-               "dom.security.https_only_mode" = true;
-             };
-           };
-         };
 
          environment.systemPackages = with pkgs; [
            # Notes
@@ -68,6 +56,8 @@
            obsidian
          ] ++ lib.optionals cfg.browsers.chromium [
            chromium
+         ] ++ lib.optionals cfg.browsers.firefox [
+          firefox
          ] ++ lib.optionals cfg.office.libreoffice [
            libreoffice
          ] ++ lib.optionals cfg.communication.thunderbird [
