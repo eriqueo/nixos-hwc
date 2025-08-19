@@ -47,7 +47,7 @@
         inherit system pkgs;
         specialArgs = { inherit inputs; };
         modules = [
-          ./machines/hwc-laptop.nix
+          ./machines/laptop/config.nix
           home-manager.nixosModules.home-manager
         ];
       };

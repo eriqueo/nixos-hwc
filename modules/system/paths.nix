@@ -1,30 +1,34 @@
 { lib, config, ... }:
 {
   options.hwc.paths = {
-    root = lib.mkOption {
-      type = lib.types.path;
-      default = "/";
-      description = "System root";
-    };
+    # Remove 'root' - never used, confusing
 
+    # Storage tiers - make optionals since not all machines have all tiers
     hot = lib.mkOption {
-      type = lib.types.path;
-      default = "/mnt/hot";
-      description = "Hot storage (SSD)";
+      type = lib.types.nullOr lib.types.path;
+      default = null;  # Machine must explicitly set if they have it
+      description = "Hot storage (SSD) - fast tier";
     };
 
     media = lib.mkOption {
-      type = lib.types.path;
-      default = "/mnt/media";
-      description = "Media storage (HDD)";
+      type = lib.types.nullOr lib.types.path;
+      default = null;  # Not all machines serve media
+      description = "Media storage (HDD) - bulk tier";
     };
 
     cold = lib.mkOption {
-      type = lib.types.path;
-      default = "/mnt/cold";
-      description = "Cold storage (Archive)";
+      type = lib.types.nullOr lib.types.path;
+      default = null;  # Optional archive tier
+      description = "Cold storage - archive tier";
     };
 
+    backup = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;  # Not all machines do backups
+      description = "Backup storage";
+    };
+
+    # System paths - these always exist
     state = lib.mkOption {
       type = lib.types.path;
       default = "/var/lib/hwc";
@@ -42,20 +46,17 @@
       default = "/var/log/hwc";
       description = "Log directory";
     };
-
-    backup = lib.mkOption {
-      type = lib.types.path;
-      default = "/mnt/backup";
-      description = "Backup directory";
-    };
   };
 
   config = {
-    # Ensure base directories exist
+    # Only create directories that are actually set
     systemd.tmpfiles.rules = [
       "d ${config.hwc.paths.state} 0755 root root -"
       "d ${config.hwc.paths.cache} 0755 root root -"
       "d ${config.hwc.paths.logs} 0755 root root -"
-    ];
+    ] ++ lib.optional (config.hwc.paths.hot != null)
+      "d ${config.hwc.paths.hot} 0755 root root -"
+    ++ lib.optional (config.hwc.paths.media != null)
+      "d ${config.hwc.paths.media} 0775 root media -";  # Note: media group
   };
 }

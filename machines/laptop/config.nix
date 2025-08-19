@@ -8,7 +8,8 @@
   ##  IMPORTS                 ##
   ##############################
   imports = [
-    ./hardware/hwc-laptop.nix
+    ./home.nix
+    ./hardware.nix
     ../profiles/base.nix
     ../profiles/security.nix
     ../profiles/workstation.nix
@@ -58,7 +59,6 @@
   ##############################
   ##  HOME-MANAGER (USER)     ##
   ##############################
-  home-manager.users.eric = import ../home/eric.nix;
 
   ##############################
   ##  NIXOS VERSION PIN       ##
