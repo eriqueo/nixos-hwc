@@ -1,26 +1,67 @@
 { config, lib, pkgs, ... }:
 {
+  ##############################
+  ##  MACHINE: HWC-LAPTOP    ##
+  ##############################
+
+  ##############################
+  ##  IMPORTS                 ##
+  ##############################
   imports = [
     ./hardware/hwc-laptop.nix
     ../profiles/base.nix
-    ../profiles/desktop-hyprland.nix
     ../profiles/security.nix
+    ../profiles/desktop-hyprland.nix
   ];
 
+  ##############################
+  ##  SYSTEM IDENTITY         ##
+  ##############################
   networking.hostName = "hwc-laptop";
 
-  # Laptop-specific settings
+  ##############################
+  ##  LAPTOP HARDWARE         ##
+  ##############################
   services.thermald.enable = true;
   services.tlp.enable = true;
 
-  # User configuration
+  ############################################
+  ##  FEATURE TOGGLES (HOST OVERRIDES)      ##
+  ##  Uncomment/edit to override profiles.  ##
+  ############################################
+  # hwc.gpu.nvidia = {
+  #   enable = true;
+  #   prime.enable = true;
+  #   prime.nvidiaBusId = "PCI:1:0:0";
+  #   prime.intelBusId  = "PCI:0:2:0";
+  #   containerRuntime = true;
+  # };
+
+   hwc.desktop.waybar.enable = true;
+
+   hwc.desktop.apps = {
+    enable = true;
+     browser.firefox   = true;
+     browser.chromium  = false;
+     multimedia.enable = true;
+     productivity.enable = true;
+   };
+
+  ##############################
+  ##  USERS                   ##
+  ##############################
   users.users.eric = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
   };
 
-  # Home-manager
+  ##############################
+  ##  HOME-MANAGER (USER)     ##
+  ##############################
   home-manager.users.eric = import ../home/eric.nix;
 
+  ##############################
+  ##  NIXOS VERSION PIN       ##
+  ##############################
   system.stateVersion = "24.05";
 }
