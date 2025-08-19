@@ -51,6 +51,15 @@
           home-manager.nixosModules.home-manager
         ];
       };
+
+      immich-worker = lib.nixosSystem {
+        inherit system pkgs;
+        specialArgs = { inherit inputs; };
+        modules = [
+          ./machines/immich-worker/config.nix
+          home-manager.nixosModules.home-manager
+        ];
+      };
     };
 
     # Helper functions for migration
