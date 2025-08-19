@@ -31,23 +31,25 @@ in
       enableCompletion = true;
       autosuggestions.enable = true;
       syntaxHighlighting.enable = true;
-      shellAliases = {
-        g = "git";
-        ga = "git add";
-        gc = "git commit";
-        gp = "git push";
-        gs = "git status";
-        gl = "git log --oneline --graph --decorate --all";
+#      shellAliases = {
+#        g = "git";
+#        ga = "git add";
+#        gc = "git commit";
+#        gp = "git push";
+#        gs = "git status";
+#        gl = "git log --oneline --graph --decorate --all";
         # This alias will be updated to point to the new repo path later
-        grebuild = "sudo nixos-rebuild switch --flake /etc/nixos/nixos-hwc";
-        grebirth = "sudo nixos-rebuild boot --flake /etc/nixos/nixos-hwc";
-      };
+#        grebuild = "sudo nixos-rebuild switch --flake /etc/nixos/nixos-hwc";
+#        grebirth = "sudo nixos-rebuild boot --flake /etc/nixos/nixos-hwc";
+#O
+ #     };
     };
-    users.defaultUserShell = lib.mkDefault pkgs.zsh;
+    users.users.eric.shell = lib.mkDefault pkgs.zsh;
 
     # 3. Home Manager integration for the 'eric' user
     home-manager.users.eric = {
-      programs.zsh = {
+       home.stateVersion = "24.05";
+       programs.zsh = {
         enable = true;
         dotDir = ".config/zsh";
         history = {
