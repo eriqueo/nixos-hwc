@@ -10,9 +10,9 @@
   imports = [
     ./home.nix
     ./hardware.nix
-    ../profiles/base.nix
-    ../profiles/security.nix
-    ../profiles/workstation.nix
+    .../profiles/base.nix
+    .../profiles/security.nix
+    .../profiles/workstation.nix
   ];
 
   ##############################
