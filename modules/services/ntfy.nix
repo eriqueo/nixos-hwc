@@ -18,15 +18,26 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    services.ntfy-sh = {
-      enable = true;
-      settings = {
-        base-url = "http://localhost:${toString cfg.port}";
-        listen-http = ":${toString cfg.port}";
-        cache-file = "${cfg.dataDir}/cache.db";
+    # Container configuration
+    virtualisation.oci-containers.containers.ntfy = {
+      image = "binwiederhier/ntfy:latest";
+      ports = [ "${toString cfg.port}:80" ];
+      volumes = [
+        "${cfg.dataDir}:/var/cache/ntfy"
+        "${cfg.dataDir}/etc:/etc/ntfy"
+      ];
+      environment = {
+        TZ = "America/Denver";
       };
     };
-    systemd.tmpfiles.rules = [ "d ${cfg.dataDir} 0755 root root -" ];
+
+    # Ensure directories exist
+    systemd.tmpfiles.rules = [
+      "d ${cfg.dataDir} 0750 root root -"
+      "d ${cfg.dataDir}/etc 0750 root root -"
+    ];
+
+    # Open firewall
     networking.firewall.allowedTCPPorts = [ cfg.port ];
   };
 }
