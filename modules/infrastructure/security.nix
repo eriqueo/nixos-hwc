@@ -78,9 +78,9 @@ in {
 
         # Service-based rules
         allowedTCPPorts = lib.flatten [
-          (lib.optional (elem "ssh" cfg.firewall.allowedServices) 22)
-          (lib.optional (elem "http" cfg.firewall.allowedServices) 80)
-          (lib.optional (elem "https" cfg.firewall.allowedServices) 443)
+          (lib.optional (lib.elem "ssh" cfg.firewall.allowedServices) 22)
+          (lib.optional (lib.elem "http" cfg.firewall.allowedServices) 80)
+          (lib.optional (lib.elem "https" cfg.firewall.allowedServices) 443)
         ];
 
         extraCommands = lib.optionalString cfg.firewall.strictMode ''
