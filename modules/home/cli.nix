@@ -64,11 +64,6 @@
            enable = true;
            userName = cfg.git.userName;
            userEmail = cfg.git.userEmail;
-           extraConfig = {
-             init.defaultBranch = "main";
-             push.default = "simple";
-             pull.rebase = false;
-           };
          };
 
          # Aliases for modern tools
