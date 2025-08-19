@@ -8,7 +8,7 @@ in {
 
     provider = lib.mkOption {
       type = lib.types.enum [ "sops" "vault" "age" ];
-      default = "sops";
+      default = "age";
       description = "Secrets provider";
     };
 
@@ -43,7 +43,7 @@ in {
   };
 
   config = lib.mkMerge [
-    (lib.mkIf (cfg.enable && cfg.provider == "sops") {
+    (lib.mkIf (cfg.enable && cfg.provider == "sops" && (config ? sops)) {
       sops = {
         defaultSopsFile = ./secrets/secrets.yaml;
         age.keyFile = cfg.sops.keyFile;

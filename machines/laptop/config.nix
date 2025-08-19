@@ -39,7 +39,7 @@
   # };
 
    hwc.desktop.waybar.enable = true;
-
+  
    hwc.desktop.apps = {
     enable = true;
      browser.firefox   = true;
