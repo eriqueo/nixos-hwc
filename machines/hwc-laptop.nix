@@ -11,7 +11,7 @@
     ./hardware/hwc-laptop.nix
     ../profiles/base.nix
     ../profiles/security.nix
-    ../profiles/desktop-hyprland.nix
+    ../profiles/workstation.nix
   ];
 
   ##############################
