@@ -143,26 +143,26 @@ in {
         };
       };
     })
-
-    # Audit system
+    #audit
     (lib.mkIf cfg.audit.enable {
       security.auditd.enable = true;
       security.audit.enable = true;
-      security.audit.rules = cfg.audit.rules;
-
-      # Default audit rules
-      security.audit.rules = lib.mkDefault ''
-        # Log all commands
-        -a exit,always -F arch=b64 -S execve
-
-        # Log file access
-        -w /etc/passwd -p wa -k passwd_changes
-        -w /etc/shadow -p wa -k shadow_changes
-
-        # Log network connections
-        -a exit,always -F arch=b64 -S connect -S accept
-      '';
+      security.audit.rules =
+        let
+          defaults = ''
+            # Log all commands
+            -a exit,always -F arch=b64 -S execve
+    
+            # Log file access
+            -w /etc/passwd -p wa -k passwd_changes
+            -w /etc/shadow -p wa -k shadow_changes
+    
+            # Log network connections
+            -a exit,always -F arch=b64 -S connect -S accept
+          '';
+        in if cfg.audit.rules == "" then defaults else defaults + "\n" + cfg.audit.rules;
     })
+    
 
     # General hardening
     {
