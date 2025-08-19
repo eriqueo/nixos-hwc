@@ -2,11 +2,11 @@
 {
   imports = [
     ./hardware/hwc-server.nix
-    .../profiles/base.nix
-    .../profiles/media.nix
-    .../profiles/monitoring.nix
-    .../profiles/ai.nix
-    .../profiles/security.nix
+    ../../profiles/base.nix
+    ../../profiles/media.nix
+    ../../profiles/monitoring.nix
+    ../../profiles/ai.nix
+    ../../profiles/security.nix
   ];
 
   # System identity
