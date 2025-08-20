@@ -1,0 +1,30 @@
+# Configuration extraction from /etc/nixos/hosts/laptop
+## Imports
+  imports =
+  imports = [
+
+## Services
+  services.gvfs.enable = true;
+  services.thermald.enable = true;
+  services.tlp.enable = true;
+  services.tumbler.enable = true;
+  services.udisks2.enable = true;
+  services.xserver.enable = true;
+
+## Hardware
+  hardware.bluetooth = {
+  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.graphics = {
+  hardware.nvidia = {
+      hardware.nvidia.prime = {
+
+## Boot
+  boot.extraModulePackages = [ ];
+  boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "rtsx_pci_sdmmc" ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ "kvm-intel" ];
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.systemd-boot.enable = true;
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
+
+## System Packages
