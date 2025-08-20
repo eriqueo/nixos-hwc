@@ -3,6 +3,9 @@
   ##############################
   ##  MACHINE: HWC-LAPTOP    ##
   ##############################
+boot.loader.systemd-boot.enable = true;
+boot.loader.efi.canTouchEfiVariables = true;
+boot.loader.grub.enable = false;
 
   ##############################
   ##  IMPORTS                 ##
@@ -19,7 +22,7 @@
   ##  SYSTEM IDENTITY         ##
   ##############################
   networking.hostName = "hwc-laptop";
-
+hwc.services.vpn.tailscale.enable = false;
   ##############################
   ##  LAPTOP HARDWARE         ##
   ##############################
@@ -39,8 +42,7 @@
   # };
 
    hwc.desktop.waybar.enable = true;
-hwc.secrets.enable = false;
-
+   hwc.secrets.enable = false;
    hwc.desktop.apps = {
     enable = true;
      browser.firefox   = true;

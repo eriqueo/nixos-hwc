@@ -30,11 +30,11 @@
 
   hwc.secrets = {
     enable = true;
-    provider = "sops";
+    provider = "age";
   };
 
   hwc.services.vpn.tailscale = {
-    enable = true;
+    enable = false;
     exitNode = false;
   };
 }
