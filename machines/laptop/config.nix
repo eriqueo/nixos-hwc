@@ -39,6 +39,7 @@
   # };
 
    hwc.desktop.waybar.enable = true;
+hwc.secrets.enable = false;
 
    hwc.desktop.apps = {
     enable = true;
