@@ -128,40 +128,29 @@ in {
         enable = true;
         maxretry = cfg.fail2ban.maxRetries;
         bantime = cfg.fail2ban.banTime;
-
-        jails = {
-          ssh = {
-            enabled = true;
-            filter = "sshd";
-            maxretry = 3;
-          };
-
-          nginx = lib.mkIf config.services.nginx.enable {
-            enabled = true;
-            filter = "nginx-http-auth";
-          };
-        };
-      };
-    })
-    #audit
-    (lib.mkIf cfg.audit.enable {
-      security.auditd.enable = true;
-      security.audit.enable = true;
-      security.audit.rules =
-        let
-          defaults = ''
-            # Log all commands
-            -a exit,always -F arch=b64 -S execve
-    
-            # Log file access
-            -w /etc/passwd -p wa -k passwd_changes
-            -w /etc/shadow -p wa -k shadow_changes
-    
-            # Log network connections
-            -a exit,always -F arch=b64 -S connect -S accept
-          '';
-        in if cfg.audit.rules == "" then defaults else defaults + "\n" + cfg.audit.rules;
-    })
+       };
+     })
+         
+        
+    # audit
+(lib.mkIf cfg.audit.enable {
+  security.auditd.enable = true;
+  security.audit.enable = true;
+  security.audit.rules =
+    let
+      defaults = [
+        "-a exit,always -F arch=b64 -S execve"
+        "-w /etc/passwd -p wa -k passwd_changes"
+        "-w /etc/shadow -p wa -k shadow_changes"
+        "-a exit,always -F arch=b64 -S connect -S accept"
+      ];
+      extra =
+        if cfg.audit.rules == "" then
+          []
+        else
+          lib.filter (s: s != "") (lib.splitString "\n" cfg.audit.rules);
+    in defaults ++ extra;
+})
     
 
     # General hardening
@@ -178,7 +167,7 @@ in {
         aide      # Intrusion detection
         lynis     # Security auditing
         clamav    # Antivirus
-        rkhunter  # Rootkit hunter
+          # Rootkit hunter
       ];
     }
   ]);
