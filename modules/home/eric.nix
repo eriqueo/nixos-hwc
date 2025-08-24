@@ -188,25 +188,15 @@ in {
     # HOME MANAGER CONFIGURATION
     #=========================================================================
 
-   # SSH key management through Home Manager (pure and compatible with agenix)
-    home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
+    home-manager.users.${cfg.user.name} = {
       home.stateVersion = "24.05";
-
-      # Create SSH authorized_keys file from agenix secret OR fallback text.
-      # Home Manager will automatically create the parent .ssh directory with default permissions.
-      # We ONLY need to define the file itself. This is the declarative way.
       home.file.".ssh/authorized_keys" =
         if cfg.ssh.useSecrets then {
-          # PURE: `source` defers reading the file until activation time.
           source = config.age.secrets.user-ssh-public-key.path;
-
         } else {
-          # PURE: `text` uses a simple string.
           text = cfg.ssh.fallbackKey;
-
         };
     };
-
     #=========================================================================
     # SECURITY INTEGRATION
     #=========================================================================
