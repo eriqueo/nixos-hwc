@@ -1,13 +1,17 @@
      { lib, ... }: {
        imports = [
          ../modules/infrastructure/gpu.nix
-         ../modules/desktop/hyprland.nix
-         ../modules/desktop/waybar.nix
-         ../modules/desktop/apps.nix
+         ../modules/infrastructure/printing.nix
+         ../modules/infrastructure/virtualization.nix
+         ../modules/infrastructure/samba.nix
+         ../modules/home/hyprland.nix
+         ../modules/home/waybar.nix
+         ../modules/home/apps.nix
          ../modules/home/cli.nix
          ../modules/home/development.nix
          ../modules/home/shell.nix
          ../modules/home/productivity.nix
+         ../modules/home/login-manager.nix
        ];
 
        # Enable desktop environment
@@ -48,7 +52,10 @@
          };
        };
 
-       # Enable home environment
+       # Workstation-specific user environment (extends base profile)
+       hwc.home.groups.virtualization = true;  # Add virtualization access for VMs
+       
+       # Enable CLI tools
        hwc.home = {
          cli = {
            enable = true;
@@ -97,6 +104,18 @@
          };
        };
 
+       # Infrastructure Services
+       hwc.infrastructure = {
+         printing.enable = true;
+         virtualization.enable = true;
+         samba.enableSketchupShare = true;
+       };
+
+       # Desktop Services  
+       hwc.home.loginManager.enable = true;
+
+       # Workstation filesystem structure
+       hwc.filesystem.userDirectories.enable = true;  # PARA structure for productivity
 
        # Sound
        security.rtkit.enable = true;
@@ -107,6 +126,6 @@
          pulse.enable = true;
        };
 
-       # Networking
-       networking.networkmanager.enable = true;
+       # Workstation-specific networking (SSH X11 forwarding for remote development)
+       hwc.networking.ssh.x11Forwarding = true;
      }

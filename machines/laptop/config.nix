@@ -33,16 +33,18 @@ hwc.services.vpn.tailscale.enable = false;
   ##  FEATURE TOGGLES (HOST OVERRIDES)      ##
   ##  Uncomment/edit to override profiles.  ##
   ############################################
-  # hwc.gpu.nvidia = {
-  #   enable = true;
-  #   prime.enable = true;
-  #   prime.nvidiaBusId = "PCI:1:0:0";
-  #   prime.intelBusId  = "PCI:0:2:0";
-  #   containerRuntime = true;
-  # };
+  
+  # GPU Configuration
+  hwc.gpu.type = "nvidia";
+  hwc.gpu.nvidia = {
+    prime.enable = true;
+    prime.nvidiaBusId = "PCI:1:0:0";
+    prime.intelBusId = "PCI:0:2:0";
+    containerRuntime = true;
+  };
 
-   hwc.desktop.waybar.enable = true;
-   hwc.secrets.enable = false;
+  hwc.desktop.waybar.enable = true;
+  hwc.secrets.enable = true;
    hwc.desktop.apps = {
     enable = true;
      browser.firefox   = true;

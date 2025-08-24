@@ -2,7 +2,10 @@
 {
   imports = [
     ../modules/system/paths.nix
-    ../modules/system/users.nix
+    ../modules/system/filesystem.nix
+    ../modules/system/networking.nix
+    ../modules/security/secrets.nix
+    ../modules/home/eric.nix
   ];
 
   # Your base configuration
@@ -22,22 +25,21 @@
     };
   };
 
-  # Basic networking
-  networking = {
-    networkmanager.enable = true;
+  # Charter v3 Networking Configuration
+  hwc.networking = {
+    enable = true;
+    ssh = {
+      enable = true;
+      passwordAuthentication = false;
+      x11Forwarding = false;
+    };
+    networkManager.enable = true;
     firewall = {
       enable = true;
+      strict = true;
       allowPing = false;
     };
-  };
-
-  # SSH
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "no";
-      PasswordAuthentication = false;
-    };
+    tailscale.enable = true;
   };
 
   # Container runtime (from your config)
@@ -64,6 +66,34 @@
     fzf
   ];
 
-  # Enable ZSH
-  programs.zsh.enable = true;
+  # Charter v3 User Configuration
+  hwc.home = {
+    user.enable = true;
+    groups = {
+      basic = true;        # wheel, networkmanager
+      media = true;        # video, audio, render
+      development = true;  # docker, podman
+    };
+    ssh.enable = true;
+    environment = {
+      enableZsh = true;
+      enablePaths = true;
+    };
+  };
+
+  # Charter v3 Security Configuration
+  hwc.security = {
+    enable = true;
+    secrets = {
+      user = true;  # User account secrets
+      vpn = true;   # VPN credentials for Tailscale/services
+    };
+    ageKeyFile = "/etc/age/keys.txt";
+  };
+
+  # Enable core filesystem management
+  hwc.filesystem = {
+    enable = true;
+    securityDirectories.enable = true;  # Security dirs always needed
+  };
 }
