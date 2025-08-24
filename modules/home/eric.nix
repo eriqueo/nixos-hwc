@@ -35,8 +35,6 @@ in {
   #============================================================================
   # OPTIONS - User Environment Configuration
   #============================================================================
- systemd.services."home-manager-${cfg.user.name}".requires = [ "agenix.service" ];
-  systemd.services."home-manager-${cfg.user.name}".after = [ "agenix.service" ];
 
   options.hwc.home = {
     user = {
@@ -96,6 +94,8 @@ in {
       enableZsh = lib.mkEnableOption "ZSH system-level configuration";
     };
   };
+  systemd.services."home-manager-${cfg.user.name}".requires = [ "agenix.service" ];
+  systemd.services."home-manager-${cfg.user.name}".after = [ "agenix.service" ];
 
   #============================================================================
   # IMPLEMENTATION - User Account and Environment
