@@ -5,7 +5,9 @@
       "Bash(touch:*)",
       "Bash(sudo mkdir:*)",
       "Bash(sudo chown:*)",
-      "Bash(sops:*)"
+      "Bash(sops:*)",
+      "Bash(sudo cp:*)",
+      "Bash(sudo ls:*)"
     ],
     "deny": [],
     "ask": [],
