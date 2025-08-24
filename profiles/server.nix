@@ -168,7 +168,7 @@
   # Enhanced container configuration for server workloads
   virtualisation = {
     # Disable Docker from base profile since we want Podman
-    docker.enable = false;
+    docker.enable = lib.mkForce false;
     
     # Enable Podman for rootless containers
     podman = {
