@@ -30,7 +30,7 @@ let
   paths = config.hwc.paths;
 
   # Import script utilities
-  scripts = import ../../lib/scripts.nix { inherit lib pkgs config; };
+ # scripts = import ../../lib/scripts.nix { inherit lib pkgs config; };
 in {
   #============================================================================
   # OPTIONS - User Environment Configuration
