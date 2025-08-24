@@ -31,13 +31,13 @@ in {
   #============================================================================
   # OPTIONS - Comprehensive Path Structure
   #============================================================================
-  
+
   options.hwc.paths = {
-    
+
     #=========================================================================
     # STORAGE TIERS - Hot/Cold Architecture (Nullable - Machine Specific)
     #=========================================================================
-    
+
     hot = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
@@ -69,7 +69,7 @@ in {
     #=========================================================================
     # SYSTEM PATHS - Always Available
     #=========================================================================
-    
+
     state = lib.mkOption {
       type = lib.types.path;
       default = "/var/lib/hwc";
@@ -97,7 +97,7 @@ in {
     #=========================================================================
     # USER PATHS - PARA Structure
     #=========================================================================
-    
+
     user = {
       home = lib.mkOption {
         type = lib.types.path;
@@ -165,7 +165,7 @@ in {
     #=========================================================================
     # APPLICATION ROOTS - Service Directories
     #=========================================================================
-    
+
     business = {
       root = lib.mkOption {
         type = lib.types.path;
@@ -249,7 +249,7 @@ in {
     #=========================================================================
     # ARR STACK PATHS - Media Management Pipeline
     #=========================================================================
-    
+
     arr = {
       # Service configuration directories
       lidarr = lib.mkOption {
@@ -287,7 +287,7 @@ in {
     #=========================================================================
     # SECURITY PATHS - Secrets and Certificates
     #=========================================================================
-    
+
     security = {
       secrets = lib.mkOption {
         type = lib.types.path;
@@ -329,7 +329,7 @@ in {
     #=========================================================================
     # NIXOS CONFIGURATION
     #=========================================================================
-    
+
     nixos = lib.mkOption {
       type = lib.types.path;
       default = "/etc/nixos";
@@ -340,7 +340,7 @@ in {
   #============================================================================
   # IMPLEMENTATION - Environment Variables and Validation
   #============================================================================
-  
+
   config = {
     # Validation assertions
     assertions = [
@@ -400,7 +400,7 @@ in {
       HWC_DOWNLOADS_CONFIG = cfg.arr.downloads;
 
       # Security
-      HWC_SECRETS_DIR = cfg.security.secrets;
+      HWC_SECRETS_SRC_DIR = cfg.security.secrets;
       HWC_SOPS_AGE_KEY = cfg.security.sopsAgeKey;
 
       # Legacy compatibility (for existing scripts)
