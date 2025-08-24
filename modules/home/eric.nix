@@ -185,33 +185,31 @@ in {
     # HOME MANAGER CONFIGURATION
     #=========================================================================
 
-  # In modules/home/eric.nix
+    # SSH key management through Home Manager (pure and compatible with agenix)
+    home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
+      home.stateVersion = "24.05";
 
-        # SSH key management through Home Manager (pure and compatible with agenix)
-        home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
-          home.stateVersion = "24.05";
+      # CORRECT WAY TO CREATE A DIRECTORY:
+      # This creates a directory named ".ssh" in the user's home.
+      home.file.".ssh" = {
+        target = ".ssh"; # The name of the directory
+        isDirectory = true; # Explicitly state it's a directory
+        mode = "0700"; # Set its permissions
+      };
 
-          # Create the .ssh directory with correct permissions first.
-          # This is crucial for the authorized_keys file to be created inside it.
-          home.file.".ssh" = {
-            enable = true;
-            mode = "0700";
-          };
-
-          # Create SSH authorized_keys file from agenix secret OR fallback text.
-          # This `if/then/else` structure is pure and easy to read.
-          home.file.".ssh/authorized_keys" =
-            if cfg.ssh.useSecrets then {
-              # PURE: `source` defers reading the file until activation time.
-              source = config.age.secrets.user-ssh-public-key.path;
-              mode = "0600";
-            } else {
-              # PURE: `text` uses a simple string.
-              text = cfg.ssh.fallbackKey;
-              mode = "0600";
-            };
+      # Create SSH authorized_keys file from agenix secret OR fallback text.
+      # This now correctly places the file inside the directory we just created.
+      home.file.".ssh/authorized_keys" =
+        if cfg.ssh.useSecrets then {
+          # PURE: `source` defers reading the file until activation time.
+          source = config.age.secrets.user-ssh-public-key.path;
+          mode = "0600";
+        } else {
+          # PURE: `text` uses a simple string.
+          text = cfg.ssh.fallbackKey;
+          mode = "0600";
         };
-
+    };
 
     #=========================================================================
     # SECURITY INTEGRATION
