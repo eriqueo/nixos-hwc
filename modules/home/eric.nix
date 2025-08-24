@@ -194,8 +194,7 @@ in {
       home.stateVersion = "24.05";
       home.file.".ssh/authorized_keys" =
         if cfg.ssh.useSecrets then {
-          source = config.age.secrets.user-ssh-public-key.path;
-        } else {
+            source = toString config.age.secrets.user-ssh-public-key.path;        } else {
           text = cfg.ssh.fallbackKey;
         };
     };
