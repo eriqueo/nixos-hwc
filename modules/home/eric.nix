@@ -190,15 +190,49 @@ in {
     # HOME MANAGER CONFIGURATION
     #=========================================================================
 
-   home-manager.users.${cfg.user.name} = {
+    home-manager.users.${cfg.user.name} = {
       home.stateVersion = "24.05";
-      home.file.".ssh/authorized_keys" =
-        if cfg.ssh.useSecrets then {
-          text = builtins.readFile config.age.secrets.user-ssh-public-key.path;
-        } else {
-          text = cfg.ssh.fallbackKey;
-        };
+      # Remove the SSH authorized_keys from here - we'll handle it with systemd
     };
+    systemd.services."setup-ssh-keys-${cfg.user.name}" = lib.mkIf cfg.ssh.enable {
+          description = "Setup SSH authorized keys for ${cfg.user.name}";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "agenix.service" ];
+          requires = [ "agenix.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            User = "root";
+          };
+          script = if cfg.ssh.useSecrets then ''
+            # Wait for the secret to be available
+            while [ ! -f "${config.age.secrets.user-ssh-public-key.path}" ]; do
+              sleep 1
+            done
+
+            # Create .ssh directory if it doesn't exist
+            mkdir -p ${paths.user.home}/.ssh
+            chmod 700 ${paths.user.home}/.ssh
+            chown ${cfg.user.name}:users ${paths.user.home}/.ssh
+
+            # Copy the public key to authorized_keys
+            cp "${config.age.secrets.user-ssh-public-key.path}" ${paths.user.home}/.ssh/authorized_keys
+            chmod 600 ${paths.user.home}/.ssh/authorized_keys
+            chown ${cfg.user.name}:users ${paths.user.home}/.ssh/authorized_keys
+          '' else ''
+            # Create .ssh directory if it doesn't exist
+            mkdir -p ${paths.user.home}/.ssh
+            chmod 700 ${paths.user.home}/.ssh
+            chown ${cfg.user.name}:users ${paths.user.home}/.ssh
+
+            # Write fallback key to authorized_keys
+            cat > ${paths.user.home}/.ssh/authorized_keys <<EOF
+            ${cfg.ssh.fallbackKey}
+            EOF
+            chmod 600 ${paths.user.home}/.ssh/authorized_keys
+            chown ${cfg.user.name}:users ${paths.user.home}/.ssh/authorized_keys
+          '';
+        };
     #=========================================================================
     # SECURITY INTEGRATION
     #=========================================================================
