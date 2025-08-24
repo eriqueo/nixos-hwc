@@ -185,30 +185,21 @@ in {
     # HOME MANAGER CONFIGURATION
     #=========================================================================
 
-     # SSH key management through Home Manager (pure and compatible with agenix)
-    home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
-      home.stateVersion = "24.05";
+    # SSH key management through Home Manager (pure and compatible with agenix)
+      home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
+        home.stateVersion = "24.05";
 
-      # CORRECT AND VERIFIED WAY TO CREATE A DIRECTORY:
-      # This creates an empty directory derivation and links it to ~/.ssh
-      home.file.".ssh" = {
-        source = (pkgs.runCommand "ssh-directory" {} "mkdir $out");
-        recursive = true; # Ensures it's treated as a directory
-        mode = "0700";
+        # Create SSH authorized_keys file from agenix secret OR fallback text.
+        # We will ONLY manage this file. We will not manage the .ssh directory.
+        home.file.".ssh/authorized_keys" =
+          if cfg.ssh.useSecrets then {
+            source = config.age.secrets.user-ssh-public-key.path;
+            mode = "0600";
+          } else {
+            text = cfg.ssh.fallbackKey;
+            mode = "0600";
+          };
       };
-
-      # Create SSH authorized_keys file from agenix secret OR fallback text.
-      # This now correctly places the file inside the directory we just created.
-      home.file.".ssh/authorized_keys" =
-        if cfg.ssh.useSecrets then {
-          source = config.age.secrets.user-ssh-public-key.path;
-          mode = "0600";
-        }
-         else {
-          text = cfg.ssh.fallbackKey;
-          mode = "0600";
-        };
-    };
 
     #=========================================================================
     # SECURITY INTEGRATION
