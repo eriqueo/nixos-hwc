@@ -31,7 +31,7 @@
     ssh = {
       enable = true;
       passwordAuthentication = false;
-      x11Forwarding = false;
+      x11Forwarding = lib.mkDefault false;
     };
     networkManager.enable = true;
     firewall = {
