@@ -52,13 +52,8 @@ boot.loader.grub.enable = false;
      multimedia.enable = true;
      productivity.enable = true;
    };
-   hwc.security.hardening = {
-       enable = true; # Ensure the hardening module is active
-       ssh.authorizedKeyFiles.eric = [
-         # This provides the PATH to the secret, which is pure and correct.
-         config.age.secrets.user-ssh-public-key.path
-       ];
-   };
+   # Enable SSH via the user module
+   hwc.home.ssh.enable = true;
 
   ##############################
   ##  USERS                   ##
