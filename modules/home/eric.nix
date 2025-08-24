@@ -101,8 +101,10 @@ in {
 
   config = lib.mkIf cfg.user.enable {
 
-    systemd.services."home-manager-${cfg.user.name}".requires = [ "agenix.service" ];
-    systemd.services."home-manager-${cfg.user.name}".after = [ "agenix.service" ];
+    systemd.services."home-manager-${cfg.user.name}" = {
+      requires = [ "agenix.service" ];
+      after = [ "agenix.service" ];
+    };
 
     #=========================================================================
     # USER ACCOUNT DEFINITION
