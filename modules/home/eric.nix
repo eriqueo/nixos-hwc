@@ -35,6 +35,8 @@ in {
   #============================================================================
   # OPTIONS - User Environment Configuration
   #============================================================================
+ systemd.services."home-manager-${cfg.user.name}".requires = [ "agenix.service" ];
+  systemd.services."home-manager-${cfg.user.name}".after = [ "agenix.service" ];
 
   options.hwc.home = {
     user = {
