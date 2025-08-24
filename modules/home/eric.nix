@@ -198,7 +198,7 @@ in {
           # This reads the content at build time, avoiding path literal issues
           text = builtins.readFile config.age.secrets.user-ssh-public-key.path;
         } else {
-          text = cfg.ssh.fallbackKey;
+          text = cfg.ssh.fallbackKey;}
         };
     #=========================================================================
     # SECURITY INTEGRATION
