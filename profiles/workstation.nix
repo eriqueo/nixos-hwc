@@ -55,7 +55,7 @@
 
        # Workstation-specific user environment (extends base profile)
        hwc.home.groups.virtualization = true;  # Add virtualization access for VMs
-       
+
        # Universal input device configuration
        hwc.home.input = {
          enable = true;
@@ -119,14 +119,18 @@
          printing.enable = true;
          virtualization.enable = true;
          samba.enableSketchupShare = true;
-         gpu.powerManagement = {
+       };
+       # Add GPU configuration separately:
+       hwc.gpu = {
+         type = "nvidia";  # You'll need to specify the GPU type
+         powerManagement = {
            enable = true;
-           smartToggle = true;        # Enable F12 GPU toggle functionality  
+           smartToggle = true;        # Enable F12 GPU toggle functionality
            toggleNotifications = true; # Show notifications when toggling
          };
        };
 
-       # Desktop Services  
+       # Desktop Services
        hwc.home.loginManager.enable = true;
 
        # Workstation filesystem structure

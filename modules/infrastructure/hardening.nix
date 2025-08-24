@@ -1,8 +1,8 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.security;
+  cfg = config.hwc.security.hardening;
 in {
-  options.hwc.security = {
+  options.hwc.security.hardening = {
     enable = lib.mkEnableOption "Security hardening";
 
     firewall = {
@@ -130,8 +130,8 @@ in {
         bantime = cfg.fail2ban.banTime;
        };
      })
-         
-        
+
+
     # audit
 (lib.mkIf cfg.audit.enable {
   security.auditd.enable = true;
@@ -151,7 +151,7 @@ in {
           lib.filter (s: s != "") (lib.splitString "\n" cfg.audit.rules);
     in defaults ++ extra;
 })
-    
+
 
     # General hardening
     {

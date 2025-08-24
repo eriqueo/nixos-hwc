@@ -1,7 +1,7 @@
 { ... }:
 {
   imports = [
-    ../modules/infrastructure/security.nix
+    ../modules/infrastructure/hardening.nix
     ../modules/infrastructure/secrets.nix
     ../modules/services/vpn.nix
   ];

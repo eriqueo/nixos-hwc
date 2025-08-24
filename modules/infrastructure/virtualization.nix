@@ -74,23 +74,25 @@ in {
     ];
     
     # QEMU/KVM with libvirtd
-    virtualisation.libvirtd = {
-      enable = true;
-      qemu = {
-        package = pkgs.qemu_kvm;
-        runAsRoot = false;
-        swtpm.enable = true;           # TPM emulation
-        ovmf.enable = true;            # UEFI firmware
-        ovmf.packages = [ pkgs.OVMF.fd ];
-        vhostUserPackages = with pkgs; [ virtiofsd ];  # Shared filesystem
-      };
-    };
-    
-    # SPICE USB redirection
-    virtualisation.spiceUSBRedirection.enable = cfg.spiceSupport;
-    
-    # Container runtime (separate from VMs)
     virtualisation = lib.mkMerge [
+      {
+        libvirtd = {
+          enable = true;
+          qemu = {
+            package = pkgs.qemu_kvm;
+            runAsRoot = false;
+            swtpm.enable = true;           # TPM emulation
+            ovmf.enable = true;            # UEFI firmware
+            ovmf.packages = [ pkgs.OVMF.fd ];
+            vhostUserPackages = with pkgs; [ virtiofsd ];  # Shared filesystem
+          };
+        };
+        
+        # SPICE USB redirection
+        spiceUSBRedirection.enable = cfg.spiceSupport;
+      }
+      
+      # Container runtime (separate from VMs)
       (lib.mkIf (cfg.containers == "podman") {
         podman = {
           enable = true;
@@ -99,6 +101,7 @@ in {
         };
         oci-containers.backend = "podman";
       })
+      
       (lib.mkIf (cfg.containers == "docker") {
         docker.enable = true;
         oci-containers.backend = "docker";
@@ -128,3 +131,4 @@ in {
     ];
   };
 }
+
