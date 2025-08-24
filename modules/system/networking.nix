@@ -32,7 +32,7 @@ in {
   #============================================================================
   # OPTIONS - Network Configuration
   #============================================================================
-  
+
   options.hwc.networking = {
     enable = lib.mkEnableOption "HWC networking configuration";
 
@@ -41,31 +41,31 @@ in {
     #=========================================================================
     ssh = {
       enable = lib.mkEnableOption "SSH server configuration";
-      
+
       port = lib.mkOption {
         type = lib.types.port;
         default = 22;
         description = "SSH server port";
       };
-      
+
       allowRootLogin = lib.mkOption {
         type = lib.types.enum [ "yes" "no" "prohibit-password" ];
         default = "no";
         description = "Allow root login via SSH";
       };
-      
+
       passwordAuthentication = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Allow password authentication";
       };
-      
+
       x11Forwarding = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Enable X11 forwarding for GUI applications";
       };
-      
+
       openFirewall = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -78,19 +78,19 @@ in {
     #=========================================================================
     tailscale = {
       enable = lib.mkEnableOption "Tailscale VPN mesh networking";
-      
+
       permitCertUid = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "User that can access Tailscale certificates (e.g., 'caddy')";
       };
-      
+
       authKeyFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
         description = "Path to Tailscale auth key file";
       };
-      
+
       extraUpFlags = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
@@ -103,20 +103,20 @@ in {
     #=========================================================================
     networkManager = {
       enable = lib.mkEnableOption "NetworkManager for network management";
-      
+
       dns = lib.mkOption {
         type = lib.types.enum [ "systemd-resolved" "dnsmasq" "none" ];
         default = "systemd-resolved";
         description = "DNS backend for NetworkManager";
       };
-      
+
       wifi = {
         backend = lib.mkOption {
           type = lib.types.enum [ "wpa_supplicant" "iwd" ];
           default = "wpa_supplicant";
           description = "WiFi backend";
         };
-        
+
         powersave = lib.mkOption {
           type = lib.types.bool;
           default = true;
@@ -134,19 +134,19 @@ in {
         default = true;
         description = "Enable firewall";
       };
-      
+
       strict = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Use strict firewall rules (deny by default)";
       };
-      
+
       allowPing = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Allow ICMP ping requests";
       };
-      
+
       # Common service ports
       services = {
         ssh = lib.mkOption {
@@ -154,13 +154,13 @@ in {
           default = cfg.ssh.enable;
           description = "Allow SSH traffic";
         };
-        
+
         web = lib.mkOption {
           type = lib.types.bool;
           default = false;
           description = "Allow HTTP/HTTPS traffic (80, 443)";
         };
-        
+
         tailscale = lib.mkOption {
           type = lib.types.bool;
           default = cfg.tailscale.enable;
@@ -174,13 +174,13 @@ in {
         default = [ ];
         description = "Additional TCP ports to open";
       };
-      
+
       extraUdpPorts = lib.mkOption {
         type = lib.types.listOf lib.types.port;
         default = [ ];
         description = "Additional UDP ports to open";
       };
-      
+
       # Interface-specific rules (e.g., for Tailscale)
       trustedInterfaces = lib.mkOption {
         type = lib.types.listOf lib.types.str;
@@ -198,13 +198,13 @@ in {
         default = true;
         description = "Configure DNS resolution";
       };
-      
+
       servers = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ "1.1.1.1" "8.8.8.8" ];
         description = "DNS servers to use";
       };
-      
+
       fallbackServers = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ "9.9.9.9" "149.112.112.112" ];
@@ -216,9 +216,9 @@ in {
   #============================================================================
   # IMPLEMENTATION - Network Service Configuration
   #============================================================================
-  
+
   config = lib.mkIf cfg.enable {
-    
+
     #=========================================================================
     # SSH SERVER CONFIGURATION
     #=========================================================================
@@ -263,25 +263,25 @@ in {
     networking.firewall = lib.mkIf cfg.firewall.enable {
       enable = true;
       allowPing = cfg.firewall.allowPing;
-      
+
       # Service-based port configuration
       allowedTCPPorts = [ ]
         ++ lib.optionals cfg.firewall.services.ssh [ cfg.ssh.port ]
         ++ lib.optionals cfg.firewall.services.web [ 80 443 ]
         ++ cfg.firewall.extraTcpPorts;
-      
+
       allowedUDPPorts = [ ]
         ++ lib.optionals cfg.firewall.services.tailscale [ 41641 ]
         ++ cfg.firewall.extraUdpPorts;
-      
+
       # Trusted interfaces (full access)
       trustedInterfaces = cfg.firewall.trustedInterfaces
         ++ lib.optionals cfg.tailscale.enable [ "tailscale0" ];
-      
+
       # Interface-specific rules for Tailscale internal services
       interfaces = lib.mkIf cfg.tailscale.enable {
         "tailscale0" = {
-          allowedTCPPorts = [ 
+          allowedTCPPorts = [
             # Add common internal service ports here
             # These will be populated by service modules
           ];
@@ -295,8 +295,7 @@ in {
     #=========================================================================
     services.resolved = lib.mkIf (cfg.dns.enable && cfg.networkManager.dns == "systemd-resolved") {
       enable = true;
-      dns = cfg.dns.servers;
-      fallbackDns = cfg.dns.fallbackServers;
+      fallbackDns = cfg.dns.servers ++ cfg.dns.fallbackServers;
       dnssec = "allow-downgrade";
       domains = [ "~." ];  # Use for all domains
     };
@@ -311,7 +310,7 @@ in {
       traceroute
       nettools
       iproute2
-      
+
       # Tailscale management
     ] ++ lib.optionals cfg.tailscale.enable [
       tailscale
