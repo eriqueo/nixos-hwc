@@ -92,35 +92,15 @@ in {
           iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent \
             --update --seconds 60 --hitcount 4 -j DROP
         '';
-      };
-    }
-
-    # SSH hardening
-    {
-      services.openssh = {
-        enable = true;
-        settings = {
-          PasswordAuthentication = cfg.ssh.passwordAuthentication;
-          PermitRootLogin = if cfg.ssh.permitRootLogin then "yes" else "no";
-          KbdInteractiveAuthentication = false;
-          X11Forwarding = false;
-          StrictModes = true;
         };
-
-        extraConfig = ''
-          Protocol 2
-          ClientAliveInterval 300
-          ClientAliveCountMax 2
-          MaxAuthTries 3
-          MaxSessions 10
-        '';
-      };
-
-      # Add authorized keys
-      users.users = lib.mapAttrs (user: keys: {
-        openssh.authorizedKeys.keys = keys;
-      }) cfg.ssh.authorizedKeys;
     }
+    # Set secure defaults for the HWC networking options
+    {
+      hwc.networking.ssh.passwordAuthentication = lib.mkDefault false;
+      hwc.networking.ssh.allowRootLogin = lib.mkDefault "no";
+      hwc.networking.ssh.x11Forwarding = lib.mkDefault false;
+    }
+
 
     # Fail2ban
     (lib.mkIf cfg.fail2ban.enable {
