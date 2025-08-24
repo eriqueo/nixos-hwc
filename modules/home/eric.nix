@@ -166,7 +166,7 @@ in {
       # Script utilities (from lib/scripts.nix)
     ] ++ (lib.optionals cfg.environment.enablePaths [
       # Path-related utilities when path management is enabled
-      scripts.pathInfo or (pkgs.writeShellScriptBin "hwc-paths" ''
+     (pkgs.writeShellScriptBin "hwc-paths" ''
         echo "HWC Path Configuration:"
         env | grep "^HWC_" | sort
       '')
