@@ -10,8 +10,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    sops-nix = {
-      url = "github:Mic92/sops-nix";
+    agenix = {
+      url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -22,7 +22,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, sops-nix, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
 
@@ -39,7 +39,7 @@
         specialArgs = { inherit inputs; };
         modules = [
           ./machines/hwc-server.nix
-          sops-nix.nixosModules.sops
+          agenix.nixosModules.default
         ];
       };
 
@@ -48,6 +48,7 @@
         specialArgs = { inherit inputs; };
         modules = [
           ./machines/laptop/config.nix
+          agenix.nixosModules.default
           home-manager.nixosModules.home-manager
         ];
       };

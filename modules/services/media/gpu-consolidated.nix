@@ -173,7 +173,7 @@ in {
       # Environment variables for GPU acceleration
       environment.sessionVariables = {
         # NVIDIA specific
-        CUDA_CACHE_PATH = "${paths.cache}/cuda";
+        CUDA_CACHE_PATH = "${paths.cache.system}/cuda";
         
         # VAAPI driver selection (prefer NVIDIA, fallback to Intel)
         LIBVA_DRIVER_NAME = "nvidia";
@@ -204,8 +204,8 @@ in {
 
       # Create GPU cache and monitoring directories
       systemd.tmpfiles.rules = [
-        "d ${paths.cache}/cuda 0755 root root -"
-        "d ${paths.logs}/gpu 0755 root root -"
+        "d ${paths.cache.system}/cuda 0755 root root -"
+        "d ${paths.logs.system}/gpu 0755 root root -"
       ];
 
       # GPU monitoring service
@@ -219,7 +219,7 @@ in {
             while true; do
               ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-smi \
                 --query-gpu=timestamp,name,temperature.gpu,utilization.gpu,utilization.memory,memory.used,memory.total \
-                --format=csv,noheader,nounits >> ${paths.logs}/gpu/gpu-usage.log
+                --format=csv,noheader,nounits >> ${paths.logs.system}/gpu/gpu-usage.log
               sleep 60
             done
           '';
