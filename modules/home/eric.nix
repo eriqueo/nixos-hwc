@@ -28,36 +28,36 @@
 let
   cfg = config.hwc.home;
   paths = config.hwc.paths;
-  
-  # Import script utilities  
+
+  # Import script utilities
   scripts = import ../../lib/scripts.nix { inherit lib pkgs config; };
 in {
   #============================================================================
   # OPTIONS - User Environment Configuration
   #============================================================================
-  
+
   options.hwc.home = {
     user = {
       enable = lib.mkEnableOption "Eric user account configuration";
-      
+
       name = lib.mkOption {
         type = lib.types.str;
         default = "eric";
         description = "Username for the primary user";
       };
-      
+
       description = lib.mkOption {
         type = lib.types.str;
         default = "Eric - Heartwood Craft";
         description = "User description";
       };
-      
+
       shell = lib.mkOption {
         type = lib.types.package;
         default = pkgs.zsh;
         description = "Default shell for the user";
       };
-      
+
       useSecrets = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -75,13 +75,13 @@ in {
 
     ssh = {
       enable = lib.mkEnableOption "SSH configuration for user";
-      
+
       useSecrets = lib.mkOption {
         type = lib.types.bool;
         default = cfg.user.useSecrets;
         description = "Use agenix secrets for SSH keys";
       };
-      
+
       fallbackKey = lib.mkOption {
         type = lib.types.str;
         default = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICubgcmg6aBisQC+MWRC4RWOY8zIHEl42O7bTbzyCiGB eriqueo@proton.me";
@@ -98,9 +98,9 @@ in {
   #============================================================================
   # IMPLEMENTATION - User Account and Environment
   #============================================================================
-  
+
   config = lib.mkIf cfg.user.enable {
-    
+
     #=========================================================================
     # USER ACCOUNT DEFINITION
     #=========================================================================
@@ -109,7 +109,7 @@ in {
       home = paths.user.home;
       description = cfg.user.description;
       shell = cfg.user.shell;
-      
+
       # Dynamic group membership based on toggles
       extraGroups = [ ]
         ++ lib.optionals cfg.groups.basic [ "wheel" "networkmanager" ]
@@ -117,23 +117,29 @@ in {
         ++ lib.optionals cfg.groups.development [ "docker" "podman" ]
         ++ lib.optionals cfg.groups.virtualization [ "libvirtd" "kvm" ]
         ++ lib.optionals cfg.groups.hardware [ "input" "uucp" "dialout" ];
-      
+
       # SSH key configuration - use secrets if available, fallback otherwise
-      openssh.authorizedKeys.keys = 
+      # Use `keyFiles` to point to the secret file path.
+      # NixOS will read this file during system activation, not during the build.
+      openssh.authorizedKeys.keyFiles =
         if cfg.ssh.enable && cfg.ssh.useSecrets && config.age.secrets ? user-ssh-public-key
-        then [ (builtins.readFile config.age.secrets.user-ssh-public-key.path) ]
-        else if cfg.ssh.enable
+        then [ config.age.secrets.user-ssh-public-key.path ]
+        else [ ];
+
+      # The fallback key still uses the `keys` option.
+      openssh.authorizedKeys.keys =
+        if cfg.ssh.enable && !cfg.ssh.useSecrets
         then [ cfg.ssh.fallbackKey ]
         else [ ];
-      
+
       # Initial password - use secrets if available
-      initialPassword = 
+      initialPassword =
         if cfg.user.useSecrets && config.age.secrets ? user-initial-password
         then null  # Password will be read from secret file
         else "il0wwlm?";  # Fallback password (matches your current password)
-      
+
       # If using secrets, set password hash from secret file
-      hashedPasswordFile = 
+      hashedPasswordFile =
         if cfg.user.useSecrets && config.age.secrets ? user-initial-password
         then config.age.secrets.user-initial-password.path
         else null;
@@ -142,7 +148,7 @@ in {
     #=========================================================================
     # SYSTEM-LEVEL ENVIRONMENT CONFIGURATION
     #=========================================================================
-    
+
     # ZSH system enablement (required for user shell)
     programs.zsh.enable = lib.mkIf cfg.environment.enableZsh true;
 
@@ -150,13 +156,13 @@ in {
     environment.systemPackages = with pkgs; [
       # Core utilities
       vim git wget curl htop tmux
-      
+
       # Modern Unix tools
       ncdu tree ripgrep fd bat eza zoxide fzf
-      
+
       # User environment tools
       which diffutils less
-      
+
       # Script utilities (from lib/scripts.nix)
     ] ++ (lib.optionals cfg.environment.enablePaths [
       # Path-related utilities when path management is enabled
@@ -169,7 +175,7 @@ in {
     #=========================================================================
     # USER DIRECTORY PERMISSIONS AND OWNERSHIP
     #=========================================================================
-    
+
     # User home directory ownership (using paths module)
     systemd.tmpfiles.rules = [
       "Z ${paths.user.home} - ${cfg.user.name} users - -"
@@ -180,7 +186,7 @@ in {
     #=========================================================================
     # OPTIONAL USER GROUPS CREATION
     #=========================================================================
-    
+
     # Create media groups if enabled
     users.groups = lib.mkIf cfg.groups.media {
       render = { gid = 2002; };  # GPU rendering group
@@ -189,7 +195,7 @@ in {
     #=========================================================================
     # SECURITY INTEGRATION
     #=========================================================================
-    
+
     # Ensure secrets are available if using them
     assertions = [
       {
