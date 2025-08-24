@@ -35,17 +35,17 @@ in {
   #============================================================================
   # OPTIONS - Toggleable Directory Sets
   #============================================================================
-  
+
   options.hwc.filesystem = {
     enable = lib.mkEnableOption "HWC filesystem structure management";
 
     #=========================================================================
     # USER DIRECTORIES - PARA Structure
     #=========================================================================
-    
+
     userDirectories = {
       enable = lib.mkEnableOption "PARA user directories, XDG config, and compatibility symlinks";
-      
+
       createHomeManager = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -56,16 +56,16 @@ in {
     #=========================================================================
     # SERVER STORAGE - Hot/Cold Architecture
     #=========================================================================
-    
+
     serverStorage = {
       enable = lib.mkEnableOption "hot/cold storage directories for media server";
-      
+
       createDownloadZones = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Create download staging and processing zones";
       };
-      
+
       createCacheDirectories = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -76,10 +76,10 @@ in {
     #=========================================================================
     # BUSINESS & AI DIRECTORIES
     #=========================================================================
-    
+
     businessDirectories = {
       enable = lib.mkEnableOption "business intelligence and AI application directories";
-      
+
       createAdhd = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -90,10 +90,10 @@ in {
     #=========================================================================
     # SERVICE CONFIGURATION DIRECTORIES
     #=========================================================================
-    
+
     serviceDirectories = {
       enable = lib.mkEnableOption "*ARR service configuration directories";
-      
+
       createLegacyPaths = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -104,7 +104,7 @@ in {
     #=========================================================================
     # SECURITY DIRECTORIES
     #=========================================================================
-    
+
     securityDirectories = {
       enable = lib.mkEnableOption "security and secrets directories";
     };
@@ -112,14 +112,14 @@ in {
     #=========================================================================
     # USER & GROUP MANAGEMENT
     #=========================================================================
-    
+
     permissions = {
       mediaGroup = lib.mkOption {
         type = lib.types.str;
         default = "media";
         description = "Group for media file access";
       };
-      
+
       serviceUser = lib.mkOption {
         type = lib.types.str;
         default = "hwc";
@@ -131,7 +131,7 @@ in {
   #============================================================================
   # IMPLEMENTATION - Directory Creation Based on Toggles
   #============================================================================
-  
+
   config = lib.mkIf cfg.enable (lib.mkMerge [
 
     #=========================================================================
@@ -147,7 +147,7 @@ in {
           gid = 2001;
         };
       };
-      
+
       users.users.${cfg.permissions.serviceUser} = {
         uid = 2000;
         group = "hwc";
@@ -161,7 +161,7 @@ in {
         ncdu        # Disk usage analyzer
         tree        # Directory structure viewer
         lsof        # List open files
-        fuser       # Find processes using files
+        psmisc      # Find processes using files
       ];
     }
 
