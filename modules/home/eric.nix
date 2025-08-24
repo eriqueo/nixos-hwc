@@ -189,7 +189,7 @@ in {
 
     # Create media groups if enabled
     users.groups = lib.mkIf cfg.groups.media {
-      render = { gid = 2002; };  # GPU rendering group
+      render = lib.mkForce { gid = 2002; };  # GPU rendering group
     };
 
     #=========================================================================
