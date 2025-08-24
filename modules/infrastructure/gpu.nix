@@ -46,6 +46,27 @@ in {
       description = "GPU type for hardware acceleration";
     };
     
+    # GPU power management and toggle functionality
+    powerManagement = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable GPU power management features";
+      };
+      
+      smartToggle = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable smart GPU toggle functionality for laptops";
+      };
+      
+      toggleNotifications = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Show desktop notifications when GPU mode changes";
+      };
+    };
+
     nvidia = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -298,5 +319,86 @@ in {
       } else {};
     description = "Container environment variables for GPU access (auto-generated based on GPU type)";
   };
+
+  #============================================================================
+  # GPU POWER MANAGEMENT AND TOGGLE FUNCTIONALITY  
+  #============================================================================
+  
+  # GPU toggle scripts (migrated from waybar.nix for proper domain organization)
+  config.environment.systemPackages = lib.mkIf cfg.powerManagement.smartToggle (with pkgs; [
+    (writeScriptBin "gpu-toggle" ''
+      #!/usr/bin/env bash
+      GPU_MODE_FILE="/tmp/gpu-mode"
+      CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
+      
+      case "$CURRENT_MODE" in
+        "intel")
+          echo "performance" > "$GPU_MODE_FILE"
+          ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+            ${libnotify}/bin/notify-send "GPU Mode" "Switched to Performance Mode ⚡" -i gpu-card
+          ''}
+          ;;
+        "performance")
+          echo "intel" > "$GPU_MODE_FILE"
+          ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+            ${libnotify}/bin/notify-send "GPU Mode" "Switched to Intel Mode 󰢮" -i gpu-card
+          ''}
+          ;;
+        *)
+          echo "intel" > "$GPU_MODE_FILE"
+          ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+            ${libnotify}/bin/notify-send "GPU Mode" "Reset to Intel Mode 󰢮" -i gpu-card  
+          ''}
+          ;;
+      esac
+      
+      # Update UI components if available (generic notification)
+      pkill -SIGUSR1 waybar 2>/dev/null || true  # Legacy waybar support
+      pkill -SIGUSR1 swaybar 2>/dev/null || true  # Future sway support
+    '')
+    
+    (writeScriptBin "gpu-launch" ''
+      #!/usr/bin/env bash
+      if [[ $# -eq 0 ]]; then
+        echo "Usage: gpu-launch <application> [args...]"
+        exit 1
+      fi
+      
+      GPU_MODE_FILE="/tmp/gpu-mode"
+      CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
+      
+      NEXT_NVIDIA_FILE="/tmp/gpu-next-nvidia"
+      if [[ -f "$NEXT_NVIDIA_FILE" ]]; then
+        rm "$NEXT_NVIDIA_FILE"
+        exec ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-offload "$@"
+      fi
+      
+      case "$CURRENT_MODE" in
+        "performance")
+          case "$1" in
+            blender|gimp|inkscape|kdenlive|obs|steam|wine|chromium|firefox|librewolf|godot|krita)
+              exec ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-offload "$@"
+              ;;
+            *)
+              exec "$@"
+              ;;
+          esac
+          ;;
+        "intel"|*)
+          exec "$@"
+          ;;
+      esac
+    '')
+    
+    # Manual dGPU override command
+    (writeScriptBin "gpu-next" ''
+      #!/usr/bin/env bash
+      touch /tmp/gpu-next-nvidia
+      echo "Next application will use NVIDIA GPU"
+      ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+        ${libnotify}/bin/notify-send "GPU Override" "Next app will use NVIDIA dGPU" -i gpu-card
+      ''}
+    '')
+  ]);
 }
 

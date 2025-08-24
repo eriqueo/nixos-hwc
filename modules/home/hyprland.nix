@@ -139,6 +139,32 @@
            bind = $mainMod SHIFT, 4, movetoworkspace, 4
            bind = $mainMod SHIFT, 5, movetoworkspace, 5
 
+           # Universal F-key bindings (normalized by keyd for all keyboards)
+           # F1: Audio mute toggle
+           bind = , XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+           # F2: Volume down
+           bind = , XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+           # F3: Volume up  
+           bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+
+           # F4: Microphone mute toggle
+           bind = , XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+           # F5: Screen brightness down
+           bind = , XF86MonBrightnessDown, exec, brightnessctl set 10%-
+           # F6: Screen brightness up
+           bind = , XF86MonBrightnessUp, exec, brightnessctl set 10%+
+           # F7: Workspace picker (show all workspaces)
+           bind = , XF86TaskPanel, exec, hyprctl dispatch overview:toggle
+           # F8: Bluetooth manager
+           bind = , XF86Bluetooth, exec, blueman-manager
+           # F9: Full screenshot
+           bind = , Print, exec, grim ~/Pictures/Screenshots/screenshot-$(date +%Y%m%d_%H%M%S).png
+           # F10: Area screenshot (lasso-style)
+           bind = , XF86LaunchA, exec, grim -g "$(slurp)" ~/Pictures/Screenshots/area-$(date +%Y%m%d_%H%M%S).png
+           # F11: External monitor position switch
+           bind = , XF86Display, exec, hyprctl dispatch dpms toggle
+           # F12: GPU offload toggle
+           bind = , XF86Launch1, exec, gpu-toggle
+
            # Startup applications
            ${lib.concatMapStringsSep "\n" (app: "exec-once =
      ${app}") cfg.startup}
@@ -155,6 +181,11 @@
            grim
            slurp
            wl-clipboard
-         ];
+          # F-key functionality packages
+          wireplumber    # For wpctl audio control (F1-F4)
+          brightnessctl  # For screen brightness control (F5-F6)
+          blueman        # For bluetooth manager (F8)
+          keyd           # For universal keyboard mapping
+        ];
        };
      }

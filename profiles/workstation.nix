@@ -12,6 +12,7 @@
          ../modules/home/shell.nix
          ../modules/home/productivity.nix
          ../modules/home/login-manager.nix
+         ../modules/home/input.nix  # Universal input device configuration
        ];
 
        # Enable desktop environment
@@ -55,6 +56,15 @@
        # Workstation-specific user environment (extends base profile)
        hwc.home.groups.virtualization = true;  # Add virtualization access for VMs
        
+       # Universal input device configuration
+       hwc.home.input = {
+         enable = true;
+         keyboard = {
+           enable = true;
+           universalFunctionKeys = true;  # Consistent F-keys across all keyboards
+         };
+       };
+
        # Enable CLI tools
        hwc.home = {
          cli = {
@@ -109,6 +119,11 @@
          printing.enable = true;
          virtualization.enable = true;
          samba.enableSketchupShare = true;
+         gpu.powerManagement = {
+           enable = true;
+           smartToggle = true;        # Enable F12 GPU toggle functionality  
+           toggleNotifications = true; # Show notifications when toggling
+         };
        };
 
        # Desktop Services  
