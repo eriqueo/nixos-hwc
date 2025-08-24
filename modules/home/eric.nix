@@ -196,11 +196,11 @@ in {
         if cfg.ssh.useSecrets then {
           # PURE: `source` defers reading the file until activation time.
           source = config.age.secrets.user-ssh-public-key.path;
-          mode = "0600";
+
         } else {
           # PURE: `text` uses a simple string.
           text = cfg.ssh.fallbackKey;
-          mode = "0600";
+
         };
     };
 
