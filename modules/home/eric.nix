@@ -194,10 +194,12 @@ in {
       home.stateVersion = "24.05";
       home.file.".ssh/authorized_keys" =
         if cfg.ssh.useSecrets then {
-            source = toString config.age.secrets.user-ssh-public-key.path;        } else {
+          # Use text with readFile instead of source
+          # This reads the content at build time, avoiding path literal issues
+          text = builtins.readFile config.age.secrets.user-ssh-public-key.path;
+        } else {
           text = cfg.ssh.fallbackKey;
         };
-    };
     #=========================================================================
     # SECURITY INTEGRATION
     #=========================================================================
