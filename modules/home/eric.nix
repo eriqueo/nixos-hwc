@@ -118,19 +118,8 @@ in {
         ++ lib.optionals cfg.groups.virtualization [ "libvirtd" "kvm" ]
         ++ lib.optionals cfg.groups.hardware [ "input" "uucp" "dialout" ];
 
-      # SSH key configuration - use secrets if available, fallback otherwise
-      # Use `keyFiles` to point to the secret file path.
-      # NixOS will read this file during system activation, not during the build.
-      openssh.authorizedKeys.keyFiles =
-        if cfg.ssh.enable && cfg.ssh.useSecrets && config.age.secrets ? user-ssh-public-key
-        then [ config.age.secrets.user-ssh-public-key.path ]
-        else [ ];
-
-      # The fallback key still uses the `keys` option.
-      openssh.authorizedKeys.keys =
-        if cfg.ssh.enable && !cfg.ssh.useSecrets
-        then [ cfg.ssh.fallbackKey ]
-        else [ ];
+      # SSH keys are now managed through Home Manager below
+      # to avoid the keyFiles/readFile incompatibility with agenix
 
       # Initial password - use secrets if available
       initialPassword =
@@ -190,6 +179,25 @@ in {
     # Create media groups if enabled
     users.groups = lib.mkIf cfg.groups.media {
       render = lib.mkForce { gid = 2002; };  # GPU rendering group
+    };
+
+    #=========================================================================
+    # HOME MANAGER CONFIGURATION
+    #=========================================================================
+
+    # SSH key management through Home Manager (pure and compatible with agenix)
+    home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
+      # Create SSH authorized_keys file from agenix secret or fallback
+      home.file.".ssh/authorized_keys" = {
+        text = if cfg.ssh.useSecrets && config.age.secrets ? user-ssh-public-key
+          then "" # Will be populated by agenix at runtime
+          else cfg.ssh.fallbackKey;
+        mode = "0600";
+      } // lib.optionalAttrs (cfg.ssh.useSecrets && config.age.secrets ? user-ssh-public-key) {
+        # When using secrets, source from agenix path instead of text
+        source = config.age.secrets.user-ssh-public-key.path;
+        text = lib.mkForce null; # Clear the text when using source
+      };
     };
 
     #=========================================================================

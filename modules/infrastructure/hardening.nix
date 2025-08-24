@@ -50,17 +50,6 @@ in {
         description = "Allow root SSH";
       };
 
-      authorizedKeys = lib.mkOption {
-        type = lib.types.attrsOf (lib.types.listOf lib.types.str);
-        default = {};
-        description = "SSH authorized keys per user";
-      };
-
-      authorizedKeyFiles = lib.mkOption {
-         type = lib.types.attrsOf (lib.types.listOf lib.types.path);
-         default = {};
-         description = "SSH authorized key files (paths) per user";
-      };
     };
 
     audit = {
@@ -107,19 +96,6 @@ in {
       hwc.networking.ssh.x11Forwarding = lib.mkDefault false;
     }
 
-    {
-      users.users = lib.mkMerge [
-        # This part handles the plain-text keys
-        (lib.mapAttrs' (user: keys: lib.nameValuePair user {
-          openssh.authorizedKeys.keys = keys;
-        }) cfg.ssh.authorizedKeys)
-
-        # This part handles the key file paths purely
-        (lib.mapAttrs' (user: keyFiles: lib.nameValuePair user {
-          openssh.authorizedKeys.keyFiles = keyFiles;
-        }) cfg.ssh.authorizedKeyFiles)
-      ];
-    }
 
     # Fail2ban
     (lib.mkIf cfg.fail2ban.enable {
