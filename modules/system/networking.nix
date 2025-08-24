@@ -306,7 +306,7 @@ in {
     environment.systemPackages = with pkgs; [
       # Network diagnostic tools
       wget curl
-      dig nslookup
+      dnsutils
       traceroute
       nettools
       iproute2
