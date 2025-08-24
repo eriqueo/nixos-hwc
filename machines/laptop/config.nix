@@ -22,7 +22,7 @@ boot.loader.grub.enable = false;
   ##  SYSTEM IDENTITY         ##
   ##############################
   networking.hostName = "hwc-laptop";
-hwc.services.vpn.tailscale.enable = false;
+  hwc.services.vpn.tailscale.enable = false;
   ##############################
   ##  LAPTOP HARDWARE         ##
   ##############################
@@ -33,7 +33,7 @@ hwc.services.vpn.tailscale.enable = false;
   ##  FEATURE TOGGLES (HOST OVERRIDES)      ##
   ##  Uncomment/edit to override profiles.  ##
   ############################################
-  
+
   # GPU Configuration
   hwc.gpu.type = "nvidia";
   hwc.gpu.nvidia = {
@@ -51,6 +51,13 @@ hwc.services.vpn.tailscale.enable = false;
      browser.chromium  = false;
      multimedia.enable = true;
      productivity.enable = true;
+   };
+   hwc.security.hardening = {
+       enable = true; # Ensure the hardening module is active
+       ssh.authorizedKeyFiles.eric = [
+         # This provides the PATH to the secret, which is pure and correct.
+         config.age.secrets.user-ssh-public-key.path
+       ];
    };
 
   ##############################
