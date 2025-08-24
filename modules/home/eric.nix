@@ -185,20 +185,33 @@ in {
     # HOME MANAGER CONFIGURATION
     #=========================================================================
 
-    # SSH key management through Home Manager (pure and compatible with agenix)
-    home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
-      # Create SSH authorized_keys file from agenix secret or fallback
-      home.file.".ssh/authorized_keys" = {
-        text = if cfg.ssh.useSecrets && config.age.secrets ? user-ssh-public-key
-          then "" # Will be populated by agenix at runtime
-          else cfg.ssh.fallbackKey;
-        mode = "0600";
-      } // lib.optionalAttrs (cfg.ssh.useSecrets && config.age.secrets ? user-ssh-public-key) {
-        # When using secrets, source from agenix path instead of text
-        source = config.age.secrets.user-ssh-public-key.path;
-        text = lib.mkForce null; # Clear the text when using source
-      };
-    };
+  # In modules/home/eric.nix
+
+        # SSH key management through Home Manager (pure and compatible with agenix)
+        home-manager.users.${cfg.user.name} = lib.mkIf cfg.ssh.enable {
+          home.stateVersion = "24.05";
+
+          # Create the .ssh directory with correct permissions first.
+          # This is crucial for the authorized_keys file to be created inside it.
+          home.file.".ssh" = {
+            enable = true;
+            mode = "0700";
+          };
+
+          # Create SSH authorized_keys file from agenix secret OR fallback text.
+          # This `if/then/else` structure is pure and easy to read.
+          home.file.".ssh/authorized_keys" =
+            if cfg.ssh.useSecrets then {
+              # PURE: `source` defers reading the file until activation time.
+              source = config.age.secrets.user-ssh-public-key.path;
+              mode = "0600";
+            } else {
+              # PURE: `text` uses a simple string.
+              text = cfg.ssh.fallbackKey;
+              mode = "0600";
+            };
+        };
+
 
     #=========================================================================
     # SECURITY INTEGRATION
