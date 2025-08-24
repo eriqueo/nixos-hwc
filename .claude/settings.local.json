@@ -8,6 +8,7 @@
       "Bash(sops:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "defaultMode": "acceptEdits"
   }
 }
