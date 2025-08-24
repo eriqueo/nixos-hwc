@@ -38,7 +38,7 @@
         inherit system pkgs;
         specialArgs = { inherit inputs; };
         modules = [
-          ./machines/hwc-server.nix
+          ./machines/server/config.nix
           agenix.nixosModules.default
         ];
       };

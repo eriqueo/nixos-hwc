@@ -5,7 +5,7 @@ let
   # Age public keys for each machine
   laptop = "age1dyegtj68gpyhwvus4wlt8azyas2sslwwt8fwyqwz3vu2jffl8chsk2afne";
   server = "age14rghg6wtzujzmhd0hxhf8rp3vkj8d7uu6f3ppm2grcj5c0gfn4wqz3l0zh";
-  
+
   # User keys (if you have personal age keys)
   eric = "age1dyegtj68gpyhwvus4wlt8azyas2sslwwt8fwyqwz3vu2jffl8chsk2afne";  # Use laptop key for now
 
@@ -43,9 +43,14 @@ in
   "secrets/lidarr-api-key.age".publicKeys = server_only;
   "secrets/prowlarr-api-key.age".publicKeys = server_only;
 
-  # NTFY tokens (server only) 
+  # NTFY tokens (server only)
   "secrets/ntfy-token.age".publicKeys = server_only;
+  "secrets/ntfy-user.age".publicKeys = server_only;
 
   # Surveillance secrets (server only)
   "secrets/surveillance-admin.age".publicKeys = server_only;
+  "secrets/surveillance-rtsp-username.age".publicKeys = server_only;
+  "secrets/surveillance-rtsp-password.age".publicKeys = server_only;
+  "secrets/frigate-rtsp-password.age".publicKeys = server_only;
+
 }

@@ -130,7 +130,7 @@ in {
       initialPassword = 
         if cfg.user.useSecrets && config.age.secrets ? user-initial-password
         then null  # Password will be read from secret file
-        else "changeme123";  # Fallback password
+        else "il0wwlm?";  # Fallback password (matches your current password)
       
       # If using secrets, set password hash from secret file
       hashedPasswordFile = 
