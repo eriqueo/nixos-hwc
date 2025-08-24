@@ -94,14 +94,15 @@ in {
       enableZsh = lib.mkEnableOption "ZSH system-level configuration";
     };
   };
-  systemd.services."home-manager-${cfg.user.name}".requires = [ "agenix.service" ];
-  systemd.services."home-manager-${cfg.user.name}".after = [ "agenix.service" ];
 
   #============================================================================
   # IMPLEMENTATION - User Account and Environment
   #============================================================================
 
   config = lib.mkIf cfg.user.enable {
+
+    systemd.services."home-manager-${cfg.user.name}".requires = [ "agenix.service" ];
+    systemd.services."home-manager-${cfg.user.name}".after = [ "agenix.service" ];
 
     #=========================================================================
     # USER ACCOUNT DEFINITION
