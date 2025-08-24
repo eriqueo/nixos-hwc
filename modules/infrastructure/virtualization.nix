@@ -94,6 +94,9 @@ in {
 
       # Container runtime (separate from VMs)
       (lib.mkIf (cfg.containers == "podman") {
+        # Disable Docker when using Podman with Docker compatibility
+        docker.enable = false;
+        
         podman = {
           enable = true;
           dockerCompat = true;
