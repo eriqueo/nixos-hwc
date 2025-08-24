@@ -6,7 +6,7 @@
     ../modules/services/vpn.nix
   ];
 
-  hwc.security = {
+  hwc.security.hardening = {
     enable = true;
 
     firewall = {
