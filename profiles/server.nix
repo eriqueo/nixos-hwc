@@ -167,17 +167,15 @@
   
   # Enhanced container configuration for server workloads
   virtualisation = {
-    # Base profile enables docker, add server-specific config
-    docker = {
-      storageDriver = "overlay2";
-      extraOptions = "--log-driver=journald --log-opt max-size=10m --log-opt max-file=3";
-    };
+    # Disable Docker from base profile since we want Podman
+    docker.enable = false;
     
     # Enable Podman for rootless containers
     podman = {
       enable = true;
       dockerCompat = true;
       defaultNetwork.settings.dns_enabled = true;
+      extraOptions = "--log-driver=journald --log-opt max-size=10m --log-opt max-file=3";
     };
     
     oci-containers.backend = "podman";  # Use Podman for system containers
