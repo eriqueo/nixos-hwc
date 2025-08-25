@@ -164,9 +164,7 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # All Home Manager options go inside this block
-    home-manager.users.eric = {
-      home.packages = with pkgs; [
+    home.packages = with pkgs; [
       # Core Hyprland tools
       wofi
       hyprshot
@@ -190,8 +188,8 @@ in {
       jq
     ];
 
-      # Hyprland configuration
-      wayland.windowManager.hyprland = {
+    # Hyprland configuration
+    wayland.windowManager.hyprland = {
       enable = true;
 
       settings = {
@@ -500,13 +498,12 @@ in {
       };
     };
 
-      # Hyprpaper configuration
-      home.file.".config/hypr/hyprpaper.conf".text = ''
+    # Hyprpaper configuration
+    home.file.".config/hypr/hyprpaper.conf".text = ''
       preload = ${wallpaperPath}
       wallpaper = eDP-1,${wallpaperPath}
       wallpaper = DP-1,${wallpaperPath}
       splash = false
     '';
-    };
   };
 }
