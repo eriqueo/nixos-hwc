@@ -32,37 +32,37 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  
+
   options.hwc.home.loginManager = {
     enable = lib.mkEnableOption "Greetd login manager with TUI greeter";
-    
+
     # Default session settings
     defaultUser = lib.mkOption {
       type = lib.types.str;
       default = "eric";
       description = "Default user for initial session";
     };
-    
+
     defaultCommand = lib.mkOption {
       type = lib.types.str;
       default = "Hyprland";
       description = "Default window manager/desktop environment command";
     };
-    
+
     # Auto-login settings
     autoLogin = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Enable automatic login for default user";
     };
-    
+
     # Greeter settings
     showTime = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Show time in TUI greeter";
     };
-    
+
     # Additional greeter options
     greeterExtraArgs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -71,11 +71,11 @@ in {
       example = [ "--asterisks" "--remember" "--remember-user-session" ];
     };
   };
-  
+
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
-  
+
   config = lib.mkIf cfg.enable {
     # Validation: Check default user exists
     assertions = [
@@ -84,7 +84,7 @@ in {
         message = "Login manager default user '${cfg.defaultUser}' does not exist";
       }
     ];
-    
+
     # Greetd service configuration
     services.greetd = {
       enable = true;
@@ -98,7 +98,7 @@ in {
             allArgs = lib.concatStringsSep " " (lib.filter (s: s != "") [ timeArg extraArgs ]);
           in "${pkgs.tuigreet}/bin/tuigreet ${allArgs} --cmd ${cfg.defaultCommand}";
         };
-        
+
         # Auto-login session (if enabled)
       } // lib.optionalAttrs cfg.autoLogin {
         initial_session = {
@@ -107,15 +107,15 @@ in {
         };
       };
     };
-    
+
     # Install greeter package
     environment.systemPackages = with pkgs; [
       tuigreet  # TUI greeter for greetd
     ];
-    
+
     # Disable other display managers
-    services.xserver.displayManager.gdm.enable = lib.mkForce false;
-    services.xserver.displayManager.lightdm.enable = lib.mkForce false;
-    services.xserver.displayManager.sddm.enable = lib.mkForce false;
+    services.displayManager.gdm.enable = lib.mkForce false;
+    services.displayManager.lightdm.enable = lib.mkForce false;
+    services.displayManager.sddm.enable = lib.mkForce false;
   };
 }
