@@ -8,7 +8,7 @@
 #   - home-manager.nixosModules.home-manager (enabled at flake/machine)
 #
 # USED BY (Downstream):
-#   - machines/*/config.nix (e.g., hwc.home.shell.enable = true)
+#   - machines/*/config.nix (e.g., hwc.home.shell.* toggles)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/workstation.nix (or any profile that wants user shell config)
@@ -18,6 +18,18 @@
 #   hwc.home.shell.packages = with pkgs; [ ripgrep fd zoxide eza ];
 #   hwc.home.shell.sessionVariables = { EDITOR = "nvim"; };
 #   hwc.home.shell.aliases = { ll = "eza -lah"; };
+#   hwc.home.shell.zsh = {
+#     enable = true;
+#     starship = true;
+#     plugins.autosuggestions = true;
+#     plugins.syntaxHighlighting = true;
+#   };
+#   hwc.home.shell.tmux = {
+#     enable = true;
+#     extraConfig = ''
+#       set -g mouse on
+#     '';
+#   };
 
 { config, lib, pkgs, ... }:
 
@@ -50,10 +62,51 @@ in
       description = "Shell aliases (mapped to programs.zsh.shellAliases).";
     };
 
-    zshExtra = lib.mkOption {
-      type = t.lines;
-      default = "";
-      description = "Additional Zsh init lines (programs.zsh.initExtra).";
+    zsh = {
+      enable = lib.mkOption {
+        type = t.bool;
+        default = true;
+        description = "Enable Zsh via Home-Manager.";
+      };
+
+      starship = lib.mkOption {
+        type = t.bool;
+        default = true;
+        description = "Enable Starship prompt.";
+      };
+
+      plugins = {
+        autosuggestions = lib.mkOption {
+          type = t.bool;
+          default = true;
+          description = "Enable zsh-autosuggestions.";
+        };
+        syntaxHighlighting = lib.mkOption {
+          type = t.bool;
+          default = true;
+          description = "Enable zsh-syntax-highlighting.";
+        };
+      };
+
+      initExtra = lib.mkOption {
+        type = t.lines;
+        default = "";
+        description = "Additional Zsh init lines (programs.zsh.initExtra).";
+      };
+    };
+
+    tmux = {
+      enable = lib.mkOption {
+        type = t.bool;
+        default = false;
+        description = "Enable tmux via Home-Manager.";
+      };
+
+      extraConfig = lib.mkOption {
+        type = t.lines;
+        default = "";
+        description = "Extra tmux.conf content (programs.tmux.extraConfig).";
+      };
     };
   };
 
@@ -70,20 +123,20 @@ in
       home.packages         = cfg.packages;
       home.sessionVariables = cfg.sessionVariables;
 
-      # --- HM: shell & helpers ------------------------------------------------
+      # --- HM: Zsh & prompt ---------------------------------------------------
       programs.zsh = {
-        enable = true;
-        autosuggestion.enable     = true;
-        syntaxHighlighting.enable = true;
+        enable = cfg.zsh.enable;
+        autosuggestion.enable     = cfg.zsh.plugins.autosuggestions;
+        syntaxHighlighting.enable = cfg.zsh.plugins.syntaxHighlighting;
         history = {
           size = 5000;
           save = 5000;
         };
         shellAliases = cfg.aliases;
-        initExtra    = cfg.zshExtra;
+        initExtra    = cfg.zsh.initExtra;
       };
 
-      programs.starship.enable = true;
+      programs.starship.enable = cfg.zsh.starship;
       programs.fzf.enable      = true;
       programs.zoxide.enable   = true;
 
@@ -92,7 +145,16 @@ in
         nix-direnv.enable = true;
       };
 
-      # HM housekeeping (set elsewhere globally if you prefer)
+      # --- HM: tmux -----------------------------------------------------------
+      programs.tmux = {
+        enable      = cfg.tmux.enable;
+        sensible    = true;
+        clock24     = true;
+        mouse       = true;
+        extraConfig = cfg.tmux.extraConfig;
+      };
+
+      # HM housekeeping (set globally elsewhere if desired)
       home.stateVersion = lib.mkDefault "24.05";
     };
   };
