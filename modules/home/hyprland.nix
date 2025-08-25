@@ -15,10 +15,12 @@
 #
 # USAGE:
 #   hwc.desktop.hyprland.enable = true;
-#   # Optional (NixOS-side knobs):
+#   hwc.desktop.hyprland.keybinds.modifier = "SUPER";
+#   hwc.desktop.hyprland.keybinds.extra = [ "$mod, R, exec, wofi --show drun" ];
+#   # Optional:
 #   #   hwc.desktop.hyprland.monitor = "eDP-1,1920x1200@60,0x0,1";
-#   #   hwc.desktop.hyprland.settings = { "$mod" = "SUPER"; };
-#   #   hwc.desktop.hyprland.extraConfig = '' # raw Hyprland lines ... '';
+#   #   hwc.desktop.hyprland.settings = { ... };
+#   #   hwc.desktop.hyprland.extraConfig = '' ... '';
 
 { config, lib, pkgs, ... }:
 
@@ -33,25 +35,37 @@ in
   options.hwc.desktop.hyprland = {
     enable = lib.mkEnableOption "Hyprland Wayland compositor";
 
-    # One common monitor line; if you need more, pass a list via settings.monitor instead.
     monitor = lib.mkOption {
       type = t.nullOr t.str;
       default = null;
       description = "Hyprland monitor directive (e.g. \"eDP-1,1920x1200@60,0x0,1\").";
     };
 
-    # High-level map merged into HM settings (safe place for simple tuning)
     settings = lib.mkOption {
       type = t.attrsOf t.anything;
       default = {};
       description = "Additional Hyprland settings (merged with defaults).";
     };
 
-    # Raw Hyprland text appended after structured settings
     extraConfig = lib.mkOption {
       type = t.nullOr t.lines;
       default = null;
       description = "Extra Hyprland config as literal text.";
+    };
+
+    # ---- NEW: keybinds shim to match profiles/workstation.nix ----------------
+    keybinds = {
+      modifier = lib.mkOption {
+        type = t.str;
+        default = "SUPER";
+        description = "Modifier symbol assigned to $mod in Hyprland (e.g., SUPER, ALT).";
+      };
+
+      extra = lib.mkOption {
+        type = t.listOf t.str;
+        default = [];
+        description = "Additional Hyprland 'bind' entries (strings) to append.";
+      };
     };
   };
 
@@ -60,68 +74,46 @@ in
   #============================================================================
   config = lib.mkIf cfg.enable {
 
-    # Keep HM using the same pkgs as the system.
     home-manager.useGlobalPkgs = lib.mkDefault true;
 
     home-manager.users.eric = { ... }: {
-
-      # Useful desktop tooling for Hyprland sessions
       home.packages = with pkgs; [
-        hyprpaper
-        hypridle
-        hyprlock
-        wofi
-        kitty
-        grim
-        slurp
-        wl-clipboard
-        brightnessctl
-        playerctl
-        pamixer
-        swaynotificationcenter
+        hyprpaper hypridle hyprlock wofi kitty grim slurp wl-clipboard
+        brightnessctl playerctl pamixer swaynotificationcenter
       ];
 
-      # Main Hyprland configuration (correct HM key)
       wayland.windowManager.hyprland = {
         enable  = true;
         package = pkgs.hyprland;
 
-        # Structured settings (safe defaults + your NixOS-side overrides)
         settings =
           let
+            baseBinds = [
+              "$mod, RETURN, exec, kitty"
+              "$mod, Q, killactive"
+              "$mod, F, togglefloating"
+              "$mod, SPACE, exec, wofi --show drun"
+              "$mod SHIFT, E, exit"
+              "$mod, H, movefocus, l"
+              "$mod, J, movefocus, d"
+              "$mod, K, movefocus, u"
+              "$mod, L, movefocus, r"
+              "$mod CTRL, H, resizeactive, -20 0"
+              "$mod CTRL, L, resizeactive, 20 0"
+            ];
             base = {
-              # Monitor: accept a single line via NixOS knob if provided
               monitor = lib.mkIf (cfg.monitor != null) [ cfg.monitor ];
 
-              exec-once = [
-                "swaync"         # notifications
-                "hyprpaper"      # wallpaper
-                "waybar"         # status bar
-              ];
+              exec-once = [ "swaync" "hyprpaper" "waybar" ];
 
-              "$mod" = "SUPER";
+              # Use the NixOS-provided modifier
+              "$mod" = cfg.keybinds.modifier;
 
-              bind = [
-                "$mod, RETURN, exec, kitty"
-                "$mod, Q, killactive"
-                "$mod, F, togglefloating"
-                "$mod, SPACE, exec, wofi --show drun"
-                "$mod SHIFT, E, exit"
-                "$mod, H, movefocus, l"
-                "$mod, J, movefocus, d"
-                "$mod, K, movefocus, u"
-                "$mod, L, movefocus, r"
-                "$mod CTRL, H, resizeactive, -20 0"
-                "$mod CTRL, L, resizeactive, 20 0"
-              ];
+              bind = baseBinds ++ cfg.keybinds.extra;
 
-              animations = {
-                enabled = true;
-              };
+              animations.enabled = true;
 
-              xwayland = {
-                force_zero_scaling = true;
-              };
+              xwayland.force_zero_scaling = true;
 
               general = {
                 gaps_in  = 6;
@@ -141,30 +133,22 @@ in
 
               decoration = {
                 rounding = 8;
-                blur = {
-                  enabled = true;
-                  size = 6;
-                  passes = 2;
-                };
+                blur = { enabled = true; size = 6; passes = 2; };
               };
             };
           in
             base // cfg.settings;
 
-        # Raw lines appended at the end if provided
         extraConfig = lib.mkIf (cfg.extraConfig != null) cfg.extraConfig;
       };
 
-      # XDG portal wiring (can also be done system-wide; harmless to keep here)
       xdg = {
         enable = true;
-        portal = {
-          enable = true;
-          extraPortals = [
-            pkgs.xdg-desktop-portal-gtk
-            pkgs.xdg-desktop-portal-hyprland
-          ];
-        };
+        portal.enable = true;
+        portal.extraPortals = [
+          pkgs.xdg-desktop-portal-gtk
+          pkgs.xdg-desktop-portal-hyprland
+        ];
       };
     };
   };
