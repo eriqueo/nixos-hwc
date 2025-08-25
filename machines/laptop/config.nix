@@ -52,7 +52,7 @@
   hwc.services.ollama = {
     enable = true;
     enableGpu = true; # Tell the Ollama service to consume the GPU capability
-    models = [ "llama3:8b", "codellama:13b", "phi3:medium" ]; # Machine-specific model list
+    models = [ "llama3:8b" "codellama:13b" "phi3:medium" ]; # Machine-specific model list
   };
 
   # --- Workstation Profile Configuration (from profiles/workstation.nix) ---
