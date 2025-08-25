@@ -156,10 +156,11 @@
        # HOME-MANAGER SYSTEM-LEVEL CONFIGURATION
        # This is the root fix. It activates Home Manager for the specified user.
        #============================================================================
+       home-manager.useGlobalPkgs = true;
+
        home-manager.users.eric = {
          # Import all the user-specific modules that contain
          # the actual Home Manager configuration.
-         home-manager.useGlobalPkgs = true;
          # You can set user-wide settings here if needed, for example:
          home.stateVersion = "24.05";
        };
