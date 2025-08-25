@@ -4,6 +4,7 @@
          ../modules/infrastructure/printing.nix
          ../modules/infrastructure/virtualization.nix
          ../modules/infrastructure/samba.nix
+         ../modules/system/desktop-packages.nix  # Desktop system packages
          ../modules/home/hyprland.nix
          ../modules/home/waybar.nix
          ../modules/home/apps.nix
@@ -132,6 +133,9 @@
 
        # Desktop Services
        hwc.home.loginManager.enable = true;
+
+       # Enable desktop system packages
+       hwc.system.desktop.enable = true;
 
        # Workstation filesystem structure
        hwc.filesystem.userDirectories.enable = true;  # PARA structure for productivity

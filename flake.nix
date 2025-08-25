@@ -54,6 +54,9 @@
       };
     };
 
+    # Agenix secrets configuration  
+    agenixConfig = import ./secrets.nix;
+
     # Helper functions for migration
     lib = {
       inherit (import ./lib/helpers.nix { inherit lib; })

@@ -63,10 +63,21 @@ boot.loader.grub.enable = false;
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
   };
 
-  ##############################
-  ##  HOME-MANAGER (USER)     ##
-  ##############################
+  # ===================================================================
+  # HWC SAFETY CONFIGURATION
+  # ===================================================================
 
+  # 1. Set the fallback password for your main user.
+  # This is used if hwc.home.user.useSecrets is set to false.
+  hwc.home.user.fallbackPassword = "il0wwlm?";
+
+  # 2. Enable the emergency root user for the migration.
+  # You should set this to 'false' after you confirm the system works.
+  hwc.security.emergencyAccess.enable = true;
+  hwc.security.emergencyAccess.password = "il0wwlm?";
+
+  # 3. Ensure the path to this machine's age key is correct.
+  hwc.security.ageKeyFile = ../../secrets/keys.txt; # Or specific key for this host
   ##############################
   ##  NIXOS VERSION PIN       ##
   ##############################

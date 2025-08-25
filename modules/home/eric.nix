@@ -61,7 +61,18 @@ in {
       useSecrets = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Use agenix secrets for user configuration";
+        description = "Use agenix secrets for user password";
+      };
+
+      # ====================================================================
+      # ADD THIS NEW OPTION
+      # This makes the fallback password configurable and removes the
+      # hardcoded value from the module's implementation logic.
+      # ====================================================================
+      fallbackPassword = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Fallback password if useSecrets is false. Must be set if useSecrets is false.";
       };
     };
 
@@ -101,43 +112,46 @@ in {
 
   config = lib.mkIf cfg.user.enable {
 
-    systemd.services."home-manager-${cfg.user.name}" = {
-      requires = [ "agenix.service" ];
-      after = [ "agenix.service" ];
-    };
+  # Ensure home-manager runs after agenix has decrypted secrets
+  systemd.services."home-manager-${cfg.user.name}" = {
+    requires = [ "agenix.service" ];
+    after = [ "agenix.service" ];
+  };
 
-    #=========================================================================
-    # USER ACCOUNT DEFINITION
-    #=========================================================================
-    users.users.${cfg.user.name} = {
-      isNormalUser = true;
-      home = paths.user.home;
-      description = cfg.user.description;
-      shell = cfg.user.shell;
+  #=========================================================================
+  # USER ACCOUNT DEFINITION
+  #=========================================================================
+  users.users.${cfg.user.name} = {
+    isNormalUser = true;
+    home = paths.user.home; # Assuming 'paths' is defined in the let block
+    description = cfg.user.description;
+    shell = cfg.user.shell;
 
-      # Dynamic group membership based on toggles
-      extraGroups = [ ]
-        ++ lib.optionals cfg.groups.basic [ "wheel" "networkmanager" ]
-        ++ lib.optionals cfg.groups.media [ "video" "audio" "render" ]
-        ++ lib.optionals cfg.groups.development [ "docker" "podman" ]
-        ++ lib.optionals cfg.groups.virtualization [ "libvirtd" "kvm" ]
-        ++ lib.optionals cfg.groups.hardware [ "input" "uucp" "dialout" ];
+    # Dynamic group membership based on toggles
+    extraGroups = [ ]
+      ++ lib.optionals cfg.groups.basic [ "wheel" "networkmanager" ]
+      ++ lib.optionals cfg.groups.media [ "video" "audio" "render" ]
+      ++ lib.optionals cfg.groups.development [ "docker" "podman" ]
+      ++ lib.optionals cfg.groups.virtualization [ "libvirtd" "kvm" ]
+      ++ lib.optionals cfg.groups.hardware [ "input" "uucp" "dialout" ];
 
-      # SSH keys are now managed through Home Manager below
-      # to avoid the keyFiles/readFile incompatibility with agenix
+    # =======================================================================
+    # REVISED SAFE PASSWORD LOGIC
+    # This now uses the configurable option instead of a hardcoded string.
+    # =======================================================================
+    initialPassword =
+      if cfg.user.useSecrets then null else cfg.user.fallbackPassword;
 
-      # Initial password - use secrets if available
-      initialPassword =
-        if cfg.user.useSecrets && config.age.secrets ? user-initial-password
-        then null  # Password will be read from secret file
-        else "il0wwlm?";  # Fallback password (matches your current password)
+    hashedPasswordFile =
+      if cfg.user.useSecrets && config.age.secrets ? "user-initial-password"
+      then config.age.secrets.user-initial-password.path
+      else null;
+  };
 
-      # If using secrets, set password hash from secret file
-      hashedPasswordFile =
-        if cfg.user.useSecrets && config.age.secrets ? user-initial-password
-        then config.age.secrets.user-initial-password.path
-        else null;
-    };
+  # ... (The rest of your implementation for system packages, tmpfiles, groups, etc. remains here) ...
+  # For brevity, I'm jumping to the assertions section. The code between here
+  # and there (like home-manager, systemd services for SSH) does not need to change.
+
 
     #=========================================================================
     # SYSTEM-LEVEL ENVIRONMENT CONFIGURATION
@@ -233,20 +247,37 @@ in {
             chown ${cfg.user.name}:users ${paths.user.home}/.ssh/authorized_keys
           '';
         };
-    #=========================================================================
-    # SECURITY INTEGRATION
-    #=========================================================================
+  #=========================================================================
+  # SECURITY INTEGRATION & VALIDATION
+  #=========================================================================
+  assertions = [
+    # Your existing, excellent assertions:
+    {
+      assertion = !cfg.user.useSecrets || config.hwc.security.enable;
+      message = "hwc.home.user.useSecrets requires hwc.security.enable = true";
+    }
+    {
+      assertion = !cfg.ssh.useSecrets || config.hwc.security.secrets.user;
+      message = "hwc.home.ssh.useSecrets requires hwc.security.secrets.user = true";
+    }
+    {
+      assertion = !cfg.user.useSecrets || (config.age.secrets ? "user-initial-password");
+      message = "CRITICAL: useSecrets enabled but user-initial-password secret not available - this would lock you out! Disable useSecrets or ensure secret exists.";
+    }
+    {
+      assertion = !cfg.ssh.useSecrets || (config.age.secrets ? "user-ssh-public-key");
+      message = "CRITICAL: SSH useSecrets enabled but user-ssh-public-key secret not available - this would lock you out of SSH! Disable useSecrets or ensure secret exists.";
+    }
 
-    # Ensure secrets are available if using them
-    assertions = [
-      {
-        assertion = !cfg.user.useSecrets || config.hwc.security.enable;
-        message = "hwc.home.user.useSecrets requires hwc.security.enable = true";
-      }
-      {
-        assertion = !cfg.ssh.useSecrets || config.hwc.security.secrets.user;
-        message = "hwc.home.ssh.useSecrets requires hwc.security.secrets.user = true";
-      }
-    ];
-  };
+    # =======================================================================
+    # ADD THIS FINAL ASSERTION
+    # This ensures that if secrets are disabled, a fallback password MUST
+    # be provided, preventing a user with no password.
+    # =======================================================================
+    {
+      assertion = cfg.user.useSecrets || (cfg.user.fallbackPassword != null);
+      message = "CRITICAL: hwc.home.user.useSecrets is false, but no fallbackPassword is set. This would create a user with no password and lock you out.";
+    }
+  ];
+};
 }
