@@ -45,7 +45,7 @@
          };
 
         waybar.scripts.enable = true;
-        };
+
 
          apps = {
            enable = true;
