@@ -41,21 +41,15 @@ in
 
         modules-left   = [ "hyprland/workspaces" "hyprland/submap" ];
         modules-center = [ "hyprland/window" "clock" ];
-        modules-right  = [
-          (lib.mkIf cfg.modules.showGpuStatus    "custom/gpu")
-          "custom/disk"
-          "idle_inhibitor"
-          "mpd"
-          "pulseaudio"
-          (lib.mkIf cfg.modules.showNetwork      "custom/network")
-          (lib.mkIf cfg.modules.showSystemMonitor "memory")
-          (lib.mkIf cfg.modules.showSystemMonitor "cpu")
-          "temperature"
-          (lib.mkIf cfg.modules.showBattery      "custom/battery")
-          "tray"
-          "custom/notification"
-          "custom/power"
-        ] |> builtins.filter (x: x != null);
+        modules-right =
+          (lib.optional  cfg.modules.showGpuStatus     "custom/gpu")
+          ++ [ "custom/disk" "idle_inhibitor" "mpd" "pulseaudio" ]
+          ++ (lib.optional  cfg.modules.showNetwork     "custom/network")
+          ++ (lib.optionals cfg.modules.showSystemMonitor [ "memory" "cpu" ])
+          ++ [ "temperature" ]
+          ++ (lib.optional  cfg.modules.showBattery     "custom/battery")
+          ++ [ "tray" "custom/notification" "custom/power" ];
+
 
         "hyprland/workspaces" = lib.mkIf cfg.modules.showWorkspaces {
           disable-scroll = true;
