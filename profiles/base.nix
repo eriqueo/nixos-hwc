@@ -88,10 +88,10 @@
   #============================================================================
   # CONTAINERS (Orchestration)
   #============================================================================
-  virtualisation = {
-    docker.enable = true;
-    oci-containers.backend = "docker";
-  };
+ # virtualisation = {
+ #   docker.enable = true;
+ #   oci-containers.backend = "docker";
+ # };
 
   #============================================================================
   # BASE TOOLING - Editor, shell tools, etc. (ergonomics)
