@@ -53,6 +53,14 @@ in
       description = "Extra Hyprland config as literal text.";
     };
 
+    # Nvidia-specific switch used by profiles/workstation.nix
+    nvidia = lib.mkOption {
+      type = t.bool;
+      default = false;
+      description = "Enable Nvidia-specific Hyprland env/workarounds for Wayland sessions.";
+    };
+
+
     # ---- NEW: keybinds shim to match profiles/workstation.nix ----------------
     keybinds = {
       modifier = lib.mkOption {
@@ -86,58 +94,66 @@ in
         enable  = true;
         package = pkgs.hyprland;
 
-        settings =
-          let
-            baseBinds = [
-              "$mod, RETURN, exec, kitty"
-              "$mod, Q, killactive"
-              "$mod, F, togglefloating"
-              "$mod, SPACE, exec, wofi --show drun"
-              "$mod SHIFT, E, exit"
-              "$mod, H, movefocus, l"
-              "$mod, J, movefocus, d"
-              "$mod, K, movefocus, u"
-              "$mod, L, movefocus, r"
-              "$mod CTRL, H, resizeactive, -20 0"
-              "$mod CTRL, L, resizeactive, 20 0"
-            ];
-            base = {
-              monitor = lib.mkIf (cfg.monitor != null) [ cfg.monitor ];
+       settings =
+              let
+                baseBinds = [
+                  "$mod, RETURN, exec, kitty"
+                  "$mod, Q, killactive"
+                  "$mod, F, togglefloating"
+                  "$mod, SPACE, exec, wofi --show drun"
+                  "$mod SHIFT, E, exit"
+                  "$mod, H, movefocus, l"
+                  "$mod, J, movefocus, d"
+                  "$mod, K, movefocus, u"
+                  "$mod, L, movefocus, r"
+                  "$mod CTRL, H, resizeactive, -20 0"
+                  "$mod CTRL, L, resizeactive, 20 0"
+                ];
 
-              exec-once = [ "swaync" "hyprpaper" "waybar" ];
+                base = {
+                  monitor = lib.mkIf (cfg.monitor != null) [ cfg.monitor ];
+                  exec-once = [ "swaync" "hyprpaper" "waybar" ];
 
-              # Use the NixOS-provided modifier
-              "$mod" = cfg.keybinds.modifier;
+                  "$mod" = cfg.keybinds.modifier;
+                  bind   = baseBinds ++ cfg.keybinds.extra;
 
-              bind = baseBinds ++ cfg.keybinds.extra;
+                  animations.enabled = true;
+                  xwayland.force_zero_scaling = true;
 
-              animations.enabled = true;
+                  general = {
+                    gaps_in  = 6;
+                    gaps_out = 12;
+                    border_size = 2;
+                    allow_tearing = false;
+                  };
 
-              xwayland.force_zero_scaling = true;
+                  input = {
+                    kb_layout = "us";
+                    follow_mouse = 1;
+                    touchpad = {
+                      natural_scroll = true;
+                      tap            = true;
+                    };
+                  };
 
-              general = {
-                gaps_in  = 6;
-                gaps_out = 12;
-                border_size = 2;
-                allow_tearing = false;
-              };
-
-              input = {
-                kb_layout = "us";
-                follow_mouse = 1;
-                touchpad = {
-                  natural_scroll = true;
-                  tap            = true;
+                  decoration = {
+                    rounding = 8;
+                    blur = { enabled = true; size = 6; passes = 2; };
+                  };
                 };
-              };
 
-              decoration = {
-                rounding = 8;
-                blur = { enabled = true; size = 6; passes = 2; };
-              };
-            };
-          in
-            base // cfg.settings;
+                # Extra env tweaks that help Nvidia on Wayland/Hyprland
+                nvidiaExtra = lib.optionalAttrs cfg.nvidia {
+                  # Hyprland's HM module expects a list of "VAR,VALUE" entries
+                  env = [
+                    "LIBVA_DRIVER_NAME,nvidia"
+                    "GBM_BACKENDS_PATH,/run/opengl-driver/lib/gbm"
+                    "WLR_NO_HARDWARE_CURSORS,1"
+                  ];
+                };
+              in
+                base // nvidiaExtra // cfg.settings;
+
 
         extraConfig = lib.mkIf (cfg.extraConfig != null) cfg.extraConfig;
       };
