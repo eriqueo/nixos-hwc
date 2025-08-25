@@ -5,7 +5,7 @@
   # Import the official modules here, unconditionally.
   # This makes the `hardware.nvidia.*` and `hardware.graphics.*` options
   # available to all modules imported by this profile.
-     nixos-hardware-modules.nvidia
+    nixos-hardware-modules.nvidia
     nixos-hardware-modules.intel
     ../modules/system/paths.nix
     ../modules/system/filesystem.nix

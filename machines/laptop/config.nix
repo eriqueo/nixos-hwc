@@ -1,5 +1,5 @@
 # In: machines/laptop/config.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixos-hardware-modules, ... }:
 
 {
   ##############################################################################
