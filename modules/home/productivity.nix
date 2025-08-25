@@ -84,8 +84,14 @@ in
 
       # HM: browsers / mail
       programs.firefox.enable    = cfg.browsers.firefox;
-      #programs.thunderbird.enable = cfg.communication.thunderbird;
-
+            # HM: mail (guarded with a minimal default profile)
+      # This prevents “profiles was accessed but has no value defined”.
+      programs.thunderbird = lib.mkIf cfg.communication.thunderbird {
+        enable = true;
+        profiles = {
+          default = { isDefault = true; };
+        };
+      };
       # HM housekeeping (can be set globally; safe default here)
       home.stateVersion = lib.mkDefault "24.05";
     };
