@@ -33,8 +33,8 @@
 
     lib = nixpkgs.lib;
      nixos-hardware-modules = {
-                         nvidia = "${nixpkgs.path}/nixos/modules/hardware/video/nvidia.nix";
-                         intel = "${nixpkgs.path}/nixos/modules/hardware/video/intel.nix";
+                         nvidia = "${nixpkgs.outPath}/nixos/modules/hardware/video/nvidia.nix";
+                         intel = "${nixpkgs.outPath}/nixos/modules/hardware/video/intel.nix";
                        };
   in {
     nixosConfigurations = {
