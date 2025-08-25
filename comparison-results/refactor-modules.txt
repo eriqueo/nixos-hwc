@@ -1,0 +1,31 @@
+# Configuration extraction from /home/eric/03-tech/nixos-hwc/modules
+## Imports
+
+## Services (enabled)
+
+## Hardware
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/gpu.nix:183:      hardware.graphics = {
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/gpu.nix:193:      hardware.nvidia = {
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/gpu.nix:203:      hardware.nvidia.prime = lib.mkIf cfg.nvidia.prime.enable {
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/gpu.nix:236:      hardware.nvidia-container-toolkit.enable = cfg.nvidia.containerRuntime;
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/gpu.nix:275:      hardware.graphics = lib.mkMerge [
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/gpu.nix:301:      hardware.graphics.extraPackages = with pkgs; [
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:118:      hardware.graphics = {
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:139:      hardware.nvidia = {
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:158:      hardware.nvidia.prime = lib.mkIf cfg.nvidia.prime.enable {
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:196:      hardware.nvidia-container-toolkit.enable = cfg.nvidia.containerRuntime;
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:247:      hardware.graphics = {
+
+## Boot
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/networking.nix:72:       boot.kernel.sysctl = {
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/hardening.nix:134:      boot.kernel.sysctl = {
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/gpu.nix:299:      boot.kernelModules = [ "amdgpu" ];
+/home/eric/03-tech/nixos-hwc/modules/services/vpn.nix:53:      boot.kernel.sysctl = lib.mkIf cfg.tailscale.exitNode {
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:165:      boot.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:166:      boot.blacklistedKernelModules = [ "nouveau" ];  # Disable nouveau
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:169:      boot.kernelParams = [ 
+/home/eric/03-tech/nixos-hwc/modules/services/media/gpu-consolidated.nix:234:      boot.extraModprobeConfig = ''
+
+## System Packages
+/home/eric/03-tech/nixos-hwc/modules/infrastructure/secrets.nix:71:      environment.systemPackages = [ pkgs.vault ];
+/home/eric/03-tech/nixos-hwc/modules/services/ai/ollama.nix:106:    environment.systemPackages = [ pkgs.ollama ];

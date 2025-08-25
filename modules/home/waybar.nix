@@ -224,9 +224,7 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # All Home Manager options go inside this block
-    home-manager.users.eric = {
-      home.packages = with pkgs; [
+    home.packages = with pkgs; [
         # Core waybar tools
         pavucontrol
         swaynotificationcenter  
@@ -259,9 +257,9 @@ in {
         xdg-desktop-portal-hyprland
       ];
 
-      # Configure waybar through home-manager
-      programs.waybar = {
-        enable = true;
+    # Configure waybar through home-manager
+    programs.waybar = {
+      enable = true;
       
       settings = [{
         layer = "top";
@@ -551,7 +549,6 @@ in {
           animation-direction: alternate;
         }
       '';
-      };
     };
   };
 }

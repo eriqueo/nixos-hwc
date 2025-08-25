@@ -1,30 +1,30 @@
 # Configuration extraction from /etc/nixos/hosts/laptop
 ## Imports
-  imports =
-  imports = [
+/etc/nixos/hosts/laptop/hardware-configuration.nix:7:  imports =
+/etc/nixos/hosts/laptop/config.nix:10:  imports = [
+/etc/nixos/hosts/laptop/home.nix:6:  imports = [
 
-## Services
-  services.gvfs.enable = true;
-  services.thermald.enable = true;
-  services.tlp.enable = true;
-  services.tumbler.enable = true;
-  services.udisks2.enable = true;
-  services.xserver.enable = true;
+## Services (enabled)
+/etc/nixos/hosts/laptop/config.nix:92:  services.xserver.enable = true;
+/etc/nixos/hosts/laptop/config.nix:147:  services.gvfs.enable = true;
+/etc/nixos/hosts/laptop/config.nix:148:  services.udisks2.enable = true;
+/etc/nixos/hosts/laptop/config.nix:149:  services.tumbler.enable = true;
+/etc/nixos/hosts/laptop/config.nix:270:  services.thermald.enable = true;
+/etc/nixos/hosts/laptop/config.nix:271:  services.tlp.enable = true;
 
 ## Hardware
-  hardware.bluetooth = {
-  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-  hardware.graphics = {
-  hardware.nvidia = {
-      hardware.nvidia.prime = {
+/etc/nixos/hosts/laptop/hardware-configuration.nix:39:  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+/etc/nixos/hosts/laptop/config.nix:95:  hardware.graphics = {
+/etc/nixos/hosts/laptop/config.nix:100:  hardware.nvidia = {
+/etc/nixos/hosts/laptop/config.nix:133:      hardware.nvidia.prime = {
+/etc/nixos/hosts/laptop/config.nix:162:  hardware.bluetooth = {
 
 ## Boot
-  boot.extraModulePackages = [ ];
-  boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "rtsx_pci_sdmmc" ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-intel" ];
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.systemd-boot.enable = true;
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
+/etc/nixos/hosts/laptop/config.nix:40:  boot.loader.systemd-boot.enable = true;
+/etc/nixos/hosts/laptop/config.nix:41:  boot.loader.efi.canTouchEfiVariables = true;
+/etc/nixos/hosts/laptop/hardware-configuration.nix:11:  boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "rtsx_pci_sdmmc" ];
+/etc/nixos/hosts/laptop/hardware-configuration.nix:12:  boot.initrd.kernelModules = [ ];
+/etc/nixos/hosts/laptop/hardware-configuration.nix:13:  boot.kernelModules = [ "kvm-intel" ];
+/etc/nixos/hosts/laptop/hardware-configuration.nix:14:  boot.extraModulePackages = [ ];
 
 ## System Packages
