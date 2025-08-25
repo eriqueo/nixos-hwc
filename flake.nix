@@ -66,7 +66,7 @@
     agenixConfig = import ./secrets.nix;
 
     # Helper functions for migration
-    lib = {
+    helpers = {
       inherit (import ./lib/helpers.nix { inherit lib; })
         mkServiceModule mkContainerService mkGpuService;
       migrationBridge = import ./lib/migration-bridge.nix { inherit inputs; };
