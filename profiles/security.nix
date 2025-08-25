@@ -33,6 +33,14 @@
     enable = true;
     provider = "age";
   };
+  # Decrypt this secret at boot (agenix)
+  age.secrets."emergency-password".file = ../secrets/emergency-password.age;
+
+  # Enable emergency access using the *hashed* password from the secret
+  hwc.security.emergencyAccess = {
+    enable = true;
+    hashedPasswordFile = config.age.secrets."emergency-password".path;
+  };
 
   hwc.services.vpn.tailscale = {
     enable = false;
