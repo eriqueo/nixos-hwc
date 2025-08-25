@@ -1,82 +1,93 @@
 # nixos-hwc/modules/home/productivity.nix
 #
-# HOME: Productivity apps (Obsidian, Firefox, LibreOffice, Thunderbird)
-# Pure Home-Manager module; no home-manager.users.* here.
+# Home UI: Productivity stack (HM consumer via NixOS orchestrator)
+# NixOS options gate inclusion; Home‑Manager config lives under home-manager.users.<user>.
 #
 # DEPENDENCIES (Upstream):
-#   - nixpkgs allowUnfree for Obsidian if used
+#   - profiles/workstation.nix (activates HM; sets home.stateVersion)
+#   - home-manager.nixosModules.home-manager
 #
 # USED BY (Downstream):
-#   - profiles/workstation.nix (enables toggles)
+#   - machines/*/config.nix (e.g., hwc.home.productivity.* toggles)
 #
 # IMPORTS REQUIRED IN:
-#   - profiles/workstation.nix: ../modules/home/productivity.nix
+#   - profiles/workstation.nix (top-level imports list)
 #
-# USAGE (from profile/machine):
+# USAGE EXAMPLE (in workstation.nix):
 #   hwc.home.productivity = {
 #     enable = true;
 #     notes.obsidian = true;
 #     browsers.firefox = true;
 #     office.libreoffice = true;
-#     communication.thunderbird = true;  # requires a profiles entry; provided below
+#     communication.thunderbird = true;
 #   };
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.productivity;
   t   = lib.types;
+  cfg = config.hwc.home.productivity;
 in
 {
   #============================================================================
-  # OPTIONS
+  # OPTIONS (NixOS layer)
   #============================================================================
   options.hwc.home.productivity = {
-    enable = lib.mkEnableOption "Enable productivity app bundle";
+    enable = lib.mkEnableOption "Productivity tooling via Home‑Manager";
 
     notes.obsidian = lib.mkOption {
-      type = t.bool; default = false;
+      type = t.bool;
+      default = false;
       description = "Install Obsidian (unfree).";
     };
 
     browsers.firefox = lib.mkOption {
-      type = t.bool; default = false;
-      description = "Enable Firefox via Home Manager.";
+      type = t.bool;
+      default = false;
+      description = "Enable Firefox via Home‑Manager.";
     };
 
     office.libreoffice = lib.mkOption {
-      type = t.bool; default = false;
+      type = t.bool;
+      default = false;
       description = "Install LibreOffice.";
     };
 
     communication.thunderbird = lib.mkOption {
-      type = t.bool; default = false;
-      description = "Enable Thunderbird with a default profile.";
+      type = t.bool;
+      default = false;
+      description = "Enable Thunderbird via Home‑Manager.";
+    };
+
+    extraPackages = lib.mkOption {
+      type = t.listOf t.package;
+      default = [ ];
+      description = "Additional user‑scoped packages to include.";
     };
   };
 
   #============================================================================
-  # IMPLEMENTATION (Home-Manager scope)
+  # IMPLEMENTATION (NixOS -> HM bridge)
   #============================================================================
   config = lib.mkIf cfg.enable {
 
-    # Packages controlled by simple toggles
-    home.packages =
-      (lib.optional cfg.notes.obsidian pkgs.obsidian)
-      ++ (lib.optional cfg.office.libreoffice pkgs.libreoffice);
+    home-manager.useGlobalPkgs = lib.mkDefault true;
 
-    # Firefox (Home Manager module)
-    programs.firefox.enable = lib.mkIf cfg.browsers.firefox true;
+    home-manager.users.eric = { ... }: let
+      pkgsList =
+        (lib.optionals cfg.notes.obsidian        [ pkgs.obsidian ]) ++
+        (lib.optionals cfg.office.libreoffice    [ pkgs.libreoffice ]) ++
+        cfg.extraPackages;
+    in {
+      # HM: packages/env
+      home.packages = pkgsList;
 
-    # Thunderbird (Home Manager module) — add a minimal required profile
-    programs.thunderbird = lib.mkIf cfg.communication.thunderbird {
-      enable = true;
+      # HM: browsers / mail
+      programs.firefox.enable    = cfg.browsers.firefox;
+      programs.thunderbird.enable = cfg.communication.thunderbird;
 
-      # Provide at least one profile or HM will error.
-      profiles.default = {
-        isDefault = true;
-        # You can add `settings = { ... };` or `userChrome = ''...'';` later.
-      };
+      # HM housekeeping (can be set globally; safe default here)
+      home.stateVersion = lib.mkDefault "24.05";
     };
   };
 }
