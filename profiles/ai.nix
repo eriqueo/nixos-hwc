@@ -2,7 +2,7 @@
 {
   imports = [
     #../modules/services/ai-bible.nix
-    ../modules/services/ollama.nix
+    ../modules/services/ai/ollama.nix
   ];
 
   #hwc.services.aiBible = {
