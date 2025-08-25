@@ -36,23 +36,6 @@ let
   paths = config.hwc.paths;
 in {
 
-  #============================================================================
-  # IMPORTS - This is now a top-level key, a peer to 'options' and 'config'.
-  # This is the correct way to make a module load other modules.
-  #============================================================================
-  imports = [
-    # Conditionally import the official NVIDIA module if type is "nvidia"
-    (lib.mkIf (cfg.type == "nvidia") (
-      "${pkgs.path}/nixos/modules/hardware/video/nvidia.nix"
-    ))
-    # Conditionally import the official Intel module if type is "intel"
-    (lib.mkIf (cfg.type == "intel") (
-      "${pkgs.path}/nixos/modules/hardware/video/intel.nix"
-    ))
-  ];
-
-
-
 
   #============================================================================
   # OPTIONS - What can be configured

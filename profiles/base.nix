@@ -1,6 +1,12 @@
 { lib, pkgs, ... }:
 {
   imports = [
+
+  # Import the official modules here, unconditionally.
+  # This makes the `hardware.nvidia.*` and `hardware.graphics.*` options
+  # available to all modules imported by this profile.
+    "${pkgs.path}/nixos/modules/hardware/video/nvidia.nix"
+    "${pkgs.path}/nixos/modules/hardware/video/intel.nix"
     ../modules/system/paths.nix
     ../modules/system/filesystem.nix
     ../modules/system/networking.nix
