@@ -77,7 +77,7 @@ boot.loader.grub.enable = false;
   hwc.security.emergencyAccess.password = "il0wwlm?";
 
   # 3. Ensure the path to this machine's age key is correct.
-  hwc.security.ageKeyFile = "etc/age/keys.txt"; # Or specific key for this host
+  hwc.security.ageKeyFile = "/etc/age/keys.txt"; # Or specific key for this host
   ##############################
   ##  NIXOS VERSION PIN       ##
   ##############################
