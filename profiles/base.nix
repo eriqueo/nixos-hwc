@@ -88,7 +88,7 @@
       user = true;  # User account secrets
       vpn = true;   # VPN credentials for Tailscale/services
     };
-    ageKeyFile = "/etc/age/keys.txt";
+    ageKeyFile = lib.mkDefault "/etc/age/keys.txt";
   };
 
   # Enable core filesystem management
