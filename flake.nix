@@ -36,7 +36,11 @@
     nixosConfigurations = {
       hwc-server = lib.nixosSystem {
         inherit system pkgs;
-        specialArgs = { inherit inputs; };
+        specialArgs = { inherit inputs;
+        nixos-hardware-modules = {
+                     nvidia = "${nixpkgs.path}/nixos/modules/hardware/video/nvidia.nix";
+                     intel = "${nixpkgs.path}/nixos/modules/hardware/video/intel.nix";
+             };
         modules = [
           agenix.nixosModules.default
           ./machines/server/config.nix
