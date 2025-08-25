@@ -1,4 +1,4 @@
-{ ... }:
+{ config, lib,... }:
 {
   imports = [
     ../modules/infrastructure/hardening.nix
