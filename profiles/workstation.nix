@@ -7,6 +7,7 @@
          ../modules/system/desktop-packages.nix  # Desktop system packages
          ../modules/home/hyprland.nix
          ../modules/home/waybar.nix
+         ../modules/home/waybar-scripts.nix
          ../modules/home/apps.nix
          ../modules/home/cli.nix
          ../modules/home/development.nix
@@ -42,6 +43,9 @@
              showBattery = true;
            };
          };
+
+        waybar.scripts.enable = true;
+        };
 
          apps = {
            enable = true;
