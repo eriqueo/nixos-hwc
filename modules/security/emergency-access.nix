@@ -21,7 +21,7 @@ in
   config = lib.mkMerge [
     (lib.mkIf cfg.enable {
       users.users.root.initialPassword = cfg.password;
-      services.openssh.settings.PermitRootLogin = "yes";
+      services.openssh.settings.PermitRootLogin = lib.mkForce "yes";
       assertions = [{
         assertion = cfg.password != null && cfg.password != "";
         message = "[hwc.security.emergencyAccess] is enabled, but no password is set. This is a misconfiguration.";
