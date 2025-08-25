@@ -84,7 +84,7 @@ in
 
       # HM: browsers / mail
       programs.firefox.enable    = cfg.browsers.firefox;
-      programs.thunderbird.enable = cfg.communication.thunderbird;
+      #programs.thunderbird.enable = cfg.communication.thunderbird;
 
       # HM housekeeping (can be set globally; safe default here)
       home.stateVersion = lib.mkDefault "24.05";
