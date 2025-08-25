@@ -18,31 +18,37 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    # Set the initial password for the 'root' user.
-    users.users.root.initialPassword = cfg.password;
-
-    # Allow root login via SSH if SSH is enabled.
-    services.openssh.permitRootLogin = "yes";
-
-    # CRITICAL: Fail the build if this is enabled without a password.
-    assertions = [{
-      assertion = cfg.password != null && cfg.password != "";
-      message = "[hwc.security.emergencyAccess] is enabled, but no password is set. This is a misconfiguration.";
-    }];
+  config = lib.mkMerge [
+    # This first part contains the actual configuration options
+    (lib.mkIf cfg.enable {
+      users.users.root.initialPassword = cfg.password;
+      services.openssh.permitRootLogin = "yes";
+      assertions = [{
+        assertion = cfg.password != null && cfg.password != "";
+        message = "[hwc.security.emergencyAccess] is enabled, but no password is set. This is a misconfiguration.";
+      }];
+    })
 
     # ===================================================================
-    # CORRECTED WARNING IMPLEMENTATION
-    # Use `lib.warn` to print a message during evaluation. This is the
-    # standard and correct way to do this.
-    # We assign it to a dummy variable that gets evaluated.
+    # THIS IS THE CORRECT PATTERN FOR THE WARNING
+    # It uses a separate mkIf block with a let-in binding to trigger
+    # the warning without assigning it to an option.
     # ===================================================================
-    _ = lib.warn ''
-      ##################################################################
-      # SECURITY WARNING: EMERGENCY ROOT ACCESS IS ACTIVE              #
-      # The root user has a password set in your configuration.nix.    #
-      # Please disable this feature in your machine config once stable.#
-      ##################################################################
-    '';
-  };
+    (lib.mkIf cfg.enable {
+      # This block does not set any options. It only performs an action.
+      _ = let
+        # This forces the evaluation of lib.warn
+        warning = lib.warn ''
+          ##################################################################
+          # SECURITY WARNING: EMERGENCY ROOT ACCESS IS ACTIVE              #
+          # The root user has a password set in your configuration.nix.    #
+          # Please disable this feature in your machine config once stable.#
+          ##################################################################
+        '';
+      in {
+        # The block must return an attribute set. An empty one is fine.
+      };
+    })
+  ];
+
 }
