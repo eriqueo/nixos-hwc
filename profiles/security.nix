@@ -4,6 +4,7 @@
     ../modules/infrastructure/hardening.nix
     ../modules/infrastructure/secrets.nix
     ../modules/services/vpn.nix
+    ../modules/security/emergency-access.nix
   ];
 
   hwc.security.hardening = {

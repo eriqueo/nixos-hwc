@@ -391,6 +391,84 @@ in {
             ${libnotify}/bin/notify-send "GPU Override" "Next app will use NVIDIA dGPU" -i gpu-card
           ''}
         '')
+
+        # GPU status script for waybar/status bars
+        (writeScriptBin "gpu-status" ''
+          #!/usr/bin/env bash
+          GPU_MODE_FILE="/tmp/gpu-mode"
+          DEFAULT_MODE="intel"
+
+          if [[ ! -f "$GPU_MODE_FILE" ]]; then
+            echo "$DEFAULT_MODE" > "$GPU_MODE_FILE"
+          fi
+
+          CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "$DEFAULT_MODE")
+          CURRENT_GPU=$(${pkgs.mesa-demos}/bin/glxinfo 2>/dev/null | grep "OpenGL renderer" | cut -d: -f2 | xargs || echo "Unknown")
+          ${lib.optionalString (cfg.type == "nvidia") ''
+            NVIDIA_POWER=$(${pkgs.linuxPackages.nvidia_x11}/bin/nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+            NVIDIA_TEMP=$(${pkgs.linuxPackages.nvidia_x11}/bin/nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+          ''}
+
+          case "$CURRENT_MODE" in
+            "intel")
+              ICON="󰢮"
+              CLASS="intel"
+              TOOLTIP="Intel Mode: $CURRENT_GPU"
+              ;;
+            "nvidia")
+              ICON="󰾲"
+              CLASS="nvidia"
+              ${lib.optionalString (cfg.type == "nvidia") ''
+                TOOLTIP="NVIDIA Mode: $CURRENT_GPU\\nPower: $NVIDIA_POWER W | Temp: $NVIDIA_TEMP°C"
+              ''}
+              ;;
+            "performance")
+              ICON="⚡"
+              CLASS="performance"
+              ${lib.optionalString (cfg.type == "nvidia") ''
+                TOOLTIP="Performance Mode: Auto-GPU Selection\\nNVIDIA: $NVIDIA_POWER W | $NVIDIA_TEMP°C"
+              ''}
+              ;;
+            *)
+              ICON="󰢮"
+              CLASS="intel"
+              TOOLTIP="Intel Mode (Default): $CURRENT_GPU"
+              ;;
+          esac
+
+          echo "{\"text\": \"$ICON\", \"class\": \"$CLASS\", \"tooltip\": \"$TOOLTIP\"}"
+        '')
+
+        # GPU toggle script for interactive switching
+        (writeScriptBin "gpu-toggle" ''
+          #!/usr/bin/env bash
+          GPU_MODE_FILE="/tmp/gpu-mode"
+          CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
+
+          case "$CURRENT_MODE" in
+            "intel")
+              echo "performance" > "$GPU_MODE_FILE"
+              ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+                ${libnotify}/bin/notify-send "GPU Mode" "Switched to Performance Mode ⚡" -i gpu-card
+              ''}
+              ;;
+            "performance")
+              echo "intel" > "$GPU_MODE_FILE"
+              ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+                ${libnotify}/bin/notify-send "GPU Mode" "Switched to Intel Mode 󰢮" -i gpu-card
+              ''}
+              ;;
+            *)
+              echo "intel" > "$GPU_MODE_FILE"
+              ${lib.optionalString cfg.powerManagement.toggleNotifications ''
+                ${libnotify}/bin/notify-send "GPU Mode" "Reset to Intel Mode 󰢮" -i gpu-card
+              ''}
+              ;;
+          esac
+
+          # Signal waybar to update
+          ${pkgs.procps}/bin/pkill -SIGUSR1 waybar 2>/dev/null || true
+        '')
       ];
     })
   ];

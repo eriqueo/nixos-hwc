@@ -13,6 +13,7 @@
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/base.nix: ../modules/security/secrets.nix
+#   - flake.nix: ./secrets.nix (CRITICAL - missing this caused the lockout)
 #
 # USAGE:
 #   config.age.secrets.vpn-username.path       # Path to decrypted secret
@@ -21,6 +22,32 @@
 # VALIDATION:
 #   - Requires age keys to be present on target machines
 #   - Secrets are decrypted to /run/agenix/ with proper permissions
+#
+# EMERGENCY RECOVERY PROCEDURES:
+# ================================
+# If you get locked out due to agenix failure:
+#
+# METHOD 1: GRUB Generation Rollback
+#   1. Reboot system
+#   2. At GRUB menu, select "Previous generations"
+#   3. Boot older generation (before the switch that caused lockout)
+#   4. Run: sudo nixos-rebuild switch --flake /etc/nixos#hwc-laptop
+#
+# METHOD 2: Emergency Root Access (if secrets are enabled)
+#   - Username: root
+#   - Password: emergency123
+#   - SSH with your regular SSH key should also work for root
+#
+# METHOD 3: Single User Mode Boot
+#   1. At GRUB, press 'e' to edit boot entry
+#   2. Add 'init=/bin/sh' to kernel line
+#   3. Boot, then: mount -o remount,rw / && passwd eric
+#
+# METHOD 4: Check Agenix Status
+#   - systemctl status agenix
+#   - ls -la /run/agenix/
+#   - ls -la /etc/age/keys.txt
+#   - journalctl -u agenix
 
 { config, lib, ... }:
 
@@ -60,6 +87,7 @@ in {
   config = lib.mkIf cfg.enable {
     # Configure agenix key file location
     age.identityPaths = [ cfg.ageKeyFile ];
+
 
     # VPN secrets for media services
     age.secrets = lib.mkMerge [
