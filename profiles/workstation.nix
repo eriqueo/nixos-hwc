@@ -159,17 +159,7 @@
        home-manager.users.eric = {
          # Import all the user-specific modules that contain
          # the actual Home Manager configuration.
-         imports = [
-           ../modules/home/apps.nix
-           ../modules/home/cli.nix
-           ../modules/home/development.nix
-           ../modules/home/hyprland.nix
-           ../modules/home/input.nix
-           ../modules/home/productivity.nix
-           ../modules/home/shell.nix
-           ../modules/home/waybar.nix
-         ];
-
+         home-manager.useGlobalPkgs = true;
          # You can set user-wide settings here if needed, for example:
          home.stateVersion = "24.05";
        };
