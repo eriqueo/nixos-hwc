@@ -38,7 +38,7 @@ in
     }];
 
     # Prominently warn the user that this insecure feature is active.
-    system.nixos.warning = [ ''
+    system.nixos.messages = [ ''
       ##################################################################
       # SECURITY WARNING: EMERGENCY ROOT ACCESS IS ACTIVE              #
       # The root user has a password set in your configuration.nix.    #
