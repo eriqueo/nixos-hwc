@@ -17,10 +17,12 @@
 #   hwc.desktop.hyprland.enable = true;
 #   hwc.desktop.hyprland.keybinds.modifier = "SUPER";
 #   hwc.desktop.hyprland.keybinds.extra = [ "$mod, R, exec, wofi --show drun" ];
+#   hwc.desktop.hyprland.startup = [ "waybar" "hyprpaper" "hypridle" ];
 #   # Optional:
 #   #   hwc.desktop.hyprland.monitor = "eDP-1,1920x1200@60,0x0,1";
 #   #   hwc.desktop.hyprland.settings = { ... };
 #   #   hwc.desktop.hyprland.extraConfig = '' ... '';
+#   #   hwc.desktop.hyprland.nvidia = true;
 
 { config, lib, pkgs, ... }:
 
@@ -30,7 +32,7 @@ let
 in
 {
   #============================================================================
-  # OPTIONS (NixOS layer) - feature gate and simple knobs
+  # OPTIONS (NixOS layer)
   #============================================================================
   options.hwc.desktop.hyprland = {
     enable = lib.mkEnableOption "Hyprland Wayland compositor";
@@ -41,44 +43,52 @@ in
       description = "Hyprland monitor directive (e.g. \"eDP-1,1920x1200@60,0x0,1\").";
     };
 
+    # Structured settings merged into HM
     settings = lib.mkOption {
       type = t.attrsOf t.anything;
       default = {};
       description = "Additional Hyprland settings (merged with defaults).";
     };
 
+    # Raw text appended after structured settings
     extraConfig = lib.mkOption {
       type = t.nullOr t.lines;
       default = null;
       description = "Extra Hyprland config as literal text.";
     };
 
-    # Nvidia-specific switch used by profiles/workstation.nix
+    # Profiles/workstation.nix shim: list of commands to run once
+    startup = lib.mkOption {
+      type = t.listOf t.str;
+      default = [ "waybar" "hyprpaper" "hypridle" ];
+      description = "Commands run via Hyprland exec-once (deduped with defaults).";
+    };
+
+    # Nvidia Wayland niceties
     nvidia = lib.mkOption {
       type = t.bool;
       default = false;
-      description = "Enable Nvidia-specific Hyprland env/workarounds for Wayland sessions.";
+      description = "Enable Nvidia-specific Hyprland env tweaks.";
     };
 
-
-    # ---- NEW: keybinds shim to match profiles/workstation.nix ----------------
+    # Keybind facade expected by workstation.nix
     keybinds = {
       modifier = lib.mkOption {
         type = t.str;
         default = "SUPER";
-        description = "Modifier symbol assigned to $mod in Hyprland (e.g., SUPER, ALT).";
+        description = "Modifier symbol bound to $mod (e.g., SUPER, ALT).";
       };
 
       extra = lib.mkOption {
         type = t.listOf t.str;
         default = [];
-        description = "Additional Hyprland 'bind' entries (strings) to append.";
+        description = "Additional Hyprland 'bind' entries to append.";
       };
     };
   };
 
   #============================================================================
-  # IMPLEMENTATION (NixOS -> HM bridge) - put HM config under users.<name>
+  # IMPLEMENTATION (NixOS -> HM bridge)
   #============================================================================
   config = lib.mkIf cfg.enable {
 
@@ -94,66 +104,70 @@ in
         enable  = true;
         package = pkgs.hyprland;
 
-       settings =
-              let
-                baseBinds = [
-                  "$mod, RETURN, exec, kitty"
-                  "$mod, Q, killactive"
-                  "$mod, F, togglefloating"
-                  "$mod, SPACE, exec, wofi --show drun"
-                  "$mod SHIFT, E, exit"
-                  "$mod, H, movefocus, l"
-                  "$mod, J, movefocus, d"
-                  "$mod, K, movefocus, u"
-                  "$mod, L, movefocus, r"
-                  "$mod CTRL, H, resizeactive, -20 0"
-                  "$mod CTRL, L, resizeactive, 20 0"
-                ];
+        settings =
+          let
+            # base binds
+            baseBinds = [
+              "$mod, RETURN, exec, kitty"
+              "$mod, Q, killactive"
+              "$mod, F, togglefloating"
+              "$mod, SPACE, exec, wofi --show drun"
+              "$mod SHIFT, E, exit"
+              "$mod, H, movefocus, l"
+              "$mod, J, movefocus, d"
+              "$mod, K, movefocus, u"
+              "$mod, L, movefocus, r"
+              "$mod CTRL, H, resizeactive, -20 0"
+              "$mod CTRL, L, resizeactive, 20 0"
+            ];
 
-                base = {
-                  monitor = lib.mkIf (cfg.monitor != null) [ cfg.monitor ];
-                  exec-once = [ "swaync" "hyprpaper" "waybar" ];
+            # defaults we’d normally start (also provided as startup default)
+            defaultExec = [ "swaync" "hyprpaper" "waybar" ];
 
-                  "$mod" = cfg.keybinds.modifier;
-                  bind   = baseBinds ++ cfg.keybinds.extra;
+            # nvidia env map (Hypr expects list of "VAR,VALUE")
+            nvidiaExtra = lib.optionalAttrs cfg.nvidia {
+              env = [
+                "LIBVA_DRIVER_NAME,nvidia"
+                "GBM_BACKENDS_PATH,/run/opengl-driver/lib/gbm"
+                "WLR_NO_HARDWARE_CURSORS,1"
+              ];
+            };
 
-                  animations.enabled = true;
-                  xwayland.force_zero_scaling = true;
+            base = {
+              monitor = lib.mkIf (cfg.monitor != null) [ cfg.monitor ];
 
-                  general = {
-                    gaps_in  = 6;
-                    gaps_out = 12;
-                    border_size = 2;
-                    allow_tearing = false;
-                  };
+              # merge: user startup + defaultExec + dedupe
+              exec-once = lib.unique (cfg.startup ++ defaultExec);
 
-                  input = {
-                    kb_layout = "us";
-                    follow_mouse = 1;
-                    touchpad = {
-                      natural_scroll = true;
-                      tap            = true;
-                    };
-                  };
+              "$mod" = cfg.keybinds.modifier;
+              bind   = baseBinds ++ cfg.keybinds.extra;
 
-                  decoration = {
-                    rounding = 8;
-                    blur = { enabled = true; size = 6; passes = 2; };
-                  };
+              animations.enabled = true;
+              xwayland.force_zero_scaling = true;
+
+              general = {
+                gaps_in  = 6;
+                gaps_out = 12;
+                border_size = 2;
+                allow_tearing = false;
+              };
+
+              input = {
+                kb_layout = "us";
+                follow_mouse = 1;
+                touchpad = {
+                  natural_scroll = true;
+                  tap            = true;
                 };
+              };
 
-                # Extra env tweaks that help Nvidia on Wayland/Hyprland
-                nvidiaExtra = lib.optionalAttrs cfg.nvidia {
-                  # Hyprland's HM module expects a list of "VAR,VALUE" entries
-                  env = [
-                    "LIBVA_DRIVER_NAME,nvidia"
-                    "GBM_BACKENDS_PATH,/run/opengl-driver/lib/gbm"
-                    "WLR_NO_HARDWARE_CURSORS,1"
-                  ];
-                };
-              in
-                base // nvidiaExtra // cfg.settings;
-
+              decoration = {
+                rounding = 8;
+                blur = { enabled = true; size = 6; passes = 2; };
+              };
+            };
+          in
+            base // nvidiaExtra // cfg.settings;
 
         extraConfig = lib.mkIf (cfg.extraConfig != null) cfg.extraConfig;
       };
