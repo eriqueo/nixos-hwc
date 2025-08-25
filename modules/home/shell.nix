@@ -148,7 +148,7 @@ in
       # --- HM: tmux -----------------------------------------------------------
       programs.tmux = {
         enable      = cfg.tmux.enable;
-        sensible    = true;
+        #sensible    = true;
         clock24     = true;
         mouse       = true;
         extraConfig = cfg.tmux.extraConfig;
