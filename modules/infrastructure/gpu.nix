@@ -1,50 +1,54 @@
 # nixos-hwc/modules/system/gpu.nix
 #
 # GPU Hardware Acceleration Management
-# Provides NVIDIA and Intel GPU support with hardware acceleration for media/services
+# Provides NVIDIA, Intel, AMD GPU support with hardware acceleration for services.
 #
-# DEPENDENCIES:
-#   Upstream: config.hwc.paths.cache (modules/system/paths.nix)
-#   Upstream: config.hwc.paths.logs  (modules/system/paths.nix)
-#   Upstream: config.time.timeZone   (system configuration)
+# DEPENDENCIES (Upstream):
+#   - config.hwc.paths.cache  (modules/system/paths.nix)
+#   - config.hwc.paths.logs   (modules/system/paths.nix)
+#   - config.time.timeZone    (system configuration)
 #
-# USED BY:
-#   Downstream: modules/services/media/jellyfin.nix (GPU transcoding)
-#   Downstream: modules/services/media/immich.nix   (ML acceleration)
-#   Downstream: profiles/media.nix                  (enables GPU for media services)
-#   Downstream: machines/server/config.nix          (specifies GPU type)
-#   Downstream: modules/services/ai/ollama.nix      (consumes accel = cuda/intel/rocm/cpu)
+# USED BY (Downstream):
+#   - modules/services/media/jellyfin.nix  (GPU transcoding)
+#   - modules/services/media/immich.nix    (ML acceleration)
+#   - modules/services/ai/ollama.nix       (consumes accel = cuda/intel/rocm/cpu)
+#   - profiles/*                           (orchestration)
+#   - machines/*/config.nix                (declares hwc.gpu.type)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/base.nix: ../modules/system/gpu.nix
-#   - Any machine using GPU acceleration
 #
 # USAGE:
 #   hwc.gpu.type = "nvidia";  # or "intel" | "amd" | "none"
-#   hwc.gpu.nvidia.driver = "stable";
-#   hwc.gpu.nvidia.enableMonitoring = true;
-#   hwc.gpu.nvidia.containerRuntime = true;
+#   hwc.gpu.nvidia.driver = "stable";  # "stable" | "beta" | "production"
+#   hwc.gpu.nvidia.containerRuntime = true;   # enables nvidia-container-toolkit
+#   hwc.gpu.nvidia.enableMonitoring = true;   # nvidia-smi logging service
 #
-# VALIDATION:
-#   - GPU type must be valid enum value
-#   - NVIDIA options only apply when type = "nvidia"
-#   - Container runtime requires type != "none"
+# NOTES:
+#   - This file assumes Podman is the OCI engine (recommended repo-wide):
+#       virtualisation.podman.enable = true;
+#       virtualisation.oci-containers.backend = "podman";
+#     (If the backend differs, CDI hint is gated and safe.)
 
 { config, lib, pkgs, ... }:
 
 let
   cfg   = config.hwc.gpu;
   paths = config.hwc.paths;
+  t     = lib.types;
 
-  t = lib.types;
-
+  # Derive a neutral acceleration signal for service consumers.
   accelFor = type:
     if type == "nvidia" then "cuda"
     else if type == "amd" then "rocm"
     else if type == "intel" then "intel"
     else "cpu";
 
-in {
+  # Detect OCI engine for CDI hinting (defaults to podman if unset per repo standard)
+  usingPodman = (config.virtualisation.oci-containers.backend or "podman") == "podman";
+
+in
+{
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
@@ -55,68 +59,62 @@ in {
       description = "GPU type for hardware acceleration";
     };
 
-    # Neutral, derived signal for consumers (services).
     accel = lib.mkOption {
       type = t.enum [ "cuda" "rocm" "intel" "cpu" ];
       default = accelFor config.hwc.gpu.type;
       readOnly = true;
-      description = "Derived acceleration target for consumers (cuda|rocm|intel|cpu).";
+      description = "Derived acceleration target (cuda|rocm|intel|cpu) for services.";
     };
 
     powerManagement = {
       enable = lib.mkOption {
         type = t.bool;
         default = false;
-        description = "Enable GPU power management features";
+        description = "Enable GPU power management helpers.";
       };
-
       smartToggle = lib.mkOption {
         type = t.bool;
         default = false;
-        description = "Enable simple user-mode GPU toggle helper for laptops";
+        description = "Install simple laptop GPU toggle helpers.";
       };
-
       toggleNotifications = lib.mkOption {
         type = t.bool;
         default = true;
-        description = "Show desktop notifications when GPU mode changes";
+        description = "Show notifications when GPU mode changes.";
       };
     };
 
     nvidia = {
-      # Keep auto-enable behavior aligned with your current interface
       enable = lib.mkOption {
         type = t.bool;
         default = cfg.type == "nvidia";
-        description = "Enable NVIDIA GPU support (auto-enabled when type = nvidia)";
+        description = "Enable NVIDIA support (auto-enabled when type = nvidia).";
       };
 
       driver = lib.mkOption {
         type = t.enum [ "stable" "beta" "production" ];
         default = "stable";
-        description = "NVIDIA driver package channel";
+        description = "NVIDIA driver package channel.";
       };
 
-      enableMonitoring  = lib.mkEnableOption "GPU utilization monitoring via nvidia-smi";
-      containerRuntime  = lib.mkEnableOption "NVIDIA container runtime for Docker/Podman";
+      enableMonitoring = lib.mkEnableOption "Log GPU utilization with nvidia-smi (unit: gpu-monitor)";
+      containerRuntime = lib.mkEnableOption "Enable NVIDIA container runtime (nvidia-container-toolkit)";
 
       prime = {
         enable = lib.mkOption {
           type = t.bool;
           default = true;
-          description = "Enable NVIDIA Prime offload for hybrid graphics";
+          description = "Enable PRIME offload (hybrid graphics).";
         };
-
         nvidiaBusId = lib.mkOption {
           type = t.str;
           default = "PCI:1:0:0";
-          description = "NVIDIA GPU bus ID";
+          description = "NVIDIA GPU bus ID.";
         };
-
         intelBusId = lib.mkOption {
           type = t.str;
           default = "PCI:0:2:0";
-          description = "Intel iGPU bus ID";
+          description = "Intel iGPU bus ID.";
         };
       };
     };
@@ -125,11 +123,11 @@ in {
       enable = lib.mkOption {
         type = t.bool;
         default = cfg.type == "intel";
-        description = "Enable Intel GPU support (auto-enabled when type = intel)";
+        description = "Enable Intel GPU support (auto-enabled when type = intel).";
       };
     };
 
-    # Exported for container services to opt-in to device passthrough.
+    # Exported flags for services to passthrough devices to containers.
     containerOptions = lib.mkOption {
       type = t.listOf t.str;
       default =
@@ -145,7 +143,7 @@ in {
         ] else if cfg.type == "amd" then [
           "--device=/dev/dri:/dev/dri"
         ] else [];
-      description = "Container CLI device options for GPU access (auto-generated).";
+      description = "Container CLI device flags for GPU access (auto-generated).";
     };
 
     containerEnvironment = lib.mkOption {
@@ -155,7 +153,7 @@ in {
           NVIDIA_VISIBLE_DEVICES = "all";
           NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility";
         } else {};
-      description = "Container environment variables for GPU access (auto-generated).";
+      description = "Container env vars for GPU access (auto-generated).";
     };
   };
 
@@ -168,11 +166,11 @@ in {
     {
       assertions = [
         {
-          assertion = cfg.nvidia.containerRuntime -> (cfg.type != "none");
+          assertion = (!cfg.nvidia.containerRuntime) || (cfg.type != "none");
           message   = "GPU container runtime requires hwc.gpu.type to be nvidia/intel/amd (not 'none').";
         }
         {
-          assertion = cfg.nvidia.enableMonitoring -> (cfg.type == "nvidia");
+          assertion = (!cfg.nvidia.enableMonitoring) || (cfg.type == "nvidia");
           message   = "NVIDIA monitoring requires hwc.gpu.type = \"nvidia\".";
         }
       ];
@@ -181,35 +179,38 @@ in {
     # --- Common graphics stack (all GPU types except 'none') ------------------
     {
       hardware.graphics = {
-        enable    = true;
+        enable = true;
         enable32Bit = true;
       };
     }
 
     # --- NVIDIA ---------------------------------------------------------------
     (lib.mkIf (cfg.type == "nvidia" && cfg.nvidia.enable) {
+      # Desktop stack driver selection
       services.xserver.videoDrivers = [ "nvidia" ];
 
+      # Core NVIDIA configuration (no nonexistent hardware.nvidia.enable)
       hardware.nvidia = {
-        enable              = true;
-        modesetting.enable  = lib.mkDefault true;
-        powerManagement.enable       = lib.mkDefault false;   # your server-friendly defaults
-        powerManagement.finegrained  = lib.mkDefault false;
-        open                = lib.mkDefault true;
-        nvidiaSettings      = lib.mkDefault true;
-        package             = config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver};
+        modesetting.enable = lib.mkDefault true;
+        powerManagement.enable      = lib.mkDefault false;
+        powerManagement.finegrained = lib.mkDefault false;
+        open           = lib.mkDefault true;   # set false if you prefer proprietary
+        nvidiaSettings = lib.mkDefault true;
+        package        = config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver};
       };
 
+      # PRIME offload for hybrid laptops
       hardware.nvidia.prime = lib.mkIf cfg.nvidia.prime.enable {
         offload.enable = true;
         nvidiaBusId    = cfg.nvidia.prime.nvidiaBusId;
         intelBusId     = cfg.nvidia.prime.intelBusId;
       };
 
+      # Kernel modules and params
       boot = {
         kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
         blacklistedKernelModules = [ "nouveau" ];
-        kernelParams   = [ "nvidia-drm.modeset=1" ];
+        kernelParams = [ "nvidia-drm.modeset=1" ];
         extraModprobeConfig = ''
           # NVIDIA device file ownership/permissions
           options nvidia NVreg_DeviceFileUID=0 NVreg_DeviceFileGID=44 NVreg_DeviceFileMode=0660
@@ -220,40 +221,42 @@ in {
         '';
       };
 
+      # Runtime environment
       environment.sessionVariables = {
         CUDA_CACHE_PATH   = "${paths.cache}/cuda";
         LIBVA_DRIVER_NAME = "nvidia";
         VDPAU_DRIVER      = "nvidia";
       };
 
+      # Useful tools
       environment.systemPackages = with pkgs; [
         config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}
         libva-utils
         vdpauinfo
       ];
 
-      # Container runtime support
+      # NVIDIA container runtime (toolkit)
       hardware.nvidia-container-toolkit.enable = cfg.nvidia.containerRuntime;
 
-      # CDI dir for engines that use CDI
-      virtualisation.containers.containersConf.settings = lib.mkIf cfg.nvidia.containerRuntime {
+      # CDI hint for Podman (harmless no-op on other engines)
+      virtualisation.containers.containersConf.settings = lib.mkIf (usingPodman && cfg.nvidia.containerRuntime) {
         engine = { cdi_spec_dirs = [ "/var/run/cdi" ]; };
       };
 
-      # Cache/logs used by monitoring and CUDA
+      # Cache/logs dirs
       systemd.tmpfiles.rules = [
         "d ${paths.cache}/cuda 0755 root root -"
         "d ${paths.logs}/gpu  0755 root root -"
       ];
 
-      # Optional monitoring service
+      # Optional: nvidia-smi monitoring
       systemd.services.gpu-monitor = lib.mkIf cfg.nvidia.enableMonitoring {
         description = "NVIDIA GPU utilization monitoring";
         serviceConfig = {
-          Type      = "simple";
-          User      = "root";
+          Type = "simple";
+          User = "root";
           ExecStart = pkgs.writeShellScript "gpu-monitor" ''
-            #!/bin/bash
+            #!/usr/bin/env bash
             while true; do
               ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-smi \
                 --query-gpu=timestamp,name,temperature.gpu,utilization.gpu,utilization.memory,memory.used,memory.total \
@@ -261,7 +264,7 @@ in {
               sleep 60
             done
           '';
-          Restart   = "always";
+          Restart = "always";
           RestartSec = "10";
         };
         wantedBy = [ ];
@@ -272,19 +275,15 @@ in {
     (lib.mkIf (cfg.type == "intel" && cfg.intel.enable) {
       services.xserver.videoDrivers = [ "modesetting" ];
 
-      hardware.graphics = lib.mkMerge [
-        { enable = true; enable32Bit = true; }
-        {
-          extraPackages = with pkgs; [
-            intel-media-driver
-            intel-vaapi-driver
-            libvdpau-va-gl
-          ];
-        }
+      # Keep enable flags common; only add extra packages here
+      hardware.graphics.extraPackages = with pkgs; [
+        intel-media-driver
+        intel-vaapi-driver
+        libvdpau-va-gl
       ];
 
       environment.sessionVariables = {
-        LIBVA_DRIVER_NAME = "iHD"; # Prefer modern Intel driver
+        LIBVA_DRIVER_NAME = "iHD"; # prefer modern Intel driver
       };
 
       environment.systemPackages = with pkgs; [
@@ -297,14 +296,13 @@ in {
     (lib.mkIf (cfg.type == "amd") {
       services.xserver.videoDrivers = [ "amdgpu" ];
       boot.kernelModules = [ "amdgpu" ];
-      # For symmetry with Intel, you might want VA-API bits here too
+
       hardware.graphics.extraPackages = with pkgs; [
-        libva-utils
         libvdpau-va-gl
       ];
     })
 
-    # --- Power management helpers / UI-adjacent scripts (optional) ------------
+    # --- Laptop helpers (optional) --------------------------------------------
     (lib.mkIf cfg.powerManagement.smartToggle {
       environment.systemPackages = with pkgs; [
         (pkgs.writeShellScriptBin "gpu-toggle" ''
