@@ -38,8 +38,9 @@
         inherit system pkgs;
         specialArgs = { inherit inputs; };
         modules = [
-          ./machines/server/config.nix
           agenix.nixosModules.default
+          ./machines/server/config.nix
+
         ];
       };
 
@@ -47,14 +48,14 @@
         inherit system pkgs;
         specialArgs = { inherit inputs; };
         modules = [
-          ./machines/laptop/config.nix
           agenix.nixosModules.default
+          ./machines/laptop/config.nix
           home-manager.nixosModules.home-manager
         ];
       };
     };
 
-    # Agenix secrets configuration  
+    # Agenix secrets configuration
     agenixConfig = import ./secrets.nix;
 
     # Helper functions for migration

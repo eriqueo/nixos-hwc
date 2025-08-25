@@ -6,6 +6,7 @@
     ../modules/system/networking.nix
     ../modules/security/secrets.nix
     ../modules/home/eric.nix
+    ../modules/infrastructure/gpu.nix
   ];
 
   # Your base configuration

@@ -38,14 +38,14 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  
+
   options.hwc.gpu = {
     type = lib.mkOption {
       type = lib.types.enum [ "none" "nvidia" "intel" "amd" ];
       default = "none";
       description = "GPU type for hardware acceleration";
     };
-    
+
     # GPU power management and toggle functionality
     powerManagement = {
       enable = lib.mkOption {
@@ -53,13 +53,13 @@ in {
         default = false;
         description = "Enable GPU power management features";
       };
-      
+
       smartToggle = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Enable smart GPU toggle functionality for laptops";
       };
-      
+
       toggleNotifications = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -73,30 +73,30 @@ in {
         default = cfg.type == "nvidia";
         description = "Enable NVIDIA GPU support (auto-enabled when type=nvidia)";
       };
-      
+
       driver = lib.mkOption {
         type = lib.types.enum [ "stable" "beta" "production" ];
         default = "stable";
         description = "NVIDIA driver version";
       };
-      
+
       enableMonitoring = lib.mkEnableOption "GPU utilization monitoring";
-      
+
       containerRuntime = lib.mkEnableOption "NVIDIA container runtime for Docker/Podman";
-      
+
       prime = {
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
           description = "Enable NVIDIA Prime for hybrid graphics";
         };
-        
+
         nvidiaBusId = lib.mkOption {
           type = lib.types.str;
           default = "PCI:1:0:0";
           description = "NVIDIA GPU bus ID";
         };
-        
+
         intelBusId = lib.mkOption {
           type = lib.types.str;
           default = "PCI:0:2:0";
@@ -104,7 +104,7 @@ in {
         };
       };
     };
-    
+
     intel = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -116,7 +116,7 @@ in {
     # Export GPU options for container services
     containerOptions = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = 
+      default =
         if cfg.type == "nvidia" then [
           "--device=/dev/nvidia0:/dev/nvidia0:rwm"
           "--device=/dev/nvidiactl:/dev/nvidiactl:rwm"
@@ -129,10 +129,10 @@ in {
         ] else [];
       description = "Container options for GPU access (auto-generated based on GPU type)";
     };
-    
+
     containerEnvironment = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
-      default = 
+      default =
         if cfg.type == "nvidia" then {
           NVIDIA_VISIBLE_DEVICES = "all";
           NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility";
@@ -140,12 +140,28 @@ in {
       description = "Container environment variables for GPU access (auto-generated based on GPU type)";
     };
   };
-  
+
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
-  
+
   config = lib.mkMerge [
+
+    {
+      imports = [
+        # This line imports the official NVIDIA module, but only if you've set
+        # hwc.gpu.type = "nvidia" in your machine's config.
+        # This module is what CREATES the `hardware.nvidia.*` options.
+        (lib.mkIf (cfg.type == "nvidia") (
+          "${pkgs.path}/nixos/modules/hardware/video/nvidia.nix"
+        ))
+
+        # This does the same for Intel.
+        (lib.mkIf (cfg.type == "intel") (
+          "${pkgs.path}/nixos/modules/hardware/video/intel.nix"
+        ))
+      ];
+    }
     # Validation assertions
     {
       assertions = [
@@ -159,21 +175,21 @@ in {
         }
       ];
     }
-    
+
     # NVIDIA GPU Configuration
     (lib.mkIf cfg.nvidia.enable {
       # Enable Graphics (updated from hardware.opengl)
       hardware.graphics = {
         enable = true;
         enable32Bit = true;
-        
+
         # Add drivers for both Intel iGPU and NVIDIA
         extraPackages = with pkgs; [
           # Intel iGPU acceleration (fallback for basic tasks)
           intel-media-driver      # LIBVA_DRIVER_NAME=iHD
           intel-vaapi-driver      # LIBVA_DRIVER_NAME=i965 (fallback)
           libvdpau-va-gl
-          
+
           # NVIDIA acceleration packages
           nvidia-vaapi-driver     # For VAAPI support
           vaapiVdpau             # VDPAU to VAAPI bridge
@@ -182,22 +198,22 @@ in {
 
       # Load nvidia driver for Xorg and Wayland
       services.xserver.videoDrivers = [ "nvidia" ];
-      
+
       # NVIDIA GPU Configuration
       hardware.nvidia = {
         # Modesetting is required for proper operation
         modesetting.enable = true;
-        
+
         # Power management settings for server (24/7 operation)
         powerManagement.enable = false;        # Disable for server stability
         powerManagement.finegrained = false;  # Not needed for server workloads
-        
+
         # Use open-source drivers (updated from false to true)
         open = true;
-        
+
         # Enable NVIDIA settings
         nvidiaSettings = true;
-        
+
         # Use specified driver version
         package = config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver};
       };
@@ -212,9 +228,9 @@ in {
       # Load NVIDIA kernel modules early in boot process
       boot.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
       boot.blacklistedKernelModules = [ "nouveau" ];  # Disable nouveau
-      
+
       # Kernel parameters for NVIDIA
-      boot.kernelParams = [ 
+      boot.kernelParams = [
         "nvidia-drm.modeset=1"  # Enable DRM kernel mode setting
       ];
 
@@ -222,10 +238,10 @@ in {
       environment.sessionVariables = {
         # NVIDIA specific
         CUDA_CACHE_PATH = "${paths.cache}/cuda";
-        
+
         # VAAPI driver selection (prefer NVIDIA, fallback to Intel)
         LIBVA_DRIVER_NAME = "nvidia";
-        
+
         # VDPAU driver
         VDPAU_DRIVER = "nvidia";
       };
@@ -234,15 +250,15 @@ in {
       environment.systemPackages = with pkgs; [
         # NVIDIA tools - use the driver package which includes nvidia-smi
         config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}
-        
-        # Video acceleration testing tools  
+
+        # Video acceleration testing tools
         libva-utils             # vainfo command
         vdpauinfo               # VDPAU info
       ];
 
       # Enable container GPU support
       hardware.nvidia-container-toolkit.enable = cfg.nvidia.containerRuntime;
-      
+
       # Configure CDI support for containers
       virtualisation.containers.containersConf.settings = lib.mkIf cfg.nvidia.containerRuntime {
         engine = {
@@ -283,19 +299,19 @@ in {
         # NVIDIA optimizations for server workloads
         options nvidia NVreg_DeviceFileUID=0 NVreg_DeviceFileGID=44 NVreg_DeviceFileMode=0660
         options nvidia NVreg_ModifyDeviceFiles=1
-        
+
         # Persistence mode for consistent performance
         options nvidia NVreg_RegistryDwords="PerfLevelSrc=0x2222"
       '';
     })
-    
+
     # Intel GPU Configuration
     (lib.mkIf cfg.intel.enable {
       # Enable Graphics for Intel
       hardware.graphics = {
         enable = true;
         enable32Bit = true;
-        
+
         extraPackages = with pkgs; [
           intel-media-driver      # LIBVA_DRIVER_NAME=iHD
           intel-vaapi-driver      # LIBVA_DRIVER_NAME=i965
@@ -314,7 +330,7 @@ in {
         intel-gpu-tools         # intel_gpu_top
       ];
     })
-    
+
     # GPU toggle scripts (migrated from waybar.nix for proper domain organization)
     (lib.mkIf cfg.powerManagement.smartToggle {
       environment.systemPackages = with pkgs; [
@@ -322,7 +338,7 @@ in {
           #!/usr/bin/env bash
           GPU_MODE_FILE="/tmp/gpu-mode"
           CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
-          
+
           case "$CURRENT_MODE" in
             "intel")
               echo "performance" > "$GPU_MODE_FILE"
@@ -339,32 +355,32 @@ in {
             *)
               echo "intel" > "$GPU_MODE_FILE"
               ${lib.optionalString cfg.powerManagement.toggleNotifications ''
-                ${libnotify}/bin/notify-send "GPU Mode" "Reset to Intel Mode 󰢮" -i gpu-card  
+                ${libnotify}/bin/notify-send "GPU Mode" "Reset to Intel Mode 󰢮" -i gpu-card
               ''}
               ;;
           esac
-          
+
           # Update UI components if available (generic notification)
           pkill -SIGUSR1 waybar 2>/dev/null || true  # Legacy waybar support
           pkill -SIGUSR1 swaybar 2>/dev/null || true  # Future sway support
         '')
-        
+
         (writeScriptBin "gpu-launch" ''
           #!/usr/bin/env bash
           if [[ $# -eq 0 ]]; then
             echo "Usage: gpu-launch <application> [args...]"
             exit 1
           fi
-          
+
           GPU_MODE_FILE="/tmp/gpu-mode"
           CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
-          
+
           NEXT_NVIDIA_FILE="/tmp/gpu-next-nvidia"
           if [[ -f "$NEXT_NVIDIA_FILE" ]]; then
             rm "$NEXT_NVIDIA_FILE"
             exec ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-offload "$@"
           fi
-          
+
           case "$CURRENT_MODE" in
             "performance")
               case "$1" in
@@ -381,7 +397,7 @@ in {
               ;;
           esac
         '')
-        
+
         # Manual dGPU override command
         (writeScriptBin "gpu-next" ''
           #!/usr/bin/env bash
