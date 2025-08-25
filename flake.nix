@@ -32,6 +32,10 @@
     };
 
     lib = nixpkgs.lib;
+     nixos-hardware-modules = {
+                         nvidia = "${nixpkgs.path}/nixos/modules/hardware/video/nvidia.nix";
+                         intel = "${nixpkgs.path}/nixos/modules/hardware/video/intel.nix";
+                       };
   in {
     nixosConfigurations = {
       hwc-server = lib.nixosSystem {
@@ -48,11 +52,8 @@
         inherit system pkgs;
         specialArgs = {
           inherit inputs;
-            nixos-hardware-modules = {
-                         nvidia = "${nixpkgs.path}/nixos/modules/hardware/video/nvidia.nix";
-                         intel = "${nixpkgs.path}/nixos/modules/hardware/video/intel.nix";
-                       };
-             };
+          inherit nixos-hardware-modules;
+           };
         modules = [
           agenix.nixosModules.default
           ./machines/laptop/config.nix
