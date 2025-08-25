@@ -113,9 +113,9 @@ in {
       tuigreet  # TUI greeter for greetd
     ];
 
-    # Disable other display managers
-    services.displayManager.gdm.enable = lib.mkForce false;
-    services.displayManager.lightdm.enable = lib.mkForce false;
-    services.displayManager.sddm.enable = lib.mkForce false;
+    # Disable other display managers (using correct NixOS 24.05+ option names)
+    services.xserver.displayManager.gdm.enable = lib.mkForce false;
+    services.xserver.displayManager.lightdm.enable = lib.mkForce false;
+    services.xserver.displayManager.sddm.enable = lib.mkForce false;
   };
 }
