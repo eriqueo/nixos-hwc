@@ -8,10 +8,9 @@
 #
 # USED BY (Downstream):
 #   - profiles/security.nix (orchestrates security posture)
-#   - machines/*/config.nix (machine facts: enable + secret wiring)
+#   - machines/*/config.nix (facts: enable + secret wiring)
 #
-# USAGE (recommended with agenix):
-#   # secrets/emergency-password.age created with `agenix`
+# USAGE (preferred with agenix):
 #   age.secrets."emergency-password".file = ./secrets/emergency-password.age;
 #   hwc.security.emergencyAccess = {
 #     enable = true;
@@ -23,23 +22,13 @@
 let
   cfg = config.hwc.security.emergencyAccess;
 
-  chosenCred =
-    if cfg.hashedPasswordFile != null then
-      { attr = { users.users.root.hashedPasswordFile = cfg.hashedPasswordFile; }; warn = null; }
-    else if cfg.hashedPassword != null then
-      { attr = { users.users.root.hashedPassword     = cfg.hashedPassword;     }; warn = null; }
-    else if cfg.passwordFile != null then
-      { attr = { users.users.root.passwordFile       = cfg.passwordFile;       }; warn = null; }
-    else if cfg.password != null then
-      { attr = { users.users.root.initialPassword    = cfg.password;           };
-        warn = ''
-          WARNING: emergencyAccess is using `initialPassword` (plaintext).
-          This only applies on first activation; subsequent changes won’t update root.
-          Prefer `hashedPassword{,File}` via agenix.
-        '';
-      }
-    else
-      { attr = {}; warn = null; };
+  hasHPF = cfg.hashedPasswordFile != null;
+  hasHP  = cfg.hashedPassword     != null;
+  hasPF  = cfg.passwordFile       != null;
+  hasP   = cfg.password           != null;
+
+  exactlyOne =
+    (lib.length (lib.filter (x: x) [ hasHPF hasHP hasPF hasP ])) == 1;
 in
 {
   #============================================================================
@@ -48,18 +37,21 @@ in
   options.hwc.security.emergencyAccess = {
     enable = lib.mkEnableOption "Emergency root password access (temporary)";
 
+    # Plaintext (discouraged; becomes initialPassword)
     password = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
       description = "PLAINTEXT emergency password (applied as initialPassword). Prefer hashed/passwordFile.";
     };
 
+    # Plaintext file (good with agenix: config.age.secrets.<name>.path)
     passwordFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
       description = "Path to PLAINTEXT password file (e.g. agenix secret path).";
     };
 
+    # Hashed inputs (preferred)
     hashedPassword = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -76,34 +68,36 @@ in
   #============================================================================
   # IMPLEMENTATION – Apply when enabled; assert invariant
   #============================================================================
-  config = lib.mkMerge [
-    (lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
       assertions = [{
-        assertion =
-          (cfg.hashedPasswordFile != null)
-          || (cfg.hashedPassword != null)
-          || (cfg.passwordFile != null)
-          || (cfg.password != null);
-        message = "[hwc.security.emergencyAccess] is enabled, but no password/secret was provided.";
+        assertion = exactlyOne;
+        message =
+          "[hwc.security.emergencyAccess] enabled, but you must provide exactly one of: "
+          + "hashedPasswordFile, hashedPassword, passwordFile, or password.";
       }];
 
-      # Allow root login while emergency access is active
+      # Allow root password auth while emergency access is active
       services.openssh.settings.PermitRootLogin = lib.mkForce "yes";
-    })
 
-    (lib.mkIf cfg.enable chosenCred.attr)
-
-    (lib.mkIf (cfg.enable && chosenCred.warn != null) {
-      warnings = [ chosenCred.warn ];
-    })
-
-    (lib.mkIf cfg.enable {
       warnings = [ ''
         ##################################################################
         # SECURITY WARNING: EMERGENCY ROOT ACCESS IS ACTIVE              #
         # Disable `hwc.security.emergencyAccess.enable` when finished.   #
         ##################################################################
       '' ];
+    }
+
+    # Pick exactly one credential source without splicing attrsets
+    (lib.mkIf hasHPF { users.users.root.hashedPasswordFile = cfg.hashedPasswordFile; })
+    (lib.mkIf hasHP  { users.users.root.hashedPassword     = cfg.hashedPassword;     })
+    (lib.mkIf hasPF  { users.users.root.passwordFile       = cfg.passwordFile;       })
+    (lib.mkIf hasP   {
+      users.users.root.initialPassword = cfg.password;
+      warnings = [ ''
+        WARNING: Using `initialPassword` (plaintext). This only applies on first
+        activation; later changes won’t update root. Prefer hashedPassword{,File}.
+      '' ];
     })
-  ];
+  ]);
 }
