@@ -6,8 +6,8 @@
          ../modules/infrastructure/samba.nix
          ../modules/system/desktop-packages.nix  # Desktop system packages
          ../modules/home/hyprland.nix
-         ../modules/home/waybar.nix
-         ../modules/home/waybar-scripts.nix
+         ../modules/schema/home/waybar.nix
+         ../modules/system/gpu/waybar-tools.nix
          ../modules/home/apps.nix
          ../modules/home/cli.nix
          ../modules/home/development.nix
@@ -161,11 +161,24 @@
        # This is the root fix. It activates Home Manager for the specified user.
        #============================================================================
        home-manager.useGlobalPkgs = true;
-
+       home-manager.extraSpecialArgs = { nixosConfig = config; };
        home-manager.users.eric = {
-         # Import all the user-specific modules that contain
-         # the actual Home Manager configuration.
-         # You can set user-wide settings here if needed, for example:
-         home.stateVersion = "24.05";
-       };
-     }
+          imports = [
+            ../modules/home/waybar/default.nix
+          ];
+          home.stateVersion = "24.05";
+        };
+
+        hwc.home.waybar = {
+          enable = true;
+          position = "top";
+          theme = "deep-nord";
+          modules = {
+            gpu = { enable = true; intervalSeconds = 5; };
+            network.enable = true;
+            battery.enable = true;
+            workspaces.enable = true;
+            sysmon.enable = true;
+          };
+        };
+}
