@@ -37,11 +37,25 @@ in
   options.hwc.desktop.hyprland = {
     enable = lib.mkEnableOption "Hyprland Wayland compositor";
 
-    monitor = lib.mkOption {
-      type = t.nullOr t.str;
-      default = null;
-      description = "Hyprland monitor directive (e.g. \"eDP-1,1920x1200@60,0x0,1\").";
+  monitor = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          primary = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Hyprland monitor string for the built-in/primary display (e.g. \"eDP-1,2560x1600@165,0x0,1.566667\").";
+          };
+          external = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Hyprland monitor string for the external display (e.g. \"DP-1,3840x2160@60,1638x0,2\").";
+          };
+        };
+      };
+      default = {};
+      description = "Monitor layout strings passed to Hyprland.";
     };
+
 
     # Structured settings merged into HM
     settings = lib.mkOption {
