@@ -47,25 +47,41 @@ let
     echo "{\"text\":\"$ICON\",\"class\":\"$CLASS\",\"tooltip\":\"$TOOLTIP\"}"
   '';
 
-  batteryHealth = pkgs.writeShellScriptBin "battery-health" ''
-    #!/usr/bin/env bash
-    B="/sys/class/power_supply/BAT0"
-    if [[ ! -d "$B" ]]; then
-      echo '{"text":"󰂑","tooltip":"No battery detected"}'
-      exit 0
-    fi
-    CAPACITY=$(cat "$B/capacity" 2>/dev/null || echo "0")
-    STATUS=$(cat "$B/status" 2>/dev/null || echo "Unknown")
-    HEALTH=$(cat "$B/health" 2>/dev/null || echo "Unknown")
-    CYCLE_COUNT=$(cat "$B/cycle_count" 2>/dev/null || echo "Unknown")
-    if [[ "$STATUS" == "Charging" ]]; then ICON="󰂄"; CLASS="charging"
-    elif [[ ${CAPACITY:-0} -gt 90 ]]; then ICON="󰁹"; CLASS="full"
-    elif [[ ${CAPACITY:-0} -gt 75 ]]; then ICON="󰂂"; CLASS="high"
-    elif [[ ${CAPACITY:-0} -gt 50 ]]; then ICON="󰁿"; CLASS="medium"
-    elif [[ ${CAPACITY:-0} -gt 25 ]]; then ICON="󰁼"; CLASS="low"
-    else ICON="󰁺"; CLASS="critical"; fi
-    echo "{\"text\":\"$ICON ${CAPACITY}%\",\"class\":\"$CLASS\",\"tooltip\":\"Battery: ${CAPACITY}%\\nStatus: $STATUS\\nHealth: $HEALTH\\nCycles: $CYCLE_COUNT\"}"
-  '';
+batteryHealth = pkgs.writeShellScriptBin "battery-health" ''
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  BATTERY_PATH="/sys/class/power_supply/BAT0"
+
+  CAPACITY="0"
+  STATUS="Unknown"
+  HEALTH="Unknown"
+  CYCLE_COUNT="Unknown"
+
+  if [[ -d "$BATTERY_PATH" ]]; then
+    CAPACITY=$(cat "$BATTERY_PATH/capacity" 2>/dev/null || echo "0")
+    STATUS=$(cat "$BATTERY_PATH/status" 2>/dev/null || echo "Unknown")
+    HEALTH=$(cat "$BATTERY_PATH/health" 2>/dev/null || echo "Unknown")
+    CYCLE_COUNT=$(cat "$BATTERY_PATH/cycle_count" 2>/dev/null || echo "Unknown")
+  fi
+
+  if [[ "$STATUS" == "Charging" ]]; then
+    ICON="󰂄"; CLASS="charging"
+  elif [[ ${CAPACITY:-0} -gt 90 ]]; then
+    ICON="󰁹"; CLASS="full"
+  elif [[ ${CAPACITY:-0} -gt 75 ]]; then
+    ICON="󰂂"; CLASS="high"
+  elif [[ ${CAPACITY:-0} -gt 50 ]]; then
+    ICON="󰁿"; CLASS="medium"
+  elif [[ ${CAPACITY:-0} -gt 25 ]]; then
+    ICON="󰁼"; CLASS="low"
+  else
+    ICON="󰁺"; CLASS="critical"
+  fi
+
+  printf '{"text":"%s %s%%","class":"%s","tooltip":"Battery: %s%%\nStatus: %s\nHealth: %s\nCycles: %s"}\n' \
+    "$ICON" "$CAPACITY" "$CLASS" "$CAPACITY" "$STATUS" "$HEALTH" "$CYCLE_COUNT"
+'';
 
   gpuMenu = pkgs.writeShellScriptBin "gpu-menu" ''
     #!/usr/bin/env bash
