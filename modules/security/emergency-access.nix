@@ -2,12 +2,6 @@
 #
 # HWC Emergency Root Access (Charter v3)
 # Provides a temporary, password-protected root account for recovery.
-#
-# DEPENDENCIES: None
-# USED BY: profiles/security.nix, machines/*/config.nix
-# USAGE:
-#   hwc.security.emergencyAccess.enable = true;
-#   hwc.security.emergencyAccess.password = "a-very-strong-password";
 
 { config, lib, pkgs, ... }:
 
@@ -37,13 +31,18 @@ in
       message = "[hwc.security.emergencyAccess] is enabled, but no password is set. This is a misconfiguration.";
     }];
 
-    # Prominently warn the user that this insecure feature is active.
-    system.nixos.messages = [ ''
+    # ===================================================================
+    # CORRECTED WARNING IMPLEMENTATION
+    # Use `lib.warn` to print a message during evaluation. This is the
+    # standard and correct way to do this.
+    # We assign it to a dummy variable that gets evaluated.
+    # ===================================================================
+    _ = lib.warn ''
       ##################################################################
       # SECURITY WARNING: EMERGENCY ROOT ACCESS IS ACTIVE              #
       # The root user has a password set in your configuration.nix.    #
       # Please disable this feature in your machine config once stable.#
       ##################################################################
-    '' ];
+    '';
   };
 }
