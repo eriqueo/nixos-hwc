@@ -1,8 +1,11 @@
 { config, lib, pkgs, nixosConfig, ... }:
 let
   wcfg = nixosConfig.hwc.home.waybar or {};
-  on = x: (x or false);
+  on = x: if x != null then x else false;
 in {
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf (on wcfg.enable) {
     programs.waybar = {
       enable = true;
@@ -31,4 +34,3 @@ in {
       };
     };
   };
-}

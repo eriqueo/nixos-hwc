@@ -1,5 +1,25 @@
 # nixos-hwc/modules/services/media/jellyfin.nix
 #
+# JELLYFIN - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.jellyfin.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/jellyfin.nix
+#
+# USAGE:
+#   hwc.services.jellyfin.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/services/media/jellyfin.nix
+#
 # Jellyfin Media Server
 # Provides streaming media server with optional GPU transcoding
 #

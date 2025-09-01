@@ -1,8 +1,31 @@
+# nixos-hwc/modules/infrastructure/storage.nix
+#
+# STORAGE - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.infrastructure.storage.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/infrastructure/storage.nix
+#
+# USAGE:
+#   hwc.infrastructure.storage.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.storage;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.storage = {
     hot = {
       enable = lib.mkEnableOption "Hot storage tier";
@@ -56,6 +79,10 @@ in {
     };
   };
   
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkMerge [
     (lib.mkIf cfg.hot.enable {
       fileSystems."${cfg.hot.path}" = {

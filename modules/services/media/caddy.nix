@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/media/caddy.nix
+#
+# CADDY - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.caddy.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/caddy.nix
+#
+# USAGE:
+#   hwc.services.caddy.enable = true;
+#   # TODO: Add specific usage examples
+
 # nixos-hwc/modules/services/network/caddy.nix
 #
 # Caddy Reverse Proxy

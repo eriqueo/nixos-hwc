@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/media/networking.nix
+#
+# NETWORKING - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.networking.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/networking.nix
+#
+# USAGE:
+#   hwc.services.networking.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/services/media/networking.nix
 #
 # HWC Media Services Networking (Charter v3)

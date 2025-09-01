@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/media/media-containers.nix
+#
+# MEDIA CONTAINERS - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.media-containers.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/media-containers.nix
+#
+# USAGE:
+#   hwc.services.media-containers.enable = true;
+#   # TODO: Add specific usage examples
+
 # hosts/server/modules/media-containers.nix (merged)
 { config, lib, pkgs, ... }:
 
@@ -463,4 +483,3 @@ EOF
           chown -R 1000:100 "${cfgRoot}/$app"
           echo "Fixed permissions for $app config"
         f
-(Content truncated due to size limit. Use page ranges or line ranges to read remaining content)

@@ -1,3 +1,23 @@
+# nixos-hwc/modules/system/users.nix
+#
+# USERS - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.system.users.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/system/users.nix
+#
+# USAGE:
+#   hwc.system.users.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 {
   users.users.eric = {

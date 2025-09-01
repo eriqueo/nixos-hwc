@@ -7,7 +7,11 @@
       "Bash(sudo chown:*)",
       "Bash(sops:*)",
       "Bash(sudo cp:*)",
-      "Bash(sudo ls:*)"
+      "Bash(sudo ls:*)",
+      "Bash(./scripts/add-section-headers.sh:*)",
+      "Bash(./scripts/validate-charter-v4.sh:*)",
+      "Bash(chmod:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": [],

@@ -1,5 +1,25 @@
 # nixos-hwc/modules/services/media/prowlarr.nix
 #
+# PROWLARR - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.prowlarr.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/prowlarr.nix
+#
+# USAGE:
+#   hwc.services.prowlarr.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/services/media/prowlarr.nix
+#
 # Prowlarr Indexer Management
 # Provides centralized indexer management for ARR stack
 #

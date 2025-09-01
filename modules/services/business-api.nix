@@ -1,8 +1,31 @@
+# nixos-hwc/modules/services/business-api.nix
+#
+# BUSINESS API - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.business-api.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/business-api.nix
+#
+# USAGE:
+#   hwc.services.business-api.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.businessApi;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.businessApi = {
     enable = lib.mkEnableOption "Business API services";
 
@@ -42,6 +65,10 @@ in {
     };
   };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf cfg.enable (lib.mkMerge [
     (lib.mkIf cfg.apis.invoicing.enable {
       virtualisation.oci-containers.containers.invoicing-api = {

@@ -1,8 +1,31 @@
+# nixos-hwc/modules/services/monitoring/grafana.nix
+#
+# GRAFANA - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.grafana.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/monitoring/grafana.nix
+#
+# USAGE:
+#   hwc.services.grafana.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.grafana;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.grafana = {
     enable = lib.mkEnableOption "Grafana dashboards";
     
@@ -25,6 +48,10 @@ in {
     };
   };
   
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf cfg.enable {
     services.grafana = {
       enable = true;

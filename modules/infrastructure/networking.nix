@@ -1,7 +1,30 @@
+# nixos-hwc/modules/infrastructure/networking.nix
+#
+# NETWORKING - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.infrastructure.networking.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/infrastructure/networking.nix
+#
+# USAGE:
+#   hwc.infrastructure.networking.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.networking;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.networking = {
     vlans = lib.mkOption {
       type = lib.types.attrsOf lib.types.attrs;
@@ -44,6 +67,10 @@ in {
     };
   };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = {
     # VLAN configuration
     networking.vlans = lib.mapAttrs (name: vlan: {

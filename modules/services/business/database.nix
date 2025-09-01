@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/business/database.nix
+#
+# DATABASE - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.database.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/business/database.nix
+#
+# USAGE:
+#   hwc.services.database.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/services/business/database.nix
 # Charter v3 Business Database Services
 # SOURCE: /etc/nixos/hosts/server/modules/business-services.nix (lines 1-133)
@@ -13,6 +33,9 @@ in {
   ####################################################################
   # CHARTER V3 OPTIONS
   ####################################################################
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.business.database = {
     enable = mkEnableOption "business database services";
     
@@ -80,9 +103,17 @@ in {
   ####################################################################
   # CHARTER V3 IMPLEMENTATION
   ####################################################################
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = mkIf cfg.enable {
     
     # Assertions
+
+    #==========================================================================
+    # VALIDATION - Assertions and checks
+    #==========================================================================
     assertions = [
       {
         assertion = cfg.postgresql.enable -> config.hwc.security.secrets.database;
@@ -259,4 +290,3 @@ in {
         optional cfg.redis.enable cfg.redis.port;
     };
   };
-}

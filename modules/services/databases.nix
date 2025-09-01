@@ -1,8 +1,31 @@
+# nixos-hwc/modules/services/databases.nix
+#
+# DATABASES - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.databases.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/databases.nix
+#
+# USAGE:
+#   hwc.services.databases.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.databases;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.databases = {
     postgresql = {
       enable = lib.mkEnableOption "PostgreSQL database";
@@ -58,6 +81,10 @@ in {
     };
   };
   
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkMerge [
     (lib.mkIf cfg.postgresql.enable {
       services.postgresql = {

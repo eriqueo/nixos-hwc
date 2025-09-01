@@ -1,7 +1,30 @@
+# nixos-hwc/modules/home/cli.nix
+#
+# CLI - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.home.cli.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/home/cli.nix
+#
+# USAGE:
+#   hwc.home.cli.enable = true;
+#   # TODO: Add specific usage examples
+
  { config, lib, pkgs, ... }:
      let
        cfg = config.hwc.home.cli;
      in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
        options.hwc.home.cli = {
          enable = lib.mkEnableOption "CLI tools and utilities";
 
@@ -31,6 +54,10 @@
          };
        };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
        config = lib.mkIf cfg.enable {
          environment.systemPackages = with pkgs; [
            # Core utilities

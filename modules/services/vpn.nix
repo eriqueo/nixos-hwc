@@ -1,7 +1,30 @@
+# nixos-hwc/modules/services/vpn.nix
+#
+# VPN - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.vpn.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/vpn.nix
+#
+# USAGE:
+#   hwc.services.vpn.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.vpn;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.vpn = {
     tailscale = {
       enable = lib.mkEnableOption "Tailscale VPN";
@@ -35,6 +58,10 @@ in {
     };
   };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkMerge [
     (lib.mkIf cfg.tailscale.enable {
       services.tailscale = {
