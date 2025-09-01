@@ -43,5 +43,8 @@ let
     pkill -SIGUSR1 waybar 2>/dev/null || true
   '';
 in {
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   environment.systemPackages = [ waybarGpuStatus waybarGpuToggle ];
 }

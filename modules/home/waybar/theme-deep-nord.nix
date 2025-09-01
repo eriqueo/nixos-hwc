@@ -17,7 +17,9 @@
 # USAGE:
 #   hwc.home.theme-deep-nord.enable = true;
 #   # TODO: Add specific usage examples
-
+#============================================================================
+# IMPLEMENTATION - Theme CSS
+#============================================================================
 ''
 * {
   font-family: Inter, JetBrains Mono, monospace;
