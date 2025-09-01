@@ -1,15 +1,15 @@
-# modules/home/eric.nix - Charter v3 User Configuration
+# nixos-hwc/modules/home/eric.nix
 #
-# HWC User Environment Management (Charter v3)
-# Consolidated user configuration with toggle-based feature control
+# ERIC USER ENVIRONMENT - Primary user configuration
+# Defines the main user account, groups, and environment settings
 #
-# DEPENDENCIES:
-#   Upstream: modules/security/secrets.nix (user secrets)
-#   Upstream: modules/system/paths.nix (user paths)
+# DEPENDENCIES (Upstream):
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#   - config.hwc.security.secrets.* (modules/security/secrets.nix)
 #
-# USED BY:
-#   Downstream: profiles/base.nix (basic user setup)
-#   Downstream: profiles/workstation.nix (user desktop environment)
+# USED BY (Downstream):
+#   - profiles/base.nix (enables via hwc.home.user.enable)
+#   - profiles/workstation.nix (imports for desktop environment)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/base.nix: ../modules/home/eric.nix
@@ -18,10 +18,6 @@
 #   hwc.home.user.enable = true;              # Basic user account
 #   hwc.home.groups.development = true;       # Development permissions
 #   hwc.home.ssh.enable = true;               # SSH configuration
-#
-# VALIDATION:
-#   - Requires hwc.security.secrets.user = true for secret integration
-#   - Creates user with proper groups and permissions
 
 { config, lib, pkgs, ... }:
 
