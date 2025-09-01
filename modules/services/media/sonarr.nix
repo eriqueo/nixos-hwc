@@ -1,5 +1,25 @@
 # nixos-hwc/modules/services/media/sonarr.nix
 #
+# SONARR - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.sonarr.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/sonarr.nix
+#
+# USAGE:
+#   hwc.services.sonarr.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/services/media/sonarr.nix
+#
 # Sonarr TV Series Management
 # Provides automated TV series downloading and organization
 #

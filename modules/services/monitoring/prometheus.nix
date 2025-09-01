@@ -1,8 +1,31 @@
+# nixos-hwc/modules/services/monitoring/prometheus.nix
+#
+# PROMETHEUS - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.prometheus.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/monitoring/prometheus.nix
+#
+# USAGE:
+#   hwc.services.prometheus.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.prometheus;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.prometheus = {
     enable = lib.mkEnableOption "Prometheus monitoring";
     
@@ -31,6 +54,10 @@ in {
     };
   };
   
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf cfg.enable {
     services.prometheus = {
       enable = true;

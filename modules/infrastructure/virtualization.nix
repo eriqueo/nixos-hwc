@@ -1,5 +1,25 @@
 # nixos-hwc/modules/infrastructure/virtualization.nix
 #
+# VIRTUALIZATION - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.infrastructure.virtualization.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/infrastructure/virtualization.nix
+#
+# USAGE:
+#   hwc.infrastructure.virtualization.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/infrastructure/virtualization.nix
+#
 # Infrastructure: Virtualization & Containers (QEMU/KVM + Podman)
 # Provides VM support (libvirtd, OVMF, SPICE) and a single container runtime (Podman).
 #

@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/ai/ai-bible.nix
+#
+# AI BIBLE - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.ai-bible.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/ai/ai-bible.nix
+#
+# USAGE:
+#   hwc.services.ai-bible.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.aiBible;
@@ -11,6 +31,9 @@ let
     pyyaml
   ]);
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.aiBible = {
     enable = lib.mkEnableOption "AI Bible documentation system";
     
@@ -67,6 +90,10 @@ in {
     };
   };
   
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf cfg.enable {
     # Main AI Bible service
     systemd.services.ai-bible = {

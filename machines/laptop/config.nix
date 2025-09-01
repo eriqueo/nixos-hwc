@@ -81,7 +81,6 @@
 
   ## Workstation profile preferences (orchestration only)
   hwc.desktop = {
-    waybar.enable = true;
     apps = {
       enable = true;
       browser.firefox = true;
@@ -97,6 +96,12 @@
     emergencyAccess.enable = true;
     # emergencyAccess.password   <-- removed; use an Agenix secret consumed by the security module
     ageKeyFile = "/etc/age/keys.txt";
+  };
+
+  ## Storage configuration
+  hwc.paths = {
+    hot = "/home/eric/storage/hot";  # SSD storage for active data
+    media = "/home/eric/storage/media";  # Media storage
   };
 
   ## User/home orchestration (implementation lives in modules/home/*)

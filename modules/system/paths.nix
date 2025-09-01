@@ -1,5 +1,25 @@
 # nixos-hwc/modules/system/paths.nix
 #
+# PATHS - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.system.paths.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/system/paths.nix
+#
+# USAGE:
+#   hwc.system.paths.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/system/paths.nix
+#
 # HWC Centralized Path Configuration System
 # Comprehensive path management for all system components
 #

@@ -1,3 +1,23 @@
+# nixos-hwc/modules/system/gpu/waybar-tools.nix
+#
+# WAYBAR TOOLS - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.system.waybar-tools.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/system/gpu/waybar-tools.nix
+#
+# USAGE:
+#   hwc.system.waybar-tools.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   drv = lib.getAttrFromPath [ "boot" "kernelPackages" "nvidiaPackages" "stable" ] config or null;

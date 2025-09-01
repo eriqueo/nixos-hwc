@@ -1,8 +1,31 @@
+# nixos-hwc/modules/services/ntfy.nix
+#
+# NTFY - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.ntfy.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/ntfy.nix
+#
+# USAGE:
+#   hwc.services.ntfy.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.ntfy;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.ntfy = {
     enable = lib.mkEnableOption "ntfy notification service";
     port = lib.mkOption {
@@ -17,6 +40,10 @@ in {
     };
   };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf cfg.enable {
     # Container configuration
     virtualisation.oci-containers.containers.ntfy = {

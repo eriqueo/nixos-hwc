@@ -1,7 +1,30 @@
+# nixos-hwc/modules/infrastructure/container-networking.nix
+#
+# CONTAINER NETWORKING - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.infrastructure.container-networking.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/infrastructure/container-networking.nix
+#
+# USAGE:
+#   hwc.infrastructure.container-networking.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.containerNetworking;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.containerNetworking = {
     networks = lib.mkOption {
       type = lib.types.attrsOf lib.types.attrs;
@@ -28,6 +51,10 @@ in {
     };
   };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = {
     # Create docker networks
     systemd.services = lib.mapAttrs' (name: network:

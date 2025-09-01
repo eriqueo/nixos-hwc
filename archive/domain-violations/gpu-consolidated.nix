@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/media/gpu-consolidated.nix
+#
+# GPU CONSOLIDATED - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.gpu-consolidated.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/gpu-consolidated.nix
+#
+# USAGE:
+#   hwc.services.gpu-consolidated.enable = true;
+#   # TODO: Add specific usage examples
+
 # nixos-hwc/modules/system/gpu.nix
 #
 # GPU Hardware Acceleration Management

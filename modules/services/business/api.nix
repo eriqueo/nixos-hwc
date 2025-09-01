@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/business/api.nix
+#
+# API - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.api.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/business/api.nix
+#
+# USAGE:
+#   hwc.services.api.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/services/business/api.nix
 # Charter v3 Business API Development Environment
 # SOURCE: /etc/nixos/hosts/server/modules/business-api.nix (lines 1-111)
@@ -13,6 +33,9 @@ in {
   ####################################################################
   # CHARTER V3 OPTIONS
   ####################################################################
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.business.api = {
     enable = mkEnableOption "business API development environment and services";
     
@@ -92,9 +115,17 @@ in {
   ####################################################################
   # CHARTER V3 IMPLEMENTATION
   ####################################################################
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = mkIf cfg.enable {
     
     # Assertions
+
+    #==========================================================================
+    # VALIDATION - Assertions and checks
+    #==========================================================================
     assertions = [
       {
         assertion = cfg.service.enable -> cfg.packages.enable;
@@ -309,4 +340,3 @@ in {
       allowedTCPPorts = [ cfg.service.port ];
     };
   };
-}

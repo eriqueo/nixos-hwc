@@ -1,5 +1,25 @@
 # nixos-hwc/modules/services/media/radarr.nix
 #
+# RADARR - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.radarr.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/media/radarr.nix
+#
+# USAGE:
+#   hwc.services.radarr.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/services/media/radarr.nix
+#
 # Radarr Movie Management
 # Provides automated movie downloading and organization
 #

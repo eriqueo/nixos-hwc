@@ -1,13 +1,20 @@
      { lib, ... }: {
        imports = [
+         # Infrastructure capabilities
          ../modules/infrastructure/gpu.nix
+         ../modules/infrastructure/waybar-gpu-tools.nix
+         ../modules/infrastructure/waybar-system-tools.nix
+         ../modules/infrastructure/user-services.nix
+         ../modules/infrastructure/user-hardware-access.nix
          ../modules/infrastructure/printing.nix
          ../modules/infrastructure/virtualization.nix
          ../modules/infrastructure/samba.nix
+
+         # System packages
          ../modules/system/desktop-packages.nix  # Desktop system packages
+
+         # Home environment (NixOS-level modules)
          ../modules/home/hyprland.nix
-         ../modules/schema/home/waybar.nix
-         ../modules/system/gpu/waybar-tools.nix
          ../modules/home/apps.nix
          ../modules/home/cli.nix
          ../modules/home/development.nix
@@ -15,6 +22,9 @@
          ../modules/home/productivity.nix
          ../modules/home/login-manager.nix
          ../modules/home/input.nix  # Universal input device configuration
+         
+         # Schema modules (define options)
+         ../modules/schema/home/waybar.nix
        ];
 
        # Enable desktop environment
@@ -34,24 +44,11 @@
            ];
          };
 
-         waybar = {
-           enable = true;
-           position = "top";
-           modules = {
-             showWorkspaces = true;
-             showNetwork = true;
-             showBattery = true;
-           };
-         };
-
-        waybar.scripts.enable = true;
-
-
          apps = {
            enable = true;
            browser = {
              firefox = true;
-             chromium = false;
+             chromium = true;
            };
            multimedia.enable = true;
            productivity.enable = true;
@@ -117,6 +114,17 @@
            office.libreoffice = true;
            communication.thunderbird = true;
          };
+
+         # Waybar configuration (home environment)
+         waybar = {
+           enable = true;
+           position = "top";
+           modules = {
+             workspaces.enable = true;
+             network.enable = true;
+             battery.enable = true;
+           };
+         };
        };
 
        # Infrastructure Services
@@ -124,22 +132,27 @@
          printing.enable = true;
          virtualization.enable = true;
          samba.enableSketchupShare = true;
-       };
-       # Add GPU configuration separately:
-       hwc.gpu = {
-         type = "nvidia";  # You'll need to specify the GPU type
-         powerManagement = {
+         # Waybar infrastructure tools
+         waybarGpuTools.enable = true;
+         waybarSystemTools.enable = true;
+         # User system services  
+         userServices.enable = true;
+         
+         # User hardware access (based on workstation needs)
+         userHardwareAccess = {
            enable = true;
-           smartToggle = true;        # Enable F12 GPU toggle functionality
-           toggleNotifications = true; # Show notifications when toggling
+           groups = {
+             media = true;          # Desktop workstation needs video/audio/render
+             development = true;    # Docker/Podman for containerized development
+             virtualization = true; # VMs enabled for workstation
+             hardware = true;       # Input devices and serial access
+           };
          };
        };
 
-       # Desktop Services
-       hwc.home.loginManager.enable = true;
+       hwc.home.loginManager.enable = true;  # Desktop Services
+       hwc.system.desktop.enable = true;        # Enable desktop system packages
 
-       # Enable desktop system packages
-       hwc.system.desktop.enable = true;
 
        # Workstation filesystem structure
        hwc.filesystem.userDirectories.enable = true;  # PARA structure for productivity
@@ -161,24 +174,13 @@
        # This is the root fix. It activates Home Manager for the specified user.
        #============================================================================
        home-manager.useGlobalPkgs = true;
-       home-manager.extraSpecialArgs = { nixosConfig = config; };
        home-manager.users.eric = {
           imports = [
+            # Waybar with all tools - Charter v4 compliant
             ../modules/home/waybar/default.nix
           ];
-          home.stateVersion = "24.05";
-        };
 
-        hwc.home.waybar = {
-          enable = true;
-          position = "top";
-          theme = "deep-nord";
-          modules = {
-            gpu = { enable = true; intervalSeconds = 5; };
-            network.enable = true;
-            battery.enable = true;
-            workspaces.enable = true;
-            sysmon.enable = true;
-          };
+          home.stateVersion = "24.05";
+
         };
 }

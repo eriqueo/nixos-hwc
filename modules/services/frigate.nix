@@ -1,8 +1,31 @@
+# nixos-hwc/modules/services/frigate.nix
+#
+# FRIGATE - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.frigate.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/frigate.nix
+#
+# USAGE:
+#   hwc.services.frigate.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.frigate;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.frigate = {
     enable = lib.mkEnableOption "Frigate NVR";
 
@@ -35,6 +58,10 @@ in {
     };
   };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf cfg.enable {
     virtualisation.oci-containers.containers.frigate = {
       image = "ghcr.io/blakeblackshear/frigate:stable";

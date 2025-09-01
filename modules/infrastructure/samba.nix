@@ -1,5 +1,25 @@
 # nixos-hwc/modules/infrastructure/samba.nix
 #
+# SAMBA - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.infrastructure.samba.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/infrastructure/samba.nix
+#
+# USAGE:
+#   hwc.infrastructure.samba.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/infrastructure/samba.nix
+#
 # Samba File Sharing Infrastructure
 # Provides SMB/CIFS file sharing with modern Windows compatibility
 #

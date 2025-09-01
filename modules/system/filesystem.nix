@@ -1,5 +1,25 @@
 # nixos-hwc/modules/system/filesystem.nix
 #
+# FILESYSTEM - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.system.filesystem.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/system/filesystem.nix
+#
+# USAGE:
+#   hwc.system.filesystem.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/system/filesystem.nix
+#
 # HWC Comprehensive Filesystem Structure Management
 # Creates complete directory structure matching production environment
 #

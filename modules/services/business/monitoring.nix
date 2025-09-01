@@ -1,3 +1,23 @@
+# nixos-hwc/modules/services/business/monitoring.nix
+#
+# MONITORING - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.monitoring.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/business/monitoring.nix
+#
+# USAGE:
+#   hwc.services.monitoring.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/services/business/monitoring.nix
 # Charter v3 Business Intelligence and Analytics Monitoring
 # SOURCE: /etc/nixos/hosts/server/modules/business-monitoring.nix (lines 1-536)
@@ -14,6 +34,9 @@ in {
   ####################################################################
   # CHARTER V3 OPTIONS
   ####################################################################
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.business.monitoring = {
     enable = mkEnableOption "business intelligence and analytics monitoring";
     
@@ -84,9 +107,17 @@ in {
   ####################################################################
   # CHARTER V3 IMPLEMENTATION
   ####################################################################
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = mkIf cfg.enable {
     
     # Assertions
+
+    #==========================================================================
+    # VALIDATION - Assertions and checks
+    #==========================================================================
     assertions = [
       {
         assertion = cfg.enable -> config.virtualisation.podman.enable;
@@ -599,4 +630,3 @@ EOF
         optional cfg.metrics.enable cfg.metrics.port;
     };
   };
-}

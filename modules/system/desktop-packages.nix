@@ -1,3 +1,23 @@
+# nixos-hwc/modules/system/desktop-packages.nix
+#
+# DESKTOP PACKAGES - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.system.desktop-packages.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/system/desktop-packages.nix
+#
+# USAGE:
+#   hwc.system.desktop-packages.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/system/desktop-packages.nix
 #
 # HWC Desktop System Packages (Charter v3)

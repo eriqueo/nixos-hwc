@@ -1,5 +1,25 @@
 # nixos-hwc/modules/infrastructure/printing.nix
 #
+# PRINTING - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.infrastructure.printing.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/infrastructure/printing.nix
+#
+# USAGE:
+#   hwc.infrastructure.printing.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/infrastructure/printing.nix
+#
 # CUPS Printing Infrastructure
 # Provides printing support with comprehensive driver packages
 #

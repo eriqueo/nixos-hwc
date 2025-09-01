@@ -1,5 +1,25 @@
 # nixos-hwc/modules/home/login-manager.nix
 #
+# LOGIN MANAGER - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.home.login-manager.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/home/login-manager.nix
+#
+# USAGE:
+#   hwc.home.login-manager.enable = true;
+#   # TODO: Add specific usage examples
+
+# nixos-hwc/modules/home/login-manager.nix
+#
 # Greetd Login Manager with TUI Greeter
 # Provides minimal TTY login manager for Wayland desktop environments
 #

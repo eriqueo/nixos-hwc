@@ -1,3 +1,23 @@
+# nixos-hwc/modules/system/networking.nix
+#
+# NETWORKING - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.system.networking.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/system/networking.nix
+#
+# USAGE:
+#   hwc.system.networking.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/system/networking.nix
 #
 # HWC System Networking Configuration (Charter v3)

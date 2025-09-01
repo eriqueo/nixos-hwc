@@ -1,3 +1,23 @@
+# nixos-hwc/modules/home/input.nix
+#
+# INPUT - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.home.input.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/home/input.nix
+#
+# USAGE:
+#   hwc.home.input.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/home/input.nix
 # Charter v3 Universal Input Configuration
 # Provides consistent keyboard mapping across all machines and input devices
@@ -12,6 +32,9 @@ in {
   ####################################################################
   # CHARTER V3 OPTIONS
   ####################################################################
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.home.input = {
     enable = mkEnableOption "universal input device configuration";
     
@@ -33,6 +56,10 @@ in {
   ####################################################################
   # CHARTER V3 IMPLEMENTATION
   ####################################################################
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = mkIf cfg.enable {
     
     ####################################################################

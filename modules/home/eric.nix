@@ -112,11 +112,8 @@ in {
 
   config = lib.mkIf cfg.user.enable {
 
-  # Ensure home-manager runs after agenix has decrypted secrets
-  systemd.services."home-manager-${cfg.user.name}" = {
-    requires = [ "agenix.service" ];
-    after = [ "agenix.service" ];
-  };
+  # User system services handled by infrastructure layer
+  # See: modules/infrastructure/user-services.nix
 
   #=========================================================================
   # USER ACCOUNT DEFINITION
@@ -128,12 +125,9 @@ in {
     shell = cfg.user.shell;
 
     # Dynamic group membership based on toggles
+    # Hardware and development groups handled by infrastructure layer
     extraGroups = [ ]
-      ++ lib.optionals cfg.groups.basic [ "wheel" "networkmanager" ]
-      ++ lib.optionals cfg.groups.media [ "video" "audio" "render" ]
-      ++ lib.optionals cfg.groups.development [ "docker" "podman" ]
-      ++ lib.optionals cfg.groups.virtualization [ "libvirtd" "kvm" ]
-      ++ lib.optionals cfg.groups.hardware [ "input" "uucp" "dialout" ];
+      ++ lib.optionals cfg.groups.basic [ "wheel" "networkmanager" ];
 
     # =======================================================================
     # REVISED SAFE PASSWORD LOGIC
@@ -171,34 +165,11 @@ in {
       # User environment tools
       which diffutils less
 
-      # Script utilities (from lib/scripts.nix)
-    ] ++ (lib.optionals cfg.environment.enablePaths [
-      # Path-related utilities when path management is enabled
-     (pkgs.writeShellScriptBin "hwc-paths" ''
-        echo "HWC Path Configuration:"
-        env | grep "^HWC_" | sort
-      '')
-    ]);
-
-    #=========================================================================
-    # USER DIRECTORY PERMISSIONS AND OWNERSHIP
-    #=========================================================================
-
-    # User home directory ownership (using paths module)
-    systemd.tmpfiles.rules = [
-      "Z ${paths.user.home} - ${cfg.user.name} users - -"
-      "Z ${paths.user.ssh} 0700 ${cfg.user.name} users - -"
-      "d ${paths.user.config} 0755 ${cfg.user.name} users -"
+      # Script utilities would be provided by infrastructure layer if needed
     ];
 
-    #=========================================================================
-    # OPTIONAL USER GROUPS CREATION
-    #=========================================================================
-
-    # Create media groups if enabled
-    users.groups = lib.mkIf cfg.groups.media {
-      render = lib.mkForce { gid = 2002; };  # GPU rendering group
-    };
+    # Hardware access and system setup handled by infrastructure layer
+    # See: modules/infrastructure/user-hardware-access.nix
 
     #=========================================================================
     # HOME MANAGER CONFIGURATION
@@ -206,47 +177,8 @@ in {
 
     home-manager.users.${cfg.user.name} = {
       home.stateVersion = "24.05";
-      # Remove the SSH authorized_keys from here - we'll handle it with systemd
+      # SSH authorized_keys and user services handled by infrastructure layer
     };
-    systemd.services."setup-ssh-keys-${cfg.user.name}" = lib.mkIf cfg.ssh.enable {
-          description = "Setup SSH authorized keys for ${cfg.user.name}";
-          wantedBy = [ "multi-user.target" ];
-          after = [ "agenix.service" ];
-          requires = [ "agenix.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            User = "root";
-          };
-          script = if cfg.ssh.useSecrets then ''
-            # Wait for the secret to be available
-            while [ ! -f "${config.age.secrets.user-ssh-public-key.path}" ]; do
-              sleep 1
-            done
-
-            # Create .ssh directory if it doesn't exist
-            mkdir -p ${paths.user.home}/.ssh
-            chmod 700 ${paths.user.home}/.ssh
-            chown ${cfg.user.name}:users ${paths.user.home}/.ssh
-
-            # Copy the public key to authorized_keys
-            cp "${config.age.secrets.user-ssh-public-key.path}" ${paths.user.home}/.ssh/authorized_keys
-            chmod 600 ${paths.user.home}/.ssh/authorized_keys
-            chown ${cfg.user.name}:users ${paths.user.home}/.ssh/authorized_keys
-          '' else ''
-            # Create .ssh directory if it doesn't exist
-            mkdir -p ${paths.user.home}/.ssh
-            chmod 700 ${paths.user.home}/.ssh
-            chown ${cfg.user.name}:users ${paths.user.home}/.ssh
-
-            # Write fallback key to authorized_keys
-            cat > ${paths.user.home}/.ssh/authorized_keys <<EOF
-            ${cfg.ssh.fallbackKey}
-            EOF
-            chmod 600 ${paths.user.home}/.ssh/authorized_keys
-            chown ${cfg.user.name}:users ${paths.user.home}/.ssh/authorized_keys
-          '';
-        };
   #=========================================================================
   # SECURITY INTEGRATION & VALIDATION
   #=========================================================================

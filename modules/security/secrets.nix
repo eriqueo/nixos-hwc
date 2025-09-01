@@ -1,3 +1,23 @@
+# nixos-hwc/modules/security/secrets.nix
+#
+# SECRETS - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.security.secrets.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/security/secrets.nix
+#
+# USAGE:
+#   hwc.security.secrets.enable = true;
+#   # TODO: Add specific usage examples
+
 # modules/security/secrets.nix
 #
 # HWC Agenix Secrets Management (Charter v3)

@@ -1,8 +1,31 @@
+# nixos-hwc/modules/services/ai/ollama-old.nix
+#
+# OLLAMA OLD - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.services.ollama-old.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/services/ai/ollama-old.nix
+#
+# USAGE:
+#   hwc.services.ollama-old.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.ollama;
   paths = config.hwc.paths;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
   options.hwc.services.ollama = {
     enable = lib.mkEnableOption "Ollama local LLM";
     
@@ -33,6 +56,10 @@ in {
     };
   };
   
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
   config = lib.mkIf cfg.enable {
     virtualisation.oci-containers.containers.ollama = {
       image = "ollama/ollama:latest";

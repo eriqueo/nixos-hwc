@@ -1,7 +1,30 @@
+# nixos-hwc/modules/home/apps.nix
+#
+# APPS - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.home.apps.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/home/apps.nix
+#
+# USAGE:
+#   hwc.home.apps.enable = true;
+#   # TODO: Add specific usage examples
+
 { config, lib, pkgs, ... }:
      let
        cfg = config.hwc.desktop.apps;
      in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
        options.hwc.desktop.apps = {
          enable = lib.mkEnableOption "Desktop applications";
 
@@ -27,6 +50,10 @@
          };
        };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
        config = lib.mkIf cfg.enable {
          # Browsers
          programs.firefox.enable = cfg.browser.firefox;

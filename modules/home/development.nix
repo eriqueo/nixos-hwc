@@ -1,7 +1,30 @@
+# nixos-hwc/modules/home/development.nix
+#
+# DEVELOPMENT - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.home.development.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../modules/home/development.nix
+#
+# USAGE:
+#   hwc.home.development.enable = true;
+#   # TODO: Add specific usage examples
+
      { config, lib, pkgs, ... }:
      let
        cfg = config.hwc.home.development;
      in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
        options.hwc.home.development = {
          enable = lib.mkEnableOption "Development tools and
      editors";
@@ -50,6 +73,10 @@
          };
        };
 
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
        config = lib.mkIf cfg.enable {
          # Neovim configuration
          programs.neovim = lib.mkIf cfg.editors.neovim {
