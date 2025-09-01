@@ -1,16 +1,16 @@
 # Charter v4 Migration Status & Process
 
-**Last Updated**: 2025-08-28  
-**Current Phase**: Phase 1 (Foundation) - 90% Complete
+**Last Updated**: 2025-09-01
+**Current Phase**: Phase 2 (Deconstruction) - 0% Complete
 
 ## 🎯 Migration Phases
 
-### Phase 1: Foundation (95% Complete)
+### Phase 1: Foundation (100% Complete)
 **Goal**: Establish Charter v4 compliance and clean domain boundaries
 
 #### ✅ Completed:
 - [x] Headers added to all modules (Charter v4 format)
-- [x] Section headers added to most modules  
+- [x] Section headers added to all modules
 - [x] Domain violations fixed: waybar hardware scripts moved to infrastructure
 - [x] Terminology updated: widgets → tools
 - [x] Waybar pattern implemented (Charter v4 compliant)
@@ -20,18 +20,16 @@
 - [x] CLAUDE.md created for session continuity
 - [x] System services moved from home to infrastructure (user-services.nix created)
 
-#### 🚧 Remaining (Phase 1):
-- [ ] Fix remaining hardware scripts violation in `modules/home/eric.nix`
-- [ ] Re-run section header script (some files missing sections again)
-- [ ] Achieve zero Charter v4 violations
-
 **Success Criteria**: `./scripts/validate-charter-v4.sh` passes with zero violations
 
-### Phase 2: Domain Cleanup (Pending Phase 1 completion)
-**Goal**: Clean up complex interdependencies and service architecture
+### Phase 2: Deconstruction & Relocation (In Progress)
+**Goal**: Break down monolithic service modules into domain-pure components
 
-#### Planned Tasks:
-- [ ] Review service interdependencies (media/* stack)  
+#### In Progress:
+- [ ] Extract services from modules/services/business/monitoring.nix
+- [ ] Extract services from modules/services/business-api.nix
+
+#### Planned:
 - [ ] Simplify profile compositions
 - [ ] Validate machine configs
 - [ ] Performance testing
@@ -67,20 +65,10 @@
 
 ## 📊 Current Violations Status
 
-**Last Run**: 2025-08-28 (Post system-services fix)
+**Last Run**: 2025-09-01 (no charter violations; `sudo nixos-rebuild` command not found)
 
 ### Remaining Violations:
-1. **Hardware scripts in home/**: `modules/home/eric.nix`
-   - **Issue**: Still contains hardware-related configurations that should be in infrastructure
-   - **Fix needed**: Identify and move remaining hardware-related code
-   - **Progress**: System services moved to infrastructure/user-services.nix ✅
-   - **Status**: PARTIAL FIX APPLIED
-
-2. **Missing section headers**: ~11 files (regressed)
-   - **Issue**: Section headers missing from various files
-   - **Fix needed**: Re-run `./scripts/add-section-headers.sh --all`
-   - **Blocker**: None - can be automated
-   - **Status**: NEEDS RE-APPLICATION
+None — Charter v4 checks pass with zero violations.
 
 ### Fixed Violations:
 - ✅ Hardware scripts in waybar (moved to infrastructure)
@@ -91,22 +79,12 @@
 
 ## 🎯 Next Actions (Priority Order)
 
-**PROGRESS**: 2/2 violation categories remain, infrastructure modules created ✅
-
-1. **Fix eric.nix hardware groups** - Move extraGroups hardware references to infrastructure
-2. **Debug section headers regression** - Files keep losing section headers
-3. **Achieve Phase 1 completion** (zero violations)
-4. **Document Phase 1 → Phase 2 handoff**
-
-**FILES CREATED THIS SESSION**:
-- `modules/infrastructure/user-services.nix` - System services for user environment
-- `modules/infrastructure/user-hardware-access.nix` - Hardware permissions and tmpfiles
+1. Restore build capability: install Nix to enable `nixos-rebuild` (curl to nixos.org returns 403)
+2. Begin Phase 2 tasks (service extraction and cleanup) once build works
 
 ## 🚨 Blockers & Decisions Needed
 
-- **eric.nix system services**: Where should user-specific systemd services live?
-- **Phase boundary criteria**: Exact definition of Phase 1 completion
-- **Testing approach**: How to validate functionality during migration
+- `nixos-rebuild` unavailable; build tests for Phase 2 cannot run
 
 ---
 

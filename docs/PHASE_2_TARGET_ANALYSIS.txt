@@ -1,0 +1,40 @@
+ 11767 total
+   632 modules/services/business/monitoring.nix
+   530 modules/system/filesystem.nix
+   492 modules/services/media/media-containers.nix
+   444 modules/system/paths.nix
+   428 modules/infrastructure/gpu.nix
+   406 modules/services/media/downloaders.nix
+   377 modules/services/media/arr-stack.nix
+   361 modules/system/networking.nix
+   342 modules/services/business/api.nix
+
+--- OCI Container Counts ---
+=== modules/services/ntfy.nix ===
+1
+=== modules/services/business/monitoring.nix ===
+2
+=== modules/services/business-api.nix ===
+2
+=== modules/services/frigate.nix ===
+1
+=== modules/services/ai/ollama-old.nix ===
+1
+=== modules/services/ai/ollama.nix ===
+1
+=== modules/services/media/lidarr.nix ===
+1
+=== modules/services/media/prowlarr.nix ===
+1
+=== modules/services/media/gluetun.nix ===
+1
+=== modules/services/media/qbittorrent.nix ===
+1
+=== modules/services/media/jellyfin.nix ===
+1
+=== modules/services/media/radarr.nix ===
+1
+=== modules/services/media/networking.nix ===
+1
+=== modules/services/media/sonarr.nix ===
+1

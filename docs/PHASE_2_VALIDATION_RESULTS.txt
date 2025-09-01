@@ -1,0 +1,20 @@
+🔍 Charter v4 Compliance Check
+==============================
+Checking domain separation violations...
+
+1. Hardware scripts in UI modules
+✅ No hardware scripts in home/
+2. Hardware configuration in services
+✅ No hardware config in services/
+3. System services in home modules
+✅ No system services in home/
+4. Hardcoded paths instead of hwc.paths.*
+✅ No hardcoded paths found
+5. Module headers (Charter v4 format)
+✅ All modules have proper headers
+6. Standard section headers
+✅ All modules have section headers
+7. File naming conventions (kebab-case)
+✅ All files use kebab-case naming
+==============================
+🎉 Charter v4 compliant! No violations found.
