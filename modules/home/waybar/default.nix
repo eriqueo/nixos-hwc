@@ -1,8 +1,30 @@
+# nixos-hwc/modules/home/waybar/default.nix
+#
+# WAYBAR - Wayland status bar configuration
+# Provides Waybar layout and module settings for the HWC environment
+#
+# DEPENDENCIES (Upstream):
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - profiles/workstation.nix (imports via home-manager)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/workstation.nix: ../modules/home/waybar/default.nix
+#
+# USAGE:
+#   home-manager.users.<name>.imports = [ ../modules/home/waybar/default.nix ];
+#
+
 { config, lib, pkgs, nixosConfig, ... }:
 let
   wcfg = nixosConfig.hwc.home.waybar or {};
   on = x: if x != null then x else false;
 in {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
+
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
@@ -34,3 +56,4 @@ in {
       };
     };
   };
+}
