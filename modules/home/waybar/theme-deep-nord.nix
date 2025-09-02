@@ -1,32 +1,21 @@
 # nixos-hwc/modules/home/waybar/theme-deep-nord.nix
 #
-# THEME DEEP NORD - Brief service description
-# TODO: Add detailed description of what this module provides
+# Waybar Theme: Deep Nord (Global Theme System Integration)
+# Charter v4 compliant - Uses global theme adapter instead of hardcoded CSS
 #
 # DEPENDENCIES (Upstream):
-#   - TODO: List upstream dependencies
-#   - config.hwc.paths.* (modules/system/paths.nix)
+#   - modules/home/theme/palettes/deep-nord.nix
+#   - modules/home/theme/adapters/waybar-css.nix
 #
 # USED BY (Downstream):
-#   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.home.theme-deep-nord.enable)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/profile.nix: ../modules/home/waybar/theme-deep-nord.nix
+#   - modules/home/waybar/default.nix
 #
 # USAGE:
-#   hwc.home.theme-deep-nord.enable = true;
-#   # TODO: Add specific usage examples
+#   programs.waybar.style = import ./theme-deep-nord.nix {};
+#
 
-''
-* {
-  font-family: Inter, JetBrains Mono, monospace;
-  font-size: 12pt;
-}
-window#waybar {
-  background: rgba(46,52,64,0.7);
-  color: #ECEFF4;
-}
-#battery.warning { color: #EBCB8B; }
-#battery.critical { color: #BF616A; }
-''
+{ }:
+let 
+  palette = import ../theme/palettes/deep-nord.nix {};
+in 
+  import ../theme/adapters/waybar-css.nix { inherit palette; }

@@ -1,9 +1,10 @@
-     { lib, ... }: {
+     { config, lib, ... }: {
        imports = [
          # Infrastructure capabilities
          ../modules/infrastructure/gpu.nix
-         ../modules/infrastructure/waybar-gpu-tools.nix
-         ../modules/infrastructure/waybar-system-tools.nix
+         ../modules/infrastructure/waybar-hardware-tools.nix
+         ../modules/infrastructure/hyprland-tools.nix
+         # ../modules/infrastructure/waybar-system-tools.nix (consolidated)
          ../modules/infrastructure/user-services.nix
          ../modules/infrastructure/user-hardware-access.nix
          ../modules/infrastructure/printing.nix
@@ -12,38 +13,75 @@
 
          # System packages
          ../modules/system/desktop-packages.nix  # Desktop system packages
+         ../modules/system/audio.nix             # Audio system
 
-         # Home environment (NixOS-level modules)
-         ../modules/home/hyprland.nix
-         ../modules/home/apps.nix
-         ../modules/home/cli.nix
-         ../modules/home/development.nix
-         ../modules/home/shell.nix
-         ../modules/home/productivity.nix
+         # NixOS-level home modules (user creation, SSH, etc.)
+         ../modules/home/eric.nix
          ../modules/home/login-manager.nix
-         ../modules/home/input.nix  # Universal input device configuration
-         
-         # Schema modules (define options)
-         ../modules/schema/home/waybar.nix
+         ../modules/home/apps.nix        # Apps uses environment.systemPackages - NixOS level
+         ../modules/home/cli.nix         # CLI uses environment.systemPackages - NixOS level  
+         ../modules/home/development.nix # Development uses environment.systemPackages - NixOS level
+         ../modules/home/input.nix       # Input config for keyboards - NixOS level
        ];
 
-       # Enable desktop environment
-       hwc.desktop = {
-         hyprland = {
-           enable = true;
-           nvidia = true;  # Enable NVIDIA optimizations
-           keybinds.modifier = "SUPER";
-           monitor = {
-             primary = "eDP-1,2560x1600@165,0x0,1.566667";
-             external = "DP-1,3840x2160@60,1638x0,2";
-           };
-           startup = [
-             "waybar"
-             "hyprpaper"
-             "hypridle"
+       # Phase 3: Centralized Home-Manager configuration
+       home-manager = {
+         useGlobalPkgs = true;
+         extraSpecialArgs = { nixosConfig = config; };
+         users.eric = {
+           imports = [
+             # True Home-Manager modules (use home.packages, programs.*, etc.)
+             ../modules/home/hyprland/default.nix
+             ../modules/home/shell.nix
+             ../modules/home/productivity.nix
+             ../modules/schema/home/waybar.nix
+             # Waybar with all tools - Charter v4 compliant
+             ../modules/home/waybar/default.nix
            ];
+           
+           # Hyprland configuration now handled by direct module import
+           
+           # Productivity configuration (pure Home-Manager)
+           hwc.home.productivity = {
+             enable = true;
+             notes.obsidian = true;
+             browsers.firefox = true;
+             office.libreoffice = true;
+             communication.thunderbird = true;
+           };
+           
+           # Shell configuration (pure Home-Manager)
+           hwc.home.shell = {
+             enable = true;
+             zsh = {
+               enable = true;
+               starship = true;
+               plugins = {
+                 autosuggestions = true;
+                 syntaxHighlighting = true;
+               };
+             };
+             tmux.enable = true;
+           };
+           
+           # Waybar configuration (pure Home-Manager)
+           hwc.home.waybar = {
+             enable = true;
+             position = "top";
+             modules = {
+               workspaces.enable = true;
+               network.enable = true;
+               battery.enable = true;
+             };
+           };
+           
+           home.stateVersion = "24.05";
          };
+       };
 
+       # Consolidated hwc.home configuration
+       hwc.home = {
+         # Desktop applications (NixOS level)
          apps = {
            enable = true;
            browser = {
@@ -53,22 +91,22 @@
            multimedia.enable = true;
            productivity.enable = true;
          };
-       };
 
-       # Workstation-specific user environment (extends base profile)
-       hwc.home.groups.virtualization = true;  # Add virtualization access for VMs
+         # User groups and access
+         groups.virtualization = true;  # Add virtualization access for VMs
 
-       # Universal input device configuration
-       hwc.home.input = {
-         enable = true;
-         keyboard = {
+         # Input device configuration
+         input = {
            enable = true;
-           universalFunctionKeys = true;  # Consistent F-keys across all keyboards
+           keyboard = {
+             enable = true;
+             universalFunctionKeys = true;  # Consistent F-keys across all keyboards
+           };
          };
-       };
-
-       # Enable CLI tools
-       hwc.home = {
+         
+         # Login manager configuration
+         loginManager.enable = true;
+         # homeManager configuration now handled centrally via HM imports above
          cli = {
            enable = true;
            modernUnix = true;
@@ -94,37 +132,8 @@
            containers = true;
          };
 
-         shell = {
-           enable = true;
-           zsh = {
-             enable = true;
-             starship = true;
-             plugins = {
-               autosuggestions = true;
-               syntaxHighlighting = true;
-             };
-           };
-           tmux.enable = true;
-         };
 
-         productivity = {
-           enable = true;
-           notes.obsidian = true;
-           browsers.firefox = true;
-           office.libreoffice = true;
-           communication.thunderbird = true;
-         };
 
-         # Waybar configuration (home environment)
-         waybar = {
-           enable = true;
-           position = "top";
-           modules = {
-             workspaces.enable = true;
-             network.enable = true;
-             battery.enable = true;
-           };
-         };
        };
 
        # Infrastructure Services
@@ -133,8 +142,11 @@
          virtualization.enable = true;
          samba.enableSketchupShare = true;
          # Waybar infrastructure tools
-         waybarGpuTools.enable = true;
-         waybarSystemTools.enable = true;
+         waybarHardwareTools.enable = true;
+         # waybarSystemTools.enable = true; (consolidated into waybarHardwareTools)
+         
+         # Hyprland infrastructure tools
+         hyprlandTools.enable = true;
          # User system services  
          userServices.enable = true;
          
@@ -148,39 +160,21 @@
              hardware = true;       # Input devices and serial access
            };
          };
+
        };
 
-       hwc.home.loginManager.enable = true;  # Desktop Services
        hwc.system.desktop.enable = true;        # Enable desktop system packages
-
+       
+       # XDG Portal configuration moved to modules/system/audio.nix
 
        # Workstation filesystem structure
        hwc.filesystem.userDirectories.enable = true;  # PARA structure for productivity
 
-       # Sound
-       security.rtkit.enable = true;
-       services.pipewire = {
-         enable = true;
-         alsa.enable = true;
-         alsa.support32Bit = true;
-         pulse.enable = true;
-       };
+       # Sound - moved to modules/system/audio.nix
+       hwc.system.audio.enable = true;
 
        # Workstation-specific networking (SSH X11 forwarding for remote development)
        hwc.networking.ssh.x11Forwarding = true;
 
-       #============================================================================
-       # HOME-MANAGER SYSTEM-LEVEL CONFIGURATION
-       # This is the root fix. It activates Home Manager for the specified user.
-       #============================================================================
-       home-manager.useGlobalPkgs = true;
-       home-manager.users.eric = {
-          imports = [
-            # Waybar with all tools - Charter v4 compliant
-            ../modules/home/waybar/default.nix
-          ];
-
-          home.stateVersion = "24.05";
-
-        };
+       # Home-Manager configuration now centralized above
 }

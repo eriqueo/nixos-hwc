@@ -80,6 +80,7 @@ in {
       hardware = lib.mkEnableOption "hardware access groups (input, uucp)";
     };
 
+
     ssh = {
       enable = lib.mkEnableOption "SSH configuration for user";
 
@@ -170,16 +171,13 @@ in {
     #=========================================================================
     # HOME MANAGER CONFIGURATION
     #=========================================================================
-
-    home-manager.users.${cfg.user.name} = {
-      home.stateVersion = "24.05";
-      # SSH authorized_keys and user services handled by infrastructure layer
-    };
+    # Home-Manager configuration now handled centrally in profiles/workstation.nix
+    # This module only provides NixOS-level user configuration
   #=========================================================================
   # SECURITY INTEGRATION & VALIDATION
   #=========================================================================
   assertions = [
-    # Your existing, excellent assertions:
+    # User and security assertions:
     {
       assertion = !cfg.user.useSecrets || config.hwc.security.enable;
       message = "hwc.home.user.useSecrets requires hwc.security.enable = true";

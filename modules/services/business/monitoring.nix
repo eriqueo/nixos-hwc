@@ -583,36 +583,14 @@ EOF
     ####################################################################
     # BUSINESS ANALYTICS DASHBOARD CONTAINER
     ####################################################################
-    virtualisation.oci-containers.containers.business-dashboard = mkIf cfg.dashboard.enable {
-      image = cfg.dashboard.image;
-      autoStart = cfg.dashboard.autoStart;
-      extraOptions = mkIf cfg.networking.useMediaNetwork [ "--network=${cfg.networking.networkName}" ];
-      ports = [ "${toString cfg.dashboard.port}:8501" ];
-      volumes = [
-        "${paths.cache}/monitoring/business:/app"
-        "${paths.business}:/business:ro"
-        "${paths.media}:/media:ro"
-        "/etc/localtime:/etc/localtime:ro"
-      ];
-      cmd = [ "sh" "-c" "cd /app && pip install streamlit pandas plotly requests prometheus_client && streamlit run dashboard.py --server.port=8501 --server.address=0.0.0.0" ];
-    };
+    # Business Dashboard moved to modules/services/business/dashboard.nix
+    # hwc.services.business.dashboard.enable = true; # Enable in profiles/
 
     ####################################################################
     # BUSINESS METRICS EXPORTER CONTAINER
     ####################################################################
-    virtualisation.oci-containers.containers.business-metrics = mkIf cfg.metrics.enable {
-      image = cfg.metrics.image;
-      autoStart = cfg.metrics.autoStart;
-      extraOptions = mkIf cfg.networking.useMediaNetwork [ "--network=${cfg.networking.networkName}" ];
-      ports = [ "${toString cfg.metrics.port}:9999" ];
-      volumes = [
-        "${paths.cache}/monitoring/business:/app"
-        "${paths.business}:/business:ro"
-        "/var/log:/logs:ro"
-        "/etc/localtime:/etc/localtime:ro"
-      ];
-      cmd = [ "sh" "-c" "cd /app && pip install prometheus_client requests && python business_metrics.py" ];
-    };
+    # Business Metrics moved to modules/services/business/metrics.nix
+    # hwc.services.business.metrics.enable = true; # Enable in profiles/
 
     ####################################################################
     # NETWORKING INTEGRATION
@@ -630,3 +608,4 @@ EOF
         optional cfg.metrics.enable cfg.metrics.port;
     };
   };
+}

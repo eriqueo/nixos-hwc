@@ -260,116 +260,61 @@ in {
     # CONTAINER SERVICES
     #=========================================================================
     
-    virtualisation.oci-containers.containers = {
-      
-      # qBittorrent - Torrent Downloads
-      qbittorrent = lib.mkIf cfg.qbittorrent.enable (buildDownloadContainer {
-        name = "qbittorrent";
-        image = cfg.qbittorrent.image;
-        ports = [ "127.0.0.1:${toString cfg.qbittorrent.webPort}:${toString cfg.qbittorrent.webPort}" ];
-        environment = {
-          WEBUI_PORT = toString cfg.qbittorrent.webPort;
-        } // cfg.qbittorrent.extraEnvironment;
-        extraVolumes = [
-          "${paths.hot}/downloads/torrents:/downloads/torrents"
-          "${paths.hot}/cache:/incomplete-downloads"
-        ];
-      });
-
-      # SABnzbd - Usenet Downloads
-      sabnzbd = lib.mkIf cfg.sabnzbd.enable (buildDownloadContainer {
-        name = "sabnzbd";
-        image = cfg.sabnzbd.image;
-        ports = [ "127.0.0.1:${toString cfg.sabnzbd.webPort}:${toString cfg.sabnzbd.webPort}" ];
-        environment = cfg.sabnzbd.extraEnvironment;
-        extraVolumes = [
-          "${paths.hot}/downloads/usenet:/downloads/usenet"
-          "${paths.hot}/cache:/incomplete-downloads"
-        ];
-      });
-
-      # SLSKD - Soulseek Downloads
-      slskd = lib.mkIf cfg.slskd.enable {
-        image = cfg.slskd.image;
-        autoStart = true;
-        extraOptions = networkOptions ++ [ "--memory=1g" "--cpus=0.5" ];
-        environment = mediaServiceEnv // {
-          SLSKD_USERNAME = cfg.slskd.username;
-          SLSKD_SLSK_USERNAME = cfg.slskd.slskUsername;
-          # Passwords will be set via secrets if enabled
-        } // (if cfg.slskd.useSecrets then { } else {
-          SLSKD_PASSWORD = "il0wwlm?";  # Fallback password
-          SLSKD_SLSK_PASSWORD = "il0wwlm?";
-        }) // cfg.slskd.extraEnvironment;
-        ports = if cfg.useVpn then [ ] else [ "127.0.0.1:${toString cfg.slskd.webPort}:${toString cfg.slskd.webPort}" ];
-        cmd = [ "--config" "/config/slskd.yml" ];
-        volumes = [
-          (configVol "slskd")
-          "${paths.hot}/downloads/soulseek:/downloads"
-          "${paths.media}/music:/data/music:ro"
-          "${paths.media}/music-soulseek:/data/music-soulseek:ro"
-          "${paths.media}/music:/data/downloads"
-        ];
-      };
-
-      # Soularr - SLSKD/Lidarr Integration
-      soularr = lib.mkIf cfg.soularr.enable {
-        image = cfg.soularr.image;
-        autoStart = true;
-        dependsOn = [ "slskd" "lidarr" ];
-        extraOptions = networkOptions ++ [ "--memory=1g" "--cpus=0.5" ];
-        environment = cfg.soularr.extraEnvironment;
-        volumes = [
-          (configVol "soularr")
-          "${paths.arr.downloads}/soularr:/data"
-          "${paths.hot}/downloads:/downloads"
-        ];
-      };
-    };
+    # Container definitions moved to individual service modules:
+    # - qBittorrent: modules/services/media/qbittorrent.nix
+    # - SABnzbd: modules/services/media/sabnzbd.nix (TODO: create)
+    # - SLSKD: modules/services/media/slskd.nix (TODO: implement)
+    # - Soularr: modules/services/media/soularr.nix (TODO: implement)
+    # Enable individual services in profiles/
 
     #=========================================================================
     # CONFIGURATION SETUP SERVICES
     #=========================================================================
     
     # Soularr configuration from ARR API keys
-    systemd.services.soularr-config = lib.mkIf cfg.soularr.enable {
-      description = "Setup Soularr configuration from secrets";
-      wantedBy = [ "podman-soularr.service" ];
-      before = [ "podman-soularr.service" ];
-      after = lib.optionals config.hwc.security.secrets.arr [ "age-install-secrets.service" ];
-      serviceConfig.Type = "oneshot";
-      script = ''
-        set -e
-        mkdir -p ${paths.arr.downloads}/soularr
-        
-        # Read API keys from secrets if available
-        ${lib.optionalString config.hwc.security.secrets.arr ''
-          LIDARR_API_KEY=$(cat ${config.age.secrets.lidarr-api-key.path} 2>/dev/null || echo "dummy-lidarr")
-          SLSKD_API_KEY=$(cat ${config.age.secrets.slskd-api-key.path} 2>/dev/null || echo "dummy-slskd")
-        ''}
-        
-        # Create Soularr configuration
-        cat > "${paths.arr.downloads}/soularr/config.ini" <<EOF
-        [Lidarr]
-        host_url = http://lidarr:8686
-        api_key = ''${LIDARR_API_KEY:-dummy-lidarr}
-        download_dir = /downloads
-        
-        [Slskd]
-        host_url = http://slskd:5030
-        api_key = ''${SLSKD_API_KEY:-dummy-slskd}
-        EOF
-        
-        echo "Soularr configuration created"
-      '';
-    };
-
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
     
     # Download services depend on network/VPN
     systemd.services = lib.mkMerge [
+      # Soularr configuration service
+      (lib.mkIf cfg.soularr.enable {
+        soularr-config = {
+          description = "Setup Soularr configuration from secrets";
+          wantedBy = [ "podman-soularr.service" ];
+          before = [ "podman-soularr.service" ];
+          after = lib.optionals config.hwc.security.secrets.arr [ "age-install-secrets.service" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            set -e
+            mkdir -p ${paths.arr.downloads}/soularr
+            
+            # Read API keys from secrets if available  
+            LIDARR_API_KEY="dummy-lidarr"
+            SLSKD_API_KEY="dummy-slskd"
+            ${lib.optionalString config.hwc.security.secrets.arr ''
+              if [ -f "${config.age.secrets.lidarr-api-key.path}" ]; then
+                LIDARR_API_KEY=$(cat ${config.age.secrets.lidarr-api-key.path})
+              fi
+            ''}
+            
+            # Create Soularr configuration
+            cat > "${paths.arr.downloads}/soularr/config.ini" <<EOF
+            [Lidarr]
+            host_url = http://lidarr:8686
+            api_key = ''${LIDARR_API_KEY:-dummy-lidarr}
+            download_dir = /downloads
+            
+            [Slskd]
+            host_url = http://slskd:5030
+            api_key = ''${SLSKD_API_KEY:-dummy-slskd}
+            EOF
+            
+            echo "Soularr configuration created"
+          '';
+        };
+      })
       # VPN dependencies
       (lib.mkIf cfg.useVpn {
         "podman-qbittorrent".after = [ "podman-gluetun.service" ];

@@ -1,6 +1,6 @@
 # nixos-hwc/modules/services/media/slskd.nix
 #
-# SLSKD - Brief service description
+# SLSKD - SoulSeek daemon for peer-to-peer file sharing
 # TODO: Add detailed description of what this module provides
 #
 # DEPENDENCIES (Upstream):
@@ -17,4 +17,27 @@
 # USAGE:
 #   hwc.services.slskd.enable = true;
 #   # TODO: Add specific usage examples
+
+{ config, lib, pkgs, ... }:
+
+with lib;
+
+{
+  #============================================================================
+  # OPTIONS - Service Configuration Interface
+  #============================================================================
+
+  options.hwc.services.slskd = {
+    enable = mkEnableOption "SLSKD SoulSeek daemon";
+  };
+
+  #============================================================================
+  # IMPLEMENTATION - Service Definition
+  #============================================================================
+
+  config = mkIf config.hwc.services.slskd.enable {
+    # TODO: Implement SLSKD service configuration
+    warnings = [ "SLSKD service is not yet implemented" ];
+  };
+}
 

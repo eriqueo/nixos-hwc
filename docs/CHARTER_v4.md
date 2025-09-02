@@ -272,7 +272,39 @@ fi
 
 ---
 
-## Appendix A — "Waybar Pack" (replicable HM pattern)
+## Appendix A — Service Pattern Standard
+
+**Rule**: One service = one Home UI module + one Infrastructure tools module. No `modules/home/<service>/tools/` for executables; Home owns config files only.
+
+**Structure**:
+- **Home UI Module**: `modules/home/<service>/default.nix` - Complete UI configuration, calls canonical binaries
+- **Infrastructure Tools Module**: `modules/infrastructure/<service>-tools.nix` - All hardware/system tools with canonical `<service>-*` naming
+- **Profiles**: Import both modules, enable via `hwc.home.<service>.enable` and `hwc.infrastructure.<service>Tools.enable`
+
+**Example (Waybar)**:
+```nix
+# modules/home/waybar/default.nix
+programs.waybar.settings.mainBar."custom/gpu" = {
+  exec = "waybar-gpu-status";           # canonical name
+  on-click = "waybar-gpu-toggle";       # canonical name
+};
+
+# modules/infrastructure/waybar-hardware-tools.nix  
+environment.systemPackages = [
+  (writeShellScriptBin "waybar-gpu-status" ''...'')
+  (writeShellScriptBin "waybar-gpu-toggle" ''...'')
+];
+
+# profiles/workstation.nix
+hwc.infrastructure.waybarHardwareTools.enable = true;
+home-manager.users.eric.imports = [ ../modules/home/waybar/default.nix ];
+```
+
+**Benefits**: Single source of truth per service, clean domain separation, predictable naming, easy maintenance.
+
+---
+
+## Appendix B — "Waybar Pack" (legacy reference)
 
 **Goal:** all Waybar config in one obvious spot, with clean boundaries.
 

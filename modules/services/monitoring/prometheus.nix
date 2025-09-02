@@ -62,7 +62,7 @@ in {
     services.prometheus = {
       enable = true;
       port = cfg.port;
-      dataDir = cfg.dataDir;
+      stateDir = cfg.dataDir;
       retentionTime = cfg.retention;
       
       globalConfig = {

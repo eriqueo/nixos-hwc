@@ -70,30 +70,22 @@ in
   # IMPLEMENTATION (NixOS -> HM bridge)
   #============================================================================
   config = lib.mkIf cfg.enable {
+    
+    # Pure Home-Manager packages
+    home.packages = 
+      (lib.optionals cfg.notes.obsidian        [ pkgs.obsidian ]) ++
+      (lib.optionals cfg.office.libreoffice    [ pkgs.libreoffice ]) ++
+      cfg.extraPackages;
 
-    home-manager.useGlobalPkgs = lib.mkDefault true;
-
-    home-manager.users.eric = { ... }: let
-      pkgsList =
-        (lib.optionals cfg.notes.obsidian        [ pkgs.obsidian ]) ++
-        (lib.optionals cfg.office.libreoffice    [ pkgs.libreoffice ]) ++
-        cfg.extraPackages;
-    in {
-      # HM: packages/env
-      home.packages = pkgsList;
-
-      # HM: browsers / mail
-      programs.firefox.enable    = cfg.browsers.firefox;
-            # HM: mail (guarded with a minimal default profile)
-      # This prevents “profiles was accessed but has no value defined”.
-      programs.thunderbird = lib.mkIf cfg.communication.thunderbird {
-        enable = true;
-        profiles = {
-          default = { isDefault = true; };
-        };
+    # HM: browsers / mail
+    programs.firefox.enable = cfg.browsers.firefox;
+    
+    # HM: mail (guarded with a minimal default profile)
+    programs.thunderbird = lib.mkIf cfg.communication.thunderbird {
+      enable = true;
+      profiles = {
+        default = { isDefault = true; };
       };
-      # HM housekeeping (can be set globally; safe default here)
-      home.stateVersion = lib.mkDefault "24.05";
     };
   };
 }

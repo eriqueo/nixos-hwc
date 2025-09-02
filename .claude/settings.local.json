@@ -13,7 +13,17 @@
       "Bash(chmod:*)",
       "Bash(git add:*)",
       "Bash(nix:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(systemctl:*)",
+      "Read(/home/eric/.config/waybar/**)",
+      "Read(/nix/store/c634mw5ar0vd0ibr2bbn0xnbs9770a5m-home-manager-files/.config/waybar/**)",
+      "Read(/etc/nixos/modules/services/**)",
+      "Read(/etc/nixos/hosts/laptop/modules/**)",
+      "Read(/etc/nixos/hosts/server/modules/**)",
+      "Read(/etc/nixos/hosts/laptop/modules/ai/**)",
+      "Read(/etc/nixos/hosts/laptop/modules/**)",
+      "Bash(./tests/waybar-smoke.sh:*)"
     ],
     "deny": [],
     "ask": [],

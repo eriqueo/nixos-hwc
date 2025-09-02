@@ -115,47 +115,38 @@ in
   #============================================================================
   config = lib.mkIf cfg.enable {
 
-    home-manager.useGlobalPkgs = lib.mkDefault true;
+    # --- HM: packages & env -------------------------------------------------
+    home.packages         = cfg.packages;
+    home.sessionVariables = cfg.sessionVariables;
 
-    home-manager.users.eric = { ... }: {
-
-      # --- HM: packages & env -------------------------------------------------
-      home.packages         = cfg.packages;
-      home.sessionVariables = cfg.sessionVariables;
-
-      # --- HM: Zsh & prompt ---------------------------------------------------
-      programs.zsh = {
-        enable = cfg.zsh.enable;
-        autosuggestion.enable     = cfg.zsh.plugins.autosuggestions;
-        syntaxHighlighting.enable = cfg.zsh.plugins.syntaxHighlighting;
-        history = {
-          size = 5000;
-          save = 5000;
-        };
-        shellAliases = cfg.aliases;
-        initExtra    = cfg.zsh.initExtra;
+    # --- HM: Zsh & prompt ---------------------------------------------------
+    programs.zsh = {
+      enable = cfg.zsh.enable;
+      autosuggestion.enable     = cfg.zsh.plugins.autosuggestions;
+      syntaxHighlighting.enable = cfg.zsh.plugins.syntaxHighlighting;
+      history = {
+        size = 5000;
+        save = 5000;
       };
+      shellAliases = cfg.aliases;
+      initExtra    = cfg.zsh.initExtra;
+    };
 
-      programs.starship.enable = cfg.zsh.starship;
-      programs.fzf.enable      = true;
-      programs.zoxide.enable   = true;
+    programs.starship.enable = cfg.zsh.starship;
+    programs.fzf.enable      = true;
+    programs.zoxide.enable   = true;
 
-      programs.direnv = {
-        enable = true;
-        nix-direnv.enable = true;
-      };
+    programs.direnv = {
+      enable = true;
+      nix-direnv.enable = true;
+    };
 
-      # --- HM: tmux -----------------------------------------------------------
-      programs.tmux = {
-        enable      = cfg.tmux.enable;
-        #sensible    = true;
-        clock24     = true;
-        mouse       = true;
-        extraConfig = cfg.tmux.extraConfig;
-      };
-
-      # HM housekeeping (set globally elsewhere if desired)
-      home.stateVersion = lib.mkDefault "24.05";
+    # --- HM: tmux -----------------------------------------------------------
+    programs.tmux = {
+      enable      = cfg.tmux.enable;
+      clock24     = true;
+      mouse       = true;
+      extraConfig = cfg.tmux.extraConfig;
     };
   };
 }

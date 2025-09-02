@@ -24,22 +24,33 @@
 #   - Requires agenix secrets to be configured
 #   - Assumes server hardware (storage, GPU)
 
-{ lib, pkgs, ... }: {
+{ lib, pkgs, config, ... }: {
 
   #============================================================================
   # CHARTER V3 SERVICE IMPORTS
   #============================================================================
   
   imports = [
-    # Media services (Charter v3 modules from Phase 2.1)
+    # Media services (Charter v3 modules from Phase 2.1) 
     ../modules/services/media/arr-stack.nix
     ../modules/services/media/networking.nix
     ../modules/services/media/downloaders.nix
+    
+    # Individual ARR services (Phase 2 decomposition)
+    ../modules/services/media/sonarr.nix
+    ../modules/services/media/radarr.nix
+    ../modules/services/media/lidarr.nix
+    ../modules/services/media/prowlarr.nix
+    
+    # Individual download services (Phase 2 decomposition)
+    ../modules/services/media/qbittorrent.nix
     
     # Business services (Charter v3 modules from Phase 2.2)
     ../modules/services/business/database.nix
     ../modules/services/business/api.nix
     ../modules/services/business/monitoring.nix
+    ../modules/services/business/dashboard.nix
+    ../modules/services/business/metrics.nix
     
     # Infrastructure services
     ../modules/infrastructure/gpu.nix
@@ -52,6 +63,9 @@
     # Monitoring services
     ../modules/services/monitoring/prometheus.nix
     ../modules/services/monitoring/grafana.nix
+    
+    # System modules
+    ../modules/system/server-packages.nix
   ];
   
   #============================================================================
@@ -80,8 +94,8 @@
     # Server-specific secrets:
     database = true;     # PostgreSQL credentials for business services
     couchdb = true;      # CouchDB credentials for Obsidian sync
-    services = true;     # Service API keys and admin credentials
-    surveillance = true; # Surveillance system credentials
+    services = false;    # Service API keys and admin credentials (disabled - missing caddy-admin.age)
+    surveillance = false; # Surveillance system credentials (disabled - missing surveillance-admin.age)
     arr = true;          # ARR stack API keys
     ntfy = true;         # NTFY notification tokens
   };
@@ -175,43 +189,16 @@
       enable = true;
       dockerCompat = true;
       defaultNetwork.settings.dns_enabled = true;
-      extraOptions = "--log-driver=journald --log-opt max-size=10m --log-opt max-file=3";
     };
     
     oci-containers.backend = "podman";  # Use Podman for system containers
   };
 
   #============================================================================
-  # SYSTEM PACKAGES (Server-specific)
+  # SYSTEM PACKAGES - Moved to modules/system/server-packages.nix
   #============================================================================
   
-  environment.systemPackages = with pkgs; [
-    # Server monitoring and management
-    htop iotop nvtop
-    lsof netstat ss
-    tcpdump nmap
-    
-    # Container management
-    docker-compose
-    podman-compose
-    
-    # File management for media
-    rsync rclone
-    unzip p7zip
-    
-    # Database tools
-    postgresql  # Client tools
-    redis       # CLI tools
-    
-    # Media processing
-    ffmpeg imagemagick
-    
-    # AI/ML tools (basic)
-    python3
-    
-    # Backup and archival
-    borgbackup restic
-  ];
+  hwc.system.serverPackages.enable = true;
 
   #============================================================================
   # PERFORMANCE OPTIMIZATIONS
@@ -289,7 +276,6 @@
     networking = {
       enable = true;
       vpn.enable = true;
-      healthMonitoring.enable = true;
     };
     
     # Download clients
@@ -337,19 +323,19 @@
   };
   
   # Infrastructure services
-  hwc.infrastructure = {
-    gpu = {
-      enable = true;
-      nvidia.enable = true;
-      cuda.enable = true;
+  hwc.gpu = {
+    type = "nvidia";
+    nvidia = {
+      driver = "stable";
+      containerRuntime = true;
+      enableMonitoring = true;
     };
   };
   
   # AI services
-  hwc.services.ai.ollama = {
+  hwc.services.ollama = {
     enable = true;
-    acceleration = "cuda";
-    hostAddress = "0.0.0.0";
+    models = [ "llama3:8b" ];
   };
   
   # Media applications

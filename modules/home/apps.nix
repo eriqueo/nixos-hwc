@@ -20,12 +20,12 @@
 
 { config, lib, pkgs, ... }:
      let
-       cfg = config.hwc.desktop.apps;
+       cfg = config.hwc.home.apps;
      in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-       options.hwc.desktop.apps = {
+       options.hwc.home.apps = {
          enable = lib.mkEnableOption "Desktop applications";
 
          browser = {

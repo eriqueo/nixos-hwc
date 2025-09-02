@@ -134,8 +134,8 @@ in {
     ];
 
     # Disable other display managers (using correct NixOS 24.05+ option names)
-    services.xserver.displayManager.gdm.enable = lib.mkForce false;
-    services.xserver.displayManager.lightdm.enable = lib.mkForce false;
-    services.xserver.displayManager.sddm.enable = lib.mkForce false;
+    services.displayManager.gdm.enable = lib.mkForce false;
+    services.xserver.displayManager.lightdm.enable = lib.mkForce false;  # lightdm not moved yet
+    services.displayManager.sddm.enable = lib.mkForce false;
   };
 }

@@ -92,7 +92,7 @@ in {
       };
       workingDirectory = mkOption {
         type = types.str;
-        default = "${paths.business}/api";
+        default = "${paths.business.root}/api";
         description = "Working directory for the API service";
       };
       user = mkOption {
@@ -249,7 +249,7 @@ in {
           cat > .env << 'EOF'
       DATABASE_URL=postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business
       REDIS_URL=redis://localhost:6379/0
-      BUSINESS_DATA_PATH=${paths.business}
+      BUSINESS_DATA_PATH=${paths.business.root}
       MEDIA_PATH=${paths.media}
       HOT_STORAGE_PATH=${paths.hot}
       COLD_STORAGE_PATH=${paths.cold}
@@ -303,7 +303,7 @@ in {
         Environment = [
           "DATABASE_URL=postgresql://business_user@localhost:5432/heartwood_business"
           "REDIS_URL=redis://localhost:6379/0"
-          "BUSINESS_DATA_PATH=${paths.business}"
+          "BUSINESS_DATA_PATH=${paths.business.root}"
           "MEDIA_PATH=${paths.media}"
           "HOT_STORAGE_PATH=${paths.hot}"
           "COLD_STORAGE_PATH=${paths.cold}"
@@ -340,3 +340,4 @@ in {
       allowedTCPPorts = [ cfg.service.port ];
     };
   };
+}
