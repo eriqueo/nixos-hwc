@@ -80,7 +80,7 @@
   };
 
   ## Workstation profile preferences (orchestration only)
-  hwc.desktop = {
+  hwc.home = {
     apps = {
       enable = true;
       browser.firefox = true;

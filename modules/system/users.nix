@@ -19,7 +19,21 @@
 #   # TODO: Add specific usage examples
 
 { config, lib, pkgs, ... }:
+
+with lib;
+
 {
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
+  
+  # NOTE: This module provides static user configuration
+  # User configuration options are handled by modules/home/eric.nix
+
+  #============================================================================
+  # IMPLEMENTATION - User and group definitions
+  #============================================================================
+
   users.users.eric = {
     isNormalUser = true;
     description = "Eric";

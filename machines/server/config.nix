@@ -14,8 +14,9 @@
   hwc.paths = {
     hot = "/mnt/hot";      # SSD hot storage
     media = "/mnt/media";  # HDD media storage
+    cold = "/mnt/media";   # Cold storage same as media for now
     # Additional paths from production
-    business = "/opt/business";
+    business.root = "/opt/business";
     cache = "/opt/cache";
   };
 
@@ -30,7 +31,7 @@
 
   # Production system settings
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nixpkgs.config.allowUnfree = true;  # Required for NVIDIA drivers
+  # allowUnfree set in flake.nix
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
@@ -41,19 +42,8 @@
   # Enable X11 services for forwarding
   services.xserver.enable = true;
 
-  # Server-specific system packages
-  environment.systemPackages = with pkgs; [
-    # GUI applications (X11 forwarding support)
-    kitty                  # Terminal emulator
-    xfce.thunar           # File manager
-    xorg.xauth            # Required for X11 forwarding
-    file-roller           # Archive manager
-    evince                # PDF viewer
-    feh                   # Image viewer
-    
-    # Media tools (server-specific)
-    picard                # Music organization
-  ];
+  # Server-specific packages moved to modules/system/server-packages.nix
+  hwc.system.serverPackages.enable = true;
 
   # Production I/O scheduler optimization
   services.udev.extraRules = ''

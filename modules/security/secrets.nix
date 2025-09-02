@@ -227,7 +227,7 @@ in {
 
       (lib.mkIf cfg.secrets.ntfy {
         ntfy-token = {
-          file = ../../secrets/ntfy-token.age;
+          file = ../../secrets/ntfy-user.age;
           mode = "0400";
           owner = "root";
           group = "root";

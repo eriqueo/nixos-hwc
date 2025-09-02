@@ -1,6 +1,6 @@
 # nixos-hwc/modules/services/media/media-containers.nix
 #
-# MEDIA CONTAINERS - Brief service description
+# MEDIA CONTAINERS - Container orchestration for media services
 # TODO: Add detailed description of what this module provides
 #
 # DEPENDENCIES (Upstream):
@@ -18,14 +18,38 @@
 #   hwc.services.media-containers.enable = true;
 #   # TODO: Add specific usage examples
 
+{ config, lib, pkgs, ... }:
+
+with lib;
+
+{
+  #============================================================================
+  # OPTIONS - Service Configuration Interface
+  #============================================================================
+
+  options.hwc.services.media-containers = {
+    enable = mkEnableOption "Media container orchestration services";
+  };
+
+  #============================================================================
+  # IMPLEMENTATION - Service Definition
+  #============================================================================
+
+  config = mkIf config.hwc.services.media-containers.enable {
+    # TODO: Implement media containers service configuration
+    warnings = [ "Media containers service is not yet implemented" ];
+  };
+}
+
 # hosts/server/modules/media-containers.nix (merged)
 { config, lib, pkgs, ... }:
 
 let
   # Paths: keep current /opt/downloads/* layout to avoid breaking existing configs
   cfgRoot   = "/opt/downloads";
-  hotRoot   = "/mnt/hot";
-  mediaRoot = "/mnt/media";
+  paths = config.hwc.paths;
+  hotRoot   = paths.hot;
+  mediaRoot = paths.media;
 
   # Helper for per-service config volumes
   configVol = service: "${cfgRoot}/${service}:/config";

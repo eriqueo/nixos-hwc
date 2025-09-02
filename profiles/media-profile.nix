@@ -50,6 +50,7 @@
     # System dependencies
     ../modules/system/gpu.nix
     ../modules/system/paths.nix
+    ../modules/system/media-packages.nix
   ];
   
   config = {
@@ -179,22 +180,8 @@
     # SYSTEM PACKAGES - Useful tools for media management
     #==========================================================================
     
-    environment.systemPackages = with pkgs; [
-      # Container management
-      podman-compose
-      
-      # Media tools
-      ffmpeg
-      mediainfo
-      
-      # Network tools
-      curl
-      wget
-      
-      # Monitoring
-      htop
-      iotop
-    ];
+    # Media packages moved to modules/system/media-packages.nix
+    hwc.system.mediaPackages.enable = true;
     
     #==========================================================================
     # USERS AND GROUPS - Consistent permissions

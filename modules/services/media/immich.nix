@@ -1,6 +1,6 @@
 # nixos-hwc/modules/services/media/immich.nix
 #
-# IMMICH - Brief service description
+# IMMICH - Photo and video management service
 # TODO: Add detailed description of what this module provides
 #
 # DEPENDENCIES (Upstream):
@@ -18,3 +18,24 @@
 #   hwc.services.immich.enable = true;
 #   # TODO: Add specific usage examples
 
+{ config, lib, pkgs, ... }:
+
+with lib;
+
+{
+  #============================================================================
+  # OPTIONS - What can be configured
+  #============================================================================
+  options.hwc.services.immich = {
+    enable = mkEnableOption "Immich photo and video management service";
+  };
+
+
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
+  config = mkIf config.hwc.services.immich.enable {
+    # TODO: Implement Immich service configuration
+    warnings = [ "Immich service is not yet implemented" ];
+  };
+}

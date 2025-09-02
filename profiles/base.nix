@@ -43,6 +43,9 @@
     ../modules/security/secrets.nix
     ../modules/home/eric.nix
     ../modules/infrastructure/gpu.nix
+    
+    # System packages
+    ../modules/system/base-packages.nix
   ];
 
   #============================================================================
@@ -96,22 +99,8 @@
   #============================================================================
   # BASE TOOLING - Editor, shell tools, etc. (ergonomics)
   #============================================================================
-  environment.systemPackages = with pkgs; [
-    vim
-    git
-    wget
-    curl
-    htop
-    tmux
-    ncdu
-    tree
-    ripgrep
-    fd
-    bat
-    eza
-    zoxide
-    fzf
-  ];
+  # Moved to modules/system/base-packages.nix
+  hwc.system.basePackages.enable = true;
 
   #============================================================================
   # USER DOMAIN (Orchestration) - Defers implementation to modules/home/*

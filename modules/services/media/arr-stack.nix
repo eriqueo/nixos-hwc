@@ -280,62 +280,37 @@ in {
     # CONTAINER SERVICES
     #=========================================================================
     
-    virtualisation.oci-containers.containers = {
-      # Sonarr - TV Series Management
-      sonarr = lib.mkIf cfg.sonarr.enable (buildArrContainer {
-        name = "sonarr";
-        image = cfg.sonarr.image;
-        mediaType = "tv";
-        port = cfg.sonarr.port;
-      });
-
-      # Radarr - Movie Management  
-      radarr = lib.mkIf cfg.radarr.enable (buildArrContainer {
-        name = "radarr";
-        image = cfg.radarr.image;
-        mediaType = "movies";
-        port = cfg.radarr.port;
-      });
-
-      # Lidarr - Music Management
-      lidarr = lib.mkIf cfg.lidarr.enable (buildArrContainer {
-        name = "lidarr";
-        image = cfg.lidarr.image;
-        mediaType = "music";
-        port = cfg.lidarr.port;
-      });
-
-      # Prowlarr - Indexer Management
-      prowlarr = lib.mkIf cfg.prowlarr.enable {
-        image = cfg.prowlarr.image;
-        autoStart = true;
-        extraOptions = [
-          "--network=${cfg.networkName}"
-          "--memory=1g" "--cpus=0.5" "--memory-swap=2g"
-        ] ++ lib.optionals cfg.gpu.enable nvidiaGpuOptions;
-        
-        environment = mediaServiceEnv 
-          // lib.optionalAttrs cfg.gpu.enable nvidiaEnv
-          // cfg.prowlarr.extraEnvironment;
-        
-        ports = [ "127.0.0.1:${toString cfg.prowlarr.port}:${toString cfg.prowlarr.port}" ];
-        
-        volumes = [
-          (configVol "prowlarr")
-        ] ++ cfg.prowlarr.extraVolumes;
-      };
-    };
+    # Container definitions moved to individual service modules:
+    # - Sonarr: modules/services/media/sonarr.nix
+    # - Radarr: modules/services/media/radarr.nix  
+    # - Lidarr: modules/services/media/lidarr.nix
+    # - Prowlarr: modules/services/media/prowlarr.nix
+    # Enable individual services in profiles/
 
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
     
-    # Ensure ARR services start after media network
+    # Ensure ARR services start after media network and API setup
     systemd.services = {
-      "podman-sonarr".after = [ "hwc-media-network.service" ];
-      "podman-radarr".after = [ "hwc-media-network.service" ];
-      "podman-lidarr".after = [ "hwc-media-network.service" ];
-      "podman-prowlarr".after = [ "hwc-media-network.service" ];
+      "podman-sonarr".after = [ "hwc-media-network.service" "arr-api-setup.service" ];
+      "podman-radarr".after = [ "hwc-media-network.service" "arr-api-setup.service" ];
+      "podman-lidarr".after = [ "hwc-media-network.service" "arr-api-setup.service" ];
+      "podman-prowlarr".after = [ "hwc-media-network.service" "arr-api-setup.service" ];
+      
+      # API key integration with agenix secrets
+      # Keys will be available at runtime for service configuration
+      arr-api-setup = lib.mkIf config.hwc.security.secrets.arr {
+        description = "Setup ARR API keys from secrets";
+        after = [ "age-install-secrets.service" ];
+        wants = [ "age-install-secrets.service" ];
+        serviceConfig.Type = "oneshot";
+        script = ''
+          # API keys are available in /run/agenix/ for manual configuration
+          # This service ensures secrets are available before ARR services start
+          echo "ARR API keys available for configuration"
+        '';
+      };
     };
 
     #=========================================================================
@@ -349,29 +324,5 @@ in {
       cfg.lidarr.port    # 8686
       cfg.prowlarr.port  # 9696
     ];
-
-    #=========================================================================
-    # API KEY MANAGEMENT
-    #=========================================================================
-    
-    # API key integration with agenix secrets
-    # Keys will be available at runtime for service configuration
-    systemd.services.arr-api-setup = lib.mkIf config.hwc.security.secrets.arr {
-      description = "Setup ARR API keys from secrets";
-      after = [ "age-install-secrets.service" ];
-      wants = [ "age-install-secrets.service" ];
-      serviceConfig.Type = "oneshot";
-      script = ''
-        # API keys are available in /run/agenix/ for manual configuration
-        # This service ensures secrets are available before ARR services start
-        echo "ARR API keys available for configuration"
-      '';
-    };
-
-    # Ensure ARR containers start after API setup
-    systemd.services."podman-sonarr".after = [ "arr-api-setup.service" ];
-    systemd.services."podman-radarr".after = [ "arr-api-setup.service" ];
-    systemd.services."podman-lidarr".after = [ "arr-api-setup.service" ];
-    systemd.services."podman-prowlarr".after = [ "arr-api-setup.service" ];
   };
 }

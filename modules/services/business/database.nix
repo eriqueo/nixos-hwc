@@ -240,7 +240,7 @@ in {
           
           # Create backup with timestamp
           DATE=$(date +%Y%m%d_%H%M%S)
-          BACKUP_FILE="${paths.business}/backups/${cfg.postgresql.databaseName}_$DATE.sql.gz"
+          BACKUP_FILE="${paths.business.backups}/${cfg.postgresql.databaseName}_$DATE.sql.gz"
           
           echo "Creating backup: $BACKUP_FILE"
           ${pkgs.postgresql}/bin/pg_dump \
@@ -258,7 +258,7 @@ in {
           fi
           
           # Keep only last N days of backups
-          find ${paths.business}/backups -name "${cfg.postgresql.databaseName}_*.sql.gz" -mtime +${toString cfg.backup.retentionDays} -delete
+          find ${paths.business.backups} -name "${cfg.postgresql.databaseName}_*.sql.gz" -mtime +${toString cfg.backup.retentionDays} -delete
           echo "Cleaned up backups older than ${toString cfg.backup.retentionDays} days"
         '';
       };
@@ -290,3 +290,4 @@ in {
         optional cfg.redis.enable cfg.redis.port;
     };
   };
+}
