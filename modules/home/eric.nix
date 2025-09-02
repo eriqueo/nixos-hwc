@@ -113,31 +113,16 @@ in {
   # See: modules/infrastructure/user-services.nix
 
   #=========================================================================
-  # USER ACCOUNT DEFINITION
+  # USER ACCOUNT DEFINITION - MOVED TO SYSTEM DOMAIN (Charter v4)
   #=========================================================================
-  users.users.${cfg.user.name} = {
-    isNormalUser = true;
-    home = paths.user.home; # Assuming 'paths' is defined in the let block
-    description = cfg.user.description;
-    shell = cfg.user.shell;
-
-    # Dynamic group membership based on toggles
-    # Hardware and development groups handled by infrastructure layer
-    extraGroups = [ ]
-      ++ lib.optionals cfg.groups.basic [ "wheel" "networkmanager" ];
-
-    # =======================================================================
-    # REVISED SAFE PASSWORD LOGIC
-    # This now uses the configurable option instead of a hardcoded string.
-    # =======================================================================
-    initialPassword =
-      if cfg.user.useSecrets then null else cfg.user.fallbackPassword;
-
-    hashedPasswordFile =
-      if cfg.user.useSecrets && config.age.secrets ? "user-initial-password"
-      then config.age.secrets.user-initial-password.path
-      else null;
-  };
+  # User account creation now handled by modules/system/users.nix
+  # This ensures proper domain separation and prevents conflicts
+  # All user authentication logic is now in the system domain where it belongs
+  
+  # The user account definition has been moved to:
+  # - modules/system/users.nix (Charter v4 compliant)
+  # - Configured in profiles/base.nix with hwc.system.users options
+  # - Emergency access available via hwc.system.users.emergencyEnable
 
   # ... (The rest of your implementation for system packages, tmpfiles, groups, etc. remains here) ...
   # For brevity, I'm jumping to the assertions section. The code between here
