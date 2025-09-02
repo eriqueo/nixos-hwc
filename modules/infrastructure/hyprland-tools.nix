@@ -440,7 +440,6 @@ in {
 
 
         serviceconfig = {
-          Type = "oneshot";
           ExecStart = "${pkgs.writeShellScript "system-health-checker-wrapper" ''
             exec /run/current-system/sw/bin/hyprland-system-health-checker
           ''}";
