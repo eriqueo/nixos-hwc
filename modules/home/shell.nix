@@ -141,6 +141,15 @@ in
       nix-direnv.enable = true;
     };
 
+    # --- HM: shell environment guards --------------------------------------
+    # Guard .zshenv to prevent shell poisoning from missing HM variables
+    home.file.".zshenv".text = ''
+      # Guarded Home Manager session variables loader
+      # Prevents shell failures when HM variables are unavailable
+      HM_VARS="/etc/profiles/per-user/$USER/etc/profile.d/hm-session-vars.sh"
+      [ -r "$HM_VARS" ] && . "$HM_VARS"
+    '';
+
     # --- HM: tmux -----------------------------------------------------------
     programs.tmux = {
       enable      = cfg.tmux.enable;

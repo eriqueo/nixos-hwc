@@ -37,11 +37,21 @@
   # IMPORTS - Assemble foundational modules (no computed paths)
   #============================================================================
   imports = [
+    # System domain modules (Charter v4 compliant)
     ../modules/system/paths.nix
     ../modules/system/filesystem.nix
     ../modules/system/networking.nix
+    ../modules/system/users.nix
+    ../modules/system/security/sudo.nix
+    ../modules/system/secrets.nix
+    
+    # Legacy security module (will be phased out)
     ../modules/security/secrets.nix
+    
+    # Legacy home module (user auth moved to system domain)
     ../modules/home/eric.nix
+    
+    # Infrastructure
     ../modules/infrastructure/gpu.nix
     
     # System packages
@@ -101,6 +111,30 @@
   #============================================================================
   # Moved to modules/system/base-packages.nix
   hwc.system.basePackages.enable = true;
+
+  #============================================================================
+  # SYSTEM DOMAIN - Core system configuration (Charter v4)
+  #============================================================================
+  # User management with agenix integration
+  hwc.system.users = {
+    enable = true;
+    user = "eric";
+    passwordSecret = "user-initial-password";
+    emergencyEnable = lib.mkDefault false; # Enable in machines/ during migrations
+  };
+
+  # Centralized sudo configuration
+  hwc.system.security.sudo = {
+    enable = true;
+    wheelNeedsPassword = false; # Restore working sudo behavior
+  };
+
+  # Agenix secrets with proper service ordering
+  hwc.system.secrets = {
+    enable = true;
+    userPasswordSecret = "user-initial-password";
+    ensureSecretsExist = true;
+  };
 
   #============================================================================
   # USER DOMAIN (Orchestration) - Defers implementation to modules/home/*
