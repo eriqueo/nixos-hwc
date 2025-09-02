@@ -98,6 +98,9 @@
     ageKeyFile = "/etc/age/keys.txt";
   };
 
+  ## Migration safety: Enable emergency access for new system domain user management
+  hwc.system.users.emergencyEnable = true; # DISABLE after confirming login/sudo works
+
   ## Storage configuration
   hwc.paths = {
     hot = "/home/eric/storage/hot";  # SSD storage for active data

@@ -436,32 +436,24 @@ in {
     #==========================================================================
     systemd.user = lib.mkIf cfg.healthMonitoring {
       services.hyprland-system-health-checker = {
-          description = "System health monitoring service";
-
-
-        serviceconfig = {
+        description = "System health monitoring service";
+        wantedBy = [ "default.target" ];
+        serviceConfig = {
+          Type = "oneshot";
           ExecStart = "${pkgs.writeShellScript "system-health-checker-wrapper" ''
             exec /run/current-system/sw/bin/hyprland-system-health-checker
           ''}";
         };
-
-
-        wantedBy = [ "default.target" ];
-
       };
 
       # Timer for regular health checks
       timers.hyprland-system-health-checker = {
-          description = "Run system health checker every 10 minutes";
-
-        timerconfig = {
+        description = "Run system health checker every 10 minutes";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
           OnCalendar = "*:0/10";
           Persistent = true;
         };
-
-
-        wantedBy = [ "timers.target" ];
-
       };
     };
   };

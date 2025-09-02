@@ -28,6 +28,8 @@
        home-manager = {
          useGlobalPkgs = true;
          extraSpecialArgs = { nixosConfig = config; };
+         # Prevent activation failures from file conflicts
+         backupFileExtension = "hm-bak";
          users.eric = {
            imports = [
              # True Home-Manager modules (use home.packages, programs.*, etc.)
