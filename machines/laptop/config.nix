@@ -90,13 +90,7 @@
   };
 
   ## Security profile toggles (secrets via Agenix; no plaintext in machines)
-  hwc.secrets.enable = true;
-  hwc.security = {
-    # Keep emergency access toggle, but do NOT inline passwords in machines.
-    emergencyAccess.enable = true;
-    # emergencyAccess.password   <-- removed; use an Agenix secret consumed by the security module
-    ageKeyFile = "/etc/age/keys.txt";
-  };
+  # Legacy security configuration removed - now handled by system domain modules
 
   ## Migration safety: Enable emergency access for new system domain user management
   hwc.system.users.emergencyEnable = true; # DISABLE after confirming login/sudo works
@@ -108,7 +102,7 @@
   };
 
   ## User/home orchestration (implementation lives in modules/home/*)
-  hwc.home.ssh.enable = true;
+  # Legacy hwc.home.ssh removed - SSH now configured via other modules
   # hwc.home.user.fallbackPassword  <-- removed; must be provided via secrets, not inline
 
   ## Machine-specific service toggles

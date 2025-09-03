@@ -5,10 +5,9 @@ This file provides essential context for Claude instances working on this nixos-
 ## 📋 Start Here - Read This First
 
 **Session Startup Checklist:**
-1. **Migration Status**: [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md) - current phase & progress
-2. **Charter v4**: [`docs/CHARTER_v4.md`](docs/CHARTER_v4.md) - domain separation rules
-3. **Progress Check**: `./scripts/migration-progress.sh` - validation & next actions
-4. **Current Phase**: Complete Phase 1 before moving to Phase 2
+1. **Charter v5**: [`docs/CHARTER_v5.md`](docs/CHARTER_v5.md) - **PRIMARY REFERENCE** for all development
+2. **Migration Status**: [`docs/MIGRATION_STATUS.md`](docs/MIGRATION_STATUS.md) - current phase & progress  
+3. **Preserve-First Doctrine**: 100% feature preservation during any refactoring - no functionality loss ever
 
 ## 🏗️ Architecture Overview
 
