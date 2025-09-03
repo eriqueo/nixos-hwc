@@ -38,16 +38,16 @@ Dependency direction is strictly leftward.
 
 ---
 
-## 2) Domains & Responsibilities (tightened)
+## 2) Domains & Responsibilities (universal config pattern)
 
 | Domain             | Purpose                      | Lives Under               | Must Contain                                                                  | Must Not Contain                               |
 | ------------------ | ---------------------------- | ------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------- |
-| **Infrastructure** | Hardware + low-level control | `modules/infrastructure/` | device helpers, udev, kernel toggles, **executable tools** (`writeScriptBin`) | UI config, HM files                            |
-| **System**         | Core OS                      | `modules/system/`         | users, security, networking, filesystem, boot, **sudo policy**, **agenix**    | hardware drivers, UI                           |
+| **Infrastructure** | Hardware + low-level control | `modules/infrastructure/` | device helpers, udev, kernel toggles, **system-wide executable tools**       | UI config, HM files, app-specific tools        |
+| **System**         | Core OS                      | `modules/system/`         | users, security, networking, filesystem, boot, **sudo policy**, **agenix**    | hardware drivers, UI, app configs               |
 | **Services**       | Daemons/containers           | `modules/services/`       | service orchestration, timers                                                 | drivers, HM UI, hardware scripts               |
-| **Home**           | User environment (HM)        | `modules/home/`           | Hyprland, Waybar, shell/apps configuration, **UI “parts”**                    | **No executables**, no systemd system services |
+| **Home**           | User environment (HM)        | `modules/home/`           | app configs, **UI parts**, **UI-specific tools** (`writeScriptBin`)          | system services, hardware drivers              |
 
-Hard rule: **Executables live only in Infrastructure.** Home is pure configuration.
+**Updated rule: UI-specific executables live with their configs.** System-wide tools live in Infrastructure.
 
 ---
 
@@ -189,50 +189,67 @@ modules/infrastructure/waybar-hardware-tools.nix
 
 ---
 
-## 9) Hyprland (v5 pattern)
+## 9) Hyprland (universal config domains)
 
-**Home (UI)**
+**Home (UI + Tools)**
 
 ```
 modules/home/hyprland/
-├─ default.nix         # single entry, merges all parts into settings
+├─ default.nix         # single entry, merges all universal domains
 └─ parts/
-   ├─ keybindings.nix  # all keybinds (pure data)
-   ├─ monitors.nix     # outputs + workspace assignment
-   ├─ windowrules.nix  # windowrulev2 list
-   ├─ input.nix        # touchpad/keyboard
-   ├─ autostart.nix    # exec-once (calls canonical tools if needed)
-   └─ theming.nix      # imports theme adapter for colors/decoration
+   ├─ behavior.nix     # keybindings + window rules + app launcher tools
+   ├─ hardware.nix     # monitors + input + monitor toggle tools  
+   ├─ session.nix      # autostart + startup + health checker tools
+   └─ appearance.nix   # theme integration (colors, decorations, animations)
 ```
 
-**Infrastructure (Tools)**
+**Universal config domains:**
+- **behavior.nix**: How things act (keybindings, window rules, app management)
+- **hardware.nix**: Physical interaction (displays, input devices, hardware tools)  
+- **session.nix**: Lifecycle management (startup, autostart, monitoring)
+- **appearance.nix**: Visual styling (themes, colors, animations)
 
-```
-modules/infrastructure/hyprland-tools.nix
-```
+**Key innovation:** UI-specific tools live with their configs for maintainability. When you want to change workspace behavior, everything is in `behavior.nix`.
 
-* Ships **canonical** executables (`hyprland-workspace-overview`, `hyprland-monitor-toggle`, …).
-* Provides **systemd user units** using correct HM/NixOS schema:
-
-  ```nix
-  systemd.user.services.hyprland-system-health-checker = {
-    description = "System health monitoring service";
-    wantedBy    = [ "default.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.writeShellScript "…" ''exec /run/current-system/sw/bin/hyprland-system-health-checker''}";
-    };
-  };
-  systemd.user.timers.hyprland-system-health-checker = {
-    description = "Run system health checker every 10 minutes";
-    wantedBy = [ "timers.target" ];
-    timerConfig = { OnCalendar = "*:0/10"; Persistent = true; };
-  };
-  ```
+**Benefits:**
+- **One place to look:** All related functionality co-located  
+- **Universal pattern:** Same domain names work across all apps
+- **Maintainable:** No hunting across directories for UI preferences
+- **Charter compliant:** Tools serve configs, configs don't hunt for tools
 
 ---
 
-## 10) Profiles & Wiring (strict)
+## 10) Universal Config Domains (pattern for all apps)
+
+**Standard domain names for any application configuration:**
+
+| Domain        | Purpose                          | Examples                                    |
+|---------------|----------------------------------|---------------------------------------------|
+| **behavior**  | How things act & interact        | keybindings, commands, shortcuts, rules    |
+| **hardware**  | Physical device interaction      | displays, input devices, sensors           |
+| **session**   | Lifecycle & state management     | startup, autostart, persistence, cleanup   |
+| **appearance**| Visual styling & presentation    | themes, colors, fonts, layouts             |
+
+**Apply this pattern to any app config:**
+
+```nix
+# modules/home/<app>/parts/
+├─ behavior.nix     # What keys do, how it responds
+├─ hardware.nix     # Device integration (if any)  
+├─ session.nix      # When it starts, what it loads
+└─ appearance.nix   # How it looks
+```
+
+**Examples for other apps:**
+- **Waybar**: behavior (modules/widgets), hardware (sensors), appearance (CSS/styling)
+- **Neovim**: behavior (keymaps/commands), session (plugins/startup), appearance (colorscheme)
+- **Shell**: behavior (aliases/functions), session (startup files), appearance (prompt)
+
+This creates **predictable, maintainable** config organization across all applications.
+
+---
+
+## 11) Profiles & Wiring (strict)
 
 Example (workstation):
 
@@ -242,7 +259,6 @@ Example (workstation):
   imports = [
     ../modules/infrastructure/gpu.nix
     ../modules/infrastructure/waybar-hardware-tools.nix
-    ../modules/infrastructure/hyprland-tools.nix
     ../modules/system/users.nix
     ../modules/system/security/sudo.nix
     ../modules/system/secrets.nix
@@ -250,7 +266,7 @@ Example (workstation):
 
   # Infrastructure toggles
   hwc.infrastructure.waybarHardwareTools.enable = true;
-  hwc.infrastructure.hyprlandTools.enable       = true;
+  # Hyprland tools now integrated into home domain universal configs
 
   # System toggles
   hwc.system.users = {
