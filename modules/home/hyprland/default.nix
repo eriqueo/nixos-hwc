@@ -1,11 +1,10 @@
 # nixos-hwc/modules/home/hyprland/default.nix
 #
-# Home UI: Hyprland Wayland Compositor (Parts-Based Structure)
-# Charter v4 compliant - Single entrypoint composing user-tweakable parts
+# Home UI: Hyprland Wayland Compositor (Universal Config Domains)
+# Charter v5 compliant - Single entrypoint composing universal behavior/hardware/session/appearance domains
 #
 # DEPENDENCIES (Upstream):
 #   - profiles/workstation.nix (imports via home-manager.users.eric.imports)
-#   - modules/infrastructure/hyprland-tools.nix (executable tools)
 #   - modules/home/theme/palettes/deep-nord.nix (theme tokens)
 #
 # USED BY (Downstream):
@@ -16,17 +15,16 @@
 #
 # USAGE:
 #   Import this module in profiles/workstation.nix home imports
+#   Universal domains: behavior.nix, hardware.nix, session.nix, appearance.nix
 #
 
 { lib, pkgs, ... }:
 let
-  # Import all parts with consistent interface
-  kb = import ./parts/keybindings.nix { inherit lib pkgs; };
-  mon = import ./parts/monitors.nix { inherit lib pkgs; };
-  wr = import ./parts/windowrules.nix { inherit lib pkgs; };
-  inp = import ./parts/input.nix { inherit lib pkgs; };
-  auto = import ./parts/autostart.nix { inherit lib pkgs; };
-  theme = import ./parts/theming.nix { inherit lib pkgs; };
+  # Import universal config domains
+  behavior = import ./parts/behavior.nix { inherit lib pkgs; };
+  hardware = import ./parts/hardware.nix { inherit lib pkgs; };
+  session = import ./parts/session.nix { inherit lib pkgs; };
+  appearance = import ./parts/appearance.nix { inherit lib pkgs; };
   
   # Wallpaper path preserved from monolith
   wallpaperPath = "/etc/nixos/hosts/laptop/modules/assets/wallpapers/nord-mountains.jpg";
@@ -54,7 +52,9 @@ in
     
     # Window manager utilities
     hyprsome  # Per-monitor workspace management
-  ];
+    
+    # Universal config domain tools
+  ] ++ behavior.tools ++ hardware.tools ++ session.tools;
   
   #============================================================================
   # SESSION VARIABLES
@@ -71,32 +71,28 @@ in
     package = pkgs.hyprland;
     
     settings = lib.mkMerge [
-      # Monitor and workspace layout
+      # Hardware domain (monitors, input, workspaces)
       {
-        monitor = mon.monitor;
-        workspace = mon.workspace;
+        monitor = hardware.monitor;
+        workspace = hardware.workspace;
+        input = hardware.input;
       }
       
-      # Window rules
-      {
-        windowrulev2 = wr.windowrulev2;
-      }
-      
-      # Input configuration
-      {
-        input = inp.input;
-      }
-      
-      # Theme settings (colors, decorations, animations)
-      theme
-      
-      # Keybindings and autostart
+      # Behavior domain (keybindings, window rules)
       {
         "$mod" = "SUPER";
-        bind = kb.bind;
-        bindm = kb.bindm or [];
-        exec-once = auto.execOnce;
+        bind = behavior.bind;
+        bindm = behavior.bindm;
+        windowrulev2 = behavior.windowrulev2;
       }
+      
+      # Session domain (autostart)
+      {
+        exec-once = session.execOnce;
+      }
+      
+      # Appearance domain (theme settings)
+      appearance
     ];
   };
   

@@ -1,7 +1,7 @@
-# nixos-hwc/modules/home/hyprland/parts/theming.nix
+# nixos-hwc/modules/home/hyprland/parts/appearance.nix
 #
-# Hyprland Theming: Theme System Integration
-# Charter v4 compliant - Pure data from theme adapter
+# Hyprland Appearance: Theme System Integration
+# Charter v5 compliant - Universal appearance domain for visual styling
 #
 # DEPENDENCIES (Upstream):
 #   - modules/home/theme/palettes/deep-nord.nix
@@ -11,8 +11,8 @@
 #   - modules/home/hyprland/default.nix
 #
 # USAGE:
-#   let theme = import ./parts/theming.nix { inherit lib pkgs; };
-#   in theme  # Contains general, decoration, animations, dwindle, misc
+#   let appearance = import ./parts/appearance.nix { inherit lib pkgs; };
+#   in appearance  # Contains general, decoration, animations, dwindle, misc
 #
 
 { lib, pkgs, ... }:

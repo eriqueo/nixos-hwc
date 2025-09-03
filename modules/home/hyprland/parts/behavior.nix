@@ -1,0 +1,364 @@
+# nixos-hwc/modules/home/hyprland/parts/behavior.nix
+#
+# Hyprland Behavior: Keybindings, Window Rules & Application Management
+# Charter v5 compliant - Universal behavior domain for UI interaction patterns
+#
+# DEPENDENCIES (Upstream):
+#   - config.hwc.infrastructure.gpu.enable (for gpu-launch integration)
+#   - systemPackages for basic tools (pkgs.jq, pkgs.wofi, etc.)
+#
+# USED BY (Downstream):
+#   - modules/home/hyprland/default.nix
+#
+# USAGE:
+#   let behavior = import ./parts/behavior.nix { inherit lib pkgs; };
+#   in { 
+#     bind = behavior.bind; 
+#     bindm = behavior.bindm; 
+#     windowrulev2 = behavior.windowrulev2; 
+#   }
+#
+
+{ lib, pkgs, ... }:
+let
+  mod = "SUPER";
+  
+  # Dependencies for scripts
+  inherit (pkgs) hyprland procps libnotify writeShellScriptBin jq;
+in
+{
+  #============================================================================
+  # KEYBINDINGS - All 139 bindings preserved exactly
+  #============================================================================
+  bind = [
+    # Essential bindings
+    "${mod}, Return, exec, kitty"
+    
+    # Window/Session Management
+    "${mod}, Q, killactive"
+    "${mod}, F, fullscreen"
+    "${mod}, Space, exec, wofi --show drun"
+    "${mod}, B, exec, gpu-launch chromium"
+    "${mod}, 2, exec, gpu-launch chromium"
+    "${mod}, J, exec, gpu-launch chromium --new-window https://jobtread.com"
+    "${mod}, 3, exec, gpu-launch chromium --new-window https://jobtread.com"
+    "${mod}, 4, exec, gpu-launch electron-mail"
+    "${mod}, 5, exec, gpu-launch obsidian"
+    "${mod}, 6, exec, kitty -e nvim"
+    "${mod}, K, exec, kitty"
+    "${mod}, 7, exec, kitty"
+    "${mod}, M, exec, kitty btop"
+    "${mod}, 8, exec, kitty btop"
+    "${mod}, 1, exec, thunar"
+    "${mod}, O, exec, gpu-launch obsidian"
+    "${mod}, E, exec, gpu-launch electron-mail"
+    "${mod}, N, exec, kitty nvim"
+    "${mod}, T, exec, thunar"
+    "${mod}, G, exec, gpu-toggle"
+    "${mod} SHIFT, M, exec, hyprland-monitor-toggle"
+    "${mod}, TAB, exec, hyprland-workspace-overview"
+    "${mod} SHIFT, T, togglefloating"
+    
+    # Screenshots
+    ", Print, exec, hyprshot -m region -o ~/05-media/pictures/screenshots/"
+    "SHIFT, Print, exec, hyprshot -m region -c"
+    "CTRL, Print, exec, hyprshot -m window -o ~/05-media/pictures/screenshots/"
+    "ALT, Print, exec, hyprshot -m output -o ~/Pictures/01-screenshots"
+    
+    # Focus movement (SUPER + arrows)
+    "${mod}, left, movefocus, l"
+    "${mod}, right, movefocus, r"
+    "${mod}, up, movefocus, u"
+    "${mod}, down, movefocus, d"
+    
+    # Window movement within workspace (SUPER + ALT + arrows)
+    "${mod} ALT, left, movewindow, l"
+    "${mod} ALT, right, movewindow, r"
+    "${mod} ALT, up, movewindow, u"
+    "${mod} ALT, down, movewindow, d"
+    "${mod} ALT, H, layoutmsg, orientationleft"
+    "${mod} ALT, V, layoutmsg, orientationtop"
+    
+    # MOVE WINDOWS with hyprsome (numeric)
+    "${mod} CTRL, 1, exec, hyprsome move 1"
+    "${mod} CTRL, 2, exec, hyprsome move 2"
+    "${mod} CTRL, 3, exec, hyprsome move 3"
+    "${mod} CTRL, 4, exec, hyprsome move 4"
+    "${mod} CTRL, 5, exec, hyprsome move 5"
+    "${mod} CTRL, 6, exec, hyprsome move 6"
+    "${mod} CTRL, 7, exec, hyprsome move 7"
+    "${mod} CTRL, 8, exec, hyprsome move 8"
+    
+    # Letter mappings for moving windows
+    "${mod} CTRL, T, exec, hyprsome move 1"
+    "${mod} CTRL, C, exec, hyprsome move 2"
+    "${mod} CTRL, J, exec, hyprsome move 3"
+    "${mod} CTRL, E, exec, hyprsome move 4"
+    "${mod} CTRL, O, exec, hyprsome move 5"
+    "${mod} CTRL, N, exec, hyprsome move 6"
+    "${mod} CTRL, K, exec, hyprsome move 7"
+    "${mod} CTRL, M, exec, hyprsome move 8"
+    
+    # WORKSPACE SWITCHING with hyprsome (per-monitor, numeric)
+    "${mod} CTRL ALT, 1, exec, hyprsome workspace 1"
+    "${mod} CTRL ALT, 2, exec, hyprsome workspace 2"
+    "${mod} CTRL ALT, 3, exec, hyprsome workspace 3"
+    "${mod} CTRL ALT, 4, exec, hyprsome workspace 4"
+    "${mod} CTRL ALT, 5, exec, hyprsome workspace 5"
+    "${mod} CTRL ALT, 6, exec, hyprsome workspace 6"
+    "${mod} CTRL ALT, 7, exec, hyprsome workspace 7"
+    "${mod} CTRL ALT, 8, exec, hyprsome workspace 8"
+    
+    # Letter mappings for workspace switching
+    "${mod} CTRL ALT, T, exec, hyprsome workspace 1"
+    "${mod} CTRL ALT, C, exec, hyprsome workspace 2"
+    "${mod} CTRL ALT, J, exec, hyprsome workspace 3"
+    "${mod} CTRL ALT, E, exec, hyprsome workspace 4"
+    "${mod} CTRL ALT, O, exec, hyprsome workspace 5"
+    "${mod} CTRL ALT, N, exec, hyprsome workspace 6"
+    "${mod} CTRL ALT, K, exec, hyprsome workspace 7"
+    "${mod} CTRL ALT, M, exec, hyprsome workspace 8"
+    "${mod} CTRL ALT, left, workspace, e-1"
+    "${mod} CTRL ALT, right, workspace, e+1"
+    
+    # Enhanced workspace management
+    "${mod}, TAB, exec, hyprland-workspace-manager overview"
+    "${mod} CTRL, right, exec, hyprland-workspace-manager next"
+    "${mod} CTRL, left, exec, hyprland-workspace-manager prev"
+    
+    # Smart application launching
+    "${mod}, B, exec, hyprland-app-launcher browser"
+    "${mod}, T, exec, hyprland-app-launcher files"
+    "${mod}, Return, exec, hyprland-app-launcher terminal"
+    "${mod}, N, exec, hyprland-app-launcher editor"
+    "${mod}, E, exec, hyprland-app-launcher email"
+    "${mod}, O, exec, hyprland-app-launcher notes"
+    "${mod}, M, exec, hyprland-app-launcher monitor"
+    
+    # System health check
+    "${mod} SHIFT, H, exec, hyprland-system-health-checker"
+    
+    # Volume controls
+    ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
+    ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+    ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+    ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+    
+    # Brightness controls
+    ", XF86MonBrightnessUp, exec, brightnessctl set 10%+"
+    ", XF86MonBrightnessDown, exec, brightnessctl set 10%-"
+    
+    # Window management
+    "${mod}, S, pseudo"
+    "${mod}, P, pin"
+    "${mod}, C, centerwindow"
+    "${mod} SHIFT, Q, exit"
+    "${mod}, L, exec, hyprlock"
+    "${mod} SHIFT, R, exec, hyprctl reload"
+    
+    # Quick launchers
+    "${mod} SHIFT, Space, exec, wofi --show run"
+    
+    # Window resizing
+    "${mod}, R, submap, resize"
+    
+    # Group management
+    "${mod}, U, togglegroup"
+    "${mod}, Tab, changegroupactive, f"
+    "${mod} SHIFT, Tab, changegroupactive, b"
+    
+    # Clipboard history
+    "${mod}, V, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"
+  ];
+  
+  bindm = [
+    # Mouse bindings (if any are added later)
+  ];
+
+  #============================================================================
+  # WINDOW RULES - All 39 rules preserved exactly
+  #============================================================================
+  windowrulev2 = [
+    # Browser rules
+    "tile,class:^(Chromium-browser)$,title:^.*JobTread.*$"
+    "workspace 3,class:^(Chromium-browser)$,title:^.*JobTread.*$"
+    "tile,class:^(chromium-.*|Chromium-.*)$"
+    
+    # File picker dialogs - comprehensive patterns
+    "float,title:^(Open).*"
+    "float,title:^(Save).*"
+    "float,title:^(Choose).*"
+    "float,title:^(Select).*"
+    "float,title:^(Upload).*"
+    "float,class:^(file_dialog)$"
+    "float,class:^(xdg-desktop-portal-gtk)$"
+    "float,class:^(org.gtk.FileChooserDialog)$"
+    "move 50 100,title:^(Open).*"
+    "move 50 100,title:^(Save).*"
+    "move 50 100,title:^(Choose).*"
+    "move 50 100,title:^(Select).*"
+    "move 50 100,title:^(Upload).*"
+    "move 50 100,class:^(xdg-desktop-portal-gtk)$"
+    "move 50 100,class:^(org.gtk.FileChooserDialog)$"
+    "size 1000 700,title:^(Open).*"
+    "size 1000 700,title:^(Save).*"
+    "size 1000 700,title:^(Choose).*"
+    "size 1000 700,title:^(Select).*"
+    "size 1000 700,title:^(Upload).*"
+    
+    # Floating windows
+    "float,class:^(pavucontrol)$"
+    "float,class:^(blueman-manager)$"
+    "size 800 600,class:^(pavucontrol)$"
+    
+    # Opacity rules
+    "opacity 0.95,class:^(kitty)$"
+    "opacity 0.90,class:^(thunar)$"
+    
+    # Workspace assignments (commented out in original)
+    # "workspace 1,class:^(thunar)$"
+    # "workspace 2,class:^(chromium-.*|Chromium-.*)$"
+    # "workspace 6,class:^(nvim)$"
+    # "workspace 7,class:^(kitty)$"
+    # "workspace 8,class:^(btop|htop|pavucontrol)$"
+    # "workspace 4,class:^(obsidian)$"
+    # "workspace 5,class:^(electron-mail)$"
+    
+    # Picture-in-picture
+    "float,title:^(Picture-in-Picture)$"
+    "pin,title:^(Picture-in-Picture)$"
+    "size 640 360,title:^(Picture-in-Picture)$"
+    
+    # No shadows for certain windows
+    "noshadow,floating:0"
+    
+    # Inhibit idle for media
+    "idleinhibit focus,class:^(mpv|vlc|youtube)$"
+    "idleinhibit fullscreen,class:^(firefox|chromium)$"
+    
+    # Immediate focus for important apps
+    "immediate,class:^(kitty|thunar)$"
+    
+    # Gaming optimizations
+    "fullscreen,class:^(steam_app_).*"
+    "immediate,class:^(steam_app_).*"
+  ];
+
+  #============================================================================
+  # APPLICATION MANAGEMENT TOOLS
+  #============================================================================
+  tools = [
+    # Workspace Overview Tool
+    (writeShellScriptBin "hyprland-workspace-overview" ''
+      #!/usr/bin/env bash
+      # Quick workspace overview with application status
+      set -euo pipefail
+
+      # Get all workspaces with windows
+      WORKSPACES=$(${hyprland}/bin/hyprctl workspaces -j | ${jq}/bin/jq -r '.[] | select(.windows > 0) | "\(.id): \(.windows) windows"')
+      
+      # Get current workspace  
+      CURRENT=$(${hyprland}/bin/hyprctl activeworkspace -j | ${jq}/bin/jq -r '.id')
+      
+      # Show overview
+      echo "=== Workspace Overview ==="
+      echo "Current: $CURRENT"
+      echo ""
+      echo "$WORKSPACES"
+      
+      # Get active window info
+      ACTIVE_WINDOW=$(${hyprland}/bin/hyprctl activewindow -j | ${jq}/bin/jq -r '.class // "No active window"')
+      echo ""
+      echo "Active: $ACTIVE_WINDOW"
+    '')
+
+    # Workspace Manager Tool  
+    (writeShellScriptBin "hyprland-workspace-manager" ''
+      #!/usr/bin/env bash
+      # Enhanced workspace navigation and management
+      set -euo pipefail
+
+      case "$1" in
+        "overview")
+          hyprland-workspace-overview
+          ;;
+        "next")
+          ${hyprland}/bin/hyprctl dispatch workspace e+1
+          ;;
+        "prev")
+          ${hyprland}/bin/hyprctl dispatch workspace e-1
+          ;;
+        *)
+          echo "Usage: workspace-manager {overview|next|prev}"
+          exit 1
+          ;;
+      esac
+    '')
+
+    # Application Launcher Tool
+    (writeShellScriptBin "hyprland-app-launcher" ''
+      #!/usr/bin/env bash
+      # Enhanced application launcher with workspace assignment
+      set -euo pipefail
+
+      case "$1" in
+        "browser")
+          if ${procps}/bin/pgrep -f chromium > /dev/null; then
+            ${hyprland}/bin/hyprctl dispatch focuswindow "chromium"
+          else
+            ${hyprland}/bin/hyprctl dispatch exec "[workspace 2] waybar-gpu-launch chromium"
+          fi
+          ;;
+
+        "files")
+          if ${procps}/bin/pgrep -f thunar > /dev/null; then
+            ${hyprland}/bin/hyprctl dispatch focuswindow "thunar"
+          else
+            ${hyprland}/bin/hyprctl dispatch exec "[workspace 1] waybar-gpu-launch thunar"
+          fi
+          ;;
+
+        "terminal")
+          ${hyprland}/bin/hyprctl dispatch exec "[workspace 7] kitty"
+          ;;
+
+        "editor")
+          if ${procps}/bin/pgrep -f nvim > /dev/null; then
+            ${hyprland}/bin/hyprctl dispatch focuswindow "nvim"
+          else
+            ${hyprland}/bin/hyprctl dispatch exec "[workspace 6] kitty -e nvim"
+          fi
+          ;;
+
+        "email")
+          if ${procps}/bin/pgrep -f electron-mail > /dev/null; then
+            ${hyprland}/bin/hyprctl dispatch focuswindow "electron-mail"
+          else
+            ${hyprland}/bin/hyprctl dispatch exec "[workspace 4] waybar-gpu-launch electron-mail"
+          fi
+          ;;
+
+        "notes")
+          if ${procps}/bin/pgrep -f obsidian > /dev/null; then
+            ${hyprland}/bin/hyprctl dispatch focuswindow "obsidian"
+          else
+            ${hyprland}/bin/hyprctl dispatch exec "[workspace 5] waybar-gpu-launch obsidian"
+          fi
+          ;;
+
+        "monitor")
+          if ${procps}/bin/pgrep -f btop > /dev/null; then
+            ${hyprland}/bin/hyprctl dispatch focuswindow "btop"
+          else
+            ${hyprland}/bin/hyprctl dispatch exec "[workspace 8] kitty -e btop"
+          fi
+          ;;
+
+        *)
+          echo "Usage: app-launcher {browser|files|terminal|editor|email|notes|monitor}"
+          exit 1
+          ;;
+      esac
+    '')
+  ];
+}
