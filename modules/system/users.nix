@@ -133,15 +133,5 @@ in {
 
     # Ensure ZSH is available system-wide
     programs.zsh.enable = lib.mkDefault true;
-
-    # System packages for user environment
-    environment.systemPackages = with pkgs; [
-      # Core utilities
-      vim git wget curl htop tmux
-      # Modern Unix tools  
-      ncdu tree ripgrep fd bat eza zoxide fzf
-      # User environment tools
-      which diffutils less
-    ];
   };
 }

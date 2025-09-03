@@ -1,5 +1,10 @@
      { config, lib, ... }: {
        imports = [
+         # System foundation modules (Charter v4 compliant)
+         ../modules/system/users.nix
+         ../modules/system/security/sudo.nix
+         ../modules/system/base-packages.nix
+         
          # Infrastructure capabilities
          ../modules/infrastructure/gpu.nix
          ../modules/infrastructure/waybar-hardware-tools.nix
@@ -15,11 +20,9 @@
          ../modules/system/desktop-packages.nix  # Desktop system packages
          ../modules/system/audio.nix             # Audio system
 
-         # NixOS-level home modules (user creation, SSH, etc.)
-         ../modules/home/eric.nix
+         # NixOS-level home modules (SSH, etc.)
          ../modules/home/login-manager.nix
          ../modules/home/apps.nix        # Apps uses environment.systemPackages - NixOS level
-         ../modules/home/cli.nix         # CLI uses environment.systemPackages - NixOS level  
          ../modules/home/development.nix # Development uses environment.systemPackages - NixOS level
          ../modules/home/input.nix       # Input config for keyboards - NixOS level
        ];
@@ -36,6 +39,7 @@
              ../modules/home/hyprland/default.nix
              ../modules/home/shell.nix
              ../modules/home/productivity.nix
+             ../modules/home/cli.nix
              ../modules/schema/home/waybar.nix
              # Waybar with all tools - Charter v4 compliant
              ../modules/home/waybar/default.nix
@@ -66,6 +70,17 @@
              tmux.enable = true;
            };
            
+           # CLI configuration (pure Home-Manager)
+           hwc.home.cli = {
+             enable = true;
+             modernUnix = true;
+             git = {
+               enable = true;
+               userName = "Eric";
+               userEmail = "eric@hwc.moe";
+             };
+           };
+           
            # Waybar configuration (pure Home-Manager)
            hwc.home.waybar = {
              enable = true;
@@ -94,9 +109,6 @@
            productivity.enable = true;
          };
 
-         # User groups and access
-         groups.virtualization = true;  # Add virtualization access for VMs
-
          # Input device configuration
          input = {
            enable = true;
@@ -109,15 +121,6 @@
          # Login manager configuration
          loginManager.enable = true;
          # homeManager configuration now handled centrally via HM imports above
-         cli = {
-           enable = true;
-           modernUnix = true;
-           git = {
-             enable = true;
-             userName = "Eric";
-             userEmail = "eric@hwc.moe";
-           };
-         };
 
          development = {
            enable = true;
@@ -165,6 +168,10 @@
 
        };
 
+       # System configuration (Charter v4 foundation modules)
+       hwc.system.users.enable = true;
+       hwc.system.security.sudo.enable = true;
+       hwc.system.basePackages.enable = true;
        hwc.system.desktop.enable = true;        # Enable desktop system packages
        
        # XDG Portal configuration moved to modules/system/audio.nix

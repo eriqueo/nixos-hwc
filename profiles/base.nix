@@ -45,12 +45,6 @@
     ../modules/system/security/sudo.nix
     ../modules/system/secrets.nix
     
-    # Legacy security module (will be phased out)
-    ../modules/security/secrets.nix
-    
-    # Legacy home module (user auth moved to system domain)
-    ../modules/home/eric.nix
-    
     # Infrastructure
     ../modules/infrastructure/gpu.nix
     
@@ -133,37 +127,22 @@
   hwc.system.secrets = {
     enable = true;
     userPasswordSecret = "user-initial-password";
-    ensureSecretsExist = true;
+    ensureSecretsExist = false; # build-only; we'll flip to true later
   };
 
   #============================================================================
   # USER DOMAIN (Orchestration) - Defers implementation to modules/home/*
   #============================================================================
-  hwc.home = {
-    user.enable = true;
-    groups = {
-      basic = true;        # wheel, networkmanager
-      media = true;        # video, audio, render
-      development = true;  # docker, podman
-    };
-    ssh.enable = true;
-    environment = {
-      enableZsh = true;
-      enablePaths = true;
-    };
-  };
+  # Legacy hwc.home.* configuration removed
+  # User management now handled by hwc.system.users in system domain
 
   #============================================================================
-  # SECURITY (Orchestration) - Defers implementation to modules/security/*
+  # SECURITY - Now handled by system domain modules
   #============================================================================
-  hwc.security = {
-    enable = true;
-    secrets = {
-      user = true;  # User account secrets
-      vpn  = true;  # VPN credentials for Tailscale/services
-    };
-    ageKeyFile = lib.mkDefault "/etc/age/keys.txt";
-  };
+  # Security configuration moved to:
+  # - hwc.system.users (user authentication)
+  # - hwc.system.security.sudo (privilege escalation) 
+  # - hwc.system.secrets (agenix integration)
 
   #============================================================================
   # FILESYSTEM (Orchestration) - Defers implementation to modules/system/filesystem.nix

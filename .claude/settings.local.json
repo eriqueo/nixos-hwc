@@ -23,7 +23,14 @@
       "Read(/etc/nixos/hosts/server/modules/**)",
       "Read(/etc/nixos/hosts/laptop/modules/ai/**)",
       "Read(/etc/nixos/hosts/laptop/modules/**)",
-      "Bash(./tests/waybar-smoke.sh:*)"
+      "Bash(./tests/waybar-smoke.sh:*)",
+      "Read(/etc/nixos/hosts/laptop/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/**)",
+      "Read(/etc/nixos/modules/users/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/shared/home-manager/**)"
     ],
     "deny": [],
     "ask": [],
