@@ -8,7 +8,6 @@
          # Infrastructure capabilities
          ../modules/infrastructure/gpu.nix
          ../modules/infrastructure/waybar-hardware-tools.nix
-         ../modules/infrastructure/hyprland-tools.nix
          # ../modules/infrastructure/waybar-system-tools.nix (consolidated)
          ../modules/infrastructure/user-services.nix
          ../modules/infrastructure/user-hardware-access.nix
@@ -150,8 +149,7 @@
          waybarHardwareTools.enable = true;
          # waybarSystemTools.enable = true; (consolidated into waybarHardwareTools)
          
-         # Hyprland infrastructure tools
-         hyprlandTools.enable = true;
+         # Hyprland tools now integrated into home domain parts
          # User system services  
          userServices.enable = true;
          
