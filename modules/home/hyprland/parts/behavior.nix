@@ -55,8 +55,8 @@ in
     "${mod}, N, exec, kitty nvim"
     "${mod}, T, exec, thunar"
     "${mod}, G, exec, gpu-toggle"
-    # "${mod} SHIFT, M, exec, hyprland-monitor-toggle" # Tool not in PATH
-    # "${mod}, TAB, exec, hyprland-workspace-overview" # Tool not in PATH
+    "${mod} SHIFT, M, exec, hyprland-monitor-toggle"
+    "${mod}, TAB, exec, hyprland-workspace-overview"
     "${mod} SHIFT, T, togglefloating"
     
     # Screenshots
@@ -122,7 +122,7 @@ in
     "${mod} CTRL ALT, right, workspace, e+1"
     
     # Enhanced workspace management  
-    # "${mod}, TAB, exec, hyprland-workspace-overview" # Tool not in PATH - use basic navigation
+    "${mod}, TAB, exec, hyprland-workspace-overview"
     "${mod} CTRL, right, workspace, e+1"
     "${mod} CTRL, left, workspace, e-1"
     
@@ -136,7 +136,7 @@ in
     "${mod}, M, exec, kitty -e btop"
     
     # System health check
-    # "${mod} SHIFT, H, exec, hyprland-system-health-checker" # Tool not in PATH
+    "${mod} SHIFT, H, exec, hyprland-system-health-checker"
     
     # Volume controls
     ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
