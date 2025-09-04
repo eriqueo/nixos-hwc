@@ -245,4 +245,5 @@ in
   ];
 
   # Tools moved to parts/system.nix for system-wide access
+  # Force regeneration
 }
