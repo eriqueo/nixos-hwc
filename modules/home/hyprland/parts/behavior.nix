@@ -24,7 +24,7 @@ let
   mod = "SUPER";
   
   # Dependencies for scripts
-  inherit (pkgs) hyprland procps libnotify writeShellScriptBin jq;
+  inherit (pkgs) hyprland procps libnotify jq;
 in
 {
   #============================================================================
@@ -47,13 +47,13 @@ in
     "${mod}, 6, exec, kitty -e nvim"
     "${mod}, K, exec, kitty"
     "${mod}, 7, exec, kitty"
-    "${mod}, M, exec, kitty btop"
-    "${mod}, 8, exec, kitty btop"
+    "${mod}, M, exec, kitty -e btop"
+    "${mod}, 8, exec, kitty -e btop"
     "${mod}, 1, exec, thunar"
     "${mod}, O, exec, gpu-launch obsidian"
     "${mod}, E, exec, gpu-launch electron-mail"
-    "${mod}, N, exec, kitty nvim"
-    "${mod}, T, exec, thunar"
+    "${mod}, N, exec, kitty -e nvim"
+    "${mod}, T, exec, kitty -e htop"
     "${mod}, G, exec, gpu-toggle"
     "${mod} SHIFT, M, exec, hyprland-monitor-toggle"
     "${mod}, TAB, exec, hyprland-workspace-overview"
@@ -126,14 +126,7 @@ in
     "${mod} CTRL, right, workspace, e+1"
     "${mod} CTRL, left, workspace, e-1"
     
-    # Direct application launching (no workspace assignments)
-    "${mod}, B, exec, gpu-launch chromium"
-    "${mod}, T, exec, thunar" 
-    "${mod}, Return, exec, kitty"
-    "${mod}, N, exec, kitty -e nvim"
-    "${mod}, E, exec, gpu-launch electron-mail"
-    "${mod}, O, exec, gpu-launch obsidian"
-    "${mod}, M, exec, kitty -e btop"
+    # Additional workspace management handled above
     
     # System health check
     "${mod} SHIFT, H, exec, hyprland-system-health-checker"

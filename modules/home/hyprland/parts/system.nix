@@ -105,7 +105,6 @@ in
         esac
       '')
 
-
       # Monitor Toggle Tool
       (writeShellScriptBin "hyprland-monitor-toggle" ''
         #!/usr/bin/env bash
