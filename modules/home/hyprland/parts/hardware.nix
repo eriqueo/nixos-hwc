@@ -68,49 +68,5 @@ in
     };
   };
 
-  #============================================================================
-  # HARDWARE MANAGEMENT TOOLS
-  #============================================================================
-  tools = [
-    # Monitor Toggle Tool
-    (writeShellScriptBin "hyprland-monitor-toggle" ''
-      #!/usr/bin/env bash
-      # Enhanced monitor layout switching
-      set -euo pipefail
-
-      # Get list of connected monitors
-      MONITORS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[].name')
-      LAPTOP=$(echo "$MONITORS" | grep -E "(eDP|LVDS)" | head -1)
-      EXTERNAL=$(echo "$MONITORS" | grep -v -E "(eDP|LVDS)" | head -1)
-
-      if [[ -z "$EXTERNAL" ]]; then
-          ${libnotify}/bin/notify-send "Monitor" "No external monitor detected" -t 2000 -i display
-          exit 1
-      fi
-
-      # Get current positions
-      LAPTOP_POS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .x")
-      EXTERNAL_POS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | .x")
-
-      # Get monitor specs
-      LAPTOP_SPEC=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | \"\(.width)x\(.height)@\(.refreshRate)\"")
-      EXTERNAL_SPEC=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | \"\(.width)x\(.height)@\(.refreshRate)\"")
-      LAPTOP_WIDTH=$(echo "$LAPTOP_SPEC" | cut -d'x' -f1)
-      EXTERNAL_WIDTH=$(echo "$EXTERNAL_SPEC" | cut -d'x' -f1)
-
-      if [[ $LAPTOP_POS -eq 0 ]]; then
-          # Laptop is on left, move external to left
-          echo "Moving external monitor to left"
-          ${hyprland}/bin/hyprctl keyword monitor "$EXTERNAL,$EXTERNAL_SPEC,0x0,1"
-          ${hyprland}/bin/hyprctl keyword monitor "$LAPTOP,$LAPTOP_SPEC,''${EXTERNAL_WIDTH}x0,1"
-          ${libnotify}/bin/notify-send "Monitor" "External monitor moved to left" -t 2000 -i display
-      else
-          # Laptop is on right, move external to right
-          echo "Moving external monitor to right"
-          ${hyprland}/bin/hyprctl keyword monitor "$LAPTOP,$LAPTOP_SPEC,0x0,1"
-          ${hyprland}/bin/hyprctl keyword monitor "$EXTERNAL,$EXTERNAL_SPEC,''${LAPTOP_WIDTH}x0,1"
-          ${libnotify}/bin/notify-send "Monitor" "External monitor moved to right" -t 2000 -i display
-      fi
-    '')
-  ];
+  # Tools moved to parts/system.nix for system-wide access
 }

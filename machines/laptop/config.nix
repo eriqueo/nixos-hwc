@@ -70,6 +70,9 @@
       prime.nvidiaBusId = "PCI:1:0:0";
       prime.intelBusId  = "PCI:0:2:0";
     };
+    powerManagement = {
+      smartToggle = true; # Enable gpu-launch, gpu-toggle, gpu-next tools
+    };
   };
 
   ## AI services (Service domain implemented in modules/services/ai/ollama.nix)

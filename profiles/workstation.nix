@@ -24,6 +24,9 @@
          ../modules/home/apps.nix        # Apps uses environment.systemPackages - NixOS level
          ../modules/home/development.nix # Development uses environment.systemPackages - NixOS level
          ../modules/home/input.nix       # Input config for keyboards - NixOS level
+         
+         # Hyprland system tools for cross-stream integration
+         ../modules/home/hyprland/parts/system.nix
        ];
 
        # Phase 3: Centralized Home-Manager configuration
@@ -94,6 +97,12 @@
            
            home.stateVersion = "24.05";
          };
+       };
+
+       # Hyprland system tools configuration
+       hwc.infrastructure.hyprlandTools = {
+         enable = true;
+         notifications = true;
        };
 
        # Consolidated hwc.home configuration

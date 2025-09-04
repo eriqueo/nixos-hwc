@@ -18,7 +18,7 @@
 #   Universal domains: behavior.nix, hardware.nix, session.nix, appearance.nix
 #
 
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 let
   # Import universal config domains
   behavior = import ./parts/behavior.nix { inherit lib pkgs; };
@@ -53,8 +53,8 @@ in
     # Window manager utilities
     hyprsome  # Per-monitor workspace management
     
-    # Universal config domain tools
-  ] ++ behavior.tools ++ hardware.tools ++ session.tools;
+    # Universal config domain tools (now managed at system level)
+  ];
   
   #============================================================================
   # SESSION VARIABLES
@@ -78,13 +78,8 @@ in
         input = hardware.input;
       }
       
-      # Behavior domain (keybindings, window rules)
-      {
-        "$mod" = "SUPER";
-        bind = behavior.bind;
-        bindm = behavior.bindm;
-        windowrulev2 = behavior.windowrulev2;
-      }
+      # Behavior domain (keybindings, window rules) 
+      (behavior // { "$mod" = "SUPER"; })
       
       # Session domain (autostart)
       {
@@ -105,4 +100,5 @@ in
     wallpaper = DP-1,${wallpaperPath}
     splash = false
   '';
+
 }
