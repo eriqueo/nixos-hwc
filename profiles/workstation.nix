@@ -36,6 +36,7 @@
            imports = [
              # True Home-Manager modules (use home.packages, programs.*, etc.)
              ../modules/home/hyprland/default.nix
+             ../modules/home/betterbird/default.nix  # Charter v5 email client
              ../modules/home/shell.nix
              ../modules/home/productivity.nix
              ../modules/home/cli.nix
@@ -52,7 +53,7 @@
              notes.obsidian = true;
              browsers.firefox = true;
              office.libreoffice = true;
-             communication.thunderbird = true;
+             # communication.thunderbird = true;  # Now managed by betterbird module
            };
            
            # Shell configuration (pure Home-Manager)

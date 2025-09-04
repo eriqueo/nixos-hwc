@@ -55,8 +55,8 @@ in
     "${mod}, N, exec, kitty nvim"
     "${mod}, T, exec, thunar"
     "${mod}, G, exec, gpu-toggle"
-    "${mod} SHIFT, M, exec, hyprland-monitor-toggle"
-    "${mod}, TAB, exec, hyprland-workspace-overview"
+    # "${mod} SHIFT, M, exec, hyprland-monitor-toggle" # Tool not in PATH
+    # "${mod}, TAB, exec, hyprland-workspace-overview" # Tool not in PATH
     "${mod} SHIFT, T, togglefloating"
     
     # Screenshots
@@ -121,22 +121,22 @@ in
     "${mod} CTRL ALT, left, workspace, e-1"
     "${mod} CTRL ALT, right, workspace, e+1"
     
-    # Enhanced workspace management
-    "${mod}, TAB, exec, hyprland-workspace-manager overview"
-    "${mod} CTRL, right, exec, hyprland-workspace-manager next"
-    "${mod} CTRL, left, exec, hyprland-workspace-manager prev"
+    # Enhanced workspace management  
+    # "${mod}, TAB, exec, hyprland-workspace-overview" # Tool not in PATH - use basic navigation
+    "${mod} CTRL, right, workspace, e+1"
+    "${mod} CTRL, left, workspace, e-1"
     
-    # Smart application launching
-    "${mod}, B, exec, hyprland-app-launcher browser"
-    "${mod}, T, exec, hyprland-app-launcher files"
-    "${mod}, Return, exec, hyprland-app-launcher terminal"
-    "${mod}, N, exec, hyprland-app-launcher editor"
-    "${mod}, E, exec, hyprland-app-launcher email"
-    "${mod}, O, exec, hyprland-app-launcher notes"
-    "${mod}, M, exec, hyprland-app-launcher monitor"
+    # Direct application launching (no workspace assignments)
+    "${mod}, B, exec, gpu-launch chromium"
+    "${mod}, T, exec, thunar" 
+    "${mod}, Return, exec, kitty"
+    "${mod}, N, exec, kitty -e nvim"
+    "${mod}, E, exec, gpu-launch electron-mail"
+    "${mod}, O, exec, gpu-launch obsidian"
+    "${mod}, M, exec, kitty -e btop"
     
     # System health check
-    "${mod} SHIFT, H, exec, hyprland-system-health-checker"
+    # "${mod} SHIFT, H, exec, hyprland-system-health-checker" # Tool not in PATH
     
     # Volume controls
     ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
@@ -181,7 +181,7 @@ in
   windowrulev2 = [
     # Browser rules
     "tile,class:^(Chromium-browser)$,title:^.*JobTread.*$"
-    "workspace 3,class:^(Chromium-browser)$,title:^.*JobTread.*$"
+    # "workspace 3,class:^(Chromium-browser)$,title:^.*JobTread.*$"
     "tile,class:^(chromium-.*|Chromium-.*)$"
     
     # File picker dialogs - comprehensive patterns

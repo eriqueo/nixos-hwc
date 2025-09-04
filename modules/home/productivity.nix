@@ -80,12 +80,12 @@ in
     # HM: browsers / mail
     programs.firefox.enable = cfg.browsers.firefox;
     
-    # HM: mail (guarded with a minimal default profile)
-    programs.thunderbird = lib.mkIf cfg.communication.thunderbird {
-      enable = true;
-      profiles = {
-        default = { isDefault = true; };
-      };
-    };
+    # HM: mail - now managed by modules/home/betterbird (Charter v5 compliant)
+    # programs.thunderbird = lib.mkIf cfg.communication.thunderbird {
+    #   enable = true;
+    #   profiles = {
+    #     default = { isDefault = true; };
+    #   };
+    # };
   };
 }
