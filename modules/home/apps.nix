@@ -72,7 +72,7 @@
            # Productivity
            obsidian
            libreoffice
-           thunderbird
+           # thunderbird - now managed by modules/home/betterbird
          ];
 
          # XDG portal for file dialogs

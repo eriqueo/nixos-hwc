@@ -25,7 +25,7 @@ in
   # AUTOSTART APPLICATIONS - Session initialization
   #============================================================================
   execOnce = [
-    "hyprland-startup"    # Custom startup script with full app initialization
+    # "hyprland-startup"  # Disabled - was launching apps to specific workspaces
     "hyprpaper"           # Wallpaper manager
     "wl-paste --type text --watch cliphist store"    # Text clipboard history
     "wl-paste --type image --watch cliphist store"   # Image clipboard history
