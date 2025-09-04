@@ -18,7 +18,7 @@
 { lib, pkgs, ... }:
 let
   # Dependencies for scripts
-  inherit (pkgs) hyprland procps libnotify writeShellScriptBin jq coreutils gawk lm_sensors systemd;
+  inherit (pkgs) hyprland procps libnotify jq coreutils gawk lm_sensors systemd;
 in
 {
   #============================================================================

@@ -71,22 +71,9 @@ in
     package = pkgs.hyprland;
     
     settings = lib.mkMerge [
-      # Hardware domain (monitors, input, workspaces)
-      {
-        monitor = hardware.monitor;
-        workspace = hardware.workspace;
-        input = hardware.input;
-      }
-      
-      # Behavior domain (keybindings, window rules) 
       (behavior // { "$mod" = "SUPER"; })
-      
-      # Session domain (autostart)
-      {
-        exec-once = session.execOnce;
-      }
-      
-      # Appearance domain (theme settings)
+      hardware
+      { exec-once = session.execOnce; }
       appearance
     ];
   };

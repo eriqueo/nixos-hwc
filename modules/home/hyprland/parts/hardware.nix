@@ -21,7 +21,7 @@
 { lib, pkgs, ... }:
 let
   # Dependencies for scripts
-  inherit (pkgs) hyprland jq libnotify writeShellScriptBin;
+  inherit (pkgs) hyprland jq libnotify;
 in
 {
   #============================================================================
