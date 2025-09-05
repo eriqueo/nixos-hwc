@@ -90,17 +90,13 @@
     };
 
     #---------------------------------------------------------------------------
-    # Optional: Centralized Agenix config (if you use it from modules)
+    # DISABLED: Non-standard flake outputs that may interfere with Home Manager
     #---------------------------------------------------------------------------
-    agenixConfig = import ./secrets.nix;
-
-    #---------------------------------------------------------------------------
-    # Helpers (exports for library-style helpers; does not affect evaluation)
-    #---------------------------------------------------------------------------
-    helpers = {
-      inherit (import ./lib/helpers.nix { inherit lib; })
-        mkServiceModule mkContainerService mkGpuService;
-      migrationBridge = import ./lib/migration-bridge.nix { inherit inputs; };
-    };
+    # agenixConfig = import ./secrets.nix;
+    # helpers = {
+    #   inherit (import ./lib/helpers.nix { inherit lib; })
+    #     mkServiceModule mkContainerService mkGpuService;
+    #   migrationBridge = import ./lib/migration-bridge.nix { inherit inputs; };
+    # };
   };
 }
