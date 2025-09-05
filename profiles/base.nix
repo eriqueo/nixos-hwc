@@ -9,7 +9,6 @@
 #   - modules/system/filesystem.nix
 #   - modules/system/networking.nix
 #   - modules/security/secrets.nix
-#   - modules/home/eric.nix
 #   - modules/infrastructure/gpu.nix
 #
 # USED BY (Downstream):
@@ -45,8 +44,7 @@
     ../modules/system/security/sudo.nix
     ../modules/system/secrets.nix
     
-    # Home domain user module (required for Home Manager integration)
-    ../modules/home/core/eric.nix
+    # Home domain user module now handled in machines/*/home.nix
     
     # Infrastructure
     ../modules/infrastructure/gpu.nix
