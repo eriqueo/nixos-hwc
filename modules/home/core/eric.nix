@@ -12,7 +12,7 @@
 #   - profiles/workstation.nix (imports for desktop environment)
 #
 # IMPORTS REQUIRED IN:
-#   - profiles/base.nix: ../modules/home/eric.nix
+#   - profiles/base.nix: ../modules/home/core/eric.nix
 #
 # USAGE:
 #   hwc.home.user.enable = true;              # Basic user account

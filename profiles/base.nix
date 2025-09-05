@@ -45,6 +45,9 @@
     ../modules/system/security/sudo.nix
     ../modules/system/secrets.nix
     
+    # Home domain user module (required for Home Manager integration)
+    ../modules/home/core/eric.nix
+    
     # Infrastructure
     ../modules/infrastructure/gpu.nix
     
