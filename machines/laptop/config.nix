@@ -40,13 +40,15 @@
   imports = [
     # Hardware-specific definitions for this machine
     ./hardware.nix
-    ./home.nix
+
 
     # Profiles that define the machine's capabilities (orchestration only)
     ../../profiles/base.nix
     ../../profiles/workstation.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
+
+     ./home.nix
   ];
 
   #============================================================================
