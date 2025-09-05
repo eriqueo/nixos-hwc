@@ -300,7 +300,7 @@ in
       # Default editors
       EDITOR = if cfg.editors.neovim then "nvim" else "micro";
       VISUAL = if cfg.editors.neovim then "nvim" else "micro";
-      
+ 
       # Development directories
       PROJECTS = "$HOME/workspace/projects";
       SCRIPTS = "$HOME/workspace/scripts";
