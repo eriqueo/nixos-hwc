@@ -37,6 +37,9 @@ in {
   config = lib.mkIf cfg.enable {
     # System-level packages - Development tools, language servers, build tools
     environment.systemPackages = with pkgs; [
+      # Core system shells
+      zsh                    # Default user shell (required for Home Manager integration)
+      
       # Core development tools
       git
       micro

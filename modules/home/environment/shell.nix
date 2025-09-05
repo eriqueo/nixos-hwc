@@ -678,7 +678,7 @@ in
 
     # --- Zsh configuration ---
     programs.zsh = {
-      enable = cfg.zsh.enable;
+      enable = true; # Explicitly enable Zsh management in Home Manager
       autosuggestion.enable = cfg.zsh.plugins.autosuggestions;
       syntaxHighlighting.enable = cfg.zsh.plugins.syntaxHighlighting;
       history = {
@@ -686,7 +686,7 @@ in
         save = 5000;
       };
       shellAliases = cfg.aliases;
-      initExtra = cfg.zsh.initExtra;
+      initContent = cfg.zsh.initExtra; # Fix deprecation warning: initExtra -> initContent
       # Guard environment variables in .zshenv (managed by programs.zsh)
       envExtra = ''
         # Guarded Home Manager session variables loader
