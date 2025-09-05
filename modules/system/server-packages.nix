@@ -34,8 +34,7 @@ in {
     # Server-specific system packages
     environment.systemPackages = with pkgs; [
       # GUI applications (X11 forwarding support)
-      kitty                  # Terminal emulator
-      xfce.thunar           # File manager
+      # kitty and thunar moved to base-packages.nix (universal tools)
       xorg.xauth            # Required for X11 forwarding
       file-roller           # Archive manager
       evince                # PDF viewer

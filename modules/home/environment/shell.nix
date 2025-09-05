@@ -1,91 +1,110 @@
-# nixos-hwc/modules/home/shell.nix
+# nixos-hwc/modules/home/environment/shell.nix
 #
-# Home UI: Shell + CLI stack (HM consumer via NixOS orchestrator)
-# NixOS options gate inclusion; Home-Manager config lives under home-manager.users.<user>.
+# SHELL ENVIRONMENT - Complete shell and CLI configuration
+# Consolidated module combining shell, CLI tools, and modern Unix replacements
 #
 # DEPENDENCIES (Upstream):
-#   - profiles/workstation.nix (imports HM and sets home.stateVersion)
-#   - home-manager.nixosModules.home-manager (enabled at flake/machine)
+#   - Home Manager modules system
+#   - profiles/workstation.nix (imports this module)
+#   - modules/home/theme/palettes/deep-nord.nix (for theming)
 #
 # USED BY (Downstream):
-#   - machines/*/config.nix (e.g., hwc.home.shell.* toggles)
+#   - profiles/workstation.nix (enables via hwc.home.shell.enable)
 #
 # IMPORTS REQUIRED IN:
-#   - profiles/workstation.nix (or any profile that wants user shell config)
+#   - profiles/workstation.nix: home-manager.users.eric.imports = [ ../modules/home/environment/shell.nix ]
 #
 # USAGE:
 #   hwc.home.shell.enable = true;
-#   hwc.home.shell.packages = with pkgs; [ ripgrep fd zoxide eza ];
-#   hwc.home.shell.sessionVariables = { EDITOR = "nvim"; };
-#   hwc.home.shell.aliases = { ll = "eza -lah"; };
+#   hwc.home.shell.modernUnix = true;
+#   hwc.home.shell.git.enable = true;
 #   hwc.home.shell.zsh = {
 #     enable = true;
 #     starship = true;
 #     plugins.autosuggestions = true;
 #     plugins.syntaxHighlighting = true;
 #   };
-#   hwc.home.shell.tmux = {
-#     enable = true;
-#     extraConfig = ''
-#       set -g mouse on
-#     '';
-#   };
 
 { config, lib, pkgs, ... }:
 
 let
-  t   = lib.types;
+  t = lib.types;
   cfg = config.hwc.home.shell;
 in
 {
   #============================================================================
-  # OPTIONS (NixOS layer)
+  # OPTIONS - Complete shell and CLI configuration
   #============================================================================
   options.hwc.home.shell = {
-    enable = lib.mkEnableOption "User shell + CLI configuration via Home-Manager";
+    enable = lib.mkEnableOption "Complete shell + CLI environment via Home-Manager";
+
+    modernUnix = lib.mkOption {
+      type = t.bool;
+      default = true;
+      description = "Enable modern Unix replacements (eza, bat, fd, etc.)";
+    };
 
     packages = lib.mkOption {
       type = t.listOf t.package;
-      default = with pkgs; [ ripgrep fd zoxide eza fzf bat jq curl wget unzip ];
-      description = "User-scoped CLI/tool packages (Home-Manager: home.packages).";
+      default = with pkgs; [
+        # Modern CLI replacements (base set)
+        ripgrep fd fzf bat jq curl wget unzip
+        # Essential utilities
+        tree micro btop fastfetch
+        # Network and transfer tools
+        rsync rclone speedtest-cli nmap traceroute dig
+        # Archive and compression
+        zip p7zip
+        # Text and data processing
+        yq pandoc
+        # System utilities
+        xclip diffutils less which lsof pstree
+        # Core development
+        git vim nano
+        # AI/Development tools
+        claude-code
+      ];
+      description = "Base CLI/tool packages (additional tools added based on modernUnix option)";
     };
 
     sessionVariables = lib.mkOption {
       type = t.attrsOf t.str;
       default = {
         LIBVIRT_DEFAULT_URI = "qemu:///system";
+        EDITOR = "micro";
+        VISUAL = "micro";
       };
-      description = "Environment variables for the user session (HM: home.sessionVariables).";
+      description = "Environment variables for the user session";
     };
 
     aliases = lib.mkOption {
       type = t.attrsOf t.str;
       default = {
-        # File management shortcuts
+        # File management shortcuts (modern tools)
         "ll" = "eza -l";
-        "la" = "eza -la";
+        "la" = "eza -la"; 
         "lt" = "eza --tree --level=2";
-        
-        # Navigation shortcuts
+
+        # Navigation shortcuts (zoxide)
         "cd" = "z";
-        "cdi" = "zi";
-        "cz" = "z";
-        "czz" = "zi";
+        "cdi" = "zi";       # interactive selection
+        "cz" = "z";         # short mnemonic
+        "czz" = "zi";       # short mnemonic for interactive
         ".." = "cd ..";
         "..." = "cd ../..";
         "...." = "cd ../../..";
-        
-        # System utilities
+
+        # System utilities (modernized)
         "df" = "df -h";
-        "du" = "du -h";
+        "du" = "du -h"; 
         "free" = "free -h";
         "htop" = "btop";
         "grep" = "rg";
         "open" = "xdg-open";
-        
+
         # Universal git = sudo git (consistent everywhere)
         "git" = "sudo git";
-        
+
         # Git workflow shortcuts (all use sudo for consistency)
         "gs" = "sudo git status -sb";
         "ga" = "sudo git add .";
@@ -93,12 +112,12 @@ in
         "gp" = "sudo git push";
         "gl" = "sudo git log --oneline --graph --decorate --all";
         "gpl" = "sudo git pull";
-        
+
         # NixOS-specific git sync aliases
         "gresync" = "cd /etc/nixos && sudo git fetch origin && sudo git pull origin master && echo '✅ Git sync complete!'";
         "gstatus" = "cd /etc/nixos && sudo git status";
         "glog" = "cd /etc/nixos && sudo git log --oneline -10";
-        
+
         # NixOS system management
         "nixcon" = "sudo micro /etc/nixos/configuration.nix";
         "nixflake" = "sudo micro /etc/nixos/flake.nix";
@@ -113,75 +132,93 @@ in
         "nixsearch" = "nix search nixpkgs";
         "nixclean" = "nix-collect-garbage -d";
         "nixgen" = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
-        
+
         # Development and productivity
         "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me";
         "reload" = "source ~/.zshrc";
-        
+
         # SERVER-SPECIFIC ALIASES (safe to have on laptop)
         # Media server navigation
         "media" = "cd /mnt/media";
         "tv" = "cd /mnt/media/tv";
         "movies" = "cd /mnt/media/movies";
-        
+
         # AI and business intelligence
         "ai-chat" = "ollama run llama3.2:3b";
         "business-dev" = "cd /opt/business && source /etc/business/setup-dev-env.sh";
         "context-snap" = "python3 /opt/adhd-tools/scripts/context-snapshot.py";
         "energy-log" = "python3 /etc/adhd-tools/energy-tracker.py";
-        
+
         # Business workflow automation
         "receipt-process" = "cd /opt/business/receipts && python3 ../api/services/ocr_processor.py";
         "cost-dashboard" = "cd /opt/business/dashboard && streamlit run dashboard.py";
         "jobtread-sync" = "cd /opt/business/api && python3 services/jobtread_sync.py";
         "business-db" = "psql postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business";
-        
+
         # ADHD productivity tools
         "focus-mode" = "systemctl --user start context-monitor";
         "focus-off" = "systemctl --user stop context-monitor";
         "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
-        
+
         # Surveillance system shortcuts
         "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
         "home-assistant" = "echo 'Home Assistant: http://100.115.126.41:8123'";
         "frigate-logs" = "sudo podman logs -f frigate";
         "ha-logs" = "sudo podman logs -f home-assistant";
-        
+
         # SSH shortcuts
         "homeserver" = "ssh eric@100.115.126.41";
         "server" = "ssh eric@100.115.126.41";
-        
+
         # VPN management (ProtonVPN - Simple On-Demand Toggle)
         "vpn" = "vpnstatus";
         "vpncheck" = "vpnstatus";
       };
-      description = "Shell aliases (mapped to programs.zsh.shellAliases).";
+      description = "Shell aliases for zsh";
+    };
+
+    git = {
+      enable = lib.mkOption {
+        type = t.bool;
+        default = true;
+        description = "Enable Git configuration";
+      };
+      userName = lib.mkOption {
+        type = t.str;
+        default = "Eric";
+        description = "Git user name";
+      };
+      userEmail = lib.mkOption {
+        type = t.str;
+        default = "eric@hwc.moe";
+        description = "Git user email";
+      };
     };
 
     zsh = {
       enable = lib.mkOption {
         type = t.bool;
         default = true;
-        description = "Enable Zsh via Home-Manager.";
+        description = "Enable Zsh via Home-Manager";
       };
 
       starship = lib.mkOption {
         type = t.bool;
         default = true;
-        description = "Enable Starship prompt.";
+        description = "Enable Starship prompt";
       };
 
       plugins = {
         autosuggestions = lib.mkOption {
           type = t.bool;
           default = true;
-          description = "Enable zsh-autosuggestions.";
+          description = "Enable zsh-autosuggestions";
         };
         syntaxHighlighting = lib.mkOption {
           type = t.bool;
           default = true;
-          description = "Enable zsh-syntax-highlighting.";
+          description = "Enable zsh-syntax-highlighting";
         };
       };
 
@@ -381,7 +418,7 @@ in
             mkdir -p "$1" && cd "$1"
           }
 
-          # Fuzzy finding functions
+          # Fuzzy finding functions (using modern CLI tools)
           ff() {
             fd -t f . ~ | fzf --query="$*" --preview 'head -20 {}'
           }
@@ -421,7 +458,7 @@ in
             echo "🔥 Load: $(uptime | awk -F'load average:' '{print $2}')"
           }
         '';
-        description = "Additional Zsh init lines (programs.zsh.initExtra).";
+        description = "Additional Zsh init lines (programs.zsh.initExtra)";
       };
     };
 
@@ -429,37 +466,142 @@ in
       enable = lib.mkOption {
         type = t.bool;
         default = false;
-        description = "Enable tmux via Home-Manager.";
+        description = "Enable tmux via Home-Manager";
       };
 
       extraConfig = lib.mkOption {
         type = t.lines;
         default = "";
-        description = "Extra tmux.conf content (programs.tmux.extraConfig).";
+        description = "Extra tmux.conf content (programs.tmux.extraConfig)";
       };
     };
   };
 
   #============================================================================
-  # IMPLEMENTATION (NixOS -> HM bridge)
+  # IMPLEMENTATION - Complete shell and CLI environment
   #============================================================================
   config = lib.mkIf cfg.enable {
 
-    # --- HM: packages & env -------------------------------------------------
-    home.packages         = cfg.packages;
+    # --- Packages: Base + Modern Unix tools ---
+    home.packages = cfg.packages ++ lib.optionals cfg.modernUnix (with pkgs; [
+      # Modern Unix replacements
+      eza          # ls replacement
+      bat          # cat replacement  
+      procs        # ps replacement
+      dust         # du replacement
+      zoxide       # cd replacement
+    ]);
+
+    # --- Session Variables ---
     home.sessionVariables = cfg.sessionVariables;
 
-    # --- HM: Zsh & prompt ---------------------------------------------------
+    # --- Modern CLI tool configurations with proper integration ---
+    programs.eza = lib.mkIf cfg.modernUnix {
+      enable = true;
+      git = true;
+      icons = "auto";
+      extraOptions = [ "--group-directories-first" ];
+    };
+    
+    programs.bat = lib.mkIf cfg.modernUnix {
+      enable = true;
+      config = {
+        theme = "TwoDark";
+        italic-text = "always";
+        pager = "less -FR";
+      };
+    };
+    
+    programs.fzf = {
+      enable = true;
+      enableZshIntegration = true;
+      defaultCommand = "fd --type f --hidden --follow --exclude .git";
+      fileWidgetCommand = "fd --type f --hidden --follow --exclude .git";
+      historyWidgetOptions = [ "--exact" ];
+      defaultOptions = [
+        "--height 40%"
+        "--reverse"
+        "--border"
+        # Gruvbox Material color scheme (matches theme)
+        "--color=bg+:#32302f,bg:#282828,spinner:#89b482,hl:#7daea3"
+        "--color=fg:#d4be98,header:#7daea3,info:#d8a657,pointer:#89b482"
+        "--color=marker:#89b482,fg+:#d4be98,prompt:#d8a657,hl+:#89b482"
+      ];
+    };
+    
+    programs.zoxide = lib.mkIf cfg.modernUnix {
+      enable = true;
+      enableZshIntegration = true;
+      options = [ "--cmd=z" ];
+    };
+
+    programs.micro = {
+      enable = true;
+      settings = {
+        colorscheme = "gruvbox-tc";
+        autoclose = true;
+        autoindent = true;
+        autosave = 10;
+        cursorline = true;
+        diffgutter = true;
+        ftoptions = true;
+        ignorecase = false;
+        indentchar = " ";
+        infobar = true;
+        keymenu = true;
+        mouse = true;
+        rmtrailingws = true;
+        ruler = true;
+        savecursor = true;
+        saveundo = true;
+        scrollbar = true;
+        smartpaste = true;
+        softwrap = false;
+        splitbottom = true;
+        splitright = true;
+        statusformatl = "$(filename) $(modified)($(line),$(col)) $(status.paste)| ft:$(opt:filetype) | $(opt:fileformat) | $(opt:encoding)";
+        statusformatr = "$(bind:ToggleKeyMenu): bindings, $(bind:ToggleHelp): help";
+        tabsize = 2;
+        tabstospaces = true;
+      };
+    };
+    
+    # --- Git configuration with full user setup ---
+    programs.git = lib.mkIf cfg.git.enable {
+      enable = true;
+      userName = cfg.git.userName;
+      userEmail = cfg.git.userEmail;
+      extraConfig = {
+        init.defaultBranch = "main";
+        pull.rebase = false;
+        core.editor = "micro";
+        alias = {
+          st = "status";
+          co = "checkout";
+          br = "branch";
+          ci = "commit";
+          ca = "commit -a";
+          cm = "commit -m";
+          cam = "commit -am";
+          unstage = "reset HEAD --";
+          last = "log -1 HEAD";
+          visual = "!gitk";
+          tree = "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
+        };
+      };
+    };
+
+    # --- Zsh configuration ---
     programs.zsh = {
       enable = cfg.zsh.enable;
-      autosuggestion.enable     = cfg.zsh.plugins.autosuggestions;
+      autosuggestion.enable = cfg.zsh.plugins.autosuggestions;
       syntaxHighlighting.enable = cfg.zsh.plugins.syntaxHighlighting;
       history = {
         size = 5000;
         save = 5000;
       };
       shellAliases = cfg.aliases;
-      initExtra    = cfg.zsh.initExtra;
+      initExtra = cfg.zsh.initExtra;
       # Guard environment variables in .zshenv (managed by programs.zsh)
       envExtra = ''
         # Guarded Home Manager session variables loader
@@ -470,20 +612,34 @@ in
     };
 
     programs.starship.enable = cfg.zsh.starship;
-    programs.fzf.enable      = true;
-    programs.zoxide.enable   = true;
 
     programs.direnv = {
       enable = true;
       nix-direnv.enable = true;
     };
 
-    # --- HM: tmux -----------------------------------------------------------
+    # --- Tmux configuration ---
     programs.tmux = {
-      enable      = cfg.tmux.enable;
-      clock24     = true;
-      mouse       = true;
-      extraConfig = cfg.tmux.extraConfig;
+      enable = cfg.tmux.enable;
+      clock24 = true;
+      keyMode = "vi";
+      mouse = true;
+      extraConfig = lib.concatStringsSep "\n" [
+        # Gruvbox Material theme
+        ''
+          set -g status-bg "#282828"
+          set -g status-fg "#d4be98"
+          set -g status-left-style "bg=#7daea3,fg=#282828"
+          set -g status-right-style "bg=#45403d,fg=#d4be98"
+          set -g window-status-current-style "bg=#7daea3,fg=#282828"
+          
+          # Better key bindings
+          bind-key v split-window -h
+          bind-key s split-window -v
+          bind-key r source-file ~/.config/tmux/tmux.conf \; display-message "Config reloaded!"
+        ''
+        cfg.tmux.extraConfig
+      ];
     };
   };
 }

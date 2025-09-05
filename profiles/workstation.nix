@@ -20,13 +20,13 @@
          ../modules/system/audio.nix             # Audio system
 
          # NixOS-level home modules (SSH, etc.)
-         ../modules/home/login-manager.nix
-         ../modules/home/apps.nix        # Apps uses environment.systemPackages - NixOS level
-         ../modules/home/development.nix # Development uses environment.systemPackages - NixOS level
-         ../modules/home/input.nix       # Input config for keyboards - NixOS level
+         ../modules/home/core/login-manager.nix
+         ../modules/home/apps/apps.nix        # Apps uses environment.systemPackages - NixOS level
+         # ../modules/home/development.nix # Development now handled in Home Manager section
+         ../modules/home/core/input.nix       # Input config for keyboards - NixOS level
          
          # Hyprland system tools for cross-stream integration
-         ../modules/home/hyprland/parts/system.nix
+         ../modules/home/apps/hyprland/parts/system.nix
        ];
 
        # Phase 3: Centralized Home-Manager configuration
@@ -38,14 +38,16 @@
          users.eric = {
            imports = [
              # True Home-Manager modules (use home.packages, programs.*, etc.)
-             ../modules/home/hyprland/default.nix
-             ../modules/home/betterbird/default.nix  # Charter v5 email client
-             ../modules/home/shell.nix
-             ../modules/home/productivity.nix
-             ../modules/home/cli.nix
+             ../modules/home/apps/hyprland/default.nix
+             ../modules/home/apps/betterbird/default.nix  # Charter v5 email client
+             ../modules/home/environment/shell.nix
+             ../modules/home/environment/productivity.nix
+             ../modules/home/environment/development.nix
+            ../modules/home/apps/kitty.nix
+            ../modules/home/apps/thunar.nix
              ../modules/schema/home/waybar.nix
              # Waybar with all tools - Charter v4 compliant
-             ../modules/home/waybar/default.nix
+             ../modules/home/apps/waybar/default.nix
            ];
            
            # Hyprland configuration now handled by direct module import
@@ -59,9 +61,10 @@
              # communication.thunderbird = true;  # Now managed by betterbird module
            };
            
-           # Shell configuration (pure Home-Manager)
+           # Shell configuration (consolidated shell + CLI)
            hwc.home.shell = {
              enable = true;
+             modernUnix = true;
              zsh = {
                enable = true;
                starship = true;
@@ -73,15 +76,25 @@
              tmux.enable = true;
            };
            
-           # CLI configuration (pure Home-Manager)
-           hwc.home.cli = {
+           # Development configuration (enhanced with git and tools)
+           hwc.home.development = {
              enable = true;
-             modernUnix = true;
              git = {
                enable = true;
                userName = "Eric";
                userEmail = "eric@hwc.moe";
              };
+             editors = {
+               neovim = true;
+               micro = true;
+             };
+             languages = {
+               nix = true;
+               python = true;
+               rust = false;
+               javascript = false;
+             };
+             containers = true;
            };
            
            # Waybar configuration (pure Home-Manager)
@@ -131,20 +144,8 @@
          loginManager.enable = true;
          # homeManager configuration now handled centrally via HM imports above
 
-         development = {
-           enable = true;
-           editors = {
-             neovim = true;
-             micro = true;
-           };
-           languages = {
-             nix = true;
-             python = true;
-             rust = false;
-             javascript = false;
-           };
-           containers = true;
-         };
+         # Development configuration moved to Home Manager section above
+         # This ensures proper integration with user environment
 
 
 
