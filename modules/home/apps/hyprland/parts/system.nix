@@ -56,7 +56,117 @@ in
       pkgs.wl-clipboard
       pkgs.brightnessctl
       pkgs.hyprsome
+     
+
+hyprStartup = pkgs.writeScriptBin "hypr-startup" ''
+    #!/usr/bin/env bash    
+    # Function for logging
+    log() {
+      echo "[$(date '+%H:%M:%S')] $1" >> /tmp/hypr-startup.log
+    }
+    log "=== Hyprland Startup Begin ==="
+    
+    # Wait until Hyprland is fully ready with timeout
+    TIMEOUT=30
+    COUNTER=0
+    until hyprctl monitors > /dev/null 2>&1; do
+      sleep 0.1
+      COUNTER=$((COUNTER + 1))
+      if [[ $COUNTER -gt $((TIMEOUT * 10)) ]]; then
+        log "ERROR: Hyprland not ready after $TIMEOUT seconds"
+        exit 1
+      fi
+    done
+    
+    log "Hyprland is ready"
+    # Wait a bit more for full initialization
+    sleep 1
+    # Initialize GPU mode to Intel (default)
+    echo "intel" > /tmp/gpu-mode
+    log "GPU mode initialized to Intel"
+    # Function to launch app with retry and better error handling
+    launch_app() {
+      local workspace=$1
+      local command=$2
+      local app_name=$3
+      local delay=$4
       
+      log "Launching $app_name on workspace $workspace"
+      
+      # Check if app is already running
+      if pgrep -f "$app_name" > /dev/null; then
+        log "$app_name already running, skipping"
+        return 0
+      fi
+      
+      # Launch with error handling
+      if hyprctl dispatch exec "[workspace $workspace silent] $command"; then
+        log "$app_name launch command sent successfully"
+      else
+        log "ERROR: Failed to launch $app_name"
+      fi
+      
+      # Wait before next launch
+      sleep "$delay"
+    }
+    
+    # Function to check if workspace exists and create if needed
+    ensure_workspace() {
+      local workspace=$1
+      if ! hyprctl workspaces -j | ${pkgs.jq}/bin/jq -e ".[] | select(.id==$workspace)" > /dev/null 2>&1; then
+        hyprctl dispatch workspace "$workspace"
+        sleep 0.2
+        log "Created workspace $workspace"
+      fi
+    }
+    
+    # Pre-create workspaces to avoid race conditions
+    for ws in {1..8}; do
+      ensure_workspace "$ws"
+    done
+    
+    log "Starting application launches..."
+    
+    # Launch applications with staggered timing for smoother startup
+    launch_app 1 "gpu-launch thunar" "thunar" 0.8
+    launch_app 2 "gpu-launch chromium" "chromium" 0.8  
+    launch_app 3 "gpu-launch chromium --new-window https://jobtread.com" "chromium" 0.8
+    launch_app 4 "gpu-launch electron-mail" "electron-mail" 0.8
+    launch_app 5 "gpu-launch obsidian" "obsidian" 0.8
+    launch_app 6 "kitty -e nvim" "nvim" 0.8
+    launch_app 7 "kitty" "kitty" 0.8
+    launch_app 8 "kitty -e btop" "btop" 0.8
+    
+    # Wait for applications to settle
+    sleep 2
+    
+    # Switch to workspace 1 with smooth transition
+    log "Switching to workspace 1"
+    hyprctl dispatch workspace 1
+    
+    # Optional: Focus the first window in workspace 1
+    sleep 0.5
+    if hyprctl clients -j | ${pkgs.jq}/bin/jq -e '.[] | select(.workspace.id==1)' > /dev/null 2>&1; then
+      hyprctl dispatch focuswindow "$(hyprctl clients -j | ${pkgs.jq}/bin/jq -r '.[] | select(.workspace.id==1) | .address' | head -1)"
+      log "Focused first window in workspace 1"
+    fi
+    
+    # Send notification that startup is complete
+    ${pkgs.libnotify}/bin/notify-send "Hyprland" "Startup complete! 🚀" -t 3000 -i desktop
+    
+    log "=== Hyprland Startup Complete ==="
+    
+    # Optional: Clean up old log files (keep last 5)
+    find /tmp -name "hypr-startup.log.*" -type f | sort | head -n -5 | xargs rm -f 2>/dev/null || true
+    
+    # Archive current log
+    cp /tmp/hypr-startup.log "/tmp/hypr-startup.log.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+  '';
+        
+
+
+
+            
       # Management tools
       # Workspace Management Tools
       (writeShellScriptBin "hyprland-workspace-overview" ''

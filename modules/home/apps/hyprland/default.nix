@@ -26,8 +26,8 @@ let
   session = import ./parts/session.nix { inherit lib pkgs; };
   appearance = import ./parts/appearance.nix { inherit lib pkgs; };
   
-  # Wallpaper path preserved from monolith
-  wallpaperPath = "/etc/nixos/hosts/laptop/modules/assets/wallpapers/nord-mountains.jpg";
+  # Wallpaper path 
+  wallpaperPath = "/home/eric/03-tech/nixos-hwc/modules/home/theme/nord-mountains.jpg";
 in
 {
   #============================================================================
@@ -53,8 +53,8 @@ in
     # Window manager utilities
     hyprsome  # Per-monitor workspace management
     
-    # Universal config domain tools (now managed at system level)
-  ];
+    # Session startup script
+  ] ++ session.packages;
   
   #============================================================================
   # SESSION VARIABLES
