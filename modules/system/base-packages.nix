@@ -98,6 +98,10 @@ in {
       # Terminal multiplexer
       tmux
       
+      # Universal GUI tools (needed by both server and workstation)
+      kitty                  # Terminal emulator (server: X11 forwarding, workstation: desktop)
+      xfce.thunar           # File manager (server: X11 forwarding, workstation: desktop)
+      
       # JSON/YAML processing
       jq
       yq

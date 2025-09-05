@@ -31,7 +31,12 @@
       "Read(/etc/nixos/modules/users/**)",
       "Read(/etc/nixos/shared/home-manager/**)",
       "Read(/etc/nixos/shared/home-manager/**)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": [],
