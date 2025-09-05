@@ -62,7 +62,7 @@
       config.allowUnfree = true;
       overlays = [
       # This tells nixpkgs to use the home-manager from our flake inputs
-      home-manager.nixosModules.home-manager-overlay
+      home-manager.overlay
     ];
     };
 
