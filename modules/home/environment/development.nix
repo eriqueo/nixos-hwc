@@ -298,9 +298,8 @@ in
     # --- Development environment variables ---
     home.sessionVariables = {
       # Default editors
-      EDITOR = if cfg.editors.neovim then "nvim" else "micro";
-      VISUAL = if cfg.editors.neovim then "nvim" else "micro";
- 
+      EDITOR = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
+      VISUAL = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       # Development directories
       PROJECTS = "$HOME/workspace/projects";
       SCRIPTS = "$HOME/workspace/scripts";
