@@ -31,40 +31,8 @@
   #============================================================================
   
   imports = [
-    # Media services (Charter v3 modules from Phase 2.1) 
-    ../modules/services/media/arr-stack.nix
-    ../modules/services/media/networking.nix
-    ../modules/services/media/downloaders.nix
-    
-    # Individual ARR services (Phase 2 decomposition)
-    ../modules/services/media/sonarr.nix
-    ../modules/services/media/radarr.nix
-    ../modules/services/media/lidarr.nix
-    ../modules/services/media/prowlarr.nix
-    
-    # Individual download services (Phase 2 decomposition)
-    ../modules/services/media/qbittorrent.nix
-    
-    # Business services (Charter v3 modules from Phase 2.2)
-    ../modules/services/business/database.nix
-    ../modules/services/business/api.nix
-    ../modules/services/business/monitoring.nix
-    ../modules/services/business/dashboard.nix
-    ../modules/services/business/metrics.nix
-    
-    # Infrastructure services
+    # Core system modules only (legacy services disabled until Charter v6 migration complete)
     ../modules/infrastructure/gpu.nix
-    ../modules/services/media/jellyfin.nix
-    ../modules/services/media/immich.nix
-    
-    # AI services (existing)
-    ../modules/services/ai/ollama.nix
-    
-    # Monitoring services
-    ../modules/services/monitoring/prometheus.nix
-    ../modules/services/monitoring/grafana.nix
-    
-    # System modules
     ../modules/system/server-packages.nix
   ];
   
@@ -83,22 +51,12 @@
   };
 
   #============================================================================
-  # SECURITY AND SECRETS (Server needs all secret categories)
+  # SECURITY AND SECRETS (Server extends base secrets)
   #============================================================================
   
-  hwc.security.secrets = {
-    # Base secrets (already enabled in base.nix):
-    # user = true;  # User account secrets
-    # vpn = true;   # VPN credentials
-    
-    # Server-specific secrets:
-    database = true;     # PostgreSQL credentials for business services
-    couchdb = true;      # CouchDB credentials for Obsidian sync
-    services = false;    # Service API keys and admin credentials (disabled - missing caddy-admin.age)
-    surveillance = false; # Surveillance system credentials (disabled - missing surveillance-admin.age)
-    arr = true;          # ARR stack API keys
-    ntfy = true;         # NTFY notification tokens
-  };
+  # Server uses the base hwc.system.secrets configuration from base.nix
+  # Individual services will configure their own specific secrets as needed
+  # No additional server-specific secrets configuration required here
 
   #============================================================================
   # NETWORKING (Server-specific configuration)
@@ -161,8 +119,8 @@
   # USER ENVIRONMENT (Server additions)
   #============================================================================
   
-  # Server user configuration extends base profile
-  hwc.home.groups.hardware = true;  # Access to hardware devices
+  # Server user configuration extends base profile - add hardware access groups
+  hwc.system.users.groups = [ "wheel" "networkmanager" "video" "input" "audio" "lp" "scanner" "docker" "podman" "kvm" "libvirtd" ];
 
   #============================================================================
   # STORAGE CONFIGURATION
@@ -257,72 +215,10 @@
   };
 
   #============================================================================
-  # CHARTER V3 SERVICE ENABLEMENT
+  # SERVICE ENABLEMENT (Legacy services temporarily disabled)
   #============================================================================
   
-  # Media services (from Phase 2.1)
-  hwc.services.media = {
-    # ARR Stack
-    arr = {
-      enable = true;
-      sonarr.enable = true;
-      radarr.enable = true; 
-      lidarr.enable = true;
-      prowlarr.enable = true;
-      gpu.enable = true;  # Enable GPU acceleration
-    };
-    
-    # Media networking and VPN
-    networking = {
-      enable = true;
-      vpn.enable = true;
-    };
-    
-    # Download clients
-    downloaders = {
-      enable = true;
-      qbittorrent.enable = true;
-      sabnzbd.enable = true;
-      slskd.enable = true;
-      soularr.enable = true;
-      useVpn = true;  # Route through VPN
-    };
-  };
-  
-  # Business services (from Phase 2.2)
-  hwc.services.business = {
-    # Database services
-    database = {
-      enable = true;
-      postgresql.enable = true;
-      redis.enable = true;
-      backup.enable = true;
-      packages.enable = true;
-    };
-    
-    # API development environment
-    api = {
-      enable = true;
-      development.enable = true;
-      packages.enable = true;
-      # service.enable = false;  # Keep disabled for development
-    };
-    
-    # Business intelligence monitoring
-    monitoring = {
-      enable = true;
-      dashboard.enable = true;
-      metrics.enable = true;
-      analytics = {
-        enable = true;
-        storageAnalysis = true;
-        processingAnalysis = true;
-        costEstimation = true;
-      };
-    };
-  };
-  
-  # Infrastructure services
+  # Infrastructure services (minimal GPU configuration)
   hwc.gpu = {
     type = "nvidia";
     nvidia = {
@@ -332,15 +228,11 @@
     };
   };
   
-  # AI services
-  hwc.services.ollama = {
-    enable = true;
-    models = [ "llama3:8b" ];
-  };
-  
-  # Media applications
-  services.jellyfin.enable = true;
-  services.immich.enable = true;
+  # Legacy services disabled until Charter v6 migration complete:
+  # - Media services (ARR stack, downloaders, etc.)
+  # - Business services (database, API, monitoring)
+  # - AI services (Ollama)
+  # - Application services (Jellyfin, Immich)
 
   #============================================================================
   # ASSERTIONS AND VALIDATION
@@ -352,8 +244,8 @@
       message = "Server profile requires hwc.paths.hot and hwc.paths.media to be configured";
     }
     {
-      assertion = config.hwc.security.enable;
-      message = "Server profile requires hwc.security.enable = true";
+      assertion = config.hwc.system.secrets.enable;
+      message = "Server profile requires hwc.system.secrets.enable = true";
     }
     {
       assertion = config.hwc.networking.tailscale.enable;

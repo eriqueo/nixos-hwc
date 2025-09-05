@@ -79,13 +79,7 @@
   };
   
   # Services for file manager integration
-  services = {
-    # Trash service
-    trash-cli.enable = true;
-    
-    # Thumbnail generation
-    tumbler.enable = true;
-  };
+  # Note: tumbler and trash-cli are packages only, no Home Manager services needed
   
   # Session variables for file manager behavior
   home.sessionVariables = {
