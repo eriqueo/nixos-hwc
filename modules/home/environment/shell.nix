@@ -158,16 +158,6 @@ in
         "jobtread-sync" = "cd /opt/business/api && python3 services/jobtread_sync.py";
         "business-db" = "psql postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business";
 
-        # ADHD productivity tools
-        "focus-mode" = "systemctl --user start context-monitor";
-        "focus-off" = "systemctl --user stop context-monitor";
-        "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
-
-        # Surveillance system shortcuts
-        "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
-        "home-assistant" = "echo 'Home Assistant: http://100.115.126.41:8123'";
-        "frigate-logs" = "sudo podman logs -f frigate";
-        "ha-logs" = "sudo podman logs -f home-assistant";
 
         # SSH shortcuts
         "homeserver" = "ssh eric@100.115.126.41";

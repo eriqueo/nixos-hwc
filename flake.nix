@@ -60,10 +60,7 @@
     pkgs = import nixpkgs {
       inherit system;
       config.allowUnfree = true;
-      overlays = [
-      # This tells nixpkgs to use the home-manager from our flake inputs
-      home-manager.overlay
-    ];
+
     };
 
     lib = nixpkgs.lib;
