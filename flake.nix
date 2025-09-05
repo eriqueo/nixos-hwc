@@ -61,8 +61,9 @@
       inherit system;
       config.allowUnfree = true;
       overlays = [
-        home-manager.nixosModules.home-manager-overlay
-      ];
+      # This tells nixpkgs to use the home-manager from our flake inputs
+      home-manager.nixosModules.home-manager-overlay
+    ];
     };
 
     lib = nixpkgs.lib;
