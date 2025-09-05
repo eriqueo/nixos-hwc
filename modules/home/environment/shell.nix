@@ -113,20 +113,22 @@ in
         "gl" = "sudo git log --oneline --graph --decorate --all";
         "gpl" = "sudo git pull";
 
-        # NixOS-specific git sync aliases
-        "gresync" = "cd /etc/nixos && sudo git fetch origin && sudo git pull origin master && echo '✅ Git sync complete!'";
-        "gstatus" = "cd /etc/nixos && sudo git status";
-        "glog" = "cd /etc/nixos && sudo git log --oneline -10";
+        # NixOS-specific git sync aliases - auto-detect repo location
+        "gresync" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && cd \"\$nixdir\" && git fetch origin && git pull origin master && echo '✅ Git sync complete!'";
+        "gstatus" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && cd \"\$nixdir\" && git status";
+        "glog" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && cd \"\$nixdir\" && git log --oneline -10";
 
-        # NixOS system management
-        "nixcon" = "sudo micro /etc/nixos/configuration.nix";
-        "nixflake" = "sudo micro /etc/nixos/flake.nix";
-        "nixlaphome" = "sudo micro /etc/nixos/hosts/laptop/home.nix";
-        "nixlapcon" = "sudo micro /etc/nixos/hosts/laptop/config.nix";
-        "nixserverhome" = "sudo micro /etc/nixos/hosts/server/home.nix";
-        "nixservercon" = "sudo micro /etc/nixos/hosts/server/config.nix";
-        "nixsecrets" = "sudo micro /etc/nixos/shared/secrets.nix";
-        "nixcameras" = "sudo micro /etc/nixos/hosts/server/modules/surveillance.nix";
+        # NixOS system management - auto-detect repo location
+        "nixflake" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && \${EDITOR:-micro} \"\$nixdir/flake.nix\"";
+        "nixlaphome" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && \${EDITOR:-micro} \"\$nixdir/machines/laptop/home.nix\"";
+        "nixlapcon" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && \${EDITOR:-micro} \"\$nixdir/machines/laptop/config.nix\"";
+        "nixserverhome" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && \${EDITOR:-micro} \"\$nixdir/machines/server/home.nix\"";
+        "nixservercon" = "nixdir=\$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && \${EDITOR:-micro} \"\$nixdir/machines/server/config.nix\"";
+        
+        # Legacy aliases - inform about new structure
+        "nixcon" = "echo '⚠️  Legacy alias - use nixlapcon or nixservercon for machine-specific configs'";
+        "nixsecrets" = "echo '⚠️  Legacy alias - secrets now managed via agenix'";
+        "nixcameras" = "echo '⚠️  Legacy alias - surveillance config moved to services modules'";
         
         # NixOS utilities
         "nixsearch" = "nix search nixpkgs";
@@ -238,13 +240,19 @@ in
             # Save current directory
             local original_dir="$PWD"
 
-            # Change to NixOS config directory
-            cd /etc/nixos || {
-              echo "❌ Could not access /etc/nixos directory"
+            # Auto-detect NixOS config directory
+            local nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1)
+            if [[ -z "$nixdir" ]]; then
+              echo "❌ Could not find NixOS config directory"
+              return 1
+            fi
+            
+            cd "$nixdir" || {
+              echo "❌ Could not access $nixdir directory"
               return 1
             }
 
-            echo "📁 Working in: /etc/nixos"
+            echo "📁 Working in: $nixdir"
 
             # Check for test mode
             local test_mode=false
@@ -424,7 +432,12 @@ in
           }
 
           fn() {
-            fd -t f . /etc/nixos | fzf --query="$*" --preview 'head -20 {}'
+            local nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1)
+            if [[ -n "$nixdir" ]]; then
+              fd -t f . "$nixdir" | fzf --query="$*" --preview 'head -20 {}'
+            else
+              echo "❌ Could not find NixOS config directory"
+            fi
           }
 
           # Universal archive extraction

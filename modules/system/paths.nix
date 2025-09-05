@@ -352,7 +352,7 @@ in {
 
     nixos = lib.mkOption {
       type = lib.types.path;
-      default = "/etc/nixos";
+      default = toString ./../..; # Dynamic path to repo root (two levels up from this file)
       description = "NixOS configuration directory";
     };
   };
