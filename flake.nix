@@ -60,6 +60,9 @@
     pkgs = import nixpkgs {
       inherit system;
       config.allowUnfree = true;
+      overlays = [
+        home-manager.nixosModules.home-manager-overlay
+      ];
     };
 
     lib = nixpkgs.lib;
@@ -85,9 +88,7 @@
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
 
-          {
-            home-manager.package = pkgs.home-manager;
-          }
+
 
           ./machines/laptop/config.nix
 
