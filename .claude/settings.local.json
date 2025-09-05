@@ -30,7 +30,8 @@
       "Read(/etc/nixos/**)",
       "Read(/etc/nixos/modules/users/**)",
       "Read(/etc/nixos/shared/home-manager/**)",
-      "Read(/etc/nixos/shared/home-manager/**)"
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": [],
