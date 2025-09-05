@@ -34,9 +34,6 @@
     
     users.eric = { config, pkgs, ... }: {
       imports = [
-        # Core user configuration
-        ../../modules/home/core/eric.nix
-        
         # Shell and environment
         ../../modules/home/environment/shell.nix
         ../../modules/home/environment/development.nix
