@@ -44,7 +44,8 @@
     ../modules/system/security/sudo.nix
     ../modules/system/secrets.nix
     
-    # Home domain user module now handled in machines/*/home.nix
+    # System user module (NixOS-level configuration)
+    ../modules/system/users/eric.nix
     
     # Infrastructure
     ../modules/infrastructure/gpu.nix
