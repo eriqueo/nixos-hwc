@@ -83,8 +83,14 @@
         specialArgs = { inherit inputs; };  # pass inputs; no hardware/service logic here
         modules = [
           agenix.nixosModules.default
-          ./machines/laptop/config.nix
           home-manager.nixosModules.home-manager
+
+          {
+            home-manager.package = pkgs.home-manager;
+          }
+
+          ./machines/laptop/config.nix
+
         ];
       };
     };
