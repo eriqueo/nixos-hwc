@@ -17,6 +17,6 @@
 
 { lib, pkgs, ... }:
 let
-  palette = import ../../theme/palettes/deep-nord.nix {};
+  palette = import ../../../theme/palettes/deep-nord.nix {};
 in
-  import ../../theme/adapters/hyprland.nix { inherit palette; }
+  import ../../../theme/adapters/hyprland.nix { inherit palette; }
