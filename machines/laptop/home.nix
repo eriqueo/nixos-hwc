@@ -39,24 +39,15 @@
         
         # Shell and environment
         ../../modules/home/environment/shell.nix
-        ../../modules/home/environment/git.nix
+        ../../modules/home/environment/development.nix
+        ../../modules/home/environment/productivity.nix
         
         # Desktop environment
         ../../modules/home/apps/hyprland
         ../../modules/home/apps/waybar
-        ../../modules/home/apps/wofi
-        ../../modules/home/apps/kitty
-        ../../modules/home/apps/thunar
-        
-        # Development tools
-        ../../modules/home/dev/neovim
-        ../../modules/home/dev/vscode
-        
-        # Productivity apps
-        ../../modules/home/apps/firefox
-        ../../modules/home/apps/discord
-        ../../modules/home/apps/spotify
-        ../../modules/home/apps/obsidian
+        ../../modules/home/apps/kitty.nix
+        ../../modules/home/apps/thunar.nix
+        ../../modules/home/apps/betterbird
       ];
       
       # Home Manager state version
