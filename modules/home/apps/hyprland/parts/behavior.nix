@@ -159,7 +159,7 @@ in
     # Clipboard history
     "${mod}, V, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"
     
-    # Dummy bind to force HM output change (temporary)
+    # Force regeneration - kitty Return binding should work
     "${mod}, F24, nop"
   ];
   
