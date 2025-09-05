@@ -74,16 +74,17 @@
                };
              };
              tmux.enable = true;
-           };
-           
-           # Development configuration (enhanced with git and tools)
-           hwc.home.development = {
-             enable = true;
+             # Git configuration moved here from development
              git = {
                enable = true;
                userName = "Eric";
                userEmail = "eric@hwc.moe";
              };
+           };
+           
+           # Development configuration (git moved to shell)
+           hwc.home.development = {
+             enable = true;
              editors = {
                neovim = true;
                micro = true;
