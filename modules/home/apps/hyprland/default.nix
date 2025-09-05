@@ -26,8 +26,8 @@ let
   session = import ./parts/session.nix { inherit lib pkgs; };
   appearance = import ./parts/appearance.nix { inherit lib pkgs; };
   
-  # Wallpaper path 
-  wallpaperPath = "/home/eric/03-tech/nixos-hwc/modules/home/theme/nord-mountains.jpg";
+  # Wallpaper path - dynamic relative to this file
+  wallpaperPath = ./../../theme/nord-mountains.jpg;
 in
 {
   #============================================================================

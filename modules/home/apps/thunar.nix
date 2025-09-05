@@ -85,5 +85,12 @@
   home.sessionVariables = {
     # Set Thunar as default file manager for applications
     FILE_MANAGER = "thunar";
+    # Set terminal for Thunar to use when opening "Open in Terminal"
+    TERMINAL = "kitty";
   };
+
+  # XDG configuration for default applications
+  xdg.configFile."xfce4/helpers.rc".text = ''
+    TerminalEmulator=kitty
+  '';
 }
