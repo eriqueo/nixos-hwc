@@ -45,8 +45,6 @@ in
     "${mod}, 4, exec, gpu-launch electron-mail"
     "${mod}, 5, exec, gpu-launch obsidian"
     "${mod}, 6, exec, kitty -e nvim"
-    "${mod}, K, exec, kitty"
-    "${mod}, 7, exec, kitty"
     "${mod}, M, exec, kitty -e btop"
     "${mod}, 8, exec, kitty -e btop"
     "${mod}, 1, exec, thunar"
@@ -121,12 +119,9 @@ in
     "${mod} CTRL ALT, left, workspace, e-1"
     "${mod} CTRL ALT, right, workspace, e+1"
     
-    # Enhanced workspace management  
-    "${mod}, TAB, exec, hyprland-workspace-overview"
+    # Enhanced workspace management (TAB handled above)
     "${mod} CTRL, right, workspace, e+1"
     "${mod} CTRL, left, workspace, e-1"
-    
-    # Additional workspace management handled above
     
     # System health check
     "${mod} SHIFT, H, exec, hyprland-system-health-checker"
@@ -157,8 +152,9 @@ in
     
     # Group management
     "${mod}, U, togglegroup"
-    "${mod}, Tab, changegroupactive, f"
-    "${mod} SHIFT, Tab, changegroupactive, b"
+    # TAB used for workspace overview - group navigation via different keys
+    "${mod} SHIFT, G, changegroupactive, f"
+    "${mod} SHIFT, B, changegroupactive, b"
     
     # Clipboard history
     "${mod}, V, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"

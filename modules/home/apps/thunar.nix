@@ -48,16 +48,19 @@
   ];
   
   # GTK configuration for file manager appearance
-  # Note: Thunar uses GTK theming, so it inherits from system GTK theme
-  gtk = {
-    enable = true;
-    
-    # File chooser settings
-    gtk3.extraConfig = {
-      gtk-recent-files-max-age = 30;  # Keep recent files for 30 days
-      gtk-recent-files-enabled = true;
-    };
-  };
+  # Import Deep Nord theme adapter for consistent theming
+  gtk = 
+    let 
+      gtkTheme = import ../theme/adapters/gtk.nix { inherit pkgs; };
+    in 
+      gtkTheme.config;
+  
+  # GTK CSS overrides for better Thunar theming
+  xdg.configFile."gtk-3.0/gtk.css".text = 
+    let 
+      gtkTheme = import ../theme/adapters/gtk.nix { inherit pkgs; };
+    in 
+      gtkTheme.gtk3CssOverride;
   
   # XDG MIME associations for file types
   xdg.mimeApps = {
