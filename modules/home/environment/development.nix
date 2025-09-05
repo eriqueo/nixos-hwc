@@ -254,48 +254,45 @@ in
       viAlias = true;
       vimAlias = true;
 
-      configure = {
-        customRC = ''
-          " Basic settings
-          set number
-          set relativenumber
-          set tabstop=2
-          set shiftwidth=2
-          set expandtab
-          set smartindent
-          set wrap
-          set noswapfile
-          set nobackup
-          set undodir=~/.vim/undodir
-          set undofile
-          set incsearch
-          set termguicolors
-          set scrolloff=8
-          set colorcolumn=80
+      # New Home Manager neovim configuration format
+      extraConfig = ''
+        " Basic settings
+        set number
+        set relativenumber
+        set tabstop=2
+        set shiftwidth=2
+        set expandtab
+        set smartindent
+        set wrap
+        set noswapfile
+        set nobackup
+        set undodir=~/.vim/undodir
+        set undofile
+        set incsearch
+        set termguicolors
+        set scrolloff=8
+        set colorcolumn=80
 
-          " Key mappings
-          let mapleader = " "
-          nnoremap <leader>pv :Ex<CR>
-          nnoremap <leader>w :w<CR>
-          nnoremap <leader>q :q<CR>
+        " Key mappings
+        let mapleader = " "
+        nnoremap <leader>pv :Ex<CR>
+        nnoremap <leader>w :w<CR>
+        nnoremap <leader>q :q<CR>
 
-          " Move lines
-          vnoremap J :m '>+1<CR>gv=gv
-          vnoremap K :m '<-2<CR>gv=gv
-        '';
+        " Move lines
+        vnoremap J :m '>+1<CR>gv=gv
+        vnoremap K :m '<-2<CR>gv=gv
+      '';
 
-        packages.myVimPackage = with pkgs.vimPlugins; {
-          start = [
-            vim-nix
-            vim-commentary
-            vim-surround
-            fzf-vim
-            telescope-nvim
-            nvim-treesitter
-            lualine-nvim
-          ];
-        };
-      };
+      plugins = with pkgs.vimPlugins; [
+        vim-nix
+        vim-commentary
+        vim-surround
+        fzf-vim
+        telescope-nvim
+        nvim-treesitter
+        lualine-nvim
+      ];
     };
 
     # --- Development environment variables ---
