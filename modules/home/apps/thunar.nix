@@ -40,7 +40,7 @@
     file-roller              # Archive manager integration
     
     # Image thumbnails
-    tumbler                  # Thumbnail service for images/videos
+    xfce.tumbler                  # Thumbnail service for images/videos
     ffmpegthumbnailer       # Video thumbnails
     
     # Additional file operations
