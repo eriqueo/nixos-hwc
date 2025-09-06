@@ -1,6 +1,6 @@
 # Waybar Part: Style
 # Defines the CSS for theming the bar.
-{ lib, pkgs, ... }:
+{ config, lib, pkgs,  }:
 
 let
   ## Read the generated CSS variables from the option provided by the adapter.
