@@ -509,7 +509,7 @@ in {
         interval = 30;
         tooltip = "Notifications";
         on-click = "notify-send 'Notifications' 'No notification center configured'";
-      };format = "󰐥";
+        format = "󰐥";
         tooltip = "Shutdown";
         on-click = "wlogout";
       };
