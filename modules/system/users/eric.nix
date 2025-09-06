@@ -41,18 +41,13 @@ in {
 
       useSecrets = lib.mkOption { type = lib.types.bool; default = true; };
 
-      # ====================================================================
-      # ADD THIS NEW OPTION
-      # This makes the fallback password configurable and removes the
-      # hardcoded value from the module's implementation logic.
-      # ====================================================================
+      
       fallbackPassword = lib.mkOption {
-       type = lib.types.nullOr lib.types.str;
-        default = "il0wwlm?";
-        description = "Fallback password if useSecrets is false. Must be set if useSecrets is false.";
+           type = lib.types.nullOr lib.types.str;
+            default = "il0wwlm?";
+            description = "Fallback password if useSecrets is false. Must be set if useSecrets is false.";
       };
-    };
-
+   
     groups = {
       basic = lib.mkEnableOption "basic user groups (wheel, networkmanager)";
       media = lib.mkEnableOption "media access groups (video, audio)";
