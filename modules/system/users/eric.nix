@@ -106,7 +106,7 @@ in {
     initalPassword = lib.mkIf (!cfg.user.useSecretes && cfg.user.fallbackPasswrod != null)  
       cfg.user.fallbackPassword;
     };  
-   }
+   
     
 
     
