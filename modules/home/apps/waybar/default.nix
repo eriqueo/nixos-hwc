@@ -509,57 +509,37 @@ in {
         interval = 30;
         tooltip = "Notifications";
         on-click = "notify-send 'Notifications' 'No notification center configured'";
-      };
-
-      "custom/power" = {
-        format = "󰐥";
+      };format = "󰐥";
         tooltip = "Shutdown";
         on-click = "wlogout";
       };
     }];
 
-    style = ''
-      
-      @define-color background ${colors.background};
-      @define-color foreground ${colors.foreground};
-      @define-color accent ${colors.css.accent};
-      @define-color warning ${colors.css.warning};
-      @define-color error ${colors.css.error};
-      @define-color success ${colors.css.success};
-      @define-color info ${colors.css.info};
+   xdg.configFile."waybar/style.css".text = waybarCss + ''
+        /* Extra rules that rely on @background/@colorN now work */
 
-      * {
-        border-radius: 0px;
-        font-family: "Fira Sans", sans-serif;
-        font-size: 14px;
-      }
+        /* Larger font size for laptop monitor */
+        window#waybar.eDP-1 * { font-size: 18px; }
 
-      /* Larger font size for laptop monitor */
-      window#waybar.eDP-1 * {
-        font-size: 18px;
-      }
+        window#waybar {
+          background-color: @background;
+          color: @foreground;
+        }
 
-      window#waybar {
-        background-color: @background;
-        color: @foreground;
-      }
-
-      #workspaces button {
-        padding: 0 5px;
-        background-color: transparent;
-        color: @foreground;
-        border-bottom: 2px solid transparent;
-      }
-
-      #workspaces button.active {
-        color: @accent;
-        border-bottom: 2px solid @accent;
-      }
-
-      #workspaces button.urgent {
-        color: @error;
-        border-bottom: 2px solid @error;
-      }
+        #workspaces button {
+          padding: 0 5px;
+          background-color: transparent;
+          color: @foreground;
+          border-bottom: 2px solid transparent;
+        }
+        #workspaces button.active {
+          color: @accent;
+          border-bottom: 2px solid @accent;
+        }
+        #workspaces button.urgent {
+          color: @crit;
+          border-bottom: 2px solid @crit;
+        }
 
       #mode {
         background-color: @accent;
@@ -706,6 +686,5 @@ in {
       }
     '';
   };
-    xdg.configFile."waybar/style.css".text = waybarCss;
-
+   
 }
