@@ -84,15 +84,7 @@
     models = [ "llama3:8b" "codellama:13b" "phi3:medium" ];
   };
 
-  ## Workstation profile preferences (orchestration only)
-  hwc.home = {
-    apps = {
-      enable = true;
-      browser.firefox = true;
-      multimedia.enable = true;
-      productivity.enable = true;
-    };
-  };
+
 
   ## Security profile toggles (secrets via Agenix; no plaintext in machines)
   # Legacy security configuration removed - now handled by system domain modules
