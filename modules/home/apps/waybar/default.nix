@@ -38,6 +38,8 @@ in
     };
 
     # Write the CSS "appearance" part to the correct XDG config file path.
-    xdg.configFile."waybar/style.css".text = appearance;
+# Write the CSS "appearance" part to the correct XDG config file path.
+    # We use builtins.trace to print the value of 'appearance' to the console during the build.
+    xdg.configFile."waybar/style.css".text = builtins.trace appearance;
   };
 }
