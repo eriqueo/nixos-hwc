@@ -193,7 +193,7 @@ in {
         
         notificationUser = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
-          default = config.hwc.system.users.user or null;
+          default = config.hwc.system.users.user.name or null;
           description = "User to notify when drives are mounted/unmounted";
         };
       };
