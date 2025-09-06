@@ -1,22 +1,17 @@
-# modules/home/theme/adapters/waybar-css.nix
-{ }:
-let
-  palette = import ../palettes/deep-nord.nix {};
+{ config, lib, ... }:
+let c = config.hwc.home.theme.colors;
 in {
-  css = ''
-    /* Palette → GTK/Waybar color tokens */
-    @define-color bg        ${palette.bg};
-    @define-color bg_alt    ${palette.bgAlt};
-    @define-color bg_dark   ${palette.bgDark};
-
-    @define-color fg        ${palette.fg};
-    @define-color muted     ${palette.muted};
-
-    @define-color accent    ${palette.accent};
-    @define-color accentAlt ${palette.accentAlt};
-
-    @define-color good      ${palette.good};
-    @define-color warn      ${palette.warn};
-    @define-color crit      ${palette.crit};
-  '';
+  options.hwc.home.theme.adapters.waybar.css = lib.mkOption {
+    type = lib.types.str;
+    default = ''
+      :root {
+        --bg: ${c.bg};
+        --fg: ${c.fg};
+        --accent: ${c.accent};
+        --warn: ${c.warn};
+        --crit: ${c.crit};
+      }
+    '';
+    description = "Waybar CSS variables from the active palette.";
+  };
 }

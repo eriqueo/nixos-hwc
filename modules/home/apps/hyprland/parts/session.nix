@@ -84,6 +84,7 @@ in
   execOnce = [
     "hyprland-startup"  # Launch applications to specific workspaces
     "hyprpaper"         # Wallpaper manager
+    "waybar"            # Status bar
     "wl-paste --type text --watch cliphist store"    # Text clipboard history
     "wl-paste --type image --watch cliphist store"   # Image clipboard history
   ];

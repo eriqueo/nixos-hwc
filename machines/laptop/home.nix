@@ -32,25 +32,32 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     
-    users.eric = { config, pkgs, ... }: {
+    users.eric = { config, lib, pkgs, ... }: {
       imports = [
         # Shell and environment
         ../../modules/home/environment/shell.nix
         ../../modules/home/environment/development.nix
         ../../modules/home/environment/productivity.nix
-        
+        # Theme
+        ../../modules/home/theme/default.nix
         # Desktop environment
-        ../../modules/home/apps/hyprland
-        ../../modules/home/apps/waybar
-        ../../modules/home/apps/kitty.nix
-        ../../modules/home/apps/thunar.nix
-        ../../modules/home/apps/betterbird
+        ../../modules/home/apps/default.nix
+
       ];
       
       # Home Manager state version
       home.stateVersion = "24.05";
       
-      # Machine-specific home configuration
+      # Single palette toggle; adapters are already loaded via theme/default.nix
+
+      hwc.home.theme.palette = "deep-nord";
+      hwc.home.apps = {
+          enable = true;
+          kitty.enable    = true;
+          thunar.enable   = true;
+          waybar.enable   = true;
+          hyprland.enable = true;
+        };
       # Enable complete shell environment
       hwc.home.shell = {
         enable = true;

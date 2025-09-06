@@ -1,141 +1,138 @@
 # nixos-hwc/modules/home/theme/adapters/gtk.nix
 #
-# GTK Theme Adapter: Deep Nord Palette → GTK Configuration
-# Charter v6 compliant - Transforms palette tokens into GTK theming
+# GTK Theme Adapter (v6):
+# - Translates active palette (config.hwc.home.theme.colors) → GTK config + CSS overrides
+# - Keeps the same adapter interface you use today:
+#     let gtkTheme = import ./theme/adapters/gtk.nix { inherit config lib pkgs; };
+#     in { gtk = gtkTheme.config; xdg.configFile."gtk-3.0/gtk.css".text = gtkTheme.gtk3CssOverride; }
 #
-# DEPENDENCIES (Upstream):
-#   - modules/home/theme/palettes/deep-nord.nix
-#
-# USED BY (Downstream):
-#   - modules/home/apps/thunar.nix
-#   - Any Home Manager module needing GTK theming
-#
-# USAGE:
-#   let gtkTheme = import ./theme/adapters/gtk.nix { inherit pkgs; };
-#   in {
-#     gtk = gtkTheme.config;
-#   }
+# NOTE: No direct palette imports; reads from config.hwc.home.theme.colors (set by theme/default.nix)
 
-{ pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 let
-  palette = import ../palettes/deep-nord.nix {};
+  c = config.hwc.home.theme.colors;
+
+  bg     = c.bg     or "#101014";
+  bgAlt  = c.bgAlt  or bg;
+  bgDark = c.bgDark or bg;
+  fg     = c.fg     or "#e5e9f0";
+  accent = c.accent or "#88c0d0";
+  muted  = c.muted  or "#4c566a";
+
+  gtk2Extra = ''
+    gtk-theme-name = "Adwaita-dark"
+    gtk-icon-theme-name = "Adwaita"
+    gtk-font-name = "Inter 11"
+    gtk-cursor-theme-name = "Adwaita"
+    gtk-cursor-theme-size = 24
+    gtk-toolbar-style = GTK_TOOLBAR_BOTH
+    gtk-toolbar-icon-size = GTK_ICON_SIZE_LARGE_TOOLBAR
+    gtk-button-images = 1
+    gtk-menu-images = 1
+    gtk-enable-event-sounds = 1
+    gtk-enable-input-feedback-sounds = 1
+    gtk-xft-antialias = 1
+    gtk-xft-hinting = 1
+    gtk-xft-hintstyle = "hintfull"
+  '';
+
+  gtk3Extra = {
+    gtk-theme-name = "Adwaita-dark";
+    gtk-icon-theme-name = "Adwaita";
+    gtk-font-name = "Inter 11";
+    gtk-cursor-theme-name = "Adwaita";
+    gtk-cursor-theme-size = 24;
+    gtk-toolbar-style = "GTK_TOOLBAR_BOTH";
+    gtk-toolbar-icon-size = "GTK_ICON_SIZE_LARGE_TOOLBAR";
+    gtk-button-images = 1;
+    gtk-menu-images = 1;
+    gtk-enable-event-sounds = 1;
+    gtk-enable-input-feedback-sounds = 1;
+    gtk-xft-antialias = 1;
+    gtk-xft-hinting = 1;
+    gtk-xft-hintstyle = "hintfull";
+    gtk-recent-files-max-age = 30;
+    gtk-recent-files-enabled = true;
+  };
+
+  gtk4Extra = {
+    gtk-theme-name = "Adwaita-dark";
+    gtk-icon-theme-name = "Adwaita";
+    gtk-font-name = "Inter 11";
+    gtk-cursor-theme-name = "Adwaita";
+    gtk-cursor-theme-size = 24;
+  };
+
+  gtk3Css = ''
+    window {
+      background-color: ${bg};
+      color: ${fg};
+    }
+
+    .sidebar {
+      background-color: ${bgAlt};
+      color: ${fg};
+    }
+
+    *:selected {
+      background-color: ${accent};
+      color: ${bg};
+    }
+
+    headerbar {
+      background-color: ${bgAlt};
+      color: ${fg};
+    }
+
+    entry {
+      background-color: ${bgDark};
+      color: ${fg};
+      border: 1px solid ${muted};
+    }
+
+    button {
+      background-color: ${bgAlt};
+      color: ${fg};
+      border: 1px solid ${muted};
+    }
+
+    button:hover {
+      background-color: ${accent};
+      color: ${bg};
+    }
+  '';
 in
 {
   config = {
     enable = true;
-    
+
     theme = {
       name = "Adwaita-dark";
       package = pkgs.gnome-themes-extra;
     };
-    
+
     iconTheme = {
       name = "Adwaita";
       package = pkgs.adwaita-icon-theme;
     };
-    
+
     cursorTheme = {
       name = "Adwaita";
       package = pkgs.adwaita-icon-theme;
       size = 24;
     };
-    
+
     font = {
       name = "Inter";
       size = 11;
     };
-    
-    gtk2.extraConfig = ''
-      gtk-theme-name = "Adwaita-dark"
-      gtk-icon-theme-name = "Adwaita"
-      gtk-font-name = "Inter 11"
-      gtk-cursor-theme-name = "Adwaita"
-      gtk-cursor-theme-size = 24
-      gtk-toolbar-style = GTK_TOOLBAR_BOTH
-      gtk-toolbar-icon-size = GTK_ICON_SIZE_LARGE_TOOLBAR
-      gtk-button-images = 1
-      gtk-menu-images = 1
-      gtk-enable-event-sounds = 1
-      gtk-enable-input-feedback-sounds = 1
-      gtk-xft-antialias = 1
-      gtk-xft-hinting = 1
-      gtk-xft-hintstyle = "hintfull"
-    '';
-    
-    gtk3.extraConfig = {
-      gtk-theme-name = "Adwaita-dark";
-      gtk-icon-theme-name = "Adwaita";
-      gtk-font-name = "Inter 11";
-      gtk-cursor-theme-name = "Adwaita";
-      gtk-cursor-theme-size = 24;
-      gtk-toolbar-style = "GTK_TOOLBAR_BOTH";
-      gtk-toolbar-icon-size = "GTK_ICON_SIZE_LARGE_TOOLBAR";
-      gtk-button-images = 1;
-      gtk-menu-images = 1;
-      gtk-enable-event-sounds = 1;
-      gtk-enable-input-feedback-sounds = 1;
-      gtk-xft-antialias = 1;
-      gtk-xft-hinting = 1;
-      gtk-xft-hintstyle = "hintfull";
-      gtk-recent-files-max-age = 30;
-      gtk-recent-files-enabled = true;
-    };
-    
-    gtk4.extraConfig = {
-      gtk-theme-name = "Adwaita-dark";
-      gtk-icon-theme-name = "Adwaita";
-      gtk-font-name = "Inter 11";
-      gtk-cursor-theme-name = "Adwaita";
-      gtk-cursor-theme-size = 24;
-    };
+
+    gtk2.extraConfig = gtk2Extra;
+    gtk3.extraConfig = gtk3Extra;
+    gtk4.extraConfig = gtk4Extra;
   };
-  
-  # CSS overrides using palette colors
-  gtk3CssOverride = ''
-    /* Deep Nord GTK Theme Overrides */
-    
-    /* Window backgrounds */
-    window {
-      background-color: ${palette.bg};
-      color: ${palette.fg};
-    }
-    
-    /* Sidebar theming for file managers */
-    .sidebar {
-      background-color: ${palette.bgAlt};
-      color: ${palette.fg};
-    }
-    
-    /* Selection colors */
-    *:selected {
-      background-color: ${palette.accent};
-      color: ${palette.bg};
-    }
-    
-    /* Header bars */
-    headerbar {
-      background-color: ${palette.bgAlt};
-      color: ${palette.fg};
-    }
-    
-    /* Entry fields */
-    entry {
-      background-color: ${palette.bgDark};
-      color: ${palette.fg};
-      border: 1px solid ${palette.muted};
-    }
-    
-    /* Buttons */
-    button {
-      background-color: ${palette.bgAlt};
-      color: ${palette.fg};
-      border: 1px solid ${palette.muted};
-    }
-    
-    button:hover {
-      background-color: ${palette.accent};
-      color: ${palette.bg};
-    }
-  '';
+
+  gtk3CssOverride = gtk3Css;
 }
+
