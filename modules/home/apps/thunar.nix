@@ -24,9 +24,11 @@
   # IMPLEMENTATION - Thunar file manager configuration
   #============================================================================
   
-  # Thunar package provided by system base-packages.nix
-  # Install essential plugins and supporting tools
+  # Thunar package and essential plugins
   home.packages = with pkgs; [
+    # Main package
+    xfce.thunar             # File manager
+    
     # Essential plugins for functionality
     xfce.thunar-volman       # Volume management
     xfce.thunar-archive-plugin  # Archive handling (.zip, .tar.gz, etc.)
@@ -44,11 +46,8 @@
     ffmpegthumbnailer       # Video thumbnails
     
     # Additional file operations
-    trash-cli               # Command-line trash operations;
-  ] ++ (lib.mkIf config.hwc.home.apps.thunar.enable [
-    # Conditionally add the main thunar package itself
-    pkgs.thunar
-  ]); # <-- The conditional package is now merged here
+    trash-cli               # Command-line trash operations
+  ];
   
   # XDG MIME associations for file types
   xdg.mimeApps = {
