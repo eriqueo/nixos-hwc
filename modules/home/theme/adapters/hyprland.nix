@@ -17,7 +17,7 @@ let
   normalizeHex = s: let
     raw = if lib.hasPrefix "#" s then lib.substring 1 (lib.stringLength s -1) s else s;
     hex = lib.toLower raw;
-    len - lib.stringLength hex;
+    len = lib.stringLength hex;
     aarrggbb =
       if len == 8 then
        (lib.substring 6 2 hex) + (lib.substrting 0 6 hex)
