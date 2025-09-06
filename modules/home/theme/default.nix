@@ -29,7 +29,7 @@ in
 #============================================================================
 # OPTIONS - What can be configured
 #============================================================================
-  options.hwc.home.theme.palette = lib.mkOption {
+  options.hwc.home.theme.colors = lib.mkOption {
     type = lib.types.enum (builtins.attrNames palettes);
     default = "deep-nord";
     description = "Active theme palette (single source of truth).";
