@@ -19,18 +19,26 @@ in
     thunar.enable    = lib.mkEnableOption "Thunar (HM)";
     waybar.enable    = lib.mkEnableOption "Waybar UI (HM)";
     hyprland.enable  = lib.mkEnableOption "Hyprland appearance (HM)";
+    #betterbird.enable  = lib.mkEnableOption "bettterbird appearance (HM)";
+    #chromium-ui.enable  = lib.mkEnableOption "chromium appearance (HM)";
+
     # future: betterbird.enable, firefox-ui.enable, chromium-ui.enable, etc.
   };
 
   #============================================================================
   # IMPLEMENTATION
   #============================================================================
+    #==========================================================
+    # DYNAMIC IMPORTS - Must be at top level
+    #==========================================================
+    imports = lib.mkIf cfg.enable (
+      (lib.optionals cfg.kitty.enable    [ ./kitty.nix ]) ++
+      (lib.optionals cfg.thunar.enable   [ ./thunar.nix ]) ++
+      (lib.optionals cfg.waybar.enable   [ ./waybar/default.nix ]) ++
+      (lib.optionals cfg.hyprland.enable [ ./hyprland/parts/appearance.nix ])
+    );
+
   config = lib.mkIf cfg.enable {
-    imports =
-      (lib.optionals cfg.kitty.enable    [ ../apps/kitty.nix ]) ++
-      (lib.optionals cfg.thunar.enable   [ ../apps/thunar.nix ]) ++
-      (lib.optionals cfg.waybar.enable   [ ../apps/waybar/default.nix ]) ++
-      (lib.optionals cfg.hyprland.enable [ ../apps/hyprland/parts/appearance.nix ]);
   #============================================================================
   # VALIDATION
   #============================================================================
