@@ -163,7 +163,7 @@ in
         elif [[ $CAPACITY -gt 25 ]]; then ICON="󰁼"; CLASS="low"
         else ICON="󰁺"; CLASS="critical"; fi
         echo "{\"text\": \"$ICON $CAPACITY%\", \"class\": \"$CLASS\", \"tooltip\": \"$TOOLTIP\"}"
-      ''')
+      '')
 
       #========================================================================
       # SYSTEM UTILITIES
