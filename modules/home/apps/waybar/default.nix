@@ -5,7 +5,7 @@
 #
 # DEPENDENCIES (Upstream):
 #   - ./service.nix (provides all 13 tools)
-  imports = [ ./system.nix ];
+ 
 #   - Home-Manager programs.waybar support
 #
 # USED BY (Downstream):
@@ -18,7 +18,7 @@
 #   home-manager.users.<name>.imports = [ ../modules/home/waybar/default.nix ];
 
 { config, lib, pkgs, nixosConfig, ... }:
-
+ imports = [ ./system.nix ];
 let
   waybarCss = (import ../../theme/adapters/waybar-css.nix {}).css;
  
