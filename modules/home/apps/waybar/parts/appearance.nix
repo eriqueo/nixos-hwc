@@ -4,7 +4,7 @@
 
 let
   # Import the theme adapter to get CSS variables like @background, @foreground, etc.
-  waybarCss = (import ../../theme/adapters/waybar-css.nix {}).css;
+  waybarCss = (import ../../../theme/adapters/waybar-css.nix {}).css;
 in
 # Return the full CSS content as a string.
 waybarCss + ''
