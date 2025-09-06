@@ -131,7 +131,7 @@ in {
         if [[ $# -eq 0 ]]; then
           echo "Usage: gpu-launch <application> [args...]"
           exit 1
-        fI
+        fi
 
         GPU_MODE_FILE="/tmp/gpu-mode"
         CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
