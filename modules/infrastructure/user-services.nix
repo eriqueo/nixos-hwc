@@ -54,7 +54,7 @@ in {
     # };
 
     # SSH key setup service (handles both secrets and fallback)
-    systemd.services."setup-ssh-keys-${cfg.username}" = lib.mkIf (homeCfg.ssh.enable or false) {
+    systemd.services."setup-ssh-keys-${cfg.username}" = lib.mkIf (usersCfg.user.ssh.enable or false) {
       description = "Setup SSH authorized keys for ${cfg.username}";
       wantedBy = [ "multi-user.target" ];
       after = [ "agenix.service" ];
@@ -64,7 +64,7 @@ in {
         RemainAfterExit = true;
         User = "root";
       };
-      script = if (homeCfg.ssh.useSecrets or false) then ''
+      script = if (usersCfg.user.ssh.useSecrets or false) then ''
         # Wait for the secret to be available
         while [ ! -f "${config.age.secrets.user-ssh-public-key.path}" ]; do
           sleep 1
@@ -87,7 +87,7 @@ in {
 
         # Write fallback key to authorized_keys
         cat > ${paths.user.home}/.ssh/authorized_keys <<EOF
-        ${homeCfg.ssh.fallbackKey or ""}
+        ${usersCfg.user.ssh.fallbackKey or ""}
         EOF
         chmod 600 ${paths.user.home}/.ssh/authorized_keys
         chown ${cfg.username}:users ${paths.user.home}/.ssh/authorized_keys
