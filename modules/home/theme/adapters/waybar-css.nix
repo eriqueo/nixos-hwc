@@ -1,7 +1,6 @@
-# Waybar CSS Theme Adapter (v6 - Synchronized)
+# Waybar CSS Theme Adapter (v6 - Synchronized & Syntactically Correct)
 # - Reads the specific palette from config.hwc.home.theme.colors
-# - Maps the palette's semantic names (bg, fg, ansi.red) to Waybar's
-#   generic CSS variables (@background, @color1, etc.).
+# - Maps the palette's semantic names to Waybar's CSS variables.
 
 { config, lib, ... }:
 
@@ -10,11 +9,12 @@ let
   c = config.hwc.home.theme.colors;
 
   # Helper function to generate a @define-color line.
-  # It now uses `or` to provide a default fallback and prevent errors.
+  # It now uses the correct Nix syntax for default values.
   defineColor = name: value:
+    # The `or` keyword can only be used when accessing an attribute.
+    # Since `value` is passed as an argument, we check if it's null instead.
     let
-      # Use the provided value or fallback to a safe default grey.
-      finalValue = value or "888888";
+      finalValue = if value == null then "888888" else value;
     in
       "@define-color ${name} #${finalValue};";
 in
@@ -27,22 +27,23 @@ in
   };
 
   # 3. Set the value of the option by correctly mapping the palette to CSS.
+  #    We use the `or null` pattern here to safely pass values to the helper.
+  #    If a color doesn't exist, `null` is passed, and the helper provides the fallback.
   config.hwc.home.theme.adapters.waybar.css = ''
     /* Generated from the ${c.name or "unnamed"} palette */
-    ${defineColor "background" c.bg}
-    ${defineColor "foreground" c.fg}
-    ${defineColor "accent" c.accent}
-    ${defineColor "accentAlt" c.accentAlt}
-    ${defineColor "crit" c.crit}
-    ${defineColor "error" c.crit}  # Mapping 'error' to your 'crit' color
-    ${defineColor "warning" c.warn}
-    ${defineColor "info" c.info}
-    ${defineColor "success" c.good}
-    ${defineColor "muted" c.muted}
+    ${defineColor "background" (c.bg or null)}
+    ${defineColor "foreground" (c.fg or null)}
+    ${defineColor "accent" (c.accent or null)}
+    ${defineColor "accentAlt" (c.accentAlt or null)}
+    ${defineColor "crit" (c.crit or null)}
+    ${defineColor "error" (c.crit or null)}  # Mapping 'error' to your 'crit' color
+    ${defineColor "warning" (c.warn or null)}
+    ${defineColor "info" (c.info or null)}
+    ${defineColor "success" (c.good or null)}
+    ${defineColor "muted" (c.muted or null)}
 
     /*
      * Mapping the generic colorN variables to your ANSI color set.
-     * This provides a consistent terminal-like color scheme for Waybar modules.
      */
     ${defineColor "color1" (c.ansi.red or null)}
     ${defineColor "color2" (c.ansi.green or null)}
