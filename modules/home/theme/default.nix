@@ -35,6 +35,11 @@ in
     description = "Active theme palette (single source of truth).";
   };
 
+  imports = [
+      ./adapters/gtk.nix
+      ./adapters/waybar-css.nix
+      ./adapters/hyprland.nix
+    ];
 #============================================================================
 # IMPLEMENTATION - What actually gets configured
 #============================================================================
@@ -44,11 +49,7 @@ in
 
     # Pull in all adapters so consumers can read config.hwc.home.theme.adapters.*
     # without importing each adapter in machines/<host>/home.nix.
-    imports = [
-      ./adapters/gtk.nix
-      ./adapters/waybar-css.nix
-      ./adapters/hyprland.nix
-    ];
+
 
     
 #============================================================================
