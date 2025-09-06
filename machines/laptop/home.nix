@@ -50,8 +50,19 @@
       # Home Manager state version
       home.stateVersion = "24.05";
       
-      # Machine-specific home configuration can go here
-      # (Currently none needed)
+      # Machine-specific home configuration
+      # Enable complete shell environment
+      hwc.home.shell = {
+        enable = true;
+        modernUnix = true;
+        git.enable = true;
+        zsh = {
+          enable = true;
+          starship = true;
+          autosuggestions = true;
+          syntaxHighlighting = true;
+        };
+      };
     };
   };
 }
