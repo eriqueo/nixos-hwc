@@ -13,6 +13,24 @@
 let
   c = config.hwc.home.theme.colors;
 
+  isBareHex = s: builtins.match "^[0-9a-fA-F]{6}([0-9a-fA-F{2})?$" s != null;
+  normalizeHex = s: let
+    raw = if lib.hasPrefix "#" s then lib.substring 1 (lib.stringLength s -1) s else s;
+    hex = lib.toLower raw;
+    len - lib.stringLength hex;
+    aarrggbb =
+      if len == 8 then
+       (lib.substring 6 2 hex) + (lib.substrting 0 6 hex)
+      else
+       hex;
+  in "0x" + aarrggbb;
+
+  toHypr = s:
+    if lib.hasPrefix "0x" s || lib.hasPrefix "rgb(" s || lib.hasPrefix "rgba(" s then s
+    else if lib.hasPrefix "#" s || isBareHex s then normalizeHex s 
+    else s;
+    
+             
   # Pull colors with graceful fallback (your gruvbox tokens -> generic -> sane defaults)
   tealRaw   = c.gruvboxTeal   or c.accent  or "#88c0d0";
   greenRaw  = c.gruvboxGreen  or c.success or "#a3be8c";
@@ -24,18 +42,18 @@ let
   # - "0x..."    -> keep
   # - "rgb(...)" / "rgba(...)" -> keep
   # - anything else -> pass through (assume already valid for Hypr)
-  isHexHash = s: lib.hasPrefix "#" s;
-  isHex0x   = s: lib.hasPrefix "0x" s;
-  isRgbLike = s: lib.hasPrefix "rgb(" s || lib.hasPrefix "rgba(" s;
+ # isHexHash = s: lib.hasPrefix "#" s;
+ # isHex0x   = s: lib.hasPrefix "0x" s;
+ # isRgbLike = s: lib.hasPrefix "rgb(" s || lib.hasPrefix "rgba(" s;
 
-  toHypr = s:
-    if isHexHash s then
-      # strip leading "#" and prefix "0x"
-      "0x" + (lib.substring 1 (lib.stringLength s - 1) s)
-    else if isHex0x s || isRgbLike s then
-      s
-    else
-      s;
+ # toHypr = s:
+ #   if isHexHash s then
+ #     # strip leading "#" and prefix "0x"
+ #     "0x" + (lib.substring 1 (lib.stringLength s - 1) s)
+ #   else if isHex0x s || isRgbLike s then
+ #     s
+ #   else
+ #     s;
 
   teal  = toHypr tealRaw;
   green = toHypr greenRaw;
