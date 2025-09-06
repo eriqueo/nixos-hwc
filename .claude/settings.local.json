@@ -40,7 +40,11 @@
       "Read(/nix/store/**)",
       "WebSearch",
       "Bash('shell\\.nix' )",
-      "Bash(profiles/ machines/ modules/)"
+      "Bash(profiles/ machines/ modules/)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/shared/home-manager/**)",
+      "Read(/etc/nixos/modules/users/**)"
     ],
     "deny": [],
     "ask": [],
