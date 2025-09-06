@@ -140,7 +140,7 @@ in
           TOOLTIP="Ethernet: $CONN_NAME\nSpeed: $SPEED"
         fi
         echo "{\"text\": \"$ICON\", \"class\": \"$CLASS\", \"tooltip\": \"$TOOLTIP\"}"
-      ''')
+      '')
 
       #========================================================================
       # BATTERY
