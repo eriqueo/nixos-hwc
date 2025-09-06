@@ -20,7 +20,7 @@ let
     len = lib.stringLength hex;
     aarrggbb =
       if len == 8 then
-       (lib.substring 6 2 hex) + (lib.substrting 0 6 hex)
+       (lib.substring 6 2 hex) + (lib.substring 0 6 hex)
       else
        hex;
   in "0x" + aarrggbb;
