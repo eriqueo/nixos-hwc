@@ -27,9 +27,11 @@
          
          # Hyprland system tools for cross-stream integration
          ../modules/home/apps/hyprland/parts/system.nix
+         ../modules/home/apps/waybar/parts/system.nix
        ];
 
        # Home-Manager configuration now handled in machines/laptop/home.nix
+        hwc.infrastructure.waybarTools.enable = true;
 
        # Hyprland system tools configuration
        hwc.infrastructure.hyprlandTools = {

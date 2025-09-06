@@ -23,10 +23,6 @@
 let
   cfg = config.hwc.infrastructure.waybarTools;
 
-  inherit (pkgs)
-    writeShellScriptBin jq libnotify procps lm_sensors ethtool iw curl
-    networkmanager networkmanagerapplet kitty nvtopPackages
-    speedtest-cli acpi powertop baobab btop wofi mesa-demos linuxPackages;
 in
 {
   #============================================================================
@@ -45,7 +41,7 @@ in
   #============================================================================
   # IMPLEMENTATION
   #============================================================================
-  config = lib.mkIf (cfg.enable && builtins.hasAttr "environment" config) {
+  config = lib.mkIf cfg.enable {
     environment.systemPackages = [
       #========================================================================
       # GPU TOOLS
