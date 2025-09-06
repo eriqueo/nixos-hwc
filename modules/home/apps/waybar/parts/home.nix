@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  waybarCss = (import ../../theme/adapters/waybar-css.nix {}).css;
+  waybarCss = (import ../../../theme/adapters/waybar-css.nix {}).css;
 in {
   programs.waybar = {
     enable = true;
