@@ -461,176 +461,67 @@ in {
           };
         }];
     
-       xdg.configFile."waybar/style.css".text = waybarCss + ''
-            /* Extra rules that rely on @background/@colorN now work */
-    
-            /* Larger font size for laptop monitor */
-            window#waybar.eDP-1 * { font-size: 18px; }
-    
-            window#waybar {
-              background-color: @background;
-              color: @foreground;
-            }
-    
-            #workspaces button {
-              padding: 0 5px;
-              background-color: transparent;
-              color: @foreground;
-              border-bottom: 2px solid transparent;
-            }
-            #workspaces button.active {
-              color: @accent;
-              border-bottom: 2px solid @accent;
-            }
-            #workspaces button.urgent {
-              color: @crit;
-              border-bottom: 2px solid @crit;
-            }
-    
-          #mode {
-            background-color: @accent;
-            color: @background;
-            border-radius: 5px;
-            padding: 0 10px;
-            margin: 0 5px;
-          }
-    
-          #window {
-            padding: 0 10px;
-          }
-    
-          #cpu,
-          #memory,
-          #temperature,
-          #disk,
-          #network,
-          #pulseaudio,
-          #battery,
-          #clock,
-          #custom-gpu,
-          #idle_inhibitor,
-          #mpd,
-          #tray,
-          #custom-notification,
-          #custom-power {
-            padding: 0 10px;
-            margin: 0 5px;
-            color: @foreground;
-          }
-    
-          #cpu {
-            background-color: @color14;
-          }
-    
-          #memory {
-            background-color: @color13;
-          }
-    
-          #temperature {
-            background-color: @color12;
-          }
-    
-          #disk {
-            background-color: @color11;
-          }
-    
-          #network {
-            background-color: @color10;
-          }
-    
-          #pulseaudio {
-            background-color: @color9;
-          }
-    
-          #battery {
-            background-color: @color8;
-          }
-    
-          #clock {
-            background-color: @color7;
-          }
-    
-          #custom-gpu {
-            background-color: @color6;
-          }
-    
-          #idle_inhibitor {
-            background-color: @color5;
-          }
-    
-          #mpd {
-            background-color: @color4;
-          }
-    
-          #tray {
-            background-color: @color3;
-          }
-    
-          #custom-notification {
-            background-color: @color2;
-          }
-    
-          #custom-power {
-            background-color: @color1;
-          }
-    
-          /* Specific styles for custom modules based on their class */
-          .intel {
-            color: @color4;
-          }
-    
-          .nvidia {
-            color: @color2;
-          }
-    
-          .performance {
-            color: @color1;
-          }
-    
-          .disconnected {
-            color: @error;
-          }
-    
-          .excellent {
-            color: @success;
-          }
-    
-          .good {
-            color: @info;
-          }
-    
-          .fair {
-            color: @warning;
-          }
-    
-          .poor {
-            color: @error;
-          }
-    
-          .charging {
-            color: @success;
-          }
-    
-          .full {
-            color: @success;
-          }
-    
-          .high {
-            color: @info;
-          }
-    
-          .medium {
-            color: @warning;
-          }
-    
-          .low {
-            color: @error;
-          }
-    
-          .critical {
-            color: @error;
-          }
-        '';
+      xdg.configFile."waybar/style.css".text = waybarCss + ''
+        /* Overrides that use the CSS variables defined in waybar-css.nix */
+        window#waybar.eDP-1 * { font-size: 18px; }
+      
+        window#waybar {
+          background-color: var(--bg);
+          color: var(--fg);
+        }
+      
+        #workspaces button {
+          padding: 0 5px;
+          background-color: transparent;
+          color: var(--fg);
+          border-bottom: 2px solid transparent;
+        }
+        #workspaces button.active {
+          color: var(--accent);
+          border-bottom: 2px solid var(--accent);
+        }
+        #workspaces button.urgent {
+          color: var(--crit);
+          border-bottom: 2px solid var(--crit);
+        }
+      
+        #mode {
+          background-color: var(--accent);
+          color: var(--bg);
+          border-radius: 5px;
+          padding: 0 10px;
+          margin: 0 5px;
+        }
+      
+        #window { padding: 0 10px; }
+      
+        /* Common module paddings */
+        #cpu, #memory, #temperature, #disk, #network, #pulseaudio, #battery,
+        #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray, #custom-notification, #custom-power {
+          padding: 0 10px;
+          margin: 0 5px;
+          color: var(--fg);
+        }
+      
+        /* Optional: tint some modules using palette tokens you already have */
+        #pulseaudio     { background-color: var(--accentAlt); }
+        #custom-notification { background-color: var(--warn); }
+        #custom-power   { background-color: var(--crit); }
+      
+        /* Classes from your JSON modules */
+        .disconnected { color: var(--crit); }
+        .excellent    { color: var(--good); }
+        .good         { color: var(--good); }
+        .fair         { color: var(--warn); }
+        .poor         { color: var(--crit); }
+        .charging     { color: var(--good); }
+        .full         { color: var(--good); }
+        .high         { color: var(--accentAlt); }
+        .medium       { color: var(--warn); }
+        .low          { color: var(--crit); }
+        .critical     { color: var(--crit); }
+      '';
+      
       };
        
 
