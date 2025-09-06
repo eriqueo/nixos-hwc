@@ -39,7 +39,7 @@
       useSecrets = false;
       fallbackPassword = "il0wwlm?";
       groups = {basic = true; media = true; hardware = true; };
-    }
+    };
     basePackages.enable = true;
     backupPackages = {
       enable = true;
