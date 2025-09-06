@@ -327,32 +327,32 @@
   };
 
  xdg.configFile."waybar/style.css".text = config.hwc.home.theme.adapters.waybar.css + ''
-   /* Overrides that rely on GTK @define-color tokens */
+   /* Overrides that rely on CSS custom properties */
    window#waybar.eDP-1 * { font-size: 18px; }
 
    window#waybar {
-     background-color: @bg;
-     color: @fg;
+     background-color: var(--bg);
+     color: var(--fg);
    }
 
    #workspaces button {
      padding: 0 5px;
      background-color: transparent;
-     color: @fg;
+     color: var(--fg);
      border-bottom: 2px solid transparent;
    }
    #workspaces button.active {
-     color: @accent;
-     border-bottom: 2px solid @accent;
+     color: var(--accent);
+     border-bottom: 2px solid var(--accent);
    }
    #workspaces button.urgent {
-     color: @crit;
-     border-bottom: 2px solid @crit;
+     color: var(--crit);
+     border-bottom: 2px solid var(--crit);
    }
 
    #mode {
-     background-color: @accent;
-     color: @bg;
+     background-color: var(--accent);
+     color: var(--bg);
      border-radius: 5px;
      padding: 0 10px;
      margin: 0 5px;
@@ -365,25 +365,19 @@
    #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray, #custom-notification, #custom-power {
      padding: 0 10px;
      margin: 0 5px;
-     color: @fg;
+     color: var(--fg);
    }
 
    /* Optional tints using palette tokens */
-   #pulseaudio            { background-color: @accentAlt; }
-   #custom-notification   { background-color: @warn; }
-   #custom-power          { background-color: @crit; }
+   #custom-notification   { background-color: var(--warn); }
+   #custom-power          { background-color: var(--crit); }
 
    /* Classes emitted by your JSON scripts */
-   .disconnected { color: @crit; }
-   .excellent    { color: @good; }
-   .good         { color: @good; }
-   .fair         { color: @warn; }
-   .poor         { color: @crit; }
-   .charging     { color: @good; }
-   .full         { color: @good; }
-   .high         { color: @accentAlt; }
-   .medium       { color: @warn; }
-   .low          { color: @crit; }
-   .critical     { color: @crit; }
+   .disconnected { color: var(--crit); }
+   .fair         { color: var(--warn); }
+   .poor         { color: var(--crit); }
+   .medium       { color: var(--warn); }
+   .low          { color: var(--crit); }
+   .critical     { color: var(--crit); }
  '';
 }
