@@ -36,7 +36,10 @@
     basePackages.enable = true;
     backupPackages = {
       enable = true;
-      protonDrive.enable = true;
+      protonDrive = {
+        enable = true;
+        useSecret = false;  # Disable secret usage for now
+      };
       monitoring.enable = true;
     };
     desktop.enable = true;
@@ -81,7 +84,10 @@
   hwc.services.backup.user = {
     enable = true;
     externalDrive.enable = true;
-    protonDrive.enable = true;
+    protonDrive = {
+      enable = true;
+      useSecret = false;  # Disable secret usage for now
+    };
     schedule = {
       enable = true;
       frequency = "daily";
