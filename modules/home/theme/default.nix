@@ -21,8 +21,8 @@
 
 let
   palettes = rec {
-    deep-nord = import ./palettes/deep-nord.nix;
-    gruv      = import ./palettes/gruv.nix;
+    deep-nord = import ./palettes/deep-nord.nix { };
+    gruv      = import ./palettes/gruv.nix { };
   };
 in
 {
