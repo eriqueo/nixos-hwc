@@ -38,7 +38,7 @@ in
     ${defineColor "accent" c.accent}
     ${defineColor "accentAlt" c.accentAlt}
     ${defineColor "crit" c.crit}
-    ${defineColor "error" c.error}
+    ${defineColor "error" c.warn}
     ${defineColor "warning" c.warning}
     ${defineColor "info" c.info}
     ${defineColor "success" c.success}
