@@ -53,6 +53,9 @@ in
   # OPTIONS - What can be configured
   #============================================================================
   options.hwc.gpu = {
+  
+    enable = lib.mkEnableOption "GPU hardware acceleration support";
+
     type = lib.mkOption {
       type = t.enum [ "none" "nvidia" "intel" "amd" ];
       default = "none";
@@ -160,7 +163,7 @@ in
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
-  config = lib.mkIf (cfg.type != "none") (lib.mkMerge [
+  config = lib.mkIf cfg.enable (lib.mkMerge [
 
     # --- Validation -----------------------------------------------------------
     {
