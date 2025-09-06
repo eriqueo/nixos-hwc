@@ -103,7 +103,7 @@ in {
       (lib.optionals cfg.user.groups.virtualization   [ "libvert" ]) ++
       (lib.optionals cfg.user.groups.hardware         [ "input" "uucp"]);
 
-    initalPassword = lib..mkIf (!cfg.user.useSecretes && cfg.user.fallbackPasswrod != null)  
+    initalPassword = lib.mkIf (!cfg.user.useSecretes && cfg.user.fallbackPasswrod != null)  
       cfg.user.fallbackPassword;
     };  
    }
