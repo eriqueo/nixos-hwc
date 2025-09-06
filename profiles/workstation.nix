@@ -19,7 +19,7 @@
     ../modules/infrastructure/printing.nix
     ../modules/infrastructure/virtualization.nix
     ../modules/infrastructure/samba.nix
-#    ../modules/infrastructure/user-services.nix
+    ../modules/infrastructure/user-services.nix
     ../modules/infrastructure/user-hardware-access.nix
     ../modules/infrastructure/storage.nix
 
