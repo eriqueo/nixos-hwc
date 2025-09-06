@@ -52,7 +52,7 @@ lib.mkIf config.hwc.home.apps.waybar.enable {
       
               # Output JSON for waybar
               echo "{\"text\": \"$ICON\", \"class\": \"$CLASS\", \"tooltip\": \"$TOOLTIP\"}"
-            '')
+          
     '';
     ".local/bin/waybar-gpu-toggle".text = ''
       #!/usr/bin/env bash
@@ -83,9 +83,7 @@ lib.mkIf config.hwc.home.apps.waybar.enable {
               esac
       
               # Refresh waybar
-              ${procps}/bin/pkill -SIGUSR1 waybar 2>/dev/null || true
-            '')
-      
+              ${procps}/bin/pkill -SIGUSR1 waybar 2>/dev/null || true      
     '';
     ".local/bin/waybar-network-status".text = ''
       #!/usr/bin/env bash
