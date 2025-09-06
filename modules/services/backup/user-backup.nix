@@ -41,7 +41,7 @@ let
     # Configuration
     USER_HOME="${paths.user.home}"
     EXTERNAL_MOUNT="${cfg.externalDrive.mountPoint}"
-    BACKUP_NAME="$(hostname)_${userCfg.user}_$(date +%Y%m%d_%H%M%S)"
+    BACKUP_NAME="$(hostname)_${userCfg.user.name}_$(date +%Y%m%d_%H%M%S)"
     LOG_FILE="/var/log/user-backup.log"
     
     # Check if external drive is mounted and has space
@@ -112,7 +112,7 @@ let
       log_info "Starting backup to Proton Drive"
       
       # Sync user home to Proton Drive with exclusions
-      ${pkgs.rclone}/bin/rclone sync "$USER_HOME" "proton:Backups/$(hostname)/${userCfg.user}" \
+      ${pkgs.rclone}/bin/rclone sync "$USER_HOME" "proton:Backups/$(hostname)/${userCfg.user.name}" \
         --config "${cfg.protonDrive.configPath}" \
         --exclude ".cache/**" \
         --exclude ".local/share/Trash/**" \
@@ -139,7 +139,7 @@ let
     
     # Main backup logic
     main() {
-      log_info "=== User Backup Started for ${userCfg.user} ==="
+      log_info "=== User Backup Started for ${userCfg.user.name} ==="
       
       # Redirect output to log file while keeping stdout
       exec > >(tee -a "$LOG_FILE")
@@ -194,7 +194,7 @@ in {
     
     username = lib.mkOption {
       type = lib.types.str;
-      default = userCfg.user or "eric";
+      default = userCfg.user.name or "eric";
       description = "Username to backup";
     };
     
