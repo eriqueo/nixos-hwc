@@ -63,34 +63,34 @@ in
       copy_on_select = true;
       
       # --- Theme Integration: Deep Nord Colors ---
-      # Background and foreground
+ # Background/foreground
       foreground = palette.fg;
       background = palette.bg;
-      selection_foreground = palette.fg;
-      selection_background = palette.accent;
-      cursor = palette.accent;
+      selection_foreground = palette.selectionFg;     # better contrast on selection
+      selection_background = palette.selectionBg;
+      cursor = palette.cursor;
       cursor_text_color = palette.bg;
-      url_color = palette.accent;
-      
-      # Normal colors (0-7)
-      color0 = "#45403d";   # black (gruvbox material dark0)
-      color1 = palette.crit; # red
-      color2 = palette.good; # green
-      color3 = palette.warn; # yellow
-      color4 = palette.accent; # blue (teal)
-      color5 = "#d3869b"; # magenta (gruvbox material)
-      color6 = palette.accentAlt; # cyan (green)
-      color7 = palette.fg;   # white
-      
-      # Bright colors (8-15)
-      color8 = palette.muted; # bright black
-      color9 = "#ea6962";   # bright red (gruvbox material)
-      color10 = "#a9b665";  # bright green (gruvbox material)  
-      color11 = "#d8a657";  # bright yellow (gruvbox material)
-      color12 = "#7daea3";  # bright blue (matches accent)
-      color13 = "#d3869b";  # bright magenta
-      color14 = "#89b482";  # bright cyan (matches accentAlt)
-      color15 = "#d4be98";  # bright white (gruvbox material fg)
+      url_color = palette.link;
+
+      # Normal (0–7)
+      color0  = palette.ansi.black;     # black
+      color1  = palette.crit;       # red
+      color2  = palette.good;       # green
+      color3  = palette.warn;       # yellow
+      color4  = palette.accent;     # blue-ish (your teal)
+      color5  = palette.magenta or palette.accentAlt;  # choose one token from palette
+      color6  = palette.accentAlt;  # cyan-ish
+      color7  = palette.fg;         # white
+
+      # Bright (8–15)
+      color8  = palette.ansi.brightBlack;      # bright black
+      color9  = palette.critBright or palette.crit;
+      color10 = palette.goodBright or palette.good;
+      color11 = palette.warnBright or palette.warn;
+      color12 = palette.accentBright or palette.accent;
+      color13 = palette.magentaBright or (palette.magenta or palette.accentAlt);
+      color14 = palette.accentAltBright or palette.accentAlt;
+      color15 = palette.fgBright or palette.fg;
     };
     
     # Key bindings
