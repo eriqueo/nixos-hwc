@@ -1,12 +1,7 @@
-# Waybar CSS Theme Adapter (v6)
-# - Reads active palette from config.hwc.home.theme.colors
-# - Exports a string of CSS variables for Waybar theming.
-#
-# Usage in HM:
-#   imports = [ ../modules/home/theme/adapters/waybar-css.nix ];
-#   ...
-#   let cssVars = config.hwc.home.theme.adapters.waybar.css;
-#   in { xdg.configFile."waybar/style.css".text = cssVars + '' ... ''; }
+# Waybar CSS Theme Adapter (v6 - Synchronized)
+# - Reads the specific palette from config.hwc.home.theme.colors
+# - Maps the palette's semantic names (bg, fg, ansi.red) to Waybar's
+#   generic CSS variables (@background, @color1, etc.).
 
 { config, lib, ... }:
 
@@ -15,22 +10,23 @@ let
   c = config.hwc.home.theme.colors;
 
   # Helper function to generate a @define-color line.
-  # It gracefully handles missing colors from the palette.
+  # It now uses `or` to provide a default fallback and prevent errors.
   defineColor = name: value:
-    if value != null then
-      "@define-color ${name} #${value};"
-    else
-      "/* @define-color ${name} is undefined in palette */";
+    let
+      # Use the provided value or fallback to a safe default grey.
+      finalValue = value or "888888";
+    in
+      "@define-color ${name} #${finalValue};";
 in
 {
-  # 2. Define a formal option to provide the generated CSS to the system.
+  # 2. Define the formal option (this part is correct).
   options.hwc.home.theme.adapters.waybar.css = lib.mkOption {
     type = lib.types.lines;
     readOnly = true;
     description = "A string of CSS @define-color variables generated from the active palette.";
   };
 
-  # 3. Set the value of the option by transforming the palette into CSS.
+  # 3. Set the value of the option by correctly mapping the palette to CSS.
   config.hwc.home.theme.adapters.waybar.css = ''
     /* Generated from the ${c.name or "unnamed"} palette */
     ${defineColor "background" c.bg}
@@ -38,24 +34,29 @@ in
     ${defineColor "accent" c.accent}
     ${defineColor "accentAlt" c.accentAlt}
     ${defineColor "crit" c.crit}
-    ${defineColor "error" c.warn}
+    ${defineColor "error" c.crit}  # Mapping 'error' to your 'crit' color
     ${defineColor "warning" c.warn}
     ${defineColor "info" c.info}
     ${defineColor "success" c.good}
     ${defineColor "muted" c.muted}
-    ${defineColor "color1" c.color1}
-    ${defineColor "color2" c.color2}
-    ${defineColor "color3" c.color3}
-    ${defineColor "color4" c.color4}
-    ${defineColor "color5" c.color5}
-    ${defineColor "color6" c.color6}
-    ${defineColor "color7" c.color7}
-    ${defineColor "color8" c.color8}
-    ${defineColor "color9" c.color9}
-    ${defineColor "color10" c.color10}
-    ${defineColor "color11" c.color11}
-    ${defineColor "color12" c.color12}
-    ${defineColor "color13" c.color13}
-    ${defineColor "color14" c.color14}
+
+    /*
+     * Mapping the generic colorN variables to your ANSI color set.
+     * This provides a consistent terminal-like color scheme for Waybar modules.
+     */
+    ${defineColor "color1" (c.ansi.red or null)}
+    ${defineColor "color2" (c.ansi.green or null)}
+    ${defineColor "color3" (c.ansi.yellow or null)}
+    ${defineColor "color4" (c.ansi.blue or null)}
+    ${defineColor "color5" (c.ansi.magenta or null)}
+    ${defineColor "color6" (c.ansi.cyan or null)}
+    ${defineColor "color7" (c.ansi.white or null)}
+    ${defineColor "color8" (c.ansi.brightBlack or null)}
+    ${defineColor "color9" (c.ansi.brightRed or null)}
+    ${defineColor "color10" (c.ansi.brightGreen or null)}
+    ${defineColor "color11" (c.ansi.brightYellow or null)}
+    ${defineColor "color12" (c.ansi.brightBlue or null)}
+    ${defineColor "color13" (c.ansi.brightMagenta or null)}
+    ${defineColor "color14" (c.ansi.brightCyan or null)}
   '';
 }
