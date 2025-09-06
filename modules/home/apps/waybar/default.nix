@@ -18,7 +18,10 @@ in
   # 1. Unconditionally import the theme adapter module.
   # This makes the `hwc.home.theme.adapters.waybar.css` option available
   # to other modules, like our `appearance.nix` part.
-  imports = [ ../../theme/adapters/waybar-css.nix ];
+  imports = [ 
+  ../../theme/adapters/waybar-css.nix
+  ./parts/scripts.nix    
+   ];
 
   # 2. The `config` block contains all the settings.
   # We wrap the entire block in `lib.mkIf` to make this whole module
