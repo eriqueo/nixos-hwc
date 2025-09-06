@@ -91,7 +91,7 @@ in {
       initialPassword = cfg.user.fallbackPassword;
       
     };
-    users.users.&{cfg.user.name} = {
+    users.users.${cfg.user.name} = {
       isNormalUser = true;
       description  = cfg.user.description;
       shell        = cfg.user.shell;
