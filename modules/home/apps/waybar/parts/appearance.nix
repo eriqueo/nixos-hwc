@@ -1,18 +1,14 @@
-# Waybar Part: Style
-# Defines the CSS for theming the bar.
-{ config, lib, pkgs,  }:
+{ config, lib, pkgs, ... }:
 
 let
-  ## Read the generated CSS variables from the option provided by the adapter.
+  # Read the generated CSS variables from the option provided by the adapter.
   cssVars = config.hwc.home.theme.adapters.waybar.css;
 in
-# Return the full CSS content as a string.
-cssVars + ''
-  /* Extra rules that rely on @background/@colorN now work */
+# Ensure a newline separates the generated variables from the main styles.
+''
+  ${cssVars}
 
-  /* Larger font size for laptop monitor */
-  window#waybar.eDP-1 * { font-size: 18px; }
-
+  /* Main Waybar styles follow */
   window#waybar {
     background-color: @background;
     color: @foreground;
