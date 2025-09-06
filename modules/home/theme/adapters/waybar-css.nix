@@ -33,8 +33,8 @@ in
   # 3. Set the value of the option by transforming the palette into CSS.
   config.hwc.home.theme.adapters.waybar.css = ''
     /* Generated from the ${c.name or "unnamed"} palette */
-    ${defineColor "background" c.background}
-    ${defineColor "foreground" c.foreground}
+    ${defineColor "background" c.bg}
+    ${defineColor "foreground" c.fg}
     ${defineColor "accent" c.accent}
     ${defineColor "accentAlt" c.accentAlt}
     ${defineColor "crit" c.crit}
