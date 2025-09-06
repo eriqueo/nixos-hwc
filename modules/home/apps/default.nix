@@ -31,15 +31,12 @@ in
     #==========================================================
     # DYNAMIC IMPORTS - Must be at top level
     #==========================================================
-    imports =
-      (lib.optionals (cfg.enable && cfg.kitty.enable)    [
-  ./kitty.nix ]) ++
-      (lib.optionals (cfg.enable && cfg.thunar.enable)   [
-  ./thunar.nix ]) ++
-      (lib.optionals (cfg.enable && cfg.waybar.enable)   [
-  ./waybar/default.nix ]) ++
-      (lib.optionals (cfg.enable && cfg.hyprland.enable) [
-  ./hyprland/parts/appearance.nix ]);
+    imports = [
+      ./kitty.nix
+      ./thunar.nix
+      ./waybar/default.nix
+      ./hyprland/parts/appearance.nix
+    ];
 
   config = lib.mkIf cfg.enable {
   #============================================================================
