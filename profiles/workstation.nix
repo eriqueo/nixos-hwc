@@ -32,13 +32,15 @@
   ];
 
   hwc.system = {
-    users.enable = true;
-    user = {
+    users = {
       enable = true;
-      name = "eric";
-      useSecrets = false;
-      fallbackPassword = "il0wwlm?";
-      groups = {basic = true; media = true; hardware = true; };
+      user = {
+        enable = true;
+        name = "eric";
+        useSecrets = false;
+        fallbackPassword = "il0wwlm?";
+        groups = {basic = true; media = true; hardware = true; };
+      };
     };
     basePackages.enable = true;
     backupPackages = {
