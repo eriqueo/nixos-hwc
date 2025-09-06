@@ -18,7 +18,10 @@
 #   home-manager.users.<name>.imports = [ ../modules/home/waybar/default.nix ];
 
 { config, lib, pkgs, nixosConfig, ... }:
- imports = [ ./system.nix ];
+ imports = [
+    ./system.nix
+   ];
+   
 let
   waybarCss = (import ../../theme/adapters/waybar-css.nix {}).css;
  
