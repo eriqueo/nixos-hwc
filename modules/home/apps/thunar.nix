@@ -48,19 +48,10 @@
   ];
   
   # GTK configuration for file manager appearance
-  # Import Deep Nord theme adapter for consistent theming
-  gtk = 
-    let 
-      gtkTheme = import ../theme/adapters/gtk.nix { inherit pkgs; };
-    in 
-      gtkTheme.config;
-  
-  # GTK CSS overrides for better Thunar theming
-  xdg.configFile."gtk-3.0/gtk.css".text = 
-    let 
-      gtkTheme = import ../theme/adapters/gtk.nix { inherit pkgs; };
-    in 
-      gtkTheme.gtk3CssOverride;
+
+  home.packages = lib.mkIf config.hwc.home.apps.thunar.enable [
+    pkgs.thunar
+  ];
   
   # XDG MIME associations for file types
   xdg.mimeApps = {
