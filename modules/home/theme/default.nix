@@ -45,7 +45,7 @@ in
 #============================================================================
   config = {
     # Materialize the selected palette as a read-only token set for adapters/apps.
-    hwc.home.theme.palette = palettes.${config.hwc.home.theme.palette};
+    hwc.home.theme.colors = palettes.${config.hwc.home.theme.palette};
 
     # Pull in all adapters so consumers can read config.hwc.home.theme.adapters.*
     # without importing each adapter in machines/<host>/home.nix.
