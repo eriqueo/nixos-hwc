@@ -83,7 +83,7 @@
     # Inherit all module definitions from the first bar instance
     # This is a powerful Waybar feature to avoid duplication.
     # We only need to redefine things we want to change.
-    inherit = "DP-4";
+    "inherit" = "DP-4";
 
     # Example of an override for the laptop screen
     tray = { spacing = 12; icon-size = 20; };
