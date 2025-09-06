@@ -126,9 +126,15 @@
   # User management with agenix integration
   hwc.system.users = {
     enable = true;
-    user = "eric";
-    #passwordSecret = "user-initial-password";
-    #emergencyEnable = lib.mkDefault false; # Enable in machines/ during migrations
+    user = {
+      enable = true;
+      name = "eric";
+      useSecrets = false; # Use fallback password for now
+      groups.basic = true;
+      groups.media = true;
+      groups.hardware = true;
+      environment.enableZsh = true;
+    };
   };
 
   # Centralized sudo configuration

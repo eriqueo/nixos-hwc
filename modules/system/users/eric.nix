@@ -86,9 +86,9 @@ in {
   config = lib.mkIf (cfg.enable && cfg.user.enable) {
     users.mutableUsers = false;
 
-    users.users.ropot = lib.mkIf (!cfg.user.useSecrets && cfg.fallbackPassword != null){
+    users.users.root = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null) {
 
-      initialPassword = cfg.user.fallbackPassword;
+      hashedPassword = null;
       
     };
     users.users.${cfg.user.name} = {
@@ -100,10 +100,10 @@ in {
       (lib.optionals cfg.user.groups.basic            [ "wheel" "networkmanager" ]) ++
       (lib.optionals cfg.user.groups.media            [ "video" "audio"]) ++
       (lib.optionals cfg.user.groups.development      [ "docker" "podman"]) ++
-      (lib.optionals cfg.user.groups.virtualization   [ "libvert" ]) ++
+      (lib.optionals cfg.user.groups.virtualization   [ "libvirtd" ]) ++
       (lib.optionals cfg.user.groups.hardware         [ "input" "uucp"]);
 
-    initalPassword = lib.mkIf (!cfg.user.useSecretes && cfg.user.fallbackPasswrod != null)  
+    initialPassword = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null)
       cfg.user.fallbackPassword;
     };  
    
@@ -152,11 +152,11 @@ in {
   assertions = [
     # User and security assertions:
     {
-      assertion = !cfg.user.useSecrets || config.hwc.security.enable;
+      assertion = !cfg.user.useSecrets || config.hwc.system.secrets.enable;
       message = "hwc.home.user.useSecrets requires hwc.security.enable = true";
     }
     {
-      assertion = !cfg.ssh.useSecrets || config.hwc.security.secrets.user;
+      assertion = !cfg.user.ssh.useSecrets || config.hwc.system.secrets.enable;
       message = "hwc.home.ssh.useSecrets requires hwc.security.secrets.user = true";
     }
     {
@@ -164,7 +164,7 @@ in {
       message = "CRITICAL: useSecrets enabled but user-initial-password secret not available - this would lock you out! Disable useSecrets or ensure secret exists.";
     }
     {
-      assertion = !cfg.ssh.useSecrets || (config.age.secrets ? "user-ssh-public-key");
+      assertion = !cfg.user.ssh.useSecrets || (config.age.secrets ? "user-ssh-public-key");
       message = "CRITICAL: SSH useSecrets enabled but user-ssh-public-key secret not available - this would lock you out of SSH! Disable useSecrets or ensure secret exists.";
     }
 
