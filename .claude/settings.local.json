@@ -38,7 +38,9 @@
       "Read(/etc/nixos/shared/home-manager/**)",
       "WebFetch(domain:github.com)",
       "Read(/nix/store/**)",
-      "WebSearch"
+      "WebSearch",
+      "Bash('shell\\.nix' )",
+      "Bash(profiles/ machines/ modules/)"
     ],
     "deny": [],
     "ask": [],
