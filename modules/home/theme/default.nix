@@ -26,18 +26,18 @@ let
   };
 in
 {
-  #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
+#============================================================================
+# OPTIONS - What can be configured
+#============================================================================
   options.hwc.home.theme.palette = lib.mkOption {
     type = lib.types.enum (builtins.attrNames palettes);
     default = "deep-nord";
     description = "Active theme palette (single source of truth).";
   };
 
-  #============================================================================
-  # IMPLEMENTATION - What actually gets configured
-  #============================================================================
+#============================================================================
+# IMPLEMENTATION - What actually gets configured
+#============================================================================
   config = {
     # Materialize the selected palette as a read-only token set for adapters/apps.
     hwc.home.theme.colors = palettes.${config.hwc.home.theme.palette};
@@ -49,16 +49,20 @@ in
       ./adapters/waybar-css.nix
       ./adapters/hyprland.nix
     ];
+
+    
+#============================================================================
+# VALIDATION - Assertions and checks
+#============================================================================
+# By convention: no environment.systemPackages, no systemd.services in HM modules
+
+    assertions = [
+      {
+        assertion = true;
+        message = "Theme root loaded.";
+      }
+    ];
   };
 
-  #============================================================================
-  # VALIDATION - Assertions and checks
-  #============================================================================
-  # By convention: no environment.systemPackages, no systemd.services in HM modules
-  assertions = [
-    {
-      assertion = true;
-      message = "Theme root loaded.";
-    }
-  ];
+
 }
