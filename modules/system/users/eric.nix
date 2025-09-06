@@ -122,7 +122,7 @@ in {
     #=========================================================================
 
     # ZSH system enablement (required for user shell)
-    programs.zsh.enable = lib.mkIf cfg.environment.enableZsh true;
+    programs.zsh.enable = lib.mkIf cfg.user.environment.enableZsh true;
 
     # Core system packages for user environment
     environment.systemPackages = with pkgs; [
