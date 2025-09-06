@@ -31,11 +31,11 @@ let
     else s;
     
              
-  # Pull colors with graceful fallback (your gruvbox tokens -> generic -> sane defaults)
-  tealRaw   = c.gruvboxTeal   or c.accent  or "#88c0d0";
-  greenRaw  = c.gruvboxGreen  or c.success or "#a3be8c";
-  mutedRaw  = c.gruvboxMuted  or c.muted   or "#4c566a";
-  bgRaw     = c.bg            or "#101014";
+  # Pull colors with graceful fallback (palette -> sane defaults)
+  tealRaw   = c.accent     or "#7daea3";
+  greenRaw  = c.accentAlt  or "#89b482"; 
+  mutedRaw  = c.muted      or "#4c566a";
+  bgRaw     = c.bg         or "#2e3440";
 
   # Hypr-friendly color coercion:
   # - "#RRGGBB"  -> "0xRRGGBB"
