@@ -104,12 +104,13 @@ let
   '';
 in
 {
-  config = {
-  gtk ={
-    enable = true;
-      theme = {
-        name = "Adwaita-dark";
-        package = pkgs.gnome-themes-extra;
+    # Make the GTK adapter config available for apps to consume
+   config.hwc.home.theme.adapters.gtk = {
+      # Expose the translated GTK settings
+      settings = {
+        gtk = {
+          enable = true;
+          theme = { name = "Adwaita-dark"; package = pkgs.gnome-themes-extra; 
     };
     iconTheme = {
       name = "Adwaita";
@@ -127,8 +128,8 @@ in
     gtk2.extraConfig = gtk2Extra;
     gtk3.extraConfig = gtk3Extra;
     gtk4.extraConfig = gtk4Extra;
+    };
   };
-
   xdg.configFile."gtk-3.0/gtk.css".text = gtk3Css;
   };
 }  
