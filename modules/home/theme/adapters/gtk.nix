@@ -2,9 +2,9 @@
   #
   # GTK Theme Adapter (v6)
   # Translates active palette (config.hwc.home.theme.colors) → 
-  GTK settings
+ # GTK settings
   # Apps consume via: 
-  config.hwc.home.theme.adapters.gtk.settings
+ # config.hwc.home.theme.adapters.gtk.settings
   #
 
   { config, lib, pkgs, ... }:
