@@ -25,12 +25,8 @@ let
   # This module now reads its OWN enable flag from the options
   # defined in apps/default.nix
   cfg = config.hwc.home.apps.hyprland;
-in
 # The entire output of this file is wrapped in a lib.mkIf
-lib.mkIf cfg.enable {
 
-  # --- ALL THE EXISTING CODE from the file goes here, indented ---
-  let
     behavior = import ./parts/behavior.nix { inherit lib pkgs; };
     hardware = import ./parts/hardware.nix { inherit lib pkgs; };
     session = import ./parts/session.nix { inherit lib pkgs; };
@@ -38,7 +34,8 @@ lib.mkIf cfg.enable {
     appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = themeSettings; };
     wallpaperPath = ./../../theme/nord-mountains.jpg;
   in
-  {
+  lib.mkIf cfg.enable {
+  
     home.packages = with pkgs; [
       wofi hyprshot hypridle hyprpaper hyprlock cliphist wl-clipboard
       brightnessctl networkmanager wirelesstools hyprsome
