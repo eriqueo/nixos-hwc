@@ -31,8 +31,6 @@ in
       (lib.optionals cfg.thunar.enable   [ ../apps/thunar.nix ]) ++
       (lib.optionals cfg.waybar.enable   [ ../apps/waybar/default.nix ]) ++
       (lib.optionals cfg.hyprland.enable [ ../apps/hyprland/parts/appearance.nix ]);
-  };
-
   #============================================================================
   # VALIDATION
   #============================================================================
@@ -43,4 +41,7 @@ in
       message   = "Home apps aggregator must not set system packages/services.";
     }
   ];
+
+
+  };
 }
