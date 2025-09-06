@@ -45,7 +45,7 @@ in
   #============================================================================
   # IMPLEMENTATION
   #============================================================================
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && builtins.hasAttr "environment" config) {
     environment.systemPackages = [
       #========================================================================
       # GPU TOOLS
