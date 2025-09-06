@@ -46,16 +46,16 @@ in
     # System-wide Hyprland tools and packages (available to all contexts)
     environment.systemPackages = [
       # Core Hyprland ecosystem packages needed for keybindings
-      hyprland  # Provides hyprctl
-      pkgs.wofi
-      pkgs.hyprshot
-      pkgs.hypridle
-      pkgs.hyprpaper
-      pkgs.hyprlock
-      pkgs.cliphist
-      pkgs.wl-clipboard
-      pkgs.brightnessctl
-      pkgs.hyprsome
+ #     hyprland  # Provides hyprctl
+  #    pkgs.wofi
+  #    pkgs.hyprshot
+  #    pkgs.hypridle
+  #    pkgs.hyprpaper
+  #    pkgs.hyprlock
+  #    pkgs.cliphist
+  #    pkgs.wl-clipboard
+  #    pkgs.brightnessctl
+  #    pkgs.hyprsome
 
 
 
