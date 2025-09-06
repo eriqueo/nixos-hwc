@@ -388,5 +388,4 @@ in {
    .low          { color: @crit; }
    .critical     { color: @crit; }
  '';
-  };
 }
