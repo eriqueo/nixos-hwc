@@ -18,92 +18,56 @@
 #   Universal domains: behavior.nix, hardware.nix, session.nix, appearance.nix
 #
 
+# In modules/home/apps/hyprland/default.nix
 { config, lib, pkgs, ... }:
+
 let
-  # Import universal config domains
-  behavior = import ./parts/behavior.nix { inherit lib pkgs; };
-  hardware = import ./parts/hardware.nix { inherit lib pkgs; };
-  session = import ./parts/session.nix { inherit lib pkgs; };
-  
-  # 1. Fetch the theme settings from the adapter right here (the "chef" gets ingredients)
-  themeSettings = config.hwc.home.theme.adapters.hyprland.settings;
-  
-  # 2. Call the appearance.nix function, passing the theme settings to it
-  appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = themeSettings; };
-  
-  # Wallpaper path - dynamic relative to this file
-  wallpaperPath = ./../../theme/nord-mountains.jpg;
+  # This module now reads its OWN enable flag from the options
+  # defined in apps/default.nix
+  cfg = config.hwc.home.apps.hyprland;
 in
-{
-  #============================================================================
-  # HOME PACKAGES (Hyprland Ecosystem)
-  #============================================================================
-  home.packages = with pkgs; [
-    # Core Hyprland tools (preserved from monolith)
-    wofi
-    hyprshot
-    hypridle
-    hyprpaper
-    hyprlock
-    
-    # Clipboard management
-    cliphist
-    wl-clipboard
-    
-    # System tools for Hyprland  
-    brightnessctl
-    networkmanager
-    wirelesstools
-    
-    # Window manager utilities
-    hyprsome  # Per-monitor workspace management
-    
-    # Session startup script
-  ] ++ session.packages;
-  
-  #============================================================================
-  # SESSION VARIABLES
-  #============================================================================
-  home.sessionVariables = {
-    XDG_CURRENT_DESKTOP = "Hyprland";
-  };
-  
-  #============================================================================
-  # HYPRLAND CONFIGURATION (Composed from Parts)
-  #============================================================================
-  wayland.windowManager.hyprland = {
-    enable = true;
-    package = pkgs.hyprland;
-    
-    settings = lib.mkMerge [
-      # Hardware domain (monitors, input, workspaces)
-      {
-        monitor = hardware.monitor;
-        workspace = hardware.workspace;
-        input = hardware.input;
-      }
-      
-      # Behavior domain (keybindings, window rules) 
-      (behavior // { "$mod" = "SUPER"; })
-      
-      # Session domain (autostart)
-      {
-        exec-once = session.execOnce;
-      }
-      
-      # Appearance domain (theme settings)
-      appearance
-    ];
-  };
-  
-  #============================================================================
-  # WALLPAPER CONFIGURATION (hyprpaper)
-  #============================================================================
-  home.file.".config/hypr/hyprpaper.conf".text = ''
-    preload = ${wallpaperPath}
-    wallpaper = eDP-1,${wallpaperPath}
-    wallpaper = DP-1,${wallpaperPath}
-    splash = false
-  '';
+# The entire output of this file is wrapped in a lib.mkIf
+lib.mkIf cfg.enable {
+
+  # --- ALL THE EXISTING CODE from the file goes here, indented ---
+  let
+    behavior = import ./parts/behavior.nix { inherit lib pkgs; };
+    hardware = import ./parts/hardware.nix { inherit lib pkgs; };
+    session = import ./parts/session.nix { inherit lib pkgs; };
+    themeSettings = config.hwc.home.theme.adapters.hyprland.settings;
+    appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = themeSettings; };
+    wallpaperPath = ./../../theme/nord-mountains.jpg;
+  in
+  {
+    home.packages = with pkgs; [
+      wofi hyprshot hypridle hyprpaper hyprlock cliphist wl-clipboard
+      brightnessctl networkmanager wirelesstools hyprsome
+    ] ++ session.packages;
+
+    home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
+
+    wayland.windowManager.hyprland = {
+      enable = true;
+      package = pkgs.hyprland;
+      settings = lib.mkMerge [
+        {
+          monitor = hardware.monitor;
+          workspace = hardware.workspace;
+          input = hardware.input;
+        }
+        (behavior // { "$mod" = "SUPER"; })
+        { exec-once = session.execOnce; }
+        appearance
+      ];
+    };
+
+    home.file.".config/hypr/hyprpaper.conf".text = ''
+      preload = ${wallpaperPath}
+      wallpaper = eDP-1,${wallpaperPath}
+      wallpaper = DP-1,${wallpaperPath}
+      splash = false
+    '';
+  }
+  # --- End of existing code ---
 
 }

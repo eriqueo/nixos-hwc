@@ -35,6 +35,7 @@ in
       ./kitty.nix
       ./thunar.nix
       ./waybar/default.nix
+      ./hyprland/default.nix
     ];
 
   config = lib.mkIf cfg.enable {
