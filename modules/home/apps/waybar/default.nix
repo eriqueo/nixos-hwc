@@ -519,7 +519,7 @@ in {
     }];
 
     style = ''
-      /* Waybar styles using deep-nord colors */
+      
       @define-color background ${colors.background};
       @define-color foreground ${colors.foreground};
       @define-color accent ${colors.css.accent};
