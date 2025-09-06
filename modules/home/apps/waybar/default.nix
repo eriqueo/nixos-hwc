@@ -35,5 +35,5 @@ let
 
     # Write the CSS "appearance" part to the correct XDG config file path.
     xdg.configFile."waybar/style.css".text = appearance;
-  }
+  
 }
