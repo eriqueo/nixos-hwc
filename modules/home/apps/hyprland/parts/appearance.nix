@@ -21,7 +21,7 @@ let
   s = config.hwc.home.theme.adapters.hyprland.settings;
 in
 {
-  programs.hyprland = {
+  wayland.windowManager.hyprland = {
     enable = true;
 
     settings = lib.mkMerge [
