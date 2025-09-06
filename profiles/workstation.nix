@@ -42,14 +42,17 @@
     desktop.enable = true;
     audio.enable = true;
   };
-
+  
+  hwc.gpu = {
+    enable = true;
+    type = "nvidia"; #or "intel"
+  };
+  
   hwc.infrastructure = {
-    gpu.enable = true;
     printing.enable = true;
     virtualization.enable = true;
     samba.enableSketchupShare = true;
     userServices.enable = true;
-
     storage = {
       backup = {
         enable = true;
