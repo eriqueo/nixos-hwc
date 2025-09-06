@@ -121,7 +121,7 @@ in {
 
         # Refresh waybar
         ${procps}/bin/pkill -SIGUSR1 waybar 2>/dev/null || true
-      ''))
+      '')
 
       # 3. GPU Launch
       (writeShellScriptBin "waybar-gpu-launch" ''
@@ -160,7 +160,7 @@ in {
             exec "$@"
             ;;
         esac
-      ''))
+      '')
 
       # 4. GPU Menu
       (writeShellScriptBin "waybar-gpu-menu" ''
@@ -186,7 +186,7 @@ in {
             waybar-gpu-toggle
             ;;
         esac
-      ''))
+      '')
 
       #========================================================================
       # SYSTEM MONITORING TOOLS (4 tools)
@@ -218,7 +218,7 @@ in {
             ${libnotify}/bin/notify-send "Workspace" "$WORKSPACE_INFO" -t 1000 -i desktop
           ''}
         fi
-      ''))
+      '')
 
       # 6. Resource Monitor
       (writeShellScriptBin "waybar-resource-monitor" ''
@@ -241,7 +241,7 @@ in {
         TEMP_NUM=$(echo "$TEMP" | cut -d'.' -f1 | grep -o '[0-9]*' || echo "0")
 
         exit 0
-      ''))
+      '')
 
       # 7. Network Status  
       (writeShellScriptBin "waybar-network-status" ''
@@ -289,7 +289,7 @@ in {
         fi
 
         echo "{\"text\": \"$ICON\", \"class\": \"$CLASS\", \"tooltip\": \"$TOOLTIP\"}"
-      ''))
+      '')
 
       # 8. Battery Health
       (writeShellScriptBin "waybar-battery-health" ''
@@ -349,7 +349,7 @@ in {
         TOOLTIP="Battery: $CAPACITY%\nStatus: $STATUS\nHealth: $HEALTH\nCycles: $CYCLE_COUNT\nTime: $TIME_STR"
 
         echo "{\"text\": \"$ICON $CAPACITY%\", \"class\": \"$CLASS\", \"tooltip\": \"$TOOLTIP\"}"
-      ''))
+      '')
 
       #========================================================================
       # SYSTEM CONTROL TOOLS (5 tools)
@@ -360,14 +360,14 @@ in {
         #!/usr/bin/env bash
         set -euo pipefail
         ${baobab}/bin/baobab &
-      ''))
+      '')
 
       # 10. System Monitor
       (writeShellScriptBin "waybar-system-monitor" ''
         #!/usr/bin/env bash
         set -euo pipefail
         ${kitty}/bin/kitty --title "System Monitor" -e ${btop}/bin/btop &
-      ''))
+      '')
 
       # 11. Network Settings
       (writeShellScriptBin "waybar-network-settings" ''
@@ -394,7 +394,7 @@ in {
             ${kitty}/bin/kitty --title "Network Diagnostics" -e sh -c 'echo "=== Network Diagnostics ==="; echo ""; echo "Current IP:"; ${curl}/bin/curl -s ifconfig.me; echo ""; echo ""; echo "Active Connections:"; ${networkmanager}/bin/nmcli connection show --active; echo ""; echo "WiFi Networks:"; ${networkmanager}/bin/nmcli dev wifi; echo ""; read -p "Press Enter to close..."' &
             ;;
         esac
-      ''))
+      '')
 
       # 12. Power Settings
       (writeShellScriptBin "waybar-power-settings" ''
@@ -408,7 +408,7 @@ in {
         else
           ${kitty}/bin/kitty --title "Power Info" -e sh -c "${acpi}/bin/acpi -V && ${powertop}/bin/powertop --dump && read" &
         fi
-      ''))
+      '')
 
       # 13. Sensor Viewer
       (writeShellScriptBin "waybar-sensor-viewer" ''
@@ -420,7 +420,7 @@ in {
         else
           ${kitty}/bin/kitty --title "Sensors" -e sh -c "${lm_sensors}/bin/sensors && read" &
         fi
-      ''))
+      '')
     ];
   };
 }
