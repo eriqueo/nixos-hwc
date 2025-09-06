@@ -88,7 +88,7 @@ in {
 
         # Output JSON for waybar
         echo "{\"text\": \"$ICON\", \"class\": \"$CLASS\", \"tooltip\": \"$TOOLTIP\"}"
-      ''))
+      '')
 
       # 2. GPU Toggle
       (writeShellScriptBin "waybar-gpu-toggle" ''

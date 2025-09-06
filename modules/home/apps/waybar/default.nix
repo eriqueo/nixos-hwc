@@ -509,6 +509,8 @@ in {
         interval = 30;
         tooltip = "Notifications";
         on-click = "notify-send 'Notifications' 'No notification center configured'";
+        };
+       "custom/power" = {
         format = "󰐥";
         tooltip = "Shutdown";
         on-click = "wlogout";
