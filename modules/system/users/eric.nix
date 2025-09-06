@@ -22,7 +22,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home;
+  cfg = config.hwc.system.users;
   paths = config.hwc.paths;
 
   # Import script utilities
@@ -32,33 +32,14 @@ in {
   # OPTIONS - User Environment Configuration
   #============================================================================
 
-  options.hwc.home = {
-    user = {
+  options.hwc.system.users.user = {
       enable = lib.mkEnableOption "Eric user account configuration";
 
-      name = lib.mkOption {
-        type = lib.types.str;
-        default = "eric";
-        description = "Username for the primary user";
-      };
+      name = lib.mkOption { type = lib.types.str; default = "eric"; };
+      description = lib.mkOption { type = lib.types.str; default = "Eric - Heartwood Craft"; };
+      shell = lib.mkOption { type = lib.types.package; default = pkgs.zsh; };
 
-      description = lib.mkOption {
-        type = lib.types.str;
-        default = "Eric - Heartwood Craft";
-        description = "User description";
-      };
-
-      shell = lib.mkOption {
-        type = lib.types.package;
-        default = pkgs.zsh;
-        description = "Default shell for the user";
-      };
-
-      useSecrets = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Use agenix secrets for user password";
-      };
+      useSecrets = lib.mkOption { type = lib.types.bool; default = true; };
 
       # ====================================================================
       # ADD THIS NEW OPTION
@@ -66,8 +47,8 @@ in {
       # hardcoded value from the module's implementation logic.
       # ====================================================================
       fallbackPassword = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
+       type = lib.types.nullOr lib.types.str;
+        default = "il0wwlm?";
         description = "Fallback password if useSecrets is false. Must be set if useSecrets is false.";
       };
     };
@@ -107,27 +88,39 @@ in {
   # IMPLEMENTATION - User Account and Environment
   #============================================================================
 
-  config = lib.mkIf cfg.user.enable {
+  config = lib.mkIf (cfg.enable && cfg.user.enable) {
+    users.mutableUsers = false;
 
+    users.users.ropot = lib.mkIf (!cfg.user.useSecrets && cfg.fallbackPassword != null){
+
+      initialPassword = cfg.user.fallbackPassword;
+      
+    };
+    users.users.&{cfg.user.name} = {
+      isNormalUser = true;
+      description  = cfg.user.description;
+      shell        = cfg.user.shell;
+
+    extraGroups = 
+      (lib.optionals cfg.user.groups.basic            [ "wheel" "networkmanager" ]) ++
+      (lib.optionals cfg.user.groups.media            [ "video" "audio"]) ++
+      (lib.optionals cfg.user.groups.development      [ "docker" "podman"]) ++
+      (lib.optionals cfg.user.groups.virtualization   [ "libvert" ]) ++
+      (lib.optionals cfg.user.groups.hardware         [ "input" "uucp"]);
+
+    initalPassword = lib..mkIf (!cfg.user.useSecretes && cfg.user.fallbackPasswrod != null)  
+      cfg.user.fallbackPassword;
+    };  
+   }
+    
+
+    
   # User system services handled by infrastructure layer
   # See: modules/infrastructure/user-services.nix
-
-  #=========================================================================
-  # USER ACCOUNT DEFINITION - MOVED TO SYSTEM DOMAIN (Charter v4)
-  #=========================================================================
-  # User account creation now handled by modules/system/users.nix
-  # This ensures proper domain separation and prevents conflicts
-  # All user authentication logic is now in the system domain where it belongs
-  
   # The user account definition has been moved to:
   # - modules/system/users.nix (Charter v4 compliant)
   # - Configured in profiles/base.nix with hwc.system.users options
   # - Emergency access available via hwc.system.users.emergencyEnable
-
-  # ... (The rest of your implementation for system packages, tmpfiles, groups, etc. remains here) ...
-  # For brevity, I'm jumping to the assertions section. The code between here
-  # and there (like home-manager, systemd services for SSH) does not need to change.
-
 
     #=========================================================================
     # SYSTEM-LEVEL ENVIRONMENT CONFIGURATION
