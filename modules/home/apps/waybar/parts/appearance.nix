@@ -3,11 +3,11 @@
 { lib, pkgs, ... }:
 
 let
-  # Import the theme adapter to get CSS variables like @background, @foreground, etc.
-  waybarCss = (import ../../../theme/adapters/waybar-css.nix {}).css;
+  ## Read the generated CSS variables from the option provided by the adapter.
+  cssVars = config.hwc.home.theme.adapters.waybar.css;
 in
 # Return the full CSS content as a string.
-waybarCss + ''
+cssVars + ''
   /* Extra rules that rely on @background/@colorN now work */
 
   /* Larger font size for laptop monitor */
