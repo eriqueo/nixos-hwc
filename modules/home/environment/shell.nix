@@ -154,7 +154,7 @@ in
         "--height 40%" "--reverse" "--border"
         "--color=bg+:#32302f,bg:#282828,spinner:#89b482,hl:#7daea3"
         "--color=fg:#d4be98,header:#7daea3,info:#d8a657,pointer:#89b482"
-        "--color=marker:#89b482,fg+:#d4be98,prompt:#d8a657,hl+:#89b4ar2"
+        "--color=marker:#89b482,fg+:#d4be98,prompt:#d8a657,hl+:#89b482"
       ];
     };
 
