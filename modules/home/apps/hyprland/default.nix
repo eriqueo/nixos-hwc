@@ -24,7 +24,12 @@ let
   behavior = import ./parts/behavior.nix { inherit lib pkgs; };
   hardware = import ./parts/hardware.nix { inherit lib pkgs; };
   session = import ./parts/session.nix { inherit lib pkgs; };
-  appearance = import ./parts/appearance.nix { inherit lib pkgs; };
+  
+  # 1. Fetch the theme settings from the adapter right here (the "chef" gets ingredients)
+  themeSettings = config.hwc.home.theme.adapters.hyprland.settings;
+  
+  # 2. Call the appearance.nix function, passing the theme settings to it
+  appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = themeSettings; };
   
   # Wallpaper path - dynamic relative to this file
   wallpaperPath = ./../../theme/nord-mountains.jpg;
