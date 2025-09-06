@@ -13,7 +13,7 @@
 let
   c = config.hwc.home.theme.colors;
 
-  isBareHex = s: builtins.match "^[0-9a-fA-F]{6}([0-9a-fA-F{2})?$" s != null;
+  isBareHex = s: builtins.match "^[0-9a-fA-F]{6}([0-9a-fA-F{2}])?$" s != null;
   normalizeHex = s: let
     raw = if lib.hasPrefix "#" s then lib.substring 1 (lib.stringLength s -1) s else s;
     hex = lib.toLower raw;
