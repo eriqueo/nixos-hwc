@@ -22,7 +22,7 @@
 
 let
   cfg = config.hwc.infrastructure.userServices;
-  homeCfg = config.hwc.home;
+  usersCfg = config.hwc.system.users;
   paths = config.hwc.paths;
 in {
 
@@ -35,7 +35,7 @@ in {
 
     username = lib.mkOption {
       type = lib.types.str;
-      default = homeCfg.user.name or "eric";
+      default = usersCfg.user.name or "eric";
       description = "Username for user services";
     };
   };
