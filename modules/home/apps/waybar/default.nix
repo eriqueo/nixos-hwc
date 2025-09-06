@@ -8,13 +8,9 @@ let
   # This module reads its OWN enable flag from the options
   # defined in modules/home/apps/default.nix
   cfg = config.hwc.home.apps.waybar;
-in
 # The entire output of this file is wrapped in a lib.mkIf, making it
 # controllable by the toggle in your main configuration.
-lib.mkIf cfg.enable {
-
-  # Let block to import the standardized parts, keeping the main config clean.
-  let
+  # Let block to import the standardized parts, keeping the main config clean.t
     # How Waybar acts (module layout, on-click actions, exec commands)
     behavior = import ./parts/behavior.nix { inherit lib pkgs; };
 
@@ -24,7 +20,7 @@ lib.mkIf cfg.enable {
     # What Waybar needs (package dependencies)
     packages = import ./parts/packages.nix { inherit lib pkgs; };
   in
-  {
+  lib.mkIf cfg.enable {
     # Assign the packages part to home.packages.
     # This ensures Waybar and all its tools are in the correct PATH.
     home.packages = packages;
