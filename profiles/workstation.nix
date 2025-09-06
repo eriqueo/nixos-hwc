@@ -19,7 +19,7 @@
     ../modules/infrastructure/printing.nix
     ../modules/infrastructure/virtualization.nix
     ../modules/infrastructure/samba.nix
-    ../modules/infrastructure/user-services.nix
+#    ../modules/infrastructure/user-services.nix
     ../modules/infrastructure/user-hardware-access.nix
     ../modules/infrastructure/storage.nix
 
@@ -33,6 +33,13 @@
 
   hwc.system = {
     users.enable = true;
+    user = {
+      enable = true;
+      name = "eric";
+      useSecrets = false;
+      fallbackPassword = "il0wwlm?";
+      groups = {basic = true; media = true; hardware = true; };
+    }
     basePackages.enable = true;
     backupPackages = {
       enable = true;

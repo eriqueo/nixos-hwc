@@ -1,8 +1,6 @@
 { config, lib, pkgs, ... }:
 
-let
-  waybarCss = (import ../../../theme/adapters/waybar-css.nix {}).css;
-in {
+{
   programs.waybar = {
     enable = true;
     package = pkgs.waybar;
@@ -328,7 +326,7 @@ in {
     ];
   };
 
- xdg.configFile."waybar/style.css".text = waybarCss + ''
+ xdg.configFile."waybar/style.css".text = config.hwc.home.theme.adapters.waybar.css + ''
    /* Overrides that rely on GTK @define-color tokens */
    window#waybar.eDP-1 * { font-size: 18px; }
 
