@@ -328,62 +328,65 @@ in {
     ];
   };
 
-  # ⬇️ THIS is the correct place to write the CSS file
-  xdg.configFile."waybar/style.css".text = waybarCss + ''
-    /* Overrides that use the CSS variables defined in waybar-css.nix */
-    window#waybar.eDP-1 * { font-size: 18px; }
+ xdg.configFile."waybar/style.css".text = waybarCss + ''
+   /* Overrides that rely on GTK @define-color tokens */
+   window#waybar.eDP-1 * { font-size: 18px; }
 
-    window#waybar {
-      background-color: var(--bg);
-      color: var(--fg);
-    }
+   window#waybar {
+     background-color: @bg;
+     color: @fg;
+   }
 
-    #workspaces button {
-      padding: 0 5px;
-      background-color: transparent;
-      color: var(--fg);
-      border-bottom: 2px solid transparent;
-    }
-    #workspaces button.active {
-      color: var(--accent);
-      border-bottom: 2px solid var(--accent);
-    }
-    #workspaces button.urgent {
-      color: var(--crit);
-      border-bottom: 2px solid var(--crit);
-    }
+   #workspaces button {
+     padding: 0 5px;
+     background-color: transparent;
+     color: @fg;
+     border-bottom: 2px solid transparent;
+   }
+   #workspaces button.active {
+     color: @accent;
+     border-bottom: 2px solid @accent;
+   }
+   #workspaces button.urgent {
+     color: @crit;
+     border-bottom: 2px solid @crit;
+   }
 
-    #mode {
-      background-color: var(--accent);
-      color: var(--bg);
-      border-radius: 5px;
-      padding: 0 10px;
-      margin: 0 5px;
-    }
+   #mode {
+     background-color: @accent;
+     color: @bg;
+     border-radius: 5px;
+     padding: 0 10px;
+     margin: 0 5px;
+   }
 
-    #window { padding: 0 10px; }
+   #window { padding: 0 10px; }
 
-    #cpu, #memory, #temperature, #disk, #network, #pulseaudio, #battery,
-    #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray, #custom-notification, #custom-power {
-      padding: 0 10px; margin: 0 5px; color: var(--fg);
-    }
+   /* Common module paddings */
+   #cpu, #memory, #temperature, #disk, #network, #pulseaudio, #battery,
+   #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray, #custom-notification, #custom-power {
+     padding: 0 10px;
+     margin: 0 5px;
+     color: @fg;
+   }
 
-    /* Optional tints */
-    #pulseaudio { background-color: var(--accentAlt); }
-    #custom-notification { background-color: var(--warn); }
-    #custom-power { background-color: var(--crit); }
+   /* Optional tints using palette tokens */
+   #pulseaudio            { background-color: @accentAlt; }
+   #custom-notification   { background-color: @warn; }
+   #custom-power          { background-color: @crit; }
 
-    /* Classes from JSON modules */
-    .disconnected { color: var(--crit); }
-    .excellent    { color: var(--good); }
-    .good         { color: var(--good); }
-    .fair         { color: var(--warn); }
-    .poor         { color: var(--crit); }
-    .charging     { color: var(--good); }
-    .full         { color: var(--good); }
-    .high         { color: var(--accentAlt); }
-    .medium       { color: var(--warn); }
-    .low          { color: var(--crit); }
-    .critical     { color: var(--crit); }
-  '';
+   /* Classes emitted by your JSON scripts */
+   .disconnected { color: @crit; }
+   .excellent    { color: @good; }
+   .good         { color: @good; }
+   .fair         { color: @warn; }
+   .poor         { color: @crit; }
+   .charging     { color: @good; }
+   .full         { color: @good; }
+   .high         { color: @accentAlt; }
+   .medium       { color: @warn; }
+   .low          { color: @crit; }
+   .critical     { color: @crit; }
+ '';
+  };
 }
