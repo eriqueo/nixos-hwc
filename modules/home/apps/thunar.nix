@@ -44,14 +44,11 @@
     ffmpegthumbnailer       # Video thumbnails
     
     # Additional file operations
-    trash-cli               # Command-line trash operations
-  ];
-  
-  # GTK configuration for file manager appearance
-
-  home.packages = lib.mkIf config.hwc.home.apps.thunar.enable [
+    trash-cli               # Command-line trash operations;
+  ] ++ (lib.mkIf config.hwc.home.apps.thunar.enable [
+    # Conditionally add the main thunar package itself
     pkgs.thunar
-  ];
+  ]); # <-- The conditional package is now merged here
   
   # XDG MIME associations for file types
   xdg.mimeApps = {
