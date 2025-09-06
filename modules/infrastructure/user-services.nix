@@ -46,11 +46,12 @@ in {
 
   config = lib.mkIf cfg.enable {
 
-    # Ensure home-manager runs after agenix has decrypted secrets
-    systemd.services."home-manager-${cfg.username}" = {
-      requires = [ "agenix.service" ];
-      after = [ "agenix.service" ];
-    };
+    # DISABLED: Modern agenix uses activation scripts, not systemd services
+    # Secrets are decrypted during system activation before home-manager runs
+    # systemd.services."home-manager-${cfg.username}" = {
+    #   requires = [ "agenix.service" ];
+    #   after = [ "agenix.service" ];
+    # };
 
     # SSH key setup service (handles both secrets and fallback)
     systemd.services."setup-ssh-keys-${cfg.username}" = lib.mkIf (homeCfg.ssh.enable or false) {

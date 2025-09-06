@@ -72,11 +72,9 @@ in {
       };
     };
 
-    # Service ordering to ensure agenix runs before user creation
-    systemd.services.agenix = {
-      before = [ "systemd-user-sessions.service" ];
-      wantedBy = [ "multi-user.target" ];
-    };
+    # DISABLED: Modern agenix uses activation scripts, not systemd services
+    # systemd.services.agenix.unitConfig.Before = "systemd-user-sessions.service";
+    # systemd.services.agenix.wantedBy = [ "multi-user.target" ];
 
     # Validation assertions
     assertions = lib.mkIf cfg.ensureSecretsExist [

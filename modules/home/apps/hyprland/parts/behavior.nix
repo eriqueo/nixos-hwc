@@ -159,8 +159,8 @@ in
     # Clipboard history
     "${mod}, V, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"
     
-    # Force regeneration - kitty Return binding should work
-    "${mod}, F24, nop"
+    # Force regeneration - kitty Return binding should work (F24 doesn't exist, so this does nothing)
+    "${mod}, F24, exec, true"
   ];
   
   bindm = [

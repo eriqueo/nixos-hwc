@@ -95,6 +95,18 @@
   };
 
   #============================================================================
+  # BLUETOOTH (Hardware Infrastructure)
+  #============================================================================
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+  
+  services.blueman.enable = true;
+  services.dbus.enable = true;
+  security.polkit.enable = true;
+
+  #============================================================================
   # CONTAINERS (Orchestration)
   #============================================================================
  # virtualisation = {
