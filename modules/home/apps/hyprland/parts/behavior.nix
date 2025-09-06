@@ -51,7 +51,7 @@ in
     "${mod}, O, exec, gpu-launch obsidian"
     "${mod}, E, exec, gpu-launch electron-mail"
     "${mod}, N, exec, kitty -e nvim"
-    "${mod}, T, exec, kitty -e htop"
+    "${mod}, T, exec, thunar"
     "${mod}, G, exec, gpu-toggle"
     "${mod} SHIFT, M, exec, hyprland-monitor-toggle"
     "${mod}, TAB, exec, hyprland-workspace-overview"
