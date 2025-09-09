@@ -6,15 +6,15 @@ let
   # This helper now returns a list containing a single line of CSS, or an empty list.
   defineColor = name: value:
     if value != null then
-      [ "@define-color ${name} #${value};" ]
+      [ "--${name}: #${value};" ]
     else
-      [ "/* @define-color ${name} is undefined in palette */" ];
+      [ "/* --${name} is undefined in palette */" ];
 in
 {
   options.hwc.home.theme.adapters.waybar.css = lib.mkOption {
     type = lib.types.lines;
     readOnly = true;
-    description = "A string of CSS @define-color variables generated from the active palette.";
+    description = "A string of CSS custom properties generated from the active palette.";
   };
 
   # Instead of one giant string, we now build a list of strings.
@@ -22,7 +22,8 @@ in
     let
       # A list of all the CSS lines
       lines =
-        [ "/* Generated from the ${c.name or "unnamed"} palette */" ]
+        [ "/* Generated from the ${c.name or "unnamed"} palette */"
+          ":root {" ]
         ++ (defineColor "background" (c.bg or null))
         ++ (defineColor "foreground" (c.fg or null))
         ++ (defineColor "accent" (c.accent or null))
@@ -46,7 +47,8 @@ in
         ++ (defineColor "color11" (c.ansi.brightYellow or null))
         ++ (defineColor "color12" (c.ansi.brightBlue or null))
         ++ (defineColor "color13" (c.ansi.brightMagenta or null))
-        ++ (defineColor "color14" (c.ansi.brightCyan or null));
+        ++ (defineColor "color14" (c.ansi.brightCyan or null))
+        ++ [ "}" ];
     in
     # Use the built-in function `lib.concatStringsSep` to join the list
     # of lines into a single string, separated by newlines.
