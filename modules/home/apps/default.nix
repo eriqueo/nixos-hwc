@@ -93,6 +93,13 @@ in
     ++ lib.optionals cfg.productivity.enable [
       obsidian
       libreoffice
+    ]
+    ++ [
+      # Fonts
+      jetbrains-mono
+      nerd-fonts.jetbrains-mono
+      fira-code
+      font-awesome
     ];
 
   #============================================================================
@@ -109,12 +116,6 @@ in
 
   # Font configuration
   fonts.fontconfig.enable = true;
-  home.packages = home.packages ++ (with pkgs; [
-    jetbrains-mono
-    nerd-fonts.jetbrains-mono
-    fira-code
-    font-awesome
-  ]);
 
 
   };
