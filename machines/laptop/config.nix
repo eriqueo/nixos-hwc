@@ -47,6 +47,8 @@
     ../../profiles/workstation.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
+    ../../profiles/hm.nix
+    ../../profiles/sys.nix
 
      ./home.nix
   ];
