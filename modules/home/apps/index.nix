@@ -1,5 +1,4 @@
-mkdir -p modules/home/apps
-cat > modules/home/apps/index.nix <<'EOF'
+
 # modules/home/apps/index.nix — auto-imports *.nix and */index.nix
 { lib, ... }:
 let
@@ -17,4 +16,3 @@ in
 {
   imports = filePaths ++ subIndex;
 }
-EOF
