@@ -138,6 +138,11 @@ in {
       # Script utilities would be provided by infrastructure layer if needed
     ];
 
+    # Font configuration for user applications
+    fonts.packages = with pkgs; [
+      (nerdfonts.override { fonts = [ "CascadiaCode" ]; })
+    ];
+
     # Hardware access and system setup handled by infrastructure layer
     # See: modules/infrastructure/user-hardware-access.nix
 
