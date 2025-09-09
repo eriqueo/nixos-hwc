@@ -1,18 +1,28 @@
-# HM entrypoint for Hyprland — imports parts only in Home Manager scope.
-{ lib, ... }:
+# modules/home/apps/hyprland/index.nix
+{ lib, pkgs, config, ... }:
 let
-  importIfExists = path: if builtins.pathExists path then [ path ] else [];
-in {
-  imports =
-    # Prefer flat layout (final)
-    (importIfExists ./parts/appearance.nix)
-    ++ (importIfExists ./parts/behavior.nix)
-    ++ (importIfExists ./parts/hardware.nix)
-    ++ (importIfExists ./parts/session.nix)
+  # 1) get themed tokens for Hyprland
+  hyprTheme = import ../../theme/adapters/hyprland.nix { inherit lib pkgs; };
 
-    # Fallback to old multi/ layout during transition
-    ++ (importIfExists ../multi/hyprland/parts/appearance.nix)
-    ++ (importIfExists ../multi/hyprland/parts/behavior.nix)
-    ++ (importIfExists ../multi/hyprland/parts/hardware.nix)
-    ++ (importIfExists ../multi/hyprland/parts/session.nix);
+  # 2) call parts as *functions*, not imports
+  appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = hyprTheme; };
+  behavior   = import ./parts/behavior.nix   { inherit lib; };
+  hardware   = if builtins.pathExists ./parts/hardware.nix
+               then import ./parts/hardware.nix { inherit lib; }
+               else {};
+  session    = import ./parts/session.nix    { inherit lib; };
+
+  cfg = config.features.hyprland;
+in
+{
+  # 3) options live in features.* (keep compat aliases if you’re mid-migration)
+  options.features.hyprland.enable = lib.mkEnableOption "Hyprland (HM) configuration";
+
+  # 4) write merged settings into the actual HM option
+  config = lib.mkIf cfg.enable {
+    wayland.windowManager.hyprland = {
+      enable = true;
+      settings = lib.mkMerge [ appearance behavior hardware session ];
+    };
+  };
 }

@@ -18,53 +18,62 @@
 #   Universal domains: behavior.nix, hardware.nix, session.nix, appearance.nix
 #
 
-# In modules/home/apps/hyprland/default.nix
+# modules/home/apps/hyprland/index.nix
+# Same behavior as your old default.nix; only the entrypoint name changes.
 { config, lib, pkgs, ... }:
 
 let
-  # This module now reads its OWN enable flag from the options
-  # defined in apps/default.nix
+  # Keep the same enable flag you already use today.
   cfg = config.hwc.home.apps.hyprland;
-# The entire output of this file is wrapped in a lib.mkIf
 
-    behavior = import ./parts/behavior.nix { inherit lib pkgs; };
-    hardware = import ./parts/hardware.nix { inherit lib pkgs; };
-    session = import ./parts/session.nix { inherit lib pkgs; };
-    themeSettings = config.hwc.home.theme.adapters.hyprland.settings;
-    appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = themeSettings; };
-    wallpaperPath = ./../../theme/nord-mountains.jpg;
-  in
-  lib.mkIf cfg.enable {
-  
-    home.packages = with pkgs; [
-      wofi hyprshot hypridle hyprpaper hyprlock cliphist wl-clipboard
-      brightnessctl networkmanager wirelesstools hyprsome
-    ] ++ session.packages;
+  # While migrating, parts might be in the flat folder *or* under multi/.
+  flatParts = ./. + "/parts";
+  legacyParts = ../multi/hyprland/parts;
+  partsDir =
+    if builtins.pathExists (flatParts + "/behavior.nix")
+    then flatParts
+    else legacyParts;
 
-    home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
+  behavior = import (partsDir + "/behavior.nix") { inherit lib pkgs; };
+  hardware = import (partsDir + "/hardware.nix") { inherit lib pkgs; };
+  session  = import (partsDir + "/session.nix")  { inherit lib pkgs; };
 
-    wayland.windowManager.hyprland = {
-      enable = true;
-      package = pkgs.hyprland;
-      settings = lib.mkMerge [
-        {
-          monitor = hardware.monitor;
-          workspace = hardware.workspace;
-          input = hardware.input;
-        }
-        (behavior // { "$mod" = "SUPER"; })
-        { exec-once = session.execOnce; }
-        appearance
-      ];
-    };
+  # Same theme adapter path you used before:
+  themeSettings = config.hwc.home.theme.adapters.hyprland.settings;
+  appearance    = import (partsDir + "/appearance.nix") { inherit lib pkgs; theme = themeSettings; };
 
-    home.file.".config/hypr/hyprpaper.conf".text = ''
-      preload = ${wallpaperPath}
-      wallpaper = eDP-1,${wallpaperPath}
-      wallpaper = DP-1,${wallpaperPath}
-      splash = false
-    '';
-  }
-  # --- End of existing code ---
+  # Same wallpaper path as before (relative to this file’s location)
+  wallpaperPath = ../../theme/nord-mountains.jpg;
+in
+lib.mkIf cfg.enable {
 
+  home.packages = with pkgs; [
+    wofi hyprshot hypridle hyprpaper hyprlock cliphist wl-clipboard
+    brightnessctl networkmanager wirelesstools hyprsome
+  ] ++ session.packages;
+
+  home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
+
+  wayland.windowManager.hyprland = {
+    enable = true;
+    package = pkgs.hyprland;
+    settings = lib.mkMerge [
+      {
+        monitor   = hardware.monitor;
+        workspace = hardware.workspace;
+        input     = hardware.input;
+      }
+      (behavior // { "$mod" = "SUPER"; })
+      { exec-once = session.execOnce; }
+      appearance
+    ];
+  };
+
+  home.file.".config/hypr/hyprpaper.conf".text = ''
+    preload = ${wallpaperPath}
+    wallpaper = eDP-1,${wallpaperPath}
+    wallpaper = DP-1,${wallpaperPath}
+    splash = false
+  '';
+}
 
