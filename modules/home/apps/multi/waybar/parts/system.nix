@@ -1,0 +1,1 @@
+{ ... }: { imports = [ ../../../../waybar/sys.nix ]; }
