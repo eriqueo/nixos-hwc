@@ -22,6 +22,30 @@ in
     #betterbird.enable  = lib.mkEnableOption "bettterbird appearance (HM)";
     #chromium-ui.enable  = lib.mkEnableOption "chromium appearance (HM)";
 
+    # Browser options
+    browser = {
+      firefox = lib.mkEnableOption "Firefox browser";
+      chromium = lib.mkEnableOption "Chromium browser";
+      librewolf = lib.mkEnableOption "LibreWolf browser";
+    };
+
+    # Application categories
+    multimedia = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable multimedia applications";
+      };
+    };
+
+    productivity = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable productivity applications";
+      };
+    };
+
     # future: betterbird.enable, firefox-ui.enable, chromium-ui.enable, etc.
   };
 
@@ -49,6 +73,48 @@ in
       message   = "Home apps aggregator must not set system packages/services.";
     }
   ];
+
+  #============================================================================
+  # BROWSER CONFIGURATION
+  #============================================================================
+  # Firefox Home Manager integration
+  programs.firefox.enable = cfg.browser.firefox;
+
+  # Browser packages via Home Manager
+  home.packages = with pkgs; []
+    ++ lib.optionals cfg.browser.chromium [ chromium ]
+    ++ lib.optionals cfg.browser.librewolf [ librewolf ]
+    ++ lib.optionals cfg.multimedia.enable [
+      vlc
+      mpv
+      pavucontrol
+      obs-studio
+    ]
+    ++ lib.optionals cfg.productivity.enable [
+      obsidian
+      libreoffice
+    ];
+
+  #============================================================================
+  # XDG PORTALS AND FONTS
+  #============================================================================
+  # XDG portal for file dialogs
+  xdg.portal = {
+    enable = true;
+    wlr.enable = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-gtk
+    ];
+  };
+
+  # Font configuration
+  fonts.fontconfig.enable = true;
+  home.packages = home.packages ++ (with pkgs; [
+    jetbrains-mono
+    nerd-fonts.jetbrains-mono
+    fira-code
+    font-awesome
+  ]);
 
 
   };
