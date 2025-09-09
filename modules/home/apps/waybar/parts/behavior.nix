@@ -2,16 +2,9 @@
 # Defines the module layout and configuration for each bar instance.
 { lib, pkgs, ... }:
 
-# The settings are a list of attribute sets, one for each monitor.
-[
-  # External monitor configuration (DP-4)
-  {
-    output = "DP-4";
-    layer = "top";
-    position = "top";
-    height = 60;
-    spacing = 4;
-
+let
+  # Define shared module lists and configurations
+  commonModules = {
     modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
@@ -19,7 +12,10 @@
       "custom/network" "bluetooth" "memory" "cpu" "temperature"
       "custom/battery" "tray" "custom/notification" "custom/power"
     ];
+  };
 
+  # Define shared widget configurations
+  commonWidgets = {
     "hyprland/workspaces" = {
       disable-scroll = true;
       all-outputs = false;
@@ -57,7 +53,6 @@
       on-click-right = "mpc next";
     };
 
-    tray = { spacing = 10; icon-size = 18; };
     clock = { format = "{:%H:%M:%S}"; format-alt = "{:%Y-%m-%d %H:%M:%S}"; };
 
     "custom/gpu" = { format = "{}"; exec = "waybar-gpu-status"; return-type = "json"; interval = 5; on-click = "waybar-gpu-toggle"; };
@@ -72,20 +67,30 @@
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "notify-send 'Notifications' 'No notification center configured'"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
-  }
+  };
 
-  # Laptop monitor configuration (eDP-1)
-  {
+  # External monitor base configuration
+  dp4Config = {
+    output = "DP-4";
+    layer = "top";
+    position = "top";
+    height = 60;
+    spacing = 4;
+    tray = { spacing = 10; icon-size = 18; };
+  };
+
+in
+[
+  # External monitor (DP-4) - merge base config with modules and widgets
+  (dp4Config // commonModules // commonWidgets)
+
+  # Laptop monitor (eDP-1) - explicitly define with same modules but different sizing
+  ({
     output = "eDP-1";
-    height = 80; # Larger for laptop screen
+    layer = "top";
+    position = "top";
+    height = 80;  # Larger for laptop screen
     spacing = 6;
-
-    # Inherit all module definitions from the first bar instance
-    # This is a powerful Waybar feature to avoid duplication.
-    # We only need to redefine things we want to change.
-    "inherit" = "DP-4";
-
-    # Example of an override for the laptop screen
-    tray = { spacing = 12; icon-size = 20; };
-  }
+    tray = { spacing = 12; icon-size = 20; };  # Override for laptop
+  } // commonModules // commonWidgets)
 ]
