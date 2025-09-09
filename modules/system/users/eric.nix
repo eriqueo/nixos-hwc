@@ -140,7 +140,7 @@ in {
 
     # Font configuration for user applications
     fonts.packages = with pkgs; [
-      (nerdfonts.override { fonts = [ "CascadiaCode" ]; })
+      nerd-fonts.caskaydia-cove
     ];
 
     # Hardware access and system setup handled by infrastructure layer
