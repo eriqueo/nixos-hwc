@@ -105,14 +105,8 @@ in
   #============================================================================
   # XDG PORTALS AND FONTS
   #============================================================================
-  # XDG portal for file dialogs
-  xdg.portal = {
-    enable = true;
-    wlr.enable = true;
-    extraPortals = with pkgs; [
-      xdg-desktop-portal-gtk
-    ];
-  };
+  # XDG portal configuration (Home Manager provides different options)
+  xdg.portal.enable = true;
 
   # Font configuration
   fonts.fontconfig.enable = true;
