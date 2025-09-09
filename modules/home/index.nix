@@ -1,5 +1,3 @@
-mkdir -p modules/home
-cat > modules/home/index.nix <<'EOF'
 # modules/home/index.nix — aggregates apps/, environment/, core/, theme/
 { lib, ... }:
 let
@@ -17,5 +15,4 @@ in
 {
   imports = filePaths ++ subIndex;
 }
-EOF
 
