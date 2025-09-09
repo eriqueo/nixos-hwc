@@ -57,6 +57,13 @@
           thunar.enable   = true;
           waybar.enable   = true;
           hyprland.enable = true;
+          browser = {
+            firefox = false;
+            chromium = true;
+            librewolf = true;
+          };
+          multimedia.enable = true;
+          productivity.enable = true;
         };
       # Enable complete shell environment
       hwc.home.shell = {
