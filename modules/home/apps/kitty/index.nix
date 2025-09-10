@@ -8,7 +8,7 @@ let
   # 1. Read the active color palette from the central config location.
   #    This is more robust than a direct file import.
   c = config.hwc.home.theme.colors;
-
+  cfg = config.features.kitty;
   # 2. Define a "smart" helper function to format colors for Kitty.
   #    It ensures the color code is always prefixed with a '#'.
   toKitty = colorStr:
@@ -17,6 +17,9 @@ let
 
 in
 {
+ options.features.kitty.enable =
+    lib.mkEnableOption "Enable the Kitty terminal emulator";
+
   #============================================================================
   # IMPLEMENTATION - Kitty terminal configuration
   #============================================================================
@@ -109,5 +112,6 @@ in
 
     # --- Shell integration (unchanged) ---
     shellIntegration.enableZshIntegration = true;
+  };
   };
 }
