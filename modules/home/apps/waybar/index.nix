@@ -8,6 +8,9 @@ let
   scripts   = import ./parts/scripts.nix   { inherit pkgs lib; };  # <— NEW: list of bins
 in
 {
+  options.features.waybar.enable =
+    lib.mkEnableOption "Enable Waybar";
+
   # remove: imports = [ ./parts/scripts.nix ... ];
   imports = [ ../../theme/adapters/waybar-css.nix ];
 
