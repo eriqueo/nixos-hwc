@@ -5,10 +5,7 @@
 
 { config, lib, pkgs, ... }:
 
-# This entire part is conditional on the main Waybar toggle.
-lib.mkIf config.hwc.home.apps.waybar.enable {
-
-  home.file = {
+{
 
     #========================================================================
     # GPU MANAGEMENT TOOLS (4 tools)
@@ -216,5 +213,4 @@ lib.mkIf config.hwc.home.apps.waybar.enable {
         fi
       '';
     };
-  };
 }
