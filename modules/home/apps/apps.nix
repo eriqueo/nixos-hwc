@@ -25,30 +25,7 @@
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-       options.hwc.home.apps = {
-         enable = lib.mkEnableOption "Desktop applications";
-
-         browser = {
-           firefox = lib.mkEnableOption "Firefox browser";
-           chromium = lib.mkEnableOption "Chromium browser";
-         };
-
-         multimedia = {
-           enable = lib.mkOption {
-             type = lib.types.bool;
-             default = true;
-             description = "Enable multimedia applications";
-           };
-         };
-
-         productivity = {
-           enable = lib.mkOption {
-             type = lib.types.bool;
-             default = true;
-             description = "Enable productivity applications";
-           };
-         };
-       };
+  # NOTE: Options moved to /modules/home/apps/default.nix to avoid conflicts
 
 
   #============================================================================
