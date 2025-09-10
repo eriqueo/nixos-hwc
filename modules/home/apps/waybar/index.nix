@@ -1,32 +1,22 @@
 # modules/home/apps/waybar/index.nix
 { config, lib, pkgs, ... }:
-
 let
-  enabled = config.features.waybar.enable or false;
-
-  flatParts   = ./. + "/parts";
-  legacyParts = ../multi/waybar/parts; # only used if you still have the old location
-  partsDir =
-    if builtins.pathExists (flatParts + "/behavior.nix")
-    then flatParts else legacyParts;
-
-  behavior   = import (partsDir + "/behavior.nix")   { inherit lib pkgs; };
-  appearance = import (partsDir + "/appearance.nix") { inherit config lib pkgs; };
-  packages   = import (partsDir + "/packages.nix")   { inherit lib pkgs; };
-  scripts    = import (partsDir + "/scripts.nix")    { inherit lib pkgs; };
+  cfg       = config.hwc.home.apps.waybar;
+  behavior  = import ./parts/behavior.nix  { inherit lib pkgs; };
+  appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
+  packages  = import ./parts/packages.nix  { inherit lib pkgs; };
+  scripts   = import ./parts/scripts.nix   { inherit pkgs lib; };  # <— NEW: list of bins
 in
 {
-  options.features.waybar.enable = lib.mkEnableOption "Enable Waybar (HM)";
+  # remove: imports = [ ./parts/scripts.nix ... ];
+  imports = [ ../../theme/adapters/waybar-css.nix ];
 
-  imports = [
-    ../../theme/adapters/waybar-css.nix
-   ];
-
-  config = lib.mkIf enabled {
-    home.packages = packages;
+  config = lib.mkIf cfg.enable {
+    # Include both regular packages and the generated script bins
+    home.packages = packages ++ scripts;
 
     programs.waybar = {
-      enable  = true;
+      enable = true;
       package = pkgs.waybar;
       settings = behavior;
     };
