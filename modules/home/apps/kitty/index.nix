@@ -114,4 +114,5 @@ in
     # --- Shell integration (unchanged) ---
     shellIntegration.enableZshIntegration = true;
   };
+  };
 }
