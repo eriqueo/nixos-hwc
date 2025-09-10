@@ -168,7 +168,7 @@ in
       if [[ "$STATUS" == "Discharging" ]]; then
         POWER_NOW="$(cat "$BATTERY_PATH/power_now"  2>/dev/null || echo 0)"
         ENERGY_NOW="$(cat "$BATTERY_PATH/energy_now" 2>/dev/null || echo 0)"
-        if [[ ${POWER_NOW:-0} -gt 0 ]]; then
+        if [[ ''${POWER_NOW:-0} -gt 0 ]]; then
           TIME_REMAINING=$(( ENERGY_NOW / POWER_NOW ))
           HOURS=$(( TIME_REMAINING ))
           MINUTES=$(( (TIME_REMAINING * 60) % 60 ))
@@ -179,15 +179,16 @@ in
       else
         TIME_STR="N/A"
       fi
-      if   [[ ${CAPACITY:-0} -gt 90 ]]; then ICON="󰁹"; CLASS="full"
-      elif [[ ${CAPACITY:-0} -gt 75 ]]; then ICON="󰂂"; CLASS="high"
-      elif [[ ${CAPACITY:-0} -gt 50 ]]; then ICON="󰁿"; CLASS="medium"
-      elif [[ ${CAPACITY:-0} -gt 25 ]]; then ICON="󰁼"; CLASS="low"
+      if   [[ ''${CAPACITY:-0} -gt 90 ]]; then ICON="󰁹"; CLASS="full"
+      elif [[ ''${CAPACITY:-0} -gt 75 ]]; then ICON="󰂂"; CLASS="high"
+      elif [[ ''${CAPACITY:-0} -gt 50 ]]; then ICON="󰁿"; CLASS="medium"
+      elif [[ ''${CAPACITY:-0} -gt 25 ]]; then ICON="󰁼"; CLASS="low"
       else                                   ICON="󰁺"; CLASS="critical"
       fi
       [[ "$STATUS" == "Charging" ]] && ICON="󰂄" && CLASS="charging"
-      echo "{\"text\":\"$ICON ${CAPACITY}%\",\"class\":\"$CLASS\",\"tooltip\":\"Battery: ${CAPACITY}%\\nStatus: $STATUS\\nHealth: $HEALTH\\nCycles: $CYCLE_COUNT\\nTime: $TIME_STR\"}"
+      echo "{\"text\":\"''$ICON ''${CAPACITY}%\",\"class\":\"''$CLASS\",\"tooltip\":\"Battery: ''${CAPACITY}%\\nStatus: ''$STATUS\\nHealth: ''$HEALTH\\nCycles: ''$CYCLE_COUNT\\nTime: ''$TIME_STR\"}"
     '')
+
 
     # ── System control helpers ───────────────────────────────────────────────
     (mk "waybar-disk-usage-gui" ''baobab &'')
