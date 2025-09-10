@@ -22,17 +22,18 @@ let
   behavior  = import (partsDir + "/behavior.nix")  { inherit lib pkgs; };
   appearance = import (partsDir + "/appearance.nix") { inherit config lib pkgs; };
   packages  = import (partsDir + "/packages.nix")  { inherit lib pkgs; };
+  scripts   = import (partsDir + "/scripts.nix")   { inherit config lib pkgs; };
 in
 {
   # Keep the same imports your default.nix had
   imports = [
     ../../theme/adapters/waybar-css.nix
-    (partsDir + "/scripts.nix")
   ];
 
   # Gate everything behind the existing enable flag
   config = lib.mkIf cfg.enable {
     home.packages = packages;
+    home.file = scripts;
 
     programs.waybar = {
       enable  = true;
