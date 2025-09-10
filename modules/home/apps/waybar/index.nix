@@ -13,6 +13,7 @@ let
   behavior   = import (partsDir + "/behavior.nix")   { inherit lib pkgs; };
   appearance = import (partsDir + "/appearance.nix") { inherit config lib pkgs; };
   packages   = import (partsDir + "/packages.nix")   { inherit lib pkgs; };
+  scripts    = import (partsDir + "/scripts.nix")    { inherit lib pkgs; };
 in
 {
   options.features.waybar.enable = lib.mkEnableOption "Enable Waybar (HM)";
