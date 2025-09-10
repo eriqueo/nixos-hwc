@@ -1,7 +1,7 @@
 # modules/home/apps/waybar/index.nix
 { config, lib, pkgs, ... }:
 let
-  cfg       = config.hwc.home.apps.waybar;
+  cfg       = config.features.waybar;
   behavior  = import ./parts/behavior.nix  { inherit lib pkgs; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
