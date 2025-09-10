@@ -18,12 +18,18 @@
 #   # Thunar enabled automatically when imported (package installation)
 
 { config, lib, pkgs, ... }:
+let
+  cfg = config.features.thunar;
 
+in
 {
+options.features.thunar.enable =
+    lib.mkEnableOption "Enable Thunar File Manager";
+
   #============================================================================
   # IMPLEMENTATION - Thunar file manager configuration
   #============================================================================
-  
+  config = lib.mkIf cfg.enable {
   # Thunar package and essential plugins
   home.packages = with pkgs; [
     # Main package
@@ -83,4 +89,5 @@
   xdg.configFile."xfce4/helpers.rc".text = ''
     TerminalEmulator=kitty
   '';
+};
 }
