@@ -20,8 +20,7 @@ in
 
   imports = [
     ../../theme/adapters/waybar-css.nix
-    (partsDir + "/scripts.nix")
-  ];
+   ];
 
   config = lib.mkIf enabled {
     home.packages = packages;
