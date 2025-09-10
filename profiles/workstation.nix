@@ -26,9 +26,7 @@
     # Services
     ../modules/services/backup/user-backup.nix
 
-    # Co-located app system parts (NixOS modules exporting infra tools)
-    ../modules/home/apps/hyprland/parts/system.nix
-    ../modules/home/apps/waybar/parts/system.nix
+
   ];
 
   hwc.system = {
