@@ -7,7 +7,7 @@
 
     users.eric = { pkgs, lib, config, ... }: {
       imports = [
-        ../modules/index.nix      
+          
         ../modules/home/index.nix
       ];
 
