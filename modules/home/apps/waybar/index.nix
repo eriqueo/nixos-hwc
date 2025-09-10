@@ -1,33 +1,36 @@
 # modules/home/apps/waybar/index.nix
-{ lib, pkgs, config, ... }:
+{ config, lib, pkgs, ... }:
+
 let
-  # 1) get CSS variables from the adapter
-  waybarCss = import ../../theme/adapters/waybar-css.nix { inherit lib pkgs; };
+  enabled = config.features.waybar.enable or false;
 
-  # 2) call parts as functions
-  appearance = import ./parts/appearance.nix { inherit lib; css = waybarCss; };
-  behavior   = import ./parts/behavior.nix   { inherit lib; };
-  packages   = import ./parts/packages.nix   { inherit lib pkgs; };
-  scripts    = import ./parts/scripts.nix    { inherit lib pkgs; };
+  flatParts   = ./. + "/parts";
+  legacyParts = ../multi/waybar/parts; # only used if you still have the old location
+  partsDir =
+    if builtins.pathExists (flatParts + "/behavior.nix")
+    then flatParts else legacyParts;
 
-  cfg = config.features.waybar;
+  behavior   = import (partsDir + "/behavior.nix")   { inherit lib pkgs; };
+  appearance = import (partsDir + "/appearance.nix") { inherit config lib pkgs; };
+  packages   = import (partsDir + "/packages.nix")   { inherit lib pkgs; };
 in
 {
-  options.features.waybar.enable = lib.mkEnableOption "Waybar (HM) configuration";
+  options.features.waybar.enable = lib.mkEnableOption "Enable Waybar (HM)";
 
-  config = lib.mkIf cfg.enable {
-    # Packages/scripts that belong to HM scope (additions are fine here)
+  imports = [
+    ../../theme/adapters/waybar-css.nix
+    (partsDir + "/scripts.nix")
+  ];
+
+  config = lib.mkIf enabled {
     home.packages = packages;
 
     programs.waybar = {
-      enable = true;
-      settings = behavior;      # e.g., JSON-like settings for modules
-      style    = appearance;    # CSS string rendered from adapter+appearance
+      enable  = true;
+      package = pkgs.waybar;
+      settings = behavior;
     };
 
-    # If your scripts part returns systemd user services or files:
-    # systemd.user.services = scripts.services or {};
-    # xdg.configFile."waybar/style.css".text = appearance; # alternative wiring
+    xdg.configFile."waybar/style.css".text = appearance;
   };
 }
-

@@ -2,17 +2,9 @@
 { config, lib, pkgs, ... }:
 
 let
-  # Allow either old or new toggle namespace during migration
-  # new (preferred):
-  newToggle = config.features.hyprland.enable or null;
-  # old (legacy):
-  oldToggle = config.hwc.home.apps.hyprland.enable or null;
-  enabled =
-    if newToggle != null then newToggle
-    else if oldToggle != null then oldToggle
-    else false;
+  enabled = config.features.hyprland.enable or false;
 
-  # Theme adapter + parts (parts are *functions*, not modules)
+  # Theme + parts (parts are functions)
   hyprTheme  = import ../../theme/adapters/hyprland.nix { inherit lib pkgs; };
   behavior   = import ./parts/behavior.nix   { inherit lib;        };
   hardware   = if builtins.pathExists ./parts/hardware.nix
@@ -23,15 +15,7 @@ let
   wallpaperPath = ../../theme/nord-mountains.jpg;
 in
 {
-  # expose the *new* option; you can keep/remove this once profiles all use it
-  options.features.hyprland.enable = lib.mkEnableOption "Hyprland (HM) configuration";
-
-  # optional: alias old → new so both work during refactor
-  imports = [
-    (lib.mkAliasOptionModule
-      [ "hwc" "home" "apps" "hyprland" "enable" ]
-      [ "features" "hyprland" "enable" ])
-  ];
+  options.features.hyprland.enable = lib.mkEnableOption "Enable Hyprland (HM)";
 
   config = lib.mkIf enabled {
     home.packages = with pkgs; [
@@ -46,9 +30,9 @@ in
       package = pkgs.hyprland;
       settings = lib.mkMerge [
         {
-          monitor   = hardware.monitor or null;
+          monitor   = hardware.monitor   or null;
           workspace = hardware.workspace or null;
-          input     = hardware.input or null;
+          input     = hardware.input     or null;
         }
         (behavior // { "$mod" = "SUPER"; })
         { exec-once = session.execOnce or []; }
