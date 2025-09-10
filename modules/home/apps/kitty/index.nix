@@ -23,6 +23,7 @@ in
   #============================================================================
   # IMPLEMENTATION - Kitty terminal configuration
   #============================================================================
+  config = lib.mkIf cfg.enable {
   programs.kitty = {
     enable = true;
     package = pkgs.kitty;
@@ -112,6 +113,5 @@ in
 
     # --- Shell integration (unchanged) ---
     shellIntegration.enableZshIntegration = true;
-  };
   };
 }
