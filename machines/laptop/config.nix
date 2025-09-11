@@ -6,7 +6,6 @@
 #
 # DEPENDENCIES (Upstream):
 #   - ./hardware.nix        (host-specific hardware facts)
-#   - ./home.nix            (user/home composition for this machine)
 #   - ../../profiles/base.nix
 #   - ../../profiles/workstation.nix
 #   - ../../profiles/security.nix
