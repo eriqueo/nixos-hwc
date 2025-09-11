@@ -6,7 +6,7 @@ let
   enabled = config.features.hyprland.enable or false;
 
   # Theme + parts (parts are functions)
-  theme  = import ../../parts/theme.nix { inherit config lib; };
+  theme  = import .parts/theme.nix { inherit config lib; };
   behavior   = import ./parts/behavior.nix   { inherit lib pkgs; };
   hardware   = if builtins.pathExists ./parts/hardware.nix
                then import ./parts/hardware.nix { inherit lib pkgs; } else {};
