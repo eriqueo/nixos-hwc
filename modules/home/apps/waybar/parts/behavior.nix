@@ -56,7 +56,7 @@ let
     clock = { format = "{:%H:%M:%S}"; format-alt = "{:%Y-%m-%d %H:%M:%S}"; };
 
     "custom/gpu" = { format = "{}"; exec = "waybar-gpu-status"; return-type = "json"; interval = 5; on-click = "waybar-gpu-toggle"; };
-    "custom/disk" = { format = "󰋊 {}%"; exec = "df -h / | awk 'NR==2 {print $5}' | sed 's/%//'"; interval = 30; };
+    "custom/disk" = { format = "󰋊 {}%"; exec = "waybar-disk-usage-gui"; interval = 30; };
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
