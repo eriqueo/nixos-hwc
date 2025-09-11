@@ -13,7 +13,6 @@ in
     lib.mkEnableOption "Enable Waybar";
 
   # remove: imports = [ ./parts/scripts.nix ... ];
-  imports = [ ../../theme/adapters/waybar-css.nix ];
 
   config = lib.mkIf cfg.enable {
     # Include both regular packages and the generated script bins
