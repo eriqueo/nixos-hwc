@@ -1,3 +1,4 @@
+
 # modules/home/apps/hyprland/index.nix
 { config, lib, pkgs, ... }:
 
@@ -5,12 +6,12 @@ let
   enabled = config.features.hyprland.enable or false;
 
   # Theme + parts (parts are functions)
-  hyprTheme  = import ../../theme/adapters/hyprland.nix { inherit lib pkgs; };
-  behavior   = import ./parts/behavior.nix   { inherit lib;        };
+  theme  = import ../../parts/theme.nix { inherit config lib; };
+  behavior   = import ./parts/behavior.nix   { inherit lib pkgs; };
   hardware   = if builtins.pathExists ./parts/hardware.nix
                then import ./parts/hardware.nix { inherit lib pkgs; } else {};
   session    = import ./parts/session.nix    { inherit lib pkgs;   };
-  appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = hyprTheme; };
+  appearance = import ./parts/appearance.nix { inherit lib pkgs; theme = theme; };
 
   wallpaperPath = ../../theme/nord-mountains.jpg;
 in

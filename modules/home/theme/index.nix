@@ -45,8 +45,6 @@ in
 
   imports = [
       ./adapters/gtk.nix
-      ./adapters/waybar-css.nix
-      ./adapters/hyprland.nix
     ];
 #============================================================================
 # IMPLEMENTATION - What actually gets configured
