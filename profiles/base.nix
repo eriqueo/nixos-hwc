@@ -155,11 +155,7 @@
   #============================================================================
   # Legacy hwc.home.* configuration removed
   # User management now handled by hwc.system.users in system domain
-  nixpkgs.config.packageOverrides = pkgs: {
-    tailscale = pkgs.tailscale.overrideAttrs (oldAttrs: {
-      doCheck = false;
-    });
-  };
+
   #============================================================================
   # SECURITY - Now handled by system domain modules
   #============================================================================
