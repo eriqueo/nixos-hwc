@@ -89,7 +89,7 @@ in
           enable = true;
           theme = { name = "Adwaita-dark"; package = pkgs.gnome-themes-extra; };
           iconTheme = { name = "Adwaita"; package = pkgs.adwaita-icon-theme; };
-          cursorTheme = { name = "Adwaita"; package = pkgs.adwaita-icon-theme; size = 24; };
+          cursorTheme = { name = "capitaine-cursors"; package = pkgs.capitaine-cursors; size = 24; };
           font = { name = "Inter"; size = 11; };
           gtk2.extraConfig = gtk2Extra;
           gtk3.extraConfig = gtk3Extra;

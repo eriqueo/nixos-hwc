@@ -20,7 +20,7 @@ let
   # 3. Build a list of all the CSS lines.
   lines =
     [ "/* Generated from the ${c.name or "unnamed"} palette */"
-      ":root {" ]
+       ]
     ++ (defineColor "background" (c.bg or null))
     ++ (defineColor "foreground" (c.fg or null))
     ++ (defineColor "accent" (c.accent or null))
@@ -45,7 +45,7 @@ let
     ++ (defineColor "color12" (c.ansi.brightBlue or null))
     ++ (defineColor "color13" (c.ansi.brightMagenta or null))
     ++ (defineColor "color14" (c.ansi.brightCyan or null))
-    ++ [ "}" ];
+    ;
 
 in
 # 4. Directly return the final value.

@@ -1,77 +1,78 @@
 { config, lib, pkgs, theme, ... }:
-
-
-# Ensure a newline separates the generated variables from the main styles.
+let
+  # Import the palette directly to get color values
+  palette = import ../../../theme/palettes/deep-nord.nix {};
+in
 ''
-  ${theme}
+/* Generated from ${palette.name} palette */
+window#waybar {
+  background-color: #${palette.bg};
+  color: #${palette.fg};
+}
 
-  /* Main Waybar styles follow */
-  window#waybar {
-    background-color: var(--background);
-    color: var(--foreground);
-  }
+#workspaces button {
+  padding: 0 5px;
+  background-color: transparent;
+  color: #${palette.fg};
+  border-bottom: 2px solid transparent;
+}
 
-  #workspaces button {
-    padding: 0 5px;
-    background-color: transparent;
-    color: var(--foreground);
-    border-bottom: 2px solid transparent;
-  }
-  #workspaces button.active {
-    color: var(--accent);
-    border-bottom: 2px solid var(--accent);
-  }
-  #workspaces button.urgent {
-    color: var(--crit);
-    border-bottom: 2px solid var(--crit);
-  }
+#workspaces button.active {
+  color: #${palette.accent};
+  border-bottom: 2px solid #${palette.accent};
+}
 
-  #mode {
-    background-color: var(--accent);
-    color: var(--background);
-    border-radius: 5px;
-    padding: 0 10px;
-    margin: 0 5px;
-  }
+#workspaces button.urgent {
+  color: #${palette.crit};
+  border-bottom: 2px solid #${palette.crit};
+}
 
-  #window { padding: 0 10px; }
+#mode {
+  background-color: #${palette.accent};
+  color: #${palette.bg};
+  border-radius: 5px;
+  padding: 0 10px;
+  margin: 0 5px;
+}
 
-  #cpu, #memory, #temperature, #disk, #network, #pulseaudio,
-  #battery, #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray,
-  #custom-notification, #custom-power {
-    padding: 0 10px;
-    margin: 0 5px;
-    color: var(--foreground);
-  }
+#window { padding: 0 10px; }
 
-  #cpu { background-color: var(--color14); }
-  #memory { background-color: var(--color13); }
-  #temperature { background-color: var(--color12); }
-  #disk { background-color: var(--color11); }
-  #network { background-color: var(--color10); }
-  #pulseaudio { background-color: var(--color9); }
-  #battery { background-color: var(--color8); }
-  #clock { background-color: var(--color7); }
-  #custom-gpu { background-color: var(--color6); }
-  #idle_inhibitor { background-color: var(--color5); }
-  #mpd { background-color: var(--color4); }
-  #tray { background-color: var(--color3); }
-  #custom-notification { background-color: var(--color2); }
-  #custom-power { background-color: var(--color1); }
+#cpu, #memory, #temperature, #disk, #network, #pulseaudio,
+#battery, #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray,
+#custom-notification, #custom-power {
+  padding: 0 10px;
+  margin: 0 5px;
+  color: #${palette.fg};
+}
 
-  /* Specific styles for custom modules based on their class */
-  .intel { color: var(--color4); }
-  .nvidia { color: var(--color2); }
-  .performance { color: var(--color1); }
-  .disconnected { color: var(--error); }
-  .excellent { color: var(--success); }
-  .good { color: var(--info); }
-  .fair { color: var(--warning); }
-  .poor { color: var(--error); }
-  .charging { color: var(--success); }
-  .full { color: var(--success); }
-  .high { color: var(--info); }
-  .medium { color: var(--warning); }
-  .low { color: var(--error); }
-  .critical { color: var(--error); }
+#cpu { background-color: #${palette.surface1}; }
+#memory { background-color: #${palette.surface2}; }
+#temperature { background-color: #${palette.muted}; }
+#disk { background-color: #${palette.surface1}; }
+#network { background-color: #${palette.surface2}; }
+#pulseaudio { background-color: #${palette.muted}; }
+#battery { background-color: #${palette.surface1}; }
+#clock { background-color: #${palette.surface2}; color: #${palette.fg}; }
+#custom-gpu { background-color: #${palette.muted}; }
+#idle_inhibitor { background-color: #${palette.surface1}; }
+#mpd { background-color: #${palette.surface2}; }
+#tray { background-color: #${palette.muted}; }
+#custom-notification { background-color: #${palette.surface1}; }
+#custom-power { background-color: #${palette.surface2}; }
+
+/* Specific styles for custom modules based on their class */
+.intel { color: #${palette.ansi.blue}; }
+.nvidia { color: #${palette.ansi.green}; }
+.performance { color: #${palette.ansi.red}; }
+.disconnected { color: #${palette.crit}; }
+.excellent { color: #${palette.good}; }
+.good { color: #${palette.info}; }
+.fair { color: #${palette.warn}; }
+.poor { color: #${palette.crit}; }
+.charging { color: #${palette.good}; }
+.full { color: #${palette.good}; }
+.high { color: #${palette.info}; }
+.medium { color: #${palette.warn}; }
+.low { color: #${palette.crit}; }
+.critical { color: #${palette.crit}; }
 ''
