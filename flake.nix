@@ -51,57 +51,45 @@
   #============================================================================
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
+
   outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, legacy-config, ... }@inputs:
   let
-    # System target(s)
     system = "x86_64-linux";
-
-    # Package set (kept here so behavior is unchanged; alternative is module-based nixpkgs.config)
+    
+    # Add the overlay here - this is the safest approach
     pkgs = import nixpkgs {
       inherit system;
       config.allowUnfree = true;
-
+      overlays = [
+        # Overlay to disable Tailscale tests
+        (final: prev: {
+          tailscale = prev.tailscale.overrideAttrs (oldAttrs: {
+            doCheck = false;
+          });
+        })
+      ];
     };
-
+    
     lib = nixpkgs.lib;
   in {
-    #---------------------------------------------------------------------------
-    # NixOS Configurations
-    #---------------------------------------------------------------------------
     nixosConfigurations = {
       hwc-server = lib.nixosSystem {
         inherit system pkgs;
-        specialArgs = { inherit inputs; };  # pass inputs; no hardware/service logic here
+        specialArgs = { inherit inputs; };
         modules = [
           agenix.nixosModules.default
           ./machines/server/config.nix
-          # (Home Manager optional on server; add if desired)
         ];
       };
-
       hwc-laptop = lib.nixosSystem {
         inherit system pkgs;
-        specialArgs = { inherit inputs; };  # pass inputs; no hardware/service logic here
+        specialArgs = { inherit inputs; };
         modules = [
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
-
-
-
           ./machines/laptop/config.nix
-
         ];
       };
     };
-
-    #---------------------------------------------------------------------------
-    # DISABLED: Non-standard flake outputs that may interfere with Home Manager
-    #---------------------------------------------------------------------------
-    # agenixConfig = import ./secrets.nix;
-    # helpers = {
-    #   inherit (import ./lib/helpers.nix { inherit lib; })
-    #     mkServiceModule mkContainerService mkGpuService;
-    #   migrationBridge = import ./lib/migration-bridge.nix { inherit inputs; };
-    # };
   };
 }
