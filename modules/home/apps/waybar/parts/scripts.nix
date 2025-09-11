@@ -24,8 +24,8 @@ in
 
     case "''$CURRENT_MODE" in
       intel)       ICON="󰢮"; CLASS="intel";       TOOLTIP="Intel Mode: ''$CURRENT_GPU" ;;
-      nvidia)      ICON="󰾲"; CLASS="nvidia";      TOOLTIP="NVIDIA Mode: ''$CURRENT_GPU\nPower: ''$NVIDIA_POWER W | Temp: ''$NVIDIA_TEMP°C" ;;
-      performance) ICON="⚡";  CLASS="performance"; TOOLTIP="Performance Mode: Auto-GPU Selection\nNVIDIA: ''$NVIDIA_POWER W | ''$NVIDIA_TEMP°C" ;;
+      nvidia)      ICON="󰾲"; CLASS="nvidia";      TOOLTIP="NVIDIA Mode: ''$CURRENT_GPU\\nPower: ''$NVIDIA_POWER W | Temp: ''$NVIDIA_TEMP°C" ;;
+      performance) ICON="⚡";  CLASS="performance"; TOOLTIP="Performance Mode: Auto-GPU Selection\\nNVIDIA: ''$NVIDIA_POWER W | ''$NVIDIA_TEMP°C" ;;
       *)           ICON="󰢮"; CLASS="intel";       TOOLTIP="Intel Mode (Default): ''$CURRENT_GPU" ;;
     esac
 
@@ -65,7 +65,7 @@ in
   '';
 
   gpu-menu = sh "waybar-gpu-menu" ''
-    CHOICE=$(printf "Launch next app with NVIDIA\nView GPU usage\nOpen nvidia-settings\nToggle Performance Mode" | wofi --dmenu --prompt "GPU Options:")
+    CHOICE=$(printf "Launch next app with NVIDIA\\nView GPU usage\\nOpen nvidia-settings\\nToggle Performance Mode" | wofi --dmenu --prompt "GPU Options:")
     case "''$CHOICE" in
       "Launch next app with NVIDIA") touch /tmp/gpu-next-nvidia; notify-send "GPU Mode" "Next app will use NVIDIA 󰾲" -i gpu-card ;;
       "View GPU usage")             kitty --title "GPU Monitor" -e nvtop & ;;
@@ -100,7 +100,7 @@ in
     # Get temperature
     TEMP=$(sensors 2>/dev/null | grep -E "(Core 0|Tctl)" | head -1 | awk '{print ''$3}' | sed 's/+//;s/°C.*//' || echo "0")
     
-    printf '{"text":"CPU: %s%% MEM: %s%% TEMP: %s°C","class":"normal","tooltip":"CPU Usage: %s%%\nMemory Usage: %s%%\nTemperature: %s°C"}\n' \
+    printf '{"text":"CPU: %s%% MEM: %s%% TEMP: %s°C","class":"normal","tooltip":"CPU Usage: %s%%\\nMemory Usage: %s%%\\nTemperature: %s°C"}\n' \
            "''$CPU_USAGE" "''$MEM_PERCENT" "''$TEMP" "''$CPU_USAGE" "''$MEM_PERCENT" "''$TEMP"
   '';
 
@@ -121,11 +121,11 @@ in
       elif [[ ''$SIGNAL -gt 50 ]]; then ICON="󰤥"; CLASS="good"
       elif [[ ''$SIGNAL -gt 25 ]]; then ICON="󰤢"; CLASS="fair"
       else                             ICON="󰤟"; CLASS="poor"; fi
-      TOOLTIP="WiFi: ''$CONN_NAME\nSignal: ''$SIGNAL%\nSpeed: ''$SPEED"
+      TOOLTIP="WiFi: ''$CONN_NAME\\nSignal: ''$SIGNAL%\\nSpeed: ''$SPEED"
     else
       ICON="󰈀"; CLASS="ethernet"
       SPEED=$(ethtool "''$DEVICE" 2>/dev/null | grep "Speed:" | awk '{print ''$2}' || echo "Unknown")
-      TOOLTIP="Ethernet: ''$CONN_NAME\nSpeed: ''$SPEED"
+      TOOLTIP="Ethernet: ''$CONN_NAME\\nSpeed: ''$SPEED"
     fi
     printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
   '';
@@ -161,7 +161,7 @@ in
     elif [[ ''$CAPACITY -gt 25 ]]; then ICON="󰁼"; CLASS="low"
     fi
     [[ "''$STATUS" == "Charging" ]] && ICON="󰂄" && CLASS="charging"
-    printf '{"text":"%s %s%%","class":"%s","tooltip":"Battery: %s%%\nStatus: %s\nHealth: %s\nCycles: %s\nTime: %s"}\n' \
+    printf '{"text":"%s %s%%","class":"%s","tooltip":"Battery: %s%%\\nStatus: %s\\nHealth: %s\\nCycles: %s\\nTime: %s"}\n' \
            "''$ICON" "''$CAPACITY" "''$CLASS" "''$CAPACITY" "''$STATUS" "''$HEALTH" "''$CYCLE_COUNT" "''$TIME_STR"
   '';
 
@@ -172,7 +172,7 @@ in
 
   # Improved network settings with better error handling
   network-settings = sh "waybar-network-settings" ''
-    CHOICE=$(printf "WiFi Manager (nmtui)\nNetwork Connections Editor\nVPN Status\nNetwork Speed Test\nNetwork Diagnostics" | wofi --dmenu --prompt "Network Tools:")
+    CHOICE=$(printf "WiFi Manager (nmtui)\\nNetwork Connections Editor\\nVPN Status\\nNetwork Speed Test\\nNetwork Diagnostics" | wofi --dmenu --prompt "Network Tools:")
     case "''$CHOICE" in
       "WiFi Manager (nmtui)")         kitty --title "WiFi Manager" -e nmtui & ;;
       "Network Connections Editor")   nm-connection-editor & ;;

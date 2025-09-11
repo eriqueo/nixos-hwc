@@ -50,4 +50,5 @@ let
 in
 # 4. Directly return the final value.
 #    Join the list of lines into a single string, separated by newlines.
-lib.concatStringsSep "\n" lines;
+lib.concatStringsSep "\n" lines
+
