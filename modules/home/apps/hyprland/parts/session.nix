@@ -19,6 +19,15 @@
 let
   # Dependencies for scripts
   inherit (pkgs) hyprland procps libnotify jq coreutils gawk lm_sensors systemd;
+  wayland.windowManager.hyprland.settings = {
+    exec-once = [
+      "hyprctl setcursor Adwaita 24"
+    ];
+    env = [
+      "XCURSOR_THEME,Adwaita"
+      "XCURSOR_SIZE,24"
+    ];
+  };
   
   # Startup script for launching applications to specific workspaces
   hyprlandStartupScript = pkgs.writeScriptBin "hyprland-startup" ''

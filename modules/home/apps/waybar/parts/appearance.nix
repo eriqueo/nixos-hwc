@@ -37,7 +37,7 @@ window#waybar {
 
 #window { padding: 0 10px; }
 
-#cpu, #memory, #temperature, #disk, #network, #pulseaudio,
+#cpu, #memory, #temperature,  #network, #pulseaudio,
 #battery, #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power {
   padding: 0 10px;
@@ -48,7 +48,6 @@ window#waybar {
 #cpu { background-color: #${palette.surface1}; }
 #memory { background-color: #${palette.surface2}; }
 #temperature { background-color: #${palette.muted}; }
-#disk { background-color: #${palette.surface1}; }
 #network { background-color: #${palette.surface2}; }
 #pulseaudio { background-color: #${palette.muted}; }
 #battery { background-color: #${palette.surface1}; }
