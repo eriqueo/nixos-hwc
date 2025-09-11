@@ -1,12 +1,9 @@
 { config, lib, pkgs, ... }:
 
-let
-  # Read the generated CSS variables from the option provided by the adapter.
-  cssVars = config.hwc.home.theme.adapters.waybar.css;
-in
+
 # Ensure a newline separates the generated variables from the main styles.
 ''
-  ${cssVars}
+  ${theme}
 
   /* Main Waybar styles follow */
   window#waybar {
