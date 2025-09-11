@@ -25,7 +25,9 @@
 #   - Secrets go through Agenix (modules/security/secrets), not inline here.
 
 { config, lib, pkgs, ... }:
-
+let
+  nvidiaPackage = config.boot.kernelPackages.nvidiaPackages.stable;
+in
 {
   ##############################################################################
   ##  MACHINE: HWC-LAPTOP
@@ -46,7 +48,7 @@
     ../../profiles/workstation.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
-    ../../profiles/hm.nix
+    (../../profiles/hm.nix {inherit nvidiaPackage;})
     ../../profiles/sys.nix
 
      

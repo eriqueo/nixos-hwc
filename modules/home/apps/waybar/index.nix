@@ -1,5 +1,9 @@
 # modules/home/apps/waybar/index.nix
+
+# The function signature is `{ config, lib, pkgs, ... }`.
+# We will access the special arguments via `config._module.args`.
 { config, lib, pkgs, ... }:
+
 let
   enabled = config.features.waybar.enable or false;
 
@@ -9,31 +13,32 @@ let
     kitty wofi jq curl
     networkmanager iw ethtool
     libnotify mesa-demos nvtopPackages.full lm_sensors acpi powertop
-    speedtest-cli hyprland 
+    speedtest-cli hyprland
     baobab btop
   ] ++ [
-    # This is the special sauce: get the NVIDIA package from the NixOS config.
-    # This requires Step 3 below.
-    kernelPackages.nvidiaPackages.stable  
+    # THIS IS THE CORRECT, FINAL SYNTAX.
+    # We access the special arguments passed to the module via `config._module.args`.
+   nvidiaPackage
   ];
 
   # 2. Create the PATH string from the package list.
   scriptPathBin = lib.makeBinPath scriptPkgs;
+
+  # These are your existing parts. This logic is correct.
   cfg       = config.features.waybar;
-  theme     = import ./parts/theme.nix     {inherit config lib; };
+  theme     = import ./parts/theme.nix     { inherit config lib; };
   behavior  = import ./parts/behavior.nix  { inherit lib pkgs; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
-  scripts   = import ./parts/scripts.nix   { inherit  pkgs lib; pathBin = scriptPathBin; };  # <— NEW: list of bins
+  scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
+
 in
 {
   options.features.waybar.enable =
     lib.mkEnableOption "Enable Waybar";
 
-  # remove: imports = [ ./parts/scripts.nix ... ];
-
   config = lib.mkIf enabled {
-    # Include both regular packages and the generated script bins
+    # Include both the script dependencies and the generated script bins.
     home.packages = scriptPkgs ++ (lib.attrValues scripts);
 
     programs.waybar = {

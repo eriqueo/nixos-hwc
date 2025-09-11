@@ -1,45 +1,43 @@
-# profiles/hm.nix (Corrected)
-{ ... }:
-{
-  home-manager = {
+# profiles/hm.nix (Final, Corrected Version with Function Signature)
 
-    extraSpecialArgs = {
-      kernelPackages = config.boot.kernelPackages;
-    };
+# This is a NixOS module, so it must be a function that accepts arguments.
+# The `config` argument here is the top-level NixOS system configuration.
+{ config, pkgs, lib, ... }:
+
+{
+  # This is the top-level `home-manager` attribute for your NixOS configuration.
+  home-manager = {
+ 
 
     useGlobalPkgs = true;
     useUserPackages = true;
 
-    users.eric = { pkgs, lib, ... }: {
+    # This defines the configuration for the user 'eric'.
+    users.eric = {
+      _module.args.nvidiaPackage = nvidiaPackage;
+      # This block now only contains settings specific to the user 'eric'.
       imports = [ ../modules/home/index.nix ];
 
-      # All assignments must go inside the 'config' block.
-   
+      home.stateVersion = "24.05";
 
-        # This sets the state version for Home Manager.
-        home.stateVersion = "24.05";
-    
-        # NEW: use features.* toggles (no old deck)
-        features = {
-          hyprland.enable = true;
-          waybar.enable   = true;
-          kitty.enable    = true;
-          thunar.enable   = true;
-          # add more per-app toggles here as you migrate them
-        };
+      features = {
+        hyprland.enable = true;
+        waybar.enable   = true;
+        kitty.enable    = true;
+        thunar.enable   = true;
+      };
 
-        # your theme/shell toggles moved from the machine file
-        hwc.home.theme.palette = "deep-nord";
-        hwc.home.shell = {
+      hwc.home.theme.palette = "deep-nord";
+
+      hwc.home.shell = {
+        enable = true;
+        modernUnix = true;
+        git.enable = true;
+        zsh = {
           enable = true;
-          modernUnix = true;
-          git.enable = true;
-          zsh = {
-            enable = true;
-            starship = true;
-            autosuggestions = true;
-            syntaxHighlighting = true;
-          };
+          starship = true;
+          autosuggestions = true;
+          syntaxHighlighting = true;
         };
       };
     };
