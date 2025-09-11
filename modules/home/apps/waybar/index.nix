@@ -9,12 +9,12 @@ let
     kitty wofi jq curl
     networkmanager iw ethtool
     libnotify mesa-demos nvtopPackages.full lm_sensors acpi powertop
-    speedtest-cli hyprland
+    speedtest-cli hyprland 
     baobab btop
   ] ++ [
     # This is the special sauce: get the NVIDIA package from the NixOS config.
     # This requires Step 3 below.
-    config.nixosConfig.boot.kernelPackages.nvidiaPackages.stable
+    kernelPackages.nvidiaPackages.stable  
   ];
 
   # 2. Create the PATH string from the package list.
@@ -24,7 +24,7 @@ let
   behavior  = import ./parts/behavior.nix  { inherit lib pkgs; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
-  scripts   = import ./parts/scripts.nix   { inherit  pkgs lib pathBin = scriptPathBin;; };  # <— NEW: list of bins
+  scripts   = import ./parts/scripts.nix   { inherit  pkgs lib; pathBin = scriptPathBin; };  # <— NEW: list of bins
 in
 {
   options.features.waybar.enable =
@@ -32,9 +32,9 @@ in
 
   # remove: imports = [ ./parts/scripts.nix ... ];
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf enabled {
     # Include both regular packages and the generated script bins
-    home.packages = packages ++ scripts;
+    home.packages = scriptPkgs ++ (lib.attrValues scripts);
 
     programs.waybar = {
       enable = true;
