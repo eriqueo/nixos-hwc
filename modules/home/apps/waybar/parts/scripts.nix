@@ -188,7 +188,7 @@ in
     elif command -v xfce4-power-manager-settings >/dev/null 2>&1; then
       xfce4-power-manager-settings &
     else
-      kitty --title "Power Info" -e sh -c "acpi -V && echo ''; echo 'Press Enter to close...'; read" &
+      kitty --title "Power Info" -e sh -c "acpi -V &&  echo 'Press Enter to close...'; read" &
     fi
   '';
 
@@ -196,7 +196,7 @@ in
     if command -v mission-center >/dev/null 2>&1; then
       mission-center &
     else
-      kitty --title "Sensors" -e sh -c "sensors && echo ''; echo 'Press Enter to close...'; read" &
+      kitty --title "Sensors" -e sh -c "sensors &&  echo 'Press Enter to close...'; read" &
     fi
   '';
 }
