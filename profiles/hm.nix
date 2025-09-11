@@ -21,7 +21,7 @@
 
       features = {
         hyprland.enable = true;
-        waybar.enable   = true;
+        waybar.enable   = false;
         kitty.enable    = true;
         thunar.enable   = true;
       };
