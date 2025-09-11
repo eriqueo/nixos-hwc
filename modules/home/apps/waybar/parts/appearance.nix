@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, theme, ... }:
 
 
 # Ensure a newline separates the generated variables from the main styles.
