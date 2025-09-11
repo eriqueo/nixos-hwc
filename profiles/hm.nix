@@ -6,14 +6,10 @@
     useUserPackages = true;
 
     users.eric = { pkgs, lib, config, ... }: {
-      imports = [
-          
-        ../modules/home/index.nix
-      ];
-
-      # carry over the machine’s HM specifics here
+      imports = [ ../modules/home/index.nix ];
+      nixosConfig = config;
       home.stateVersion = "24.05";
-
+      config = {
       # NEW: use features.* toggles (no old deck)
       features = {
         hyprland.enable = true;
@@ -35,6 +31,7 @@
           autosuggestions = true;
           syntaxHighlighting = true;
         };
+      };
       };
     };
   };
