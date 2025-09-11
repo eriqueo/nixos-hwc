@@ -74,6 +74,12 @@ in
     smart_split = false;
     smart_resizing = true;
   };
+home.pointerCursor = {
+  name = "Adwaita";
+  package = pkgs.adwaita-icon-theme;
+  size = 24;
+  gtk.enable = true;
+};
 
   misc = {
     disable_hyprland_logo = true;

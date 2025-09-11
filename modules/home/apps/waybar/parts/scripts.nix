@@ -145,44 +145,44 @@ in
            "''$CPU_USAGE" "''$MEM_PERCENT" "''$TEMP" "''$CPU_USAGE" "''$MEM_PERCENT" "''$TEMP"
   '';
 
-  "network-status" = sh "waybar-network-status" ''
-    ACTIVE_CONN=$(nmcli -t -f NAME,TYPE,DEVICE connection show --active | grep -Ev ':(loopback|tun|tap|wireguard|tailscale|bridge):' | head -1 || true)
+ "network-status" = sh "waybar-network-status" ''
+  ACTIVE_CONN=$(nmcli -t -f NAME,TYPE,DEVICE connection show --active | grep -Ev ':(loopback|tun|tap|wireguard|tailscale|bridge):' | head -1 || true)
 
-    if [[ -z "''$ACTIVE_CONN" ]]; then
-      printf '{"text":"󰤭","class":"disconnected","tooltip":"No network connection"}\n'
-      exit 0
-    fi
+  if [[ -z "''$ACTIVE_CONN" ]]; then
+    printf '{"text":"󰤭","class":"disconnected","tooltip":"No network connection"}\n'
+    exit 0
+  fi
 
-    CONN_NAME=$(echo "''$ACTIVE_CONN" | cut -d: -f1)
-    CONN_TYPE=$(echo "''$ACTIVE_CONN" | cut -d: -f2)
-    DEVICE=$(echo "''$ACTIVE_CONN" | cut -d: -f3)
+  CONN_NAME=$(echo "''$ACTIVE_CONN" | cut -d: -f1)
+  CONN_TYPE=$(echo "''$ACTIVE_CONN" | cut -d: -f2)
+  DEVICE=$(echo "''$ACTIVE_CONN" | cut -d: -f3)
 
-    if [[ "''$CONN_TYPE" == "802-11-wireless" ]]; then
-      SIGNAL=$(nmcli -t -f IN-USE,SIGNAL dev wifi | awk -F: ''$'\''$1=="*" {print $2; exit}'$'\'')
-      SPEED=$(iw dev "''$DEVICE" link 2>/dev/null | awk -F':' '/tx bitrate/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')
-      SIGNAL="''${SIGNAL:-0}"
-      SPEED="''${SPEED:-Unknown}"
+  if [[ "''$CONN_TYPE" == "802-11-wireless" ]]; then
+    SIGNAL=$(nmcli -t -f IN-USE,SIGNAL dev wifi | awk -F: '$1=="*" {print $2; exit}')
+    SPEED=$(iw dev "''$DEVICE" link 2>/dev/null | awk -F':' '/tx bitrate/ {gsub(/^[ \t]+/,"",$2); print $2; exit}')
+    SIGNAL="''${SIGNAL:-0}"
+    SPEED="''${SPEED:-Unknown}"
 
-      if [[ ''$SIGNAL -gt 75 ]]; then
-        ICON="󰤨"; CLASS="excellent"
-      elif [[ ''$SIGNAL -gt 50 ]]; then
-        ICON="󰤥"; CLASS="good"
-      elif [[ ''$SIGNAL -gt 25 ]]; then
-        ICON="󰤢"; CLASS="fair"
-      else
-        ICON="󰤟"; CLASS="poor"
-      fi
-      TOOLTIP="WiFi: ''$CONN_NAME\\nSignal: ''$SIGNAL%\\nSpeed: ''$SPEED"
+    if [[ ''$SIGNAL -gt 75 ]]; then
+      ICON="󰤨"; CLASS="excellent"
+    elif [[ ''$SIGNAL -gt 50 ]]; then
+      ICON="󰤥"; CLASS="good"
+    elif [[ ''$SIGNAL -gt 25 ]]; then
+      ICON="󰤢"; CLASS="fair"
     else
-      ICON="󰈀"
-      CLASS="ethernet"
-      SPEED=$(ethtool "''$DEVICE" 2>/dev/null | awk -F': ' '/Speed:/ {print $2; exit}')
-      SPEED="''${SPEED:-Unknown}"
-      TOOLTIP="Ethernet: ''$CONN_NAME\\nSpeed: ''$SPEED"
+      ICON="󰤟"; CLASS="poor"
     fi
+    TOOLTIP="WiFi: ''$CONN_NAME\\nSignal: ''$SIGNAL%\\nSpeed: ''$SPEED"
+  else
+    ICON="󰈀"
+    CLASS="ethernet"
+    SPEED=$(ethtool "''$DEVICE" 2>/dev/null | awk -F': ' '/Speed:/ {print $2; exit}')
+    SPEED="''${SPEED:-Unknown}"
+    TOOLTIP="Ethernet: ''$CONN_NAME\\nSpeed: ''$SPEED"
+  fi
 
-    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
-  '';
+  printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
+'';
 
   "battery-health" = sh "waybar-battery-health" ''
     BATTERY_PATH="/sys/class/power_supply/BAT0"
@@ -201,8 +201,9 @@ in
       POWER_NOW=$(cat "''$BATTERY_PATH/power_now" 2>/dev/null || echo "0")
       ENERGY_NOW=$(cat "''$BATTERY_PATH/energy_now" 2>/dev/null || echo "0")
       if [[ ''${POWER_NOW:-0} -gt 0 ]]; then
+        # hours as float: µWh / µW → hours
         HOURS_FLOAT=$(awk -v e="''$ENERGY_NOW" -v p="''$POWER_NOW" 'BEGIN { printf "%.2f", (e/p) }')
-        HOURS_INT=${HOURS_FLOAT%.*}
+        HOURS_INT=''${HOURS_FLOAT%.*}
         FRACTION=$(awk -v h="''$HOURS_FLOAT" 'BEGIN { printf "%.2f", h - int(h) }')
         MINUTES=$(awk -v f="''$FRACTION" 'BEGIN { printf "%d", (f*60) }')
         TIME_STR="''${HOURS_INT}h ''${MINUTES}m"
@@ -212,7 +213,7 @@ in
     else
       TIME_STR="N/A"
     fi
-
+    
     ICON="󰁺"; CLASS="critical"
     if [[ ''$CAPACITY -gt 90 ]]; then
       ICON="󰁹"; CLASS="full"
@@ -231,16 +232,6 @@ in
            "''$ICON" "''$CAPACITY" "''$CLASS" "''$CAPACITY" "''$STATUS" "''$HEALTH" "''$CYCLE_COUNT" "''$TIME_STR"
   '';
 
-  "disk-usage" = sh "waybar-disk-usage-gui" ''
-    kitty --title "Disk Usage" -e ncdu "''${HOME:-/}" &
-  '';
-
-  "disk-usage-status" = sh "waybar-disk-usage-status" ''
-    DISK=$(df -h / | awk 'NR==2 {print $5 " (" $3 "/" $2 ")"}')
-    TOOLTIP=$(df -h -x tmpfs -x devtmpfs | awk 'NR>1 {printf "%s: %s (%s/%s)\n", $6, $5, $3, $2}')
-    TOOLTIP_ESCAPED=$(echo "''$TOOLTIP" | sed ':a;N;$!ba;s/\n/\\n/g')
-    printf '{"text":" %s","class":"normal","tooltip":"%s"}\n' "''$DISK" "''$TOOLTIP_ESCAPED"
-  '';
 
   "system-monitor" = sh "waybar-system-monitor" ''
     kitty --title "System Monitor" -e btop &

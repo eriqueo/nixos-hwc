@@ -8,7 +8,7 @@ let
     modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
-      "custom/gpu" "custom/disk" "idle_inhibitor" "mpd" "pulseaudio"
+      "custom/gpu" "idle_inhibitor" "mpd" "pulseaudio"
       "custom/network" "bluetooth" "memory" "cpu" "temperature"
       "custom/battery" "tray" "custom/notification" "custom/power"
     ];
@@ -56,7 +56,6 @@ let
     clock = { format = "{:%H:%M:%S}"; format-alt = "{:%Y-%m-%d %H:%M:%S}"; };
 
     "custom/gpu" = { format = "{}"; exec = "waybar-gpu-status"; return-type = "json"; interval = 5; on-click = "waybar-gpu-toggle"; };
-    "custom/disk" = { format = "󰋊 {}%"; exec = "waybar-disk-usage-gui"; interval = 30; };
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
