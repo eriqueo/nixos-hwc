@@ -14,7 +14,6 @@
 
     # This defines the configuration for the user 'eric'.
     users.eric = {
-      _module.args.nvidiaPackage = nvidiaPackage;
       # This block now only contains settings specific to the user 'eric'.
       imports = [ ../modules/home/index.nix ];
 
