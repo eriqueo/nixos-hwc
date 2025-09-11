@@ -30,7 +30,7 @@ in
     esac
 
     printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$ICON" "$CLASS" "$TOOLTIP"
-  ''
+  '';
 
   gpu-toggle = sh "waybar-gpu-toggle" ''
     GPU_MODE_FILE="/tmp/gpu-mode"
@@ -41,9 +41,9 @@ in
       *)           echo "intel"       > "$GPU_MODE_FILE"; notify-send "GPU Mode" "Reset to Intel Mode 󰢮" -i gpu-card ;;
     esac
     pkill -SIGUSR1 waybar 2>/dev/null || true
-  ''
+  '';
 
-  gpu- launch = sh "waybar-gpu-launch" ''
+  gpu-launch = sh "waybar-gpu-launch" ''
     if [[ $# -eq 0 ]]; then echo "Usage: waybar-gpu-launch <application> [args...]"; exit 1; fi
     GPU_MODE_FILE="/tmp/gpu-mode"
     CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "intel")
@@ -62,7 +62,7 @@ in
       nvidia) exec nvidia-offload "$@" ;;
       *)      exec "$@" ;;
     esac
-  ''
+  '';
 
   gpu-menu = sh "waybar-gpu-menu" ''
     CHOICE=$(printf "Launch next app with NVIDIA\nView GPU usage\nOpen nvidia-settings\nToggle Performance Mode" | wofi --dmenu --prompt "GPU Options:")
@@ -72,7 +72,7 @@ in
       "Open nvidia-settings")       nvidia-settings & ;;
       "Toggle Performance Mode")    waybar-gpu-toggle ;;
     esac
-  ''
+  '';
 
   # ===== System monitoring tools =====
   workspace-switcher = sh "waybar-workspace-switcher" ''
@@ -84,7 +84,7 @@ in
       WORKSPACE_INFO=$(hyprctl workspaces -j | jq -r ".[] | select(.id==$WORKSPACE) | \"Workspace $WORKSPACE: \(.windows) windows\"" 2>/dev/null || echo "Workspace $WORKSPACE")
       notify-send "Workspace" "$WORKSPACE_INFO" -t 1000 -i desktop
     fi
-  ''
+  '';
 
   resource-monitor = sh "waybar-resource-monitor" ''
     CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/%us,//')
@@ -94,7 +94,7 @@ in
     MEM_PERCENT=$(( MEM_USED * 100 / MEM_TOTAL ))
     TEMP=$(sensors 2>/dev/null | grep -E "(Core 0|Tctl)" | head -1 | awk '{print $3}' | sed 's/+//;s/°C.*//' || echo "0")
     :  # output is consumed by a custom module; keep as a placeholder or extend later
-  ''
+  '';
 
   network-status = sh "waybar-network-status" ''
     ACTIVE_CONN=$(nmcli -t -f NAME,TYPE,DEVICE connection show --active | grep -v ":loopback:\|:tun:\|:bridge:" | head -1)
@@ -120,7 +120,7 @@ in
       TOOLTIP="Ethernet: $CONN_NAME\nSpeed: $SPEED"
     fi
     printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$ICON" "$CLASS" "$TOOLTIP"
-  ''
+  '';
 
   battery-health = sh "waybar-battery-health" ''
     BATTERY_PATH="/sys/class/power_supply/BAT0"
@@ -159,12 +159,12 @@ in
 
     printf '{"text":"%s %s%%","class":"%s","tooltip":"Battery: %s%%\nStatus: %s\nHealth: %s\nCycles: %s\nTime: %s"}\n' \
            "$ICON" "$CAPACITY" "$CLASS" "$CAPACITY" "$STATUS" "$HEALTH" "$CYCLE_COUNT" "$TIME_STR"
-  ''
+  '';
 
   # ===== System control tools =====
-  disk-usage = sh "waybar-disk-usage-gui" ''baobab &''
+  disk-usage = sh "waybar-disk-usage-gui" ''baobab &'';
 
-  system-monitor = sh "waybar-system-monitor" ''kitty --title "System Monitor" -e btop &''
+  system-monitor = sh "waybar-system-monitor" ''kitty --title "System Monitor" -e btop &'';
 
   network-settings = sh "waybar-network-settings" ''
     CHOICE=$(printf "WiFi Manager (nmtui)\nNetwork Connections Editor\nVPN Status\nNetwork Speed Test\nNetwork Diagnostics" | wofi --dmenu --prompt "Network Tools:")
@@ -175,7 +175,7 @@ in
       "Network Speed Test")           kitty --title "Network Speed Test" -e sh -c 'speedtest-cli; read -p "Press Enter to close..."' & ;;
       "Network Diagnostics")          kitty --title "Network Diagnostics" -e sh -c 'echo "=== Network Diagnostics ==="; echo ""; echo "Current IP:"; curl -s ifconfig.me; echo ""; echo ""; echo "Active Connections:"; nmcli connection show --active; echo ""; echo "WiFi Networks:"; nmcli dev wifi; echo ""; read -p "Press Enter to close..."' & ;;
     esac
-  ''
+  '';
 
   power-settings = sh "waybar-power-settings" ''
     if command -v gnome-power-statistics >/dev/null 2>&1; then
@@ -185,7 +185,7 @@ in
     else
       kitty --title "Power Info" -e sh -c "acpi -V && powertop --dump && read" &
     fi
-  ''
+  '';
 
   sensor-viewer = sh "waybar-sensor-viewer" ''
     if command -v mission-center >/dev/null 2>&1; then
@@ -193,5 +193,5 @@ in
     else
       kitty --title "Sensors" -e sh -c "sensors && read" &
     fi
-  ''
+  '';
 }
