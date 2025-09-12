@@ -1,18 +1,13 @@
-
-# modules/home/apps/index.nix — auto-imports *.nix and */index.nix
+# modules/home/apps/index.nix
 { lib, ... }:
 let
-  dir   = builtins.readDir ./.;
-  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix") dir;
-  subds = lib.filterAttrs (_: t: t == "directory") dir;
+  dir = builtins.readDir ./.;
+  appDirs =
+    lib.filter (n: let d = dir.${n}; in d == "directory" && builtins.pathExists (./. + "/${n}/index.nix"))
+      (lib.attrNames dir);
 
-  filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
-  subIndex  =
-    lib.pipe (lib.attrNames subds) [
-      (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
-      (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
-    ];
-in
-{
-  imports = filePaths ++ subIndex;
-}
+  # optional: exclude scratch or “multi” scaffolding if you don’t want it auto-loaded
+  appDirsWanted = lib.filter (n: !(lib.hasSuffix "-bak" n) && n != "hyprland-new") appDirs;
+
+  imports = map (n: ./. + "/${n}/index.nix") (lib.sort lib.compare appDirsWanted);
+in { inherit imports; }
