@@ -20,13 +20,14 @@
       home.stateVersion = "24.05";
 
       features = {
-        hyprland.enable   = true;
-        waybar.enable     = true;
-        kitty.enable      = true;
-        thunar.enable     = true;
-        betterbird.enable = true;
-        chromium.enable   = true;
-        librewolf.enable  = true;
+        hyprland.enable     = true;
+        waybar.enable       = true;
+        kitty.enable        = true;
+        thunar.enable       = true;
+        betterbird.enable   = true;
+        chromium.enable     = true;
+        librewolf.enable    = true;
+        protonBridge.enable = true
       };
 
       hwc.home.theme.palette = "deep-nord";
