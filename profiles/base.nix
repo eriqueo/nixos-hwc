@@ -40,12 +40,11 @@
     ../modules/system/paths.nix
     ../modules/system/filesystem.nix
     ../modules/system/networking.nix
-    ../modules/system/users.nix
     ../modules/system/security/sudo.nix
     ../modules/system/secrets.nix
     
     # System user module (NixOS-level configuration)
-    ../modules/system/users/eric.nix
+    ../modules/system/eric.nix
     
     # Infrastructure
     ../modules/infrastructure/gpu.nix

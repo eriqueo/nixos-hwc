@@ -8,7 +8,6 @@ in
   bind = [
     "${mod}, RETURN, exec, kitty"
     "${mod}, SPACE,  exec, wofi --show drun"
-    "${mod}, SPACE, exec, wofi --show run"
     "${mod}, L, exec, hyprlock"
     "${mod} SHIFT, R, exec, hyprctl reload"
     "${mod} SHIFT, Q, exit"
@@ -84,8 +83,8 @@ in
     "${mod} CTRL ALT, K, exec, hyprsome workspace 7"
     "${mod} CTRL ALT, M, exec, hyprsome workspace 8"
 
-    "${mod} CTRL, right, workspace, e+1"
-    "${mod} CTRL, left,  workspace, e-1"
+    "${mod} CTRL ALT, right, workspace, e+1"
+    "${mod} CTRL ALT, left,  workspace, e-1"
 
     ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
     ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"

@@ -7,7 +7,6 @@
 {
   imports = [
     # System
-    ../modules/system/users.nix
     ../modules/system/security/sudo.nix
     ../modules/system/base-packages.nix
     ../modules/system/backup-packages.nix
