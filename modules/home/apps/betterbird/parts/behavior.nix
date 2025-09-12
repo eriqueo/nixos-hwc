@@ -1,69 +1,37 @@
-# nixos-hwc/modules/home/betterbird/parts/behavior.nix
-#
-# Betterbird Behavior: User Preferences, Filters, Tags & Email Rules
-# Charter v5 compliant - Universal behavior domain for email interaction patterns
-#
-# DEPENDENCIES (Upstream):
-#   - None (email behavior configuration)
-#
-# USED BY (Downstream):
-#   - modules/home/betterbird/default.nix
-#
-# USAGE:
-#   let behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
-#   in { home.file = behavior.files profileBase; }
-#
-
+# Betterbird • Behavior part
+# Pure behavioral prefs (no services, no packages, no account-coupled files).
 { lib, pkgs, config, ... }:
 
 {
-  #============================================================================
-  # CONFIGURATION FILES - User preferences, filters, and behavioral settings
-  #============================================================================
   files = profileBase: {
-    # Core user preferences and behavior settings
+    # Global prefs for layout, threading, CSS enablement, etc.
     "${profileBase}/user.js".text = ''
-      // Enable userChrome.css customizations
+      // Enable custom CSS
       user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 
-      // Layout + view defaults - how the interface behaves
-      user_pref("mail.pane_config.dynamic", 1); // vertical layout
-      user_pref("mail.threadpane.use_correspondents", false);
-      user_pref("mailnews.default_sort_type", 18); // sort by date
-      user_pref("mailnews.default_sort_order", 2); // descending
-      user_pref("mailnews.default_view_flags", 1); // threaded
+      // Layout / panes
+      user_pref("mail.pane_config.dynamic", 1);                  // Vertical view
+      user_pref("mail.threadpane.use_correspondents", false);    // Show From, not Correspondents
+      user_pref("mailnews.default_view_flags", 1);               // Threaded
 
-      // Email tagging system - behavioral organization
-      user_pref("mailnews.tags", "@Action,1,#FF0000,@Waiting,2,#FFA500,@Read Later,3,#0000FF,@Today,4,#FFFF00,@Clients,5,#00FF00,@Finance,6,#808080");
-    '';
+      // Sorting (18 = by date), 2 = descending
+      user_pref("mailnews.default_sort_type", 18);
+      user_pref("mailnews.default_sort_order", 2);
 
-    # Email filtering rules - how emails are automatically processed
-    "${profileBase}/filters/msgFilterRules.dat".text = ''
-      version="9"
-      logging="yes"
+      // Message list behavior
+      user_pref("mailnews.mark_message_read.auto", true);
+      user_pref("mailnews.mark_message_read.delay", true);
+      user_pref("mailnews.mark_message_read.delay.interval", 300);
 
-      name="Tag Clients - Action"
-      enabled="yes"
-      type="1"
-      action="AddTag"
-      actionValue="@Action"
-      action="AddTag"
-      actionValue="@Clients"
-      condition="OR (from,contains,bmyincplans.com) (subject,contains,Estimate)"
+      // Composition
+      user_pref("mailnews.reply_followup_to", true);
+      user_pref("mail.compose.autosave", true);
+      user_pref("mail.compose.autosaveinterval", 2);
 
-      name="Move Promos"
-      enabled="yes"
-      type="1"
-      action="Move to folder"
-      actionValue="mailbox://<account-identifier>/Promotions"
-      condition="OR (subject,contains,unsubscribe) (subject,contains,% off) (subject,contains,sale)"
-
-      name="Finance"
-      enabled="yes"
-      type="1"
-      action="AddTag"
-      actionValue="@Finance"
-      condition="OR (subject,contains,invoice) (subject,contains,receipt) (from,contains,intuit.com)"
+      // UI polish
+      user_pref("browser.tabs.drawInTitlebar", true);
+      user_pref("browser.tabs.inTitlebar", 1);
+      user_pref("layout.css.prefers-color-scheme.content-override", 0); // Follow system
     '';
   };
 }

@@ -1,55 +1,42 @@
-# nixos-hwc/modules/home/betterbird/default.nix
-#
-# Home UI: Betterbird Email Client (Universal Config Domains)  
-# Charter v5 compliant - Email client configuration with behavior/session/appearance domains
-#
-# DEPENDENCIES (Upstream):
-#   - profiles/workstation.nix (imports via home-manager.users.eric.imports)
-#
-# USED BY (Downstream):
-#   - Home-Manager configuration only
-#
-# USAGE:
-#   Import this module in profiles/workstation.nix home imports
-#   Universal domains: behavior.nix (filters/tags), session.nix (services), appearance.nix (styling)
-#
+# Home app: Betterbird — no Thunderbird fallback
+{ config, lib, pkgs, ... }:
 
-{ lib, pkgs, config, ... }:
 let
-  # Import universal config domains
-  behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
-  session = import ./parts/session.nix { inherit lib pkgs; };
-  appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
+  cfg = config.features.betterbird or { enable = false; };
 
-  homeDir = config.home.homeDirectory;
-  profileBase = "${homeDir}/.thunderbird";  # Betterbird uses same profile structure
+  # Hard-require Betterbird in nixpkgs
+  _ = lib.assertMsg (lib.hasAttr "betterbird" pkgs)
+        "pkgs.betterbird not found in this nixpkgs. Add an overlay or switch channels.";
+
+  # Universal domains
+  behavior   = import ./parts/behavior.nix   { inherit lib pkgs config; };
+  appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
+  session    = import ./parts/session.nix    { inherit lib pkgs config; };
+
+  homeDir     = config.home.homeDirectory;
+  profileBase = "${homeDir}/.thunderbird"; # Betterbird uses TB profile layout
 in
 {
-  #============================================================================
-  # HOME PACKAGES (Email Ecosystem)
-  #============================================================================
-  home.packages = with pkgs; [
-    thunderbird      # TODO: Switch to betterbird when available in nixpkgs
-    protonmail-bridge
-  ];
+  options.features.betterbird.enable =
+    lib.mkEnableOption "Enable Betterbird (no Thunderbird fallback)";
 
-  #============================================================================
-  # SESSION VARIABLES
-  #============================================================================
-  home.sessionVariables = {
-    THUNDERBIRD_PROFILE = "default-release";  # Betterbird uses same profile system
+  config = lib.mkIf cfg.enable {
+    # Only Betterbird + any per-app extras from session.parts
+    home.packages = [ pkgs.betterbird ] ++ (session.packages or []);
+
+    # Optional env (from session) + a stable profile var
+    home.sessionVariables =
+      (session.env or {}) // { THUNDERBIRD_PROFILE = "default-release"; };
+
+    # Optional user services for this app
+    systemd.user.services = (session.services or { });
+
+    # Files from behavior/appearance (each part may return a function or a set)
+    home.file = lib.mkMerge [
+      (if builtins.isFunction behavior.files
+         then behavior.files profileBase else (behavior.files or {}))
+      (if builtins.isFunction appearance.files
+         then appearance.files profileBase else (appearance.files or {}))
+    ];
   };
-
-  #============================================================================
-  # SYSTEMD SERVICES (Session Domain)
-  #============================================================================
-  systemd.user.services = session.services;
-
-  #============================================================================
-  # CONFIGURATION FILES (Behavior + Appearance)
-  #============================================================================
-  home.file = lib.mkMerge [
-    (behavior.files profileBase)
-    (appearance.files profileBase)
-  ];
 }

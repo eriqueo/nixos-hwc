@@ -15,18 +15,18 @@
 
 { lib, pkgs, config, ... }:
 
-{
-  options.features.chromium.enable = 
-    lib.mkEnableOption "Enable Chromium browser (HM)";
+let cfg = config.features.chromium or { enable = false; };
+in {
+  options.features.chromium.enable =
+    lib.mkEnableOption "Enable Chromium (user-scoped)";
 
-  config = lib.mkIf (config.features.chromium.enable or false) {
-    home.packages = with pkgs; [
-      chromium
-    ];
-
+  config = lib.mkIf cfg.enable {
+    home.packages = [ pkgs.chromium ];
+    # If you want chromium flags later:
+    # xdg.desktopEntries.chromium.settings = { ... };
+  };
+}
     # Future: Add universal domain parts
     # behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
     # session = import ./parts/session.nix { inherit lib pkgs config; };  
     # appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
-  };
-}
