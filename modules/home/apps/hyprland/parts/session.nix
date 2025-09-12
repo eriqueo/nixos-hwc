@@ -17,11 +17,14 @@ let
   hyprlandStartupScript = pkgs.writeScriptBin "hyprland-startup" ''
     #!/usr/bin/env bash
     set -euo pipefail
-    TIMEOUT=30; COUNTER=0
+
+    # wait for hyprctl to be ready
+    TIMEOUT=30; COUNT=0
     until ${pkgs.hyprland}/bin/hyprctl monitors >/dev/null 2>&1; do
-      sleep 0.1; COUNTER=$((COUNTER + 1))
-      [[ $COUNTER -gt $((TIMEOUT * 10)) ]] && exit 1
+      sleep 0.1; COUNT=$((COUNT+1))
+      [[ $COUNT -gt $((TIMEOUT*10)) ]] && exit 1
     done
+
     ${pkgs.hyprland}/bin/hyprctl dispatch workspace 1
     command -v kitty   >/dev/null 2>&1 && kitty   & sleep 0.3 || true
     ${pkgs.hyprland}/bin/hyprctl dispatch workspace 2
@@ -36,24 +39,23 @@ let
 
 in
 {
-  settings = {
-    exec-once = [
-      "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
-      "hyprland-startup"
-      "hyprpaper"
-      "waybar"
-      "wl-paste --type text --watch cliphist store"
-      "wl-paste --type image --watch cliphist store"
-    ];
+  # FLAT KEYS (NO nested `settings = {}`!)
+  execOnce = [
+    "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
+    "hyprland-startup"
+    "hyprpaper"
+    "waybar"
+    "wl-paste --type text --watch cliphist store"
+    "wl-paste --type image --watch cliphist store"
+  ];
 
-    env = [
-      "HYPRCURSOR_THEME,${hyprcursorName}"
-      "HYPRCURSOR_SIZE,${cursorSize}"
-      "XCURSOR_THEME,${xcursorName}"
-      "XCURSOR_SIZE,${cursorSize}"
-      "XCURSOR_PATH,${xcPkg}/share/icons"
-    ];
-  };
+  env = [
+    "HYPRCURSOR_THEME,${hyprcursorName}"
+    "HYPRCURSOR_SIZE,${cursorSize}"
+    "XCURSOR_THEME,${xcursorName}"
+    "XCURSOR_SIZE,${cursorSize}"
+    "XCURSOR_PATH,${xcPkg}/share/icons"
+  ];
 
   packages = [ hyprlandStartupScript ];
 
