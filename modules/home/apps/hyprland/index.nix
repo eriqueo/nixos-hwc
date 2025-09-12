@@ -1,17 +1,33 @@
-# modules/home/apps/hyprland/index.nix  (drop-in fix for the settings block)
 { config, lib, pkgs, ... }:
+
 let
-  enabled    = config.features.hyprland.enable or false;
+  enabled = config.features.hyprland.enable or false;
+
+  # Parts must return flat attrsets (no nested `settings = {}` inside them)
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; };
   appearance = import ./parts/appearance.nix { inherit lib pkgs theme;  };
-  behavior   = import ./parts/behavior.nix   { inherit lib pkgs;        };
+  behavior   = import ./parts/behavior.nix   { inherit config lib pkgs;        };
   session    = import ./parts/session.nix    { inherit config lib pkgs;        };
-  hw         = import ./parts/hardware.nix   { inherit lib pkgs; };
+
+  # Optional hardware part (guarded import)
+  hw = if builtins.pathExists ./parts/hardware.nix
+       then import ./parts/hardware.nix { inherit lib pkgs; }
+       else {};
+
   wallpaperPath = ../../theme/nord-mountains.jpg;
-in {
-  options.features.hyprland.enable = lib.mkEnableOption "Enable Hyprland (HM)";
+
+  # >>> DEFINE basePkgs IN THIS LET <<<
+  basePkgs = with pkgs; [
+    wofi hyprshot hypridle hyprpaper hyprlock cliphist wl-clipboard
+    brightnessctl networkmanager wirelesstools hyprsome
+  ];
+in
+{
+  options.features.hyprland.enable =
+    lib.mkEnableOption "Enable Hyprland (HM)";
 
   config = lib.mkIf enabled {
+    # list ++ list (DON'T use `pkgs ++ …`)
     home.packages = basePkgs ++ (session.packages or []);
 
     home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
@@ -29,11 +45,11 @@ in {
         # Behavior (flat)
         behavior
 
-        # Session (guarded)
+        # Session bits (guarded)
         (lib.optionalAttrs (session ? execOnce && session.execOnce != null) { "exec-once" = session.execOnce; })
         (lib.optionalAttrs (session ? env      && session.env      != null) { env         = session.env;      })
 
-        # Appearance/theme — use ONLY appearance, because it already merges `theme`
+        # Appearance (already merged with theme)
         appearance
       ];
     };
