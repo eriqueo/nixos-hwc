@@ -57,6 +57,7 @@ in
   env = [
     "XCURSOR_THEME,Adwaita"
     "XCURSOR_SIZE,24"
+    "XCURSOR_PATH,${pkgs.adwaita-icon-theme}/share/icons"
   ];
 
   # Make the startup script available to the session/user.
