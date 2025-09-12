@@ -1,41 +1,17 @@
-# nixos-hwc/modules/home/betterbird/parts/session.nix
-#
-# Betterbird Session: Services & Lifecycle Management
-# Charter v5 compliant - Universal session domain for email services and startup
-#
-# DEPENDENCIES (Upstream):
-#   - systemPackages for protonmail-bridge
-#
-# USED BY (Downstream):
-#   - modules/home/betterbird/default.nix
-#
-# USAGE:
-#   let session = import ./parts/session.nix { inherit lib pkgs; };
-#   in { systemd.user.services = session.services; }
-#
-
-{ lib, pkgs, ... }:
+# Betterbird • Session part
+# Session-scoped things only: packages, user services, env.
+{ lib, pkgs, config, ... }:
 
 {
-  #============================================================================
-  # SYSTEMD SERVICES - Email-related background services
-  #============================================================================
-  services = {
-    # ProtonMail Bridge - maintains stable connection to ProtonMail servers
-    protonmail-bridge = {
-      Unit = {
-        Description = "ProtonMail Bridge";
-        After = [ "network.target" ];
-      };
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.protonmail-bridge}/bin/protonmail-bridge --noninteractive";
-        Restart = "on-failure";
-        RestartSec = 5;
-      };
-      Install = {
-        WantedBy = [ "default.target" ];
-      };
-    };
+  # If you want extras installed *with* Betterbird, put them here.
+  packages = [ ];
+
+  # If you want Betterbird-specific user services, define them here.
+  # (Most users don’t need any; Proton Bridge etc. should be their own module.)
+  services = { };
+
+  # Export session env if needed (kept tiny and generic).
+  env = {
+    THUNDERBIRD_PROFILE = "default-release";
   };
 }

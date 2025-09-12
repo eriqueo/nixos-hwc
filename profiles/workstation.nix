@@ -6,12 +6,8 @@
 { lib, ... }:
 {
   imports = [
-    # System
-    ../modules/system/security/sudo.nix
-    ../modules/system/base-packages.nix
-    ../modules/system/backup-packages.nix
-    ../modules/system/desktop-packages.nix
-    ../modules/system/audio.nix
+    # System (now auto-imported via base.nix)
+    # ../modules/system/ components imported via profiles/base.nix
 
     # Infrastructure
     ../modules/infrastructure/gpu.nix

@@ -15,18 +15,16 @@
 
 { lib, pkgs, config, ... }:
 
-{
-  options.features.librewolf.enable = 
-    lib.mkEnableOption "Enable LibreWolf browser (HM)";
+let cfg = config.features.librewolf or { enable = false; };
+in {
+  options.features.librewolf.enable =
+    lib.mkEnableOption "Enable LibreWolf (user-scoped)";
 
-  config = lib.mkIf (config.features.librewolf.enable or false) {
-    home.packages = with pkgs; [
-      librewolf
-    ];
-
+  config = lib.mkIf cfg.enable {
+    home.packages = [ pkgs.librewolf ];
+  };
+}
     # Future: Add universal domain parts
     # behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
     # session = import ./parts/session.nix { inherit lib pkgs config; };  
     # appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
-  };
-}

@@ -50,7 +50,7 @@
     # System dependencies
     ../modules/system/gpu.nix
     ../modules/system/paths.nix
-    ../modules/system/media-packages.nix
+    # Media packages removed - duplicates consolidated into packages/base.nix and packages/server.nix
   ];
   
   config = {

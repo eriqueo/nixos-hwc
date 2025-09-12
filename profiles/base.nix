@@ -36,21 +36,14 @@
   # IMPORTS - Assemble foundational modules (no computed paths)
   #============================================================================
   imports = [
-    # System domain modules (Charter v4 compliant)
-    ../modules/system/paths.nix
-    ../modules/system/filesystem.nix
-    ../modules/system/networking.nix
-    ../modules/system/security/sudo.nix
-    ../modules/system/secrets.nix
-    
-    # System user module (NixOS-level configuration)
-    ../modules/system/eric.nix
+    # System domain modules (Charter v7 reorganized)
+    ../modules/system/core
+    ../modules/system/services  
+    ../modules/system/storage
+    ../modules/system/packages
     
     # Infrastructure
     ../modules/infrastructure/gpu.nix
-    
-    # System packages
-    ../modules/system/base-packages.nix
   ];
 
   #============================================================================
