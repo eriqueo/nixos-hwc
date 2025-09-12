@@ -27,13 +27,7 @@
       };
 
       hwc.home.theme.palette = "deep-nord";
-      home.pointerCursor = {
-        name = "Adwaita";
-        package = pkgs.adwaita-icon-theme;
-        size = 24;
-        gtk.enable = true;
-      };
-      home.packages = [ pkgs.adwaita-icon-theme ];
+
       
 
       hwc.home.shell = {

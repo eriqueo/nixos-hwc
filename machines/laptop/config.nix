@@ -63,11 +63,7 @@
   #============================================================================
   # HWC PROFILE ORCHESTRATION (Facts/Toggles Only)
   #============================================================================
-hwc.infrastructure.hyprlandTools = {
-  enable = true;
-  cursor.theme = "Adwaita";
-  cursor.size  = 24;
-};
+
   ## GPU capability (Infrastructure domain implemented in modules/system/gpu.nix)
   hwc.gpu = {
     type = "nvidia";
@@ -115,7 +111,7 @@ hwc.infrastructure.hyprlandTools = {
   #============================================================================
   services.thermald.enable = true;
   services.tlp.enable = true;
-
+  programs.dconf.enable = true;
   # Note: user account/group wiring should be handled by home/user modules.
   # Removing inline users.users.eric avoids duplication and keeps domains clean.
 }
