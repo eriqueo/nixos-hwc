@@ -1,4 +1,3 @@
-
 # modules/home/apps/hyprland/index.nix
 { config, lib, pkgs, ... }:
 
@@ -6,7 +5,7 @@ let
   enabled = config.features.hyprland.enable or false;
 
   # Theme + parts (parts are functions)
-  theme  = import ./parts/theme.nix { inherit config lib; };
+  theme  = import ./parts/theme.nix { inherit config lib pkgs; };
   behavior   = import ./parts/behavior.nix   { inherit lib pkgs; };
   hardware   = if builtins.pathExists ./parts/hardware.nix
                then import ./parts/hardware.nix { inherit lib pkgs; } else {};
@@ -37,6 +36,7 @@ in
         }
         (behavior // { "$mod" = "SUPER"; })
         { exec-once = session.execOnce or []; }
+        { env       = session.env or []; }          # ← ADD THIS LINE/BLOCK
         appearance
       ];
     };

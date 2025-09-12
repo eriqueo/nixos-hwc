@@ -1,27 +1,16 @@
-# /parts/theme.nix
-
-# This is a "part" that adapts the theme for Hyprland.
-# It is a simple function that reads from the global config and returns
-# an attribute set of Hyprland settings. It is imported by hyprland/index.nix.
-
-{ config, lib, ... }:
-
+{ config, lib, pkgs, ... }:
 let
-  # 1. Read the active color palette from the central config location.
   c = config.hwc.home.theme.colors;
 
-  # 2. Define a robust helper function to format colors for Hyprland.
   toHypr = colorStr:
-    if colorStr == null then "0x888888" # Fallback for missing colors
-    else "0x" + colorStr;
+    let
+      hex = if colorStr == null then "888888" else lib.removePrefix "#" colorStr;
+    in "0x${hex}";
 
-  # 3. Pull colors from the palette using the helper.
   activeBorder1 = toHypr (c.accent or null);
-  activeBorder2 = toHypr (c.accentAlt or null);
+  activeBorder2 = toHypr (c.accentAlt or (c.accent or null));
   inactiveBorder = toHypr (c.muted or null);
 in
-# 4. Directly return the final attribute set.
-#    This is the value that `hyprTheme` will hold when you import this file.
 {
   general = {
     gaps_in = 6;
@@ -74,12 +63,6 @@ in
     smart_split = false;
     smart_resizing = true;
   };
-home.pointerCursor = {
-  name = "Adwaita";
-  package = pkgs.adwaita-icon-theme;
-  size = 24;
-  gtk.enable = true;
-};
 
   misc = {
     disable_hyprland_logo = true;
