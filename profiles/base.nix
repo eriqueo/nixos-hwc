@@ -37,7 +37,7 @@
   #============================================================================
   imports = [
     # System domain modules (Charter v7 reorganized)
-    ../modules/system
+    ../modules/system/index.nix
     
     # Infrastructure
     ../modules/infrastructure/gpu.nix
