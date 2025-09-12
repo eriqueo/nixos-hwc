@@ -108,4 +108,25 @@
     error = "#ea6962";       # muted red
     success = "#a9b665";     # muted green
     info = "#7daea3";        # soft blue
+
+  # …existing palette (colors, etc.)…
+    
+    cursor = {
+      size = 24;
+    
+      # GTK/Qt side (XCursor)
+      xcursor = {
+        name    = "Nordzy-cursors";
+        package = "nordzy-cursor-theme";  # name of the pkg attr in pkgs
+      };
+    
+      # Hyprland side (Hyprcursor)
+      hyprcursor = {
+        name          = "Nordzy-hyprcursors";
+        # path in your repo containing the hyprcursor assets (manifest.hl + hyprcursors/)
+        # We'll link this into ~/.local/share/icons
+        assetPathRel  = "modules/home/theme/assets/cursors/Nordzy-hyprcursors";
+      };
+    };
+      
 }

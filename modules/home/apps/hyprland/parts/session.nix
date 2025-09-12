@@ -1,65 +1,63 @@
 # modules/home/apps/hyprland/parts/session.nix
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 let
+  cur = config.hwc.home.theme.cursor or {};
+  xc  = cur.xcursor or {};
+  hc  = cur.hyprcursor or {};
+  cursorSize = toString (cur.size or 24);
+
+  pkgByName = name:
+    if lib.hasAttr name pkgs then builtins.getAttr name pkgs else pkgs.adwaita-icon-theme;
+  xcPkg = pkgByName (xc.package or "adwaita-icon-theme");
+
+  xcursorName    = xc.name or "Adwaita";
+  hyprcursorName = hc.name or xcursorName;
+
   hyprlandStartupScript = pkgs.writeScriptBin "hyprland-startup" ''
     #!/usr/bin/env bash
     set -euo pipefail
-
-    log() { echo "[$(date '+%H:%M:%S')] $1" >> /tmp/hypr-startup.log; }
-    log "=== Hyprland Startup Begin ==="
-
-    TIMEOUT=30
-    COUNTER=0
+    TIMEOUT=30; COUNTER=0
     until ${pkgs.hyprland}/bin/hyprctl monitors >/dev/null 2>&1; do
-      sleep 0.1
-      COUNTER=$((COUNTER + 1))
-      if [[ $COUNTER -gt $((TIMEOUT * 10)) ]]; then
-        log "ERROR: Hyprland not ready after $TIMEOUT seconds"
-        exit 1
-      fi
+      sleep 0.1; COUNTER=$((COUNTER + 1))
+      [[ $COUNTER -gt $((TIMEOUT * 10)) ]] && exit 1
     done
-
-    # Optional settle
-    sleep 1
-
-    # Workspace 1: terminal
     ${pkgs.hyprland}/bin/hyprctl dispatch workspace 1
     command -v kitty   >/dev/null 2>&1 && kitty   & sleep 0.3 || true
-
-    # Workspace 2: browser
     ${pkgs.hyprland}/bin/hyprctl dispatch workspace 2
     command -v firefox >/dev/null 2>&1 && firefox & sleep 0.3 || true
-
-    # Workspace 3: file manager
     ${pkgs.hyprland}/bin/hyprctl dispatch workspace 3
     command -v thunar  >/dev/null 2>&1 && thunar  & sleep 0.3 || true
-
-    # Return focus
     ${pkgs.hyprland}/bin/hyprctl dispatch workspace 1
-
-    log "=== Hyprland Startup Complete ==="
   '';
+
+  hyprcursorSource =
+    if (hc ? assetPathRel) then ../../.. + "/${hc.assetPathRel}" else null;
+
 in
 {
-  # Hyprland will run these exactly once at session start.
-  # Waybar is launched here so it inherits HM/Hypr env (no user systemd).
-  execOnce = [
-    "hyprctl setcursor Adwaita 24"
-    "hyprland-startup"
-    "hyprpaper"
-    "waybar"
-    "wl-paste --type text --watch cliphist store"
-    "wl-paste --type image --watch cliphist store"
-  ];
+  settings = {
+    exec-once = [
+      "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
+      "hyprland-startup"
+      "hyprpaper"
+      "waybar"
+      "wl-paste --type text --watch cliphist store"
+      "wl-paste --type image --watch cliphist store"
+    ];
 
-  # Hyprland's env list ("KEY,VALUE" strings) – used by apps it spawns.
-  env = [
-    "XCURSOR_THEME,Adwaita"
-    "XCURSOR_SIZE,24"
-    "XCURSOR_PATH,${pkgs.adwaita-icon-theme}/share/icons"
-  ];
+    env = [
+      "HYPRCURSOR_THEME,${hyprcursorName}"
+      "HYPRCURSOR_SIZE,${cursorSize}"
+      "XCURSOR_THEME,${xcursorName}"
+      "XCURSOR_SIZE,${cursorSize}"
+      "XCURSOR_PATH,${xcPkg}/share/icons"
+    ];
+  };
 
-  # Make the startup script available to the session/user.
   packages = [ hyprlandStartupScript ];
+
+  files = lib.mkIf (hyprcursorSource != null) {
+    ".local/share/icons/${hyprcursorName}".source = hyprcursorSource;
+  };
 }

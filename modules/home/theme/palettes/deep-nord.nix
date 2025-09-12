@@ -1,19 +1,4 @@
 # nixos-hwc/modules/home/theme/palettes/deep-nord.nix
-#
-# Global Theme Tokens: Deep Nord Palette
-# Charter v4 compliant - Pure data tokens for theming adapters
-#
-# DEPENDENCIES (Upstream):
-#   - None (source of truth)
-#
-# USED BY (Downstream):
-#   - modules/home/theme/adapters/*.nix
-#
-# USAGE:
-#   let palette = import ./palettes/deep-nord.nix {};
-#   in palette.accent  # "#7daea3"
-#
-# nixos-hwc/modules/home/theme/palettes/deep-nord.nix
 # Deep Nord — expanded tokens for apps & adapters (Charter v6)
 
 { }:
@@ -46,25 +31,27 @@
   # --- UI roles (common adapters can read these) ---
   selectionFg = "2e3440";
   selectionBg = "7daea3";
-  cursor      = "7daea3";
+
+  # RENAMED: avoid collision with pointer-theme object below
+  cursorColor = "7daea3";  # text-caret / selection handles, not the pointer theme
+  caret       = "7daea3";  # alias for readability
+
   link        = "88c0d0";
   border      = "434C5E";
   borderDim   = "3b4252";
 
   # --- ANSI 16 (term adapters like Kitty/Alacritty/WezTerm) ---
-  # Normal
   ansi = {
-    black   = "45403d";  # gruvbox-ish dark
-    red     = "BF616A";  # crit
-    green   = "A3BE8C";  # good
-    yellow  = "EBCB8B";  # warn
-    blue    = "7daea3";  # accent (teal)
-    magenta = "d3869b";  # gruvbox magenta
-    cyan    = "89b482";  # accentAlt (greenish)
-    white   = "ECEFF4";  # fg
+    black   = "45403d";
+    red     = "BF616A";
+    green   = "A3BE8C";
+    yellow  = "EBCB8B";
+    blue    = "7daea3";
+    magenta = "d3869b";
+    cyan    = "89b482";
+    white   = "ECEFF4";
 
-    # Bright
-    brightBlack   = "4C566A"; # muted
+    brightBlack   = "4C566A";
     brightRed     = "ea6962";
     brightGreen   = "a9b665";
     brightYellow  = "d8a657";
@@ -83,9 +70,8 @@
   };
 
   # For convenience with Hyprland’s "rgba(RRGGBBAA)" border strings.
-  # Adapters can build: "rgba(${hypr.teal}${alpha.opaque})"
   hypr = {
-    teal   = "7daea3";  # no leading '#'
+    teal   = "7daea3";
     green  = "89b482";
     muted  = "45403d";
   };
@@ -94,4 +80,24 @@
   gruvboxTeal  = "7daea3ff";
   gruvboxGreen = "89b482ff";
   gruvboxMuted = "45403daa";
+
+  # --- Pointer theme config (palette-driven)
+  # GTK/Qt use XCursor; Hyprland uses Hyprcursor. Keep them in sync here.
+  cursor = {
+    size = 24;
+
+    # GTK/Qt side (XCursor)
+    xcursor = {
+      name    = "Nordzy-cursors";
+      package = "nordzy-cursor-theme";  # pkgs.<this>
+    };
+
+    # Hyprland side (Hyprcursor)
+    hyprcursor = {
+      name         = "Nordzy-hyprcursors";
+      # path in your repo containing the hyprcursor assets (manifest.hl + hyprcursors/)
+      # The Hyprland-session adapter will link this into ~/.local/share/icons
+      assetPathRel = "modules/home/theme/assets/cursors/Nordzy-hyprcursors";
+    };
+  };
 }
