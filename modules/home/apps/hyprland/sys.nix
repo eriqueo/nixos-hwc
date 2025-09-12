@@ -1,20 +1,34 @@
-# Co-located system lane for Hyprland (temporary compat options)
+# modules/home/apps/hyprland/sys.nix
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.infrastructure.hyprlandTools;
-in {
-  # Provide the options that profiles/workstation.nix currently sets.
+in
+{
   options.hwc.infrastructure.hyprlandTools = {
-    enable = lib.mkEnableOption "Hyprland system helper tools (compat)";
-    notifications = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Show notifications for Hyprland tool actions (compat).";
+    enable = lib.mkEnableOption "Hyprland system helpers (cursor, env, packages)";
+    cursor = {
+      theme = lib.mkOption { type = lib.types.str; default = "Adwaita"; };
+      size  = lib.mkOption { type = lib.types.int; default = 24; };
     };
   };
 
-  # No-op implementation for now; we’re just keeping evaluation green.
   config = lib.mkIf cfg.enable {
-    # later you can add environment.systemPackages, services, etc.
+    # Ensure cursor theme assets exist system-wide
+    environment.systemPackages = [ pkgs.adwaita-icon-theme ];
+
+    # Export cursor env to all login / graphical sessions
+    environment.sessionVariables = {
+      XCURSOR_THEME = cfg.cursor.theme;
+      XCURSOR_SIZE  = toString cfg.cursor.size;
+      # Useful in odd environments to help resolution:
+      XCURSOR_PATH  = "${pkgs.adwaita-icon-theme}/share/icons";
+    };
+
+    # Also export to user services (Waybar, etc.)
+    systemd.user.sessionVariables = {
+      XCURSOR_THEME = cfg.cursor.theme;
+      XCURSOR_SIZE  = toString cfg.cursor.size;
+      XCURSOR_PATH  = "${pkgs.adwaita-icon-theme}/share/icons";
+    };
   };
 }

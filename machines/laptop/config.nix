@@ -63,7 +63,11 @@
   #============================================================================
   # HWC PROFILE ORCHESTRATION (Facts/Toggles Only)
   #============================================================================
-
+hwc.infrastructure.hyprlandTools = {
+  enable = true;
+  cursor.theme = "Adwaita";
+  cursor.size  = 24;
+};
   ## GPU capability (Infrastructure domain implemented in modules/system/gpu.nix)
   hwc.gpu = {
     type = "nvidia";
