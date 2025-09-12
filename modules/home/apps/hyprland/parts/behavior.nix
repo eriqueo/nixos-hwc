@@ -8,7 +8,7 @@ in
   bind = [
     "${mod}, RETURN, exec, kitty"
     "${mod}, SPACE,  exec, wofi --show drun"
-    "${mod}, SHIFT,SPACE, exec, wofi --show run"
+    "${mod}, SPACE, exec, wofi --show run"
     "${mod}, L, exec, hyprlock"
     "${mod} SHIFT, R, exec, hyprctl reload"
     "${mod} SHIFT, Q, exit"
