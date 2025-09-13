@@ -19,10 +19,10 @@
 #   - profiles/base.nix: ../modules/system/gpu.nix
 #
 # USAGE:
-#   hwc.gpu.type = "nvidia";  # or "intel" | "amd" | "none"
-#   hwc.gpu.nvidia.driver = "stable";  # "stable" | "beta" | "production"
-#   hwc.gpu.nvidia.containerRuntime = true;   # enables nvidia-container-toolkit
-#   hwc.gpu.nvidia.enableMonitoring = true;   # nvidia-smi logging service
+#   hwc.infrastructure.hardware.gpu.type = "nvidia";  # or "intel" | "amd" | "none"
+#   hwc.infrastructure.hardware.gpu.nvidia.driver = "stable";  # "stable" | "beta" | "production"
+#   hwc.infrastructure.hardware.gpu.nvidia.containerRuntime = true;   # enables nvidia-container-toolkit
+#   hwc.infrastructure.hardware.gpu.nvidia.enableMonitoring = true;   # nvidia-smi logging service
 #
 # NOTES:
 #   - This file assumes Podman is the OCI engine (recommended repo-wide):
@@ -33,7 +33,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg   = config.hwc.gpu;
+  cfg   = config.hwc.infrastructure.hardware.gpu;
   paths = config.hwc.paths;
   t     = lib.types;
 
@@ -52,7 +52,7 @@ in
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.gpu = {
+  options.hwc.infrastructure.hardware.gpu = {
   
     enable = lib.mkEnableOption "GPU hardware acceleration support";
 
@@ -64,7 +64,7 @@ in
 
     accel = lib.mkOption {
       type = t.enum [ "cuda" "rocm" "intel" "cpu" ];
-      default = accelFor config.hwc.gpu.type;
+      default = accelFor config.hwc.infrastructure.hardware.gpu.type;
       readOnly = true;
       description = "Derived acceleration target (cuda|rocm|intel|cpu) for services.";
     };

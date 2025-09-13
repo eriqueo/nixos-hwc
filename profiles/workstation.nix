@@ -3,7 +3,7 @@
 # WORKSTATION PROFILE - NixOS orchestration only (v6)
 # Imports system/infrastructure/services modules. No Home Manager here.
 
-{ lib, ... }:
+{ lib, pkgs, ... }:
 {
   imports = [
     # System (now auto-imported via base.nix)
@@ -66,7 +66,7 @@
   
   hwc.infrastructure = {
     hardware = {
-      peripherals.printing.enable = true;
+      peripherals.enable = true;
       permissions = {
         enable = true;
         groups = {
@@ -86,15 +86,11 @@
 
     session = {
       services.enable = true;
-
-      # Tools/binaries provided by the co-located system parts
-      hyprlandTools = {
-        enable = true;
-        notifications = true;
-      };
-      waybarTools.enable = true;
     };
   };
+
+  # System integration for Chromium (HM provides packages via profiles/hm.nix)
+  hwc.infrastructure.session.chromium.enable = true;
 
   hwc.services.backup.user = {
     enable = true;

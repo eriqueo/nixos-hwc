@@ -21,7 +21,7 @@
 #
 # USAGE:
 #   # Machine declares facts/toggles (no implementation here):
-#   #   hwc.gpu.type = "nvidia" | "intel" | "amd" | "none";
+#   #   hwc.infrastructure.hardware.gpu.type = "nvidia" | "intel" | "amd" | "none";
 #   #   hwc.services.ollama.enable = true;
 #
 # GUARANTEES:

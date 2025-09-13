@@ -26,9 +26,9 @@
 # DEPENDENCIES:
 #   Upstream: config.hwc.paths.hot (modules/system/paths.nix)
 #   Upstream: config.hwc.paths.media (modules/system/paths.nix)
-#   Upstream: config.hwc.gpu.type (modules/system/gpu.nix) [optional]
-#   Upstream: config.hwc.gpu.containerOptions (modules/system/gpu.nix)
-#   Upstream: config.hwc.gpu.containerEnvironment (modules/system/gpu.nix)
+#   Upstream: config.hwc.infrastructure.hardware.gpu.type (modules/infrastructure/hardware/gpu.nix) [optional]
+#   Upstream: config.hwc.infrastructure.hardware.gpu.containerOptions (modules/infrastructure/hardware/gpu.nix)
+#   Upstream: config.hwc.infrastructure.hardware.gpu.containerEnvironment (modules/infrastructure/hardware/gpu.nix)
 #
 # USED BY:
 #   Downstream: profiles/media.nix (enables this service)
@@ -45,7 +45,7 @@
 #
 # VALIDATION:
 #   - Requires hwc.paths.hot to be configured
-#   - GPU acceleration requires hwc.gpu.type != "none"
+#   - GPU acceleration requires hwc.infrastructure.hardware.gpu.type != "none"
 #   - Port must be available
 
 { config, lib, pkgs, ... }:
@@ -53,7 +53,7 @@
 let
   cfg = config.hwc.services.jellyfin;
   paths = config.hwc.paths;
-  gpu = config.hwc.gpu;
+  gpu = config.hwc.infrastructure.hardware.gpu;
 in {
   #============================================================================
   # OPTIONS - What can be configured
@@ -128,7 +128,7 @@ in {
       }
       {
         assertion = cfg.enableGpu -> (gpu.type != "none");
-        message = "Jellyfin GPU acceleration requires hwc.gpu.type to be configured";
+        message = "Jellyfin GPU acceleration requires hwc.infrastructure.hardware.gpu.type to be configured";
       }
     ];
     

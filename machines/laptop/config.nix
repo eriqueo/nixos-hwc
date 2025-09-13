@@ -19,7 +19,7 @@
 #
 # USAGE:
 #   - This file declares facts:
-#       * GPU type:        hwc.gpu.type = "...";
+#       * GPU type:        hwc.infrastructure.hardware.gpu.type = "...";
 #       * AI services:     hwc.services.ollama.enable = true; models = [ ... ];
 #       * Per-machine toggles (e.g., disable Tailscale on laptop).
 #   - Secrets go through Agenix (modules/security/secrets), not inline here.
@@ -64,8 +64,9 @@
   # HWC PROFILE ORCHESTRATION (Facts/Toggles Only)
   #============================================================================
 
-  ## GPU capability (Infrastructure domain implemented in modules/system/gpu.nix)
-  hwc.gpu = {
+  ## GPU capability (Infrastructure domain implemented in modules/infrastructure/hardware/gpu.nix)
+  hwc.infrastructure.hardware.gpu = {
+    enable = true;
     type = "nvidia";
     nvidia = {
       containerRuntime = true; # expose GPU to containers (module implements details)
@@ -81,7 +82,7 @@
   ## AI services (Service domain implemented in modules/services/ai/ollama.nix)
   hwc.services.ollama = {
     enable = true;
-    # Do NOT set 'enableGpu' here; the service should infer from hwc.gpu.accel.
+    # Do NOT set 'enableGpu' here; the service should infer from hwc.infrastructure.hardware.gpu.accel.
     models = [ "llama3:8b" "codellama:13b" "phi3:medium" ];
   };
 

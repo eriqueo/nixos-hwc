@@ -6,7 +6,7 @@
 #
 # DEPENDENCIES (Upstream):
 #   - ../modules/services/ai/ollama.nix
-#   - modules/system/gpu.nix (indirectly; services consume hwc.gpu.accel)
+#   - modules/infrastructure/hardware/gpu.nix (indirectly; services consume hwc.infrastructure.hardware.gpu.accel)
 #
 # USED BY (Downstream):
 #   - machines/*/config.nix  (enable/override service facts per machine)
@@ -18,7 +18,7 @@
 #   # This profile sets defaults; machines can override:
 #   #   hwc.services.ollama.enable = true;
 #   #   hwc.services.ollama.models = [ "llama3:8b" ... ];
-#   # GPU use is inferred from hwc.gpu.accel via modules/system/gpu.nix.
+#   # GPU use is inferred from hwc.infrastructure.hardware.gpu.accel via modules/infrastructure/hardware/gpu.nix.
 
 { lib, ... }:
 
@@ -36,7 +36,7 @@
   #============================================================================
   hwc.services.ollama = {
     enable = lib.mkDefault true;              # profile turns it on by default
-    # No 'enableGpu' here—service consumes hwc.gpu.accel from infra module.
+    # No 'enableGpu' here—service consumes hwc.infrastructure.hardware.gpu.accel from infra module.
     models = lib.mkDefault [ "llama3:8b" "codellama:13b" ];
   };
 

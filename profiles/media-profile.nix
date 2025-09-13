@@ -129,7 +129,7 @@
     #==========================================================================
     
     # GPU configuration (type set by machine)
-    hwc.gpu = {
+    hwc.infrastructure.hardware.gpu = {
       nvidia = {
         containerRuntime = lib.mkDefault true;
         enableMonitoring = lib.mkDefault true;

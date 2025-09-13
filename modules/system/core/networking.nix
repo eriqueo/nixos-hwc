@@ -81,31 +81,26 @@ in {
     # Bridge configuration
     networking.bridges = cfg.bridges;
 
-    # Static routes
-    networking.interfaces.eth0.ipv.routes = cfg.staticRoutes;
+    # DNS configuration
+    networking = {
+      nameservers = cfg.dnsServers;
+      search = cfg.search;
 
-       # DNS configuration
-       networking = {
-         nameservers = cfg.dnsServers;
-         search = cfg.search;
+      # Static routes
+      interfaces.eth0.ipv4.routes = cfg.staticRoutes;
+    };
 
-         # Set MTU
-         interfaces = lib.mapAttrs (name: iface: {
-           mtu = cfg.mtu;
-         }) config.networking.interfaces;
-       };
+    # Network optimization
+    boot.kernel.sysctl = {
+      # TCP optimization
+      "net.core.rmem_max" = 134217728;
+      "net.core.wmem_max" = 134217728;
+      "net.ipv4.tcp_rmem" = "4096 87380 134217728";
+      "net.ipv4.tcp_wmem" = "4096 65536 134217728";
 
-       # Network optimization
-       boot.kernel.sysctl = {
-         # TCP optimization
-         "net.core.rmem_max" = 134217728;
-         "net.core.wmem_max" = 134217728;
-         "net.ipv4.tcp_rmem" = "4096 87380 134217728";
-         "net.ipv4.tcp_wmem" = "4096 65536 134217728";
-
-         # Connection tracking
-         "net.netfilter.nf_conntrack_max" = 262144;
-         "net.netfilter.nf_conntrack_tcp_timeout_established" = 86400;
-       };
-     };
-    }
+      # Connection tracking
+      "net.netfilter.nf_conntrack_max" = 262144;
+      "net.netfilter.nf_conntrack_tcp_timeout_established" = 86400;
+    };
+  };
+}
