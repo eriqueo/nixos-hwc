@@ -2,9 +2,9 @@
 {
   imports = [
     ../modules/infrastructure/hardening.nix
-    ../modules/infrastructure/secrets.nix
+    ../modules/infrastructure/secrets.nix  # Keep for vault config, remove age.secrets
     ../modules/services/vpn.nix
-    ../modules/security/emergency-access.nix
+    ../modules/security/index.nix          # New consolidated security domain
   ];
 
   hwc.security.hardening = {
@@ -29,17 +29,13 @@
     audit.enable = true;
   };
 
-  hwc.secrets = {
-    enable = true;
-    provider = "age";
-  };
-  # Decrypt this secret at boot (agenix)
-  age.secrets."emergency-password".file = ../secrets/emergency-password.age;
+  # Security domain provides all secrets via materials facade
+  hwc.security.enable = true;
 
-  # Enable emergency access using the *hashed* password from the secret
+  # Enable emergency access using the materials facade
   hwc.security.emergencyAccess = {
     enable = true;
-    hashedPasswordFile = config.age.secrets."emergency-password".path;
+    hashedPasswordFile = config.hwc.security.materials.emergencyPasswordFile;
   };
 
   hwc.services.vpn.tailscale = {

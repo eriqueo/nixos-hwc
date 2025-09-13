@@ -5,7 +5,7 @@
 #
 # DEPENDENCIES (Upstream):
 #   - config.hwc.paths.* (modules/system/paths.nix)
-#   - config.hwc.system.secrets.* (modules/system/secrets.nix)
+#   - config.hwc.security.materials.* (modules/security/ domain)
 #
 # USED BY (Downstream):
 #   - profiles/base.nix (enables via hwc.system.users options)
@@ -156,19 +156,19 @@ in
     assertions = [
       # User and security assertions:
       {
-        assertion = !cfg.user.useSecrets || config.hwc.system.secrets.enable;
-        message = "hwc.system.users.useSecrets requires hwc.system.secrets.enable = true";
+        assertion = !cfg.user.useSecrets || config.hwc.security.enable;
+        message = "hwc.system.users.useSecrets requires hwc.security.enable = true (via security profile)";
       }
       {
-        assertion = !cfg.user.ssh.useSecrets || config.hwc.system.secrets.enable;
-        message = "hwc.system.users.ssh.useSecrets requires hwc.system.secrets.enable = true";
+        assertion = !cfg.user.ssh.useSecrets || config.hwc.security.enable;
+        message = "hwc.system.users.ssh.useSecrets requires hwc.security.enable = true (via security profile)";
       }
       {
-        assertion = !cfg.user.useSecrets || (config.age.secrets ? "user-initial-password");
+        assertion = !cfg.user.useSecrets || (config.hwc.security.materials.userInitialPasswordFile != null);
         message = "CRITICAL: useSecrets enabled but user-initial-password secret not available - this would lock you out! Disable useSecrets or ensure secret exists.";
       }
       {
-        assertion = !cfg.user.ssh.useSecrets || (config.age.secrets ? "user-ssh-public-key");
+        assertion = !cfg.user.ssh.useSecrets || (config.hwc.security.materials.userSshPublicKeyFile != null);
         message = "CRITICAL: SSH useSecrets enabled but user-ssh-public-key secret not available - this would lock you out of SSH! Disable useSecrets or ensure secret exists.";
       }
       {
