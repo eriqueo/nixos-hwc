@@ -44,7 +44,7 @@
       };
       monitoring.enable = true;
     };
-    desktop.enable = true;
+    # desktop packages moved to modules/home/ - remove this option
     audio.enable = true;
   };
   
