@@ -15,13 +15,13 @@
 #   - profiles/profile.nix: ../modules/infrastructure/user-services.nix
 #
 # USAGE:
-#   hwc.infrastructure.userServices.enable = true;
-#   hwc.infrastructure.userServices.username = "eric";  # defaults to config.hwc.home.user.name
+#   hwc.infrastructure.session.services.enable = true;
+#   hwc.infrastructure.session.services.username = "eric";  # defaults to config.hwc.home.user.name
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.infrastructure.userServices;
+  cfg = config.hwc.infrastructure.session.services;
   usersCfg = config.hwc.system.users;
   paths = config.hwc.paths;
 in {
@@ -30,7 +30,7 @@ in {
   # OPTIONS - User Service Configuration
   #============================================================================
 
-  options.hwc.infrastructure.userServices = {
+  options.hwc.infrastructure.session.services = {
     enable = lib.mkEnableOption "user system services (home-manager integration, SSH setup)";
 
     username = lib.mkOption {

@@ -34,9 +34,9 @@
 #   - profiles/workstation.nix: ../modules/infrastructure/printing.nix
 #
 # USAGE:
-#   hwc.infrastructure.printing.enable = true;
-#   hwc.infrastructure.printing.drivers = [ "hplip" "gutenprint" ];  # Override defaults
-#   hwc.infrastructure.printing.avahi = true;  # Enable network printer discovery
+#   hwc.infrastructure.hardware.peripherals.enable = true;
+#   hwc.infrastructure.hardware.peripherals.drivers = [ "hplip" "gutenprint" ];  # Override defaults
+#   hwc.infrastructure.hardware.peripherals.avahi = true;  # Enable network printer discovery
 #
 # VALIDATION:
 #   - Requires desktop environment for GUI printer management tools
@@ -44,13 +44,13 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.infrastructure.printing;
+  cfg = config.hwc.infrastructure.hardware.peripherals;
 in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
   
-  options.hwc.infrastructure.printing = {
+  options.hwc.infrastructure.hardware.peripherals = {
     enable = lib.mkEnableOption "CUPS printing support with drivers";
     
     # Driver packages

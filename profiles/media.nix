@@ -1,12 +1,12 @@
 { ... }:
 {
   imports = [
-    ../modules/infrastructure/storage.nix
+    ../modules/infrastructure/index.nix
     ../modules/services/jellyfin.nix
     ../modules/services/arr-stack.nix
   ];
   
-  hwc.storage = {
+  hwc.infrastructure.hardware.storage = {
     media = {
       enable = true;
       directories = [
