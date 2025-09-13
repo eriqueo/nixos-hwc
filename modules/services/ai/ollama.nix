@@ -5,7 +5,7 @@
 #
 # DEPENDENCIES (Upstream):
 #   - config.hwc.paths.*        (modules/system/paths.nix)
-#   - config.hwc.gpu.*          (modules/system/gpu.nix)  // accel, containerOptions, containerEnvironment
+#   - config.hwc.infrastructure.hardware.gpu.*          (modules/infrastructure/hardware/gpu.nix)  // accel, containerOptions, containerEnvironment
 #
 # USED BY (Downstream):
 #   - profiles/ai.nix           (orchestration toggle)
@@ -17,7 +17,7 @@
 # USAGE:
 #   hwc.services.ollama.enable = true;
 #   hwc.services.ollama.models = [ "llama3:8b" "codellama:13b" ];
-#   # GPU use is inferred from hwc.gpu.type/accel; no enableGpu knob here.
+#   # GPU use is inferred from hwc.infrastructure.hardware.gpu.type/accel; no enableGpu knob here.
 
 { config, lib, pkgs, ... }:
 
@@ -26,9 +26,9 @@ let
   paths = config.hwc.paths;
 
   # Derived convenience flags from infrastructure capability (read-only source of truth)
-  accel = config.hwc.gpu.accel or "cpu";
-  gpuExtraOptions = config.hwc.gpu.containerOptions or [];
-  gpuEnv          = config.hwc.gpu.containerEnvironment or {};
+  accel = config.hwc.infrastructure.hardware.gpu.accel or "cpu";
+  gpuExtraOptions = config.hwc.infrastructure.hardware.gpu.containerOptions or [];
+  gpuEnv          = config.hwc.infrastructure.hardware.gpu.containerEnvironment or {};
 in
 {
   #============================================================================
@@ -56,7 +56,7 @@ in
     };
 
     # If you want a manual CPU override even when GPU is present, add a boolean here later.
-    # For now, we follow hwc.gpu.accel automatically.
+    # For now, we follow hwc.infrastructure.hardware.gpu.accel automatically.
   };
 
   #============================================================================

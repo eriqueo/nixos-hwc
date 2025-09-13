@@ -9,6 +9,7 @@
     ./materials.nix          # Stable read-only path facade for consumers
     ./compat.nix             # Compatibility aliases for legacy paths
     ./emergency-access.nix   # Emergency access configuration (existing)
+    ./hardening.nix          # Security hardening configuration
   ];
 
   # Security domain enable option

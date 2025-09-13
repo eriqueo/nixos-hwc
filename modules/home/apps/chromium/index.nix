@@ -15,10 +15,12 @@
 
 { lib, pkgs, config, ... }:
 
-let cfg = config.features.chromium or { enable = false; };
+let 
+  cfg = config.features.chromium;
 in {
-  options.features.chromium.enable =
-    lib.mkEnableOption "Enable Chromium (user-scoped)";
+  options.features.chromium = {
+    enable = lib.mkEnableOption "Chromium browser (user-scoped package)";
+  };
 
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.chromium ];
