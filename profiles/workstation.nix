@@ -45,12 +45,29 @@
       monitoring.enable = true;
     };
     # desktop packages moved to modules/home/ - remove this option
-    audio.enable = true;
   };
   
   hwc.gpu = {
     enable = true;
     type = "nvidia"; #or "intel"
+  };
+
+  # System behavior (input/audio)
+  hwc.system.services.behavior = {
+    enable = true;
+    keyboard = {
+      enable = true;
+      universalFunctionKeys = true;
+    };
+    audio.enable = true;
+  };
+
+  # Login manager for workstation
+  hwc.system.services.session.loginManager = {
+    enable = true;
+    defaultUser = "eric";
+    defaultCommand = "Hyprland";
+    autoLogin = true;
   };
   
   hwc.infrastructure = {

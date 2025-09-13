@@ -126,18 +126,17 @@
     };
   };
 
-  # Centralized sudo configuration
-  hwc.system.security.sudo = {
+  # Session management (sudo + login)
+  hwc.system.services.session = {
     enable = true;
-    wheelNeedsPassword = false; # Restore working sudo behavior
+    sudo = {
+      enable = true;
+      wheelNeedsPassword = false; # Restore working sudo behavior
+    };
   };
 
-  # Agenix secrets with proper service ordering
-  hwc.system.secrets = {
-    enable = true;
-    userPasswordSecret = "user-initial-password";
-    ensureSecretsExist = false; # build-only; we'll flip to true later
-  };
+  # Security domain provides all secrets (enabled via security profile)
+  # No direct configuration needed here - security profile handles it
 
   #============================================================================
   # USER DOMAIN (Orchestration) - Defers implementation to modules/home/*
@@ -150,8 +149,8 @@
   #============================================================================
   # Security configuration moved to:
   # - hwc.system.users (user authentication)
-  # - hwc.system.security.sudo (privilege escalation) 
-  # - hwc.system.secrets (agenix integration)
+  # - hwc.system.services.session.sudo (privilege escalation)
+  # - hwc.security.* (via security profile - agenix integration)
 
   #============================================================================
   # FILESYSTEM (Orchestration) - Defers implementation to modules/system/filesystem.nix

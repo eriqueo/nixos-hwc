@@ -8,20 +8,26 @@ let
 
   homeDir     = config.home.homeDirectory;
   profileBase = "${homeDir}/.thunderbird";
+  cfg = config.features.betterbird;
 in
 {
-  # Packages that belong with the app (you can add betterbird here if you package it)
-  home.packages = (session.packages or []) ++ (tools.packages or []);
+  options.features.betterbird.enable =
+    lib.mkEnableOption "Betterbird email client with Thunderbird compatibility";
 
-  # Session variables (none are strictly required, but session/env is supported)
-  home.sessionVariables = (session.env or {});
+  config = lib.mkIf cfg.enable {
+    # Packages that belong with the app (you can add betterbird here if you package it)
+    home.packages = (session.packages or []) ++ (tools.packages or []);
 
-  # User services: tools + session
-  systemd.user.services = (tools.services or {}) // (session.services or {});
+    # Session variables (none are strictly required, but session/env is supported)
+    home.sessionVariables = (session.env or {});
 
-  # File drops (theming + prefs)
-  home.file = lib.mkMerge [
-    (appearance.files profileBase)
-    (behavior.files   profileBase)
-  ];
+    # User services: tools + session
+    systemd.user.services = (tools.services or {}) // (session.services or {});
+
+    # File drops (theming + prefs)
+    home.file = lib.mkMerge [
+      (appearance.files profileBase)
+      (behavior.files   profileBase)
+    ];
+  };
 }
