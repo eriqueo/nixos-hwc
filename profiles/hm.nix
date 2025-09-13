@@ -27,7 +27,7 @@
         betterbird.enable   = true;
         chromium.enable     = true;
         librewolf.enable    = true;
-        protonBridge.enable = true
+        protonBridge.enable = true;
       };
 
       hwc.home.theme.palette = "deep-nord";
