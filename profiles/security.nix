@@ -1,8 +1,6 @@
 { config, lib,... }:
 {
   imports = [
-    ../modules/infrastructure/hardening.nix
-    ../modules/infrastructure/secrets.nix  # Keep for vault config, remove age.secrets
     ../modules/services/vpn.nix
     ../modules/security/index.nix          # New consolidated security domain
   ];

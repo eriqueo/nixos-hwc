@@ -9,14 +9,8 @@
     # System (now auto-imported via base.nix)
     # ../modules/system/ components imported via profiles/base.nix
 
-    # Infrastructure
-    ../modules/infrastructure/gpu.nix
-    ../modules/infrastructure/printing.nix
-    ../modules/infrastructure/virtualization.nix
-    ../modules/infrastructure/samba.nix
-    ../modules/infrastructure/user-services.nix
-    ../modules/infrastructure/user-hardware-access.nix
-    ../modules/infrastructure/storage.nix
+    # Infrastructure (3-bucket aggregator)
+    ../modules/infrastructure/index.nix
 
     # Services
     ../modules/services/backup/user-backup.nix
@@ -47,7 +41,7 @@
     # desktop packages moved to modules/home/ - remove this option
   };
   
-  hwc.gpu = {
+  hwc.infrastructure.hardware.gpu = {
     enable = true;
     type = "nvidia"; #or "intel"
   };
@@ -71,33 +65,35 @@
   };
   
   hwc.infrastructure = {
-    printing.enable = true;
-    virtualization.enable = true;
-    samba.enableSketchupShare = true;
-    userServices.enable = true;
-    storage = {
-      backup = {
+    hardware = {
+      peripherals.printing.enable = true;
+      permissions = {
         enable = true;
-        externalDrive.autoMount = true;
+        groups = {
+          media = true;
+          development = true;
+          virtualization = true;
+          hardware = true;
+        };
+      };
+      storage = {
+        backup = {
+          enable = true;
+          externalDrive.autoMount = true;
+        };
       };
     };
 
-    userHardwareAccess = {
-      enable = true;
-      groups = {
-        media = true;
-        development = true;
-        virtualization = true;
-        hardware = true;
-      };
-    };
+    session = {
+      services.enable = true;
 
-    # Tools/binaries provided by the co-located system parts
-    hyprlandTools = {
-      enable = true;
-      notifications = true;
+      # Tools/binaries provided by the co-located system parts
+      hyprlandTools = {
+        enable = true;
+        notifications = true;
+      };
+      waybarTools.enable = true;
     };
-    waybarTools.enable = true;
   };
 
   hwc.services.backup.user = {

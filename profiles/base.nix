@@ -40,7 +40,7 @@
     ../modules/system/index.nix
     
     # Infrastructure
-    ../modules/infrastructure/gpu.nix
+    ../modules/infrastructure/index.nix
   ];
 
   #============================================================================

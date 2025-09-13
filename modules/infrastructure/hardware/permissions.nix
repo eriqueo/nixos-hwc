@@ -8,19 +8,19 @@
 #   - config.hwc.home.user.name (modules/home/eric.nix)
 #
 # USED BY (Downstream):
-#   - profiles/*.nix (enables via hwc.infrastructure.userHardwareAccess.enable)
+#   - profiles/*.nix (enables via hwc.infrastructure.hardware.permissions.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../modules/infrastructure/user-hardware-access.nix
 #
 # USAGE:
-#   hwc.infrastructure.userHardwareAccess.enable = true;
-#   hwc.infrastructure.userHardwareAccess.username = "eric";
+#   hwc.infrastructure.hardware.permissions.enable = true;
+#   hwc.infrastructure.hardware.permissions.username = "eric";
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.infrastructure.userHardwareAccess;
+  cfg = config.hwc.infrastructure.hardware.permissions;
   usersCfg = config.hwc.system.users;
   paths = config.hwc.paths;
 in {
@@ -29,7 +29,7 @@ in {
   # OPTIONS - User Hardware Access Configuration
   #============================================================================
 
-  options.hwc.infrastructure.userHardwareAccess = {
+  options.hwc.infrastructure.hardware.permissions = {
     enable = lib.mkEnableOption "user hardware access permissions and system setup";
 
     username = lib.mkOption {

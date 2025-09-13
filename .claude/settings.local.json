@@ -44,7 +44,8 @@
       "Read(/etc/nixos/shared/home-manager/**)",
       "Read(/etc/nixos/shared/home-manager/**)",
       "Read(/etc/nixos/shared/home-manager/**)",
-      "Read(/etc/nixos/modules/users/**)"
+      "Read(/etc/nixos/modules/users/**)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": [],

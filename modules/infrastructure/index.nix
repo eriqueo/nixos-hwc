@@ -1,13 +1,21 @@
+# modules/infrastructure/index.nix
+#
+# Infrastructure Domain - Integration glue for hardware, services, and users
+# Imports the 3 clean buckets: hardware, mesh, session
 { lib, ... }:
-let
-  dir   = builtins.readDir ./.;
-  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix") dir;
-  subds = lib.filterAttrs (_: t: t == "directory") dir;
+{
+  imports = [
+    # Hardware bucket - user↔hardware integration glue
+    ./hardware/permissions.nix    # User groups, hardware ACLs, tmpfiles
+    ./hardware/gpu.nix           # GPU acceleration integration
+    ./hardware/peripherals.nix   # Printer integration glue
+    ./hardware/storage.nix       # Storage device integration
 
-  filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
-  subIndex  =
-    lib.pipe (lib.attrNames subds) [
-      (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
-      (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
-    ];
-in { imports = filePaths ++ subIndex; }
+    # Mesh bucket - service↔service and service↔network glue
+    ./mesh/container-networking.nix  # Container network integration
+
+    # Session bucket - user-scoped helpers (non-WM-specific)
+    ./session/services.nix       # Background user services
+    ./session/commands.nix       # Shared CLI commands (disabled by default)
+  ];
+}

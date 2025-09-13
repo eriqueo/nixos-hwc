@@ -20,7 +20,7 @@
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.infrastructure.storage;
+  cfg = config.hwc.infrastructure.hardware.storage;
   paths = config.hwc.paths;
   
   # External drive mount script
@@ -118,7 +118,7 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.infrastructure.storage = {
+  options.hwc.infrastructure.hardware.storage = {
     hot = {
       enable = lib.mkEnableOption "Hot storage tier";
       

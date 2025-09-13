@@ -20,12 +20,12 @@
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.containerNetworking;
+  cfg = config.hwc.infrastructure.mesh.container;
 in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.containerNetworking = {
+  options.hwc.infrastructure.mesh.container = {
     networks = lib.mkOption {
       type = lib.types.attrsOf lib.types.attrs;
       default = {};
