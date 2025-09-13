@@ -9,5 +9,5 @@ let
   # optional: exclude scratch or “multi” scaffolding if you don’t want it auto-loaded
   appDirsWanted = lib.filter (n: !(lib.hasSuffix "-bak" n) && n != "hyprland-new") appDirs;
 
-  imports = map (n: ./. + "/${n}/index.nix") (lib.sort lib.compare appDirsWanted);
+  imports = map (n: ./. + "/${n}/index.nix") (lib.sort (a: b: a < b) appDirsWanted);
 in { inherit imports; }
