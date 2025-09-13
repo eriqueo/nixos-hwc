@@ -90,7 +90,7 @@ in
           runAsRoot = false;
           swtpm.enable = true;
           ovmf.enable  = true;
-          ovmf.packages = [ pkgs.OVMF.fd ];
+          ovmf.packages = [ pkgs.OVMFFull.fd ];
           vhostUserPackages = with pkgs; [ virtiofsd ];
         };
       };

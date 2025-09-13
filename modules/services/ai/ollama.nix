@@ -92,37 +92,46 @@ in
     # One-shot model pre-pull after the container is up.
     systemd.services.ollama-pull-models = {
       description = "Pre-download initial Ollama models";
-      after  = [ "network-online.target" "oci-containers-ollama.service" ];
-      wants  = [ "network-online.target" "oci-containers-ollama.service" ];
+      after    = [ "network-online.target" "oci-containers-ollama.service" ];
+      wants    = [ "network-online.target" "oci-containers-ollama.service" ];
       wantedBy = [ "multi-user.target" ];
 
+      # pullCmds stays exactly as you had it
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        # Run once (idempotent marker)
-        ExecStartPre = "/bin/sh -c 'test -f /var/lib/ollama-models-pulled && exit 0 || exit 0'";
-        ExecStart = let
-          pullCmds = lib.concatMapStringsSep "\n" (model: ''
+
+        ExecStart = "${pkgs.bash}/bin/bash -lc ${lib.escapeShellArg ''
+          set -euo pipefail
+          mark=/var/lib/ollama-models-pulled
+
+          if [ -f "$mark" ]; then
+            echo "Models already pulled (marker: $mark)"
+            exit 0
+          fi
+
+          echo "Waiting for Ollama to be ready on port ${toString cfg.port}..."
+          for i in $(seq 1 120); do
+            if ${pkgs.curl}/bin/curl -fsS http://127.0.0.1:${toString cfg.port}/api/tags >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          # Generated model pulls
+          ${lib.concatMapStringsSep "\n" (model: ''
             echo "Pulling ${model}..."
             ${pkgs.curl}/bin/curl -sS -X POST -H 'Content-Type: application/json' \
               --data '{"name":"${model}","stream":false}' \
               http://127.0.0.1:${toString cfg.port}/api/pull || exit 1
             echo "Pulled: ${model}"
-          '') cfg.models;
-        in ''
-          /bin/sh -eu -c '
-            echo "Waiting for Ollama to be ready on port ${toString cfg.port}..."
-            for i in $(seq 1 120); do
-              if ${pkgs.curl}/bin/curl -fsS http://127.0.0.1:${toString cfg.port}/api/tags >/dev/null; then
-                break
-              fi
-              sleep 1
-            done
-            ${pullCmds}
-            touch /var/lib/ollama-models-pulled
-          '
-        '';
+          '') cfg.models}
+
+          touch "$mark"
+        ''}";
       };
+    }
+
     };
 
     # IMPORTANT: No user/group manipulation here (user domain). Keep Charter separation.
