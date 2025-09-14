@@ -60,9 +60,11 @@ in {
     # Disable thermald (Intel-specific, causes issues on ThinkPads with unsupported ACPI)
     services.thermald.enable = lib.mkIf cfg.disableIncompatibleServices (lib.mkForce false);
     
-    # Enable power profile management
+    # Power profile management (mutually exclusive)
     services.power-profiles-daemon.enable = lib.mkIf (cfg.powerManagement.enable && cfg.powerManagement.service == "power-profiles-daemon") true;
-    services.tlp.enable = lib.mkIf (cfg.powerManagement.enable && cfg.powerManagement.service == "tlp") true;
+    
+    # Always force disable TLP to prevent conflicts (we manage power via power-profiles-daemon by default)
+    services.tlp.enable = lib.mkForce false;
     
     # Blacklist problematic kernel modules
     boot.blacklistedKernelModules = cfg.blacklistedModules;
