@@ -62,7 +62,6 @@ in {
     
     services.keyd = lib.mkIf cfg.keyboard.enable {
       enable = true;
-      group = "input";  # Use kernel's input group instead of non-existent "keyd" group
 
       keyboards.default = lib.mkIf cfg.keyboard.universalFunctionKeys {
         ids = [ "*" ];  # Apply to all keyboards
@@ -85,10 +84,9 @@ in {
       };
     };
 
-    # Validate keyd configuration at build time to catch syntax errors early
-    systemd.services.keyd.serviceConfig.ExecStartPre = lib.mkIf cfg.keyboard.enable (lib.mkForce [
-      "${pkgs.keyd}/bin/keyd -n -c /etc/keyd/default.conf"
-    ]);
+    # Ensure keyd has access to input devices via user groups
+    users.groups.keyd = lib.mkIf cfg.keyboard.enable {};
+    users.groups.input = lib.mkIf cfg.keyboard.enable {};
 
     #=========================================================================
     # AUDIO SYSTEM CONFIGURATION
