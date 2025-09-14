@@ -56,6 +56,16 @@
     audio.enable = true;
   };
 
+  # Thermal management
+  hwc.system.core.thermal = {
+    enable = true;
+    powerManagement.enable = true;
+    disableIncompatibleServices = true;
+  };
+
+  # Polkit configuration
+  hwc.system.core.polkit.enable = true;
+
   # Login manager for workstation
   hwc.system.services.session.loginManager = {
     enable = true;
