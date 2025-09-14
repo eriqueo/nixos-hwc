@@ -40,7 +40,7 @@ let
     # Configuration
     USER_HOME="${paths.user.home}"
     EXTERNAL_MOUNT="${cfg.externalDrive.mountPoint}"
-    BACKUP_NAME="$(hostname)_${userCfg.user.name}_$(date +%Y%m%d_%H%M%S)"
+    BACKUP_NAME="$(${pkgs.nettools}/bin/hostname)_${userCfg.user.name}_$(date +%Y%m%d_%H%M%S)"
     LOG_FILE="/var/log/user-backup.log"
     
     # Check if external drive is mounted and has space
@@ -166,15 +166,15 @@ let
       if [[ "$backup_success" == true ]]; then
         log_info "=== Backup completed successfully ==="
         ${lib.optionalString cfg.notifications.enable ''
-          # Send success notification
-          ${pkgs.libnotify}/bin/notify-send "Backup Complete" "User data backed up successfully" --icon=dialog-information
+          # Log success (desktop notifications don't work in system context)
+          logger "Backup Complete: User data backed up successfully"
         ''}
         exit 0
       else
         log_error "=== All backup methods failed ==="
         ${lib.optionalString cfg.notifications.enable ''
-          # Send failure notification
-          ${pkgs.libnotify}/bin/notify-send "Backup Failed" "All backup methods failed" --icon=dialog-error --urgency=critical
+          # Log failure (desktop notifications don't work in system context)  
+          logger -p user.err "Backup Failed: All backup methods failed"
         ''}
         exit 1
       fi
