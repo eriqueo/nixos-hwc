@@ -69,7 +69,7 @@
     
     # Server-specific Tailscale configuration
     tailscale = {
-      permitCertUid = "caddy";  # Allow Caddy to access certificates
+      permitCertUid = lib.mkIf config.hwc.services.caddy.enable "caddy";  # Allow Caddy to access certificates only if Caddy is enabled
       extraUpFlags = [ 
         "--advertise-tags=tag:server"
         "--accept-routes" 

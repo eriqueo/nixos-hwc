@@ -162,6 +162,8 @@ in {
         "kernel.unprivileged_bpf_disabled" = 1;
         "net.core.bpf_jit_harden" = 2;
         "kernel.ftrace_enabled" = false;
+        "fs.protected_hardlinks" = 1;  # Prevent hardlink-based privilege escalation
+        "fs.protected_symlinks" = 1;   # Prevent symlink-based privilege escalation
       };
 
       # Security packages
