@@ -5,7 +5,7 @@
 #
 # DEPENDENCIES:
 #   Upstream: config.hwc.paths.storage.hot (modules/system/paths.nix)
-#   Upstream: config.hwc.gpu.type (modules/system/gpu.nix) [optional]
+#   Upstream: config.hwc.infrastructure.hardware.gpu.type (modules/infrastructure/hardware/gpu.nix) [optional]
 #   Upstream: virtualisation.docker.enable (profiles/base.nix)
 #
 # USED BY:
@@ -23,7 +23,7 @@
 #
 # VALIDATION:
 #   - Requires hwc.paths.storage.hot to be configured
-#   - GPU acceleration requires hwc.gpu.type != "none"
+#   - GPU acceleration requires hwc.infrastructure.hardware.gpu.type != "none"
 #   - Port 8096 must be available
 
 { config, lib, pkgs, ... }:
@@ -75,8 +75,8 @@ in {
         message = "Jellyfin requires hwc.paths.storage.hot to be configured";
       }
       {
-        assertion = cfg.enableGpu -> (config.hwc.gpu.type or "none") != "none";
-        message = "Jellyfin GPU acceleration requires hwc.gpu.type to be configured";
+        assertion = cfg.enableGpu -> (config.hwc.infrastructure.hardware.gpu.type or "none") != "none";
+        message = "Jellyfin GPU acceleration requires hwc.infrastructure.hardware.gpu.type to be configured";
       }
     ];
     
@@ -98,10 +98,10 @@ in {
       };
       
       extraOptions = lib.optionals cfg.enableGpu (
-        if config.hwc.gpu.type == "nvidia" then [
+        if config.hwc.infrastructure.hardware.gpu.type == "nvidia" then [
           "--runtime=nvidia"
           "--gpus=all"
-        ] else if config.hwc.gpu.type == "intel" then [
+        ] else if config.hwc.infrastructure.hardware.gpu.type == "intel" then [
           "--device=/dev/dri"
         ] else []
       );

@@ -12,7 +12,7 @@
 #   Upstream: modules/services/utility/qbittorrent.nix
 #   Upstream: modules/services/network/gluetun.nix
 #   Upstream: modules/services/network/caddy.nix
-#   Upstream: modules/system/gpu.nix
+#   Upstream: modules/infrastructure/hardware/gpu.nix
 #   Upstream: modules/system/paths.nix
 #
 # USED BY:
