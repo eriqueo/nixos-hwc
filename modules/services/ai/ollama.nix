@@ -96,12 +96,11 @@ in
       wants    = [ "network-online.target" "oci-containers-ollama.service" ];
       wantedBy = [ "multi-user.target" ];
 
-      # pullCmds stays exactly as you had it
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-
-        ExecStart = "${pkgs.bash}/bin/bash -lc ${lib.escapeShellArg ''
+        
+        ExecStart = pkgs.writeShellScript "ollama-pull-models" ''
           set -euo pipefail
           mark=/var/lib/ollama-models-pulled
 
@@ -128,10 +127,8 @@ in
           '') cfg.models}
 
           touch "$mark"
-        ''}";
+        '';
       };
-    }
-
     };
 
     # IMPORTANT: No user/group manipulation here (user domain). Keep Charter separation.
