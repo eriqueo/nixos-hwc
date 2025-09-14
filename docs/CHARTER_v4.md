@@ -112,7 +112,7 @@ Every .nix file must follow this exact header and section format:
 #
 # DEPENDENCIES (Upstream):
 #   - config.hwc.paths.* (modules/system/paths.nix)
-#   - config.hwc.gpu.accel (modules/infrastructure/gpu.nix)
+#   - config.hwc.infrastructure.hardware.gpu.accel (modules/infrastructure/hardware/gpu.nix)
 #
 # USED BY (Downstream):
 #   - profiles/workstation.nix (enables via hwc.services.service.enable)

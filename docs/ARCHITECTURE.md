@@ -72,7 +72,7 @@ All paths derive from `config.hwc.paths`:
 ## GPU Management
 
 ```nix
-hwc.gpu.nvidia = {
+hwc.infrastructure.hardware.gpu.nvidia = {
   enable = true;
   containerRuntime = true;
 };

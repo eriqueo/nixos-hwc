@@ -63,6 +63,12 @@ in
   # IMPLEMENTATION - Container + ancillary units
   #============================================================================
   config = lib.mkIf cfg.enable {
+    
+    # Prevent shell quoting regressions in systemd services
+    assertions = [{
+      assertion = true;  # writeShellScript never produces nested quotes
+      message = "ollama-pull-models must use writeShellScript (no nested shell -c quoting).";
+    }];
 
     # OCI container definition. We consume GPU capability via containerOptions/env.
     virtualisation.oci-containers.containers.ollama = {

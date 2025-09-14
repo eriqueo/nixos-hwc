@@ -13,7 +13,7 @@
 #   - modules/services/media/immich.nix    (ML acceleration)
 #   - modules/services/ai/ollama.nix       (consumes accel = cuda/intel/rocm/cpu)
 #   - profiles/*                           (orchestration)
-#   - machines/*/config.nix                (declares hwc.gpu.type)
+#   - machines/*/config.nix                (declares hwc.infrastructure.hardware.gpu.type)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/base.nix: ../modules/system/gpu.nix
@@ -170,11 +170,11 @@ in
       assertions = [
         {
           assertion = (!cfg.nvidia.containerRuntime) || (cfg.type != "none");
-          message   = "GPU container runtime requires hwc.gpu.type to be nvidia/intel/amd (not 'none').";
+          message   = "GPU container runtime requires hwc.infrastructure.hardware.gpu.type to be nvidia/intel/amd (not 'none').";
         }
         {
           assertion = (!cfg.nvidia.enableMonitoring) || (cfg.type == "nvidia");
-          message   = "NVIDIA monitoring requires hwc.gpu.type = \"nvidia\".";
+          message   = "NVIDIA monitoring requires hwc.infrastructure.hardware.gpu.type = \"nvidia\".";
         }
       ];
     }
