@@ -29,8 +29,7 @@ let
   userCfg = config.hwc.system.users;
   
   # Backup script with intelligent drive detection and fallback
-  backupScript = pkgs.writeScriptBin "user-backup" ''
-    #!/usr/bin/env bash
+  backupScript = pkgs.writeShellScript "user-backup" ''
     set -euo pipefail
     
     # Logging functions
@@ -289,8 +288,7 @@ in {
       }
     ];
     
-    # Install backup script
-    environment.systemPackages = [ backupScript ];
+    # Backup script is used directly by systemd service
     
     # Rclone config from agenix secret
     environment.etc."rclone-proton.conf" = lib.mkIf (cfg.protonDrive.enable && cfg.protonDrive.useSecret) {
@@ -307,7 +305,7 @@ in {
       serviceConfig = {
         Type = "oneshot";
         User = "root";  # Needed to access user files and mount points
-        ExecStart = "${backupScript}/bin/user-backup";
+        ExecStart = backupScript;
         
         # Security hardening
         PrivateTmp = true;

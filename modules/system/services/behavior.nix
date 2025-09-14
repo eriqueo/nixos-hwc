@@ -62,6 +62,7 @@ in {
     
     services.keyd = lib.mkIf cfg.keyboard.enable {
       enable = true;
+      group = "input";  # Use kernel's input group instead of non-existent "keyd" group
 
       keyboards.default = lib.mkIf cfg.keyboard.universalFunctionKeys {
         ids = [ "*" ];  # Apply to all keyboards
@@ -84,6 +85,11 @@ in {
       };
     };
 
+    # Validate keyd configuration at build time to catch syntax errors early
+    systemd.services.keyd.serviceConfig.ExecStartPre = lib.mkIf cfg.keyboard.enable (lib.mkForce [
+      "${pkgs.keyd}/bin/keyd -n -c /etc/keyd/default.conf"
+    ]);
+
     #=========================================================================
     # AUDIO SYSTEM CONFIGURATION
     #=========================================================================
@@ -97,10 +103,18 @@ in {
       alsa.enable = true;
       alsa.support32Bit = true;
       pulse.enable = true;
+      wireplumber.enable = true;
     };
     
+    # UPower for battery information (used by wireplumber)
+    services.upower.enable = lib.mkIf cfg.audio.enable true;
+    
     # XDG portal configuration (for desktop integration)
-    xdg.portal.config.common.default = lib.mkIf cfg.audio.enable "*";  # Keep < 1.17 behavior for compatibility
+    xdg.portal = lib.mkIf cfg.audio.enable {
+      enable = true;
+      extraPortals = with pkgs; [ xdg-desktop-portal-gtk xdg-desktop-portal-hyprland ];
+      config.common.default = "*";  # Keep < 1.17 behavior for compatibility
+    };
 
     #=========================================================================
     # FUTURE INPUT DEVICE CONFIGURATIONS
