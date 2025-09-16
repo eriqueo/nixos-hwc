@@ -5,13 +5,6 @@ let
   cfg = config.hwc.services.containers.slskd;
 in
 {
-  options.hwc.services.containers.slskd = {
-    enable = mkEnableOption "slskd container";
-    image  = shared.mkImageOption { default = "slskd/slskd:latest"; description = "Container image"; };
-    network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
-    gpu.enable    = mkOption { type = types.bool; default = true; };
-  };
-
   imports = [
     ./parts/sys.nix
     ./parts/config.nix

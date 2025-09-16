@@ -5,13 +5,6 @@ let
   cfg = config.hwc.services.containers.radarr;
 in
 {
-  options.hwc.services.containers.radarr = {
-    enable = mkEnableOption "radarr container";
-    image  = shared.mkImageOption { default = "lscr.io/linuxserver/radarr:latest"; description = "Container image"; };
-    network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
-    gpu.enable    = mkOption { type = types.bool; default = true; };
-  };
-
   imports = [
     ./parts/sys.nix
     ./parts/config.nix
