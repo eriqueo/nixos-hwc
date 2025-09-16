@@ -72,13 +72,8 @@ in {
       render = lib.mkForce { gid = 2002; };  # GPU rendering group
     };
 
-    # Add hardware groups to user account
-    users.users.${cfg.username}.extraGroups = lib.lists.flatten [
-      (lib.optionals cfg.groups.media [ "video" "audio" "render" ])
-      (lib.optionals cfg.groups.development [ "docker" "podman" ])
-      (lib.optionals cfg.groups.virtualization [ "libvirtd" "kvm" ])
-      (lib.optionals cfg.groups.hardware [ "input" "uucp" "dialout" ])
-    ];
+    # Hardware groups are created above; user group assignment handled in user domain
+    # users.users.${cfg.username}.extraGroups should be managed in modules/system/users/
 
   };
 }

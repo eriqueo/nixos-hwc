@@ -114,14 +114,13 @@ in {
         ExecStart = "${pythonEnv}/bin/python ${cfg.dataDir}/bible_system.py";
         WorkingDirectory = cfg.dataDir;
         Restart = "on-failure";
-        User = "ai-bible";
-        Group = "ai-bible";
+        DynamicUser = true;
+        StateDirectory = "ai-bible";
         
         # Security
         PrivateTmp = true;
         ProtectSystem = "strict";
         ProtectHome = true;
-        ReadWritePaths = [ cfg.dataDir ];
       };
     };
     
@@ -140,7 +139,8 @@ in {
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${pythonEnv}/bin/python ${cfg.dataDir}/bible_rewriter.py";
-        User = "ai-bible";
+        DynamicUser = true;
+        StateDirectory = "ai-bible";
       };
     };
     
@@ -163,20 +163,10 @@ in {
     };
     
     # User and permissions
-    users.users.ai-bible = {
-      isSystemUser = true;
-      group = "ai-bible";
-      home = cfg.dataDir;
-    };
-    users.groups.ai-bible = {};
-    
-    # Setup directories and copy Python scripts
-    systemd.tmpfiles.rules = [
-      "d ${cfg.dataDir} 0750 ai-bible ai-bible -"
-      "d ${cfg.dataDir}/bibles 0750 ai-bible ai-bible -"
-      "d ${cfg.dataDir}/prompts 0750 ai-bible ai-bible -"
-      "d ${cfg.dataDir}/output 0750 ai-bible ai-bible -"
-    ];
+    # Setup directories (handled by StateDirectory)
+    # systemd.tmpfiles.rules = [
+    #   # Directories are now managed by StateDirectory in service config
+    # ];
     
     networking.firewall.allowedTCPPorts = [ cfg.port ];
   };
