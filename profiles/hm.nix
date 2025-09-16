@@ -28,6 +28,7 @@
         chromium.enable     = true;
         librewolf.enable    = true;
         protonBridge.enable = true;
+        obsidian.enable     = true;
       };
 
       hwc.home.theme.palette = "deep-nord";
