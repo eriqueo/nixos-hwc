@@ -6,7 +6,8 @@ let
 in
 {
   imports = [
-    ./parts/sys.nix
+    ./sys.nix
+  ./parts/sys.nix
     ./parts/config.nix
     ./parts/scripts.nix
     ./parts/pkgs.nix

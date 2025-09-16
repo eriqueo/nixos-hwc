@@ -42,7 +42,7 @@
 | **System**         | Core OS + accounts + OS services | `modules/system/`         | users, sudo, networking, security, secrets, paths, system packages | HM configs                                   |
 | **Server**         | Host-provided workloads          | `modules/server/`         | containers, reverse proxy, databases, media stacks, monitoring     | HM configs                                   |
 | **Home**           | User environment (HM)            | `modules/home/`           | `programs.*`, `home.*`, DE/WM configs, shells                      | systemd.services, environment.systemPackages |
-| **Profiles**       | Orchestration                    | `profiles/`               | system imports, toggles                                            | HM activation, implementation                |
+| **Profiles**       | Orchestration                    | `profiles/`               | system imports, toggles                                            | HM activation (except hm.nix), implementation |
 | **Machines**       | Hardware facts + HM activation   | `machines/<host>/`        | `config.nix`, `home.nix`, storage, GPU type                        | Shared logic, profile-like orchestration     |
 
 **Key Principle**
@@ -85,6 +85,7 @@ Every **unit** (app, tool, or workload) MUST include:
 ## 6) Home Manager Boundary
 
 * **HM activation is machine-specific, never in profiles.**
+* **Exception**: `profiles/hm.nix` may contain HM activation as the single centralized HM profile
 * Example (`machines/laptop/home.nix`):
 
 ```nix
@@ -158,13 +159,13 @@ Every **unit** (app, tool, or workload) MUST include:
 rg "writeScriptBin" modules/home/
 rg "systemd\.services" modules/home/
 rg "environment\.systemPackages" modules/home/
-rg "home-manager" profiles/
+rg "home-manager" profiles/ --exclude profiles/hm.nix
 rg "/mnt/" modules/
 ```
 
 **Hard blockers**
 
-* HM activation in profiles
+* HM activation in profiles (except profiles/hm.nix)
 * NixOS modules in HM
 * HM modules in system/server
 * User creation outside `modules/system/users/`
