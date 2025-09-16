@@ -36,16 +36,16 @@
 {
   imports = [
     # Media services
-    ../modules/services/media/jellyfin.nix
-    ../modules/services/media/sonarr.nix
-    ../modules/services/media/radarr.nix
-    ../modules/services/media/lidarr.nix
-    ../modules/services/media/prowlarr.nix
+    ../modules/server/media/jellyfin.nix
+    ../modules/server/media/sonarr.nix
+    ../modules/server/media/radarr.nix
+    ../modules/server/media/lidarr.nix
+    ../modules/server/media/prowlarr.nix
     
     # Download and networking
-    ../modules/services/utility/qbittorrent.nix
-    ../modules/services/network/gluetun.nix
-    ../modules/services/network/caddy.nix
+    ../modules/server/utility/qbittorrent.nix
+    ../modules/server/network/gluetun.nix
+    ../modules/server/network/caddy.nix
     
     # System dependencies
     ../modules/system/gpu.nix

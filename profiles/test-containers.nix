@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 {
   imports = [
-    ../modules/services/containers
+    ../modules/server/containers/index.nix
   ];
 
   time.timeZone = "America/Denver";

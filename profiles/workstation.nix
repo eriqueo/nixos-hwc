@@ -13,7 +13,7 @@
     ../modules/infrastructure/index.nix
 
     # Services
-    ../modules/services/backup/user-backup.nix
+    ../modules/server/backup/user-backup.nix
 
 
   ];
