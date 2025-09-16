@@ -7,7 +7,6 @@ in
 {
   imports = [
     ./sys.nix
-  ./parts/sys.nix
     ./parts/config.nix
     ./parts/scripts.nix
     ./parts/pkgs.nix
