@@ -27,9 +27,6 @@ urlColor    = if C ? link then C.link else (if C ? accent2 then C.accent2 else (
 
 in
 {
-  options.features.kitty.enable =
-    lib.mkEnableOption "Enable the Kitty terminal emulator";
-
   config = lib.mkIf (config.features.kitty.enable or false) {
     programs.kitty = {
       enable = true;

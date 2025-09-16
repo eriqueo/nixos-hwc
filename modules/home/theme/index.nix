@@ -26,23 +26,6 @@ let
   };
 in
 {
-#============================================================================
-# OPTIONS - What can be configured
-#============================================================================
-  options.hwc.home.theme = {
-    palette = lib.mkOption {
-      type = lib.types.enum (builtins.attrNames palettes);
-      default = "deep-nord";
-      description = "Active theme palette (single source of truth).";
-    };
-    
-    colors = lib.mkOption {
-      type = lib.types.attrs;
-      default = {};
-      description = "Materialized color tokens from selected palette.";
-    };
-  };
-
   imports = [
       ./adapters/gtk.nix
     ];
