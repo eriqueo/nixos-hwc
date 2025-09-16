@@ -106,26 +106,6 @@ in
   config = lib.mkIf (cfg.enable && cfg.user.enable) {
     users.mutableUsers = false;
 
-    users.users.root = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null) {
-      hashedPassword = null;
-    };
-
-    users.users.${cfg.user.name} = {
-      isNormalUser = true;
-      description  = cfg.user.description;
-      shell        = cfg.user.shell;
-
-      extraGroups = 
-        (lib.optionals cfg.user.groups.basic            [ "wheel" "networkmanager" ]) ++
-        (lib.optionals cfg.user.groups.media            [ "video" "audio"]) ++
-        (lib.optionals cfg.user.groups.development      [ "docker" "podman"]) ++
-        (lib.optionals cfg.user.groups.virtualization   [ "libvirtd" ]) ++
-        (lib.optionals cfg.user.groups.hardware         [ "input" "uucp"]);
-
-      initialPassword = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null)
-        cfg.user.fallbackPassword;
-    };  
-
     #=========================================================================
     # SYSTEM-LEVEL ENVIRONMENT CONFIGURATION
     #=========================================================================
