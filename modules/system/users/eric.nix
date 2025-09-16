@@ -3,6 +3,8 @@ let
   cfg = config.hwc.system.users;
 in {
   config = lib.mkIf (cfg.enable && cfg.user.enable) {
+    users.mutableUsers = false;
+
     users.users.${cfg.user.name} = {
       isNormalUser = true;
       home = "/home/${cfg.user.name}";
@@ -39,5 +41,32 @@ in {
     fonts.packages = lib.mkIf cfg.enable (with pkgs; [
       nerd-fonts.caskaydia-cove
     ]);
+
+    #=========================================================================
+    # SECURITY INTEGRATION & VALIDATION
+    #=========================================================================
+    assertions = [
+      # User and security assertions:
+      {
+        assertion = !cfg.user.useSecrets || config.hwc.security.enable;
+        message = "hwc.system.users.useSecrets requires hwc.security.enable = true (via security profile)";
+      }
+      {
+        assertion = !cfg.user.ssh.useSecrets || config.hwc.security.enable;
+        message = "hwc.system.users.ssh.useSecrets requires hwc.security.enable = true (via security profile)";
+      }
+      {
+        assertion = !cfg.user.useSecrets || (config.hwc.security.materials.userInitialPasswordFile != null);
+        message = "CRITICAL: useSecrets enabled but user-initial-password secret not available - this would lock you out! Disable useSecrets or ensure secret exists.";
+      }
+      {
+        assertion = !cfg.user.ssh.useSecrets || (config.hwc.security.materials.userSshPublicKeyFile != null);
+        message = "CRITICAL: SSH useSecrets enabled but user-ssh-public-key secret not available - this would lock you out of SSH! Disable useSecrets or ensure secret exists.";
+      }
+      {
+        assertion = cfg.user.useSecrets || (cfg.user.fallbackPassword != null);
+        message = "CRITICAL: hwc.system.users.useSecrets is false, but no fallbackPassword is set. This would create a user with no password and lock you out.";
+      }
+    ];
   };
 }
