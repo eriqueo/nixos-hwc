@@ -4,7 +4,7 @@ let
     system = "x86_64-linux";
     modules = [
       ../modules/system/paths.nix
-      ../modules/services/ntfy.nix
+      ../modules/server/ntfy.nix
       {
         hwc.services.ntfy.enable = true;
         

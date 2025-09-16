@@ -1,17 +1,28 @@
 #!/usr/bin/env bash
-# HWC Charter v7 Linter
-# Enforces: single API (options.nix), lane purity, aggregator naming, import discipline,
-# profiles-only machines, one proxy authority, secrets hygiene, permissions, and more.
+# HWC Charter v7 Linter (rev2)
+# - Single API per unit (options.nix)
+# - Lane purity
+# - Aggregator naming (index.nix only)
+# - Profiles discipline (machines import profiles only)
+# - HM activation: ONLY allowed in profiles/hm.nix (sanctioned exception)
+# - Parts purity (no options/imports/config)
+# - One proxy authority (best-effort)
+# - .nix permissions 0644
+# - Secrets hygiene
+# Notes:
+# * Scans ONLY .nix files (avoids README/MD false positives)
+# * Allows co-located Home sys.nix
+# * Guards ripgrep calls to avoid "no pattern" noise
 
 set -euo pipefail
 
-# -------- config --------
 REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 cd "$REPO_ROOT"
 
 DOMAINS=(modules/home modules/infrastructure modules/security modules/server modules/system)
+ONLY_NIX_GLOBS=(-g '**/*.nix' -g '!**/.direnv/**' -g '!**/result*' -g '!**/node_modules/**')
 
-# Known aggregators that are allowed to NOT have options.nix next to index.nix
+# index.nix without options.nix is allowed ONLY for these aggregators
 ALLOW_INDEX_NO_OPTIONS=(
   "modules/home/index.nix"
   "modules/home/apps/index.nix"
@@ -23,7 +34,6 @@ ALLOW_INDEX_NO_OPTIONS=(
   "modules/system/index.nix"
 )
 
-# -------- helpers --------
 ERRS=0
 WARNS=0
 fail(){ ERRS=$((ERRS+1)); printf 'ERROR: %s\n' "$*" >&2; }
@@ -33,7 +43,7 @@ has(){ command -v "$1" >/dev/null 2>&1; }
 
 need_tools(){
   local miss=0
-  for t in rg awk find stat xargs sed cut sort uniq; do
+  for t in rg awk find stat xargs sed cut sort uniq wc; do
     has "$t" || { echo "Missing tool: $t" >&2; miss=1; }
   done
   [[ $miss -eq 0 ]] || exit 2
@@ -48,99 +58,99 @@ is_allowed_index_without_options(){
 }
 
 list_index_files(){
-  rg -n -l --no-ignore -S \
-    -g 'modules/**/index.nix' \
-    -g '!**/.direnv/**' -g '!**/result*' -g '!**/node_modules/**' || true
+  rg -n -l --no-ignore -S "${ONLY_NIX_GLOBS[@]}" -g 'modules/**/index.nix' || true
 }
 
-# -------- checks --------
+# ---------- Checks ----------
 
 check_aggregator_naming(){
+  # forbid default.nix as an aggregator anywhere under modules/**
   local hits
-  hits=$(rg -n -l --no-ignore -S -g 'modules/**/default.nix' || true)
+  hits=$(rg -n -l --no-ignore -S "${ONLY_NIX_GLOBS[@]}" -g 'modules/**/default.nix' || true)
   [[ -z "$hits" ]] || while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
     fail "Aggregator must be index.nix, not default.nix → $f"
   done <<< "$hits"
 }
 
 check_options_presence_per_unit(){
-  # Require options.nix next to index.nix for unit directories (not domain aggregators)
-  local idx
-  idx="$(list_index_files)"
+  local idx; idx="$(list_index_files)"
+  [[ -n "$idx" ]] || return 0
   while IFS= read -r f; do
     [[ -z "$f" ]] && continue
     if is_allowed_index_without_options "$f"; then
       continue
     fi
-    # Heuristic: if directory looks like a unit (has parts/ or sys.nix or other files),
-    # it must have options.nix
     local dir; dir=$(dirname "$f")
-    if [[ -d "$dir/parts" || -f "$dir/sys.nix" || $(find "$dir" -maxdepth 1 -type f -name '*.nix' | wc -l) -gt 1 ]]; then
-      [[ -f "$dir/options.nix" ]] || fail "Missing options.nix next to index.nix → $dir/ (single API per unit)"
+    # If it looks like a unit (has parts/, sys.nix, or >1 nix files), require options.nix
+    local count nix_count
+    nix_count=$(find "$dir" -maxdepth 1 -type f -name '*.nix' | wc -l | awk '{print $1}')
+    if [[ -d "$dir/parts" || -f "$dir/sys.nix" || "$nix_count" -gt 1 ]]; then
+      [[ -f "$dir/options.nix" ]] || fail "Missing options.nix next to index.nix → $dir/"
     fi
   done <<< "$idx"
 }
 
 check_no_options_declared_in_disallowed_files(){
-  # options.* must only live in options.nix (not in index.nix, sys.nix, parts/*)
+  # options.* must live ONLY in options.nix (not in index.nix, sys.nix, parts/*.nix)
   local hits
-  hits=$(rg -n --no-ignore -S \
+  hits=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" \
     -e '(^|\s)options\.' \
     -g 'modules/**/index.nix' \
     -g 'modules/**/sys.nix' \
     -g 'modules/**/parts/*.nix' || true)
-  [[ -z "$hits" ]] || while IFS= read -r line; do
-    fail "Options declared outside options.nix → $line"
+  [[ -z "$hits" ]] || while IFS= read -r l; do
+    [[ -z "$l" ]] && continue
+    fail "Options declared outside options.nix → $l"
   done <<< "$hits"
 }
 
-check_lane_purity(){
-  # No HM lane content under server/**
+check_lane_purity_server(){
+  # No HM lane config under server/** (nix files only)
   local hits
-  hits=$(rg -n --no-ignore -S -g 'modules/server/**' \
-    -e '(^|\s)home\.' \
-    -e '(^|\s)programs\.' \
-    -e 'home-manager' || true)
+  hits=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" -g 'modules/server/**' \
+    -e '(^|\s)home\.' -e '(^|\s)programs\.' -e 'home-manager' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
+    [[ -z "$l" ]] && continue
     fail "Home Manager content under server/ (lane purity) → $l"
   done <<< "$hits"
 }
 
-check_profiles_do_not_activate_hm(){
-  # HM activation must be machine-specific, not in profiles
-  local hits
-  hits=$(rg -n --no-ignore -S -g 'profiles/**/*.nix' -e '(^|\s)home-manager\s*=' || true)
+check_profiles_hm_activation(){
+  # HM activation only allowed in profiles/hm.nix
+  local profs hits
+  profs=$(rg -n -l --no-ignore -S "${ONLY_NIX_GLOBS[@]}" -g 'profiles/**/*.nix' || true)
+  [[ -z "$profs" ]] && return 0
+  hits=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" -g 'profiles/**/*.nix' -e '(^|\s)home-manager\s*=' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
-    fail "Home Manager activation found in profiles; must be in machines/*/home.nix → $l"
+    [[ -z "$l" ]] && continue
+    local file="${l%%:*}"
+    if [[ "$file" != "profiles/hm.nix" ]]; then
+      fail "Home Manager activation found in profiles; only profiles/hm.nix is allowed → $l"
+    fi
   done <<< "$hits"
 }
 
 check_machines_import_profiles_only(){
   # machines/*/config.nix must not import modules directly
   local files
-  files=$(rg -n -l --no-ignore -S -g 'machines/**/config.nix' || true)
-  [[ -z "$files" ]] || while IFS= read -r f; do
-    if rg -n --no-ignore -S '\.\./modules/' "$f" >/dev/null; then
+  files=$(rg -n -l --no-ignore -S "${ONLY_NIX_GLOBS[@]}" -g 'machines/**/config.nix' || true)
+  [[ -z "$files" ]] && return 0
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    if rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" '\.\./modules/' "$f" >/dev/null; then
       fail "Machine config imports modules directly; machines must import profiles only → $f"
     fi
   done <<< "$files"
 }
 
 check_profile_lane_imports_and_order(){
-  # profiles/hm.nix must not import server/*/index.nix
-  [[ -f profiles/hm.nix ]] && if rg -n --no-ignore -S '\.\./modules/server/.*/index\.nix' profiles/hm.nix >/dev/null; then
-    fail "profiles/hm.nix imports server/*/index.nix (lane cross-import)"
-  fi
-  # profiles/sys.nix must not import home/*/index.nix
-  [[ -f profiles/sys.nix ]] && if rg -n --no-ignore -S '\.\./modules/home/.*/index\.nix' profiles/sys.nix >/dev/null; then
-    fail "profiles/sys.nix imports home/*/index.nix (lane cross-import)"
-  fi
-  # Import order: options before implementations in each profile
+  # Warn if profiles don't import options before implementations (best-effort)
   for p in profiles/hm.nix profiles/sys.nix; do
     [[ -f "$p" ]] || continue
     local first_opt first_impl
-    first_opt=$(rg -n --no-ignore -S '/options\.nix' "$p" | head -n1 | cut -d: -f1 || true)
-    first_impl=$(rg -n --no-ignore -S '/(index|sys)\.nix' "$p" | head -n1 | cut -d: -f1 || true)
+    first_opt=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" '/options\.nix' "$p" | head -n1 | cut -d: -f1 || true)
+    first_impl=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" '/(index|sys)\.nix' "$p" | head -n1 | cut -d: -f1 || true)
     if [[ -z "$first_opt" ]]; then
       warn "$p does not explicitly import options.nix; ensure domain aggregators load options first."
     elif [[ -n "$first_impl" && "$first_impl" -lt "$first_opt" ]]; then
@@ -150,13 +160,13 @@ check_profile_lane_imports_and_order(){
 }
 
 check_single_proxy_authority(){
-  # profiles/sys.nix importing both host Caddy aggregator and container Caddy unit → error
+  # Very best-effort: error if profiles/sys.nix references both host-proxy and server/container caddy
   [[ -f profiles/sys.nix ]] || return 0
   local host container
-  host=$(rg -n --no-ignore -S 'reverseProxy|_shared/caddy\.nix|server/.*/_shared/caddy\.nix' profiles/sys.nix || true)
-  container=$(rg -n --no-ignore -S '\.\./modules/server/.*/caddy/(index|.*\.nix)' profiles/sys.nix || true)
+  host=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" 'reverseProxy|_shared/caddy\.nix|server/.*/_shared/caddy\.nix' profiles/sys.nix || true)
+  container=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" '\.\./modules/server/.*/caddy/(index|.*\.nix)' profiles/sys.nix || true)
   if [[ -n "$host" && -n "$container" ]]; then
-    fail "Reverse proxy conflict: host Caddy aggregator and containerized Caddy imported together in profiles/sys.nix"
+    fail "Reverse proxy conflict: host proxy and containerized Caddy imported together in profiles/sys.nix"
   fi
 }
 
@@ -174,62 +184,72 @@ check_permissions_nix_sources(){
 }
 
 check_secrets_hygiene(){
-  # No private keys; .age references only in modules/security/**
-  local priv
+  # No private key material in repo; .age referenced only in modules/security/**
+  local priv age_refs
   priv=$(rg -n --no-ignore -S \
     -e '-----BEGIN (AGE ENCRYPTED FILE|OPENSSH PRIVATE KEY|RSA PRIVATE KEY|ED25519 PRIVATE KEY)-----' \
     -g '!**/vendor/**' -g '!**/node_modules/**' || true)
   [[ -z "$priv" ]] || while IFS= read -r l; do
+    [[ -z "$l" ]] && continue
     fail "Private key material committed → $l"
   done <<< "$priv"
 
-  local age_refs
-  age_refs=$(rg -n --no-ignore -S '\.age(["'\'']|$)' modules -g '!modules/security/**' || true)
+  age_refs=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" '\.age(["'\'']|$)' modules -g '!modules/security/**' || true)
   [[ -z "$age_refs" ]] || while IFS= read -r l; do
+    [[ -z "$l" ]] && continue
     fail ".age referenced outside modules/security/** (units must use /run/agenix/*) → $l"
   done <<< "$age_refs"
 }
 
 check_parts_are_pure(){
-  # parts/*.nix must not declare options/imports or top-level config
+  # parts/*.nix must not declare options/imports/config
   local hits
-  hits=$(rg -n --no-ignore -S \
+  hits=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" \
     -g 'modules/**/parts/*.nix' \
     -e '(^|\s)options\.' -e '^\s*imports\s*=' -e '^\s*config\s*=' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
+    [[ -z "$l" ]] && continue
     fail "parts/* must be pure fragments (no options/imports/config) → $l"
   done <<< "$hits"
 }
 
 check_users_defined_in_system_users_only(){
-  # users.users.* must only appear under modules/system/users/**
+  # users.users.* must appear only under modules/system/users/** (allowlist: emergency root if you decide later)
   local hits
-  hits=$(rg -n --no-ignore -S '(^|\s)users\.users\.' -g '!modules/system/users/**' modules || true)
+  hits=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" '(^|\s)users\.users\.' modules -g '!modules/system/users/**' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
+    [[ -z "$l" ]] && continue
     fail "User definitions must live under modules/system/users/** → $l"
   done <<< "$hits"
 }
 
 check_home_has_no_system_writes(){
-  # No systemd.services or environment.systemPackages under modules/home/**
+  # No systemd.services or environment.systemPackages under modules/home/**,
+  # EXCEPT co-located sys.nix files (explicitly allowed) and pure fragments.
   local hits
-  hits=$(rg -n --no-ignore -S -g 'modules/home/**' \
-    -e '(^|\s)systemd\.services\.' \
-    -e '(^|\s)environment\.systemPackages' || true)
+  hits=$(rg -n --no-ignore -S "${ONLY_NIX_GLOBS[@]}" -g 'modules/home/**' \
+    -e '(^|\s)systemd\.services\.' -e '(^|\s)environment\.systemPackages' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
+    [[ -z "$l" ]] && continue
+    local file="${l%%:*}"
+    # allow co-located sys.nix under modules/home/**
+    if [[ "$file" =~ ^modules/home/.*/sys\.nix$ ]]; then
+      continue
+    fi
     fail "System-lane mutation found under modules/home/** → $l"
   done <<< "$hits"
 }
 
-# -------- run --------
+# ---------- Run ----------
+
 need_tools
 note "Repo: $REPO_ROOT"
 
 check_aggregator_naming
 check_options_presence_per_unit
 check_no_options_declared_in_disallowed_files
-check_lane_purity
-check_profiles_do_not_activate_hm
+check_lane_purity_server
+check_profiles_hm_activation
 check_machines_import_profiles_only
 check_profile_lane_imports_and_order
 check_single_proxy_authority

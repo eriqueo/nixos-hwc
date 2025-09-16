@@ -11,18 +11,18 @@
     ./_shared/caddy.nix
     
     # Container services
-    ./caddy
-    ./gluetun
-    ./immich
-    ./jellyfin
-    ./lidarr
-    ./navidrome
-    ./prowlarr
-    ./qbittorrent
-    ./radarr
-    ./sabnzbd
-    ./slskd
-    ./sonarr
-    ./soularr
+    ./caddy/index.nix
+    ./gluetun/index.nix
+    ./immich/index.nix
+    ./jellyfin/index.nix
+    ./lidarr/index.nix
+    ./navidrome/index.nix
+    ./prowlarr/index.nix
+    ./qbittorrent/index.nix
+    ./radarr/index.nix
+    ./sabnzbd/index.nix
+    ./slskd/index.nix
+    ./sonarr/index.nix
+    ./soularr/index.nix
   ];
 }

@@ -2,8 +2,8 @@
 {
   imports = [
     ../modules/infrastructure/index.nix
-    ../modules/services/jellyfin.nix
-    ../modules/services/arr-stack.nix
+    ../modules/server/jellyfin.nix
+    ../modules/server/arr-stack.nix
   ];
   
   hwc.infrastructure.hardware.storage = {

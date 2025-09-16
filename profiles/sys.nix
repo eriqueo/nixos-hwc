@@ -11,6 +11,6 @@ in
   imports =
     [ ../modules/system/index.nix ]
     ++ (gatherSys ../modules/home/apps)
-    ++ (gatherSys ../modules/services)
+    ++ (gatherSys ../modules/server)
     ++ (gatherSys ../modules/infrastructure);
 }

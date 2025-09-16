@@ -5,7 +5,7 @@
 # No hardware logic or user management here (Charter v3).
 #
 # DEPENDENCIES (Upstream):
-#   - ../modules/services/ai/ollama.nix
+#   - ../modules/server/ai/ollama.nix
 #   - modules/infrastructure/hardware/gpu.nix (indirectly; services consume hwc.infrastructure.hardware.gpu.accel)
 #
 # USED BY (Downstream):
@@ -27,8 +27,8 @@
   # IMPORTS - AI service modules (no computed paths)
   #============================================================================
   imports = [
-    ../modules/services/ai/ollama.nix
-    # ../modules/services/ai-bible.nix  # (optional future service)
+    ../modules/server/ai/ollama/ollama.nix
+    # ../modules/server/ai/ai-bible/ai-bible.nix  # (optional future service)
   ];
 
   #============================================================================

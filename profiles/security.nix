@@ -1,7 +1,7 @@
 { config, lib,... }:
 {
   imports = [
-    ../modules/services/networking/vpn.nix
+    ../modules/server/networking/vpn.nix
     ../modules/security/index.nix          # New consolidated security domain
   ];
 
