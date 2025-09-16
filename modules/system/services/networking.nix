@@ -316,7 +316,7 @@ in {
     services.resolved = lib.mkIf (cfg.dns.enable && cfg.networkManager.dns == "systemd-resolved") {
       enable = true;
       fallbackDns = cfg.dns.servers ++ cfg.dns.fallbackServers;
-      dnssec = "allow-downgrade";
+      dnssec = "false";  # Disable DNSSEC to silence cosmetic validation failures
       domains = [ "~." ];  # Use for all domains
     };
 

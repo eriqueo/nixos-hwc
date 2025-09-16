@@ -10,6 +10,7 @@
     ./hardware/gpu.nix           # GPU acceleration integration
     ./hardware/peripherals.nix   # Printer integration glue
     ./hardware/storage.nix       # Storage device integration
+    ./hardware/virtualization.nix # VM/container hardware runtime
 
     # Mesh bucket - service↔service and service↔network glue
     ./mesh/container-networking.nix  # Container network integration

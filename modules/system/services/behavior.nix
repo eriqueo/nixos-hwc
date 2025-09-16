@@ -114,6 +114,10 @@ in {
       config.common.default = "*";  # Keep < 1.17 behavior for compatibility
     };
 
+    # Keyring integration for secure app vaults (ProtonMail Bridge, etc.)
+    services.gnome.gnome-keyring.enable = lib.mkIf cfg.audio.enable true;
+    programs.seahorse.enable = lib.mkIf cfg.audio.enable true;
+
     #=========================================================================
     # FUTURE INPUT DEVICE CONFIGURATIONS
     #=========================================================================
