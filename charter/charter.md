@@ -1,305 +1,223 @@
-# CHARTER v7 — Structure, Naming, and Scopes (HM + System)
 
-> **Purpose**  
-> One mental model for *both* Home‑Manager (HM) and System scopes that’s explicit, greppable, and hard to mess up. This charter standardizes **names**, **locations**, **imports**, and **debug lanes** so changes are drop‑in and traceable.
+# HWC Architecture Charter
 
----
-
-## 0) Big picture (read me first)
-
-- **Two profiles = two lanes**
-  - `profiles/hm.nix` → HM/user scope only
-  - `profiles/sys.nix` → System scope only
-- **Auto‑aggregation everywhere** with `index.nix` so new units are “drop in”
-- **Co‑location**: if a system bit exists *because* of a unit, it lives next to that unit in `sys.nix`
-- **Platform‑wide** system stays under `modules/system/*`
-- **Shared plumbing** (virtualization, container networking, hardening) stays under `modules/infrastructure/*`
-- **Theme pipeline**: One palette → many adapters → apps consume tokens. (Matches our existing README.)
+**Owner**: Eric
+**Scope**: `nixos-hwc/` — all machines, modules, profiles, HM, and supporting files
+**Goal**: Deterministic, maintainable, scalable, and reproducible NixOS via strict domain separation, explicit APIs, and predictable patterns.
 
 ---
 
-## 1) Roles & vocabulary (function over domain)
+## 0) Preserve-First Doctrine
 
-- **Unit**: a feature directory you can enable/disable as a whole (e.g., `modules/home/apps/waybar/` or `modules/services/jellyfin/`).
-- **Namespace**: a top‑level subtree under `modules/` — `home/`, `system/`, `infrastructure/`, `services/`.
-- **Profile**: a top‑level collector a machine imports (our “lanes”).
-
----
-
-## 2) Standard file names (applies to units *and* namespaces)
-
-| File             | Role (what it does) | Notes |
-|---               |---                   |---|
-| `index.nix`      | **Public entry** & auto‑aggregator | Always the file a parent imports. |
-| `sys.nix`        | **Unit‑scoped system add‑ons**     | systemd user/root units, udev, groups, firewall, `environment.systemPackages` required *by this unit*. |
-| `options.nix`    | **Typed knobs & defaults**         | Your `features.<unit>.*` (bools, ints, enums, strings). |
-| `parts/`         | **Leaf impls**                     | `pkgs.nix`, `ui.nix`, `behavior.nix`, `session.nix`, `scripts.nix`. Keep small and focused. |
-
-**Scope rules**
-- If it configures the **user**, it goes in `index.nix` / `parts/*` (HM lane).
-- If it configures the **system because this unit exists**, it goes in `sys.nix` next to that unit.
-- If it configures the **platform regardless of units**, it belongs under `modules/system/*`.
+* **Refactor = reorganize, not rewrite**.
+* 100% feature parity during migrations.
+* Wrappers/adapters allowed only as temporary bridges (tracked & removed).
+* Never switch on red builds.
 
 ---
 
-## 3) Canonical directory layout
+## 1) Core Layering & Flow
 
-```
-modules/
-  home/
-    index.nix                 # aggregates apps/, environment/, core/, theme/
-    apps/
-      index.nix               # auto-imports *.nix and */index.nix
-      kitty.nix               # simple single-file unit
-      alacritty.nix
-      waybar/
-        index.nix
-        options.nix
-        sys.nix               # unit-scoped system helpers (only if needed)
-        parts/{pkgs.nix,ui.nix,behavior.nix,session.nix,scripts.nix}
-      hyprland/
-        index.nix
-        options.nix
-        sys.nix
-        parts/...
-    environment/
-      index.nix
-      development.nix         # HM tool bundles (fd, rg, jq, etc.)
-      productivity.nix
-      shell.nix
-    core/
-      index.nix               # HM glue (input, login manager, etc.)
-      input.nix
-      login-manager.nix
-    theme/
-      index.nix               # adapters + palette tokens exposed to apps
-      options.nix
-      parts/
-        adapters/{gtk.nix,waybar-css.nix,hyprland.nix}
-        palettes/{deep-nord.nix,gruv.nix}
+**NixOS system flow**
+`flake.nix` → `machines/<host>/config.nix` → `profiles/*` → `modules/{system,infrastructure,server}/`
 
-  system/
-    index.nix                 # platform-wide system scope
-    filesystem.nix
-    networking.nix
-    printing.nix
-    paths.nix
-    secrets.nix
-    security/sudo.nix
-    users/*.nix
-    gpu/*
+**Home Manager flow**
+`machines/<host>/home.nix` → `modules/home/`
 
-  infrastructure/
-    index.nix                 # cross-cutting plumbing for many units
-    virtualization.nix
-    container-networking.nix
-    hardening.nix
-    # If a sub-item here needs host system bits, co-locate a sibling sys.nix
+**Rules**
 
-  services/
-    # later; each service should be its own unit folder
-    name/
-      index.nix
-      sys.nix
-      parts/...
-```
-
-**Mental model**  
-- **Unit‑scoped system** → `that-unit/sys.nix`.  
-- **Platform‑wide system** → `modules/system/*`.  
-- **Shared plumbing** → `modules/infrastructure/*`.
+* Modules **implement** capabilities behind `options.nix`.
+* Profiles **orchestrate imports & toggles only**.
+* Machines **declare hardware facts** and activate HM.
+* **No cycles**: dependency direction is always downward.
+* Home Manager lives at machine level, not profile level.
 
 ---
 
-## 4) Profiles = lanes (debug starting points)
+## 2) Domains & Responsibilities
 
-- `profiles/hm.nix` imports **only** HM aggregators (usually just `modules/home/index.nix`).
-- `profiles/sys.nix` imports **platform system first** (`modules/system/index.nix`), then **unit `sys.nix`** discovered under `modules/home/apps`, `modules/services`, `modules/infrastructure`.
+| Domain             | Purpose                          | Location                  | Must Contain                                                       | Must Not Contain                             |
+| ------------------ | -------------------------------- | ------------------------- | ------------------------------------------------------------------ | -------------------------------------------- |
+| **Infrastructure** | Hardware mgmt + system tools     | `modules/infrastructure/` | GPU, power, udev, virtualization, system binaries                  | HM configs                                   |
+| **System**         | Core OS + accounts + OS services | `modules/system/`         | users, sudo, networking, security, secrets, paths, system packages | HM configs                                   |
+| **Server**         | Host-provided workloads          | `modules/server/`         | containers, reverse proxy, databases, media stacks, monitoring     | HM configs                                   |
+| **Home**           | User environment (HM)            | `modules/home/`           | `programs.*`, `home.*`, DE/WM configs, shells                      | systemd.services, environment.systemPackages |
+| **Profiles**       | Orchestration                    | `profiles/`               | system imports, toggles                                            | HM activation, implementation                |
+| **Machines**       | Hardware facts + HM activation   | `machines/<host>/`        | `config.nix`, `home.nix`, storage, GPU type                        | Shared logic, profile-like orchestration     |
 
-> If `environment.systemPackages`/systemd is acting up, start at `profiles/sys.nix`.  
-> If per‑user configs misbehave, start at `profiles/hm.nix`.
+**Key Principle**
 
-**Ordering rule**: platform‑wide system first, then unit `sys.nix` so unit overrides can win.
+* User accounts → `modules/system/users/eric.nix`
+* User env → `modules/home/` imported by `machines/<host>/home.nix`
 
 ---
 
-## 5) Auto‑aggregation snippets (copy/paste)
+## 3) Unit Anatomy
 
-### Flat folder mixing `*.nix` and `*/index.nix`
+Every **unit** (app, tool, or workload) MUST include:
+
+* `index.nix` → aggregator, defines imports, always declares options.
+* `options.nix` → mandatory, API definition (consumed by both `sys.nix` and `index.nix`).
+* `sys.nix` → system-lane implementation, co-located but imported only by system profiles.
+* `parts/**` → pure functions, no options, no side-effects.
+
+**Rule**: `options.nix` always exists. Options are never defined ad hoc in `sys.nix` or `index.nix`.
+
+---
+
+## 4) Lane Purity
+
+* **Lanes never import each other’s `index.nix`**.
+* Co-located `sys.nix` belongs to the **system lane**, even when inside `modules/home/apps/<unit>`.
+* Profiles decide which lane’s files to import.
+
+---
+
+## 5) Aggregators
+
+* Aggregators are always named **`index.nix`**.
+* Unit aggregators = `modules/home/apps/waybar/index.nix`.
+* Domain aggregators = `modules/home/index.nix`, `modules/server/index.nix`.
+* Profiles may import domain aggregators and unit indices.
+
+---
+
+## 6) Home Manager Boundary
+
+* **HM activation is machine-specific, never in profiles.**
+* Example (`machines/laptop/home.nix`):
+
 ```nix
-{ lib, ... }:
-let
-  dir   = builtins.readDir ./.;
-  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix") dir;
-  subds = lib.filterAttrs (_: t: t == "directory") dir;
-
-  filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
-  subIndex  =
-    lib.pipe (lib.attrNames subds) [
-      (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
-      (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
-    ];
-in { imports = filePaths ++ subIndex; }
-```
-
-### Gather `sys.nix` from child dirs (used in `profiles/sys.nix`)
-```nix
-let gatherSys = dirPath:
-  let
-    entries = builtins.readDir dirPath;
-    subdirs = lib.attrNames (lib.filterAttrs (_: t: t == "directory") entries);
-  in lib.filter builtins.pathExists (map (n: dirPath + "/${n}/sys.nix") subdirs);
-in
-{
-  imports =
-    [ ../modules/system/index.nix ]  # platform system first
-    ++ (gatherSys ../modules/home/apps)
-    ++ (gatherSys ../modules/services)
-    ++ (gatherSys ../modules/infrastructure);
-}
-```
-
----
-
-## 6) Options & overrides (consistent API)
-
-- All unit options live under **`features.<unit>.*`**. Examples:
-  - `features.waybar.enable`, `features.waybar.fontSize`, `features.hyprland.enable`
-- Profiles can set *defaults* via `lib.mkDefault` so machines can override.
-- Machines can override any `features.*` or `theme.*` value directly.
-
-**Do not** hard‑enable heavy features in profiles with `=` unless the profile *is* that feature.
-
----
-
-## 7) Theme pipeline (how to switch or tweak)
-
-**Where things live**
-- Palette tokens: `modules/home/theme/parts/palettes/*.nix`
-- Adapters: `modules/home/theme/parts/adapters/*.nix` (GTK, Waybar CSS, Hyprland, etc.)
-- App consumption: each app’s `parts/ui.nix` reads tokens and renders settings/CSS.
-
-**Switch theme globally**
-1. Set palette in `modules/home/theme/options.nix` default (or per‑machine override `theme.palette = "deep-nord";`).  
-2. Rebuild. All adapters and apps update together.
-
-**Change Waybar font size**
-- Set `features.waybar.fontSize` per machine (e.g., in `machines/laptop/config.nix`).
-- `modules/home/apps/waybar/parts/ui.nix` must read that option and set both `settings` and `style` accordingly.
-
-> The “one palette → adapters → apps” flow is our source of truth and matches the existing README semantics.  
-
----
-
-## 8) Where to add/tweak things (practical recipes)
-
-### A) Add a simple HM app (e.g., Alacritty)
-1) Create `modules/home/apps/alacritty.nix`:
-```nix
-{ ... }: {
-  programs.alacritty = {
-    enable = true;
-    settings.window.opacity = 0.96;
-  };
-}
-```
-2) Done. `apps/index.nix` auto‑imports it; `profiles/hm.nix` already imports `modules/home/index.nix`.
-
-### B) Add an HM unit with options + system helpers (e.g., Waybar)
-```
-modules/home/apps/waybar/
-  index.nix
-  options.nix
-  sys.nix           # only if waybar needs host packages/services
-  parts/{pkgs.nix,ui.nix,behavior.nix,session.nix,scripts.nix}
-```
-- `index.nix` imports `options.nix` + `parts/*`.
-- `sys.nix` adds `environment.systemPackages`, user services, udev, etc., *required by Waybar*.
-- Everything is auto‑picked by `apps/index.nix` (HM) and `profiles/sys.nix` (system).
-
-### C) Add a platform‑wide system feature (e.g., Printing)
-1) Edit/create `modules/system/printing.nix`.  
-2) Done. `modules/system/index.nix` and `profiles/sys.nix` pick it up.
-
-### D) Add a dev tool for *your user* (fd, rg, jq)
-- Put it in `modules/home/environment/development.nix` under `home.packages`.  
-- Avoid duplicating the same tool in `environment.systemPackages` unless a systemd unit requires it.
-
-### E) Toggle features per machine
-`machines/imac/config.nix`:
-```nix
-{
-  imports = [
-    ./hardware.nix
-    ../../profiles/hm.nix
-    ../../profiles/sys.nix
-  ];
-
-  features = {
-    hyprland.enable = false;     # lighter hardware
-    waybar = {
-      enable  = true;
-      battery = false;
-      sensors = false;
-      fontSize = 10;
+{ config, pkgs, lib, ... }: {
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+    users.eric = {
+      imports = [
+        ../../modules/home/apps/hyprland
+        ../../modules/home/apps/waybar
+        ../../modules/home/apps/kitty
+      ];
+      home.stateVersion = "24.05";
     };
   };
-
-  theme.palette = "deep-nord";
 }
 ```
 
-### F) Where to debug
-- HM issues → open `profiles/hm.nix` → follow to relevant unit’s `index.nix`.
-- System issues (`environment.systemPackages`, systemd) → open `profiles/sys.nix` → either platform `modules/system/*` or the unit’s `sys.nix`.
+---
+
+## 7) Structural Rules
+
+* **Structural files** = all `.nix` sources under `modules/`, `profiles/`, `machines/` and `flake.{nix,lock}`.
+* Never apply automated regex rewrites to structural files.
+* Generated artifacts (systemd units, container manifests) are not structural.
 
 ---
 
-## 9) Guardrails (lint yourself before you wreck yourself)
+## 8) Theming
 
-- **No dual install**: a tool must be in either `home.packages` (user) **or** `environment.systemPackages` (system), not both.
-- **Profiles never import leaves**: profiles import only `index.nix` or `sys.nix`, never `parts/*`.
-- **Networking split**: host networking in `modules/system/networking.nix`; container bridges in `modules/infrastructure/container-networking.nix`.
-- **GPU split**: host stack in `modules/system/gpu/*`; container runtime tweaks in `infrastructure/*` or in a specific service’s unit if truly specific.
+* Palettes (`modules/home/theme/palettes/*.nix`) define tokens.
+* Adapters (`modules/home/theme/adapters/*.nix`) transform palettes to app configs.
+* No hardcoded colors in app configs.
 
-**Quick checks (ripgrep)**  
-```sh
-rg -n "sys\.nix" profiles/hm.nix                          # should be empty
-rg -n "modules/home/.+/(parts|ui\.nix|behavior\.nix)" profiles  # should be empty
-# Compare dual-scope packages:
-rg -n "home\.packages" modules | cut -d: -f1 | sort -u
-rg -n "environment\.systemPackages" modules | cut -d: -f1 | sort -u
+---
+
+## 9) Helpers & Parts
+
+* `parts/**` and `_shared/**` MUST be pure helpers:
+
+  * No options
+  * No side effects
+  * No direct system mutation
+
+---
+
+## 10) File Standards
+
+* Files/dirs: `kebab-case.nix`
+* Options: camelCase (e.g. `hwc.system.users.enable`)
+* Scripts: `domain-purpose` (e.g. `waybar-gpu-status`)
+* All modules include: **OPTIONS / IMPLEMENTATION / VALIDATION** sections
+
+---
+
+## 11) Enforcement Rules
+
+* Functional purity per domain.
+* Single source of truth.
+* No multiple writers to same path.
+* Profiles orchestrate only, machines declare only.
+
+---
+
+## 12) Validation & Anti-Patterns
+
+**Searches (must be empty):**
+
+```bash
+rg "writeScriptBin" modules/home/
+rg "systemd\.services" modules/home/
+rg "environment\.systemPackages" modules/home/
+rg "home-manager" profiles/
+rg "/mnt/" modules/
+```
+
+**Hard blockers**
+
+* HM activation in profiles
+* NixOS modules in HM
+* HM modules in system/server
+* User creation outside `modules/system/users/`
+* Mixed-domain modules (e.g., `users.users` + `programs.zsh`)
+
+---
+
+## 13) Server Workloads
+
+* Reverse proxy authority is central in `server/containers/caddy/`.
+* When host-level Caddy aggregator is enabled, containerized proxy units MUST be disabled.
+* Per-unit container state defaults to `/opt/<category>/<unit>:/config`. Override only for ephemeral workloads, host storage policy, or multiple instances.
+
+---
+
+## 14) Profiles & Import Order
+
+* Profiles MUST import `options.nix` before any lane implementations.
+* Example:
+
+```nix
+imports = [
+  ../modules/system/index.nix
+  ../modules/server/index.nix
+] ++ (gatherSys ../modules/home/apps);
 ```
 
 ---
 
-## 10) Implementation plan (safe migration, minimal churn)
+## 15) Migration Protocol
 
-1) **Add aggregators**  
-   - `modules/home/index.nix` (imports `apps/`, `environment/`, `core/`, `theme/`)  
-   - `modules/home/apps/index.nix` (auto‑imports `*.nix` and `*/index.nix`)  
-   - `modules/system/index.nix` (aggregate platform files + subdir `index.nix`)
-2) **Create two profiles**  
-   - `profiles/hm.nix` → imports `modules/home/index.nix` only  
-   - `profiles/sys.nix` → imports `modules/system/index.nix` and gathers `*/sys.nix` from `modules/home/apps`, `modules/infrastructure`, and `modules/services`
-3) **Move a few files for clarity** (do in small commits)  
-   - `infrastructure/gpu.nix` → `system/gpu/*.nix` (host GPU)  
-   - `infrastructure/networking.nix` → merge into `system/networking.nix` (host)  
-   - `infrastructure/printing.nix` → `system/printing.nix`  
-   - `infrastructure/user-hardware-access.nix` → `system/user-hardware-access.nix`  
-   - Remove `infrastructure/waybar-hardware-tools.nix` (superseded by `apps/waybar/sys.nix`)
-4) **Smoke test** (build‑only)  
-   ```sh
-   sudo nixos-rebuild build --flake .#laptop
-   ```
-5) **Switch** (host by host)  
-   ```sh
-   sudo nixos-rebuild switch --flake .#laptop
-   ```
-6) **Lock in**: add the ripgrep lints to `operations/validation/` and run before PRs/commits.
+1. **Discovery** → list features.
+2. **Classification** → Part / Adapter / Tool.
+3. **Relocation** → Parts & adapters → Home, Tools → Infra.
+4. **Interface** → canonical tool names only.
+5. **Validation** → build-only → smoke → switch.
 
 ---
 
-## 11) Theme note (source of truth)
+## 16) Status
 
-This charter intentionally matches our existing theme README: one palette drives adapters (GTK, Waybar, Hyprland) which feed apps. Change a palette once, rebuild, everything follows.
+* Phase 1 (Domain separation): ✅ complete.
+* Phase 2 (Module standardization): 🔄 in progress.
+* Phase 3 (Validation & optimization): ⏳ pending.
+
+---
+
+## 17) Charter Change Management
+
+* Version bump on any normative change.
+* PRs require non-author review.
+* Linter (`tools/hwc-lint.sh`) updated in same PR.
+* Include “Impact & Migration” notes for breaking changes.
+
+---
+

@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-09-14T19:52:08.570Z",
+  "url": "https://www.rmfinish.com/",
+  "domain": "www.rmfinish.com",
+  "title": "Local Remodeling Company, Remodeling Services | Bozeman, Livingston, MT | Rocky Mountain Finish Work",
+  "titleLength": 100,
+  "description": "Rocky Mountain Finish Work offers expert remodeling for homes & businesses. Get your free quote today!",
+  "descriptionLength": 102,
+  "keywords": "Not found",
+  "ogTitle": "Local Remodeling Company, Remodeling Services | Bozeman, Livingston, MT | Rocky Mountain Finish Work",
+  "ogDescription": "Rocky Mountain Finish Work offers expert remodeling for homes & businesses. Get your free quote today!",
+  "ogImage": "Not found",
+  "twitterCard": "summary",
+  "schema": "WebSite, HomeAndConstructionBusiness",
+  "headings": {
+    "H1": 1,
+    "H2": 1,
+    "H3": 12,
+    "H4": 8,
+    "H5": 0,
+    "H6": 0
+  },
+  "links": {
+    "internal": 23,
+    "external": 3,
+    "total": 30
+  },
+  "images": {
+    "total": 5,
+    "withAlt": 3,
+    "withTitle": 0,
+    "lazy": 0,
+    "missingAlt": 2
+  },
+  "technical": {
+    "canonical": "https://www.rmfinish.com/",
+    "robots": "Not found",
+    "viewport": "initial-scale=1, minimum-scale=1, maximum-scale=5, viewport-fit=cover",
+    "charset": "utf-8",
+    "https": true,
+    "pageSpeed": "1s"
+  },
+  "pageInfo": {
+    "wordCount": 517,
+    "lastModified": "09/14/2025 19:52:08",
+    "language": "en",
+    "doctype": "html"
+  }
+}

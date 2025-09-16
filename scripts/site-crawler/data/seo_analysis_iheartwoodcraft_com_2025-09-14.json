@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-09-14T19:32:04.513Z",
+  "url": "https://iheartwoodcraft.com/",
+  "domain": "iheartwoodcraft.com",
+  "title": "Bozeman's Reliable Remodeler | Heartwood Craft",
+  "titleLength": 46,
+  "description": "Custom Remodeling Contractor Specializing in: Bathrooms, Kitchens, Timber Framing, and Universal Design. When Cookie Cutter Doesn't Cut It.",
+  "descriptionLength": 139,
+  "keywords": "Not found",
+  "ogTitle": "Heartwood Craft - Bozeman's Reliable Remodeler",
+  "ogDescription": "Specializing in Bathrooms, Timber Framing, Custom Woodworking, and Universal Design",
+  "ogImage": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/logo-black.png",
+  "twitterCard": "summary_large_image",
+  "schema": "Place, GeneralContractor,Organization, WebSite, ImageObject, WebPage",
+  "headings": {
+    "H1": 2,
+    "H2": 37,
+    "H3": 39,
+    "H4": 2,
+    "H5": 2,
+    "H6": 0
+  },
+  "links": {
+    "internal": 137,
+    "external": 18,
+    "total": 190
+  },
+  "images": {
+    "total": 8,
+    "withAlt": 4,
+    "withTitle": 4,
+    "lazy": 2,
+    "missingAlt": 4
+  },
+  "technical": {
+    "canonical": "https://iheartwoodcraft.com/",
+    "robots": "follow, index, max-snippet:-1, max-video-preview:-1, max-image-preview:large",
+    "viewport": "width=device-width, initial-scale=1",
+    "charset": "UTF-8",
+    "https": true,
+    "pageSpeed": "2s"
+  },
+  "pageInfo": {
+    "wordCount": 238,
+    "lastModified": "09/14/2025 19:32:04",
+    "language": "en-US",
+    "doctype": "html"
+  }
+}

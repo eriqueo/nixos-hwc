@@ -45,7 +45,10 @@
       "Read(/etc/nixos/shared/home-manager/**)",
       "Read(/etc/nixos/shared/home-manager/**)",
       "Read(/etc/nixos/modules/users/**)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash([ -d \"modules/\" ])",
+      "Bash({ echo \"FAIL step1: modules/ directory not found\")",
+      "Bash(exit 1)"
     ],
     "deny": [],
     "ask": [],
