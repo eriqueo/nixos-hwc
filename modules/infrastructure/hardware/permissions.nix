@@ -73,7 +73,6 @@ in {
     };
 
     # Hardware groups are created above; user group assignment handled in user domain
-    # users.users.${cfg.username}.extraGroups should be managed in modules/system/users/
-
+ 
   };
 }

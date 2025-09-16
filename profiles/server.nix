@@ -119,8 +119,8 @@
   # USER ENVIRONMENT (Server additions)
   #============================================================================
   
-  # Server user configuration extends base profile - add hardware access groups
-  hwc.system.users.groups = [ "wheel" "networkmanager" "video" "input" "audio" "lp" "scanner" "docker" "podman" "kvm" "libvirtd" ];
+  # User groups now managed in modules/system/users/ domain (Charter compliance)
+  # Hardware access groups are included in the user definition
 
   #============================================================================
   # STORAGE CONFIGURATION

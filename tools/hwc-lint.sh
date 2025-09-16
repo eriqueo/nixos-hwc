@@ -2,28 +2,21 @@
 # HWC Charter v7 Linter (focused & reliable)
 #
 # PURPOSE
-#   Fast, deterministic lint for the core HWC charter rules that matter during refactors.
-#   Uses narrow file scopes and explicit allowlists to reduce false positives.
+#   Fast, deterministic lint for core HWC charter rules during refactors.
+#   Narrow scopes + allowlists to reduce false positives.
 #
-# WHAT IT CHECKS (tunable via HWC_LINT_RULES):
+# CHECKS (tunable via HWC_LINT_RULES):
 #   - aggregator_naming:   Aggregators are named index.nix (no default.nix) under modules/**
-#   - options_outside:     No `options.*` in index.nix / sys.nix / parts/*  (must live in options.nix)
-#   - parts_pure:          parts/* contain only fragments (no `options`, no top-level `imports =`, no top-level `config =`)
+#   - options_outside:     No `options.*` in index.nix / sys.nix / parts/* (options live in options.nix)
+#   - parts_pure:          parts/* must not contain top-level `options`, `imports =`, or `config =`
 #   - hm_profile:          Only profiles/hm.nix may contain `home-manager =`
-#   - users_scope:         All users.users.* must live under modules/system/users/**
+#   - users_scope:         All users.users.* must live under modules/system/users/** (comments ignored)
 #   - permissions:         All *.nix must be mode 0644
 #
 # USAGE
-#   # Full repo, all rules:
 #   tools/hwc-lint.sh
-#
-#   # Only specific rules:
 #   HWC_LINT_RULES="options_outside,parts_pure,permissions" tools/hwc-lint.sh
-#
-#   # Only changed files vs origin/main:
 #   HWC_LINT_CHANGED=1 tools/hwc-lint.sh
-#
-#   # Limit scan to a subtree:
 #   HWC_LINT_PATHS="modules/server/containers modules/home/apps/waybar" tools/hwc-lint.sh
 #
 # ENV
@@ -32,9 +25,7 @@
 #   HWC_LINT_REF     = git ref (default: origin/main)
 #   HWC_LINT_PATHS   = space-separated subpaths to include
 #
-# EXIT
-#   0 on clean; 1 if any errors; 2 if required tools missing.
-#
+# EXIT: 0 clean; 1 errors; 2 tool missing.
 set -euo pipefail
 
 # ---------- Setup ----------
@@ -46,22 +37,20 @@ HWC_LINT_CHANGED="${HWC_LINT_CHANGED:-0}"
 HWC_LINT_REF="${HWC_LINT_REF:-origin/main}"
 HWC_LINT_PATHS="${HWC_LINT_PATHS:-}"
 
-# Tools check
-need() { command -v "$1" >/dev/null 2>&1 || { echo "Missing tool: $1" >&2; exit 2; }; }
+need(){ command -v "$1" >/dev/null 2>&1 || { echo "Missing tool: $1" >&2; exit 2; }; }
 need rg; need awk; need find; need stat; need sed; need cut; need sort; need uniq; need wc
 
-# File scopes
 BASE_GLOBS=(-g '**/*.nix' -g '!**/.direnv/**' -g '!**/result*' -g '!**/node_modules/**')
+
+# Limit to supplied paths if any
+PATH_GLOBS=()
 if [[ -n "$HWC_LINT_PATHS" ]]; then
-  PATH_GLOBS=()
   for p in $HWC_LINT_PATHS; do PATH_GLOBS+=(-g "$p/**"); done
-else
-  PATH_GLOBS=()
 fi
 
 # Only changed?
 if [[ "$HWC_LINT_CHANGED" == "1" ]]; then
-  mapfile -t CHANGED < <(git diff --name-only "$HWC_LINT_REF" -- | rg -n '^.*\.nix$' -N -S || true)
+  mapfile -t CHANGED < <(git diff --name-only "$HWC_LINT_REF" -- | rg -N -S '\.nix$' || true)
   if ((${#CHANGED[@]}==0)); then
     echo "note : no changed .nix files vs ${HWC_LINT_REF}"
     echo "----------------------------------------"
@@ -81,7 +70,7 @@ note(){ printf 'note : %s\n' "$*"; }
 
 note "Repo: $REPO_ROOT"
 
-# ---------- Helpers ----------
+# ---------- Rule runner ----------
 WANT=",$HWC_LINT_RULES,"
 run_rule(){ # $1=name  $2=function
   if [[ "$HWC_LINT_RULES" == "all" || "$WANT" == *",$1,"* ]]; then
@@ -100,14 +89,13 @@ check_aggregator_naming(){ # aggregator_naming
 }
 
 check_options_outside(){ # options_outside
-  # Only flag options.* if it appears in files where it's disallowed.
-  # Allowed: **/options.nix only.
+  # Only flag options.* in files where it is disallowed; ignore commented lines.
   local hits
-  hits=$(rg -n --no-ignore -S "${RG_SCOPE[@]}" \
+  hits=$(rg -n --no-ignore -S -P "${RG_SCOPE[@]}" \
       -g 'modules/**/index.nix' \
       -g 'modules/**/sys.nix' \
       -g 'modules/**/parts/*.nix' \
-      -e '(^|\s)options\.' || true)
+      -e '^(?!\s*#).*options\.' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
     [[ -z "$l" ]] && continue
     fail "Options declared outside options.nix → $l"
@@ -115,12 +103,13 @@ check_options_outside(){ # options_outside
 }
 
 check_parts_pure(){ # parts_pure
-  # Only scan files under parts/*.nix, never elsewhere.
-  # Parts must NOT declare top-level options/imports/config blocks.
+  # parts/* must NOT declare top-level options/imports/config; ignore commented lines.
   local hits
-  hits=$(rg -n --no-ignore -S "${RG_SCOPE[@]}" \
+  hits=$(rg -n --no-ignore -S -P "${RG_SCOPE[@]}" \
       -g 'modules/**/parts/*.nix' \
-      -e '^\s*options\.' -e '^\s*imports\s*=' -e '^\s*config\s*=' || true)
+      -e '^(?!\s*#)\s*options\.' \
+      -e '^(?!\s*#)\s*imports\s*=' \
+      -e '^(?!\s*#)\s*config\s*=' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
     [[ -z "$l" ]] && continue
     fail "parts/* must be pure fragments (no options/imports/config) → $l"
@@ -128,10 +117,11 @@ check_parts_pure(){ # parts_pure
 }
 
 check_hm_profile(){ # hm_profile
-  # Only profiles/hm.nix may contain 'home-manager ='
+  # Only profiles/hm.nix may contain 'home-manager ='; ignore commented lines.
   local hits
-  hits=$(rg -n --no-ignore -S "${RG_SCOPE[@]}" \
-      -g 'profiles/**/*.nix' -e '(^|\s)home-manager\s*=' || true)
+  hits=$(rg -n --no-ignore -S -P "${RG_SCOPE[@]}" \
+      -g 'profiles/**/*.nix' \
+      -e '^(?!\s*#).*home-manager\s*=' || true)
   [[ -z "$hits" ]] || while IFS= read -r l; do
     [[ -z "$l" ]] && continue
     local file="${l%%:*}"
@@ -141,17 +131,32 @@ check_hm_profile(){ # hm_profile
   done <<< "$hits"
 }
 
-check_users_scope(){ # users_scope
-  # All users.users.* must live under modules/system/users/**
-  # Only scan *.nix (no README/md).
+check_users_defined_in_system_users_only(){ # users_scope
+  # 1) find non-comment occurrences of users.users.*
   local hits
-  hits=$(rg -n --no-ignore -S "${RG_SCOPE[@]}" \
-      -g 'modules/**/*.nix' -g '!modules/system/users/**' \
-      -e '(^|\s)users\.users\.' || true)
-  [[ -z "$hits" ]] || while IFS= read -r l; do
-    [[ -z "$l" ]] && continue
-    fail "User definitions must live under modules/system/users/** → $l"
-  done <<< "$hits"
+  hits=$(rg -n --no-ignore -S -P "${RG_SCOPE[@]}" \
+    -g 'machines/**/*.nix' -g 'modules/**/*.nix' \
+    -e '^(?!\s*#).*users\.users\.' || true)
+
+  # 2) filter out allowed security root-credential mutations:
+  #    allowed ONLY inside modules/security/**
+  #    for: root.hashedPassword(File)?, root.password(File)?, root.initialPassword
+  if [[ -n "$hits" ]]; then
+    while IFS= read -r l; do
+      [[ -z "$l" ]] && continue
+      file="${l%%:*}"
+      # allow-list inside security/**
+      if [[ "$file" == modules/security/* ]]; then
+        if echo "$l" | rg -q -P 'users\.users\.root\.(hashedPassword(File)?|password(File)?|initialPassword)\b'; then
+          continue
+        fi
+      fi
+      # Everything else must live under modules/system/users/**
+      if [[ "$file" != modules/system/users/* ]]; then
+        fail "User definitions must live under modules/system/users/** → $l"
+      fi
+    done <<< "$hits"
+  fi
 }
 
 check_permissions(){ # permissions
@@ -171,7 +176,7 @@ run_rule aggregator_naming   check_aggregator_naming
 run_rule options_outside     check_options_outside
 run_rule parts_pure          check_parts_pure
 run_rule hm_profile          check_hm_profile
-run_rule users_scope         check_users_scope
+run_rule users_scope         check_users_defined_in_system_users_only
 run_rule permissions         check_permissions
 
 echo "----------------------------------------"

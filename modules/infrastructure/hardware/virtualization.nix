@@ -125,6 +125,5 @@ in
     ];
 
     # --- User access handled in user domain -----------------------
-    # users.users.eric.extraGroups should be managed in modules/system/users/
   };
 }
