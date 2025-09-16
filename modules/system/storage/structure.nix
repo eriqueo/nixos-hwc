@@ -168,14 +168,6 @@ in {
         };
       };
 
-      users.users.${cfg.permissions.serviceUser} = {
-        uid = 2000;
-        group = "hwc";
-        extraGroups = [ cfg.permissions.mediaGroup ];
-        isSystemUser = true;
-        description = "HWC services user";
-      };
-
       # Install filesystem utilities
       environment.systemPackages = with pkgs; [
         ncdu        # Disk usage analyzer

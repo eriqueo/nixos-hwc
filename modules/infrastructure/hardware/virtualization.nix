@@ -124,7 +124,7 @@ in
       win-spice
     ];
 
-    # --- User access (merged safely with other modules) -----------------------
-    users.users.eric.extraGroups = lib.mkDefault cfg.userGroups;
+    # --- User access handled in user domain -----------------------
+    # users.users.eric.extraGroups should be managed in modules/system/users/
   };
 }
