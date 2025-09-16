@@ -23,9 +23,6 @@ let
 
 in
 {
-options.features.thunar.enable =
-    lib.mkEnableOption "Enable Thunar File Manager";
-
   #============================================================================
   # IMPLEMENTATION - Thunar file manager configuration
   #============================================================================

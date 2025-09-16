@@ -8,13 +8,6 @@ let
   cfg = config.hwc.infrastructure.session.chromium;
 in {
   #============================================================================
-  # OPTIONS - Chromium System Integration
-  #============================================================================
-  options.hwc.infrastructure.session.chromium = {
-    enable = lib.mkEnableOption "Chromium browser system integration (portals, dbus, dconf support)";
-  };
-
-  #============================================================================
   # IMPLEMENTATION - System Integration Only
   #============================================================================
   config = lib.mkIf cfg.enable {

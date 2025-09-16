@@ -11,9 +11,6 @@ let
   cfg = config.features.betterbird;
 in
 {
-  options.features.betterbird.enable =
-    lib.mkEnableOption "Betterbird email client with Thunderbird compatibility";
-
   config = lib.mkIf cfg.enable {
     # Packages that belong with the app (you can add betterbird here if you package it)
     home.packages = (session.packages or []) ++ (tools.packages or []);

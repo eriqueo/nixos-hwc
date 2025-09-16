@@ -17,9 +17,6 @@
 
 let cfg = config.features.librewolf or { enable = false; };
 in {
-  options.features.librewolf.enable =
-    lib.mkEnableOption "Enable LibreWolf (user-scoped)";
-
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.librewolf ];
   };

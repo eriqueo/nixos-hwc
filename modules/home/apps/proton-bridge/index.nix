@@ -4,9 +4,6 @@ let
   cfg = config.features.protonBridge or { enable = true; };
 in
 {
-  options.features.protonBridge.enable =
-    lib.mkEnableOption "Enable ProtonMail Bridge (user session)";
-
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.protonmail-bridge ];
 

@@ -18,10 +18,6 @@
 let 
   cfg = config.features.chromium;
 in {
-  options.features.chromium = {
-    enable = lib.mkEnableOption "Chromium browser (user-scoped package)";
-  };
-
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.chromium ];
     # If you want chromium flags later:
