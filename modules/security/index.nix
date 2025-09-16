@@ -12,13 +12,6 @@
     ./hardening.nix          # Security hardening configuration
   ];
 
-  # Security domain enable option
-  options.hwc.security.enable = lib.mkOption {
-    type = lib.types.bool;
-    default = true;
-    description = "Enable security domain with secrets management";
-  };
-
   # Core agenix configuration
   config = lib.mkIf config.hwc.security.enable {
     # Ensure age identity paths are configured
