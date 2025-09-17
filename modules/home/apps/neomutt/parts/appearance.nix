@@ -15,9 +15,12 @@ let
   # Generate individual account config files
   accountFiles = lib.listToAttrs (lib.mapAttrsToList (name: account: 
     let
-      passwordCommand = if account.useAgenixPassword
+      passwordCommand = 
+        if account.useAgenixPassword && materials ? protonBridgePasswordFile && materials.protonBridgePasswordFile != null
         then "cat ${materials.protonBridgePasswordFile}"
-        else account.bridgePasswordCommand;
+        else if account ? bridgePasswordCommand && account.bridgePasswordCommand != null
+        then account.bridgePasswordCommand
+        else "echo 'ERROR: Bridge password not configured - check agenix setup'";
     in {
       name = ".config/neomutt/accounts/${account.name}";
       value.text = ''
