@@ -44,14 +44,14 @@
                 email = "eriqueokeefe@gmail.com";
                 bridgeUsername = "eriqueokeefe@gmail.com";
                 useAgenixPassword = false;
-                bridgePasswordCommand = "cat /run/agenix/gmail-personal-password";
+                bridgePasswordCommand = "cat /run/agenix/gmail-personal-password | tr -d '\\n'";
               };
               gmail-business = {
                 realName = "Eric O'Keefe";
                 email = "heartwoodcraftmt@gmail.com";
                 bridgeUsername = "heartwoodcraftmt@gmail.com";
                 useAgenixPassword = false;
-                bridgePasswordCommand = "cat /run/agenix/gmail-business-password";
+                bridgePasswordCommand = "cat /run/agenix/gmail-business-password | tr -d '\\n'";
               };
             };
           };
