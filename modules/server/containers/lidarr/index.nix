@@ -1,11 +1,10 @@
 { lib, config, pkgs, ... }:
 let
-  inherit (lib) mkOption mkEnableOption mkIf mkMerge types;
-  shared = config.hwc.services.shared.lib;
   cfg = config.hwc.services.containers.lidarr;
 in
 {
   imports = [
+    ./options.nix
     ./sys.nix
     ./parts/config.nix
     ./parts/scripts.nix
@@ -13,5 +12,5 @@ in
     ./parts/lib.nix
   ];
 
-  config = mkIf cfg.enable { };
+  config = lib.mkIf cfg.enable { };
 }

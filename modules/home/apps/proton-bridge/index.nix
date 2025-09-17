@@ -4,6 +4,7 @@ let
   cfg = config.features.protonBridge or { enable = true; };
 in
 {
+  imports = [ ./options.nix ];
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.protonmail-bridge ];
 

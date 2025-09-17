@@ -35,6 +35,7 @@ let
 
 in
 {
+  imports = [ ./options.nix ];
   config = lib.mkIf enabled {
     # Include both the script dependencies and the generated script bins.
     home.packages = scriptPkgs ++ (lib.attrValues scripts);
