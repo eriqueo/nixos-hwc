@@ -97,26 +97,22 @@ in
       color tilde      ${themeColors.colors.tilde.fg}      ${themeColors.colors.tilde.bg}
       color tree       ${themeColors.colors.tree.fg}       ${themeColors.colors.tree.bg}
       
-      # Mailbox definitions
+      # Mailbox definitions for ProtonMail only (Gmail added on-demand)
       ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: account: 
         let
           # Determine if this is a Gmail account
           isGmail = lib.hasSuffix "@gmail.com" account.email;
           imapServer = if isGmail then "imap.gmail.com:993" else "127.0.0.1:1143";
-        in ''
-          # ${account.name} mailboxes
-          mailboxes "imap://${account.bridgeUsername}@${imapServer}/INBOX"
-          ${if isGmail then ''
-            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/Sent Mail"
-            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/Drafts" 
-            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/Trash"
-            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/All Mail"
-          '' else ''
+        in 
+          # Only add ProtonMail mailboxes at startup to avoid timeouts
+          if isGmail then ""
+          else ''
+            # ${account.name} mailboxes
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/INBOX"
             mailboxes "imap://${account.bridgeUsername}@${imapServer}/Sent"
             mailboxes "imap://${account.bridgeUsername}@${imapServer}/Drafts"
             mailboxes "imap://${account.bridgeUsername}@${imapServer}/Trash"
-          ''}
-        ''
+          ''
       ) cfg.accounts)}
       
       # Account configurations
