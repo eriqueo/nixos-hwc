@@ -29,6 +29,8 @@
         librewolf.enable    = true;
         protonBridge.enable = true;
         obsidian.enable     = true;
+        protonMail.enable = true;
+        protonPass.enable = true;
         dunst.enable        = true;
         neomutt = {
             enable = true;
