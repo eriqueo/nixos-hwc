@@ -113,7 +113,7 @@
   services.thermald.enable = true;
   services.tlp.enable = true;
   programs.dconf.enable = true;
-  services.dunst.enable = true;
+  #services.dunst.enable = true;
   # Note: user account/group wiring should be handled by home/user modules.
   # Removing inline users.users.eric avoids duplication and keeps domains clean.
 }

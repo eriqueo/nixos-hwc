@@ -57,5 +57,13 @@
       owner = "root";
       group = "root";
     };
+    
+    # Email service credentials
+    proton-bridge-password = {
+      file = ../../../secrets/proton-bridge-password.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
   };
 }
