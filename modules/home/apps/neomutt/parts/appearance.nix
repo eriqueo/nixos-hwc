@@ -105,16 +105,16 @@ in
           imapServer = if isGmail then "imap.gmail.com:993" else "127.0.0.1:1143";
         in ''
           # ${account.name} mailboxes
-          mailboxes "imap://${imapServer}/INBOX"
+          mailboxes "imap://${account.bridgeUsername}@${imapServer}/INBOX"
           ${if isGmail then ''
-            mailboxes "imap://${imapServer}/[Gmail]/Sent Mail"
-            mailboxes "imap://${imapServer}/[Gmail]/Drafts" 
-            mailboxes "imap://${imapServer}/[Gmail]/Trash"
-            mailboxes "imap://${imapServer}/[Gmail]/All Mail"
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/Sent Mail"
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/Drafts" 
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/Trash"
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/[Gmail]/All Mail"
           '' else ''
-            mailboxes "imap://${imapServer}/Sent"
-            mailboxes "imap://${imapServer}/Drafts"
-            mailboxes "imap://${imapServer}/Trash"
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/Sent"
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/Drafts"
+            mailboxes "imap://${account.bridgeUsername}@${imapServer}/Trash"
           ''}
         ''
       ) cfg.accounts)}
