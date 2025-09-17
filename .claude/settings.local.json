@@ -48,7 +48,8 @@
       "Bash(mv:*)",
       "Bash([ -d \"modules/\" ])",
       "Bash({ echo \"FAIL step1: modules/ directory not found\")",
-      "Bash(exit 1)"
+      "Bash(exit 1)",
+      "Read(//home/eric/.config/neomutt/accounts/**)"
     ],
     "deny": [],
     "ask": [],
