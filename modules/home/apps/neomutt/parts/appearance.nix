@@ -7,7 +7,7 @@ let
   materials = cfg.materials or {};
   
   # Import theme adapter for NeoMutt colors
-  themeColors = import ../../theme/adapters/neomutt.nix { inherit config lib; };
+  themeColors = import ../../../theme/adapters/neomutt.nix { inherit config lib; };
   
   # Generate account configurations for ProtonMail Bridge
   accountConfigs = lib.concatStringsSep "\n\n" (lib.mapAttrsToList (name: account: ''
@@ -20,7 +20,7 @@ let
     let
       passwordCommand = 
         if account.useAgenixPassword
-        then "cat /run/agenix/proton-bridge-password"
+        then "cat /run/agenix/proton-bridge-password | tr -d '\\n'"
         else if account ? bridgePasswordCommand && account.bridgePasswordCommand != null
         then account.bridgePasswordCommand
         else "echo 'ERROR: Password not configured'";
