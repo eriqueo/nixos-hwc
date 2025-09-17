@@ -101,10 +101,10 @@ in {
       system-config-printer   # GUI printer configuration
     ]);
     
-    # Firewall rules for printing
-    networking.firewall = {
-      allowedTCPPorts = [ 631 ]; # CUPS web interface
-      allowedUDPPorts = lib.optionals cfg.avahi [ 5353 ]; # mDNS
+    # Declare firewall requirements through networking module
+    hwc.networking.firewall = {
+      extraTcpPorts = [ 631 ]; # CUPS web interface
+      extraUdpPorts = lib.optionals cfg.avahi [ 5353 ]; # mDNS
     };
   };
 }
