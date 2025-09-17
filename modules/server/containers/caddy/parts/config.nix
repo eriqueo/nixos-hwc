@@ -1,1 +1,1 @@
-{ inputs, ... }: {}
+{ lib, config, pkgs, ... }: {}
