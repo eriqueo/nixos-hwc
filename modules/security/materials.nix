@@ -79,6 +79,13 @@ in
       description = "Path to decrypted NTFY user credentials file";
     };
     
+    # Email domain secret paths
+    protonBridgePasswordFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      readOnly = true;
+      description = "Path to decrypted ProtonMail Bridge password file";
+    };
+    
     # Infrastructure domain secret paths
     databaseNameFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
@@ -148,6 +155,9 @@ in
     couchdbAdminUsernameFile = pathOrNull "couchdb-admin-username";
     couchdbAdminPasswordFile = pathOrNull "couchdb-admin-password";
     ntfyUserFile = pathOrNull "ntfy-user";
+    
+    # Email domain paths
+    protonBridgePasswordFile = pathOrNull "proton-bridge-password";
     
     # Infrastructure domain paths
     databaseNameFile = pathOrNull "database-name";
