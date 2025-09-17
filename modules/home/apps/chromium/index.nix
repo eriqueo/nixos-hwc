@@ -18,6 +18,7 @@
 let 
   cfg = config.features.chromium;
 in {
+  imports = [ ./options.nix ];
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.chromium ];
     # If you want chromium flags later:

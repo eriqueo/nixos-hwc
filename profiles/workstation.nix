@@ -99,8 +99,6 @@
     };
   };
 
-  # System integration for Chromium (HM provides packages via profiles/hm.nix)
-  hwc.infrastructure.session.chromium.enable = true;
 
   hwc.services.backup.user = {
     enable = true;

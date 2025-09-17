@@ -23,6 +23,7 @@ let
   ];
 in
 {
+  imports = [ ./options.nix ];
   config = lib.mkIf enabled {
     # list ++ list (DON'T use `pkgs ++ …`)
     home.packages = basePkgs ++ (session.packages or []);

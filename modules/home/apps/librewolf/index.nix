@@ -17,6 +17,7 @@
 
 let cfg = config.features.librewolf or { enable = false; };
 in {
+  imports = [ ./options.nix ];
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.librewolf ];
   };

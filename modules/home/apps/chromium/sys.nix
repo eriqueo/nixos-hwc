@@ -1,17 +1,19 @@
 # modules/home/apps/chromium/sys.nix
 #
 # Chromium Browser - System integration glue (no packages)
-# Provides system-side helpers for Chromium integration with gpu-launch
+# Provides basic system integration for Chromium (dconf, dbus)
+# GPU acceleration handled via existing gpu-launch infrastructure
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.infrastructure.session.chromium;
+  cfg = config.features.chromium;
 in {
+  imports = [ ./options.nix ];
   #============================================================================
   # IMPLEMENTATION - System Integration Only
   #============================================================================
   config = lib.mkIf cfg.enable {
-    # System-side helpers for Chromium (no packages - HM handles those)
+    # Basic system integration for Chromium browser
     # Ensure dconf is available for browser settings
     programs.dconf.enable = lib.mkDefault true;
     
@@ -19,6 +21,6 @@ in {
     services.dbus.enable = lib.mkDefault true;
     
     # No environment.systemPackages - HM provides the chromium binary
-    # gpu-launch will find it via user PATH when running as user
+    # GPU acceleration via gpu-launch command (from infrastructure.hardware.gpu)
   };
 }

@@ -2,9 +2,7 @@
 { config, lib, pkgs, ... }:
 
 {
-  imports = [
-    ./options.nix
-  ];
+  imports = [ ./options.nix ];
 
   config = lib.mkIf (config.features.obsidian.enable or false) {
     home.packages = with pkgs; [
