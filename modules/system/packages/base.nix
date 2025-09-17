@@ -45,6 +45,10 @@ in {
       micro
       neovim
       
+      # Security and password management
+      pass                   # Password store (required by ProtonMail Bridge)
+      gnupg                  # GPG encryption (required by pass)
+      
       # System monitoring and utilities
       htop
       btop
