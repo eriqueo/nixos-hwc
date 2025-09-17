@@ -54,9 +54,15 @@ let
         # Server settings
         set folder = "imap://${imapServer}/"
         set spoolfile = "+INBOX"
-        set postponed = "+[Gmail]/Drafts"
-        set record = "+[Gmail]/Sent Mail"
-        set trash = "+[Gmail]/Trash"
+        ${if isGmail then ''
+          set postponed = "+[Gmail]/Drafts"
+          set record = "+[Gmail]/Sent Mail"
+          set trash = "+[Gmail]/Trash"
+        '' else ''
+          set postponed = "+Drafts"
+          set record = "+Sent"
+          set trash = "+Trash"
+        ''}
         
         set smtp_url = "smtp://${account.bridgeUsername}@${smtpServer}/"
         ${sslSettings}
