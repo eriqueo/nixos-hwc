@@ -33,6 +33,7 @@
         neomutt = {
             enable = true;
             accounts = {
+              # Order matters - first account is default
               proton = {
                 realName = "Eric";
                 email = "eriqueo@proton.me";
