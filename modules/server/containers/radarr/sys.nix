@@ -1,24 +1,22 @@
 { lib, config, pkgs, ... }:
 let
-  shared = config.hwc.services.shared.lib;
+  # Import PURE helper library - no circular dependencies
+  helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.services.containers.radarr;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
-    (shared.mkContainer {
+    (helpers.mkContainer {
       name = "radarr";
       image = cfg.image;
       networkMode = cfg.network.mode;
       gpuEnable = cfg.gpu.enable;
-      ports = ["127.0.0.1:7878:7878"];
+      gpuMode = "intel";  # Static default - GPU detection deferred
+      timeZone = "UTC";   # Static default - timezone detection deferred
+      ports = [];
       volumes = [ "/opt/downloads/radarr:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })
-    { # publish caddy route
-      hwc.services.shared.routes = lib.mkAfter [
-        (shared.mkRoute { path = "/radarr"; upstream = "127.0.0.1:7878"; stripPrefix = false; })
-      ];
-    }
   ]);
 }
