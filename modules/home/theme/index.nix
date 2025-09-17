@@ -28,6 +28,7 @@ in
 {
   imports = [
       ./adapters/gtk.nix
+      ./options.nix
     ];
 #============================================================================
 # IMPLEMENTATION - What actually gets configured

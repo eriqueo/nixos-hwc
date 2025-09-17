@@ -25,6 +25,7 @@
         kitty.enable        = true;
         thunar.enable       = true;
         betterbird.enable   = true;
+        neomutt.enable      = true;
         chromium.enable     = true;
         librewolf.enable    = true;
         protonBridge.enable = true;
