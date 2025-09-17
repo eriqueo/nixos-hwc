@@ -27,6 +27,16 @@ let
       '';
 in
 {
+  options.hwc.services.shared = {
+    # accumulator used by services to publish reverse proxy routes
+    routes = mkOption {
+      internal = true;
+      type = types.listOf (types.attrsOf types.anything);
+      default = [];
+      description = "Aggregated reverse proxy routes (service-provided).";
+    };
+  };
+
   options.hwc.services.reverseProxy = {
     enable = mkEnableOption "Aggregate service routes into a single Caddy vhost";
     domain = mkOption { type = types.str; default = "localhost"; };

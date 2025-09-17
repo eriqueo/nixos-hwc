@@ -84,9 +84,8 @@ in {
       };
     };
 
-    # Ensure keyd has access to input devices via user groups
-    users.groups.keyd = lib.mkIf cfg.keyboard.enable {};
-    users.groups.input = lib.mkIf cfg.keyboard.enable {};
+    # Enable uinput kernel module for keyd device access
+    boot.kernelModules = lib.mkIf cfg.keyboard.enable [ "uinput" ];
 
     #=========================================================================
     # AUDIO SYSTEM CONFIGURATION

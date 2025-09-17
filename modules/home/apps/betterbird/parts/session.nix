@@ -3,8 +3,8 @@
 { lib, pkgs, config, ... }:
 
 {
-  # If you want extras installed *with* Betterbird, put them here.
-  packages = [ ];
+  # Thunderbird (Betterbird replacement) with extras
+  packages = [ pkgs.thunderbird ];
 
   # If you want Betterbird-specific user services, define them here.
   # (Most users don’t need any; Proton Bridge etc. should be their own module.)
