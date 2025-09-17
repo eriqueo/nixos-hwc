@@ -164,11 +164,7 @@
   
   # Server performance tuning
   boot.kernel.sysctl = {
-    # Network performance
-    "net.core.rmem_max" = 134217728;
-    "net.core.wmem_max" = 134217728;
-    "net.ipv4.tcp_rmem" = "4096 87380 134217728";
-    "net.ipv4.tcp_wmem" = "4096 65536 134217728";
+    # Network performance handled by system domain - removed duplicates
     
     # File system performance
     "vm.dirty_ratio" = 15;

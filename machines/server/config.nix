@@ -3,7 +3,8 @@
   imports = [
     ./hardware.nix
     ../../profiles/base.nix
-    ../../profiles/server.nix  # Charter v3 server profile includes all services
+    ../../profiles/server.nix  
+    ../../profiles/security.nix
   ];
 
   # System identity

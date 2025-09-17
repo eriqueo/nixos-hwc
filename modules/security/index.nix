@@ -10,6 +10,7 @@
     ./compat.nix             # Compatibility aliases for legacy paths
     ./emergency-access.nix   # Emergency access configuration (existing)
     ./hardening.nix          # Security hardening configuration
+    ./options.nix
   ];
 
   # Core agenix configuration
