@@ -4,7 +4,7 @@
 
 let
   cfg = config.features.neomutt;
-  materials = config.hwc.security.materials;
+  materials = cfg.materials or {};
   
   # Generate account configurations for ProtonMail Bridge
   accountConfigs = lib.concatStringsSep "\n\n" (lib.mapAttrsToList (name: account: ''
