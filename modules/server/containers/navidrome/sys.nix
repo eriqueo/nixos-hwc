@@ -1,24 +1,22 @@
 { lib, config, pkgs, ... }:
 let
-  shared = config.hwc.services.shared.lib;
+  # Import PURE helper library - no circular dependencies
+  helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.services.containers.navidrome;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
-    (shared.mkContainer {
+    (helpers.mkContainer {
       name = "navidrome";
       image = cfg.image;
       networkMode = cfg.network.mode;
       gpuEnable = cfg.gpu.enable;
-      ports = ["0.0.0.0:4533:4533"];
+      gpuMode = "intel";  # Static default - GPU detection deferred
+      timeZone = "UTC";   # Static default - timezone detection deferred
+      ports = [];
       volumes = [ "/opt/downloads/navidrome:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })
-    { # publish caddy route
-      hwc.services.shared.routes = lib.mkAfter [
-        (shared.mkRoute { path = "/navidrome"; upstream = "127.0.0.1:4533"; stripPrefix = false; })
-      ];
-    }
   ]);
 }

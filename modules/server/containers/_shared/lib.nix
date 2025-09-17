@@ -13,7 +13,7 @@ in
     };
   };
 
-  # exported helpers
+  # exported helpers - NOW PURE (no config reads)
   config.hwc.services.shared.lib = rec {
     mkBoolOption = { default ? false, description ? "" }:
       mkOption { type = types.bool; inherit default description; };
@@ -27,8 +27,10 @@ in
     mkRoute = { path, upstream, stripPrefix ? false }:
       { inherit path upstream stripPrefix; };
 
+    # PURE: accepts GPU mode and timezone as arguments
     mkContainer = {
       name, image, networkMode ? "media", gpuEnable ? true,
+      gpuMode ? "intel", timeZone ? "UTC",
       ports ? [], volumes ? [], environment ? {}, extraOptions ? [], dependsOn ? []
     }:
     let
@@ -38,7 +40,7 @@ in
         else [ "--network=media-network" ];
       gpuOpts =
         if (!gpuEnable) then []
-        else if (config.hwc.infrastructure.hardware.gpu.accel or null) == "cuda" then [
+        else if gpuMode == "cuda" then [
           "--device=/dev/nvidia0:/dev/nvidia0:rwm"
           "--device=/dev/nvidiactl:/dev/nvidiactl:rwm"
           "--device=/dev/nvidia-modeset:/dev/nvidia-modeset:rwm"
@@ -51,7 +53,7 @@ in
       baseEnv = {
         PUID = "1000";
         PGID = "1000";
-        TZ   = config.time.timeZone or "UTC";
+        TZ = timeZone;
       };
     in
     {
