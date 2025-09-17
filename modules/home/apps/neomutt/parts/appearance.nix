@@ -20,7 +20,7 @@ let
     let
       passwordCommand = 
         if account.useAgenixPassword
-        then "cat /run/agenix/proton-bridge-password | tr -d '\\n'"
+        then "sh -c 'cat /run/agenix/proton-bridge-password | tr -d \"\\n\"'"
         else if account ? bridgePasswordCommand && account.bridgePasswordCommand != null
         then account.bridgePasswordCommand
         else "echo 'ERROR: Password not configured'";
