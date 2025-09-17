@@ -97,6 +97,28 @@ in
       color tilde      ${themeColors.colors.tilde.fg}      ${themeColors.colors.tilde.bg}
       color tree       ${themeColors.colors.tree.fg}       ${themeColors.colors.tree.bg}
       
+      # Mailbox definitions
+      ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: account: 
+        let
+          # Determine if this is a Gmail account
+          isGmail = lib.hasSuffix "@gmail.com" account.email;
+          imapServer = if isGmail then "imap.gmail.com:993" else "127.0.0.1:1143";
+        in ''
+          # ${account.name} mailboxes
+          mailboxes "imap://${imapServer}/INBOX"
+          ${if isGmail then ''
+            mailboxes "imap://${imapServer}/[Gmail]/Sent Mail"
+            mailboxes "imap://${imapServer}/[Gmail]/Drafts" 
+            mailboxes "imap://${imapServer}/[Gmail]/Trash"
+            mailboxes "imap://${imapServer}/[Gmail]/All Mail"
+          '' else ''
+            mailboxes "imap://${imapServer}/Sent"
+            mailboxes "imap://${imapServer}/Drafts"
+            mailboxes "imap://${imapServer}/Trash"
+          ''}
+        ''
+      ) cfg.accounts)}
+      
       # Account configurations
       ${accountConfigs}
       
