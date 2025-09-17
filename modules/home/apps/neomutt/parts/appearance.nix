@@ -6,8 +6,8 @@ let
   cfg = config.features.neomutt;
   materials = cfg.materials or {};
   
-  # Import theme palette
-  palette = import ../../../theme/palettes/deep-nord.nix {};
+  # Import theme adapter for NeoMutt colors
+  themeColors = import ../../theme/adapters/neomutt.nix { inherit config lib; };
   
   # Generate account configurations for ProtonMail Bridge
   accountConfigs = lib.concatStringsSep "\n\n" (lib.mapAttrsToList (name: account: ''
@@ -79,17 +79,17 @@ in
       set pager_context = 3
       set menu_scroll = yes
       
-      # Colors (deep-nord theme)
-      color normal     "#${palette.fg}"         "#${palette.bg}"
-      color attachment "#${palette.warn}"       "#${palette.bg}"
-      color hdrdefault "#${palette.accent2}"    "#${palette.bg}"
-      color indicator  "#${palette.bg}"         "#${palette.accent}"
-      color markers    "#${palette.crit}"       "#${palette.bg}"
-      color quoted     "#${palette.good}"       "#${palette.bg}"
-      color signature  "#${palette.fgDim}"      "#${palette.bg}"
-      color status     "#${palette.fg}"         "#${palette.surface1}"
-      color tilde      "#${palette.info}"       "#${palette.bg}"
-      color tree       "#${palette.accent}"     "#${palette.bg}"
+      # Colors from theme adapter (deep-nord palette)
+      color normal     ${themeColors.colors.normal.fg}     ${themeColors.colors.normal.bg}
+      color attachment ${themeColors.colors.attachment.fg} ${themeColors.colors.attachment.bg}
+      color hdrdefault ${themeColors.colors.hdrdefault.fg} ${themeColors.colors.hdrdefault.bg}
+      color indicator  ${themeColors.colors.indicator.fg}  ${themeColors.colors.indicator.bg}
+      color markers    ${themeColors.colors.markers.fg}    ${themeColors.colors.markers.bg}
+      color quoted     ${themeColors.colors.quoted.fg}     ${themeColors.colors.quoted.bg}
+      color signature  ${themeColors.colors.signature.fg}  ${themeColors.colors.signature.bg}
+      color status     ${themeColors.colors.status.fg}     ${themeColors.colors.status.bg}
+      color tilde      ${themeColors.colors.tilde.fg}      ${themeColors.colors.tilde.bg}
+      color tree       ${themeColors.colors.tree.fg}       ${themeColors.colors.tree.bg}
       
       # Account configurations
       ${accountConfigs}

@@ -88,7 +88,6 @@
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/laptop/config.nix
-          ./profiles/test-containers.nix
         ];
       };
     };
