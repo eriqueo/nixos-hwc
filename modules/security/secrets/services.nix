@@ -61,9 +61,23 @@
     # Email service credentials
     proton-bridge-password = {
       file = ../../../secrets/proton-bridge-password.age;
-      mode = "0400";
-      owner = "root";
-      group = "root";
+      mode = "0440";
+      owner = "eric";
+      group = "users";
+    };
+    
+    gmail-personal-password = {
+      file = ../../../secrets/gmail-personal-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "users";
+    };
+    
+    gmail-business-password = {
+      file = ../../../secrets/gmail-business-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "users";
     };
   };
 }

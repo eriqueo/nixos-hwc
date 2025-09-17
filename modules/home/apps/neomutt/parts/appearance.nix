@@ -6,6 +6,9 @@ let
   cfg = config.features.neomutt;
   materials = cfg.materials or {};
   
+  # Import theme palette
+  palette = import ../../../theme/palettes/deep-nord.nix {};
+  
   # Generate account configurations for ProtonMail Bridge
   accountConfigs = lib.concatStringsSep "\n\n" (lib.mapAttrsToList (name: account: ''
     # ${account.name} account configuration
@@ -16,11 +19,25 @@ let
   accountFiles = lib.listToAttrs (lib.mapAttrsToList (name: account: 
     let
       passwordCommand = 
-        if account.useAgenixPassword && materials ? protonBridgePasswordFile && materials.protonBridgePasswordFile != null
-        then "cat ${materials.protonBridgePasswordFile}"
+        if account.useAgenixPassword
+        then "cat /run/agenix/proton-bridge-password"
         else if account ? bridgePasswordCommand && account.bridgePasswordCommand != null
         then account.bridgePasswordCommand
-        else "echo 'ERROR: Bridge password not configured - check agenix setup'";
+        else "echo 'ERROR: Password not configured'";
+      
+      # Determine if this is a Gmail account
+      isGmail = lib.hasSuffix "@gmail.com" account.email;
+      
+      # Server settings based on provider
+      imapServer = if isGmail then "imap.gmail.com:993" else "127.0.0.1:1143";
+      smtpServer = if isGmail then "smtp.gmail.com:587" else "127.0.0.1:1025";
+      sslSettings = if isGmail then ''
+        set ssl_starttls = yes
+        set ssl_force_tls = yes
+      '' else ''
+        set ssl_starttls = no
+        set ssl_force_tls = no
+      '';
     in {
       name = ".config/neomutt/accounts/${account.name}";
       value.text = ''
@@ -28,22 +45,21 @@ let
         set from = "${account.email}"
         set realname = "${account.realName}"
         
-        # ProtonMail Bridge settings
+        # Email server settings
         set imap_user = "${account.bridgeUsername}"
         set imap_pass = "`${passwordCommand}`"
         set smtp_user = "${account.bridgeUsername}"
         set smtp_pass = "`${passwordCommand}`"
         
-        # Server settings for ProtonMail Bridge
-        set folder = "imap://127.0.0.1:1143/"
+        # Server settings
+        set folder = "imap://${imapServer}/"
         set spoolfile = "+INBOX"
-        set postponed = "+Drafts"
-        set record = "+Sent"
-        set trash = "+Trash"
+        set postponed = "+[Gmail]/Drafts"
+        set record = "+[Gmail]/Sent Mail"
+        set trash = "+[Gmail]/Trash"
         
-        set smtp_url = "smtp://${account.bridgeUsername}@127.0.0.1:1025/"
-        set ssl_starttls = no
-        set ssl_force_tls = no
+        set smtp_url = "smtp://${account.bridgeUsername}@${smtpServer}/"
+        ${sslSettings}
       '';
     }
   ) cfg.accounts);
@@ -63,17 +79,17 @@ in
       set pager_context = 3
       set menu_scroll = yes
       
-      # Colors (basic theme)
-      color normal     white         default
-      color attachment yellow        default
-      color hdrdefault cyan          default
-      color indicator  black         yellow
-      color markers    red           default
-      color quoted     green         default
-      color signature  cyan          default
-      color status     brightgreen   blue
-      color tilde      blue          default
-      color tree       red           default
+      # Colors (deep-nord theme)
+      color normal     "#${palette.fg}"         "#${palette.bg}"
+      color attachment "#${palette.warn}"       "#${palette.bg}"
+      color hdrdefault "#${palette.accent2}"    "#${palette.bg}"
+      color indicator  "#${palette.bg}"         "#${palette.accent}"
+      color markers    "#${palette.crit}"       "#${palette.bg}"
+      color quoted     "#${palette.good}"       "#${palette.bg}"
+      color signature  "#${palette.fgDim}"      "#${palette.bg}"
+      color status     "#${palette.fg}"         "#${palette.surface1}"
+      color tilde      "#${palette.info}"       "#${palette.bg}"
+      color tree       "#${palette.accent}"     "#${palette.bg}"
       
       # Account configurations
       ${accountConfigs}

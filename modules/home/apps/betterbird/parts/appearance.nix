@@ -1,15 +1,16 @@
 { lib, pkgs, config, ... }:
 
 let
-  C = config.hwc.home.theme.colors or {};
-  toCss = c: if c == null then "#888888" else "#" + (lib.removePrefix "#" c);
-
-  bg      = toCss (C.bg or "282828");
-  fg      = toCss (C.fg or "ebdbb2");
-  accent  = toCss (C.accent or "83a598");
-  hilite  = toCss (C.warn or "fabd2f");
-  border  = toCss (C.border or "504945");
-  surface = toCss (C.surface0 or "323232");
+  # Import theme palette directly
+  palette = import ../../../theme/palettes/deep-nord.nix {};
+  
+  # Convert palette colors to CSS format
+  bg      = "#${palette.bg}";
+  fg      = "#${palette.fg}";
+  accent  = "#${palette.accent}";
+  hilite  = "#${palette.warn}";
+  border  = "#${palette.border}";
+  surface = "#${palette.surface0}";
 in
 {
   files = profileBase: {

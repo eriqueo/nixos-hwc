@@ -29,13 +29,30 @@
         librewolf.enable    = true;
         protonBridge.enable = true;
         obsidian.enable     = true;
+        dunst.enable        = true;
         neomutt = {
             enable = true;
-            accounts.proton = {
-              realName = "Eric";  # Replace with your actual name
-              email = "eriqueo@proton.me";
-              bridgeUsername = "eriqueo@proton.me";
-              useAgenixPassword = true;  # This is the default
+            accounts = {
+              proton = {
+                realName = "Eric";
+                email = "eriqueo@proton.me";
+                bridgeUsername = "eriqueo@proton.me";
+                useAgenixPassword = true;
+              };
+              gmail-personal = {
+                realName = "Eric O'Keefe";
+                email = "eriqueokeefe@gmail.com";
+                bridgeUsername = "eriqueokeefe@gmail.com";
+                useAgenixPassword = false;
+                bridgePasswordCommand = "cat /run/agenix/gmail-personal-password";
+              };
+              gmail-business = {
+                realName = "Eric O'Keefe";
+                email = "heartwoodcraftmt@gmail.com";
+                bridgeUsername = "heartwoodcraftmt@gmail.com";
+                useAgenixPassword = false;
+                bridgePasswordCommand = "cat /run/agenix/gmail-business-password";
+              };
             };
           };
       };
