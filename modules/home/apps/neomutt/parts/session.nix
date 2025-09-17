@@ -11,6 +11,6 @@
 
   # Export session env if needed
   env = {
-    EDITOR = "nvim"; # Default editor for composing emails
+    # EDITOR is controlled by shell module for global consistency
   };
 }

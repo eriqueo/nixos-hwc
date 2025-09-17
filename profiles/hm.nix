@@ -25,11 +25,19 @@
         kitty.enable        = true;
         thunar.enable       = true;
         betterbird.enable   = true;
-        neomutt.enable      = true;
         chromium.enable     = true;
         librewolf.enable    = true;
         protonBridge.enable = true;
         obsidian.enable     = true;
+        neomutt = {
+            enable = true;
+            accounts.proton = {
+              realName = "Eric";  # Replace with your actual name
+              email = "eriqueo@proton.me";
+              bridgeUsername = "eriqueo@proton.me";
+              useAgenixPassword = true;  # This is the default
+            };
+          };
       };
 
       hwc.home.theme.palette = "deep-nord";
