@@ -37,39 +37,58 @@ in {
   config = lib.mkIf cfg.enable {
     # System-level packages - Development tools, language servers, build tools
     environment.systemPackages = with pkgs; [
-
       # Core system shells
-      zsh git micro neovim                 # Default user shell (required for Home Manager integration) 
-      tmux kitty xfce.thunar               # Terminal emulator (server: X11 forwarding, workstation: desktop)
-      vim ncdu zoxide gh                   # GitHub CLI
-
+      zsh                    # Default user shell (required for Home Manager integration)
+      
+      # Core development tools
+      git
+      micro
+      neovim
+      
       # Security and password management
-      pass gnupg isync  # Password store, GPG encryption, Email sync (required by ProtonMail Bridge)
-                        
-      # Mail shit
-      neomutt  msmtp  abook  w3m lynx gnupg  pass file 
-
+      pass                   # Password store (required by ProtonMail Bridge)
+      gnupg                  # GPG encryption (required by pass)
+      
       # System monitoring and utilities
-      htop btop tree neofetch
+      htop
+      btop
+      tree
+      neofetch
       
       # Network tools
-      wget curl
+      wget
+      curl
       
       # File management
-      unzip zip p7zip rsync
+      unzip
+      zip
+      p7zip
+      rsync
       
       # Language servers for development
-      lua-language-server nil pyright                     # Lua LSP, Nix LSP, Python LSP
+      lua-language-server              # Lua LSP
+      nil                             # Nix LSP  
+      pyright                         # Python LSP
       nodePackages.typescript-language-server  # TypeScript/JavaScript LSP
-      gopls clang-tools                        # Go LSP, C/C++ LSP (includes clangd)
-                 
+      gopls                          # Go LSP
+      clang-tools                    # C/C++ LSP (includes clangd)
+      
       # Development build tools (needed for some LSP features)
-      gcc gnumake cmake
-      pkg-config nodejs                         # Needed for some LSPs
-      python3 cargo go                   # Needed for Python development
-       
+      gcc
+      gnumake
+      cmake
+      pkg-config
+      nodejs                         # Needed for some LSPs
+      python3                        # Needed for Python development
+      cargo                          # Rust package manager
+      go                            # Go compiler
+      
       # Enhanced CLI tools (system-level)
-      bat eza fzf ripgrep fd           
+      bat          # better cat
+      eza          # better ls
+      fzf          # fuzzy finder
+      ripgrep      # better grep
+      fd           # better find
       
       # Development languages and tools
       python3Packages.pip
@@ -79,13 +98,25 @@ in {
       universal-ctags                # tag navigation
       
       # Security and secrets management
-      sops age ssh-to-age
+      sops
+      age
+      ssh-to-age
+      
+      # Terminal multiplexer
+      tmux
+      
+      # Universal GUI tools (needed by both server and workstation)
+      kitty                  # Terminal emulator (server: X11 forwarding, workstation: desktop)
+      xfce.thunar           # File manager (server: X11 forwarding, workstation: desktop)
       
       # JSON/YAML processing
-      jq yq
+      jq
+      yq
       
       # System information
-      usbutils pciutils dmidecode
+      usbutils
+      pciutils
+      dmidecode
       
       # Disk and filesystem tools
       parted        # Disk partitioning tool
@@ -93,7 +124,14 @@ in {
       dosfstools    # FAT32/VFAT filesystem tools
       e2fsprogs     # ext2/3/4 filesystem tools
       ntfs3g        # NTFS filesystem support
-
+      
+      # Version control and GitHub
+      gh           # GitHub CLI
+      
+      # Core system utilities
+      vim
+      ncdu
+      zoxide
     ];
   };
 }

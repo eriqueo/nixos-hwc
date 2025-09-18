@@ -92,6 +92,16 @@ in {
         example = [ "--asterisks" "--remember" "--remember-user-session" ];
       };
     };
+    
+    # NEW: user lingering for systemd --use
+    linger = {
+          enable = lib.mkEnableOption "Enable lingering for selected users (keeps user systemd running without login)";
+          users = lib.mkOption {
+            type = with lib.types; listOf str;
+            default = [ "eric" ];
+            description = "Users to enable linger for (so user timers/services run when logged out).";
+          };
+        };
   };
 
   #============================================================================
@@ -160,6 +170,9 @@ in {
     services.xserver.displayManager.lightdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);  # lightdm not moved yet
     services.displayManager.sddm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
 
+    #  logind linger users (lets HM user timers run while logged out) ---
+    services.logind.lingerUsers = lib.mkIf cfg.linger.enable cfg.linger.users;
+
     #=========================================================================
     # VALIDATION AND WARNINGS
     #=========================================================================
@@ -167,8 +180,8 @@ in {
     # Validation: Check default user exists
     assertions = [
       {
-        assertion = !cfg.loginManager.enable || (config.users.users ? ${cfg.loginManager.defaultUser});
-        message = "Login manager default user '${cfg.loginManager.defaultUser}' does not exist";
+       assertion = (!cfg.loginManager.enable)  || (lib.hasAttr cfg.loginManager.defaultUser config.users.users);
+       message = "Login manager default user '${cfg.loginManager.defaultUser}' does not exist";
       }
       {
         assertion = !cfg.sudo.enableExtraRules || (cfg.sudo.extraUsers != []);
