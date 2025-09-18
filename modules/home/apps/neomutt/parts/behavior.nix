@@ -20,7 +20,11 @@ in {
     ".config/neomutt/behavior.muttrc".text = ''
       # Do NOT alias plain 'g' (avoid bind warning about 'gi' aliasing 'g')
       bind index g noop
-
+      bind index G noop
+      bind index D noop
+      bind index \\\\ noop
+      bind pager \\\\ noop
+      
       # ----------------------------
       # Account jump macros
       # ----------------------------

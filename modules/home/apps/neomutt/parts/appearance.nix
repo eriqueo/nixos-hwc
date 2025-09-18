@@ -105,7 +105,7 @@ in {
       set sidebar_folder_indent = yes
       set mail_check_stats    = yes
       # %B name, %N new, %S size, %! flagged
-      set sidebar_format      = "%B %?N?%N/?%S%?%!"
+      set sidebar_format      = "%B %?N?[%N]??"
       # Navigation bindings (vim-like)
       bind index,pager \Cj sidebar-next
       bind index,pager \Ck sidebar-prev
