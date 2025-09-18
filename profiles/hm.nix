@@ -1,24 +1,19 @@
-# profiles/hm.nix (Final, Corrected Version with Function Signature)
-
-# This is a NixOS module, so it must be a function that accepts arguments.
-# The `config` argument here is the top-level NixOS system configuration.
+# profiles/hm.nix
 { config, pkgs, lib, ... }:
 
 {
-  # This is the top-level `home-manager` attribute for your NixOS configuration.
   home-manager = {
- 
-
     useGlobalPkgs = true;
     useUserPackages = true;
+    # Ensure HM will back up any pre-existing files instead of failing.
+    backupFileExtension = "hm-bak";
 
-    # This defines the configuration for the user 'eric'.
     users.eric = {
-      # This block now only contains settings specific to the user 'eric'.
       imports = [ ../modules/home/index.nix ];
 
       home.stateVersion = "24.05";
 
+      # Your feature toggles (keep as-is if the modules exist)
       features = {
         hyprland.enable     = true;
         waybar.enable       = true;
@@ -29,40 +24,80 @@
         librewolf.enable    = true;
         protonBridge.enable = true;
         obsidian.enable     = true;
-        protonMail.enable = true;
-        protonPass.enable = true;
+        protonMail.enable   = true;
+        protonPass.enable   = true;
         dunst.enable        = true;
+
+        # --- NeoMutt (NEW schema; matches modules/home/apps/neomutt/options.nix) ---
         neomutt = {
-            enable = true;
-            accounts = {
-              # Order matters - first account is default
-              proton = {
-                realName = "Eric";
-                email = "eriqueo@proton.me";
-                bridgeUsername = "eriqueo@proton.me";
-                useAgenixPassword = true;
+          enable = true;
+          accounts = {
+            # Default account first
+            proton = {
+              name       = "proton";
+              type       = "proton-bridge";
+              realName   = "Eric";
+              address    = "eriqueo@proton.me";
+              # Leave login empty -> generator will fall back to bridgeUsername/address
+              login      = "";
+              password = {
+                mode   = "pass";
+                pass   = "email/proton/bridge";  # pass insert email/proton/bridge
               };
-              gmail-personal = {
-                realName = "Eric O'Keefe";
-                email = "eriqueokeefe@gmail.com";
-                bridgeUsername = "eriqueokeefe@gmail.com";
-                useAgenixPassword = false;
-                bridgePasswordCommand = "cat /run/agenix/gmail-personal-password | tr -d '\\n'";
+              maildirName = "proton";
+              sync.patterns = [ "INBOX" "Sent" "Drafts" "Trash" "Archive" ];
+              send.msmtpAccount = "proton";
+              primary = true;
+            };
+
+            gmail-personal = {
+              name       = "gmail-personal";
+              type       = "gmail";
+              realName   = "Eric O'Keefe";
+              address    = "eriqueokeefe@gmail.com";
+              login      = "eriqueokeefe@gmail.com";
+              password = {
+                mode   = "agenix";
+                agenix = "/run/agenix/gmail-personal-password";
               };
-              gmail-business = {
-                realName = "Eric O'Keefe";
-                email = "heartwoodcraftmt@gmail.com";
-                bridgeUsername = "heartwoodcraftmt@gmail.com";
-                useAgenixPassword = false;
-                bridgePasswordCommand = "cat /run/agenix/gmail-business-password | tr -d '\\n'";
+              maildirName = "gmail-personal";
+              # Gmail folder names with spaces — generator quotes them
+              sync.patterns = [
+                "INBOX"
+                "[Gmail]/Sent Mail"
+                "[Gmail]/Drafts"
+                "[Gmail]/Trash"
+                "[Gmail]/All Mail"
+              ];
+              send.msmtpAccount = "gmail-personal";
+            };
+
+            gmail-business = {
+              name       = "gmail-business";
+              type       = "gmail";
+              realName   = "Eric O'Keefe";
+              address    = "heartwoodcraftmt@gmail.com";
+              login      = "heartwoodcraftmt@gmail.com";
+              password = {
+                mode   = "agenix";
+                agenix = "/run/agenix/gmail-business-password";
               };
+              maildirName = "gmail-business";
+              sync.patterns = [
+                "INBOX"
+                "[Gmail]/Sent Mail"
+                "[Gmail]/Drafts"
+                "[Gmail]/Trash"
+                "[Gmail]/All Mail"
+              ];
+              send.msmtpAccount = "gmail-business";
             };
           };
+        };
       };
 
+      # Theme and shell (unchanged)
       hwc.home.theme.palette = "deep-nord";
-
-      
 
       hwc.home.shell = {
         enable = true;
