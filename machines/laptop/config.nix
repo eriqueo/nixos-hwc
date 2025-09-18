@@ -43,7 +43,6 @@
 
     # Profiles that define the machine's capabilities (orchestration only)
     ../../profiles/base.nix
-    ../../profiles/workstation.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
     ../../profiles/hm.nix

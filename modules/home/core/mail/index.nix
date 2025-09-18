@@ -1,0 +1,163 @@
+{ config, lib, pkgs, ... }:
+let
+  accs = config.features.neomutt.accounts or {};
+  vals = lib.attrValues accs;
+
+  # ---- helpers ---------------------------------------------------------------
+  passCmd = a:
+    let
+      pass = "/run/current-system/sw/bin/pass";
+      entry = if a.password.mode == "pass" then lib.escapeShellArg a.password.pass else null;
+      agenixPath = if a.password.mode == "agenix" then lib.escapeShellArg (toString a.password.agenix) else null;
+    in
+    if a.password.mode == "pass" then
+      # NOTE: double quotes so $HOME expands at runtime
+      ''env -i HOME="$HOME" GNUPGHOME="$HOME/.gnupg" PASSWORD_STORE_DIR="$HOME/.password-store" PATH="/run/current-system/sw/bin" ${pass} show ${entry}''
+    else if a.password.mode == "agenix" then
+      # robust path handling via $0 to avoid quoting hell
+      ''sh -c 'tr -d "\n" < "$0"' ${agenixPath}''
+    else
+      a.password.command;
+
+  imapHost = a: if a.type == "proton-bridge" then "127.0.0.1" else "imap.gmail.com";
+  imapPort = a: if a.type == "proton-bridge" then 1143 else 993;
+  tlsType  = a: if a.type == "proton-bridge" then "None" else "IMAPS";
+
+  smtpHost = a: if a.type == "proton-bridge" then "127.0.0.1" else "smtp.gmail.com";
+  smtpPort = a: if a.type == "proton-bridge" then 1025 else 587;
+  startTLS = a: if a.type == "proton-bridge" then false else true;
+
+  isGmail = a: a.type == "gmail";
+
+  primary =
+    let p = lib.filter (a: a.primary or false) vals;
+    in if p != [] then lib.head p else (if vals != [] then lib.head vals else null);
+
+  # msmtp per-account block
+  msmtpBlock = a:
+    let cmd = passCmd a;
+    in ''
+      account ${a.send.msmtpAccount}
+      host ${smtpHost a}
+      port ${toString (smtpPort a)}
+      ${if startTLS a then "tls_starttls on\ntls on" else "tls off"}
+      from ${a.address}
+      user ${a.login}
+      passwordeval "${cmd}"
+    '';
+
+  # mbsync per-account block
+  mbsyncBlock = a:
+    let
+      cmd = passCmd a;
+      createPolicy = if isGmail a then "Create Near" else "Create Both";
+    in ''
+      IMAPAccount ${a.name}
+      Host ${imapHost a}
+      Port ${toString (imapPort a)}
+      User ${a.login}
+      PassCmd "${cmd}"
+      TLSType ${tlsType a}
+      # AuthMechs *     # (optional) force all mechs; usually not needed
+
+      IMAPStore ${a.name}-remote
+      Account ${a.name}
+
+      MaildirStore ${a.name}-local
+      Path ~/Maildir/${a.maildirName}/
+      Inbox ~/Maildir/${a.maildirName}/INBOX
+      SubFolders Verbatim
+
+      Channel ${a.name}-all
+      Far :${a.name}-remote:
+      Near :${a.name}-local:
+      Patterns ${lib.concatStringsSep " " (map (p: lib.escapeShellArg p) a.sync.patterns)}
+      ${createPolicy}
+      Expunge Both
+      SyncState *
+    '';
+
+  haveProton = lib.any (a: a.type == "proton-bridge") vals;
+
+in
+{
+  # ---------------- mbsync ----------------------------------------------------
+  home.file.".mbsyncrc".text = lib.concatStringsSep "\n\n" (map mbsyncBlock vals);
+
+  # ---------------- msmtp -----------------------------------------------------
+  home.file.".config/msmtp/config".text = lib.mkIf (primary != null) ''
+    defaults
+    auth on
+    tls on
+    tls_trust_file /etc/ssl/certs/ca-bundle.crt
+    logfile ~/.config/msmtp/msmtp.log
+
+    ${lib.concatStringsSep "\n\n" (map msmtpBlock vals)}
+
+    account default : ${primary.send.msmtpAccount}
+  '';
+  home.file.".config/msmtp/config".permissions = "0600";
+  home.file.".config/msmtp/msmtp.log".text = "";
+  home.file.".config/msmtp/msmtp.log".permissions = "0600";
+
+  # ---------------- abook -----------------------------------------------------
+  home.file.".abook/abookrc".text = ''
+    [format]
+    field delim = :
+    addrfield delim = ;
+    tuple delim = ,
+    [options]
+    autosave = yes
+  '';
+  home.file.".abook/addressbook".text = "# abook addressbook\n";
+
+  # ---------------- user services/timers -------------------------------------
+  # Proton Bridge (headless) as USER service if any proton account exists
+  systemd.user.services.protonmail-bridge = lib.mkIf haveProton {
+    Unit = {
+      Description = "ProtonMail Bridge (headless)";
+      After = [ "default.target" "network-online.target" ];
+      Wants = [ "network-online.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.protonmail-bridge}/bin/protonmail-bridge --noninteractive --log-level warn"
+      ;
+      Restart = "on-failure";
+      RestartSec = 2;
+      Environment = [
+        "PATH=/run/current-system/sw/bin:${pkgs.pass}/bin"
+        "PASSWORD_STORE_DIR=%h/.password-store"
+        "GNUPGHOME=%h/.gnupg"
+      ];
+    };
+    Install = { WantedBy = [ "default.target" ]; };
+  };
+
+  # Periodic mbsync (user timer). Order it after Bridge when Proton is present.
+  systemd.user.services.mbsync = {
+    Unit = {
+      Description = "mbsync all";
+      After = [ "network-online.target" ] ++ lib.optionals haveProton [ "protonmail-bridge.service" ];
+      Wants = [ "network-online.target" ] ++ lib.optionals haveProton [ "protonmail-bridge.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.isync}/bin/mbsync -a";
+      Environment = [
+        "PATH=/run/current-system/sw/bin"
+        "PASSWORD_STORE_DIR=%h/.password-store"
+        "GNUPGHOME=%h/.gnupg"
+      ];
+    };
+  };
+  systemd.user.timers.mbsync = {
+    Unit.Description = "Periodic mbsync";
+    Timer = {
+      OnBootSec = "2m";
+      OnUnitActiveSec = "5m";
+      AccuracySec = "30s";
+      Persistent = true;
+    };
+    Install.WantedBy = [ "timers.target" ];
+  };
+}

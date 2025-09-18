@@ -1,56 +1,27 @@
 # nixos-hwc/profiles/base.nix
 #
 # Base System Profile (Orchestration Only)
-# Aggregates foundational modules and sets high-level toggles.
-# No hardware driver details, no nixpkgs-internal imports, no conditional imports.
-#
-# DEPENDENCIES (Upstream):
-#   - modules/system/paths.nix
-#   - modules/system/filesystem.nix
-#   - modules/system/networking.nix
-#   - modules/security/secrets.nix
-#   - modules/infrastructure/gpu.nix
-#
-# USED BY (Downstream):
-#   - machines/*/config.nix (selects this profile)
-#   - profiles/* (stack additional profiles on top, e.g., ai.nix)
-#
-# IMPORTS REQUIRED IN:
-#   - Any machine using the base system:
-#       imports = [ ../../profiles/base.nix ];
-#
-# USAGE:
-#   # Machine declares facts/toggles (no implementation here):
-#   #   hwc.infrastructure.hardware.gpu.type = "nvidia" | "intel" | "amd" | "none";
-#   #   hwc.services.ollama.enable = true;
-#
-# GUARANTEES:
-#   - Static imports only (no recursion risk)
-#   - No hardware.* or service implementation logic here
-#   - Modules implement; profiles orchestrate; machines declare reality
+# Aggregates foundational modules and sets high-level defaults.
+# No hardware driver details; no workstation-specific toggles here.
 
 { lib, pkgs, ... }:
 
 {
-  #============================================================================
-  # IMPORTS - Assemble foundational modules (no computed paths)
-  #============================================================================
+  #==========================================================================
+  # IMPORTS – Foundational system + infra modules (single root orchestrator)
+  #==========================================================================
   imports = [
-    # System domain modules (Charter v7 reorganized)
     ../modules/system/index.nix
-    
-    # Infrastructure
     ../modules/infrastructure/index.nix
   ];
 
-  #============================================================================
-  # BASE SETTINGS - Cross-cutting defaults (machine can override)
-  #============================================================================
+  #==========================================================================
+  # BASE SETTINGS – Cross-cutting defaults (machines may override)
+  #==========================================================================
   time.timeZone = lib.mkDefault "America/Denver";
-
-  #============================================================================
-  # NIX SETTINGS - Package manager features and GC policy
-  #============================================================================
+  users.users.eric = {
+    hashedPassword = $y$j9T$mpCws7jy8SXAeH2rwkaGr.$lc1CQDwsoUxiv6s0PZqlKBmia1ffk4gs5jfyLW1Yg86;
+  };
   nix = {
     settings = {
       experimental-features = [ "nix-command" "flakes" ];
@@ -64,9 +35,9 @@
     };
   };
 
-  #============================================================================
-  # NETWORKING (Orchestration) - Defers implementation to modules/system/networking.nix
-  #============================================================================
+  #==========================================================================
+  # NETWORKING (orchestration only; implementation lives in modules/system/*)
+  #==========================================================================
   hwc.networking = {
     enable = true;
     ssh = {
@@ -83,42 +54,29 @@
     tailscale.enable = true;
   };
 
-  #============================================================================
-  # BLUETOOTH (Hardware Infrastructure)
-  #============================================================================
+  #==========================================================================
+  # CORE SYSTEM DEFAULTS
+  #==========================================================================
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
   };
-  
+
   services.blueman.enable = true;
   services.dbus.enable = true;
   security.polkit.enable = true;
 
-  #============================================================================
-  # CONTAINERS (Orchestration)
-  #============================================================================
- # virtualisation = {
- #   docker.enable = true;
- #   oci-containers.backend = "docker";
- # };
-
-  #============================================================================
-  # BASE TOOLING - Editor, shell tools, etc. (ergonomics)
-  #============================================================================
-  # Moved to modules/system/base-packages.nix
+  # Base/essential packages (implementation in modules/system/packages/*)
   hwc.system.basePackages.enable = true;
 
-  #============================================================================
-  # SYSTEM DOMAIN - Core system configuration (Charter v4)
-  #============================================================================
-  # User management with agenix integration
+  # User management (implementation in modules/system/users/*)
   hwc.system.users = {
     enable = true;
     user = {
       enable = true;
       name = "eric";
-      useSecrets = false; # Use fallback password for now
+      # For now, rely on module defaults or secret infra; no inline fallback here
+      useSecrets = false;
       groups.basic = true;
       groups.media = true;
       groups.hardware = true;
@@ -126,37 +84,22 @@
     };
   };
 
-  # Session management (sudo + login)
+  # Session management (sudo + linger; DM is set in sys.nix overlay)
   hwc.system.services.session = {
     enable = true;
     sudo = {
       enable = true;
-      wheelNeedsPassword = false; # Restore working sudo behavior
+      wheelNeedsPassword = false;
+    };
+    linger = {
+      enable = true;
+      users = [ "eric" ];
     };
   };
 
-  # Security domain provides all secrets (enabled via security profile)
-  # No direct configuration needed here - security profile handles it
-
-  #============================================================================
-  # USER DOMAIN (Orchestration) - Defers implementation to modules/home/*
-  #============================================================================
-  # Legacy hwc.home.* configuration removed
-  # User management now handled by hwc.system.users in system domain
-
-  #============================================================================
-  # SECURITY - Now handled by system domain modules
-  #============================================================================
-  # Security configuration moved to:
-  # - hwc.system.users (user authentication)
-  # - hwc.system.services.session.sudo (privilege escalation)
-  # - hwc.security.* (via security profile - agenix integration)
-
-  #============================================================================
-  # FILESYSTEM (Orchestration) - Defers implementation to modules/system/filesystem.nix
-  #============================================================================
+  # Filesystem orchestration (implementation in modules/system/filesystem.nix)
   hwc.filesystem = {
     enable = true;
-    securityDirectories.enable = true;  # Security dirs always needed
+    securityDirectories.enable = true;
   };
 }
