@@ -31,6 +31,7 @@
         # --- NeoMutt (NEW schema; matches modules/home/apps/neomutt/options.nix) ---
         neomutt = {
           enable = true;
+          adapter = "old-dog";
           accounts = {
             # Default account first
             proton = {

@@ -5,8 +5,14 @@ let
   cfg = config.features.neomutt or { };
 
   # Theme adapter (fallbacks to 'default' if any color missing)
-  themeColorsRaw =
-    import ../../../theme/adapters/neomutt.nix { inherit config lib; };
+  # Adapter toggle: set features.neomutt.adapter = "old-dog" to use the new one
+  adapterName = (cfg.adapter or "default");
+  adapterPath = if adapterName == "old-dog"
+                then ../../../theme/adapters/neomutt-old-dog.nix
+                else ../../../theme/adapters/neomutt.nix;
+
+  themeColorsRaw = import adapterPath { inherit config lib; };
+
   def = { fg = "default"; bg = "default"; };
   # safe get
   get = name: (themeColorsRaw.colors.${name} or def);
@@ -102,7 +108,7 @@ in {
       color index_subject ${(get "index_subject").fg} ${(get "index_subject").bg}
     
       # Compact index line that lines up with the columns above
-      set index_format = "%4C %Z %{%b %d} %-20.20F %?l?%4l&%4c? %s"
+      set index_format = "%%4C %Z %{%b %d} %-18.18F %s"
       set size_show_bytes = no
     '';
     

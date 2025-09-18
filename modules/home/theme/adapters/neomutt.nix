@@ -28,11 +28,10 @@ in
 {
   colors = {
     # ---------- core ----------
-    normal     = { fg = toNeomuttColor (C.fg or "ECEFF4") "white";        bg = "default"; };
-    attachment = { fg = toNeomuttColor (C.warn or "EBCB8B") "yellow";      bg = "default"; };
-    hdrdefault = { fg = toNeomuttColor (C.accent2 or C.accent or "7daea3") "cyan"; bg = "default"; };
-    indicator  = { fg = toNeomuttColor (C.bg or "2e3440") "black";
-                   bg = toNeomuttColor (C.accent or "7daea3") "green"; };
+   normal     = { fg = toNeomuttColor (C.fg or "ECEFF4") "white";        bg = "default"; };
+   attachment = { fg = toNeomuttColor (C.warn or "EBCB8B") "yellow";      bg = "default"; };
+   hdrdefault = { fg = toNeomuttColor (C.accent2 or C.accent or "7daea3") "cyan"; bg = "default"; };                 
+   indicator  = { fg = toNeomuttColor (C.bg or "2e3440") "black";          bg = toNeomuttColor (C.accent or "7daea3") "green"; };
     markers    = { fg = toNeomuttColor (C.crit or "BF616A") "red";         bg = "default"; };
     quoted     = { fg = toNeomuttColor (C.good or "A3BE8C") "green";       bg = "default"; };
     signature  = { fg = toNeomuttColor (C.fgDim or C.muted or "4C566A") "brightblack"; bg = "default"; };
@@ -54,7 +53,7 @@ in
     index_flags   = { fg = toNeomuttColor (C.warn      or "EBCB8B") "yellow";      bg = "default"; };
     index_date    = { fg = toNeomuttColor (C.info      or "81A1C1") "blue";        bg = "default"; };
     index_author  = { fg = toNeomuttColor (C.good      or "A3BE8C") "green";       bg = "default"; };
-    index_size    = { fg = toNeomuttColor (C.accentAlt or "d3869b") "magenta";     bg = "default"; };
+    index_size    = { fg = toNeomuttColor (C.accentAlt or "4C566A") "brightblack";     bg = "default"; };
     index_subject = { fg = toNeomuttColor (C.fg        or "ECEFF4") "white";       bg = "default"; };
 
     # ---------- sidebar ----------
