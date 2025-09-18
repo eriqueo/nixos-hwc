@@ -26,6 +26,11 @@ let
   smtpHost = a: if a.type == "proton-bridge" then "127.0.0.1" else "smtp.gmail.com";
   smtpPort = a: if a.type == "proton-bridge" then 1025 else 587;
   startTLS = a: if a.type == "proton-bridge" then false else true;
+  loginOf = a:
+    let has = s: (s or "") != "";
+    in if has a.login then a.login
+       else if a.type == "proton-bridge" && has a.bridgeUsername then a.bridgeUsername
+       else a.address;  # last resort
 
   isGmail = a: a.type == "gmail";
 
@@ -42,7 +47,7 @@ let
       port ${toString (smtpPort a)}
       ${if startTLS a then "tls_starttls on\ntls on" else "tls off"}
       from ${a.address}
-      user ${a.login}
+      user ${loginOf a}
       passwordeval "${cmd}"
     '';
 
@@ -55,7 +60,7 @@ let
       IMAPAccount ${a.name}
       Host ${imapHost a}
       Port ${toString (imapPort a)}
-      User ${a.login}
+      User ${loginOf a}
       PassCmd "${cmd}"
       TLSType ${tlsType a}
       # AuthMechs *     # (optional) force all mechs; usually not needed
