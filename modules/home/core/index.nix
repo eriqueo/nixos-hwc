@@ -5,7 +5,7 @@ let
   # import all child dirs under core (mail included) if they expose index.nix
   subIndex =
     lib.pipe (lib.attrNames (lib.filterAttrs (_: t: t == "directory") dir)) [
-      (ns: map (n: ./. + "/${n}/index.nix"))
+      (ns: map (n: ./. + "/${n}/index.nix") ns)
       (paths: lib.filter builtins.pathExists paths)
     ];
 

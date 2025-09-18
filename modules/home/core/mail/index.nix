@@ -22,15 +22,20 @@ let
   imapHost = a: if a.type == "proton-bridge" then "127.0.0.1" else "imap.gmail.com";
   imapPort = a: if a.type == "proton-bridge" then 1143 else 993;
   tlsType  = a: if a.type == "proton-bridge" then "None" else "IMAPS";
-
+  hasField = a: n: builtins.hasAttr n a;
+  getField = a: n: if builtins.hasAttr n a then builtins.getAttr n a else null;
+  hasText  = s: builtins.isString s && s != "";
   smtpHost = a: if a.type == "proton-bridge" then "127.0.0.1" else "smtp.gmail.com";
   smtpPort = a: if a.type == "proton-bridge" then 1025 else 587;
   startTLS = a: if a.type == "proton-bridge" then false else true;
   loginOf = a:
-    let has = s: (s or "") != "";
-    in if has a.login then a.login
-       else if a.type == "proton-bridge" && has a.bridgeUsername then a.bridgeUsername
-       else a.address;  # last resort
+    let
+      try = n: if hasField a n && hasText (getField a n) then getField a n else null;
+    in
+      if      try "login"           != null then try "login"
+      else if try "bridgeUsername"  != null then try "bridgeUsername"
+      else if try "address"         != null then try "address"
+      else "";
 
   isGmail = a: a.type == "gmail";
 
@@ -90,49 +95,30 @@ in
   home.file.".mbsyncrc".text = lib.concatStringsSep "\n\n" (map mbsyncBlock vals);
 
   
-  # Proton default secret path when useAgenixPassword=true:
-  #   /run/agenix/proton-bridge-password
-  home.file.".config/msmtp/config".text =
-    let
-      # accounts as a list of values (you already have accs/vals defined above)
-      mkMsmtp = a:
-        let
-          isBridge = (a.type or "proton-bridge") == "proton-bridge";
-          host     = if isBridge then "127.0.0.1"     else "smtp.gmail.com";
-          port     = if isBridge then 1025           else 587;
-          tlsLines = if isBridge then "tls off"      else "tls on\ntls_starttls on";
-          fromAddr = (a.address or a.email);
-          userName = (a.login or a.bridgeUsername or a.email);
-          pwCmd =
-            if (a ? bridgePasswordCommand) && a.bridgePasswordCommand != null then a.bridgePasswordCommand
-            else if (a ? useAgenixPassword) && a.useAgenixPassword then "sh -c 'tr -d \"\\n\" < /run/agenix/proton-bridge-password'"
-            else "sh -c 'echo ERROR: set bridgePasswordCommand or useAgenixPassword'";
-          acctName = (a.name or fromAddr);
-        in ''
-          account ${acctName}
-          host ${host}
-          port ${toString port}
-          ${tlsLines}
-          from ${fromAddr}
-          user ${userName}
-          passwordeval "${pwCmd}"
-        '';
-
-      firstName = if accs != {} then lib.head (lib.attrNames accs) else "default";
-    in ''
-      defaults
-      auth on
-      tls_trust_file /etc/ssl/certs/ca-bundle.crt
-      logfile ~/.config/msmtp/msmtp.log
-
-      ${lib.concatStringsSep "\n\n" (map mkMsmtp vals)}
-
-      account default : ${firstName}
-    '';
-
-  home.file.".config/msmtp/config".mode = "0600";
-  home.file.".config/msmtp/msmtp.log".text = "";
-  home.file.".config/msmtp/msmtp.log".mode = "0600";
+ # ---------------- msmtp (secure real file via activation) --------------------
+  home.activation.msmtpConfig = lib.mkIf (primary != null) (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    set -eu
+    mkdir -p "$HOME/.config/msmtp"
+  
+    # Write the config as a real file, then lock down perms.
+    cat > "$HOME/.config/msmtp/config" <<'EOF'
+  defaults
+  auth on
+  tls on
+  tls_trust_file /etc/ssl/certs/ca-bundle.crt
+  logfile ~/.config/msmtp/msmtp.log
+  
+  ${lib.concatStringsSep "\n\n" (map msmtpBlock vals)}
+  
+  account default : ${primary.send.msmtpAccount}
+  EOF
+    chmod 600 "$HOME/.config/msmtp/config"
+  
+    # Ensure the log exists and is private
+    : > "$HOME/.config/msmtp/msmtp.log"
+    chmod 600 "$HOME/.config/msmtp/msmtp.log"
+  '');
+  
 
 
   # ---------------- abook -----------------------------------------------------
@@ -158,7 +144,6 @@ in
       ExecStart = "${pkgs.protonmail-bridge}/bin/protonmail-bridge --noninteractive --log-level warn"
       ;
       Restart = "on-failure";
-      RestartSec = 2;
       Environment = [
         "PATH=/run/current-system/sw/bin:${pkgs.pass}/bin"
         "PASSWORD_STORE_DIR=%h/.password-store"
