@@ -89,21 +89,51 @@ in
   # ---------------- mbsync ----------------------------------------------------
   home.file.".mbsyncrc".text = lib.concatStringsSep "\n\n" (map mbsyncBlock vals);
 
-  # ---------------- msmtp -----------------------------------------------------
-  home.file.".config/msmtp/config".text = lib.mkIf (primary != null) ''
-    defaults
-    auth on
-    tls on
-    tls_trust_file /etc/ssl/certs/ca-bundle.crt
-    logfile ~/.config/msmtp/msmtp.log
+  
+  # Proton default secret path when useAgenixPassword=true:
+  #   /run/agenix/proton-bridge-password
+  home.file.".config/msmtp/config".text =
+    let
+      # accounts as a list of values (you already have accs/vals defined above)
+      mkMsmtp = a:
+        let
+          isBridge = (a.type or "proton-bridge") == "proton-bridge";
+          host     = if isBridge then "127.0.0.1"     else "smtp.gmail.com";
+          port     = if isBridge then 1025           else 587;
+          tlsLines = if isBridge then "tls off"      else "tls on\ntls_starttls on";
+          fromAddr = (a.address or a.email);
+          userName = (a.login or a.bridgeUsername or a.email);
+          pwCmd =
+            if (a ? bridgePasswordCommand) && a.bridgePasswordCommand != null then a.bridgePasswordCommand
+            else if (a ? useAgenixPassword) && a.useAgenixPassword then "sh -c 'tr -d \"\\n\" < /run/agenix/proton-bridge-password'"
+            else "sh -c 'echo ERROR: set bridgePasswordCommand or useAgenixPassword'";
+          acctName = (a.name or fromAddr);
+        in ''
+          account ${acctName}
+          host ${host}
+          port ${toString port}
+          ${tlsLines}
+          from ${fromAddr}
+          user ${userName}
+          passwordeval "${pwCmd}"
+        '';
 
-    ${lib.concatStringsSep "\n\n" (map msmtpBlock vals)}
+      firstName = if accs != {} then lib.head (lib.attrNames accs) else "default";
+    in ''
+      defaults
+      auth on
+      tls_trust_file /etc/ssl/certs/ca-bundle.crt
+      logfile ~/.config/msmtp/msmtp.log
 
-    account default : ${primary.send.msmtpAccount}
-  '';
+      ${lib.concatStringsSep "\n\n" (map mkMsmtp vals)}
+
+      account default : ${firstName}
+    '';
+
   home.file.".config/msmtp/config".mode = "0600";
   home.file.".config/msmtp/msmtp.log".text = "";
   home.file.".config/msmtp/msmtp.log".mode = "0600";
+
 
   # ---------------- abook -----------------------------------------------------
   home.file.".abook/abookrc".text = ''
