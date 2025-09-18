@@ -101,9 +101,9 @@ in
 
     account default : ${primary.send.msmtpAccount}
   '';
-  home.file.".config/msmtp/config".permissions = "0600";
+  home.file.".config/msmtp/config".mode = "0600";
   home.file.".config/msmtp/msmtp.log".text = "";
-  home.file.".config/msmtp/msmtp.log".permissions = "0600";
+  home.file.".config/msmtp/msmtp.log".mode = "0600";
 
   # ---------------- abook -----------------------------------------------------
   home.file.".abook/abookrc".text = ''

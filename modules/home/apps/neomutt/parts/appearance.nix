@@ -3,101 +3,116 @@
 
 let
   cfg = config.features.neomutt or { };
-  themeColors = import ../../../theme/adapters/neomutt.nix { inherit config lib; };
 
-  # Folder-hooks per local account Maildir (proton, gmail-personal, gmail-business, …)
+  # Theme adapter (fallbacks to 'default' if any color missing)
+  themeColorsRaw =
+    import ../../../theme/adapters/neomutt.nix { inherit config lib; };
+  def = { fg = "default"; bg = "default"; };
+  # safe get
+  get = name: (themeColorsRaw.colors.${name} or def);
+
+  # Helper: first account *value* (not just its name)
+  accVals = lib.attrValues (cfg.accounts or { });
+  firstAcc = if accVals != [] then lib.head accVals else null;
+
+  # Folder-hooks: when you enter an account’s local Maildir, set identity
   accountHooks =
     lib.concatStringsSep "\n"
-      (lib.mapAttrsToList (_name: account:
+      (map (a:
         let
-          accName = account.name or (lib.replaceStrings ["@" "."] ["-" "-"] account.email);
-          addr    = account.email;
-          real    = account.realName or "User";
-          # Maildir root: ~/Maildir/<accName> (matches your mbsync config)
-          pat     = "^=\\Q${accName}\\E/";
+          maildir = a.maildirName or (a.name or "inbox");
+          addr    = a.address;
+          real    = a.realName or "User";
         in ''
-          # Identity for ${accName}
-          folder-hook ${pat} "set from=${addr}; set realname='${real}'; set envelope_from_address=${addr}; my_hdr Return-Path: ${addr}"
-        '') (cfg.accounts or { }));
+          # Identity for ${maildir}
+          folder-hook "=${maildir}/*" "set from=${addr}; set realname='${real}'; set use_envelope_from=yes"
+        '') accVals);
 
 in {
   files = profileBase: {
-
-    # Main config: LOCAL Maildir only; no remote IMAP/SMTP here.
+    # ===================== main config =====================
     ".config/neomutt/neomuttrc".text = ''
-      set mbox_type=Maildir
-      set folder="~/Maildir"                 # top-level for all accounts
-      ${lib.optionalString (cfg.accounts or {} != {})
-        (let first = lib.head (lib.attrNames cfg.accounts); in
-          ''set spoolfile="=${first}/INBOX"'')
-      }
+      # --- Storage (offline-first) ---
+      set mbox_type = Maildir
+      set folder    = "~/Maildir"
+      ${lib.optionalString (firstAcc != null) ''
+        set spoolfile = "=${firstAcc.maildirName or (firstAcc.name or "inbox")}/INBOX"
+      ''}
 
-      set header_cache="~/.cache/neomutt/headers"
-      set message_cachedir="~/.cache/neomutt/bodies"
-      set sort=reverse-date
-      set menu_scroll=yes
-      set pager_context=3
-      set pager_index_lines=8
+      # --- Caches & UX ---
+      set header_cache     = "~/.cache/neomutt/headers"
+      set message_cachedir = "~/.cache/neomutt/bodies"
+      set sort             = reverse-date
+      set menu_scroll      = yes
+      set pager_context    = 3
+      set pager_index_lines= 8
 
-      # Auto-discover all Maildir boxes for sidebar (proton + gmail-*)
+      # --- Auto-discover all local Maildirs for sidebar ---
+      # Finds every Maildir folder by presence of 'cur', escapes spaces
       mailboxes `find ~/Maildir -type d -name cur -printf "%h\n" | sed -e 's/ /\\ /g' | sort -u | tr '\n' ' '`
 
-      # Source look & UI
+      # --- Look & UI ---
       source "~/.config/neomutt/theme.muttrc"
       source "~/.config/neomutt/sidebar.muttrc"
       source "~/.config/neomutt/behavior.muttrc"
 
-      # Use msmtp to send; ignore any smtp_url from other snippets
+      # --- Sending: always via msmtp (system path), never smtp_url here ---
       unset smtp_url
-      set sendmail="/run/current-system/sw/bin/msmtp"
-      set use_envelope_from=yes
+      set   sendmail = "/run/current-system/sw/bin/msmtp"
+      set   use_envelope_from = yes
 
-      # abook + inline HTML
+      # --- abook integration + HTML handling ---
       set query_command = "abook --mutt-query '%s'"
       auto_view text/html
       bind editor <Tab> complete-query
-      set mailcap_path="~/.mailcap"
+      set mailcap_path = "~/.mailcap"
       alternative_order text/plain text/enriched text/html
 
-      # Per-account identity when entering that Maildir
+      # --- Per-account identity when entering that Maildir ---
       ${accountHooks}
     '';
 
-    # Theme (colors and compact index)
+    # ===================== theme =====================
     ".config/neomutt/theme.muttrc".text = ''
-      color status        ${themeColors.colors.status.fg}   ${themeColors.colors.status.bg}
-      color indicator     ${themeColors.colors.indicator.fg} ${themeColors.colors.indicator.bg}
-      color tree          ${themeColors.colors.tree.fg}     ${themeColors.colors.tree.bg}
-      color markers       ${themeColors.colors.markers.fg}  ${themeColors.colors.markers.bg}
-      color search        ${themeColors.colors.search.fg}   ${themeColors.colors.search.bg}
-      color index         ${themeColors.colors.indexNew.fg} ${themeColors.colors.indexNew.bg} "~N"
-      color index         ${themeColors.colors.indexFlag.fg} ${themeColors.colors.indexFlag.bg} "~F"
-      color index         ${themeColors.colors.indexDel.fg} ${themeColors.colors.indexDel.bg} "~D"
-      color index         ${themeColors.colors.indexToMe.fg} ${themeColors.colors.indexToMe.bg} "~p"
-      color index         ${themeColors.colors.indexFromMe.fg} ${themeColors.colors.indexFromMe.bg} "~P"
+      # Colors (safe fallbacks if theme adapter lacks a key)
+      color status        ${(get "status").fg}     ${(get "status").bg}
+      color indicator     ${(get "indicator").fg}  ${(get "indicator").bg}
+      color tree          ${(get "tree").fg}       ${(get "tree").bg}
+      color markers       ${(get "markers").fg}    ${(get "markers").bg}
+      color search        ${(get "search").fg}     ${(get "search").bg}
+      color normal        ${(get "normal").fg}     ${(get "normal").bg}
+      color quoted        ${(get "quoted").fg}     ${(get "quoted").bg}
+      color signature     ${(get "signature").fg}  ${(get "signature").bg}
+      color hdrdefault    ${(get "hdrdefault").fg} ${(get "hdrdefault").bg}
 
-      # Sidebar base colors (specials)
-      color sidebar_ordinary default default
-      color sidebar_highlight black yellow
-      color sidebar_divider  blue  default
-      color sidebar_flagged  magenta default
-      color sidebar_new      yellow default
+      # Index accents (fall back gracefully)
+      color index         ${(get "indexNew").fg}   ${(get "indexNew").bg} "~N"
+      color index         ${(get "indexFlag").fg}  ${(get "indexFlag").bg} "~F"
+      color index         ${(get "indexDel").fg}   ${(get "indexDel").bg} "~D"
+      color index         ${(get "indexToMe").fg}  ${(get "indexToMe").bg} "~p"
+      color index         ${(get "indexFromMe").fg} ${(get "indexFromMe").bg} "~P"
 
       # Compact index line
-      set index_format="%Z %{%b %d} %-20.20F (%3cK) %s"
-      set size_show_bytes=no
+      set index_format = "%Z %{%b %d} %-20.20F (%3cK) %s"
+      set size_show_bytes = no
     '';
 
-    # Sidebar only (UI + binds). No mailboxes or account jumps hardcoded.
+    # ===================== sidebar =====================
     ".config/neomutt/sidebar.muttrc".text = ''
-      set sidebar_visible=yes
-      set sidebar_width=26
-      set sidebar_short_path=yes
-      set mail_check_stats=yes
-      set sidebar_format="%B %?N?%N/?%S?"
-
+      set sidebar_visible     = yes
+      set sidebar_width       = 28
+      set sidebar_short_path  = yes
+      set sidebar_folder_indent = yes
+      set mail_check_stats    = yes
+      # %B name, %N new, %S size, %! flagged
+      set sidebar_format      = "%B %?N?%N/?%S%?%!"
+      # Navigation bindings (vim-like)
+      bind index,pager \Cj sidebar-next
+      bind index,pager \Ck sidebar-prev
+      bind index,pager \Co sidebar-open
+      bind index,pager \Cn sidebar-next-new
+      bind index,pager \Cp sidebar-prev-new
     '';
-
 
   };
 }
