@@ -74,45 +74,58 @@ in {
 
     # ===================== theme =====================
     ".config/neomutt/theme.muttrc".text = ''
-      # Colors (safe fallbacks if theme adapter lacks a key)
-      color status        ${(get "status").fg}     ${(get "status").bg}
-      color indicator     ${(get "indicator").fg}  ${(get "indicator").bg}
-      color tree          ${(get "tree").fg}       ${(get "tree").bg}
-      color markers       ${(get "markers").fg}    ${(get "markers").bg}
-      color search        ${(get "search").fg}     ${(get "search").bg}
-      color normal        ${(get "normal").fg}     ${(get "normal").bg}
-      color quoted        ${(get "quoted").fg}     ${(get "quoted").bg}
-      color signature     ${(get "signature").fg}  ${(get "signature").bg}
-      color hdrdefault    ${(get "hdrdefault").fg} ${(get "hdrdefault").bg}
-
-      # Index accents (fall back gracefully)
-      color index         ${(get "indexNew").fg}   ${(get "indexNew").bg} "~N"
-      color index         ${(get "indexFlag").fg}  ${(get "indexFlag").bg} "~F"
-      color index         ${(get "indexDel").fg}   ${(get "indexDel").bg} "~D"
-      color index         ${(get "indexToMe").fg}  ${(get "indexToMe").bg} "~p"
-      color index         ${(get "indexFromMe").fg} ${(get "indexFromMe").bg} "~P"
-
-      # Compact index line
-      set index_format = "%Z %{%b %d} %-20.20F (%3cK) %s"
+      # Colors from theme adapter
+      color status        ${(get "status").fg}        ${(get "status").bg}
+      color indicator     ${(get "indicator").fg}     ${(get "indicator").bg}
+      color tree          ${(get "tree").fg}          ${(get "tree").bg}
+      color markers       ${(get "markers").fg}       ${(get "markers").bg}
+      color search        ${(get "search").fg}        ${(get "search").bg}
+      color normal        ${(get "normal").fg}        ${(get "normal").bg}
+      color quoted        ${(get "quoted").fg}        ${(get "quoted").bg}
+      color signature     ${(get "signature").fg}     ${(get "signature").bg}
+      color hdrdefault    ${(get "hdrdefault").fg}    ${(get "hdrdefault").bg}
+      color tilde         ${(get "tilde").fg}         ${(get "tilde").bg}
+    
+      # Accents (matchers)
+      color index         ${(get "indexNew").fg}      ${(get "indexNew").bg} "~N"
+      color index         ${(get "indexFlag").fg}     ${(get "indexFlag").bg} "~F"
+      color index         ${(get "indexDel").fg}      ${(get "indexDel").bg} "~D"
+      color index         ${(get "indexToMe").fg}     ${(get "indexToMe").bg} "~p"
+      color index         ${(get "indexFromMe").fg}   ${(get "indexFromMe").bg} "~P"
+    
+      # Per-column colors (NeoMutt feature)
+      color index_number  ${(get "index_number").fg}  ${(get "index_number").bg}
+      color index_flags   ${(get "index_flags").fg}   ${(get "index_flags").bg}
+      color index_date    ${(get "index_date").fg}    ${(get "index_date").bg}
+      color index_author  ${(get "index_author").fg}  ${(get "index_author").bg}
+      color index_size    ${(get "index_size").fg}    ${(get "index_size").bg}
+      color index_subject ${(get "index_subject").fg} ${(get "index_subject").bg}
+    
+      # Compact index line that lines up with the columns above
+      set index_format = "%4C %Z %{%b %d} %-20.20F %?l?%4l&%4c? %s"
       set size_show_bytes = no
     '';
+    
 
     # ===================== sidebar =====================
     ".config/neomutt/sidebar.muttrc".text = ''
       set sidebar_visible     = yes
-      set sidebar_width       = 28
+      set sidebar_width       = 26
       set sidebar_short_path  = yes
-      set sidebar_folder_indent = yes
       set mail_check_stats    = yes
+    
+      # Keep format simple (no unsupported %? ternaries)
       # %B name, %N new, %S size, %! flagged
-      set sidebar_format      = "%B %?N?[%N]??"
-      # Navigation bindings (vim-like)
-      bind index,pager \Cj sidebar-next
-      bind index,pager \Ck sidebar-prev
-      bind index,pager \Co sidebar-open
-      bind index,pager \Cn sidebar-next-new
-      bind index,pager \Cp sidebar-prev-new
+      set sidebar_format = "%B %N/%S%!"
+    
+      # Sidebar colors from adapter
+      color sidebar_ordinary  ${(get "sidebar_ordinary").fg}  ${(get "sidebar_ordinary").bg}
+      color sidebar_highlight ${(get "sidebar_highlight").fg} ${(get "sidebar_highlight").bg}
+      color sidebar_divider   ${(get "sidebar_divider").fg}   ${(get "sidebar_divider").bg}
+      color sidebar_flagged   ${(get "sidebar_flagged").fg}   ${(get "sidebar_flagged").bg}
+      color sidebar_new       ${(get "sidebar_new").fg}       ${(get "sidebar_new").bg}
     '';
+    
 
   };
 }
