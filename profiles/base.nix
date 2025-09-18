@@ -20,7 +20,7 @@
   #==========================================================================
   time.timeZone = lib.mkDefault "America/Denver";
   users.users.eric = {
-    hashedPassword = $y$j9T$mpCws7jy8SXAeH2rwkaGr.$lc1CQDwsoUxiv6s0PZqlKBmia1ffk4gs5jfyLW1Yg86;
+    hashedPassword = "$y$j9T$mpCws7jy8SXAeH2rwkaGr.$lc1CQDwsoUxiv6s0PZqlKBmia1ffk4gs5jfyLW1Yg86";
   };
   nix = {
     settings = {
