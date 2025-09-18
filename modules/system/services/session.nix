@@ -144,10 +144,14 @@ in
     # Provide greeter package
     environment.systemPackages = lib.mkIf cfg.loginManager.enable [ pkgs.tuigreet ];
 
-    # Disable other display managers (new-style option paths)
-    services.displayManager.gdm.enable   = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
-    services.displayManager.sddm.enable  = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
-    services.displayManager.lightdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
+    # Disable other display managers
+    # GDM/SDDM (newer paths)
+    services.displayManager.gdm.enable  = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
+    services.displayManager.sddm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
+
+    # LightDM (still under the xserver namespace on your channel)
+    services.xserver.displayManager.lightdm.enable =
+      lib.mkIf cfg.loginManager.enable (lib.mkForce false);
 
     # ---------------- LINGERING (per-user) ----------------
     # NixOS doesn't have services.logind.lingerUsers; it's per-user:
