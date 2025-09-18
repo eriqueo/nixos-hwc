@@ -1,9 +1,15 @@
-# modules/home/core/index.nix — aggregates core home functionality
 { lib, ... }:
 let
   dir = builtins.readDir ./.;
 
-  # import only plain top-level files you intend to keep alongside subdirs
+  # import all child dirs under core (mail included) if they expose index.nix
+  subIndex =
+    lib.pipe (lib.attrNames (lib.filterAttrs (_: t: t == "directory") dir)) [
+      (ns: map (n: ./. + "/${n}/index.nix"))
+      (paths: lib.filter builtins.pathExists paths)
+    ];
+
+  # import any plain .nix files sitting directly in core/
   files = lib.filterAttrs (n: t:
     t == "regular"
     && lib.hasSuffix ".nix" n
@@ -13,5 +19,5 @@ let
 
   filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
 in {
-  imports = filePaths;
+  imports = filePaths ++ subIndex;
 }

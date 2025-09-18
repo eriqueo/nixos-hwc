@@ -13,8 +13,8 @@ let
 
   # Helper: first account *value* (not just its name)
   accVals = lib.attrValues (cfg.accounts or { });
-  firstAcc = if accVals != [] then lib.head accVals else null;
-
+  firstAcc = lib.findFirst (a: a.primary or false) (lib.head accVals) accVals;
+  
   # Folder-hooks: when you enter an account’s local Maildir, set identity
   accountHooks =
     lib.concatStringsSep "\n"
