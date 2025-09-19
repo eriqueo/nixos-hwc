@@ -33,7 +33,6 @@
           enable = true;
           theme.palette = "gruv";
           # Optional overrides (per-app)
-          theme.override = { accent = "#00FFC8"; };
           accounts = {
             # Default account first
             proton = {

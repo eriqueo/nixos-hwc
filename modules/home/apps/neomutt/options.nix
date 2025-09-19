@@ -13,10 +13,11 @@
                                 # color themeing
     #-------------------------------------------------------------------------
     theme = {
+      # null → use global config.hwc.home.theme.name
       palette = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
-        default = null;  # null = use global config.hwc.home.theme.name
-        description = "Per-app palette override for NeoMutt (e.g. \"gruv\" or \"deep-nord\").";
+        default = null;
+        description = "Per-app palette override for NeoMutt (e.g. \"gruv\" | \"deep-nord\").";
       };
     };
     #-------------------------------------------------------------------------
