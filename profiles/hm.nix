@@ -93,7 +93,7 @@
               ];
               send.msmtpAccount = "gmail-business";
             };
-          }
+          };
           };
 
         #-----------------------

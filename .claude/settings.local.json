@@ -50,7 +50,8 @@
       "Bash({ echo \"FAIL step1: modules/ directory not found\")",
       "Bash(exit 1)",
       "Read(//home/eric/.config/neomutt/accounts/**)",
-      "Bash(gpg:*)"
+      "Bash(gpg:*)",
+      "Read(//home/eric/.config/neomutt/**)"
     ],
     "deny": [],
     "ask": [],
