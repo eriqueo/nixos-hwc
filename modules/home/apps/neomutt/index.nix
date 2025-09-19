@@ -1,27 +1,26 @@
+# modules/home/apps/neomutt/index.nix
 { lib, pkgs, config, ... }:
 
 let
-  behavior   = import ./parts/behavior.nix   { inherit lib pkgs config; };
-  appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
-  session    = import ./parts/session.nix    { inherit lib pkgs config; };
+  enabled   = config.features.neomutt.enable or false;
+
   theme     = import ./parts/theme.nix     { inherit config lib; };
+  appearance= import ./parts/appearance.nix{ inherit lib pkgs config theme; };
+  behavior  = import ./parts/behavior.nix  { inherit lib pkgs config; };
+  session   = import ./parts/session.nix   { inherit lib pkgs config; };
 
-
-  homeDir = config.home.homeDirectory;
-  cfg = config.features.neomutt;
-in
-{
+in {
   imports = [ ./options.nix ];
-  config = lib.mkIf cfg.enable { 
-    home.packages = (session.packages or []); # Packages that belong with the app
-    home.sessionVariables = (session.env or {}); # Session variables
-    systemd.user.services = (session.services or {});    # User services
+  config = lib.mkIf enabled {
+    home.packages         = (session.packages or []);
+    home.sessionVariables = (session.env or {});
+    systemd.user.services = (session.services or {});
 
-
-    # File drops (theming + config)
+    # Parts only return data → index coordinates home.file
     home.file = lib.mkMerge [
       (appearance.files config.home.homeDirectory)
       (behavior.files   config.home.homeDirectory)
+      # session.files if you add any, like icons
     ];
   };
 }
