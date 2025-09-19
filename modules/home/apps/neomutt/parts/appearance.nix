@@ -3,7 +3,8 @@
 { lib, pkgs, config, theme, ... }:
 
 let
-  cfg  = config.features.neomutt or {};
+    accVals = lib.attrValues (config.features.mail.accounts or {});
+
 
   t    = theme.tokens;
   m    = theme.mono or {};

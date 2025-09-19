@@ -27,15 +27,14 @@
         protonMail.enable   = true;
         protonPass.enable   = true;
         dunst.enable        = true;
-
-        # --- NeoMutt (NEW schema; matches modules/home/apps/neomutt/options.nix) ---
-        neomutt = {
-          enable = true;
-          theme.palette = "gruv";
-          # Optional overrides (per-app)
-          accounts = {
-            # Default account first
-            proton = {
+        #-----------------------
+        #   ---Mail---
+        #-----------------------
+                                
+        mail ={
+          enable         = true;
+          accounts ={
+             proton = {
               name       = "proton";
               type       = "proton-bridge";
               realName   = "Eric";
@@ -94,8 +93,15 @@
               ];
               send.msmtpAccount = "gmail-business";
             };
+          }
           };
-        };
+
+        #-----------------------
+        #   --- NeoMutt---
+        #-----------------------
+        neomutt = {
+          enable = true;
+          theme.palette = "gruv"; };
       };
 
       # Theme and shell (unchanged)
