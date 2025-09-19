@@ -50,10 +50,13 @@ let
       account ${a.send.msmtpAccount}
       host ${smtpHost a}
       port ${toString (smtpPort a)}
-      ${if startTLS a then "tls_starttls on\ntls on" else "tls off"}
+      ${if startTLS a
+        then "tls on\ntls_starttls on\n"
+        else "tls off\ntls_starttls off\n"}
+      ${if a.type == "proton-bridge" then "auth plain\n" else "auth on\n"}
       from ${a.address}
       user ${loginOf a}
-      passwordeval "${cmd}"
+      passwordeval "${cmd}"  
     '';
 
   # mbsync per-account block

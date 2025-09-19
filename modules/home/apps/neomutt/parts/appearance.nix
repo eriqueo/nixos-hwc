@@ -4,14 +4,30 @@
 let
   cfg = config.features.neomutt or { };
 
-  # Theme adapter (fallbacks to 'default' if any color missing)
-  # Adapter toggle: set features.neomutt.adapter = "old-dog" to use the new one
-  adapterName = (cfg.adapter or "default");
-  adapterPath = if adapterName == "old-dog"
-                then ../../../theme/adapters/neomutt-old-dog.nix
-                else ../../../theme/adapters/neomutt.nix;
-
-  themeColorsRaw = import adapterPath { inherit config lib; };
+ # Named palettes
+    paletteMap = {
+      deep-nord = ../../../theme/palettes/deep-nord.nix;
+      gruv      = ../../../theme/palettes/gruv.nix;
+    };
+  
+    # Load chosen palette (file or name), then apply overrides
+    basePalette =
+      if (cfg.theme or {}).useGlobal or false then
+        (config.hwc.home.theme or {})                           # global fallback
+      else if lib.isPath (cfg.theme.palette or null) then
+        import cfg.theme.palette { inherit lib; }               # explicit file
+      else
+        import (paletteMap.${cfg.theme.palette}) { inherit lib; };  # named preset
+  
+    resolvedPalette =
+      if (cfg.theme or {}).override or {} == {} then basePalette
+      else { colors = (basePalette.colors or basePalette) // cfg.theme.override; };
+      
+ themeColorsRaw =
+    import ../../../theme/adapters/neomutt.nix {
+      inherit config lib;
+      palette = resolvedPalette;   # <— key change
+    };
 
   def = { fg = "default"; bg = "default"; };
   # safe get
@@ -48,10 +64,16 @@ in {
       # --- Caches & UX ---
       set header_cache     = "~/.cache/neomutt/headers"
       set message_cachedir = "~/.cache/neomutt/bodies"
-      set sort             = reverse-date
-      set menu_scroll      = yes
+      set sort             = reverse-threads
+      set sort_aux         = last-date-received
+      set sort_re
+      set uncollapse_jump
+      
       set pager_context    = 3
       set pager_index_lines= 8
+      set pager_stop
+      set tilde
+      
 
       # --- Auto-discover all local Maildirs for sidebar ---
       # Finds every Maildir folder by presence of 'cur', escapes spaces
@@ -79,38 +101,92 @@ in {
     '';
 
     # ===================== theme =====================
+    # ===== Index defaults =====
     ".config/neomutt/theme.muttrc".text = ''
-      # Colors from theme adapter
-      color status        ${(get "status").fg}        ${(get "status").bg}
-      color indicator     ${(get "indicator").fg}     ${(get "indicator").bg}
-      color tree          ${(get "tree").fg}          ${(get "tree").bg}
-      color markers       ${(get "markers").fg}       ${(get "markers").bg}
-      color search        ${(get "search").fg}        ${(get "search").bg}
-      color normal        ${(get "normal").fg}        ${(get "normal").bg}
-      color quoted        ${(get "quoted").fg}        ${(get "quoted").bg}
-      color signature     ${(get "signature").fg}     ${(get "signature").bg}
-      color hdrdefault    ${(get "hdrdefault").fg}    ${(get "hdrdefault").bg}
-      color tilde         ${(get "tilde").fg}         ${(get "tilde").bg}
+          ${line "index"        (get "index_default")} '.*'
+          ${line "index_author" (get "index_author")} '.*'
+          ${line "index_number" (get "index_number")}
+          ${line "index_subject"(get "index_subject")} '.*'
     
-      # Accents (matchers)
-      color index         ${(get "indexNew").fg}      ${(get "indexNew").bg} "~N"
-      color index         ${(get "indexFlag").fg}     ${(get "indexFlag").bg} "~F"
-      color index         ${(get "indexDel").fg}      ${(get "indexDel").bg} "~D"
-      color index         ${(get "indexToMe").fg}     ${(get "indexToMe").bg} "~p"
-      color index         ${(get "indexFromMe").fg}   ${(get "indexFromMe").bg} "~P"
+          # New mail (~N)
+          ${line "index"        (get "index_new_default")} "~N"
+          ${line "index_author" (get "index_new_author")} "~N"
+          ${line "index_subject"(get "index_new_subject")} "~N"
     
-      # Per-column colors (NeoMutt feature)
-      color index_number  ${(get "index_number").fg}  ${(get "index_number").bg}
-      color index_flags   ${(get "index_flags").fg}   ${(get "index_flags").bg}
-      color index_date    ${(get "index_date").fg}    ${(get "index_date").bg}
-      color index_author  ${(get "index_author").fg}  ${(get "index_author").bg}
-      color index_size    ${(get "index_size").fg}    ${(get "index_size").bg}
-      color index_subject ${(get "index_subject").fg} ${(get "index_subject").bg}
+          # ===== Headers (pager) =====
+          ${line "header" (get "hdr_default")} ".*"
+          ${line "header" (get "hdr_from")}    "^(From)"
+          ${line "header" (get "hdr_subject")} "^(Subject)"
+          ${line "header" (get "hdr_ccbcc")}   "^(CC|BCC)"
     
-      # Compact index line that lines up with the columns above
-      set index_format = "%%4C %Z %{%b %d} %-18.18F %s"
-      set size_show_bytes = no
-    '';
+          # ===== Mono / attributes =====
+          mono bold       ${m.bold}
+          mono underline  ${m.underline}
+          mono indicator  ${m.indicator}
+          mono error      ${m.error}
+    
+          # ===== Core UI =====
+          ${line "normal"          (get "normal")}
+          ${line "indicator"       (get "indicator")}
+          ${line "sidebar_highlight" (get "sidebar_highlight")}
+          ${line "sidebar_divider"   (get "sidebar_divider")}
+          ${line "sidebar_flagged"   (get "sidebar_flagged")}
+          ${line "sidebar_new"       (get "sidebar_new")}
+          ${line "error"           (get "error")}
+          ${line "tilde"           (get "tilde")}
+          ${line "message"         (get "message")}
+          ${line "markers"         (get "markers")}
+          ${line "attachment"      (get "attachment")}
+          ${line "search"          (get "search")}
+          ${line "status"          (get "status")}
+          ${line "hdrdefault"      (get "hdrdefault")}
+    
+          # Quoting levels
+          ${line "quoted"  (get "quoted0")}
+          ${line "quoted1" (get "quoted1")}
+          ${line "quoted2" (get "quoted2")}
+          ${line "quoted3" (get "quoted3")}
+          ${line "quoted4" (get "quoted4")}
+          ${line "quoted5" (get "quoted5")}
+    
+          ${line "signature" (get "signature")}
+          ${line "bold"      (get "boldTok")}
+          ${line "underline" (get "underlineTok")}
+    
+          # ===== Body regex highlights =====
+          ${line "body" (get "body_email")}     "[\\-\\.+_a-zA-Z0-9]+@[\\-\\.a-zA-Z0-9]+"
+          ${line "body" (get "body_url")}       "(https?|ftp)://[\\-\\.,/%~_:?&=\\#a-zA-Z0-9]+"
+          ${line "body" (get "body_code")}      "\\`[^\\`]*\\`"
+    
+          ${line "body" (get "body_h1")}        "^# \\.*"
+          ${line "body" (get "body_h2")}        "^## \\.*"
+          ${line "body" (get "body_h3")}        "^### \\.*"
+          ${line "body" (get "body_listitem")}  "^(\\t| )*(-|\\*) \\.*"
+    
+          ${line "body" (get "body_emote")}     "[;:][-o][)/(|]"
+          ${line "body" (get "body_emote")}     "[;:][)(|]"
+          ${line "body" (get "body_emote")}     "[ ][*][^*]*[*][ ]?"
+          ${line "body" (get "body_emote")}     "[ ]?[*][^*]*[*][ ]"
+    
+          ${line "body" (get "body_sig_bad")}   "(BAD signature)"
+          ${line "body" (get "body_sig_good")}  "(Good signature)"
+          ${line "body" (get "body_gpg_goodln")} "^gpg: Good signature .*"
+          ${line "body" (get "body_gpg_anyln")}  "^gpg: "
+          ${line "body" (get "body_gpg_badln")}  "^gpg: BAD signature from.*"
+    
+          # ===== Optional per-column colors (if used) =====
+          color index_number  ${(get "col_number").fg}  ${(get "col_number").bg}
+          color index_flags   ${(get "col_flags").fg}   ${(get "col_flags").bg}
+          color index_date    ${(get "col_date").fg}    ${(get "col_date").bg}
+          color index_author  ${(get "col_author").fg}  ${(get "col_author").bg}
+          color index_size    ${(get "col_size").fg}    ${(get "col_size").bg}
+          color index_subject ${(get "col_subject").fg} ${(get "col_subject").bg}
+    
+          # ===== Suggested index/status formatting =====
+          set index_format="%Z %{%b %d} %-20.20F (%3cK) %s"
+          set size_show_bytes=no
+        '';
+    
     
 
     # ===================== sidebar =====================

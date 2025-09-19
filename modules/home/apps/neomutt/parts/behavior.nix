@@ -18,12 +18,15 @@ let
 in {
   files = profileBase: {
     ".config/neomutt/behavior.muttrc".text = ''
-      # Do NOT alias plain 'g' (avoid bind warning about 'gi' aliasing 'g')
-      bind index g noop
-      bind index G noop
-      bind index D noop
+      # Clear conflicting default bindings
       bind index \\\\ noop
       bind pager \\\\ noop
+      
+      # Enable basic navigation - g for top, G for bottom
+      bind index g first-entry
+      bind index G last-entry
+      bind pager g top
+      bind pager G bottom
       
       # ----------------------------
       # Account jump macros
@@ -46,12 +49,30 @@ in {
       # ----------------------------
       macro index M  "<tag-prefix><save-message>"    "Move tagged/current"
       macro index C  "<tag-prefix><copy-message>"    "Copy tagged/current"
-      macro index DD "<tag-prefix><delete-message>"  "Delete tagged"
+      macro index d  "<delete-message>"              "Delete current"
+      macro index D  "<tag-prefix><delete-message>"  "Delete tagged"
+      
+      # ----------------------------
+      # Folder/Label management
+      # ----------------------------
+      macro index cf "<change-folder>?" "Change folder"
+      macro index cs "<save-message>?" "Save/move to folder"
+      macro index cc "<copy-message>?" "Copy to folder"
 
       # Add sender to abook
       macro index A "<pipe-message>abook --add-email<enter>" "Add sender to abook"
 
-      # Sidebar (well-supported set) – double backslash to survive Nix string escapes
+      # ----------------------------
+      # Threading controls (Ctrl+t for thread operations)
+      # ----------------------------
+      bind index \\Ct collapse-thread
+      bind index \\CT collapse-all
+      bind index \\Cu next-thread
+      bind index \\CU prev-thread
+      
+      # ----------------------------
+      # Sidebar navigation
+      # ----------------------------
       bind index,pager \\Cp sidebar-prev
       bind index,pager \\Cn sidebar-next
       bind index,pager \\Co sidebar-open
