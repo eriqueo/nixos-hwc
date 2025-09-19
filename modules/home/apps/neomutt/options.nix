@@ -9,13 +9,20 @@
       default = {};
       description = "Resolved security/materials view from system lane.";
     };
-
-    adapter = lib.mkOption {
-      type = lib.types.enum [ "default" "old-dog" ];
-      default = "default";
-      description = "Theme adapter to use for NeoMutt.";
+    #-------------------------------------------------------------------------
+                                # color themeing
+    #-------------------------------------------------------------------------
+    theme = {
+      palette = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;  # null = use global config.hwc.home.theme.name
+        description = "Per-app palette override for NeoMutt (e.g. \"gruv\" or \"deep-nord\").";
+      };
     };
-
+    #-------------------------------------------------------------------------
+                                # accounts
+    #-------------------------------------------------------------------------
+   
     accounts = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
         options = {

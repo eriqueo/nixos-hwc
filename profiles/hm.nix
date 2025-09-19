@@ -31,7 +31,9 @@
         # --- NeoMutt (NEW schema; matches modules/home/apps/neomutt/options.nix) ---
         neomutt = {
           enable = true;
-          adapter = "old-dog";
+          theme.palette = "gruv";
+          # Optional overrides (per-app)
+          theme.override = { accent = "#00FFC8"; };
           accounts = {
             # Default account first
             proton = {

@@ -1,10 +1,11 @@
 # modules/home/theme/adapters/neomutt.nix
 # Adapter: palette -> NeoMutt color configuration
-{ config, lib, ... }:
+# modules/home/theme/adapters/neomutt.nix
+{ lib, config, palette ? null, ... }:
 
 let
-  # Palette resolver: support both {colors = {...}} and flat tokens
-  T = config.hwc.home.theme or {};
+  # Prefer explicit palette; else global; else {}
+  T = if palette != null then palette else (config.hwc.home.theme or {});
   C = T.colors or T;
 
   # Map hex → terminal color names (fallbacks are terminal names)
