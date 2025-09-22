@@ -16,7 +16,7 @@
 { lib, pkgs, config, ... }:
 
 let 
-  cfg = config.features.chromium;
+  cfg = config.hwc.home.apps.chromium;
 in {
   imports = [ ./options.nix ];
   config = lib.mkIf cfg.enable {

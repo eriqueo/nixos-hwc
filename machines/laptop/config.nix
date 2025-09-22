@@ -45,7 +45,7 @@
     ../../profiles/base.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
-    ../../profiles/hm.nix
+    ../../profiles/home.nix
     ../../profiles/sys.nix
 
      

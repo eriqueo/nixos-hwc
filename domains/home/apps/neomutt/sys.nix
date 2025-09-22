@@ -8,7 +8,7 @@
 
 let
   
-  cfg = config.features.neomutt;
+  cfg = config.hwc.home.apps.neomutt;
   secMaterials = lib.attrByPath [ "hwc" "security" "materials" ] {} config;
 in {
   imports = [ ./options.nix ];

@@ -1,7 +1,7 @@
 # Co-located system lane for ProtonMail Bridge
 { lib, config, pkgs, ... }:
 let
-  cfg = config.features.protonBridge;
+  cfg = config.hwc.home.apps.protonBridge;
 in {
   imports = [ ./options.nix ];
   config = lib.mkIf cfg.enable {

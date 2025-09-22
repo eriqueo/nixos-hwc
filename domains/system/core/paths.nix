@@ -423,6 +423,9 @@ in {
       HWC_SECRETS_SRC_DIR = cfg.security.secrets;
       HWC_SOPS_AGE_KEY = cfg.security.sopsAgeKey;
 
+      # NixOS configuration
+      HWC_NIXOS_DIR = cfg.nixos;
+
       # Legacy compatibility (for existing scripts)
       HEARTWOOD_USER_HOME = cfg.user.home;
       HEARTWOOD_HOT_STORAGE = if cfg.hot != null then cfg.hot else "";

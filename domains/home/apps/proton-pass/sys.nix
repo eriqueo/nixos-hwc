@@ -3,7 +3,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.features.protonPass;
+  cfg = config.hwc.home.apps.protonPass;
 in
 {
   imports = [ ./options.nix ];

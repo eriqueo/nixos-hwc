@@ -4,7 +4,7 @@
 {
   imports = [ ./options.nix ];
 
-  config = lib.mkIf (config.features.obsidian.enable or false) {
+  config = lib.mkIf (config.hwc.home.apps.obsidian.enable or false) {
     home.packages = with pkgs; [
       obsidian
     ];

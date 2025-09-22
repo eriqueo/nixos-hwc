@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  enabled = config.features.dunst.enable or false;
+  enabled = config.hwc.home.apps.dunst.enable or false;
   
   # Import appearance configuration
   appearance = import ./parts/appearance.nix { inherit config lib pkgs; };

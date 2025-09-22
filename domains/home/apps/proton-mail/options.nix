@@ -2,7 +2,7 @@
 { lib, ... }:
 
 {
-  options.features.protonMail = {
+  options.hwc.home.apps.protonMail = {
     enable = lib.mkEnableOption "Enable ProtonMail desktop client";
     
     # Auto-start configuration

@@ -28,7 +28,7 @@ urlColor    = if C ? link then C.link else (if C ? accent2 then C.accent2 else (
 in
 {
   imports = [ ./options.nix ];
-  config = lib.mkIf (config.features.kitty.enable or false) {
+  config = lib.mkIf (config.hwc.home.apps.kitty.enable or false) {
     programs.kitty = {
       enable = true;
       package = pkgs.kitty;

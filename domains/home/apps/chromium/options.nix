@@ -2,7 +2,7 @@
 { lib, ... }:
 
 {
-  options.features.chromium = {
+  options.hwc.home.apps.chromium = {
     enable = lib.mkEnableOption "Chromium browser (user-scoped package)";
   };
 }

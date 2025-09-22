@@ -2,7 +2,7 @@
 { lib, pkgs, config, ... }:
 
 let
-  enabled   = config.features.neomutt.enable or false;
+  enabled   = config.hwc.home.apps.neomutt.enable or false;
 
   theme     = import ./parts/theme.nix     { inherit config lib; };
   appearance= import ./parts/appearance.nix{ inherit lib pkgs config theme; };

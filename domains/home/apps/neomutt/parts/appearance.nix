@@ -2,7 +2,7 @@
 { lib, pkgs, config, theme, ... }:
 
 let
-  accVals  = lib.attrValues (config.features.mail.accounts or {});
+  accVals  = lib.attrValues (config.hwc.home.core.mail.accounts or {});
   t        = theme.tokens;
   m        = theme.mono or {};
   get      = name: t.${name};

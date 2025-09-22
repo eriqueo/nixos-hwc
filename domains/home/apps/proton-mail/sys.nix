@@ -3,7 +3,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.features.protonMail;
+  cfg = config.hwc.home.apps.protonMail;
 in
 {
   imports = [ ./options.nix ];

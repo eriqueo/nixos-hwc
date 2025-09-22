@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.features.neomutt = {
+  options.hwc.home.apps.neomutt = {
     enable = lib.mkEnableOption "Enable NeoMutt and related mail tooling";
 
     materials = lib.mkOption {

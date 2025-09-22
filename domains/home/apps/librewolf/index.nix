@@ -15,7 +15,7 @@
 
 { lib, pkgs, config, ... }:
 
-let cfg = config.features.librewolf or { enable = false; };
+let cfg = config.hwc.home.apps.librewolf or { enable = false; };
 in {
   imports = [ ./options.nix ];
   config = lib.mkIf cfg.enable {

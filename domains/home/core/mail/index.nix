@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  enabled = config.features.mail.enable or false;
+  enabled = config.hwc.home.core.mail.enable or false;
 
   parts = [
     (import ./parts/sync_send_search.nix { inherit config lib pkgs; })
