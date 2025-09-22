@@ -61,7 +61,7 @@ in
       "inode/directory" = [ "thunar.desktop" ];
       "application/x-directory" = [ "thunar.desktop" ];
       
-      # Archive file associations
+      # Archive file associations  
       "application/zip" = [ "file-roller.desktop" ];
       "application/x-tar" = [ "file-roller.desktop" ];
       "application/x-compressed-tar" = [ "file-roller.desktop" ];
@@ -70,12 +70,12 @@ in
       "application/x-7z-compressed" = [ "file-roller.desktop" ];
       "application/x-rar" = [ "file-roller.desktop" ];
       
-      # Text and code file associations
+      # Comprehensive text and code file associations using wildcards
+      "text/*" = [ "kitty.desktop" ];
+      "application/x-*" = [ "kitty.desktop" ];
       "application/json" = [ "kitty.desktop" ];
-      "text/plain" = [ "kitty.desktop" ];
-      "text/x-readme" = [ "kitty.desktop" ];
-      "application/x-shellscript" = [ "kitty.desktop" ];
-      "text/x-script" = [ "kitty.desktop" ];
+      "application/xml" = [ "kitty.desktop" ];
+      "application/yaml" = [ "kitty.desktop" ];
     };
   };
   
