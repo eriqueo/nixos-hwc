@@ -3,12 +3,12 @@
 set -euo pipefail
 violations=0
 
-rg -q "writeScriptBin" modules/home/ && echo "home contains hardware scripts" && violations=$((violations+1))
-rg -q "hardware\." modules/services/ && echo "services reference hardware.*" && violations=$((violations+1))
-rg -q "systemd\.services" modules/home/ && echo "home defines systemd services" && violations=$((violations+1))
-rg -q "/mnt/" modules/ && echo "hardcoded /mnt paths in modules" && violations=$((violations+1))
+rg -q "writeScriptBin" domains/home/ && echo "home contains hardware scripts" && violations=$((violations+1))
+rg -q "hardware\." domains/services/ && echo "services reference hardware.*" && violations=$((violations+1))
+rg -q "systemd\.services" domains/home/ && echo "home defines systemd services" && violations=$((violations+1))
+rg -q "/mnt/" domains/ && echo "hardcoded /mnt paths in modules" && violations=$((violations+1))
 
-rg -q "modules/home/" --glob '!profiles/**' --glob '!modules/home/**' && echo "HM import outside profiles" && violations=$((violations+1))
+rg -q "domains/home/" --glob '!profiles/**' --glob '!domains/home/**' && echo "HM import outside profiles" && violations=$((violations+1))
 
 rg -q "systemd\.|virtualisation\.|services\.[^h]|environment\.|programs\." profiles/ && echo "profile implementation present" && violations=$((violations+1))
 

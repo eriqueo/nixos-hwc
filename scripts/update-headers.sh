@@ -7,17 +7,17 @@ set -euo pipefail
 # Function to determine domain from file path
 get_domain() {
     local filepath="$1"
-    if [[ "$filepath" =~ modules/infrastructure/ ]]; then
+    if [[ "$filepath" =~ domains/infrastructure/ ]]; then
         echo "infrastructure"
-    elif [[ "$filepath" =~ modules/services/ ]]; then
+    elif [[ "$filepath" =~ domains/services/ ]]; then
         echo "services" 
-    elif [[ "$filepath" =~ modules/home/ ]]; then
+    elif [[ "$filepath" =~ domains/home/ ]]; then
         echo "home"
-    elif [[ "$filepath" =~ modules/system/ ]]; then
+    elif [[ "$filepath" =~ domains/system/ ]]; then
         echo "system"
-    elif [[ "$filepath" =~ modules/security/ ]]; then
+    elif [[ "$filepath" =~ domains/security/ ]]; then
         echo "security"
-    elif [[ "$filepath" =~ modules/schema/ ]]; then
+    elif [[ "$filepath" =~ domains/schema/ ]]; then
         echo "schema"
     else
         echo "unknown"
@@ -48,7 +48,7 @@ create_header() {
 #
 # DEPENDENCIES (Upstream):
 #   - TODO: List upstream dependencies
-#   - config.hwc.paths.* (modules/system/paths.nix)
+#   - config.hwc.paths.* (domains/system/paths.nix)
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
@@ -159,7 +159,7 @@ fi
 
 if [ "$1" = "--all" ]; then
     echo "🔄 Updating headers for all modules..."
-    find modules/ -name "*.nix" -not -path "*/.*" | while read -r file; do
+    find domains/ -name "*.nix" -not -path "*/.*" | while read -r file; do
         process_file "$file"
     done
     echo "✅ All module headers updated!"

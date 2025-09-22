@@ -4,7 +4,7 @@
 This repository contains a modular NixOS configuration using flakes.
 
 ### Directory Layout
-- `modules/` - Reusable NixOS modules
+- `domains/` - Reusable NixOS modules
 - `profiles/` - Composable configuration profiles
 - `machines/` - Machine-specific configurations
 - `operations/` - Operational scripts and tools
@@ -54,7 +54,7 @@ sudo nixos-rebuild switch --flake .#$(hostname)
 
 ### Add New Service
 
-1. Create module in `modules/services/`
+1. Create module in `domains/services/`
 2. Add to appropriate profile
 3. Test with `nixos-rebuild build`
 4. Deploy with `nixos-rebuild switch`

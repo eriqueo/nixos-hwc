@@ -3,8 +3,8 @@ let
   nixosTest = nixpkgs.lib.nixosSystem {
     system = "x86_64-linux";
     modules = [
-      ../modules/system/paths.nix
-      ../modules/server/ntfy.nix
+      ../domains/system/paths.nix
+      ../domains/server/ntfy.nix
       {
         hwc.services.ntfy.enable = true;
         

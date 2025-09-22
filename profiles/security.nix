@@ -1,8 +1,8 @@
 { config, lib,... }:
 {
   imports = [
-    ../modules/server/networking/vpn.nix
-    ../modules/security/index.nix          # New consolidated security domain
+    ../domains/server/networking/vpn.nix
+    ../domains/security/index.nix          # New consolidated security domain
   ];
 
   hwc.security.hardening = {

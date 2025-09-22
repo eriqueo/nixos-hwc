@@ -11,8 +11,8 @@
   # IMPORTS – Foundational system + infra modules (single root orchestrator)
   #==========================================================================
   imports = [
-    ../modules/system/index.nix
-    ../modules/infrastructure/index.nix
+    ../domains/system/index.nix
+    ../domains/infrastructure/index.nix
   ];
 
   #==========================================================================

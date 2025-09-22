@@ -5,12 +5,12 @@ SERVICE="ntfy"
 echo "=== Service Comparison: $SERVICE ==="
 
 # Check old config
-echo "Old config location: /etc/nixos/hosts/server/modules/"
-ls -la /etc/nixos/hosts/server/modules/*ntfy* 2>/dev/null || echo "No ntfy in old"
+echo "Old config location: /etc/nixos/hosts/server/domains/"
+ls -la /etc/nixos/hosts/server/domains/*ntfy* 2>/dev/null || echo "No ntfy in old"
 
 # Check new config  
-echo "New config location: /etc/nixos-next/modules/services/"
-ls -la /etc/nixos-next/modules/services/ntfy.nix
+echo "New config location: /etc/nixos-next/domains/services/"
+ls -la /etc/nixos-next/domains/services/ntfy.nix
 
 # Compare outputs
 echo ""

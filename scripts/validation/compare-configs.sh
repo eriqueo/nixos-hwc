@@ -5,7 +5,7 @@ echo "Date: $(date)"
 echo ""
 
 OLD_COUNT=$(find /etc/nixos -name "*.nix" -type f | xargs grep -l "services\." | wc -l)
-NEW_COUNT=$(find /etc/nixos-next/modules/services -name "*.nix" | wc -l)
+NEW_COUNT=$(find /etc/nixos-next/domains/services -name "*.nix" | wc -l)
 
 echo "Service Modules:"
 echo "  Old structure: $OLD_COUNT files"
@@ -24,7 +24,7 @@ echo "  New: $NEW_SIZE"
 
 echo ""
 echo "Storage modules:"
-ls -la /etc/nixos-next/modules/infrastructure/
+ls -la /etc/nixos-next/domains/infrastructure/
 
 echo ""
 echo "✅ Day 5 Progress: Media stack architecture complete"

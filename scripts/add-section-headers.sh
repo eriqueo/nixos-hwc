@@ -68,7 +68,7 @@ fi
 if [ "$1" = "--all" ]; then
     echo "🔄 Adding section headers to all modules..."
     
-    find modules/ -name "*.nix" -not -path "*/.*" | while read -r file; do
+    find domains/ -name "*.nix" -not -path "*/.*" | while read -r file; do
         add_section_headers "$file"
     done
     
