@@ -42,18 +42,18 @@ EOF
     # Create .obsidian directory for proper vault recognition
     mkdir -p "${vaultPath}/.obsidian"
     
-    # Sync all .nix files
+    # Sync all .nix files preserving directory structure
     find "${nixosPath}" -name "*.nix" -type f | while read -r nixfile; do
       # Get relative path from nixos root
       relpath=$(realpath --relative-to="${nixosPath}" "$nixfile")
       
-      # Convert path to markdown filename (replace / with -)
-      mdname=$(echo "$relpath" | sed 's/\//-/g' | sed 's/\.nix$/.md/')
+      # Create markdown filename preserving directory structure
+      mdpath=$(echo "$relpath" | sed 's/\.nix$/.md/')
       
-      # Target markdown file
-      target="${vaultPath}/$mdname"
+      # Target markdown file with full directory structure
+      target="${vaultPath}/$mdpath"
       
-      # Create target directory if needed
+      # Create target directory structure
       target_dir=$(dirname "$target")
       mkdir -p "$target_dir"
       
@@ -74,11 +74,11 @@ This vault contains a dynamically synced, markdown version of the NixOS configur
 - **Format**: `.nix` files converted to `.md` with syntax highlighting
 - **Sync Trigger**: Manual via `sync-nixos-vault` or systemd service
 
-## 📁 File Naming Convention
+## 📁 File Structure
 
-Files are named using their relative path with `/` replaced by `-`:
-- `domains/home/apps/firefox/index.nix` → `domains-home-apps-firefox-index.md`
-- `machines/laptop/config.nix` → `machines-laptop-config.md`
+Files preserve the original directory structure:
+- `domains/home/apps/firefox/index.nix` → `domains/home/apps/firefox/index.md`
+- `machines/laptop/config.nix` → `machines/laptop/config.md`
 - `flake.nix` → `flake.md`
 
 ## 🧠 LLM-Friendly Features
