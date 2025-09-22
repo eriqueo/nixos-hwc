@@ -18,11 +18,11 @@ update_file() {
     local domain="unknown"
     local service=$(basename "$filepath" .nix)
     
-    if [[ "$filepath" =~ modules/infrastructure/ ]]; then domain="infrastructure"
-    elif [[ "$filepath" =~ modules/services/ ]]; then domain="services" 
-    elif [[ "$filepath" =~ modules/home/ ]]; then domain="home"
-    elif [[ "$filepath" =~ modules/system/ ]]; then domain="system"
-    elif [[ "$filepath" =~ modules/security/ ]]; then domain="security"
+    if [[ "$filepath" =~ domains/infrastructure/ ]]; then domain="infrastructure"
+    elif [[ "$filepath" =~ domains/services/ ]]; then domain="services" 
+    elif [[ "$filepath" =~ domains/home/ ]]; then domain="home"
+    elif [[ "$filepath" =~ domains/system/ ]]; then domain="system"
+    elif [[ "$filepath" =~ domains/security/ ]]; then domain="security"
     fi
     
     # Create temporary file with header
@@ -40,7 +40,7 @@ update_file() {
 #
 # DEPENDENCIES (Upstream):
 #   - TODO: List upstream dependencies
-#   - config.hwc.paths.* (modules/system/paths.nix)
+#   - config.hwc.paths.* (domains/system/paths.nix)
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
@@ -75,7 +75,7 @@ if [ "$1" = "--all" ]; then
     echo "🔄 Adding headers to modules without them..."
     
     # Find files without Charter v4 headers
-    find modules/ -name "*.nix" -not -path "*/.*" | while read -r file; do
+    find domains/ -name "*.nix" -not -path "*/.*" | while read -r file; do
         if ! grep -q "# DEPENDENCIES (Upstream):" "$file" 2>/dev/null; then
             update_file "$file"
         fi

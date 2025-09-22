@@ -1,7 +1,7 @@
 # Configuration extraction from /home/eric/03-tech/nixos-hwc/machines/laptop
 ## Imports
 /home/eric/03-tech/nixos-hwc/machines/laptop/config.nix:40:  imports = [
-/home/eric/03-tech/nixos-hwc/machines/laptop/home.nix:2:  imports = [ ../../modules/home/eric.nix ];
+/home/eric/03-tech/nixos-hwc/machines/laptop/home.nix:2:  imports = [ ../../domains/home/eric.nix ];
 /home/eric/03-tech/nixos-hwc/machines/laptop/hardware.nix:6:  imports =
 
 ## Services (enabled)

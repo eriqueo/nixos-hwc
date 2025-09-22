@@ -17,7 +17,7 @@
 {
   # Keep ONLY imports not already included by base.nix
   imports = [
-    ../modules/server/backup/user-backup.nix
+    ../domains/server/backup/user-backup.nix
   ];
 
   # ---- Workstation hardware/infrastructure overlays ------------------------

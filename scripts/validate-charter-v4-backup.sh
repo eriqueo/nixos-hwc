@@ -30,32 +30,32 @@ echo
 
 # Check 1: Hardware scripts in UI (home/)
 echo "1. Hardware scripts in UI modules"
-if rg -q "writeScriptBin|writeShellScript" modules/home/ 2>/dev/null; then
-    report_violation "Hardware scripts in home/" "$(rg -l "writeScriptBin|writeShellScript" modules/home/ | sed 's/^/     /')"
+if rg -q "writeScriptBin|writeShellScript" domains/home/ 2>/dev/null; then
+    report_violation "Hardware scripts in home/" "$(rg -l "writeScriptBin|writeShellScript" domains/home/ | sed 's/^/     /')"
 else
     report_success "No hardware scripts in home/"
 fi
 
 # Check 2: Hardware config in services
 echo "2. Hardware configuration in services"
-if rg -q "hardware\." modules/services/ 2>/dev/null; then
-    report_violation "Hardware config in services/" "$(rg -l "hardware\." modules/services/ | sed 's/^/     /')"
+if rg -q "hardware\." domains/services/ 2>/dev/null; then
+    report_violation "Hardware config in services/" "$(rg -l "hardware\." domains/services/ | sed 's/^/     /')"
 else
     report_success "No hardware config in services/"
 fi
 
 # Check 3: System services in home
 echo "3. System services in home modules"
-if rg -q "systemd\.services" modules/home/ 2>/dev/null; then
-    report_violation "System services in home/" "$(rg -l "systemd\.services" modules/home/ | sed 's/^/     /')"
+if rg -q "systemd\.services" domains/home/ 2>/dev/null; then
+    report_violation "System services in home/" "$(rg -l "systemd\.services" domains/home/ | sed 's/^/     /')"
 else
     report_success "No system services in home/"
 fi
 
 # Check 4: Hardcoded paths
 echo "4. Hardcoded paths instead of hwc.paths.*"
-if rg -q "/mnt/|/opt/|/var/lib/" modules/ --exclude="*.md" 2>/dev/null; then
-    report_violation "Hardcoded paths found" "$(rg -l "/mnt/|/opt/|/var/lib/" modules/ --exclude="*.md" | sed 's/^/     /')"
+if rg -q "/mnt/|/opt/|/var/lib/" domains/ --exclude="*.md" 2>/dev/null; then
+    report_violation "Hardcoded paths found" "$(rg -l "/mnt/|/opt/|/var/lib/" domains/ --exclude="*.md" | sed 's/^/     /')"
 else
     report_success "No hardcoded paths found"
 fi
@@ -67,7 +67,7 @@ while IFS= read -r file; do
     if ! grep -q "# DEPENDENCIES (Upstream):" "$file" 2>/dev/null; then
         missing_headers+=("$file")
     fi
-done < <(find modules/ -name "*.nix" -not -path "*/.*")
+done < <(find domains/ -name "*.nix" -not -path "*/.*")
 
 if [ ${#missing_headers[@]} -gt 0 ]; then
     report_violation "Missing Charter v4 headers" "$(printf '%s\n' "${missing_headers[@]}" | sed 's/^/     /')"
@@ -82,7 +82,7 @@ while IFS= read -r file; do
     if ! grep -q "#============================================================================" "$file" 2>/dev/null; then
         missing_sections+=("$file")
     fi
-done < <(find modules/ -name "*.nix" -not -path "*/.*")
+done < <(find domains/ -name "*.nix" -not -path "*/.*")
 
 if [ ${#missing_sections[@]} -gt 0 ]; then
     report_violation "Missing section headers" "$(printf '%s\n' "${missing_sections[@]}" | head -10 | sed 's/^/     /')"
@@ -101,7 +101,7 @@ while IFS= read -r file; do
     if [[ "$filename" =~ [A-Z_] ]]; then
         bad_names+=("$file")
     fi
-done < <(find modules/ -name "*.nix" -not -path "*/.*")
+done < <(find domains/ -name "*.nix" -not -path "*/.*")
 
 if [ ${#bad_names[@]} -gt 0 ]; then
     report_violation "Non-kebab-case filenames" "$(printf '%s\n' "${bad_names[@]}" | sed 's/^/     /')"

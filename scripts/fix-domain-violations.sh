@@ -17,7 +17,7 @@ extract_hardware_scripts() {
     if grep -q "writeScriptBin\|writeShellScript" "$source_file"; then
         echo "  ⚠️  Found hardware scripts - manual intervention needed"
         echo "     Review: $source_file"
-        echo "     These scripts should be moved to modules/infrastructure/"
+        echo "     These scripts should be moved to domains/infrastructure/"
     fi
 }
 
@@ -25,9 +25,9 @@ extract_hardware_scripts() {
 fix_hardware_in_services() {
     echo "Checking for hardware config in services..."
     
-    if rg -q "hardware\." modules/services/; then
+    if rg -q "hardware\." domains/services/; then
         echo "  ⚠️  Found hardware config in services:"
-        rg -l "hardware\." modules/services/ | sed 's/^/     /'
+        rg -l "hardware\." domains/services/ | sed 's/^/     /'
         echo "     These should be moved to infrastructure/ or use capability flags"
     fi
 }
@@ -36,9 +36,9 @@ fix_hardware_in_services() {
 fix_system_services_in_home() {
     echo "Checking for system services in home..."
     
-    if rg -q "systemd\.services" modules/home/; then
+    if rg -q "systemd\.services" domains/home/; then
         echo "  ⚠️  Found system services in home:"
-        rg -l "systemd\.services" modules/home/ | sed 's/^/     /'
+        rg -l "systemd\.services" domains/home/ | sed 's/^/     /'
         echo "     These should be moved to services/ domain"
     fi
 }
@@ -47,7 +47,7 @@ echo "=== Domain Violation Analysis ==="
 
 # Check home/ for hardware scripts
 echo "1. Hardware scripts in home/ modules:"
-find modules/home/ -name "*.nix" | while read -r file; do
+find domains/home/ -name "*.nix" | while read -r file; do
     if grep -q "writeScriptBin\|writeShellScript" "$file"; then
         extract_hardware_scripts "$file" "infrastructure"
     fi
@@ -65,23 +65,23 @@ echo
 echo "=== Specific Violations Found ==="
 
 # Analyze specific problematic files
-echo "📁 modules/home/waybar/tools/gpu.nix"
-if [ -f "modules/home/waybar/tools/gpu.nix" ]; then
-    echo "  → This GPU tool should move to modules/infrastructure/waybar-gpu-tools.nix"
+echo "📁 domains/home/waybar/tools/gpu.nix"
+if [ -f "domains/home/waybar/tools/gpu.nix" ]; then
+    echo "  → This GPU tool should move to domains/infrastructure/waybar-gpu-tools.nix"
     echo "  → The waybar module should only reference the binary names"
 fi
 
 echo
-echo "📁 modules/home/waybar/scripts.nix"
-if [ -f "modules/home/waybar/scripts.nix" ]; then
-    echo "  → Hardware monitoring scripts should move to modules/infrastructure/"
+echo "📁 domains/home/waybar/scripts.nix"
+if [ -f "domains/home/waybar/scripts.nix" ]; then
+    echo "  → Hardware monitoring scripts should move to domains/infrastructure/"
     echo "  → Keep only UI configuration in waybar/"
 fi
 
 echo
-echo "📁 modules/services/media/gpu-consolidated.nix"
-if [ -f "modules/services/media/gpu-consolidated.nix" ]; then
-    echo "  → GPU configuration should move to modules/infrastructure/gpu.nix"
+echo "📁 domains/services/media/gpu-consolidated.nix"
+if [ -f "domains/services/media/gpu-consolidated.nix" ]; then
+    echo "  → GPU configuration should move to domains/infrastructure/gpu.nix"
     echo "  → Services should consume GPU capabilities, not configure hardware"
 fi
 

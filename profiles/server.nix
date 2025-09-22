@@ -32,7 +32,7 @@
   
   imports = [
     # Core system modules only (legacy services disabled until Charter v6 migration complete)
-    ../modules/infrastructure/index.nix
+    ../domains/infrastructure/index.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
   

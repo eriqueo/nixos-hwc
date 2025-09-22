@@ -1,8 +1,8 @@
 { ... }:
 {
   imports = [
-    ../modules/server/business-api.nix
-    ../modules/server/databases.nix
+    ../domains/server/business-api.nix
+    ../domains/server/databases.nix
   ];
   
   hwc.services.businessApi = {

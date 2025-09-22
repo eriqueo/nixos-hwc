@@ -1,8 +1,8 @@
 { ... }:
 {
   imports = [
-    ../modules/server/prometheus.nix
-    ../modules/server/grafana.nix
+    ../domains/server/prometheus.nix
+    ../domains/server/grafana.nix
   ];
   
   hwc.services.prometheus = {

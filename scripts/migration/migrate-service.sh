@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SERVICE=$1
-OLD_PATH="/etc/nixos/hosts/server/modules/$SERVICE.nix"
-NEW_PATH="/etc/nixos-next/modules/services/$SERVICE.nix"
+OLD_PATH="/etc/nixos/hosts/server/domains/$SERVICE.nix"
+NEW_PATH="/etc/nixos-next/domains/services/$SERVICE.nix"
 
 echo "=== Migrating $SERVICE ==="
 
