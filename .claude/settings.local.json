@@ -51,7 +51,8 @@
       "Bash(exit 1)",
       "Read(//home/eric/.config/neomutt/accounts/**)",
       "Bash(gpg:*)",
-      "Read(//home/eric/.config/neomutt/**)"
+      "Read(//home/eric/.config/neomutt/**)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": [],
