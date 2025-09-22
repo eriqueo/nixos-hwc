@@ -67,9 +67,13 @@ Every **unit** (app, tool, or workload) MUST include:
 
 ## 4) Lane Purity
 
-* **Lanes never import each other’s `index.nix`**.
+* **Lanes never import each other's `index.nix`**.
 * Co-located `sys.nix` belongs to the **system lane**, even when inside `modules/home/apps/<unit>`.
-* Profiles decide which lane’s files to import.
+* **Examples of valid sys.nix content**:
+  - `modules/home/apps/kitty/sys.nix` → `environment.systemPackages = [ pkgs.kitty-themes ];`
+  - `modules/home/apps/firefox/sys.nix` → `programs.firefox.policies = { ... };`
+  - This is system-lane code imported by system profiles, **not HM boundary violations**.
+* Profiles decide which lane's files to import.
 
 ---
 
