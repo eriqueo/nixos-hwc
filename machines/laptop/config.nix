@@ -40,6 +40,8 @@
     # Hardware-specific definitions for this machine
     ./hardware.nix
 
+    # Vault sync system for Obsidian
+    ../../scripts/vault-sync-system.nix
 
     # Profiles that define the machine's capabilities (orchestration only)
     ../../profiles/base.nix
