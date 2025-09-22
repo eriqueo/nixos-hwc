@@ -41,6 +41,8 @@ in
     # File operations support
     gvfs                     # Virtual filesystems (trash, network, etc.)
     udisks2                  # Disk mounting
+    shared-mime-info         # MIME type database (essential for file associations)
+    desktop-file-utils       # Desktop entry and MIME cache management
     
     # Archive support
     file-roller              # Archive manager integration
@@ -53,6 +55,16 @@ in
     trash-cli               # Command-line trash operations
   ];
   
+  # Desktop entry for micro text editor in kitty
+  xdg.desktopEntries.micro = {
+    name = "Micro Text Editor";
+    comment = "Edit text files with micro in kitty terminal";
+    exec = "kitty micro %F";
+    icon = "text-editor";
+    mimeType = [ "text/plain" "application/x-shellscript" ];
+    categories = [ "TextEditor" "Development" "ConsoleOnly" ];
+  };
+
   # XDG MIME associations for file types
   xdg.mimeApps = {
     enable = true;
@@ -71,11 +83,11 @@ in
       "application/x-rar" = [ "file-roller.desktop" ];
       
       # Comprehensive text and code file associations using wildcards
-      "text/*" = [ "kitty.desktop" ];
-      "application/x-*" = [ "kitty.desktop" ];
-      "application/json" = [ "kitty.desktop" ];
-      "application/xml" = [ "kitty.desktop" ];
-      "application/yaml" = [ "kitty.desktop" ];
+      "text/*" = [ "micro.desktop" ];
+      "application/x-*" = [ "micro.desktop" ];
+      "application/json" = [ "micro.desktop" ];
+      "application/xml" = [ "micro.desktop" ];
+      "application/yaml" = [ "micro.desktop" ];
     };
   };
   
