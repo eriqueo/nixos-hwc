@@ -1,46 +1,26 @@
-# nixos-hwc/modules/system/filesystem.nix
+# nixos-hwc/modules/infrastructure/filesystem-structure/index.nix
 #
-# FILESYSTEM - Brief service description
-# TODO: Add detailed description of what this module provides
+# FILESYSTEM STRUCTURE - Cross-domain filesystem orchestrator
+# Creates standardized directory structure for both laptop and server environments
+# Provides uniform navigation and naming conventions across all domains
 #
 # DEPENDENCIES (Upstream):
-#   - TODO: List upstream dependencies
-#   - config.hwc.paths.* (modules/system/paths.nix)
+#   - config.hwc.paths.* (modules/system/core/paths.nix)
 #
 # USED BY (Downstream):
-#   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.system.filesystem.enable)
+#   - profiles/base.nix (core directories)
+#   - profiles/server.nix (server storage)
+#   - All applications expecting standard directory layout
 #
 # IMPORTS REQUIRED IN:
-#   - profiles/profile.nix: ../modules/system/filesystem.nix
+#   - modules/infrastructure/index.nix (automatic via domain aggregator)
 #
 # USAGE:
-#   hwc.system.filesystem.enable = true;
-#   # TODO: Add specific usage examples
-
-# nixos-hwc/modules/system/filesystem.nix
-#
-# HWC Comprehensive Filesystem Structure Management
-# Creates complete directory structure matching production environment
-#
-# DEPENDENCIES:
-#   Upstream: config.hwc.paths.* (modules/system/paths.nix)
-#
-# USED BY:
-#   Downstream: profiles/base.nix (core directories)
-#   Downstream: profiles/workstation.nix (user directories)
-#   Downstream: profiles/media.nix (server storage)
-#   Downstream: profiles/business.nix (business directories)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/base.nix: ../modules/system/filesystem.nix
-#
-# USAGE:
-#   hwc.filesystem.userDirectories.enable = true;     # PARA structure
-#   hwc.filesystem.serverStorage.enable = true;       # Hot/cold storage
-#   hwc.filesystem.businessDirectories.enable = true; # Business/AI
-#   hwc.filesystem.serviceDirectories.enable = true;  # ARR stack
-#   hwc.filesystem.securityDirectories.enable = true; # Secrets
+#   hwc.infrastructure.filesystemStructure.userDirectories.enable = true;     # PARA structure
+#   hwc.infrastructure.filesystemStructure.serverStorage.enable = true;       # Hot/cold storage
+#   hwc.infrastructure.filesystemStructure.businessDirectories.enable = true; # Business/AI
+#   hwc.infrastructure.filesystemStructure.serviceDirectories.enable = true;  # ARR stack
+#   hwc.infrastructure.filesystemStructure.securityDirectories.enable = true; # Secrets
 #
 # VALIDATION:
 #   - Requires storage paths to be set when storage directories enabled
@@ -49,104 +29,16 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.filesystem;
+  cfg = config.hwc.infrastructure.filesystemStructure;
   paths = config.hwc.paths;
 in {
   #============================================================================
-  # OPTIONS - Toggleable Directory Sets
+  # IMPORTS - Options definition
   #============================================================================
-
-  options.hwc.filesystem = {
-    enable = lib.mkEnableOption "HWC filesystem structure management";
-
-    #=========================================================================
-    # USER DIRECTORIES - PARA Structure
-    #=========================================================================
-
-    userDirectories = {
-      enable = lib.mkEnableOption "PARA user directories, XDG config, and compatibility symlinks";
-
-      createHomeManager = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Create Home Manager integration for PARA structure";
-      };
-    };
-
-    #=========================================================================
-    # SERVER STORAGE - Hot/Cold Architecture
-    #=========================================================================
-
-    serverStorage = {
-      enable = lib.mkEnableOption "hot/cold storage directories for media server";
-
-      createDownloadZones = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Create download staging and processing zones";
-      };
-
-      createCacheDirectories = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Create media cache directories for transcoding";
-      };
-    };
-
-    #=========================================================================
-    # BUSINESS & AI DIRECTORIES
-    #=========================================================================
-
-    businessDirectories = {
-      enable = lib.mkEnableOption "business intelligence and AI application directories";
-
-      createAdhd = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Create ADHD productivity tools directories";
-      };
-    };
-
-    #=========================================================================
-    # SERVICE CONFIGURATION DIRECTORIES
-    #=========================================================================
-
-    serviceDirectories = {
-      enable = lib.mkEnableOption "*ARR service configuration directories";
-
-      createLegacyPaths = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Create legacy /opt/downloads compatibility paths";
-      };
-    };
-
-    #=========================================================================
-    # SECURITY DIRECTORIES
-    #=========================================================================
-
-    securityDirectories = {
-      enable = lib.mkEnableOption "security and secrets directories";
-    };
-
-    #=========================================================================
-    # USER & GROUP MANAGEMENT
-    #=========================================================================
-
-    permissions = {
-      mediaGroup = lib.mkOption {
-        type = lib.types.str;
-        default = "media";
-        description = "Group for media file access";
-      };
-
-      serviceUser = lib.mkOption {
-        type = lib.types.str;
-        default = "hwc";
-        description = "User for HWC service data";
-      };
-    };
-  };
+  
+  imports = [
+    ./options.nix
+  ];
 
   #============================================================================
   # IMPLEMENTATION - Directory Creation Based on Toggles

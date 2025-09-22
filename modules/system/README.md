@@ -77,7 +77,7 @@ Services → Can bind to interfaces and communicate
 
 **Option Pattern:**
 ```nix
-hwc.filesystem = {
+hwc.infrastructure.filesystemStructure = {
   enable = true;
   securityDirectories.enable = true;    # /etc/age, /run/agenix
   serverStorage.enable = true;          # /mnt/hot, /mnt/cold, etc.
