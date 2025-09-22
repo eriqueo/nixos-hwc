@@ -8,7 +8,7 @@
 #   - aggregator_naming : no modules/**/default.nix (aggregators must be index.nix)
 #   - options_outside   : forbid "options.*" in index.nix / sys.nix / parts/*.nix (never options.nix)
 #   - parts_pure        : forbid top-level "options.", "imports =", "config =" in parts/*.nix
-#   - hm_profile        : only profiles/hm.nix may contain "home-manager ="
+#   - hm_profile        : only profiles/home.nix may contain "home-manager ="
 #   - users_scope       : "users.users.*" only under modules/system/users/** (ignores comments)
 #   - permissions       : all *.nix must be mode 0644
 #
@@ -125,7 +125,7 @@ check_parts_pure(){ # parts_pure
 }
 
 check_hm_profile(){ # hm_profile
-  # Only profiles/hm.nix may contain 'home-manager ='
+  # Only profiles/home.nix may contain 'home-manager ='
   # Ignore commented lines
   local hits
   hits=$(rg -n --no-ignore -P "${RG_SCOPE[@]}" \
@@ -134,8 +134,8 @@ check_hm_profile(){ # hm_profile
   [[ -z "$hits" ]] || while IFS= read -r l; do
     [[ -z "$l" ]] && continue
     local file="${l%%:*}"
-    if [[ "$file" != "profiles/hm.nix" ]]; then
-      fail "Home Manager activation found in profiles; only profiles/hm.nix is allowed → $l"
+    if [[ "$file" != "profiles/home.nix" ]]; then
+      fail "Home Manager activation found in profiles; only profiles/home.nix is allowed → $l"
     fi
   done <<< "$hits"
 }

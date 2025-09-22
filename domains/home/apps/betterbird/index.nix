@@ -8,7 +8,7 @@ let
 
   homeDir     = config.home.homeDirectory;
   profileBase = "${homeDir}/.thunderbird";
-  cfg = config.features.betterbird;
+  cfg = config.hwc.home.apps.betterbird;
 in
 {
   imports = [ ./options.nix ];

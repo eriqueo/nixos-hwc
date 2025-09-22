@@ -73,14 +73,14 @@ in
         "gpl" = "git pull";
         "gl" = "git log --oneline --graph --decorate --all";
         "gll" = "git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
-        "gresync" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && cd \"$nixdir\" && git fetch origin && git pull origin master && echo '✅ Git sync complete!'";
-        "gstatus" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && cd \"$nixdir\" && git status";
-        "glog" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && cd \"$nixdir\" && git log --oneline -10";
-        "nixflake" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && ${EDITOR:-micro} \"$nixdir/flake.nix\"";
-        "nixlaphome" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && ${EDITOR:-micro} \"$nixdir/machines/laptop/home.nix\"";
-        "nixlapcon" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && ${EDITOR:-micro} \"$nixdir/machines/laptop/config.nix\"";
-        "nixserverhome" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && ${EDITOR:-micro} \"$nixdir/machines/server/home.nix\"";
-        "nixservercon" = "nixdir=$(find /etc/nixos ~/.nixos ~/.config/nixos -maxdepth 1 -type d 2>/dev/null | head -1) && ${EDITOR:-micro} \"$nixdir/machines/server/config.nix\"";
+        "gresync" = "cd \"$HWC_NIXOS_DIR\" && git fetch origin && git pull origin master && echo '✅ Git sync complete!'";
+        "gstatus" = "cd \"$HWC_NIXOS_DIR\" && git status";
+        "glog" = "cd \"$HWC_NIXOS_DIR\" && git log --oneline -10";
+        "nixflake" = "${EDITOR:-micro} \"$HWC_NIXOS_DIR/flake.nix\"";
+        "nixlaphome" = "${EDITOR:-micro} \"$HWC_NIXOS_DIR/machines/laptop/home.nix\"";
+        "nixlapcon" = "${EDITOR:-micro} \"$HWC_NIXOS_DIR/machines/laptop/config.nix\"";
+        "nixserverhome" = "${EDITOR:-micro} \"$HWC_NIXOS_DIR/machines/server/home.nix\"";
+        "nixservercon" = "${EDITOR:-micro} \"$HWC_NIXOS_DIR/machines/server/config.nix\"";
         "nixsearch" = "nix search nixpkgs";
         "nixclean" = "nix-collect-garbage -d";
         "nixgen" = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
@@ -120,18 +120,12 @@ in
             # Save current directory
             local original_dir="$PWD"
 
-            # Find NixOS config directory dynamically
-            local nixdir=""
-            for dir in "$PWD" ~/.nixos ~/.config/nixos /etc/nixos; do
-              if [[ -d "$dir" && (-f "$dir/flake.nix" || -f "$dir/configuration.nix") ]]; then
-                nixdir="$dir"
-                break
-              fi
-            done
+            # Use dynamic NixOS config directory
+            local nixdir="$HWC_NIXOS_DIR"
 
-            if [[ -z "$nixdir" ]]; then
-              echo "❌ Could not find NixOS configuration directory"
-              echo "💡 Checked: current dir, ~/.nixos, ~/.config/nixos, /etc/nixos"
+            if [[ -z "$nixdir" || ! -d "$nixdir" ]]; then
+              echo "❌ Could not find NixOS configuration directory at: $nixdir"
+              echo "💡 HWC_NIXOS_DIR environment variable may not be set correctly"
               return 1
             fi
 

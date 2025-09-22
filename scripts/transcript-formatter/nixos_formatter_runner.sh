@@ -6,7 +6,7 @@
 
 set -e
 
-SCRIPT_DIR="$HOME/03-tech/nixos-hwc/scripts/transcript-formatter"
+SCRIPT_DIR="$HOME/.nixos/scripts/transcript-formatter"
 FORMATTER_SCRIPT="$SCRIPT_DIR/obsidian_transcript_formatter.py"
 PROMPT_FILE="$SCRIPT_DIR/formatting_prompt.txt"
 

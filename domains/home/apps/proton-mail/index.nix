@@ -6,7 +6,7 @@ let
   session    = import ./parts/session.nix    { inherit lib pkgs config; };
 
   homeDir = config.home.homeDirectory;
-  cfg = config.features.protonMail;
+  cfg = config.hwc.home.apps.protonMail;
 in
 {
   imports = [ ./options.nix ];

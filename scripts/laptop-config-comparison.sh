@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PRODUCTION="/etc/nixos"
-REFACTOR="/home/eric/03-tech/nixos-hwc"
+REFACTOR="$HOME/.nixos"
 OUTPUT_DIR="$REFACTOR/comparison-results"
 
 # Resolve actual source dirs (fallback to root if host subdir missing)

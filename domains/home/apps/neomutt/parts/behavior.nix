@@ -3,7 +3,7 @@
 { lib, pkgs, config, ... }:
 
 let
-  accounts   = config.features.mail.accounts or {};
+  accounts   = config.hwc.home.core.mail.accounts or {};
   accNames   = lib.attrNames accounts;
 
   # account -> maildir name

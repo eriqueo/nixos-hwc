@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  accs = config.features.mail.accounts or {};
+  accs = config.hwc.home.core.mail.accounts or {};
   vals = lib.attrValues accs;
 
   # ---------------- helpers ----------------

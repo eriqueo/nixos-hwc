@@ -19,7 +19,7 @@
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.features.thunar;
+  cfg = config.hwc.home.apps.thunar;
 
 in
 {

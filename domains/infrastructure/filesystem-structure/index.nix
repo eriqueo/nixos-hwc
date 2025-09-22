@@ -75,7 +75,7 @@ in {
     (lib.mkIf cfg.userDirectories.enable {
       systemd.tmpfiles.rules = [
         # NixOS configuration access permissions
-        "Z /etc/nixos - eric users - -"
+        "Z ${paths.nixos} - eric users - -"
 
         # Main user directory
         "d ${paths.user.home} 0755 eric users -"

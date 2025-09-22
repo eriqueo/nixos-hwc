@@ -22,7 +22,7 @@
 let
   cfg = config.hwc.services.transcriptApi;
   paths = config.hwc.paths;
-  scriptPath = "${paths.root}/etc/nixos/scripts/yt_transcript.py";
+  scriptPath = "${paths.nixos}/scripts/yt_transcript.py";
 in {
   #============================================================================
   # OPTIONS - What can be configured

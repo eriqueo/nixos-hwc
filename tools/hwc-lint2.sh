@@ -8,7 +8,7 @@
 #   - Home-lane purity vs. system writes (allow co-located modules/home/**/sys.nix)
 #   - No Home Manager lane content under server/**
 #   - Profiles discipline: machines import profiles only (not modules directly)
-#   - HM activation only in profiles/hm.nix (sanctioned exception)
+#   - HM activation only in profiles/home.nix (sanctioned exception)
 #   - Single reverse-proxy authority (best-effort conflict check)
 #   - Users must be defined only under modules/system/users/**
 #   - Secrets hygiene (.age references and key material)
@@ -209,8 +209,8 @@ check_profiles_hm_activation(){ # hm_profile
   [[ -z "$hits" ]] || while IFS= read -r l; do
     [[ -z "$l" ]] && continue
     local file="${l%%:*}"
-    if [[ "$file" != "profiles/hm.nix" ]]; then
-      fail "Home Manager activation found in profiles; only profiles/hm.nix is allowed → $l"
+    if [[ "$file" != "profiles/home.nix" ]]; then
+      fail "Home Manager activation found in profiles; only profiles/home.nix is allowed → $l"
     fi
   done <<< "$hits"
 }
@@ -228,7 +228,7 @@ check_machines_import_profiles_only(){ # machines_profiles_only
 }
 
 check_profile_lane_imports_and_order(){ # profile_order
-  for p in profiles/hm.nix profiles/sys.nix; do
+  for p in profiles/home.nix profiles/sys.nix; do
     [[ -f "$p" ]] || continue
     local first_opt first_impl
     first_opt=$(rg -n --no-ignore -S "${RG_FILTERS[@]}" '/options\.nix' "$p" | head -n1 | cut -d: -f1 || true)

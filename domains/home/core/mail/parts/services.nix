@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  vals = lib.attrValues (config.features.mail.accounts or {});
+  vals = lib.attrValues (config.hwc.home.core.mail.accounts or {});
   haveProton = lib.any (a: a.type == "proton-bridge") vals;
 in
 {

@@ -3,7 +3,7 @@
 { config, lib, ... }:
 
 let
-  cfg = config.features.neomutt or {};
+  cfg = config.hwc.home.apps.neomutt or {};
 
   # Resolve palette: per-app override > global theme
   paletteName =

@@ -42,24 +42,19 @@
       #========================================================================
       
       # Desktop environment
-      hwc.home.apps = {
-        hyprland.enable = true;
-        waybar.enable = true;
-        kitty.enable = true;
-        thunar.enable = true;
-        betterbird.enable = true;
-        chromium.enable = true;
-        librewolf.enable = true;
-        # protonBridge.enable = true;  # TODO: Update to new namespace
-        obsidian.enable = true;
-        # protonMail.enable = true;    # TODO: Update to new namespace
-        # protonPass.enable = true;    # TODO: Update to new namespace
-        dunst.enable = true;
-      };
+      hwc.home.apps.hyprland.enable = true;
+      hwc.home.apps.waybar.enable = true;
+      hwc.home.apps.kitty.enable = true;
+      hwc.home.apps.thunar.enable = true;
+      hwc.home.apps.betterbird.enable = true;
+      hwc.home.apps.chromium.enable = true;
+      hwc.home.apps.librewolf.enable = true;
+      hwc.home.apps.obsidian.enable = true;
+      hwc.home.apps.dunst.enable = true;
       
       # Mail configuration
       hwc.home.core.mail = {
-          enable         = true;
+          enable = true;
           accounts ={
              proton = {
               name       = "proton";
@@ -125,10 +120,8 @@
 
       
       # NeoMutt configuration  
-      hwc.home.apps.neomutt = {
-        enable = true;
-        theme.palette = "gruv";
-      };
+      hwc.home.apps.neomutt.enable = true;
+      hwc.home.apps.neomutt.theme.palette = "gruv";
     };
   };
 }

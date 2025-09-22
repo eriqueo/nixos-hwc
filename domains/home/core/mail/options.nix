@@ -2,11 +2,14 @@
 { lib, config, ... }:
 
 {
-  # Back-compat: keep the old path working while everything migrates to features.mail.accounts
+  # Back-compat: keep the old path working while everything migrates
   imports = [
     (lib.mkAliasOptionModule
       [ "features" "neomutt" "accounts" ]
-      [ "features" "mail"    "accounts" ])
+      [ "hwc" "home" "core" "mail" "accounts" ])
+    (lib.mkAliasOptionModule
+      [ "features" "mail" ]
+      [ "hwc" "home" "core" "mail" ])
   ];
 
   options.hwc.home.core.mail = {

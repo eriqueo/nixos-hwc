@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  enabled = config.features.hyprland.enable or false;
+  enabled = config.hwc.home.apps.hyprland.enable or false;
 
   # Parts must return flat attrsets (no nested `settings = {}` inside them)
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; };

@@ -5,7 +5,7 @@
 { config, lib, pkgs,  ... }:
 
 let
-  enabled = config.features.waybar.enable or false;
+  enabled = config.hwc.home.apps.waybar.enable or false;
 
   # This is the key. We get the pkgs for the specific host system.
   # This `pkgs` will have the correct overlays, including nvidiaPackages.
@@ -26,7 +26,7 @@ let
   scriptPathBin = lib.makeBinPath scriptPkgs;
 
   # Your parts imports are correct.
-  cfg       = config.features.waybar;
+  cfg       = config.hwc.home.apps.waybar;
   theme     = import ./parts/theme.nix     { inherit config lib; };
   behavior  = import ./parts/behavior.nix  { inherit lib pkgs; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; theme = theme; };
