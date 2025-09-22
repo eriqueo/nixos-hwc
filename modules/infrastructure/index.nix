@@ -6,7 +6,7 @@
 {
   imports = [
     # Cross-domain orchestrators
-    ./filesystem-structure       # Cross-domain filesystem structure orchestrator
+    ./filesystem-structure/index.nix  # Cross-domain filesystem structure orchestrator
 
     # Hardware bucket - user↔hardware integration glue
     ./hardware/permissions.nix    # User groups, hardware ACLs, tmpfiles
