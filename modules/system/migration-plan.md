@@ -218,7 +218,7 @@ The `profiles/sys.nix` appears to be a system-focused profile. To integrate the 
   config = {
     hwc.system.packages.base.enable = true;
     hwc.networking.enable = true;
-    hwc.filesystem.enable = true;
+    hwc.infrastructure.filesystemStructure.enable = true;
     hwc.system.secrets.enable = true;
     hwc.system.users.enable = true;
     

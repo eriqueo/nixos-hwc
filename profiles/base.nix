@@ -97,8 +97,8 @@
     };
   };
 
-  # Filesystem orchestration (implementation in modules/system/filesystem.nix)
-  hwc.filesystem = {
+  # Filesystem orchestration (implementation in modules/infrastructure/filesystem-structure/)
+  hwc.infrastructure.filesystemStructure = {
     enable = true;
     securityDirectories.enable = true;
   };

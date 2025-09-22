@@ -41,7 +41,7 @@
   #============================================================================
   
   # Enable complete server filesystem structure
-  hwc.filesystem = {
+  hwc.infrastructure.filesystemStructure = {
     enable = true;
     serverStorage.enable = true;        # Hot/cold storage directories
     businessDirectories.enable = true;  # Business intelligence and AI directories  
