@@ -69,6 +69,13 @@ in
       "application/x-xz-compressed-tar" = [ "file-roller.desktop" ];
       "application/x-7z-compressed" = [ "file-roller.desktop" ];
       "application/x-rar" = [ "file-roller.desktop" ];
+      
+      # Text and code file associations
+      "application/json" = [ "kitty.desktop" ];
+      "text/plain" = [ "kitty.desktop" ];
+      "text/x-readme" = [ "kitty.desktop" ];
+      "application/x-shellscript" = [ "kitty.desktop" ];
+      "text/x-script" = [ "kitty.desktop" ];
     };
   };
   

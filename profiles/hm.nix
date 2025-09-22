@@ -104,8 +104,9 @@
           theme.palette = "gruv"; };
       };
 
-      # Theme and shell (unchanged)
+      # Theme, fonts, and shell (unchanged)
       hwc.home.theme.palette = "deep-nord";
+      hwc.home.fonts.enable = true;
 
       hwc.home.shell = {
         enable = true;

@@ -37,10 +37,6 @@ in {
       which diffutils less
     ]);
 
-    # Font configuration for user applications
-    fonts.packages = lib.mkIf cfg.enable (with pkgs; [
-      nerd-fonts.caskaydia-cove
-    ]);
 
     #=========================================================================
     # SECURITY INTEGRATION & VALIDATION
