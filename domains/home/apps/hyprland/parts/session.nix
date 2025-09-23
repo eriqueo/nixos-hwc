@@ -41,6 +41,8 @@ in
 {
   # FLAT KEYS (NO nested `settings = {}`!)
   execOnce = [
+    "xfconfd"
+
     "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
     "hyprland-startup"
     "hyprpaper"

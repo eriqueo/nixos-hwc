@@ -345,6 +345,24 @@ in {
         description = "Tailscale certificates";
       };
     };
+      userDirs = {
+        desktop = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
+        download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
+        documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/documents"; };
+        templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/templates"; };
+        publicShare = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
+        pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures"; };
+        music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/music"; };
+        videos = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/videos"; };
+      };
+
+      mediaPaths = {
+        pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures"; };
+        music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/music"; };
+        videos = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/videos"; };
+        screenshots = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures/01-screenshots"; };
+        picturesInbox = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures/99-inbox"; };
+      };
 
     #=========================================================================
     # NIXOS CONFIGURATION
@@ -425,6 +443,18 @@ in {
 
       # NixOS configuration
       HWC_NIXOS_DIR = cfg.nixos;
+
+      HWC_XDG_DESKTOP = cfg.userDirs.desktop;
+      HWC_XDG_DOWNLOAD = cfg.userDirs.download;
+      HWC_XDG_DOCUMENTS = cfg.userDirs.documents;
+      HWC_XDG_TEMPLATES = cfg.userDirs.templates;
+      HWC_XDG_PUBLIC = cfg.userDirs.publicShare;
+      HWC_XDG_PICTURES = cfg.userDirs.pictures;
+      HWC_XDG_MUSIC = cfg.userDirs.music;
+      HWC_XDG_VIDEOS = cfg.userDirs.videos;
+      HWC_PICTURES_DIR = cfg.mediaPaths.pictures;
+      HWC_SCREENSHOTS_DIR = cfg.mediaPaths.screenshots;
+      
 
       # Legacy compatibility (for existing scripts)
       HEARTWOOD_USER_HOME = cfg.user.home;
