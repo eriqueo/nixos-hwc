@@ -51,6 +51,9 @@
       hwc.home.apps.librewolf.enable = true;
       hwc.home.apps.obsidian.enable = true;
       hwc.home.apps.dunst.enable = true;
+      hwc.home.apps.protonAuthenticator.enable = true;
+      hwc.home.apps.protonMail.enable = true;
+      hwc.home.apps.protonBridge.enable = true;
       
       # Mail configuration
       hwc.home.core.mail = {
