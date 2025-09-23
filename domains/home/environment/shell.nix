@@ -43,6 +43,7 @@ in
         LIBVIRT_DEFAULT_URI = "qemu:///system";
         EDITOR = "micro";
         VISUAL = "micro";
+        HWC_NIXOS_DIR = "/home/eric/.nixos";
       };
       description = "Environment variables for the user session.";
     };
@@ -401,12 +402,13 @@ in
         save = 5000;
       };
       shellAliases = cfg.aliases;
-      initContent = cfg.zsh.initContent;
-      envExtra = ''
+      initContent = ''
         # Guarded Home Manager session variables loader
         if [ -f "/etc/profiles/per-user/$USER/etc/profile.d/hm-session-vars.sh" ]; then
           . "/etc/profiles/per-user/$USER/etc/profile.d/hm-session-vars.sh"
         fi
+        
+        ${cfg.zsh.initContent}
       '';
     };
 
