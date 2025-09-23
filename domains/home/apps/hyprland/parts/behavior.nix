@@ -20,11 +20,11 @@ in
     "${mod}, 6, exec, kitty -e nvim"
     "${mod}, M, exec, kitty -e btop"
     "${mod}, 8, exec, kitty -e btop"
-    "${mod}, 1, exec, thunar"
+    "${mod}, 1, exec, kitty -e yazi"
     "${mod}, O, exec, gpu-launch obsidian"
     "${mod}, E, exec, gpu-launch electron-mail"
     "${mod}, N, exec, kitty -e nvim"
-    "${mod}, T, exec, thunar"
+    "${mod}, T, exec, kitty -e yazi"
     "${mod}, G, exec, gpu-toggle"
     "${mod} SHIFT, M, exec, hyprland-monitor-toggle"
     "${mod}, TAB, exec, hyprland-workspace-overview"
@@ -135,7 +135,7 @@ in
 
     # Opacity
     "opacity 0.95,class:^(kitty)$"
-    "opacity 0.90,class:^(thunar)$"
+    "opacity 0.90,class:^(yazi)$"
 
     # PiP
     "float,title:^(Picture-in-Picture)$"
@@ -146,7 +146,7 @@ in
     "noshadow,floating:0"
     "idleinhibit focus,class:^(mpv|vlc|youtube)$"
     "idleinhibit fullscreen,class:^(firefox|chromium)$"
-    "immediate,class:^(kitty|thunar)$"
+    "immediate,class:^(kitty|yazi)$"
 
     # Gaming
     "fullscreen,class:^(steam_app_).*"
