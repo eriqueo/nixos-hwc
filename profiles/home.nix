@@ -66,6 +66,7 @@
               address    = "eriqueo@proton.me";
               # Leave login empty -> generator will fall back to bridgeUsername/address
               login      = "";
+              bridgeUsername = "eriqueo";  # Proton Bridge expects username without domain
               password = {
                 mode   = "pass";
                 pass   = "email/proton/bridge";  # pass insert email/proton/bridge
