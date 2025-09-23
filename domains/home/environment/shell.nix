@@ -90,7 +90,6 @@ in
         "reload" = "source ~/.zshrc";
         "homeserver" = "ssh eric@100.115.126.41";
         "server" = "ssh eric@100.115.126.41";
-        "add-app" = "$HWC_NIXOS_DIR/scripts/add-home-app.sh";
       };
       description = "Shell aliases for zsh";
     };
@@ -403,10 +402,10 @@ in
       };
       shellAliases = cfg.aliases;
       initContent = ''
-        # Guarded Home Manager session variables loader
-        if [ -f "/etc/profiles/per-user/$USER/etc/profile.d/hm-session-vars.sh" ]; then
-          . "/etc/profiles/per-user/$USER/etc/profile.d/hm-session-vars.sh"
-        fi
+        # add-app shell function
+        add-app() {
+          /home/eric/.nixos/scripts/add-home-app.sh "$@"
+        }
         
         ${cfg.zsh.initContent}
       '';
