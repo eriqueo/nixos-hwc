@@ -29,8 +29,6 @@ let
 in
 {
   imports = [
-    ./parts/paths.nix
-    ./parts/structure.nix
     ./options.nix
     ./sys.nix
   ];

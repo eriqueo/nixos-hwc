@@ -13,6 +13,7 @@
   imports = [
     ../domains/system/index.nix
     ../domains/infrastructure/index.nix
+
   ];
 
   #==========================================================================
@@ -97,9 +98,7 @@
     };
   };
 
-  # Filesystem orchestration (implementation in modules/infrastructure/filesystem-structure/)
-  hwc.infrastructure.filesystemStructure = {
-    enable = true;
-    securityDirectories.enable = true;
-  };
-}
+  hwc.filesystem = {
+      enable = true;
+    };
+  }

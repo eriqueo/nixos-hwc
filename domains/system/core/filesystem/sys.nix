@@ -27,12 +27,11 @@ let
     p.security.secrets p.security.sopsAgeKey
   ];
 
-  # Derive user paths from declared account when available (avoids hardcoding).
   ericHome = (config.users.users.eric.home or "/home/eric");
 in
 {
   config = lib.mkIf cfg.enable {
-    # Fill in sane defaults from the declared user if not explicitly set
+    # derive user paths from declared account if present
     hwc.filesystem.paths.user.home  = lib.mkDefault ericHome;
     hwc.filesystem.paths.user.inbox = lib.mkDefault "${ericHome}/Inbox";
     hwc.filesystem.paths.user.work  = lib.mkDefault "${ericHome}/Work";
