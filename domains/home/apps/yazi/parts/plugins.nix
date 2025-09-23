@@ -7,8 +7,11 @@
     '';
   };
 
-  # Full border plugin
-  "yazi/plugins/full-border.yazi/init.lua" = {
+  # ========================================================================
+  # CORRECTED: Renamed the plugin file from 'init.lua' to 'main.lua'
+  # to match Yazi's expected plugin structure.
+  # ========================================================================
+  "yazi/plugins/full-border.yazi/main.lua" = {
     text = ''
       --- @since 25.2.26
       local function setup(_, opts)
