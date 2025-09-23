@@ -89,6 +89,7 @@ in
         "reload" = "source ~/.zshrc";
         "homeserver" = "ssh eric@100.115.126.41";
         "server" = "ssh eric@100.115.126.41";
+        "add-app" = "$HWC_NIXOS_DIR/scripts/add-home-app.sh";
       };
       description = "Shell aliases for zsh";
     };
