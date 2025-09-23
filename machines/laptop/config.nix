@@ -81,11 +81,8 @@
   };
 
   ## AI services (Service domain implemented in modules/services/ai/ollama.nix)
-  hwc.services.ollama = {
-    enable = true;
-    # Do NOT set 'enableGpu' here; the service should infer from hwc.infrastructure.hardware.gpu.accel.
-    models = [ "llama3:8b" "codellama:13b" "phi3:medium" ];
-  };
+  # Disabled on laptop since it requires storage paths
+  hwc.services.ollama.enable = lib.mkForce false;
 
 
 
@@ -95,11 +92,11 @@
   ## Migration safety: Enable emergency access for new system domain user management
   hwc.system.users.emergencyEnable = true; # DISABLE after confirming login/sudo works
 
-  ## Storage configuration
-  hwc.paths = {
-    hot = "/home/eric/storage/hot";  # SSD storage for active data
-    media = "/home/eric/storage/media";  # Media storage
-  };
+  ## Storage configuration - Not needed on laptop
+  # hwc.paths = {
+  #   hot = "/home/eric/storage/hot";  # SSD storage for active data
+  #   media = "/home/eric/storage/media";  # Media storage
+  # };
 
   ## User/home orchestration (implementation lives in modules/home/*)
   # Legacy hwc.home.ssh removed - SSH now configured via other modules
