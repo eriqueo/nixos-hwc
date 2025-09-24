@@ -54,6 +54,7 @@
       hwc.home.apps.protonAuthenticator.enable = true;
       hwc.home.apps.protonMail.enable = true;
       hwc.home.apps.protonBridge.enable = true;
+      hwc.home.apps.aerc.enable = true;
       
       # Mail configuration
       hwc.home.core.mail = {
@@ -66,7 +67,7 @@
               address    = "eriqueo@proton.me";
               # Leave login empty -> generator will fall back to bridgeUsername/address
               login      = "";
-              bridgeUsername = "eriqueo";  # Proton Bridge expects username without domain
+             
               password = {
                 mode   = "pass";
                 pass   = "email/proton/bridge";  # pass insert email/proton/bridge

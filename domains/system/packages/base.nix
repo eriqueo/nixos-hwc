@@ -41,11 +41,13 @@ in {
           vim ncdu zoxide gh
       
           pass gnupg isync
-          neomutt msmtp abook w3m lynx gnupg pass file
+          neomutt msmtp abook
+          w3m lynx gnupg pass file
       
           htop btop tree neofetch
       
-          wget curl dhcpcd upower usbutils dnsutils reaver fping
+          wget curl dhcpcd upower 
+          usbutils dnsutils reaverwps fping
       
           unzip zip p7zip rsync
       
@@ -69,7 +71,7 @@ in {
       
           jq yq
       
-          usbutils pciutils dmidecode
+          pciutils dmidecode
       
           parted
           gptfdisk
