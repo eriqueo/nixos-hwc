@@ -128,6 +128,7 @@
       hwc.home.apps.neomutt.theme.palette = "gruv";
       hwc.home.apps.aerc.enable = true;
       hwc.home.apps.yazi.enable = true;
+      hwc.home.apps.ipcalc.enable = true;
     };
   };
 }
