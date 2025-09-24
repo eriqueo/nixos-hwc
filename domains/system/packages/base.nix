@@ -35,65 +35,59 @@ in {
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
   config = lib.mkIf cfg.enable {
-    # System-level packages - Development tools, language servers, build tools
     environment.systemPackages = with pkgs; [
-
-      # Core system shells
-      zsh git micro neovim                 # Default user shell (required for Home Manager integration) 
-      tmux kitty xfce.thunar               # Terminal emulator (server: X11 forwarding, workstation: desktop)
-      vim ncdu zoxide gh                   # GitHub CLI
-
-      # Security and password management
-      pass gnupg isync  # Password store, GPG encryption, Email sync (required by ProtonMail Bridge)
-                        
-      # Mail shit
-      neomutt  msmtp  abook  w3m lynx gnupg  pass file 
-
-      # System monitoring and utilities
+      zsh git micro neovim
+      tmux kitty xfce.thunar
+      vim ncdu zoxide gh
+  
+      pass gnupg isync
+      neomutt msmtp abook w3m lynx gnupg pass file
+  
       htop btop tree neofetch
-      
-      # Network tools
-      wget curl
-      
-      # File management
+  
+      wget curl dhcpcd
+  
       unzip zip p7zip rsync
-      
-      # Language servers for development
-      lua-language-server nil pyright                     # Lua LSP, Nix LSP, Python LSP
-      nodePackages.typescript-language-server  # TypeScript/JavaScript LSP
-      gopls clang-tools                        # Go LSP, C/C++ LSP (includes clangd)
-                 
-      # Development build tools (needed for some LSP features)
+  
+      lua-language-server nil pyright
+      nodePackages.typescript-language-server
+      gopls clang-tools
+  
       gcc gnumake cmake
-      pkg-config nodejs                         # Needed for some LSPs
-      python3 cargo go                   # Needed for Python development
-       
-      # Enhanced CLI tools (system-level)
-      bat eza fzf ripgrep fd           
-      
-      # Development languages and tools
+      pkg-config nodejs
+      python3 cargo go
+  
+      bat eza fzf ripgrep fd
+  
       python3Packages.pip
-      python3Packages.pynvim         # the 'pynvim' host module
-      nodePackages.neovim            # npm 'neovim' package (alternative host)
-      tree-sitter                    # CLI for building parsers
-      universal-ctags                # tag navigation
-      
-      # Security and secrets management
+      python3Packages.pynvim
+      nodePackages.neovim
+      tree-sitter
+      universal-ctags
+  
       sops age ssh-to-age
-      
-      # JSON/YAML processing
+  
       jq yq
-      
-      # System information
+  
       usbutils pciutils dmidecode
-      
-      # Disk and filesystem tools
-      parted        # Disk partitioning tool
-      gptfdisk      # GPT partition management (gdisk/sgdisk)
-      dosfstools    # FAT32/VFAT filesystem tools
-      e2fsprogs     # ext2/3/4 filesystem tools
-      ntfs3g        # NTFS filesystem support
-
+  
+      parted
+      gptfdisk
+      dosfstools
+      e2fsprogs
+      ntfs3g
+  
+      # Added network diagnostics, capture, IDS, and monitoring stack
+      wireshark wireshark-cli tcpdump ngrep mitmproxy
+      nmap masscan zmap arp-scan arping
+      traceroute mtr iproute2 nftables iptables ufw bridge-utils
+      iftop nethogs bmon bandwhich conntrack-tools
+      iperf3 speedtest-cli fast-cli
+      iw wireless_tools wpa_supplicant wavemon kismet
+      bind ldns dogdns
+      suricata snort zeek
+      arpwatch
     ];
   };
+  
 }
