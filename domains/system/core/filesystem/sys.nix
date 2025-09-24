@@ -42,12 +42,12 @@ in
     ];
 
     environment.variables = {
-      HEARTWOOD_HOT_STORAGE   = if nonNull p.hot then p.hot else "";
+      HEARTWOOD_HOT_STORAGE   = lib.mkForce (if nonNull p.hot then p.hot else "");
       HEARTWOOD_COLD_STORAGE  = if nonNull p.cold then p.cold else "";
       HEARTWOOD_BUSINESS_ROOT = p.business.root;
       HEARTWOOD_AI_ROOT       = p.ai.root;
-      HEARTWOOD_SECRETS_DIR   = p.security.secrets;
-      HEARTWOOD_SOPS_AGE_KEY  = p.security.sopsAgeKey;
+      HEARTWOOD_SECRETS_DIR   = lib.mkForce p.security.secrets;
+      HEARTWOOD_SOPS_AGE_KEY  = lib.mkForce p.security.sopsAgeKey;
       HEARTWOOD_USER_HOME     = p.user.home;
       HEARTWOOD_USER_INBOX    = p.user.inbox;
       HEARTWOOD_USER_WORK     = p.user.work;
