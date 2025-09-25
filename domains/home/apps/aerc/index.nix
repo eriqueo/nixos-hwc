@@ -10,11 +10,9 @@ let
 in {
   imports = [ ./options.nix ];
 
-  config = lib.mkIf enabled {
-    # 1. Install the aerc package
-    home.packages = [ pkgs.aerc ];
-
-    # 2. Generate the configuration files
-    home.file = aercConfig.files;
-  };
+   config = lib.mkIf enabled (lib.mkMerge [
+    { home.packages = [ pkgs.aerc ]; }
+    # aercConfig now provides the home.file attribute directly, so we merge it in
+    aercConfig 
+  ]);
 }
