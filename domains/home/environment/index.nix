@@ -1,1 +1,1 @@
-{ ... }: { imports = [ ./shell.nix ./scripts/transcript-formatter.nix ./development.nix ./productivity.nix ]; }
+{ ... }: { imports = [ ./shell ./scripts/transcript-formatter.nix ./development.nix ./productivity.nix ]; }

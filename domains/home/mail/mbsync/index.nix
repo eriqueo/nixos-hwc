@@ -91,6 +91,8 @@ in
       Service = {
         Type = "oneshot";
         ExecStart = "${pkgs.isync}/bin/mbsync -a";
+        ExecStartPost = "${pkgs.notmuch}/bin/notmuch new";
+        
         Environment = [
           "PATH=/run/current-system/sw/bin"
           "PASSWORD_STORE_DIR=%h/.password-store"
