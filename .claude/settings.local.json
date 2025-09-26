@@ -53,7 +53,8 @@
       "Bash(gpg:*)",
       "Read(//home/eric/.config/neomutt/**)",
       "Bash(tree:*)",
-      "Bash(journalctl:*)"
+      "Bash(journalctl:*)",
+      "Read(//etc/nixos/**)"
     ],
     "deny": [],
     "ask": [],

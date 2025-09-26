@@ -43,10 +43,8 @@ in
 
         ${lib.optionalString (defaultLabel != "") "account default : ${defaultLabel}"}
       '';
-      mode = "0600";
     };
 
     home.file.".config/msmtp/msmtp.log".text = "";
-    home.file.".config/msmtp/msmtp.log".mode = "0600";
   };
 }

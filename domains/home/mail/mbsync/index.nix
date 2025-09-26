@@ -4,7 +4,6 @@ let
   accs = cfg.accounts or {};
   vals = lib.attrValues accs;
 
-  # Enable when the domain is on AND the per-program toggle is on AND there is at least one account
   on = (cfg.enable or true) && (cfg.mbsync.enable or true) && (vals != []);
 
   haveProton = lib.any (a: a.type == "proton-bridge") vals;
@@ -12,13 +11,44 @@ let
   common = import ../parts/common.nix { inherit lib; };
   maildirRoot = "${config.home.homeDirectory}/Maildir";
 
+  # Escape [ and ] for mbsync patterns
+  escapeSquareBrackets = s: builtins.replaceStrings ["["  "]"] ["\\[" "\\]"] s;
+
+  # Expand Gmail namespace aliases: [Gmail] <-> [Google Mail]
+  expandGoogleAliases = s:
+    if lib.hasInfix "[Gmail]/" s then
+      [ s (lib.replaceStrings ["[Gmail]"] ["[Google Mail]"] s) ]
+    else if lib.hasInfix "[Google Mail]/" s then
+      [ s (lib.replaceStrings ["[Google Mail]"] ["[Gmail]"] s) ]
+    else
+      [ s ];
+
+  # Quote for mbsync conf (double quotes; escape any " or \ just in case)
+    confQuote = s:
+      let esc = builtins.replaceStrings [ "\"" ] [ "\\\"" ] s;
+      in "\"" + esc + "\"";
+
+  # Build the final Patterns list per account
+  patternsFor = a:
+    let
+      raw = a.sync.patterns or [ "INBOX" ];
+    in if common.isGmail a then
+      let
+        expanded  = lib.concatLists (map expandGoogleAliases raw);
+        escaped   = map escapeSquareBrackets expanded;
+      in lib.unique escaped
+    else
+      raw;
+
   mbsyncBlock = a:
     let
-      cmd  = common.passCmd a;
+      cmd   = common.passCmd a;
       imapH = if a.imapHost != null then a.imapHost else common.imapHost a;
       imapP = if a.imapPort != null then a.imapPort else common.imapPort a;
       tlsT  = if a.imapTls  != null then a.imapTls  else common.tlsType a;
       createPolicy = if common.isGmail a then "Create Near" else "Create Both";
+
+      patStr = lib.concatStringsSep " " (map confQuote (patternsFor a));
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}
@@ -38,7 +68,7 @@ let
       Channel ${a.name}-all
       Far :${a.name}-remote:
       Near :${a.name}-local:
-      Patterns ${lib.concatStringsSep " " (map lib.escapeShellArg a.sync.patterns)}
+      Patterns ${patStr}
       ${createPolicy}
       Expunge Both
       SyncState *
@@ -55,8 +85,8 @@ in
     systemd.user.services.mbsync = {
       Unit = {
         Description = "mbsync all";
-        After = [ "network-online.target" ] ++ lib.optionals haveProton [ "protonmail-bridge.service" ];
-        Wants = [ "network-online.target" ] ++ lib.optionals haveProton [ "protonmail-bridge.service" ];
+        After  = [ "network-online.target" ] ++ lib.optionals haveProton [ "protonmail-bridge.service" ];
+        Wants  = [ "network-online.target" ] ++ lib.optionals haveProton [ "protonmail-bridge.service" ];
       };
       Service = {
         Type = "oneshot";
