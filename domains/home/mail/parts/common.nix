@@ -3,6 +3,7 @@ let
   hasField = a: n: builtins.hasAttr n a;
   getField = a: n: if hasField a n then builtins.getAttr n a else null;
   hasText  = s: builtins.isString s && s != "";
+
   loginOf = a:
     let try = n: if hasField a n && hasText (getField a n) then getField a n else null;
     in if      try "login"          != null then try "login"
@@ -32,7 +33,46 @@ let
       ''sh -c 'tr -d "\n" < "$0"' ${agenixPath}''
     else
       a.password.command;
+
+  md = a:
+    if hasField a "maildirName" && hasText (getField a "maildirName")
+    then a.maildirName
+    else (a.name or "");
+
+  rolesFor = a:
+    let base = md a; in
+    if isGmail a then {
+      sent    = [ "${base}/[Gmail]/Sent Mail" ];
+      drafts  = [ "${base}/[Gmail]/Drafts" ];
+      trash   = [ "${base}/[Gmail]/Trash" ];
+      spam    = [ "${base}/[Gmail]/Spam" ];
+      archive = [ "${base}/[Gmail]/All Mail" ];
+    } else {
+      sent    = [ "${base}/Sent" ];
+      drafts  = [ "${base}/Drafts" ];
+      trash   = [ "${base}/Trash" ];
+      spam    = [ "${base}/Spam" ];
+      archive = [ "${base}/Archive" "${base}/All Mail" ];
+    };
+
+  imapDefaultsFor = a: {
+    host   = imapHost a;
+    port   = imapPort a;
+    tlsType = tlsType a;
+    user   = loginOf a;
+  };
+
+  smtpDefaultsFor = a: {
+    host     = smtpHost a;
+    port     = smtpPort a;
+    startTLS = startTLS a;
+    user     = loginOf a;
+  };
 in
 {
-  inherit hasField getField hasText loginOf isGmail imapHost imapPort tlsType smtpHost smtpPort startTLS passCmd;
+  inherit
+    hasField getField hasText loginOf isGmail
+    imapHost imapPort tlsType smtpHost smtpPort startTLS
+    passCmd
+    md rolesFor imapDefaultsFor smtpDefaultsFor;
 }

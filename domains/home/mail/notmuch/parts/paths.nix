@@ -1,4 +1,3 @@
-# Pure helper: compute maildirRoot deterministically
 { lib, config, cfg }:
 let
   root = let v = cfg.maildirRoot or ""; in

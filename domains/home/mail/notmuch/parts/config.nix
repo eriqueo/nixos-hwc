@@ -1,6 +1,4 @@
-# Pure helper: notmuch config & packages
 { lib, pkgs, maildirRoot, userName, primaryEmail, otherEmails, newTags }:
-
 let mkSemi = xs: lib.concatStringsSep ";" xs;
 in {
   packages = [ pkgs.notmuch pkgs.ripgrep pkgs.coreutils pkgs.gnused ];
@@ -15,6 +13,8 @@ in {
         other_email = mkSemi otherEmails;
       };
       maildir.synchronize_flags = "true";
+      new.ignore = lib.optionalString (excludeFolders != []) (mkSemi excludeFolders);
+
     };
   };
 }

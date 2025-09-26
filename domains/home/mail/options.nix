@@ -2,10 +2,8 @@
 let t = lib.types; in
 {
   options.hwc.home.mail = {
-    # One switch for the whole mail stack; default on if you want it everywhere
     enable = lib.mkEnableOption "Mail domain" // { default = true; };
 
-    # Shared data schema (no separate toggle needed)
     accounts = lib.mkOption {
       type = t.attrsOf (t.submodule ({ name, ... }: {
         options = {
@@ -42,12 +40,5 @@ let t = lib.types; in
       default = {};
       description = "Shared mail accounts for all mail components.";
     };
-
-    # (Optional) per-program toggles; default true for your “everything on” stance
-    mbsync.enable  = lib.mkEnableOption "mbsync"  // { default = true; };
-    msmtp.enable   = lib.mkEnableOption "msmtp"   // { default = true; };
-    notmuch.enable = lib.mkEnableOption "notmuch" // { default = true; };
-    bridge.enable  = lib.mkEnableOption "Proton Bridge" // { default = true; };
-    abook.enable   = lib.mkEnableOption "abook"   // { default = true; };
   };
 }
