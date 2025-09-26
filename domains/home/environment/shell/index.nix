@@ -118,7 +118,7 @@ in
         save = 5000;
       };
       shellAliases = cfg.aliases;
-      initExtra = ''
+      initContent = ''
         # Helper functions for enhanced shell experience
         
         # Fuzzy finding function
