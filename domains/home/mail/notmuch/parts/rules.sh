@@ -1,38 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Notmuch tagging rules — folder-based (robust with [Gmail]/[Google Mail] names)
+# Helper
 tag() { notmuch tag "$@"; }
 
-# 0) Normalize special folders → canonical tags
-# Proton
-tag +sent    -inbox -unread -- 'folder:"proton/Sent"'
-tag +trash   -inbox -unread -- 'folder:"proton/Trash"'
-tag +spam    -inbox -unread -- 'folder:"proton/Spam"'
-tag +archive -inbox         -- 'folder:"proton/Archive" OR folder:"proton/All Mail"'
-tag +draft   -inbox -unread -- 'folder:"proton/Drafts"'
+# ---- Special folders → tags (use EXACT folder: paths) ----
+# SENT
+tag +sent   -inbox -unread -- \
+  'folder:"proton/Sent" \
+   OR folder:"gmail-personal/[Gmail]/Sent Mail"  OR folder:"gmail-business/[Gmail]/Sent Mail" \
+   OR folder:"gmail-personal/[Google Mail]/Sent Mail" OR folder:"gmail-business/[Google Mail]/Sent Mail"'
 
-# Gmail (handle both “[Gmail]” and “[Google Mail]” namespaces)
-tag +sent    -inbox -unread -- 'folder:"gmail-*/[Gmail]/Sent Mail"     OR folder:"gmail-*/[Google Mail]/Sent Mail"'
-tag +trash   -inbox -unread -- 'folder:"gmail-*/[Gmail]/Trash"         OR folder:"gmail-*/[Google Mail]/Trash"'
-tag +spam    -inbox -unread -- 'folder:"gmail-*/[Gmail]/Spam"          OR folder:"gmail-*/[Google Mail]/Spam"'
-tag +archive -inbox         -- 'folder:"gmail-*/[Gmail]/All Mail"      OR folder:"gmail-*/[Google Mail]/All Mail"'
-tag +draft   -inbox -unread -- 'folder:"gmail-*/[Gmail]/Drafts"        OR folder:"gmail-*/[Google Mail]/Drafts"'
+# TRASH
+tag +trash  -inbox -unread -- \
+  'folder:"proton/Trash" \
+   OR folder:"gmail-personal/[Gmail]/Trash"  OR folder:"gmail-business/[Gmail]/Trash" \
+   OR folder:"gmail-personal/[Google Mail]/Trash" OR folder:"gmail-business/[Google Mail]/Trash"'
 
-# 1) Newsletters
-# If you rely on List-Id, uncomment the next line (works well on most lists):
-# tag +newsletter -inbox -- 'list:*'
-# Sender/domain heuristics (expanded by Nix):
-__NEWSLETTER_BLOCK__
+# SPAM
+tag +spam   -inbox -unread -- \
+  'folder:"proton/Spam" \
+   OR folder:"gmail-personal/[Gmail]/Spam"   OR folder:"gmail-business/[Gmail]/Spam"  \
+   OR folder:"gmail-personal/[Google Mail]/Spam"  OR folder:"gmail-business/[Google Mail]/Spam"'
 
-# 2) Notifications / bots / no-reply (expanded by Nix):
-__NOTIFICATION_BLOCK__
+# DRAFTS
+tag +draft  -inbox -unread -- \
+  'folder:"proton/Drafts" \
+   OR folder:"gmail-personal/[Gmail]/Drafts" OR folder:"gmail-business/[Gmail]/Drafts" \
+   OR folder:"gmail-personal/[Google Mail]/Drafts" OR folder:"gmail-business/[Google Mail]/Drafts"'
 
-# 3) Finance (receipts/statements) (expanded by Nix):
-__FINANCE_BLOCK__
+# ARCHIVE / ALL MAIL
+tag +archive -inbox -- \
+  'folder:"proton/Archive" OR folder:"proton/All Mail" \
+   OR folder:"gmail-personal/[Gmail]/All Mail"  OR folder:"gmail-business/[Gmail]/All Mail" \
+   OR folder:"gmail-personal/[Google Mail]/All Mail" OR folder:"gmail-business/[Google Mail]/All Mail"'
 
-# 4) Action-worthy subjects (expanded by Nix):
-__ACTION_SUBJECT_BLOCK__
-
-# 5) Safety: don't mix system folders into categories
+# (your newsletter / notification / finance / action sections can stay as-is)
+# Safety: don't classify system folders as action/newsletter/etc.
 tag -action -newsletter -notification -- 'tag:sent OR tag:trash OR tag:spam OR tag:draft'
