@@ -80,7 +80,6 @@ in
         options = [ "NOPASSWD" ];
       }];
     }];
-  };
 
     # Validation assertions
     assertions = [
@@ -93,4 +92,5 @@ in
         message = "ProtonVPN endpoint must be configured when enabled";
       }
     ];
+  };
 }
