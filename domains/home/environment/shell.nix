@@ -90,6 +90,9 @@ in
         "reload" = "source ~/.zshrc";
         "homeserver" = "ssh eric@100.115.126.41";
         "server" = "ssh eric@100.115.126.41";
+        "vpnon" = "sudo wg-quick up protonvpn";
+        "vpnoff" = "sudo wg-quick down protonvpn";
+        "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
       };
       description = "Shell aliases for zsh";
     };
