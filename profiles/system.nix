@@ -33,7 +33,8 @@
   # System services
   hwc.system.services.behavior.enable = false;
   hwc.system.services.session.enable = false;
-  hwc.services.network.vpn.enable = true;
+  hwc.system.services.vpn.enable = true;
+  hwc.system.services.vpn.protonvpn.enable = true;
   
   # Security levels
   hwc.system.security.level = "standard";  # Can be: minimal, standard, hardened
