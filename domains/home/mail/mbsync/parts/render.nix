@@ -27,8 +27,11 @@ let
        else raw;
 
   getOr = a: n: def:
-    if common.hasField a n && common.getField a n != null && (builtins.isString (common.getField a n) -> (common.getField a n != "") || true)
-    then common.getField a n else def;
+    if common.hasField a n then
+      let v = common.getField a n; in
+      if v == null then def else
+      if builtins.isString v then (if v == "" then def else v) else v
+    else def;
 
   mbsyncBlock = a:
     let
@@ -36,9 +39,10 @@ let
       imapH = getOr a "imapHost" (common.imapHost a);
       imapP = getOr a "imapPort" (common.imapPort a);
       tlsT  = getOr a "imapTls"  (common.tlsType a);
+      extra = getOr a "extraMbsync" "";
       createPolicy = if common.isGmail a then "Create Near" else "Create Both";
       patStr = lib.concatStringsSep " " (map confQuote (patternsFor a));
-      extra  = if common.hasField a "extraMbsync" then (common.getField a "extraMbsync" or "") else "";
+
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}

@@ -54,7 +54,8 @@
       "Read(//home/eric/.config/neomutt/**)",
       "Bash(tree:*)",
       "Bash(journalctl:*)",
-      "Read(//etc/nixos/**)"
+      "Read(//etc/nixos/**)",
+      "Bash(sudo smartctl:*)"
     ],
     "deny": [],
     "ask": [],

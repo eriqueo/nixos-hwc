@@ -6,16 +6,19 @@ let
   common = import ../../parts/common.nix { inherit lib; };
 
   getOr = a: n: def:
-    if common.hasField a n && common.getField a n != null && (builtins.isString (common.getField a n) -> (common.getField a n != "") || true)
-    then common.getField a n else def;
+    if common.hasField a n then
+      let v = common.getField a n; in
+      if v == null then def else
+      if builtins.isString v then (if v == "" then def else v) else v
+    else def;
 
   msmtpBlock = a:
     let
       cmd = common.passCmd a;
       host = getOr a "smtpHost" (common.smtpHost a);
       port = getOr a "smtpPort" (common.smtpPort a);
+      extra = getOr a "extraMsmtp" "";
       startTLS = getOr a "startTLS" (common.startTLS a);
-      extra = if common.hasField a "extraMsmtp" then (common.getField a "extraMsmtp" or "") else "";
       authLine = if a.type == "proton-bridge" then "auth plain" else "auth on";
       tlsLines = if startTLS then "tls on\ntls_starttls on" else "tls off\ntls_starttls off";
       label = a.send.msmtpAccount;
