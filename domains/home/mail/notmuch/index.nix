@@ -1,85 +1,82 @@
 { config, lib, pkgs, ... }:
+
 let
-  cfgMail = config.hwc.home.mail;
-  cfg     = cfgMail.notmuch;
-  on      = (cfgMail.enable or true) && (cfgMail.notmuch.enable or true);
+  cfg = config.hwc.home.mail.notmuch or {};
+  # Defaults so the module is self-contained; your options.nix can still override.
+  maildirRoot  = cfg.maildirRoot or "${config.home.homeDirectory}/Maildir";
+  userName     = cfg.userName     or "eric okeefe";
+  primaryEmail = cfg.primaryEmail or "eriqueo@proton.me";
+  otherEmails  = cfg.otherEmails  or [ "eric@iheartwoodcraft.com" "eriqueokeefe@gmail.com" "heartwoodcraftmt@gmail.com" ];
+  newTags      = cfg.newTags      or [ "unread" "inbox" ];
 
+  mkSemi = xs: lib.concatStringsSep ";" xs;
 
-  # Render a list of “from contains X” OR-joined
-    fromBlock = (xs: if xs == [] then "" else
-      "notmuch tag +__TAG__ -inbox -- '" +
-      (lib.concatStringsSep "' OR '" (map (s: "from:" + s) xs)) +
-      "'\n");
-  
-    # Render subject contains; lowercased comparison is ok in notmuch
-    subjBlock = (xs:
-      if xs == [] then "" else
-      "notmuch tag +action -- '" +
-      (lib.concatStringsSep "' OR '" (map (s: "subject:" + s)) ) +
-      "'\n");
-  
-    rulesScript =
-      let
-        newsletterCmd = lib.replaceStrings [ "__TAG__" ] [ "newsletter" ] (fromBlock cfg.rules.newsletterSenders);
-        notificationCmd = lib.replaceStrings [ "__TAG__" ] [ "notification" ] (fromBlock cfg.rules.notificationSenders);
-        financeCmd = lib.replaceStrings [ "__TAG__" ] [ "finance" ] (fromBlock cfg.rules.financeSenders);
-        actionSubjCmd = subjBlock (map (x: lib.toLower x) cfg.rules.actionSubjects);
-  
-        raw = builtins.readFile ./parts/rules.sh;
-        filled = lib.pipe raw [
-            (s: lib.replaceStrings [ "__NEWSLETTER_BLOCK__"   ] [ newsletterCmd   ] s)
-            (s: lib.replaceStrings [ "__NOTIFICATION_BLOCK__" ] [ notificationCmd ] s)
-            (s: lib.replaceStrings [ "__FINANCE_BLOCK__"      ] [ financeCmd      ] s)
-          ];
-      in filled;
-  # Derive maildir + primary email if unset
-  effectiveMaildirRoot =
-    if (cfg.maildirRoot or "") != "" then cfg.maildirRoot
-    else "${config.home.homeDirectory}/Maildir";
+  savedSearchesText = ''
+    inbox=tag:inbox AND tag:unread
+    action=tag:action AND tag:unread
+    finance=tag:finance AND tag:unread
+    newsletter=tag:newsletter AND tag:unread
+    notifications=tag:notification AND tag:unread
+    sent=tag:sent
+    archive=tag:archive
+  '';
 
-  vals = lib.attrValues (cfgMail.accounts or {});
-  primary =
-    let p = lib.filter (a: a.primary or false) vals;
-    in if p != [] then lib.head p else (if vals != [] then lib.head vals else null);
-  primaryEmailAuto =
-    if (cfg.primaryEmail or "") != "" then cfg.primaryEmail
-    else (if primary != null then (primary.address or "") else "");
+  # NOTE: escape \[Gmail] for mbsync-style paths; notmuch matches plain strings.
+  postNewHookText = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
 
-  mkSemis = lib.concatStringsSep ";";
-  mkSaved = builtins.concatStringsSep "\n" (lib.mapAttrsToList (n: q: "${n}=${q}") cfg.savedSearches);
-in
-{
-  imports = [ ./options.nix ];
+    # Sent / Trash / Spam / Drafts / Archive tagging across providers
+    notmuch tag +sent   -inbox -unread -- 'path:"proton/Sent" OR path:"gmail-*/[Gmail]/Sent Mail" OR path:"gmail-*/[Google Mail]/Sent Mail"'
+    notmuch tag +trash  -inbox -unread -- 'path:"proton/Trash" OR path:"gmail-*/[Gmail]/Trash" OR path:"gmail-*/[Google Mail]/Trash"'
+    notmuch tag +spam   -inbox -unread -- 'path:"proton/Spam"  OR path:"gmail-*/[Gmail]/Spam"  OR path:"gmail-*/[Google Mail]/Spam"'
+    notmuch tag +draft  -inbox -unread -- 'path:"proton/Drafts" OR path:"gmail-*/[Gmail]/Drafts" OR path:"gmail-*/[Google Mail]/Drafts"'
+    notmuch tag +archive        -inbox        -- 'path:"proton/Archive" OR path:"proton/All Mail" OR path:"gmail-*/[Gmail]/All Mail" OR path:"gmail-*/[Google Mail]/All Mail"'
+  '';
 
-  config = lib.mkIf on {
+  dashboardScript = ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "inbox (unread): %s\n" "$(notmuch count 'tag:inbox and tag:unread')"
+    printf "sent:           %s\n" "$(notmuch count 'tag:sent')"
+    printf "archive:        %s\n" "$(notmuch count 'tag:archive')"
+    printf "drafts:         %s\n" "$(notmuch count 'tag:draft')"
+    printf "spam:           %s\n" "$(notmuch count 'tag:spam')"
+    printf "trash:          %s\n" "$(notmuch count 'tag:trash')"
+  '';
+
+in {
+  # IMPORTANT: don’t gate this behind an extra enable unless you want to.
+  config = {
     home.packages = [ pkgs.notmuch pkgs.ripgrep pkgs.coreutils pkgs.gnused ];
 
     programs.notmuch = {
       enable = true;
-      new.tags = cfg.newTags;
+      new.tags = newTags;
       extraConfig = {
-        database.path = effectiveMaildirRoot;
+        database.path = maildirRoot;
         user = {
-          name = cfg.userName;
-          primary_email = primaryEmailAuto;
-          other_email    = mkSemis cfg.otherEmails;
+          name = userName;
+          primary_email = primaryEmail;
+          other_email = mkSemi otherEmails;
         };
         maildir.synchronize_flags = "true";
-      } // lib.optionalAttrs (cfg.excludeFolders != []) {
-        index.exclude = mkSemis cfg.excludeFolders;
       };
-      hooks.postNew = cfg.postNewHook;
+      # Do NOT use hooks.postNew here; we write the real hook file below.
     };
 
-    xdg.configFile."notmuch/saved-searches".text = mkSaved;
-    
-    home.file.".local/bin/mail-dashboard" = lib.mkIf cfg.installDashboard {
-        source = ./parts/dashboard.sh;
-        executable = true;
-     };
-  
-    home.file.".local/bin/mail-sample" = lib.mkIf cfg.installSampler {
-      source = ./parts/sample.sh;
+    # Saved searches (declarative)
+    xdg.configFile."notmuch/saved-searches".text = savedSearchesText;
+
+    # Real post-new hook file at the path Notmuch will execute
+    home.file."${maildirRoot}/.notmuch/hooks/post-new" = {
+      text = postNewHookText;
+      executable = true;
+    };
+
+    # Optional helper; toggle by an option if you prefer.
+    home.file.".local/bin/mail-dashboard" = {
+      text = dashboardScript;
       executable = true;
     };
   };

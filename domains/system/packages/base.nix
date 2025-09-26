@@ -90,6 +90,7 @@ in {
           bind ldns dogdns
           suricata snort zeek
           arp-scan arping aircrack-ng
+          wireguard-tools
         ];
       
         # Recommended modules for NixOS firewall/capture usability
