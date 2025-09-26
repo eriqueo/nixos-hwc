@@ -82,10 +82,7 @@ in
     }];
   };
 
-  #============================================================================
-  # VALIDATION - Ensure proper configuration
-  #============================================================================
-  config = lib.mkIf cfg.enable {
+    # Validation assertions
     assertions = [
       {
         assertion = cfg.protonvpn.enable -> (cfg.protonvpn.privateKey != "");
@@ -96,5 +93,4 @@ in
         message = "ProtonVPN endpoint must be configured when enabled";
       }
     ];
-  };
 }
