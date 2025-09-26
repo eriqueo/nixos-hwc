@@ -17,238 +17,170 @@ in
 {
   files = profileBase: {
     ".config/aerc/binds.conf".text = ''
-      # ############################################
-      # UNIVERSAL KEYBINDING SYSTEM - AERC
-      # Leader = ',' ; lowercase after leader
-      # Translated from neomutt keybindings
-      # ############################################
+      # =============================================
+      # Universal Keybinding System - Aerc
+      # Generated: Sep 26, 2025
+      # =============================================
       
-      # Global bindings (apply everywhere unless overridden)
-      [global]
-      # Reserve leader key
-      "," = :noop<Enter>
+      # ---------------------------------------------
+      # Global Binds & Tab Navigation
+      # ---------------------------------------------
+      <C-h> = :prev-tab<Enter>
+      <C-p> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
+      <C-n> = :next-tab<Enter>
+      <C-q> = :prompt 'Quit aerc?' quit<Enter>
+      <C-t> = :term<Enter>
+      ?     = :help keys<Enter>
       
-      ############################################
-      # MESSAGE LIST CONTEXT (like neomutt index)
-      ############################################
+      # ---------------------------------------------
+      # [messages] - Main View
+      # ---------------------------------------------
       [messages]
-      
-      # ===== CORE NAVIGATION (vim-like) =====
-      g = :select 0<Enter>
-      G = :select -1<Enter>
-      
+      # --- Core Navigation ---
       j = :next<Enter>
       k = :prev<Enter>
+      h = :prev-folder<Enter>
+      l = :next-folder<Enter>
+      g = :select 0<Enter>
+      G = :select -1<Enter>
+      <C-d> = :next 50%<Enter>
+      <C-u> = :prev 50%<Enter>
+      <Enter> = :view<Enter>
+      q = :quit<Enter>
       
-      # Page navigation
-      <C-f> = :next 100%<Enter>
-      <C-b> = :prev 100%<Enter>
+      # --- Selection ---
+      J = :mark -t<Enter>:next<Enter>
+      K = :mark -t<Enter>:prev<Enter>
+      V = :mark -v<Enter>
       
-      # ===== LEADER + G - GO/NAVIGATION =====
-      ",gh" = ":cf INBOX<Enter>"
-      ",gs" = ":cf Sent<Enter>"  
-      ",gd" = ":cf Drafts<Enter>"
-      ",gt" = ":cf Trash<Enter>"
-      ",ga" = ":cf Archive<Enter>"
-      ",gg" = ":cf<space>"
+      # --- Base Verbs (Tier 1 Actions) ---
+      d = :archive flat<Enter>
+      D = :delete<Enter>
+      c = :compose<Enter>
+      C = :reply -aq<Enter>
       
-      # Account-specific INBOX shortcuts (,g1, ,g2, etc.)
-      ${accountBindings}
+      # --- Verb + Numbered Destination (Shortcut Path) ---
+      # 'x' is for Move (Cut), 'y' is for Copy (Yank)
+      x0 = :mv 0_Inbox<Enter>
+      x1 = :mv 1_Archive<Enter>
+      x2 = :mv 2_Sent<Enter>
+      x3 = :mv 3_Drafts<Enter>
+      x4 = :mv 4_Important<Enter>
+      x5 = :mv 5_ProjectA<Enter>
+      x6 = :mv 6_ProjectB<Enter>
+      x7 = :mv 7_ReadLater<Enter>
+      x8 = :mv 8_Spam<Enter>
+      x9 = :mv 9_Trash<Enter>
       
-      # ===== LEADER + F - FIND/FILTER =====
-      ",fa" = ":clear<Enter>"
-      ",fn" = ":filter<space>unread<Enter>" 
-      ",fu" = ":filter<space>unread<Enter>"
-      ",ft" = ":filter<space>flagged<Enter>"
-      ",ff" = ":filter<space>flagged<Enter>"
-      ",fc" = ":clear<Enter>"
-      ",fs" = ":search<space>"
+      y0 = :cp 0_Inbox<Enter>
+      y1 = :cp 1_Archive<Enter>
+      y2 = :cp 2_Sent<Enter>
+      y3 = :cp 3_Drafts<Enter>
+      y4 = :cp 4_Important<Enter>
+      y5 = :cp 5_ProjectA<Enter>
+      y6 = :cp 6_ProjectB<Enter>
+      y7 = :cp 7_ReadLater<Enter>
+      y8 = :cp 8_Spam<Enter>
+      y9 = :cp 9_Trash<Enter>
       
-      # ===== LEADER + S - SORT =====
-      ",sn" = ":sort from<Enter>"
-      ",ss" = ":sort size<Enter>" 
-      ",sm" = ":sort date<Enter>"
-      ",st" = ":sort thread<Enter>"
-      ",sr" = ":sort -r date<Enter>"
-      ",se" = ":sort subject<Enter>"
+      # --- Uppercase Verb for Flexible Path ---
+      X = :mv<space>
+      Y = :cp<space>
       
-      # ===== LEADER + T - THREAD OPERATIONS =====
-      ",th" = ":fold<Enter>"
-      ",ta" = ":fold -a<Enter>"
-      ",tn" = ":next-folder<Enter>"
-      ",tp" = ":prev-folder<Enter>"
+      # ---------------------------------------------
+      # <Space> Leader Menu (Tier 2 Actions)
+      # ---------------------------------------------
+      # <Space>g - Go (Navigate to folder)
+      <Space>g0 = :cf 0_Inbox<Enter>
+      <Space>g1 = :cf 1_Archive<Enter>
+      <Space>g2 = :cf 2_Sent<Enter>
+      <Space>g3 = :cf 3_Drafts<Enter>
+      <Space>g4 = :cf 4_Important<Enter>
+      <Space>g5 = :cf 5_ProjectA<Enter>
+      <Space>g6 = :cf 6_ProjectB<Enter>
+      <Space>g7 = :cf 7_ReadLater<Enter>
+      <Space>g8 = :cf 8_Spam<Enter>
+      <Space>g9 = :cf 9_Trash<Enter>
       
-      # ===== SWEEP TAGGING (J/K like Yazi) =====
-      J = ":mark -t<Enter>:next<Enter>"
-      K = ":mark -t<Enter>:prev<Enter>"
+      # <Space>f - Find
+      <Space>ff = :filter<space>
+      <Space>fs = :search<space>
       
-      # Tag operations
-      ",a" = ":mark -a<Enter>"
-      ",u" = ":unmark -a<Enter>"
+      # <Space>s - Sort
+      <Space>sd = :sort -r date<Enter>
+      <Space>sf = :sort from<Enter>
+      <Space>ss = :sort subject<Enter>
       
-      # ===== LEADER + Y/X - COPY/MOVE =====
-      ",y" = ":copy<space>"
-      ",x" = ":move<space>"
+      # <Space>t - Tabs/Toggles
+      <Space>tt = :toggle-threads<Enter>
+      <Space>tn = :new-tab<Enter>
+      <Space>tc = :close-tab<Enter>
       
-      # Quick moves
-      ",xa" = ":move Archive<Enter>"
-      ",xs" = ":move Sent<Enter>"
+      # <Space>w - Window
+      <Space>ws = :split<Enter>
+      <Space>wv = :vsplit<Enter>
       
-      # ===== WINDOW/VIEW =====
-      ",wh" = ":help<Enter>"
-      ",ws" = ":toggle-sidebar<Enter>"
-      
-      # ===== QUICK SINGLE KEYS =====
-      i = ":compose<Enter>"
-      o = ":view<Enter>"
-      <Enter> = ":view<Enter>"
-      r = ":reply<Enter>"
-      R = ":reply -a<Enter>"
-      f = ":forward<Enter>"
-      "/" = ":search<space>"
-      n = ":next-result<Enter>"
-      N = ":prev-result<Enter>"
-      
-      # Delete operations
-      d = ":move Trash<Enter>"
-      D = ":delete<Enter>"
-      
-      # Archive
-      a = ":move Archive<Enter>"
-      A = ":archive flat<Enter>"
-      
-      # ===== UTILITIES =====
-      ",us" = ":pipe urlscan<Enter>"
-      ",aa" = ":pipe abook --add-email<Enter>"
-      ",mr" = ":mark -a<Enter>:mark -t unread<Enter>:unmark -a<Enter>"
-      ",rr" = ":source ~/.config/aerc/aerc.conf<Enter>"
-      
-      # Terminal and external commands
-      "!" = ":term<space>"
-      "$" = ":term<space>"
-      "|" = ":pipe<space>"
-      
-      ############################################
-      # MESSAGE VIEWER CONTEXT (like neomutt pager)
-      ############################################
+      # ---------------------------------------------
+      # [view] - Message Viewer
+      # ---------------------------------------------
       [view]
+      q = :close<Enter>
+      j = :next<Enter>
+      k = :prev<Enter>
+      d = :archive flat<Enter>:close<Enter>
+      D = :delete<Enter>:close<Enter>
+      c = :compose<Enter>
+      C = :reply -aq<Enter>
+      H = :toggle-headers<Enter>
       
-      # Navigation in viewer
-      j = ":next<Enter>"
-      k = ":prev<Enter>"
-      g = ":select 0<Enter>"
-      G = ":select -1<Enter>"
+      # --- Verb + Numbered Destination (from within a message) ---
+      x0 = :mv 0_Inbox<Enter>:close<Enter>
+      x1 = :mv 1_Archive<Enter>:close<Enter>
+      x2 = :mv 2_Sent<Enter>:close<Enter>
+      x3 = :mv 3_Drafts<Enter>:close<Enter>
+      x4 = :mv 4_Important<Enter>:close<Enter>
+      x5 = :mv 5_ProjectA<Enter>:close<Enter>
+      x6 = :mv 6_ProjectB<Enter>:close<Enter>
+      x7 = :mv 7_ReadLater<Enter>:close<Enter>
+      x8 = :mv 8_Spam<Enter>:close<Enter>
+      x9 = :mv 9_Trash<Enter>:close<Enter>
       
-      # Page navigation within message
-      <C-f> = ":next-part<Enter>"
-      <C-b> = ":prev-part<Enter>
-      J = ":next<Enter>"
-      K = ":prev<Enter>"
+      y0 = :cp 0_Inbox<Enter>
+      y1 = :cp 1_Archive<Enter>
+      y2 = :cp 2_Sent<Enter>
+      y3 = :cp 3_Drafts<Enter>
+      y4 = :cp 4_Important<Enter>
+      y5 = :cp 5_ProjectA<Enter>
+      y6 = :cp 6_ProjectB<Enter>
+      y7 = :cp 7_ReadLater<Enter>
+      y8 = :cp 8_Spam<Enter>
+      y9 = :cp 9_Trash<Enter>
       
-      # Close viewer
-      q = ":close<Enter>"
+      # --- Passthrough for searching within the message body ---
+      / = :toggle-key-passthrough<Enter>/
       
-      # Actions from viewer
-      r = ":reply<Enter>"
-      R = ":reply -a<Enter>"
-      f = ":forward<Enter>"
+      [view::passthrough]
+      $noinherit = true
+      <Esc> = :toggle-key-passthrough<Enter>
       
-      # Delete from viewer
-      d = ":move Trash<Enter>"
-      D = ":delete<Enter>"
-      
-      # Archive from viewer  
-      a = ":move Archive<Enter>"
-      A = ":archive flat<Enter>"
-      
-      # Save and pipe
-      s = ":save<space>"
-      "|" = ":pipe<space>"
-      
-      # Headers and parts
-      H = ":toggle-headers<Enter>"
-      <C-k> = ":prev-part<Enter>"
-      <C-j> = ":next-part<Enter>"
-      
-      # URL handling
-      ",us" = ":open-link<space>"
-      
-      ############################################
-      # COMPOSE CONTEXT
-      ############################################
+      # ---------------------------------------------
+      # Other Contexts (Compose, Terminal)
+      # ---------------------------------------------
       [compose]
-      
-      # Navigation between fields
-      <C-k> = ":prev-field<Enter>"
-      <C-j> = ":next-field<Enter>"
-      <Tab> = ":next-field<Enter>"
-      
-      # Header operations
-      ",ha" = ":header<space>"
-      
-      # Attachments
-      a = ":attach<space>"
-      ",sa" = ":attach<space>"
-      d = ":detach<space>"
-      
-      # Send operations
-      y = ":send<Enter>"
-      q = ":abort<Enter>"
-      
-      # Postpone (like neomutt's postpone)
-      p = ":postpone<Enter>"
-      
-      ############################################
-      # COMPOSE EDITOR CONTEXT
-      ############################################
-      [compose::editor]
-      
-      # Don't inherit global bindings in editor
       $noinherit = true
       $ex = <C-x>
+      <C-h> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
+      <C-k> = :prev-field<Enter>
+      <C-j> = :next-field<Enter>
       
-      # Field navigation from editor
-      <C-k> = ":prev-field<Enter>"
-      <C-j> = ":next-field<Enter>"
-      
-      ############################################
-      # COMPOSE REVIEW CONTEXT  
-      ############################################
-      [compose::review]
-      
-      # Review actions
-      y = ":send<Enter>"
-      e = ":edit<Enter>"
-      a = ":attach<space>"
-      d = ":detach<space>"
-      q = ":abort<Enter>"
-      p = ":postpone<Enter>"
-      
-      ############################################
-      # TERMINAL CONTEXT
-      ############################################
       [terminal]
+      $noinherit = true
+      $ex = <C-x>
+      <C-h> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
       
-      # Terminal navigation
-      <C-p> = ":prev-tab<Enter>"
-      <C-n> = ":next-tab<Enter>"
-      q = ":close<Enter>"
-      
-      ############################################
-      # FOLDER/SIDEBAR CONTEXT  
-      ############################################
-      # Note: aerc doesn't have a dedicated folder context like neomutt
-      # Folder navigation is handled in the messages context
-      
-      ############################################
-      # ACCOUNT-SPECIFIC OVERRIDES
-      ############################################
-      # Example of per-account bindings (uncomment and modify as needed):
-      # [messages:account=Work]
-      # S = ":move Spam<Enter>"
-      # 
-      # [messages:account=Personal] 
-      # A = ":archive<Enter>"
     '';
   };
 }
