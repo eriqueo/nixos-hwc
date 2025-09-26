@@ -1,17 +1,22 @@
-# domains/home/mail/index.nix
 { lib, ... }:
 let
   dir = builtins.readDir ./.;
 
-  # only take subdirectories that have an index.nix
-  mailDirs =
-    lib.filter (n: let d = dir.${n}; in d == "directory" && builtins.pathExists (./. + "/${n}/index.nix"))
-      (lib.attrNames dir);
+  # child program dirs that have an index.nix (mbsync, msmtp, notmuch, abook, bridge,…)
+  kids = lib.filter (n:
+    dir.${n} == "directory"
+    && n != "accounts"
+    && builtins.pathExists (./. + "/${n}/index.nix")
+  ) (lib.attrNames dir);
 
-  # optionally filter out scratch dirs, backups, etc.
-  mailDirsWanted = lib.filter (n: !(lib.hasSuffix "-bak" n)) mailDirs;
+  children = map (n: ./. + "/${n}/index.nix")
+              (lib.sort (a: b: a < b) kids);
 
-  imports = map (n: ./. + "/${n}/index.nix") (lib.sort (a: b: a < b) mailDirsWanted);
-in {
-  inherit imports;
+  haveAccounts = builtins.pathExists (./accounts/index.nix);
+in
+{
+  imports =
+    [ ./options.nix ]
+    ++ lib.optional haveAccounts (./accounts/index.nix)
+    ++ children;
 }

@@ -1,10 +1,11 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
-  enabled = config.hwc.home.mail.enable or false;
-in
+  cfg = config.hwc.home.mail;
+  on  = (cfg.enable or true) && (cfg.abook.enable or true);in
 {
   config = lib.mkIf enabled {
-    home.packages = [pkgs.abook];
+    home.packages = [ pkgs.abook ];
+
     home.file.".abook/abookrc".text = ''
       [format]
       field delim = :
@@ -13,6 +14,7 @@ in
       [options]
       autosave = yes
     '';
+
     home.file.".abook/addressbook".text = "# abook addressbook\n";
   };
 }

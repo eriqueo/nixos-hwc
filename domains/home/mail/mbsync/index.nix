@@ -1,8 +1,11 @@
 { config, lib, pkgs, ... }:
 let
-  enabled = config.hwc.home.mail.enable or false;
-  accs = config.hwc.home.mail.accounts or {};
+  cfg  = config.hwc.home.mail;
+  accs = cfg.accounts or {};
   vals = lib.attrValues accs;
+
+  # Enable when the domain is on AND the per-program toggle is on AND there is at least one account
+  on = (cfg.enable or true) && (cfg.mbsync.enable or true) && (vals != []);
 
   haveProton = lib.any (a: a.type == "proton-bridge") vals;
 
@@ -11,11 +14,11 @@ let
 
   mbsyncBlock = a:
     let
-      cmd = common.passCmd a;
-      createPolicy = if common.isGmail a then "Create Near" else "Create Both";
+      cmd  = common.passCmd a;
       imapH = if a.imapHost != null then a.imapHost else common.imapHost a;
       imapP = if a.imapPort != null then a.imapPort else common.imapPort a;
       tlsT  = if a.imapTls  != null then a.imapTls  else common.tlsType a;
+      createPolicy = if common.isGmail a then "Create Near" else "Create Both";
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}
@@ -43,7 +46,7 @@ let
     '';
 in
 {
-  config = lib.mkIf enabled {
+  config = lib.mkIf on {
     home.packages = [ pkgs.isync pkgs.pass pkgs.gnupg ];
 
     home.file.".mbsyncrc".text =
