@@ -1,17 +1,17 @@
-# modules/home/index.nix
+# domains/home/index.nix
 { lib, ... }:
 let
   dir = builtins.readDir ./.;
 
-  # only import known subtrees in a stable order
-  wantedDirs = [ "environment" "theme" "apps" "mail" ];
+  # add "mail" here
+  wantedDirs = [ "core" "environment" "theme" "apps" "mail" ];
+
   subIndex =
     lib.pipe wantedDirs [
       (ns: lib.filter (n: lib.hasAttr n dir && dir.${n} == "directory") ns)
       (ns: map (n: ./. + "/${n}/index.nix") ns)
     ];
 
-  # import only plain top-level files you intend to keep alongside those dirs
   files = lib.filterAttrs (n: t:
     t == "regular"
     && lib.hasSuffix ".nix" n

@@ -24,6 +24,7 @@
         };
       };
 
+      # (unchanged unless you later add an Apps domain gate)
       hwc.home.apps.hyprland.enable = true;
       hwc.home.apps.waybar.enable = true;
       hwc.home.apps.kitty.enable = true;
@@ -32,72 +33,25 @@
       hwc.home.apps.chromium.enable = true;
       hwc.home.apps.librewolf.enable = true;
       hwc.home.apps.obsidian.enable = true;
-      hwc.home.apps.dunst.enable = true
-      ;
+      hwc.home.apps.dunst.enable = true;
       hwc.home.apps.protonAuthenticator.enable = true;
       hwc.home.apps.protonMail.enable = true;
       hwc.home.apps.aerc.enable = true;
 
+      # MAIL — accounts now come from domains/home/mail/accounts/index.nix
       hwc.home.mail = {
         enable = true;
 
-        accounts = {
-          proton = {
-            name = "proton";
-            type = "proton-bridge";
-            realName = "Eric";
-            address = "eriqueo@proton.me";
-            login = "";
-            password = { mode = "pass"; pass = "email/proton/bridge"; };
-            maildirName = "proton";
-            sync.patterns = [ "INBOX" "Sent" "Drafts" "Trash" "Archive" ];
-            send.msmtpAccount = "proton";
-            primary = true;
-          };
-
-          gmail-personal = {
-            name = "gmail-personal";
-            type = "gmail";
-            realName = "Eric O'Keefe";
-            address = "eriqueokeefe@gmail.com";
-            login = "eriqueokeefe@gmail.com";
-            password = { mode = "agenix"; agenix = "/run/agenix/gmail-personal-password"; };
-            maildirName = "gmail-personal";
-            sync.patterns = [
-              "INBOX"
-              "[Gmail]/Sent Mail"
-              "[Gmail]/Drafts"
-              "[Gmail]/Trash"
-              "[Gmail]/All Mail"
-            ];
-            send.msmtpAccount = "gmail-personal";
-          };
-
-          gmail-business = {
-            name = "gmail-business";
-            type = "gmail";
-            realName = "Eric O'Keefe";
-            address = "heartwoodcraftmt@gmail.com";
-            login = "heartwoodcraftmt@gmail.com";
-            password = { mode = "agenix"; agenix = "/run/agenix/gmail-business-password"; };
-            maildirName = "gmail-business";
-            sync.patterns = [
-              "INBOX"
-              "[Gmail]/Sent Mail"
-              "[Gmail]/Drafts"
-              "[Gmail]/Trash"
-              "[Gmail]/All Mail"
-            ];
-            send.msmtpAccount = "gmail-business";
-          };
-        };
-
         notmuch = {
           enable = true;
-          maildirRoot = "${config.home.homeDirectory}/Maildir";
           userName = "eric okeefe";
-          primaryEmail = ""; 
-          otherEmails = [ "eric@iheartwoodcraft.com" "eriqueokeefe@gmail.com" "heartwoodcraftmt@gmail.com" ];
+          # primaryEmail = "";            # <- optional; will auto-derive
+          # maildirRoot  = "...";         # <- optional; will auto-derive
+          otherEmails = [
+            "eric@iheartwoodcraft.com"
+            "eriqueokeefe@gmail.com"
+            "heartwoodcraftmt@gmail.com"
+          ];
           newTags = [ "unread" "inbox" ];
           excludeFolders = [ "[Gmail]/Spam" "[Gmail]/Trash" ];
           postNewHook = ''
@@ -113,6 +67,14 @@
           installDashboard = true;
           installSampler = true;
         };
+
+        # Optional overrides for Bridge (defaults are fine to omit)
+        # bridge = {
+        #   enable = true;        # defaults to true when a proton account exists
+        #   logLevel = "warn";    # "error" | "warn" | "info" | "debug"
+        #   extraArgs = [ ];
+        #   environment = { };
+        # };
       };
 
       hwc.home.apps.neomutt.enable = true;

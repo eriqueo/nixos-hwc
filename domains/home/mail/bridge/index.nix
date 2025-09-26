@@ -1,18 +1,25 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.home.mail.bridge;
-  accs = config.hwc.home.mail.accounts or {};
+  # Domain + shared accounts
+  mail = config.hwc.home.mail;
+  accs = mail.accounts or {};
   vals = lib.attrValues accs;
+
+  # Is there any Proton Bridge-backed account?
   haveProton = lib.any (a: a.type == "proton-bridge") vals;
 
-  # Auto-enable if any account uses Proton Bridge; explicit cfg.enable overrides if set
-  enabled = (cfg.enable or (lib.mkDefault haveProton));
+  # Submodule config (log level, extra env/args, etc.)
+  br  = mail.bridge or {};
 
-  args = lib.concatStringsSep " " (["--noninteractive" "--log-level" cfg.logLevel] ++ cfg.extraArgs);
-  envLines = lib.mapAttrsToList (k: v: ''"${k}=${v}"'') cfg.environment;
+  # Turn on only when: domain enabled AND bridge enabled AND there is a proton account
+  on = (mail.enable or true) && (br.enable or true) && haveProton;
+
+  # CLI args + env lines
+  args = lib.concatStringsSep " " (["--noninteractive" "--log-level" (br.logLevel or "warn")] ++ (br.extraArgs or []));
+  envLines = lib.mapAttrsToList (k: v: ''"${k}=${v}"'') (br.environment or {});
 in
 {
-  config = lib.mkIf enabled {
+  config = lib.mkIf on {
     home.packages = [ pkgs.protonmail-bridge ];
 
     # First-time helper
@@ -41,11 +48,11 @@ in
         Restart = "on-failure";
         RestartSec = 5;
         Environment = [
-          # Needed if you use pass for Bridge creds
+          # Allow pass/gnupg without globally installing into PATH
           "PATH=/run/current-system/sw/bin:${pkgs.pass}/bin"
           "PASSWORD_STORE_DIR=%h/.password-store"
           "GNUPGHOME=%h/.gnupg"
-          # Bridge defaults are 1143/1025; override here if you want different ports:
+          # Optional port overrides:
           # "PROTONMAIL_BRIDGE_IMAP_PORT=1143"
           # "PROTONMAIL_BRIDGE_SMTP_PORT=1025"
         ] ++ envLines;

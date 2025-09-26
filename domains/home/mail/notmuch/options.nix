@@ -1,9 +1,9 @@
 { lib, ... }:
 with lib;
 {
-  options.hwc.home.apps.notmuch = {
+  options.hwc.home.mail.notmuch = {
     enable = mkEnableOption "Enable Notmuch module";
-    maildirRoot = mkOption { type = types.str; default = "~/.local/share/mail"; };
+    maildirRoot = mkOption { type = types.str; default = ""; };  # empty ⇒ auto-derive
     userName = mkOption { type = types.str; default = "user"; };
     primaryEmail = mkOption { type = types.str; default = ""; };
     otherEmails = mkOption { type = types.listOf types.str; default = []; };
