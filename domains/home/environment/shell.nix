@@ -74,7 +74,7 @@ in
         "gpl" = "git pull";
         "gl" = "git log --oneline --graph --decorate --all";
         "gll" = "git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
-        "gresync" = "cd \"$HWC_NIXOS_DIR\" && git fetch origin && git pull origin master && echo '✅ Git sync complete!'";
+        "gresync" = "cd \"$HWC_NIXOS_DIR\" && git fetch origin && git pull origin main && echo '✅ Git sync complete!'";
         "gstatus" = "cd \"$HWC_NIXOS_DIR\" && git status";
         "glog" = "cd \"$HWC_NIXOS_DIR\" && git log --oneline -10";
         "nixflake" = "${EDITOR:-micro} \"$HWC_NIXOS_DIR/flake.nix\"";
@@ -161,7 +161,7 @@ in
                 cd "$original_dir"
                 return 1
               fi
-              if ! sudo -E git pull origin master; then
+              if ! sudo -E git pull origin main; then
                 echo "❌ Git pull failed - resolve conflicts manually"
                 cd "$original_dir"
                 return 1
@@ -208,7 +208,7 @@ in
               return 1
             fi
 
-            if ! sudo -E git pull origin master; then
+            if ! sudo -E git pull origin main; then
               echo "❌ Git pull failed - resolve conflicts manually"
               if [[ "$stash_created" == true ]]; then
                 echo "🔄 Restoring stashed changes..."

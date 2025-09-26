@@ -15,8 +15,8 @@ in
     CURRENT_MODE=$(cat "''$GPU_MODE_FILE" 2>/dev/null || echo "''$DEFAULT_MODE")
 
     CURRENT_GPU=$(glxinfo 2>/dev/null | grep "OpenGL renderer" | cut -d: -f2 | xargs || echo "Unknown")
-    NVIDIA_POWER=$(nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
-    NVIDIA_TEMP=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+    NVIDIA_POWER=$(nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 | grep -E "^[0-9.]+$" || echo "0")
+    NVIDIA_TEMP=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | grep -E "^[0-9.]+$" || echo "0")
 
     case "''$CURRENT_MODE" in
       intel)
@@ -27,12 +27,12 @@ in
       nvidia)
         ICON="󰾲"
         CLASS="nvidia"
-        TOOLTIP="NVIDIA Mode: ''$CURRENT_GPU\\nPower: ''$NVIDIA_POWER W | Temp: ''$NVIDIA_TEMP°C"
+        TOOLTIP="NVIDIA Mode: ''$CURRENT_GPU - Power: ''${NVIDIA_POWER}W | Temp: ''${NVIDIA_TEMP}C"
         ;;
       performance)
         ICON="⚡"
         CLASS="performance"
-        TOOLTIP="Performance Mode: Auto-GPU Selection\\nNVIDIA: ''$NVIDIA_POWER W | ''$NVIDIA_TEMP°C"
+        TOOLTIP="Performance Mode: Auto-GPU Selection - NVIDIA: ''${NVIDIA_POWER}W | ''${NVIDIA_TEMP}C"
         ;;
       *)
         ICON="󰢮"
