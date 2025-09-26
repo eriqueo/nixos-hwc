@@ -1,13 +1,17 @@
-# Fixed version - simpler and working
+# domains/home/apps/neomutt/parts/appearance.nix (drop-in)
 { lib, pkgs, config, theme, ... }:
 
 let
-  accVals  = lib.attrValues (config.hwc.home.core.mail.accounts or {});
-  t        = theme.tokens;
-  m        = theme.mono or {};
-  get      = name: t.${name};
+  # Accounts (now under hwc.home.mail.accounts)
+  accVals   = lib.attrValues (config.hwc.home.mail.accounts or {});
+  haveAccs  = accVals != [];
 
-  # Safe color line: optional regex pattern is always single-quoted
+  # Theme tokens (t may be partial; m is optional mono attributes)
+  t   = theme.tokens or {};
+  m   = theme.mono   or {};
+  get = name: (t.${name} or {});   # returns an attrset; colorLine defaults fg/bg
+
+  # Safe color line builder; pattern is single-quoted when present
   colorLine = kind: spec: pattern:
     let
       fg  = spec.fg or "default";
@@ -15,10 +19,12 @@ let
       pat = if pattern == null || pattern == "" then "" else " '" + pattern + "'";
     in "color ${kind} ${fg} ${bg}${pat}";
 
-  # First account (for default spoolfile)
-  firstAcc = lib.findFirst (a: a.primary or false) (lib.head accVals) accVals;
-
-in {
+  # Primary account (prefer explicit primary; else first; else null)
+  primary =
+    let p = lib.filter (a: a.primary or false) accVals;
+    in if p != [] then lib.head p else (if haveAccs then lib.head accVals else null);
+in
+{
   files = profileBase: {
     # -------------------- MAIN CONFIG (neomuttrc) --------------------
     ".config/neomutt/neomuttrc".text = ''
@@ -27,15 +33,14 @@ in {
       ############################################
       set mbox_type = Maildir
       set folder    = "~/Maildir"
-      ${lib.optionalString (firstAcc != null) ''
-        set spoolfile = "=${firstAcc.maildirName or (firstAcc.name or "inbox")}/INBOX"
+      ${lib.optionalString (primary != null) ''
+        set spoolfile = "=${(primary.maildirName or (primary.name or "inbox"))}/INBOX"
       ''}
 
       # Discover all local Maildirs for sidebar (quote paths safely)
       mailboxes `find ~/Maildir -type d -name cur -printf '"%h" ' | sort -u`
-      
-      # Give each account's INBOX a human label for the sidebar
-      # Uses .sidebarLabel (preferred), or .label, or .name, then falls back to maildirName
+
+      # Human labels for each account's INBOX in the sidebar
       ${lib.concatStringsSep "\n" (map (a:
         let
           n = a.maildirName or (a.name or "inbox");
@@ -45,8 +50,8 @@ in {
       ############################################
       # UX: Caches / Pager / Threaded workflow
       ############################################
-      set header_cache      = "~/.cache/neomutt/headers"
-      set message_cachedir  = "~/.cache/neomutt/bodies"
+      set header_cache      = "~/.cache/neomuttrc/headers"
+      set message_cachedir  = "~/.cache/neomuttrc/bodies"
 
       # Thread-first workflow
       set sort              = reverse-threads
@@ -98,19 +103,19 @@ in {
       set mailcap_path = "~/.mailcap"
       alternative_order text/plain text/enriched text/html
       bind editor <Tab> complete-query
-      
+
       # Enhanced attachment handling
       set attach_format = "%u%D%I %t%4n %T%.40d%> [%.7m/%.10M, %.6e%?C?, %C?, %s] "
-      set attach_split = yes
+      set attach_split  = yes
     '';
 
-    # -------------------- THEME (same as before) --------------------
+    # -------------------- THEME (safe defaults if tokens missing) --------------------
     ".config/neomutt/theme.muttrc".text = ''
       # ===== Index defaults =====
-      ${colorLine "index"        (get "index_default")  ".*"}
-      ${colorLine "index_author" (get "index_author")   ".*"}
-      ${colorLine "index_number" (get "index_number")   ""}
-      ${colorLine "index_subject"(get "index_subject")  ".*"}
+      ${colorLine "index"        (get "index_default")   ".*"}
+      ${colorLine "index_author" (get "index_author")    ".*"}
+      ${colorLine "index_number" (get "index_number")    ""}
+      ${colorLine "index_subject"(get "index_subject")   ".*"}
 
       # ===== New mail (~N) =====
       ${colorLine "index"        (get "index_new_default")  "~N"}
@@ -195,54 +200,54 @@ in {
     # -------------------- SIMPLE WORKING MAILCAP --------------------
     ".mailcap".text = ''
       # Enhanced NeoMutt Mailcap Configuration for Modern NixOS
-      
+
       # HTML Content
       text/html; lynx -assume_charset=%{charset} -display_charset=utf-8 -dump -width=1024 %s; nametemplate=%s.html; copiousoutput
       text/html; xdg-open %s; test=test -n "$DISPLAY"; nametemplate=%s.html
       text/html; w3m -I %{charset} -T text/html -cols 140 -o display_link_number=1 -dump %s; copiousoutput; nametemplate=%s.html
-      
+
       # Plain Text
       text/plain; cat %s; copiousoutput
       text/plain; $EDITOR %s; edit
       text/*; cat %s; copiousoutput
-      
+
       # Calendar and Meeting Invites
       text/calendar; cat %s; copiousoutput
       application/ics; cat %s; copiousoutput
-      
+
       # Images
       image/*; icat.sh '%s'; test=test "$TERM" = "xterm-kitty"; needsterminal
       image/*; xdg-open %s; test=test -n "$DISPLAY"
       image/*; file %s; copiousoutput
-      
+
       # Audio and Video
       video/*; setsid mpv --quiet %s &; test=test -n "$DISPLAY"
       video/*; file %s; copiousoutput
       audio/*; setsid mpv --quiet %s &; test=test -n "$DISPLAY"
       audio/*; file %s; copiousoutput
-      
+
       # PDF Documents
       application/pdf; xdg-open %s; test=test -n "$DISPLAY"; nametemplate=%s.pdf
       application/pdf; pdftotext -layout %s -; copiousoutput
-      
+
       # Microsoft Office Documents (Legacy)
       application/msword; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.ms-excel; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.ms-powerpoint; xdg-open %s; test=test -n "$DISPLAY"
       application/msword; pandoc --from docx --to markdown %s; copiousoutput
-      
+
       # Microsoft Office Documents (Modern OpenXML)
       application/vnd.openxmlformats-officedocument.wordprocessingml.document; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.openxmlformats-officedocument.presentationml.presentation; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.openxmlformats-officedocument.wordprocessingml.document; pandoc --from docx --to markdown %s; copiousoutput
-      
+
       # LibreOffice/OpenDocument Formats
       application/vnd.oasis.opendocument.text; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.oasis.opendocument.spreadsheet; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.oasis.opendocument.presentation; xdg-open %s; test=test -n "$DISPLAY"
       application/vnd.oasis.opendocument.text; pandoc --from odt --to markdown %s; copiousoutput
-      
+
       # Archives and Compressed Files
       application/zip; unzip -l %s; copiousoutput
       application/x-tar; tar -tf %s; copiousoutput
@@ -250,7 +255,7 @@ in {
       application/gzip; file %s; copiousoutput
       application/x-bzip2; file %s; copiousoutput
       application/x-xz; file %s; copiousoutput
-      
+
       # Programming and Text Files
       text/x-shellscript; cat %s; copiousoutput
       text/x-python; cat %s; copiousoutput
@@ -260,17 +265,17 @@ in {
       application/json; cat %s; copiousoutput
       application/xml; cat %s; copiousoutput
       text/xml; cat %s; copiousoutput
-      
+
       # Subtitle Files
       application/x-subrip; $EDITOR %s
-      
+
       # Email Messages
       message/rfc822; cat %s; copiousoutput
-      
+
       # Generic Binary Files
       application/octet-stream; xdg-open %s; test=test -n "$DISPLAY"
       application/octet-stream; file %s; copiousoutput
-      
+
       # Catch-all for unknown application types
       application/*; xdg-open %s; test=test -n "$DISPLAY"
       application/*; file %s; copiousoutput

@@ -3,7 +3,7 @@ let
   cfg = config.hwc.home.mail;
   on  = (cfg.enable or true) && (cfg.abook.enable or true);in
 {
-  config = lib.mkIf enabled {
+  config = lib.mkIf on {
     home.packages = [ pkgs.abook ];
 
     home.file.".abook/abookrc".text = ''

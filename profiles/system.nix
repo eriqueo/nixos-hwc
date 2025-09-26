@@ -12,6 +12,7 @@
     ../domains/system/core/paths
     ../domains/system/security/secrets
     ../domains/system/services/networking
+    ../domains/system/services/vpn
   ];
   
   # Essential system functionality - every machine needs these
@@ -32,6 +33,7 @@
   # System services
   hwc.system.services.behavior.enable = false;
   hwc.system.services.session.enable = false;
+  hwc.services.network.vpn.enable = true;
   
   # Security levels
   hwc.system.security.level = "standard";  # Can be: minimal, standard, hardened

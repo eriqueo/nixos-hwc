@@ -42,32 +42,6 @@
       hwc.home.mail = {
         enable = true;
 
-        notmuch = {
-          enable = true;
-          userName = "eric okeefe";
-          # primaryEmail = "";            # <- optional; will auto-derive
-          # maildirRoot  = "...";         # <- optional; will auto-derive
-          otherEmails = [
-            "eric@iheartwoodcraft.com"
-            "eriqueokeefe@gmail.com"
-            "heartwoodcraftmt@gmail.com"
-          ];
-          newTags = [ "unread" "inbox" ];
-          excludeFolders = [ "[Gmail]/Spam" "[Gmail]/Trash" ];
-          postNewHook = ''
-            notmuch tag +sent -inbox -unread -- "(from:eriqueo@proton.me OR from:eric@iheartwoodcraft.com OR from:eriqueokeefe@gmail.com OR from:heartwoodcraftmt@gmail.com)"
-          '';
-          savedSearches = {
-            inbox = "tag:inbox AND tag:unread";
-            action = "tag:action AND tag:unread";
-            finance = "tag:finance AND tag:unread";
-            newsletter = "tag:newsletter AND tag:unread";
-            notifications = "tag:notification AND tag:unread";
-          };
-          installDashboard = true;
-          installSampler = true;
-        };
-
         # Optional overrides for Bridge (defaults are fine to omit)
         # bridge = {
         #   enable = true;        # defaults to true when a proton account exists
