@@ -62,7 +62,10 @@
   # Hardware conveniences (USB, groups/permissions, external backup storage)
   hwc.infrastructure = {
     hardware = {
-      peripherals.enable = true;
+      peripherals = {
+        enable = true;
+        avahi = true;
+      };
       permissions = {
         enable = true;
         groups = {
