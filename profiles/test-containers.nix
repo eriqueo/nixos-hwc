@@ -1,9 +1,15 @@
 { config, lib, pkgs, ... }:
 {
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   imports = [
     ../domains/server/containers/index.nix
   ];
 
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
   time.timeZone = "America/Denver";
 
   hwc.services.reverseProxy.enable = true;

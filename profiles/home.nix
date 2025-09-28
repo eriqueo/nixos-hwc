@@ -1,6 +1,9 @@
 { config, pkgs, lib, ... }:
 
 {
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
@@ -10,6 +13,9 @@
       imports = [ ../domains/home/index.nix ];
       home.stateVersion = "24.05";
 
+      #==========================================================================
+      # OPTIONAL FEATURES - Sensible defaults, override per machine
+      #==========================================================================
       hwc.home.theme.palette = "deep-nord";
       hwc.home.fonts.enable = true;
       hwc.home.shell = {

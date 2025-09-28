@@ -26,7 +26,9 @@
 
 { lib, pkgs, config, ... }: {
 
-  #============================================================================
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   # CHARTER V3 SERVICE IMPORTS
   #============================================================================
   
@@ -35,11 +37,10 @@
     ../domains/infrastructure/index.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
-  
-  #============================================================================
-  # SERVER STORAGE AND FILESYSTEM
-  #============================================================================
-  
+
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
   # Enable complete server filesystem structure
   hwc.filesystem = {
     enable = true;
