@@ -46,7 +46,7 @@ in
 #============================================================================
 # VALIDATION - Assertions and checks
 #============================================================================
-# By convention: no environment.systemPackages, no systemd.services in HM modules
+# Charter compliance: Home Manager modules use home.packages, not environment.systemPackages
 
     assertions = [
       {

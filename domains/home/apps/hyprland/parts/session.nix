@@ -14,25 +14,8 @@ let
   xcursorName    = xc.name or "Adwaita";
   hyprcursorName = hc.name or xcursorName;
 
-  hyprlandStartupScript = pkgs.writeScriptBin "hyprland-startup" ''
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    # wait for hyprctl to be ready
-    TIMEOUT=30; COUNT=0
-    until ${pkgs.hyprland}/bin/hyprctl monitors >/dev/null 2>&1; do
-      sleep 0.1; COUNT=$((COUNT+1))
-      [[ $COUNT -gt $((TIMEOUT*10)) ]] && exit 1
-    done
-
-    ${pkgs.hyprland}/bin/hyprctl dispatch workspace 1
-    command -v kitty   >/dev/null 2>&1 && kitty   & sleep 0.3 || true
-    ${pkgs.hyprland}/bin/hyprctl dispatch workspace 2
-    command -v firefox >/dev/null 2>&1 && firefox & sleep 0.3 || true
-    ${pkgs.hyprland}/bin/hyprctl dispatch workspace 3
-    command -v thunar  >/dev/null 2>&1 && thunar  & sleep 0.3 || true
-    ${pkgs.hyprland}/bin/hyprctl dispatch workspace 1
-  '';
+  # Startup script removed from home domain for charter compliance
+  # Script is now provided by co-located sys.nix as system package
 
   hyprcursorSource =
     if (hc ? assetPathRel) then ../../.. + "/${hc.assetPathRel}" else null;
@@ -58,7 +41,7 @@ in
     "XCURSOR_PATH,${xcPkg}/share/icons"
   ];
 
-  packages = [ hyprlandStartupScript ];
+  packages = [ ]; # hyprland-startup script now provided by system packages
 
   files = lib.mkIf (hyprcursorSource != null) {
     ".local/share/icons/${hyprcursorName}".source = hyprcursorSource;
