@@ -18,3 +18,29 @@
     # environment = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
   };
 }
+
+# Template for HWC Charter-compliant index.nix files
+# CRITICAL: All charter elements must be INSIDE the module definition { }
+#
+# { config, lib, pkgs, ... }:  # Function signature
+# let
+#   cfg = config.hwc.{{NAMESPACE_PATH}};
+# in
+# {  # ← MODULE DEFINITION STARTS HERE
+#   #==========================================================================
+#   # OPTIONS
+#   #==========================================================================
+#   imports = [ ./options.nix ];  # ✅ INSIDE module scope
+#
+#   #==========================================================================
+#   # IMPLEMENTATION
+#   #==========================================================================
+#   config = lib.mkIf cfg.enable {
+#     # implementation here
+#   };
+#
+#   #==========================================================================
+#   # VALIDATION
+#   #==========================================================================
+#   # assertions and validation logic
+# }  # ← MODULE DEFINITION ENDS HERE
