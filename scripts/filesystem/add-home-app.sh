@@ -12,9 +12,41 @@ readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
-# Script directory and repo root
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Script directory (resolve symlinks) and repo root (robust)
+get_script_dir() {
+  local src="${BASH_SOURCE[0]}"
+  while [[ -h "$src" ]]; do
+    local dir
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ "$src" != /* ]] && src="$dir/$src"
+  done
+  cd -P "$(dirname "$src")" && pwd
+}
+
+discover_repo_root() {
+  local start="${1:-$(pwd)}"
+  # Prefer Git if available
+  local git_root
+  git_root="$(git -C "$start" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "$git_root" ]]; then
+    echo "$git_root"
+    return
+  fi
+  # Fallback: walk up until a sentinel is found
+  local d="$start"
+  while [[ "$d" != "/" ]]; do
+    if [[ -e "$d/flake.nix" || -d "$d/.git" || -d "$d/profiles" ]]; then
+      echo "$d"
+      return
+    fi
+    d="$(dirname "$d")"
+  done
+  echo "$start"
+}
+
+readonly SCRIPT_DIR="$(get_script_dir)"
+readonly REPO_ROOT="$(discover_repo_root "$SCRIPT_DIR")"
 
 # Temporary files for cleanup
 readonly TEMP_DIR=$(mktemp -d)
