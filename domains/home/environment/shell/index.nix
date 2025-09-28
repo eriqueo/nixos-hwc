@@ -137,7 +137,7 @@ in
 
         # add-app shell function
         add-app() {
-          /home/eric/.nixos/scripts/add-home-app.sh "$@"
+          /home/eric/.nixos/scripts/filesystem/add-home-app.sh "$@"
         }
       '';
     };

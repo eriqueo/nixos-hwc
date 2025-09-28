@@ -44,6 +44,7 @@ in
       enable = true;
       package = pkgs.waybar;
       settings = behavior;
+      systemd.enable = true;
     };
 
     xdg.configFile."waybar/style.css".text = appearance;

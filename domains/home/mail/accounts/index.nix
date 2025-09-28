@@ -41,5 +41,17 @@
       ];
       send.msmtpAccount = "gmail-business";
     };
+
+    iheartwoodcraft = {
+      name = "iheartwoodcraft";
+      type = "proton-bridge";
+      realName = "Eric";
+      address = "eric@iheartwoodcraft.com";
+      login = "";
+      password = { mode = "pass"; pass = "email/proton/bridge"; };
+      maildirName = "iheartwoodcraft";
+      sync.patterns = [ "INBOX" "Sent" "Drafts" "Trash" "Archive" ];
+      send.msmtpAccount = "iheartwoodcraft";
+    };
   };
 }

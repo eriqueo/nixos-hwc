@@ -41,13 +41,27 @@
   #============================================================================
   
   # Enable complete server filesystem structure
-  hwc.infrastructure.filesystemStructure = {
+  hwc.filesystem = {
     enable = true;
-    serverStorage.enable = true;        # Hot/cold storage directories
-    businessDirectories.enable = true;  # Business intelligence and AI directories  
-    serviceDirectories.enable = true;   # *ARR service configuration directories
-    securityDirectories.enable = true;  # Security and secrets directories (from base)
-    userDirectories.enable = true;      # PARA structure (from base, but needed for server admin)
+    structure.dirs = [
+      # Business intelligence and AI directories
+      { path = "/opt/business"; }
+      { path = "/opt/ai"; }
+      
+      # Service configuration directories
+      { path = "/opt/arr"; }
+      { path = "/opt/media"; }
+      { path = "/opt/monitoring"; }
+      
+      # HWC standard directories
+      { path = "/var/lib/hwc"; }
+      { path = "/var/cache/hwc"; }
+      { path = "/var/log/hwc"; }
+      { path = "/var/tmp/hwc"; }
+      
+      # Security directories
+      { path = "/var/lib/hwc/secrets"; mode = "0700"; }
+    ];
   };
 
   #============================================================================
