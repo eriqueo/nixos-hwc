@@ -23,7 +23,7 @@ let
 in
 {
   #============================================================================
-  # IMPORTS - Module structure
+  # OPTIONS - Module structure
   #============================================================================
   imports = [
     ./options.nix
@@ -81,16 +81,19 @@ in
       }];
     }];
 
-    # Validation assertions
-    assertions = [
-      {
-        assertion = cfg.protonvpn.enable -> (cfg.protonvpn.privateKey != "");
-        message = "ProtonVPN private key must be configured when enabled";
-      }
-      {
-        assertion = cfg.protonvpn.enable -> (cfg.protonvpn.endpoint != "");
-        message = "ProtonVPN endpoint must be configured when enabled";
-      }
-    ];
   };
+
+  #============================================================================
+  # VALIDATION - Configuration assertions and checks
+  #============================================================================
+  config.assertions = [
+    {
+      assertion = cfg.protonvpn.enable -> (cfg.protonvpn.privateKey != "");
+      message = "ProtonVPN private key must be configured when enabled";
+    }
+    {
+      assertion = cfg.protonvpn.enable -> (cfg.protonvpn.endpoint != "");
+      message = "ProtonVPN endpoint must be configured when enabled";
+    }
+  ];
 }

@@ -17,7 +17,13 @@
 
 let cfg = config.hwc.home.apps.librewolf or { enable = false; };
 in {
+  #==========================================================================
+  # OPTIONS 
+  #==========================================================================
   imports = [ ./options.nix ];
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.librewolf ];
   };
@@ -26,3 +32,7 @@ in {
     # behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
     # session = import ./parts/session.nix { inherit lib pkgs config; };  
     # appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
