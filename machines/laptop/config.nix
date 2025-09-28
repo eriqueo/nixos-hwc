@@ -107,6 +107,9 @@
   ## Machine-specific service toggles
   hwc.services.vpn.tailscale.enable = false; # Disable tailscale on this machine
 
+  ## Tailscale DNS configuration - accept DNS for reverse proxy access
+  hwc.networking.tailscale.extraUpFlags = [ "--accept-dns" ];
+
   #============================================================================
   # LOW-LEVEL SYSTEM OVERRIDES (Use Sparingly; host-specific)
   #============================================================================
