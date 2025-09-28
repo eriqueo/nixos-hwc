@@ -55,6 +55,7 @@
       hwc.home.apps.neomutt.theme.palette = "gruv";
       hwc.home.apps.yazi.enable = true;
       hwc.home.apps.ipcalc.enable = true;
+      hwc.home.apps.geminiCli.enable = true;
     };
   };
 }
