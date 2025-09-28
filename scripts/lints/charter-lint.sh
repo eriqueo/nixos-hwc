@@ -267,7 +267,7 @@ check_module_anatomy() {
     grep -qE "#\s*OPTIONS" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing OPTIONS section"; ((errors+=1)); }
     grep -qE "#\s*IMPLEMENTATION" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing IMPLEMENTATION section"; ((errors+=1)); }
     grep -qE "#\s*VALIDATION" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing VALIDATION section"; ((errors+=1)); }
-    grep -qE "imports.*options\.nix" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing options.nix import"; ((errors+=1)); }
+    grep -q "./options.nix" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing options.nix import"; ((errors+=1)); }
   fi
 
   if [[ $errors -eq 0 ]]; then
