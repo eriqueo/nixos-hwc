@@ -110,6 +110,29 @@
   ## Tailscale DNS configuration - accept DNS for reverse proxy access
   hwc.networking.tailscale.extraUpFlags = [ "--accept-dns" ];
 
+  ## Static hosts for reverse proxy services (fallback when Tailscale DNS fails)
+  networking.hosts = {
+    "100.115.126.41" = [
+      # Media management services
+      "sonarr.local"
+      "radarr.local"
+      "prowlarr.local"
+      "jellyfin.local"
+      "lidarr.local"
+      "qbittorrent.local"
+
+      # Monitoring and admin
+      "grafana.local"
+      "dashboard.local"
+      "prometheus.local"
+      "caddy.local"
+
+      # General server access
+      "server.local"
+      "hwc.local"
+    ];
+  };
+
   #============================================================================
   # LOW-LEVEL SYSTEM OVERRIDES (Use Sparingly; host-specific)
   #============================================================================
