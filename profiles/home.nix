@@ -56,6 +56,7 @@
       hwc.home.apps.yazi.enable = true;
       hwc.home.apps.ipcalc.enable = true;
       hwc.home.apps.geminiCli.enable = true;
+      hwc.home.apps.onlyofficeDesktopeditors.enable = true;
     };
   };
 }
