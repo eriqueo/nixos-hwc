@@ -1,11 +1,17 @@
 { ... }:
 {
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   imports = [
     ../domains/infrastructure/index.nix
     ../domains/server/jellyfin.nix
     ../domains/server/arr-stack.nix
   ];
-  
+
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
   hwc.infrastructure.hardware.storage = {
     media = {
       enable = true;

@@ -29,6 +29,9 @@ in
   #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkMerge [
     # Warn (once) if the app is enabled but there are no accounts to bind to
     (lib.mkIf (appEnabled && !haveAccs) {

@@ -15,11 +15,17 @@
 
 { lib, pkgs, ... }:
 {
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   # Keep ONLY imports not already included by base.nix
   imports = [
     ../domains/server/backup/user-backup.nix
   ];
 
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
   # ---- Workstation hardware/infrastructure overlays ------------------------
 
   hwc.infrastructure.hardware.gpu = {

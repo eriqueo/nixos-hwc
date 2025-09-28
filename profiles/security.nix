@@ -1,10 +1,16 @@
 { config, lib,... }:
 {
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   imports = [
     ../domains/server/networking/vpn.nix
     ../domains/security/index.nix          # New consolidated security domain
   ];
 
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
   hwc.security.hardening = {
     enable = true;
 

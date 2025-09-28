@@ -28,11 +28,17 @@ let
   ];
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [
     ./options.nix
     ./sys.nix
   ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     assertions = [
       { assertion = builtins.all isAbs allPaths; message = "All hwc.filesystem.paths values must be absolute."; }
@@ -53,4 +59,9 @@ in
     systemd.tmpfiles.rules =
       builtins.map mkDir (fromPaths ++ s.dirs);
   };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  # Add assertions and validation logic here
 }
