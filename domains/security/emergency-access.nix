@@ -1,4 +1,4 @@
-# nixos-h../domains/security/emergency-access.nix
+# HWC Charter Module/domains/security/emergency-access.nix
 #
 # HWC Emergency Root Access (Charter v3)
 # Provides a temporary, password-protected root account for recovery.

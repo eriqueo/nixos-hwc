@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/storage.nix
+# HWC Charter Module/domains/infrastructure/storage.nix
 #
 # STORAGE - Storage infrastructure management with external drive detection
 # Provides hot storage, media storage, backup storage, and external drive auto-mounting

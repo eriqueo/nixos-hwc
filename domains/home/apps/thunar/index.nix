@@ -1,4 +1,4 @@
-# nixos-h../domains/home/apps/thunar.nix
+# HWC Charter Module/domains/home/apps/thunar.nix
 # ... (header is the same)
 
 { config, lib, pkgs, ... }:

@@ -1,4 +1,4 @@
-# nixos-h../domains/home/apps/librewolf/index.nix
+# HWC Charter Module/domains/home/apps/librewolf/index.nix
 #
 # Home UI: LibreWolf Browser Configuration  
 # Charter v7 compliant - Privacy-focused Firefox fork configuration with universal domains

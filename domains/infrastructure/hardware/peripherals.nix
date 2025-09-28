@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/printing.nix
+# HWC Charter Module/domains/infrastructure/printing.nix
 #
 # PRINTING - Brief service description
 # TODO: Add detailed description of what this module provides
@@ -18,7 +18,7 @@
 #   hwc.infrastructure.printing.enable = true;
 #   # TODO: Add specific usage examples
 
-# nixos-h../domains/infrastructure/printing.nix
+# HWC Charter Module/domains/infrastructure/printing.nix
 #
 # CUPS Printing Infrastructure
 # Provides printing support with comprehensive driver packages

@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/samba.nix
+# HWC Charter Module/domains/infrastructure/samba.nix
 #
 # SAMBA - Brief service description
 # TODO: Add detailed description of what this module provides
@@ -18,7 +18,7 @@
 #   hwc.infrastructure.samba.enable = true;
 #   # TODO: Add specific usage examples
 
-# nixos-h../domains/infrastructure/samba.nix
+# HWC Charter Module/domains/infrastructure/samba.nix
 #
 # Samba File Sharing Infrastructure
 # Provides SMB/CIFS file sharing with modern Windows compatibility

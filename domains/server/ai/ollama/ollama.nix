@@ -1,4 +1,4 @@
-# nixos-h../domains/services/ai/ollama.nix
+# HWC Charter Module/domains/services/ai/ollama.nix
 #
 # Service: Ollama (Local LLM via OCI container)
 # Consumes GPU capability exposed by modules/system/gpu.nix (no driver logic here).

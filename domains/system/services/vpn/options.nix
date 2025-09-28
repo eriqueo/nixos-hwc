@@ -1,4 +1,4 @@
-# nixos-h../domains/system/services/vpn/options.nix
+# HWC Charter Module/domains/system/services/vpn/options.nix
 #
 # VPN OPTIONS - ProtonVPN WireGuard configuration options
 # Following HWC charter namespace pattern: domains/system/services/vpn/ → hwc.system.services.vpn.*

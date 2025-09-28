@@ -1,4 +1,4 @@
-# nixos-h../domains/services/transcript-api.nix
+# HWC Charter Module/domains/services/transcript-api.nix
 #
 # TRANSCRIPT API - Brief service description
 # TODO: Add detailed description of what this module provides

@@ -1,4 +1,4 @@
-# nixos-h../domains/home/theme/palettes/deep-nord.nix
+# HWC Charter Module/domains/home/theme/palettes/deep-nord.nix
 # Deep Nord — expanded tokens for apps & adapters (Charter v6)
 
 { }:

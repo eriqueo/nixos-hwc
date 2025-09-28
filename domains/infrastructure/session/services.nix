@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/user-services.nix
+# HWC Charter Module/domains/infrastructure/user-services.nix
 #
 # USER SERVICES - System-level user service management (infrastructure layer)
 # Provides systemd services for user environment setup and secret integration

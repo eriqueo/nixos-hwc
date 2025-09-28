@@ -1,4 +1,4 @@
-# nixos-h../domains/home/environment/shell/options.nix
+# HWC Charter Module/domains/home/environment/shell/options.nix
 #
 # SHELL OPTIONS - Complete shell and CLI configuration options
 # Following HWC charter namespace pattern: domains/home/environment/shell/ → hwc.home.shell.*

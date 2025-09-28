@@ -1,4 +1,4 @@
-# nixos-h../domains/home/theme/default.nix
+# HWC Charter Module/domains/home/theme/default.nix
 #
 # THEME ROOT (v6) — Single entry point for theming in Home Manager.
 # Exposes a palette toggle and imports all theme adapters so apps can consume

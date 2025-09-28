@@ -1,4 +1,4 @@
-# nixos-h../domains/system/core/polkit.nix
+# HWC Charter Module/domains/system/core/polkit.nix
 #
 # POLKIT - PolicyKit configuration and directory management
 # Provides polkit directory structure and basic configuration

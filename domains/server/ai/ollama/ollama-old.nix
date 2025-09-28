@@ -1,4 +1,4 @@
-# nixos-h../domains/services/ai/ollama-old.nix
+# HWC Charter Module/domains/services/ai/ollama-old.nix
 #
 # OLLAMA OLD - Brief service description
 # TODO: Add detailed description of what this module provides

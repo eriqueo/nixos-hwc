@@ -1,4 +1,4 @@
-# nixos-h../domains/services/monitoring/grafana.nix
+# HWC Charter Module/domains/services/monitoring/grafana.nix
 #
 # GRAFANA - Brief service description
 # TODO: Add detailed description of what this module provides

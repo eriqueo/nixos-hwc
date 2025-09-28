@@ -1,4 +1,4 @@
-# nixos-h../domains/services/monitoring/prometheus.nix
+# HWC Charter Module/domains/services/monitoring/prometheus.nix
 #
 # PROMETHEUS - Brief service description
 # TODO: Add detailed description of what this module provides

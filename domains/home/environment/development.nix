@@ -1,4 +1,4 @@
-# nixos-h../domains/home/environment/development.nix
+# HWC Charter Module/domains/home/environment/development.nix
 #
 # DEVELOPMENT ENVIRONMENT - Complete development stack configuration
 # Enhanced with rich git configuration, environment setup, and directory structure

@@ -1,4 +1,4 @@
-# nixos-h../domains/services/vpn.nix
+# HWC Charter Module/domains/services/vpn.nix
 #
 # VPN - Brief service description
 # TODO: Add detailed description of what this module provides

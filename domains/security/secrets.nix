@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/secrets.nix
+# HWC Charter Module/domains/infrastructure/secrets.nix
 #
 # SECRETS - Brief service description
 # TODO: Add detailed description of what this module provides
