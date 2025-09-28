@@ -33,10 +33,9 @@ in
   # IMPLEMENTATION - VPN service configuration
   #============================================================================
   config = lib.mkIf cfg.enable {
-    
     # WireGuard kernel module and tools
     networking.wireguard.enable = true;
-    
+
     # System packages for VPN management
     environment.systemPackages = with pkgs; [
       wireguard-tools
@@ -48,7 +47,7 @@ in
         address = [ cfg.protonvpn.address ];
         dns = [ cfg.protonvpn.dns ];
         privateKey = cfg.protonvpn.privateKey;
-        
+
         peers = [{
           publicKey = cfg.protonvpn.publicKey;
           endpoint = cfg.protonvpn.endpoint;
@@ -81,19 +80,21 @@ in
       }];
     }];
 
+    # Validation assertions
+    assertions = [
+      {
+        assertion = cfg.protonvpn.enable -> (cfg.protonvpn.privateKey != "");
+        message = "ProtonVPN private key must be configured when enabled";
+      }
+      {
+        assertion = cfg.protonvpn.enable -> (cfg.protonvpn.endpoint != "");
+        message = "ProtonVPN endpoint must be configured when enabled";
+      }
+    ];
   };
 
   #============================================================================
-  # VALIDATION - Configuration assertions and checks
+  # VALIDATION
   #============================================================================
-  config.assertions = [
-    {
-      assertion = cfg.protonvpn.enable -> (cfg.protonvpn.privateKey != "");
-      message = "ProtonVPN private key must be configured when enabled";
-    }
-    {
-      assertion = cfg.protonvpn.enable -> (cfg.protonvpn.endpoint != "");
-      message = "ProtonVPN endpoint must be configured when enabled";
-    }
-  ];
+  # Configuration validation handled by assertions in implementation section
 }
