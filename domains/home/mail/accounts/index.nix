@@ -1,4 +1,12 @@
-# Sets values only (no options). Lives under the domain so it’s uniform with others.
+#==========================================================================
+# OPTIONS
+#==========================================================================
+imports = [ ./options.nix ];
+
+#==========================================================================
+# IMPLEMENTATION
+#==========================================================================
+# Sets values only (no options). Lives under the domain so it's uniform with others.
 {
   hwc.home.mail.accounts = {
     proton = {
@@ -54,4 +62,9 @@
       send.msmtpAccount = "iheartwoodcraft";
     };
   };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  # Add assertions and validation logic here
 }
