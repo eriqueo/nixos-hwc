@@ -68,6 +68,66 @@ This initiative aims to bring the HWC NixOS configuration into full compliance w
 
 **Lesson**: Nix file modification requires sophisticated AST parsing, not pattern matching. Incremental, tested changes are safer than bulk automation.
 
+### Charter Structure Placement Errors (2025-09-28)
+**Problem**: When adding charter-compliant structure (imports, section headers) to index.nix files, initially placed elements outside the Nix module definition.
+
+**Specific Errors Made**:
+1. **imports outside module**: Placed `imports = [ ./options.nix ];` before the opening `{` of the module
+2. **Duplicate config blocks**: Created separate `config` attribute definitions in same module scope
+3. **Misplaced let-in**: Duplicated let-in bindings when restructuring files
+
+**Build Failures**:
+```
+error: syntax error, unexpected '=', expecting end of file
+at domains/home/mail/accounts/index.nix:4:9:
+     3| #==========================================================================
+     4| imports = [ ./options.nix ];
+        |         ^
+```
+
+```
+error: attribute 'config' already defined at index.nix:35:3
+at index.nix:89:3:
+```
+
+**Correct Structure**: All charter elements must be **inside** the module definition:
+```nix
+# WRONG - imports outside module
+#==========================================================================
+# OPTIONS
+#==========================================================================
+imports = [ ./options.nix ];  # ❌ SYNTAX ERROR
+{
+  # module content
+}
+
+# CORRECT - imports inside module
+{
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  imports = [ ./options.nix ];  # ✅ VALID
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = { /* ... */ };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  # assertions and validation logic
+}
+```
+
+**Resolution**:
+- Moved all imports inside module scope
+- Consolidated duplicate config blocks into single config attribute
+- Removed duplicate let-in bindings
+- Tested each fix with `nixos-rebuild dry-run`
+
+**Lesson**: **Always place charter structure elements inside the module definition `{ }` scope.** The section headers are comments and can be placed anywhere, but functional elements (imports, config, assertions) must follow Nix syntax rules within the module attribute set.
+
 ### Kebab-case Namespace Debates
 **Problem**: Initial linter flagged style differences (protonMail vs proton-mail) as violations.
 
@@ -132,6 +192,7 @@ This initiative aims to bring the HWC NixOS configuration into full compliance w
 3. **Git discipline**: Commit working states, avoid large bulk changes
 4. **Manual verification**: Review generated code before applying
 5. **Document rationale**: Clear commit messages explaining the architectural improvement
+6. **Module structure placement**: Always place charter elements (imports, config, assertions) **inside** the module definition `{ }` scope, never outside it
 
 ## Success Metrics
 
