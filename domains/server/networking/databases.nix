@@ -1,4 +1,4 @@
-# nixos-h../domains/services/databases.nix
+# HWC Charter Module/domains/services/databases.nix
 #
 # DATABASES - Brief service description
 # TODO: Add detailed description of what this module provides

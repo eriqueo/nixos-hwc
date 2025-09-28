@@ -1,4 +1,4 @@
-# nixos-h../domains/system/networking.nix
+# HWC Charter Module/domains/system/networking.nix
 #
 # NETWORKING - Brief service description
 # TODO: Add detailed description of what this module provides

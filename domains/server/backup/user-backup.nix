@@ -1,4 +1,4 @@
-# nixos-h../domains/services/backup/user-backup.nix
+# HWC Charter Module/domains/services/backup/user-backup.nix
 #
 # USER BACKUP - Intelligent user data backup with external drive detection and cloud fallback
 # Provides automated backup with external drive priority and Proton Drive fallback

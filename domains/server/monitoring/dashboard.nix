@@ -1,4 +1,4 @@
-# nixos-h../domains/services/business/dashboard.nix
+# HWC Charter Module/domains/services/business/dashboard.nix
 #
 # BUSINESS DASHBOARD - Streamlit analytics dashboard service
 # Provides web-based business intelligence and analytics visualization

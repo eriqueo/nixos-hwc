@@ -1,4 +1,4 @@
-# nixos-h../domains/services/ai/ai-bible.nix
+# HWC Charter Module/domains/services/ai/ai-bible.nix
 #
 # AI BIBLE - Brief service description
 # TODO: Add detailed description of what this module provides

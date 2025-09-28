@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/user-hardware-access.nix
+# HWC Charter Module/domains/infrastructure/user-hardware-access.nix
 #
 # USER HARDWARE ACCESS - Infrastructure layer for hardware permissions and directory setup
 # Provides system-level user groups, tmpfiles rules, and hardware access permissions

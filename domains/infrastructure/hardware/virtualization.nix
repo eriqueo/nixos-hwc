@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/virtualization.nix
+# HWC Charter Module/domains/infrastructure/virtualization.nix
 #
 # VIRTUALIZATION - Brief service description
 # TODO: Add detailed description of what this module provides
@@ -18,7 +18,7 @@
 #   hwc.infrastructure.virtualization.enable = true;
 #   # TODO: Add specific usage examples
 
-# nixos-h../domains/infrastructure/virtualization.nix
+# HWC Charter Module/domains/infrastructure/virtualization.nix
 #
 # Infrastructure: Virtualization & Containers (QEMU/KVM + Podman)
 # Provides VM support (libvirtd, OVMF, SPICE) and a single container runtime (Podman).

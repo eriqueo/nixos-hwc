@@ -1,0 +1,860 @@
+[0;34m[LINT][0m HWC Charter Compliance Linter (robust)
+[0;34m[LINT][0m Repository: /home/eric/.nixos
+
+[0;34m[LINT][0m Running Charter validation searches…
+Checking for writeScriptBin violations...
+[0;31m[ERROR][0m Charter violation: writeScriptBin found in domains/home/
+[0;31m[ERROR][0m   FILE: domains/home/apps/hyprland/parts/session.nix
+[0;31m[ERROR][0m     Line 17:  hyprlandStartupScript = pkgs.writeScriptBin "hyprland-startup" ''
+[0;31m[ERROR][0m   Solution: Move script creation to co-located sys.nix or system domain
+
+Checking for systemd.services violations...
+[0;31m[ERROR][0m Charter violation: systemd.services found in domains/home/
+[0;31m[ERROR][0m   FILE: domains/home/theme/index.nix
+[0;31m[ERROR][0m     Line 49:# By convention: no environment.systemPackages, no systemd.services in HM modules
+[0;31m[ERROR][0m   Solution: Move to co-located sys.nix or system domain
+
+Checking for environment.systemPackages violations...
+[0;31m[ERROR][0m Charter violation: environment.systemPackages found in domains/home/
+[0;31m[ERROR][0m   FILE: domains/home/theme/index.nix
+[0;31m[ERROR][0m     Line 49:# By convention: no environment.systemPackages, no systemd.services in HM modules
+[0;31m[ERROR][0m   Solution: Use home.packages or move to co-located sys.nix
+
+Checking for home-manager in profiles violations...
+Checking for hardcoded /mnt/ paths...
+[1;33m[WARN][0m Charter concern: hardcoded /mnt/ paths found in domains/
+[1;33m[WARN][0m   FILE: domains/system/core/paths.nix
+[1;33m[WARN][0m     Line 38:#   config.hwc.paths.hot           # "/mnt/hot"
+[1;33m[WARN][0m     Line 65:      example = "/mnt/hot";
+[1;33m[WARN][0m     Line 72:      example = "/mnt/media";
+[1;33m[WARN][0m     Line 79:      example = "/mnt/archive";
+[1;33m[WARN][0m     Line 86:      example = "/mnt/backup";
+[1;33m[WARN][0m   FILE: domains/system/packages/security.nix
+[1;33m[WARN][0m     Line 114:    if mountpoint -q "/mnt/backup" 2>/dev/null; then
+[1;33m[WARN][0m     Line 119:      df -h "/mnt/backup"
+[1;33m[WARN][0m   FILE: domains/infrastructure/hardware/storage.nix
+[1;33m[WARN][0m     Line 127:        default = "/mnt/hot";
+[1;33m[WARN][0m     Line 149:        default = "/mnt/media";
+[1;33m[WARN][0m     Line 168:        default = "/mnt/backup";
+[1;33m[WARN][0m   FILE: domains/server/backup/user-backup.nix
+[1;33m[WARN][0m     Line 206:        default = "/mnt/backup";
+[1;33m[WARN][0m   Suggestion: Consider using variable paths from hwc.paths
+
+
+[0;34m[LINT][0m Checking individual files...
+[1;33m[WARN][0m FILE: profiles/monitoring.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/monitoring.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: profiles/server.nix
+[1;33m[WARN][0m   Hardcoded /mnt/ path found - consider using variable paths
+[1;33m[WARN][0m FILE: profiles/server.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/server.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: profiles/home.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/home.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: profiles/ai.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/business.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/business.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: profiles/security.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/security.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: profiles/test-containers.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/test-containers.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: profiles/media.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/media.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: profiles/sys.nix
+[1;33m[WARN][0m   Missing BASE section marker - consider adding # BASE SYSTEM or similar section
+[1;33m[WARN][0m FILE: profiles/sys.nix
+[1;33m[WARN][0m   Missing OPTIONAL FEATURES section marker - consider adding # OPTIONAL FEATURES section
+[1;33m[WARN][0m FILE: machines/server/config.nix
+[1;33m[WARN][0m   Hardcoded /mnt/ path found - consider using variable paths
+[0;31m[ERROR][0m FILE: scripts/helpers.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/mail/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/mail/bridge/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/mail/notmuch/options.nix
+[1;33m[WARN][0m FILE: domains/home/mail/notmuch/parts/scripts.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/home/mail/accounts/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/mail/mbsync/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/mail/msmtp/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/betterbird/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/dunst/options.nix
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-authenticator/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.apps.proton-authenticator.*
+[0;31m[ERROR][0m   Found: options.hwc.home.apps.protonAuthenticator
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-pass/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.apps.proton-pass.*
+[0;31m[ERROR][0m   Found: options.hwc.home.apps.protonPass
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/kitty/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/hyprland/options.nix
+[1;33m[WARN][0m FILE: domains/home/apps/hyprland/parts/hardware.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/ipcalc/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/chromium/options.nix
+[1;33m[WARN][0m FILE: domains/home/apps/chromium/index.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/yazi/options.nix
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-mail/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.apps.proton-mail.*
+[0;31m[ERROR][0m   Found: options.hwc.home.apps.protonMail
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/thunar/options.nix
+[1;33m[WARN][0m FILE: domains/home/apps/thunar/index.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/librewolf/options.nix
+[1;33m[WARN][0m FILE: domains/home/apps/librewolf/index.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/neomutt/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/aerc/options.nix
+[0;31m[ERROR][0m FILE: domains/home/apps/onlyoffice-desktopeditors/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.apps.onlyoffice-desktopeditors.*
+[0;31m[ERROR][0m   Found: options.hwc.home.apps.onlyofficeDesktopeditors
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/obsidian/options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/home/apps/waybar/options.nix
+[0;31m[ERROR][0m FILE: domains/home/apps/gemini-cli/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.apps.gemini-cli.*
+[0;31m[ERROR][0m   Found: options.hwc.home.apps.geminiCli
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/home/environment/shell/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.environment.shell.*
+[0;31m[ERROR][0m   Found: options.hwc.home.shell
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[1;33m[WARN][0m FILE: domains/home/environment/shell/options.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/home/environment/shell/parts/grebuild.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/home/environment/shell/index.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/home/environment/productivity.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.environment.productivity.*
+[0;31m[ERROR][0m   Found: options.hwc.home.productivity
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/home/environment/productivity.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/home/environment/productivity.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/home/environment/development.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.environment.development.*
+[0;31m[ERROR][0m   Found: options.hwc.home.development
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/home/environment/development.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/home/environment/development.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/home/theme/options.nix
+[0;31m[ERROR][0m FILE: domains/home/theme/fonts/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.home.theme.fonts.*
+[0;31m[ERROR][0m   Found: options.hwc.home.fonts
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[1;33m[WARN][0m FILE: domains/home/theme/palettes/deep-nord.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/home/theme/index.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/business/api.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/business/api.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/business/business-api.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.business.business-api.*
+[0;31m[ERROR][0m   Found: options.hwc.services.businessApi
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/business/business-api.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/business/business-api.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/business/business-api.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/backup/user-backup.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.backup.user-backup.*
+[0;31m[ERROR][0m   Found: options.hwc.services.backup.user
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[1;33m[WARN][0m FILE: domains/server/backup/user-backup.nix
+[1;33m[WARN][0m   Hardcoded /mnt/ path found - consider using variable paths
+[0;31m[ERROR][0m FILE: domains/server/backup/user-backup.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/backup/user-backup.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/server/ai/ollama/ollama.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.ai.ollama.ollama.*
+[0;31m[ERROR][0m   Found: options.hwc.services.ollama
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/ai/ollama/ollama.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/ai/ollama/ollama.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/server/ai/ollama/ollama-old.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.ai.ollama.ollama-old.*
+[0;31m[ERROR][0m   Found: options.hwc.services.ollama
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/ai/ollama/ollama-old.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/ai/ollama/ollama-old.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/ai/ollama/ollama-old.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/ai/ai-bible/ai-bible.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.ai.ai-bible.ai-bible.*
+[0;31m[ERROR][0m   Found: options.hwc.services.aiBible
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/ai/ai-bible/ai-bible.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/ai/ai-bible/ai-bible.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/ai/ai-bible/ai-bible.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/networking/vpn.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.networking.vpn.*
+[0;31m[ERROR][0m   Found: options.hwc.services.vpn
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/networking/vpn.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/networking/vpn.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/networking/vpn.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/networking/ntfy.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.networking.ntfy.*
+[0;31m[ERROR][0m   Found: options.hwc.services.ntfy
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/networking/ntfy.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/networking/ntfy.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/networking/ntfy.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/networking/transcript-api.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.networking.transcript-api.*
+[0;31m[ERROR][0m   Found: options.hwc.services.transcriptApi
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/networking/transcript-api.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/networking/transcript-api.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/networking/transcript-api.nix
+[1;33m[WARN][0m   TODO comment found
+[1;33m[WARN][0m FILE: domains/server/networking/database.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/networking/database.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/networking/databases.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.networking.databases.*
+[0;31m[ERROR][0m   Found: options.hwc.services.databases
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/networking/databases.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/networking/databases.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/networking/databases.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/networking/networking.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.networking.networking.*
+[0;31m[ERROR][0m   Found: options.hwc.services.media.networking
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/networking/networking.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/networking/networking.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/networking/networking.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/containers/immich/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.immich.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.immich
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/qbittorrent/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.qbittorrent.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.qbittorrent
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/navidrome/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.navidrome.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.navidrome
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/radarr/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.radarr.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.radarr
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/prowlarr/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.prowlarr.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.prowlarr
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/sabnzbd/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.sabnzbd.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.sabnzbd
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/sonarr/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.sonarr.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.sonarr
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/slskd/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.slskd.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.slskd
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/jellyfin/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.jellyfin.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.jellyfin
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/lidarr/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.lidarr.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.lidarr
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/soularr/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.soularr.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.soularr
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/gluetun/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.gluetun.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.gluetun
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/containers/caddy/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.containers.caddy.*
+[0;31m[ERROR][0m   Found: options.hwc.services.containers.caddy
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[1;33m[WARN][0m FILE: domains/server/monitoring/monitoring.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/monitoring/monitoring.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/monitoring/prometheus.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.monitoring.prometheus.*
+[0;31m[ERROR][0m   Found: options.hwc.services.prometheus
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/monitoring/prometheus.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/monitoring/prometheus.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/monitoring/prometheus.nix
+[1;33m[WARN][0m   TODO comment found
+[1;33m[WARN][0m FILE: domains/server/monitoring/metrics.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/monitoring/dashboard.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/server/monitoring/grafana.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.monitoring.grafana.*
+[0;31m[ERROR][0m   Found: options.hwc.services.grafana
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/monitoring/grafana.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/monitoring/grafana.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/monitoring/grafana.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/server/downloaders/downloaders.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.server.downloaders.downloaders.*
+[0;31m[ERROR][0m   Found: options.hwc.services.media.downloaders
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/server/downloaders/downloaders.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/server/downloaders/downloaders.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/server/downloaders/downloaders.nix
+[1;33m[WARN][0m   TODO comment found
+[0;31m[ERROR][0m FILE: domains/infrastructure/mesh/container-networking.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.infrastructure.mesh.container-networking.*
+[0;31m[ERROR][0m   Found: options.hwc.infrastructure.mesh.container
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/infrastructure/mesh/container-networking.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/mesh/container-networking.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/infrastructure/mesh/container-networking.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/infrastructure/session/services.nix
+[0;31m[ERROR][0m FILE: domains/infrastructure/session/services.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/session/services.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/infrastructure/session/commands.nix
+[0;31m[ERROR][0m FILE: domains/infrastructure/session/commands.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/infrastructure/hardware/gpu.nix
+[0;31m[ERROR][0m FILE: domains/infrastructure/hardware/gpu.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/gpu.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/infrastructure/hardware/virtualization.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.infrastructure.hardware.virtualization.*
+[0;31m[ERROR][0m   Found: options.hwc.infrastructure.virtualization
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/infrastructure/hardware/virtualization.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/virtualization.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/virtualization.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/infrastructure/hardware/permissions.nix
+[0;31m[ERROR][0m FILE: domains/infrastructure/hardware/permissions.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/permissions.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/infrastructure/hardware/peripherals.nix
+[0;31m[ERROR][0m FILE: domains/infrastructure/hardware/peripherals.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/peripherals.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/peripherals.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/infrastructure/hardware/storage.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/storage.nix
+[1;33m[WARN][0m   Hardcoded /mnt/ path found - consider using variable paths
+[0;31m[ERROR][0m FILE: domains/infrastructure/hardware/storage.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/infrastructure/hardware/storage.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/security/materials.nix
+[0;31m[ERROR][0m FILE: domains/security/materials.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[0;32m[OK][0m Namespace alignment correct: domains/security/options.nix
+[0;31m[ERROR][0m FILE: domains/security/emergency-access.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.security.emergency-access.*
+[0;31m[ERROR][0m   Found: options.hwc.security.emergencyAccess
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/security/emergency-access.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/security/emergency-access.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/security/secrets.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.security.secrets.*
+[0;31m[ERROR][0m   Found: options.hwc.secrets
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/security/secrets.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/security/secrets.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/security/secrets.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/security/hardening.nix
+[0;31m[ERROR][0m FILE: domains/security/hardening.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/security/hardening.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/security/hardening.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/system/users/options.nix
+[0;31m[ERROR][0m FILE: domains/system/packages/server.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.packages.server.*
+[0;31m[ERROR][0m   Found: options.hwc.system.serverPackages
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/system/packages/server.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/packages/server.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/system/packages/base.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.packages.base.*
+[0;31m[ERROR][0m   Found: options.hwc.system.basePackages
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/system/packages/base.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/packages/base.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/system/packages/security.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.packages.security.*
+[0;31m[ERROR][0m   Found: options.hwc.system.backupPackages
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[1;33m[WARN][0m FILE: domains/system/packages/security.nix
+[1;33m[WARN][0m   Hardcoded /mnt/ path found - consider using variable paths
+[0;31m[ERROR][0m FILE: domains/system/packages/security.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/packages/security.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/system/core/paths.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.core.paths.*
+[0;31m[ERROR][0m   Found: options.hwc.paths
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[1;33m[WARN][0m FILE: domains/system/core/paths.nix
+[1;33m[WARN][0m   Hardcoded /mnt/ path found - consider using variable paths
+[0;31m[ERROR][0m FILE: domains/system/core/paths.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/core/paths.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/system/core/paths.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/system/core/thermal.nix
+[0;31m[ERROR][0m FILE: domains/system/core/thermal.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/core/thermal.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/system/core/filesystem/options.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.core.filesystem.*
+[0;31m[ERROR][0m   Found: options.hwc.filesystem.enable
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;32m[OK][0m Namespace alignment correct: domains/system/core/polkit.nix
+[0;31m[ERROR][0m FILE: domains/system/core/polkit.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/core/polkit.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/system/core/networking.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.core.networking.*
+[0;31m[ERROR][0m   Found: options.hwc.networking
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/system/core/networking.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/core/networking.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/system/core/networking.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/system/services/behavior.nix
+[0;31m[ERROR][0m FILE: domains/system/services/behavior.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/services/behavior.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;32m[OK][0m Namespace alignment correct: domains/system/services/vpn/options.nix
+[1;33m[WARN][0m FILE: domains/system/services/vpn/options.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/system/services/vpn/index.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/system/services/samba.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.services.samba.*
+[0;31m[ERROR][0m   Found: options.hwc.infrastructure.samba
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/system/services/samba.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/services/samba.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/system/services/samba.nix
+[1;33m[WARN][0m   TODO comment found
+[0;32m[OK][0m Namespace alignment correct: domains/system/services/session.nix
+[0;31m[ERROR][0m FILE: domains/system/services/session.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/services/session.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[0;31m[ERROR][0m FILE: domains/system/services/networking.nix
+[0;31m[ERROR][0m   Namespace mismatch - Expected: options.hwc.system.services.networking.*
+[0;31m[ERROR][0m   Found: options.hwc.networking
+[0;31m[ERROR][0m   Suggestion: Move option definition to match directory structure
+[0;31m[ERROR][0m FILE: domains/system/services/networking.nix
+[0;31m[ERROR][0m   Anti-pattern: Options defined outside options.nix or index.nix
+[0;31m[ERROR][0m   Solution: Move option definitions to options.nix
+[1;33m[WARN][0m FILE: domains/system/services/networking.nix
+[1;33m[WARN][0m   Legacy comment header format - consider updating to current Charter format
+[1;33m[WARN][0m FILE: domains/system/services/networking.nix
+[1;33m[WARN][0m   TODO comment found
+
+[0;34m[LINT][0m Checking module anatomy...
+[0;31m[ERROR][0m FILE: domains/home/mail/bridge/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/mail/bridge/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/bridge/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/notmuch/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/mail/notmuch/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/notmuch/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/accounts/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/mail/accounts/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/accounts/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/accounts/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/home/mail/mbsync/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/mail/mbsync/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/mbsync/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/abook/
+[0;31m[ERROR][0m   Missing required file: options.nix
+[0;31m[ERROR][0m FILE: domains/home/mail/abook/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/mail/abook/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/abook/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/abook/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/home/mail/msmtp/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/mail/msmtp/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/mail/msmtp/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/betterbird/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/betterbird/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/betterbird/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/dunst/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/dunst/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/dunst/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;32m[OK][0m Module anatomy correct: domains/home/apps/proton-authenticator
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-pass/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-pass/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-pass/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/kitty/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/kitty/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/kitty/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/hyprland/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/hyprland/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/hyprland/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;32m[OK][0m Module anatomy correct: domains/home/apps/ipcalc
+[0;31m[ERROR][0m FILE: domains/home/apps/chromium/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/chromium/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/chromium/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/yazi/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/yazi/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/yazi/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-mail/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-mail/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/proton-mail/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/thunar/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/thunar/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/librewolf/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/librewolf/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/librewolf/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/neomutt/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/neomutt/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/neomutt/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/aerc/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/aerc/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/aerc/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;32m[OK][0m Module anatomy correct: domains/home/apps/onlyoffice-desktopeditors
+[0;31m[ERROR][0m FILE: domains/home/apps/obsidian/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/obsidian/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/obsidian/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/waybar/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/apps/waybar/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/apps/waybar/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;32m[OK][0m Module anatomy correct: domains/home/apps/gemini-cli
+[0;31m[ERROR][0m FILE: domains/home/environment/shell/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/environment/shell/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/environment/shell/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/home/theme/fonts/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/home/theme/fonts/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/home/theme/fonts/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/home/theme/fonts/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/immich/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/immich/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/immich/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/immich/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/qbittorrent/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/qbittorrent/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/qbittorrent/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/qbittorrent/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/navidrome/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/navidrome/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/navidrome/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/navidrome/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/radarr/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/radarr/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/radarr/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/radarr/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/prowlarr/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/prowlarr/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/prowlarr/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/prowlarr/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/sabnzbd/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/sabnzbd/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/sabnzbd/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/sabnzbd/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/sonarr/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/sonarr/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/sonarr/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/sonarr/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/slskd/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/slskd/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/slskd/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/slskd/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/jellyfin/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/jellyfin/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/jellyfin/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/jellyfin/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/lidarr/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/lidarr/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/lidarr/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/lidarr/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/soularr/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/soularr/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/soularr/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/soularr/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/gluetun/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/gluetun/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/gluetun/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/gluetun/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/server/containers/caddy/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/server/containers/caddy/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/caddy/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/server/containers/caddy/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/system/core/filesystem/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/system/core/filesystem/index.nix
+[0;31m[ERROR][0m   Missing IMPLEMENTATION section
+[0;31m[ERROR][0m FILE: domains/system/core/filesystem/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/system/core/filesystem/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+[0;31m[ERROR][0m FILE: domains/system/services/vpn/index.nix
+[0;31m[ERROR][0m   Missing OPTIONS section
+[0;31m[ERROR][0m FILE: domains/system/services/vpn/index.nix
+[0;31m[ERROR][0m   Missing VALIDATION section
+[0;31m[ERROR][0m FILE: domains/system/services/vpn/index.nix
+[0;31m[ERROR][0m   Missing options.nix import
+
+[0;34m[LINT][0m Linting complete!
+
+[0;31m[ERROR][0m ❌ Found 220 error(s)
+[1;33m[WARN][0m ⚠️  Found 215 warning(s)
+
+
+=========================================
+METADATA
+=========================================
+Timestamp: Sun Sep 28 01:22:53 AM MDT 2025
+Branch: main
+Commit: fadda85
+Arguments: 
+Exit Code: 1
+Repository: /home/eric/.nixos

@@ -1,4 +1,4 @@
-# nixos-h../domains/infrastructure/hardening.nix
+# HWC Charter Module/domains/infrastructure/hardening.nix
 #
 # HARDENING - Brief service description
 # TODO: Add detailed description of what this module provides

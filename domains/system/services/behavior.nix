@@ -1,4 +1,4 @@
-# nixos-h../domains/system/services/behavior.nix
+# HWC Charter Module/domains/system/services/behavior.nix
 #
 # BEHAVIOR - System input behavior and audio configuration
 # Combines keyboard input mapping with audio system for unified system behavior control

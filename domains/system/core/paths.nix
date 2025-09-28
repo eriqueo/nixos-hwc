@@ -1,4 +1,4 @@
-# nixos-h../domains/system/paths.nix
+# HWC Charter Module/domains/system/paths.nix
 #
 # PATHS - Brief service description
 # TODO: Add detailed description of what this module provides
@@ -18,7 +18,7 @@
 #   hwc.system.paths.enable = true;
 #   # TODO: Add specific usage examples
 
-# nixos-h../domains/system/paths.nix
+# HWC Charter Module/domains/system/paths.nix
 #
 # HWC Centralized Path Configuration System
 # Comprehensive path management for all system components

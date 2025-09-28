@@ -1,4 +1,4 @@
-# nixos-h../domains/services/business-api.nix
+# HWC Charter Module/domains/services/business-api.nix
 #
 # BUSINESS API - Brief service description
 # TODO: Add detailed description of what this module provides

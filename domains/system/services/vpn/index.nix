@@ -1,4 +1,4 @@
-# nixos-h../domains/system/services/vpn/index.nix
+# HWC Charter Module/domains/system/services/vpn/index.nix
 #
 # VPN IMPLEMENTATION - ProtonVPN WireGuard service
 # System domain module providing ProtonVPN connectivity via WireGuard

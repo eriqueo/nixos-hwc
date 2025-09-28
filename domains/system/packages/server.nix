@@ -1,4 +1,4 @@
-# nixos-h../domains/system/server-packages.nix
+# HWC Charter Module/domains/system/server-packages.nix
 #
 # SERVER PACKAGES - System-level packages for server operations
 # GUI applications for X11 forwarding and server-specific tools

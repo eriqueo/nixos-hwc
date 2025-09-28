@@ -1,4 +1,4 @@
-# nixos-h../domains/system/base-packages.nix
+# HWC Charter Module/domains/system/base-packages.nix
 #
 # BASE PACKAGES - Essential system tools and utilities
 # Core command-line tools needed on all machines

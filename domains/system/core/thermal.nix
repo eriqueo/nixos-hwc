@@ -1,4 +1,4 @@
-# nixos-h../domains/system/core/thermal.nix
+# HWC Charter Module/domains/system/core/thermal.nix
 #
 # THERMAL - System thermal management and power profile configuration
 # Provides thermal management configuration suitable for different hardware platforms

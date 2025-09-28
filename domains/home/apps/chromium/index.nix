@@ -1,4 +1,4 @@
-# nixos-h../domains/home/apps/chromium/index.nix
+# HWC Charter Module/domains/home/apps/chromium/index.nix
 #
 # Home UI: Chromium Browser Configuration
 # Charter v7 compliant - Web browser configuration with universal domains

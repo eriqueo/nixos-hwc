@@ -1,4 +1,4 @@
-# nixos-h../domains/services/business/metrics.nix
+# HWC Charter Module/domains/services/business/metrics.nix
 #
 # BUSINESS METRICS - Business metrics collection and export service
 # Provides Prometheus-compatible metrics for business intelligence

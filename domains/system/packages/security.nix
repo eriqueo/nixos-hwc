@@ -1,4 +1,4 @@
-# nixos-h../domains/system/backup-packages.nix
+# HWC Charter Module/domains/system/backup-packages.nix
 #
 # BACKUP PACKAGES - System packages and tools for backup operations
 # Provides rclone, backup utilities, and Proton Drive configuration management

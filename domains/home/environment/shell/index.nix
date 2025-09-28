@@ -1,4 +1,4 @@
-# nixos-h../domains/home/environment/shell/index.nix
+# HWC Charter Module/domains/home/environment/shell/index.nix
 #
 # SHELL IMPLEMENTATION - Complete shell and CLI configuration
 # Aggregator module implementing shell functionality using parts

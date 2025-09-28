@@ -1,4 +1,4 @@
-# nixos-h../domains/home/productivity.nix
+# HWC Charter Module/domains/home/productivity.nix
 #
 # Home UI: Productivity stack (HM consumer via NixOS orchestrator)
 # NixOS options gate inclusion; Home‑Manager config lives under home-manager.users.<user>.

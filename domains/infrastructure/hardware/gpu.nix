@@ -1,4 +1,4 @@
-# nixos-h../domains/system/gpu.nix
+# HWC Charter Module/domains/system/gpu.nix
 #
 # GPU Hardware Acceleration Management
 # Provides NVIDIA, Intel, AMD GPU support with hardware acceleration for services.

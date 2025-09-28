@@ -1,4 +1,4 @@
-# nixos-h../domains/system/services/session.nix
+# HWC Charter Module/domains/system/services/session.nix
 #
 # SESSION — User session management and access control
 # - Sudo policy (wheel, extra NOPASSWD rules)
