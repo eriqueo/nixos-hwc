@@ -5,6 +5,7 @@ let
   cfgPart   = import ./parts/config.nix   { inherit lib pkgs config; };
   bindsPart = import ./parts/behavior.nix { inherit lib pkgs config; };
   sessPart  = import ./parts/session.nix  { inherit lib pkgs config; };
+  sievePart = import ./parts/sieve.nix    { inherit lib pkgs config; };
 in
 {
   #==========================================================================
@@ -17,7 +18,7 @@ in
   #==========================================================================
   config = lib.mkIf enabled {
     home.packages = (cfgPart.packages or []) ++ (sessPart.packages or []);
-    home.file     = (cfgPart.files "") // (bindsPart.files "") // {
+    home.file     = (cfgPart.files "") // (bindsPart.files "") // (sievePart.files "") // {
       ".notmuch-config".source =
         config.lib.file.mkOutOfStoreSymlink
           "${config.home.homeDirectory}/.config/notmuch/default/config";
