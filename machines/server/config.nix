@@ -44,7 +44,7 @@
   services.xserver.enable = true;
 
   # Server-specific packages moved to modules/system/server-packages.nix
-  hwc.system.serverPackages.enable = true;
+  hwc.system.packages.server.enable = true;
 
   # Production I/O scheduler optimization
   services.udev.extraRules = ''

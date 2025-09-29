@@ -171,7 +171,7 @@
   # SYSTEM PACKAGES - Moved to modules/system/server-packages.nix
   #============================================================================
   
-  hwc.system.serverPackages.enable = true;
+  hwc.system.packages.server.enable = true;
 
   #============================================================================
   # PERFORMANCE OPTIMIZATIONS
