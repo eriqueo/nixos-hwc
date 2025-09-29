@@ -68,7 +68,7 @@
   security.polkit.enable = true;
 
   # Base/essential packages (implementation in modules/system/packages/*)
-  hwc.system.basePackages.enable = true;
+  hwc.system.packages.base.enable = true;
 
   # User management (implementation in modules/system/users/*)
   hwc.system.users = {

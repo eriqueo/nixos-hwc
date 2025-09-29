@@ -94,7 +94,7 @@
   };
 
   # System backup packages (if your modules/system/basePackages exposes this)
-  hwc.system.backupPackages = {
+  hwc.system.packages.security = {
     enable = true;
     protonDrive = {
       enable = true;

@@ -1,39 +1,15 @@
-# HWC Charter Module/domains/system/base-packages.nix
-#
+# domains/system/packages/base.nix
 # BASE PACKAGES - Essential system tools and utilities
-# Core command-line tools needed on all machines
-#
-# DEPENDENCIES (Upstream):
-#   - None (base system packages)
-#
-# USED BY (Downstream):
-#   - profiles/base.nix (enables via hwc.system.basePackages.enable)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/base.nix: ../domains/system/base-packages.nix
-#
-# USAGE:
-#   hwc.system.basePackages.enable = true;
+# Charter-compliant: implementation only, options in packages/options.nix
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.basePackages;
+  cfg = config.hwc.system.packages.base;
 in {
-  #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.system.basePackages = {
-    enable = lib.mkEnableOption "Essential system packages";
-    
-    development = lib.mkEnableOption "Development tools and language servers";
-    
-    multimedia = lib.mkEnableOption "Multimedia and graphics tools";
-  };
-
-  #============================================================================
-  # IMPLEMENTATION - What actually gets configured
-  #============================================================================
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
         environment.systemPackages = with pkgs; [
           zsh git micro neovim
@@ -98,7 +74,12 @@ in {
       
         # Allow non-root capture with Wireshark/tcpdump (adds group, sets caps)
         programs.wireshark.enable = true;
-    
+
   };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  # Add assertions and validation logic here
   
 }

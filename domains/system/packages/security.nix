@@ -1,27 +1,11 @@
-# HWC Charter Module/domains/system/backup-packages.nix
-#
+# domains/system/packages/security.nix
 # BACKUP PACKAGES - System packages and tools for backup operations
-# Provides rclone, backup utilities, and Proton Drive configuration management
-#
-# DEPENDENCIES (Upstream):
-#   - config.age.secrets.* (agenix secrets for cloud credentials)
-#   - config.hwc.system.users.* (user configuration)
-#
-# USED BY (Downstream):
-#   - modules/services/backup/user-backup.nix (backup service)
-#   - profiles/*.nix (enables via hwc.system.backupPackages.enable)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/workstation.nix or profiles/server.nix: ../domains/system/backup-packages.nix
-#
-# USAGE:
-#   hwc.system.backupPackages.enable = true;
-#   hwc.system.backupPackages.protonDrive.enable = true;
+# Charter-compliant: implementation only, options in packages/options.nix
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.backupPackages;
+  cfg = config.hwc.system.packages.security;
   userCfg = config.hwc.system.users;
   
   # Rclone configuration template for Proton Drive
@@ -145,58 +129,9 @@ let
   '';
   
 in {
-  #============================================================================
-  # OPTIONS - Backup packages configuration
-  #============================================================================
-  
-  options.hwc.system.backupPackages = {
-    enable = lib.mkEnableOption "backup system packages and utilities";
-    
-    # Cloud storage configuration
-    protonDrive = {
-      enable = lib.mkEnableOption "Proton Drive integration";
-      
-      email = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Proton Mail email address (leave empty to use interactive setup)";
-      };
-      
-      encodedPassword = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Rclone-encoded password (leave empty to use interactive setup)";
-      };
-      
-      useSecret = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Use agenix secret for rclone configuration";
-      };
-      
-      secretName = lib.mkOption {
-        type = lib.types.str;
-        default = "rclone-proton-config";
-        description = "Name of agenix secret containing rclone config";
-      };
-    };
-    
-    # Additional backup tools
-    extraTools = lib.mkOption {
-      type = lib.types.listOf lib.types.package;
-      default = [];
-      description = "Additional backup-related packages to install";
-    };
-    
-    # Maintenance and monitoring
-    monitoring = {
-      enable = lib.mkEnableOption "backup monitoring and maintenance tools";
-    };
-  };
-
-  #============================================================================
-  # IMPLEMENTATION - Backup system packages
-  #============================================================================
+  #==========================================================================
+  # IMPLEMENTATION
+  #===========================================================================
   
   config = lib.mkIf cfg.enable {
     
@@ -313,4 +248,9 @@ in {
       ''
     ];
   };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  # Additional assertions already in config.assertions above
 }
