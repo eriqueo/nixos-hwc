@@ -43,7 +43,7 @@ in
 
     environment.variables = {
       HEARTWOOD_HOT_STORAGE   = lib.mkForce (if nonNull p.hot then p.hot else "");
-      HEARTWOOD_COLD_STORAGE  = if nonNull p.cold then p.cold else "";
+      HEARTWOOD_COLD_STORAGE  = lib.mkForce (if nonNull p.cold then p.cold else "");
       HEARTWOOD_BUSINESS_ROOT = p.business.root;
       HEARTWOOD_AI_ROOT       = p.ai.root;
       HEARTWOOD_SECRETS_DIR   = lib.mkForce p.security.secrets;
