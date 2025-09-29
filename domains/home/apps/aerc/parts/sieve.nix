@@ -38,7 +38,7 @@ in {
       "${sieveDir}/filters/bundle.sieve".text = bundle;
       "${sieveDir}/README".text = ''
         Managed by Home Manager.
-        - Add Sieve via hwc.home.apps.aerc.sieve.filters.<name> = ''…'' in Nix.
+        - Add Sieve via hwc.home.apps.aerc.sieve.filters.<name> = "..." in Nix.
         - Combined bundle: ${config.home.homeDirectory}/${sieveDir}/filters/bundle.sieve
         - Paste bundle into Proton > Filters > Add sieve filter (Sieve editor).
       '';
