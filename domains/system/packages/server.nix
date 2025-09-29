@@ -1,35 +1,15 @@
-# HWC Charter Module/domains/system/server-packages.nix
-#
+# domains/system/packages/server.nix
 # SERVER PACKAGES - System-level packages for server operations
-# GUI applications for X11 forwarding and server-specific tools
-#
-# DEPENDENCIES (Upstream):
-#   - None (base system packages)
-#
-# USED BY (Downstream):
-#   - machines/server/config.nix (enables via hwc.system.serverPackages.enable)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/server.nix: ../domains/system/server-packages.nix
-#
-# USAGE:
-#   hwc.system.serverPackages.enable = true;
+# Charter-compliant: implementation only, options in packages/options.nix
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.serverPackages;
+  cfg = config.hwc.system.packages.server;
 in {
-  #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.system.serverPackages = {
-    enable = lib.mkEnableOption "Server-specific system packages";
-  };
-
-  #============================================================================
-  # IMPLEMENTATION - What actually gets configured
-  #============================================================================
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     # Server-specific system packages
     environment.systemPackages = with pkgs; [
@@ -70,4 +50,9 @@ in {
       borgbackup restic
     ];
   };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  # Add assertions and validation logic here
 }
