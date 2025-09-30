@@ -3,8 +3,9 @@
   imports = [
     ./hardware.nix
     ../../profiles/base.nix
-    ../../profiles/server.nix  
+    ../../profiles/server.nix
     ../../profiles/security.nix
+    ../../profiles/ai.nix
   ];
 
   # System identity
@@ -33,6 +34,12 @@
   # Production system settings
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   # allowUnfree set in flake.nix
+
+  # AI services configuration
+  hwc.server.ai.ollama = {
+    enable = true;
+    models = [ "llama3:8b" "codellama:13b" ];
+  };
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
