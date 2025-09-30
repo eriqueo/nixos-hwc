@@ -21,67 +21,9 @@
 { config, lib, pkgs, ... }:
 
 let
-  t = lib.types;
   cfg = config.hwc.home.development;
 in
 {
-  #============================================================================
-  # OPTIONS - Complete development environment configuration
-  #============================================================================
-  options.hwc.home.development = {
-    enable = lib.mkEnableOption "Development tools and environment";
-
-# Git configuration moved to shell.nix for consistency
-
-    editors = {
-      neovim = lib.mkOption {
-        type = t.bool;
-        default = true;
-        description = "Enable Neovim with configuration";
-      };
-      micro = lib.mkOption {
-        type = t.bool;
-        default = true;
-        description = "Enable Micro editor";
-      };
-    };
-
-    languages = {
-      nix = lib.mkOption {
-        type = t.bool;
-        default = true;
-        description = "Enable Nix development tools";
-      };
-      python = lib.mkOption {
-        type = t.bool;
-        default = true;
-        description = "Enable Python development tools";
-      };
-      javascript = lib.mkOption {
-        type = t.bool;
-        default = false;
-        description = "Enable JavaScript/Node.js development tools";
-      };
-      rust = lib.mkOption {
-        type = t.bool;
-        default = false;
-        description = "Enable Rust development tools";
-      };
-    };
-
-    containers = lib.mkOption {
-      type = t.bool;
-      default = true;
-      description = "Enable container development tools";
-    };
-
-    directoryStructure = lib.mkOption {
-      type = t.bool;
-      default = true;
-      description = "Create development directory structure";
-    };
-  };
-
   #============================================================================
   # IMPLEMENTATION - Complete development environment
   #============================================================================
