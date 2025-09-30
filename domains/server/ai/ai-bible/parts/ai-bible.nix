@@ -32,66 +32,6 @@ let
   ]);
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.services.aiBible = {
-    enable = lib.mkEnableOption "AI Bible documentation system";
-    
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 8888;
-      description = "API port";
-    };
-    
-    dataDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.state}/ai-bible";
-    };
-    
-    features = {
-      autoGeneration = lib.mkEnableOption "Auto documentation generation";
-      
-      llmIntegration = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Enable LLM integration";
-      };
-      
-      categories = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [
-          "system_architecture"
-          "container_services"
-          "hardware_gpu"
-          "monitoring_observability"
-          "storage_data"
-        ];
-        description = "Documentation categories";
-      };
-    };
-    
-    llm = {
-      provider = lib.mkOption {
-        type = lib.types.enum [ "ollama" "openai" "anthropic" ];
-        default = "ollama";
-      };
-      
-      model = lib.mkOption {
-        type = lib.types.str;
-        default = "llama2";
-        description = "LLM model to use";
-      };
-      
-      endpoint = lib.mkOption {
-        type = lib.types.str;
-        default = "http://localhost:11434";
-        description = "LLM API endpoint";
-      };
-    };
-  };
-  
-
-  #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
   config = lib.mkIf cfg.enable {

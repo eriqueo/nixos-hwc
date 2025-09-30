@@ -25,32 +25,6 @@ let
   scriptPath = "${paths.nixos}/scripts/yt_transcript.py";
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.services.transcriptApi = {
-    enable = lib.mkEnableOption "YouTube transcript API";
-    
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 5000;
-      description = "API port";
-    };
-    
-    dataDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.state}/transcript-api";
-      description = "Data directory";
-    };
-    
-    apiKeys = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-      description = "YouTube API keys";
-    };
-  };
-  
-
-  #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
   config = lib.mkIf cfg.enable {
