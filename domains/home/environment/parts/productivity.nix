@@ -25,47 +25,9 @@
 { config, lib, pkgs, ... }:
 
 let
-  t   = lib.types;
   cfg = config.hwc.home.productivity;
 in
 {
-  #============================================================================
-  # OPTIONS (NixOS layer)
-  #============================================================================
-  options.hwc.home.productivity = {
-    enable = lib.mkEnableOption "Productivity tooling via Home‑Manager";
-
-    notes.obsidian = lib.mkOption {
-      type = t.bool;
-      default = false;
-      description = "Install Obsidian (unfree).";
-    };
-
-    browsers.firefox = lib.mkOption {
-      type = t.bool;
-      default = false;
-      description = "Enable Firefox via Home‑Manager.";
-    };
-
-    office.libreoffice = lib.mkOption {
-      type = t.bool;
-      default = false;
-      description = "Install LibreOffice.";
-    };
-
-    communication.thunderbird = lib.mkOption {
-      type = t.bool;
-      default = false;
-      description = "Enable Thunderbird via Home‑Manager.";
-    };
-
-    extraPackages = lib.mkOption {
-      type = t.listOf t.package;
-      default = [ ];
-      description = "Additional user‑scoped packages to include.";
-    };
-  };
-
   #============================================================================
   # IMPLEMENTATION (NixOS -> HM bridge)
   #============================================================================
