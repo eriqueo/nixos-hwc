@@ -44,7 +44,7 @@
 #   hwc.services.media.networking.mediaNetwork = "media-network";
 #
 # VALIDATION:
-#   - Requires hwc.security.secrets.vpn = true for VPN credentials
+#   - Requires hwc.secrets.secrets.vpn = true for VPN credentials
 #   - Creates container networks before dependent services
 
 { config, lib, pkgs, ... }:
@@ -144,8 +144,8 @@ in {
     #=========================================================================
     assertions = [
       {
-        assertion = !cfg.vpn.enable || config.hwc.security.secrets.vpn;
-        message = "VPN requires hwc.security.secrets.vpn = true for credentials";
+        assertion = !cfg.vpn.enable || config.hwc.secrets.secrets.vpn;
+        message = "VPN requires hwc.secrets.secrets.vpn = true for credentials";
       }
     ];
 
@@ -209,7 +209,7 @@ in {
       ports = map (port: "127.0.0.1:${toString port}:${toString port}") cfg.firewall.vpnPorts;
       
       # VPN credentials from agenix secrets
-      environmentFiles = lib.optionals config.hwc.security.secrets.vpn [
+      environmentFiles = lib.optionals config.hwc.secrets.secrets.vpn [
         "/run/agenix/vpn-credentials"  # Will be created by setup service
       ];
     };
@@ -219,7 +219,7 @@ in {
     #=========================================================================
     
     # Create VPN credentials file from agenix secrets
-    systemd.services.gluetun-env-setup = lib.mkIf (cfg.vpn.enable && config.hwc.security.secrets.vpn) {
+    systemd.services.gluetun-env-setup = lib.mkIf (cfg.vpn.enable && config.hwc.secrets.secrets.vpn) {
       description = "Setup Gluetun VPN credentials from agenix";
       before = [ "podman-gluetun.service" ];
       wantedBy = [ "podman-gluetun.service" ];

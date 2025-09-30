@@ -1,4 +1,4 @@
-# modules/security/secrets/infrastructure.nix
+# domains/secrets/declarations/infrastructure.nix
 #
 # Infrastructure domain secrets - Database and infrastructure service credentials
 # Data-only module that declares age.secrets entries for infrastructure authentication
@@ -8,21 +8,21 @@
   age.secrets = {
     # Database credentials
     database-name = {
-      file = ../../../secrets/database-name.age;
+      file = ../parts/infrastructure/database-name.age;
       mode = "0400";
       owner = "root";
       group = "root";
     };
     
     database-password = {
-      file = ../../../secrets/database-password.age;
+      file = ../parts/infrastructure/database-password.age;
       mode = "0400";
       owner = "root";
       group = "root";
     };
     
     database-user = {
-      file = ../../../secrets/database-user.age;
+      file = ../parts/infrastructure/database-user.age;
       mode = "0400";
       owner = "root";
       group = "root";
@@ -30,14 +30,14 @@
     
     # Surveillance system credentials
     surveillance-rtsp-username = {
-      file = ../../../secrets/surveillance-rtsp-username.age;
+      file = ../parts/infrastructure/surveillance-rtsp-username.age;
       mode = "0400";
       owner = "root";
       group = "root";
     };
     
     surveillance-rtsp-password = {
-      file = ../../../secrets/surveillance-rtsp-password.age;
+      file = ../parts/infrastructure/surveillance-rtsp-password.age;
       mode = "0400";
       owner = "root";
       group = "root";
@@ -45,7 +45,22 @@
     
     # Frigate RTSP credentials
     frigate-rtsp-password = {
-      file = ../../../secrets/frigate-rtsp-password.age;
+      file = ../parts/infrastructure/frigate-rtsp-password.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
+
+    # VPN credentials
+    vpn-username = {
+      file = ../parts/infrastructure/vpn-username.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
+
+    vpn-password = {
+      file = ../parts/infrastructure/vpn-password.age;
       mode = "0400";
       owner = "root";
       group = "root";

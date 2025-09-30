@@ -20,71 +20,9 @@
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.security.hardening;
+  cfg = config.hwc.secrets.hardening;
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.security.hardening = {
-    enable = lib.mkEnableOption "Security hardening";
-
-    firewall = {
-      strictMode = lib.mkEnableOption "Strict firewall mode";
-
-      allowedServices = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ "ssh" "http" "https" ];
-        description = "Allowed services";
-      };
-
-      trustedInterfaces = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ "lo" ];
-        description = "Trusted network interfaces";
-      };
-    };
-
-    fail2ban = {
-      enable = lib.mkEnableOption "Fail2ban intrusion prevention";
-
-      maxRetries = lib.mkOption {
-        type = lib.types.int;
-        default = 5;
-        description = "Max failed attempts";
-      };
-
-      banTime = lib.mkOption {
-        type = lib.types.str;
-        default = "10m";
-        description = "Ban duration";
-      };
-    };
-
-    ssh = {
-      passwordAuthentication = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Allow password auth";
-      };
-
-      permitRootLogin = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Allow root SSH";
-      };
-
-    };
-
-    audit = {
-      enable = lib.mkEnableOption "Security auditing";
-
-      rules = lib.mkOption {
-        type = lib.types.lines;
-        default = "";
-        description = "Audit rules";
-      };
-    };
-  };
 
 
   #============================================================================

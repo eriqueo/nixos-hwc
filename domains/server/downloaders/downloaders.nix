@@ -284,7 +284,7 @@ in {
           description = "Setup Soularr configuration from secrets";
           wantedBy = [ "podman-soularr.service" ];
           before = [ "podman-soularr.service" ];
-          after = lib.optionals config.hwc.security.secrets.arr [ "age-install-secrets.service" ];
+          after = lib.optionals config.hwc.secrets.secrets.arr [ "age-install-secrets.service" ];
           serviceConfig.Type = "oneshot";
           script = ''
             set -e
@@ -293,7 +293,7 @@ in {
             # Read API keys from secrets if available  
             LIDARR_API_KEY="dummy-lidarr"
             SLSKD_API_KEY="dummy-slskd"
-            ${lib.optionalString config.hwc.security.secrets.arr ''
+            ${lib.optionalString config.hwc.secrets.secrets.arr ''
               if [ -f "${config.age.secrets.lidarr-api-key.path}" ]; then
                 LIDARR_API_KEY=$(cat ${config.age.secrets.lidarr-api-key.path})
               fi
