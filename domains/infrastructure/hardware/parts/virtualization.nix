@@ -44,31 +44,12 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.infrastructure.virtualization;
+  cfg = config.hwc.infrastructure.hardware.virtualization;
   t   = lib.types;
 in
 {
   #============================================================================
-  # OPTIONS
-  #============================================================================
-  options.hwc.infrastructure.virtualization = {
-    enable      = lib.mkEnableOption "QEMU/KVM virtualization with libvirtd";
-    enableGpu   = lib.mkEnableOption "GPU passthrough support (placeholder toggles)";
-    spiceSupport = lib.mkOption {
-      type = t.bool;
-      default = true;
-      description = "Enable SPICE USB redirection and tools";
-    };
-
-    userGroups = lib.mkOption {
-      type = t.listOf t.str;
-      default = [ "libvirtd" ];
-      description = "Groups to add primary user to for VM management";
-    };
-  };
-
-  #============================================================================
-  # IMPLEMENTATION
+  # IMPLEMENTATION - Virtualization and containers
   #============================================================================
   config = lib.mkIf cfg.enable {
 

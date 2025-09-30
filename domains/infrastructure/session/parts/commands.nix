@@ -20,17 +20,7 @@ let
   cfg = config.hwc.infrastructure.session.commands;
 in {
   #============================================================================
-  # OPTIONS - Shared CLI Commands Configuration
-  #============================================================================
-
-  options.hwc.infrastructure.session.commands = {
-    enable = lib.mkEnableOption "shared CLI commands for cross-app integration";
-
-    gpuLaunch = lib.mkEnableOption "gpu-launch command for GPU-accelerated app launching";
-  };
-
-  #============================================================================
-  # IMPLEMENTATION - Shared Command Helpers
+  # IMPLEMENTATION - Shared CLI commands
   #============================================================================
 
   config = lib.mkIf cfg.enable {

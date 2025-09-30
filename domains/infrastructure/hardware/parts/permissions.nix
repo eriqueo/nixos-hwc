@@ -24,30 +24,8 @@ let
   usersCfg = config.hwc.system.users;
   paths = config.hwc.paths;
 in {
-
   #============================================================================
-  # OPTIONS - User Hardware Access Configuration
-  #============================================================================
-
-  options.hwc.infrastructure.hardware.permissions = {
-    enable = lib.mkEnableOption "user hardware access permissions and system setup";
-
-    username = lib.mkOption {
-      type = lib.types.str;
-      default = usersCfg.user.name or "eric";
-      description = "Username for hardware access setup";
-    };
-
-    groups = {
-      media = lib.mkEnableOption "media hardware groups (video, audio, render)";
-      development = lib.mkEnableOption "development groups (docker, podman)";
-      virtualization = lib.mkEnableOption "virtualization groups (libvirtd, kvm)";
-      hardware = lib.mkEnableOption "hardware access groups (input, uucp, dialout)";
-    };
-  };
-
-  #============================================================================
-  # IMPLEMENTATION - Hardware Access and System Setup
+  # IMPLEMENTATION - User hardware access permissions
   #============================================================================
 
   config = lib.mkIf cfg.enable {
