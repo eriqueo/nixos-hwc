@@ -27,7 +27,7 @@ let
 in
 {
   imports = [
-      ./adapters/gtk.nix
+      ./templates/gtk.nix
       ./fonts/index.nix
       ./options.nix
     ];
