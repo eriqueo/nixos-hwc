@@ -21,51 +21,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.businessApi;
-  paths = config.hwc.paths;
 in {
-  #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.services.businessApi = {
-    enable = lib.mkEnableOption "Business API services";
-
-    apis = {
-      invoicing = {
-        enable = lib.mkEnableOption "Invoicing API";
-        port = lib.mkOption {
-          type = lib.types.port;
-          default = 3001;
-        };
-        database = lib.mkOption {
-          type = lib.types.str;
-          default = "postgresql://localhost/invoicing";
-        };
-      };
-
-      crm = {
-        enable = lib.mkEnableOption "CRM API";
-        port = lib.mkOption {
-          type = lib.types.port;
-          default = 3002;
-        };
-      };
-
-      analytics = {
-        enable = lib.mkEnableOption "Analytics API";
-        port = lib.mkOption {
-          type = lib.types.port;
-          default = 3003;
-        };
-      };
-    };
-
-    dataDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.state}/business";
-    };
-  };
-
-
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
