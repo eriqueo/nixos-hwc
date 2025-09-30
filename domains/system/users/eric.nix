@@ -44,19 +44,19 @@ in {
     assertions = [
       # User and security assertions:
       {
-        assertion = !cfg.user.useSecrets || config.hwc.security.enable;
-        message = "hwc.system.users.useSecrets requires hwc.security.enable = true (via security profile)";
+        assertion = !cfg.user.useSecrets || config.hwc.secrets.enable;
+        message = "hwc.system.users.useSecrets requires hwc.secrets.enable = true (via security profile)";
       }
       {
-        assertion = !cfg.user.ssh.useSecrets || config.hwc.security.enable;
-        message = "hwc.system.users.ssh.useSecrets requires hwc.security.enable = true (via security profile)";
+        assertion = !cfg.user.ssh.useSecrets || config.hwc.secrets.enable;
+        message = "hwc.system.users.ssh.useSecrets requires hwc.secrets.enable = true (via security profile)";
       }
       {
-        assertion = !cfg.user.useSecrets || (config.hwc.security.materials.userInitialPasswordFile != null);
+        assertion = !cfg.user.useSecrets || (config.hwc.secrets.api.userInitialPasswordFile != null);
         message = "CRITICAL: useSecrets enabled but user-initial-password secret not available - this would lock you out! Disable useSecrets or ensure secret exists.";
       }
       {
-        assertion = !cfg.user.ssh.useSecrets || (config.hwc.security.materials.userSshPublicKeyFile != null);
+        assertion = !cfg.user.ssh.useSecrets || (config.hwc.secrets.api.userSshPublicKeyFile != null);
         message = "CRITICAL: SSH useSecrets enabled but user-ssh-public-key secret not available - this would lock you out of SSH! Disable useSecrets or ensure secret exists.";
       }
       {

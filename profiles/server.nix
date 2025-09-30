@@ -69,7 +69,7 @@
   # SECURITY AND SECRETS (Server extends base secrets)
   #============================================================================
   
-  # Server uses the base hwc.system.secrets configuration from base.nix
+  # Server uses the base hwc.secrets configuration from base.nix
   # Individual services will configure their own specific secrets as needed
   # No additional server-specific secrets configuration required here
 
@@ -256,8 +256,8 @@
       message = "Server profile requires hwc.paths.hot and hwc.paths.media to be configured";
     }
     {
-      assertion = config.hwc.system.secrets.enable;
-      message = "Server profile requires hwc.system.secrets.enable = true";
+      assertion = config.hwc.secrets.enable;
+      message = "Server profile requires hwc.secrets.enable = true";
     }
     {
       assertion = config.hwc.networking.tailscale.enable;

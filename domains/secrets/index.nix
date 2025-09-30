@@ -1,20 +1,19 @@
-# modules/security/index.nix
+# domains/secrets/index.nix
 #
-# Security domain aggregator - single source of truth for all secrets and security
-# Imports all security components: domain secrets, materials facade, and compatibility shim
+# Secrets domain aggregator - single source of truth for all secrets
+# Imports all secret declarations, API facade, emergency access, and hardening
 { lib, config, ... }:
 {
   imports = [
-    ./secrets/index.nix      # Aggregates all domain secret files
-    ./materials.nix          # Stable read-only path facade for consumers
-    ./compat.nix             # Compatibility aliases for legacy paths
-    ./emergency-access.nix   # Emergency access configuration (existing)
+    ./options.nix            # Consolidated options (charter-compliant)
+    ./declarations/index.nix # Age secret declarations organized by domain
+    ./secrets-api.nix        # Stable read-only path facade for consumers
+    ./emergency.nix          # Emergency root access for recovery
     ./hardening.nix          # Security hardening configuration
-    ./options.nix
   ];
 
   # Core agenix configuration
-  config = lib.mkIf config.hwc.security.enable {
+  config = lib.mkIf config.hwc.secrets.enable {
     # Ensure age identity paths are configured
     age.identityPaths = lib.mkDefault [ "/etc/age/keys.txt" ];
     
@@ -33,7 +32,7 @@
       ''
         ##################################################################
         # SECURITY DOMAIN ACTIVE                                        #
-        # All secrets managed via hwc.security.materials.*             #
+        # All secrets managed via hwc.secrets.api.*                   #
         # Secrets decrypted to /run/agenix/ during system boot.        #
         # Ensure age keys are deployed to /etc/age/keys.txt             #
         ##################################################################

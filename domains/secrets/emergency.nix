@@ -1,4 +1,4 @@
-# HWC Charter Module/domains/security/emergency-access.nix
+# HWC Charter Module/domains/secrets/emergency-access.nix
 #
 # HWC Emergency Root Access (Charter v3)
 # Provides a temporary, password-protected root account for recovery.
@@ -12,7 +12,7 @@
 #
 # USAGE (preferred with agenix):
 #   age.secrets."emergency-password".file = ./secrets/emergency-password.age;
-#   hwc.security.emergencyAccess = {
+#   hwc.secrets.emergency = {
 #     enable = true;
 #     hashedPasswordFile = config.age.secrets."emergency-password".path;
 #   };
@@ -20,7 +20,7 @@
 { config, lib, ... }:
 
 let
-  cfg = config.hwc.security.emergencyAccess;
+  cfg = config.hwc.secrets.emergency;
 
   hasHPF = cfg.hashedPasswordFile != null;
   hasHP  = cfg.hashedPassword     != null;
@@ -32,38 +32,6 @@ let
 in
 {
   #============================================================================
-  # OPTIONS – Interface (no secrets hardcoded)
-  #============================================================================
-  options.hwc.security.emergencyAccess = {
-    enable = lib.mkEnableOption "Emergency root password access (temporary)";
-
-    # Plaintext (discouraged; becomes initialPassword)
-    password = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "PLAINTEXT emergency password (applied as initialPassword). Prefer hashed/passwordFile.";
-    };
-
-    # Plaintext file (good with agenix: config.age.secrets.<name>.path)
-    passwordFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = "Path to PLAINTEXT password file (e.g. agenix secret path).";
-    };
-
-    # Hashed inputs (preferred)
-    hashedPassword = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Hashed password (e.g. mkpasswd -m sha-512). Preferred.";
-    };
-
-    hashedPasswordFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = "Path to file containing a hashed password. Preferred.";
-    };
-  };
 
   #============================================================================
   # IMPLEMENTATION – Apply when enabled; assert invariant
@@ -73,7 +41,7 @@ in
       assertions = [{
         assertion = exactlyOne;
         message =
-          "[hwc.security.emergencyAccess] enabled, but you must provide exactly one of: "
+          "[hwc.secrets.emergency] enabled, but you must provide exactly one of: "
           + "hashedPasswordFile, hashedPassword, passwordFile, or password.";
       }];
 
@@ -83,7 +51,7 @@ in
       warnings = [ ''
         ##################################################################
         # SECURITY WARNING: EMERGENCY ROOT ACCESS IS ACTIVE              #
-        # Disable `hwc.security.emergencyAccess.enable` when finished.   #
+        # Disable `hwc.secrets.emergency.enable` when finished.   #
         ##################################################################
       '' ];
     }

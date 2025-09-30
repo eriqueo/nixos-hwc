@@ -56,7 +56,8 @@
       "Bash(journalctl:*)",
       "Read(//etc/nixos/**)",
       "Bash(sudo smartctl:*)",
-      "Bash(./scripts/lints/charter-lint.sh:*)"
+      "Bash(./scripts/lints/charter-lint.sh:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": [],
