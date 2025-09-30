@@ -22,42 +22,6 @@
 let
   cfg = config.hwc.services.vpn;
 in {
-  #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.services.vpn = {
-    tailscale = {
-      enable = lib.mkEnableOption "Tailscale VPN";
-
-      authKeyFile = lib.mkOption {
-        type = lib.types.path;
-        description = "Path to auth key file";
-      };
-
-      exitNode = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Act as exit node";
-      };
-
-      advertiseRoutes = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [];
-        description = "Routes to advertise";
-      };
-    };
-
-    wireguard = {
-      enable = lib.mkEnableOption "WireGuard VPN";
-
-      interfaces = lib.mkOption {
-        type = lib.types.attrsOf lib.types.attrs;
-        default = {};
-        description = "WireGuard interfaces";
-      };
-    };
-  };
-
 
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
