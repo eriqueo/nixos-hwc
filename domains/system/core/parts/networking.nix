@@ -23,52 +23,6 @@ let
   cfg = config.hwc.networking;
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.networking = {
-    vlans = lib.mkOption {
-      type = lib.types.attrsOf lib.types.attrs;
-      default = {};
-      description = "VLAN configurations";
-      example = {
-        management = { id = 10; interface = "eth0"; };
-        storage = { id = 20; interface = "eth0"; };
-      };
-    };
-
-    bridges = lib.mkOption {
-      type = lib.types.attrsOf lib.types.attrs;
-      default = {};
-      description = "Bridge configurations";
-    };
-
-    staticRoutes = lib.mkOption {
-      type = lib.types.listOf lib.types.attrs;
-      default = [];
-      description = "Static routes";
-    };
-
-    dnsServers = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "1.1.1.1" "8.8.8.8" ];
-      description = "DNS servers";
-    };
-
-    search = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "local" ];
-      description = "DNS search domains";
-    };
-
-    mtu = lib.mkOption {
-      type = lib.types.int;
-      default = 1500;
-      description = "Default MTU";
-    };
-  };
-
-
-  #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
   config = {

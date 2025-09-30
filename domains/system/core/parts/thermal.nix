@@ -22,36 +22,6 @@ let
   cfg = config.hwc.system.core.thermal;
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-
-  options.hwc.system.core.thermal = {
-    enable = lib.mkEnableOption "thermal management configuration";
-
-    powerManagement = {
-      enable = lib.mkEnableOption "power profile management";
-      
-      service = lib.mkOption {
-        type = lib.types.enum [ "power-profiles-daemon" "tlp" ];
-        default = "power-profiles-daemon";
-        description = "Power management service to use";
-      };
-    };
-
-    disableIncompatibleServices = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Disable thermal services that are incompatible with this hardware platform";
-    };
-
-    blacklistedModules = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "spd5118" ];  # DDR5 SPD sensor with resume issues
-      description = "Kernel modules to blacklist for hardware compatibility";
-    };
-  };
-
-  #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
 
