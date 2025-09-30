@@ -80,8 +80,8 @@
     };
   };
 
-  ## AI services (Service domain implemented in modules/services/ai/ollama.nix)
-  hwc.services.ollama = {
+  ## AI services (Service domain implemented in domains/server/ai/ollama)
+  hwc.server.ai.ollama = {
     enable = true;
     models = [ "llama3:8b" "codellama:13b" "phi3:medium" ];
   };
