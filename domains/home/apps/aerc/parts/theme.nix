@@ -166,10 +166,6 @@ in {
 
     # Emoticons and special content
     body_emote = token (hex c.accent) "default" false;
-
-    # Attachment indicators
-    attachment = token (hex c.fileArchive) "default" false;
-    attachment_selected = token (hex c.bg1) (hex c.selection) false;
   };
 
   # Boolean attributes (aerc uses string values)
