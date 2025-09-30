@@ -2,17 +2,9 @@
 { config, lib, ... }:
 
 let
-  cfg = config.hwc.home.apps.aerc or {};
-
-  # Resolve palette: per-app override > global theme  
-  paletteName =
-    if (cfg ? theme && cfg.theme ? palette && cfg.theme.palette != null)
-    then cfg.theme.palette
-    else (config.hwc.home.theme.name or "deep-nord");
-
-  palettesBase = ../../.. + "/theme/palettes";
-  palettePath  = palettesBase + ("/" + paletteName + ".nix");
-  P            = import palettePath {};
+  # Consume global theme colors from config.hwc.home.theme.colors
+  # This automatically updates when hwc.home.theme.palette changes
+  colors = config.hwc.home.theme.colors or {};
 
   # Aerc uses different color specification than neomutt
   # It supports: "default", w3c color names, hex codes, palette indices

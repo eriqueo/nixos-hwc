@@ -89,6 +89,7 @@
         "vpnon" = "sudo wg-quick up protonvpn";
         "vpnoff" = "sudo wg-quick down protonvpn";
         "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
+        "cdn" = "cd ~/.nixos";
       };
       description = "Shell aliases for zsh";
     };
