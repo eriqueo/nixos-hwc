@@ -23,37 +23,7 @@ let
   cfg = config.hwc.infrastructure.mesh.container;
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  options.hwc.infrastructure.mesh.container = {
-    networks = lib.mkOption {
-      type = lib.types.attrsOf lib.types.attrs;
-      default = {};
-      description = "Container networks";
-      example = {
-        media = {
-          subnet = "172.20.0.0/16";
-          gateway = "172.20.0.1";
-        };
-      };
-    };
-
-    defaultNetwork = lib.mkOption {
-      type = lib.types.str;
-      default = "bridge";
-      description = "Default container network";
-    };
-
-    enableIpv6 = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable IPv6 in containers";
-    };
-  };
-
-
-  #============================================================================
-  # IMPLEMENTATION - What actually gets configured
+  # IMPLEMENTATION - Container networking
   #============================================================================
   config = {
     # Create docker networks

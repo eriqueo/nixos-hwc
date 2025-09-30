@@ -25,23 +25,8 @@ let
   usersCfg = config.hwc.system.users;
   paths = config.hwc.paths;
 in {
-
   #============================================================================
-  # OPTIONS - User Service Configuration
-  #============================================================================
-
-  options.hwc.infrastructure.session.services = {
-    enable = lib.mkEnableOption "user system services (home-manager integration, SSH setup)";
-
-    username = lib.mkOption {
-      type = lib.types.str;
-      default = usersCfg.user.name or "eric";
-      description = "Username for user services";
-    };
-  };
-
-  #============================================================================
-  # IMPLEMENTATION - System Services for User Environment
+  # IMPLEMENTATION - User system services
   #============================================================================
 
   config = lib.mkIf cfg.enable {

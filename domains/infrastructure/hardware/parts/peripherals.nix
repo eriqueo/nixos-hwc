@@ -47,38 +47,7 @@ let
   cfg = config.hwc.infrastructure.hardware.peripherals;
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-  
-  options.hwc.infrastructure.hardware.peripherals = {
-    enable = lib.mkEnableOption "CUPS printing support with drivers";
-    
-    # Driver packages
-    drivers = lib.mkOption {
-      type = lib.types.listOf lib.types.package;
-      default = with pkgs; [
-        gutenprint     # High quality drivers for Canon, Epson, Lexmark, Sony, Olympus
-        hplip          # HP Linux Imaging and Printing
-        brlaser        # Brother laser printer driver
-        brgenml1lpr    # Brother Generic LPR driver
-        cnijfilter2    # Canon IJ Printer Driver
-      ];
-      description = "Printer driver packages to install";
-    };
-    
-    # Network discovery
-    avahi = lib.mkEnableOption "Avahi for network printer discovery";
-    
-    # GUI tools
-    guiTools = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Install GUI printer management tools";
-    };
-  };
-  
-  #============================================================================
-  # IMPLEMENTATION - What actually gets configured
+  # IMPLEMENTATION - CUPS printing support
   #============================================================================
   
   config = lib.mkIf cfg.enable {
