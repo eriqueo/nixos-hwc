@@ -15,6 +15,7 @@ let
   token = fg: bg: bold: { inherit fg bg bold; };
 
 in {
+  # Main section styles (no [section] prefix)
   tokens = {
     # ===== CORE UI ELEMENTS (Official) =====
     default = token (hex c.fg1) "default" false;
@@ -88,36 +89,26 @@ in {
     index_size = token (hex c.fg3) "default" false;
     index_subject = token (hex c.fg1) "default" false;
 
-    # ===== VIEWER SECTION (Official colorize filter styles) =====
-    # These styles are ONLY used by the built-in colorize filter
-    # Note: 'header' is already defined in Core UI section above
+  };
 
+  # [viewer] section styles - used by built-in colorize filter
+  viewerTokens = {
     url = token (hex c.link) "default" false;
+    header = token (hex c.accent) "default" true;
     signature = token (hex c.fg3) "default" false;
 
     # Diff/patch colors
     diff_meta = token (hex c.info) "default" true;
     diff_chunk = token (hex c.accent) "default" false;
     diff_chunk_func = token (hex c.accentAlt) "default" false;
-    diff_add = token (hex c.successBright) (hex c.bg0) false;
-    diff_del = token (hex c.errorBright) (hex c.bg0) false;
+    diff_add = token (hex c.successBright) "default" false;
+    diff_del = token (hex c.errorBright) "default" false;
 
-    # Quote levels (official names for colorize filter)
+    # Quote levels for nested replies
     quote_1 = token (hex c.success) "default" false;
     quote_2 = token (hex c.info) "default" false;
     quote_3 = token (hex c.accent) "default" false;
     quote_4 = token (hex c.warning) "default" false;
     quote_x = token (hex c.error) "default" false;
-  };
-
-  # Boolean attributes (aerc uses string values)
-  attrs = {
-    bold = "true";
-    normal = "false";
-    italic = "true";
-    underline = "true";
-    dim = "true";
-    reverse = "true";
-    blink = "true";
   };
 }

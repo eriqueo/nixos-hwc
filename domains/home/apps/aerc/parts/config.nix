@@ -28,10 +28,20 @@ let
 
   stylesetConf = let
     tokens = themePart.tokens;
+    viewerTokens = themePart.viewerTokens;
+
     renderStyle = name: style:
       "${name}.fg = ${style.fg}\n${name}.bg = ${style.bg}\n${name}.bold = ${if style.bold then "true" else "false"}";
-    styleLines = lib.mapAttrsToList renderStyle tokens;
-  in lib.concatStringsSep "\n" styleLines;
+
+    # Main section styles
+    mainStyleLines = lib.mapAttrsToList renderStyle tokens;
+    mainSection = lib.concatStringsSep "\n" mainStyleLines;
+
+    # [viewer] section styles
+    viewerStyleLines = lib.mapAttrsToList renderStyle viewerTokens;
+    viewerSection = "[viewer]\n" + (lib.concatStringsSep "\n" viewerStyleLines);
+
+  in mainSection + "\n\n" + viewerSection;
 
   aercConf = ''
     [ui]
