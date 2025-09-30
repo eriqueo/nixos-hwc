@@ -42,12 +42,10 @@ in
     # without importing each adapter in machines/<host>/home.nix.
 
 
-    
+
 #============================================================================
 # VALIDATION - Assertions and checks
 #============================================================================
-# Charter compliance: Home Manager modules use home.packages, not environment.systemPackages
-
     assertions = [
       {
         assertion = true;
