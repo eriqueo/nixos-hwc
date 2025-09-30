@@ -23,34 +23,6 @@ let
   cfg = config.hwc.system.services.behavior;
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-
-  options.hwc.system.services.behavior = {
-    enable = lib.mkEnableOption "system input behavior and audio configuration";
-
-    # Keyboard behavior configuration
-    keyboard = {
-      enable = lib.mkEnableOption "universal keyboard mapping";
-      universalFunctionKeys = lib.mkEnableOption "standardize F-keys across all keyboards";
-    };
-
-    # Future input device extensibility
-    mouse = {
-      enable = lib.mkEnableOption "universal mouse configuration";
-    };
-
-    touchpad = {
-      enable = lib.mkEnableOption "universal touchpad configuration";
-    };
-
-    # Audio system configuration
-    audio = {
-      enable = lib.mkEnableOption "PipeWire audio system";
-    };
-  };
-
-  #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
 
