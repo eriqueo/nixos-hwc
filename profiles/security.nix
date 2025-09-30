@@ -4,8 +4,8 @@
   # BASE SYSTEM - Critical for machine functionality
   #==========================================================================
   imports = [
-    ../domains/server/networking/vpn.nix
-    ../domains/secrets/index.nix          # New consolidated security domain
+    ../domains/server/networking            # Includes VPN configuration
+    ../domains/secrets/index.nix            # New consolidated security domain
   ];
 
   #==========================================================================
