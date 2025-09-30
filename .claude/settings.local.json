@@ -59,7 +59,8 @@
       "Bash(./scripts/lints/charter-lint.sh:*)",
       "Bash(git mv:*)",
       "Bash(test:*)",
-      "Bash(sudo test:*)"
+      "Bash(sudo test:*)",
+      "Bash(nix-store:*)"
     ],
     "deny": [],
     "ask": [],
