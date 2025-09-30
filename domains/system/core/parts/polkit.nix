@@ -21,20 +21,6 @@ let
   cfg = config.hwc.system.core.polkit;
 in {
   #============================================================================
-  # OPTIONS - What can be configured
-  #============================================================================
-
-  options.hwc.system.core.polkit = {
-    enable = lib.mkEnableOption "polkit directory management";
-
-    createMissingDirectories = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Create missing polkit rule directories to silence warnings";
-    };
-  };
-
-  #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
 
