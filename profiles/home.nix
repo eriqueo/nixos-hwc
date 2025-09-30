@@ -16,7 +16,7 @@
       #==========================================================================
       # OPTIONAL FEATURES - Sensible defaults, override per machine
       #==========================================================================
-      hwc.home.theme.palette = "deep-nord";
+      hwc.home.theme.palette = "gruv";
       hwc.home.fonts.enable = true;
       hwc.home.shell = {
         enable = true;
