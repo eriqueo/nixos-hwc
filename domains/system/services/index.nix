@@ -2,8 +2,8 @@
 { lib, ... }:
 let
   dir   = builtins.readDir ./.;
-  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix") dir;
-  subds = lib.filterAttrs (_: t: t == "directory") dir;
+  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix" && n != "options.nix") dir;
+  subds = lib.filterAttrs (n: t: t == "directory" && n != "parts") dir;
 
   filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
   subIndex  =
@@ -13,5 +13,11 @@ let
     ];
 in
 {
-  imports = filePaths ++ subIndex;
+  imports = [
+    ./options.nix
+    ./parts/behavior.nix
+    ./parts/session.nix
+    ./parts/samba.nix
+    ./parts/networking.nix
+  ] ++ filePaths ++ subIndex;
 }
