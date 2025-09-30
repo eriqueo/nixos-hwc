@@ -7,7 +7,7 @@ let
   # Import the parts as local variables
   keymapConfig = import ./parts/keymap.nix;
   pluginsConfig = import ./parts/plugins.nix;
-  themeConfig = import ./parts/theme.nix;
+  themeConfig = import ./parts/theme.nix { inherit config; };
 
 in
 {

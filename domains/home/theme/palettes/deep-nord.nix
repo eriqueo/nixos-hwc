@@ -5,40 +5,78 @@
 {
   name = "deep-nord";
 
-  # --- Neutrals / backgrounds ---
-  bg       = "2e3440";  # main background
-  bgAlt    = "3b4252";  # alt background (headers/sidebars)
-  bgDark   = "0B1115";  # very dark (overlays, popups)
-  surface0 = "2f3541";  # panels / cards
-  surface1 = "343b49";  # raised panels
-  surface2 = "394152";  # most raised
+  # --- Background Hierarchy (4 shades for rich UI depth) ---
+  bg0      = "0B1115";  # Deepest: modals, masks, deepest overlays
+  bg1      = "2e3440";  # Main: primary background
+  bg2      = "3b4252";  # Elevated: sidebars, inactive tabs, raised surfaces
+  bg3      = "434c5e";  # Highest: active elements, buttons, borders
 
-  # --- Foregrounds ---
-  fg       = "ECEFF4";  # primary text
-  fgDim    = "d8dee9";  # secondary text
-  muted    = "4C566A";  # muted/disabled
+  # Legacy aliases (keep for compatibility during transition)
+  bg       = "2e3440";  # → bg1
+  bgAlt    = "3b4252";  # → bg2
+  bgDark   = "0B1115";  # → bg0
+  surface0 = "2f3541";  # intermediate shade
+  surface1 = "343b49";  # intermediate shade
+  surface2 = "394152";  # intermediate shade
 
-  # --- Accents / status ---
-  accent     = "7daea3"; # teal (primary)
-  accentAlt  = "89b482"; # green (secondary)
-  accent2    = "88c0d0"; # nord cyan (optional tertiary)
+  # --- Foreground Hierarchy (4 levels for text prominence) ---
+  fg0      = "ECEFF4";  # Brightest: headings, emphasis, key info
+  fg1      = "E5E9F0";  # Normal: body text, primary content
+  fg2      = "D8DEE9";  # Dimmed: secondary text, labels
+  fg3      = "4C566A";  # Muted: disabled, comments, dividers
 
-  good  = "A3BE8C";
-  warn  = "EBCB8B";
-  crit  = "BF616A";
-  info  = "81A1C1";
+  # Legacy aliases
+  fg       = "ECEFF4";  # → fg0
+  fgDim    = "d8dee9";  # → fg2
+  muted    = "4C566A";  # → fg3
 
-  # --- UI roles (common adapters can read these) ---
-  selectionFg = "2e3440";
-  selectionBg = "7daea3";
+  # --- Primary Accents (main interaction colors) ---
+  accent     = "88c0d0"; # Cyan: primary accent (tabs, modes, links)
+  accentAlt  = "81a1c1"; # Blue: secondary accent
+  accent2    = "5e81ac"; # Dark blue: tertiary
 
-  # RENAMED: avoid collision with pointer-theme object below
-  cursorColor = "7daea3";  # text-caret / selection handles, not the pointer theme
-  caret       = "7daea3";  # alias for readability
+  # --- Semantic Status Colors (base + variants) ---
+  success       = "A3BE8C"; # Green: success states
+  successBright = "a9b665"; # Bright green: emphasis
+  successDim    = "8FBCBB"; # Teal green: subtle
 
-  link        = "88c0d0";
-  border      = "434C5E";
-  borderDim   = "3b4252";
+  warning       = "EBCB8B"; # Yellow: warnings
+  warningBright = "d8a657"; # Orange-yellow: urgent
+
+  error         = "BF616A"; # Red: errors
+  errorBright   = "ea6962"; # Bright red: critical
+  errorDim      = "c34043"; # Dark red: broken/invalid
+
+  info          = "81A1C1"; # Blue: info/help
+
+  # Legacy aliases
+  good  = "A3BE8C";  # → success
+  warn  = "EBCB8B";  # → warning
+  crit  = "BF616A";  # → error
+
+  # --- UI Element Colors (specific roles) ---
+  # Selection & Marking
+  selection   = "88c0d0"; # Primary selection color
+  selectionFg = "2e3440"; # Text on selection
+  selectionBg = "88c0d0"; # Selection background
+  marked      = "B48EAD"; # Marked items (violet)
+  markedAlt   = "5e81ac"; # Alt marked color
+
+  # Interactive Elements
+  cursorColor = "88c0d0"; # Text cursor
+  caret       = "88c0d0"; # Caret/insertion point
+  link        = "81a1c1"; # Hyperlinks
+  linkHover   = "5e81ac"; # Hovered links
+
+  # Borders & Separators
+  border      = "434C5E"; # Main borders
+  borderDim   = "3b4252"; # Subtle borders
+  borderBright= "4C566A"; # Emphasized borders
+  separator   = "4C566A"; # UI separators
+
+  # Progress & Loading
+  progress    = "88c0d0"; # Progress bar fill
+  progressBg  = "3b4252"; # Progress bar background
 
   # --- ANSI 16 (term adapters like Kitty/Alacritty/WezTerm) ---
   ansi = {
@@ -75,6 +113,16 @@
     green  = "89b482";
     muted  = "45403d";
   };
+
+  # --- File Type Colors (for file managers) ---
+  fileImage    = "EBCB8B"; # Yellow: images
+  fileMedia    = "B48EAD"; # Violet: audio/video
+  fileArchive  = "BF616A"; # Red: archives/compressed
+  fileDocument = "8FBCBB"; # Teal: documents/PDFs
+  fileCode     = "81A1C1"; # Blue: source code
+  fileExec     = "A3BE8C"; # Green: executables
+  fileOrphan   = "c34043"; # Dark red: broken links
+  fileDir      = "88c0d0"; # Cyan: directories
 
   # Legacy keys kept for back-compat (can be removed after adapters migrate)
   gruvboxTeal  = "7daea3ff";
