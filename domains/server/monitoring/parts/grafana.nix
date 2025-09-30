@@ -26,27 +26,6 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.services.grafana = {
-    enable = lib.mkEnableOption "Grafana dashboards";
-    
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 3000;
-      description = "Grafana port";
-    };
-    
-    dataDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.state}/grafana";
-      description = "Data directory";
-    };
-    
-    domain = lib.mkOption {
-      type = lib.types.str;
-      default = "grafana.local";
-      description = "Domain name";
-    };
-  };
   
 
   #============================================================================

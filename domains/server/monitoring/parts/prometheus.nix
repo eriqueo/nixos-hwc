@@ -26,33 +26,6 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.services.prometheus = {
-    enable = lib.mkEnableOption "Prometheus monitoring";
-    
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 9090;
-      description = "Prometheus port";
-    };
-    
-    dataDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.state}/prometheus";
-      description = "Data directory";
-    };
-    
-    retention = lib.mkOption {
-      type = lib.types.str;
-      default = "30d";
-      description = "Data retention period";
-    };
-    
-    scrapeConfigs = lib.mkOption {
-      type = lib.types.listOf lib.types.attrs;
-      default = [];
-      description = "Scrape configurations";
-    };
-  };
   
 
   #============================================================================
