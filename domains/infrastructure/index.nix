@@ -1,14 +1,13 @@
 # domains/infrastructure/index.nix
-#
-# Infrastructure Domain aggregator
-# Imports all infrastructure subdomain aggregators
-
 { lib, ... }:
-
-{
-  imports = [
-    ./hardware/index.nix  # Hardware subdomain (GPU, peripherals, virtualization, storage, permissions)
-    ./session/index.nix   # Session subdomain (user services, shared commands)
-    ./mesh/index.nix      # Mesh subdomain (container networking)
+let
+  dir = builtins.readDir ./.;
+  subds = lib.filterAttrs (n: t: t == "directory") dir;
+  subIndex = lib.pipe (lib.attrNames subds) [
+    (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
+    (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
   ];
+in
+{
+  imports = [ ./options.nix ] ++ subIndex;
 }

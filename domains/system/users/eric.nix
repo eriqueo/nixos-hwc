@@ -10,30 +10,39 @@ in {
       home = "/home/${cfg.user.name}";
       shell = cfg.user.shell;
       description = cfg.user.description;
-      
-      extraGroups = 
+
+      extraGroups =
         (lib.optionals cfg.user.groups.basic            [ "wheel" "networkmanager" ]) ++
-        (lib.optionals cfg.user.groups.media            [ "video" "audio"]) ++
+        (lib.optionals cfg.user.groups.media            [ "video" "audio" "render" ]) ++
         (lib.optionals cfg.user.groups.development      [ "docker" "podman"]) ++
         (lib.optionals cfg.user.groups.virtualization   [ "libvirtd" "kvm" ]) ++
         (lib.optionals cfg.user.groups.hardware         [ "input" "uucp"]);
 
       initialPassword = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null)
         cfg.user.fallbackPassword;
+
+      openssh.authorizedKeys.keys = lib.mkIf cfg.user.ssh.enable (
+        if cfg.user.ssh.useSecrets then
+          [ (builtins.readFile config.age.secrets.user-ssh-public-key.path) ]
+        else
+          [ cfg.user.ssh.fallbackKey ]
+      );
     };
 
     # ZSH system enablement (required for user shell)
     programs.zsh.enable = lib.mkIf cfg.user.environment.enableZsh true;
 
-    # Core system packages for user environment  
+    users.groups.render = lib.mkIf cfg.user.groups.media { gid = 2002; };
+
+    systemd.tmpfiles.rules = lib.mkIf cfg.enable [
+      "Z /home/${cfg.user.name} - ${cfg.user.name} users - -"
+      "Z /home/${cfg.user.name}/.ssh 0700 ${cfg.user.name} users - -"
+      "d /home/${cfg.user.name}/.config 0755 ${cfg.user.name} users -"
+    ];
+
     environment.systemPackages = lib.mkIf cfg.enable (with pkgs; [
-      # Core utilities
       vim git wget curl htop tmux
-
-      # Modern Unix tools
       ncdu tree ripgrep fd bat eza zoxide fzf
-
-      # User environment tools
       which diffutils less
     ]);
 

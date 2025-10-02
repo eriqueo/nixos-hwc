@@ -2,7 +2,7 @@
 {
   imports = [
     ./hardware.nix
-    ../../profiles/base.nix
+    ../../profiles/system.nix
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix

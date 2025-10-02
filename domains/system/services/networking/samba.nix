@@ -1,46 +1,4 @@
-# HWC Charter Module/domains/infrastructure/samba.nix
-#
-# SAMBA - Brief service description
-# TODO: Add detailed description of what this module provides
-#
-# DEPENDENCIES (Upstream):
-#   - TODO: List upstream dependencies
-#   - config.hwc.paths.* (modules/system/paths.nix)
-#
-# USED BY (Downstream):
-#   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.infrastructure.samba.enable)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/profile.nix: ../domains/infrastructure/samba.nix
-#
-# USAGE:
-#   hwc.infrastructure.samba.enable = true;
-#   # TODO: Add specific usage examples
 
-# HWC Charter Module/domains/infrastructure/samba.nix
-#
-# Samba File Sharing Infrastructure
-# Provides SMB/CIFS file sharing with modern Windows compatibility
-#
-# DEPENDENCIES:
-#   Upstream: config.hwc.paths.* (for share paths) [optional]
-#
-# USED BY:
-#   Downstream: profiles/workstation.nix (enables for development VMs)
-#   Downstream: machines/laptop/config.nix (may override shares)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/workstation.nix: ../domains/infrastructure/samba.nix
-#
-# USAGE:
-#   hwc.infrastructure.samba.enable = true;
-#   hwc.infrastructure.samba.workgroup = "DOMAIN";  # Override default
-#   hwc.infrastructure.samba.shares.myshare = { path = "/path"; };
-#
-# VALIDATION:
-#   - Share paths must exist
-#   - Firewall ports will be opened automatically
 
 { config, lib, pkgs, ... }:
 
