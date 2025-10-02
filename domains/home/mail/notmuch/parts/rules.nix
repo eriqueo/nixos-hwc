@@ -10,13 +10,16 @@ let
   financeQ      = orJoin (map mkFrom (R.financeSenders      or []));
   actionQ       = orJoin (map mkSubj (R.actionSubjects      or []));
 
-  line = tag: ops: q: if q == "" then "" else ''notmuch tag ${tag} ${ops} -- '${q}'\n'';
+  # Emit a real newline using a multi-line string
+  line = tag: ops: q:
+    if q == "" then "" else ''
+notmuch tag ${tag} ${ops} -- '${q}'
+'';
 
   rulesText = ''
-    ${line "+newsletter"  "-inbox" newsletterQ}
-    ${line "+notification" "-inbox" notificationQ}
-    ${line "+finance"     "-inbox" financeQ}
-    ${line "+action"      ""       actionQ}
-    notmuch tag -action -newsletter -notification -- 'tag:sent OR tag:trash OR tag:spam OR tag:draft'
-  '';
+${line "+newsletter"  "-inbox" newsletterQ}
+${line "+notification" "-inbox" notificationQ}
+${line "+finance"     "-inbox" financeQ}
+${line "+action"      ""       actionQ}
+'';
 in { text = rulesText; }

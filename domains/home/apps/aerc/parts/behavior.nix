@@ -24,22 +24,23 @@ in
       <C-h> = :prev-tab<Enter>
       <C-l> = :next-tab<Enter>
       <C-q> = :prompt 'Quit aerc?' quit<Enter>
-      <C-t> = :term<Enter>
+      <C-t> = :term<Enter>   
+      <C-j> = :next-folder<Enter>
+      <C-k> = :prev-folder<Enter>
       ?     = :help keys<Enter>
       <C-r> = :exec mbsync -a<Enter>
 
       [messages]
       j = :next<Enter>
       k = :prev<Enter>
-      h = :prev-folder<Enter>
-      l = :next-folder<Enter>
       g = :select 0<Enter>
       G = :select -1<Enter>
       <C-d> = :next 50%<Enter>
       <C-u> = :prev 50%<Enter>
       <Enter> = :view<Enter>
       q = :quit<Enter>
-
+      <C-Space> = :expand-folder<Enter>
+      <C-S-Space> = :collapse-folder<Enter>
       J = :mark -t<Enter>:next<Enter>
       K = :mark -t<Enter>:prev<Enter>
       V = :mark -v<Enter>
@@ -49,9 +50,70 @@ in
       c = :compose<Enter>
       C = :reply -aq<Enter>
 
+      # --- Verb + Numbered Destination (Shortcut Path) ---
+      # 'x' is for Move (Cut), 'y' is for Copy (Yank)
+      x0 = :mv 0_Inbox<Enter>
+      x1 = :mv 1_Archive<Enter>
+      x2 = :mv 2_Sent<Enter>
+      x3 = :mv 3_Drafts<Enter>
+      x4 = :mv 4_Important<Enter>
+      x5 = :mv 5_ProjectA<Enter>
+      x6 = :mv 6_ProjectB<Enter>
+      x7 = :mv 7_ReadLater<Enter>
+      x8 = :mv 8_Spam<Enter>
+      x9 = :mv 9_Trash<Enter>
+
+      y0 = :cp 0_Inbox<Enter>
+      y1 = :cp 1_Archive<Enter>
+      y2 = :cp 2_Sent<Enter>
+      y3 = :cp 3_Drafts<Enter>
+      y4 = :cp 4_Important<Enter>
+      y5 = :cp 5_ProjectA<Enter>
+      y6 = :cp 6_ProjectB<Enter>
+      y7 = :cp 7_ReadLater<Enter>
+      y8 = :cp 8_Spam<Enter>
+      y9 = :cp 9_Trash<Enter>
+
+      # --- Uppercase Verb for Flexible Path ---
       X = :mv<space>
       Y = :cp<space>
 
+      # ---------------------------------------------
+      # <Space> Leader Menu (Tier 2 Actions)
+      # ---------------------------------------------
+      # <Space>g - Go (Navigate to folder)
+      <Space>g0 = :cf 0_Inbox<Enter>
+      <Space>g1 = :cf 1_Archive<Enter>
+      <Space>g2 = :cf 2_Sent<Enter>
+      <Space>g3 = :cf 3_Drafts<Enter>
+      <Space>g4 = :cf 4_Important<Enter>
+      <Space>g5 = :cf 5_ProjectA<Enter>
+      <Space>g6 = :cf 6_ProjectB<Enter>
+      <Space>g7 = :cf 7_ReadLater<Enter>
+      <Space>g8 = :cf 8_Spam<Enter>
+      <Space>g9 = :cf 9_Trash<Enter>
+      
+      # <Space>f - Find
+      <Space>ff = :filter<space>
+      <Space>fs = :search<space>
+      
+      # <Space>s - Sort
+      <Space>sd = :sort -r date<Enter>
+      <Space>sf = :sort from<Enter>
+      <Space>ss = :sort subject<Enter>
+      
+      # <Space>t - Tabs/Toggles
+      <Space>tt = :toggle-threads<Enter>
+      <Space>tn = :new-tab<Enter>
+      <Space>tc = :close-tab<Enter>
+      
+      # <Space>w - Window
+      <Space>ws = :split<Enter>
+      <Space>wv = :vsplit<Enter>
+      
+      # ---------------------------------------------
+      # [view] - Message Viewer
+      # ---------------------------------------------
       [view]
       q = :close<Enter>
       j = :next<Enter>
@@ -66,6 +128,22 @@ in
       [view::passthrough]
       $noinherit = true
       <Esc> = :toggle-key-passthrough<Enter>
+      # ---------------------------------------------
+      # Other Contexts (Compose, Terminal)
+      # ---------------------------------------------
+      [compose]
+      $noinherit = true
+      $ex = <C-x>
+      <C-h> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
+      <C-k> = :prev-field<Enter>
+      <C-j> = :next-field<Enter>
+      
+      [terminal]
+      $noinherit = true
+      $ex = <C-x>
+      <C-h> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
 
       ${accountBindings}
     '';

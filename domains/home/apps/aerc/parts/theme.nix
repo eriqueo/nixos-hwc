@@ -33,6 +33,10 @@ in {
     stack = token (hex c.fg2) (hex c.bg1) false;  # UI stack element
     spinner = token (hex c.accent) "default" false;
 
+
+     # A more general but powerful approach using the wildcard from the man page:
+    "*.selected" = token (hex c.fg0) (hex c.bg3) true;
+
     # ===== MESSAGE LIST (Official + Custom) =====
     msglist_default = token (hex c.fg1) "default" false;
     msglist_unread = token (hex c.warning) "default" true;
@@ -82,12 +86,12 @@ in {
 
     # ===== PER-COLUMN COLORS (Custom enhancement for message list) =====
     # Note: These are NOT in official spec but may work
-    index_number = token (hex c.fg3) "default" false;
-    index_flags = token (hex c.warning) "default" false;
-    index_date = token (hex c.info) "default" false;
-    index_author = token (hex c.success) "default" false;
-    index_size = token (hex c.fg3) "default" false;
-    index_subject = token (hex c.fg1) "default" false;
+   # index_number = token (hex c.fg3) "default" false;
+   # index_flags = token (hex c.warning) "default" false;
+   # index_date = token (hex c.info) "default" false;
+   # index_author = token (hex c.success) "default" false;
+   # index_size = token (hex c.fg3) "default" false;
+   # index_subject = token (hex c.fg1) "default" false;
 
   };
 
