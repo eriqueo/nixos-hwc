@@ -48,7 +48,7 @@
   # scripts, and all required packages (rclone, etc.).
   hwc.system.services.backup = {
     enable = true;
-    protonDrive.enable = false;  # Disabled until secret is configured
+    protonDrive.enable = lib.mkDefault false;
     monitoring.enable = true;
   };
 
