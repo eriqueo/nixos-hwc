@@ -50,7 +50,7 @@ in
       enable = true;
       package = pkgs.waybar;
       settings = behavior;
-      systemd.enable = true;
+      systemd.enable = false;
     };
 
     xdg.configFile."waybar/style.css".text = appearance;

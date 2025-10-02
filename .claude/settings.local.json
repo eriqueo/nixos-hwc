@@ -60,7 +60,14 @@
       "Bash(git mv:*)",
       "Bash(test:*)",
       "Bash(sudo test:*)",
-      "Bash(nix-store:*)"
+      "Bash(nix-store:*)",
+      "Read(//home/eric/.config/hypr/**)",
+      "Bash(hyprctl binds:*)",
+      "Read(//etc/**)",
+      "Bash(sudo keyd:*)",
+      "Bash(hyprctl:*)",
+      "Bash(libinput debug-events:*)",
+      "Read(//dev/input/by-id/**)"
     ],
     "deny": [],
     "ask": [],

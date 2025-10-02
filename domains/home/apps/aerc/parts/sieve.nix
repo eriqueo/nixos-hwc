@@ -9,14 +9,14 @@ let
         address :all :matches ["To","Cc","Bcc"] ["*@iheartwoodcraft.com"],
         envelope :all :matches "to" ["*@iheartwoodcraft.com"]
       ) {
-        fileinto "HWC/INBOX";
+        fileinto "hwc/inbox";
         stop;
       }
       elsif anyof(
         address :all :is ["To","Cc","Bcc"] ["eriqueo@proton.me"],
         envelope :all :is "to" ["eriqueo@proton.me"]
       ) {
-        fileinto "PROTON/INBOX";
+        fileinto "proton/inbox";
         stop;
       }
     '';
