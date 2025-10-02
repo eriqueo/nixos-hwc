@@ -49,7 +49,6 @@
   hwc.system.services.backup = {
     enable = true;
     protonDrive.enable = true;
-    protonDrive.useSecret = true; # Let the module handle finding the secret
     monitoring.enable = true;
   };
 
