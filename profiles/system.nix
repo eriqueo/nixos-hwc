@@ -81,6 +81,9 @@
   # This remains the same, cleanly handling user creation.
   hwc.system.users = {
     enable = true;
-    user.name = "eric";
+    user = {
+      enable = true;
+      name = "eric";
+    };
   };
 }
