@@ -13,6 +13,8 @@ let
   cfg = config.hwc.system.services.shell;
 in
 {
+  imports = [ ./options.nix ];
+
   config = lib.mkIf cfg.enable {
 
     #=========================================================================
