@@ -41,6 +41,14 @@ in
       package = pkgs.hyprland;
 
       settings = lib.mkMerge [
+        # Debug logging
+        {
+          debug = {
+            enable_stdout_logs = true;
+            log_file = "/home/eric/.local/state/hypr/hyprland.log";
+          };
+        }
+
         # Guarded hardware keys — never write = null
         (lib.optionalAttrs (hw ? monitor   && hw.monitor   != null) { monitor   = hw.monitor;   })
         (lib.optionalAttrs (hw ? workspace && hw.workspace != null) { workspace = hw.workspace; })
