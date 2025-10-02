@@ -49,12 +49,13 @@ in
     #=========================================================================
     services.samba = lib.mkIf cfg.samba.enable {
       enable = true;
-      # Hardcoded sensible defaults
-      workgroup = "WORKGROUP";
-      security = "user";
-      # Use the 'shares' option which we kept
+      settings = {
+        global = {
+          workgroup = "WORKGROUP";
+          security = "user";
+        };
+      };
       shares = cfg.samba.shares;
-      # Add any other static samba settings here
     };
 
     #=========================================================================
