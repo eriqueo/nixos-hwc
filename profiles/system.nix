@@ -84,6 +84,13 @@
     user = {
       enable = true;
       name = "eric";
+      groups = {
+        basic = true;           # wheel, networkmanager
+        media = true;           # video, audio, render
+        development = true;     # docker, podman
+        virtualization = true;  # libvirtd, kvm
+        hardware = true;        # input, uucp
+      };
     };
   };
 }
