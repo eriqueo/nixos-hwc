@@ -7,11 +7,12 @@
 let
   cfg = config.hwc.system.services.vpn;
 
-  # Get the stable paths to your existing secrets from the materials facade.
   usernameFile = config.hwc.security.materials.vpnUsernameFile;
   passwordFile = config.hwc.security.materials.vpnPasswordFile;
 in
 {
+  imports = [ ./options.nix ];
+
   config = lib.mkIf (cfg.enable && cfg.protonvpn.enable) {
 
     #=========================================================================
