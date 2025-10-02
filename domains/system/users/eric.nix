@@ -8,6 +8,7 @@ in {
     users.users.${cfg.user.name} = {
       isNormalUser = true;
       home = "/home/${cfg.user.name}";
+      group = "users";
       shell = cfg.user.shell;
       description = cfg.user.description;
 
