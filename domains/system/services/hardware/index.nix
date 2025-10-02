@@ -12,10 +12,11 @@
 { config, lib, pkgs, ... }:
 
 let
-  # This now points to our new, clean options API in hardware/options.nix
   cfg = config.hwc.system.services.hardware;
 in
 {
+  imports = [ ./options.nix ];
+
   config = lib.mkIf cfg.enable {
 
     #=========================================================================
