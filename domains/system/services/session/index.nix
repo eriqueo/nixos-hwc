@@ -14,6 +14,8 @@ let
   cfg = config.hwc.system.services.session;
 in
 {
+  imports = [ ./options.nix ];
+
   config = lib.mkIf cfg.enable {
 
     #=========================================================================
