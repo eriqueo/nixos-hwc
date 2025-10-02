@@ -101,11 +101,11 @@
     powerManagement.smartToggle = true;
   };
 
-  # AI services (remains unchanged).
-  hwc.server.ai.ollama = {
-    enable = true;
-    models = [ "llama3:8b" "codellama:13b" "phi3:medium" ];
-  };
+  # AI services (disabled until server domain refactor complete).
+  # hwc.server.ai.ollama = {
+  #   enable = true;
+  #   models = [ "llama3:8b" "codellama:13b" "phi3:medium" ];
+  # };
 
   # --- Miscellaneous Machine-Specific Settings ---
 
