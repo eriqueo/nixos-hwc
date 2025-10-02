@@ -54,12 +54,6 @@ in {
         '';
         };
     }
-    # Set secure defaults for the HWC networking options
-    {
-      hwc.networking.ssh.passwordAuthentication = lib.mkDefault false;
-      hwc.networking.ssh.allowRootLogin = lib.mkDefault "no";
-      hwc.networking.ssh.x11Forwarding = lib.mkDefault false;
-    }
 
 
     # Fail2ban
