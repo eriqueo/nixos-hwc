@@ -3,6 +3,9 @@
 let
   cfg = config.hwc.home.apps.hyprland;
 
+  # Import helper scripts from parts/
+  hyprlandScripts = import ./parts/scripts.nix { inherit pkgs lib; };
+
   # Hyprland startup script - moved from home domain for charter compliance
   hyprlandStartupScript = pkgs.writeScriptBin "hyprland-startup" ''
     #!/usr/bin/env bash
@@ -26,7 +29,7 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    # Provide the startup script as a system package
-    environment.systemPackages = [ hyprlandStartupScript ];
+    # Provide the startup script and helper scripts as system packages
+    environment.systemPackages = [ hyprlandStartupScript ] ++ hyprlandScripts;
   };
 }

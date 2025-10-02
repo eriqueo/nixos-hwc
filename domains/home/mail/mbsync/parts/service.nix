@@ -12,7 +12,13 @@
     Service = {
       Type = "oneshot";
 
-      ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p %h/.cache";
+      ExecStartPre = [
+        "${pkgs.coreutils}/bin/mkdir -p %h/.cache"
+        "${pkgs.coreutils}/bin/mkdir -p %h/Maildir/iheartwoodcraft"
+        "${pkgs.coreutils}/bin/mkdir -p %h/Maildir/proton"
+        "${pkgs.coreutils}/bin/mkdir -p %h/Maildir/gmail-personal"
+        "${pkgs.coreutils}/bin/mkdir -p %h/Maildir/gmail-business"
+      ];
 
       ExecStart =
         "${pkgs.util-linux}/bin/flock -n %h/.cache/mbsync.lock -c '${pkgs.isync}/bin/mbsync -a'";
