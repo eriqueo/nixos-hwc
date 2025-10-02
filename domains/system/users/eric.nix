@@ -33,7 +33,7 @@ in {
     # ZSH system enablement (required for user shell)
     programs.zsh.enable = true;
 
-    users.groups.render = lib.mkIf cfg.user.groups.media { gid = 2002; };
+    # render group is already defined by NixOS with gid 303
 
     systemd.tmpfiles.rules = lib.mkIf cfg.enable [
       "Z /home/${cfg.user.name} - ${cfg.user.name} users - -"
