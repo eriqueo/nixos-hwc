@@ -10,10 +10,6 @@
     # Base system packages - essential tools for all machines
     base = {
       enable = lib.mkEnableOption "Essential system packages";
-
-      development = lib.mkEnableOption "Development tools and language servers";
-
-      multimedia = lib.mkEnableOption "Multimedia and graphics tools";
     };
 
     # Server-specific packages - tools for server operations

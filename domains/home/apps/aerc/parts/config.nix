@@ -46,10 +46,75 @@ let
     column-name = {{index (.From | names) 0}}
     column-flags = {{.Flags | join ""}}
     column-subject = {{.ThreadPrefix}}{{.Subject}}
-    [viewer]
-    pager=${pkgs.less}/bin/less -R
     [compose]
     editor=${pkgs.kitty}/bin/kitty -e ${pkgs.neovim}/bin/nvim
+    [viewer]
+    # Non-interactive filter output is paged here
+    pager = ${pkgs.less}/bin/less -R
+    # Prefer plain, then HTML in multipart/alternative
+    alternatives = text/plain,text/html
+    
+    [filters]
+    # HTML (interactive; uses aerc's html helper: w3m + socks sandbox)
+    # Requires: w3m and either dante (socksify) or util-linux (unshare)
+    text/html = ! html
+    
+    # Plain text (wrap + colorize like mailcap’s copiousoutput)
+    text/plain = wrap -w 100 | colorize
+    text/*     = cat -
+    
+    # Calendar / invites (aerc has a built-in calendar filter)
+    text/calendar = calendar
+    application/ics = calendar
+    
+    # Images in TTY (fallback renderer). Use :open for GUI viewer.
+    image/* = ${pkgs.chafa}/bin/chafa -f symbols -s $(tput cols)x0 -
+    
+    # PDF to text (inline)
+    application/pdf = ${pkgs.poppler_utils}/bin/pdftotext -layout - -
+    
+    # Code-ish/texty things (pretty-print; fall back to cat on error)
+    application/json = ${pkgs.jq}/bin/jq -C . 2>/dev/null || cat -
+    application/xml  = ${pkgs.libxml2}/bin/xmllint --format - 2>/dev/null || cat -
+    text/xml         = ${pkgs.libxml2}/bin/xmllint --format - 2>/dev/null || cat -
+    
+    # Raw .eml/rfc822 bodies
+    message/rfc822 = cat -
+    
+    [openers]
+    # HTML / PDF / images: open in system handlers (GUI)
+    text/html = xdg-open {}
+    application/pdf = xdg-open {}
+    image/* = xdg-open {}
+    
+    # Audio / Video
+    video/* = setsid -f ${pkgs.mpv}/bin/mpv --quiet {}
+    audio/* = setsid -f ${pkgs.mpv}/bin/mpv --quiet {}
+    
+    # Microsoft Office (legacy + OOXML)
+    application/msword = xdg-open {}
+    application/vnd.ms-excel = xdg-open {}
+    application/vnd.ms-powerpoint = xdg-open {}
+    application/vnd.openxmlformats-officedocument.wordprocessingml.document = xdg-open {}
+    application/vnd.openxmlformats-officedocument.spreadsheetml.sheet = xdg-open {}
+    application/vnd.openxmlformats-officedocument.presentationml.presentation = xdg-open {}
+    
+    # LibreOffice / OpenDocument
+    application/vnd.oasis.opendocument.text = xdg-open {}
+    application/vnd.oasis.opendocument.spreadsheet = xdg-open {}
+    application/vnd.oasis.opendocument.presentation = xdg-open {}
+    
+    # Archives: list contents in a pager on :open
+    application/zip   = ${pkgs.unzip}/bin/unzip -l {} | ${pkgs.less}/bin/less -R
+    application/x-tar = ${pkgs.gnutar}/bin/tar -tf {} | ${pkgs.less}/bin/less -R
+    application/gzip  = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
+    application/x-gzip = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
+    application/x-bzip2 = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
+    application/x-xz    = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
+    
+    # Generic binaries / catch-alls
+    application/octet-stream = xdg-open {}
+    application/* = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
   '';
 in
 {
@@ -58,5 +123,6 @@ in
       ".config/aerc/accounts.conf.source".text = accountsConf;
       ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
     };
-  packages = with pkgs; [ aerc msmtp isync notmuch urlscan abook w3m ripgrep ];
+  packages = with pkgs; [ aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler_utils jq libxml2 mpv unzip gnutar file xdg-utils w3m
+   ];
 }

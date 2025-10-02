@@ -67,7 +67,16 @@
       "Bash(sudo keyd:*)",
       "Bash(hyprctl:*)",
       "Bash(libinput debug-events:*)",
-      "Read(//dev/input/by-id/**)"
+      "Read(//dev/input/by-id/**)",
+      "Bash(xargs rg:*)",
+      "Read(//nix/store/4brax5a9s6fjk4cnw450y600gsrygd21-user-environment/bin/**)",
+      "Bash(git log:*)",
+      "Read(//home/eric/Maildir/**)",
+      "Read(//nix/store/**)",
+      "Bash(for f in profiles/*.nix)",
+      "Bash(do echo \"=== $f imports ===\")",
+      "Bash(done)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": [],
