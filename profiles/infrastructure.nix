@@ -1,7 +1,7 @@
 # profiles/infrastructure.nix
 {
   imports = [
-    ../domains/infrastructure
+    ../domains/infrastructure/index.nix
   ];
 
   hwc.infrastructure.hardware.gpu.enable = false;

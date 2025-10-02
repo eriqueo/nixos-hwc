@@ -80,7 +80,27 @@ let
     
     # Raw .eml/rfc822 bodies
     message/rfc822 = cat -
-    
+
+    # Email delivery/status messages
+    message/delivery-status = cat -
+    message/disposition-notification = cat -
+
+    # CSV files
+    text/csv = cat -
+
+    # Rich Text Format
+    application/rtf = ${pkgs.pandoc}/bin/pandoc -f rtf -t plain - 2>/dev/null || cat -
+    text/rtf = ${pkgs.pandoc}/bin/pandoc -f rtf -t plain - 2>/dev/null || cat -
+
+    # Markdown
+    text/markdown = ${pkgs.glow}/bin/glow - 2>/dev/null || cat -
+
+    # PGP/MIME (aerc handles internally, but explicit for logging)
+    application/pgp-signature = cat -
+    application/pgp-encrypted = cat -
+    application/pkcs7-signature = cat -
+    application/pkcs7-mime = cat -
+
     [openers]
     # HTML / PDF / images: open in system handlers (GUI)
     text/html = xdg-open {}
@@ -111,7 +131,21 @@ let
     application/x-gzip = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
     application/x-bzip2 = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
     application/x-xz    = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
-    
+    application/x-7z-compressed = ${pkgs.p7zip}/bin/7z l {} | ${pkgs.less}/bin/less -R
+    application/x-rar-compressed = ${pkgs.unrar}/bin/unrar l {} | ${pkgs.less}/bin/less -R
+
+    # Apple iWork
+    application/vnd.apple.pages = xdg-open {}
+    application/vnd.apple.numbers = xdg-open {}
+    application/vnd.apple.keynote = xdg-open {}
+
+    # Rich Text Format
+    application/rtf = xdg-open {}
+    text/rtf = xdg-open {}
+
+    # CSV
+    text/csv = xdg-open {}
+
     # Generic binaries / catch-alls
     application/octet-stream = xdg-open {}
     application/* = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R
@@ -123,6 +157,8 @@ in
       ".config/aerc/accounts.conf.source".text = accountsConf;
       ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
     };
-  packages = with pkgs; [ aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler_utils jq libxml2 mpv unzip gnutar file xdg-utils w3m
-   ];
+  packages = with pkgs; [
+    aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler_utils
+    jq libxml2 mpv unzip gnutar file xdg-utils w3m pandoc glow p7zip unrar
+  ];
 }
