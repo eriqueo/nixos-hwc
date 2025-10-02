@@ -31,7 +31,7 @@ in {
     };
 
     # ZSH system enablement (required for user shell)
-    programs.zsh.enable = lib.mkIf cfg.user.environment.enableZsh true;
+    programs.zsh.enable = true;
 
     users.groups.render = lib.mkIf cfg.user.groups.media { gid = 2002; };
 
