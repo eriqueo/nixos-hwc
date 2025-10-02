@@ -38,7 +38,7 @@
   # Manages the login screen, sudo, and user lingering.
   hwc.system.services.session = {
     enable = true;
-    loginManager.autoLogin = true; # Example of a high-level tweak
+    loginManager.autoLoginUser = "eric";
     sudo.wheelNeedsPassword = false;
     linger.users = [ "eric" ];
   };

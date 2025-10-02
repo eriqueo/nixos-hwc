@@ -74,7 +74,7 @@ let
           enabled = config.hwc.system.services.session.enable;
           loginManager = {
             enabled = config.hwc.system.services.session.loginManager.enable;
-            autoLogin = config.hwc.system.services.session.loginManager.autoLogin;
+            autoLoginUser = config.hwc.system.services.session.loginManager.autoLoginUser;
           };
           sudo = {
             enabled = config.hwc.system.services.session.sudo.enable;

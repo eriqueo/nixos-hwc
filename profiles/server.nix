@@ -182,9 +182,9 @@
     # Network performance handled by system domain - removed duplicates
     
     # File system performance
-    "vm.dirty_ratio" = 15;
-    "vm.dirty_background_ratio" = 5;
-    "vm.swappiness" = 10;
+    "vm.dirty_ratio" = lib.mkDefault 15;
+    "vm.dirty_background_ratio" = lib.mkDefault 5;
+    "vm.swappiness" = lib.mkDefault 10;
   };
 
   # I/O scheduler optimization for server workloads
