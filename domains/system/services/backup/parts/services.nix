@@ -3,9 +3,33 @@
 
 let
   cfg = config.hwc.system.services.backup;
-  # We need to reference the script defined in the other part.
-  # We can look it up by its package name.
-  backupMaintenanceScript = pkgs.backup-maintenance;
+
+  backupMaintenanceScript = pkgs.writeScriptBin "backup-maintenance" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "=== Backup System Maintenance ==="
+
+    if [[ -f "/etc/rclone-proton.conf" ]] || [[ -f "/root/.config/rclone/rclone.conf" ]]; then
+      echo "✅ Rclone configuration found"
+
+      echo "Testing Proton Drive connection..."
+      if ${pkgs.rclone}/bin/rclone lsd proton: >/dev/null 2>&1; then
+        echo "✅ Proton Drive connection working"
+      else
+        echo "❌ Proton Drive connection failed"
+      fi
+    else
+      echo "❌ No rclone configuration found"
+    fi
+
+    if mountpoint -q "/mnt/backup" 2>/dev/null; then
+      echo "✅ External backup drive mounted"
+      df -h "/mnt/backup"
+    else
+      echo "ℹ️  No external backup drive mounted"
+    fi
+  '';
 in
 {
   config = lib.mkIf cfg.enable {
