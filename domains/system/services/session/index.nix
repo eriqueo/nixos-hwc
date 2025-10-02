@@ -73,8 +73,8 @@ in
     #=========================================================================
     assertions = [
       {
-        assertion = (cfg.loginManager.defaultUser == null)
-                 || (lib.hasAttr cfg.loginManager.defaultUser config.users.users);
+        assertion = (cfg.loginManager.autoLoginUser == null)
+                 || (lib.hasAttr cfg.loginManager.autoLoginUser config.users.users);
         message = "Login manager: autoLoginUser '${cfg.loginManager.autoLoginUser}' is not a defined user.";
       }
       {

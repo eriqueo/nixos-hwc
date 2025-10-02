@@ -13,11 +13,11 @@ in {
       description = cfg.user.description;
 
       extraGroups =
-        (lib.optionals cfg.user.groups.basic            [ "wheel" "networkmanager" ]) ++
-        (lib.optionals cfg.user.groups.media            [ "video" "audio" "render" ]) ++
-        (lib.optionals cfg.user.groups.development      [ "docker" "podman"]) ++
-        (lib.optionals cfg.user.groups.virtualization   [ "libvirtd" "kvm" ]) ++
-        (lib.optionals cfg.user.groups.hardware         [ "input" "uucp"]);
+        (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" ]) ++
+        (lib.optionals cfg.user.groups.media          [ "video" "audio" "render" ]) ++
+        (lib.optionals cfg.user.groups.development    [ "docker" "podman" ]) ++
+        (lib.optionals cfg.user.groups.virtualization [ "libvirtd" "kvm" ]) ++
+        (lib.optionals cfg.user.groups.hardware       [ "input" "uucp" ]);
 
       initialPassword = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null)
         cfg.user.fallbackPassword;
@@ -30,29 +30,15 @@ in {
       );
     };
 
-    # ZSH system enablement (required for user shell)
     programs.zsh.enable = true;
 
-    # render group is already defined by NixOS with gid 303
-
-    systemd.tmpfiles.rules = lib.mkIf cfg.enable [
-      "Z /home/${cfg.user.name} - ${cfg.user.name} users - -"
-      "Z /home/${cfg.user.name}/.ssh 0700 ${cfg.user.name} users - -"
-      "d /home/${cfg.user.name}/.config 0755 ${cfg.user.name} users -"
-    ];
-
-    environment.systemPackages = lib.mkIf cfg.enable (with pkgs; [
+    environment.systemPackages = with pkgs; [
       vim git wget curl htop tmux
       ncdu tree ripgrep fd bat eza zoxide fzf
       which diffutils less
-    ]);
+    ];
 
-
-    #=========================================================================
-    # SECURITY INTEGRATION & VALIDATION
-    #=========================================================================
     assertions = [
-      # User and security assertions:
       {
         assertion = !cfg.user.useSecrets || config.hwc.secrets.enable;
         message = "hwc.system.users.useSecrets requires hwc.secrets.enable = true (via security profile)";

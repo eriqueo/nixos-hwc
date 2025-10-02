@@ -47,10 +47,10 @@ in {
     # Network optimization
     boot.kernel.sysctl = {
       # TCP optimization
-      "net.core.rmem_max" = 134217728;
-      "net.core.wmem_max" = 134217728;
-      "net.ipv4.tcp_rmem" = "4096 87380 134217728";
-      "net.ipv4.tcp_wmem" = "4096 65536 134217728";
+      "net.core.rmem_max" = lib.mkDefault 134217728;
+      "net.core.wmem_max" = lib.mkDefault 134217728;
+      "net.ipv4.tcp_rmem" = lib.mkDefault "4096 87380 134217728";
+      "net.ipv4.tcp_wmem" = lib.mkDefault "4096 65536 134217728";
 
       # Connection tracking
       "net.netfilter.nf_conntrack_max" = 262144;
