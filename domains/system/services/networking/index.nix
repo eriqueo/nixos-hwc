@@ -14,11 +14,10 @@
 { config, lib, pkgs, ... }:
 
 let
-  # This now points to our new, clean options API in networking/options.nix
   cfg = config.hwc.networking;
 in
 {
-  # NO MORE IMPORTS NEEDED HERE. All logic is self-contained.
+  imports = [ ./options.nix ];
 
   config = lib.mkIf cfg.enable {
 
