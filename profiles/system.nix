@@ -58,7 +58,7 @@
   hwc.networking = {
     enable = true;
     ssh.enable = true;
-    tailscale.enable = true;
+    tailscale.enable = lib.mkDefault true;
 
     # One line to define a comprehensive firewall policy.
     # The implementation handles opening the right ports for SSH and Tailscale.
