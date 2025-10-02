@@ -64,9 +64,7 @@
   # Enable the backup system with Proton Drive.
   hwc.system.services.backup = {
     enable = true;
-    protonDrive.enable = true;
-    # The secret name defaults to "rclone-proton-config", so no need to set it
-    # unless you use a different name for this machine.
+    protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
   };
 
   # Enable the declarative VPN service using the official CLI.
