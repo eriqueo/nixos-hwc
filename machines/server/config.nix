@@ -51,7 +51,7 @@
 
     ssh.enable = true;
     tailscale.enable = true;
-    firewall.level = "server";
+    firewall.level = lib.mkForce "server";
   };
 
   # AI services configuration
@@ -62,10 +62,10 @@
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
-    X11Forwarding = true;
+    X11Forwarding = lib.mkForce true;
     PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
   };
-
+  services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
   # Enable X11 services for forwarding
   services.xserver.enable = true;
 

@@ -1,3 +1,15 @@
+# domains/system/services/hardware/index.nix
+#
+# HARDWARE - System services for hardware interaction.
+# Covers audio (PipeWire), input devices (keyd), monitoring tools,
+# and robust portal ordering for sandboxed apps.
+#
+# Usage:
+#   hwc.system.services.hardware.enable = true;
+#   hwc.system.services.hardware.audio.enable = true;
+#   hwc.system.services.hardware.keyboard.enable = true;
+#   hwc.system.services.hardware.monitoring.enable = true;
+
 { config, lib, pkgs, ... }:
 
 let
@@ -8,10 +20,9 @@ in
 
   config = lib.mkIf cfg.enable {
 
-    #=========================================================================
+    #==========================================================================
     # AUDIO SYSTEM & DESKTOP PORTALS
-    #=========================================================================
-
+    #==========================================================================
     security.rtkit.enable = lib.mkIf cfg.audio.enable true;
 
     services.pipewire = lib.mkIf cfg.audio.enable {
@@ -24,69 +35,63 @@ in
 
     services.upower.enable = lib.mkIf cfg.audio.enable true;
 
-    # Declarative portals
+    # Portals (system-level) with explicit backend preference
     xdg.portal = lib.mkIf cfg.audio.enable {
       enable = true;
+
+      # Prefer Hyprland backend, then GTK (file picker, etc.)
+      config = {
+        common.default = [ "hyprland" "gtk" ];
+      };
+
       extraPortals = with pkgs; [
         xdg-desktop-portal-gtk
         xdg-desktop-portal-hyprland
       ];
     };
 
+    # --- Bombproof ordering for user portal units (no scripts, just metadata)
+    #
+    # Start generic portal as part of the session and after DBus.
+    systemd.user.services.xdg-desktop-portal = lib.mkIf cfg.audio.enable {
+      unitConfig = {
+        PartOf  = [ "graphical-session.target" ];
+        After   = [ "graphical-session.target" "dbus.service" ];
+        Requires= [ "dbus.service" ];
+      };
+    };
+
+    # Hyprland portal: after generic portal and only when the Wayland socket exists.
+    # %t expands to XDG_RUNTIME_DIR at runtime; Hyprland creates wayland-1 on your setup.
+    systemd.user.services.xdg-desktop-portal-hyprland = lib.mkIf cfg.audio.enable {
+      unitConfig = {
+        PartOf              = [ "graphical-session.target" ];
+        After               = [ "graphical-session.target" "xdg-desktop-portal.service" ];
+        Requires            = [ "xdg-desktop-portal.service" ];
+        ConditionPathExists = "%t/wayland-1";
+      };
+    };
+
+    # Optional: keyring commonly used by desktop apps
     services.gnome.gnome-keyring.enable = lib.mkIf cfg.audio.enable true;
 
-    # Order portals after Wayland socket
-    systemd.user.services."wayland-ready" = lib.mkIf cfg.audio.enable {
-      Unit = {
-        Description = "Wait for Wayland socket before starting portals";
-        Before = [ "xdg-desktop-portal.service" "xdg-desktop-portal-hyprland.service" ];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = ''
-          ${pkgs.bash}/bin/sh -c '
-            while [ ! -S "$XDG_RUNTIME_DIR/wayland-1" ]; do
-              sleep 0.2
-            done
-          '
-        '';
-        RemainAfterExit = true;
-      };
-      Install = { WantedBy = [ "default.target" ]; };
-    };
-
-    systemd.user.services."xdg-desktop-portal" = lib.mkIf cfg.audio.enable {
-      unitConfig = {
-        After = [ "wayland-ready.service" ];
-        Requires = [ "wayland-ready.service" ];
-      };
-    };
-
-    systemd.user.services."xdg-desktop-portal-hyprland" = lib.mkIf cfg.audio.enable {
-      unitConfig = {
-        After = [ "xdg-desktop-portal.service" "wayland-ready.service" ];
-        Requires = [ "xdg-desktop-portal.service" "wayland-ready.service" ];
-      };
-    };
-
-    #=========================================================================
+    #==========================================================================
     # UNIVERSAL KEYBOARD MAPPING (keyd)
-    #=========================================================================
-
+    #==========================================================================
     services.keyd = lib.mkIf cfg.keyboard.enable {
       enable = true;
       keyboards.default = {
         ids = [ "*" ];
         settings.main = {
-          f1 = "XF86AudioMute";
-          f2 = "XF86AudioLowerVolume";
-          f3 = "XF86AudioRaiseVolume";
-          f4 = "XF86AudioMicMute";
-          f5 = "XF86MonBrightnessDown";
-          f6 = "XF86MonBrightnessUp";
-          f7 = "XF86TaskPanel";
-          f8 = "XF86Bluetooth";
-          f9 = "print";
+          f1  = "XF86AudioMute";
+          f2  = "XF86AudioLowerVolume";
+          f3  = "XF86AudioRaiseVolume";
+          f4  = "XF86AudioMicMute";
+          f5  = "XF86MonBrightnessDown";
+          f6  = "XF86MonBrightnessUp";
+          f7  = "XF86TaskPanel";
+          f8  = "XF86Bluetooth";
+          f9  = "print";
           f10 = "XF86LaunchA";
           f11 = "XF86Display";
           f12 = "XF86Launch1";
@@ -94,12 +99,12 @@ in
       };
     };
 
+    # keyd needs uinput to create a virtual keyboard device
     boot.kernelModules = lib.mkIf cfg.keyboard.enable [ "uinput" ];
 
-    #=========================================================================
-    # HARDWARE MONITORING UTILITIES
-    #=========================================================================
-
+    #==========================================================================
+    # CO-LOCATED HARDWARE & UTILITY PACKAGES
+    #==========================================================================
     environment.systemPackages =
       (lib.optionals cfg.monitoring.enable [
         pkgs.pciutils
