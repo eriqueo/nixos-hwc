@@ -41,7 +41,6 @@ in
         {
           debug = {
             enable_stdout_logs = true;
-            log_file = "/home/eric/.local/state/hypr/hyprland.log";
           };
         }
 
