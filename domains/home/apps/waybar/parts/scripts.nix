@@ -51,10 +51,14 @@ in
       intel)
         echo "performance" > "''$GPU_MODE_FILE"
         notify-send "GPU Mode" "Switched to Performance Mode ⚡" -i gpu-card
+        # Signal waybar to update without restarting
+        pkill -RTMIN+8 waybar 2>/dev/null || true
         ;;
       performance)
         echo "intel" > "''$GPU_MODE_FILE"
         notify-send "GPU Mode" "Switched to Intel Mode 󰢮" -i gpu-card
+        # Signal waybar to update without restarting
+        pkill -RTMIN+8 waybar 2>/dev/null || true
         ;;
       *)
         echo "intel" > "''$GPU_MODE_FILE"

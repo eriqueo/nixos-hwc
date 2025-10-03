@@ -43,8 +43,8 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf enabled {
-    # Include both the script dependencies and the generated script bins.
-    home.packages = scriptPkgs ++ (lib.attrValues scripts);
+    # Include waybar packages, script dependencies, and generated script bins.
+    home.packages = packages ++ scriptPkgs ++ (lib.attrValues scripts);
 
     programs.waybar = {
       enable = true;
