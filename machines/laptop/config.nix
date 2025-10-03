@@ -31,7 +31,7 @@
     # ../../profiles/ai.nix # This might be imported by a server profile now.
 
     # Infrastructure domain for GPU only (not storage/virtualization)
-    ../../domains/infrastructure/hardware
+    ../../domains/infrastructure/hardware/index.nix
   ];
 
   #============================================================================
