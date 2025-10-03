@@ -116,11 +116,13 @@ in
               ]
             else
               # mode == "interfaces"
+              let
+                ifaceFlags =
+                  lib.concatMapStringsSep " " (i: "--interface ${i}") cfg.waitOnline.interfaces;
+              in
               [
                 ""
-                "${pkgs.bash}/bin/bash -uec '${pkgs.networkmanager}/bin/nm-online -s -q "
-                  + (lib.concatStringsSep " " (map (i: "--interface ${i}") cfg.waitOnline.interfaces))
-                  + "'"
+                "${pkgs.bash}/bin/bash -uec '${pkgs.networkmanager}/bin/nm-online -s -q ${ifaceFlags}'"
               ];
         });
 

@@ -80,11 +80,11 @@
   # Server networking extends base configuration
   hwc.networking = {
     # Base networking already enabled in base.nix
-    ssh.x11Forwarding = true;  # For remote GUI applications
+    #ssh.x11Forwarding = true;  # For remote GUI applications
     
     # Server-specific Tailscale configuration
     tailscale = {
-      permitCertUid = lib.mkIf config.services.caddy.enable "caddy";  # Allow Caddy to access certificates only if Caddy is enabled
+      #permitCertUid = lib.mkIf config.services.caddy.enable "caddy";  # Allow Caddy to access certificates only if Caddy is enabled
       extraUpFlags = [ 
         "--advertise-tags=tag:server"
         "--accept-routes" 
@@ -93,7 +93,7 @@
     
     # Server firewall allows additional service ports
     firewall = {
-      services.web = true;  # Enable HTTP/HTTPS for Caddy
+      #services.web = true;  # Enable HTTP/HTTPS for Caddy
       extraTcpPorts = [
         # Media services
         5000   # Frigate
