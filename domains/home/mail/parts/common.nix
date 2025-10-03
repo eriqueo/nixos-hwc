@@ -23,12 +23,11 @@ let
 
   passCmd = a:
     let
-      pass = "/run/current-system/sw/bin/pass";
       entry      = if a.password.mode == "pass"   then lib.escapeShellArg a.password.pass else null;
       agenixPath = if a.password.mode == "agenix" then lib.escapeShellArg (toString a.password.agenix) else null;
     in
     if a.password.mode == "pass" then
-      ''env -i HOME="$HOME" GNUPGHOME="$HOME/.gnupg" PASSWORD_STORE_DIR="$HOME/.password-store" PATH="/run/current-system/sw/bin" ${pass} show ${entry}''
+      ''sh -c 'pass show ${entry}' ''
     else if a.password.mode == "agenix" then
       ''sh -c 'tr -d "\n" < "$0"' ${agenixPath}''
     else
