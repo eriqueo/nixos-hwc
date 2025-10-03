@@ -1,16 +1,4 @@
-# domains/system/services/networking/index.nix
-#
-# HWC System Networking Configuration (Charter v5 Refactor)
-# Centralized networking setup for SSH, Tailscale, Samba, and firewall.
-#
-# USAGE:
-#   hwc.networking.enable = true;
-#   hwc.networking.ssh.enable = true;
-#   hwc.networking.tailscale.enable = true;
-#   hwc.networking.firewall.level = "strict"; # Can be: off, basic, strict, server
-#   hwc.networking.samba.enable = true;
-#   hwc.networking.samba.shares = { ... };
-
+# HWC System Networking (declarative + per-machine wait-online policy)
 { config, lib, pkgs, ... }:
 
 let
@@ -21,12 +9,17 @@ in
 
   config = lib.mkIf cfg.enable {
 
-    #=========================================================================
-    # SSH SERVER CONFIGURATION
-    #=========================================================================
+    # =========================
+    # NetworkManager
+    # =========================
+    networking.networkmanager.enable = lib.mkIf cfg.networkManager.enable true;
+
+    # =========================
+    # SSH
+    # =========================
     services.openssh = lib.mkIf cfg.ssh.enable {
       enable = true;
-      ports = [ cfg.ssh.port ];
+      ports  = [ cfg.ssh.port ];
       settings = {
         PermitRootLogin = "no";
         PasswordAuthentication = false;
@@ -35,54 +28,47 @@ in
       };
     };
 
-    #=========================================================================
-    # TAILSCALE VPN CONFIGURATION
-    #=========================================================================
+    # =========================
+    # Tailscale
+    # =========================
     services.tailscale = lib.mkIf cfg.tailscale.enable {
       enable = true;
       authKeyFile = cfg.tailscale.authKeyFile;
       extraUpFlags = cfg.tailscale.extraUpFlags;
     };
 
-    #=========================================================================
-    # SAMBA FILE SHARING CONFIGURATION
-    #=========================================================================
+    # =========================
+    # Samba
+    # =========================
     services.samba = lib.mkIf cfg.samba.enable {
       enable = true;
-      settings = {
-        global = {
-          workgroup = "WORKGROUP";
-          security = "user";
-        };
+      settings.global = {
+        workgroup = "WORKGROUP";
+        security = "user";
       };
       shares = cfg.samba.shares;
     };
 
-    #=========================================================================
-    # NETWORKMANAGER CONFIGURATION
-    #=========================================================================
-    networking.networkmanager.enable = lib.mkIf cfg.networkManager.enable true;
-
-    #=========================================================================
-    # FIREWALL CONFIGURATION (using the new 'level' option)
-    #=========================================================================
+    # =========================
+    # Firewall
+    # =========================
     networking.firewall = {
-      enable = cfg.firewall.level != "off";
+      enable    = cfg.firewall.level != "off";
       allowPing = cfg.firewall.level == "basic";
-      allowedTCPPorts = (cfg.firewall.extraTcpPorts)
+      allowedTCPPorts =
+        cfg.firewall.extraTcpPorts
         ++ (lib.optionals (cfg.firewall.level == "server") [ 80 443 ])
         ++ (lib.optionals cfg.ssh.enable [ cfg.ssh.port ])
-        # Open standard Samba ports if enabled
         ++ (lib.optionals cfg.samba.enable [ 139 445 ]);
-      allowedUDPPorts = (cfg.firewall.extraUdpPorts)
-        # Open standard Samba ports if enabled
+      allowedUDPPorts =
+        cfg.firewall.extraUdpPorts
         ++ (lib.optionals cfg.samba.enable [ 137 138 ]);
       trustedInterfaces = lib.optionals cfg.tailscale.enable [ "tailscale0" ];
     };
 
-    #=========================================================================
-    # DNS CONFIGURATION (with sensible defaults)
-    #=========================================================================
+    # =========================
+    # DNS (systemd-resolved)
+    # =========================
     services.resolved = {
       enable = true;
       fallbackDns = [ "1.1.1.1" "8.8.8.8" "9.9.9.9" ];
@@ -90,32 +76,65 @@ in
       domains = [ "~." ];
     };
 
-    #=========================================================================
-    # CO-LOCATED NETWORK PACKAGES
-    #=========================================================================
+    # =========================
+    # Tooling
+    # =========================
     environment.systemPackages = with pkgs; [
-      # Core tools
       wget curl dnsutils traceroute nettools iproute2 mtr nmap wireshark-cli
-      # GUI tools
       networkmanagerapplet
     ]
     ++ (lib.optionals cfg.tailscale.enable [ tailscale ])
-    # Add the samba package if the samba service is enabled
-    ++ (lib.optionals cfg.samba.enable [ samba ]);
+    ++ (lib.optionals cfg.samba.enable     [ samba ]);
 
-    #=========================================================================
-    # SYSTEMD NETWORK WAIT
-    #=========================================================================
-    systemd.targets.network-online.wantedBy = [ "multi-user.target" ];
-    systemd.services.NetworkManager-wait-online.enable = lib.mkIf cfg.networkManager.enable true;
+    # =========================
+    # network-online policy (bombproof & declarative)
+    # =========================
 
-    #=========================================================================
-    # SECURITY ASSERTIONS
-    #=========================================================================
+    # Only pull in network-online.target when we actually want to block on network.
+    systemd.targets.network-online.wantedBy =
+      lib.mkIf (cfg.waitOnline.mode != "off") [ "multi-user.target" ];
+
+    # By default, disable NM wait-online unless asked otherwise.
+    systemd.services.NetworkManager-wait-online.enable = (cfg.waitOnline.mode != "off");
+
+    # Configure nm-online behavior per mode.
+    #
+    # NOTE: clearing ExecStart with [""] is required to override the upstream command.
+    systemd.services.NetworkManager-wait-online.serviceConfig =
+      let
+        base = {
+          TimeoutStartSec = "${toString cfg.waitOnline.timeoutSeconds}s";
+        };
+      in
+      lib.mkIf (cfg.waitOnline.mode != "off")
+        (base // {
+          ExecStart =
+            if cfg.waitOnline.mode == "all" then
+              [
+                "" # clear previous
+                "${pkgs.networkmanager}/bin/nm-online -s -q"
+              ]
+            else
+              # mode == "interfaces"
+              [
+                ""
+                "${pkgs.bash}/bin/bash -uec '${pkgs.networkmanager}/bin/nm-online -s -q "
+                  + (lib.concatStringsSep " " (map (i: "--interface ${i}") cfg.waitOnline.interfaces))
+                  + "'"
+              ];
+        });
+
+    # =========================
+    # Safety assertions
+    # =========================
     assertions = [
       {
         assertion = cfg.tailscale.enable -> (cfg.firewall.level != "off");
-        message = "The firewall must be enabled when using Tailscale.";
+        message   = "The firewall must be enabled when using Tailscale.";
+      }
+      {
+        assertion = (cfg.waitOnline.mode != "interfaces") || (cfg.waitOnline.interfaces != []);
+        message   = "waitOnline.mode is \"interfaces\" but no interfaces were provided.";
       }
     ];
   };

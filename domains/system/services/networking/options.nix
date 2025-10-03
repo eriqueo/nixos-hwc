@@ -1,65 +1,99 @@
-# domains/system/services/networking/options.nix
 { lib, config, ... }:
+
+let
+  types = lib.types;
+in
 {
   options.hwc.networking = {
-    enable = lib.mkEnableOption "HWC networking configuration";
+    enable = lib.mkEnableOption "Enable HWC networking (SSH, Tailscale, Samba, firewall, NM).";
 
+    # ---- NetworkManager ----
+    networkManager.enable = lib.mkOption {
+      type = types.bool;
+      default = true;
+      description = "Enable NetworkManager.";
+    };
+
+    # ---- SSH ----
     ssh = {
-      enable = lib.mkEnableOption "SSH server configuration";
+      enable = lib.mkEnableOption "Enable OpenSSH server.";
       port = lib.mkOption {
-        type = lib.types.port;
+        type = types.port;
         default = 22;
-        description = "SSH server port";
+        description = "OpenSSH TCP port.";
       };
     };
 
+    # ---- Tailscale ----
     tailscale = {
-      enable = lib.mkEnableOption "Tailscale VPN mesh networking";
-
+      enable = lib.mkEnableOption "Enable Tailscale.";
       authKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
+        type = types.nullOr types.path;
         default = null;
-        description = "Path to Tailscale auth key file";
+        description = "Path to a file containing TS_AUTHKEY (optional).";
       };
-
       extraUpFlags = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
+        type = types.listOf types.str;
         default = [];
-        description = "Extra flags for tailscale up command";
+        example = [ "--operator=eric" "--advertise-exit-node" ];
+        description = "Extra flags for `tailscale up`.";
       };
     };
 
-    networkManager = {
-      enable = lib.mkEnableOption "NetworkManager for network management";
+    # ---- Samba ----
+    samba = {
+      enable = lib.mkEnableOption "Enable Samba file sharing.";
+      shares = lib.mkOption {
+        type = types.attrsOf types.attrs;
+        default = { };
+        example = {
+          public = { path = "/data/public"; browseable = true; readOnly = true; guestAccess = true; };
+        };
+        description = "Samba shares attrset, passed to services.samba.shares.";
+      };
     };
 
+    # ---- Firewall ----
     firewall = {
       level = lib.mkOption {
-        type = lib.types.enum [ "off" "basic" "strict" "server" ];
+        type = types.enum [ "off" "basic" "strict" "server" ];
         default = "strict";
-        description = "High-level firewall profile";
+        description = "Firewall profile.";
       };
-
       extraTcpPorts = lib.mkOption {
-        type = lib.types.listOf lib.types.port;
+        type = types.listOf types.port;
         default = [];
-        description = "Additional TCP ports to open";
+        description = "Extra TCP ports to open.";
       };
-
       extraUdpPorts = lib.mkOption {
-        type = lib.types.listOf lib.types.port;
+        type = types.listOf types.port;
         default = [];
-        description = "Additional UDP ports to open";
+        description = "Extra UDP ports to open.";
       };
     };
 
-    samba = {
-      enable = lib.mkEnableOption "Samba file sharing service";
-
-      shares = lib.mkOption {
-        type = lib.types.attrs;
-        default = {};
-        description = "Samba share definitions";
+    # ---- Wait-online policy (per-machine) ----
+    waitOnline = {
+      mode = lib.mkOption {
+        type = types.enum [ "off" "all" "interfaces" ];
+        default = "off";
+        description = ''
+          Network boot policy:
+            - "off": do not block boot on network (best for laptops/Hyprland)
+            - "all": wait for any NM-managed connection to be online
+            - "interfaces": wait only for the given interface names
+        '';
+      };
+      interfaces = lib.mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = [ "eth0" "enp5s0" "wlp0s20f3" ];
+        description = "Interfaces to wait for when mode = \"interfaces\".";
+      };
+      timeoutSeconds = lib.mkOption {
+        type = types.ints.positive;
+        default = 90;
+        description = "Maximum time nm-online should wait before timing out.";
       };
     };
   };
