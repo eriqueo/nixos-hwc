@@ -18,7 +18,7 @@ let
 
   # >>> DEFINE basePkgs IN THIS LET <<<
   basePkgs = with pkgs; [
-    wofi hyprshot hypridle hyprpaper hyprlock cliphist wl-clipboard
+    wofi hyprshot grim hypridle hyprpaper hyprlock cliphist wl-clipboard
     brightnessctl networkmanager wirelesstools hyprsome
   ];
 in
