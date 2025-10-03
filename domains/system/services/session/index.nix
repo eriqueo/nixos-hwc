@@ -23,23 +23,58 @@ in
 
     services.greetd = lib.mkIf cfg.loginManager.enable {
       enable = true;
-      settings = {
-        default_session = {
-          user = "greeter";
-          command =
-            let
-              args = "--time --remember --remember-user-session --asterisks";
-            in
-            "${pkgs.tuigreet}/bin/tuigreet ${args} --cmd ${cfg.loginManager.defaultCommand}";
+
+      # Wrap Hyprland in a small starter script that:
+      #  - guarantees a session D-Bus
+      #  - exports safe Wayland/NVIDIA env vars for hybrid laptops
+      #  - execs Hyprland by absolute path
+      #
+      # Notes:
+      #  - The NVIDIA exports are safe on Intel (ignored if NVIDIA isn't active)
+      #  - Remove WLR_NO_HARDWARE_CURSORS if you never see cursor glitches
+      #
+      settings =
+        let
+          hyprStart = pkgs.writeShellScript "start-hyprland-session" ''
+            export XDG_SESSION_TYPE=wayland
+            export XDG_CURRENT_DESKTOP=Hyprland
+            export WLR_RENDERER=vulkan
+            # Helps on some NVIDIA systems; harmless elsewhere
+            export WLR_NO_HARDWARE_CURSORS=1
+
+            # NVIDIA PRIME offload hints (ignored if not applicable)
+            export __NV_PRIME_RENDER_OFFLOAD=1
+            export __VK_LAYER_NV_optimus=NVIDIA_only
+            export __GLX_VENDOR_LIBRARY_NAME=nvidia
+
+            # Optional VA-API on NVIDIA; harmless if driver not present
+            export LIBVA_DRIVER_NAME=nvidia
+
+            # Keep logs useful
+            export HYPRLAND_LOG_WLR=1
+
+            exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/Hyprland
+          '';
+        in
+        {
+          default_session = {
+            user = "greeter";
+            command =
+              let
+                args = "--time --remember --remember-user-session --asterisks";
+              in
+              "${pkgs.tuigreet}/bin/tuigreet ${args} --cmd ${hyprStart}";
+          };
+        }
+        // lib.optionalAttrs (cfg.loginManager.autoLoginUser != null) {
+          initial_session = {
+            user = cfg.loginManager.autoLoginUser;
+            command = "${hyprStart}";
+          };
         };
-      } // lib.optionalAttrs (cfg.loginManager.autoLoginUser != null) {
-        initial_session = {
-          user = cfg.loginManager.autoLoginUser;
-          command = cfg.loginManager.defaultCommand;
-        };
-      };
     };
 
+    # Keep these to avoid display-manager conflicts
     services.displayManager.gdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
     services.displayManager.sddm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
     services.xserver.displayManager.lightdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
@@ -56,6 +91,7 @@ in
     # CO-LOCATED PACKAGES
     #=========================================================================
 
+    # Ensure tuigreet available
     environment.systemPackages = lib.mkIf cfg.loginManager.enable [ pkgs.tuigreet ];
 
     #=========================================================================

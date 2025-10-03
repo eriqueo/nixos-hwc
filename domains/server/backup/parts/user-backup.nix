@@ -167,14 +167,14 @@ let
         log_info "=== Backup completed successfully ==="
         ${lib.optionalString cfg.notifications.enable ''
           # Log success (desktop notifications don't work in system context)
-          logger "Backup Complete: User data backed up successfully"
+          ${pkgs.util-linux}/bin/logger "Backup Complete: User data backed up successfully"
         ''}
         exit 0
       else
         log_error "=== All backup methods failed ==="
         ${lib.optionalString cfg.notifications.enable ''
-          # Log failure (desktop notifications don't work in system context)  
-          logger -p user.err "Backup Failed: All backup methods failed"
+          # Log failure (desktop notifications don't work in system context)
+          ${pkgs.util-linux}/bin/logger -p user.err "Backup Failed: All backup methods failed"
         ''}
         exit 1
       fi

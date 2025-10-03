@@ -76,7 +76,8 @@
       "Bash(for f in profiles/*.nix)",
       "Bash(do echo \"=== $f imports ===\")",
       "Bash(done)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(loginctl list-sessions:*)"
     ],
     "deny": [],
     "ask": [],
