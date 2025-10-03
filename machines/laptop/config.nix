@@ -70,6 +70,16 @@
   # Enable the declarative VPN service using the official CLI.
   hwc.system.services.vpn.protonvpn.enable = true;
 
+  # Enable session management (greetd autologin, sudo, lingering).
+  hwc.system.services.session = {
+    enable = true;
+    loginManager.enable = true;
+    loginManager.autoLoginUser = "eric";
+    sudo.enable = true;
+    linger.enable = true;
+    linger.users = [ "eric" ];
+  };
+
   # --- Networking Configuration (Laptop: do NOT block boot on network) ---
   hwc.networking = {
     enable = true;
