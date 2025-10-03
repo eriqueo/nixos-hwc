@@ -123,6 +123,7 @@ in
       c = :compose<Enter>
       C = :reply -aq<Enter>
       H = :toggle-headers<Enter>
+      u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
 
       [view::passthrough]

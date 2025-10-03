@@ -347,7 +347,7 @@ in {
     };
       userDirs = {
         desktop = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
-        download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
+        download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}/downloads"; };
         documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/documents"; };
         templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/templates"; };
         publicShare = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
