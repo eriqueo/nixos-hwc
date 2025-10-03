@@ -22,6 +22,9 @@ in {
       initialPassword = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null)
         cfg.user.fallbackPassword;
 
+      hashedPasswordFile = lib.mkIf cfg.user.useSecrets
+        config.age.secrets.user-initial-password.path;
+
       openssh.authorizedKeys.keys = lib.mkIf cfg.user.ssh.enable (
         if cfg.user.ssh.useSecrets then
           [ (builtins.readFile config.age.secrets.user-ssh-public-key.path) ]
