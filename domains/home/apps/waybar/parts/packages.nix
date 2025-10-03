@@ -35,7 +35,5 @@ with pkgs; [
   nvtopPackages.full
   (if pkgs.system == "x86_64-linux" then pkgs.linuxPackages.nvidia_x11.settings else null)
 
-  # Portal packages
-  xdg-desktop-portal-gtk
-  xdg-desktop-portal-hyprland
+
 ]
