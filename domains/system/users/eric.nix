@@ -13,7 +13,7 @@ in {
       description = cfg.user.description;
 
       extraGroups =
-        (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" ]) ++
+        (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" "bluetooth" ]) ++
         (lib.optionals cfg.user.groups.media          [ "video" "audio" "render" ]) ++
         (lib.optionals cfg.user.groups.development    [ "docker" "podman" ]) ++
         (lib.optionals cfg.user.groups.virtualization [ "libvirtd" "kvm" ]) ++
