@@ -1,15 +1,3 @@
-# domains/system/services/hardware/index.nix
-#
-# HARDWARE - System services for hardware interaction.
-# Covers audio (PipeWire), input devices (keyboard), monitoring,
-# and portal ordering for sandboxed apps.
-#
-# Usage:
-#   hwc.system.services.hardware.enable = true;
-#   hwc.system.services.hardware.audio.enable = true;
-#   hwc.system.services.hardware.keyboard.enable = true;
-#   hwc.system.services.hardware.monitoring.enable = true;
-
 { config, lib, pkgs, ... }:
 
 let
@@ -36,7 +24,7 @@ in
 
     services.upower.enable = lib.mkIf cfg.audio.enable true;
 
-    # Portal packages and configuration
+    # Declarative portals
     xdg.portal = lib.mkIf cfg.audio.enable {
       enable = true;
       extraPortals = with pkgs; [
@@ -45,10 +33,12 @@ in
       ];
     };
 
-    # Declarative systemd user unit to wait for Wayland socket
+    services.gnome.gnome-keyring.enable = lib.mkIf cfg.audio.enable true;
+
+    # Order portals after Wayland socket
     systemd.user.services."wayland-ready" = lib.mkIf cfg.audio.enable {
       Unit = {
-        Description = "Wait for Wayland socket";
+        Description = "Wait for Wayland socket before starting portals";
         Before = [ "xdg-desktop-portal.service" "xdg-desktop-portal-hyprland.service" ];
       };
       Service = {
@@ -65,7 +55,6 @@ in
       Install = { WantedBy = [ "default.target" ]; };
     };
 
-    # Portal services depend explicitly on wayland-ready
     systemd.user.services."xdg-desktop-portal" = lib.mkIf cfg.audio.enable {
       unitConfig = {
         After = [ "wayland-ready.service" ];
@@ -79,8 +68,6 @@ in
         Requires = [ "xdg-desktop-portal.service" "wayland-ready.service" ];
       };
     };
-
-    services.gnome.gnome-keyring.enable = lib.mkIf cfg.audio.enable true;
 
     #=========================================================================
     # UNIVERSAL KEYBOARD MAPPING (keyd)
@@ -110,7 +97,7 @@ in
     boot.kernelModules = lib.mkIf cfg.keyboard.enable [ "uinput" ];
 
     #=========================================================================
-    # CO-LOCATED HARDWARE & UTILITY PACKAGES
+    # HARDWARE MONITORING UTILITIES
     #=========================================================================
 
     environment.systemPackages =

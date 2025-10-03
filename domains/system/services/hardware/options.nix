@@ -1,16 +1,13 @@
-# NEW file: domains/system/services/hardware/options.nix
-{ lib, config, ... }:
+{ lib, ... }:
 
 {
   options.hwc.system.services.hardware = {
-    # The master switch for all hardware-related services.
-    enable = lib.mkEnableOption "Enable hardware services (input, audio, monitoring)";
+    # Master toggle
+    enable = lib.mkEnableOption "Enable all hardware-related services (audio, input, monitoring)";
 
-    # We can keep these as simple toggles. They are clear roles.
+    # Sub-modules
     keyboard.enable = lib.mkEnableOption "Enable universal keyboard mapping (keyd)";
-    audio.enable = lib.mkEnableOption "Enable PipeWire audio system";
-
-    # We can add a new option for hardware monitoring tools.
-    monitoring.enable = lib.mkEnableOption "Enable hardware monitoring tools (sensors, etc.)";
+    audio.enable    = lib.mkEnableOption "Enable PipeWire audio system and portals";
+    monitoring.enable = lib.mkEnableOption "Enable hardware monitoring tools (sensors, smartctl, etc.)";
   };
 }
