@@ -64,6 +64,7 @@
       hwc.home.apps.geminiCli.enable = true;
       hwc.home.apps.onlyofficeDesktopeditors.enable = true;
       hwc.home.apps.wasistlos.enable = true;
+      hwc.home.apps.n8n.enable = true;
     };
   };
 }
