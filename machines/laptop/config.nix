@@ -27,9 +27,11 @@
     # The system.nix profile is now the main entry point for all system services.
     ../../profiles/system.nix
     ../../profiles/home.nix
-    ../../profiles/infrastructure.nix
     ../../profiles/security.nix
     # ../../profiles/ai.nix # This might be imported by a server profile now.
+
+    # Infrastructure domain for GPU only (not storage/virtualization)
+    ../../domains/infrastructure/hardware
   ];
 
   #============================================================================
@@ -82,6 +84,7 @@
     # Applies only if tailscale.enable were true; harmless to keep.
     tailscale.extraUpFlags = [ "--accept-dns" ];
   };
+
 
   # --- Infrastructure & Server Roles ---
 
