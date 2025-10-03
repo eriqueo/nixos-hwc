@@ -31,6 +31,8 @@ in
 
     home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
 
+    home.file.".local/state/hypr/.keep".text = "";
+
     wayland.windowManager.hyprland = {
       enable  = true;
       package = pkgs.hyprland;
