@@ -77,7 +77,8 @@
       "Bash(do echo \"=== $f imports ===\")",
       "Bash(done)",
       "Bash(cat:*)",
-      "Bash(loginctl list-sessions:*)"
+      "Bash(loginctl list-sessions:*)",
+      "Read(//home/eric/.config/**)"
     ],
     "deny": [],
     "ask": [],
