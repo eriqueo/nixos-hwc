@@ -1,3 +1,8 @@
+# nixos-hwc/machines/server/config.nix
+#
+# MACHINE: HWC-SERVER
+# Declares machine identity and composes profiles; states hardware reality.
+
 { config, lib, pkgs, ... }:
 {
   imports = [
@@ -34,6 +39,20 @@
   # Production system settings
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   # allowUnfree set in flake.nix
+
+  # --- Networking Configuration (Server: DO wait for network) ---
+  hwc.networking = {
+    enable = true;
+    networkManager.enable = true;
+
+    # Safest: wait for any NetworkManager connection (no hard-coded iface names).
+    waitOnline.mode = "all";
+    waitOnline.timeoutSeconds = 90;
+
+    ssh.enable = true;
+    tailscale.enable = true;
+    firewall.level = "server";
+  };
 
   # AI services configuration
   hwc.server.ai.ollama = {

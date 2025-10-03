@@ -45,8 +45,6 @@
   #============================================================================
 
   # --- System Services Configuration ---
-  # This is where we enable and configure the new, self-contained modules.
-
   # Enable the core shell environment with development tools.
   hwc.system.services.shell = {
     enable = true;
@@ -70,17 +68,18 @@
   # Enable the declarative VPN service using the official CLI.
   hwc.system.services.vpn.protonvpn.enable = true;
 
-  # --- Networking Configuration (New, Simplified API) ---
+  # --- Networking Configuration (Laptop: do NOT block boot on network) ---
   hwc.networking = {
     enable = true;
-    ssh.enable = true; # Enable the SSH server.
+    networkManager.enable = true;
 
-    # Use the high-level firewall profile.
+    # Laptop should not wait-online; Hyprland can start immediately.
+    waitOnline.mode = "off";
+
+    ssh.enable = true;            # Enable the SSH server.
     firewall.level = "strict";
-
-    # Explicitly disable Tailscale on this specific machine.
     tailscale.enable = false;
-    # This flag is still valid, but will only apply if tailscale.enable were true.
+    # Applies only if tailscale.enable were true; harmless to keep.
     tailscale.extraUpFlags = [ "--accept-dns" ];
   };
 
