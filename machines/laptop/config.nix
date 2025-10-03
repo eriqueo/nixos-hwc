@@ -58,6 +58,7 @@
     enable = true;
     keyboard.enable = true;
     audio.enable = true;
+    bluetooth.enable = true;
     monitoring.enable = true;
   };
 
@@ -90,8 +91,7 @@
 
     ssh.enable = true;            # Enable the SSH server.
     firewall.level = "strict";
-    tailscale.enable = false;
-    # Applies only if tailscale.enable were true; harmless to keep.
+    tailscale.enable = true;
     tailscale.extraUpFlags = [ "--accept-dns" ];
   };
 

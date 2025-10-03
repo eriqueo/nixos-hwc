@@ -103,6 +103,21 @@ in
     boot.kernelModules = lib.mkIf cfg.keyboard.enable [ "uinput" ];
 
     #==========================================================================
+    # BLUETOOTH
+    #==========================================================================
+    hardware.bluetooth = lib.mkIf cfg.bluetooth.enable {
+      enable = true;
+      powerOnBoot = true;
+      settings.General = {
+        DiscoverableTimeout = 0;
+        AutoEnable = true;
+        Experimental = true;
+      };
+    };
+
+    services.blueman.enable = lib.mkIf cfg.bluetooth.enable true;
+
+    #==========================================================================
     # CO-LOCATED HARDWARE & UTILITY PACKAGES
     #==========================================================================
     environment.systemPackages =
