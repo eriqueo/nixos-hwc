@@ -466,6 +466,18 @@ in {
       HEARTWOOD_SOPS_AGE_KEY = cfg.security.sopsAgeKey;
     };
 
+    # Configure XDG user directories globally
+    environment.etc."xdg/user-dirs.defaults".text = ''
+      DESKTOP=${cfg.userDirs.desktop}
+      DOWNLOAD=${cfg.userDirs.download}
+      TEMPLATES=${cfg.userDirs.templates}
+      PUBLICSHARE=${cfg.userDirs.publicShare}
+      DOCUMENTS=${cfg.userDirs.documents}
+      MUSIC=${cfg.userDirs.music}
+      PICTURES=${cfg.userDirs.pictures}
+      VIDEOS=${cfg.userDirs.videos}
+    '';
+
     # Create system path directories (always available)
     systemd.tmpfiles.rules = [
       "d ${cfg.state} 0755 root root -"
