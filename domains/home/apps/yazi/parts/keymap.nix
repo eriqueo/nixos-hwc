@@ -13,22 +13,18 @@
       { on = [ "<Space>", "g", "r" ], run = "cd /", desc = "Go: root" },
       { on = [ "<Space>", "g", "t" ], run = "cd /tmp", desc = "Go: temp" },
       
-      # NEW: Numbered directory shortcuts (adjust paths to match your setup)
-      { on = [ "<Space>", "g", "0" ], run = "cd ~/00_inbox", desc = "Go: 0_dotfiles" },
-      { on = [ "<Space>", "g", "1" ], run = "cd ~/01_hwc", desc = "Go: 1_documents" },
-      { on = [ "<Space>", "g", "2" ], run = "cd ~/02_personal", desc = "Go: 2_downloads" },
-      { on = [ "<Space>", "g", "3" ], run = "cd ~/03_tech", desc = "Go: 3_pictures" },
-      { on = [ "<Space>", "g", "4" ], run = "cd ~/04_reference", desc = "Go: 4_videos" },
-      { on = [ "<Space>", "g", "5" ], run = "cd ~/05_media", desc = "Go: 5_projects" },
-      { on = [ "<Space>", "g", "6" ], run = "cd ~/06_archive", desc = "Go: 6_archive" },
-      { on = [ "<Space>", "g", "7" ], run = "cd ~/07_temp", desc = "Go: 7_temp" },
-      { on = [ "<Space>", "g", "8" ], run = "cd ~/08_misc", desc = "Go: 8_misc" },
+      # NEW: Numbered directory shortcuts (3-digit filesystem structure)
+      { on = [ "<Space>", "g", "0" ], run = "cd ~/000_inbox", desc = "Go: inbox" },
+      { on = [ "<Space>", "g", "1" ], run = "cd ~/100_hwc", desc = "Go: work" },
+      { on = [ "<Space>", "g", "2" ], run = "cd ~/200_personal", desc = "Go: personal" },
+      { on = [ "<Space>", "g", "3" ], run = "cd ~/300_tech", desc = "Go: tech" },
+      { on = [ "<Space>", "g", "5" ], run = "cd ~/500_media", desc = "Go: media" },
       { on = [ "<Space>", "g", "9" ], run = "cd ~/900_vaults", desc = "Go: 9_vaults" },
     
-      # Keep your existing letter-based shortcuts for compatibility
-      { on = [ "<Space>", "g", "d" ], run = "cd ~/00_inbox", desc = "Go: downloads" },
-      { on = [ "<Space>", "g", "n" ], run = "cd ~/.nixos", desc = "Go: documents" },
-      { on = [ "<Space>", "g", "p" ], run = "cd ~/05_media/pictures", desc = "Go: pictures" },
+      # Letter-based shortcuts for common locations
+      { on = [ "<Space>", "g", "d" ], run = "cd ~/000_inbox", desc = "Go: downloads/inbox" },
+      { on = [ "<Space>", "g", "n" ], run = "cd ~/.nixos", desc = "Go: nixos" },
+      { on = [ "<Space>", "g", "p" ], run = "cd ~/500_media/pictures", desc = "Go: pictures" },
       { on = [ "<Space>", "g", "v" ], run = "cd ~/900_vaults", desc = "Go: vaults" },
     
       # Space-leader: FIND/SEARCH (keeping your existing setup)
