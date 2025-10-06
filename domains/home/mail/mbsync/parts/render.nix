@@ -29,18 +29,34 @@ let
     let esc = builtins.replaceStrings [ "\"" ] [ "\\\"" ] s;
     in "\"" + esc + "\"";
 
-  # Include Proton custom folders; keep Gmail special-casing for aliases
+  # Process patterns - now supports paired format: ["remote" "local" "remote2" "local2"]
   patternsFor = a:
     let
       raw0 = a.sync.patterns or [ "INBOX" ];
-      raw  =
-        if a.type == "proton-bridge"
-        then raw0 ++ [ "Folders/*" ]   # Proton Bridge exposes custom folders here
-        else raw0;
+
+      # Check if patterns are in paired format (even length list)
+      isPaired = (builtins.length raw0) > 0 && (lib.mod (builtins.length raw0) 2 == 0);
+
+      # For paired format, just escape square brackets
+      processPaired = patterns:
+        if common.isGmail a
+        then map escapeSquareBrackets patterns
+        else patterns;
+
+      # For legacy single-pattern format, expand aliases
+      processLegacy = patterns:
+        let
+          raw = if a.type == "proton-bridge"
+                then patterns ++ [ "Folders/*" ]
+                else patterns;
+        in
+          if common.isGmail a
+          then lib.unique (map escapeSquareBrackets (lib.concatLists (map expandGoogleAliases raw)))
+          else lib.unique raw;
     in
-      if common.isGmail a
-      then lib.unique (map escapeSquareBrackets (lib.concatLists (map expandGoogleAliases raw)))
-      else lib.unique raw;
+      if isPaired
+      then processPaired raw0
+      else processLegacy raw0;
 
   getOr = a: n: def:
     if common.hasField a n then

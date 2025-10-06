@@ -18,9 +18,14 @@
         address = "eriqueo@proton.me";
         login = "";
         password = { mode = "pass"; pass = "email/proton/bridge"; };
-        maildirName = "proton";
-        # include Proton custom folders:
-        sync.patterns = [ "INBOX" "Sent" "Drafts" "Trash" "Archive" "Folders/*" "Labels/*" ];
+        maildirName = "200-personal";
+        sync.patterns = [
+          "INBOX" "210-inbox"
+          "Archive" "211-archive"
+          "Sent" "212-sent"
+          "Drafts" "213-drafts"
+          "Trash" "219-trash"
+        ];
         send.msmtpAccount = "proton";
         primary = true;
       };
@@ -34,9 +39,14 @@
           address = "eriqueokeefe@gmail.com";
           login = "eriqueokeefe@gmail.com";
           password = { mode = "agenix"; agenix = "/run/agenix/gmail-personal-password"; };
-          maildirName = "gmail-personal";
+          maildirName = "200-personal";
           sync.patterns = [
-            "INBOX" "[Gmail]/Sent Mail" "[Gmail]/Drafts" "[Gmail]/Trash" "[Gmail]/All Mail"
+            "INBOX" "210-inbox"
+            "[Gmail]/All Mail" "211-archive"
+            "[Gmail]/Sent Mail" "212-sent"
+            "[Gmail]/Drafts" "213-drafts"
+            "[Gmail]/Starred" "214-important"
+            "[Gmail]/Trash" "219-trash"
           ];
           send.msmtpAccount = "gmail-personal";
         };
@@ -50,9 +60,13 @@
           address = "heartwoodcraftmt@gmail.com";
           login = "heartwoodcraftmt@gmail.com";
           password = { mode = "agenix"; agenix = "/run/agenix/gmail-business-password"; };
-          maildirName = "gmail-business";
+          maildirName = "100-work";
           sync.patterns = [
-            "INBOX" "[Gmail]/Sent Mail" "[Gmail]/Drafts" "[Gmail]/Trash" "[Gmail]/All Mail"
+            "INBOX" "110-inbox"
+            "[Gmail]/All Mail" "111-archive"
+            "[Gmail]/Sent Mail" "112-sent"
+            "[Gmail]/Drafts" "113-drafts"
+            "[Gmail]/Trash" "119-trash"
           ];
           send.msmtpAccount = "gmail-business";
         };
@@ -66,9 +80,14 @@
           address = "eric@iheartwoodcraft.com";
           login = "";
           password = { mode = "pass"; pass = "email/proton/bridge"; };
-          maildirName = "iheartwoodcraft";
-          # include Proton custom folders:
-          sync.patterns = [ "INBOX" "Sent" "Drafts" "Trash" "Archive" "Folders/*" ];
+          maildirName = "100-work";
+          sync.patterns = [
+            "INBOX" "110-inbox"
+            "Archive" "111-archive"
+            "Sent" "112-sent"
+            "Drafts" "113-drafts"
+            "Trash" "119-trash"
+          ];
           send.msmtpAccount = "iheartwoodcraft";
         };
   };
