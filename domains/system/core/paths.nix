@@ -150,12 +150,6 @@ in {
         description = "Technology development area";
       };
 
-      reference = lib.mkOption {
-        type = lib.types.path;
-        default = "${cfg.user.home}/400_ref";
-        description = "Cross-domain reference materials";
-      };
-
       media = lib.mkOption {
         type = lib.types.path;
         default = "${cfg.user.home}/500_media";
@@ -348,8 +342,8 @@ in {
       userDirs = {
         desktop = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
         download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}/downloads"; };
-        documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/documents"; };
-        templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/templates"; };
+        documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/110-documents"; };
+        templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/130-reference/templates"; };
         publicShare = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
         pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures"; };
         music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/music"; };
@@ -420,7 +414,6 @@ in {
       HWC_WORK_DIR = cfg.user.work;
       HWC_PERSONAL_DIR = cfg.user.personal;
       HWC_TECH_DIR = cfg.user.tech;
-      HWC_REFERENCE_DIR = cfg.user.reference;
       HWC_MEDIA_DIR = cfg.user.media;
       HWC_VAULTS_DIR = cfg.user.vaults;
 

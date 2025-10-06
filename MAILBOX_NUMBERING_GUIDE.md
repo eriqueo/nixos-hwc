@@ -1,343 +1,305 @@
-# Standardized Numbered Mailbox Guide
+# Domain-Based Unified Mailbox Guide
 
-## Goal
-Create consistent numbered mailbox prefixes (0-9) that work across:
-- aerc keybindings (local Maildir names)
-- mbsync syncing (server ↔ local mapping)
-- All email accounts (ProtonMail, Gmail, etc.)
+**Owner**: Eric
+**Scope**: `~/Maildir/` — All email organization
+**Goal**: Unified domain-based mailboxes with source account tagging and visual differentiation
 
 ---
 
-## The Problem
+## Core Principles
 
-Your aerc bindings reference:
-```
-0_Inbox, 1_Archive, 2_Sent, 3_Drafts, 4_Important, etc.
-```
-
-But your IMAP servers have standard names:
-- ProtonMail: `INBOX`, `Archive`, `Sent`, `Drafts`, `Folders/Important`
-- Gmail: `INBOX`, `[Gmail]/All Mail`, `[Gmail]/Sent Mail`, `[Gmail]/Drafts`
-
-mbsync needs to map between these correctly.
+1. **Domain Separation**: Organize by context (work/personal), not by email account
+2. **Unified Inboxes**: Single inbox per domain, regardless of source account
+3. **Source Tagging**: Auto-tag messages by source account for filtering/searching
+4. **Visual Differentiation**: Color-coded by account within domain (blue spectrum = work, purple = personal)
+5. **3-Digit Numbering**: Align with Filesystem Charter (`XXX-name` format)
 
 ---
 
-## The Solution: mbsync Channel Mapping
+## Mailbox Structure
 
-mbsync supports **per-folder renaming** using the `Patterns` directive with `:` notation:
-
+### Work Domain (100-199)
 ```
-Patterns "INBOX" "0_Inbox" "Archive" "1_Archive" "Sent" "2_Sent"
-```
-
-This means:
-- **Remote (IMAP server):** `INBOX`, `Archive`, `Sent`
-- **Local (Maildir):** `0_Inbox`, `1_Archive`, `2_Sent`
-
----
-
-## Standard Mailbox Numbering Scheme
-
-Based on your aerc bindings:
-
-| Number | Purpose       | Common IMAP Names                          |
-|--------|---------------|--------------------------------------------|
-| 0      | Inbox         | `INBOX`                                    |
-| 1      | Archive       | `Archive`, `[Gmail]/All Mail`              |
-| 2      | Sent          | `Sent`, `[Gmail]/Sent Mail`                |
-| 3      | Drafts        | `Drafts`, `[Gmail]/Drafts`                 |
-| 4      | Important     | `Important`, `Folders/Important`, `Starred`|
-| 5      | ProjectA      | Custom folder (create on server)          |
-| 6      | ProjectB      | Custom folder (create on server)          |
-| 7      | ReadLater     | Custom folder (create on server)          |
-| 8      | Spam          | `Spam`, `Junk`, `[Gmail]/Spam`             |
-| 9      | Trash         | `Trash`, `[Gmail]/Trash`                   |
-
----
-
-## Implementation Steps
-
-### Step 1: Add Mapping Configuration to Account Options
-
-**File:** `domains/home/mail/accounts/parts/options.nix`
-
-Add a new option for mailbox mapping:
-
-```nix
-mailboxMapping = lib.mkOption {
-  type = lib.types.attrsOf lib.types.str;
-  default = {
-    "INBOX" = "0_Inbox";
-    "Archive" = "1_Archive";
-    "Sent" = "2_Sent";
-    "Drafts" = "3_Drafts";
-    "Important" = "4_Important";
-    "Spam" = "8_Spam";
-    "Trash" = "9_Trash";
-  };
-  description = ''
-    Mapping of remote IMAP folder names to local numbered Maildir names.
-    Format: { "RemoteName" = "LocalName"; }
-  '';
-};
+100-work/
+├── 110-inbox/          # Unified work inbox (all work accounts)
+├── 111-archive/        # Archived work emails
+├── 112-sent/           # Sent work emails
+├── 113-drafts/         # Work drafts
+├── 114-clients/        # Client-specific threads
+├── 115-projects/       # Project-specific threads
+├── 118-spam/           # Work spam
+└── 119-trash/          # Deleted work emails
 ```
 
-### Step 2: Update mbsync render to use mappings
-
-**File:** `domains/home/mail/mbsync/parts/render.nix`
-
-Modify the `patternsFor` function to generate mapping patterns:
-
-```nix
-# OLD (around line 33):
-patternsFor = a:
-  let
-    raw0 = a.sync.patterns or [ "INBOX" ];
-    # ... existing code
-  in
-    # ... existing code
-
-# NEW:
-patternsFor = a:
-  let
-    # Get mailbox mapping if defined
-    mapping = a.mailboxMapping or {};
-
-    # Generate patterns with renaming
-    mappedPatterns = lib.mapAttrsToList
-      (remote: local: "\"${remote}\" \"${local}\"")
-      mapping;
-
-    # Keep existing sync.patterns for additional folders
-    raw0 = a.sync.patterns or [];
-    additionalPatterns = map confQuote raw0;
-
-    # Combine
-    allPatterns = mappedPatterns ++ additionalPatterns;
-
-    # Add Proton custom folders
-    withProton =
-      if a.type == "proton-bridge"
-      then allPatterns ++ [ "\"Folders/*\"" ]
-      else allPatterns;
-  in
-    if common.isGmail a
-    then lib.unique (map escapeSquareBrackets (lib.concatLists (map expandGoogleAliases withProton)))
-    else lib.unique withProton;
+### Personal Domain (200-299)
 ```
-
-### Step 3: Configure Each Account
-
-**File:** `domains/home/mail/accounts/index.nix`
-
-For each account, define its specific mapping:
-
-#### ProtonMail Example:
-```nix
-hwc.home.mail.accounts.proton = {
-  enable = true;
-  type = "proton-bridge";
-  # ... existing config ...
-
-  mailboxMapping = {
-    "INBOX" = "0_Inbox";
-    "Archive" = "1_Archive";
-    "Sent" = "2_Sent";
-    "Drafts" = "3_Drafts";
-    "Folders/Important" = "4_Important";
-    "Folders/Work" = "5_Work";        # Custom folder
-    "Folders/Personal" = "6_Personal"; # Custom folder
-    "Spam" = "8_Spam";
-    "Trash" = "9_Trash";
-  };
-};
-```
-
-#### Gmail Example:
-```nix
-hwc.home.mail.accounts.gmail-personal = {
-  enable = true;
-  type = "gmail";
-  # ... existing config ...
-
-  mailboxMapping = {
-    "INBOX" = "0_Inbox";
-    "[Gmail]/All Mail" = "1_Archive";
-    "[Gmail]/Sent Mail" = "2_Sent";
-    "[Gmail]/Drafts" = "3_Drafts";
-    "[Gmail]/Starred" = "4_Important";
-    "Work" = "5_Work";              # Custom label
-    "Personal" = "6_Personal";      # Custom label
-    "[Gmail]/Spam" = "8_Spam";
-    "[Gmail]/Trash" = "9_Trash";
-  };
-};
+200-personal/
+├── 210-inbox/          # Unified personal inbox (all personal accounts)
+├── 211-archive/        # Archived personal emails
+├── 212-sent/           # Sent personal emails
+├── 213-drafts/         # Personal drafts
+├── 214-important/      # Starred/important personal emails
+├── 218-spam/           # Personal spam
+└── 219-trash/          # Deleted personal emails
 ```
 
 ---
 
-## Step 4: Create Custom Folders on Server
+## Account Routing & Tagging
 
-For folders that don't exist yet (5-7 in your scheme), you need to create them:
+### Work Accounts → `100-work/`
 
-### ProtonMail Web UI:
-1. Go to Settings → Folders/Labels
-2. Create: `Important`, `Work`, `Personal`, `ReadLater` (or your preferred names)
-3. They will appear under `Folders/` in IMAP
+| Account           | IMAP Folders                          | Local Folders      | Auto-Tags      | Color Scheme |
+|-------------------|---------------------------------------|--------------------|----------------|--------------|
+| iheartwoodcraft   | INBOX, Archive, Sent, Drafts, Trash  | 110-inbox, etc.    | `hwc-email`    | Light Blue   |
+| gmail-business    | INBOX, [Gmail]/*, etc.                | 110-inbox, etc.    | `gmail-work`   | Dark Blue    |
 
-### Gmail Web UI:
-1. Create labels: `Work`, `Personal`, `ReadLater`
-2. In Settings → Labels, enable "Show in IMAP" for each
-3. They will appear as top-level folders in IMAP
+### Personal Accounts → `200-personal/`
+
+| Account           | IMAP Folders                          | Local Folders      | Auto-Tags          | Color Scheme  |
+|-------------------|---------------------------------------|--------------------|-------------------|---------------|
+| gmail-personal    | INBOX, [Gmail]/*, etc.                | 210-inbox, etc.    | `gmail-personal`  | Light Purple  |
+| proton            | INBOX, Archive, Sent, Drafts, Trash   | 210-inbox, etc.    | `proton-personal` | Dark Purple   |
 
 ---
 
-## Step 5: Update aerc bindings
+## Folder Numbering Pattern
 
-Your aerc bindings are already correct! They reference the local numbered names:
+Within each domain, use the tens place for folder type:
 
+| Range  | Purpose                  | Examples                              |
+|--------|--------------------------|---------------------------------------|
+| XX0-XX4| Core mail folders        | XX0=inbox, XX1=archive, XX2=sent, XX3=drafts, XX4=important/starred |
+| XX5-XX7| Custom/project folders   | XX5=projects, XX6=clients, XX7=reading |
+| XX8    | Spam                     | XX8=spam                              |
+| XX9    | Trash                    | XX9=trash                             |
+
+---
+
+## Implementation Details
+
+### 1. mbsync Configuration
+
+**Goal**: Route multiple accounts into unified domain mailboxes
+
+**Strategy**: Use mbsync's multi-master sync to pull all work accounts → `100-work/`, all personal → `200-personal/`
+
+**Example mapping** (iheartwoodcraft → 100-work):
 ```
-x0 = :mv 0_Inbox<Enter>
-x1 = :mv 1_Archive<Enter>
-# etc.
+Patterns "INBOX" "110-inbox" "Archive" "111-archive" "Sent" "112-sent"
 ```
 
-Once mbsync creates the numbered folders locally, aerc will find them.
+**Example mapping** (gmail-business → 100-work):
+```
+Patterns "INBOX" "110-inbox" "[Gmail]/All Mail" "111-archive" "[Gmail]/Sent Mail" "112-sent"
+```
 
----
+**Example mapping** (gmail-personal → 200-personal):
+```
+Patterns "INBOX" "210-inbox" "[Gmail]/All Mail" "211-archive" "[Gmail]/Sent Mail" "212-sent"
+```
 
-## Step 6: Initial Sync & Migration
+**Example mapping** (proton → 200-personal):
+```
+Patterns "INBOX" "210-inbox" "Archive" "211-archive" "Sent" "212-sent"
+```
 
-After implementing the changes:
+### 2. notmuch Tagging
 
-1. **Backup existing mail:**
-   ```bash
-   cp -r ~/Maildir ~/Maildir.backup
-   ```
+**Goal**: Auto-tag messages by source account on sync
 
-2. **Clear local mail (optional - forces clean sync):**
-   ```bash
-   rm -rf ~/Maildir/*
-   ```
-
-3. **Rebuild NixOS:**
-   ```bash
-   sudo nixos-rebuild switch --flake .#hwc-laptop
-   ```
-
-4. **Run initial sync:**
-   ```bash
-   mbsync -a
-   ```
-
-5. **Verify folder structure:**
-   ```bash
-   ls -la ~/Maildir/iheartwoodcraft/
-   # Should show: 0_Inbox/ 1_Archive/ 2_Sent/ etc.
-   ```
-
-6. **Test in aerc:**
-   ```bash
-   aerc
-   # Try: <Space>g0 (should go to 0_Inbox)
-   # Try: x1 (should move message to 1_Archive)
-   ```
-
----
-
-## Alternative: Simpler Approach (If Above is Too Complex)
-
-If modifying mbsync render is too complex, you can use **symlinks**:
-
-### After normal mbsync (without renaming):
+**Tagging rules** (`~/.notmuch-config` or post-new hook):
 
 ```bash
-#!/usr/bin/env bash
-# ~/scripts/create-numbered-mailbox-links.sh
+# Work domain tags
+notmuch tag +hwc-email +work -- folder:100-work/** and from:*@iheartwoodcraft.com
+notmuch tag +gmail-work +work -- folder:100-work/** and from:*@gmail.com
 
-MAILDIR="$HOME/Maildir"
-
-for account in iheartwoodcraft proton gmail-personal gmail-business; do
-  cd "$MAILDIR/$account" || continue
-
-  # Create numbered symlinks pointing to actual folders
-  ln -sf INBOX 0_Inbox
-  ln -sf Archive 1_Archive
-  ln -sf Sent 2_Sent
-  ln -sf Drafts 3_Drafts
-  ln -sf Important 4_Important
-  ln -sf Spam 8_Spam
-  ln -sf Trash 9_Trash
-
-  # Gmail-specific
-  if [[ "$account" == gmail-* ]]; then
-    ln -sf "[Gmail]/All Mail" 1_Archive
-    ln -sf "[Gmail]/Sent Mail" 2_Sent
-    ln -sf "[Gmail]/Drafts" 3_Drafts
-    ln -sf "[Gmail]/Starred" 4_Important
-    ln -sf "[Gmail]/Spam" 8_Spam
-    ln -sf "[Gmail]/Trash" 9_Trash
-  fi
-done
+# Personal domain tags
+notmuch tag +gmail-personal +personal -- folder:200-personal/** and from:*@gmail.com
+notmuch tag +proton-personal +personal -- folder:200-personal/** and from:*@proton.me
 ```
 
-**Add to mbsync service:**
+**Additional useful tags:**
+- `+inbox` for messages in XX0-inbox folders
+- `+archived` for messages in XX1-archive folders
+- `+unread` for new messages
+- `+flagged` for important/starred
 
-```nix
-# domains/home/mail/mbsync/parts/service.nix
-ExecStartPost = "${pkgs.bash}/bin/bash /home/eric/scripts/create-numbered-mailbox-links.sh";
+### 3. aerc Color Configuration
+
+**Goal**: Visual differentiation by source account within unified inbox
+
+**Color scheme** (`~/.config/aerc/aerc.conf` or stylesets):
+
+```ini
+# Work domain - Blue spectrum
+*.hwc-email = blue
+*.gmail-work = darkblue
+
+# Personal domain - Purple spectrum
+*.gmail-personal = lightmagenta
+*.proton-personal = magenta
+
+# Folder-based colors
+*.work = blue
+*.personal = magenta
 ```
 
-**Pros:**
-- Simple, no mbsync config changes
-- Easy to understand and debug
+### 4. aerc Keybindings
 
-**Cons:**
-- Symlinks might confuse some mail clients
-- Doesn't actually rename folders on disk
-- Links need recreation after each sync
+**Updated keybindings** for 3-digit folder structure:
+
+```ini
+# Move to inbox
+<Space>g0 = :cf 110-inbox<Enter>   # Work inbox
+<Space>g2 = :cf 210-inbox<Enter>   # Personal inbox
+
+# Quick file messages
+x0 = :mv 110-inbox<Enter>          # To work inbox
+x1 = :mv 111-archive<Enter>        # To work archive
+x2 = :mv 112-sent<Enter>           # To work sent
+x4 = :mv 114-clients<Enter>        # To work clients
+x5 = :mv 115-projects<Enter>       # To work projects
+
+p0 = :mv 210-inbox<Enter>          # To personal inbox
+p1 = :mv 211-archive<Enter>        # To personal archive
+p4 = :mv 214-important<Enter>      # To personal important
+
+# Quick spam/trash
+x8 = :mv 118-spam<Enter>           # Work spam
+x9 = :mv 119-trash<Enter>          # Work trash
+p9 = :mv 219-trash<Enter>          # Personal trash
+```
 
 ---
 
-## Recommended Approach
+## Workflow
 
-**Use the mbsync mapping approach (Steps 1-6)** because:
-- ✅ Folders are actually renamed (cleaner)
-- ✅ Works with all mail clients
-- ✅ Consistent across rebuilds
-- ✅ No post-sync scripts needed
+### Receiving Mail
+1. **Sync**: `mbsync -a` pulls all accounts into unified domain folders
+2. **Tag**: notmuch post-new hook auto-tags by source account
+3. **View**: Open aerc, see unified inbox with color-coded messages
 
-The symlink approach is a quick hack if you need it working immediately.
+### Filtering by Account
+- Search work from HWC: `tag:hwc-email`
+- Search work from Gmail: `tag:gmail-work`
+- Search all work: `tag:work` or `folder:100-work/**`
+- Search all personal: `tag:personal` or `folder:200-personal/**`
+
+### Filing Messages
+- Use keybindings (`x1`, `x4`, `p1`, etc.) to move to appropriate folders
+- Archive is domain-specific (work archive vs personal archive)
+- Projects/clients folders for active threads
+
+---
+
+## Migration Plan
+
+### Phase 1: Backup
+```bash
+cp -r ~/Maildir ~/Maildir.backup.$(date +%Y%m%d)
+```
+
+### Phase 2: Update Configuration
+1. Update mbsync account mappings (route to unified folders)
+2. Update notmuch tagging rules
+3. Update aerc colors and keybindings
+4. Rebuild NixOS: `sudo nixos-rebuild switch --flake .#hwc-laptop`
+
+### Phase 3: Initial Sync
+```bash
+# Clear existing Maildir (backup already made)
+rm -rf ~/Maildir/*
+
+# Sync all accounts into new structure
+mbsync -a
+
+# Initial notmuch index
+notmuch new
+```
+
+### Phase 4: Verification
+```bash
+# Check folder structure
+tree -L 2 -d ~/Maildir/
+
+# Should show:
+# 100-work/110-inbox/
+# 100-work/111-archive/
+# ...
+# 200-personal/210-inbox/
+# ...
+
+# Check tags
+notmuch search tag:hwc-email
+notmuch search tag:gmail-work
+notmuch search tag:gmail-personal
+notmuch search tag:proton-personal
+```
+
+### Phase 5: Test in aerc
+- Open aerc
+- Navigate folders with updated keybindings
+- Verify color coding
+- Test message filing
+- Test search/filter by tags
 
 ---
 
 ## Troubleshooting
 
-### Folders not syncing:
-- Check `mbsync -a -D` for debug output
-- Verify folder exists on server (check webmail)
-- Check `Patterns` line in generated `~/.mbsyncrc`
+### Messages syncing to wrong domain
+- Check mbsync `Patterns` mapping in account config
+- Verify account is routing to correct domain folder (100-work vs 200-personal)
 
-### aerc can't find folders:
-- Run `ls ~/Maildir/<account>/` to verify names
-- Check aerc config references match exactly (case-sensitive)
-- Try `:cf 0_Inbox` manually in aerc
+### Tags not applying
+- Check notmuch post-new hook is running
+- Verify `from:` patterns match actual email addresses
+- Manually tag: `notmuch tag +hwc-email -- from:*@iheartwoodcraft.com`
 
-### Messages disappear:
-- Check server webmail - they should be in the renamed folder
-- mbsync might have moved them correctly but aerc is looking in wrong place
-- Verify `mailboxMapping` matches both server names and aerc bindings
+### Colors not showing in aerc
+- Check aerc styleset configuration
+- Verify tag names match exactly (case-sensitive)
+- Test with: `notmuch search tag:hwc-email` (should show messages)
+
+### Duplicate messages in unified inbox
+- mbsync might be syncing same message from multiple accounts
+- Use notmuch deduplication or adjust sync patterns
 
 ---
 
-## Summary
+## Benefits of This Approach
 
-1. Add `mailboxMapping` option to account options
-2. Update mbsync render to use mappings in `Patterns`
-3. Configure each account with server→local name mapping
-4. Create custom folders on server if needed
-5. Rebuild and sync
-6. Test in aerc
+✅ **Single work inbox** - All work email in one place, regardless of source account
+✅ **Single personal inbox** - All personal email unified
+✅ **Context-based organization** - File by domain (work vs personal), not by account
+✅ **Visual differentiation** - Colors show account source at a glance
+✅ **Searchable by source** - Tags enable filtering by specific account when needed
+✅ **Filesystem Charter alignment** - 3-digit numbering with domain separation
+✅ **Scalable** - Easy to add new accounts (just route to appropriate domain)
+✅ **Clean keybindings** - Predictable, domain-aware folder navigation
 
-**Result:** Consistent 0-9 numbered folders across all accounts, clean keybindings, proper server sync.
+---
+
+## Future Enhancements
+
+### Additional Domains
+- `300-tech/` for GitHub notifications, dev mailing lists
+- `000-system/` for server/monitoring alerts
+
+### Additional Folders
+- `116-waiting/` for emails awaiting response
+- `117-reading/` for newsletters/long reads
+- `225-receipts/` for purchase confirmations
+
+### Smart Filtering
+- Auto-file by sender patterns
+- Auto-tag by subject keywords
+- Priority inbox via notmuch queries
+
+---
+
+**Version**: v2.0 - Domain-Based Unified Mailboxes
+**Last Updated**: 2025-10-06
+**Status**: Active implementation

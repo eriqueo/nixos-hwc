@@ -12,7 +12,7 @@
 2. **Domain Separation**: Hundreds place indicates domain (100=work, 200=personal, etc.)
 3. **Nested Structure**: Each domain has internal organization (110, 120, etc.)
 4. **Inbox-First**: Process items through `000_inbox/` before filing
-5. **Cross-Domain Assets**: Shared resources (media, reference) at `4xx`/`5xx` level
+5. **Domain-Specific Storage**: Reference materials live within their relevant domain (not cross-domain)
 
 ---
 
@@ -25,7 +25,6 @@
 ├── 100_hwc/                # Work domain
 ├── 200_personal/           # Personal domain
 ├── 300_tech/               # Technology/development domain
-├── 400_ref/                # Cross-domain reference materials
 ├── 500_media/              # Cross-domain media library
 └── 900_vaults/             # Cloud sync (Obsidian, etc.)
 ```
@@ -79,11 +78,6 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
 **Examples**: Code projects, tutorials, documentation, configs
 **Boundary**: Technology-focused activities (learning, building, experimenting)
 
-### `400_ref/` - Cross-Domain Reference
-**Purpose**: Shared reference materials used across domains
-**Examples**: Ebooks, manuals, templates, research papers
-**Boundary**: Reference-only, not project-specific
-
 ### `500_media/` - Cross-Domain Media
 **Purpose**: Personal media library (not domain-specific)
 **Examples**: Photos, music, videos
@@ -108,7 +102,8 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
 
 System automatically maps XDG directories:
 - `XDG_DOWNLOAD_DIR` → `~/000_inbox/downloads/`
-- `XDG_DOCUMENTS_DIR` → `~/400_ref/documents/`
+- `XDG_DOCUMENTS_DIR` → `~/100_hwc/110-documents/`
+- `XDG_TEMPLATES_DIR` → `~/100_hwc/130-reference/templates/`
 - `XDG_PICTURES_DIR` → `~/500_media/pictures/`
 - `XDG_MUSIC_DIR` → `~/500_media/music/`
 - `XDG_VIDEOS_DIR` → `~/500_media/videos/`
@@ -128,17 +123,18 @@ System automatically maps XDG directories:
    - Work-related → `100_hwc/000-inbox/`
    - Personal → `200_personal/000-inbox/`
    - Tech/dev → `300_tech/000-inbox/`
-   - Reference → `400_ref/`
    - Media → `500_media/`
-4. From domain inbox, file into appropriate subfolder (`110`, `120`, etc.)
+4. From domain inbox, file into appropriate subfolder:
+   - Documents → `110-documents/`
+   - Projects → `120-projects/`
+   - Reference → `130-reference/`
 
 ### Choosing a Domain
 Ask: "What is the primary context for this item?"
-- **Work context?** → `100_hwc/`
-- **Personal life?** → `200_personal/`
-- **Learning/building tech?** → `300_tech/`
-- **Pure reference?** → `400_ref/`
-- **Media asset?** → `500_media/`
+- **Work context?** → `100_hwc/` (includes work documents, templates, reference)
+- **Personal life?** → `200_personal/` (includes personal docs, reference)
+- **Learning/building tech?** → `300_tech/` (includes tech docs, tutorials, configs)
+- **Media asset?** → `500_media/` (photos, music, videos only)
 
 ### Archive Strategy
 - **Option A**: Per-domain archive (`190-archive/`, `290-archive/`)
@@ -150,8 +146,8 @@ Ask: "What is the primary context for this item?"
 ## Anti-Patterns
 
 ❌ **Don't create duplicate paths**
-Bad: `100_hwc/documents/` AND `400_ref/hwc-docs/`
-Good: `100_hwc/110-documents/` only
+Bad: Creating separate cross-domain reference folders
+Good: Store reference materials within their relevant domain (`100_hwc/130-reference/`, etc.)
 
 ❌ **Don't skip inbox processing**
 Bad: Download → move directly to deep folder
