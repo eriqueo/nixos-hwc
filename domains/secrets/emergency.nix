@@ -47,13 +47,6 @@ in
 
       # Allow root password auth while emergency access is active
       services.openssh.settings.PermitRootLogin = lib.mkForce "yes";
-
-      warnings = [ ''
-        ##################################################################
-        # SECURITY WARNING: EMERGENCY ROOT ACCESS IS ACTIVE              #
-        # Disable `hwc.secrets.emergency.enable` when finished.   #
-        ##################################################################
-      '' ];
     }
 
     # Pick exactly one credential source without splicing attrsets

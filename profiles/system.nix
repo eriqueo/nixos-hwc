@@ -81,6 +81,7 @@
   # This remains the same, cleanly handling user creation.
   hwc.system.users = {
     enable = true;
+    emergencyEnable = lib.mkDefault true;  # Emergency root access for recovery
     user = {
       enable = true;
       name = "eric";

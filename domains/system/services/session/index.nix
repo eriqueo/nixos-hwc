@@ -110,9 +110,5 @@ in
         message = "Lingering: one or more users in the linger list are not defined users.";
       }
     ];
-
-    warnings = lib.optionals (cfg.sudo.enable && !cfg.sudo.wheelNeedsPassword) [
-      "SECURITY NOTICE: Passwordless sudo for the 'wheel' group is active."
-    ];
   };
 }

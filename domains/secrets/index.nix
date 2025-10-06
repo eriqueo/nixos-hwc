@@ -27,16 +27,5 @@
       HWC_SECRETS_DIR = "/run/agenix";
     };
 
-    # Security domain activation warning
-    warnings = [
-      ''
-        ##################################################################
-        # SECURITY DOMAIN ACTIVE                                        #
-        # All secrets managed via hwc.secrets.api.*                   #
-        # Secrets decrypted to /run/agenix/ during system boot.        #
-        # Ensure age keys are deployed to /etc/age/keys.txt             #
-        ##################################################################
-      ''
-    ];
   };
 }
