@@ -31,7 +31,7 @@ in
     #==========================================================================
     # Hyprland requires these home apps - enforce at module level
     hwc.home.apps.waybar.enable = lib.mkForce true;
-    hwc.home.apps.dunst.enable = lib.mkForce true;
+    hwc.home.apps.swaync.enable = lib.mkForce true;
     # System-level forcing done in sys.nix
 
     #==========================================================================
@@ -83,8 +83,8 @@ in
         message = "hyprland requires waybar (critical dependency - forced via mkForce)";
       }
       {
-        assertion = config.hwc.home.apps.dunst.enable;
-        message = "hyprland requires dunst notification daemon (critical dependency - forced via mkForce)";
+        assertion = config.hwc.home.apps.swaync.enable;
+        message = "hyprland requires swaync notification daemon (critical dependency - forced via mkForce)";
       }
     ];
   };
