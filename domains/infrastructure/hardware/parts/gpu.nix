@@ -249,14 +249,26 @@ in
           NEXT_NVIDIA_FILE="/tmp/gpu-next-nvidia"
           if [[ -f "$NEXT_NVIDIA_FILE" ]]; then
             rm "$NEXT_NVIDIA_FILE"
-            exec ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-offload "$@"
+            # Use nvidia-offload environment variables
+            if command -v nvidia-smi >/dev/null 2>&1; then
+              export __NV_PRIME_RENDER_OFFLOAD=1
+              export __GLX_VENDOR_LIBRARY_NAME=nvidia
+              export __VK_LAYER_NV_optimus=NVIDIA_only
+            fi
+            exec "$@"
           fi
 
           case "$CURRENT_MODE" in
             "performance")
               case "$1" in
                 blender|gimp|inkscape|kdenlive|obs|steam|wine|chromium|firefox|librewolf|godot|krita)
-                  exec ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-offload "$@"
+                  # Use nvidia-offload environment variables
+                  if command -v nvidia-smi >/dev/null 2>&1; then
+                    export __NV_PRIME_RENDER_OFFLOAD=1
+                    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+                    export __VK_LAYER_NV_optimus=NVIDIA_only
+                  fi
+                  exec "$@"
                   ;;
                 *)
                   exec "$@"

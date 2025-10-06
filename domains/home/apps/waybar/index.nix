@@ -55,7 +55,10 @@ in
     #==========================================================================
     # VALIDATION
     #==========================================================================
-    # Note: Assertions for system-level dependencies should be in sys.nix
-    # Home Manager modules can't access config.hwc.system directly
+    # GPU scripts dependency: waybar-gpu-status widget calls gpu-toggle (from infrastructure.hardware.gpu)
+    # This dependency is enforced at runtime - gpu-toggle must exist in PATH
+    # Infrastructure GPU module provides: gpu-toggle, gpu-status, gpu-launch, gpu-next
+    # Note: Cross-domain assertions (HM -> System) can't be enforced at build time
+    #       Runtime failure will occur if infrastructure.hardware.gpu.powerManagement.smartToggle is not enabled
   };
 }
