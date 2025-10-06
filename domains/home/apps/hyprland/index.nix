@@ -19,7 +19,7 @@ let
 
   basePkgs = with pkgs; [
     wofi hyprshot grim hypridle hyprpaper hyprlock cliphist wl-clipboard
-    brightnessctl networkmanager wirelesstools hyprsome
+    brightnessctl networkmanager wirelesstools hyprsome wlogout
   ];
 in
 {
@@ -85,6 +85,14 @@ in
       {
         assertion = config.hwc.home.apps.swaync.enable;
         message = "hyprland requires swaync notification daemon (critical dependency - forced via mkForce)";
+      }
+      {
+        assertion = !enabled || config.hwc.home.apps.kitty.enable;
+        message = "hyprland requires kitty as session-critical terminal (SUPER+RETURN, multiple keybinds)";
+      }
+      {
+        assertion = !enabled || config.hwc.home.apps.yazi.enable;
+        message = "hyprland requires yazi as file manager (SUPER+1, SUPER+T keybinds)";
       }
     ];
   };

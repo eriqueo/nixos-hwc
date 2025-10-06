@@ -21,6 +21,10 @@ in
         assertion = config.hwc.system.services.networking.enable;
         message = "waybar's network module requires hwc.system.services.networking.enable = true (for nmcli)";
       }
+      {
+        assertion = config.hwc.system.services.media.mpd.enable;
+        message = "waybar's mpd module requires hwc.system.services.media.mpd.enable = true";
+      }
     ];
   };
 }
