@@ -52,22 +52,24 @@ let
       state-icons = { paused = ""; playing = ""; };
       on-click = "mpc toggle";
       on-click-right = "mpc next";
+      swap-icon-label = false;
     };
 
     clock = { format = "{:%H:%M:%S}"; format-alt = "{:%Y-%m-%d %H:%M:%S}"; };
 
     "custom/gpu" = { format = "{}"; exec = "waybar-gpu-status"; return-type = "json"; interval = 5; on-click = "waybar-gpu-toggle"; };
-    idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; };
-    pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
+    idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; swap-icon-label = false; };
+    pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; swap-icon-label = false; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
     bluetooth = { format = "{icon}"; format-icons = { enabled = "󰂯"; disabled = "󰂲"; }; format-connected = "󰂱 {num_connections}"; on-click = "blueman-manager"; swap-icon-label = false; };
-    memory = { format = "󰍛 {percentage}%"; interval = 5; on-click = "waybar-system-monitor"; };
-    cpu = { format = "󰻠 {usage}%"; interval = 5; on-click = "waybar-system-monitor"; };
+    memory = { format = "󰍛 {percentage}%"; interval = 5; on-click = "waybar-system-monitor"; swap-icon-label = false; };
+    cpu = { format = "󰻠 {usage}%"; interval = 5; on-click = "waybar-system-monitor"; swap-icon-label = false; };
     temperature = {
       hwmon-path-abs = "/sys/class/hwmon";
       input-filename = "temp1_input";
       critical-threshold = 80;
       format = "󰔏 {temperatureC}°C";
+      swap-icon-label = false;
     };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "notify-send 'Notifications' 'No notification center configured'"; };
