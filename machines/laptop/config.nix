@@ -119,9 +119,6 @@
 
   # --- Miscellaneous Machine-Specific Settings ---
 
-  # Emergency user access (remains unchanged).
-  hwc.system.users.emergencyEnable = true;
-
   # Storage paths (remains unchanged).
   hwc.paths.hot = "/home/eric/03-tech/local-storage";
 
