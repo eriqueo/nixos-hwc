@@ -1,0 +1,909 @@
+{
+  "meta": {
+    "toolVersion": "2.1.0",
+    "schemaVersion": "raw-harvest-v1",
+    "harvestedAt": "2025-09-14T21:36:43.496Z",
+    "url": "https://iheartwoodcraft.com/home/projects/interiors/",
+    "domain": "iheartwoodcraft.com",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0",
+    "scoped": true,
+    "diagnosticsMode": false,
+    "analysisTimeMs": 17
+  },
+  "extracted": {
+    "meta": {
+      "title": "Interior | Kitchen & Bathroom | Heartwood Craft Bozeman",
+      "titleLength": 55,
+      "description": "Our comprehensive bathroom and interior remodeling services transform outdated spaces into functional, beautiful environments that reflect your lifestyle and cooking needs.",
+      "descriptionLength": 172,
+      "robots": "follow, index, max-snippet:-1, max-video-preview:-1, max-image-preview:large",
+      "canonical": "https://iheartwoodcraft.com/home/projects/interiors/",
+      "language": "en-US",
+      "viewport": "width=device-width, initial-scale=1",
+      "charset": "UTF-8"
+    },
+    "metaAll": [
+      {
+        "name": null,
+        "property": null,
+        "httpEquiv": null,
+        "content": null
+      },
+      {
+        "name": "viewport",
+        "property": null,
+        "httpEquiv": null,
+        "content": "width=device-width, initial-scale=1"
+      },
+      {
+        "name": "description",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Our comprehensive bathroom and interior remodeling services transform outdated spaces into functional, beautiful environments that reflect your lifestyle and cooking needs."
+      },
+      {
+        "name": "robots",
+        "property": null,
+        "httpEquiv": null,
+        "content": "follow, index, max-snippet:-1, max-video-preview:-1, max-image-preview:large"
+      },
+      {
+        "name": null,
+        "property": "og:locale",
+        "httpEquiv": null,
+        "content": "en_US"
+      },
+      {
+        "name": null,
+        "property": "og:type",
+        "httpEquiv": null,
+        "content": "article"
+      },
+      {
+        "name": null,
+        "property": "og:title",
+        "httpEquiv": null,
+        "content": "Interior | Kitchen & Bathroom | Heartwood Craft Bozeman"
+      },
+      {
+        "name": null,
+        "property": "og:description",
+        "httpEquiv": null,
+        "content": "Our comprehensive bathroom and interior remodeling services transform outdated spaces into functional, beautiful environments that reflect your lifestyle and cooking needs."
+      },
+      {
+        "name": null,
+        "property": "og:url",
+        "httpEquiv": null,
+        "content": "https://iheartwoodcraft.com/home/projects/interiors/"
+      },
+      {
+        "name": null,
+        "property": "og:site_name",
+        "httpEquiv": null,
+        "content": "iheartwoodcraft.com"
+      },
+      {
+        "name": null,
+        "property": "article:publisher",
+        "httpEquiv": null,
+        "content": "https://www.facebook.com/heartwoodcraftmt"
+      },
+      {
+        "name": null,
+        "property": "og:updated_time",
+        "httpEquiv": null,
+        "content": "2025-09-13T16:56:43-06:00"
+      },
+      {
+        "name": null,
+        "property": "fb:app_id",
+        "httpEquiv": null,
+        "content": "427741786546457"
+      },
+      {
+        "name": null,
+        "property": "og:image",
+        "httpEquiv": null,
+        "content": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/logo-black.png"
+      },
+      {
+        "name": null,
+        "property": "og:image:secure_url",
+        "httpEquiv": null,
+        "content": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/logo-black.png"
+      },
+      {
+        "name": null,
+        "property": "og:image:width",
+        "httpEquiv": null,
+        "content": "1007"
+      },
+      {
+        "name": null,
+        "property": "og:image:height",
+        "httpEquiv": null,
+        "content": "755"
+      },
+      {
+        "name": null,
+        "property": "og:image:alt",
+        "httpEquiv": null,
+        "content": "Interior"
+      },
+      {
+        "name": null,
+        "property": "og:image:type",
+        "httpEquiv": null,
+        "content": "image/png"
+      },
+      {
+        "name": "twitter:card",
+        "property": null,
+        "httpEquiv": null,
+        "content": "summary_large_image"
+      },
+      {
+        "name": "twitter:title",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Interior | Kitchen & Bathroom | Heartwood Craft Bozeman"
+      },
+      {
+        "name": "twitter:description",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Our comprehensive bathroom and interior remodeling services transform outdated spaces into functional, beautiful environments that reflect your lifestyle and cooking needs."
+      },
+      {
+        "name": "twitter:image",
+        "property": null,
+        "httpEquiv": null,
+        "content": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/logo-black.png"
+      },
+      {
+        "name": "twitter:label1",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Time to read"
+      },
+      {
+        "name": "twitter:data1",
+        "property": null,
+        "httpEquiv": null,
+        "content": "1 minute"
+      },
+      {
+        "name": "generator",
+        "property": null,
+        "httpEquiv": null,
+        "content": "WordPress 6.8.2"
+      },
+      {
+        "name": "generator",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Site Kit by Google 1.159.0"
+      },
+      {
+        "name": "generator",
+        "property": null,
+        "httpEquiv": null,
+        "content": "performance-lab 3.9.0; plugins: "
+      },
+      {
+        "name": "google-adsense-platform-account",
+        "property": null,
+        "httpEquiv": null,
+        "content": "ca-host-pub-2644536267352236"
+      },
+      {
+        "name": "google-adsense-platform-domain",
+        "property": null,
+        "httpEquiv": null,
+        "content": "sitekit.withgoogle.com"
+      },
+      {
+        "name": "generator",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Elementor 3.31.2; features: e_font_icon_svg, additional_custom_breakpoints, e_element_cache; settings: css_print_method-external, google_font-enabled, font_display-swap"
+      },
+      {
+        "name": "msapplication-TileImage",
+        "property": null,
+        "httpEquiv": null,
+        "content": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/cropped-Small-Logo-jpg-300x300.webp"
+      }
+    ],
+    "openGraph": {
+      "title": "Interior | Kitchen & Bathroom | Heartwood Craft Bozeman",
+      "description": "Our comprehensive bathroom and interior remodeling services transform outdated spaces into functional, beautiful environments that reflect your lifestyle and cooking needs.",
+      "image": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/logo-black.png",
+      "url": "https://iheartwoodcraft.com/home/projects/interiors/",
+      "type": "article",
+      "site_name": "iheartwoodcraft.com",
+      "locale": "en_US"
+    },
+    "twitter": {
+      "card": "summary_large_image",
+      "title": "Interior | Kitchen & Bathroom | Heartwood Craft Bozeman",
+      "description": "Our comprehensive bathroom and interior remodeling services transform outdated spaces into functional, beautiful environments that reflect your lifestyle and cooking needs.",
+      "image": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/logo-black.png",
+      "site": "",
+      "creator": ""
+    },
+    "linkRels": [
+      {
+        "rel": "profile",
+        "href": "https://gmpg.org/xfn/11",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "canonical",
+        "href": "https://iheartwoodcraft.com/home/projects/interiors/",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "dns-prefetch",
+        "href": "https://www.googletagmanager.com/",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "dns-prefetch",
+        "href": "https://pagead2.googlesyndication.com/",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://iheartwoodcraft.com/feed/",
+        "as": null,
+        "type": "application/rss+xml",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://iheartwoodcraft.com/comments/feed/",
+        "as": null,
+        "type": "application/rss+xml",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-includes/css/dashicons.min.css?ver=6.8.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-includes/css/admin-bar.min.css?ver=6.8.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/query-monitor/assets/query-monitor.css?ver=3.19.0",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/lib/eicons/css/elementor-icons.min.css?ver=5.43.0",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/common.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/theme-light.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/wp-mail-smtp/assets/css/admin-bar.min.css?ver=4.5.0",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/seo-by-rank-math/assets/front/css/rank-math.css?ver=1.0.251",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/themes/hello-elementor/assets/css/reset.css?ver=3.4.4",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/themes/hello-elementor/assets/css/theme.css?ver=3.4.4",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/themes/hello-elementor/assets/css/header-footer.css?ver=3.4.4",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/conditionals/dialog.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/frontend.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/elementor/css/post-1549.css?ver=1757804099",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/widget-divider.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/widget-image.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor-pro/assets/css/widget-nav-menu.min.css?ver=3.24.1",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/widget-heading.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/widget-icon-list.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/lib/animations/styles/e-animation-pulse.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/widget-social-icons.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/conditionals/apple-webkit.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/css/admin-bar.min.css?ver=3.31.2",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor-pro/assets/css/frontend.min.css?ver=3.24.1",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor-pro/assets/css/widget-gallery.min.css?ver=3.24.1",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/lib/e-gallery/css/e-gallery.min.css?ver=1.2.0",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/elementor/css/post-1911.css?ver=1757804205",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/elementor/css/post-1564.css?ver=1757804100",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/elementor/css/post-1560.css?ver=1757804100",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/elementor/google-fonts/css/gfsdidot.css?ver=1751177503",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/elementor/google-fonts/css/poppins.css?ver=1751177517",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/elementor/google-fonts/css/overpass.css?ver=1751177541",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "https://api.w.org/",
+        "href": "https://iheartwoodcraft.com/wp-json/",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://iheartwoodcraft.com/wp-json/wp/v2/pages/1911",
+        "as": null,
+        "type": "application/json",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "EditURI",
+        "href": "https://iheartwoodcraft.com/xmlrpc.php?rsd",
+        "as": null,
+        "type": "application/rsd+xml",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "shortlink",
+        "href": "https://iheartwoodcraft.com/?p=1911",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://iheartwoodcraft.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fiheartwoodcraft.com%2Fhome%2Fprojects%2Finteriors%2F",
+        "as": null,
+        "type": "application/json+oembed",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://iheartwoodcraft.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fiheartwoodcraft.com%2Fhome%2Fprojects%2Finteriors%2F&format=xml",
+        "as": null,
+        "type": "text/xml+oembed",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "icon",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/cropped-Small-Logo-jpg-100x100.webp",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": "32x32"
+      },
+      {
+        "rel": "icon",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/cropped-Small-Logo-jpg-300x300.webp",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": "192x192"
+      },
+      {
+        "rel": "apple-touch-icon",
+        "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/cropped-Small-Logo-jpg-300x300.webp",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://iheartwoodcraft.com/wp-content/plugins/elementor/assets/lib/swiper/v8/css/swiper.min.css?ver=8.4.5",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      }
+    ],
+    "headings": [
+      {
+        "tag": "h1",
+        "text": "Interiors",
+        "id": null
+      },
+      {
+        "tag": "h1",
+        "text": "Interiors",
+        "id": null
+      },
+      {
+        "tag": "h1",
+        "text": "Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Bathroom Remodels",
+        "id": null
+      }
+    ],
+    "links": {
+      "counts": {
+        "total": 11,
+        "internal": 11,
+        "external": 0
+      },
+      "internal": [
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20180806_180252-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20180806_180252-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/PamBath1-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/PamBath1-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20190621_123844-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20190621_123844-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/05/20190724_193753-scaled.jpg",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/05/20190724_193753-scaled.jpg",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20170607_110911996-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20170607_110911996-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20160907_171425246-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20160907_171425246-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20160416_123156989-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20160416_123156989-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/05/camylla-battani-UCctf6kvtLw-unsplash.jpg",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/05/camylla-battani-UCctf6kvtLw-unsplash.jpg",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20160416_123150541-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/IMG_20160416_123150541-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20200412_101224-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20200412_101224-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        },
+        {
+          "abs": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20181215_135222-scaled.webp",
+          "href": "https://iheartwoodcraft.com/wp-content/uploads/2024/04/20181215_135222-scaled.webp",
+          "text": "",
+          "internal": true,
+          "context": "content",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": true
+        }
+      ],
+      "external": []
+    },
+    "images": {
+      "total": 0,
+      "withAlt": 0,
+      "missingAlt": 0,
+      "items": [],
+      "backgroundImages": []
+    },
+    "content": {
+      "scopedText": "Interiors Interiors Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts Bathroom Remodels Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create the perfect bathroom layout.Custom Vanities & Storage We design and build custom bathroom vanities that provide ample storage while serving as beautiful focal points. Our solutions include double vanities for shared spaces, floating vanities for modern aesthetics, and traditional styles for classic homes.Tile Work & Floor Tile Installation From subway tiles to natural stone, our skilled craftsmen install floor tile and wall tile with precision. We handle everything from waterproofing to final grouting, ensuring your bathroom surfaces are both beautiful and durable.Shower & Tub Installation Whether you prefer luxurious soaking tubs, walk-in showers, or combination units, we handle complete installation including plumbing, waterproofing, and finishing work. Our shower installations include custom glass doors, built-in niches, and premium fixtures.Bathroom Lighting & Ventilation Proper lighting and ventilation are crucial for bathroom functionality. We install vanity lighting, recessed lighting, exhaust fans, and natural light solutions that create bright, comfortable spaces while preventing moisture issues.",
+      "blocks": [
+        {
+          "tag": "div",
+          "text": "Interiors Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts Bathroom Remodels Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We"
+        },
+        {
+          "tag": "div",
+          "text": "Interiors Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts Bathroom Remodels Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We"
+        },
+        {
+          "tag": "div",
+          "text": "Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts"
+        },
+        {
+          "tag": "div",
+          "text": "Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts"
+        },
+        {
+          "tag": "div",
+          "text": "Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts"
+        },
+        {
+          "tag": "div",
+          "text": "Custom Kitchens & Bathroom Remodeling with Your Trusted Bozeman Experts"
+        },
+        {
+          "tag": "div",
+          "text": "Bathroom Remodels Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create "
+        },
+        {
+          "tag": "div",
+          "text": "Bathroom Remodels Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create "
+        },
+        {
+          "tag": "div",
+          "text": "Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create the perfect bathro"
+        },
+        {
+          "tag": "div",
+          "text": "Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create the perfect bathro"
+        },
+        {
+          "tag": "div",
+          "text": "Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care.Complete Bathroom Design ServicesBathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create the perfect bathro"
+        },
+        {
+          "tag": "div",
+          "text": "Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care."
+        },
+        {
+          "tag": "div",
+          "text": "Create your personal spa retreat with our comprehensive bathroom remodeling services. From powder room updates to master suite transformations, we handle every aspect of bathroom renovation with precision and care."
+        },
+        {
+          "tag": "div",
+          "text": "Bathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create the perfect bathroom layout."
+        },
+        {
+          "tag": "div",
+          "text": "Bathroom Design & Space Planning Our bathroom design process focuses on maximizing space efficiency while creating a relaxing, functional environment. We consider your daily routines, storage needs, and aesthetic preferences to create the perfect bathroom layout."
+        },
+        {
+          "tag": "div",
+          "text": "Custom Vanities & Storage We design and build custom bathroom vanities that provide ample storage while serving as beautiful focal points. Our solutions include double vanities for shared spaces, floating vanities for modern aesthetics, and traditional styles for classic homes."
+        },
+        {
+          "tag": "div",
+          "text": "Custom Vanities & Storage We design and build custom bathroom vanities that provide ample storage while serving as beautiful focal points. Our solutions include double vanities for shared spaces, floating vanities for modern aesthetics, and traditional styles for classic homes."
+        },
+        {
+          "tag": "div",
+          "text": "Tile Work & Floor Tile Installation From subway tiles to natural stone, our skilled craftsmen install floor tile and wall tile with precision. We handle everything from waterproofing to final grouting, ensuring your bathroom surfaces are both beautiful and durable."
+        },
+        {
+          "tag": "div",
+          "text": "Tile Work & Floor Tile Installation From subway tiles to natural stone, our skilled craftsmen install floor tile and wall tile with precision. We handle everything from waterproofing to final grouting, ensuring your bathroom surfaces are both beautiful and durable."
+        },
+        {
+          "tag": "div",
+          "text": "Shower & Tub Installation Whether you prefer luxurious soaking tubs, walk-in showers, or combination units, we handle complete installation including plumbing, waterproofing, and finishing work. Our shower installations include custom glass doors, built-in niches, and premium fixtures."
+        },
+        {
+          "tag": "div",
+          "text": "Shower & Tub Installation Whether you prefer luxurious soaking tubs, walk-in showers, or combination units, we handle complete installation including plumbing, waterproofing, and finishing work. Our shower installations include custom glass doors, built-in niches, and premium fixtures."
+        },
+        {
+          "tag": "div",
+          "text": "Bathroom Lighting & Ventilation Proper lighting and ventilation are crucial for bathroom functionality. We install vanity lighting, recessed lighting, exhaust fans, and natural light solutions that create bright, comfortable spaces while preventing moisture issues."
+        },
+        {
+          "tag": "div",
+          "text": "Bathroom Lighting & Ventilation Proper lighting and ventilation are crucial for bathroom functionality. We install vanity lighting, recessed lighting, exhaust fans, and natural light solutions that create bright, comfortable spaces while preventing moisture issues."
+        }
+      ]
+    },
+    "schema": {
+      "count": 0,
+      "types": [],
+      "blocks": []
+    },
+    "technical": {
+      "https": true,
+      "hreflang": [],
+      "mixedContentDetected": false,
+      "perfTimings": {
+        "navigationStart": 1757885629692,
+        "domContentLoaded": 1384,
+        "loadEvent": 1634
+      }
+    },
+    "hashes": {
+      "headHash": "baf60d71"
+    }
+  }
+}

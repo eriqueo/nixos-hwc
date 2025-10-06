@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/eric/03-tech/nixos-hwc/charter/**)",
+      "Read(//home/eric/.claude/projects/-home-eric-03-tech-nixos-hwc/**)",
+      "Read(//home/eric/03-tech/nixos-hwc/modules/home/apps/**)",
+      "Read(//home/eric/03-tech/nixos-hwc/profiles/**)",
+      "Read(//home/eric/03-tech/nixos-hwc/machines/**)",
+      "Read(//home/eric/03-tech/nixos-hwc/**)",
+      "Bash(rg:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

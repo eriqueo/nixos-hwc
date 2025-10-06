@@ -1,0 +1,13 @@
+# modules/server/containers/prowlarr/options.nix
+{ lib, ... }:
+let
+  inherit (lib) mkOption mkEnableOption types;
+in
+{
+  options.hwc.services.containers.prowlarr = {
+    enable = mkEnableOption "prowlarr container";
+        image  = mkOption { type = types.str; default = "lscr.io/linuxserver/prowlarr:latest"; description = "Container image"; };
+    network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
+    gpu.enable    = mkOption { type = types.bool; default = true; };
+  };
+}
