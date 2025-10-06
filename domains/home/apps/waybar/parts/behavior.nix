@@ -28,6 +28,7 @@ let
       on-click = "activate";
       on-scroll-up = "hyprctl dispatch workspace e+1";
       on-scroll-down = "hyprctl dispatch workspace e-1";
+      swap-icon-label = false;
     };
 
     "hyprland/submap" = { format = "✨ {}"; max-length = 8; tooltip = false; };
