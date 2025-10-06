@@ -113,6 +113,14 @@ in
         '';
       };
 
+      # Udev rules to ensure nvidia devices are accessible by video group
+      services.udev.extraRules = ''
+        KERNEL=="nvidia", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidia*"
+        KERNEL=="nvidia_modeset", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidia-modeset"
+        KERNEL=="nvidia_uvm", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidia-uvm*"
+        KERNEL=="nvidiactl", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidiactl"
+      '';
+
       # Runtime environment
       environment.sessionVariables = {
         CUDA_CACHE_PATH   = "${paths.cache}/cuda";
