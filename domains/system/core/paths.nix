@@ -43,7 +43,7 @@
 #   - All paths are absolute
 #   - Storage paths are machine-configurable (nullable)
 
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.hwc.paths;
@@ -477,6 +477,9 @@ in {
       PICTURES=${cfg.userDirs.pictures}
       VIDEOS=${cfg.userDirs.videos}
     '';
+
+    # Install xdg-user-dirs package for xdg-user-dirs-update command
+    environment.systemPackages = [ pkgs.xdg-user-dirs ];
 
     # Create system path directories (always available)
     systemd.tmpfiles.rules = [
