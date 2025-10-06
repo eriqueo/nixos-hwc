@@ -29,34 +29,33 @@ let
     let esc = builtins.replaceStrings [ "\"" ] [ "\\\"" ] s;
     in "\"" + esc + "\"";
 
-  # Process patterns - now supports paired format: ["remote" "local" "remote2" "local2"]
+  # Process mailboxMapping attribute - generates "Remote" "Local" pattern pairs
   patternsFor = a:
     let
-      raw0 = a.sync.patterns or [ "INBOX" ];
+      # Use the mailboxMapping attribute from account config
+      mapping = a.mailboxMapping or {};
 
-      # Check if patterns are in paired format (even length list)
-      isPaired = (builtins.length raw0) > 0 && (lib.mod (builtins.length raw0) 2 == 0);
+      # Convert attrset to list of quoted "Remote" "Local" pairs
+      mappedPatterns = lib.mapAttrsToList
+        (remoteName: localName: "${confQuote remoteName} ${confQuote localName}")
+        mapping;
 
-      # For paired format, just escape square brackets
-      processPaired = patterns:
+      # Allow for additional wildcard patterns if needed
+      wildcards = a.sync.wildcards or [];
+      wildcardPatterns = map confQuote wildcards;
+
+      # Combine mapped patterns with wildcards
+      allPatterns = mappedPatterns ++ wildcardPatterns;
+
+      # For Gmail, expand [Gmail] <-> [Google Mail] aliases in remote names
+      processedPatterns =
         if common.isGmail a
-        then map escapeSquareBrackets patterns
-        else patterns;
-
-      # For legacy single-pattern format, expand aliases
-      processLegacy = patterns:
-        let
-          raw = if a.type == "proton-bridge"
-                then patterns ++ [ "Folders/*" ]
-                else patterns;
-        in
-          if common.isGmail a
-          then lib.unique (map escapeSquareBrackets (lib.concatLists (map expandGoogleAliases raw)))
-          else lib.unique raw;
+        then map escapeSquareBrackets allPatterns
+        else allPatterns;
     in
-      if isPaired
-      then processPaired raw0
-      else processLegacy raw0;
+      if allPatterns == []
+      then [ (confQuote "INBOX") ]  # Fallback to INBOX if no mapping defined
+      else lib.unique processedPatterns;
 
   getOr = a: n: def:
     if common.hasField a n then
@@ -73,7 +72,7 @@ let
       tlsT  = getOr a "imapTls"  (common.tlsType a);
       extra = getOr a "extraMbsync" "";
       createPolicy = if common.isGmail a then "Create Near" else "Create Both";
-      patStr = lib.concatStringsSep " " (map confQuote (patternsFor a));
+      patStr = lib.concatStringsSep " " (patternsFor a);
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}

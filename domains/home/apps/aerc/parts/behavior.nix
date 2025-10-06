@@ -35,7 +35,6 @@ in
       k = :prev<Enter>
       g = :select 0<Enter>
       G = :select -1<Enter>
-      d = :mv 1_Archive<Enter>
       <C-d> = :next 50%<Enter>
       <C-u> = :prev 50%<Enter>
       <Enter> = :view<Enter>
@@ -47,33 +46,16 @@ in
       V = :mark -v<Enter>
 
       d = :archive flat<Enter>
+      d1 = :mv 190_hwc-archive<Enter>
+      d2 = :mv 290_pers-archive<Enter>
       D = :delete<Enter>
       c = :compose<Enter>
       C = :reply -aq<Enter>
 
-      # --- Verb + Numbered Destination (Shortcut Path) ---
-      # 'x' is for Move (Cut), 'y' is for Copy (Yank)
-      x0 = :mv 0_Inbox<Enter>
-      x1 = :mv 1_Archive<Enter>
-      x2 = :mv 2_Sent<Enter>
-      x3 = :mv 3_Drafts<Enter>
-      x4 = :mv 4_Important<Enter>
-      x5 = :mv 5_ProjectA<Enter>
-      x6 = :mv 6_ProjectB<Enter>
-      x7 = :mv 7_ReadLater<Enter>
-      x8 = :mv 8_Spam<Enter>
-      x9 = :mv 9_Trash<Enter>
-
-      y0 = :cp 0_Inbox<Enter>
-      y1 = :cp 1_Archive<Enter>
-      y2 = :cp 2_Sent<Enter>
-      y3 = :cp 3_Drafts<Enter>
-      y4 = :cp 4_Important<Enter>
-      y5 = :cp 5_ProjectA<Enter>
-      y6 = :cp 6_ProjectB<Enter>
-      y7 = :cp 7_ReadLater<Enter>
-      y8 = :cp 8_Spam<Enter>
-      y9 = :cp 9_Trash<Enter>
+      # --- Filing with <Space>m (Move to domain folders) ---
+      <Space>mp1 = :mv 120_hwc-projects<Enter>
+      <Space>mp2 = :mv 220_pers-projects<Enter>
+      <Space>mi = :mv 210_pers-important<Enter>
 
       # --- Uppercase Verb for Flexible Path ---
       X = :mv<space>
@@ -82,17 +64,14 @@ in
       # ---------------------------------------------
       # <Space> Leader Menu (Tier 2 Actions)
       # ---------------------------------------------
-      # <Space>g - Go (Navigate to folder)
-      <Space>g0 = :cf 0_Inbox<Enter>
-      <Space>g1 = :cf 1_Archive<Enter>
-      <Space>g2 = :cf 2_Sent<Enter>
-      <Space>g3 = :cf 3_Drafts<Enter>
-      <Space>g4 = :cf 4_Important<Enter>
-      <Space>g5 = :cf 5_ProjectA<Enter>
-      <Space>g6 = :cf 6_ProjectB<Enter>
-      <Space>g7 = :cf 7_ReadLater<Enter>
-      <Space>g8 = :cf 8_Spam<Enter>
-      <Space>g9 = :cf 9_Trash<Enter>
+      # <Space>g - Go (Navigate to folders)
+      <Space>gi = :cf 000_inbox<Enter>
+      <Space>gs = :cf 010_sent<Enter>
+      <Space>gd = :cf 011_drafts<Enter>
+      <Space>ga1 = :cf 190_hwc-archive<Enter>
+      <Space>ga2 = :cf 290_pers-archive<Enter>
+      <Space>gp1 = :cf 120_hwc-projects<Enter>
+      <Space>gp2 = :cf 220_pers-projects<Enter>
       
       # <Space>f - Find
       <Space>ff = :filter<space>
@@ -126,7 +105,9 @@ in
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
-      d = :mv 1_Archive<Enter>:close<Enter>
+      d = :archive flat<Enter>:close<Enter>
+      d1 = :mv 190_hwc-archive<Enter>:close<Enter>
+      d2 = :mv 290_pers-archive<Enter>:close<Enter>
       O = :open<Enter>
       S = :save<space>
       U = :pipe -mb urlscan -r<Enter>

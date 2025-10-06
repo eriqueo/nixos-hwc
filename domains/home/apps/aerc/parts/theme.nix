@@ -46,6 +46,19 @@ in {
     msglist_marked = token (hex c.bg1) (hex c.marked) true;
     msglist_result = token (hex c.accent) "default" true;
 
+    # ===== SOURCE ACCOUNT TAGS (Custom - Tag-based colors) =====
+    # Work domain - Blue spectrum
+    "*.hwc-email" = token "#5DA0DE" "default" false;       # Light blue for HWC
+    "*.gmail-work" = token "#2563EB" "default" false;      # Dark blue for Gmail work
+
+    # Personal domain - Purple spectrum
+    "*.gmail-personal" = token "#C084FC" "default" false;  # Light purple for Gmail personal
+    "*.proton-personal" = token "#9333EA" "default" false; # Dark purple for Proton
+
+    # Domain-level tags
+    "*.work" = token "#3B82F6" "default" false;            # Blue for work domain
+    "*.personal" = token "#A855F7" "default" false;        # Purple for personal domain
+
     # Official: Additional message states
     msglist_answered = token (hex c.success) "default" false;
     msglist_forwarded = token (hex c.info) "default" false;
