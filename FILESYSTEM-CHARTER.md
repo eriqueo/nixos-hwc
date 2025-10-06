@@ -27,7 +27,7 @@
 ├── 300_tech/               # Technology/development domain
 ├── 400_ref/                # Cross-domain reference materials
 ├── 500_media/              # Cross-domain media library
-└── 99-vaults/              # Cloud sync (Obsidian, etc.)
+└── 900_vaults/             # Cloud sync (Obsidian, etc.)
 ```
 
 ---
@@ -97,7 +97,7 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
 └── videos/
 ```
 
-### `99-vaults/` - Cloud Sync
+### `900_vaults/` - Cloud Sync
 **Purpose**: Synced knowledge bases and cloud storage
 **Examples**: Obsidian vaults, Proton Drive, sync folders
 **Boundary**: Items managed by external sync services
