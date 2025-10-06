@@ -8,7 +8,6 @@ let
   enabled = config.hwc.home.apps.hyprland.enable or false;
 
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; };
-  appearance = import ./parts/appearance.nix { inherit lib pkgs theme;  };
   behavior   = import ./parts/behavior.nix   { inherit config lib pkgs; };
   session    = import ./parts/session.nix    { inherit config lib pkgs; };
 
@@ -53,7 +52,7 @@ in
         (lib.optionalAttrs (session ? execOnce && session.execOnce != null) { "exec-once" = session.execOnce; })
         (lib.optionalAttrs (session ? env      && session.env      != null) { env         = session.env;      })
 
-        appearance
+        theme
       ];
     };
 
