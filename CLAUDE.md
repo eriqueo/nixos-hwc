@@ -290,7 +290,19 @@ imports = [
 
 ---
 
-**Charter Version**: v5.0 - Domain Architecture & Profile Feature Menus
+## 18) Configuration Validity & Dependency Assertions
+
+* **Mandatory Validation Section**: Every `index.nix` with `enable` toggle MUST include `# VALIDATION` section after `# IMPLEMENTATION`.
+* **Assertion Requirement**: Modules MUST assert all runtime dependencies (system services, binaries, configuration reads).
+* **Assertion Template**: `{ assertion = !enabled || config.hwc.dep.enable; message = "X requires Y"; }`
+* **Sub-Toggle Policy**: Sub-toggles default to master state unless overridden. Dependents assert specific sub-toggle, not master.
+* **Linting**: Charter linter verifies assertion presence and cross-domain dependency coverage.
+* **Fail-Fast Principle**: Invalid configurations MUST fail at build time, never at runtime.
+* **Examples**: See `domains/home/apps/waybar/index.nix`, `domains/home/apps/hyprland/index.nix` for reference patterns.
+
+---
+
+**Charter Version**: v6.0 - Configuration Validity & Dependency Assertions
 
 ---
 
