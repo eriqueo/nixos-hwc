@@ -1,305 +1,387 @@
-# Domain-Based Unified Mailbox Guide
+# Unified Inbox Maildir Architecture
 
 **Owner**: Eric
 **Scope**: `~/Maildir/` — All email organization
-**Goal**: Unified domain-based mailboxes with source account tagging and visual differentiation
+**Goal**: GTD-style unified inbox with domain-based contextual filing
+**Philosophy**: Single pane of glass, process once, file by context
 
 ---
 
 ## Core Principles
 
-1. **Domain Separation**: Organize by context (work/personal), not by email account
-2. **Unified Inboxes**: Single inbox per domain, regardless of source account
-3. **Source Tagging**: Auto-tag messages by source account for filtering/searching
-4. **Visual Differentiation**: Color-coded by account within domain (blue spectrum = work, purple = personal)
-5. **3-Digit Numbering**: Align with Filesystem Charter (`XXX-name` format)
+1. **Single Unified Inbox**: All new mail from all accounts lands in `000_inbox` — **one place to check**
+2. **Global System Folders**: Shared Sent (`010_sent`), Drafts (`011_drafts`), Spam (`800_spam`), Trash (`900_trash`)
+3. **Domain-Specific Archives**: Contextual filing into `190_hwc-archive` (work) or `290_pers-archive` (personal)
+4. **Source Account Tagging**: notmuch auto-tags by account, aerc color-codes for visual differentiation
+5. **Filesystem Charter Alignment**: 3-digit numbering (`XXX_name`) with domain separation
 
 ---
 
-## Mailbox Structure
+## The Critical Difference
 
-### Work Domain (100-199)
+### ❌ Wrong (Segregated Systems)
 ```
-100-work/
-├── 110-inbox/          # Unified work inbox (all work accounts)
-├── 111-archive/        # Archived work emails
-├── 112-sent/           # Sent work emails
-├── 113-drafts/         # Work drafts
-├── 114-clients/        # Client-specific threads
-├── 115-projects/       # Project-specific threads
-├── 118-spam/           # Work spam
-└── 119-trash/          # Deleted work emails
+100-work/110-inbox/        ← Separate work inbox
+100-work/111-archive/
+200-personal/210-inbox/    ← Separate personal inbox
+200-personal/211-archive/
+```
+**Problem**: Multiple inboxes to check, violates GTD "single collection point" principle
+
+### ✅ Correct (Unified Inbox)
+```
+000_inbox/                 ← THE ONLY inbox (all accounts)
+190_hwc-archive/           ← Work archive (filed contextually)
+290_pers-archive/          ← Personal archive (filed contextually)
+```
+**Benefit**: One inbox, process once, file by context
+
+---
+
+## Maildir Structure
+
+### Global Folders (Shared Across All Accounts)
+
+```
+~/Maildir/
+├── 000_inbox/             # Unified inbox - ALL new mail lands here
+├── 010_sent/              # Global sent folder
+├── 011_drafts/            # Global drafts folder
+├── 800_spam/              # Global spam folder
+└── 900_trash/             # Global trash folder
 ```
 
-### Personal Domain (200-299)
+### Domain-Specific Folders (Contextual Filing)
+
 ```
-200-personal/
-├── 210-inbox/          # Unified personal inbox (all personal accounts)
-├── 211-archive/        # Archived personal emails
-├── 212-sent/           # Sent personal emails
-├── 213-drafts/         # Personal drafts
-├── 214-important/      # Starred/important personal emails
-├── 218-spam/           # Personal spam
-└── 219-trash/          # Deleted personal emails
+~/Maildir/
+├── 190_hwc-archive/       # Work archived mail
+├── 120_hwc-projects/      # Work project folders
+├── 290_pers-archive/      # Personal archived mail
+├── 210_pers-important/    # Personal important/starred
+└── 220_pers-projects/     # Personal projects
+```
+
+### Per-Account Sync Paths (Hidden Implementation Detail)
+
+```
+~/Maildir/
+├── 100_hwc/               # HWC account sync path
+├── 110_gmail-business/    # Gmail business sync path
+├── 200_personal/          # Gmail personal sync path
+└── 210_proton/            # Proton sync path
+```
+
+**Note**: These directories are mbsync implementation details. Users interact with the unified `000_inbox` and domain folders above.
+
+---
+
+## Account Configuration
+
+### Work Domain (1xx)
+
+**iheartwoodcraft** (`eric@iheartwoodcraft.com`):
+```nix
+maildirName = "100_hwc";
+mailboxMapping = {
+  "INBOX"   = "000_inbox";         # → Unified inbox
+  "Sent"    = "010_sent";          # → Global sent
+  "Drafts"  = "011_drafts";        # → Global drafts
+  "Archive" = "190_hwc-archive";   # → Work archive
+  "Spam"    = "800_spam";          # → Global spam
+  "Trash"   = "900_trash";         # → Global trash
+};
+```
+
+**gmail-business** (`heartwoodcraftmt@gmail.com`):
+```nix
+maildirName = "110_gmail-business";
+mailboxMapping = {
+  "INBOX"               = "000_inbox";         # → Unified inbox
+  "[Gmail]/Sent Mail"   = "010_sent";          # → Global sent
+  "[Gmail]/Drafts"      = "011_drafts";        # → Global drafts
+  "[Gmail]/All Mail"    = "190_hwc-archive";   # → Work archive
+  "[Gmail]/Spam"        = "800_spam";          # → Global spam
+  "[Gmail]/Trash"       = "900_trash";         # → Global trash
+};
+```
+
+### Personal Domain (2xx)
+
+**gmail-personal** (`eriqueokeefe@gmail.com`):
+```nix
+maildirName = "200_personal";
+mailboxMapping = {
+  "INBOX"               = "000_inbox";         # → Unified inbox
+  "[Gmail]/Sent Mail"   = "010_sent";          # → Global sent
+  "[Gmail]/Drafts"      = "011_drafts";        # → Global drafts
+  "[Gmail]/All Mail"    = "290_pers-archive";  # → Personal archive
+  "[Gmail]/Starred"     = "210_pers-important";# → Personal important
+  "[Gmail]/Spam"        = "800_spam";          # → Global spam
+  "[Gmail]/Trash"       = "900_trash";         # → Global trash
+};
+```
+
+**proton** (`eriqueo@proton.me`):
+```nix
+maildirName = "210_proton";
+mailboxMapping = {
+  "INBOX"   = "000_inbox";         # → Unified inbox
+  "Sent"    = "010_sent";          # → Global sent
+  "Drafts"  = "011_drafts";        # → Global drafts
+  "Archive" = "290_pers-archive";  # → Personal archive
+  "Spam"    = "800_spam";          # → Global spam
+  "Trash"   = "900_trash";         # → Global trash
+};
 ```
 
 ---
 
-## Account Routing & Tagging
+## notmuch Tagging Strategy
 
-### Work Accounts → `100-work/`
-
-| Account           | IMAP Folders                          | Local Folders      | Auto-Tags      | Color Scheme |
-|-------------------|---------------------------------------|--------------------|----------------|--------------|
-| iheartwoodcraft   | INBOX, Archive, Sent, Drafts, Trash  | 110-inbox, etc.    | `hwc-email`    | Light Blue   |
-| gmail-business    | INBOX, [Gmail]/*, etc.                | 110-inbox, etc.    | `gmail-work`   | Dark Blue    |
-
-### Personal Accounts → `200-personal/`
-
-| Account           | IMAP Folders                          | Local Folders      | Auto-Tags          | Color Scheme  |
-|-------------------|---------------------------------------|--------------------|-------------------|---------------|
-| gmail-personal    | INBOX, [Gmail]/*, etc.                | 210-inbox, etc.    | `gmail-personal`  | Light Purple  |
-| proton            | INBOX, Archive, Sent, Drafts, Trash   | 210-inbox, etc.    | `proton-personal` | Dark Purple   |
-
----
-
-## Folder Numbering Pattern
-
-Within each domain, use the tens place for folder type:
-
-| Range  | Purpose                  | Examples                              |
-|--------|--------------------------|---------------------------------------|
-| XX0-XX4| Core mail folders        | XX0=inbox, XX1=archive, XX2=sent, XX3=drafts, XX4=important/starred |
-| XX5-XX7| Custom/project folders   | XX5=projects, XX6=clients, XX7=reading |
-| XX8    | Spam                     | XX8=spam                              |
-| XX9    | Trash                    | XX9=trash                             |
-
----
-
-## Implementation Details
-
-### 1. mbsync Configuration
-
-**Goal**: Route multiple accounts into unified domain mailboxes
-
-**Strategy**: Use mbsync's multi-master sync to pull all work accounts → `100-work/`, all personal → `200-personal/`
-
-**Example mapping** (iheartwoodcraft → 100-work):
-```
-Patterns "INBOX" "110-inbox" "Archive" "111-archive" "Sent" "112-sent"
-```
-
-**Example mapping** (gmail-business → 100-work):
-```
-Patterns "INBOX" "110-inbox" "[Gmail]/All Mail" "111-archive" "[Gmail]/Sent Mail" "112-sent"
-```
-
-**Example mapping** (gmail-personal → 200-personal):
-```
-Patterns "INBOX" "210-inbox" "[Gmail]/All Mail" "211-archive" "[Gmail]/Sent Mail" "212-sent"
-```
-
-**Example mapping** (proton → 200-personal):
-```
-Patterns "INBOX" "210-inbox" "Archive" "211-archive" "Sent" "212-sent"
-```
-
-### 2. notmuch Tagging
-
-**Goal**: Auto-tag messages by source account on sync
-
-**Tagging rules** (`~/.notmuch-config` or post-new hook):
+Auto-applied tags for visual differentiation and filtering:
 
 ```bash
-# Work domain tags
-notmuch tag +hwc-email +work -- folder:100-work/** and from:*@iheartwoodcraft.com
-notmuch tag +gmail-work +work -- folder:100-work/** and from:*@gmail.com
+# Tag by source account
+notmuch tag +hwc-email -- 'path:100_hwc/** OR from:*@iheartwoodcraft.com'
+notmuch tag +gmail-work -- 'path:110_gmail-business/** OR from:*heartwoodcraftmt@gmail.com'
+notmuch tag +gmail-personal -- 'path:200_personal/** OR from:*eriqueokeefe@gmail.com'
+notmuch tag +proton-personal -- 'path:210_proton/** OR from:*@proton.me'
 
-# Personal domain tags
-notmuch tag +gmail-personal +personal -- folder:200-personal/** and from:*@gmail.com
-notmuch tag +proton-personal +personal -- folder:200-personal/** and from:*@proton.me
-```
+# Tag by domain (derived)
+notmuch tag +work -- 'tag:hwc-email OR tag:gmail-work'
+notmuch tag +personal -- 'tag:gmail-personal OR tag:proton-personal'
 
-**Additional useful tags:**
-- `+inbox` for messages in XX0-inbox folders
-- `+archived` for messages in XX1-archive folders
-- `+unread` for new messages
-- `+flagged` for important/starred
-
-### 3. aerc Color Configuration
-
-**Goal**: Visual differentiation by source account within unified inbox
-
-**Color scheme** (`~/.config/aerc/aerc.conf` or stylesets):
-
-```ini
-# Work domain - Blue spectrum
-*.hwc-email = blue
-*.gmail-work = darkblue
-
-# Personal domain - Purple spectrum
-*.gmail-personal = lightmagenta
-*.proton-personal = magenta
-
-# Folder-based colors
-*.work = blue
-*.personal = magenta
-```
-
-### 4. aerc Keybindings
-
-**Updated keybindings** for 3-digit folder structure:
-
-```ini
-# Move to inbox
-<Space>g0 = :cf 110-inbox<Enter>   # Work inbox
-<Space>g2 = :cf 210-inbox<Enter>   # Personal inbox
-
-# Quick file messages
-x0 = :mv 110-inbox<Enter>          # To work inbox
-x1 = :mv 111-archive<Enter>        # To work archive
-x2 = :mv 112-sent<Enter>           # To work sent
-x4 = :mv 114-clients<Enter>        # To work clients
-x5 = :mv 115-projects<Enter>       # To work projects
-
-p0 = :mv 210-inbox<Enter>          # To personal inbox
-p1 = :mv 211-archive<Enter>        # To personal archive
-p4 = :mv 214-important<Enter>      # To personal important
-
-# Quick spam/trash
-x8 = :mv 118-spam<Enter>           # Work spam
-x9 = :mv 119-trash<Enter>          # Work trash
-p9 = :mv 219-trash<Enter>          # Personal trash
+# Tag unified inbox
+notmuch tag +inbox -- 'folder:000_inbox'
 ```
 
 ---
 
-## Workflow
+## aerc Color Scheme
 
-### Receiving Mail
-1. **Sync**: `mbsync -a` pulls all accounts into unified domain folders
-2. **Tag**: notmuch post-new hook auto-tags by source account
-3. **View**: Open aerc, see unified inbox with color-coded messages
+Visual differentiation in the unified inbox:
 
-### Filtering by Account
-- Search work from HWC: `tag:hwc-email`
-- Search work from Gmail: `tag:gmail-work`
-- Search all work: `tag:work` or `folder:100-work/**`
-- Search all personal: `tag:personal` or `folder:200-personal/**`
+| Tag               | Color         | Purpose                    |
+|-------------------|---------------|----------------------------|
+| `hwc-email`       | Light Blue    | HWC work email             |
+| `gmail-work`      | Dark Blue     | Gmail work email           |
+| `gmail-personal`  | Light Purple  | Gmail personal email       |
+| `proton-personal` | Dark Purple   | Proton personal email      |
+| `work`            | Blue          | Any work domain email      |
+| `personal`        | Purple        | Any personal domain email  |
 
-### Filing Messages
-- Use keybindings (`x1`, `x4`, `p1`, etc.) to move to appropriate folders
-- Archive is domain-specific (work archive vs personal archive)
-- Projects/clients folders for active threads
+Configuration in `domains/home/apps/aerc/parts/theme.nix`:
+```nix
+"*.hwc-email" = token "#5DA0DE" "default" false;       # Light blue
+"*.gmail-work" = token "#2563EB" "default" false;      # Dark blue
+"*.gmail-personal" = token "#C084FC" "default" false;  # Light purple
+"*.proton-personal" = token "#9333EA" "default" false; # Dark purple
+```
 
 ---
 
-## Migration Plan
+## aerc Keybindings
 
-### Phase 1: Backup
+### Primary Workflow
+
+```ini
+# Archive (generic - aerc decides)
+d = :archive flat<Enter>
+
+# Archive to specific domain
+d1 = :mv 190_hwc-archive<Enter>      # Work archive
+d2 = :mv 290_pers-archive<Enter>     # Personal archive
+
+# Delete
+D = :delete<Enter>
+```
+
+### Navigation (`<Space>g` for "Go")
+
+```ini
+<Space>gi = :cf 000_inbox<Enter>          # The one true Inbox
+<Space>gs = :cf 010_sent<Enter>           # Sent
+<Space>gd = :cf 011_drafts<Enter>         # Drafts
+<Space>ga1 = :cf 190_hwc-archive<Enter>   # Work archive
+<Space>ga2 = :cf 290_pers-archive<Enter>  # Personal archive
+<Space>gp1 = :cf 120_hwc-projects<Enter>  # Work projects
+<Space>gp2 = :cf 220_pers-projects<Enter> # Personal projects
+```
+
+### Filing (`<Space>m` for "Move")
+
+```ini
+<Space>mp1 = :mv 120_hwc-projects<Enter>      # Work projects
+<Space>mp2 = :mv 220_pers-projects<Enter>     # Personal projects
+<Space>mi = :mv 210_pers-important<Enter>     # Personal important
+```
+
+---
+
+## Workflow Example
+
+### Morning Email Processing
+
+1. **Open aerc** → Automatically shows `000_inbox`
+2. **See unified inbox** with color-coded messages:
+   - Light blue = HWC work email
+   - Dark blue = Gmail work email
+   - Light purple = Gmail personal
+   - Dark purple = Proton personal
+3. **Process each message**:
+   - Work email → Press `d1` → Moves to `190_hwc-archive`
+   - Personal email → Press `d2` → Moves to `290_pers-archive`
+   - Project-specific → Press `<Space>mp1` → Moves to `120_hwc-projects`
+4. **Result**: Empty inbox, everything filed contextually
+
+### Searching
+
+```bash
+# Find all work email
+:filter tag:work
+
+# Find all HWC email specifically
+:filter tag:hwc-email
+
+# Find all personal email
+:filter tag:personal
+
+# Find all unread in inbox
+:filter tag:inbox AND tag:unread
+```
+
+---
+
+## Why This Architecture Works
+
+### ✅ Single Collection Point (GTD)
+- Only one inbox to check (`000_inbox`)
+- All new mail visible in one view
+- No mental overhead deciding "which inbox to check"
+
+### ✅ Contextual Filing
+- Archive work email → `190_hwc-archive`
+- Archive personal email → `290_pers-archive`
+- File by context, not by source account
+
+### ✅ Visual Clarity
+- Color coding shows account source at a glance
+- No need to segregate into separate inboxes
+- Unified view with instant visual differentiation
+
+### ✅ Filesystem Charter Alignment
+- 3-digit numbering (`000_inbox`, `190_hwc-archive`)
+- Domain separation (1xx = work, 2xx = personal)
+- Consistent with file organization principles
+
+### ✅ Scalable
+- Easy to add new accounts (just route to `000_inbox`)
+- Easy to add new domain folders (`3xx_tech/`, etc.)
+- Simple, predictable structure
+
+---
+
+## Anti-Patterns to Avoid
+
+### ❌ Multiple Inboxes
+**Bad**: Creating `110-inbox`, `210-inbox` folders
+**Why**: Violates "single pane of glass" principle, increases cognitive load
+
+### ❌ Account-Based Filing
+**Bad**: Filing by account (`100_hwc/archive/`, `200_personal/archive/`)
+**Why**: Breaks contextual organization, creates silos
+
+### ❌ Moving Messages to Inbox
+**Bad**: Keybinding like `x0 = :mv 000_inbox<Enter>`
+**Why**: Inbox is for new mail only, not a filing destination
+
+### ❌ Segregated Sent/Drafts
+**Bad**: Creating `110-sent`, `210-sent` folders
+**Why**: Mail clients expect single Sent/Drafts folders
+
+---
+
+## Migration Steps
+
+### 1. Backup
 ```bash
 cp -r ~/Maildir ~/Maildir.backup.$(date +%Y%m%d)
 ```
 
-### Phase 2: Update Configuration
-1. Update mbsync account mappings (route to unified folders)
-2. Update notmuch tagging rules
-3. Update aerc colors and keybindings
-4. Rebuild NixOS: `sudo nixos-rebuild switch --flake .#hwc-laptop`
-
-### Phase 3: Initial Sync
+### 2. Rebuild System
 ```bash
-# Clear existing Maildir (backup already made)
+git add -A
+git commit -m "feat(mail): implement unified inbox architecture"
+sudo nixos-rebuild switch --flake .#hwc-laptop
+```
+
+### 3. Clear and Resync
+```bash
 rm -rf ~/Maildir/*
-
-# Sync all accounts into new structure
 mbsync -a
-
-# Initial notmuch index
 notmuch new
 ```
 
-### Phase 4: Verification
+### 4. Verify Structure
 ```bash
-# Check folder structure
-tree -L 2 -d ~/Maildir/
+tree -L 1 -d ~/Maildir/
 
 # Should show:
-# 100-work/110-inbox/
-# 100-work/111-archive/
-# ...
-# 200-personal/210-inbox/
-# ...
-
-# Check tags
-notmuch search tag:hwc-email
-notmuch search tag:gmail-work
-notmuch search tag:gmail-personal
-notmuch search tag:proton-personal
+# 000_inbox/
+# 010_sent/
+# 011_drafts/
+# 100_hwc/
+# 110_gmail-business/
+# 190_hwc-archive/
+# 200_personal/
+# 210_proton/
+# 290_pers-archive/
+# 800_spam/
+# 900_trash/
 ```
 
-### Phase 5: Test in aerc
+### 5. Test in aerc
 - Open aerc
-- Navigate folders with updated keybindings
-- Verify color coding
-- Test message filing
-- Test search/filter by tags
+- Verify `000_inbox` is default view
+- Check color coding on messages
+- Test `d1`/`d2` archiving
+- Test `<Space>gi` navigation
 
 ---
 
 ## Troubleshooting
 
-### Messages syncing to wrong domain
-- Check mbsync `Patterns` mapping in account config
-- Verify account is routing to correct domain folder (100-work vs 200-personal)
+### Inbox not showing messages
+- Check `mbsync -a` ran successfully
+- Verify `notmuch new` indexed mail
+- Check `~/Maildir/000_inbox/` contains files
 
-### Tags not applying
-- Check notmuch post-new hook is running
-- Verify `from:` patterns match actual email addresses
-- Manually tag: `notmuch tag +hwc-email -- from:*@iheartwoodcraft.com`
+### Colors not showing
+- Verify notmuch tags applied: `notmuch search tag:hwc-email`
+- Check aerc theme loaded: `~/.config/aerc/stylesets/hwc-theme`
+- Restart aerc
 
-### Colors not showing in aerc
-- Check aerc styleset configuration
-- Verify tag names match exactly (case-sensitive)
-- Test with: `notmuch search tag:hwc-email` (should show messages)
-
-### Duplicate messages in unified inbox
-- mbsync might be syncing same message from multiple accounts
-- Use notmuch deduplication or adjust sync patterns
+### Messages syncing to wrong folders
+- Check `mailboxMapping` in account config
+- Verify mbsync patterns: `cat ~/.mbsyncrc`
+- Re-run `mbsync -a` after config changes
 
 ---
 
-## Benefits of This Approach
+## Summary
 
-✅ **Single work inbox** - All work email in one place, regardless of source account
-✅ **Single personal inbox** - All personal email unified
-✅ **Context-based organization** - File by domain (work vs personal), not by account
-✅ **Visual differentiation** - Colors show account source at a glance
-✅ **Searchable by source** - Tags enable filtering by specific account when needed
-✅ **Filesystem Charter alignment** - 3-digit numbering with domain separation
-✅ **Scalable** - Easy to add new accounts (just route to appropriate domain)
-✅ **Clean keybindings** - Predictable, domain-aware folder navigation
+This architecture creates a **powerful unified inbox** that:
+- ✅ Processes all mail in one place (`000_inbox`)
+- ✅ Files contextually by domain (`190_hwc-archive`, `290_pers-archive`)
+- ✅ Maintains visual differentiation via colors (blue = work, purple = personal)
+- ✅ Aligns with Filesystem Charter principles
+- ✅ Scales elegantly as accounts/domains grow
 
----
-
-## Future Enhancements
-
-### Additional Domains
-- `300-tech/` for GitHub notifications, dev mailing lists
-- `000-system/` for server/monitoring alerts
-
-### Additional Folders
-- `116-waiting/` for emails awaiting response
-- `117-reading/` for newsletters/long reads
-- `225-receipts/` for purchase confirmations
-
-### Smart Filtering
-- Auto-file by sender patterns
-- Auto-tag by subject keywords
-- Priority inbox via notmuch queries
+**The goal**: One inbox to check, color-coded messages, contextual filing, zero cognitive overhead.
 
 ---
 
-**Version**: v2.0 - Domain-Based Unified Mailboxes
+**Version**: v3.0 - Unified Inbox Architecture
 **Last Updated**: 2025-10-06
-**Status**: Active implementation
+**Status**: Production implementation
