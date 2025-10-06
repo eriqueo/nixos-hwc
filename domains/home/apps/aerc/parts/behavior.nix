@@ -35,6 +35,7 @@ in
       k = :prev<Enter>
       g = :select 0<Enter>
       G = :select -1<Enter>
+      d = :mv 1_Archive<Enter>
       <C-d> = :next 50%<Enter>
       <C-u> = :prev 50%<Enter>
       <Enter> = :view<Enter>
@@ -125,6 +126,10 @@ in
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
+      d = :mv 1_Archive<Enter>:close<Enter>
+      O = :open<Enter>
+      S = :save<space>
+      U = :pipe -mb urlscan -r<Enter>
 
       [view::passthrough]
       $noinherit = true

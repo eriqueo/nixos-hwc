@@ -78,7 +78,8 @@
       "Bash(done)",
       "Bash(cat:*)",
       "Bash(loginctl list-sessions:*)",
-      "Read(//home/eric/.config/**)"
+      "Read(//home/eric/.config/**)",
+      "Read(//sys/class/hwmon/**)"
     ],
     "deny": [],
     "ask": [],
