@@ -55,6 +55,13 @@ in
     #==========================================================================
     # VALIDATION
     #==========================================================================
+    assertions = [
+      {
+        assertion = !enabled || config.hwc.home.apps.swaync.enable;
+        message = "waybar requires swaync for notification center (custom/notification widget)";
+      }
+    ];
+
     # GPU scripts dependency: waybar-gpu-status widget calls gpu-toggle (from infrastructure.hardware.gpu)
     # This dependency is enforced at runtime - gpu-toggle must exist in PATH
     # Infrastructure GPU module provides: gpu-toggle, gpu-status, gpu-launch, gpu-next

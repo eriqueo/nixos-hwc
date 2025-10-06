@@ -72,7 +72,7 @@ let
       swap-icon-label = false;
     };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
-    "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "notify-send 'Notifications' 'No notification center configured'"; };
+    "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
   };
 

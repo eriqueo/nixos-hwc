@@ -43,6 +43,7 @@
       hwc.home.apps.protonAuthenticator.enable = true;
       hwc.home.apps.protonMail.enable = true;
       hwc.home.apps.aerc.enable = true;
+      hwc.home.apps.swaync.enable = true
 
       # MAIL — accounts now come from domains/home/mail/accounts/index.nix
       hwc.home.mail = {
