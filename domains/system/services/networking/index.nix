@@ -42,11 +42,12 @@ in
     # =========================
     services.samba = lib.mkIf cfg.samba.enable {
       enable = true;
-      settings.global = {
-        workgroup = "WORKGROUP";
-        security = "user";
-      };
-      shares = cfg.samba.shares;
+      settings = {
+        global = {
+          workgroup = "WORKGROUP";
+          security = "user";
+        };
+      } // cfg.samba.shares;
     };
 
     # =========================

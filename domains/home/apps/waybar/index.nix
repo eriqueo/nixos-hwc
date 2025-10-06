@@ -62,6 +62,10 @@ in
       }
     ];
 
+    # Runtime dependencies enforced via scriptPkgs PATH:
+    # - kitty, wofi, btop: Runtime availability ensured via scriptPkgs inclusion (line 15, 19)
+    # - wlogout: Called by custom/power widget, must be installed system-wide or in home packages
+    #
     # GPU scripts dependency: waybar-gpu-status widget calls gpu-toggle (from infrastructure.hardware.gpu)
     # This dependency is enforced at runtime - gpu-toggle must exist in PATH
     # Infrastructure GPU module provides: gpu-toggle, gpu-status, gpu-launch, gpu-next
