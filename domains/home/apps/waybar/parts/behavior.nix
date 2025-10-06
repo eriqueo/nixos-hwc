@@ -62,7 +62,12 @@ let
     bluetooth = { format = "{icon}"; format-icons = { enabled = "󰂯"; disabled = "󰂲"; }; format-connected = "󰂱 {num_connections}"; on-click = "blueman-manager"; };
     memory = { format = "󰍛 {percentage}%"; interval = 5; on-click = "waybar-system-monitor"; };
     cpu = { format = "󰻠 {usage}%"; interval = 5; on-click = "waybar-system-monitor"; };
-    temperature = { hwmon-path = "/sys/class/hwmon/hwmon6/temp1_input"; critical-threshold = 80; format = "󰔏 {temperatureC}°C"; };
+    temperature = {
+      hwmon-path-abs = "/sys/class/hwmon";
+      input-filename = "temp1_input";
+      critical-threshold = 80;
+      format = "󰔏 {temperatureC}°C";
+    };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "notify-send 'Notifications' 'No notification center configured'"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };

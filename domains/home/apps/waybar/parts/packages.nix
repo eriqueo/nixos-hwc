@@ -33,7 +33,6 @@ with pkgs; [
   btop
   mission-center
   nvtopPackages.full
-  (if pkgs.system == "x86_64-linux" then pkgs.linuxPackages.nvidia_x11.settings else null)
-
-
+] ++ lib.optionals (pkgs.system == "x86_64-linux") [
+  linuxPackages.nvidia_x11.settings
 ]

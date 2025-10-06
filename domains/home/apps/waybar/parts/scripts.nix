@@ -8,6 +8,20 @@ let
   '';
 in
 {
+  "nvidia-offload" = sh "nvidia-offload" ''
+    # Gracefully handle machines without NVIDIA hardware
+    if ! command -v nvidia-smi >/dev/null 2>&1; then
+      # No NVIDIA tools available, run normally
+      exec "$@"
+    fi
+
+    # NVIDIA hardware detected, use offload environment variables
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+    exec "$@"
+  '';
+
   "gpu-status" = sh "waybar-gpu-status" ''
     GPU_MODE_FILE="/tmp/gpu-mode"
     DEFAULT_MODE="intel"

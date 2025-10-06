@@ -7,29 +7,26 @@
 let
   enabled = config.hwc.home.apps.waybar.enable or false;
 
-  # This is the key. We get the pkgs for the specific host system.
-  # This `pkgs` will have the correct overlays, including nvidiaPackages.
- 
+  # scriptPkgs: All runtime dependencies needed by waybar custom scripts.
+  # NVIDIA tools (nvidia-smi, nvidia-settings) are provided by system configuration
+  # in the infrastructure domain and don't need to be included here.
+  scriptPkgs = with pkgs; [
+    coreutils gnugrep gawk gnused procps util-linux
+    kitty wofi jq curl
+    networkmanager iw ethtool
+    libnotify mesa-demos nvtopPackages.full lm_sensors acpi powertop
+    speedtest-cli hyprland
+    baobab btop
+  ];
 
-  # 1. Define all dependencies for the scripts in one place.
-    scriptPkgs = with pkgs; [
-      coreutils gnugrep gawk gnused procps util-linux
-      kitty wofi jq curl
-      networkmanager iw ethtool
-      libnotify mesa-demos nvtopPackages.full lm_sensors acpi powertop
-      speedtest-cli hyprland
-      baobab btop
-      linuxPackages.nvidiaPackages.stable  # Note: no need for pkgs. prefix inside 'with pkgs'
-    ];
-
-  # 2. Create the PATH string from the package list.
+  # Create the PATH string from scriptPkgs for runtime script execution.
   scriptPathBin = lib.makeBinPath scriptPkgs;
 
-  # Your parts imports are correct.
+  # Import parts: pure functions that build waybar configuration components.
   cfg       = config.hwc.home.apps.waybar;
   theme     = import ./parts/theme.nix     { inherit config lib; };
   behavior  = import ./parts/behavior.nix  { inherit lib pkgs; };
-  appearance= import ./parts/appearance.nix { inherit config lib pkgs; theme = theme; };
+  appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
   scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
 
@@ -60,3 +57,7 @@ in
   #==========================================================================
   # VALIDATION
   #==========================================================================
+  # Future assertions can be added here to validate:
+  # - Theme palette structure (palette.bg, palette.fg, etc.)
+  # - Required script dependencies are available
+  # - Configuration consistency checks
