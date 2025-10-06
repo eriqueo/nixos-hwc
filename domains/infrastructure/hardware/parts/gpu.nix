@@ -113,12 +113,13 @@ in
         '';
       };
 
-      # Udev rules to ensure nvidia devices are accessible by video group
+      # Udev rules to ensure nvidia devices are accessible by all users
       services.udev.extraRules = ''
-        KERNEL=="nvidia", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidia*"
-        KERNEL=="nvidia_modeset", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidia-modeset"
-        KERNEL=="nvidia_uvm", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidia-uvm*"
-        KERNEL=="nvidiactl", RUN+="${pkgs.coreutils}/bin/chmod 0666 /dev/nvidiactl"
+        KERNEL=="nvidia[0-9]*", MODE="0666"
+        KERNEL=="nvidia-modeset", MODE="0666"
+        KERNEL=="nvidia-uvm", MODE="0666"
+        KERNEL=="nvidia-uvm-tools", MODE="0666"
+        KERNEL=="nvidiactl", MODE="0666"
       '';
 
       # Runtime environment
@@ -299,10 +300,10 @@ in
           fi
 
           CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "$DEFAULT_MODE")
-          CURRENT_GPU=$(${pkgs.mesa-demos}/bin/glxinfo 2>/dev/null | grep "OpenGL renderer" | cut -d: -f2 | xargs || echo "Unknown")
+          CURRENT_GPU=$(glxinfo 2>/dev/null | grep "OpenGL renderer" | cut -d: -f2 | xargs || echo "Unknown")
           ${lib.optionalString (cfg.type == "nvidia") ''
-            NVIDIA_POWER=$(${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
-            NVIDIA_TEMP=$(${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+            NVIDIA_POWER=$(nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+            NVIDIA_TEMP=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
           ''}
 
           case "$CURRENT_MODE" in
