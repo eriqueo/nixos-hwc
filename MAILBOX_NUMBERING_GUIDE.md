@@ -56,10 +56,10 @@
 ```
 ~/Maildir/
 ├── 190_hwc-archive/       # Work archived mail
-├── 120_hwc-projects/      # Work project folders
+├── 120_hwc-dev/           # Work development/projects
 ├── 290_pers-archive/      # Personal archived mail
 ├── 210_pers-important/    # Personal important/starred
-└── 220_pers-projects/     # Personal projects
+└── 220_pers-dev/          # Personal development/projects
 ```
 
 ### Per-Account Sync Paths (Hidden Implementation Detail)
@@ -205,15 +205,15 @@ D = :delete<Enter>
 <Space>gd = :cf 011_drafts<Enter>         # Drafts
 <Space>ga1 = :cf 190_hwc-archive<Enter>   # Work archive
 <Space>ga2 = :cf 290_pers-archive<Enter>  # Personal archive
-<Space>gp1 = :cf 120_hwc-projects<Enter>  # Work projects
-<Space>gp2 = :cf 220_pers-projects<Enter> # Personal projects
+<Space>gp1 = :cf 120_hwc-dev<Enter>  # Work development
+<Space>gp2 = :cf 220_pers-dev<Enter> # Personal development
 ```
 
 ### Filing (`<Space>m` for "Move")
 
 ```ini
-<Space>mp1 = :mv 120_hwc-projects<Enter>      # Work projects
-<Space>mp2 = :mv 220_pers-projects<Enter>     # Personal projects
+<Space>mp1 = :mv 120_hwc-dev<Enter>      # Work development
+<Space>mp2 = :mv 220_pers-dev<Enter>     # Personal development
 <Space>mi = :mv 210_pers-important<Enter>     # Personal important
 ```
 
@@ -232,7 +232,7 @@ D = :delete<Enter>
 3. **Process each message**:
    - Work email → Press `d1` → Moves to `190_hwc-archive`
    - Personal email → Press `d2` → Moves to `290_pers-archive`
-   - Project-specific → Press `<Space>mp1` → Moves to `120_hwc-projects`
+   - Project-specific → Press `<Space>mp1` → Moves to `120_hwc-dev`
 4. **Result**: Empty inbox, everything filed contextually
 
 ### Searching

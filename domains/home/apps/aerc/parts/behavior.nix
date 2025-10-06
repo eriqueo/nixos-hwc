@@ -53,8 +53,8 @@ in
       C = :reply -aq<Enter>
 
       # --- Filing with <Space>m (Move to domain folders) ---
-      <Space>mp1 = :mv 120_hwc-projects<Enter>
-      <Space>mp2 = :mv 220_pers-projects<Enter>
+      <Space>mp1 = :mv 120_hwc-dev<Enter>
+      <Space>mp2 = :mv 220_pers-dev<Enter>
       <Space>mi = :mv 210_pers-important<Enter>
 
       # --- Uppercase Verb for Flexible Path ---
@@ -70,8 +70,8 @@ in
       <Space>gd = :cf 011_drafts<Enter>
       <Space>ga1 = :cf 190_hwc-archive<Enter>
       <Space>ga2 = :cf 290_pers-archive<Enter>
-      <Space>gp1 = :cf 120_hwc-projects<Enter>
-      <Space>gp2 = :cf 220_pers-projects<Enter>
+      <Space>gp1 = :cf 120_hwc-dev<Enter>
+      <Space>gp2 = :cf 220_pers-dev<Enter>
       
       # <Space>f - Find
       <Space>ff = :filter<space>

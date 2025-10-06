@@ -39,7 +39,7 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
 1XX_domain/
 ├── 000-inbox/              # Domain-specific processing queue
 ├── 110-documents/          # Domain documents
-├── 120-projects/           # Active projects
+├── 120-development/        # Active development work
 ├── 130-reference/          # Domain reference materials
 ├── 140-media/              # Domain-specific media
 └── 190-archive/            # Completed/archived items (optional)
@@ -48,7 +48,7 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
 **Numbering Within Domains:**
 - `X00-X09`: Inbox/processing
 - `X10-X19`: Documents/files
-- `X20-X29`: Projects/active work
+- `X20-X29`: Development/active work
 - `X30-X39`: Reference materials
 - `X40-X49`: Media/assets
 - `X90-X99`: Archive/completed
@@ -126,7 +126,7 @@ System automatically maps XDG directories:
    - Media → `500_media/`
 4. From domain inbox, file into appropriate subfolder:
    - Documents → `110-documents/`
-   - Projects → `120-projects/`
+   - Development → `120-development/`
    - Reference → `130-reference/`
 
 ### Choosing a Domain
