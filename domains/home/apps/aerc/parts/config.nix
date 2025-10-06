@@ -45,6 +45,8 @@ let
     column-flags = {{.Flags | join ""}}
     column-subject = {{.ThreadPrefix}}{{.Subject}}
     mouse-enabled = true
+    enable-osc8 = true
+    
 
     [compose]
     editor=${pkgs.kitty}/bin/kitty -e ${pkgs.neovim}/bin/nvim
@@ -59,7 +61,8 @@ let
     text/* = cat -
     text/calendar = calendar
     application/ics = calendar
-    image/* = ${pkgs.chafa}/bin/chafa -f symbols -s $(${pkgs.ncurses}/bin/tput cols)x0 -
+    image/* = ${pkgs.bash}/bin/bash -lc 'if [ -n "$KITTY_WINDOW_ID" ]; then ${pkgs.kitty}/bin/kitty +kitten icat --stdin yes; elif [ "$TERM_PROGRAM" = "WezTerm" ]; then ${pkgs.chafa}/bin/chafa -f sixel -s $(${pkgs.ncurses}/bin/tput cols)x0 -; else ${pkgs.chafa}/bin/chafa -f symbols -s $(${pkgs.ncurses}/bin/tput cols)x0 -; fi'
+          
     application/pdf = ${pkgs.poppler_utils}/bin/pdftotext -layout - -
     application/json = ${pkgs.jq}/bin/jq -C . 2>/dev/null || cat -
     application/xml  = ${pkgs.libxml2}/bin/xmllint --format - 2>/dev/null || cat -
@@ -75,6 +78,9 @@ let
     application/pgp-encrypted = cat -
     application/pkcs7-signature = cat -
     application/pkcs7-mime = cat -
+
+    [triggers]
+    new-email = exec notify-send "New Email" "{{.From}} - {{.Subject}}"
 
     [openers]
     text/html = xdg-open {}
@@ -112,7 +118,8 @@ in
 {
   files = profileBase:{
     ".config/aerc/aerc.conf".text = aercConf;
-    ".config/aerc/accounts.conf.source".text = accountsConf;
+    ".config/aerc/accounts.conf".text = accountsConf;
+        ".config/aerc/accounts.conf.source".text = accountsConf;
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
   };
   packages = with pkgs; [
