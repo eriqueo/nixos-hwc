@@ -164,7 +164,7 @@ in {
 
       vaults = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/99-vaults";
+        default = "${cfg.user.home}/900_vaults";
         description = "Knowledge management and cloud storage (Obsidian, etc.)";
       };
 

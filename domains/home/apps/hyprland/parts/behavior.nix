@@ -31,7 +31,7 @@ in
     "${mod} SHIFT,T,togglefloating"
     "${mod} SHIFT,H,exec,hyprland-system-health-checker"
 
-    ",PRINT,exec,hyprshot -m region -c -o /home/eric/05-media/pictures/screenshots/"
+    ",PRINT,exec,hyprshot -m region -c -o $HWC_SCREENSHOTS_DIR/"
 
     "${mod},left,movefocus,l"
     "${mod},right,movefocus,r"

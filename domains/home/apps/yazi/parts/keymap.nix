@@ -23,13 +23,13 @@
       { on = [ "<Space>", "g", "6" ], run = "cd ~/06_archive", desc = "Go: 6_archive" },
       { on = [ "<Space>", "g", "7" ], run = "cd ~/07_temp", desc = "Go: 7_temp" },
       { on = [ "<Space>", "g", "8" ], run = "cd ~/08_misc", desc = "Go: 8_misc" },
-      { on = [ "<Space>", "g", "9" ], run = "cd ~/99_vaults", desc = "Go: 9_trash" },
+      { on = [ "<Space>", "g", "9" ], run = "cd ~/900_vaults", desc = "Go: 9_vaults" },
     
       # Keep your existing letter-based shortcuts for compatibility
       { on = [ "<Space>", "g", "d" ], run = "cd ~/00_inbox", desc = "Go: downloads" },
       { on = [ "<Space>", "g", "n" ], run = "cd ~/.nixos", desc = "Go: documents" },
       { on = [ "<Space>", "g", "p" ], run = "cd ~/05_media/pictures", desc = "Go: pictures" },
-      { on = [ "<Space>", "g", "v" ], run = "cd ~/99_vaults", desc = "Go: videos" },
+      { on = [ "<Space>", "g", "v" ], run = "cd ~/900_vaults", desc = "Go: vaults" },
     
       # Space-leader: FIND/SEARCH (keeping your existing setup)
       { on = [ "<Space>", "f", "f" ], run = "filter", desc = "Find: filter files" },
