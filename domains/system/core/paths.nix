@@ -125,47 +125,47 @@ in {
         description = "User home directory";
       };
 
-      # PARA Structure
+      # Domain Structure (3-digit prefix)
       inbox = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/00-inbox";
+        default = "${cfg.user.home}/000_inbox";
         description = "Global inbox for unsorted items";
       };
 
       work = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/01-hwc";
+        default = "${cfg.user.home}/100_hwc";
         description = "Work/business project area";
       };
 
       personal = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/02-personal";
+        default = "${cfg.user.home}/200_personal";
         description = "Personal project area";
       };
 
       tech = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/03-tech";
+        default = "${cfg.user.home}/300_tech";
         description = "Technology development area";
       };
 
       reference = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/04-ref";
-        description = "Reference materials";
+        default = "${cfg.user.home}/400_ref";
+        description = "Cross-domain reference materials";
       };
 
       media = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/05-media";
-        description = "Personal media collection";
+        default = "${cfg.user.home}/500_media";
+        description = "Cross-domain media collection";
       };
 
       vaults = lib.mkOption {
         type = lib.types.path;
         default = "${cfg.user.home}/99-vaults";
-        description = "Knowledge management and cloud storage";
+        description = "Knowledge management and cloud storage (Obsidian, etc.)";
       };
 
       # User configuration
