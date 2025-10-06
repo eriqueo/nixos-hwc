@@ -40,9 +40,15 @@ in
         # create regular file with strict perms (not a symlink)
         ${pkgs.coreutils}/bin/install -Dm600 "$SRC" "$DST"
       '';
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !enabled || (config.hwc.home.mail.accounts != {} && config.hwc.home.mail.accounts != null);
+        message = "aerc requires at least one mail account configured via hwc.home.mail.accounts";
+      }
+    ];
   };
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

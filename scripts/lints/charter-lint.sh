@@ -268,6 +268,15 @@ check_module_anatomy() {
     grep -qE "#\s*IMPLEMENTATION" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing IMPLEMENTATION section"; ((errors+=1)); }
     grep -qE "#\s*VALIDATION" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing VALIDATION section"; ((errors+=1)); }
     grep -q "./options.nix" "$index_file" || { module_anatomy_error "FILE: $index_relative"; print_error "  Missing options.nix import"; ((errors+=1)); }
+
+    # Charter Section 18: Check for assertions in modules with enable toggle
+    if grep -qE "mkIf.*enable" "$index_file" && ! grep -qE "assertions\s*=\s*\[" "$index_file"; then
+      module_anatomy_error "FILE: $index_relative"
+      print_error "  Charter v6.0 violation: Module with enable toggle lacks assertions"
+      print_error "  Required: assertions = [ { assertion = ...; message = ...; } ];"
+      print_error "  See: Charter Section 18 (Configuration Validity)"
+      ((errors+=1))
+    fi
   fi
 
   if [[ $errors -eq 0 ]]; then

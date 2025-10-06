@@ -29,6 +29,16 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
+    #==========================================================================
+    # DEPENDENCY FORCING (System domain)
+    #==========================================================================
+    # Hyprland requires these system services
+    hwc.system.services.hardware.audio.enable = lib.mkDefault true;
+    hwc.system.services.hardware.bluetooth.enable = lib.mkDefault true;
+
+    #==========================================================================
+    # IMPLEMENTATION
+    #==========================================================================
     # Provide the startup script and helper scripts as system packages
     environment.systemPackages = [ hyprlandStartupScript ] ++ hyprlandScripts;
   };

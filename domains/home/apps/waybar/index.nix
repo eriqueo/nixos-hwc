@@ -51,13 +51,11 @@ in
     };
 
     xdg.configFile."waybar/style.css".text = appearance;
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    # Note: Assertions for system-level dependencies should be in sys.nix
+    # Home Manager modules can't access config.hwc.system directly
   };
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  # Future assertions can be added here to validate:
-  # - Theme palette structure (palette.bg, palette.fg, etc.)
-  # - Required script dependencies are available
-  # - Configuration consistency checks
