@@ -16,38 +16,41 @@
       #==========================================================================
       # OPTIONAL FEATURES - Sensible defaults, override per machine
       #==========================================================================
-      hwc.home.theme.palette = "gruv";
-      hwc.home.fonts.enable = true;
+
+      # --- Theme & Fonts (BASE) ---
+      hwc.home.theme.palette = lib.mkDefault "gruv";
+      hwc.home.fonts.enable = lib.mkDefault true;
+
+      # --- Shell Environment (BASE) ---
       hwc.home.shell = {
-        enable = true;
-        modernUnix = true;
-        git.enable = true;
+        enable = lib.mkDefault true;
+        modernUnix = lib.mkDefault true;
+        git.enable = lib.mkDefault true;
         zsh = {
-          enable = true;
-          starship = true;
-          autosuggestions = true;
-          syntaxHighlighting = true;
+          enable = lib.mkDefault true;
+          starship = lib.mkDefault true;
+          autosuggestions = lib.mkDefault true;
+          syntaxHighlighting = lib.mkDefault true;
         };
       };
 
-      # (unchanged unless you later add an Apps domain gate)
-      hwc.home.apps.hyprland.enable = true;
-      hwc.home.apps.waybar.enable = true;
-      hwc.home.apps.kitty.enable = true;
-      hwc.home.apps.thunar.enable = true;
-      hwc.home.apps.betterbird.enable = true;
-      hwc.home.apps.chromium.enable = true;
-      hwc.home.apps.librewolf.enable = true;
-      hwc.home.apps.obsidian.enable = true;
-      hwc.home.apps.protonAuthenticator.enable = true;
-      hwc.home.apps.protonMail.enable = true;
-      hwc.home.apps.aerc.enable = true;
-      hwc.home.apps.swaync.enable = true;
+      # --- Desktop Environment (Session-Critical) ---
+      hwc.home.apps.hyprland.enable = lib.mkDefault true;   # Wayland compositor
+      hwc.home.apps.waybar.enable = lib.mkDefault true;     # Status bar
+      hwc.home.apps.swaync.enable = lib.mkDefault true;     # Notification daemon
+      hwc.home.apps.kitty.enable = lib.mkDefault true;      # Terminal emulator
 
-      # MAIL — accounts now come from domains/home/mail/accounts/index.nix
+      # --- File Management ---
+      hwc.home.apps.thunar.enable = lib.mkDefault true;     # GUI file manager
+      hwc.home.apps.yazi.enable = lib.mkDefault true;       # TUI file manager
+
+      # --- Web Browsers ---
+      hwc.home.apps.chromium.enable = lib.mkDefault true;   # Chromium browser
+      hwc.home.apps.librewolf.enable = lib.mkDefault true;  # Privacy-focused Firefox
+
+      # --- Mail & Communication ---
       hwc.home.mail = {
-        enable = true;
-
+        enable = lib.mkDefault true;
         # Optional overrides for Bridge (defaults are fine to omit)
         # bridge = {
         #   enable = true;        # defaults to true when a proton account exists
@@ -56,15 +59,27 @@
         #   environment = { };
         # };
       };
+      hwc.home.apps.aerc.enable = lib.mkDefault true;           # TUI mail client
+      hwc.home.apps.neomutt.enable = lib.mkDefault true;        # TUI mail client (alternative)
+      hwc.home.apps.neomutt.theme.palette = lib.mkDefault "gruv";
+      hwc.home.apps.betterbird.enable = lib.mkDefault true;     # GUI mail client (Thunderbird fork)
+      hwc.home.apps.protonMail.enable = lib.mkDefault true;     # Proton Mail bridge/client
 
-      hwc.home.apps.neomutt.enable = true;
-      hwc.home.apps.neomutt.theme.palette = "gruv";
-      hwc.home.apps.yazi.enable = true;
-      hwc.home.apps.ipcalc.enable = true;
-      hwc.home.apps.geminiCli.enable = true;
-      hwc.home.apps.onlyofficeDesktopeditors.enable = true;
-      hwc.home.apps.wasistlos.enable = true;
-      hwc.home.apps.n8n.enable = true;
+      # --- Proton Suite ---
+      hwc.home.apps.protonAuthenticator.enable = lib.mkDefault true;  # 2FA authenticator
+      hwc.home.apps.protonPass.enable = lib.mkDefault false;          # Password manager (optional)
+
+      # --- Productivity & Office ---
+      hwc.home.apps.obsidian.enable = lib.mkDefault true;                    # Knowledge base
+      hwc.home.apps.onlyofficeDesktopeditors.enable = lib.mkDefault true;    # Office suite
+
+      # --- Development & Automation ---
+      hwc.home.apps.n8n.enable = lib.mkDefault false;            # Workflow automation (resource-heavy)
+      hwc.home.apps.geminiCli.enable = lib.mkDefault true;       # AI CLI tool
+
+      # --- Utilities ---
+      hwc.home.apps.ipcalc.enable = lib.mkDefault true;          # IP calculator
+      hwc.home.apps.wasistlos.enable = lib.mkDefault false;      # System monitor (niche)
     };
   };
 }
