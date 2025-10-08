@@ -1,10 +1,10 @@
 # NixOS Vault Sync System
-# Automatically syncs ~/.nixos to /home/eric/99-vaults/03_nixos as markdown
+# Automatically syncs ~/.nixos to vault as markdown
 { config, lib, pkgs, ... }:
 
 let
-  vaultPath = "/home/eric/99-vaults/03_nixos";
-  nixosPath = "/home/eric/.nixos";
+  vaultPath = "${config.hwc.paths.user.vaults}/03_nixos";
+  nixosPath = config.hwc.paths.nixos;
   
   # Script to convert .nix files to .md format
   nixToMarkdown = pkgs.writeShellScript "nix-to-markdown" ''
@@ -70,7 +70,7 @@ This vault contains a dynamically synced, markdown version of the NixOS configur
 ## 🔄 Auto-Sync System
 
 - **Source**: `~/.nixos`
-- **Target**: `~/99-vaults/03_nixos/`
+- **Target**: `~/900_vaults/03_nixos/`
 - **Format**: `.nix` files converted to `.md` with syntax highlighting
 - **Sync Trigger**: Manual via `sync-nixos-vault` or systemd service
 

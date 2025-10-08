@@ -1,4 +1,4 @@
-# nixos-h../domains/home/theme/default.nix
+# HWC Charter Module/domains/home/theme/default.nix
 #
 # THEME ROOT (v6) — Single entry point for theming in Home Manager.
 # Exposes a palette toggle and imports all theme adapters so apps can consume
@@ -27,7 +27,7 @@ let
 in
 {
   imports = [
-      ./adapters/gtk.nix
+      ./templates/gtk.nix
       ./fonts/index.nix
       ./options.nix
     ];
@@ -42,12 +42,10 @@ in
     # without importing each adapter in machines/<host>/home.nix.
 
 
-    
+
 #============================================================================
 # VALIDATION - Assertions and checks
 #============================================================================
-# By convention: no environment.systemPackages, no systemd.services in HM modules
-
     assertions = [
       {
         assertion = true;

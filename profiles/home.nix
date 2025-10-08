@@ -1,6 +1,9 @@
 { config, pkgs, lib, ... }:
 
 {
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
@@ -10,53 +13,71 @@
       imports = [ ../domains/home/index.nix ];
       home.stateVersion = "24.05";
 
-      hwc.home.theme.palette = "deep-nord";
-      hwc.home.fonts.enable = true;
-      hwc.home.shell = {
-        enable = true;
-        modernUnix = true;
-        git.enable = true;
-        zsh = {
-          enable = true;
-          starship = true;
-          autosuggestions = true;
-          syntaxHighlighting = true;
+      #==========================================================================
+      # OPTIONAL FEATURES - Sensible defaults, override per machine
+      #==========================================================================
+
+      # --- Home Environment Configuration ---
+      hwc.home = {
+        # Theme & Fonts (BASE)
+        theme.palette = lib.mkDefault "gruv";
+        fonts.enable = lib.mkDefault true;
+
+        # Shell Environment (BASE)
+        shell = {
+          enable = lib.mkDefault true;
+          modernUnix = lib.mkDefault true;
+          git.enable = lib.mkDefault true;
+          zsh = {
+            enable = lib.mkDefault true;
+            starship = lib.mkDefault true;
+            autosuggestions = lib.mkDefault true;
+            syntaxHighlighting = lib.mkDefault true;
+          };
+        };
+
+        # Mail & Communication
+        mail.enable = lib.mkDefault true;
+
+        # Applications
+        apps = {
+          # Desktop Environment (Session-Critical)
+          hyprland.enable = lib.mkDefault true;   # Wayland compositor
+          waybar.enable = lib.mkDefault true;     # Status bar
+          swaync.enable = lib.mkDefault true;     # Notification daemon
+          kitty.enable = lib.mkDefault true;      # Terminal emulator
+
+          # File Management
+          thunar.enable = lib.mkDefault true;     # GUI file manager
+          yazi.enable = lib.mkDefault true;       # TUI file manager
+
+          # Web Browsers
+          chromium.enable = lib.mkDefault true;   # Chromium browser
+          librewolf.enable = lib.mkDefault true;  # Privacy-focused Firefox
+
+          # Mail Clients
+          aerc.enable = lib.mkDefault true;                # TUI mail client
+          neomutt.enable = lib.mkDefault true;             # TUI mail client (alternative)
+          betterbird.enable = lib.mkDefault true;          # GUI mail client (Thunderbird fork)
+          protonMail.enable = lib.mkDefault true;          # Proton Mail bridge/client
+
+          # Proton Suite
+          protonAuthenticator.enable = lib.mkDefault true; # 2FA authenticator
+          protonPass.enable = lib.mkDefault false;         # Password manager (optional)
+
+          # Productivity & Office
+          obsidian.enable = lib.mkDefault true;                   # Knowledge base
+          onlyofficeDesktopeditors.enable = lib.mkDefault true;   # Office suite
+
+          # Development & Automation
+          n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
+          geminiCli.enable = lib.mkDefault true;           # AI CLI tool
+
+          # Utilities
+          ipcalc.enable = lib.mkDefault true;              # IP calculator
+          wasistlos.enable = lib.mkDefault false;          # System monitor (niche)
         };
       };
-
-      # (unchanged unless you later add an Apps domain gate)
-      hwc.home.apps.hyprland.enable = true;
-      hwc.home.apps.waybar.enable = true;
-      hwc.home.apps.kitty.enable = true;
-      hwc.home.apps.thunar.enable = true;
-      hwc.home.apps.betterbird.enable = true;
-      hwc.home.apps.chromium.enable = true;
-      hwc.home.apps.librewolf.enable = true;
-      hwc.home.apps.obsidian.enable = true;
-      hwc.home.apps.dunst.enable = true;
-      hwc.home.apps.protonAuthenticator.enable = true;
-      hwc.home.apps.protonMail.enable = true;
-      hwc.home.apps.aerc.enable = true;
-
-      # MAIL — accounts now come from domains/home/mail/accounts/index.nix
-      hwc.home.mail = {
-        enable = true;
-
-        # Optional overrides for Bridge (defaults are fine to omit)
-        # bridge = {
-        #   enable = true;        # defaults to true when a proton account exists
-        #   logLevel = "warn";    # "error" | "warn" | "info" | "debug"
-        #   extraArgs = [ ];
-        #   environment = { };
-        # };
-      };
-
-      hwc.home.apps.neomutt.enable = true;
-      hwc.home.apps.neomutt.theme.palette = "gruv";
-      hwc.home.apps.yazi.enable = true;
-      hwc.home.apps.ipcalc.enable = true;
-      hwc.home.apps.geminiCli.enable = true;
-      hwc.home.apps.onlyofficeDesktopeditors.enable = true;
     };
   };
 }

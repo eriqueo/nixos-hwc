@@ -33,6 +33,12 @@ let t = lib.types; in
           extraMsmtp = lib.mkOption { type = t.lines; default = ""; };
 
           sync.patterns = lib.mkOption { type = t.listOf t.str; default = [ "INBOX" "Sent" "Drafts" "Trash" ]; };
+          sync.wildcards = lib.mkOption { type = t.listOf t.str; default = []; description = "Additional wildcard patterns for mbsync (e.g., Folders/*)"; };
+          mailboxMapping = lib.mkOption {
+            type = t.attrsOf t.str;
+            default = {};
+            description = "Map remote IMAP folder names to local Maildir folder names. Format: { \"RemoteName\" = \"LocalName\"; }";
+          };
           send.msmtpAccount = lib.mkOption { type = t.str; default = name; };
           primary = lib.mkOption { type = t.bool; default = false; };
         };

@@ -24,34 +24,80 @@ in
       <C-h> = :prev-tab<Enter>
       <C-l> = :next-tab<Enter>
       <C-q> = :prompt 'Quit aerc?' quit<Enter>
-      <C-t> = :term<Enter>
+      <C-t> = :term<Enter>   
+      <C-j> = :next-folder<Enter>
+      <C-k> = :prev-folder<Enter>
       ?     = :help keys<Enter>
       <C-r> = :exec mbsync -a<Enter>
 
       [messages]
       j = :next<Enter>
       k = :prev<Enter>
-      h = :prev-folder<Enter>
-      l = :next-folder<Enter>
       g = :select 0<Enter>
       G = :select -1<Enter>
       <C-d> = :next 50%<Enter>
       <C-u> = :prev 50%<Enter>
       <Enter> = :view<Enter>
       q = :quit<Enter>
-
+      <C-Space> = :expand-folder<Enter>
+      <C-S-Space> = :collapse-folder<Enter>
       J = :mark -t<Enter>:next<Enter>
       K = :mark -t<Enter>:prev<Enter>
       V = :mark -v<Enter>
+      r = :read<Enter>
+      u = :unread<Enter>
 
-      d = :archive flat<Enter>
+      aa = :archive flat<Enter>
+      a1 = :mv 190_hwc-archive<Enter>
+      a2 = :mv 290_pers-archive<Enter>
+      S = :mv 800_spam<Enter>
       D = :delete<Enter>
       c = :compose<Enter>
       C = :reply -aq<Enter>
 
+      # --- Filing with <Space>m (Move to domain folders) ---
+      <Space>mp1 = :mv 120_hwc-dev<Enter>
+      <Space>mp2 = :mv 220_pers-dev<Enter>
+      <Space>mi = :mv 210_pers-important<Enter>
+      <Space>ms = :mv 800_spam<Enter>
+      
+      # --- Uppercase Verb for Flexible Path ---
       X = :mv<space>
       Y = :cp<space>
 
+      # ---------------------------------------------
+      # <Space> Leader Menu (Tier 2 Actions)
+      # ---------------------------------------------
+      # <Space>g - Go (Navigate to folders)
+      <Space>gi = :cf 000_inbox<Enter>
+      <Space>gs = :cf 010_sent<Enter>
+      <Space>gd = :cf 011_drafts<Enter>
+      <Space>ga1 = :cf 190_hwc-archive<Enter>
+      <Space>ga2 = :cf 290_pers-archive<Enter>
+      <Space>gp1 = :cf 120_hwc-dev<Enter>
+      <Space>gp2 = :cf 220_pers-dev<Enter>
+      
+      # <Space>f - Find
+      <Space>ff = :filter<space>
+      <Space>fs = :search<space>
+      
+      # <Space>s - Sort
+      <Space>sd = :sort -r date<Enter>
+      <Space>sf = :sort from<Enter>
+      <Space>ss = :sort subject<Enter>
+      
+      # <Space>t - Tabs/Toggles
+      <Space>tt = :toggle-threads<Enter>
+      <Space>tn = :new-tab<Enter>
+      <Space>tc = :close-tab<Enter>
+      
+      # <Space>w - Window
+      <Space>ws = :split<Enter>
+      <Space>wv = :vsplit<Enter>
+      
+      # ---------------------------------------------
+      # [view] - Message Viewer
+      # ---------------------------------------------
       [view]
       q = :close<Enter>
       j = :next<Enter>
@@ -61,13 +107,43 @@ in
       c = :compose<Enter>
       C = :reply -aq<Enter>
       H = :toggle-headers<Enter>
+      u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
+      aa = :archive flat<Enter>:close<Enter>
+      a1 = :mv 190_hwc-archive<Enter>:close<Enter>
+      a2 = :mv 290_pers-archive<Enter>:close<Enter>
+      O = :open<Enter>
+      S = :save<space>
+      U = :pipe -mb urlscan -r<Enter>
 
       [view::passthrough]
       $noinherit = true
       <Esc> = :toggle-key-passthrough<Enter>
+      # ---------------------------------------------
+      # Other Contexts (Compose, Terminal)
+      # ---------------------------------------------
+      [compose]
+      $noinherit = true
+      $ex = <C-x>
+      <C-h> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
+      <C-k> = :prev-field<Enter>
+      <C-j> = :next-field<Enter>
+      
+      [terminal]
+      $noinherit = true
+      $ex = <C-x>
+      <C-h> = :prev-tab<Enter>
+      <C-l> = :next-tab<Enter>
 
       ${accountBindings}
     '';
+
+     ".config/ov/config.yaml".text = ''
+        ClipboardMethod: "OSC52"
+        WrapMode: true
+        HScrollWidth: "10%"
+      '';
+    
   };
 }

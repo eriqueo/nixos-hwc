@@ -1,4 +1,4 @@
-# nixos-h../domains/home/apps/thunar.nix
+# HWC Charter Module/domains/home/apps/thunar.nix
 # ... (header is the same)
 
 { config, lib, pkgs, ... }:
@@ -6,6 +6,9 @@ let
   cfg = config.hwc.home.apps.thunar;
 in
 {
+  #==========================================================================
+  # OPTIONS 
+  #==========================================================================
   imports = [ ./options.nix ];
   #============================================================================
   # IMPLEMENTATION - Thunar file manager configuration
@@ -75,3 +78,7 @@ in
     };
   };
 }
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================

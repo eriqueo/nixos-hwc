@@ -1,8 +1,16 @@
+#==========================================================================
+# OPTIONS
+#==========================================================================
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.mail;
   on  = (cfg.enable or true) && (cfg.abook.enable or true);in
 {
+  imports = [ ./options.nix ];
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf on {
     home.packages = [ pkgs.abook ];
 
@@ -17,4 +25,9 @@ let
 
     home.file.".abook/addressbook".text = "# abook addressbook\n";
   };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  # Add assertions and validation logic here
 }

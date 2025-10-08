@@ -1,95 +1,73 @@
-# nixos-h../domains/system/services/vpn/index.nix
+# FINAL, CORRECT file: domains/system/services/vpn/index.nix
 #
-# VPN IMPLEMENTATION - ProtonVPN WireGuard service
-# System domain module providing ProtonVPN connectivity via WireGuard
-#
-# DEPENDENCIES (Upstream):
-#   - domains/system/services/vpn/options.nix (API definition)
-#
-# USED BY (Downstream):
-#   - profiles/system.nix (imports this module)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/system.nix: ../domains/system/services/vpn
-#
-# USAGE:
-#   hwc.system.services.vpn.enable = true;
-#   hwc.system.services.vpn.protonvpn.enable = true;
+# VPN - Manages ProtonVPN connectivity using the official CLI and existing secrets.
 
 { config, lib, pkgs, ... }:
 
 let
   cfg = config.hwc.system.services.vpn;
+
+  usernameFile = config.hwc.security.materials.vpnUsernameFile;
+  passwordFile = config.hwc.security.materials.vpnPasswordFile;
 in
 {
-  #============================================================================
-  # IMPORTS - Module structure
-  #============================================================================
-  imports = [
-    ./options.nix
-  ];
+  imports = [ ./options.nix ];
 
-  #============================================================================
-  # IMPLEMENTATION - VPN service configuration
-  #============================================================================
-  config = lib.mkIf cfg.enable {
-    
-    # WireGuard kernel module and tools
-    networking.wireguard.enable = true;
-    
-    # System packages for VPN management
+  config = lib.mkIf (cfg.enable && cfg.protonvpn.enable) {
+
+    #=========================================================================
+    # PROTONVPN CLI SERVICE
+    #=========================================================================
+    # This service ensures you are logged in and connected on boot.
+    systemd.services.protonvpn-connect = {
+      description = "ProtonVPN CLI Connect Service";
+      # We want this to start after the network is fully online.
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+
+      # This is a 'oneshot' service because it runs a command and then exits.
+      # The VPN connection itself is managed by the system's networking stack.
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+
+        # The magic happens here. We run a script that uses the secret files.
+        ExecStart = pkgs.writeScript "protonvpn-login-script" ''
+          #!${pkgs.bash}/bin/bash
+          set -e
+          # First, log in using the username and password from the secret files.
+          ${pkgs.protonvpn-cli}/bin/protonvpn-cli login --username "$(cat ${usernameFile})" --password "$(cat ${passwordFile})"
+          # Then, connect to the fastest server.
+          ${pkgs.protonvpn-cli}/bin/protonvpn-cli connect --fastest
+        '';
+
+        # The corresponding stop command.
+        ExecStop = "${pkgs.protonvpn-cli}/bin/protonvpn-cli disconnect";
+      };
+
+      # We want this service to be enabled on boot.
+      wantedBy = [ "multi-user.target" ];
+    };
+
+    #=========================================================================
+    # CO-LOCATED PACKAGES
+    #=========================================================================
+    # The module now provides the official CLI tool.
     environment.systemPackages = with pkgs; [
-      wireguard-tools
+      protonvpn-cli
     ];
 
-    # ProtonVPN WireGuard interface configuration
-    networking.wg-quick.interfaces = lib.mkIf cfg.protonvpn.enable {
-      protonvpn = {
-        address = [ cfg.protonvpn.address ];
-        dns = [ cfg.protonvpn.dns ];
-        privateKey = cfg.protonvpn.privateKey;
-        
-        peers = [{
-          publicKey = cfg.protonvpn.publicKey;
-          endpoint = cfg.protonvpn.endpoint;
-          allowedIPs = [ "0.0.0.0/0" "::/0" ];
-          persistentKeepalive = cfg.protonvpn.persistentKeepalive;
-        }];
-      };
-    };
-
-    # Firewall configuration for WireGuard
-    networking.firewall = lib.mkIf cfg.protonvpn.enable {
-      allowedUDPPorts = [ 51820 ];
-    };
-
-    # Enable IP forwarding for VPN routing
-    boot.kernel.sysctl = lib.mkIf cfg.protonvpn.enable {
-      "net.ipv4.ip_forward" = 1;
-      "net.ipv6.conf.all.forwarding" = 1;
-    };
-
-    # Passwordless sudo for VPN commands
-    security.sudo.extraRules = lib.mkIf cfg.protonvpn.enable [{
-      users = [ "eric" ];
-      commands = [{
-        command = "${pkgs.wireguard-tools}/bin/wg-quick";
-        options = [ "NOPASSWD" ];
-      } {
-        command = "${pkgs.wireguard-tools}/bin/wg";
-        options = [ "NOPASSWD" ];
-      }];
-    }];
-
-    # Validation assertions
+    #=========================================================================
+    # VALIDATION
+    #=========================================================================
     assertions = [
       {
-        assertion = cfg.protonvpn.enable -> (cfg.protonvpn.privateKey != "");
-        message = "ProtonVPN private key must be configured when enabled";
+        assertion = usernameFile != null;
+        message = "ProtonVPN is enabled, but the 'vpnUsernameFile' secret is not available.";
       }
       {
-        assertion = cfg.protonvpn.enable -> (cfg.protonvpn.endpoint != "");
-        message = "ProtonVPN endpoint must be configured when enabled";
+        assertion = passwordFile != null;
+        message = "ProtonVPN is enabled, but the 'vpnPasswordFile' secret is not available.";
       }
     ];
   };

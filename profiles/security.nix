@@ -1,11 +1,17 @@
 { config, lib,... }:
 {
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   imports = [
-    ../domains/server/networking/vpn.nix
-    ../domains/security/index.nix          # New consolidated security domain
+    ../domains/server/networking            # Includes VPN configuration
+    ../domains/secrets/index.nix            # New consolidated security domain
   ];
 
-  hwc.security.hardening = {
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
+  hwc.secrets.hardening = {
     enable = true;
 
     firewall = {
@@ -28,12 +34,12 @@
   };
 
   # Security domain provides all secrets via materials facade
-  hwc.security.enable = true;
+  hwc.secrets.enable = true;
 
   # Enable emergency access using the materials facade
-  hwc.security.emergencyAccess = {
+  hwc.secrets.emergency = {
     enable = true;
-    hashedPasswordFile = config.hwc.security.materials.emergencyPasswordFile;
+    hashedPasswordFile = config.hwc.secrets.api.emergencyPasswordFile;
   };
 
   hwc.services.vpn.tailscale = {

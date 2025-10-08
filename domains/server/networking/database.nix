@@ -1,4 +1,4 @@
-# nixos-h../domains/services/business/database.nix
+# HWC Charter Module/domains/services/business/database.nix
 #
 # DATABASE - Brief service description
 # TODO: Add detailed description of what this module provides
@@ -116,8 +116,8 @@ in {
     #==========================================================================
     assertions = [
       {
-        assertion = cfg.postgresql.enable -> config.hwc.security.secrets.database;
-        message = "Business PostgreSQL requires database secrets to be enabled (hwc.security.secrets.database = true)";
+        assertion = cfg.postgresql.enable -> config.hwc.secrets.secrets.database;
+        message = "Business PostgreSQL requires database secrets to be enabled (hwc.secrets.secrets.database = true)";
       }
       {
         assertion = cfg.backup.enable -> cfg.postgresql.enable;

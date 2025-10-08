@@ -1,173 +1,130 @@
-# aerc theme.nix - adapter from palette to aerc styleset tokens
+# aerc theme.nix - Adapter from palette to aerc styleset tokens
+# Generates comprehensive aerc styleset with hex colors
 { config, lib, ... }:
 
 let
-  cfg = config.hwc.home.apps.aerc or {};
+  # Consume global theme colors from config.hwc.home.theme.colors
+  # This automatically updates when hwc.home.theme.palette changes
+  c = config.hwc.home.theme.colors or {};
 
-  # Resolve palette: per-app override > global theme  
-  paletteName =
-    if (cfg ? theme && cfg.theme ? palette && cfg.theme.palette != null)
-    then cfg.theme.palette
-    else (config.hwc.home.theme.name or "deep-nord");
+  # Helper to format hex colors for aerc (with # prefix)
+  hex = color: "#${color}";
 
-  palettesBase = ../../.. + "/theme/palettes";
-  palettePath  = palettesBase + ("/" + paletteName + ".nix");
-  P            = import palettePath {};
-
-  # Aerc uses different color specification than neomutt
-  # It supports: "default", w3c color names, hex codes, palette indices
-  roleToAerc = {
-    # Map terminal color roles to appropriate values for aerc
-    red = "red"; brightRed = "lightred"; 
-    green = "green"; brightGreen = "lightgreen";
-    yellow = "yellow"; brightYellow = "lightyellow"; 
-    blue = "blue"; brightBlue = "lightblue";
-    magenta = "magenta"; brightMagenta = "lightmagenta"; 
-    cyan = "cyan"; brightCyan = "lightcyan";
-    black = "black"; brightBlack = "gray"; 
-    white = "white"; brightWhite = "brightwhite";
-    default = "default";
-  };
-
-  # Map semantic colors for aerc (similar to neomutt but adapted for aerc's style objects)
-  pick = {
-    fg           = roleToAerc.white;
-    fgDim        = roleToAerc.brightBlack;
-    bg           = roleToAerc.default;
-    muted        = roleToAerc.brightBlack;
-
-    good         = roleToAerc.green;
-    warn         = roleToAerc.yellow;
-    crit         = roleToAerc.red;
-    info         = roleToAerc.blue;
-
-    accent       = roleToAerc.cyan;
-    accentAlt    = roleToAerc.magenta;
-    accent2      = roleToAerc.brightBlue;
-
-    selectionFg  = roleToAerc.black;
-    selectionBg  = roleToAerc.cyan;
-
-    b_good       = roleToAerc.brightGreen;
-    b_warn       = roleToAerc.brightYellow;
-    b_crit       = roleToAerc.brightRed;
-    b_info       = roleToAerc.brightBlue;
-    b_accent     = roleToAerc.brightCyan;
-    b_accentAlt  = roleToAerc.brightMagenta;
-    b_fg         = roleToAerc.brightWhite;
-  };
-
-  # Helper function to create style token
+  # Aerc styleset token generator
+  # Creates fg/bg/bold tuple for each UI element
   token = fg: bg: bold: { inherit fg bg bold; };
 
 in {
+  # Main section styles (no [section] prefix)
   tokens = {
-    # ===== CORE UI ELEMENTS (aerc specific) =====
-    default = token pick.fg pick.bg false;
-    error = token pick.crit pick.bg false;
-    warning = token pick.warn pick.bg false;
-    success = token pick.good pick.bg false;
+    # ===== CORE UI ELEMENTS (Official) =====
+    default = token (hex c.fg1) "default" false;
+    error = token (hex c.error) "default" false;
+    warning = token (hex c.warning) "default" false;
+    success = token (hex c.success) "default" false;
+    title = token (hex c.fg0) (hex c.bg2) true;
+    header = token (hex c.accent) "default" true;
+
+    # ===== TAB STYLING (Official) =====
+    tab = token (hex c.fg2) (hex c.bg2) false;
+
+    # ===== BORDERS & UI CHROME (Official) =====
+    border = token (hex c.border) "default" false;
+    stack = token (hex c.fg2) (hex c.bg1) false;  # UI stack element
+    spinner = token (hex c.accent) "default" false;
+
+
+     # A more general but powerful approach using the wildcard from the man page:
+    "*.selected" = token (hex c.fg0) (hex c.bg3) true;
+
+    # ===== MESSAGE LIST (Official + Custom) =====
+    msglist_default = token (hex c.fg1) "default" false;
+    msglist_unread = token (hex c.warning) "default" true;
+    msglist_read = token (hex c.fg2) "default" false;
+    msglist_flagged = token (hex c.errorBright) "default" true;
+    msglist_deleted = token (hex c.fg3) "default" false;
+    msglist_marked = token (hex c.bg1) (hex c.marked) true;
+    msglist_result = token (hex c.accent) "default" true;
+
+   # ===== SOURCE ACCOUNT COLORS (Header-based dynamic styling) =====
+     # Colors are now sourced from your global Gruvbox theme palette for consistency.
+
+     # --- Work Domain (Cool Colors) ---
+     "[messages].From:iheartwoodcraft.com"        = token (hex c.selection)   "default" false; #// Primary Work: Blue
+     "[messages].From:heartwoodcraftmt@gmail.com" = token (hex c.accent)   "default" false; #// Secondary Work: Aqua
+
+     # --- Personal Domain (Warm Colors) ---
+     "[messages].From:eriqueokeefe@gmail.com"     = token (hex c.accentAlt) "default" false; #// Primary Personal: Purple
+     "[messages].From:proton.me"                  = token (hex c.marked)    "default" false; #// Secondary Personal: Red/Magenta
+
     
-    # ===== TAB STYLING =====
-    tab_default = token pick.fgDim pick.bg false;
-    tab_selected = token pick.fg pick.bg true;
-    
-    # ===== BORDERS =====
-    border = token pick.muted pick.bg false;
-    
-    # ===== MESSAGE LIST (equivalent to neomutt index colors) =====
-    msglist_default = token pick.warn pick.bg false;
-    msglist_unread = token pick.b_warn pick.bg true;
-    msglist_read = token pick.warn pick.bg false;
-    msglist_flagged = token pick.crit pick.bg true;
-    msglist_deleted = token pick.fgDim pick.bg false;
-    msglist_marked = token pick.selectionFg pick.selectionBg true;
-    msglist_result = token pick.b_accent pick.bg true;
-    
-    # Selected states for message list
-    msglist_default_selected = token pick.selectionFg pick.selectionBg true;
-    msglist_unread_selected = token pick.b_warn pick.selectionBg true;
-    msglist_read_selected = token pick.warn pick.selectionBg true;
-    msglist_flagged_selected = token pick.b_crit pick.selectionBg true;
-    
-    # ===== DIRECTORY LIST (sidebar equivalent) =====
-    dirlist_default = token pick.fgDim pick.bg false;
-    dirlist_unread = token pick.good pick.bg true;
-    dirlist_recent = token pick.accent pick.bg false;
-    dirlist_selected = token pick.selectionFg pick.selectionBg true;
-    
+    # Official: Additional message states
+    msglist_answered = token (hex c.success) "default" false;
+    msglist_forwarded = token (hex c.info) "default" false;
+
+    # Official: Thread-related styles
+    msglist_thread_folded = token (hex c.accent) "default" false;
+    msglist_thread_context = token (hex c.fg3) "default" false;
+    msglist_thread_orphan = token (hex c.errorDim) "default" false;
+
+    # Official: UI chrome for message list
+    msglist_gutter = token (hex c.bg3) (hex c.bg2) false;
+    msglist_pill = token (hex c.fg0) (hex c.bg3) false;
+
+    # ===== DIRECTORY LIST (Official) =====
+    dirlist_default = token (hex c.fg2) "default" false;
+    dirlist_unread = token (hex c.success) "default" true;
+    dirlist_recent = token (hex c.accent) "default" false;
+
     # ===== STATUS LINE =====
-    statusline_default = token pick.b_warn pick.bg false;
-    statusline_error = token pick.crit pick.bg true;
-    statusline_success = token pick.good pick.bg false;
-    
-    # ===== COMPLETION POPOVER =====
-    completion_default = token pick.fg pick.bg false;
-    completion_selected = token pick.selectionFg pick.selectionBg false;
-    
-    # ===== MESSAGE VIEWER/COMPOSER =====
-    part_switcher = token pick.accent pick.bg false;
-    selector_default = token pick.fg pick.bg false;
-    selector_focused = token pick.selectionFg pick.selectionBg false;
-    selector_chooser = token pick.accent pick.bg false;
-    
-    # ===== SPINNER =====
-    spinner = token pick.accent pick.bg false;
-    
-    # ===== VIEWER CONTENT COLORS (for colorize filter) =====
-    # Email headers
-    hdr_default = token pick.info pick.bg false;
-    hdr_from = token pick.b_accentAlt pick.bg false;
-    hdr_subject = token pick.b_accent pick.bg false;
-    hdr_ccbcc = token pick.b_fg pick.bg false;
-    
-    # URL and links
-    body_url = token pick.b_info pick.bg false;
-    body_email = token pick.b_crit pick.bg false;
-    
-    # Quoted text levels
-    quoted0 = token pick.good pick.bg false;
-    quoted1 = token pick.info pick.bg false;
-    quoted2 = token pick.accent pick.bg false;
-    quoted3 = token pick.warn pick.bg false;
-    quoted4 = token pick.crit pick.bg false;
-    quoted5 = token pick.b_crit pick.bg false;
-    
-    # Code and formatting
-    body_code = token pick.good pick.bg false;
-    body_h1 = token pick.b_info pick.bg false;
-    body_h2 = token pick.b_accent pick.bg false;
-    body_h3 = token pick.b_good pick.bg false;
-    body_listitem = token pick.warn pick.bg false;
-    
-    # Signature
-    signature = token pick.good pick.bg false;
-    
-    # Diff/patch colors
-    diff_meta = token pick.b_info pick.bg true;
-    diff_chunk = token pick.b_accent pick.bg false;
-    diff_add = token pick.b_good pick.bg false;
-    diff_del = token pick.b_crit pick.bg false;
-    
-    # GPG/encryption
-    body_sig_good = token pick.accent pick.bg false;
-    body_sig_bad = token pick.crit pick.bg false;
-    body_gpg_good = token pick.muted pick.bg false;
-    body_gpg_any = token pick.b_warn pick.bg false;
-    body_gpg_bad = token pick.b_warn pick.crit false;
-    
-    # Emoticons and special content
-    body_emote = token pick.b_accent pick.bg false;
+    statusline_default = token (hex c.fg1) (hex c.bg0) false;
+    statusline_error = token (hex c.errorBright) (hex c.bg0) true;
+    statusline_success = token (hex c.success) (hex c.bg0) false;
+
+    # ===== COMPLETION POPOVER (Official) =====
+    completion_default = token (hex c.fg1) (hex c.bg2) false;
+    completion_description = token (hex c.fg3) (hex c.bg2) false;
+    completion_gutter = token (hex c.bg3) (hex c.bg2) false;
+    completion_pill = token (hex c.fg0) (hex c.bg3) false;
+
+    # ===== MESSAGE VIEWER/COMPOSER (Official) =====
+    part_switcher = token (hex c.bg2) (hex c.bg1) false;
+    part_filename = token (hex c.fg0) "default" false;
+    part_mimetype = token (hex c.fg3) "default" false;
+
+    selector_default = token (hex c.fg1) "default" false;
+    selector_focused = token (hex c.bg1) (hex c.selection) false;
+    selector_chooser = token (hex c.accent) "default" true;
+
+    # ===== PER-COLUMN COLORS (Custom enhancement for message list) =====
+    # Note: These are NOT in official spec but may work
+   # index_number = token (hex c.fg3) "default" false;
+   # index_flags = token (hex c.warning) "default" false;
+   # index_date = token (hex c.info) "default" false;
+   # index_author = token (hex c.success) "default" false;
+   # index_size = token (hex c.fg3) "default" false;
+   # index_subject = token (hex c.fg1) "default" false;
+
   };
 
-  # Boolean attributes (aerc uses string values)
-  attrs = {
-    bold = "true";
-    normal = "false";
-    italic = "true";
-    underline = "true";
-    dim = "true";
-    reverse = "true";
-    blink = "true";
+  # [viewer] section styles - used by built-in colorize filter
+  viewerTokens = {
+    url = token (hex c.link) "default" false;
+    header = token (hex c.accent) "default" true;
+    signature = token (hex c.fg3) "default" false;
+
+    # Diff/patch colors
+    diff_meta = token (hex c.info) "default" true;
+    diff_chunk = token (hex c.accent) "default" false;
+    diff_chunk_func = token (hex c.accentAlt) "default" false;
+    diff_add = token (hex c.successBright) "default" false;
+    diff_del = token (hex c.errorBright) "default" false;
+
+    # Quote levels for nested replies
+    quote_1 = token (hex c.success) "default" false;
+    quote_2 = token (hex c.info) "default" false;
+    quote_3 = token (hex c.accent) "default" false;
+    quote_4 = token (hex c.warning) "default" false;
+    quote_x = token (hex c.error) "default" false;
   };
 }
