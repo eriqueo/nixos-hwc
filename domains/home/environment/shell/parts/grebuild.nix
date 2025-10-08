@@ -1,4 +1,4 @@
-# nixos-h../domains/home/environment/shell/parts/grebuild.nix
+# HWC Charter Module/domains/home/environment/shell/parts/grebuild.nix
 #
 # GREBUILD PART - Git rebuild function as proper derivation
 # Pure function returning writeShellApplication for grebuild command

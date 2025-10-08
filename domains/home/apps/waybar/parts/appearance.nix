@@ -1,7 +1,7 @@
-{ config, lib, pkgs, theme, ... }:
+{ config, lib, pkgs, ... }:
 let
-  # Import the palette directly to get color values
-  palette = import ../../../theme/palettes/deep-nord.nix {};
+  # Use the active theme from central configuration
+  palette = config.hwc.home.theme.colors;
 in
 ''
 /* Generated from ${palette.name} palette */

@@ -1,0 +1,31 @@
+# domains/secrets/declarations/home.nix
+#
+# Home domain secrets - User email and personal credentials
+# Data-only module that declares age.secrets entries for user applications
+{ config, lib, ... }:
+{
+  # Home domain secrets - email credentials
+  age.secrets = {
+    # Email service credentials
+    proton-bridge-password = {
+      file = ../parts/home/proton-bridge-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "users";
+    };
+
+    gmail-personal-password = {
+      file = ../parts/home/gmail-personal-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "users";
+    };
+
+    gmail-business-password = {
+      file = ../parts/home/gmail-business-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "users";
+    };
+  };
+}

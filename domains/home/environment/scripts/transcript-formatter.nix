@@ -52,7 +52,7 @@ in
       Restart          = "on-failure";
       RestartSec       = "5s";
       Environment = [
-        "WATCH_FOLDER=${config.home.homeDirectory}/99-vaults/06-contractor/raw"
+        "WATCH_FOLDER=${config.home.homeDirectory}/900_vaults/06-contractor/raw"
         "PROMPT_FILE=${appDir}/formatting_prompt.txt"
         "PATH=${extraPath}:/run/current-system/sw/bin"
       ];

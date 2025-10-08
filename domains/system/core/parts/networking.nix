@@ -1,0 +1,59 @@
+# HWC Charter Module/domains/infrastructure/networking.nix
+#
+# NETWORKING - Brief service description
+# TODO: Add detailed description of what this module provides
+#
+# DEPENDENCIES (Upstream):
+#   - TODO: List upstream dependencies
+#   - config.hwc.paths.* (modules/system/paths.nix)
+#
+# USED BY (Downstream):
+#   - TODO: List downstream consumers
+#   - profiles/*.nix (enables via hwc.infrastructure.networking.enable)
+#
+# IMPORTS REQUIRED IN:
+#   - profiles/profile.nix: ../domains/infrastructure/networking.nix
+#
+# USAGE:
+#   hwc.infrastructure.networking.enable = true;
+#   # TODO: Add specific usage examples
+
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.hwc.networking;
+in {
+  #============================================================================
+  # IMPLEMENTATION - What actually gets configured
+  #============================================================================
+  config = {
+    networking = {
+      # VLAN configuration
+      vlans = lib.mapAttrs (name: vlan: {
+        id = vlan.id;
+        interface = vlan.interface;
+      }) cfg.vlans;
+
+      # Bridge configuration
+      bridges = cfg.bridges;
+
+      # DNS configuration
+      nameservers = cfg.dnsServers;
+      search = cfg.search;
+    } // lib.optionalAttrs (cfg.routeInterface != null && cfg.staticRoutes != []) {
+      interfaces.${cfg.routeInterface}.ipv4.routes = cfg.staticRoutes;
+    };
+
+    # Network optimization
+    boot.kernel.sysctl = {
+      # TCP optimization
+      "net.core.rmem_max" = lib.mkDefault 134217728;
+      "net.core.wmem_max" = lib.mkDefault 134217728;
+      "net.ipv4.tcp_rmem" = lib.mkDefault "4096 87380 134217728";
+      "net.ipv4.tcp_wmem" = lib.mkDefault "4096 65536 134217728";
+
+      # Connection tracking
+      "net.netfilter.nf_conntrack_max" = 262144;
+      "net.netfilter.nf_conntrack_tcp_timeout_established" = 86400;
+    };
+  };
+}

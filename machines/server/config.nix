@@ -1,10 +1,16 @@
+# nixos-hwc/machines/server/config.nix
+#
+# MACHINE: HWC-SERVER
+# Declares machine identity and composes profiles; states hardware reality.
+
 { config, lib, pkgs, ... }:
 {
   imports = [
     ./hardware.nix
-    ../../profiles/base.nix
-    ../../profiles/server.nix  
+    ../../profiles/system.nix
+    ../../profiles/server.nix
     ../../profiles/security.nix
+    ../../profiles/ai.nix
   ];
 
   # System identity
@@ -34,17 +40,37 @@
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   # allowUnfree set in flake.nix
 
-  # Enhanced SSH configuration for server
-  services.openssh.settings = {
-    X11Forwarding = true;
-    PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
+  # --- Networking Configuration (Server: DO wait for network) ---
+  hwc.networking = {
+    enable = true;
+    networkManager.enable = true;
+
+    # Safest: wait for any NetworkManager connection (no hard-coded iface names).
+    waitOnline.mode = "all";
+    waitOnline.timeoutSeconds = 90;
+
+    ssh.enable = true;
+    tailscale.enable = true;
+    firewall.level = lib.mkForce "server";
   };
 
+  # AI services configuration
+  hwc.server.ai.ollama = {
+    enable = true;
+    models = [ "llama3:8b" "codellama:13b" ];
+  };
+
+  # Enhanced SSH configuration for server
+  services.openssh.settings = {
+    X11Forwarding = lib.mkForce true;
+    PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
+  };
+  services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
   # Enable X11 services for forwarding
   services.xserver.enable = true;
 
   # Server-specific packages moved to modules/system/server-packages.nix
-  hwc.system.serverPackages.enable = true;
+  hwc.system.packages.server.enable = true;
 
   # Production I/O scheduler optimization
   services.udev.extraRules = ''

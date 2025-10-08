@@ -26,7 +26,9 @@
 
 { lib, pkgs, config, ... }: {
 
-  #============================================================================
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   # CHARTER V3 SERVICE IMPORTS
   #============================================================================
   
@@ -35,11 +37,10 @@
     ../domains/infrastructure/index.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
-  
-  #============================================================================
-  # SERVER STORAGE AND FILESYSTEM
-  #============================================================================
-  
+
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
   # Enable complete server filesystem structure
   hwc.filesystem = {
     enable = true;
@@ -68,7 +69,7 @@
   # SECURITY AND SECRETS (Server extends base secrets)
   #============================================================================
   
-  # Server uses the base hwc.system.secrets configuration from base.nix
+  # Server uses the base hwc.secrets configuration from base.nix
   # Individual services will configure their own specific secrets as needed
   # No additional server-specific secrets configuration required here
 
@@ -79,11 +80,11 @@
   # Server networking extends base configuration
   hwc.networking = {
     # Base networking already enabled in base.nix
-    ssh.x11Forwarding = true;  # For remote GUI applications
+    #ssh.x11Forwarding = true;  # For remote GUI applications
     
     # Server-specific Tailscale configuration
     tailscale = {
-      permitCertUid = lib.mkIf config.services.caddy.enable "caddy";  # Allow Caddy to access certificates only if Caddy is enabled
+      #permitCertUid = lib.mkIf config.services.caddy.enable "caddy";  # Allow Caddy to access certificates only if Caddy is enabled
       extraUpFlags = [ 
         "--advertise-tags=tag:server"
         "--accept-routes" 
@@ -92,7 +93,7 @@
     
     # Server firewall allows additional service ports
     firewall = {
-      services.web = true;  # Enable HTTP/HTTPS for Caddy
+      #services.web = true;  # Enable HTTP/HTTPS for Caddy
       extraTcpPorts = [
         # Media services
         5000   # Frigate
@@ -170,7 +171,7 @@
   # SYSTEM PACKAGES - Moved to modules/system/server-packages.nix
   #============================================================================
   
-  hwc.system.serverPackages.enable = true;
+  hwc.system.packages.server.enable = true;
 
   #============================================================================
   # PERFORMANCE OPTIMIZATIONS
@@ -181,9 +182,9 @@
     # Network performance handled by system domain - removed duplicates
     
     # File system performance
-    "vm.dirty_ratio" = 15;
-    "vm.dirty_background_ratio" = 5;
-    "vm.swappiness" = 10;
+    "vm.dirty_ratio" = lib.mkDefault 15;
+    "vm.dirty_background_ratio" = lib.mkDefault 5;
+    "vm.swappiness" = lib.mkDefault 10;
   };
 
   # I/O scheduler optimization for server workloads
@@ -255,8 +256,8 @@
       message = "Server profile requires hwc.paths.hot and hwc.paths.media to be configured";
     }
     {
-      assertion = config.hwc.system.secrets.enable;
-      message = "Server profile requires hwc.system.secrets.enable = true";
+      assertion = config.hwc.secrets.enable;
+      message = "Server profile requires hwc.secrets.enable = true";
     }
     {
       assertion = config.hwc.networking.tailscale.enable;

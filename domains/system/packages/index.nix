@@ -1,8 +1,11 @@
-# modules/system/packages/index.nix — aggregates system package definitions
+# domains/system/packages/index.nix — Charter-compliant aggregator
+# Options aggregator: imports options.nix
+# Config aggregator: imports all implementation files
+
 { lib, ... }:
 let
   dir   = builtins.readDir ./.;
-  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix") dir;
+  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix" && n != "options.nix") dir;
   subds = lib.filterAttrs (_: t: t == "directory") dir;
 
   filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
@@ -13,5 +16,8 @@ let
     ];
 in
 {
-  imports = filePaths ++ subIndex;
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  imports = [ ./options.nix ] ++ filePaths ++ subIndex;
 }

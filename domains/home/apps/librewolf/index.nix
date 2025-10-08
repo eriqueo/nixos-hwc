@@ -1,4 +1,4 @@
-# nixos-h../domains/home/apps/librewolf/index.nix
+# HWC Charter Module/domains/home/apps/librewolf/index.nix
 #
 # Home UI: LibreWolf Browser Configuration  
 # Charter v7 compliant - Privacy-focused Firefox fork configuration with universal domains
@@ -17,7 +17,13 @@
 
 let cfg = config.hwc.home.apps.librewolf or { enable = false; };
 in {
+  #==========================================================================
+  # OPTIONS 
+  #==========================================================================
   imports = [ ./options.nix ];
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.librewolf ];
   };
@@ -26,3 +32,7 @@ in {
     # behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
     # session = import ./parts/session.nix { inherit lib pkgs config; };  
     # appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================

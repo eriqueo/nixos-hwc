@@ -1,4 +1,4 @@
-# nixos-h../domains/system/paths.nix
+# HWC Charter Module/domains/system/paths.nix
 #
 # PATHS - Brief service description
 # TODO: Add detailed description of what this module provides
@@ -18,7 +18,7 @@
 #   hwc.system.paths.enable = true;
 #   # TODO: Add specific usage examples
 
-# nixos-h../domains/system/paths.nix
+# HWC Charter Module/domains/system/paths.nix
 #
 # HWC Centralized Path Configuration System
 # Comprehensive path management for all system components
@@ -43,7 +43,7 @@
 #   - All paths are absolute
 #   - Storage paths are machine-configurable (nullable)
 
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.hwc.paths;
@@ -125,47 +125,41 @@ in {
         description = "User home directory";
       };
 
-      # PARA Structure
+      # Domain Structure (3-digit prefix)
       inbox = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/00-inbox";
+        default = "${cfg.user.home}/000_inbox";
         description = "Global inbox for unsorted items";
       };
 
       work = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/01-hwc";
+        default = "${cfg.user.home}/100_hwc";
         description = "Work/business project area";
       };
 
       personal = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/02-personal";
+        default = "${cfg.user.home}/200_personal";
         description = "Personal project area";
       };
 
       tech = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/03-tech";
+        default = "${cfg.user.home}/300_tech";
         description = "Technology development area";
-      };
-
-      reference = lib.mkOption {
-        type = lib.types.path;
-        default = "${cfg.user.home}/04-ref";
-        description = "Reference materials";
       };
 
       media = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/05-media";
-        description = "Personal media collection";
+        default = "${cfg.user.home}/500_media";
+        description = "Cross-domain media collection";
       };
 
       vaults = lib.mkOption {
         type = lib.types.path;
-        default = "${cfg.user.home}/99-vaults";
-        description = "Knowledge management and cloud storage";
+        default = "${cfg.user.home}/900_vaults";
+        description = "Knowledge management and cloud storage (Obsidian, etc.)";
       };
 
       # User configuration
@@ -347,9 +341,9 @@ in {
     };
       userDirs = {
         desktop = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
-        download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
-        documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/documents"; };
-        templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.reference}/templates"; };
+        download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}/downloads"; };
+        documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/110-documents"; };
+        templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/130-reference/templates"; };
         publicShare = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
         pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures"; };
         music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/music"; };
@@ -420,7 +414,6 @@ in {
       HWC_WORK_DIR = cfg.user.work;
       HWC_PERSONAL_DIR = cfg.user.personal;
       HWC_TECH_DIR = cfg.user.tech;
-      HWC_REFERENCE_DIR = cfg.user.reference;
       HWC_MEDIA_DIR = cfg.user.media;
       HWC_VAULTS_DIR = cfg.user.vaults;
 
@@ -465,6 +458,21 @@ in {
       HEARTWOOD_SECRETS_DIR = cfg.security.secrets;
       HEARTWOOD_SOPS_AGE_KEY = cfg.security.sopsAgeKey;
     };
+
+    # Configure XDG user directories globally
+    environment.etc."xdg/user-dirs.defaults".text = ''
+      DESKTOP=${cfg.userDirs.desktop}
+      DOWNLOAD=${cfg.userDirs.download}
+      TEMPLATES=${cfg.userDirs.templates}
+      PUBLICSHARE=${cfg.userDirs.publicShare}
+      DOCUMENTS=${cfg.userDirs.documents}
+      MUSIC=${cfg.userDirs.music}
+      PICTURES=${cfg.userDirs.pictures}
+      VIDEOS=${cfg.userDirs.videos}
+    '';
+
+    # Install xdg-user-dirs package for xdg-user-dirs-update command
+    environment.systemPackages = [ pkgs.xdg-user-dirs ];
 
     # Create system path directories (always available)
     systemd.tmpfiles.rules = [

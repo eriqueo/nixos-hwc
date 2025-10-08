@@ -7,12 +7,18 @@ let
   # Import the parts as local variables
   keymapConfig = import ./parts/keymap.nix;
   pluginsConfig = import ./parts/plugins.nix;
-  themeConfig = import ./parts/theme.nix;
+  themeConfig = import ./parts/theme.nix { inherit config; };
 
 in
 {
+  #==========================================================================
+  # OPTIONS 
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
       yazi micro ffmpegthumbnailer unzip jq poppler_utils fontpreview
@@ -82,3 +88,7 @@ in
       // themeConfig;
   };
 }
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================

@@ -1,296 +1,140 @@
+# Claude Code Working Instructions
 
-# HWC Architecture Charter
-
-**Owner**: Eric
-**Scope**: `nixos-hwc/` — all machines, domains, profiles, HM, and supporting files
-**Goal**: Deterministic, maintainable, scalable, and reproducible NixOS via strict domain separation, explicit APIs, predictable patterns, and user-centric organization.
+**Project**: NixOS HWC (Heartwood Collective)
+**Full Charter**: See `charter/charter.md` for complete architecture documentation
 
 ---
 
-## 0) Preserve-First Doctrine
+## Philosophy & Approach
 
-* **Refactor = reorganize, not rewrite**.
-* 100% feature parity during migrations.
-* Wrappers/adapters allowed only as temporary bridges (tracked & removed).
-* Never switch on red builds.
+**CRITICAL: Fix Root Causes, Not Symptoms**
 
----
+- When something fails, **STOP and understand WHY** before attempting fixes
+- Do NOT make "shitty patches" just to get things to rebuild
+- Do NOT focus on getting something to work at the expense of doing it correctly
+- If you don't understand the root problem, **ASK** before proceeding
+- Simple fixes are fine IF they address the actual issue
+- Multiple steps are fine IF they're the right steps
 
-## 1) Core Architectural Concepts
+**Examples of Bad Behavior to AVOID:**
+- ❌ "Let me try wrapping this in a try-catch to suppress the error"
+- ❌ "I'll add this hack to make it build, we can fix it properly later"
+- ❌ "The test is failing, let me disable the test"
+- ❌ Making 5 rapid changes without understanding which one actually helps
 
-### **Domains**
-- **Definition**: A folder of modules organized around a common interaction boundary (how they talk to the system), where each module handles one logical concern and follows the namespace pattern of its folder path
-- **Purpose**: Clear separation of concerns based on system interaction boundaries
-- **Location**: `domains/` folder
-- **Namespace Rule**: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
-- **Debugging**: Direct folder-to-namespace mapping for immediate error traceability
-
-### **Modules**
-- **Definition**: A single logical concern that provides one place to configure all aspects of that concern
-- **Purpose**: "One place per concern" - all hyprland config, all user config, etc. lives in one logical location
-- **Example**: `domains/home/apps/firefox/` contains everything firefox-related
-
-### **Profiles**
-- **Definition**: Domain-specific feature menus that aggregate modules to serve machine composition purposes
-- **Structure**: Two clear sections per profile:
-  - **BASE**: Required imports/options for domain functionality (won't boot/breaks without)
-  - **OPTIONAL FEATURES**: Sensible defaults that can be overridden per machine
-- **Types**: `system.nix`, `home.nix`, `infrastructure.nix`, `server.nix`
-- **Machine Composition**: Machines import combination of domain profiles needed
-
-### **Profile Pattern**
-Each domain profile follows this structure:
-```nix
-# profiles/system.nix
-{
-  #==========================================================================
-  # BASE SYSTEM - Critical for machine functionality  
-  #==========================================================================
-  # Essential imports, users, permissions, secrets, networking
-  
-  #==========================================================================
-  # OPTIONAL FEATURES - Sensible defaults, override per machine
-  #==========================================================================
-  # Development tools, media packages, security levels, etc.
-}
-```
-
-**Base Determination**: Anything required for basic machine operation - boot, management, permissions, authentication.
+**Examples of Good Behavior:**
+- ✅ "This is failing because X. The root cause is Y. Here's how to fix Y."
+- ✅ "I need to understand the dependency chain before making changes"
+- ✅ "This 'fix' would work but it's a bandaid. Let me do it properly."
 
 ---
 
-## 2) Core Layering & Flow
+## Architecture Quick Reference
 
-**NixOS system flow**
-`flake.nix` → `machines/<host>/config.nix` → `profiles/*` → `domains/{system,infrastructure,server}/`
+**Full details in `charter/charter.md` - Read it if unfamiliar with HWC architecture**
 
-**Home Manager flow**
-`machines/<host>/home.nix` → `domains/home/`
+### Domain Structure
+- `domains/system/` - Core OS, users, networking, paths
+- `domains/secrets/` - Encrypted secrets (agenix), API at `/run/agenix`
+- `domains/infrastructure/` - Hardware, GPU, power, virtualization
+- `domains/server/` - Containers, databases, media stacks
+- `domains/home/` - User environment (Home Manager only)
+- `profiles/` - Domain feature menus (system.nix, home.nix, etc.)
+- `machines/<host>/` - Hardware facts + profile composition
 
-**Machine Composition Flow**
-```
-profiles/system.nix → domains/system/*
-profiles/home.nix → domains/home/*
-profiles/infrastructure.nix → domains/infrastructure/*
-profiles/server.nix → domains/server/*
-         ↓
-machines/laptop/config.nix imports needed profiles
-```
-
-**Rules**
-
-* Modules **implement** capabilities behind `options.nix`.
-* Profiles **provide domain feature menus with base/optional structure**.
-* Machines **declare hardware facts and import needed domain profiles**.
-* **No cycles**: dependency direction is always downward.
-* Home Manager lives at machine level, not profile level.
+### Key Rules
+- Namespace follows folder: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
+- Every module needs `options.nix` (never define options elsewhere)
+- System domain = NixOS, Home domain = Home Manager, never mix
+- Profiles provide feature menus, machines compose profiles
+- One logical concern per module directory
 
 ---
 
-## 3) Domain Boundaries & Responsibilities
+## Common Commands
 
-| Domain             | Purpose                          | Location                  | Must Contain                                                       | Must Not Contain                             |
-| ------------------ | -------------------------------- | ------------------------- | ------------------------------------------------------------------ | -------------------------------------------- |
-| **Infrastructure** | Hardware mgmt + cross-domain orchestration | `domains/infrastructure/` | GPU, power, udev, virtualization, filesystem structure             | HM configs                                   |
-| **System**         | Core OS + accounts + OS services | `domains/system/`         | users, sudo, networking, security, secrets, paths, system packages | HM configs                                   |
-| **Server**         | Host-provided workloads          | `domains/server/`         | containers, reverse proxy, databases, media stacks, monitoring     | HM configs                                   |
-| **Home**           | User environment (HM)            | `domains/home/`           | `programs.*`, `home.*`, DE/WM configs, shells                      | systemd.services, environment.systemPackages |
-| **Profiles**       | Domain feature menus             | `profiles/`               | domain imports, base/optional toggles                              | HM activation (except hm.nix), implementation |
-| **Machines**       | Hardware facts + profile composition | `machines/<host>/`        | `config.nix`, `home.nix`, storage, GPU type                        | Shared logic, profile-like orchestration     |
-
-**Key Principles**
-
-* User accounts → `domains/system/users/eric.nix`
-* User env → `domains/home/` imported by `machines/<host>/home.nix`
-* Cross-domain orchestrators → `domains/infrastructure/` (filesystem structure, etc.)
-* Namespace follows folder structure: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
-
----
-
-## 4) Unit Anatomy
-
-Every **module** (app, tool, or workload) MUST include:
-
-* `index.nix` → aggregator, imports options.nix, implements functionality
-* `options.nix` → mandatory, API definition following folder→namespace pattern
-* `sys.nix` → system-lane implementation, co-located but imported only by system profiles
-* `parts/**` → pure functions, no options, no side-effects
-
-**Rules**
-* `options.nix` always exists - options never defined ad hoc in other files
-* Namespace matches folder structure: `domains/home/apps/firefox/options.nix` defines `hwc.home.apps.firefox.*`
-* One logical concern per module directory
-
----
-
-## 5) Lane Purity
-
-* **Lanes never import each other's `index.nix`**.
-* Co-located `sys.nix` belongs to the **system lane**, even when inside `domains/home/apps/<unit>`.
-* **Examples of valid sys.nix content**:
-  - `domains/home/apps/kitty/sys.nix` → `environment.systemPackages = [ pkgs.kitty-themes ];`
-  - `domains/home/apps/firefox/sys.nix` → `programs.firefox.policies = { ... };`
-  - This is system-lane code imported by system profiles, **not HM boundary violations**.
-* Profiles decide which lane's files to import.
-
----
-
-## 6) Aggregators
-
-* Aggregators are always named **`index.nix`**.
-* Module aggregators = `domains/home/apps/waybar/index.nix`.
-* Domain aggregators = `domains/home/index.nix`, `domains/server/index.nix`.
-* Profiles may import domain aggregators and individual module indices.
-
----
-
-## 7) Home Manager Boundary
-
-* **HM activation is machine-specific, never in profiles.**
-* **Exception**: `profiles/home.nix` serves as the Home Manager domain feature menu
-* Example (`machines/laptop/home.nix`):
-
-```nix
-{ config, pkgs, lib, ... }: {
-  home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
-    users.eric = {
-      imports = [
-        ../../domains/home/apps/hyprland
-        ../../domains/home/apps/waybar
-        ../../domains/home/apps/kitty
-      ];
-      home.stateVersion = "24.05";
-    };
-  };
-}
-```
-
----
-
-## 8) Structural Rules
-
-* **Structural files** = all `.nix` sources under `domains/`, `profiles/`, `machines/` and `flake.{nix,lock}`.
-* Never apply automated regex rewrites to structural files.
-* Generated artifacts (systemd units, container manifests) are not structural.
-
----
-
-## 9) Theming
-
-* Palettes (`domains/home/theme/palettes/*.nix`) define tokens.
-* Adapters (`domains/home/theme/adapters/*.nix`) transform palettes to app configs.
-* No hardcoded colors in app configs.
-
----
-
-## 10) Helpers & Parts
-
-* `parts/**` and `_shared/**` MUST be pure helpers:
-
-  * No options
-  * No side effects
-  * No direct system mutation
-
----
-
-## 11) File Standards
-
-* Files/dirs: `kebab-case.nix`
-* Options: camelCase following folder structure (e.g. `hwc.home.apps.firefox.enable`)
-* Scripts: `domain-purpose` (e.g. `waybar-gpu-status`)
-* All modules include: **OPTIONS / IMPLEMENTATION / VALIDATION** sections
-* Namespace matches folder: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
-
----
-
-## 12) Enforcement Rules
-
-* Functional purity per domain.
-* Single source of truth.
-* No multiple writers to same path.
-* Profiles provide feature menus, machines compose profiles.
-* One logical concern per module directory.
-* Namespace follows folder structure for debugging.
-
----
-
-## 13) Validation & Anti-Patterns
-
-**Searches (must be empty):**
-
+### Rebuild & Test
 ```bash
-rg "writeScriptBin" domains/home/
-rg "systemd\.services" domains/home/
-rg "environment\.systemPackages" domains/home/
-rg "home-manager" profiles/ --exclude profiles/home.nix
-rg "/mnt/" domains/
+# Build (don't switch yet)
+sudo nixos-rebuild build --flake .#hwc-laptop
+
+# Switch to new config (after testing build)
+sudo nixos-rebuild switch --flake .#hwc-laptop
+
+# Test boot (safe - reverts on reboot)
+sudo nixos-rebuild test --flake .#hwc-laptop
 ```
 
-**Hard blockers**
+### Git Workflow
+```bash
+# ALWAYS commit before rebuild
+git add -A
+git commit -m "message"
 
-* HM activation in profiles (except profiles/home.nix domain menu)
-* NixOS modules in HM
-* HM modules in system/server
-* User creation outside `domains/system/users/`
-* Mixed-domain modules (e.g., `users.users` + `programs.zsh`)
-* Options defined outside `options.nix` files
-* Namespace not matching folder structure
-
----
-
-## 13) Server Workloads
-
-* Reverse proxy authority is central in `domains/server/containers/caddy/`.
-* When host-level Caddy aggregator is enabled, containerized proxy units MUST be disabled.
-* Per-unit container state defaults to `/opt/<category>/<unit>:/config`. Override only for ephemeral workloads, host storage policy, or multiple instances.
-
----
-
-## 14) Profiles & Import Order
-
-* Profiles MUST import `options.nix` before any lane implementations.
-* Example:
-
-```nix
-imports = [
-  ../domains/system/index.nix
-  ../domains/server/index.nix
-] ++ (gatherSys ../domains/home/apps);
+# Then rebuild
+sudo nixos-rebuild build --flake .#hwc-laptop
 ```
 
----
-
-## 15) Migration Protocol
-
-1. **Discovery** → list features.
-2. **Classification** → Part / Adapter / Tool.
-3. **Relocation** → Parts & adapters → Home, Tools → Infra.
-4. **Interface** → canonical tool names only.
-5. **Validation** → build-only → smoke → switch.
+### Home Manager
+- Home Manager is a **MODULE**, not a flake
+- Config lives in `machines/laptop/home.nix`
+- Activates via system rebuild (not separate `home-manager switch`)
 
 ---
 
-## 16) Status
+## Common Mistakes & Reminders
 
-* Phase 1 (Domain separation): ✅ complete.
-* Phase 2 (Domain/Profile architecture): 🔄 in progress.
-* Phase 3 (Namespace alignment): ⏳ pending.
-* Phase 4 (Validation & optimization): ⏳ pending.
+### Tool Usage
+- ❌ **NEVER use `grep`** → ✅ Use `rg` (ripgrep)
+- ❌ **NEVER use `sed`** → ✅ Directly edit files with Edit tool
+- ❌ **Don't use `find`** → ✅ Use Glob or Grep tools
+
+### Architecture
+- ❌ Don't add Home Manager config to system domain
+- ❌ Don't add systemd services to home domain
+- ❌ Don't define options outside `options.nix` files
+- ❌ Don't hardcode paths - use `config.hwc.paths.*`
+- ✅ Always add validation section to modules with enable toggles
+- ✅ Assert runtime dependencies (fail at build, not runtime)
+
+### Build Process
+- ❌ Don't try simple fixes just to get things to work
+- ❌ Don't skip understanding the root cause
+- ✅ Add and commit changes BEFORE rebuilding
+- ✅ Build first, then switch (don't switch on red)
+- ✅ Run linters if configured (`npm run lint`, `ruff`, etc.)
+
+### Flake Name
+- The flake is `hwc-laptop`, not just `laptop`
+- Command: `sudo nixos-rebuild build --flake .#hwc-laptop`
 
 ---
 
-## 17) Charter Change Management
+## Project-Specific Notes
 
-* Version bump on any normative change.
-* PRs require non-author review.
-* Linter (`tools/hwc-lint.sh`) updated in same PR.
-* Include "Impact & Migration" notes for breaking changes.
+### Paths
+- Hot storage: `/home/eric/03-tech/local-storage` (configured per-machine)
+- Secrets: `/run/agenix` (managed by agenix)
+- Filesystem charter: `FILESYSTEM-CHARTER.md` (home directory organization)
+
+### Networking
+- Wait-online policy is per-machine (laptop = "off", server = "all")
+- Static routes need explicit interface configuration
+
+### Secrets
+- Domain: `domains/secrets/`
+- All secrets via agenix (encrypted .age files)
+- Stable API at `/run/agenix`
 
 ---
 
-**Charter Version**: v5.0 - Domain Architecture & Profile Feature Menus
+## When In Doubt
+
+1. **Read the charter**: `charter/charter.md`
+2. **Ask the user** if you don't understand the root cause
+3. **Explain your reasoning** before making changes
+4. **Fix root problems**, not symptoms
 
 ---
 
+**Charter Version Reference**: v6.0 (see `charter/charter.md` for full details)

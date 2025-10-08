@@ -1,4 +1,4 @@
-# nixos-h../domains/home/hyprland/parts/hardware.nix
+# HWC Charter Module/domains/home/hyprland/parts/hardware.nix
 #
 # Hyprland Hardware: Monitor Configuration, Input Settings & Display Management
 # Charter v5 compliant - Universal hardware domain for physical device interaction

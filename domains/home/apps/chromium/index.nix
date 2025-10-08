@@ -1,4 +1,4 @@
-# nixos-h../domains/home/apps/chromium/index.nix
+# HWC Charter Module/domains/home/apps/chromium/index.nix
 #
 # Home UI: Chromium Browser Configuration
 # Charter v7 compliant - Web browser configuration with universal domains
@@ -18,7 +18,13 @@
 let 
   cfg = config.hwc.home.apps.chromium;
 in {
+  #==========================================================================
+  # OPTIONS 
+  #==========================================================================
   imports = [ ./options.nix ];
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.chromium ];
     # If you want chromium flags later:
@@ -29,3 +35,7 @@ in {
     # behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
     # session = import ./parts/session.nix { inherit lib pkgs config; };  
     # appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================

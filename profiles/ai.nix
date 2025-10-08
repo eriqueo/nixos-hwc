@@ -23,20 +23,19 @@
 { lib, ... }:
 
 {
-  #============================================================================
-  # IMPORTS - AI service modules (no computed paths)
-  #============================================================================
+  #==========================================================================
+  # BASE SYSTEM - Critical for machine functionality
+  #==========================================================================
   imports = [
-    ../domains/server/ai/ollama/ollama.nix
+    ../domains/server/ai/ollama
     # ../domains/server/ai/ai-bible/ai-bible.nix  # (optional future service)
   ];
 
-  #============================================================================
-  # DEFAULTS - Soft toggles for AI services (machines may override)
-  #============================================================================
-  hwc.services.ollama = {
-    enable = lib.mkDefault true;              # profile turns it on by default
-    # No 'enableGpu' here—service consumes hwc.infrastructure.hardware.gpu.accel from infra module.
+  #==========================================================================
+  # OPTIONAL FEATURES - Sensible defaults, override per machine
+  #==========================================================================
+  hwc.server.ai.ollama = {
+    enable = lib.mkDefault true;
     models = lib.mkDefault [ "llama3:8b" "codellama:13b" ];
   };
 
