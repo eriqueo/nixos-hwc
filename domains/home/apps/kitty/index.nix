@@ -1,46 +1,35 @@
 # modules/home/apps/kitty/index.nix
-# Adapter: palette -> Kitty config (HM module, no systemd)
 { config, lib, pkgs, ... }:
 
 let
-  # Palette resolver: support both {colors = {...}} and flat tokens.
   T = config.hwc.home.theme or {};
   C = T.colors or T;
 
-  # Ensure # prefix for Kitty colors
   toKitty = colorStr:
     let s = if colorStr == null then "888888" else lib.removePrefix "#" colorStr;
     in "#${s}";
 
-# Safe caret color resolution (no 'or' misuse)
-caretColor =
-  if T ? cursorColor then T.cursorColor
-  else if C ? cursorColor then C.cursorColor
-  else if C ? caret then C.caret
-  else if C ? cursor && builtins.typeOf C.cursor == "string" then C.cursor
-  else if C ? accent then C.accent
-  else "7daea3";
-  
-selectionFg = if C ? selectionFg then C.selectionFg else (if C ? bg then C.bg else "2e3440");
-selectionBg = if C ? selectionBg then C.selectionBg else (if C ? accent then C.accent else "7daea3");
-urlColor    = if C ? link then C.link else (if C ? accent2 then C.accent2 else (if C ? accent then C.accent else "7daea3"));
+  caretColor =
+    if T ? cursorColor then T.cursorColor
+    else if C ? cursorColor then C.cursorColor
+    else if C ? caret then C.caret
+    else if C ? cursor && builtins.typeOf C.cursor == "string" then C.cursor
+    else if C ? accent then C.accent
+    else "7daea3";
 
+  selectionFg = if C ? selectionFg then C.selectionFg else (if C ? bg then C.bg else "2e3440");
+  selectionBg = if C ? selectionBg then C.selectionBg else (if C ? accent then C.accent else "7daea3");
+  urlColor    = if C ? link then C.link else (if C ? accent2 then C.accent2 else (if C ? accent then C.accent else "7daea3"));
 in
 {
-  #==========================================================================
-  # OPTIONS 
-  #==========================================================================
   imports = [ ./options.nix ];
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
+
   config = lib.mkIf (config.hwc.home.apps.kitty.enable or false) {
     programs.kitty = {
       enable = true;
       package = pkgs.kitty;
 
       settings = {
-        # Fonts / behavior
         font_family = "CaskaydiaCove Nerd Font";
         font_size = 16;
         enable_audio_bell = false;
@@ -48,23 +37,24 @@ in
         background_opacity = "0.95";
         scrollback_lines = 10000;
 
-        # Cursor (caret)
         cursor_shape = "block";
         cursor_blink_interval = 0;
 
-        # Window
         remember_window_size = true;
         initial_window_width = 120;
         initial_window_height = 30;
 
-        # Tabs
         tab_bar_edge = "bottom";
         tab_bar_style = "powerline";
         tab_powerline_style = "slanted";
 
-        # Mouse
         mouse_hide_wait = 3.0;
         copy_on_select = true;
+
+        # Link ergonomics
+        detect_urls = "yes";
+        open_url_with = "default";
+        clipboard_control = "write-primary write-clipboard no-append";
 
         # Theme from palette
         foreground = toKitty (C.fg or "ECEFF4");
@@ -116,11 +106,15 @@ in
         "ctrl+shift+end" = "scroll_end";
       };
 
+      # Mouse mappings not representable via the 'settings' attrset
+      # Use extraConfig for raw kitty directives.
+      extraConfig = ''
+        mouse_map left release ungrabbed mouse_click_url_or_select
+        mouse_map ctrl+left release grabbed mouse_click_url
+
+      '';
+
       shellIntegration.enableZshIntegration = true;
     };
   };
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

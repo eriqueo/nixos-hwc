@@ -42,7 +42,6 @@
             "INBOX"               = "000_inbox";
             "[Gmail]/Sent Mail"   = "010_sent";
             "[Gmail]/Drafts"      = "011_drafts";
-            "[Gmail]/All Mail"    = "290_pers-archive";
             "[Gmail]/Starred"     = "210_pers-important";
             "[Gmail]/Spam"        = "800_spam";
             "[Gmail]/Trash"       = "900_trash";
@@ -62,7 +61,7 @@
             "INBOX"               = "000_inbox";
             "[Gmail]/Sent Mail"   = "010_sent";
             "[Gmail]/Drafts"      = "011_drafts";
-            "[Gmail]/All Mail"    = "190_hwc-archive";
+            "[Gmail]/Starred"     = "110_hwc-important";
             "[Gmail]/Spam"        = "800_spam";
             "[Gmail]/Trash"       = "900_trash";
           };

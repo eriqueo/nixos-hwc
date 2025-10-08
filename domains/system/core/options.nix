@@ -68,6 +68,13 @@
       description = "Bridge configurations";
     };
 
+    routeInterface = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Network interface to apply static routes to (e.g., eth0, eno1). If null, routes are not configured.";
+      example = "eth0";
+    };
+
     staticRoutes = lib.mkOption {
       type = lib.types.listOf lib.types.attrs;
       default = [];

@@ -26,22 +26,21 @@ in {
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
   config = {
-    # VLAN configuration
-    networking.vlans = lib.mapAttrs (name: vlan: {
-      id = vlan.id;
-      interface = vlan.interface;
-    }) cfg.vlans;
-
-    # Bridge configuration
-    networking.bridges = cfg.bridges;
-
-    # DNS configuration
     networking = {
+      # VLAN configuration
+      vlans = lib.mapAttrs (name: vlan: {
+        id = vlan.id;
+        interface = vlan.interface;
+      }) cfg.vlans;
+
+      # Bridge configuration
+      bridges = cfg.bridges;
+
+      # DNS configuration
       nameservers = cfg.dnsServers;
       search = cfg.search;
-
-      # Static routes
-      interfaces.eth0.ipv4.routes = cfg.staticRoutes;
+    } // lib.optionalAttrs (cfg.routeInterface != null && cfg.staticRoutes != []) {
+      interfaces.${cfg.routeInterface}.ipv4.routes = cfg.staticRoutes;
     };
 
     # Network optimization
