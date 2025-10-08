@@ -1,4 +1,3 @@
-
 # HWC Architecture Charter
 
 **Owner**: Eric
@@ -92,7 +91,8 @@ machines/laptop/config.nix imports needed profiles
 | Domain             | Purpose                          | Location                  | Must Contain                                                       | Must Not Contain                             |
 | ------------------ | -------------------------------- | ------------------------- | ------------------------------------------------------------------ | -------------------------------------------- |
 | **Infrastructure** | Hardware mgmt + cross-domain orchestration | `domains/infrastructure/` | GPU, power, udev, virtualization, filesystem structure             | HM configs                                   |
-| **System**         | Core OS + accounts + OS services | `domains/system/`         | users, sudo, networking, security, secrets, paths, system packages | HM configs                                   |
+| **System**         | Core OS + accounts + OS services | `domains/system/`         | users, sudo, networking, security, paths, system packages          | HM configs, secret declarations              |
+| **Secrets**        | Encrypted secrets via agenix     | `domains/secrets/`        | age declarations, secret API, emergency access, hardening          | Secret values (only encrypted .age files)    |
 | **Server**         | Host-provided workloads          | `domains/server/`         | containers, reverse proxy, databases, media stacks, monitoring     | HM configs                                   |
 | **Home**           | User environment (HM)            | `domains/home/`           | `programs.*`, `home.*`, DE/WM configs, shells                      | systemd.services, environment.systemPackages |
 | **Profiles**       | Domain feature menus             | `profiles/`               | domain imports, base/optional toggles                              | HM activation (except hm.nix), implementation |
@@ -102,6 +102,7 @@ machines/laptop/config.nix imports needed profiles
 
 * User accounts → `domains/system/users/eric.nix`
 * User env → `domains/home/` imported by `machines/<host>/home.nix`
+* Secrets → `domains/secrets/` with stable API facade at `/run/agenix`
 * Cross-domain orchestrators → `domains/infrastructure/` (filesystem structure, etc.)
 * Namespace follows folder structure: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
 
@@ -302,7 +303,15 @@ imports = [
 
 ---
 
-**Charter Version**: v6.0 - Configuration Validity & Dependency Assertions
+## 19) Related Charters
+
+* **Filesystem Charter** (`FILESYSTEM-CHARTER.md`): Home directory organization (`~/`) with domain-based structure
+  - 3-digit prefix system (100_hwc, 200_personal, 300_tech, etc.)
+  - XDG integration configured in `domains/system/core/paths.nix`
+  - GTD-style inbox processing workflow
 
 ---
 
+**Charter Version**: v6.0 - Configuration Validity & Dependency Assertions
+
+---
