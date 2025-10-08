@@ -114,8 +114,8 @@ let
       Account ${a.name}
 
       MaildirStore ${a.name}-local
-      Path ${maildirRoot}/
-      Inbox ${maildirRoot}/000_inbox
+      Path ${maildirRoot}/${a.maildirName}/
+      Inbox ${maildirRoot}/${a.maildirName}/inbox
       SubFolders Verbatim
 
       ${channelsStr}
