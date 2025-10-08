@@ -16,14 +16,12 @@
         address = "eriqueo@proton.me";
         login = "";
         password = { mode = "pass"; pass = "email/proton/bridge"; };
-        maildirName = "210_proton";
+        maildirName = "200_personal";
         mailboxMapping = {
-          "INBOX"   = "000_inbox";
-          "Sent"    = "010_sent";
-          "Drafts"  = "011_drafts";
-          "Archive" = "290_pers-archive";
-          "Spam"    = "800_spam";
-          "Trash"   = "900_trash";
+          "personal_inbox" = "inbox";    # Server-side filtered folder
+          "Sent"           = "sent";
+          "Drafts"         = "drafts";
+          "Archive"        = "archive";
         };
         sync.wildcards = [ "Folders/*" "Labels/*" ];
         send.msmtpAccount = "proton";
@@ -37,14 +35,12 @@
           address = "eriqueokeefe@gmail.com";
           login = "eriqueokeefe@gmail.com";
           password = { mode = "agenix"; agenix = "/run/agenix/gmail-personal-password"; };
-          maildirName = "200_personal";
+          maildirName = "210_gmail-personal";
           mailboxMapping = {
-            "INBOX"               = "000_inbox";
-            "[Gmail]/Sent Mail"   = "010_sent";
-            "[Gmail]/Drafts"      = "011_drafts";
-            "[Gmail]/Starred"     = "210_pers-important";
-            "[Gmail]/Spam"        = "800_spam";
-            "[Gmail]/Trash"       = "900_trash";
+            "INBOX"               = "inbox";
+            "[Gmail]/Sent Mail"   = "sent";
+            "[Gmail]/Drafts"      = "drafts";
+            "[Gmail]/Starred"     = "starred";
           };
           send.msmtpAccount = "gmail-personal";
         };
@@ -58,12 +54,10 @@
           password = { mode = "agenix"; agenix = "/run/agenix/gmail-business-password"; };
           maildirName = "110_gmail-business";
           mailboxMapping = {
-            "INBOX"               = "000_inbox";
-            "[Gmail]/Sent Mail"   = "010_sent";
-            "[Gmail]/Drafts"      = "011_drafts";
-            "[Gmail]/Starred"     = "110_hwc-important";
-            "[Gmail]/Spam"        = "800_spam";
-            "[Gmail]/Trash"       = "900_trash";
+            "INBOX"               = "inbox";
+            "[Gmail]/Sent Mail"   = "sent";
+            "[Gmail]/Drafts"      = "drafts";
+            "[Gmail]/Starred"     = "starred";
           };
           send.msmtpAccount = "gmail-business";
         };
@@ -77,12 +71,10 @@
           password = { mode = "pass"; pass = "email/proton/bridge"; };
           maildirName = "100_hwc";
           mailboxMapping = {
-            "INBOX"   = "000_inbox";
-            "Sent"    = "010_sent";
-            "Drafts"  = "011_drafts";
-            "Archive" = "190_hwc-archive";
-            "Spam"    = "800_spam";
-            "Trash"   = "900_trash";
+            "hwc_inbox" = "inbox";    # Server-side filtered folder (note: underscore, not hyphen)
+            "Sent"      = "sent";
+            "Drafts"    = "drafts";
+            "Archive"   = "archive";
           };
           sync.wildcards = [ "Folders/*" ];
           send.msmtpAccount = "iheartwoodcraft";
