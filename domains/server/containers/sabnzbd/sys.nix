@@ -14,7 +14,13 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
       ports = [];
-      volumes = [ "/opt/downloads/sabnzbd:/config" ];
+      volumes = [ 
+        "/opt/downloads/sabnzbd:/config"
+        "/mnt/hot/downloads:/downloads"
+        "/mnt/hot/cache:/incomplete-downloads"
+        "/opt/downloads/scripts:/config/scripts:ro"
+        "/mnt/hot/events:/mnt/hot/events"
+      ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })
