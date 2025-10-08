@@ -6,17 +6,17 @@ let
   themePart = import ./theme.nix { inherit lib config; };
   maildirBase   = "maildir://${config.home.homeDirectory}/Maildir";
 
-  sentFolder    = a: let r = common.rolesFor a; in lib.head (r.sent);
-  draftsFolder  = a: let r = common.rolesFor a; in lib.head (r.drafts);
-  accountRoot   = a: common.md a;
-
+  # Unified inbox: All accounts share the same maildir folders
+  # source = root Maildir (shows all folders including 000_inbox, 010_sent, etc.)
+  # Each account is just a sending identity
   accountBlock = a: ''
     [${a.name}]
     from                 = ${a.realName or ""} <${a.address}>
-    source               = ${maildirBase}/${accountRoot a}
+    source               = ${maildirBase}
     outgoing             = exec:msmtp -a ${a.send.msmtpAccount}
-    postpone             = ${maildirBase}/${draftsFolder a}
-    copy-to              = ${maildirBase}/${sentFolder a}
+    postpone             = ${maildirBase}/011_drafts
+    copy-to              = ${maildirBase}/010_sent
+    ${if a.primary or false then "default = INBOX" else ""}
   '';
 
   accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals);
@@ -33,6 +33,9 @@ let
   in mainSection + "\n\n" + viewerSection;
 
   aercConf = ''
+    [general]
+    enable-osc8 = true
+    
     [ui]
     index-columns=date<20,name<17,flags>4,subject<*
     threading-enabled=true
@@ -45,14 +48,14 @@ let
     column-flags = {{.Flags | join ""}}
     column-subject = {{.ThreadPrefix}}{{.Subject}}
     mouse-enabled = true
-    enable-osc8 = true
+    
     
 
     [compose]
     editor=${pkgs.kitty}/bin/kitty -e ${pkgs.neovim}/bin/nvim
 
     [viewer]
-    pager = env LESSHISTFILE=/dev/null ${pkgs.less}/bin/less -R --mouse -+S -X
+    pager = ${pkgs.ov}/bin/ov -F --wrap --hscroll-width 10%
     alternatives = text/plain,text/html
 
     [filters]
@@ -125,6 +128,6 @@ in
   packages = with pkgs; [
     aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler_utils
     jq libxml2 mpv unzip gnutar file xdg-utils w3m pandoc glow p7zip unrar
-    util-linux ncurses
+    util-linux ncurses ov xclip
   ];
 }

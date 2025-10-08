@@ -37,14 +37,14 @@ let
 
   accountTags = ''
     # Tag by source account
-    ${nm} tag +hwc-email -- 'path:100_hwc/** OR from:*@iheartwoodcraft.com'
-    ${nm} tag +gmail-work -- 'path:110_gmail-business/** OR from:*heartwoodcraftmt@gmail.com'
-    ${nm} tag +gmail-personal -- 'path:200_personal/** OR from:*eriqueokeefe@gmail.com'
-    ${nm} tag +proton-personal -- 'path:210_proton/** OR from:*@proton.me'
+    ${nm} tag +hwc_email -- 'path:100_hwc/** OR from:*@iheartwoodcraft.com'
+    ${nm} tag +gmail_work -- 'path:110_gmail-business/** OR from:*heartwoodcraftmt@gmail.com'
+    ${nm} tag +gmail_personal -- 'path:200_personal/** OR from:*eriqueokeefe@gmail.com'
+    ${nm} tag +proton_personal -- 'path:210_proton/** OR from:*@proton.me'
 
     # Tag by domain (derived from source)
-    ${nm} tag +work -- 'tag:hwc-email OR tag:gmail-work'
-    ${nm} tag +personal -- 'tag:gmail-personal OR tag:proton-personal'
+    ${nm} tag +work -- 'tag:hwc_email OR tag:gmail_work'
+    ${nm} tag +personal -- 'tag:gmail_personal OR tag:proton_personal'
 
     # Tag unified inbox
     ${nm} tag +inbox -- 'folder:000_inbox'

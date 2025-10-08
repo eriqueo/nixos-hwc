@@ -44,10 +44,13 @@ in
       J = :mark -t<Enter>:next<Enter>
       K = :mark -t<Enter>:prev<Enter>
       V = :mark -v<Enter>
+      r = :read<Enter>
+      u = :unread<Enter>
 
-      d = :archive flat<Enter>
-      d1 = :mv 190_hwc-archive<Enter>
-      d2 = :mv 290_pers-archive<Enter>
+      aa = :archive flat<Enter>
+      a1 = :mv 190_hwc-archive<Enter>
+      a2 = :mv 290_pers-archive<Enter>
+      S = :mv 800_spam<Enter>
       D = :delete<Enter>
       c = :compose<Enter>
       C = :reply -aq<Enter>
@@ -56,7 +59,8 @@ in
       <Space>mp1 = :mv 120_hwc-dev<Enter>
       <Space>mp2 = :mv 220_pers-dev<Enter>
       <Space>mi = :mv 210_pers-important<Enter>
-
+      <Space>ms = :mv 800_spam<Enter>
+      
       # --- Uppercase Verb for Flexible Path ---
       X = :mv<space>
       Y = :cp<space>
@@ -105,9 +109,9 @@ in
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
-      d = :archive flat<Enter>:close<Enter>
-      d1 = :mv 190_hwc-archive<Enter>:close<Enter>
-      d2 = :mv 290_pers-archive<Enter>:close<Enter>
+      aa = :archive flat<Enter>:close<Enter>
+      a1 = :mv 190_hwc-archive<Enter>:close<Enter>
+      a2 = :mv 290_pers-archive<Enter>:close<Enter>
       O = :open<Enter>
       S = :save<space>
       U = :pipe -mb urlscan -r<Enter>
@@ -134,5 +138,12 @@ in
 
       ${accountBindings}
     '';
+
+     ".config/ov/config.yaml".text = ''
+        ClipboardMethod: "OSC52"
+        WrapMode: true
+        HScrollWidth: "10%"
+      '';
+    
   };
 }

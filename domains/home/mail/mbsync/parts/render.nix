@@ -29,33 +29,62 @@ let
     let esc = builtins.replaceStrings [ "\"" ] [ "\\\"" ] s;
     in "\"" + esc + "\"";
 
-  # Process mailboxMapping attribute - generates "Remote" "Local" pattern pairs
-  patternsFor = a:
+  # Generate one Channel per mailbox mapping
+  channelsFor = a:
     let
-      # Use the mailboxMapping attribute from account config
       mapping = a.mailboxMapping or {};
-
-      # Convert attrset to list of quoted "Remote" "Local" pairs
-      mappedPatterns = lib.mapAttrsToList
-        (remoteName: localName: "${confQuote remoteName} ${confQuote localName}")
-        mapping;
-
-      # Allow for additional wildcard patterns if needed
       wildcards = a.sync.wildcards or [];
-      wildcardPatterns = map confQuote wildcards;
+      createPolicy = if common.isGmail a then "Create Near" else "Create Both";
 
-      # Combine mapped patterns with wildcards
-      allPatterns = mappedPatterns ++ wildcardPatterns;
+      # Create one channel per mailbox mapping
+      makeChannel = remoteName: localName:
+        let
+          # Clean channel name: remove special chars, use only alphanumeric and hyphens
+          cleanName = lib.replaceStrings ["[" "]" "/" " "] ["" "" "-" "-"] remoteName;
+          channelName = "${a.name}-${cleanName}";
+          # Quote folder names if they contain spaces or special chars
+          quotedRemote = confQuote remoteName;
+          quotedLocal = confQuote localName;
+        in ''
+          Channel ${channelName}
+          Far :${a.name}-remote:${quotedRemote}
+          Near :${a.name}-local:${quotedLocal}
+          ${createPolicy}
+          Expunge Both
+          SyncState *
+        '';
 
-      # For Gmail, expand [Gmail] <-> [Google Mail] aliases in remote names
-      processedPatterns =
-        if common.isGmail a
-        then map escapeSquareBrackets allPatterns
-        else allPatterns;
+      mappedChannels = lib.mapAttrsToList makeChannel mapping;
+
+      # Wildcard channels (e.g., Folders/*) - use pattern-based channel
+      wildcardChannel = if wildcards != [] then
+        let
+          wildcardPatterns = lib.concatStringsSep " " (map confQuote wildcards);
+        in ''
+          Channel ${a.name}-wildcards
+          Far :${a.name}-remote:
+          Near :${a.name}-local:
+          Patterns ${wildcardPatterns}
+          ${createPolicy}
+          Expunge Both
+          SyncState *
+        ''
+      else "";
+
+      allChannels = mappedChannels ++ (if wildcardChannel != "" then [wildcardChannel] else []);
     in
-      if allPatterns == []
-      then [ (confQuote "INBOX") ]  # Fallback to INBOX if no mapping defined
-      else lib.unique processedPatterns;
+      if allChannels == [] then
+        # Fallback to simple INBOX channel if no mapping
+        [''
+          Channel ${a.name}
+          Far :${a.name}-remote:
+          Near :${a.name}-local:
+          Patterns "INBOX"
+          ${createPolicy}
+          Expunge Both
+          SyncState *
+        '']
+      else allChannels;
 
   getOr = a: n: def:
     if common.hasField a n then
@@ -71,8 +100,8 @@ let
       imapP = getOr a "imapPort" (common.imapPort a);
       tlsT  = getOr a "imapTls"  (common.tlsType a);
       extra = getOr a "extraMbsync" "";
-      createPolicy = if common.isGmail a then "Create Near" else "Create Both";
-      patStr = lib.concatStringsSep " " (patternsFor a);
+      channels = channelsFor a;
+      channelsStr = lib.concatStringsSep "\n" channels;
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}
@@ -85,17 +114,11 @@ let
       Account ${a.name}
 
       MaildirStore ${a.name}-local
-      Path ${maildirRoot}/${a.maildirName}/
-      Inbox ${maildirRoot}/${a.maildirName}/INBOX
+      Path ${maildirRoot}/
+      Inbox ${maildirRoot}/000_inbox
       SubFolders Verbatim
 
-      Channel ${a.name}
-      Far :${a.name}-remote:
-      Near :${a.name}-local:
-      Patterns ${patStr}
-      ${createPolicy}
-      Expunge Both
-      SyncState *
+      ${channelsStr}
       ${extra}
     '';
 

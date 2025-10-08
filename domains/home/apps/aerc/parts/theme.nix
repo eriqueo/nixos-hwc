@@ -46,19 +46,18 @@ in {
     msglist_marked = token (hex c.bg1) (hex c.marked) true;
     msglist_result = token (hex c.accent) "default" true;
 
-    # ===== SOURCE ACCOUNT TAGS (Custom - Tag-based colors) =====
-    # Work domain - Blue spectrum
-    "*.hwc-email" = token "#5DA0DE" "default" false;       # Light blue for HWC
-    "*.gmail-work" = token "#2563EB" "default" false;      # Dark blue for Gmail work
+   # ===== SOURCE ACCOUNT COLORS (Header-based dynamic styling) =====
+     # Colors are now sourced from your global Gruvbox theme palette for consistency.
 
-    # Personal domain - Purple spectrum
-    "*.gmail-personal" = token "#C084FC" "default" false;  # Light purple for Gmail personal
-    "*.proton-personal" = token "#9333EA" "default" false; # Dark purple for Proton
+     # --- Work Domain (Cool Colors) ---
+     "[messages].From:iheartwoodcraft.com"        = token (hex c.selection)   "default" false; #// Primary Work: Blue
+     "[messages].From:heartwoodcraftmt@gmail.com" = token (hex c.accent)   "default" false; #// Secondary Work: Aqua
 
-    # Domain-level tags
-    "*.work" = token "#3B82F6" "default" false;            # Blue for work domain
-    "*.personal" = token "#A855F7" "default" false;        # Purple for personal domain
+     # --- Personal Domain (Warm Colors) ---
+     "[messages].From:eriqueokeefe@gmail.com"     = token (hex c.accentAlt) "default" false; #// Primary Personal: Purple
+     "[messages].From:proton.me"                  = token (hex c.marked)    "default" false; #// Secondary Personal: Red/Magenta
 
+    
     # Official: Additional message states
     msglist_answered = token (hex c.success) "default" false;
     msglist_forwarded = token (hex c.info) "default" false;
