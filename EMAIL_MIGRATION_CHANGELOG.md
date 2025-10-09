@@ -97,15 +97,28 @@
   - Service had dependencies on gnome-keyring-daemon.service (violated HWC architecture)
 
 **Resolution Attempted:**
-- ✅ Removed gnome-keyring dependencies from bridge service (domains/home/mail/bridge/parts/service.nix)
-- ✅ Bridge now configured to use `pass` password store (already configured in runtime.nix)
-- ✅ Rebuilt NixOS and restarted bridge service
-- ✅ Bridge starts successfully without keychain (vault unencrypted, acceptable for headless)
-- ⏸️ **WAITING**: User needs to perform interactive `protonmail-bridge --cli login` to add accounts
+- ❌ Removed gnome-keyring dependencies from bridge service (WRONG - reverted)
+- ❌ Tried overriding bridge package buildInputs (failed - needs libsecret to compile)
+- ❌ Rolled back flake.lock to nixpkgs e9f00bd (didn't fix it - not nixpkgs issue)
+- ✅ **ROOT CAUSE FOUND**: gnome-keyring-daemon was running but not registered on D-Bus
+  - Daemon at PID 2554 wasn't responding to D-Bus secret service requests
+  - Bridge hung waiting for D-Bus reply that never came
+- ✅ **FIX**: Killed stale gnome-keyring-daemon with `pkill -9 -f gnome-keyring`
+  - D-Bus restarted fresh gnome-keyring automatically
+  - D-Bus secret service now responds correctly
+  - Bridge CLI starts successfully (shows ASCII banner)
+- ✅ Bridge service now running (PID 355441)
+- ⏸️ **WAITING**: User needs to perform interactive `protonmail-bridge --cli` to add accounts
+  - Vault was cleared during troubleshooting, accounts need to be re-added
 
 **Next Steps:**
-- Phase 3.1: User must log in to Proton Bridge interactively
-- Then resume: Run reconciling sync
+- Phase 3.1: User must log in to Proton Bridge interactively:
+  1. Stop bridge service: `systemctl --user stop protonmail-bridge`
+  2. Run: `protonmail-bridge --cli`
+  3. At prompt, type: `login`
+  4. Follow prompts to add iheartwoodcraft and proton accounts
+  5. Exit CLI and restart service: `systemctl --user start protonmail-bridge`
+- Phase 3.2: Then resume: Run reconciling sync with mbsync
 
 ---
 
