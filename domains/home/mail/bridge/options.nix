@@ -14,5 +14,19 @@ with lib; {
     };
     ensureConfigDir = mkOption { type = types.bool; default = true; };
     restartSec = mkOption { type = types.int; default = 5; };
+
+    # Keychain configuration for reliable operation
+    keychain = {
+      helper = mkOption {
+        type = types.str;
+        default = "pass";
+        description = "Keychain helper to use. 'pass' is more reliable than gnome-keyring for headless operation.";
+      };
+      disableTest = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Disable keychain testing to prevent hangs during startup.";
+      };
+    };
   };
 }
