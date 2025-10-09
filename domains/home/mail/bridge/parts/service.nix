@@ -3,8 +3,8 @@
   systemd.user.services.protonmail-bridge = {
     Unit = {
       Description = "ProtonMail Bridge (headless)";
-      After = [ "default.target" "network-online.target" ];
-      Wants = [ "network-online.target" ];
+      After = [ "default.target" "network-online.target" "graphical-session-pre.target" ];
+      Wants = [ "network-online.target" "graphical-session-pre.target" ];
     };
     Service = {
       Type = "simple";
