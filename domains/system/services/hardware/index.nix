@@ -73,7 +73,8 @@ in
     };
 
     # Optional: keyring commonly used by desktop apps
-    services.gnome.gnome-keyring.enable = lib.mkIf cfg.audio.enable true;
+    # DISABLED: Using pass for credential management instead of gnome-keyring
+    # services.gnome.gnome-keyring.enable = lib.mkIf cfg.audio.enable true;
 
     #==========================================================================
     # UNIVERSAL KEYBOARD MAPPING (keyd)

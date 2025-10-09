@@ -84,7 +84,9 @@
       "Read(//home/eric/Maildir.backup.20250930_151641/gmail-business/**)",
       "Read(//home/eric/Maildir.backup.20250930_151641/iheartwoodcraft/INBOX/**)",
       "Bash(echo:*)",
-      "Bash(rsync:*)"
+      "Bash(rsync:*)",
+      "Read(//home/eric/.local/share/keyrings/**)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": [],
