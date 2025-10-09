@@ -4,11 +4,7 @@ with lib; {
     enable = mkEnableOption "Proton Mail Bridge";
     package = mkOption {
       type = types.package;
-      default = pkgs.protonmail-bridge.overrideAttrs (old: {
-        # Pin to version that was working 3 weeks ago
-        # This removes libsecret build dependency which causes keychain hangs
-        buildInputs = [];
-      });
+      default = pkgs.protonmail-bridge;
     };
     logLevel = mkOption { type = types.str; default = "warn"; };
     extraArgs = mkOption { type = types.listOf types.str; default = []; };
