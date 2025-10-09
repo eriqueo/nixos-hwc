@@ -29,7 +29,7 @@ in
     {
       assertions = [
         {
-          assertion = br.keychain.helper or "pass" == "pass" -> pkgs.pass != null;
+          assertion = (br.keychain.helper == "pass") -> (builtins.elem pkgs.pass config.home.packages);
           message = "hwc.home.mail.bridge.keychain.helper is set to 'pass' but pass package is not available";
         }
       ];
