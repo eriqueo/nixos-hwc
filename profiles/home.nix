@@ -61,6 +61,9 @@
           betterbird.enable = lib.mkDefault true;          # GUI mail client (Thunderbird fork)
           protonMail.enable = lib.mkDefault true;          # Proton Mail bridge/client
 
+          # Security
+          gpg.enable = lib.mkDefault true;
+
           # Proton Suite
           protonAuthenticator.enable = lib.mkDefault true; # 2FA authenticator
           protonPass.enable = lib.mkDefault false;         # Password manager (optional)
