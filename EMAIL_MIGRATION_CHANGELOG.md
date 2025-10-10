@@ -9,10 +9,15 @@
 ## Session Log
 
 ### Session 1: 2025-10-08 (Initial Planning & Phase 1 Start)
-**Time**: [Start Time]
-**Status**: Executing Phase 1
+**Time**: Morning-Evening
+**Status**: Completed Phase 1 & 2
 
-**Completed:**
+### Session 2: 2025-10-09 (CRITICAL: Proton Bridge Authentication Fixed)
+**Time**: 16:00-19:00 MDT
+**Status**: ✅ BRIDGE WORKING - Ready for Phase 3
+**Next Action**: Wait for rate limit to clear, then continue Phase 3
+
+**Session 1 Completed:**
 - ✅ Analyzed current email system issues
 - ✅ Compared three different architectural approaches
 - ✅ Decided on Dual Unified Inbox architecture (work/personal separation)
@@ -21,13 +26,32 @@
 - ✅ **Phase 1.1**: Configured Proton server-side filters
   - Created folders: `hwc_inbox` and `personal_inbox` (note: underscores, not hyphens)
   - Created filters to route mail to respective folders
-
 - ✅ **Phase 1.2**: Stopped mbsync timer
   - Timer stopped successfully (inactive/dead)
   - Killed any running mbsync processes
 - ✅ **Phase 1.3**: Created safety backup
   - Backup location: `~/Maildir.backup-20251008-163440`
   - Original size: 16GB
+- ✅ **Phase 2**: Updated mbsync configuration
+  - Updated local folder paths for new structure
+
+**Session 2 CRITICAL FIXES:**
+- ✅ **BRIDGE AUTHENTICATION FIXED**: Resolved major blocking issue
+  - **Root Cause**: Bridge service was using empty `insecure/vault.enc` instead of encrypted `vault.enc` with account data
+  - **Solution**: Deleted empty insecure vault, forced service to use encrypted vault
+  - **Key Discovery**: Bridge vault key exists in pass at `docker-credential-helpers/.../bridge-vault-key`
+  - **Result**: Bridge ports 1143/1025 now open and functioning
+- ✅ **Made Bridge Configuration Declarative** (HWC Charter Compliant)
+  - Bridge now managed via NixOS home-manager
+  - Keychain configuration: `{"DisableTest":true,"Helper":"pass"}`
+  - No more manual bridge management
+- ✅ **Updated Bridge Password** in both pass and agenix
+  - Current bridge password: `8YmD16Ugka6OCWrU8Z92Uw`
+  - Updated `pass show email/proton/bridge`
+  - Updated `domains/secrets/parts/home/proton-bridge-password.age`
+- ✅ **Documented Age Key Management** in CLAUDE.md and charter.md
+  - Public key: `age1dyegtj68gpyhwvus4wlt8azyas2sslwwt8fwyqwz3vu2jffl8chsk2afne`
+  - Process documented for future secret updates
   - Backup size: 2.8MB (hardlinks - space efficient)
   - Verified structure intact
 
