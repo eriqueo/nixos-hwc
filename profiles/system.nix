@@ -1,6 +1,6 @@
 # NEW, CLEAN profiles/system.nix
 
-{ lib, ... }:
+{ lib, pkgs, ... }:
 {
   #==========================================================================
   # IMPORTS
@@ -17,6 +17,19 @@
     gc.automatic = true;
   };
   time.timeZone = "America/Denver";
+
+  #==========================================================================
+  # SYSTEM PACKAGES
+  #==========================================================================
+  environment.systemPackages = [
+    (pkgs.writeShellScriptBin "pb-cli" ''
+      exec sudo -u protonbridge \
+        XDG_CONFIG_HOME=/var/lib/proton-bridge/config \
+        XDG_DATA_HOME=/var/lib/proton-bridge/data \
+        XDG_CACHE_HOME=/var/lib/proton-bridge/cache \
+        ${pkgs.protonmail-bridge}/bin/protonmail-bridge --cli
+    '')
+  ];
 
   #==========================================================================
   # HWC SYSTEM SERVICES CONFIGURATION
