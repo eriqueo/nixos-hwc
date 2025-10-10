@@ -67,7 +67,7 @@ in
         ExecStartPost = pkgs.writeShellScript "proton-bridge-export-cert" ''
           set -eu
           # wait briefly until IMAP port is ready
-          for i in $(seq 1 15); do
+          for i in $(${pkgs.util-linux}/bin/seq 1 15); do
             if ${pkgs.openssl}/bin/openssl s_client -starttls imap -connect 127.0.0.1:1143 -quiet </dev/null >/dev/null 2>&1; then
               break
             fi
