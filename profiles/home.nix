@@ -39,7 +39,8 @@
         # Mail & Communication
         mail = {
           enable = lib.mkDefault true;
-          bridge.keychain.helper = ""; # Use insecure vault (no GPG/pass needed for systemd)
+          # Bridge now managed by system service - disabled in HM
+          bridge.enable = false;
         };
 
         # Applications
