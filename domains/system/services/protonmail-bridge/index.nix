@@ -44,6 +44,7 @@ in
           "XDG_CACHE_HOME=/var/lib/proton-bridge/cache"
           "PATH=/run/current-system/sw/bin"
         ];
+        PermissionsStartOnly = true;
 
         ExecStartPre = pkgs.writeShellScript "proton-bridge-init" ''
           ${pkgs.procps}/bin/pgrep -u eric -f protonmail-bridge >/dev/null 2>&1 && {
@@ -62,6 +63,23 @@ in
         '';
 
         ExecStart = "${pkgs.coreutils}/bin/env -i HOME=/var/lib/proton-bridge XDG_CONFIG_HOME=/var/lib/proton-bridge/config XDG_DATA_HOME=/var/lib/proton-bridge/data XDG_CACHE_HOME=/var/lib/proton-bridge/cache PATH=/run/current-system/sw/bin ${bridgePkg}/bin/protonmail-bridge --noninteractive --log-level warn";
+
+        ExecStartPost = pkgs.writeShellScript "proton-bridge-export-cert" ''
+          set -eu
+          # wait briefly until IMAP port is ready
+          for i in $(seq 1 15); do
+            if ${pkgs.openssl}/bin/openssl s_client -starttls imap -connect 127.0.0.1:1143 -quiet </dev/null >/dev/null 2>&1; then
+              break
+            fi
+            ${pkgs.coreutils}/bin/sleep 1
+          done
+          # extract server certificate and store as local trust just for mbsync
+          ${pkgs.coreutils}/bin/mkdir -p /etc/ssl/local
+          ${pkgs.openssl}/bin/openssl s_client -starttls imap -connect 127.0.0.1:1143 -showcerts </dev/null \
+            | ${pkgs.gnused}/bin/sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' \
+            | ${pkgs.coreutils}/bin/tee /etc/ssl/local/proton-bridge.pem >/dev/null
+          ${pkgs.coreutils}/bin/chmod 0644 /etc/ssl/local/proton-bridge.pem
+        '';
 
         NoNewPrivileges = true;
         ProtectSystem = "strict";

@@ -102,6 +102,7 @@ let
       extra = getOr a "extraMbsync" "";
       channels = channelsFor a;
       channelsStr = lib.concatStringsSep "\n" channels;
+      certFile = if a.type == "proton-bridge" then "CertificateFile /etc/ssl/local/proton-bridge.pem" else "";
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}
@@ -109,6 +110,7 @@ let
       User ${common.loginOf a}
       PassCmd "${cmd}"
       TLSType ${tlsT}
+      ${certFile}
 
       IMAPStore ${a.name}-remote
       Account ${a.name}
