@@ -5,7 +5,6 @@ let
     "PATH=/run/current-system/sw/bin:${pkgs.pass}/bin"
     "PASSWORD_STORE_DIR=%h/.password-store"
     "GNUPGHOME=%h/.gnupg"
-    "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus"
   ];
   env = baseEnv ++ lib.mapAttrsToList (k: v: "${k}=${v}") (br.environment or {});
 in
