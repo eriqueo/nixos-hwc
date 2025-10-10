@@ -37,7 +37,10 @@
         };
 
         # Mail & Communication
-        mail.enable = lib.mkDefault true;
+        mail = {
+          enable = lib.mkDefault true;
+          bridge.keychain.helper = ""; # Use insecure vault (no GPG/pass needed for systemd)
+        };
 
         # Applications
         apps = {
