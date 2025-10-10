@@ -2,12 +2,12 @@
 let
   args = lib.concatStringsSep " " (["--noninteractive" "--log-level" (br.logLevel or "warn")] ++ (br.extraArgs or []));
 
-  # For insecure vault mode, exclude pass from PATH to prevent auto-detection
+  # For insecure vault mode, exclude ALL sources of pass from PATH to prevent auto-detection
   # Bridge auto-detects pass in PATH and sets Helper:"pass-app", overriding our Helper:""
   isInsecureVault = (br.keychain.helper or "pass") == "";
   basePath = if isInsecureVault
-             then "/run/current-system/sw/bin"
-             else "/run/current-system/sw/bin:${pkgs.pass}/bin";
+             then "/run/current-system/sw/bin"  # Minimal PATH without user profile
+             else "/home/eric/.nix-profile/bin:/run/current-system/sw/bin:${pkgs.pass}/bin";
 
   baseEnv = [
     "PATH=${basePath}"
