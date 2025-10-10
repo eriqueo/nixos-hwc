@@ -47,10 +47,10 @@ in
         PermissionsStartOnly = true;
 
         ExecStartPre = pkgs.writeShellScript "proton-bridge-init" ''
-          ${pkgs.procps}/bin/pgrep -u eric -f protonmail-bridge >/dev/null 2>&1 && {
+          if ${pkgs.procps}/bin/pgrep -u eric -f "protonmail-bridge" | ${pkgs.findutils}/bin/xargs -r ${pkgs.procps}/bin/ps -p 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "/bin/protonmail-bridge"; then
             echo "user-scoped protonmail-bridge detected; stop it before starting system unit" >&2
             exit 1
-          }
+          fi
 
           ${pkgs.coreutils}/bin/install -d -m 700 -o protonbridge -g protonbridge /var/lib/proton-bridge/config/protonmail/bridge-v3/insecure
           ${pkgs.coreutils}/bin/install -d -m 700 -o protonbridge -g protonbridge /var/lib/proton-bridge/data
