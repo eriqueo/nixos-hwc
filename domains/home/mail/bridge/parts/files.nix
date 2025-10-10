@@ -16,14 +16,5 @@ let
       ".config/protonmail/bridge/.keep".text = "";
     } else {};
 
-  # Declarative keychain configuration for reliable operation
-  keychain = {
-    ".config/protonmail/bridge-v3/keychain.json" = {
-      text = builtins.toJSON {
-        Helper = br.keychain.helper or "pass";
-        DisableTest = br.keychain.disableTest or true;
-      };
-    };
-  };
 in
-{ home.file = setup // keep // keychain; }
+{ home.file = setup // keep; }
