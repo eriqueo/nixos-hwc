@@ -52,6 +52,30 @@
 - ✅ **Documented Age Key Management** in CLAUDE.md and charter.md
   - Public key: `age1dyegtj68gpyhwvus4wlt8azyas2sslwwt8fwyqwz3vu2jffl8chsk2afne`
   - Process documented for future secret updates
+
+**CRITICAL INSIGHTS & REMAINING ISSUES:**
+- ❌ **BRIDGE NOT TRULY DECLARATIVE**: Service loses state on every restart
+- ❌ **Root Cause**: Bridge systemd service cannot access pass/GPG keychain reliably
+- ❌ **Current State**: Account data trapped in encrypted vault (`vault.enc` 5.3k) that service can't decrypt
+- ❌ **Service Behavior**: Falls back to empty unencrypted vault on each restart
+- ❌ **Authentication**: Gets "Could not load/create vault key" → creates new empty vault → "no such user"
+
+**Technical Details:**
+- ✅ **Keychain Config**: `~/.config/protonmail/bridge-v3/keychain.json` = `{"DisableTest":true,"Helper":"pass"}`
+- ✅ **Pass Entries**: Vault key exists at `docker-credential-helpers/.../bridge-vault-key` = `RogHJ24CBG5og3hlOwHytn/D4KJ9IDD7ZbZXP/vpsb4=`
+- ✅ **CLI Works**: Account added successfully via CLI with pass backend
+- ❌ **Service Fails**: Systemd service can't access GPG agent for pass decryption
+
+**Temporary Workaround Applied:**
+- Deleted `insecure/vault.enc` to force encrypted vault usage
+- Worked briefly (ports opened, service responded)
+- Failed on restart - recreated empty insecure vault
+
+**Files Modified:**
+- `domains/home/mail/bridge/parts/runtime.nix` - Removed DBUS_SESSION_BUS_ADDRESS
+- `domains/home/mail/bridge/parts/files.nix` - Added keychain.json generation
+- `domains/secrets/parts/home/proton-bridge-password.age` - Updated with current password
+- `CLAUDE.md` & `charter/charter.md` - Documented age key process
   - Backup size: 2.8MB (hardlinks - space efficient)
   - Verified structure intact
 
@@ -67,11 +91,25 @@
 
 **✅ PHASE 1 COMPLETE**
 
-**Next Steps:**
-- Phase 2: Migrate Local Data & Update Config (IN PROGRESS)
-  - Step 2.1: Migrate mail from backup (FOUND per-account backup from 2025-09-30)
-  - Step 2.2: Rewrite mbsync configuration
-  - Step 2.3: Clear all sync state
+**CRITICAL NEXT ACTIONS FOR GEMINI-CLI:**
+
+**Priority 1: Fix Bridge Service Pass Integration**
+- Bridge systemd service needs GPG agent access for pass decryption
+- Options:
+  1. Add GPG_AGENT_INFO and proper GPG environment to service
+  2. Use different keychain backend that works in systemd context
+  3. Manage bridge entirely via CLI (stop systemd service permanently)
+
+**Priority 2: Continue Email Migration (Once Bridge Fixed)**
+- Phase 3: Run `mbsync -a` to sync all accounts
+- Phase 4: Create hardlink script for dual unified inboxes
+- Phase 5: Reindex notmuch and update aerc
+
+**Working Account Data (Trapped in Encrypted Vault):**
+- Account: `eriqueo` with emails `eric@iheartwoodcraft.com` and `eriqueo@proton.me`
+- Password: `8YmD16Ugka6OCWrU8Z92Uw`
+- Vault key: `RogHJ24CBG5og3hlOwHytn/D4KJ9IDD7ZbZXP/vpsb4=` (in pass)
+- Data location: `~/.config/protonmail/bridge-v3/vault.enc` (5.3k, encrypted)
 
 **Discovery:**
 - Found 4 Maildir backups in home folder
