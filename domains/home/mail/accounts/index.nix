@@ -14,7 +14,7 @@
         type = "proton-bridge";
         realName = "Eric";
         address = "eriqueo@proton.me";
-        login = "eriqueo@proton.me";
+        login = "eric@iheartwoodcraft.com";
         password = { mode = "pass"; pass = "email/proton/bridge"; };
         maildirName = "200_personal";
         mailboxMapping = {
