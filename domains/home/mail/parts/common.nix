@@ -15,11 +15,11 @@ let
 
   imapHost = a: if a.type == "proton-bridge" then "127.0.0.1" else "imap.gmail.com";
   imapPort = a: if a.type == "proton-bridge" then 1143        else 993;
-  tlsType  = a: if a.type == "proton-bridge" then "None"      else "IMAPS";
+  tlsType  = a: if a.type == "proton-bridge" then "STARTTLS" else "IMAPS";
 
   smtpHost = a: if a.type == "proton-bridge" then "127.0.0.1" else "smtp.gmail.com";
   smtpPort = a: if a.type == "proton-bridge" then 1025        else 587;
-  startTLS = a: if a.type == "proton-bridge" then false       else true;
+  startTLS = a: if a.type == "proton-bridge" then true        else true;
 
   passCmd = a:
     let
