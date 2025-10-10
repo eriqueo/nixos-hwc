@@ -86,7 +86,8 @@
       "Bash(echo:*)",
       "Bash(rsync:*)",
       "Read(//home/eric/.local/share/keyrings/**)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pass show:*)"
     ],
     "deny": [],
     "ask": [],
