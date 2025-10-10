@@ -6,8 +6,8 @@ let
   # Bridge auto-detects pass in PATH and sets Helper:"pass-app", overriding our Helper:""
   isInsecureVault = (br.keychain.helper or "pass") == "";
   basePath = if isInsecureVault
-             then "/run/current-system/sw/bin"
-             else "/run/current-system/sw/bin:${pkgs.pass}/bin";
+             then "/run/current-system/sw/bin"  # Minimal PATH without user profile
+             else "/home/eric/.nix-profile/bin:/run/current-system/sw/bin:${pkgs.pass}/bin";
 
   baseEnv = [
     "PATH=${basePath}"
