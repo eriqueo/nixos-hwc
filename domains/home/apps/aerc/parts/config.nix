@@ -28,6 +28,7 @@ let
     postpone             = ${maildirBase}/700_drafts
     copy-to              = ${maildirBase}/600_sent
     query-map            = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
+    labels               = true
   '';
 
   accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals) + "\n\n" + notmuchAccount;
@@ -75,7 +76,7 @@ let
     enable-osc8 = true
 
     [ui]
-    index-columns=date<20,name<17,flags>4,tags<15,subject<*
+    index-columns=date<20,name<17,flags>4,subject<*
     threading-enabled=true
     confirm-quit=false
     styleset-name=hwc-theme
@@ -84,7 +85,6 @@ let
     column-date = {{.DateAutoFormat .Date.Local}}
     column-name = {{index (.From | names) 0}}
     column-flags = {{.Flags | join ""}}
-    column-tags = {{.Tags | join " "}}
     column-subject = {{.ThreadPrefix}}{{.Subject}}
     mouse-enabled = true
     
