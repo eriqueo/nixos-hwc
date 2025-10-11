@@ -66,6 +66,7 @@
       hwc.home.apps.wasistlos.enable = true;
       hwc.home.apps.n8n.enable = true;
       hwc.home.apps.localsend.enable = true;
+      hwc.home.apps.dosbox.enable = true;
     };
   };
 }

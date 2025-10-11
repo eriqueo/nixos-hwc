@@ -113,6 +113,12 @@
     powerManagement.smartToggle = true;
   };
 
+  # Virtualization (QEMU/KVM + virt-manager)
+  hwc.infrastructure.virtualization = {
+    enable = true;
+    spiceSupport = true;
+  };
+
   # AI Compute Node - Ollama service
   hwc.server.ai.ollama = {
     enable = true;

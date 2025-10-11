@@ -93,6 +93,12 @@
       hwc.home.apps.geminiCli.enable = true;
       hwc.home.apps.n8n.enable = true;
 
+      # PC Emulation
+      hwc.home.apps._86box = {
+        enable = true;
+        withRoms = true;  # Include ROM files for easier setup
+      };
+
       # RetroArch configuration (hwc-kids specific)
       hwc.home.apps.retroarch = {
         enable = true;
