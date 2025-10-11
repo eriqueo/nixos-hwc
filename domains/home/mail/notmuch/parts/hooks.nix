@@ -36,18 +36,18 @@ let
     if (builtins.isString extraHook && extraHook != "") then "\n" + extraHook else "";
 
   accountTags = ''
-    # Tag by source account
-    ${nm} tag +hwc_email -- 'path:100_hwc/** OR from:*@iheartwoodcraft.com'
-    ${nm} tag +gmail_work -- 'path:110_gmail-business/** OR from:*heartwoodcraftmt@gmail.com'
-    ${nm} tag +gmail_personal -- 'path:200_personal/** OR from:*eriqueokeefe@gmail.com'
-    ${nm} tag +proton_personal -- 'path:210_proton/** OR from:*@proton.me'
+    # Tag by source account (path-based - infallible)
+    ${nm} tag +hwc_email -- 'path:100_hwc/** and not tag:hwc_email'
+    ${nm} tag +gmail_work -- 'path:110_gmail-business/** and not tag:gmail_work'
+    ${nm} tag +proton_pers -- 'path:200_personal/** and not tag:proton_pers'
+    ${nm} tag +gmail_pers -- 'path:210_gmail-personal/** and not tag:gmail_pers'
 
-    # Tag by domain (derived from source)
-    ${nm} tag +work -- 'tag:hwc_email OR tag:gmail_work'
-    ${nm} tag +personal -- 'tag:gmail_personal OR tag:proton_personal'
+    # Tag by domain (work vs personal)
+    ${nm} tag +work -- '(tag:hwc_email or tag:gmail_work) and not tag:work'
+    ${nm} tag +personal -- '(tag:proton_pers or tag:gmail_pers) and not tag:personal'
 
     # Tag unified inbox
-    ${nm} tag +inbox -- 'folder:000_inbox'
+    ${nm} tag +inbox -- 'folder:000_inbox and not tag:inbox'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
 in
