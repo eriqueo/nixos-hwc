@@ -30,6 +30,8 @@ let
       ''sh -c 'pass show ${entry}' ''
     else if a.password.mode == "agenix" then
       ''sh -c 'tr -d "\n" < "$0"' ${agenixPath}''
+    else if a.type == "proton-bridge" then
+      ''cat /run/agenix/proton-bridge-password''
     else
       a.password.command;
 
