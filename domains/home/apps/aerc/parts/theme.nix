@@ -57,6 +57,22 @@ in {
      "[messages].From:eriqueokeefe@gmail.com"     = token (hex c.accentAlt) "default" false; #// Primary Personal: Purple
      "[messages].From:proton.me"                  = token (hex c.marked)    "default" false; #// Secondary Personal: Red/Magenta
 
+     # ===== NOTMUCH TAG-BASED COLORS (Option B: Phase 4) =====
+     # Account-specific tags for colored badges
+     "[messages].Tag:hwc_email"     = token (hex c.selection)   "default" false; #// HWC: Blue
+     "[messages].Tag:gmail_work"    = token (hex c.accent)      "default" false; #// Gmail Work: Aqua
+     "[messages].Tag:proton_pers"   = token (hex c.marked)      "default" false; #// Proton: Red/Magenta
+     "[messages].Tag:gmail_pers"    = token (hex c.accentAlt)   "default" false; #// Gmail Personal: Purple
+
+     # Domain-level tags
+     "[messages].Tag:work"          = token (hex c.info)        "default" true;  #// Work domain: Bold info color
+     "[messages].Tag:personal"      = token (hex c.success)     "default" true;  #// Personal domain: Bold success color
+
+     # Status tags
+     "[messages].Tag:unread"        = token (hex c.warning)     "default" true;  #// Unread: Bold warning
+     "[messages].Tag:starred"       = token (hex c.errorBright) "default" true;  #// Starred: Bright error (star color)
+     "[messages].Tag:action"        = token (hex c.marked)      (hex c.bg2) true; #// Action required: Highlighted
+
     
     # Official: Additional message states
     msglist_answered = token (hex c.success) "default" false;

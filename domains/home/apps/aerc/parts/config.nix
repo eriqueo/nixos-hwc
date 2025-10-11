@@ -19,7 +19,45 @@ let
     ${if a.primary or false then "default = INBOX" else ""}
   '';
 
-  accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals);
+  # Notmuch account for unified tagged view (Option B: Phase 4)
+  notmuchAccount = ''
+    [notmuch]
+    from                 = Eric O'Keefe <eriqueo@proton.me>
+    source               = notmuch://${config.home.homeDirectory}/Maildir
+    outgoing             = exec:msmtp -a proton
+    postpone             = ${maildirBase}/700_drafts
+    copy-to              = ${maildirBase}/600_sent
+    query-map            = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
+  '';
+
+  accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals) + "\n\n" + notmuchAccount;
+
+  # Notmuch queries for virtual folders with account filtering
+  notmuchQueries = ''
+    # Unified views
+    INBOX=tag:inbox and tag:unread
+    All Mail=*
+
+    # Work accounts (HWC + Gmail Business)
+    Work Inbox=tag:work and tag:inbox and tag:unread
+    Work All=tag:work
+    HWC Only=tag:hwc_email
+    Gmail Work=tag:gmail_work
+
+    # Personal accounts (Proton + Gmail Personal)
+    Personal Inbox=tag:personal and tag:inbox and tag:unread
+    Personal All=tag:personal
+    Proton Only=tag:proton_pers
+    Gmail Personal=tag:gmail_pers
+
+    # System folders
+    Sent=tag:sent
+    Drafts=tag:draft
+    Archive=tag:archive
+    Starred=tag:starred
+    Spam=tag:spam
+    Trash=tag:trash
+  '';
 
   stylesetConf = let
     tokens = themePart.tokens;
@@ -124,6 +162,7 @@ in
     ".config/aerc/accounts.conf".text = accountsConf;
         ".config/aerc/accounts.conf.source".text = accountsConf;
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
+    ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
   packages = with pkgs; [
     aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler_utils
