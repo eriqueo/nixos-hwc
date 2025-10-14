@@ -102,9 +102,10 @@ let
       extra = getOr a "extraMbsync" "";
       channels = channelsFor a;
       channelsStr = lib.concatStringsSep "\n" channels;
-      # For proton-bridge, we'll use STARTTLS with certificate verification
-      certFile = if a.type == "proton-bridge" then "# CertificateFile /etc/ssl/local/proton-bridge.pem" else "";
-      # mbsync 1.5.1 doesn't support TLS fingerprinting directly - using STARTTLS with system trust
+      # Proton Bridge uses STARTTLS with a self-signed leaf; pin by file.
+      certFile = if a.type == "proton-bridge"
+                 then "CertificateFile /etc/ssl/local/proton-bridge.pem"
+                 else "";
       tlsFingerprint = "";
     in ''
       IMAPAccount ${a.name}

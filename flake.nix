@@ -30,6 +30,10 @@
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.05";
+    nixvirt = {
+        url = "github:AshleyYakeley/NixVirt";
+        inputs.nixpkgs.follows = "nixpkgs";
+      };
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -86,6 +90,7 @@
         specialArgs = { inherit inputs; };
         modules = [
           agenix.nixosModules.default
+          inputs.nixvirt.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/laptop/config.nix
         ];
