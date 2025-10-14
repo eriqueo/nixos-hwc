@@ -35,6 +35,9 @@
 
     # Virtualization domain for WinApps/VMs (without full infrastructure profile)
     ../../domains/infrastructure/virtualization/index.nix
+
+    # WinApps domain for Windows application integration
+    ../../domains/infrastructure/winapps/index.nix
   ];
 
   #============================================================================
@@ -122,6 +125,18 @@
   hwc.infrastructure.virtualization = {
     enable = true;
     spiceSupport = false;  # no SPICE USB redirection on laptop
+  };
+
+  # WinApps configuration for Excel access
+  hwc.infrastructure.winapps = {
+    enable = true;
+    rdpSettings = {
+      vmName = "RDPWindows";
+      ip = "192.168.122.10";  # Update this after VM creation
+      user = "eric";  # Update with Windows username
+    };
+    multiMonitor = true;
+    debug = false;
   };
 
   # Libvirt/QEMU: make OVMF visible and avoid extra groups by using wheel sockets.
