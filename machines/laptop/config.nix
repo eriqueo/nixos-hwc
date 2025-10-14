@@ -28,6 +28,7 @@
     ../../profiles/system.nix
     ../../profiles/home.nix
     ../../profiles/security.nix
+    ../../profiles/infrastructure.nix
     # ../../profiles/ai.nix # This might be imported by a server profile now.
 
     # Infrastructure domain for GPU only (not storage/virtualization)
