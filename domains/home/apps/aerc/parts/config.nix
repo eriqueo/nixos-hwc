@@ -19,41 +19,32 @@ let
     ${if a.primary or false then "default = INBOX" else ""}
   '';
 
-  # Unified notmuch account (following runbook exactly)
+  # Saved searches shown as folders under the notmuch unified account
+  notmuchQueries = ''
+    inbox  = tag:inbox AND NOT tag:trash AND NOT tag:spam
+    unread = tag:unread AND NOT tag:trash AND NOT tag:spam
+    all    = NOT tag:trash AND NOT tag:spam
+
+    hwc    = tag:acc:hwc   AND NOT tag:trash AND NOT tag:spam
+    gbiz   = tag:acc:gbiz  AND NOT tag:trash AND NOT tag:spam
+    pers   = tag:acc:pers  AND NOT tag:trash AND NOT tag:spam
+    gpers  = tag:acc:gpers AND NOT tag:trash AND NOT tag:spam
+  '';
+
+  # Unified notmuch account (first)
   unifiedAccount = ''
     [unified]
-    source = notmuch://
-    from = Eric O'Keefe <eric@iheartwoodcraft.com>
+    source     = notmuch://${config.home.homeDirectory}/Maildir
+    from       = Eric O'Keefe <eric@iheartwoodcraft.com>
+    outgoing   = exec:msmtp -a proton
+    postpone   = ${maildirBase}/700_drafts
+    copy-to    = ${maildirBase}/600_sent
+    query-map  = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
+    default    = inbox
   '';
 
-  accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals) + "\n\n" + unifiedAccount;
-
-  # Notmuch queries for virtual folders with account filtering
-  notmuchQueries = ''
-    # Unified views
-    INBOX=tag:inbox and tag:unread
-    All Mail=*
-
-    # Work accounts (HWC + Gmail Business)
-    Work Inbox=tag:work and tag:inbox and tag:unread
-    Work All=tag:work
-    HWC Only=tag:hwc_email
-    Gmail Work=tag:gmail_work
-
-    # Personal accounts (Proton + Gmail Personal)
-    Personal Inbox=tag:personal and tag:inbox and tag:unread
-    Personal All=tag:personal
-    Proton Only=tag:proton_pers
-    Gmail Personal=tag:gmail_pers
-
-    # System folders
-    Sent=tag:sent
-    Drafts=tag:draft
-    Archive=tag:archive
-    Starred=tag:starred
-    Spam=tag:spam
-    Trash=tag:trash
-  '';
+  # Make unified FIRST, then the IMAP accounts
+  accountsConf = unifiedAccount + "\n\n" + lib.concatStringsSep "\n\n" (map accountBlock accVals);
 
   stylesetConf = let
     tokens = themePart.tokens;
