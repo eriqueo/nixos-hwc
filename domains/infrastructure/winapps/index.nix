@@ -55,25 +55,24 @@ EOF
         fi
       '';
     };
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+
+    warnings = lib.optionals (cfg.rdpSettings.user == "") [
+      "WinApps RDP user not configured. Set hwc.infrastructure.winapps.rdpSettings.user in your machine config."
+    ];
+
+    assertions = [
+      {
+        assertion = virt.enable;
+        message = "WinApps requires virtualization to be enabled (hwc.infrastructure.virtualization.enable = true)";
+      }
+      {
+        assertion = cfg.rdpSettings.ip != "";
+        message = "WinApps requires RDP IP address to be configured";
+      }
+    ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-
-  config.warnings = lib.optionals cfg.enable [
-    (lib.mkIf (cfg.rdpSettings.user == "")
-      "WinApps RDP user not configured. Set hwc.infrastructure.winapps.rdpSettings.user in your machine config.")
-  ];
-
-  config.assertions = [
-    {
-      assertion = !cfg.enable || virt.enable;
-      message = "WinApps requires virtualization to be enabled (hwc.infrastructure.virtualization.enable = true)";
-    }
-    {
-      assertion = !cfg.enable || (cfg.rdpSettings.ip != "");
-      message = "WinApps requires RDP IP address to be configured";
-    }
-  ];
 }
