@@ -43,8 +43,8 @@ let
     ${nm} tag +acc:gpers -- 'path:210_gmail-personal/**'
 
     # (Optional) reconstruct inbox/unread by folder names
-    ${nm} tag +inbox  -- 'folder:/inbox($|/) and not tag:trash and not tag:spam'
-    ${nm} tag +unread -- 'folder:/new($|/)   and not tag:trash and not tag:spam'
+    ${nm} tag +inbox  -- 'folder:inbox and not tag:trash and not tag:spam'
+    ${nm} tag +unread -- 'folder:new   and not tag:trash and not tag:spam'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
 in
