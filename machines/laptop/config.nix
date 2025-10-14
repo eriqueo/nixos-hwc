@@ -159,22 +159,22 @@
   virtualisation.podman.enable = lib.mkForce false;
   virtualisation.docker.enable = lib.mkForce false;
 
-  # --- Declarative libvirt storage pool (Optional, requires NixVirt in flake) --
-  # Guarded so it's a no-op until you import NixVirt's module in flake.nix
-  virtualisation.libvirt.pools = lib.mkIf (lib.hasAttrByPath [ "virtualisation" "libvirt" "pools" ] config) [
-    {
-      name = "ISOs";
-      present = true;
-      type = "dir";
-      target = {
-        path = "${config.hwc.paths.hot}/ISOs";  # e.g. /home/eric/03-tech/local-storage/ISOs
-        owner = "root";
-        group = "root";
-        mode  = "0755";
-      };
-      autostart = true;
-    }
-  ];
+  # --- Declarative libvirt storage pool (requires NixVirt in flake) --
+  # Commented out until NixVirt module is imported in flake.nix
+  # virtualisation.libvirt.pools = [
+  #   {
+  #     name = "ISOs";
+  #     present = true;
+  #     type = "dir";
+  #     target = {
+  #       path = "${config.hwc.paths.hot}/ISOs";
+  #       owner = "root";
+  #       group = "root";
+  #       mode  = "0755";
+  #     };
+  #     autostart = true;
+  #   }
+  # ];
 
   #============================================================================
   # === [profiles/home.nix] Orchestration =====================================
