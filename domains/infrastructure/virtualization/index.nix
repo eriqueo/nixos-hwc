@@ -52,6 +52,8 @@ in
       virtiofsd
       win-virtio
       win-spice
+      freerdp3
+      xdg-utils
     ];
 
     systemd.services = lib.mapAttrs' (name: network:
