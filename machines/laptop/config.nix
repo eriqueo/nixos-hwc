@@ -111,6 +111,9 @@
     powerManagement.smartToggle = true;
   };
 
+  # Enable virtualization for WinApps/VMs
+  hwc.infrastructure.virtualization.enable = true;
+
   # AI services (disabled until server domain refactor complete).
   # hwc.server.ai.ollama = {
   #   enable = true;
