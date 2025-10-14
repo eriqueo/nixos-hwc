@@ -150,7 +150,7 @@
 
     # Ensure firmware enumeration succeeds on this host.
     qemu = {
-      runAsRoot = true;     # fixes OVMF metadata enumeration edge cases
+      runAsRoot = lib.mkForce true;     # fixes OVMF metadata enumeration edge cases
       ovmf.packages = [ pkgs.OVMFFull.fd ];
     };
   };
