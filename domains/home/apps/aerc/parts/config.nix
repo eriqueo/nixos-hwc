@@ -19,19 +19,14 @@ let
     ${if a.primary or false then "default = INBOX" else ""}
   '';
 
-  # Notmuch account for unified tagged view (Option B: Phase 4)
-  notmuchAccount = ''
-    [notmuch]
-    from                 = Eric O'Keefe <eriqueo@proton.me>
-    source               = notmuch://${config.home.homeDirectory}/Maildir
-    outgoing             = exec:msmtp -a proton
-    postpone             = ${maildirBase}/700_drafts
-    copy-to              = ${maildirBase}/600_sent
-    query-map            = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
-    labels               = true
+  # Unified notmuch account (following runbook exactly)
+  unifiedAccount = ''
+    [unified]
+    source = notmuch://
+    from = Eric O'Keefe <eric@iheartwoodcraft.com>
   '';
 
-  accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals) + "\n\n" + notmuchAccount;
+  accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals) + "\n\n" + unifiedAccount;
 
   # Notmuch queries for virtual folders with account filtering
   notmuchQueries = ''
@@ -95,8 +90,11 @@ let
     column-flags = {{.Flags | join ""}}
     column-subject = {{.ThreadPrefix}}{{.Subject}}
     mouse-enabled = true
-    
-    
+
+    [notmuch]
+    # Include tags (%T) in the index format; adjust other fields to taste
+    index-format=%D %-20.20F %Z %s %T
+
 
     [compose]
     editor=${pkgs.kitty}/bin/kitty -e ${pkgs.neovim}/bin/nvim
