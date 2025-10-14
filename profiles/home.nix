@@ -41,6 +41,13 @@
           enable = lib.mkDefault true;
           # Bridge now managed by system service - disabled in HM
           bridge.enable = false;
+
+          # Notmuch configuration per runbook
+          notmuch = {
+            userName = "Eric O'Keefe";
+            primaryEmail = "eric@iheartwoodcraft.com";
+            newTags = [ "unread" "inbox" ];
+          };
         };
 
         # Applications
