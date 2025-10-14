@@ -19,9 +19,6 @@ in
       xdg-utils
     ];
 
-    # Enable FreeRDP program for system-wide configuration
-    programs.xfreeRDP.enable = true;
-
     # Create WinApps configuration directory and files
     system.activationScripts.winapps-setup = {
       deps = [ "users" ];
