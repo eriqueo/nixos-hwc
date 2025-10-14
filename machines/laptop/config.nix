@@ -28,11 +28,12 @@
     ../../profiles/system.nix
     ../../profiles/home.nix
     ../../profiles/security.nix
-    ../../profiles/infrastructure.nix
     # ../../profiles/ai.nix # This might be imported by a server profile now.
 
     # Infrastructure domain for GPU only (not storage/virtualization)
     ../../domains/infrastructure/hardware/index.nix
+    # Virtualization domain for WinApps (without full infrastructure profile)
+    ../../domains/infrastructure/virtualization/index.nix
   ];
 
   #============================================================================
@@ -112,8 +113,15 @@
     powerManagement.smartToggle = true;
   };
 
-  # Enable virtualization for WinApps/VMs
-  hwc.infrastructure.virtualization.enable = true;
+  # Enable virtualization for WinApps/VMs (minimal setup)
+  hwc.infrastructure.virtualization = {
+    enable = true;
+    spiceSupport = false;  # Don't need SPICE USB redirection
+  };
+
+  # Override virtualization domain's Docker/Podman settings to avoid conflicts
+  virtualisation.podman.enable = lib.mkForce false;
+  virtualisation.docker.enable = lib.mkForce false;
 
   # AI services (disabled until server domain refactor complete).
   # hwc.server.ai.ollama = {
