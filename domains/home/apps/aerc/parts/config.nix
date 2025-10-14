@@ -65,8 +65,16 @@ let
     viewerTokens = themePart.viewerTokens;
     renderStyle = name: style:
       "${name}.fg = ${style.fg}\n${name}.bg = ${style.bg}\n${name}.bold = ${if style.bold then "true" else "false"}";
-    mainStyleLines = lib.mapAttrsToList renderStyle tokens;
-    mainSection = lib.concatStringsSep "\n" mainStyleLines;
+
+    # Separate tag-based styles from regular styles for proper ordering
+    tagStyles = lib.filterAttrs (name: _: lib.hasPrefix "[messages].Tag:" name) tokens;
+    regularStyles = lib.filterAttrs (name: _: !(lib.hasPrefix "[messages].Tag:" name)) tokens;
+
+    # Render in order: regular styles first, then tag styles (for highest precedence)
+    regularStyleLines = lib.mapAttrsToList renderStyle regularStyles;
+    tagStyleLines = lib.mapAttrsToList renderStyle tagStyles;
+    mainSection = lib.concatStringsSep "\n" (regularStyleLines ++ tagStyleLines);
+
     viewerStyleLines = lib.mapAttrsToList renderStyle viewerTokens;
     viewerSection = "[viewer]\n" + (lib.concatStringsSep "\n" viewerStyleLines);
   in mainSection + "\n\n" + viewerSection;
