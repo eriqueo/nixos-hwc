@@ -190,9 +190,9 @@ cmd_rdp_test() {
         log_success "RDP port 3389 is accessible"
 
         # Test with xfreerdp if available
-        if command -v xfreerdp3 &>/dev/null; then
+        if command -v xfreerdp &>/dev/null; then
             log_info "You can test RDP connection with:"
-            echo "xfreerdp3 /v:$ip /u:<username> /cert:ignore"
+            echo "xfreerdp /v:$ip /u:<username> /cert:ignore"
         fi
     else
         log_error "Cannot connect to RDP port 3389"
