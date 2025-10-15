@@ -48,13 +48,19 @@ check_prerequisites() {
     fi
 
     # Check required commands
-    local required_commands=("git" "virsh" "xfreerdp3")
+    local required_commands=("git" "virsh")
     for cmd in "${required_commands[@]}"; do
         if ! command -v "$cmd" &> /dev/null; then
             log_error "Required command '$cmd' not found. Ensure WinApps infrastructure is enabled in NixOS config"
             exit 1
         fi
     done
+
+    # Check for FreeRDP (try multiple versions)
+    if ! command -v "xfreerdp3" &> /dev/null && ! command -v "xfreerdp" &> /dev/null; then
+        log_error "FreeRDP not found. Ensure WinApps infrastructure is enabled in NixOS config"
+        exit 1
+    fi
 
     log_success "Prerequisites check passed"
 }
@@ -206,7 +212,7 @@ print_next_steps() {
     echo
     log_info "Troubleshooting:"
     echo "  - Check VM status: virsh list --all"
-    echo "  - Test RDP: xfreerdp3 /v:<VM_IP> /u:<username> /cert:ignore"
+    echo "  - Test RDP: xfreerdp /v:<VM_IP> /u:<username> /cert:ignore"
     echo "  - View logs: journalctl -u libvirtd"
 }
 
