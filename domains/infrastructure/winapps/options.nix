@@ -51,5 +51,23 @@ in
       default = false;
       description = "Enable debug mode for troubleshooting";
     };
+
+    autoStart = lib.mkOption {
+      type = t.bool;
+      default = false;
+      description = "Automatically start Windows VM on system boot";
+    };
+
+    autoInstall = lib.mkOption {
+      type = t.bool;
+      default = false;
+      description = "Automatically install WinApps on first activation";
+    };
+
+    monitorService = lib.mkOption {
+      type = t.bool;
+      default = false;
+      description = "Enable systemd service to monitor VM health";
+    };
   };
 }
