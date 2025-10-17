@@ -453,12 +453,12 @@ let
     Default=1
     EOF
 
-    echo "✅ Betterbird profile setup complete!"
+    echo "✅ Thunderbird profile setup complete!"
     echo ""
     echo "Next steps:"
-    echo "1. Start Betterbird: betterbird"
+    echo "1. Start Thunderbird: thunderbird (or mail-gui)"
     echo "2. Install tbkeys-lite addon for custom keybindings"
-    echo "3. Add passwords for all 4 accounts (Betterbird will prompt)"
+    echo "3. Add passwords for all 4 accounts (Thunderbird will prompt)"
     echo "4. For Proton accounts: Start proton-bridge first"
     echo ""
     echo "Features available:"
@@ -470,10 +470,10 @@ let
 
 in {
   # Module structure for integration with betterbird/index.nix
-  packages = [ pkgs.betterbird ];
+  packages = [ pkgs.thunderbird ];
 
   env = {
-    BETTERBIRD_PROFILE = "default";
+    THUNDERBIRD_PROFILE = "default";
   };
 
   services = {
@@ -486,7 +486,7 @@ in {
       executable = true;
       text = ''
         #!/bin/sh
-        # Betterbird launcher with Bridge integration
+        # Thunderbird launcher with Bridge integration
         set -e
 
         # Check if Proton Bridge is running
@@ -509,8 +509,8 @@ in {
           echo "⚠️  Proton Bridge certificate missing - STARTTLS may fail"
         fi
 
-        echo "🚀 Starting Betterbird..."
-        betterbird
+        echo "🚀 Starting Thunderbird..."
+        thunderbird
       '';
     };
 
@@ -519,7 +519,7 @@ in {
       executable = true;
       text = ''
         #!/bin/sh
-        echo "=== Betterbird IMAP Integration Status ==="
+        echo "=== Thunderbird IMAP Integration Status ==="
         echo ""
         echo "📁 Profile: ${profileDir}"
         echo "🔐 Proton Bridge: $(systemctl --user is-active protonmail-bridge.service 2>/dev/null || echo 'not managed by systemd')"
@@ -530,7 +530,7 @@ in {
         echo ""
         echo "🔗 Email Architecture:"
         echo "   • aerc ← → ~/Maildir ← → mbsync ← → IMAP Servers"
-        echo "   • Betterbird ← → ~/.betterbird/ImapMail ← → IMAP Servers"
+        echo "   • Thunderbird ← → ~/.betterbird/ImapMail ← → IMAP Servers"
         echo "   • Separate systems, no shared storage"
         echo ""
         echo "📂 Unified Views Available:"

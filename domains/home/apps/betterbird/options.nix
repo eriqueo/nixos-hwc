@@ -3,7 +3,7 @@
 
 {
   options.hwc.home.apps.betterbird = {
-    enable = lib.mkEnableOption "Enable Betterbird (enhanced Thunderbird) with IMAP-only mode";
+    enable = lib.mkEnableOption "Enable Thunderbird with IMAP-only mode (betterbird removed from nixpkgs)";
 
     protonBridgeIntegration = lib.mkOption {
       type = lib.types.bool;
