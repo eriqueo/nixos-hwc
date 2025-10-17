@@ -213,7 +213,7 @@ let
   # NOTE: User will need to add passwords via Thunderbird GUI on first run
   accountPrefs = ''
     // === ACCOUNT STRUCTURE ===
-    // Gmail Work Account
+    // Gmail Work Account (OAuth2)
     user_pref("mail.account.account1.identities", "id1");
     user_pref("mail.account.account1.server", "server1");
     user_pref("mail.identity.id1.fullName", "${realName}");
@@ -225,12 +225,15 @@ let
     user_pref("mail.server.server1.socketType", 3); // SSL/TLS
     user_pref("mail.server.server1.type", "imap");
     user_pref("mail.server.server1.userName", "${gmailWork}");
+    user_pref("mail.server.server1.authMethod", 10); // OAuth2
     user_pref("mail.smtpserver.smtp1.hostname", "smtp.gmail.com");
     user_pref("mail.smtpserver.smtp1.port", 465);
     user_pref("mail.smtpserver.smtp1.username", "${gmailWork}");
+    user_pref("mail.smtpserver.smtp1.authMethod", 10); // OAuth2
+    user_pref("mail.smtpserver.smtp1.try_ssl", 3); // SSL/TLS
     user_pref("mail.identity.id1.smtpServer", "smtp1");
 
-    // Gmail Personal Account  
+    // Gmail Personal Account (OAuth2)
     user_pref("mail.account.account2.identities", "id2");
     user_pref("mail.account.account2.server", "server2");
     user_pref("mail.identity.id2.fullName", "${realName}");
@@ -239,12 +242,15 @@ let
     user_pref("mail.server.server2.hostname", "imap.gmail.com");
     user_pref("mail.server.server2.name", "${gmailPersonal}");
     user_pref("mail.server.server2.port", 993);
-    user_pref("mail.server.server2.socketType", 3);
+    user_pref("mail.server.server2.socketType", 3); // SSL/TLS
     user_pref("mail.server.server2.type", "imap");
     user_pref("mail.server.server2.userName", "${gmailPersonal}");
+    user_pref("mail.server.server2.authMethod", 10); // OAuth2
     user_pref("mail.smtpserver.smtp2.hostname", "smtp.gmail.com");
     user_pref("mail.smtpserver.smtp2.port", 465);
     user_pref("mail.smtpserver.smtp2.username", "${gmailPersonal}");
+    user_pref("mail.smtpserver.smtp2.authMethod", 10); // OAuth2
+    user_pref("mail.smtpserver.smtp2.try_ssl", 3); // SSL/TLS
     user_pref("mail.identity.id2.smtpServer", "smtp2");
 
     // Proton Work Account
