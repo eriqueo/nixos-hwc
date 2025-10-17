@@ -3,8 +3,8 @@
 { lib, pkgs, config, ... }:
 
 {
-  # Betterbird with extras
-  packages = [ pkgs.betterbird ];
+  # Thunderbird (betterbird removed from nixpkgs)
+  packages = [ pkgs.thunderbird ];
 
   # If you want Betterbird-specific user services, define them here.
   # (Most users don't need any; Proton Bridge etc. should be their own module.)
@@ -12,6 +12,6 @@
 
   # Export session env if needed (kept tiny and generic).
   env = {
-    BETTERBIRD_PROFILE = "default-release";
+    THUNDERBIRD_PROFILE = "default-release";
   };
 }
