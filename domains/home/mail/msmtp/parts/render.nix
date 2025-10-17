@@ -21,12 +21,14 @@ let
       startTLS = getOr a "startTLS" (common.startTLS a);
       authLine = if a.type == "proton-bridge" then "auth plain" else "auth on";
       tlsLines = if startTLS then "tls on\ntls_starttls on" else "tls off\ntls_starttls off";
+      certLine = if a.type == "proton-bridge" then "tls_trust_file /etc/ssl/local/proton-bridge.pem" else "";
       label = a.send.msmtpAccount;
     in ''
       account ${label}
       host ${host}
       port ${toString port}
       ${tlsLines}
+      ${lib.optionalString (certLine != "") certLine}
       ${authLine}
       from ${a.address}
       user ${common.loginOf a}

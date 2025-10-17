@@ -52,6 +52,34 @@ in
         executable = true;
       };
     })
+
+    # Auto-sync service and timer
+    {
+      systemd.user.services.mail-sync = {
+        Unit = {
+          Description = "Sync mail and update notmuch index";
+          After = [ "network.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${config.home.homeDirectory}/.local/bin/sync-mail";
+        };
+      };
+
+      systemd.user.timers.mail-sync = {
+        Unit = {
+          Description = "Timer for mail sync";
+          Requires = [ "mail-sync.service" ];
+        };
+        Timer = {
+          OnCalendar = "*:0/5";  # Every 5 minutes
+          Persistent = true;
+        };
+        Install = {
+          WantedBy = [ "timers.target" ];
+        };
+      };
+    }
   ]);
 }
 

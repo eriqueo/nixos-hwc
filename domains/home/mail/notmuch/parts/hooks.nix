@@ -36,18 +36,15 @@ let
     if (builtins.isString extraHook && extraHook != "") then "\n" + extraHook else "";
 
   accountTags = ''
-    # Tag by source account
-    ${nm} tag +hwc_email -- 'path:100_hwc/** OR from:*@iheartwoodcraft.com'
-    ${nm} tag +gmail_work -- 'path:110_gmail-business/** OR from:*heartwoodcraftmt@gmail.com'
-    ${nm} tag +gmail_personal -- 'path:200_personal/** OR from:*eriqueokeefe@gmail.com'
-    ${nm} tag +proton_personal -- 'path:210_proton/** OR from:*@proton.me'
+    # Tag by per-account Maildir root (following runbook exactly)
+    ${nm} tag +acc:hwc   -- 'path:100_hwc/**'
+    ${nm} tag +acc:gbiz  -- 'path:110_gmail-business/**'
+    ${nm} tag +acc:pers  -- 'path:200_personal/**'
+    ${nm} tag +acc:gpers -- 'path:210_gmail-personal/**'
 
-    # Tag by domain (derived from source)
-    ${nm} tag +work -- 'tag:hwc_email OR tag:gmail_work'
-    ${nm} tag +personal -- 'tag:gmail_personal OR tag:proton_personal'
-
-    # Tag unified inbox
-    ${nm} tag +inbox -- 'folder:000_inbox'
+    # (Optional) reconstruct inbox/unread by folder names
+    ${nm} tag +inbox  -- 'folder:inbox and not tag:trash and not tag:spam'
+    ${nm} tag +unread -- 'folder:new   and not tag:trash and not tag:spam'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
 in

@@ -17,7 +17,7 @@
       ];
 
       ExecStart =
-        "${pkgs.util-linux}/bin/flock -n %h/.cache/mbsync.lock -c '${pkgs.isync}/bin/mbsync -a'";
+        "${pkgs.util-linux}/bin/flock -n %h/.cache/mbsync.lock -c '%h/.local/bin/sync-mail'";
 
       # Ensure hooks can find notmuch; never fail the unit on hook errors
       ExecStartPost =
@@ -42,7 +42,7 @@
     Unit.Description = "Periodic mbsync";
     Timer = {
       OnBootSec = "2m";
-      OnUnitActiveSec = "5m";
+      OnUnitActiveSec = "3m";
       AccuracySec = "30s";
       Persistent = true;
       Unit = "mbsync.service";

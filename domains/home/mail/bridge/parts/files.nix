@@ -15,5 +15,6 @@ let
     if (br.ensureConfigDir or true) then {
       ".config/protonmail/bridge/.keep".text = "";
     } else {};
+
 in
 { home.file = setup // keep; }

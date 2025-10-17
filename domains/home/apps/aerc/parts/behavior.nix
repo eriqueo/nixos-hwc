@@ -24,11 +24,19 @@ in
       <C-h> = :prev-tab<Enter>
       <C-l> = :next-tab<Enter>
       <C-q> = :prompt 'Quit aerc?' quit<Enter>
-      <C-t> = :term<Enter>   
+      <C-t> = :term<Enter>
       <C-j> = :next-folder<Enter>
       <C-k> = :prev-folder<Enter>
+      <C-p> = :next-account<Enter>
+      <C-n> = :prev-account<Enter>
       ?     = :help keys<Enter>
       <C-r> = :exec mbsync -a<Enter>
+
+      # Quick account switching
+      ,n = :cd notmuch<Enter>
+      ,g = :cd gmail-business<Enter>
+      ,p = :cd proton<Enter>
+      ,h = :cd iheartwoodcraft<Enter>
 
       [messages]
       j = :next<Enter>

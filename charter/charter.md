@@ -103,6 +103,9 @@ machines/laptop/config.nix imports needed profiles
 * User accounts → `domains/system/users/eric.nix`
 * User env → `domains/home/` imported by `machines/<host>/home.nix`
 * Secrets → `domains/secrets/` with stable API facade at `/run/agenix`
+  - **Age Key Management**: `sudo age-keygen -y /etc/age/keys.txt` for public key
+  - **Secret Updates**: `echo "value" | age -r <pubkey> > domains/secrets/parts/domain/name.age`
+  - **Verification**: `sudo age -d -i /etc/age/keys.txt path/to/secret.age`
 * Cross-domain orchestrators → `domains/infrastructure/` (filesystem structure, etc.)
 * Namespace follows folder structure: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
 
