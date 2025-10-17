@@ -36,6 +36,9 @@
           };
         };
 
+        # Development Environment
+        development.enable = lib.mkDefault true;
+
         # Mail & Communication
         mail = {
           enable = lib.mkDefault true;
