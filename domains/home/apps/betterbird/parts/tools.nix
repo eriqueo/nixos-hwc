@@ -16,7 +16,7 @@ let
   importer = pkgs.writeShellScriptBin "bb-apply-mail-data" ''
     set -euo pipefail
 
-    PROF_INI="$HOME/.thunderbird/profiles.ini"
+    PROF_INI="$HOME/.betterbird/profiles.ini"
     [ -f "$PROF_INI" ] || exit 0
 
     # Get the default profile path (Path= when Default=1)
@@ -29,7 +29,7 @@ let
     [ -n "''${PROFILE_PATH:-}" ] || exit 0
     case "$PROFILE_PATH" in
       /*) PROFILE_DIR="$PROFILE_PATH" ;;
-      *)  PROFILE_DIR="$HOME/.thunderbird/$PROFILE_PATH" ;;
+      *)  PROFILE_DIR="$HOME/.betterbird/$PROFILE_PATH" ;;
     esac
     [ -d "$PROFILE_DIR" ] || exit 0
 

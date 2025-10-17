@@ -8,7 +8,7 @@ let
   profile    = import ./parts/profile.nix    { inherit lib pkgs config; };
 
   homeDir     = config.home.homeDirectory;
-  profileBase = "${homeDir}/.thunderbird";
+  profileBase = "${homeDir}/.betterbird";
   cfg = config.hwc.home.apps.betterbird;
 in
 {
