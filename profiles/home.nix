@@ -91,6 +91,7 @@
           ipcalc.enable = lib.mkDefault true;              # IP calculator
           wasistlos.enable = lib.mkDefault false;          # System monitor (niche)
           bottlesUnwrapped.enable = lib.mkDefault true;
+          thunderbird.enable = lib.mkDefault true;
         };
       };
     };
