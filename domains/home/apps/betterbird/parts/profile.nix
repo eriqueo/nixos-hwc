@@ -1,22 +1,61 @@
 { config, lib, pkgs, ... }:
 
 let
-  # Your email addresses - FILL THESE IN
+  # Integration with existing mail system
+  mailAccounts = config.hwc.home.mail.accounts or {};
+  maildirBase = "${config.home.homeDirectory}/Maildir";
+
+  # Extract account details from existing mail configuration
   gmailWork = "heartwoodcraftmt@gmail.com";
   gmailPersonal = "eriqueokeefe@gmail.com";
   protonWork = "eric@iheartwoodcraft.com";
   protonPersonal = "eriqueo@proton.me";
-  
+
   realName = "Eric O'Keefe";
 
   # Profile directory structure
   profileDir = "${config.home.homeDirectory}/.thunderbird/profiles/default";
+
+  # Password integration with existing pass system
+  passwordCmd = account: pkgs.writeShellScript "get-${account}-password" ''
+    set -euo pipefail
+    export PATH="${pkgs.pass}/bin:${pkgs.gnupg}/bin:$PATH"
+    export HOME="${config.home.homeDirectory}"
+    export GNUPGHOME="${config.home.homeDirectory}/.gnupg"
+    export PASSWORD_STORE_DIR="${config.home.homeDirectory}/.password-store"
+
+    case "${account}" in
+      "gmail-business") pass show email/gmail/business | tr -d '\n' ;;
+      "gmail-personal") pass show email/gmail/personal | tr -d '\n' ;;
+      "proton-work") pass show email/proton/bridge | tr -d '\n' ;;
+      "proton-personal") pass show email/proton/bridge | tr -d '\n' ;;
+      *) echo "Unknown account: ${account}" >&2; exit 1 ;;
+    esac
+  '';
+
+  # Maildir LocalFolders integration
+  maildirLocalFolders = ''
+    // === MAILDIR INTEGRATION ===
+    // Set up LocalFolders to point to existing Maildir structure
+    user_pref("mail.account.localfolders.server", "server_local");
+    user_pref("mail.server.server_local.directory", "${maildirBase}");
+    user_pref("mail.server.server_local.hostname", "Local Folders");
+    user_pref("mail.server.server_local.name", "Local Folders");
+    user_pref("mail.server.server_local.type", "none");
+    user_pref("mail.server.server_local.userName", "");
+
+    // Show LocalFolders in folder pane
+    user_pref("mail.accountmanager.localfoldersserver", "server_local");
+    user_pref("mail.server.server_local.directory-rel", "[ProfD]../../../Maildir");
+  '';
 
   # user.js - Core preferences
   userJs = pkgs.writeText "user.js" ''
     // === UNIFIED FOLDERS ===
     user_pref("mail.folder.views.version", 1);
     user_pref("mailnews.default_view_flags", 1); // Unified folders view
+
+    ${maildirLocalFolders}
     
     // === APPEARANCE ===
     user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
@@ -218,9 +257,12 @@ let
     user_pref("mail.server.server3.socketType", 2); // STARTTLS
     user_pref("mail.server.server3.type", "imap");
     user_pref("mail.server.server3.userName", "${protonWork}");
+    user_pref("mail.server.server3.isSecure", true);
+    user_pref("mail.server.server3.override_namespaces", true);
     user_pref("mail.smtpserver.smtp3.hostname", "127.0.0.1");
     user_pref("mail.smtpserver.smtp3.port", 1025);
     user_pref("mail.smtpserver.smtp3.username", "${protonWork}");
+    user_pref("mail.smtpserver.smtp3.try_ssl", 2); // STARTTLS
     user_pref("mail.identity.id3.smtpServer", "smtp3");
 
     // Proton Personal Account
@@ -232,12 +274,15 @@ let
     user_pref("mail.server.server4.hostname", "127.0.0.1"); // Proton Bridge
     user_pref("mail.server.server4.name", "${protonPersonal}");
     user_pref("mail.server.server4.port", 1143);
-    user_pref("mail.server.server4.socketType", 2);
+    user_pref("mail.server.server4.socketType", 2); // STARTTLS
     user_pref("mail.server.server4.type", "imap");
     user_pref("mail.server.server4.userName", "${protonPersonal}");
+    user_pref("mail.server.server4.isSecure", true);
+    user_pref("mail.server.server4.override_namespaces", true);
     user_pref("mail.smtpserver.smtp4.hostname", "127.0.0.1");
     user_pref("mail.smtpserver.smtp4.port", 1025);
     user_pref("mail.smtpserver.smtp4.username", "${protonPersonal}");
+    user_pref("mail.smtpserver.smtp4.try_ssl", 2); // STARTTLS
     user_pref("mail.identity.id4.smtpServer", "smtp4");
 
     // Account list
@@ -338,20 +383,40 @@ let
   # Setup script to initialize profile
   setupScript = pkgs.writeShellScript "setup-thunderbird-profile" ''
     set -e
-    
+
     PROFILE_DIR="${profileDir}"
-    
+    MAILDIR_BASE="${maildirBase}"
+
     echo "Setting up Thunderbird profile at $PROFILE_DIR..."
-    
+
     # Create profile directory structure
     mkdir -p "$PROFILE_DIR"
     mkdir -p "$PROFILE_DIR/chrome"
     mkdir -p "$PROFILE_DIR/ImapMail"
-    
+    mkdir -p "$PROFILE_DIR/Mail"
+
     # Copy configuration files
     cp ${userJs} "$PROFILE_DIR/user.js"
     cp ${userChromeCss} "$PROFILE_DIR/chrome/userChrome.css"
-    
+
+    # Set up Maildir LocalFolders symlink
+    if [ -d "$MAILDIR_BASE" ]; then
+      echo "✅ Linking Maildir to Thunderbird LocalFolders..."
+      mkdir -p "$PROFILE_DIR/Mail"
+      if [ ! -L "$PROFILE_DIR/Mail/Local Folders" ]; then
+        ln -sf "$MAILDIR_BASE" "$PROFILE_DIR/Mail/Local Folders"
+      fi
+    else
+      echo "⚠️  Maildir not found at $MAILDIR_BASE - will create when mail sync runs"
+    fi
+
+    # Check for Proton Bridge certificate
+    if [ -f "/etc/ssl/local/proton-bridge.pem" ]; then
+      echo "✅ Proton Bridge certificate found - STARTTLS ready"
+    else
+      echo "⚠️  Proton Bridge certificate not found - you may need to start the certificate service"
+    fi
+
     # Initialize prefs.js if it doesn't exist
     if [ ! -f "$PROFILE_DIR/prefs.js" ]; then
       cat > "$PROFILE_DIR/prefs.js" <<'EOF'
@@ -390,25 +455,108 @@ let
   '';
 
 in {
-  home.packages = [ pkgs.thunderbird ];
-  
-  home.activation.setupThunderbirdProfile = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    ${setupScript}
-  '';
-  
-  # Optional: Auto-start script
-  home.file.".local/bin/mail" = {
-    executable = true;
-    text = ''
-      #!/bin/sh
-      # Start proton bridge if needed
-      if command -v protonmail-bridge >/dev/null 2>&1; then
-        protonmail-bridge --cli &
-        sleep 2
-      fi
-      
-      # Start Thunderbird
-      thunderbird
+  # Module structure for integration with betterbird/index.nix
+  packages = [ pkgs.thunderbird ];
+
+  env = {
+    THUNDERBIRD_PROFILE = "default";
+    THUNDERBIRD_MAILDIR = maildirBase;
+  };
+
+  services = {
+    # Service to ensure Maildir is linked on session start
+    thunderbird-maildir-link = {
+      Unit = {
+        Description = "Link Maildir to Thunderbird LocalFolders";
+        After = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "link-maildir" ''
+          set -e
+          PROFILE_DIR="${profileDir}"
+          MAILDIR_BASE="${maildirBase}"
+
+          if [ -d "$MAILDIR_BASE" ] && [ -d "$PROFILE_DIR" ]; then
+            mkdir -p "$PROFILE_DIR/Mail"
+            if [ ! -L "$PROFILE_DIR/Mail/Local Folders" ]; then
+              ln -sf "$MAILDIR_BASE" "$PROFILE_DIR/Mail/Local Folders"
+              echo "✅ Linked $MAILDIR_BASE to Thunderbird LocalFolders"
+            fi
+          fi
+        '';
+      };
+      Install = { WantedBy = [ "default.target" ]; };
+    };
+  };
+
+  files = profileBase: {
+    # Auto-start script
+    ".local/bin/mail-gui" = {
+      executable = true;
+      text = ''
+        #!/bin/sh
+        # Enhanced mail launcher with Bridge integration
+        set -e
+
+        # Check if Proton Bridge is running
+        if ! pgrep -x "protonmail-bridge" >/dev/null 2>&1; then
+          echo "🔄 Starting Proton Bridge..."
+          if command -v protonmail-bridge >/dev/null 2>&1; then
+            protonmail-bridge --cli &
+            sleep 3
+          else
+            echo "⚠️  Proton Bridge not found - Proton accounts may not work"
+          fi
+        else
+          echo "✅ Proton Bridge already running"
+        fi
+
+        # Check certificate
+        if [ -f "/etc/ssl/local/proton-bridge.pem" ]; then
+          echo "✅ Proton Bridge certificate ready"
+        else
+          echo "⚠️  Proton Bridge certificate missing - STARTTLS may fail"
+        fi
+
+        # Check Maildir sync
+        if [ -d "${maildirBase}" ]; then
+          echo "✅ Maildir found at ${maildirBase}"
+        else
+          echo "⚠️  Maildir not found - run 'sync-mail' first"
+        fi
+
+        echo "🚀 Starting Thunderbird..."
+        thunderbird
+      '';
+    };
+
+    # Integration info script
+    ".local/bin/thunderbird-status" = {
+      executable = true;
+      text = ''
+        #!/bin/sh
+        echo "=== Thunderbird Integration Status ==="
+        echo ""
+        echo "📁 Profile: ${profileDir}"
+        echo "📧 Maildir: ${maildirBase}"
+        echo "🔐 Proton Bridge: $(systemctl --user is-active protonmail-bridge.service 2>/dev/null || echo 'not managed by systemd')"
+        echo "📜 Certificate: $([ -f /etc/ssl/local/proton-bridge.pem ] && echo 'present' || echo 'missing')"
+        echo ""
+        echo "🔗 Maildir Link: $([ -L '${profileDir}/Mail/Local Folders' ] && echo 'linked' || echo 'not linked')"
+        echo "⚙️  Profile exists: $([ -d '${profileDir}' ] && echo 'yes' || echo 'no')"
+        echo ""
+        if [ -d "${maildirBase}" ]; then
+          echo "📂 Maildir folders:"
+          ls -la "${maildirBase}" | grep '^d' | awk '{print "   " $9}' | grep -v '^\.$\|^\.\.$'
+        fi
+      '';
+    };
+  };
+
+  activation = {
+    setupThunderbirdProfile = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      ${setupScript}
     '';
   };
 }
