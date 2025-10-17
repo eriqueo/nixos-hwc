@@ -563,7 +563,7 @@ add_to_home_profile() {
     fi
     
     # Check if already added
-    if grep -q "hwc\.home\.apps\.$option_name\.enable" "$home_profile"; then
+    if grep -q "$option_name\.enable = lib\.mkDefault" "$home_profile"; then
         warn "Package already enabled in home profile"
         return 0
     fi
@@ -599,40 +599,55 @@ add_to_home_profile() {
     #     return 1
     # fi
     
-    # Look for a flag comment to insert new apps, or find the last hwc.home.apps entry
+    # Look for a flag comment to insert new apps, or find the last app entry within the apps block
     local insertion_line
     if grep -q "# INSERT_NEW_APPS_HERE" "$home_profile"; then
         # Use the flag if it exists
         insertion_line=$(grep -n "# INSERT_NEW_APPS_HERE" "$home_profile" | head -1 | cut -d: -f1)
         debug "Found INSERT_NEW_APPS_HERE flag at line $insertion_line"
     else
-        # Fall back to finding the last hwc.home.apps entry within the users.eric block
-        # First find the users.eric block start
-        local eric_start
-        eric_start=$(grep -n "users\.eric = {" "$home_profile" | head -1 | cut -d: -f1)
-        
-        if [[ -n "$eric_start" ]]; then
-            # Find the last hwc.home.apps line after the users.eric block starts
-            insertion_line=$(sed -n "${eric_start},\$p" "$home_profile" | grep -n "hwc\.home\.apps\." | tail -1 | cut -d: -f1)
-            if [[ -n "$insertion_line" ]]; then
-                # Adjust line number to be relative to the whole file
-                insertion_line=$((eric_start + insertion_line - 1))
-                debug "Found last app entry in users.eric block at line $insertion_line"
+        # Find the apps block and locate the last entry within it
+        local apps_start apps_end
+
+        # Find the line with "apps = {"
+        apps_start=$(grep -n "apps = {" "$home_profile" | head -1 | cut -d: -f1)
+
+        if [[ -n "$apps_start" ]]; then
+            # Find the closing brace for the apps block by looking for the next "};" after apps_start
+            # We need to be careful to find the right closing brace
+            apps_end=$(sed -n "${apps_start},\$p" "$home_profile" | grep -n "^[[:space:]]*};" | head -1 | cut -d: -f1)
+            if [[ -n "$apps_end" ]]; then
+                apps_end=$((apps_start + apps_end - 1))
+                debug "Found apps block from line $apps_start to $apps_end"
+
+                # Find the last .enable line within the apps block
+                local last_enable_line
+                last_enable_line=$(sed -n "${apps_start},${apps_end}p" "$home_profile" | grep -n "\.enable = lib\.mkDefault" | tail -1 | cut -d: -f1)
+
+                if [[ -n "$last_enable_line" ]]; then
+                    # Adjust line number to be relative to the whole file
+                    insertion_line=$((apps_start + last_enable_line - 1))
+                    debug "Found last app enable entry within apps block at line $insertion_line"
+                else
+                    # If no enable entries found, insert after the "apps = {" line
+                    insertion_line=$apps_start
+                    debug "No existing app entries found, inserting after apps = { line"
+                fi
             fi
         fi
     fi
-    
+
     if [[ -z "$insertion_line" ]]; then
         error "Could not find insertion point for new app entry"
         cp "$backup_file" "$home_profile"
         return 1
     fi
-    
-    # Insert the new app entry with proper indentation
-    sed -i "${insertion_line}a\\      hwc.home.apps.$option_name.enable = true;" "$home_profile"
+
+    # Insert the new app entry with proper indentation (matching existing format)
+    sed -i "${insertion_line}a\\          $option_name.enable = lib.mkDefault true;" "$home_profile"
     
     # Validate the modification
-    if ! grep -q "hwc\.home\.apps\.$option_name\.enable" "$home_profile"; then
+    if ! grep -q "$option_name\.enable = lib\.mkDefault" "$home_profile"; then
         error "Failed to add entry to home profile"
         # Restore backup
         cp "$backup_file" "$home_profile"
@@ -647,7 +662,7 @@ add_to_home_profile() {
         return 1
     fi
     
-    success "Added hwc.home.apps.$option_name.enable = true to home profile"
+    success "Added $option_name.enable = lib.mkDefault true to home profile"
     rm -f "$backup_file"
 }
 

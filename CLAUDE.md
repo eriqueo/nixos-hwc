@@ -121,10 +121,30 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 - Wait-online policy is per-machine (laptop = "off", server = "all")
 - Static routes need explicit interface configuration
 
-### Secrets
+### Secrets & Age Key Management
 - Domain: `domains/secrets/`
 - All secrets via agenix (encrypted .age files)
 - Stable API at `/run/agenix`
+
+**Age Key Access for Secret Updates:**
+```bash
+# 1. Get the public key for encryption
+sudo age-keygen -y /etc/age/keys.txt
+# Output: age1dyegtj68gpyhwvus4wlt8azyas2sslwwt8fwyqwz3vu2jffl8chsk2afne
+
+# 2. Encrypt new secret with the public key
+echo "new-secret-value" | age -r age1dyegtj68gpyhwvus4wlt8azyas2sslwwt8fwyqwz3vu2jffl8chsk2afne > domains/secrets/parts/domain/secret-name.age
+
+# 3. Verify decryption works
+sudo age -d -i /etc/age/keys.txt domains/secrets/parts/domain/secret-name.age
+
+# 4. Commit and rebuild
+git add domains/secrets/parts/domain/secret-name.age
+git commit -m "update secret"
+sudo nixos-rebuild switch --flake .#hwc-laptop
+```
+
+**Important:** Always backup old .age files before replacing them.
 
 ---
 

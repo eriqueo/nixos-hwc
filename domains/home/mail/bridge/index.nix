@@ -22,9 +22,17 @@ in
     { home.packages = [ (br.package or pkgs.protonmail-bridge) ]; }
     files
     service
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    {
+      assertions = [
+        {
+          assertion = (br.keychain.helper == "pass") -> (builtins.elem pkgs.pass config.home.packages);
+          message = "hwc.home.mail.bridge.keychain.helper is set to 'pass' but pass package is not available";
+        }
+      ];
+    }
   ]);
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

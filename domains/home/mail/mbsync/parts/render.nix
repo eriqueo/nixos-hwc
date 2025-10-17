@@ -102,6 +102,11 @@ let
       extra = getOr a "extraMbsync" "";
       channels = channelsFor a;
       channelsStr = lib.concatStringsSep "\n" channels;
+      # Proton Bridge uses STARTTLS with a self-signed leaf; pin by file.
+      certFile = if a.type == "proton-bridge"
+                 then "CertificateFile /etc/ssl/local/proton-bridge.pem"
+                 else "";
+      tlsFingerprint = "";
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}
@@ -109,13 +114,15 @@ let
       User ${common.loginOf a}
       PassCmd "${cmd}"
       TLSType ${tlsT}
+      ${certFile}
+      ${tlsFingerprint}
 
       IMAPStore ${a.name}-remote
       Account ${a.name}
 
       MaildirStore ${a.name}-local
-      Path ${maildirRoot}/
-      Inbox ${maildirRoot}/000_inbox
+      Path ${maildirRoot}/${a.maildirName}/
+      Inbox ${maildirRoot}/${a.maildirName}/inbox
       SubFolders Verbatim
 
       ${channelsStr}

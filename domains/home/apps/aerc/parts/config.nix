@@ -19,15 +19,48 @@ let
     ${if a.primary or false then "default = INBOX" else ""}
   '';
 
-  accountsConf = lib.concatStringsSep "\n\n" (map accountBlock accVals);
+  # Saved searches shown as folders under the notmuch unified account
+  notmuchQueries = ''
+    inbox  = tag:inbox AND NOT tag:trash AND NOT tag:spam
+    unread = tag:unread AND NOT tag:trash AND NOT tag:spam
+    all    = NOT tag:trash AND NOT tag:spam
+
+    hwc    = tag:acc:hwc   AND NOT tag:trash AND NOT tag:spam
+    gbiz   = tag:acc:gbiz  AND NOT tag:trash AND NOT tag:spam
+    pers   = tag:acc:pers  AND NOT tag:trash AND NOT tag:spam
+    gpers  = tag:acc:gpers AND NOT tag:trash AND NOT tag:spam
+  '';
+
+  # Unified notmuch account (first)
+  unifiedAccount = ''
+    [unified]
+    source     = notmuch://${config.home.homeDirectory}/Maildir
+    from       = Eric O'Keefe <eric@iheartwoodcraft.com>
+    outgoing   = exec:msmtp -a proton
+    postpone   = ${maildirBase}/700_drafts
+    copy-to    = ${maildirBase}/600_sent
+    query-map  = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
+    default    = inbox
+  '';
+
+  # Make unified FIRST, then the IMAP accounts
+  accountsConf = unifiedAccount + "\n\n" + lib.concatStringsSep "\n\n" (map accountBlock accVals);
 
   stylesetConf = let
     tokens = themePart.tokens;
     viewerTokens = themePart.viewerTokens;
     renderStyle = name: style:
       "${name}.fg = ${style.fg}\n${name}.bg = ${style.bg}\n${name}.bold = ${if style.bold then "true" else "false"}";
-    mainStyleLines = lib.mapAttrsToList renderStyle tokens;
-    mainSection = lib.concatStringsSep "\n" mainStyleLines;
+
+    # Separate tag-based styles from regular styles for proper ordering
+    tagStyles = lib.filterAttrs (name: _: lib.hasPrefix "[messages].Tag:" name) tokens;
+    regularStyles = lib.filterAttrs (name: _: !(lib.hasPrefix "[messages].Tag:" name)) tokens;
+
+    # Render in order: regular styles first, then tag styles (for highest precedence)
+    regularStyleLines = lib.mapAttrsToList renderStyle regularStyles;
+    tagStyleLines = lib.mapAttrsToList renderStyle tagStyles;
+    mainSection = lib.concatStringsSep "\n" (regularStyleLines ++ tagStyleLines);
+
     viewerStyleLines = lib.mapAttrsToList renderStyle viewerTokens;
     viewerSection = "[viewer]\n" + (lib.concatStringsSep "\n" viewerStyleLines);
   in mainSection + "\n\n" + viewerSection;
@@ -35,7 +68,7 @@ let
   aercConf = ''
     [general]
     enable-osc8 = true
-    
+
     [ui]
     index-columns=date<20,name<17,flags>4,subject<*
     threading-enabled=true
@@ -48,8 +81,11 @@ let
     column-flags = {{.Flags | join ""}}
     column-subject = {{.ThreadPrefix}}{{.Subject}}
     mouse-enabled = true
-    
-    
+
+    [notmuch]
+    # Include tags (%T) in the index format; adjust other fields to taste
+    index-format=%D %-20.20F %Z %s %T
+
 
     [compose]
     editor=${pkgs.kitty}/bin/kitty -e ${pkgs.neovim}/bin/nvim
@@ -124,6 +160,7 @@ in
     ".config/aerc/accounts.conf".text = accountsConf;
         ".config/aerc/accounts.conf.source".text = accountsConf;
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
+    ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
   packages = with pkgs; [
     aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler_utils

@@ -30,8 +30,14 @@
     ../../profiles/security.nix
     # ../../profiles/ai.nix # This might be imported by a server profile now.
 
-    # Infrastructure domain for GPU only (not storage/virtualization)
+    # Infrastructure domain for GPU only (not storage)
     ../../domains/infrastructure/hardware/index.nix
+
+    # Virtualization domain for WinApps/VMs (without full infrastructure profile)
+    ../../domains/infrastructure/virtualization/index.nix
+
+    # WinApps domain for Windows application integration
+    ../../domains/infrastructure/winapps/index.nix
   ];
 
   #============================================================================
@@ -43,7 +49,7 @@
   system.stateVersion = "24.05";
 
   #============================================================================
-  # HWC PROFILE ORCHESTRATION (Facts & Toggles Only)
+  # === [profiles/system.nix] Orchestration ====================================
   #============================================================================
 
   # --- System Services Configuration ---
@@ -95,8 +101,9 @@
     tailscale.extraUpFlags = [ "--accept-dns" ];
   };
 
-
-  # --- Infrastructure & Server Roles ---
+  #============================================================================
+  # === [domains/infrastructure/hardware] Orchestration ========================
+  #============================================================================
 
   # GPU capability (remains unchanged).
   hwc.infrastructure.hardware.gpu = {
@@ -111,13 +118,77 @@
     powerManagement.smartToggle = true;
   };
 
-  # AI services (disabled until server domain refactor complete).
-  # hwc.server.ai.ollama = {
-  #   enable = true;
-  #   models = [ "llama3:8b" "codellama:13b" "phi3:medium" ];
-  # };
+  #============================================================================
+  # === [domains/infrastructure/virtualization] Orchestration ==================
+  #============================================================================
+  # Minimal virtualization for WinApps/VMs. We avoid pulling full infra profile.
+  hwc.infrastructure.virtualization = {
+    enable = true;
+    spiceSupport = false;  # no SPICE USB redirection on laptop
+  };
 
-  # --- Miscellaneous Machine-Specific Settings ---
+  # WinApps configuration for Excel access
+  hwc.infrastructure.winapps = {
+    enable = true;
+    rdpSettings = {
+      vmName = "RDPWindows";
+      ip = "192.168.122.10";  # Update this after VM creation
+      user = "eric";  # Update with Windows username
+    };
+    multiMonitor = true;
+    debug = false;
+  };
+
+  # Libvirt/QEMU: make OVMF visible and avoid extra groups by using wheel sockets.
+  virtualisation.libvirtd = {
+    # Use wheel for socket perms so you don't need extra groups.
+    extraConfig = ''
+      unix_sock_group = "wheel"
+      unix_sock_ro_perms = "0770"
+      unix_sock_rw_perms = "0770"
+    '';
+
+    # Ensure firmware enumeration succeeds on this host.
+    qemu = {
+      runAsRoot = lib.mkForce true;     # fixes OVMF metadata enumeration edge cases
+      ovmf.packages = [ pkgs.OVMFFull.fd ];
+    };
+  };
+
+  # Avoid container engines on the laptop (keep them in server profiles).
+  virtualisation.podman.enable = lib.mkForce false;
+  virtualisation.docker.enable = lib.mkForce false;
+
+  # --- Declarative libvirt storage pool (requires NixVirt in flake) --
+  # Commented out until NixVirt module is imported in flake.nix
+  # virtualisation.libvirt.pools = [
+  #   {
+  #     name = "ISOs";
+  #     present = true;
+  #     type = "dir";
+  #     target = {
+  #       path = "${config.hwc.paths.hot}/ISOs";
+  #       owner = "root";
+  #       group = "root";
+  #       mode  = "0755";
+  #     };
+  #     autostart = true;
+  #   }
+  # ];
+
+  #============================================================================
+  # === [profiles/home.nix] Orchestration =====================================
+  #============================================================================
+  # (Profile-driven; nothing machine-specific added here.)
+
+  #============================================================================
+  # === [profiles/security.nix] Orchestration =================================
+  #============================================================================
+  # (Profile-driven; nothing machine-specific added here.)
+
+  #============================================================================
+  # MISCELLANEOUS MACHINE-SPECIFIC SETTINGS
+  #============================================================================
 
   # Storage paths (remains unchanged).
   hwc.paths.hot = "/home/eric/03-tech/local-storage";
