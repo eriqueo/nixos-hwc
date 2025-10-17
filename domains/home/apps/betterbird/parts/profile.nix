@@ -1,11 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  # Integration with existing mail system
-  mailAccounts = config.hwc.home.mail.accounts or {};
-  maildirBase = "${config.home.homeDirectory}/Maildir";
-
-  # Extract account details from existing mail configuration
+  # IMAP-only configuration (separate from aerc)
   gmailWork = "heartwoodcraftmt@gmail.com";
   gmailPersonal = "eriqueokeefe@gmail.com";
   protonWork = "eric@iheartwoodcraft.com";
@@ -14,7 +10,7 @@ let
   realName = "Eric O'Keefe";
 
   # Profile directory structure
-  profileDir = "${config.home.homeDirectory}/.thunderbird/profiles/default";
+  profileDir = "${config.home.homeDirectory}/.betterbird/profiles/default";
 
   # Password integration with existing pass system
   passwordCmd = account: pkgs.writeShellScript "get-${account}-password" ''
@@ -33,29 +29,35 @@ let
     esac
   '';
 
-  # Maildir LocalFolders integration
-  maildirLocalFolders = ''
-    // === MAILDIR INTEGRATION ===
-    // Set up LocalFolders to point to existing Maildir structure
-    user_pref("mail.account.localfolders.server", "server_local");
-    user_pref("mail.server.server_local.directory", "${maildirBase}");
-    user_pref("mail.server.server_local.hostname", "Local Folders");
-    user_pref("mail.server.server_local.name", "Local Folders");
-    user_pref("mail.server.server_local.type", "none");
-    user_pref("mail.server.server_local.userName", "");
+  # Unified Folders & Smart Folders configuration
+  unifiedFoldersConfig = ''
+    // === UNIFIED FOLDERS ===
+    user_pref("mail.folder.views.version", 1);
+    user_pref("mailnews.default_view_flags", 1); // Enable unified folders
 
-    // Show LocalFolders in folder pane
-    user_pref("mail.accountmanager.localfoldersserver", "server_local");
-    user_pref("mail.server.server_local.directory-rel", "[ProfD]../../../Maildir");
+    // === SMART FOLDERS (Virtual Folders) ===
+    // Work View: Gmail Work + Proton Work inboxes
+    user_pref("mail.server.server_virtual1.directory", "mailbox://nobody@smart%20mailboxes/work");
+    user_pref("mail.server.server_virtual1.hostname", "smart mailboxes");
+    user_pref("mail.server.server_virtual1.name", "Work");
+    user_pref("mail.server.server_virtual1.type", "none");
+    user_pref("mail.server.server_virtual1.virtualFolders", "Inbox");
+    user_pref("mail.server.server_virtual1.Inbox.searchFolderUri", "mailbox://heartwoodcraftmt%40gmail.com@imap.gmail.com/INBOX|mailbox://eric%40iheartwoodcraft.com@127.0.0.1/INBOX");
+    user_pref("mail.server.server_virtual1.Inbox.searchFolderFlag", "1");
+
+    // Personal View: Gmail Personal + Proton Personal inboxes
+    user_pref("mail.server.server_virtual2.directory", "mailbox://nobody@smart%20mailboxes/personal");
+    user_pref("mail.server.server_virtual2.hostname", "smart mailboxes");
+    user_pref("mail.server.server_virtual2.name", "Personal");
+    user_pref("mail.server.server_virtual2.type", "none");
+    user_pref("mail.server.server_virtual2.virtualFolders", "Inbox");
+    user_pref("mail.server.server_virtual2.Inbox.searchFolderUri", "mailbox://eriqueokeefe%40gmail.com@imap.gmail.com/INBOX|mailbox://eriqueo%40proton.me@127.0.0.1/INBOX");
+    user_pref("mail.server.server_virtual2.Inbox.searchFolderFlag", "1");
   '';
 
   # user.js - Core preferences
   userJs = pkgs.writeText "user.js" ''
-    // === UNIFIED FOLDERS ===
-    user_pref("mail.folder.views.version", 1);
-    user_pref("mailnews.default_view_flags", 1); // Unified folders view
-
-    ${maildirLocalFolders}
+    ${unifiedFoldersConfig}
     
     // === APPEARANCE ===
     user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
@@ -285,8 +287,29 @@ let
     user_pref("mail.smtpserver.smtp4.try_ssl", 2); // STARTTLS
     user_pref("mail.identity.id4.smtpServer", "smtp4");
 
+    // IMAP Download & Offline Settings
+    // Gmail Work (server1)
+    user_pref("mail.server.server1.download_on_biff", true);
+    user_pref("mail.server.server1.offline_download", true);
+    user_pref("mail.server.server1.check_new_mail", true);
+
+    // Gmail Personal (server2)
+    user_pref("mail.server.server2.download_on_biff", true);
+    user_pref("mail.server.server2.offline_download", true);
+    user_pref("mail.server.server2.check_new_mail", true);
+
+    // Proton Work (server3)
+    user_pref("mail.server.server3.download_on_biff", true);
+    user_pref("mail.server.server3.offline_download", true);
+    user_pref("mail.server.server3.check_new_mail", true);
+
+    // Proton Personal (server4)
+    user_pref("mail.server.server4.download_on_biff", true);
+    user_pref("mail.server.server4.offline_download", true);
+    user_pref("mail.server.server4.check_new_mail", true);
+
     // Account list
-    user_pref("mail.accountmanager.accounts", "account1,account2,account3,account4");
+    user_pref("mail.accountmanager.accounts", "account1,account2,account3,account4,server_virtual1,server_virtual2");
     user_pref("mail.accountmanager.defaultaccount", "account1");
     user_pref("mail.smtpservers", "smtp1,smtp2,smtp3,smtp4");
   '';
@@ -381,34 +404,21 @@ let
   '';
 
   # Setup script to initialize profile
-  setupScript = pkgs.writeShellScript "setup-thunderbird-profile" ''
+  setupScript = pkgs.writeShellScript "setup-betterbird-profile" ''
     set -e
 
     PROFILE_DIR="${profileDir}"
-    MAILDIR_BASE="${maildirBase}"
 
-    echo "Setting up Thunderbird profile at $PROFILE_DIR..."
+    echo "Setting up Betterbird profile at $PROFILE_DIR..."
 
     # Create profile directory structure
     mkdir -p "$PROFILE_DIR"
     mkdir -p "$PROFILE_DIR/chrome"
     mkdir -p "$PROFILE_DIR/ImapMail"
-    mkdir -p "$PROFILE_DIR/Mail"
 
     # Copy configuration files
     cp ${userJs} "$PROFILE_DIR/user.js"
     cp ${userChromeCss} "$PROFILE_DIR/chrome/userChrome.css"
-
-    # Set up Maildir LocalFolders symlink
-    if [ -d "$MAILDIR_BASE" ]; then
-      echo "✅ Linking Maildir to Thunderbird LocalFolders..."
-      mkdir -p "$PROFILE_DIR/Mail"
-      if [ ! -L "$PROFILE_DIR/Mail/Local Folders" ]; then
-        ln -sf "$MAILDIR_BASE" "$PROFILE_DIR/Mail/Local Folders"
-      fi
-    else
-      echo "⚠️  Maildir not found at $MAILDIR_BASE - will create when mail sync runs"
-    fi
 
     # Check for Proton Bridge certificate
     if [ -f "/etc/ssl/local/proton-bridge.pem" ]; then
@@ -428,9 +438,9 @@ let
     fi
     
     # Set up profiles.ini to use this profile
-    PROFILES_INI="${config.home.homeDirectory}/.thunderbird/profiles.ini"
+    PROFILES_INI="${config.home.homeDirectory}/.betterbird/profiles.ini"
     mkdir -p "$(dirname "$PROFILES_INI")"
-    
+
     cat > "$PROFILES_INI" <<EOF
     [General]
     StartWithLastProfile=1
@@ -442,52 +452,32 @@ let
     Path=profiles/default
     Default=1
     EOF
-    
-    echo "✅ Profile setup complete!"
+
+    echo "✅ Betterbird profile setup complete!"
     echo ""
     echo "Next steps:"
-    echo "1. Start Thunderbird: thunderbird"
+    echo "1. Start Betterbird: betterbird"
     echo "2. Install tbkeys-lite addon for custom keybindings"
-    echo "3. Add passwords for all 4 accounts (Thunderbird will prompt)"
+    echo "3. Add passwords for all 4 accounts (Betterbird will prompt)"
     echo "4. For Proton accounts: Start proton-bridge first"
     echo ""
-    echo "Your unified inboxes will be available in the 'Unified' folder view."
+    echo "Features available:"
+    echo "• Unified Folders: See all 4 inboxes merged"
+    echo "• Smart Folder 'Work': Gmail Work + Proton Work combined"
+    echo "• Smart Folder 'Personal': Gmail Personal + Proton Personal combined"
+    echo "• Account tags: Visual distinction between Gmail vs Proton"
   '';
 
 in {
   # Module structure for integration with betterbird/index.nix
-  packages = [ pkgs.thunderbird ];
+  packages = [ pkgs.betterbird ];
 
   env = {
-    THUNDERBIRD_PROFILE = "default";
-    THUNDERBIRD_MAILDIR = maildirBase;
+    BETTERBIRD_PROFILE = "default";
   };
 
   services = {
-    # Service to ensure Maildir is linked on session start
-    thunderbird-maildir-link = {
-      Unit = {
-        Description = "Link Maildir to Thunderbird LocalFolders";
-        After = [ "graphical-session.target" ];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = pkgs.writeShellScript "link-maildir" ''
-          set -e
-          PROFILE_DIR="${profileDir}"
-          MAILDIR_BASE="${maildirBase}"
-
-          if [ -d "$MAILDIR_BASE" ] && [ -d "$PROFILE_DIR" ]; then
-            mkdir -p "$PROFILE_DIR/Mail"
-            if [ ! -L "$PROFILE_DIR/Mail/Local Folders" ]; then
-              ln -sf "$MAILDIR_BASE" "$PROFILE_DIR/Mail/Local Folders"
-              echo "✅ Linked $MAILDIR_BASE to Thunderbird LocalFolders"
-            fi
-          fi
-        '';
-      };
-      Install = { WantedBy = [ "default.target" ]; };
-    };
+    # No services needed for IMAP-only mode
   };
 
   files = profileBase: {
@@ -496,7 +486,7 @@ in {
       executable = true;
       text = ''
         #!/bin/sh
-        # Enhanced mail launcher with Bridge integration
+        # Betterbird launcher with Bridge integration
         set -e
 
         # Check if Proton Bridge is running
@@ -519,43 +509,40 @@ in {
           echo "⚠️  Proton Bridge certificate missing - STARTTLS may fail"
         fi
 
-        # Check Maildir sync
-        if [ -d "${maildirBase}" ]; then
-          echo "✅ Maildir found at ${maildirBase}"
-        else
-          echo "⚠️  Maildir not found - run 'sync-mail' first"
-        fi
-
-        echo "🚀 Starting Thunderbird..."
-        thunderbird
+        echo "🚀 Starting Betterbird..."
+        betterbird
       '';
     };
 
     # Integration info script
-    ".local/bin/thunderbird-status" = {
+    ".local/bin/betterbird-status" = {
       executable = true;
       text = ''
         #!/bin/sh
-        echo "=== Thunderbird Integration Status ==="
+        echo "=== Betterbird IMAP Integration Status ==="
         echo ""
         echo "📁 Profile: ${profileDir}"
-        echo "📧 Maildir: ${maildirBase}"
         echo "🔐 Proton Bridge: $(systemctl --user is-active protonmail-bridge.service 2>/dev/null || echo 'not managed by systemd')"
         echo "📜 Certificate: $([ -f /etc/ssl/local/proton-bridge.pem ] && echo 'present' || echo 'missing')"
         echo ""
-        echo "🔗 Maildir Link: $([ -L '${profileDir}/Mail/Local Folders' ] && echo 'linked' || echo 'not linked')"
         echo "⚙️  Profile exists: $([ -d '${profileDir}' ] && echo 'yes' || echo 'no')"
+        echo "📧 IMAP Storage: $([ -d '${profileDir}/ImapMail' ] && echo '~/.betterbird/profiles/default/ImapMail' || echo 'not created yet')"
         echo ""
-        if [ -d "${maildirBase}" ]; then
-          echo "📂 Maildir folders:"
-          ls -la "${maildirBase}" | grep '^d' | awk '{print "   " $9}' | grep -v '^\.$\|^\.\.$'
-        fi
+        echo "🔗 Email Architecture:"
+        echo "   • aerc ← → ~/Maildir ← → mbsync ← → IMAP Servers"
+        echo "   • Betterbird ← → ~/.betterbird/ImapMail ← → IMAP Servers"
+        echo "   • Separate systems, no shared storage"
+        echo ""
+        echo "📂 Unified Views Available:"
+        echo "   • Unified Folders: All 4 inboxes merged"
+        echo "   • Smart Folder 'Work': Gmail Work + Proton Work"
+        echo "   • Smart Folder 'Personal': Gmail Personal + Proton Personal"
       '';
     };
   };
 
   activation = {
-    setupThunderbirdProfile = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    setupBetterbirdProfile = lib.hm.dag.entryAfter ["writeBoundary"] ''
       ${setupScript}
     '';
   };
