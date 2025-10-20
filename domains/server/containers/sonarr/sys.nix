@@ -12,11 +12,16 @@ in
       networkMode = cfg.network.mode;
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred
-      timeZone = "UTC";   # Static default - timezone detection deferred
-      ports = [];
-      volumes = [ "/opt/downloads/sonarr:/config" ];
+      timeZone = config.time.timeZone or "UTC";
+      ports = [ "127.0.0.1:8989:8989" ];
+      volumes = [
+        "/opt/downloads/sonarr:/config"
+        "${config.hwc.paths.media}/tv:/tv"
+        "${config.hwc.paths.hot}/processing/sonarr-temp:/processing"
+        "${config.hwc.paths.hot}/downloads:/downloads"
+      ];
       environment = { };
-      dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
+      dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ "prowlarr" ];
     })
   ]);
 }
