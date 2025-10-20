@@ -50,18 +50,28 @@
       # Business intelligence and AI directories
       { path = "/opt/business"; }
       { path = "/opt/ai"; }
-      
+
       # Service configuration directories
       { path = "/opt/arr"; }
       { path = "/opt/media"; }
       { path = "/opt/monitoring"; }
-      
+      { path = "/opt/downloads"; }  # Container base directory
+
+      # Container-specific directories
+      { path = "/mnt/hot/downloads"; }  # Already exists, keep for safety
+      { path = "/mnt/hot/events"; }  # Critical for SABnzbd automation
+      { path = "/mnt/hot/processing"; }  # Already exists, keep for safety
+      { path = "/mnt/hot/processing/sonarr-temp"; }
+      { path = "/mnt/hot/processing/radarr-temp"; }
+      { path = "/mnt/hot/processing/lidarr-temp"; }
+      { path = "/opt/downloads/scripts"; }  # Post-processing scripts
+
       # HWC standard directories
       { path = "/var/lib/hwc"; }
       { path = "/var/cache/hwc"; }
       { path = "/var/log/hwc"; }
       { path = "/var/tmp/hwc"; }
-      
+
       # Security directories
       { path = "/var/lib/hwc/secrets"; mode = "0700"; }
     ];
@@ -256,7 +266,13 @@
   # Phase 4: Specialized Services (Soulseek integration)
   hwc.services.containers.slskd.enable = true;
   # hwc.services.containers.soularr.enable = true;  # TODO: depends on lidarr
-  
+
+  # Phase 5: Infrastructure Services
+  hwc.services.reverseProxy = {
+    enable = true;
+    domain = "localhost";  # TODO: Set to actual Tailscale domain
+  };
+
   # Legacy services disabled until Charter v6 migration complete:
   # - Business services (database, API, monitoring)
   # - AI services (Ollama)
