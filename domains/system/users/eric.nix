@@ -29,7 +29,7 @@ in {
         if cfg.user.ssh.useSecrets then
           [ (builtins.readFile config.age.secrets.user-ssh-public-key.path) ]
         else
-          [ cfg.user.ssh.fallbackKey ]
+          cfg.user.ssh.fallbackKey
       );
     };
 
