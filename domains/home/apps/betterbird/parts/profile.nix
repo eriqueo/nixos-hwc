@@ -1,22 +1,63 @@
 { config, lib, pkgs, ... }:
 
 let
-  # Your email addresses - FILL THESE IN
+  # IMAP-only configuration (separate from aerc)
   gmailWork = "heartwoodcraftmt@gmail.com";
   gmailPersonal = "eriqueokeefe@gmail.com";
   protonWork = "eric@iheartwoodcraft.com";
   protonPersonal = "eriqueo@proton.me";
-  
+
   realName = "Eric O'Keefe";
 
   # Profile directory structure
-  profileDir = "${config.home.homeDirectory}/.thunderbird/profiles/default";
+  profileDir = "${config.home.homeDirectory}/.betterbird/profiles/default";
+
+  # Password integration with existing pass system
+  passwordCmd = account: pkgs.writeShellScript "get-${account}-password" ''
+    set -euo pipefail
+    export PATH="${pkgs.pass}/bin:${pkgs.gnupg}/bin:$PATH"
+    export HOME="${config.home.homeDirectory}"
+    export GNUPGHOME="${config.home.homeDirectory}/.gnupg"
+    export PASSWORD_STORE_DIR="${config.home.homeDirectory}/.password-store"
+
+    case "${account}" in
+      "gmail-business") pass show email/gmail/business | tr -d '\n' ;;
+      "gmail-personal") pass show email/gmail/personal | tr -d '\n' ;;
+      "proton-work") pass show email/proton/bridge | tr -d '\n' ;;
+      "proton-personal") pass show email/proton/bridge | tr -d '\n' ;;
+      *) echo "Unknown account: ${account}" >&2; exit 1 ;;
+    esac
+  '';
+
+  # Unified Folders & Smart Folders configuration
+  unifiedFoldersConfig = ''
+    // === UNIFIED FOLDERS ===
+    user_pref("mail.folder.views.version", 1);
+    user_pref("mailnews.default_view_flags", 1); // Enable unified folders
+
+    // === SMART FOLDERS (Virtual Folders) ===
+    // Work View: Gmail Work + Proton Work inboxes
+    user_pref("mail.server.server_virtual1.directory", "mailbox://nobody@smart%20mailboxes/work");
+    user_pref("mail.server.server_virtual1.hostname", "smart mailboxes");
+    user_pref("mail.server.server_virtual1.name", "Work");
+    user_pref("mail.server.server_virtual1.type", "none");
+    user_pref("mail.server.server_virtual1.virtualFolders", "Inbox");
+    user_pref("mail.server.server_virtual1.Inbox.searchFolderUri", "mailbox://heartwoodcraftmt%40gmail.com@imap.gmail.com/INBOX|mailbox://eric%40iheartwoodcraft.com@127.0.0.1/INBOX");
+    user_pref("mail.server.server_virtual1.Inbox.searchFolderFlag", "1");
+
+    // Personal View: Gmail Personal + Proton Personal inboxes
+    user_pref("mail.server.server_virtual2.directory", "mailbox://nobody@smart%20mailboxes/personal");
+    user_pref("mail.server.server_virtual2.hostname", "smart mailboxes");
+    user_pref("mail.server.server_virtual2.name", "Personal");
+    user_pref("mail.server.server_virtual2.type", "none");
+    user_pref("mail.server.server_virtual2.virtualFolders", "Inbox");
+    user_pref("mail.server.server_virtual2.Inbox.searchFolderUri", "mailbox://eriqueokeefe%40gmail.com@imap.gmail.com/INBOX|mailbox://eriqueo%40proton.me@127.0.0.1/INBOX");
+    user_pref("mail.server.server_virtual2.Inbox.searchFolderFlag", "1");
+  '';
 
   # user.js - Core preferences
   userJs = pkgs.writeText "user.js" ''
-    // === UNIFIED FOLDERS ===
-    user_pref("mail.folder.views.version", 1);
-    user_pref("mailnews.default_view_flags", 1); // Unified folders view
+    ${unifiedFoldersConfig}
     
     // === APPEARANCE ===
     user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
@@ -168,43 +209,17 @@ let
     }
   '';
 
-  # prefs.js template - Account configuration
-  # NOTE: User will need to add passwords via Thunderbird GUI on first run
+  # Account configuration - framework only
+  # NOTE: Accounts should be added manually via Thunderbird UI for OAuth2
   accountPrefs = ''
-    // === ACCOUNT STRUCTURE ===
-    // Gmail Work Account
-    user_pref("mail.account.account1.identities", "id1");
-    user_pref("mail.account.account1.server", "server1");
-    user_pref("mail.identity.id1.fullName", "${realName}");
-    user_pref("mail.identity.id1.useremail", "${gmailWork}");
-    user_pref("mail.identity.id1.valid", true);
-    user_pref("mail.server.server1.hostname", "imap.gmail.com");
-    user_pref("mail.server.server1.name", "${gmailWork}");
-    user_pref("mail.server.server1.port", 993);
-    user_pref("mail.server.server1.socketType", 3); // SSL/TLS
-    user_pref("mail.server.server1.type", "imap");
-    user_pref("mail.server.server1.userName", "${gmailWork}");
-    user_pref("mail.smtpserver.smtp1.hostname", "smtp.gmail.com");
-    user_pref("mail.smtpserver.smtp1.port", 465);
-    user_pref("mail.smtpserver.smtp1.username", "${gmailWork}");
-    user_pref("mail.identity.id1.smtpServer", "smtp1");
+    // === OAUTH2 FRAMEWORK ===
+    user_pref("mail.server.default.oauth2.scope", "https://mail.google.com/");
+    user_pref("mail.smtpserver.default.oauth2.scope", "https://mail.google.com/");
+    user_pref("mailnews.oauth2.google.scope", "https://mail.google.com/");
 
-    // Gmail Personal Account  
-    user_pref("mail.account.account2.identities", "id2");
-    user_pref("mail.account.account2.server", "server2");
-    user_pref("mail.identity.id2.fullName", "${realName}");
-    user_pref("mail.identity.id2.useremail", "${gmailPersonal}");
-    user_pref("mail.identity.id2.valid", true);
-    user_pref("mail.server.server2.hostname", "imap.gmail.com");
-    user_pref("mail.server.server2.name", "${gmailPersonal}");
-    user_pref("mail.server.server2.port", 993);
-    user_pref("mail.server.server2.socketType", 3);
-    user_pref("mail.server.server2.type", "imap");
-    user_pref("mail.server.server2.userName", "${gmailPersonal}");
-    user_pref("mail.smtpserver.smtp2.hostname", "smtp.gmail.com");
-    user_pref("mail.smtpserver.smtp2.port", 465);
-    user_pref("mail.smtpserver.smtp2.username", "${gmailPersonal}");
-    user_pref("mail.identity.id2.smtpServer", "smtp2");
+    // Enable OAuth2 for Gmail by default
+    user_pref("mail.smtpserver.default.authMethod", 10);
+    user_pref("mail.server.default.authMethod", 10);
 
     // Proton Work Account
     user_pref("mail.account.account3.identities", "id3");
@@ -218,9 +233,12 @@ let
     user_pref("mail.server.server3.socketType", 2); // STARTTLS
     user_pref("mail.server.server3.type", "imap");
     user_pref("mail.server.server3.userName", "${protonWork}");
+    user_pref("mail.server.server3.isSecure", true);
+    user_pref("mail.server.server3.override_namespaces", true);
     user_pref("mail.smtpserver.smtp3.hostname", "127.0.0.1");
     user_pref("mail.smtpserver.smtp3.port", 1025);
     user_pref("mail.smtpserver.smtp3.username", "${protonWork}");
+    user_pref("mail.smtpserver.smtp3.try_ssl", 2); // STARTTLS
     user_pref("mail.identity.id3.smtpServer", "smtp3");
 
     // Proton Personal Account
@@ -232,16 +250,40 @@ let
     user_pref("mail.server.server4.hostname", "127.0.0.1"); // Proton Bridge
     user_pref("mail.server.server4.name", "${protonPersonal}");
     user_pref("mail.server.server4.port", 1143);
-    user_pref("mail.server.server4.socketType", 2);
+    user_pref("mail.server.server4.socketType", 2); // STARTTLS
     user_pref("mail.server.server4.type", "imap");
     user_pref("mail.server.server4.userName", "${protonPersonal}");
+    user_pref("mail.server.server4.isSecure", true);
+    user_pref("mail.server.server4.override_namespaces", true);
     user_pref("mail.smtpserver.smtp4.hostname", "127.0.0.1");
     user_pref("mail.smtpserver.smtp4.port", 1025);
     user_pref("mail.smtpserver.smtp4.username", "${protonPersonal}");
+    user_pref("mail.smtpserver.smtp4.try_ssl", 2); // STARTTLS
     user_pref("mail.identity.id4.smtpServer", "smtp4");
 
+    // IMAP Download & Offline Settings
+    // Gmail Work (server1)
+    user_pref("mail.server.server1.download_on_biff", true);
+    user_pref("mail.server.server1.offline_download", true);
+    user_pref("mail.server.server1.check_new_mail", true);
+
+    // Gmail Personal (server2)
+    user_pref("mail.server.server2.download_on_biff", true);
+    user_pref("mail.server.server2.offline_download", true);
+    user_pref("mail.server.server2.check_new_mail", true);
+
+    // Proton Work (server3)
+    user_pref("mail.server.server3.download_on_biff", true);
+    user_pref("mail.server.server3.offline_download", true);
+    user_pref("mail.server.server3.check_new_mail", true);
+
+    // Proton Personal (server4)
+    user_pref("mail.server.server4.download_on_biff", true);
+    user_pref("mail.server.server4.offline_download", true);
+    user_pref("mail.server.server4.check_new_mail", true);
+
     // Account list
-    user_pref("mail.accountmanager.accounts", "account1,account2,account3,account4");
+    user_pref("mail.accountmanager.accounts", "account1,account2,account3,account4,server_virtual1,server_virtual2");
     user_pref("mail.accountmanager.defaultaccount", "account1");
     user_pref("mail.smtpservers", "smtp1,smtp2,smtp3,smtp4");
   '';
@@ -335,80 +377,175 @@ let
     user_pref("extensions.tbkeys.key.space.t", "cmd:cmd_goFolder,Trash");
   '';
 
-  # Setup script to initialize profile
-  setupScript = pkgs.writeShellScript "setup-thunderbird-profile" ''
-    set -e
-    
-    PROFILE_DIR="${profileDir}"
-    
-    echo "Setting up Thunderbird profile at $PROFILE_DIR..."
-    
-    # Create profile directory structure
-    mkdir -p "$PROFILE_DIR"
-    mkdir -p "$PROFILE_DIR/chrome"
-    mkdir -p "$PROFILE_DIR/ImapMail"
-    
-    # Copy configuration files
-    cp ${userJs} "$PROFILE_DIR/user.js"
-    cp ${userChromeCss} "$PROFILE_DIR/chrome/userChrome.css"
-    
-    # Initialize prefs.js if it doesn't exist
-    if [ ! -f "$PROFILE_DIR/prefs.js" ]; then
-      cat > "$PROFILE_DIR/prefs.js" <<'EOF'
-    # Mozilla User Preferences
-    ${accountPrefs}
-    ${tagsPrefs}
-    ${tbkeysPrefs}
-    EOF
-    fi
-    
-    # Set up profiles.ini to use this profile
-    PROFILES_INI="${config.home.homeDirectory}/.thunderbird/profiles.ini"
-    mkdir -p "$(dirname "$PROFILES_INI")"
-    
-    cat > "$PROFILES_INI" <<EOF
-    [General]
-    StartWithLastProfile=1
-    Version=2
-
-    [Profile0]
-    Name=default
-    IsRelative=1
-    Path=profiles/default
-    Default=1
-    EOF
-    
-    echo "✅ Profile setup complete!"
-    echo ""
-    echo "Next steps:"
-    echo "1. Start Thunderbird: thunderbird"
-    echo "2. Install tbkeys-lite addon for custom keybindings"
-    echo "3. Add passwords for all 4 accounts (Thunderbird will prompt)"
-    echo "4. For Proton accounts: Start proton-bridge first"
-    echo ""
-    echo "Your unified inboxes will be available in the 'Unified' folder view."
-  '';
 
 in {
-  home.packages = [ pkgs.thunderbird ];
-  
-  home.activation.setupThunderbirdProfile = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    ${setupScript}
-  '';
-  
-  # Optional: Auto-start script
-  home.file.".local/bin/mail" = {
-    executable = true;
-    text = ''
-      #!/bin/sh
-      # Start proton bridge if needed
-      if command -v protonmail-bridge >/dev/null 2>&1; then
-        protonmail-bridge --cli &
-        sleep 2
-      fi
-      
-      # Start Thunderbird
-      thunderbird
-    '';
+  # Module structure for integration with betterbird/index.nix
+  packages = [ pkgs.thunderbird ];
+
+  env = {
+    THUNDERBIRD_PROFILE = "default";
   };
+
+  services = {
+    # No services needed for IMAP-only mode
+  };
+
+  files = profileBase: {
+    # Declarative profile files
+    ".betterbird/profiles.ini".text = ''
+      [General]
+      StartWithLastProfile=1
+      Version=2
+
+      [Profile0]
+      Name=default
+      IsRelative=1
+      Path=profiles/default
+      Default=1
+    '';
+
+    ".betterbird/profiles/default/user.js".source = userJs;
+    ".betterbird/profiles/default/chrome/userChrome.css".source = userChromeCss;
+
+    ".betterbird/profiles/default/prefs.js".text = ''
+      # Mozilla User Preferences
+      ${accountPrefs}
+      ${tagsPrefs}
+      ${tbkeysPrefs}
+    '';
+
+    # Auto-start script
+    ".local/bin/mail-gui" = {
+      executable = true;
+      text = ''
+        #!/bin/sh
+        # Thunderbird launcher with Bridge integration
+        set -e
+
+        # Check if this is first run
+        PROFILE_DIR="${config.home.homeDirectory}/.betterbird/profiles/default"
+        FIRST_RUN=false
+        if [ ! -d "$PROFILE_DIR/ImapMail" ]; then
+          FIRST_RUN=true
+        fi
+
+        # Check if Proton Bridge is running
+        if ! pgrep -x "protonmail-bridge" >/dev/null 2>&1; then
+          echo "🔄 Starting Proton Bridge..."
+          if command -v protonmail-bridge >/dev/null 2>&1; then
+            protonmail-bridge --cli &
+            sleep 3
+          else
+            echo "⚠️  Proton Bridge not found - Proton accounts may not work"
+          fi
+        else
+          echo "✅ Proton Bridge already running"
+        fi
+
+        # Check certificate
+        if [ -f "/etc/ssl/local/proton-bridge.pem" ]; then
+          echo "✅ Proton Bridge certificate ready"
+        else
+          echo "⚠️  Proton Bridge certificate missing - STARTTLS may fail"
+        fi
+
+        if [ "$FIRST_RUN" = "true" ]; then
+          echo ""
+          echo "📧 FIRST-TIME SETUP REQUIRED:"
+          echo ""
+          echo "ADD GMAIL ACCOUNTS MANUALLY:"
+          echo "1. Account Settings → Account Actions → Add Mail Account"
+          echo "2. Gmail Work: heartwoodcraftmt@gmail.com"
+          echo "3. Gmail Personal: eriqueokeefe@gmail.com"
+          echo "4. Use 'Configure manually' and set Authentication to 'OAuth2'"
+          echo "5. Thunderbird will open browser for Google sign-in"
+          echo ""
+          echo "ADD PROTON ACCOUNTS:"
+          echo "6. Proton Work: eric@iheartwoodcraft.com (Bridge password)"
+          echo "7. Proton Personal: eriqueo@proton.me (Bridge password)"
+          echo "8. Server: 127.0.0.1:1143 (IMAP), 127.0.0.1:1025 (SMTP), STARTTLS"
+          echo ""
+          echo "OPTIONAL:"
+          echo "9. Install tbkeys-lite addon for vim-like keybindings"
+          echo "10. Enable unified folders in View menu"
+          echo ""
+        fi
+
+        echo "🚀 Starting Thunderbird..."
+        thunderbird
+      '';
+    };
+
+    # Setup guide script
+    ".local/bin/betterbird-setup" = {
+      executable = true;
+      text = ''
+        #!/bin/sh
+        echo "=== Thunderbird Email Account Setup Guide ==="
+        echo ""
+        echo "🔧 GMAIL ACCOUNTS (OAuth2 - No App Passwords Needed):"
+        echo ""
+        echo "1. Open Thunderbird Account Settings"
+        echo "2. Account Actions → Add Mail Account"
+        echo ""
+        echo "GMAIL WORK:"
+        echo "   Email: heartwoodcraftmt@gmail.com"
+        echo "   Click 'Configure manually'"
+        echo "   IMAP: imap.gmail.com:993 (SSL/TLS)"
+        echo "   SMTP: smtp.gmail.com:465 (SSL/TLS)"
+        echo "   Authentication: OAuth2 (both IMAP & SMTP)"
+        echo ""
+        echo "GMAIL PERSONAL:"
+        echo "   Email: eriqueokeefe@gmail.com"
+        echo "   Same settings as above"
+        echo ""
+        echo "🔧 PROTON ACCOUNTS (Bridge Required):"
+        echo ""
+        echo "PROTON WORK:"
+        echo "   Email: eric@iheartwoodcraft.com"
+        echo "   IMAP: 127.0.0.1:1143 (STARTTLS)"
+        echo "   SMTP: 127.0.0.1:1025 (STARTTLS)"
+        echo "   Authentication: Normal password"
+        echo "   Password: Use Bridge-generated password"
+        echo ""
+        echo "PROTON PERSONAL:"
+        echo "   Email: eriqueo@proton.me"
+        echo "   Same settings as above"
+        echo ""
+        echo "📋 Bridge Password Commands:"
+        echo "   protonmail-bridge --cli"
+        echo "   > list"
+        echo "   > info 0  # Shows passwords for each account"
+        echo ""
+        echo "🎯 After Setup:"
+        echo "   • View → Folder Pane → Unified Folders"
+        echo "   • Install tbkeys-lite addon for vim keybindings"
+        echo "   • Check status: betterbird-status"
+      '';
+    };
+
+    # Integration info script
+    ".local/bin/betterbird-status" = {
+      executable = true;
+      text = ''
+        #!/bin/sh
+        echo "=== Thunderbird IMAP Integration Status ==="
+        echo ""
+        echo "📁 Profile: ${profileDir}"
+        echo "🔐 Proton Bridge: $(systemctl --user is-active protonmail-bridge.service 2>/dev/null || echo 'not managed by systemd')"
+        echo "📜 Certificate: $([ -f /etc/ssl/local/proton-bridge.pem ] && echo 'present' || echo 'missing')"
+        echo ""
+        echo "⚙️  Profile exists: $([ -d '${profileDir}' ] && echo 'yes' || echo 'no')"
+        echo "📧 IMAP Storage: $([ -d '${profileDir}/ImapMail' ] && echo '~/.betterbird/profiles/default/ImapMail' || echo 'not created yet')"
+        echo ""
+        echo "🔗 Email Architecture:"
+        echo "   • aerc ← → ~/Maildir ← → mbsync ← → IMAP Servers"
+        echo "   • Thunderbird ← → ~/.betterbird/ImapMail ← → IMAP Servers"
+        echo "   • Separate systems, no shared storage"
+        echo ""
+        echo "📂 Setup Guide: betterbird-setup"
+      '';
+    };
+  };
+
 }

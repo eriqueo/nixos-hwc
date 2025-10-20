@@ -5,9 +5,10 @@ let
   appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
   session    = import ./parts/session.nix    { inherit lib pkgs config; };
   tools      = import ./parts/tools.nix      { inherit lib pkgs config; };
+  profile    = import ./parts/profile.nix    { inherit lib pkgs config; };
 
   homeDir     = config.home.homeDirectory;
-  profileBase = "${homeDir}/.thunderbird";
+  profileBase = "${homeDir}/.betterbird";
   cfg = config.hwc.home.apps.betterbird;
 in
 {
@@ -18,22 +19,36 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
-    # Packages that belong with the app (you can add betterbird here if you package it)
-    home.packages = (session.packages or []) ++ (tools.packages or []);
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    # Packages: session + tools + profile
+    {
+      home.packages = (session.packages or []) ++ (tools.packages or []) ++ (profile.packages or []);
+    }
 
-    # Session variables (none are strictly required, but session/env is supported)
-    home.sessionVariables = (session.env or {});
+    # Session variables
+    {
+      home.sessionVariables = (session.env or {}) // (profile.env or {});
+    }
 
-    # User services: tools + session
-    systemd.user.services = (tools.services or {}) // (session.services or {});
+    # User services: tools + session + profile
+    {
+      systemd.user.services = (tools.services or {}) // (session.services or {}) // (profile.services or {});
+    }
 
-    # File drops (theming + prefs)
-    home.file = lib.mkMerge [
-      (appearance.files profileBase)
-      (behavior.files   profileBase)
-    ];
-  };
+    # File drops (theming + prefs + profile)
+    {
+      home.file = lib.mkMerge [
+        (appearance.files profileBase)
+        (behavior.files   profileBase)
+        (profile.files profileBase)
+      ];
+    }
+
+    # Home activation scripts from profile
+    (lib.mkIf (profile ? activation) {
+      home.activation = profile.activation;
+    })
+  ]);
 }
 
   #==========================================================================

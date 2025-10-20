@@ -36,6 +36,9 @@
           };
         };
 
+        # Development Environment
+        development.enable = lib.mkDefault true;
+
         # Mail & Communication
         mail = {
           enable = lib.mkDefault true;
@@ -92,6 +95,7 @@
           wasistlos.enable = lib.mkDefault false;          # System monitor (niche)
           bottlesUnwrapped.enable = lib.mkDefault true;
           thunderbird.enable = lib.mkDefault true;
+          localsend.enable = lib.mkDefault true;
         };
       };
     };

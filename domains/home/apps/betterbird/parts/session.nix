@@ -3,11 +3,11 @@
 { lib, pkgs, config, ... }:
 
 {
-  # Thunderbird (Betterbird replacement) with extras
+  # Thunderbird (betterbird removed from nixpkgs)
   packages = [ pkgs.thunderbird ];
 
   # If you want Betterbird-specific user services, define them here.
-  # (Most users don’t need any; Proton Bridge etc. should be their own module.)
+  # (Most users don't need any; Proton Bridge etc. should be their own module.)
   services = { };
 
   # Export session env if needed (kept tiny and generic).
