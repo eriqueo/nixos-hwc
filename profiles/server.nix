@@ -35,6 +35,8 @@
   imports = [
     # Core system modules only (legacy services disabled until Charter v6 migration complete)
     ../domains/infrastructure/index.nix
+    # Container services (Charter v6 migration in progress)
+    ../domains/server/containers/index.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
 
@@ -226,9 +228,9 @@
   };
 
   #============================================================================
-  # SERVICE ENABLEMENT (Legacy services temporarily disabled)
+  # SERVICE ENABLEMENT (Charter v6 migration in progress)
   #============================================================================
-  
+
   # Infrastructure services (minimal GPU configuration)
   hwc.infrastructure.hardware.gpu = {
     enable = true;
@@ -239,9 +241,18 @@
       enableMonitoring = true;
     };
   };
+
+  # Container services (Charter v6 migration test)
+  hwc.services.containers.gluetun.enable = true;
+  hwc.services.containers.qbittorrent.enable = true;
+  hwc.services.containers.sabnzbd.enable = true;
+
+  # Phase 3: Media Management (*arr Stack)
+  hwc.services.containers.prowlarr.enable = true;
+  hwc.services.containers.sonarr.enable = true;
+  hwc.services.containers.radarr.enable = true;
   
   # Legacy services disabled until Charter v6 migration complete:
-  # - Media services (ARR stack, downloaders, etc.)
   # - Business services (database, API, monitoring)
   # - AI services (Ollama)
   # - Application services (Jellyfin, Immich)

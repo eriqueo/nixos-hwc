@@ -5,9 +5,30 @@ let
 in
 {
   options.hwc.services.containers.qbittorrent = {
-    enable = mkEnableOption "qbittorrent container";
-        image  = mkOption { type = types.str; default = "lscr.io/linuxserver/qbittorrent"; description = "Container image"; };
-    network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
-    gpu.enable    = mkOption { type = types.bool; default = true; };
+    enable = mkEnableOption "qBittorrent torrent client container";
+
+    image = mkOption {
+      type = types.str;
+      default = "lscr.io/linuxserver/qbittorrent:latest";
+      description = "Container image for qBittorrent";
+    };
+
+    network.mode = mkOption {
+      type = types.enum [ "media" "vpn" ];
+      default = "vpn";
+      description = "Network mode: 'media' for direct access, 'vpn' to route through gluetun";
+    };
+
+    webPort = mkOption {
+      type = types.port;
+      default = 8080;
+      description = "Web UI port";
+    };
+
+    gpu.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Enable GPU acceleration (not typically needed for qBittorrent)";
+    };
   };
 }
