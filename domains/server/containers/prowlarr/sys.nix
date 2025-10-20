@@ -12,8 +12,8 @@ in
       networkMode = cfg.network.mode;
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred
-      timeZone = "UTC";   # Static default - timezone detection deferred
-      ports = [];
+      timeZone = config.time.timeZone or "UTC";
+      ports = [ "127.0.0.1:9696:9696" ];
       volumes = [ "/opt/downloads/prowlarr:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
