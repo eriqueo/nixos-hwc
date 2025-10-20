@@ -251,6 +251,11 @@
   hwc.services.containers.prowlarr.enable = true;
   hwc.services.containers.sonarr.enable = true;
   hwc.services.containers.radarr.enable = true;
+  hwc.services.containers.lidarr.enable = true;
+
+  # Phase 4: Specialized Services (Soulseek integration)
+  hwc.services.containers.slskd.enable = true;
+  # hwc.services.containers.soularr.enable = true;  # TODO: depends on lidarr
   
   # Legacy services disabled until Charter v6 migration complete:
   # - Business services (database, API, monitoring)
