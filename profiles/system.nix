@@ -52,6 +52,7 @@
   hwc.system.services.session = {
     enable = true;
     loginManager.autoLoginUser = "eric";
+    sudo.enable = true;
     sudo.wheelNeedsPassword = false;
     linger.users = [ "eric" ];
   };
