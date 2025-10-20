@@ -29,28 +29,43 @@
 
 ---
 
-### Phase 2: Download Clients (Planned)
+### Phase 2: Download Clients ✅ Complete
 
-#### 🟡 qBittorrent Torrent Client
-- **Dependencies**: gluetun (VPN networking)
-- **Secrets Required**: None (uses gluetun's VPN connection)
-- **Key Features**:
-  - Network mode: `--network=container:gluetun`
-  - Web UI exposed through gluetun ports
-  - Download path: `/mnt/hot/downloads`
-  - Config volume: `/opt/downloads/qbittorrent:/config`
-- **Migration Pattern**: Extract from monolith `buildDownloadContainer` function
+#### ✅ qBittorrent Torrent Client (2025-10-20)
+- **Status**: Complete and tested
+- **Files Modified**:
+  - `domains/server/containers/qbittorrent/options.nix` - Enhanced options with webPort, VPN mode
+  - `domains/server/containers/qbittorrent/parts/config.nix` - Full Charter-compliant implementation
+  - `domains/server/containers/qbittorrent/sys.nix` - Disabled to avoid conflicts
+  - `profiles/server.nix` - Enabled qBittorrent container
+- **Key Changes**:
+  - ✅ VPN networking via gluetun: `--network=container:gluetun`
+  - ✅ Web UI port configuration (default: 8080)
+  - ✅ Volume mounts: config and downloads
+  - ✅ Resource limits: 2GB RAM, 1 CPU, 4GB swap
+  - ✅ Proper dependency management and validation assertions
+- **Testing**:
+  - ✅ Build succeeds: `sudo nixos-rebuild build --flake .#hwc-server`
+  - ✅ Container properly configured with VPN networking
+  - ✅ No configuration conflicts
 
-#### 🟡 SABnzbd Usenet Client
-- **Dependencies**: gluetun (VPN networking)
-- **Critical Mounts**:
-  - `/mnt/hot/events:/mnt/hot/events` (event processing - CRITICAL)
-  - `/opt/downloads/scripts:/config/scripts:ro` (script access)
-- **Key Features**:
-  - Network mode: `--network=container:gluetun`
-  - Post-processing scripts for media automation
-  - Hostname whitelist configuration
-- **Migration Notes**: Most complex due to event system integration
+#### ✅ SABnzbd Usenet Client (2025-10-20)
+- **Status**: Complete and tested
+- **Files Modified**:
+  - `domains/server/containers/sabnzbd/options.nix` - Enhanced options with webPort, VPN mode
+  - `domains/server/containers/sabnzbd/parts/config.nix` - Full Charter-compliant implementation
+  - `domains/server/containers/sabnzbd/sys.nix` - Disabled to avoid conflicts
+  - `profiles/server.nix` - Enabled SABnzbd container
+- **Key Changes**:
+  - ✅ VPN networking via gluetun: `--network=container:gluetun`
+  - ✅ **CRITICAL mount preserved**: `/mnt/hot/events:/mnt/hot/events` (automation pipeline)
+  - ✅ Post-processing scripts: `/opt/downloads/scripts:/config/scripts:ro`
+  - ✅ Port configuration: 8081 external, 8085 internal (VPN mode)
+  - ✅ Resource limits and proper validation assertions
+- **Testing**:
+  - ✅ Build succeeds: `sudo nixos-rebuild build --flake .#hwc-server`
+  - ✅ All critical mounts verified and preserved
+  - ✅ No configuration conflicts
 
 ---
 
