@@ -55,7 +55,7 @@ in
 
       # Volume mounts
       volumes = [
-        "${paths.hot}/downloads/qbittorrent:/config"
+        "/opt/downloads/qbittorrent:/config"
         "${paths.hot}/downloads:/downloads"
       ];
 
