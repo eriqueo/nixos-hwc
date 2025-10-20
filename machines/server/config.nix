@@ -90,10 +90,10 @@
 
   # BULLETPROOF: Override user secrets for server reliability
   hwc.system.users.user = {
-      useSecrets = lib.mkForce false;
-      fallbackPassword = lib.mkForce "il0wwlm?";
-      ssh.useSecrets = lib.mkForce false;  # Force fallback SSH key
-    };
+    useSecrets = lib.mkForce false;
+    fallbackPassword = lib.mkForce "il0wwlm?";
+    ssh.useSecrets = lib.mkForce false;  # Force fallback SSH key
+  };
 
   # BULLETPROOF: Ensure emergency root access works
   hwc.secrets.emergency = {
