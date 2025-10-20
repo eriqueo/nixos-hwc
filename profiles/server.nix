@@ -59,6 +59,8 @@
 
       # Container-specific directories
       { path = "/mnt/hot/downloads"; }  # Already exists, keep for safety
+      { path = "/mnt/hot/downloads/incomplete"; }  # SLSKD incomplete downloads
+      { path = "/mnt/hot/downloads/complete"; }  # SLSKD completed downloads
       { path = "/mnt/hot/events"; }  # Critical for SABnzbd automation
       { path = "/mnt/hot/processing"; }  # Already exists, keep for safety
       { path = "/mnt/hot/processing/sonarr-temp"; }
@@ -265,12 +267,27 @@
 
   # Phase 4: Specialized Services (Soulseek integration)
   hwc.services.containers.slskd.enable = true;
-  # hwc.services.containers.soularr.enable = true;  # TODO: depends on lidarr
+  hwc.services.containers.soularr.enable = true;  # Now that Lidarr is enabled
+  hwc.services.containers.navidrome.enable = true;
 
   # Phase 5: Infrastructure Services
   hwc.services.reverseProxy = {
     enable = true;
     domain = "localhost";  # TODO: Set to actual Tailscale domain
+  };
+
+  # Phase 6: Support Services - Storage Automation
+  hwc.services.storage = {
+    enable = true;
+    cleanup = {
+      enable = true;
+      schedule = "daily";
+      retentionDays = 7;
+    };
+    monitoring = {
+      enable = true;
+      alertThreshold = 85;
+    };
   };
 
   # Legacy services disabled until Charter v6 migration complete:
