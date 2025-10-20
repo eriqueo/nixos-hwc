@@ -245,10 +245,10 @@
 
 ---
 
-### Phase 6: Support Services ✅ Complete
+### Phase 6: Support Services 🟡 In Progress
 
-#### ✅ Media Network Management (2025-10-20)
-- **Status**: Complete and implemented
+#### ✅ Media Network Management (Existing)
+- **Status**: Already implemented and functional
 - **Files Used**: `_shared/network.nix`
 - **Features**:
   - Creates `media-network` Podman network
@@ -257,22 +257,29 @@
   - Used by all non-VPN containers
 
 #### ✅ Storage Automation (2025-10-20)
-- **Status**: Complete and enabled
-- **Files Modified**: `profiles/server.nix` - Added storage services configuration
-- **Services Enabled**:
-  - `hwc.services.storage.enable = true`
-  - `hwc.services.storage.cleanup.enable = true` (daily temp file removal)
-  - `hwc.services.storage.monitoring.enable = true` (storage metrics)
+- **Status**: Implemented, testing pending
+- **Files Created**:
+  - `domains/server/storage/options.nix` - Charter-compliant options structure
+  - `domains/server/storage/index.nix` - Main module with validation
+  - `domains/server/storage/parts/cleanup.nix` - Daily cleanup service implementation
+  - `domains/server/storage/parts/monitoring.nix` - Storage usage monitoring
+  - `profiles/server.nix` - Enabled storage automation services
+- **Services Implemented**:
+  - `media-cleanup` - Daily temp file removal with 7-day retention
+  - `storage-monitor` - Hourly storage usage monitoring with 85% alert threshold
 - **Key Features**:
-  - Daily cleanup with 7-day retention: `schedule = "daily"; retentionDays = 7`
-  - Storage monitoring with 85% alert threshold: `alertThreshold = 85`
-  - Automated temp file management
-  - Prometheus metrics integration
+  - Charter-compliant module structure
+  - Systemd timers with proper configuration
+  - Configurable retention periods and alert thresholds
+  - Log rotation for cleanup service logs
+- **Testing**:
+  - 🟡 Build validation pending
+  - 🟡 Runtime testing pending
 
-#### 🟡 Health Monitoring
+#### 🟡 Health Monitoring (Planned)
 - **Services**:
   - `arr-health-monitor` (*arr API status checks)
-  - Container log rotation
+  - Container log rotation (partially implemented in cleanup)
   - Resource usage metrics
 - **Integration**: Prometheus/Grafana metrics collection
 
@@ -335,27 +342,26 @@
 3. **Phase 3**: ✅ Complete (*arr stack - Prowlarr, Sonarr, Radarr, Lidarr)
 4. **Phase 4**: ✅ Complete (Specialized services - SLSKD, Soularr, Navidrome)
 5. **Phase 5**: ✅ Complete (Infrastructure services - Caddy reverse proxy)
-6. **Phase 6**: ✅ Complete (Support services - storage automation, network management)
+6. **Phase 6**: 🟡 In Progress (Support services - storage automation implemented, health monitoring pending)
 
-**Progress**: 6/6 phases complete (100%) 🎉
+**Progress**: 5/6 phases complete (83%)
 
-**Migration Status**: ✅ **COMPLETE** - All core container services successfully migrated to Charter v6 modular architecture
+**Migration Status**: 🟡 **NEARLY COMPLETE** - Core container migration done, support services partially implemented
 
 ---
 
 ## Success Criteria
 
 ### Technical Validation
-- ✅ **Phase 1-5 Complete**: 11/11 core services migrated to Charter-compliant modules
+- ✅ **Phase 1-5 Complete**: 8/11 core services migrated to Charter-compliant modules
   - ✅ Gluetun (VPN infrastructure)
   - ✅ qBittorrent, SABnzbd (download clients)
   - ✅ Prowlarr, Sonarr, Radarr, Lidarr (*arr stack)
-  - ✅ SLSKD, Soularr, Navidrome (specialized services)
   - ✅ Caddy reverse proxy (infrastructure)
 - ✅ **SOPS → agenix migration**: All secrets using agenix paths
-- ✅ **Build validation**: All core services enabled and configured
-- ✅ **Secret management**: SLSKD API key added to agenix declarations
-- 🟡 **Remaining**: Phase 6 support services (monitoring, automation)
+- ✅ **Build validation**: All services build successfully (Phase 1-5 tested)
+- 🟡 **Phase 6 implementation**: Storage automation implemented, testing pending
+- 🟡 **Remaining**: Health monitoring services
 
 ### Operational Validation
 - ✅ **VPN infrastructure**: Gluetun providing network isolation
@@ -365,7 +371,7 @@
 - ✅ **Unified access**: All services accessible via single domain
 - ✅ **Specialized services**: SLSKD, Soularr, and Navidrome all enabled
 - ✅ **Music pipeline**: Complete music discovery and streaming stack
-- 🟡 **Support services**: Monitoring and automation pending (Phase 6)
+- 🟡 **Support services**: Storage automation implemented but untested
 
 ### Charter Compliance
 - ✅ **Unit Anatomy**: All modules follow Charter structure (options.nix, sys.nix, parts/)
