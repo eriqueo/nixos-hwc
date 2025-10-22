@@ -11,6 +11,11 @@
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
+    
+    # Restore missing functionality (fix for SSH lockout and service loss)
+    ../../profiles/media.nix
+    ../../profiles/business.nix
+    ../../profiles/monitoring.nix
   ];
 
   # System identity
@@ -88,18 +93,15 @@
     RuntimeMaxUse=100M
   '';
 
-  # BULLETPROOF: Override user secrets for server reliability
-  hwc.system.users.user = {
-    useSecrets = lib.mkForce false;
-    fallbackPassword = lib.mkForce "il0wwlm?";
-    ssh.useSecrets = lib.mkForce false;  # Force fallback SSH key
-  };
-
-  # BULLETPROOF: Ensure emergency root access works
-  hwc.secrets.emergency = {
-    enable = lib.mkForce true;
-    password = lib.mkForce "il0wwlm?";
-  };
+  # REMOVED: BULLETPROOF overrides that caused SSH lockout
+  # The following settings disabled secrets-based SSH authentication and relied on
+  # initialPassword semantics which only work on first activation, causing lockout.
+  # Proper secrets management via agenix is now restored.
+  #
+  # If emergency access is needed, use a hashed password instead:
+  # users.users.eric.hashedPassword = "<generate with: mkpasswd -m sha-512>";
+  # users.users.root.hashedPassword = "<generate with: mkpasswd -m sha-512>";
+  # Then remove after regaining access.
 
   system.stateVersion = "24.05";
 }
