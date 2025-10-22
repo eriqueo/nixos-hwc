@@ -35,8 +35,8 @@
   imports = [
     # Core system modules only (legacy services disabled until Charter v6 migration complete)
     ../domains/infrastructure/index.nix
-    # Container services (Charter v6 migration in progress)
-    ../domains/server/containers/index.nix
+    # Server domain modules (includes containers and other server services)
+    ../domains/server/index.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
 
