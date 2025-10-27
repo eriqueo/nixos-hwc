@@ -14,7 +14,7 @@ let
 
     web = {
       port = 5030;
-      url_base = "/slskd";
+      # No url_base - SLSKD runs on its own port, not as a subpath
       https = {
         disabled = true;
         port = 5031;
@@ -63,15 +63,15 @@ in
       extraOptions = [
         "--network=${mediaNetworkName}"
       ];
-      cmd = [ "--config" "/slskd.yml" ];
+      cmd = [ "--config" "/app/slskd.yml" ];
       ports = [
-        "127.0.0.1:5031:5030"      # Web UI (via reverse proxy)
+        "0.0.0.0:5031:5030"        # Web UI - expose directly on external interface
         "0.0.0.0:50300:50300/tcp"  # P2P port
       ];
       volumes = [
         "${hotRoot}/downloads/incomplete:/downloads/incomplete"
         "${hotRoot}/downloads/complete:/downloads/complete"
-        "/etc/slskd/slskd.yml:/slskd.yml:ro"
+        "/etc/slskd/slskd.yml:/app/slskd.yml:ro"
       ];
       environment = {
         PUID = "1000";
@@ -81,7 +81,7 @@ in
     };
 
     # Firewall configuration
-    networking.firewall.allowedTCPPorts = [ 50300 ];
+    networking.firewall.allowedTCPPorts = [ 50300 5031 ];
 
     # Service dependencies
     systemd.services."podman-slskd".after = [ "network-online.target" "init-media-network.service" ];

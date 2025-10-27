@@ -15,15 +15,15 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable { };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.optionals cfg.enable [
-    {
-      assertion = config.hwc.paths.hot != null;
-      message = "Storage automation requires hwc.paths.hot to be configured";
-    }
-  ];
+  config = lib.mkIf cfg.enable {
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = config.hwc.paths.hot != null;
+        message = "Storage automation requires hwc.paths.hot to be configured";
+      }
+    ];
+  };
 }
