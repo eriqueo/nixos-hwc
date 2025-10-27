@@ -28,7 +28,22 @@ let
           key = "Nd5g9X1AcVck7z7Q4Yq0IuULeQ7ci/Zu7++Lmcq7jOqF0e6ZbCvp5SmWVBN3EAVE";
           ttl = 604800000;
         };
+        apiKeys = {
+          soularr = "LP1Fsn2mQrMjCgFmX2W97lTDFKDQVLgl";
+        };
       };
+    };
+
+    directories = {
+      downloads = "/downloads/complete";
+      incomplete = "/downloads/incomplete";
+    };
+
+    shares = {
+      directories = [
+        "/downloads/complete"
+        "/music"
+      ];
     };
 
     soulseek = {
@@ -71,6 +86,7 @@ in
       volumes = [
         "${hotRoot}/downloads/incomplete:/downloads/incomplete"
         "${hotRoot}/downloads/complete:/downloads/complete"
+        "/mnt/media/music:/music:ro"
         "/etc/slskd/slskd.yml:/app/slskd.yml:ro"
       ];
       environment = {

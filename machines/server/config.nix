@@ -59,7 +59,7 @@
 
   # AI services configuration
   hwc.server.ai.ollama = {
-    enable = true;
+    enable = false;
     models = [ "llama3:8b" "codellama:13b" ];
   };
 
