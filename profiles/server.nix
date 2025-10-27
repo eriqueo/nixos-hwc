@@ -269,6 +269,7 @@
   hwc.services.containers.slskd.enable = true;
   hwc.services.containers.soularr.enable = true;  # Now that Lidarr is enabled
   hwc.services.containers.navidrome.enable = true;
+  hwc.services.containers.jellyfin.enable = true;
 
   # Phase 5: Infrastructure Services
   hwc.services.reverseProxy = {

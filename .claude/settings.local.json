@@ -90,7 +90,14 @@
       "Bash(pass show:*)",
       "Bash(pgrep:*)",
       "Bash(sudo pb-cli:*)",
-      "Bash(notmuch:*)"
+      "Bash(notmuch:*)",
+      "Bash(hostnamectl)",
+      "Bash(nixos-version --json)",
+      "Bash(sudo nix-env:*)",
+      "Bash(readlink:*)",
+      "Read(//home/eric/nixos-hwc/**)",
+      "Bash(sudo rg:*)",
+      "Bash(sudo find /opt/downloads -maxdepth 2 -type d)"
     ],
     "deny": [],
     "ask": [],

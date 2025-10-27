@@ -11,6 +11,9 @@
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
+    # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
+    # ../../profiles/business.nix      # TODO: Enable when business services are implemented
+    # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed
   ];
 
   # System identity
@@ -60,6 +63,13 @@
     models = [ "llama3:8b" "codellama:13b" ];
   };
 
+  # Feature enablement (disabled for initial stability)
+  # hwc.features = {
+  #   media.enable = true;        # TODO: Fix sops/agenix conflict
+  #   business.enable = true;     # TODO: Enable when business containers are implemented
+  #   monitoring.enable = true;   # TODO: Enable when monitoring services are fixed
+  # };
+
   # Enhanced SSH configuration for server
   services.openssh.settings = {
     X11Forwarding = lib.mkForce true;
@@ -88,19 +98,8 @@
     RuntimeMaxUse=100M
   '';
 
-  # BULLETPROOF: Override user secrets for server reliability
-  hwc.system.users.user = {
-    useSecrets = lib.mkForce false;
-    fallbackPassword = lib.mkForce "il0wwlm?";
-    ssh.useSecrets = lib.mkForce false;  # Force fallback SSH key
-  };
-
-  # BULLETPROOF: Ensure emergency root access works
-  hwc.secrets.emergency = {
-      enable = lib.mkForce true;
-      password = lib.mkForce "il0wwlm?";
-      hashedPasswordFile = lib.mkForce null;  # Override security profile's hashedPasswordFile
-    };
+  # Emergency access via security domain (safer than machine-level overrides)
+  # hwc.secrets.emergency.enable is handled by security profile
 
   system.stateVersion = "24.05";
 }

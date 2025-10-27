@@ -5,5 +5,5 @@
   ];
 
   # Enable media orchestrator by default for server
-  hwc.server.orchestration.mediaOrchestrator.enable = true;
+  # hwc.server.orchestration.mediaOrchestrator.enable = true;  # Disabled: sops/agenix conflict
 }
