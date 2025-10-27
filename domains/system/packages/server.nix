@@ -45,6 +45,7 @@ in {
       
       # AI/ML tools (basic)
       python3
+      gemini-cli
       
       # Backup and archival
       borgbackup restic

@@ -90,7 +90,9 @@
       "Bash(pass show:*)",
       "Bash(pgrep:*)",
       "Bash(sudo pb-cli:*)",
-      "Bash(notmuch:*)"
+      "Bash(notmuch:*)",
+      "Bash(sudo systemctl stop:*)",
+      "Bash(sudo lsof:*)"
     ],
     "deny": [],
     "ask": [],
