@@ -64,7 +64,7 @@ in
       allowedUDPPorts =
         cfg.firewall.extraUdpPorts
         ++ (lib.optionals cfg.samba.enable [ 137 138 ]);
-      trustedInterfaces = lib.optionals cfg.tailscale.enable [ "tailscale0" ];
+      trustedInterfaces = [ "eno1" ] ++ (lib.optionals cfg.tailscale.enable [ "tailscale0" ]);
     };
 
     # =========================

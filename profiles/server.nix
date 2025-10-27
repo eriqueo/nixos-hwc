@@ -58,6 +58,7 @@
       { path = "/opt/downloads"; }  # Container base directory
 
       # Container-specific directories
+      { path = "/opt/downloads/jellyfin"; }
       { path = "/mnt/hot/downloads"; }  # Already exists, keep for safety
       { path = "/mnt/hot/downloads/incomplete"; }  # SLSKD incomplete downloads
       { path = "/mnt/hot/downloads/complete"; }  # SLSKD completed downloads
