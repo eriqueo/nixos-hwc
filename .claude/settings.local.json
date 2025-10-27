@@ -98,6 +98,8 @@
       "Read(//home/eric/nixos-hwc/**)",
       "Bash(sudo rg:*)",
       "Bash(sudo find /opt/downloads -maxdepth 2 -type d)"
+      "Bash(sudo systemctl stop:*)",
+      "Bash(sudo lsof:*)"
     ],
     "deny": [],
     "ask": [],
