@@ -99,7 +99,9 @@
       "Bash(sudo rg:*)",
       "Bash(sudo find /opt/downloads -maxdepth 2 -type d)"
       "Bash(sudo systemctl stop:*)",
-      "Bash(sudo lsof:*)"
+      "Bash(sudo lsof:*)",
+      "Bash(lsblk:*)",
+      "Bash(sudo rm:*)"
     ],
     "deny": [],
     "ask": [],
