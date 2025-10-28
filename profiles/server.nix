@@ -35,6 +35,8 @@
   imports = [
     # Core system modules only (legacy services disabled until Charter v6 migration complete)
     ../domains/infrastructure/index.nix
+    # Server domain modules (includes containers and other server services)
+    ../domains/server/index.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
 
@@ -48,18 +50,31 @@
       # Business intelligence and AI directories
       { path = "/opt/business"; }
       { path = "/opt/ai"; }
-      
+
       # Service configuration directories
       { path = "/opt/arr"; }
       { path = "/opt/media"; }
       { path = "/opt/monitoring"; }
-      
+      { path = "/opt/downloads"; }  # Container base directory
+
+      # Container-specific directories
+      { path = "/opt/downloads/jellyfin"; }
+      { path = "/mnt/hot/downloads"; }  # Already exists, keep for safety
+      { path = "/mnt/hot/downloads/incomplete"; }  # SLSKD incomplete downloads
+      { path = "/mnt/hot/downloads/complete"; }  # SLSKD completed downloads
+      { path = "/mnt/hot/events"; }  # Critical for SABnzbd automation
+      { path = "/mnt/hot/processing"; }  # Already exists, keep for safety
+      { path = "/mnt/hot/processing/sonarr-temp"; }
+      { path = "/mnt/hot/processing/radarr-temp"; }
+      { path = "/mnt/hot/processing/lidarr-temp"; }
+      { path = "/opt/downloads/scripts"; }  # Post-processing scripts
+
       # HWC standard directories
       { path = "/var/lib/hwc"; }
       { path = "/var/cache/hwc"; }
       { path = "/var/log/hwc"; }
       { path = "/var/tmp/hwc"; }
-      
+
       # Security directories
       { path = "/var/lib/hwc/secrets"; mode = "0700"; }
     ];
@@ -226,22 +241,58 @@
   };
 
   #============================================================================
-  # SERVICE ENABLEMENT (Legacy services temporarily disabled)
+  # SERVICE ENABLEMENT (Charter v6 migration in progress)
   #============================================================================
-  
+
   # Infrastructure services (minimal GPU configuration)
   hwc.infrastructure.hardware.gpu = {
     enable = true;
     type = "nvidia";
     nvidia = {
       driver = "stable";
-      containerRuntime = true;
+      containerRuntime = false;  # Temporarily disabled due to nixpkgs update driver issues
       enableMonitoring = true;
     };
   };
-  
+
+  # Container services (Charter v6 migration test)
+  hwc.services.containers.gluetun.enable = true;
+  hwc.services.containers.qbittorrent.enable = true;
+  hwc.services.containers.sabnzbd.enable = true;
+
+  # Phase 3: Media Management (*arr Stack)
+  hwc.services.containers.prowlarr.enable = true;
+  hwc.services.containers.sonarr.enable = true;
+  hwc.services.containers.radarr.enable = true;
+  hwc.services.containers.lidarr.enable = true;
+
+  # Phase 4: Specialized Services (Soulseek integration)
+  hwc.services.containers.slskd.enable = true;
+  hwc.services.containers.soularr.enable = true;  # Now that Lidarr is enabled
+  hwc.services.containers.navidrome.enable = true;
+  hwc.services.containers.jellyfin.enable = true;
+
+  # Phase 5: Infrastructure Services
+  hwc.services.reverseProxy = {
+    enable = true;
+    domain = "hwc.ocelot-wahoo.ts.net";
+  };
+
+  # Phase 6: Support Services - Storage Automation
+  hwc.services.storage = {
+    enable = true;
+    cleanup = {
+      enable = true;
+      schedule = "daily";
+      retentionDays = 7;
+    };
+    monitoring = {
+      enable = true;
+      alertThreshold = 85;
+    };
+  };
+
   # Legacy services disabled until Charter v6 migration complete:
-  # - Media services (ARR stack, downloaders, etc.)
   # - Business services (database, API, monitoring)
   # - AI services (Ollama)
   # - Application services (Jellyfin, Immich)

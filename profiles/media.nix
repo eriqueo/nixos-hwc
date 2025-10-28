@@ -1,39 +1,31 @@
-{ ... }:
+{ lib, config, ... }:
+let
+  cfg = config.hwc.features.media;
+in
 {
-  #==========================================================================
-  # BASE SYSTEM - Critical for machine functionality
-  #==========================================================================
-  imports = [
-    ../domains/infrastructure/index.nix
-    ../domains/server/jellyfin.nix
-    ../domains/server/arr-stack.nix
-  ];
+  options.hwc.features.media = {
+    enable = lib.mkEnableOption "media services (Jellyfin, *arr stack)";
+  };
 
-  #==========================================================================
-  # OPTIONAL FEATURES - Sensible defaults, override per machine
-  #==========================================================================
-  hwc.infrastructure.hardware.storage = {
-    media = {
-      enable = true;
-      directories = [
-        "movies" "tv" "music" "books"
-        "downloads" "incomplete"
-      ];
+  config = lib.mkIf cfg.enable {
+    #==========================================================================
+    # MEDIA STORAGE - Storage configuration for media services
+    #==========================================================================
+    hwc.infrastructure.storage = {
+      media = {
+        enable = true;
+        directories = [
+          "movies" "tv" "music" "books"
+          "downloads" "incomplete"
+        ];
+      };
+      hot.enable = true;
     };
-    hot.enable = true;
-  };
-  
-  hwc.services.jellyfin = {
-    enable = true;
-    enableGpu = true;
-    openFirewall = true;
-  };
-  
-  hwc.services.arrStack = {
-    enable = true;
-    sonarr.enable = true;
-    radarr.enable = true;
-    prowlarr.enable = true;
-    bazarr.enable = true;
+
+    # NOTE: *arr stack containers (prowlarr, sonarr, radarr, lidarr) are enabled
+    # in the server profile. This media profile focuses on Jellyfin and storage.
+
+    # Jellyfin will be enabled when the appropriate container service is added
+    # For now, this profile just ensures media storage is properly configured
   };
 }
