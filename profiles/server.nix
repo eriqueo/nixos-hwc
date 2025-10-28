@@ -250,7 +250,7 @@
     type = "nvidia";
     nvidia = {
       driver = "stable";
-      containerRuntime = true;
+      containerRuntime = false;  # Temporarily disabled due to nixpkgs update driver issues
       enableMonitoring = true;
     };
   };
@@ -275,7 +275,7 @@
   # Phase 5: Infrastructure Services
   hwc.services.reverseProxy = {
     enable = true;
-    domain = "localhost";  # TODO: Set to actual Tailscale domain
+    domain = "hwc.ocelot-wahoo.ts.net";
   };
 
   # Phase 6: Support Services - Storage Automation

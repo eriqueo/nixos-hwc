@@ -45,6 +45,9 @@ in
         PUID = "1000";
         PGID = "1000";
         TZ = config.time.timeZone or "America/Denver";
+        # Set SABnzbd download directories
+        SABNZBD_COMPLETE_DIR = "/downloads";
+        SABNZBD_INCOMPLETE_DIR = "/downloads/incomplete";
       } // lib.optionalAttrs (cfg.network.mode == "vpn") {
         # When using VPN, SABnzbd runs on port 8085 inside container
         # but gluetun exposes it as 8081 externally
@@ -82,6 +85,20 @@ in
         then [ "podman-gluetun.service" ]
         else [ "hwc-media-network.service" ];
     };
+
+    #=========================================================================
+    # REVERSE PROXY ROUTE REGISTRATION
+    #=========================================================================
+    # Publish reverse proxy route for web UI access
+    hwc.services.shared.routes = lib.mkAfter [
+      {
+        path = "/sab";
+        upstream = if cfg.network.mode == "vpn"
+          then "127.0.0.1:8081"  # SABnzbd via Gluetun
+          else "127.0.0.1:${toString cfg.webPort}";  # Direct SABnzbd
+        stripPrefix = false;
+      }
+    ];
 
     #=========================================================================
     # FIREWALL CONFIGURATION

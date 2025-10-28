@@ -44,12 +44,12 @@ in
 [Lidarr]
 host_url = http://lidarr:8686/lidarr
 api_key = $LIDARR_API_KEY
-download_dir = /downloads/music/complete
+download_dir = /downloads/music
 
 [Slskd]
 host_url = http://slskd:5030
 api_key = $SLSKD_API_KEY
-download_dir = /downloads/music/complete
+download_dir = /downloads/music
 
 [General]
 interval = 300
