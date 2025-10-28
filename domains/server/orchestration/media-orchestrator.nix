@@ -37,18 +37,27 @@ in
         "network-online.target"
         "media-orchestrator-install.service"
         "podman-sonarr.service" "podman-radarr.service" "podman-lidarr.service"
-        "sops-install-secrets.service"
       ];
       wantedBy = [ "multi-user.target" ];
+
+      # Create environment file with agenix secrets
+      preStart = ''
+        # Read API keys from agenix secrets and create environment file
+        cat > /tmp/media-orchestrator.env << EOF
+SONARR_API_KEY=$(cat ${config.age.secrets.sonarr-api-key.path})
+RADARR_API_KEY=$(cat ${config.age.secrets.radarr-api-key.path})
+LIDARR_API_KEY=$(cat ${config.age.secrets.lidarr-api-key.path})
+PROWLARR_API_KEY=$(cat ${config.age.secrets.prowlarr-api-key.path})
+SONARR_URL=http://localhost:8989
+RADARR_URL=http://localhost:7878
+LIDARR_URL=http://localhost:8686
+EOF
+      '';
+
       serviceConfig = {
         Type = "simple";
         User = "root";
-        EnvironmentFile = "${config.sops.secrets.arr_api_keys_env.path}";
-        Environment = [
-          "SONARR_URL=http://localhost:8989"
-          "RADARR_URL=http://localhost:7878"
-          "LIDARR_URL=http://localhost:8686"
-        ];
+        EnvironmentFile = "/tmp/media-orchestrator.env";
         ExecStart = "${pythonWithRequests}/bin/python3 ${cfgRoot}/scripts/media-orchestrator.py";
         Restart = "always";
         RestartSec = "3s";
