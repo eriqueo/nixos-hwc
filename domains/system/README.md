@@ -396,6 +396,120 @@ options.hwc.system.users.user.name = lib.mkOption { ... };
 config.hwc.paths.user.home = "/home/${config.hwc.system.users.user.name}";
 ```
 
+## Recent Changes & Evolution
+
+### ✅ Audit Log Management (October 2024)
+Critical fix to prevent disk space issues:
+- **Log rotation configuration**: Added proper auditd.conf with 100MB files, 5 file rotation
+- **Space thresholds**: 2GB/1GB warning levels with syslog actions
+- **Emergency fix**: Resolved 282GB audit.log that consumed 97% disk space
+- **Prevention**: Automated log management prevents future disk crises
+
+### ✅ Workspace Foundation (October 2024)
+System domain now provides foundation for workspace integration:
+- **Directory structure**: Proper hierarchy for workspace automation
+- **User permissions**: Enhanced group management for workspace scripts
+- **Service integration**: Foundation for workspace script deployment
+
+### ✅ Filesystem Structure Maturity
+- **Security directories**: Proper /etc/age/ and /run/agenix/ structure
+- **Server storage**: Enhanced hot/cold/media directory organization
+- **User PARA structure**: Projects/Areas/Resources/Archive organization
+- **Service directories**: Comprehensive service configuration paths
+
+## Validation & Health Checks
+
+### Critical System Health
+```bash
+# Check disk usage (prevent audit log crisis)
+df -h /
+sudo du -sh /var/log/audit/
+
+# Verify audit rotation is working
+sudo ls -lah /var/log/audit/
+```
+
+### User Account Validation
+```bash
+# Verify user setup
+id $USER
+groups $USER
+
+# Check SSH configuration
+ssh-add -l
+cat ~/.ssh/authorized_keys
+```
+
+### Network and Services
+```bash
+# Network status
+ip addr show
+resolvectl status
+
+# Critical services
+systemctl status display-manager
+systemctl status sshd
+systemctl --user status pipewire
+```
+
+## Troubleshooting Common Issues
+
+### Disk Space Crisis
+**Symptoms**: System becomes unresponsive, can't write files
+**Cause**: Audit logs growing without rotation
+**Solution**:
+```bash
+# Emergency: Truncate large audit log
+sudo truncate -s 0 /var/log/audit/audit.log
+
+# Permanent: Verify rotation config
+sudo cat /etc/audit/auditd.conf | grep -E "(max_log_file|num_logs)"
+```
+
+### User Authentication Issues
+**Symptoms**: Can't login, SSH keys not working
+**Cause**: Agenix secrets not decrypted or fallback not working
+**Solution**:
+```bash
+# Check agenix status
+sudo ls -la /run/agenix/
+
+# Verify fallback password works
+sudo passwd eric
+
+# Check SSH key deployment
+sudo cat /etc/age/keys.txt
+```
+
+### Network Connectivity Problems
+**Symptoms**: No internet, DNS not resolving
+**Cause**: Network configuration or DNS issues
+**Solution**:
+```bash
+# Check network manager
+systemctl status NetworkManager
+
+# Test DNS
+dig @1.1.1.1 google.com
+resolvectl flush-caches
+```
+
+## Future Roadmap
+
+### Short-term (Next Quarter)
+- **Enhanced audit management**: More sophisticated log analysis and alerting
+- **Advanced filesystem structure**: Better service directory organization
+- **Improved user management**: More granular permission controls
+
+### Medium-term
+- **System monitoring integration**: Proactive health monitoring
+- **Advanced networking**: Better VLAN and bridge management
+- **Enhanced security**: More comprehensive security hardening
+
 ---
+
+**Domain Version**: v3.0 - Foundational OS with workspace integration and audit management
+**Charter Compliance**: ✅ Full compliance with HWC Charter v6.0
+**Last Updated**: October 2024 - Post audit crisis resolution and workspace foundation
 
 The system domain forms the **foundational layer** of the NixOS configuration, providing the essential OS services and capabilities that all other domains depend on. It focuses on **core system functionality** while maintaining clean interfaces for integration with higher-level domains.
