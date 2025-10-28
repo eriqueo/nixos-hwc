@@ -82,7 +82,13 @@
         specialArgs = { inherit inputs; };
         modules = [
           agenix.nixosModules.default
+          home-manager.nixosModules.home-manager
           ./machines/server/config.nix
+          {
+            # Disable Home Manager on server - it's enabled somewhere in domains
+            home-manager.users.eric.home.stateVersion = "24.05";
+            home-manager.backupFileExtension = "backup";
+          }
         ];
       };
       hwc-laptop = lib.nixosSystem {

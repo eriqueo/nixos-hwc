@@ -14,7 +14,7 @@ let
 
     web = {
       port = 5030;
-      # No url_base - SLSKD runs on its own port, not as a subpath
+      # SLSKD doesn't support subpaths - must run on dedicated port
       https = {
         disabled = true;
         port = 5031;
@@ -35,14 +35,14 @@ let
     };
 
     directories = {
-      downloads = "/downloads/complete";
+      downloads = "/downloads/music";
       incomplete = "/downloads/incomplete";
     };
 
     shares = {
       directories = [
-        "/downloads/complete"
-        "/music"
+        { path = "/downloads/music"; alias = "Downloads"; }
+        { path = "/music"; alias = "Library"; }
       ];
     };
 
@@ -80,12 +80,12 @@ in
       ];
       cmd = [ "--config" "/app/slskd.yml" ];
       ports = [
-        "0.0.0.0:5031:5030"        # Web UI - expose directly on external interface
+        "0.0.0.0:5031:5030"        # Web UI - SLSKD requires dedicated port
         "0.0.0.0:50300:50300/tcp"  # P2P port
       ];
       volumes = [
         "${hotRoot}/downloads/incomplete:/downloads/incomplete"
-        "${hotRoot}/downloads/complete:/downloads/complete"
+        "${hotRoot}/downloads/music:/downloads/music"
         "/mnt/media/music:/music:ro"
         "/etc/slskd/slskd.yml:/app/slskd.yml:ro"
       ];
@@ -96,7 +96,7 @@ in
       };
     };
 
-    # Firewall configuration
+    # Firewall configuration - SLSKD requires dedicated port
     networking.firewall.allowedTCPPorts = [ 50300 5031 ];
 
     # Service dependencies

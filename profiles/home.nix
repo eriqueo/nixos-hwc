@@ -7,7 +7,7 @@
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    backupFileExtension = "hm-bak";
+    backupFileExtension = lib.mkDefault "hm-bak";
 
     users.eric = {
       imports = [ ../domains/home/index.nix ];
