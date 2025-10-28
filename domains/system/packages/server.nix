@@ -41,7 +41,7 @@ in {
       redis       # CLI tools
 
       # Media processing
-      ffmpeg imagemagick
+      ffmpeg imagemagick mediainfo
 
       # AI/ML tools (basic)
       python3
