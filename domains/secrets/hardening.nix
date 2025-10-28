@@ -70,10 +70,10 @@ in {
         max_log_file = 100
         max_log_file_action = rotate
         num_logs = 5
-        space_left = 75
-        space_left_action = email
-        admin_space_left = 50
-        admin_space_left_action = suspend
+        space_left = 2048
+        space_left_action = syslog
+        admin_space_left = 1024
+        admin_space_left_action = syslog
         disk_full_action = suspend
         disk_error_action = suspend
         use_libwrap = yes
@@ -84,6 +84,13 @@ in {
         krb5_principal = auditd
         name_format = HOSTNAME
         plugin_dir = /etc/audit/plugins.d
+      '';
+
+      # Journald limits to prevent another vector for disk space issues
+      services.journald.extraConfig = '';
+        SystemMaxUse=200M
+        SystemMaxFileSize=50M
+        MaxRetentionSec=7day
       '';
 
       security.audit.rules =
