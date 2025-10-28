@@ -21,7 +21,7 @@
     ./hardware.nix
 
     # Vault sync system for Obsidian (remains unchanged).
-    ../../scripts/vault-sync-system.nix
+    ../../workspace/infrastructure/vault-sync-system.nix
 
     # Profiles that define the machine's capabilities.
     # The system.nix profile is now the main entry point for all system services.
