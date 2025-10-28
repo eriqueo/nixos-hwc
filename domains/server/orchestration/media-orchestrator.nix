@@ -2,6 +2,7 @@
 let
   pythonWithRequests = pkgs.python3.withPackages (ps: with ps; [ requests ]);
   cfgRoot = "/opt/downloads";
+  paths = config.hwc.paths;
   hotRoot = "/mnt/hot";
 in
 {
@@ -18,6 +19,13 @@ in
       script = ''
         set -e
         mkdir -p ${cfgRoot}/scripts ${hotRoot}/events
+
+        # Deploy automation scripts from workspace
+        cp ${paths.nixos}/workspace/automation/media-orchestrator.py ${cfgRoot}/scripts/
+        cp ${paths.nixos}/workspace/automation/qbt-finished.sh ${cfgRoot}/scripts/
+        cp ${paths.nixos}/workspace/automation/sab-finished.py ${cfgRoot}/scripts/
+        chmod +x ${cfgRoot}/scripts/*.py ${cfgRoot}/scripts/*.sh
+
         chown -R 1000:1000 ${cfgRoot}/scripts ${hotRoot}/events
         chmod 775 ${cfgRoot}/scripts ${hotRoot}/events
       '';
