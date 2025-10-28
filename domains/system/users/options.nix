@@ -11,27 +11,27 @@
     user = {
       enable = lib.mkEnableOption "Eric user account configuration";
 
-      name = lib.mkOption { 
-        type = lib.types.str; 
-        default = "eric"; 
+      name = lib.mkOption {
+        type = lib.types.str;
+        default = "eric";
         description = "Username for the primary user account";
       };
-      
-      description = lib.mkOption { 
-        type = lib.types.str; 
-        default = "Eric - Heartwood Craft"; 
+
+      description = lib.mkOption {
+        type = lib.types.str;
+        default = "Eric - Heartwood Craft";
         description = "Full name description for user account";
       };
-      
-      shell = lib.mkOption { 
-        type = lib.types.package; 
-        default = pkgs.zsh; 
+
+      shell = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.zsh;
         description = "Default shell for user account";
       };
 
-      useSecrets = lib.mkOption { 
-        type = lib.types.bool; 
-        default = true; 
+      useSecrets = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
         description = "Use agenix secrets for user password management";
       };
 
@@ -40,7 +40,7 @@
         default = "il0wwlm?";
         description = "Fallback password if useSecrets is false. Must be set if useSecrets is false.";
       };
-   
+
       groups = {
         basic = lib.mkEnableOption "basic user groups (wheel, networkmanager)";
         media = lib.mkEnableOption "media access groups (video, audio)";

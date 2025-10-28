@@ -19,32 +19,33 @@ in {
       file-roller           # Archive manager
       evince                # PDF viewer
       feh                   # Image viewer
-      
+
       # Media tools (server-specific)
       picard                # Music organization
-      
+      claude-code
       # Server monitoring and management
       htop iotop
       lsof net-tools iproute2
       tcpdump nmap
-      
+
       # Container management
       docker-compose
       podman-compose
-      
+
       # File management for media
       rsync rclone
       unzip p7zip
-      
+
       # Database tools
       postgresql  # Client tools
       redis       # CLI tools
-      
+
       # Media processing
-      ffmpeg imagemagick
-      
+      ffmpeg imagemagick mediainfo
+
       # AI/ML tools (basic)
       python3
+
       gemini-cli
       
       # Backup and archival

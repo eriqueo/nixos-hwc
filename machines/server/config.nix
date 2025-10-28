@@ -8,9 +8,13 @@
   imports = [
     ./hardware.nix
     ../../profiles/system.nix
+    ../../profiles/home.nix
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
+    # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
+    # ../../profiles/business.nix      # TODO: Enable when business services are implemented
+    # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed
   ];
 
   # System identity
@@ -56,9 +60,16 @@
 
   # AI services configuration
   hwc.server.ai.ollama = {
-    enable = true;
+    enable = false;
     models = [ "llama3:8b" "codellama:13b" ];
   };
+
+  # Feature enablement (disabled for initial stability)
+  # hwc.features = {
+  #   media.enable = true;        # TODO: Fix sops/agenix conflict
+  #   business.enable = true;     # TODO: Enable when business containers are implemented
+  #   monitoring.enable = true;   # TODO: Enable when monitoring services are fixed
+  # };
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
@@ -88,17 +99,68 @@
     RuntimeMaxUse=100M
   '';
 
-  # BULLETPROOF: Override user secrets for server reliability
-  hwc.system.users.user = {
-    useSecrets = lib.mkForce false;
-    fallbackPassword = lib.mkForce "il0wwlm?";
-    ssh.useSecrets = lib.mkForce false;  # Force fallback SSH key
-  };
+  # Emergency access via security domain (safer than machine-level overrides)
+  # hwc.secrets.emergency.enable is handled by security profile
 
-  # BULLETPROOF: Ensure emergency root access works
-  hwc.secrets.emergency = {
-    enable = lib.mkForce true;
-    password = lib.mkForce "il0wwlm?";
+  # Override home profile for headless server - only CLI/shell tools
+  home-manager.users.eric = {
+    # Disable all GUI applications for headless server
+    hwc.home.apps = {
+      # Desktop Environment (disable all)
+      hyprland.enable = lib.mkForce false;
+      waybar.enable = lib.mkForce false;
+      swaync.enable = lib.mkForce false;
+      kitty.enable = lib.mkForce false;
+
+      # File Management (disable GUI, keep CLI)
+      thunar.enable = lib.mkForce false;
+      # yazi.enable remains true (CLI tool)
+
+      # Web Browsers (disable all)
+      chromium.enable = lib.mkForce false;
+      librewolf.enable = lib.mkForce false;
+
+      # Mail Clients (keep CLI, disable GUI)
+      # aerc.enable remains true (CLI tool)
+      # neomutt.enable remains true (CLI tool)
+      betterbird.enable = lib.mkForce false;
+      protonMail.enable = lib.mkForce false;
+      thunderbird.enable = lib.mkForce false;
+
+      # Security (keep CLI tools)
+      # gpg.enable remains true
+
+      # Proton Suite (disable GUI)
+      protonAuthenticator.enable = lib.mkForce false;
+      protonPass.enable = lib.mkForce false;
+
+      # Productivity & Office (disable all)
+      obsidian.enable = lib.mkForce false;
+      onlyofficeDesktopeditors.enable = lib.mkForce false;
+
+      # Development & Automation (keep CLI)
+      n8n.enable = lib.mkForce false;
+      # geminiCli.enable remains true (CLI tool)
+
+      # Utilities (disable GUI)
+      wasistlos.enable = lib.mkForce false;
+      bottlesUnwrapped.enable = lib.mkForce false;
+      localsend.enable = lib.mkForce false;
+    };
+
+    # Keep shell/CLI configuration enabled
+    hwc.home.shell.enable = true;
+    hwc.home.development.enable = true;
+
+    # Disable mail for server (no GUI mail needed)
+    hwc.home.mail.enable = lib.mkForce false;
+
+    # Disable desktop features for headless server
+    hwc.home.fonts.enable = lib.mkForce false;
+
+    # Disable desktop services that try to use dconf
+    targets.genericLinux.enable = false;
+    dconf.enable = lib.mkForce false;
   };
 
   system.stateVersion = "24.05";
