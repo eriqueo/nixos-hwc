@@ -133,9 +133,9 @@ in
       EDITOR = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       VISUAL = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       # Development directories
-      PROJECTS = "$HOME/workspace/projects";
-      SCRIPTS = "$HOME/workspace/scripts";
-      DOTFILES = "$HOME/workspace/dotfiles";
+      PROJECTS = "$HOME/.nixos/workspace/projects";
+      SCRIPTS = "$HOME/.nixos/workspace";
+      WORKSPACE = "$HOME/.nixos/workspace";
       
     } // lib.optionalAttrs cfg.languages.python {
       # Python development
@@ -149,12 +149,13 @@ in
     };
 
     # --- Development directory structure ---
-    home.file = lib.mkIf cfg.directoryStructure {
-      "workspace/projects/.keep".text = "Development projects directory";
-      "workspace/scripts/.keep".text = "Custom automation scripts directory";  
-      "workspace/dotfiles/.keep".text = "Configuration backups and dotfiles directory";
-      ".local/bin/.keep".text = "User-local executables directory";
-    };
+    #     # Development directory structure disabled - using NixOS workspace
+    #     # home.file = lib.mkIf cfg.directoryStructure {
+    #       "workspace/projects/.keep".text = "Development projects directory";
+    #       "workspace/scripts/.keep".text = "Custom automation scripts directory";  
+    #       "workspace/dotfiles/.keep".text = "Configuration backups and dotfiles directory";
+    #       ".local/bin/.keep".text = "User-local executables directory";
+    #     };
 
     # --- PATH extensions for development ---
     home.sessionPath = [
