@@ -38,9 +38,11 @@ EOF
       autoStart = true;
       extraOptions = [
         "--cap-add=NET_ADMIN"
+        "--cap-add=SYS_MODULE"
         "--device=/dev/net/tun:/dev/net/tun"
         "--network=${mediaNetworkName}"
         "--network-alias=gluetun"
+        "--privileged"
       ];
       ports = [
         "0.0.0.0:8080:8080"  # qBittorrent UI
