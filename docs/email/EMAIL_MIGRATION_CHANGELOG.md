@@ -75,7 +75,7 @@
 - `domains/home/mail/bridge/parts/runtime.nix` - Removed DBUS_SESSION_BUS_ADDRESS
 - `domains/home/mail/bridge/parts/files.nix` - Added keychain.json generation
 - `domains/secrets/parts/home/proton-bridge-password.age` - Updated with current password
-- `CLAUDE.md` & `charter/charter.md` - Documented age key process
+- `CLAUDE.md` & `charter.md` - Documented age key process
   - Backup size: 2.8MB (hardlinks - space efficient)
   - Verified structure intact
 
