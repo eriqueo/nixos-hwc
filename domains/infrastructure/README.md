@@ -167,6 +167,40 @@ hwc.infrastructure.session.chromium.enable = true;  # dbus, dconf, portals
 - Check if `hwc.infrastructure.session.<app>.enable = true` is set
 - Verify the app's `sys.nix` file is being imported via `profiles/sys.nix`
 
+## Recent Changes & Evolution
+
+### ✅ Workspace Integration (October 2024)
+The infrastructure domain now supports the new workspace structure:
+- **GPU-launch command**: Integrated with workspace productivity tools
+- **Hardware permissions**: Support for workspace automation scripts
+- **Cross-domain coordination**: Better integration between domains via workspace
+
+### ✅ Container Orchestration Maturity
+- **Container networking**: Advanced inter-container communication
+- **GPU acceleration**: Seamless hardware acceleration for containerized services
+- **Storage integration**: Coordinated storage access patterns
+
+### ✅ Session Integration Expansion
+- **App system integration**: Comprehensive support for Home Manager applications
+- **Background services**: Enhanced user-scoped service coordination
+- **CLI tools**: Expanded shared command ecosystem
+
+## Future Roadmap
+
+### Short-term (Next Quarter)
+- **Enhanced GPU detection**: More robust hardware capability detection
+- **Extended peripheral support**: Printer, scanner, and device automation
+- **Advanced container networking**: Service mesh and load balancing capabilities
+
+### Medium-term
+- **Multi-machine coordination**: Infrastructure sharing across machines
+- **Advanced storage integration**: Distributed storage and caching
+- **Enhanced session management**: More sophisticated user environment coordination
+
 ---
+
+**Domain Version**: v3.0 - Mature 3-bucket architecture with workspace integration
+**Charter Compliance**: ✅ Full compliance with HWC Charter v6.0
+**Last Updated**: October 2024 - Post workspace reorganization and container maturity
 
 The infrastructure domain provides the essential "glue code" that makes the system cohesive without creating tight coupling between domains. Keep it focused on integration, not implementation.
