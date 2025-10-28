@@ -1,4 +1,4 @@
-# HWC Security Domain - Secrets Management
+# HWC Secrets Domain - Secrets Management
 
 > **Single source of truth for all secrets, credentials, and authentication in the HWC nixos configuration**
 
@@ -13,7 +13,7 @@
 
 ## 🏗️ Architecture Overview
 
-The HWC Security Domain follows a clean **domain-organized** approach with **stable interfaces** and **backward compatibility**:
+The HWC Secrets Domain follows a clean **domain-organized** approach with **stable interfaces** and **backward compatibility**:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -24,13 +24,13 @@ The HWC Security Domain follows a clean **domain-organized** approach with **sta
                │ (stable read-only paths)
 ┌──────────────▼──────────────────────────┐
 │             MATERIALS FACADE            │
-│        (domains/security/materials.nix) │
+│        (domains/secrets/materials.nix) │
 └──────────────┬──────────────────────────┘
                │ age.secrets.*.path
                │
 ┌──────────────▼──────────────────────────┐
 │           DOMAIN SECRETS                │
-│     (domains/security/secrets/*.nix)    │
+│     (domains/secrets/secrets/*.nix)    │
 └──────────────┬──────────────────────────┘
                │ *.age files
                │
@@ -42,7 +42,7 @@ The HWC Security Domain follows a clean **domain-organized** approach with **sta
 
 **Key Principles:**
 - **Domain Separation**: Secrets organized by functional domain (system, services, infrastructure, networking)
-- **Single Source of Truth**: All secrets managed in `domains/security/`
+- **Single Source of Truth**: All secrets managed in `domains/secrets/`
 - **Stable Interface**: Consumers use `hwc.security.materials.*` paths
 - **Backward Compatibility**: Legacy paths work during migration
 - **No Whack-a-Mole**: Changes don't break existing consumers
@@ -50,7 +50,7 @@ The HWC Security Domain follows a clean **domain-organized** approach with **sta
 ## 📁 Directory Structure
 
 ```
-domains/security/
+domains/secrets/
 ├── README.md                 # This documentation
 ├── index.nix                 # Main aggregator (imports everything)
 ├── materials.nix             # Stable read-only path facade
@@ -70,7 +70,7 @@ domains/security/
 Each domain file contains **only** `age.secrets` declarations:
 
 ```nix
-# domains/security/secrets/system.nix
+# domains/secrets/secrets/system.nix
 {
   age.secrets = {
     user-initial-password = {
@@ -101,7 +101,7 @@ The security profile imports everything automatically:
 
 ```nix
 # profiles/security.nix
-imports = [ ../domains/security/index.nix ];
+imports = [ ../domains/secrets/index.nix ];
 hwc.security.enable = true;
 ```
 
@@ -117,7 +117,7 @@ echo "my-secret-value" | age -r $(cat age-key.pub) > secrets/new-service-token.a
 
 **Step 2: Add to appropriate domain file**
 ```nix
-# domains/security/secrets/services.nix (if it's a service credential)
+# domains/secrets/secrets/services.nix (if it's a service credential)
 age.secrets = {
   # ... existing secrets ...
   new-service-token = {
@@ -131,7 +131,7 @@ age.secrets = {
 
 **Step 3: Expose via materials facade**
 ```nix
-# domains/security/materials.nix
+# domains/secrets/materials.nix
 options.hwc.security.materials = {
   # ... existing options ...
   newServiceTokenFile = lib.mkOption {
@@ -183,12 +183,12 @@ rg "oldSecretFile" --type nix
 
 **Step 2: Remove from materials facade**
 ```nix
-# domains/security/materials.nix - remove the option and mapping
+# domains/secrets/materials.nix - remove the option and mapping
 ```
 
 **Step 3: Remove from domain file**
 ```nix
-# domains/security/secrets/*.nix - remove the age.secrets entry
+# domains/secrets/secrets/*.nix - remove the age.secrets entry
 ```
 
 **Step 4: Delete encrypted file**
