@@ -176,9 +176,10 @@ Additional domains can be added following the same pattern:
 
 ## Charter Version
 
-**Version**: v1.0
-**Last Updated**: 2025-10-06
+**Version**: v2.0 - Integration with HWC Architecture Charter v6.0
+**Last Updated**: 2025-10-28
 **Status**: Active implementation
+**Related**: See `charter.md` for complete NixOS architecture documentation
 
 ---
 
