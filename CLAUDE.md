@@ -1,7 +1,17 @@
 # Claude Code Working Instructions
 
 **Project**: NixOS HWC (Heartwood Collective)
-**Full Charter**: See `charter/charter.md` for complete architecture documentation
+
+## ⚠️ MANDATORY READING REQUIREMENT ⚠️
+
+**BEFORE STARTING ANY WORK, AI ASSISTANTS MUST READ:**
+1. **`charter.md`** - Complete HWC Architecture Charter v6.0
+2. **`FILESYSTEM-CHARTER.md`** - Home directory organization v2.0
+3. **This entire document** - Working instructions and patterns
+
+**Failure to read these documents results in architectural violations and broken implementations.**
+
+**Full Charter**: See `charter.md` for complete architecture documentation
 
 ---
 
@@ -31,7 +41,7 @@
 
 ## Architecture Quick Reference
 
-**Full details in `charter/charter.md` - Read it if unfamiliar with HWC architecture**
+**Full details in `charter.md` - Read it if unfamiliar with HWC architecture**
 
 ### Domain Structure
 - `domains/system/` - Core OS, users, networking, paths
@@ -113,7 +123,7 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 ## Project-Specific Notes
 
 ### Paths
-- Hot storage: `/home/eric/03-tech/local-storage` (configured per-machine)
+- Local development storage: `~/300_tech/120-development/local-storage/` (per filesystem charter)
 - Secrets: `/run/agenix` (managed by agenix)
 - Filesystem charter: `FILESYSTEM-CHARTER.md` (home directory organization)
 
@@ -150,11 +160,11 @@ sudo nixos-rebuild switch --flake .#hwc-laptop
 
 ## When In Doubt
 
-1. **Read the charter**: `charter/charter.md`
+1. **Read the charter**: `charter.md`
 2. **Ask the user** if you don't understand the root cause
 3. **Explain your reasoning** before making changes
 4. **Fix root problems**, not symptoms
 
 ---
 
-**Charter Version Reference**: v6.0 (see `charter/charter.md` for full details)
+**Charter Version Reference**: v6.0 (see `charter.md` for full details)

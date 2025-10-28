@@ -306,12 +306,14 @@ imports = [
 
 ---
 
-## 19) Related Charters
+## 19) Related Documentation
 
 * **Filesystem Charter** (`FILESYSTEM-CHARTER.md`): Home directory organization (`~/`) with domain-based structure
   - 3-digit prefix system (100_hwc, 200_personal, 300_tech, etc.)
   - XDG integration configured in `domains/system/core/paths.nix`
   - GTD-style inbox processing workflow
+* **Claude Instructions** (`CLAUDE.md`): AI assistant working instructions and quick reference
+* **Documentation Index** (`GEMINI.md`): Dynamic index to all authoritative sources
 
 ---
 
