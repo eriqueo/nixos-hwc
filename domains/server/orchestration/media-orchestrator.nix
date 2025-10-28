@@ -21,9 +21,9 @@ in
         mkdir -p ${cfgRoot}/scripts ${hotRoot}/events
 
         # Deploy automation scripts from workspace
-        cp ${paths.nixos}/workspace/automation/media-orchestrator.py ${cfgRoot}/scripts/
-        cp ${paths.nixos}/workspace/automation/qbt-finished.sh ${cfgRoot}/scripts/
-        cp ${paths.nixos}/workspace/automation/sab-finished.py ${cfgRoot}/scripts/
+        cp /home/eric/.nixos/workspace/automation/media-orchestrator.py ${cfgRoot}/scripts/
+        cp /home/eric/.nixos/workspace/automation/qbt-finished.sh ${cfgRoot}/scripts/
+        cp /home/eric/.nixos/workspace/automation/sab-finished.py ${cfgRoot}/scripts/
         chmod +x ${cfgRoot}/scripts/*.py ${cfgRoot}/scripts/*.sh
 
         chown -R 1000:1000 ${cfgRoot}/scripts ${hotRoot}/events
