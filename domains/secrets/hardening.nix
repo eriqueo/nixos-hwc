@@ -63,6 +63,29 @@ in {
     (lib.mkIf (cfg.audit.enable or false) {
       security.auditd.enable = true;
       security.audit.enable  = true;
+
+      # Configure auditd with proper log rotation
+      environment.etc."audit/auditd.conf".text = '';
+        # Log rotation settings to prevent disk space issues
+        max_log_file = 100
+        max_log_file_action = rotate
+        num_logs = 5
+        space_left = 75
+        space_left_action = email
+        admin_space_left = 50
+        admin_space_left_action = suspend
+        disk_full_action = suspend
+        disk_error_action = suspend
+        use_libwrap = yes
+        tcp_listen_queue = 5
+        tcp_max_per_addr = 1
+        tcp_client_max_idle = 0
+        enable_krb5 = no
+        krb5_principal = auditd
+        name_format = HOSTNAME
+        plugin_dir = /etc/audit/plugins.d
+      '';
+
       security.audit.rules =
         let
           defaults = [
