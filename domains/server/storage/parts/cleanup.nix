@@ -28,10 +28,31 @@ let
       find /var/lib/containers -name "*.log" -mtime +${toString cfg.retentionDays} -delete || true
     fi
 
+    # Clean up Caddy logs (critical - these caused our disk space issue)
+    if [ -d "/var/log/caddy" ]; then
+      echo "Cleaning Caddy logs..."
+      # Remove old rotated logs
+      find /var/log/caddy -name "*.log.gz" -mtime +${toString cfg.retentionDays} -delete || true
+
+      # Truncate active logs larger than 50MB to prevent disk space issues
+      find /var/log/caddy -name "*.log" -size +50M -exec truncate -s 50M {} \; || true
+      echo "Truncated large Caddy logs (>50MB) to prevent disk space issues"
+    fi
+
     # Clean up systemd journal logs older than retention
     if command -v journalctl >/dev/null 2>&1; then
       echo "Cleaning systemd journal..."
       journalctl --vacuum-time=${toString cfg.retentionDays}d || true
+    fi
+
+    # Clean up other system logs that can grow large
+    if [ -d "/var/log" ]; then
+      echo "Cleaning other system logs..."
+      # Remove old wtmp/btmp logs
+      find /var/log -name "wtmp.*" -o -name "btmp.*" -mtime +${toString cfg.retentionDays} -delete || true
+
+      # Truncate large syslog files if they exist
+      find /var/log -name "syslog" -o -name "messages" -size +100M -exec truncate -s 50M {} \; || true
     fi
 
     echo "$(date): Media cleanup completed"
@@ -75,6 +96,22 @@ in
       missingok = true;
       notifempty = true;
       create = "644 root root";
+    };
+
+    # Critical: Log rotation for Caddy logs to prevent disk space issues
+    services.logrotate.settings.caddy = {
+      files = [ "/var/log/caddy/*.log" ];
+      frequency = "daily";
+      rotate = 7;
+      size = "50M";  # Rotate when files reach 50MB
+      compress = true;
+      delaycompress = true;
+      missingok = true;
+      notifempty = true;
+      create = "644 caddy caddy";
+      postrotate = ''
+        systemctl reload caddy.service || true
+      '';
     };
   };
 }
