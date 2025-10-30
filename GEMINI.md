@@ -32,6 +32,11 @@
 - **Purpose**: Working instructions for AI assistant, common patterns, anti-patterns
 - **Key Sections**: Philosophy, rebuild commands, path mappings, troubleshooting
 
+### **♊ Gemini Code Instructions** → `GEMINI.md`
+- **Reference Architecture**: HWC Charter v6.0
+- **Purpose**: Working instructions for AI assistant, common patterns, anti-patterns
+- **Key Sections**: Philosophy, rebuild commands, path mappings, troubleshooting
+
 ---
 
 ## **Architecture Documentation** → `docs/architecture/`
@@ -49,6 +54,14 @@
 | Home Paths | `FILESYSTEM-CHARTER.md` | Top-Level Structure |
 | Rebuild Commands | `CLAUDE.md` | Common Commands |
 | Validation Rules | `charter.md` | §18 Configuration Validity |
+
+---
+
+## **Specialized Gemini Agents**
+
+### **♊ Gemini HWC Troubleshooting Specialist** → `gemini-hwc-troubleshooter.md`
+- **Purpose**: Expert NixOS HWC troubleshooting specialist for build failures, configuration conflicts, and system issues
+- **Scope**: `/home/eric/.nixos` - HWC (Heartwood Collective) architecture debugging
 
 ---
 
