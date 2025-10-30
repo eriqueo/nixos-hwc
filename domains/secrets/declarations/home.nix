@@ -10,22 +10,22 @@
     proton-bridge-password = {
       file = ../parts/home/proton-bridge-password.age;
       mode = "0440";
-      owner = "eric";
-      group = "users";
+      owner = "root";
+      group = "secrets";
     };
 
     gmail-personal-password = {
       file = ../parts/home/gmail-personal-password.age;
       mode = "0440";
-      owner = "eric";
-      group = "users";
+      owner = "root";
+      group = "secrets";
     };
 
     gmail-business-password = {
       file = ../parts/home/gmail-business-password.age;
       mode = "0440";
-      owner = "eric";
-      group = "users";
+      owner = "root";
+      group = "secrets";
     };
   };
 }

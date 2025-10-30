@@ -135,6 +135,8 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 - Domain: `domains/secrets/`
 - All secrets via agenix (encrypted .age files)
 - Stable API at `/run/agenix`
+- **Permission Model**: All secrets use `group = "secrets"; mode = "0440"`
+- **Service Access**: All service users must include `extraGroups = [ "secrets" ]`
 
 **Age Key Access for Secret Updates:**
 ```bash
