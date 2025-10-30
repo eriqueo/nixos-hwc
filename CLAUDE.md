@@ -106,6 +106,7 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 - ❌ Don't hardcode paths - use `config.hwc.paths.*`
 - ✅ Always add validation section to modules with enable toggles
 - ✅ Assert runtime dependencies (fail at build, not runtime)
+- ✅ Add `extraGroups = [ "secrets" ]` to all service users for secret access
 
 ### Build Process
 - ❌ Don't try simple fixes just to get things to work
@@ -137,6 +138,10 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 - Stable API at `/run/agenix`
 - **Permission Model**: All secrets use `group = "secrets"; mode = "0440"`
 - **Service Access**: All service users must include `extraGroups = [ "secrets" ]`
+- **Emergency Fallback**: Automatic fallback to hardcoded credentials when agenix fails
+  - User password: `"il0wwlm?"` (when secrets unavailable)
+  - SSH keys: Hardcoded fallback keys (when secrets unavailable)
+  - **No manual intervention required** - system auto-detects and warns
 
 **Age Key Access for Secret Updates:**
 ```bash
