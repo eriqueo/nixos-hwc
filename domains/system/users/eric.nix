@@ -5,6 +5,9 @@ in {
   config = lib.mkIf (cfg.enable && cfg.user.enable) {
     users.mutableUsers = false;
 
+    # Shared secrets group for service access
+    users.groups.secrets = {};
+
     users.users.${cfg.user.name} = {
       isNormalUser = true;
       home = "/home/${cfg.user.name}";
@@ -13,7 +16,7 @@ in {
       description = cfg.user.description;
 
       extraGroups =
-        (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" "bluetooth" ]) ++
+        (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" "bluetooth" "secrets" ]) ++
         (lib.optionals cfg.user.groups.media          [ "video" "audio" "render" ]) ++
         (lib.optionals cfg.user.groups.development    [ "docker" "podman" ]) ++
         (lib.optionals cfg.user.groups.virtualization [ "libvirtd" "kvm" ]) ++

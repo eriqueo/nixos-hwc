@@ -14,6 +14,7 @@ in
       home = "/var/lib/proton-bridge";
       createHome = true;
       group = "protonbridge";
+      extraGroups = [ "secrets" ];
     };
 
     systemd.services.protonmail-bridge = {
