@@ -80,6 +80,16 @@ in
     services.xserver.displayManager.lightdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
 
     #=========================================================================
+    # PAM CONFIGURATION
+    #=========================================================================
+
+    # Enable GNOME Keyring PAM integration for automatic unlock
+    security.pam.services = lib.mkIf cfg.loginManager.enable {
+      greetd.enableGnomeKeyring = true;
+      login.enableGnomeKeyring = true;
+    };
+
+    #=========================================================================
     # USER LINGERING
     #=========================================================================
 
