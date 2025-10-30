@@ -158,13 +158,55 @@ sudo nixos-rebuild switch --flake .#hwc-laptop
 
 ---
 
-## When In Doubt
+## Specialized Agents
 
-1. **Read the charter**: `charter.md`
-2. **Ask the user** if you don't understand the root cause
-3. **Explain your reasoning** before making changes
-4. **Fix root problems**, not symptoms
+**Use these HWC-specific agents proactively for better results:**
+
+### Primary Agents
+- **`nixos-hwc-architect`** - Use for architecture design, module creation, domain organization, and HWC compliance review
+- **`nixos-hwc-troubleshooter`** - Use for build failures, configuration conflicts, service issues, and system debugging
+
+### When to Use Each Agent
+
+**Architecture Agent** (`nixos-hwc-architect`):
+- Planning new modules or features
+- Reviewing domain boundaries and namespace compliance
+- Designing profile structure (BASE vs OPTIONAL)
+- Secret management workflows (agenix/age)
+- Migration from non-HWC patterns
+- Any architectural decisions
+
+**Troubleshooting Agent** (`nixos-hwc-troubleshooter`):
+- NixOS rebuild failures
+- Module conflicts and option collisions
+- systemd service issues
+- Performance problems
+- Runtime errors and crashes
+- Any debugging or error resolution
+
+**Examples:**
+```bash
+# Use architecture agent
+"Help me add a new container service following HWC patterns"
+"Review this module for domain compliance"
+
+# Use troubleshooting agent
+"My rebuild is failing with type errors"
+"Service won't start after configuration change"
+```
+
+**Agent Specifications**: See `nixos-hwc-agent.md` and `nixos-hwc-troubleshooter.md` for complete capabilities.
 
 ---
 
-**Charter Version Reference**: v6.0 (see `charter.md` for full details)
+## When In Doubt
+
+1. **Use the specialized agents** - They understand HWC patterns deeply
+2. **Read the charter**: `CHARTER.md`
+3. **Ask the user** if you don't understand the root cause
+4. **Explain your reasoning** before making changes
+5. **Fix root problems**, not symptoms
+
+---
+
+**Charter Version Reference**: v6.0 (see `CHARTER.md` for full details)

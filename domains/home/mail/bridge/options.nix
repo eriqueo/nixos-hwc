@@ -19,12 +19,12 @@ with lib; {
     keychain = {
       helper = mkOption {
         type = types.str;
-        default = "pass";
-        description = "Keychain helper to use. 'pass' is more reliable than gnome-keyring for headless operation.";
+        default = "";
+        description = "Keychain helper to use. Empty string uses GNOME keyring via org.freedesktop.secrets.";
       };
       disableTest = mkOption {
         type = types.bool;
-        default = true;
+        default = false;
         description = "Disable keychain testing to prevent hangs during startup.";
       };
     };
