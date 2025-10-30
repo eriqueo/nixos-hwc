@@ -20,7 +20,10 @@ EOF
       ExecStart = "${(br.package or pkgs.protonmail-bridge)}/bin/protonmail-bridge ${runtime.args}";
       Restart = "on-failure";
       RestartSec = "${toString (br.restartSec or 5)}";
-      Environment = runtime.env ++ [ "GPG_TTY=%t/tty" ];
+      Environment = runtime.env ++ [
+        "GPG_TTY=%t/tty"
+        "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus"
+      ];
     };
     Install = { WantedBy = [ "default.target" ]; };
   };
