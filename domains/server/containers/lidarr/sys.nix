@@ -17,7 +17,6 @@ in
       volumes = [
         "/opt/downloads/lidarr:/config"
         "${config.hwc.paths.media}/music:/music"
-        "${config.hwc.paths.hot}/processing/lidarr-temp:/processing"
         "${config.hwc.paths.hot}/downloads:/downloads"
       ];
       environment = { };

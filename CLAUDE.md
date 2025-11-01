@@ -158,13 +158,56 @@ sudo nixos-rebuild switch --flake .#hwc-laptop
 
 ---
 
-## When In Doubt
+## Lessons Learned & Known Issues
 
-1. **Read the charter**: `charter.md`
-2. **Ask the user** if you don't understand the root cause
-3. **Explain your reasoning** before making changes
-4. **Fix root problems**, not symptoms
+### Jellyfin Service Architecture (2025-10-31)
+
+**Issue**: Containerized Jellyfin vs Native Service Connectivity
+
+**Problem**:
+Containerized Jellyfin (`hwc.services.containers.jellyfin`) was isolated on `media-network` container network, preventing external device access (Roku TVs, etc.) despite proper port mapping and firewall configuration.
+
+**Root Cause**:
+- Container network isolation created routing barriers
+- Port mapping `0.0.0.0:8096:8096` with container network != direct host network access
+- External devices couldn't reach container IP `10.89.0.123` from LAN
+
+**Solution**:
+Switch to native NixOS service for media servers requiring external device access:
+
+```nix
+# ❌ Problematic containerized approach
+hwc.services.containers.jellyfin.enable = true;
+
+# ✅ Working native service approach
+services.jellyfin = {
+  enable = true;
+  openFirewall = false;  # Manage firewall manually
+};
+```
+
+**Firewall Requirements**:
+```nix
+firewall.extraTcpPorts = [ 8096 7359 ];  # Jellyfin HTTP + TCP discovery
+firewall.extraUdpPorts = [ 7359 ];       # Jellyfin UDP discovery
+```
+
+**When to Use Each Approach**:
+- **Native Services**: Media servers, services needing external device access
+- **Containers**: Internal services, API services, isolated workloads
+
+**Reference**: Compare working `/etc/nixos/hosts/server/config.nix` vs HWC containerized approach
 
 ---
 
-**Charter Version Reference**: v6.0 (see `charter.md` for full details)
+## When In Doubt
+
+1. **Read the charter**: `CHARTER.md`
+2. **Ask the user** if you don't understand the root cause
+3. **Explain your reasoning** before making changes
+4. **Fix root problems**, not symptoms
+5. **Check `/etc/nixos` for working reference implementations**
+
+---
+
+**Charter Version Reference**: v6.0 (see `CHARTER.md` for full details)

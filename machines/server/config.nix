@@ -56,12 +56,43 @@
     ssh.enable = true;
     tailscale.enable = true;
     firewall.level = lib.mkForce "server";
+    firewall.extraTcpPorts = [ 8096 7359 2283 4533 ];  # Jellyfin, Immich, Navidrome
+    firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
   };
 
   # AI services configuration
   hwc.server.ai.ollama = {
     enable = false;
     models = [ "llama3:8b" "codellama:13b" ];
+  };
+
+  # Native Media Services (replacing containerized versions)
+  services.jellyfin = {
+    enable = true;
+    openFirewall = false;  # We manage firewall manually
+  };
+
+  services.immich = {
+    enable = true;
+    host = "0.0.0.0";
+    port = 2283;
+    mediaLocation = "/mnt/photos";
+    database = {
+      createDB = false;  # Use existing database
+      name = "immich";
+      user = "immich";
+    };
+    redis.enable = true;
+  };
+
+  services.navidrome = {
+    enable = true;
+    settings = {
+      Address = "0.0.0.0";
+      Port = 4533;
+      MusicFolder = "/mnt/media/music";
+      DataFolder = "/var/lib/navidrome";
+    };
   };
 
   # Feature enablement (disabled for initial stability)
