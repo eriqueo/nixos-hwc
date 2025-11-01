@@ -60,6 +60,17 @@
     firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
   };
 
+  # Machine-specific GPU override for Quadro P1000 (legacy driver required)
+  hwc.infrastructure.hardware.gpu = {
+    enable = lib.mkForce true;
+    type = "nvidia";
+    nvidia = {
+      driver = "legacy_470";  # P1000 requires legacy driver
+      containerRuntime = true;
+      enableMonitoring = true;
+    };
+  };
+
   # AI services configuration
   hwc.server.ai.ollama = {
     enable = false;
