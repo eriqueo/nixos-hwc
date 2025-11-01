@@ -44,7 +44,7 @@ in
           ];
           # Allow access to both new uploads and external library directories
           ReadWritePaths = [ cfg.settings.mediaLocation ];
-          ReadOnlyPaths = [ "/mnt/hot/pictures" ];
+          ReadOnlyPaths = [ "/mnt/media/pictures" ];
           # Add user to GPU groups via supplementary groups
           SupplementaryGroups = [ "video" "render" ];
         };
@@ -63,7 +63,7 @@ in
             "/dev/nvidia-uvm-tools rw"
           ];
           # Allow ML service to read external library for analysis
-          ReadOnlyPaths = [ "/mnt/hot/pictures" ];
+          ReadOnlyPaths = [ "/mnt/media/pictures" ];
           # Add user to GPU groups via supplementary groups
           SupplementaryGroups = [ "video" "render" ];
         };
