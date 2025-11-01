@@ -71,8 +71,12 @@
     };
   };
 
-  # P1000 requires legacy driver - override the NVIDIA package
-  hardware.nvidia.package = lib.mkForce config.boot.kernelPackages.nvidiaPackages.legacy_470;
+  # P1000 requires legacy driver - override the NVIDIA package and disable modern features
+  hardware.nvidia = {
+    package = lib.mkForce config.boot.kernelPackages.nvidiaPackages.legacy_470;
+    open = lib.mkForce false;  # Legacy driver doesn't support open-source modules
+    gsp.enable = lib.mkForce false;  # Legacy driver doesn't support GSP firmware
+  };
 
   # AI services configuration
   hwc.server.ai.ollama = {
