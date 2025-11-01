@@ -102,7 +102,7 @@ let
     application/ics = calendar
     image/* = ${pkgs.bash}/bin/bash -lc 'if [ -n "$KITTY_WINDOW_ID" ]; then ${pkgs.kitty}/bin/kitty +kitten icat --stdin yes; elif [ "$TERM_PROGRAM" = "WezTerm" ]; then ${pkgs.chafa}/bin/chafa -f sixel -s $(${pkgs.ncurses}/bin/tput cols)x0 -; else ${pkgs.chafa}/bin/chafa -f symbols -s $(${pkgs.ncurses}/bin/tput cols)x0 -; fi'
           
-    application/pdf = ${pkgs.poppler_utils}/bin/pdftotext -layout - -
+    application/pdf = ${pkgs.poppler-utils}/bin/pdftotext -layout - -
     application/json = ${pkgs.jq}/bin/jq -C . 2>/dev/null || cat -
     application/xml  = ${pkgs.libxml2}/bin/xmllint --format - 2>/dev/null || cat -
     text/xml         = ${pkgs.libxml2}/bin/xmllint --format - 2>/dev/null || cat -
@@ -163,7 +163,7 @@ in
     ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
   packages = with pkgs; [
-    aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler_utils
+    aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler-utils
     jq libxml2 mpv unzip gnutar file xdg-utils w3m pandoc glow p7zip unrar
     util-linux ncurses ov xclip
   ];

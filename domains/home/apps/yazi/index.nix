@@ -21,7 +21,7 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
-      yazi micro ffmpegthumbnailer unzip jq poppler_utils fontpreview
+      yazi micro ffmpegthumbnailer unzip jq poppler-utils fontpreview
       fd ripgrep fzf zoxide file exiftool imagemagick p7zip
     ];
 

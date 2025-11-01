@@ -14,6 +14,7 @@ in
     systemd.services.media-orchestrator-install = {
       description = "Install media orchestrator assets";
       after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig.Type = "oneshot";
       script = ''
@@ -38,6 +39,7 @@ in
         "media-orchestrator-install.service"
         "podman-sonarr.service" "podman-radarr.service" "podman-lidarr.service"
       ];
+      wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
       # Create environment file with agenix secrets

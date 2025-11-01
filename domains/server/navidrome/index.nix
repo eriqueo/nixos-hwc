@@ -39,19 +39,19 @@ in
 
     # Open firewall port
     networking.firewall.allowedTCPPorts = [ cfg.settings.port ];
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  assertions = [
-    {
-      assertion = !cfg.enable || (cfg.settings.initialAdminPassword != "");
-      message = "hwc.server.navidrome requires initialAdminPassword to be set";
-    }
-    {
-      assertion = !cfg.reverseProxy.enable || config.hwc.services.reverseProxy.enable;
-      message = "hwc.server.navidrome.reverseProxy requires hwc.services.reverseProxy.enable = true";
-    }
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || (cfg.settings.initialAdminPassword != "");
+        message = "hwc.server.navidrome requires initialAdminPassword to be set";
+      }
+      {
+        assertion = !cfg.reverseProxy.enable || config.hwc.services.reverseProxy.enable;
+        message = "hwc.server.navidrome.reverseProxy requires hwc.services.reverseProxy.enable = true";
+      }
+    ];
+  };
 }
