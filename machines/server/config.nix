@@ -85,32 +85,9 @@
     redis.enable = true;
   };
 
-  services.navidrome = {
-    enable = true;
-    settings = {
-      Address = "0.0.0.0";
-      Port = 4533;
-      MusicFolder = "/mnt/media/music";
-      DataFolder = "/var/lib/navidrome";
-      # Match /etc/nixos credentials
-      ND_INITIAL_ADMIN_USER = "admin";
-      ND_INITIAL_ADMIN_PASSWORD = "il0wwlm?";
-    };
-  };
+  # Navidrome configuration handled by server profile native service
 
-  # Enable reverse proxy and configure Navidrome route
-  hwc.services.reverseProxy = {
-    enable = true;
-    domain = "localhost";
-  };
-
-  hwc.services.shared.routes = [
-    {
-      path = "/navidrome";
-      upstream = "127.0.0.1:4533";
-      stripPrefix = true;
-    }
-  ];
+  # Reverse proxy domain handled by server profile
 
   # Feature enablement (disabled for initial stability)
   # hwc.features = {
