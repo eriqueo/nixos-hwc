@@ -80,6 +80,36 @@
 
   # NVIDIA license acceptance handled in flake.nix
 
+  # Enable GPU acceleration for Immich ML (P1000)
+  systemd.services.immich-machine-learning = {
+    serviceConfig = {
+      # Grant GPU device access for ML processing
+      DeviceAllow = [
+        "/dev/nvidia0 rw"
+        "/dev/nvidiactl rw"
+        "/dev/nvidia-modeset rw"
+        "/dev/nvidia-uvm rw"
+        "/dev/nvidia-uvm-tools rw"
+        "/dev/dri/card0 rw"
+        "/dev/dri/renderD128 rw"
+      ];
+      SupplementaryGroups = [ "video" "render" ];
+    };
+    environment = {
+      # NVIDIA GPU acceleration for ML workloads
+      NVIDIA_VISIBLE_DEVICES = "all";
+      NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility";
+      # Critical: Add library path for NVIDIA CUDA libraries
+      LD_LIBRARY_PATH = "/run/opengl-driver/lib:/run/opengl-driver-32/lib";
+      # PyTorch CUDA configuration for P1000 (Pascal, compute capability 6.1)
+      CUDA_VISIBLE_DEVICES = "0";
+      TORCH_CUDA_ARCH_LIST = "6.1";
+      # Fix cache directory permissions
+      MPLCONFIGDIR = "/var/cache/immich-machine-learning";
+      TRANSFORMERS_CACHE = "/var/cache/immich-machine-learning";
+    };
+  };
+
   # AI services configuration
   hwc.server.ai.ollama = {
     enable = false;
