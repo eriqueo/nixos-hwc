@@ -47,7 +47,12 @@ in
       enable = true;
       virtualHosts."${config.hwc.services.reverseProxy.domain}".extraConfig =
         concatStringsSep "\n" (map renderRoute routes);
+
+      # Immich requires direct port access (no subpath support)
+      virtualHosts."${config.hwc.services.reverseProxy.domain}:2283".extraConfig = mkIf config.hwc.server.immich.enable ''
+        reverse_proxy localhost:2283
+      '';
     };
-    networking.firewall.allowedTCPPorts = [ 80 443 ];
+    networking.firewall.allowedTCPPorts = [ 80 443 2283 ];
   };
 }
