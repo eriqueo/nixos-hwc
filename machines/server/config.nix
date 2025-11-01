@@ -65,11 +65,14 @@
     enable = lib.mkForce true;
     type = "nvidia";
     nvidia = {
-      driver = "legacy_470";  # P1000 requires legacy driver
+      driver = "stable";  # Use stable as base, override package below
       containerRuntime = true;
       enableMonitoring = true;
     };
   };
+
+  # P1000 requires legacy driver - override the NVIDIA package
+  hardware.nvidia.package = lib.mkForce config.boot.kernelPackages.nvidiaPackages.legacy_470;
 
   # AI services configuration
   hwc.server.ai.ollama = {
