@@ -32,7 +32,7 @@ in
     hwc.services.shared.routes = lib.mkIf cfg.reverseProxy.enable [
       {
         path = cfg.reverseProxy.path;
-        upstream = "${cfg.settings.address}:${toString cfg.settings.port}";
+        upstream = "127.0.0.1:${toString cfg.settings.port}";
         stripPrefix = true;
       }
     ];
