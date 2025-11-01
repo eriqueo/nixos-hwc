@@ -269,8 +269,8 @@
   # Phase 4: Specialized Services (Soulseek integration)
   hwc.services.containers.slskd.enable = true;
   hwc.services.containers.soularr.enable = true;  # Now that Lidarr is enabled
-  hwc.services.containers.navidrome.enable = true;
-  hwc.services.containers.jellyfin.enable = true;
+  # hwc.services.containers.navidrome.enable = true;  # Disabled - using native service
+  # hwc.services.containers.jellyfin.enable = true;  # Disabled - using native service
 
   # Phase 5: Infrastructure Services
   hwc.services.reverseProxy = {

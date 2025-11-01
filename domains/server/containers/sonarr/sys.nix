@@ -17,7 +17,6 @@ in
       volumes = [
         "/opt/downloads/sonarr:/config"
         "${config.hwc.paths.media}/tv:/tv"
-        "${config.hwc.paths.hot}/processing/sonarr-temp:/processing"
         "${config.hwc.paths.hot}/downloads:/downloads"
       ];
       environment = { };

@@ -17,7 +17,6 @@ in
       volumes = [
         "/opt/downloads/radarr:/config"
         "${config.hwc.paths.media}/movies:/movies"
-        "${config.hwc.paths.hot}/processing/radarr-temp:/processing"
         "${config.hwc.paths.hot}/downloads:/downloads"
       ];
       environment = { };

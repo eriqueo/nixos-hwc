@@ -326,6 +326,38 @@ curl http://localhost:7878/api/v3/system/status  # Radarr
 curl http://localhost:8096/System/Info           # Jellyfin
 ```
 
+### Required Firewall Ports
+```nix
+# Common media service ports for machine firewall configuration
+firewall.extraTcpPorts = [
+  # Media Management (*arr stack)
+  7878   # Radarr
+  8989   # Sonarr
+  8686   # Lidarr
+  9696   # Prowlarr
+
+  # Media Servers
+  8096   # Jellyfin HTTP
+  7359   # Jellyfin additional TCP
+  4533   # Navidrome
+
+  # Download Clients (if not VPN-routed)
+  8080   # qBittorrent
+  8081   # SABnzbd
+  5030   # SLSKD
+];
+
+firewall.extraUdpPorts = [
+  7359   # Jellyfin discovery
+  50300  # SLSKD
+];
+```
+
+**Note**: Container vs Native Service Port Handling
+- **Containerized services**: Ports handled automatically by container networking
+- **Native services** (e.g., `services.jellyfin`): Require explicit firewall configuration
+- See Charter v6.0 "Server Workloads" for container vs native service decisions
+
 ## Profile Integration
 
 ### Server Profile Enablement

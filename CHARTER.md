@@ -246,9 +246,24 @@ rg "/mnt/" domains/
 
 ## 13) Server Workloads
 
+### Container vs Native Service Decisions
+
+* **Native Services**: Use for external device connectivity (media servers, game servers)
+  - Media services requiring LAN device access (Jellyfin for Roku/smart TVs)
+  - Services with complex network discovery requirements
+  - Example: `services.jellyfin.enable = true` instead of `hwc.services.containers.jellyfin.enable`
+
+* **Containers**: Use for internal services, isolated workloads
+  - API services, databases, processing workloads
+  - Services without external device connectivity requirements
+  - Better security isolation for untrusted workloads
+
+### Container Architecture Rules
+
 * Reverse proxy authority is central in `domains/server/containers/caddy/`.
 * When host-level Caddy aggregator is enabled, containerized proxy units MUST be disabled.
 * Per-unit container state defaults to `/opt/<category>/<unit>:/config`. Override only for ephemeral workloads, host storage policy, or multiple instances.
+* Container networks create routing barriers - external devices may not reach containerized services despite proper port mapping.
 
 ---
 

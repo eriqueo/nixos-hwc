@@ -13,7 +13,7 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
-      ports = [];
+      ports = [ "0.0.0.0:8096:8096" ];
       volumes = [ "/opt/downloads/jellyfin:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
