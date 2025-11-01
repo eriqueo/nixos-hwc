@@ -272,6 +272,16 @@
   # hwc.services.containers.navidrome.enable = true;  # Disabled - using native service
   # hwc.services.containers.jellyfin.enable = true;  # Disabled - using native service
 
+  # Native Media Services (Charter compliant)
+  hwc.server.navidrome = {
+    enable = true;
+    settings = {
+      initialAdminUser = "admin";
+      initialAdminPassword = "il0wwlm?";
+    };
+    reverseProxy.enable = true;
+  };
+
   # Phase 5: Infrastructure Services
   hwc.services.reverseProxy = {
     enable = true;
