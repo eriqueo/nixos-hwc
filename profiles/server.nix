@@ -278,6 +278,7 @@
     settings = {
       initialAdminUser = "admin";
       initialAdminPassword = "il0wwlm?";
+      baseUrl = "/navidrome";  # Required for reverse proxy
     };
     reverseProxy.enable = true;
   };

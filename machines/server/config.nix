@@ -78,6 +78,9 @@
     gsp.enable = lib.mkForce false;  # Legacy driver doesn't support GSP firmware
   };
 
+  # Accept NVIDIA license for P1000 legacy driver
+  nixpkgs.config.nvidia.acceptLicense = true;
+
   # AI services configuration
   hwc.server.ai.ollama = {
     enable = false;
