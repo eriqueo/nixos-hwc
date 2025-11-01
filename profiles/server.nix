@@ -282,6 +282,32 @@
     reverseProxy.enable = true;
   };
 
+  hwc.server.jellyfin = {
+    enable = true;
+    openFirewall = false;  # Manual firewall management
+    reverseProxy = {
+      enable = true;
+      path = "/media";
+      upstream = "localhost:8096";
+    };
+  };
+
+  hwc.server.immich = {
+    enable = true;
+    settings = {
+      host = "0.0.0.0";
+      port = 2283;
+      mediaLocation = "/mnt/photos";
+    };
+    database = {
+      createDB = false;  # Use existing database
+      name = "immich";
+      user = "immich";
+    };
+    redis.enable = true;
+    gpu.enable = true;  # Enable GPU acceleration
+  };
+
   # Phase 5: Infrastructure Services
   hwc.services.reverseProxy = {
     enable = true;
