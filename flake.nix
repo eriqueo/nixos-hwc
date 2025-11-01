@@ -63,7 +63,11 @@
     # Add the overlay here - this is the safest approach
     pkgs = import nixpkgs {
       inherit system;
-      config.allowUnfree = true;
+      config = {
+        allowUnfree = true;
+        # Accept NVIDIA license for legacy driver support
+        nvidia.acceptLicense = true;
+      };
       overlays = [
         # Overlay to disable Tailscale tests
         (final: prev: {
