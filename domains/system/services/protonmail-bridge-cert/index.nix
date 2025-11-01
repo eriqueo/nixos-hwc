@@ -28,6 +28,7 @@ in
     description = "Export Proton Bridge IMAP STARTTLS certificate";
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" "protonmail-bridge.service" ];
+    wants = [ "network-online.target" ];
     requires = [ "protonmail-bridge.service" ];
     serviceConfig = {
       Type = "oneshot";

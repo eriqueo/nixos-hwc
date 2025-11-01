@@ -100,9 +100,9 @@ in
     # Git configuration
     programs.git = lib.mkIf cfg.git.enable {
       enable = true;
-      userName = cfg.git.userName;
-      userEmail = cfg.git.userEmail;
-      extraConfig = {
+      settings = {
+        user.name = cfg.git.userName;
+        user.email = cfg.git.userEmail;
         init.defaultBranch = "main";
         core.editor = "micro";
       };

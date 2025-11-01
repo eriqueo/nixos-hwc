@@ -250,7 +250,7 @@
     type = "nvidia";
     nvidia = {
       driver = "stable";
-      containerRuntime = false;  # Temporarily disabled due to nixpkgs update driver issues
+      containerRuntime = true;   # Re-enabled after nixpkgs update
       enableMonitoring = true;
     };
   };
