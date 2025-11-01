@@ -42,6 +42,12 @@ in
         default = "";
         description = "Initial admin password";
       };
+
+      baseUrl = mkOption {
+        type = types.str;
+        default = "";
+        description = "Base URL for reverse proxy (e.g., /navidrome)";
+      };
     };
 
     reverseProxy = {

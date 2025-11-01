@@ -25,6 +25,8 @@ in
         # Credentials for initial setup
         ND_INITIAL_ADMIN_USER = cfg.settings.initialAdminUser;
         ND_INITIAL_ADMIN_PASSWORD = cfg.settings.initialAdminPassword;
+      } // lib.optionalAttrs (cfg.settings.baseUrl != "") {
+        BaseURL = cfg.settings.baseUrl;
       };
     };
 
