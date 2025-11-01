@@ -66,24 +66,10 @@
     models = [ "llama3:8b" "codellama:13b" ];
   };
 
-  # Native Media Services (replacing containerized versions)
-  services.jellyfin = {
-    enable = true;
-    openFirewall = false;  # We manage firewall manually
-  };
-
-  services.immich = {
-    enable = true;
-    host = "0.0.0.0";
-    port = 2283;
-    mediaLocation = "/mnt/photos";
-    database = {
-      createDB = false;  # Use existing database
-      name = "immich";
-      user = "immich";
-    };
-    redis.enable = true;
-  };
+  # Native Media Services now handled by Charter-compliant domain modules
+  # - hwc.server.jellyfin via server profile
+  # - hwc.server.immich via server profile
+  # - hwc.server.navidrome via server profile
 
   # Navidrome configuration handled by server profile native service
 
