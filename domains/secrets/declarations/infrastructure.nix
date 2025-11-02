@@ -44,8 +44,22 @@
     };
     
     # Frigate RTSP credentials
+    frigate-rtsp-username = {
+      file = ../parts/infrastructure/frigate-rtsp-username.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
+
     frigate-rtsp-password = {
       file = ../parts/infrastructure/frigate-rtsp-password.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
+
+    frigate-camera-ips = {
+      file = ../parts/infrastructure/frigate-camera-ips.age;
       mode = "0400";
       owner = "root";
       group = "root";
