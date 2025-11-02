@@ -9,7 +9,9 @@ let
       strip   = r.stripPrefix or false;
     in
       if strip then ''
-        handle_path ${path}/* {
+        @${builtins.replaceStrings ["/"] ["_"] path} path ${path} ${path}/*
+        handle @${builtins.replaceStrings ["/"] ["_"] path} {
+          uri strip_prefix ${path}
           reverse_proxy ${upstream}
         }
       '' else ''
