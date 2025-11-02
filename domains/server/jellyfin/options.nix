@@ -27,5 +27,9 @@ in
         description = "Upstream server for reverse proxy";
       };
     };
+
+    gpu = {
+      enable = mkEnableOption "GPU acceleration for video transcoding";
+    };
   };
 }

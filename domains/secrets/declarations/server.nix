@@ -74,5 +74,27 @@
       owner = "root";
       group = "root";
     };
+
+    # Frigate NVR camera credentials
+    frigate-rtsp-username = {
+      file = ../parts/server/frigate-rtsp-username.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
+
+    frigate-rtsp-password = {
+      file = ../parts/server/frigate-rtsp-password.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
+
+    frigate-camera-ips = {
+      file = ../parts/server/frigate-camera-ips.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
   };
 }

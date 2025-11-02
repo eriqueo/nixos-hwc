@@ -130,6 +130,31 @@
     };
   };
 
+  # Frigate NVR for camera surveillance
+  hwc.server.frigate = {
+    enable = true;
+
+    gpu = {
+      enable = true;
+      detector = "tensorrt";
+      useFP16 = false;  # Pascal GPU (P1000) requires FP16 disabled
+    };
+
+    mqtt.enable = true;
+
+    monitoring = {
+      watchdog.enable = true;
+      prometheus.enable = true;
+    };
+
+    storage = {
+      maxSizeGB = 2000;
+      pruneSchedule = "hourly";
+    };
+
+    firewall.tailscaleOnly = true;
+  };
+
   # Native Media Services now handled by Charter-compliant domain modules
   # - hwc.server.jellyfin via server profile
   # - hwc.server.immich via server profile
