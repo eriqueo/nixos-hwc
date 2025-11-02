@@ -14,7 +14,7 @@ in
       {
         path = "/jellyseerr";
         upstream = "127.0.0.1:5055";
-        stripPrefix = false;
+        stripPrefix = true;
       }
     ];
   };
