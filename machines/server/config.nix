@@ -125,8 +125,8 @@
     };
     monitoring.enableHealthCheck = true;
     reverseProxy = {
-      enable = false;  # Set to true if exposing via Caddy
-      path = "/couchdb";
+      enable = true;  # Expose via Caddy for remote access
+      path = "/sync";  # Match Obsidian's expected path
     };
   };
 

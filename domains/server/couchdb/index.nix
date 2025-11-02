@@ -46,15 +46,32 @@ in
         ADMIN_USERNAME=$(cat ${adminUsernamePath})
         ADMIN_PASSWORD=$(cat ${adminPasswordPath})
 
-        # Generate configuration using pure function
-        cat > ${cfg.settings.dataDir}/local.ini << 'EOF'
-${generateConfig {
-          adminUsername = "$ADMIN_USERNAME";
-          adminPassword = "$ADMIN_PASSWORD";
-          maxDocumentSize = cfg.settings.maxDocumentSize;
-          maxHttpRequestSize = cfg.settings.maxHttpRequestSize;
-          corsOrigins = cfg.settings.corsOrigins;
-        }}
+        # Generate configuration with runtime variable substitution
+        cat > ${cfg.settings.dataDir}/local.ini << EOF
+[admins]
+$ADMIN_USERNAME = $ADMIN_PASSWORD
+
+[couchdb]
+single_node=true
+max_document_size = ${toString cfg.settings.maxDocumentSize}
+
+[chttpd]
+require_valid_user = true
+max_http_request_size = ${toString cfg.settings.maxHttpRequestSize}
+
+[chttpd_auth]
+require_valid_user = true
+
+[httpd]
+WWW-Authenticate = Basic realm="couchdb"
+enable_cors = true
+
+[cors]
+origins = ${builtins.concatStringsSep "," cfg.settings.corsOrigins}
+credentials = true
+headers = accept, authorization, content-type, origin, referer
+methods = GET, PUT, POST, HEAD, DELETE
+max_age = 3600
 EOF
 
         # Set proper ownership and permissions
