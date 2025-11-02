@@ -8,12 +8,13 @@
     # Shared infrastructure
     ./_shared/network.nix
     ./_shared/caddy.nix
-    
+
     # Container services
     ./caddy/index.nix
     ./gluetun/index.nix
     ./immich/index.nix
     ./jellyfin/index.nix
+    ./jellyseerr/index.nix
     ./lidarr/index.nix
     ./navidrome/index.nix
     ./prowlarr/index.nix

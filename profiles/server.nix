@@ -61,6 +61,7 @@
 
       # Container-specific directories
       { path = "/opt/downloads/jellyfin"; }
+      { path = "/opt/downloads/jellyseerr"; }
       { path = "/mnt/hot/downloads"; }  # Already exists, keep for safety
       { path = "/mnt/hot/downloads/incomplete"; }  # SLSKD incomplete downloads
       { path = "/mnt/hot/downloads/complete"; }  # SLSKD completed downloads
@@ -116,9 +117,10 @@
         5000   # Frigate
         8080   # qBittorrent (via Gluetun)
         7878   # Radarr
-        8989   # Sonarr  
+        8989   # Sonarr
         8686   # Lidarr
         9696   # Prowlarr
+        5055   # Jellyseerr
         4533   # Navidrome
         8096   # Jellyfin
         2283   # Immich
@@ -267,6 +269,7 @@
   hwc.services.containers.sonarr.enable = true;
   hwc.services.containers.radarr.enable = true;
   hwc.services.containers.lidarr.enable = true;
+  hwc.services.containers.jellyseerr.enable = true;
 
   # Phase 4: Specialized Services (Soulseek integration)
   hwc.services.containers.slskd.enable = true;
