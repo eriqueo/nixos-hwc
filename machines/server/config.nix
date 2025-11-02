@@ -131,6 +131,8 @@
   };
 
   # Frigate NVR for camera surveillance
+  # Access: http://server-ip:5000 (direct port, no reverse proxy)
+  # Frigate doesn't support subpaths due to WebSocket/asset serving requirements
   hwc.server.frigate = {
     enable = true;
 
@@ -150,11 +152,6 @@
     storage = {
       maxSizeGB = 2000;
       pruneSchedule = "hourly";
-    };
-
-    reverseProxy = {
-      enable = true;
-      path = "/frigate";
     };
 
     firewall.tailscaleOnly = true;
