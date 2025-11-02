@@ -32,6 +32,15 @@ in
   config = lib.mkMerge [
     (lib.mkIf cfg.enable {
       environment.systemPackages = with pkgs; [ ffmpeg ];
+
+      # Reverse proxy configuration
+      hwc.services.shared.routes = lib.mkIf cfg.reverseProxy.enable [
+        {
+          path = cfg.reverseProxy.path;
+          upstream = "localhost:${toString cfg.settings.port}";
+          stripPrefix = false;  # Frigate needs the full path
+        }
+      ];
     })
 
     # Assertions

@@ -152,6 +152,11 @@
       pruneSchedule = "hourly";
     };
 
+    reverseProxy = {
+      enable = true;
+      path = "/frigate";
+    };
+
     firewall.tailscaleOnly = true;
   };
 
