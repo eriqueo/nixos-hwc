@@ -35,7 +35,7 @@ in
       {
         path = cfg.reverseProxy.path;
         upstream = "127.0.0.1:${toString cfg.settings.port}";
-        stripPrefix = true;
+        stripPrefix = false;  # Navidrome needs full path with /navidrome prefix
       }
     ];
 
