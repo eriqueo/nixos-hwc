@@ -116,6 +116,20 @@
     models = [ "llama3:8b" "codellama:13b" ];
   };
 
+  # CouchDB for Obsidian LiveSync
+  hwc.server.couchdb = {
+    enable = true;
+    settings = {
+      port = 5984;
+      bindAddress = "127.0.0.1";  # Localhost only for security
+    };
+    monitoring.enableHealthCheck = true;
+    reverseProxy = {
+      enable = false;  # Set to true if exposing via Caddy
+      path = "/couchdb";
+    };
+  };
+
   # Native Media Services now handled by Charter-compliant domain modules
   # - hwc.server.jellyfin via server profile
   # - hwc.server.immich via server profile
