@@ -293,6 +293,7 @@
       path = "/media";
       upstream = "localhost:8096";
     };
+    gpu.enable = true;  # Enable NVIDIA GPU acceleration for transcoding
   };
 
   hwc.server.immich = {
