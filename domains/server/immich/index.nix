@@ -74,8 +74,9 @@ in
       };
     };
 
-    # Open firewall port
-    networking.firewall.allowedTCPPorts = [ cfg.settings.port ];
+    # Open firewall port only on Tailscale interface (not public)
+    # This allows HTTPS access via hwc.ocelot-wahoo.ts.net:2283 using Tailscale certs
+    networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ cfg.settings.port ];
 
     #==========================================================================
     # VALIDATION

@@ -37,6 +37,8 @@
     ../domains/infrastructure/index.nix
     # Server domain modules (includes containers and other server services)
     ../domains/server/index.nix
+    # CouchDB for Obsidian LiveSync
+    ../domains/server/couchdb
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
 

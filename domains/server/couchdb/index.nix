@@ -1,0 +1,124 @@
+{ lib, config, pkgs, ... }:
+let
+  cfg = config.hwc.server.couchdb;
+  generateConfig = import ./config-generator.nix;
+in
+{
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  imports = [
+    ./options.nix
+  ];
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = lib.mkIf cfg.enable {
+    # Systemd service to setup CouchDB configuration BEFORE CouchDB starts
+    # This injects secrets from agenix into local.ini
+    systemd.services.couchdb-config-setup = {
+      description = "Setup CouchDB admin configuration from agenix secrets";
+      before = [ "couchdb.service" ];
+      wantedBy = [ "couchdb.service" ];
+      wants = [ "agenix.service" ];
+      after = [ "agenix.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        User = "root";
+      };
+      script = ''
+        # Ensure CouchDB config directory exists
+        mkdir -p ${cfg.settings.dataDir}
+
+        # Read credentials from agenix secrets
+        ADMIN_USERNAME=$(cat ${cfg.secrets.adminUsername})
+        ADMIN_PASSWORD=$(cat ${cfg.secrets.adminPassword})
+
+        # Generate configuration using pure function
+        cat > ${cfg.settings.dataDir}/local.ini << 'EOF'
+${generateConfig {
+          adminUsername = "$ADMIN_USERNAME";
+          adminPassword = "$ADMIN_PASSWORD";
+          maxDocumentSize = cfg.settings.maxDocumentSize;
+          maxHttpRequestSize = cfg.settings.maxHttpRequestSize;
+          corsOrigins = cfg.settings.corsOrigins;
+        }}
+EOF
+
+        # Set proper ownership and permissions
+        chown couchdb:couchdb ${cfg.settings.dataDir}/local.ini
+        chmod 600 ${cfg.settings.dataDir}/local.ini
+      '';
+    };
+
+    # Native CouchDB service configuration
+    services.couchdb = {
+      enable = true;
+      port = cfg.settings.port;
+      bindAddress = cfg.settings.bindAddress;
+      # Admin credentials handled via local.ini from systemd service above
+    };
+
+    # Health monitoring service for Obsidian LiveSync
+    systemd.services.couchdb-health-monitor = lib.mkIf cfg.monitoring.enableHealthCheck {
+      description = "Monitor CouchDB health for Obsidian LiveSync";
+      after = [ "couchdb.service" ];
+      wants = [ "couchdb.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "couchdb-health-check" ''
+          echo "Checking CouchDB health for Obsidian LiveSync..."
+          TIMEOUT=${toString cfg.monitoring.healthCheckTimeout}
+          ATTEMPTS=$((TIMEOUT / 2))
+
+          for i in $(seq 1 $ATTEMPTS); do
+            if ${pkgs.curl}/bin/curl -s http://${cfg.settings.bindAddress}:${toString cfg.settings.port}/_up > /dev/null 2>&1; then
+              echo "CouchDB is healthy and ready for Obsidian LiveSync"
+              exit 0
+            fi
+            echo "Waiting for CouchDB... ($i/$ATTEMPTS)"
+            sleep 2
+          done
+
+          echo "CouchDB health check timeout after $TIMEOUT seconds"
+          exit 1
+        '';
+      };
+      # Manual health checks only - don't auto-start
+      # wantedBy = [ "multi-user.target" ];
+    };
+
+    # Register reverse proxy route if enabled
+    hwc.services.shared.routes = lib.mkIf cfg.reverseProxy.enable [
+      {
+        path = cfg.reverseProxy.path;
+        upstream = "${cfg.settings.bindAddress}:${toString cfg.settings.port}";
+        stripPrefix = false;  # CouchDB needs full path
+      }
+    ];
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || (builtins.pathExists cfg.secrets.adminUsername);
+        message = "hwc.server.couchdb requires admin username secret at ${cfg.secrets.adminUsername}";
+      }
+      {
+        assertion = !cfg.enable || (builtins.pathExists cfg.secrets.adminPassword);
+        message = "hwc.server.couchdb requires admin password secret at ${cfg.secrets.adminPassword}";
+      }
+      {
+        assertion = !cfg.reverseProxy.enable || config.hwc.services.reverseProxy.enable;
+        message = "hwc.server.couchdb.reverseProxy requires hwc.services.reverseProxy.enable = true";
+      }
+      {
+        assertion = cfg.settings.bindAddress == "127.0.0.1" || cfg.settings.bindAddress == "0.0.0.0";
+        message = "hwc.server.couchdb bindAddress should be 127.0.0.1 (localhost) or 0.0.0.0 (all interfaces)";
+      }
+    ];
+  };
+}
