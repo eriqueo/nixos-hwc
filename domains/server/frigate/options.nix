@@ -148,6 +148,16 @@ in
       };
     };
 
+    reverseProxy = {
+      enable = mkEnableOption "Enable reverse proxy route for Frigate";
+
+      path = mkOption {
+        type = types.str;
+        default = "/frigate";
+        description = "URL path for reverse proxy";
+      };
+    };
+
     firewall = {
       tailscaleOnly = mkOption {
         type = types.bool;

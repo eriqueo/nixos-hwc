@@ -17,7 +17,9 @@ in
       volumes = [
         "/opt/downloads/jellyseerr:/config"
       ];
-      environment = { };
+      environment = {
+        URL_BASE = "/jellyseerr";
+      };
       dependsOn = [ "sonarr" "radarr" ];
     })
   ]);
