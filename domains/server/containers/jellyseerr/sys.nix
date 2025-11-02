@@ -18,7 +18,7 @@ in
         "/opt/downloads/jellyseerr:/config"
       ];
       environment = { };
-      dependsOn = [ "jellyfin" "sonarr" "radarr" ];
+      dependsOn = [ "sonarr" "radarr" ];
     })
   ]);
 }
