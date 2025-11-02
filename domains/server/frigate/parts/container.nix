@@ -55,14 +55,14 @@ detectors:
 ''}
 
 ffmpeg: &ffmpeg_defaults
-${lib.optionalString cfg.gpu.enable ''
-  hwaccel_args:
-    - -hwaccel
-    - nvdec
-    - -hwaccel_device
-    - "${toString cfg.gpu.device}"
-    - -hwaccel_output_format
-    - nv12
+  ${lib.optionalString cfg.gpu.enable ''
+hwaccel_args:
+  - -hwaccel
+  - nvdec
+  - -hwaccel_device
+  - "${toString cfg.gpu.device}"
+  - -hwaccel_output_format
+  - nv12
 ''}
   input_args:
     - -rtsp_transport
