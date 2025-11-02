@@ -7,7 +7,7 @@ let
   isInsecureVault = (br.keychain.helper or "pass") == "";
   basePath = if isInsecureVault
              then "/run/current-system/sw/bin"  # Minimal PATH without user profile
-             else "/home/eric/.nix-profile/bin:/run/current-system/sw/bin:${pkgs.pass}/bin";
+             else "/etc/profiles/per-user/eric/bin:/home/eric/.nix-profile/bin:/run/current-system/sw/bin";
 
   baseEnv = [
     "PATH=${basePath}"

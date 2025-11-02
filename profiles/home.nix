@@ -42,8 +42,8 @@
         # Mail & Communication
         mail = {
           enable = lib.mkDefault true;
-          # Bridge now managed by system service - disabled in HM
-          bridge.enable = false;
+          # Bridge managed by Home Manager user service
+          bridge.enable = true;
 
           # Notmuch configuration per runbook
           notmuch = {
