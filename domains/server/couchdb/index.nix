@@ -123,7 +123,7 @@ EOF
       {
         path = cfg.reverseProxy.path;
         upstream = "${cfg.settings.bindAddress}:${toString cfg.settings.port}";
-        stripPrefix = false;  # CouchDB needs full path
+        stripPrefix = true;  # Strip /sync prefix for CouchDB
       }
     ];
 
