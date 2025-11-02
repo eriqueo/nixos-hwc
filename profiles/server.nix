@@ -280,7 +280,7 @@
     settings = {
       initialAdminUser = "admin";
       initialAdminPassword = "il0wwlm?";
-      baseUrl = "/navidrome";  # Required for reverse proxy
+      # baseUrl NOT needed - Caddy strips /navidrome prefix before forwarding
     };
     reverseProxy.enable = true;
   };
