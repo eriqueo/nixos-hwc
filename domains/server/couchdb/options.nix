@@ -50,15 +50,15 @@ in
 
     secrets = {
       adminUsername = mkOption {
-        type = types.path;
-        default = "/run/agenix/couchdb-admin-username";
-        description = "Path to admin username secret";
+        type = types.nullOr types.path;
+        default = null;
+        description = "Path to admin username secret (defaults to hwc.secrets.api.couchdbAdminUsernameFile)";
       };
 
       adminPassword = mkOption {
-        type = types.path;
-        default = "/run/agenix/couchdb-admin-password";
-        description = "Path to admin password secret";
+        type = types.nullOr types.path;
+        default = null;
+        description = "Path to admin password secret (defaults to hwc.secrets.api.couchdbAdminPasswordFile)";
       };
     };
 

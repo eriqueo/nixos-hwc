@@ -2,6 +2,17 @@
 let
   cfg = config.hwc.server.couchdb;
   generateConfig = import ./config-generator.nix;
+
+  # Use secrets API with fallback
+  adminUsernamePath =
+    if cfg.secrets.adminUsername != null
+    then cfg.secrets.adminUsername
+    else config.hwc.secrets.api.couchdbAdminUsernameFile;
+
+  adminPasswordPath =
+    if cfg.secrets.adminPassword != null
+    then cfg.secrets.adminPassword
+    else config.hwc.secrets.api.couchdbAdminPasswordFile;
 in
 {
   #==========================================================================
@@ -32,8 +43,8 @@ in
         mkdir -p ${cfg.settings.dataDir}
 
         # Read credentials from agenix secrets
-        ADMIN_USERNAME=$(cat ${cfg.secrets.adminUsername})
-        ADMIN_PASSWORD=$(cat ${cfg.secrets.adminPassword})
+        ADMIN_USERNAME=$(cat ${adminUsernamePath})
+        ADMIN_PASSWORD=$(cat ${adminPasswordPath})
 
         # Generate configuration using pure function
         cat > ${cfg.settings.dataDir}/local.ini << 'EOF'
@@ -104,12 +115,12 @@ EOF
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.enable || (builtins.pathExists cfg.secrets.adminUsername);
-        message = "hwc.server.couchdb requires admin username secret at ${cfg.secrets.adminUsername}";
+        assertion = !cfg.enable || (adminUsernamePath != null);
+        message = "hwc.server.couchdb requires couchdb-admin-username secret (via hwc.secrets.api or cfg.secrets.adminUsername)";
       }
       {
-        assertion = !cfg.enable || (builtins.pathExists cfg.secrets.adminPassword);
-        message = "hwc.server.couchdb requires admin password secret at ${cfg.secrets.adminPassword}";
+        assertion = !cfg.enable || (adminPasswordPath != null);
+        message = "hwc.server.couchdb requires couchdb-admin-password secret (via hwc.secrets.api or cfg.secrets.adminPassword)";
       }
       {
         assertion = !cfg.reverseProxy.enable || config.hwc.services.reverseProxy.enable;
