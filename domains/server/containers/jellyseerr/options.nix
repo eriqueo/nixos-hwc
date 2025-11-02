@@ -6,7 +6,7 @@ in
 {
   options.hwc.services.containers.jellyseerr = {
     enable = mkEnableOption "jellyseerr container";
-    image  = mkOption { type = types.str; default = "lscr.io/linuxserver/jellyseerr:latest"; description = "Container image"; };
+    image  = mkOption { type = types.str; default = "docker.io/fallenbagel/jellyseerr:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
     gpu.enable    = mkOption { type = types.bool; default = false; };
   };
