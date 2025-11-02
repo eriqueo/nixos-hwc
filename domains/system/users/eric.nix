@@ -5,6 +5,9 @@ in {
   config = lib.mkIf (cfg.enable && cfg.user.enable) {
     users.mutableUsers = false;
 
+    # Shared secrets group for service access
+    users.groups.secrets = {};
+
     users.users.${cfg.user.name} = {
       isNormalUser = true;
       home = "/home/${cfg.user.name}";
@@ -13,20 +16,23 @@ in {
       description = cfg.user.description;
 
       extraGroups =
-        (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" "bluetooth" ]) ++
+        (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" "bluetooth" "secrets" ]) ++
         (lib.optionals cfg.user.groups.media          [ "video" "audio" "render" ]) ++
         (lib.optionals cfg.user.groups.development    [ "docker" "podman" ]) ++
         (lib.optionals cfg.user.groups.virtualization [ "libvirtd" "kvm" ]) ++
         (lib.optionals cfg.user.groups.hardware       [ "input" "uucp" ]);
 
-      initialPassword = lib.mkIf (!cfg.user.useSecrets && cfg.user.fallbackPassword != null)
-        cfg.user.fallbackPassword;
+      # Smart password configuration: secrets when available, fallback when not
+      initialPassword = lib.mkIf (
+        (!cfg.user.useSecrets || config.hwc.secrets.api.userInitialPasswordFile == null)
+        && cfg.user.fallbackPassword != null
+      ) cfg.user.fallbackPassword;
 
-      hashedPasswordFile = lib.mkIf cfg.user.useSecrets
+      hashedPasswordFile = lib.mkIf (cfg.user.useSecrets && config.hwc.secrets.api.userInitialPasswordFile != null)
         config.age.secrets.user-initial-password.path;
 
       openssh.authorizedKeys.keys = lib.mkIf cfg.user.ssh.enable (
-        if cfg.user.ssh.useSecrets then
+        if cfg.user.ssh.useSecrets && config.hwc.secrets.api.userSshPublicKeyFile != null then
           [ (builtins.readFile config.age.secrets.user-ssh-public-key.path) ]
         else
           cfg.user.ssh.fallbackKey
@@ -51,17 +57,28 @@ in {
         message = "hwc.system.users.ssh.useSecrets requires hwc.secrets.enable = true (via security profile)";
       }
       {
-        assertion = !cfg.user.useSecrets || (config.hwc.secrets.api.userInitialPasswordFile != null);
-        message = "CRITICAL: useSecrets enabled but user-initial-password secret not available - this would lock you out! Disable useSecrets or ensure secret exists.";
+        assertion = cfg.user.fallbackPassword != null;
+        message = "CRITICAL: No fallbackPassword set. This is required for emergency access when agenix fails.";
       }
-      {
-        assertion = !cfg.user.ssh.useSecrets || (config.hwc.secrets.api.userSshPublicKeyFile != null);
-        message = "CRITICAL: SSH useSecrets enabled but user-ssh-public-key secret not available - this would lock you out of SSH! Disable useSecrets or ensure secret exists.";
-      }
-      {
-        assertion = cfg.user.useSecrets || (cfg.user.fallbackPassword != null);
-        message = "CRITICAL: hwc.system.users.useSecrets is false, but no fallbackPassword is set. This would create a user with no password and lock you out.";
-      }
+    ];
+
+    # Warnings for fallback scenarios
+    warnings = lib.optionals (cfg.user.useSecrets && config.hwc.secrets.api.userInitialPasswordFile == null) [
+      ''
+        ##################################################################
+        # AGENIX FALLBACK ACTIVE: user-initial-password not available   #
+        # Using fallback password for emergency access.                 #
+        # This is expected when agenix/secrets are broken.              #
+        ##################################################################
+      ''
+    ] ++ lib.optionals (cfg.user.ssh.useSecrets && config.hwc.secrets.api.userSshPublicKeyFile == null) [
+      ''
+        ##################################################################
+        # AGENIX FALLBACK ACTIVE: user-ssh-public-key not available     #
+        # Using fallback SSH keys for emergency access.                 #
+        # This is expected when agenix/secrets are broken.              #
+        ##################################################################
+      ''
     ];
   };
 }

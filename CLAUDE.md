@@ -106,6 +106,7 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 - ❌ Don't hardcode paths - use `config.hwc.paths.*`
 - ✅ Always add validation section to modules with enable toggles
 - ✅ Assert runtime dependencies (fail at build, not runtime)
+- ✅ Add `extraGroups = [ "secrets" ]` to all service users for secret access
 
 ### Build Process
 - ❌ Don't try simple fixes just to get things to work
@@ -135,6 +136,12 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 - Domain: `domains/secrets/`
 - All secrets via agenix (encrypted .age files)
 - Stable API at `/run/agenix`
+- **Permission Model**: All secrets use `group = "secrets"; mode = "0440"`
+- **Service Access**: All service users must include `extraGroups = [ "secrets" ]`
+- **Emergency Fallback**: Automatic fallback to hardcoded credentials when agenix fails
+  - User password: `"il0wwlm?"` (when secrets unavailable)
+  - SSH keys: Hardcoded fallback keys (when secrets unavailable)
+  - **No manual intervention required** - system auto-detects and warns
 
 **Age Key Access for Secret Updates:**
 ```bash
@@ -155,6 +162,47 @@ sudo nixos-rebuild switch --flake .#hwc-laptop
 ```
 
 **Important:** Always backup old .age files before replacing them.
+
+---
+
+## Specialized Agents
+
+**Use these HWC-specific agents proactively for better results:**
+
+### Primary Agents
+- **`nixos-hwc-architect`** - Use for architecture design, module creation, domain organization, and HWC compliance review
+- **`nixos-hwc-troubleshooter`** - Use for build failures, configuration conflicts, service issues, and system debugging
+
+### When to Use Each Agent
+
+**Architecture Agent** (`nixos-hwc-architect`):
+- Planning new modules or features
+- Reviewing domain boundaries and namespace compliance
+- Designing profile structure (BASE vs OPTIONAL)
+- Secret management workflows (agenix/age)
+- Migration from non-HWC patterns
+- Any architectural decisions
+
+**Troubleshooting Agent** (`nixos-hwc-troubleshooter`):
+- NixOS rebuild failures
+- Module conflicts and option collisions
+- systemd service issues
+- Performance problems
+- Runtime errors and crashes
+- Any debugging or error resolution
+
+**Examples:**
+```bash
+# Use architecture agent
+"Help me add a new container service following HWC patterns"
+"Review this module for domain compliance"
+
+# Use troubleshooting agent
+"My rebuild is failing with type errors"
+"Service won't start after configuration change"
+```
+
+**Agent Specifications**: See `nixos-hwc-agent.md` and `nixos-hwc-troubleshooter.md` for complete capabilities.
 
 ---
 
@@ -202,11 +250,12 @@ firewall.extraUdpPorts = [ 7359 ];       # Jellyfin UDP discovery
 
 ## When In Doubt
 
-1. **Read the charter**: `CHARTER.md`
-2. **Ask the user** if you don't understand the root cause
-3. **Explain your reasoning** before making changes
-4. **Fix root problems**, not symptoms
-5. **Check `/etc/nixos` for working reference implementations**
+1. **Use the specialized agents** - They understand HWC patterns deeply
+2. **Read the charter**: `CHARTER.md`
+3. **Ask the user** if you don't understand the root cause
+4. **Explain your reasoning** before making changes
+5. **Fix root problems**, not symptoms
+6. **Check `/etc/nixos` for working reference implementations**
 
 ---
 

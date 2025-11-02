@@ -287,11 +287,11 @@ hwc.services.containers.gluetun.enable = true;
 sudo nixos-rebuild build --flake .#hwc-server
 
 # Compare configurations
-sudo python3 /etc/nixos/tools/config-validation/system-distiller.py > /tmp/old-system.json
-sudo python3 /etc/nixos/tools/config-validation/system-distiller.py > /tmp/new-system.json
+sudo python3 workspace/utilities/config-validation/system-distiller.py > /tmp/old-system.json
+sudo python3 workspace/utilities/config-validation/system-distiller.py > /tmp/new-system.json
 
 # Look for differences
-/etc/nixos/tools/config-validation/config-differ.sh /tmp/old-system.json /tmp/new-system.json
+bash workspace/utilities/config-validation/config-differ.sh /tmp/old-system.json /tmp/new-system.json
 ```
 
 ---

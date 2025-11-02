@@ -93,7 +93,7 @@
 
   # --- Proton Mail Bridge Module ---
   # Isolated system service with dedicated user and proper state management
-  hwc.system.services.protonmail-bridge.enable = true;
+  hwc.system.services.protonmail-bridge.enable = false;
 
   # --- User Module ---
   # This remains the same, cleanly handling user creation.

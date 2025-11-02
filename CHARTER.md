@@ -103,6 +103,8 @@ machines/laptop/config.nix imports needed profiles
 * User accounts → `domains/system/users/eric.nix`
 * User env → `domains/home/` imported by `machines/<host>/home.nix`
 * Secrets → `domains/secrets/` with stable API facade at `/run/agenix`
+  - **Permission Model**: All secrets use `group = "secrets"; mode = "0440"` for shared access
+  - **Service Access**: All service users must include `extraGroups = [ "secrets" ]`
   - **Age Key Management**: `sudo age-keygen -y /etc/age/keys.txt` for public key
   - **Secret Updates**: `echo "value" | age -r <pubkey> > domains/secrets/parts/domain/name.age`
   - **Verification**: `sudo age -d -i /etc/age/keys.txt path/to/secret.age`

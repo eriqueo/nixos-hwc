@@ -9,38 +9,38 @@
     # Database credentials
     database-name = {
       file = ../parts/infrastructure/database-name.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
     
     database-password = {
       file = ../parts/infrastructure/database-password.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
     
     database-user = {
       file = ../parts/infrastructure/database-user.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
     
     # Surveillance system credentials
     surveillance-rtsp-username = {
       file = ../parts/infrastructure/surveillance-rtsp-username.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
     
     surveillance-rtsp-password = {
       file = ../parts/infrastructure/surveillance-rtsp-password.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
     
     # Frigate RTSP credentials
@@ -53,9 +53,9 @@
 
     frigate-rtsp-password = {
       file = ../parts/infrastructure/frigate-rtsp-password.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     frigate-camera-ips = {
@@ -68,16 +68,16 @@
     # VPN credentials
     vpn-username = {
       file = ../parts/infrastructure/vpn-username.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     vpn-password = {
       file = ../parts/infrastructure/vpn-password.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
   };
 }

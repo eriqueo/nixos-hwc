@@ -9,25 +9,25 @@
     # User authentication secrets
     user-initial-password = {
       file = ../parts/system/user-initial-password.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     # Emergency access for system recovery
     emergency-password = {
       file = ../parts/system/emergency-password.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     # User SSH public key for authentication
     user-ssh-public-key = {
       file = ../parts/system/user-ssh-public-key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
   };
 }

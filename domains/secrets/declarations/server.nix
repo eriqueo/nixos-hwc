@@ -9,70 +9,70 @@
     # ARR stack API keys
     radarr-api-key = {
       file = ../parts/server/radarr-api-key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     sonarr-api-key = {
       file = ../parts/server/sonarr-api-key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     lidarr-api-key = {
       file = ../parts/server/lidarr-api-key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     prowlarr-api-key = {
       file = ../parts/server/prowlarr-api-key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     # SLSKD API key for Soularr integration
     slskd-api-key = {
       file = ../parts/server/slskd-api-key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     # CouchDB admin credentials
     couchdb-admin-username = {
       file = ../parts/server/couchdb-admin-username.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     couchdb-admin-password = {
       file = ../parts/server/couchdb-admin-password.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     # Notification service credentials
     ntfy-user = {
       file = ../parts/server/ntfy-user.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
 
     # AI/LLM API keys
     gemini-api-key = {
       file = ../parts/server/gemini_api_key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "secrets";
     };
 
     # Frigate secrets are in domains/secrets/declarations/infrastructure.nix
