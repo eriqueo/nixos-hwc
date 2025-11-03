@@ -24,9 +24,10 @@ in
     })
 
     # Ensure persistent storage directory exists with correct permissions
+    # fallenbagel/jellyseerr runs as UID/GID 1000:1000
     {
       systemd.tmpfiles.rules = [
-        "d /opt/jellyseerr/config 0755 568 568 -"
+        "d /opt/jellyseerr/config 0755 1000 1000 -"
       ];
     }
   ]);
