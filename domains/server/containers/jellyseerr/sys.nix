@@ -27,24 +27,6 @@ in
     {
       systemd.tmpfiles.rules = [
         "d /opt/jellyseerr/config 0755 568 568 -"
-        # Pre-configure Jellyfin connection settings
-        ''f+ /opt/jellyseerr/config/settings.json 0644 568 568 - ${pkgs.writeText "jellyseerr-settings.json" (builtins.toJSON {
-          jellyfin = {
-            name = "Jellyfin";
-            ip = "10.89.0.1";  # Gateway IP (host from container perspective)
-            port = 8096;
-            useSsl = false;
-            urlBase = "";
-            externalHostname = "";
-            jellyfinForgotPasswordUrl = "";
-            libraries = [];
-            serverId = "";
-            apiKey = "";
-          };
-          main = {
-            mediaServerType = 4;  # Jellyfin
-          };
-        })}''
       ];
     }
   ]);
