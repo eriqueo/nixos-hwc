@@ -12,6 +12,7 @@
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
+    ../../domains/server/routes.nix
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
     # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed

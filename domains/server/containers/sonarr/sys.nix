@@ -19,7 +19,9 @@ in
         "${config.hwc.paths.media}/tv:/tv"
         "${config.hwc.paths.hot}/downloads:/downloads"
       ];
-      environment = { };
+      environment = {
+        SONARR__URLBASE = "/sonarr";
+      };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ "prowlarr" ];
     })
   ]);

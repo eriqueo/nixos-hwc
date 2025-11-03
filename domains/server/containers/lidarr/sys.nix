@@ -19,7 +19,9 @@ in
         "${config.hwc.paths.media}/music:/music"
         "${config.hwc.paths.hot}/downloads:/downloads"
       ];
-      environment = { };
+      environment = {
+        LIDARR__URLBASE = "/lidarr";
+      };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ "prowlarr" ];
     })
   ]);
