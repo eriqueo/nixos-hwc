@@ -30,14 +30,7 @@ in
       };
     };
 
-    # Register reverse proxy route if enabled
-    hwc.services.shared.routes = lib.mkIf cfg.reverseProxy.enable [
-      {
-        path = cfg.reverseProxy.path;
-        upstream = "127.0.0.1:${toString cfg.settings.port}";
-        stripPrefix = false;  # Navidrome needs full path with /navidrome prefix
-      }
-    ];
+
 
     # Open firewall port
     networking.firewall.allowedTCPPorts = [ cfg.settings.port ];

@@ -15,7 +15,9 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:9696:9696" ];
       volumes = [ "/opt/downloads/prowlarr:/config" ];
-      environment = { };
+      environment = {
+        PROWLARR__URLBASE = "/prowlarr";
+      };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })
   ]);

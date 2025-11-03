@@ -118,14 +118,7 @@ EOF
       # wantedBy = [ "multi-user.target" ];
     };
 
-    # Register reverse proxy route if enabled
-    hwc.services.shared.routes = lib.mkIf cfg.reverseProxy.enable [
-      {
-        path = cfg.reverseProxy.path;
-        upstream = "${cfg.settings.bindAddress}:${toString cfg.settings.port}";
-        stripPrefix = true;  # Strip /sync prefix for CouchDB
-      }
-    ];
+
 
     #==========================================================================
     # VALIDATION

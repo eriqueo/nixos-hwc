@@ -86,19 +86,7 @@ in
         else [ "hwc-media-network.service" ];
     };
 
-    #=========================================================================
-    # REVERSE PROXY ROUTE REGISTRATION
-    #=========================================================================
-    # Publish reverse proxy route for web UI access
-    hwc.services.shared.routes = lib.mkAfter [
-      {
-        path = "/sab";
-        upstream = if cfg.network.mode == "vpn"
-          then "127.0.0.1:8081"  # SABnzbd via Gluetun
-          else "127.0.0.1:${toString cfg.webPort}";  # Direct SABnzbd
-        stripPrefix = false;
-      }
-    ];
+
 
     #=========================================================================
     # FIREWALL CONFIGURATION

@@ -20,14 +20,7 @@ in
       openFirewall = cfg.openFirewall;
     };
 
-    # Register reverse proxy route if enabled
-    hwc.services.shared.routes = lib.mkIf cfg.reverseProxy.enable [
-      {
-        path = cfg.reverseProxy.path;
-        upstream = cfg.reverseProxy.upstream;
-        stripPrefix = true;
-      }
-    ];
+
 
     # Manual firewall configuration (matching /etc/nixos pattern)
     networking.firewall = lib.mkIf (!cfg.openFirewall) {
