@@ -15,12 +15,19 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:5055:5055" ];
       volumes = [
-        "/opt/downloads/jellyseerr:/config"
+        "/opt/jellyseerr/config:/app/config"
       ];
       environment = {
-        URL_BASE = "/jellyseerr";
+        # No URL_BASE needed in port mode
       };
       dependsOn = [ "sonarr" "radarr" ];
     })
+
+    # Ensure persistent storage directory exists with correct permissions
+    {
+      systemd.tmpfiles.rules = [
+        "d /opt/jellyseerr/config 0755 568 568 -"
+      ];
+    }
   ]);
 }
