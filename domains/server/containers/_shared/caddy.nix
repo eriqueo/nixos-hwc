@@ -24,7 +24,11 @@ let
       # common reverse_proxy block (no invalid transport stanza)
       proxyBlock = ''
         reverse_proxy ${r.upstream} {
+          header_up Host {host}
           header_up X-Real-IP {remote}
+          header_up X-Forwarded-For {remote}
+          header_up X-Forwarded-Proto {scheme}
+          header_up X-Forwarded-Host {host}
           ${renderHeaders}
           ${lib.optionalString ws "flush_interval -1"}
         }
