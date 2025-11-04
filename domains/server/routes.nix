@@ -1,40 +1,35 @@
 { lib, config, ... }:
 {
   hwc.services.shared.routes = [
-    # Jellyfin
+    # Jellyfin - strip path (app expects root despite URL_BASE)
     {
       name = "jellyfin";
       mode = "subpath";
       path = "/jellyfin";
       upstream = "http://127.0.0.1:8096";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = false;
       headers = { "X-Forwarded-Prefix" = "/jellyfin"; };
     }
 
-    # Jellyseerr
+    # Jellyseerr - port mode (doesn't work well with subpaths)
     {
       name = "jellyseerr";
-      mode = "subpath";
-      path = "/jellyseerr";
+      mode = "port";
+      port = 5543;  # Dedicated port for Jellyseerr
       upstream = "http://127.0.0.1:5055";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
-      headers = { "X-Forwarded-Prefix" = "/jellyseerr"; };
     }
 
-    # Navidrome
+    # Navidrome - preserve path (URL base set in app)
     {
       name = "navidrome";
       mode = "subpath";
       path = "/music";
       upstream = "http://127.0.0.1:4533";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = true;
       headers = { "X-Forwarded-Prefix" = "/music"; };
     }
 
-    # Immich (port mode - access via https://hwc.ocelot-wahoo.ts.net:7443)
+    # Immich - port mode (subpath-hostile)
     {
       name = "immich";
       mode = "port";
@@ -42,7 +37,7 @@
       upstream = "http://127.0.0.1:2283";
     }
 
-    # Frigate (port mode - access via https://hwc.ocelot-wahoo.ts.net:5443)
+    # Frigate - port mode (subpath-hostile)
     {
       name = "frigate";
       mode = "port";
@@ -50,87 +45,81 @@
       upstream = "http://127.0.0.1:5000";
     }
 
-    # Sabnzbd
+    # Sabnzbd - preserve path (URL base set in app)
     {
       name = "sabnzbd";
       mode = "subpath";
       path = "/sab";
       upstream = "http://127.0.0.1:8081";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = true;
       headers = { "X-Forwarded-Prefix" = "/sab"; };
     }
 
-    # qBittorrent
+    # qBittorrent - strip path (app expects root despite URL_BASE)
     {
       name = "qbittorrent";
       mode = "subpath";
       path = "/qbt";
       upstream = "http://127.0.0.1:8080";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = false;
       headers = { "X-Forwarded-Prefix" = "/qbt"; };
     }
 
-    # slskd
+    # slskd - port mode with corrected upstream
     {
       name = "slskd";
       mode = "port";
       port = 8443;
-      upstream = "http://127.0.0.1:5030";
+      upstream = "http://127.0.0.1:5031";
     }
 
-    # Sonarr
+    # Sonarr - preserve path (URL base set in app)
     {
       name = "sonarr";
       mode = "subpath";
       path = "/sonarr";
       upstream = "http://127.0.0.1:8989";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = true;
       headers = { "X-Forwarded-Prefix" = "/sonarr"; };
     }
 
-    # Radarr
+    # Radarr - preserve path (URL base set in app)
     {
       name = "radarr";
       mode = "subpath";
       path = "/radarr";
       upstream = "http://127.0.0.1:7878";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = true;
       headers = { "X-Forwarded-Prefix" = "/radarr"; };
     }
 
-    # Lidarr
+    # Lidarr - preserve path (URL base set in app)
     {
       name = "lidarr";
       mode = "subpath";
       path = "/lidarr";
       upstream = "http://127.0.0.1:8686";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = true;
       headers = { "X-Forwarded-Prefix" = "/lidarr"; };
     }
 
-    # Prowlarr
+    # Prowlarr - preserve path (URL base set in app)
     {
       name = "prowlarr";
       mode = "subpath";
       path = "/prowlarr";
       upstream = "http://127.0.0.1:9696";
-      stripPrefix = true;
-      assetStrategy = "rewrite";
+      needsUrlBase = true;
       headers = { "X-Forwarded-Prefix" = "/prowlarr"; };
     }
 
-    # CouchDB (Obsidian LiveSync)
+    # CouchDB (Obsidian LiveSync) - preserve path
     {
       name = "couchdb";
       mode = "subpath";
       path = "/sync";
       upstream = "http://127.0.0.1:5984";
-      stripPrefix = true;
+      needsUrlBase = true;
       headers = { "X-Forwarded-Prefix" = "/sync"; };
     }
   ];

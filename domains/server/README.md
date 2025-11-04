@@ -264,6 +264,19 @@ serviceConfig.EnvironmentFile = "/tmp/service.env";
 
 ## Recent Major Changes
 
+### ✅ Jellyseerr Port Mode Migration (November 2025)
+- **Issue**: Jellyseerr showed blank screen in subpath mode despite HTTP 200 health checks
+- **Root Cause**: Application doesn't respect URL_BASE for internal redirects
+- **Solution**: Migrated from subpath to port mode (port 5543)
+- **Documentation**: Complete troubleshooting case study in SERVICES.md
+- **Impact**: Established pattern for handling subpath-hostile applications
+
+### ✅ Service Documentation Overhaul (November 2025)
+- **SERVICES.md**: Comprehensive 600+ line guide covering all services, routing architecture, and troubleshooting
+- **QUICK-REFERENCE.md**: Fast lookup guide for service URLs and commands
+- **list-services.sh**: New utility script showing service status and access methods
+- **Routing Modes**: Documented three routing patterns (preserve, strip, port mode)
+
 ### ✅ Workspace Reorganization (October 2024)
 - **Script Organization**: Moved from `scripts/` to `workspace/automation/`
 - **Purpose-based Structure**: Organized by function vs machine
@@ -281,6 +294,21 @@ serviceConfig.EnvironmentFile = "/tmp/service.env";
 - **GPU Integration**: Hardware acceleration for media services
 - **Storage Coordination**: Shared storage across service stack
 - **Network Isolation**: Container networking with proper isolation
+
+## Documentation & User Guides
+
+### Service Access Documentation
+- **[SERVICES.md](SERVICES.md)** - Comprehensive service guide with routing architecture, troubleshooting, and the Jellyseerr case study
+- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - Quick lookup for all service URLs and common tasks
+
+### Utility Scripts
+```bash
+# List all services with status and access URLs
+bash workspace/utilities/scripts/list-services.sh
+
+# Health check all services through Caddy
+bash workspace/utilities/scripts/caddy-health-check.sh
+```
 
 ## Validation & Troubleshooting
 
