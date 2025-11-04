@@ -171,8 +171,12 @@ EOF
     };
 
     # Firewall
-    networking.firewall = lib.mkIf cfg.firewall.tailscaleOnly {
-      interfaces."tailscale0" = {
+    networking.firewall = {
+      # Always allow localhost access for reverse proxy
+      interfaces."lo".allowedTCPPorts = [ cfg.settings.port ];
+
+      # Optionally restrict external access to Tailscale only
+      interfaces."tailscale0" = lib.mkIf cfg.firewall.tailscaleOnly {
         allowedTCPPorts = [ cfg.settings.port 8554 8555 ]
           ++ lib.optionals cfg.mqtt.enable [ cfg.mqtt.port ];
         allowedUDPPorts = [ 8555 ];

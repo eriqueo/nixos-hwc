@@ -139,7 +139,7 @@
 
     gpu = {
       enable = true;
-      detector = "tensorrt";
+      detector = "cpu";  # Changed from tensorrt - no longer supported on amd64
       useFP16 = false;  # Pascal GPU (P1000) requires FP16 disabled
     };
 

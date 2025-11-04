@@ -78,8 +78,8 @@ in
       };
 
       detector = mkOption {
-        type = types.enum [ "tensorrt" "cpu" ];
-        default = "tensorrt";
+        type = types.enum [ "tensorrt" "cpu" "onnx" ];
+        default = "cpu";
         description = "Detector type";
       };
 
