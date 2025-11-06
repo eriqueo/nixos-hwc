@@ -41,8 +41,8 @@ let
 
     shares = {
       directories = [
-        { path = "/downloads/music"; alias = "Downloads"; }
-        { path = "/music"; alias = "Library"; }
+        "[Downloads]/downloads/music"
+        "[Library]/music"
       ];
     };
 
