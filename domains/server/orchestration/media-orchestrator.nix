@@ -35,11 +35,12 @@ in
     systemd.services.media-orchestrator = {
       description = "Event-driven *Arr nudger (no file moves)";
       after = [
+        "agenix.service"
         "network-online.target"
         "media-orchestrator-install.service"
         "podman-sonarr.service" "podman-radarr.service" "podman-lidarr.service"
       ];
-      wants = [ "network-online.target" ];
+      wants = [ "agenix.service" "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
       # Create environment file with agenix secrets
