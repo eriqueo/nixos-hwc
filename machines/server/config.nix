@@ -72,11 +72,11 @@
     };
   };
 
-  # P1000 requires legacy driver - override the NVIDIA package and disable modern features
+  # P1000 (Pascal) with driver 580 - last full-support branch before legacy transition
   hardware.nvidia = {
-    package = lib.mkForce config.boot.kernelPackages.nvidiaPackages.legacy_470;
-    open = lib.mkForce false;  # Legacy driver doesn't support open-source modules
-    gsp.enable = lib.mkForce false;  # Legacy driver doesn't support GSP firmware
+    package = config.boot.kernelPackages.nvidiaPackages.stable;  # 580.95.05
+    open = lib.mkForce false;  # Pascal doesn't support open-source modules
+    gsp.enable = lib.mkForce false;  # Pascal doesn't support GSP firmware
   };
 
   # NVIDIA license acceptance handled in flake.nix

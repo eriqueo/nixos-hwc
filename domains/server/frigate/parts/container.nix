@@ -53,6 +53,13 @@ detectors:
     type: tensorrt
     device: ${toString cfg.gpu.device}
 ''}
+${lib.optionalString (cfg.gpu.detector == "onnx" && cfg.gpu.enable) ''
+detectors:
+  onnx:
+    type: onnx
+    device: ${toString cfg.gpu.device}
+    num_threads: 3
+''}
 
 ffmpeg: &ffmpeg_defaults
   ${lib.optionalString cfg.gpu.enable ''
