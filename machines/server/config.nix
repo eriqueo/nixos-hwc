@@ -139,7 +139,7 @@
 
     gpu = {
       enable = true;
-      detector = "cpu";  # Changed from tensorrt - no longer supported on amd64
+      detector = "tensorrt";  # Re-enabled with legacy_470 driver for P1000
       useFP16 = false;  # Pascal GPU (P1000) requires FP16 disabled
     };
 

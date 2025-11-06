@@ -2,14 +2,14 @@
 {
   hwc.services.shared.routes = [
     # Jellyfin - strip path (app expects root despite URL_BASE)
-    {
-      name = "jellyfin";
-      mode = "subpath";
-      path = "/jellyfin";
-      upstream = "http://127.0.0.1:8096";
-      needsUrlBase = false;
-      headers = { "X-Forwarded-Prefix" = "/jellyfin"; };
-    }
+  #  {
+   #   name = "jellyfin";
+   #   mode = "subpath";
+   #   path = "/jellyfin";
+   #   upstream = "http://127.0.0.1:8096";
+   #   needsUrlBase = false;
+   #   headers = { "X-Forwarded-Prefix" = "/jellyfin"; };
+   # }
 
     # Jellyseerr - port mode (doesn't work well with subpaths)
     {
