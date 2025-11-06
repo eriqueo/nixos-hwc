@@ -1,6 +1,5 @@
-{ lib, config, pkgs, ... }:
+{ lib, pkgs, config, ... }:
 let
-  # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.services.containers.jellyseerr;
 in
@@ -11,22 +10,21 @@ in
       image = cfg.image;
       networkMode = cfg.network.mode;
       gpuEnable = cfg.gpu.enable;
-      gpuMode = "intel";  # Static default - GPU detection deferred
+      gpuMode = "intel";
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:5055:5055" ];
       volumes = [
-        "/opt/jellyseerr/config:/app/config"
+        "/opt/jellyseerr/config:/app/config:rw"
       ];
-      environment = {
-        # No URL_BASE needed in port mode
-      };
+      environment = { };
+      extraOptions = [ ];
       dependsOn = [ "sonarr" "radarr" ];
+      user = "1000:1000";
     })
-
-    # Ensure persistent storage directory exists with correct permissions
-    # fallenbagel/jellyseerr runs as UID/GID 1000:1000
     {
       systemd.tmpfiles.rules = [
+        "d /opt 0755 root root -"
+        "d /opt/jellyseerr 0755 1000 1000 -"
         "d /opt/jellyseerr/config 0755 1000 1000 -"
       ];
     }
