@@ -35,9 +35,37 @@
       group = "secrets";
     };
 
-    # SLSKD API key for Soularr integration
+    # SLSKD credentials
     slskd-api-key = {
       file = ../parts/server/slskd-api-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    slskd-web-username = {
+      file = ../parts/server/slskd-web-username.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    slskd-web-password = {
+      file = ../parts/server/slskd-web-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    slskd-soulseek-username = {
+      file = ../parts/server/slskd-soulseek-username.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    slskd-soulseek-password = {
+      file = ../parts/server/slskd-soulseek-password.age;
       mode = "0440";
       owner = "root";
       group = "secrets";
