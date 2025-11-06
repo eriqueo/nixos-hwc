@@ -139,7 +139,7 @@
 
     gpu = {
       enable = true;
-      detector = "tensorrt";  # Re-enabled with legacy_470 driver for P1000
+      detector = "onnx";  # ONNX with CUDA for GPU acceleration (TensorRT deprecated on amd64)
       useFP16 = false;  # Pascal GPU (P1000) requires FP16 disabled
     };
 
