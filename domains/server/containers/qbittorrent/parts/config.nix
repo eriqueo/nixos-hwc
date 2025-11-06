@@ -57,6 +57,8 @@ in
       volumes = [
         "/opt/downloads/qbittorrent:/config"
         "${paths.hot}/downloads:/downloads"
+        "/opt/downloads/scripts:/scripts:ro"
+        "${paths.hot}/events:/mnt/hot/events"
       ];
 
       # Dependencies
