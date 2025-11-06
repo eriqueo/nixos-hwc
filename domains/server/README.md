@@ -264,6 +264,13 @@ serviceConfig.EnvironmentFile = "/tmp/service.env";
 
 ## Recent Major Changes
 
+### ✅ Media Orchestration Pipeline Restoration (November 2025)
+- **Issue**: Completed downloads not importing to cold storage
+- **Root Causes**: agenix service dependency missing, qBittorrent volume mounts missing, fake torrents from ThePirateBay
+- **Solution**: Added systemd dependencies (commit `8e5e14d`), added volume mounts (commit `4f3f3a3`)
+- **Documentation**: Comprehensive troubleshooting guide in TROUBLESHOOTING.md
+- **Impact**: Established best practices for safe downloads via *arr apps, documented fake torrent detection
+
 ### ✅ Jellyseerr Port Mode Migration (November 2025)
 - **Issue**: Jellyseerr showed blank screen in subpath mode despite HTTP 200 health checks
 - **Root Cause**: Application doesn't respect URL_BASE for internal redirects
@@ -300,6 +307,7 @@ serviceConfig.EnvironmentFile = "/tmp/service.env";
 ### Service Access Documentation
 - **[SERVICES.md](SERVICES.md)** - Comprehensive service guide with routing architecture, troubleshooting, and the Jellyseerr case study
 - **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - Quick lookup for all service URLs and common tasks
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Issue resolution guide, incident documentation, and preventive measures
 
 ### Utility Scripts
 ```bash
