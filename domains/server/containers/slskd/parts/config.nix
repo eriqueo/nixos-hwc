@@ -23,7 +23,7 @@ let
       authentication = {
         disabled = false;
         username = "slskd-admin";
-        password = "NpbG0Jcj4CP2h50arX6wtxFc5ju4PaPQ";
+        password = "newpassword123";
         jwt = {
           key = "Nd5g9X1AcVck7z7Q4Yq0IuULeQ7ci/Zu7++Lmcq7jOqF0e6ZbCvp5SmWVBN3EAVE";
           ttl = 604800000;

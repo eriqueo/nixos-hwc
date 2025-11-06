@@ -120,6 +120,12 @@ in
     services.caddy = {
       enable = true;
       extraConfig = ''
+        localhost {
+          tls internal
+          encode zstd gzip
+          ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "subpath") routes))}
+        }
+
         ${rootHost} {
           tls { get_certificate tailscale }
           encode zstd gzip

@@ -47,7 +47,7 @@ in
         TZ = config.time.timeZone or "America/Denver";
         # Set SABnzbd download directories
         SABNZBD_COMPLETE_DIR = "/downloads";
-        SABNZBD_INCOMPLETE_DIR = "/downloads/incomplete";
+        SABNZBD_INCOMPLETE_DIR = "/config/incomplete";
       } // lib.optionalAttrs (cfg.network.mode == "vpn") {
         # When using VPN, SABnzbd runs on port 8085 inside container
         # but gluetun exposes it as 8081 externally
