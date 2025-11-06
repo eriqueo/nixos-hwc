@@ -5,6 +5,13 @@ let
   mediaNetworkName = "media-network";
   hotRoot = "/mnt/hot";
 
+  # Read secrets from agenix
+  webUsername = lib.strings.removeSuffix "\n" (builtins.readFile config.age.secrets.slskd-web-username.path);
+  webPassword = lib.strings.removeSuffix "\n" (builtins.readFile config.age.secrets.slskd-web-password.path);
+  soulseekUsername = lib.strings.removeSuffix "\n" (builtins.readFile config.age.secrets.slskd-soulseek-username.path);
+  soulseekPassword = lib.strings.removeSuffix "\n" (builtins.readFile config.age.secrets.slskd-soulseek-password.path);
+  apiKey = lib.strings.removeSuffix "\n" (builtins.readFile config.age.secrets.slskd-api-key.path);
+
   # SLSKD configuration set
   slskdConfigSet = {
     debug = false;
@@ -22,14 +29,14 @@ let
       };
       authentication = {
         disabled = false;
-        username = "slskd-admin";
-        password = "newpassword123";
+        username = webUsername;
+        password = webPassword;
         jwt = {
           key = "Nd5g9X1AcVck7z7Q4Yq0IuULeQ7ci/Zu7++Lmcq7jOqF0e6ZbCvp5SmWVBN3EAVE";
           ttl = 604800000;
         };
         apiKeys = {
-          soularr = "LP1Fsn2mQrMjCgFmX2W97lTDFKDQVLgl";
+          soularr = apiKey;
         };
       };
     };
@@ -47,8 +54,8 @@ let
     };
 
     soulseek = {
-      username = "eriqueok";
-      password = "il0wwlm?";
+      username = soulseekUsername;
+      password = soulseekPassword;
       description = "A slskd user. https://github.com/slskd/slskd";
       listen_ip_address = "0.0.0.0";
       listen_port = 50300;
