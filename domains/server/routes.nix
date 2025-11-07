@@ -113,14 +113,30 @@
       headers = { "X-Forwarded-Prefix" = "/prowlarr"; };
     }
 
-    # CouchDB (Obsidian LiveSync) - preserve path
+    # CouchDB (Obsidian LiveSync) - strip /sync prefix
     {
       name = "couchdb";
       mode = "subpath";
       path = "/sync";
       upstream = "http://127.0.0.1:5984";
-      needsUrlBase = true;
-      headers = { "X-Forwarded-Prefix" = "/sync"; };
+      needsUrlBase = false;  # Strip /sync prefix - CouchDB doesn't support URL base
+    }
+
+    # Tdarr - port mode (WebSocket intensive, subpath issues)
+    {
+      name = "tdarr";
+      mode = "port";
+      port = 8265;
+      upstream = "http://127.0.0.1:8265";
+    }
+
+    # Organizr - Root dashboard (should be accessible at /)
+    {
+      name = "organizr";
+      mode = "subpath";
+      path = "/";
+      upstream = "http://127.0.0.1:9983";
+      needsUrlBase = false;
     }
   ];
 }
