@@ -139,6 +139,18 @@
     debug = false;
   };
 
+  # Fabric AI integration
+  hwc.system.apps.fabric = {
+    enableHome = true;
+    provider = "openai";
+    model = "gpt-4o-mini";
+    initPatterns = true;
+    env = {
+      # User can optionally point to server API instead of direct provider access
+      # FABRIC_API_URL = "https://hwc.ocelot-wahoo.ts.net";
+    };
+  };
+
   # Libvirt/QEMU: make OVMF visible and avoid extra groups by using wheel sockets.
   virtualisation.libvirtd = {
     # Use wheel for socket perms so you don't need extra groups.
