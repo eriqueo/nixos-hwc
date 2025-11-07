@@ -58,6 +58,15 @@ detectors:
   onnx:
     type: onnx
     num_threads: 3
+
+model:
+  path: /config/models/yolov9-s-320.onnx
+  input_tensor: nchw
+  input_pixel_format: rgb
+  width: 320
+  height: 320
+  model_type: yolov9
+  input_dtype: float
 ''}
 
 ffmpeg: &ffmpeg_defaults
@@ -170,6 +179,7 @@ EOF
 
       volumes = [
         "${cfg.storage.configPath}:/config"
+        "${cfg.storage.configPath}/models:/config/models:ro"
         "${cfg.storage.mediaPath}:/media/frigate"
         "${cfg.storage.bufferPath}:/tmp/frigate"
         "/etc/localtime:/etc/localtime:ro"
