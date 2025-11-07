@@ -48,6 +48,12 @@ in
           # Add user to GPU groups via supplementary groups
           SupplementaryGroups = [ "video" "render" ];
         };
+        environment = {
+          # NVIDIA GPU acceleration for transcoding/thumbnail generation
+          NVIDIA_VISIBLE_DEVICES = "0";
+          NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility";
+          LD_LIBRARY_PATH = "/run/opengl-driver/lib:/run/opengl-driver-32/lib";
+        };
       };
 
       immich-machine-learning = {
@@ -68,8 +74,15 @@ in
           SupplementaryGroups = [ "video" "render" ];
         };
         environment = {
-          # NVIDIA GPU acceleration for ML workloads
+          # NVIDIA GPU acceleration for ML workloads (CLIP, facial recognition)
+          NVIDIA_VISIBLE_DEVICES = "0";
+          NVIDIA_DRIVER_CAPABILITIES = "compute,utility";
           CUDA_VISIBLE_DEVICES = "0";
+          LD_LIBRARY_PATH = "/run/opengl-driver/lib:/run/opengl-driver-32/lib";
+
+          # Machine learning optimizations
+          TRANSFORMERS_CACHE = "/var/lib/immich/.cache";
+          MPLCONFIGDIR = "/var/lib/immich/.config/matplotlib";
         };
       };
     };
