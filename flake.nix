@@ -45,6 +45,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    fabric = {
+      url = "github:danielmiessler/fabric";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Reference repo during migration (non-flake)
     legacy-config = {
       url = "github:eriqueo/nixos-hwc";
@@ -56,7 +61,7 @@
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, fabric, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
     

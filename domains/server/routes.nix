@@ -126,7 +126,7 @@
     {
       name = "tdarr";
       mode = "port";
-      port = 8265;
+      port = 8267;  # Use 8267 externally, forward to internal 8265
       upstream = "http://127.0.0.1:8265";
     }
 
