@@ -277,6 +277,11 @@
   # hwc.services.containers.navidrome.enable = true;  # Disabled - using native service
   # hwc.services.containers.jellyfin.enable = true;  # Disabled - using native service
 
+  # Phase 5: Media Optimization and Management
+  hwc.services.containers.tdarr.enable = true;
+  hwc.services.containers.recyclarr.enable = true;
+  hwc.services.containers.organizr.enable = true;
+
   # Native Media Services (Charter compliant)
   hwc.server.navidrome = {
     enable = true;
