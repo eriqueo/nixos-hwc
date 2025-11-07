@@ -17,13 +17,16 @@
     ./jellyseerr/index.nix
     ./lidarr/index.nix
     ./navidrome/index.nix
+    ./organizr/index.nix
     ./prowlarr/index.nix
     ./qbittorrent/index.nix
     ./radarr/index.nix
+    ./recyclarr/index.nix
     ./sabnzbd/index.nix
     ./slskd/index.nix
     ./sonarr/index.nix
     ./soularr/index.nix
+    ./tdarr/index.nix
   ];
 
   # Guard against user creation in container modules
