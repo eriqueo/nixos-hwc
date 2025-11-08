@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  nix-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Run flake check
+        run: nix flake check --all-systems
+
+      - name: Build server configuration
+        run: nix build .#nixosConfigurations.hwc-server.config.system.build.toplevel --no-link
+
+      - name: Build laptop configuration
+        run: nix build .#nixosConfigurations.hwc-laptop.config.system.build.toplevel --no-link
+
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Check for dead code
+        run: nix run nixpkgs#deadnix -- -f .
+
+      - name: Run statix linter
+        run: nix run nixpkgs#statix -- check .
