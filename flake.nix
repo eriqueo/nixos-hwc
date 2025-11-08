@@ -45,10 +45,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # TODO: Re-enable when upstream Fabric flake fixes darwin.apple_sdk_11_0 issue
-    # fabric = {
-    #   url = "github:danielmiessler/fabric";
-    # };
+    fabric = {
+      url = "github:danielmiessler/fabric";
+      # Pin Fabric to use its own locked nixpkgs (c11863f1, April 2024)
+      # which still has darwin.apple_sdk_11_0 needed by gomod2nix
+      inputs.nixpkgs.url = "github:nixos/nixpkgs/c11863f1e964833214b767f4a369c6e6a7aba141";
+    };
 
     # Reference repo during migration (non-flake)
     legacy-config = {
@@ -61,7 +63,7 @@
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, fabric, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
     

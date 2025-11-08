@@ -4,7 +4,6 @@
 { ... }:
 {
   imports = [
-    # TODO: Re-enable fabric when upstream darwin SDK issue is resolved
-    # ./fabric/index.nix
+    ./fabric/index.nix
   ];
 }

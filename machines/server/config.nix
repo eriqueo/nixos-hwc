@@ -89,19 +89,18 @@
     models = [ "llama3:8b" "codellama:13b" ];
   };
 
-  # TODO: Re-enable when upstream Fabric darwin SDK issue is resolved
-  # # Fabric AI integration
-  # hwc.system.apps.fabric = {
-  #   enableApi = true;
-  #   provider = "openai";
-  #   model = "gpt-4o-mini";
-  #   api = {
-  #     listenAddress = "127.0.0.1";
-  #     port = 8080;
-  #     envFile = config.age.secrets.fabric-server-env.path;
-  #     openFirewall = false;  # Only accessible via Tailscale reverse proxy
-  #   };
-  # };
+  # Fabric AI integration
+  hwc.system.apps.fabric = {
+    enableApi = true;
+    provider = "openai";
+    model = "gpt-4o-mini";
+    api = {
+      listenAddress = "127.0.0.1";
+      port = 8080;
+      envFile = config.age.secrets.fabric-server-env.path;
+      openFirewall = false;  # Only accessible via Tailscale reverse proxy
+    };
+  };
 
   # CouchDB for Obsidian LiveSync
   hwc.server.couchdb = {
