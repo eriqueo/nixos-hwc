@@ -39,12 +39,8 @@ in
         else [ "--network=media-network" ]
       ) ++ lib.optionals cfg.gpu.enable [
         # NVIDIA GPU passthrough (P1000 supports NVENC/NVDEC)
-        "--device=/dev/nvidia0:/dev/nvidia0:rwm"
-        "--device=/dev/nvidiactl:/dev/nvidiactl:rwm"
-        "--device=/dev/nvidia-modeset:/dev/nvidia-modeset:rwm"
-        "--device=/dev/nvidia-uvm:/dev/nvidia-uvm:rwm"
-        "--device=/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools:rwm"
-        "--device=/dev/dri:/dev/dri:rwm"
+        # Use CDI (Container Device Interface) with nvidia-container-toolkit
+        "--device=nvidia.com/gpu=0"
       ];
 
       # Environment variables
@@ -63,6 +59,7 @@ in
 
         # Node configuration
         nodeName = "TdarrNode";
+        internalNode = "true";  # Enable worker node in same container
 
         # SAFETY SETTINGS - Prevent file deletion/corruption
         # Keep original files until transcode is verified
