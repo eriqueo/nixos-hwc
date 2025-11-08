@@ -7,6 +7,8 @@
 {
   imports = [
     ./apps.nix
+    ./caddy.nix
+    ../parts/caddy.nix
     ./home.nix
     ./system.nix
     ./server.nix

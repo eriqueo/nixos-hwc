@@ -45,10 +45,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    fabric = {
-      url = "github:danielmiessler/fabric";
-      # Don't follow our nixpkgs - fabric needs its own pin for compatibility
-    };
+    # TODO: Re-enable when upstream Fabric flake fixes darwin.apple_sdk_11_0 issue
+    # fabric = {
+    #   url = "github:danielmiessler/fabric";
+    # };
 
     # Reference repo during migration (non-flake)
     legacy-config = {
@@ -61,7 +61,7 @@
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, fabric, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
     
