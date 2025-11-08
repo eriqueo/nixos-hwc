@@ -5,12 +5,7 @@
 with lib;
 let
   cfg = config.hwc.server.apps.fabricApi;
-  # Override Fabric to use Go 1.25 from pkgs overlay
-  fabricPkg = if cfg.package != null then cfg.package else (
-    inputs.fabric.packages.${pkgs.system}.default.override {
-      go = pkgs.go_1_25;
-    }
-  );
+  fabricPkg = if cfg.package != null then cfg.package else inputs.fabric.packages.${pkgs.system}.default;
   listenArg = "${cfg.listenAddress}:${toString cfg.port}";
 in
 {

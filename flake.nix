@@ -48,9 +48,9 @@
     };
 
     fabric = {
-      url = "github:danielmiessler/fabric";
-      # Pin Fabric to use its own locked nixpkgs (c11863f1, April 2024)
-      # which still has darwin.apple_sdk_11_0 needed by gomod2nix
+      # Pin to v1.4.80 (Oct 2024) - last version compatible with Go 1.24
+      # This version works with the April 2024 nixpkgs that has darwin SDK
+      url = "github:danielmiessler/fabric/v1.4.80";
       inputs.nixpkgs.url = "github:nixos/nixpkgs/c11863f1e964833214b767f4a369c6e6a7aba141";
     };
 
@@ -88,11 +88,6 @@
           tailscale = prev.tailscale.overrideAttrs (oldAttrs: {
             doCheck = false;
           });
-        })
-        # Overlay to inject Go 1.25 for Fabric only
-        # Import from nixpkgs-go but don't use its full package set
-        (final: prev: {
-          go_1_25 = (import nixpkgs-go { inherit system; }).go_1_25 or (import nixpkgs-go { inherit system; }).go;
         })
       ];
     };
