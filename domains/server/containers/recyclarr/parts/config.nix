@@ -30,7 +30,7 @@ in
         ${lib.optionalString cfg.services.sonarr.enable ''
         sonarr:
           tv:
-            base_url: http://host.containers.internal:8989
+            base_url: http://localhost:8989
             api_key: !secret sonarr_api_key
 
             # Quality definitions from TRaSH Guides
@@ -75,7 +75,7 @@ in
         ${lib.optionalString cfg.services.radarr.enable ''
         radarr:
           movies:
-            base_url: http://host.containers.internal:7878
+            base_url: http://localhost:7878
             api_key: !secret radarr_api_key
 
             # Quality definitions from TRaSH Guides
