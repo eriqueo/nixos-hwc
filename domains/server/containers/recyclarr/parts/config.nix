@@ -20,6 +20,7 @@ in
 
       script = ''
         mkdir -p ${cfgRoot}/config
+        mkdir -p ${cfgRoot}/cache
 
         # Generate recyclarr.yml configuration
         cat > ${cfgRoot}/config/recyclarr.yml <<EOF
@@ -170,7 +171,7 @@ in
 
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.podman}/bin/podman run --rm --network=media-network --add-host=host.containers.internal:10.89.0.1 -v ${cfgRoot}/config:/config:ro ghcr.io/recyclarr/recyclarr:latest sync";
+        ExecStart = "${pkgs.podman}/bin/podman run --rm --network=media-network --add-host=host.containers.internal:10.89.0.1 -v ${cfgRoot}/config:/config ghcr.io/recyclarr/recyclarr:latest sync";
       };
     };
 
