@@ -279,7 +279,10 @@
 
   # Phase 5: Media Optimization and Management
   hwc.services.containers.tdarr.enable = true;
-  hwc.services.containers.recyclarr.enable = true;
+  hwc.services.containers.recyclarr = {
+    enable = true;
+    services.lidarr.enable = false;  # Disable Lidarr sync (not supported in current Recyclarr version)
+  };
   hwc.services.containers.organizr.enable = true;
 
   # Native Media Services (Charter compliant)
