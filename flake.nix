@@ -48,10 +48,9 @@
     };
 
     fabric = {
-      # Pin to v1.4.80 (Oct 2024) - last version compatible with Go 1.24
-      # This version works with the April 2024 nixpkgs that has darwin SDK
-      url = "github:danielmiessler/fabric/v1.4.80";
-      inputs.nixpkgs.url = "github:nixos/nixpkgs/c11863f1e964833214b767f4a369c6e6a7aba141";
+      url = "github:danielmiessler/fabric";
+      # Let Fabric use its own nixpkgs - don't follow ours
+      # This avoids toolchain version conflicts
     };
 
     codex = {
