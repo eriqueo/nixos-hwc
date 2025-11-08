@@ -23,6 +23,26 @@
         "type": "github"
       }
     },
+    "codex": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1762579735,
+        "narHash": "sha256-c3F7zPstsBfFNQ2Vv49VjVyE5zsOTvfPGE48t/IuQbE=",
+        "owner": "openai",
+        "repo": "codex",
+        "rev": "917f39ec12ddc30e5cd093364c4532901fdc604c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "openai",
+        "repo": "codex",
+        "type": "github"
+      }
+    },
     "darwin": {
       "inputs": {
         "nixpkgs": [
@@ -250,6 +270,7 @@
     "root": {
       "inputs": {
         "agenix": "agenix",
+        "codex": "codex",
         "fabric": "fabric",
         "home-manager": "home-manager_2",
         "legacy-config": "legacy-config",
