@@ -10,20 +10,21 @@ in
 {
   imports = [
     ./options.nix
-    ../../../home/apps/fabric/index.nix
     ../../../server/apps/fabric-api/index.nix
   ];
 
   config = mkMerge [
-    # Forward to Home Manager module when enableHome is true
+    # Forward to Home Manager via home-manager.users when enableHome is true
     (mkIf cfg.enableHome {
-      hwc.home.apps.fabric = {
-        enable = true;
-        package = chosenPkg;
-        provider = cfg.provider;
-        model = cfg.model;
-        env = cfg.env;
-        initPatterns = cfg.initPatterns;
+      home-manager.users.eric = {
+        hwc.home.apps.fabric = {
+          enable = true;
+          package = chosenPkg;
+          provider = cfg.provider;
+          model = cfg.model;
+          env = cfg.env;
+          initPatterns = cfg.initPatterns;
+        };
       };
     })
 
