@@ -1,11 +1,11 @@
 # domains/home/apps/fabric/index.nix
 #
 # Fabric CLI for user environment - Home Manager implementation
-{ config, lib, pkgs, fabric, ... }:
+{ config, lib, pkgs, inputs, ... }:
 with lib;
 let
   cfg = config.hwc.home.apps.fabric;
-  fabricPkg = if cfg.package != null then cfg.package else fabric.packages.${pkgs.system}.default;
+  fabricPkg = if cfg.package != null then cfg.package else inputs.fabric.packages.${pkgs.system}.default;
 in
 {
   imports = [ ./options.nix ];
