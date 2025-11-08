@@ -4,6 +4,7 @@
 { ... }:
 {
   imports = [
-    ./fabric/index.nix
+    # TODO: Re-enable Fabric when Go 1.25 / nixpkgs compatibility is resolved
+    # ./fabric/index.nix
   ];
 }
