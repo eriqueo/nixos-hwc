@@ -23,7 +23,7 @@ in
 
     # Optional: Initialize patterns on first activation
     home.activation.fabricInit = mkIf cfg.initPatterns (
-      hm.dag.entryAfter [ "writeBoundary" ] ''
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         if [ ! -d "$HOME/.config/fabric/patterns" ]; then
           $DRY_RUN_CMD ${fabricPkg}/bin/fabric --setup || true
           $DRY_RUN_CMD ${fabricPkg}/bin/fabric --updatepatterns || true
