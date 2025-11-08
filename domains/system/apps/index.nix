@@ -4,6 +4,6 @@
 { ... }:
 {
   imports = [
-    ./fabric
+    ./fabric/index.nix
   ];
 }
