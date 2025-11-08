@@ -30,7 +30,7 @@ in
         ${lib.optionalString cfg.services.sonarr.enable ''
         sonarr:
           tv:
-            base_url: http://localhost:8989
+            base_url: http://sonarr:8989
             api_key: !secret sonarr_api_key
 
             # Quality definitions from TRaSH Guides
@@ -75,7 +75,7 @@ in
         ${lib.optionalString cfg.services.radarr.enable ''
         radarr:
           movies:
-            base_url: http://localhost:7878
+            base_url: http://radarr:7878
             api_key: !secret radarr_api_key
 
             # Quality definitions from TRaSH Guides
@@ -172,7 +172,7 @@ in
 
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.podman}/bin/podman run --rm --network=media-network --add-host=host.containers.internal:10.89.0.1 -v ${cfgRoot}/config:/config ghcr.io/recyclarr/recyclarr:latest sync";
+        ExecStart = "${pkgs.podman}/bin/podman run --rm --network=media-network -v ${cfgRoot}/config:/config ghcr.io/recyclarr/recyclarr:latest sync";
       };
     };
 
