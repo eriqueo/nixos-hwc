@@ -76,7 +76,7 @@ hwaccel_args:
   - -hwaccel_device
   - "${toString cfg.gpu.device}"
   - -hwaccel_output_format
-  - nv12
+  - yuv420p
 ''}
   input_args:
     - -rtsp_transport
