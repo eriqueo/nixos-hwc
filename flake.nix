@@ -54,6 +54,11 @@
       inputs.nixpkgs.url = "github:nixos/nixpkgs/c11863f1e964833214b767f4a369c6e6a7aba141";
     };
 
+    codex = {
+      url = "github:openai/codex";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Reference repo during migration (non-flake)
     legacy-config = {
       url = "github:eriqueo/nixos-hwc";
@@ -65,12 +70,9 @@
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, nixpkgs-go, home-manager, agenix, fabric, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, nixpkgs-go, home-manager, agenix, fabric, codex, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
-
-    # Import nixpkgs-go for Go 1.25 toolchain
-    pkgsGo = import nixpkgs-go { inherit system; };
 
     # Add the overlay here - this is the safest approach
     pkgs = import nixpkgs {
@@ -87,9 +89,10 @@
             doCheck = false;
           });
         })
-        # Overlay to inject Go 1.25 into Fabric
+        # Overlay to inject Go 1.25 for Fabric only
+        # Import from nixpkgs-go but don't use its full package set
         (final: prev: {
-          go_1_25 = pkgsGo.go_1_25 or pkgsGo.go;
+          go_1_25 = (import nixpkgs-go { inherit system; }).go_1_25 or (import nixpkgs-go { inherit system; }).go;
         })
       ];
     };
