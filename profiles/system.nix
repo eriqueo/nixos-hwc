@@ -13,7 +13,16 @@
   # BASE NIXOS SETTINGS
   #==========================================================================
   nix = {
-    settings.experimental-features = [ "nix-command" "flakes" ];
+    settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      # Pin binary caches for consistent, fast rebuilds
+      substituters = [
+        "https://cache.nixos.org"
+      ];
+      trusted-public-keys = [
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      ];
+    };
     gc.automatic = true;
   };
   time.timeZone = "America/Denver";
