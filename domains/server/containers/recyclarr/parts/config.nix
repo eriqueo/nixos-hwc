@@ -156,8 +156,9 @@ in
         ''}
         EOF
 
-        chmod 600 ${cfgRoot}/config/secrets.yml
+        chmod 644 ${cfgRoot}/config/secrets.yml
         chmod 644 ${cfgRoot}/config/recyclarr.yml
+        chown -R eric:users ${cfgRoot}
       '';
     };
 
