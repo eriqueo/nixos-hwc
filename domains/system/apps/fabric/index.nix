@@ -10,8 +10,8 @@ in
 {
   imports = [
     ./options.nix
-    ../../../home/apps/fabric
-    ../../../server/apps/fabric-api
+    ../../../home/apps/fabric/index.nix
+    ../../../server/apps/fabric-api/index.nix
   ];
 
   config = mkMerge [
