@@ -30,6 +30,8 @@
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.05";
+    # Pinned nixpkgs for Go 1.25+ toolchain (needed by Fabric)
+    nixpkgs-go.url      = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
         inputs.nixpkgs.follows = "nixpkgs";
@@ -63,10 +65,13 @@
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, fabric, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, nixpkgs-go, home-manager, agenix, fabric, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
-    
+
+    # Import nixpkgs-go for Go 1.25 toolchain
+    pkgsGo = import nixpkgs-go { inherit system; };
+
     # Add the overlay here - this is the safest approach
     pkgs = import nixpkgs {
       inherit system;
@@ -81,6 +86,10 @@
           tailscale = prev.tailscale.overrideAttrs (oldAttrs: {
             doCheck = false;
           });
+        })
+        # Overlay to inject Go 1.25 into Fabric
+        (final: prev: {
+          go_1_25 = pkgsGo.go_1_25 or pkgsGo.go;
         })
       ];
     };

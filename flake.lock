@@ -179,6 +179,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-go": {
+      "locked": {
+        "lastModified": 1762361079,
+        "narHash": "sha256-lz718rr1BDpZBYk7+G8cE6wee3PiBUpn8aomG/vLLiY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "ffcdcf99d65c61956d882df249a9be53e5902ea5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-stable": {
       "locked": {
         "lastModified": 1735563628,
@@ -238,6 +254,7 @@
         "home-manager": "home-manager_2",
         "legacy-config": "legacy-config",
         "nixpkgs": "nixpkgs_2",
+        "nixpkgs-go": "nixpkgs-go",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixvirt": "nixvirt"
       }
