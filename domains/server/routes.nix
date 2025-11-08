@@ -130,13 +130,12 @@
       upstream = "http://127.0.0.1:8265";
     }
 
-    # Organizr - Root dashboard (should be accessible at /)
+    # Organizr - Root dashboard on dedicated port
     {
       name = "organizr";
-      mode = "subpath";
-      path = "/";
+      mode = "port";
+      port = 9443;  # Dedicated port for Organizr dashboard
       upstream = "http://127.0.0.1:9983";
-      needsUrlBase = false;
     }
   ];
 }
