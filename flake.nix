@@ -47,7 +47,7 @@
 
     fabric = {
       url = "github:danielmiessler/fabric";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Don't follow our nixpkgs - fabric needs its own pin for compatibility
     };
 
     # Reference repo during migration (non-flake)
