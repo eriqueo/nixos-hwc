@@ -269,6 +269,7 @@
   hwc.services.containers.sonarr.enable = true;
   hwc.services.containers.radarr.enable = true;
   hwc.services.containers.lidarr.enable = true;
+  hwc.services.containers.beets.enable = true;
   hwc.services.containers.jellyseerr.enable = true;
 
   # Phase 4: Specialized Services (Soulseek integration)

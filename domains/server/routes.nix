@@ -19,6 +19,16 @@
       upstream = "http://127.0.0.1:5055";
     }
 
+    # Jellyseerr - convenience subpath (strips prefix for client assets)
+    {
+      name = "jellyseerr-subpath";
+      mode = "subpath";
+      path = "/jellyseerr";
+      upstream = "http://127.0.0.1:5055";
+      needsUrlBase = false;
+      headers = { "X-Forwarded-Prefix" = "/jellyseerr"; };
+    }
+
     # Navidrome - preserve path (URL base set in app)
     {
       name = "navidrome";

@@ -9,6 +9,7 @@ INSECURE="${INSECURE:-0}"
 # name|mode|public_path_or_port|upstream_url|unit_hint
 SERVICES=(
   "jellyfin|subpath|/jellyfin|http://127.0.0.1:8096|jellyfin"
+  "jellyseerr-sub|subpath|/jellyseerr|http://127.0.0.1:5055|jellyseerr"
   "jellyseerr|port|5543|http://127.0.0.1:5055|jellyseerr"
   "navidrome|subpath|/music|http://127.0.0.1:4533|navidrome"
   "sonarr|subpath|/sonarr|http://127.0.0.1:8989|sonarr"

@@ -45,7 +45,7 @@ in {
 
       # AI/ML tools (basic)
       python3
-
+      aider-chat               # AI pair programming in terminal with Ollama support
       gemini-cli
       
       # Backup and archival

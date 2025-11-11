@@ -30,7 +30,7 @@ hwc.services.containers.jellyseerr = {
 
 - **Default Port**: 5055
 - **Network Mode**: `media` (connects to other services)
-- **Reverse Proxy**: Accessible at `/jellyseerr`
+- **Reverse Proxy**: Available via `/jellyseerr` (subpath) or dedicated port `:5543`
 
 ### Dependencies
 
@@ -56,8 +56,9 @@ Jellyseerr depends on:
    ```
 
 3. **Access Jellyseerr**:
-   - Via reverse proxy: `https://hwc.ocelot-wahoo.ts.net/jellyseerr`
-   - Direct access: `http://localhost:5055`
+   - Via Caddy subpath: `https://hwc.ocelot-wahoo.ts.net/jellyseerr`
+   - Via Caddy port: `https://hwc.ocelot-wahoo.ts.net:5543/`
+   - Direct container port (local): `http://localhost:5055`
 
 4. **Complete setup wizard**:
    - Sign in with your Jellyfin account
