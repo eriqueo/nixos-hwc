@@ -28,9 +28,23 @@ in
       allowedUDPPorts = [ 7359 ];       # UDP discovery
     };
 
-    # GPU acceleration configuration (matching Immich pattern)
-    systemd.services.jellyfin = lib.mkIf cfg.gpu.enable {
-      serviceConfig = {
+    # GPU acceleration and migration fix configuration
+    systemd.services.jellyfin = {
+      # Fix corrupted migration files before startup to prevent crash loops
+      preStart = ''
+        CONFIG_DIR="/var/lib/jellyfin/config"
+
+        # Remove corrupted migrations.xml that causes "Sequence contains no elements" crash
+        # Jellyfin will regenerate this file on startup with correct format for 10.11+
+        if [ -f "$CONFIG_DIR/migrations.xml" ]; then
+          if grep -q "CreateNetworkConfiguration" "$CONFIG_DIR/migrations.xml" 2>/dev/null; then
+            echo "Removing old-format migrations.xml (pre-10.11 format incompatible)"
+            rm -f "$CONFIG_DIR/migrations.xml"
+          fi
+        fi
+      '';
+
+      serviceConfig = lib.mkIf cfg.gpu.enable {
         # Add GPU device access for video transcoding
         DeviceAllow = [
           "/dev/nvidia0 rw"
@@ -44,7 +58,8 @@ in
         # Add user to GPU groups for hardware access
         SupplementaryGroups = [ "video" "render" ];
       };
-      environment = {
+
+      environment = lib.mkIf cfg.gpu.enable {
         # NVIDIA GPU acceleration for video transcoding
         NVIDIA_VISIBLE_DEVICES = "all";
         NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility";

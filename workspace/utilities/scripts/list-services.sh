@@ -52,7 +52,7 @@ printf "%-3s %-15s %-10s %-50s\n" \
     "$(check_container jellyseerr)" \
     "Jellyseerr" \
     "Container" \
-    "https://${DOMAIN}:5543/"
+    "https://${DOMAIN}/jellyseerr (alt :5543)"
 
 printf "%-3s %-15s %-10s %-50s\n" \
     "$(check_service navidrome)" \

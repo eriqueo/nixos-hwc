@@ -10,6 +10,7 @@
     ./_shared/caddy.nix
 
     # Container services
+    ./beets/index.nix
     ./caddy/index.nix
     ./gluetun/index.nix
     ./immich/index.nix

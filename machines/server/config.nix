@@ -85,8 +85,12 @@
 
   # AI services configuration
   hwc.server.ai.ollama = {
-    enable = false;
-    models = [ "llama3:8b" "codellama:13b" ];
+    enable = true;
+    # Optimized models for 4GB VRAM GPU (Quadro P1000) - guaranteed to fit in VRAM
+    models = [
+      "qwen2.5-coder:3b"              # 1.9GB - Best coding model that fits in 4GB VRAM
+      "phi3:3.8b-mini-instruct-4k"    # 2.3GB - General purpose, excellent quality
+    ];
   };
 
   # TODO: Re-enable Fabric when Go 1.25 / nixpkgs compatibility is resolved
