@@ -8,7 +8,7 @@ in
       main = {
         initialized = true;
         trustProxy = true;
-        applicationUrl = "https://hwc.ocelot-wahoo.ts.net/jellyseerr";
+        applicationUrl = "https://hwc.ocelot-wahoo.ts.net:5543";
         mediaServerType = 4;
       };
       public = {

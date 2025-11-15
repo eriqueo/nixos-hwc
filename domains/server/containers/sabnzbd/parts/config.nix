@@ -75,6 +75,14 @@ in
     };
 
     #=========================================================================
+    # SYSTEMD TMPFILES - PRE-CREATE DIRECTORIES WITH PROPER PERMISSIONS
+    #=========================================================================
+    systemd.tmpfiles.rules = [
+      # Create incomplete directory with proper ownership (PUID=1000, PGID=1000)
+      "d ${paths.hot}/downloads/incomplete 0755 1000 1000 -"
+    ];
+
+    #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
     systemd.services.podman-sabnzbd = {

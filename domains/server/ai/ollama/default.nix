@@ -5,7 +5,14 @@ let
   paths = config.hwc.paths or {};
 
   accel = config.hwc.infrastructure.hardware.gpu.accel or "cpu";
-  gpuExtraOptions = config.hwc.infrastructure.hardware.gpu.containerOptions or [];
+  gpuType = config.hwc.infrastructure.hardware.gpu.type or "none";
+
+  # For NVIDIA, use CDI annotation for proper driver mounting
+  gpuExtraOptions = if gpuType == "nvidia" then [
+    "--device=nvidia.com/gpu=all"
+    "--security-opt=label=disable"
+  ] else config.hwc.infrastructure.hardware.gpu.containerOptions or [];
+
   gpuEnv = config.hwc.infrastructure.hardware.gpu.containerEnvironment or {};
 
   pullScript = import ./parts/pull-script.nix { inherit lib pkgs config; };
