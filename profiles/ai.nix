@@ -28,6 +28,7 @@
   #==========================================================================
   imports = [
     ../domains/server/ai/ollama
+    ../domains/server/ai/mcp
     # ../domains/server/ai/ai-bible/ai-bible.nix  # (optional future service)
   ];
 
