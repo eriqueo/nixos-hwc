@@ -24,8 +24,7 @@ in
           package = pkgs.qemu_kvm;
           runAsRoot = false;
           swtpm.enable = true;
-          ovmf.enable = true;
-          ovmf.packages = [ pkgs.OVMFFull.fd ];
+          # OVMF is now available by default with QEMU - no configuration needed
           vhostUserPackages = with pkgs; [ virtiofsd ];
         };
       };
@@ -50,9 +49,9 @@ in
       spice-gtk
       spice-protocol
       virtiofsd
-      win-virtio
+      virtio-win
       win-spice
-      freerdp3
+      freerdp
       xdg-utils
     ];
 

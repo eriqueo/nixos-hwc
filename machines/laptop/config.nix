@@ -139,17 +139,9 @@
     debug = false;
   };
 
-  # Fabric AI integration
-  hwc.system.apps.fabric = {
-    enableHome = true;
-    provider = "openai";
-    model = "gpt-4o-mini";
-    initPatterns = true;
-    env = {
-      # User can optionally point to server API instead of direct provider access
-      # FABRIC_API_URL = "https://hwc.ocelot-wahoo.ts.net";
-    };
-  };
+  # Fabric AI integration - REMOVED
+  # The Fabric app configuration has been removed from the system.
+  # See commit: refactor: cleanup unused AI tools and improve server configuration
 
   # Libvirt/QEMU: make OVMF visible and avoid extra groups by using wheel sockets.
   virtualisation.libvirtd = {
@@ -160,10 +152,9 @@
       unix_sock_rw_perms = "0770"
     '';
 
-    # Ensure firmware enumeration succeeds on this host.
+    # OVMF is now available by default with QEMU
     qemu = {
       runAsRoot = lib.mkForce true;     # fixes OVMF metadata enumeration edge cases
-      ovmf.packages = [ pkgs.OVMFFull.fd ];
     };
   };
 

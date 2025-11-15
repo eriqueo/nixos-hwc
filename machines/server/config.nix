@@ -93,6 +93,25 @@
     ];
   };
 
+  # MCP (Model Context Protocol) server for LLM access
+  hwc.server.ai.mcp = {
+    enable = true;
+
+    # Filesystem MCP for ~/.nixos directory
+    filesystem.nixos = {
+      enable = true;
+      # Defaults:
+      # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
+      # - user: "eric"
+    };
+
+    # HTTP proxy for remote access
+    proxy.enable = true;  # Listen on localhost:6001
+
+    # Expose via Caddy at /mcp-nixos
+    reverseProxy.enable = true;
+  };
+
   # TODO: Re-enable Fabric when Go 1.25 / nixpkgs compatibility is resolved
   # # Fabric AI integration
   # hwc.system.apps.fabric = {
