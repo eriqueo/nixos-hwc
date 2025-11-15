@@ -30,8 +30,7 @@
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.05";
-    # Pinned nixpkgs for Go 1.25+ toolchain (needed by Fabric)
-    nixpkgs-go.url      = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
         inputs.nixpkgs.follows = "nixpkgs";
@@ -47,17 +46,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    fabric = {
-      url = "github:danielmiessler/fabric";
-      # Let Fabric use its own nixpkgs - don't follow ours
-      # This avoids toolchain version conflicts
-    };
-
-    codex = {
-      url = "github:openai/codex";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Reference repo during migration (non-flake)
     legacy-config = {
       url = "github:eriqueo/nixos-hwc";
@@ -69,7 +57,7 @@
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, nixpkgs-go, home-manager, agenix, fabric, codex, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
 
@@ -105,7 +93,7 @@
             # Disable Home Manager on server - it's enabled somewhere in domains
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
-            # Pass inputs to Home Manager modules (needed for codex, fabric, etc.)
+            # Pass inputs to Home Manager modules
             home-manager.extraSpecialArgs = { inherit inputs; };
           }
         ];

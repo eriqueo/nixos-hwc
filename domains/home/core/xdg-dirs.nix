@@ -1,15 +1,12 @@
 # domains/home/core/xdg-dirs.nix
 #
-# XDG User Directories Auto-Update
-# Ensures ~/.config/user-dirs.dirs stays in sync with system defaults
+# XDG User Directories Configuration
+# Home Manager's built-in XDG support handles user-dirs.dirs creation
+# System-level defaults are configured in domains/system/core/paths.nix
 { config, lib, pkgs, ... }:
 
 {
-  config = {
-    # Automatically update XDG user directories on activation
-    # This reads /etc/xdg/user-dirs.defaults and writes ~/.config/user-dirs.dirs
-    home.activation.updateXdgDirs = config.lib.dag.entryAfter ["writeBoundary"] ''
-      $DRY_RUN_CMD ${pkgs.xdg-user-dirs}/bin/xdg-user-dirs-update
-    '';
-  };
+  # XDG user directories are managed by Home Manager's built-in xdg.userDirs option
+  # and the system-level /etc/xdg/user-dirs.defaults file
+  config = {};
 }

@@ -107,6 +107,12 @@ in
       wants = if cfg.network.mode == "vpn"
         then [ "podman-gluetun.service" ]
         else [ "init-media-network.service" ];
+
+      # Ensure tdarr-temp directory exists
+      preStart = ''
+        install -d -m755 ${paths.hot}/processing/tdarr-temp
+        chown -R 1000:1000 ${paths.hot}/processing/tdarr-temp
+      '';
     };
 
     #=========================================================================

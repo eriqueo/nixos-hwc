@@ -127,39 +127,6 @@ in
       ];
     };
 
-    # --- Aider AI coding assistant configuration ---
-    home.file.".aider.conf.yml".text = ''
-      # Aider configuration for Ollama local LLMs
-      # Optimized for 4GB VRAM GPU (NVIDIA Quadro P1000)
-
-      # Primary model - best coding model that fits in GPU
-      model: ollama/qwen2.5-coder:3b
-
-      # Editor preference
-      editor: nvim
-
-      # Git integration
-      auto-commits: true
-      commit-prompt: true
-      dirty-commits: true
-
-      # Context and performance
-      pretty: true
-      stream: true
-      show-diffs: true
-
-      # File handling
-      auto-lint: true
-      auto-test: false
-
-      # Model-specific settings for GPU optimization
-      ollama:
-        base_url: http://localhost:11434
-        num_ctx: 4096          # Context window (reduced for 4GB VRAM)
-        num_gpu: 1             # Use GPU
-        num_thread: 6          # Half of CPU threads for better concurrency
-    '';
-
     # --- Development environment variables ---
     home.sessionVariables = {
       # Default editors
@@ -169,10 +136,7 @@ in
       PROJECTS = "$HOME/.nixos/workspace/projects";
       SCRIPTS = "$HOME/.nixos/workspace";
       WORKSPACE = "$HOME/.nixos/workspace";
-      # Aider configuration
-      AIDER_MODEL = "ollama/qwen2.5-coder:3b";
-      OLLAMA_API_BASE = "http://localhost:11434";
-      
+
     } // lib.optionalAttrs cfg.languages.python {
       # Python development
       PYTHONDONTWRITEBYTECODE = "1";
