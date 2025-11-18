@@ -15,13 +15,8 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
       nodejs
-      nodePackages.npm
+      # User can install gemini-cli manually with: npm install -g gemini-cli
     ];
-
-    # Install gemini-cli globally via npm
-    home.activation.installGeminiCli = lib.hm.dag.entryAfter ["writeBoundary"] ''
-      $DRY_RUN_CMD ${pkgs.nodePackages.npm}/bin/npm install -g gemini-cli || true
-    '';
   };
 
   #==========================================================================
