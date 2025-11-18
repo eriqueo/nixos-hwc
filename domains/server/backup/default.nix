@@ -9,5 +9,6 @@
   imports = [
     ./options.nix
     ./parts/user-backup.nix
+    ./parts/server-backup-scripts.nix
   ];
 }

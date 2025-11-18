@@ -6,10 +6,13 @@
 { lib, config, ... }:
 
 let
-  cfg = config.hwc.services.backup.user;
   userCfg = config.hwc.system;
 in
 {
+  options.hwc.server.backup = {
+    enable = lib.mkEnableOption "automated server backup (containers, databases, system)";
+  };
+
   options.hwc.services.backup.user = {
     enable = lib.mkEnableOption "intelligent user data backup service";
 
