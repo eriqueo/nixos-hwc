@@ -28,8 +28,9 @@ chmod +x "$HOOKS_DIR/post-commit"
 
 # Option 2: Cron job for periodic push (backup option)
 CRON_SCRIPT="$REPO_ROOT/.claude/auto-push-cron.sh"
-cat > "$CRON_SCRIPT" <<EOF
+cat > "$CRON_SCRIPT" <<'EOF'
 #!/usr/bin/env bash
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 BRANCH=\$(git branch --show-current)
 UNPUSHED=\$(git log @{u}.. --oneline 2>/dev/null | wc -l)

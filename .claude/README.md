@@ -63,7 +63,7 @@ This installs:
 ```bash
 crontab -e
 # Add this line:
-*/30 * * * * /home/eric/03-tech/nixos-hwc/.claude/auto-push-cron.sh
+*/30 * * * * /home/eric/.nixos/.claude/auto-push-cron.sh
 ```
 
 ## 💡 Token Efficiency Tips
