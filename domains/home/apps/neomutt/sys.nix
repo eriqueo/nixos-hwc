@@ -1,18 +1,19 @@
 # modules/home/apps/neomutt/sys.nix
 #
 # System lane wiring for neomutt.
-# Charter v7: co-located sys.nix files expose System/HW/Security data
-# to the Home Manager unit via its own options.
+# Charter v7: co-located sys.nix files for system dependencies
 
 { lib, config, pkgs, ... }:
 
 let
-  
-  cfg = config.hwc.home.apps.neomutt;
-  secMaterials = lib.attrByPath [ "hwc" "security" "materials" ] {} config;
+  # Check if home options are available (they might not be during system-only imports)
+  cfg = lib.attrByPath ["hwc" "home" "apps" "neomutt"] { enable = false; } config;
 in {
-  imports = [ ./options.nix ];
   config = lib.mkIf cfg.enable {
-    features.neomutt.materials = secMaterials;
+    # Minimal system dependencies for neomutt
+    # Most dependencies are handled in Home Manager
+
+    # No specific system packages needed for neomutt
+    # Mail transport handled by msmtp/isync in Home Manager
   };
 }

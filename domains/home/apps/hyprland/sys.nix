@@ -2,7 +2,8 @@
 # System-side dependencies for Hyprland window manager
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.home.apps.hyprland;
+  # Check if home options are available (they might not be during system-only imports)
+  cfg = lib.attrByPath ["hwc" "home" "apps" "hyprland"] { enable = false; } config;
 
   # Import helper scripts from parts/
   hyprlandScripts = import ./parts/scripts.nix { inherit pkgs lib; };
