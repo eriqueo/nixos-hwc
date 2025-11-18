@@ -16,6 +16,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from typing import Dict
 import yaml
 
 # Add current directory to path for imports
@@ -24,8 +25,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scanners.service_scanner import ServiceScanner
 from scanners.package_scanner import PackageScanner
 from scanners.container_scanner import ContainerScanner
+from scanners.enhanced_container_scanner import EnhancedContainerScanner
+from scanners.dotfiles_scanner import DotfilesScanner
+from scanners.system_scanner import SystemScanner
+from scanners.secrets_scanner import SecretsScanner
 from generators.universal_ir import UniversalIRGenerator
 from generators.arch_backend import ArchBackend
+from generators.docker_compose_generator import DockerComposeGenerator
 
 
 class NixOSTranslator:
@@ -43,12 +49,15 @@ class NixOSTranslator:
 
     def scan(self):
         """Scan the NixOS configuration and extract all information"""
-        self.log("Starting scan of NixOS configuration...")
+        self.log("Starting comprehensive scan of NixOS configuration...")
 
-        # Initialize scanners
+        # Initialize all scanners
         service_scanner = ServiceScanner(self.source_path, verbose=self.verbose)
         package_scanner = PackageScanner(self.source_path, verbose=self.verbose)
-        container_scanner = ContainerScanner(self.source_path, verbose=self.verbose)
+        container_scanner = EnhancedContainerScanner(self.source_path, verbose=self.verbose)
+        dotfiles_scanner = DotfilesScanner(self.source_path, verbose=self.verbose)
+        system_scanner = SystemScanner(self.source_path, verbose=self.verbose)
+        secrets_scanner = SecretsScanner(self.source_path, verbose=self.verbose)
 
         # Scan for services
         self.log("Scanning for enabled services...")
@@ -58,14 +67,32 @@ class NixOSTranslator:
         self.log("Scanning for packages...")
         packages = package_scanner.scan()
 
-        # Scan for containers
-        self.log("Scanning for containers...")
-        containers = container_scanner.scan()
+        # Scan for containers (enhanced)
+        self.log("Scanning for containers (detailed)...")
+        containers_data = container_scanner.scan()
+        containers = containers_data.get('containers', [])
+        stacks = container_scanner.categorize_by_stack(containers)
+
+        # Scan for dotfiles
+        self.log("Scanning for home-manager dotfiles...")
+        dotfiles = dotfiles_scanner.scan()
+
+        # Scan for system config
+        self.log("Scanning system configuration...")
+        system_config = system_scanner.scan()
+
+        # Scan for secrets
+        self.log("Scanning secrets inventory...")
+        secrets = secrets_scanner.scan()
 
         return {
             'services': services,
             'packages': packages,
-            'containers': containers
+            'containers': containers_data,
+            'container_stacks': stacks,
+            'dotfiles': dotfiles,
+            'system': system_config,
+            'secrets': secrets
         }
 
     def generate_universal_ir(self, scan_data):
@@ -88,7 +115,38 @@ class NixOSTranslator:
 
         backend.generate(universal_path, arch_path)
 
+        # Also generate Docker Compose files
+        self.log("Generating Docker Compose files...")
+        self._generate_docker_compose(universal_path, arch_path)
+
         return arch_path
+
+    def _generate_docker_compose(self, universal_path: Path, output_path: Path):
+        """Generate Docker Compose files from container definitions"""
+        import yaml
+
+        # Load containers data
+        containers_file = universal_path / 'containers.yml'
+        if not containers_file.exists():
+            self.log("No containers.yml found, skipping Docker Compose generation")
+            return
+
+        with open(containers_file, 'r') as f:
+            data = yaml.safe_load(f)
+
+        containers = data.get('containers', [])
+        if not containers:
+            self.log("No containers found, skipping Docker Compose generation")
+            return
+
+        # Categorize into stacks
+        from scanners.enhanced_container_scanner import EnhancedContainerScanner
+        scanner = EnhancedContainerScanner(self.source_path, verbose=self.verbose)
+        stacks = scanner.categorize_by_stack(containers)
+
+        # Generate compose files
+        compose_gen = DockerComposeGenerator(verbose=self.verbose)
+        compose_gen.generate(containers, output_path, stacks)
 
     def export(self):
         """Export NixOS config to universal format"""
