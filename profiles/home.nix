@@ -98,6 +98,7 @@
           thunderbird.enable = lib.mkDefault true;
           localsend.enable = lib.mkDefault true;
           opencode.enable = lib.mkDefault true;
+          googleCloudSdk.enable = lib.mkDefault true;
         };
       };
     };
