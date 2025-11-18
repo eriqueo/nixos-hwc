@@ -4,7 +4,7 @@ let
   dir = builtins.readDir ./.;
 
   # only import known subtrees in a stable order
-  wantedDirs = [ "apps" "core" "packages" "services" "storage"  "users"];
+  wantedDirs = [ "core" "packages" "services" "storage" "users"];
   subIndex =
     lib.pipe wantedDirs [
       (ns: lib.filter (n: lib.hasAttr n dir && dir.${n} == "directory") ns)

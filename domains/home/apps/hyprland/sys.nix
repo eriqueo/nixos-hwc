@@ -1,4 +1,5 @@
-# modules/home/apps/hyprland/sys.nix - System-side components for Hyprland
+# domains/home/apps/hyprland/sys.nix
+# System-side dependencies for Hyprland window manager
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.hyprland;
@@ -6,7 +7,7 @@ let
   # Import helper scripts from parts/
   hyprlandScripts = import ./parts/scripts.nix { inherit pkgs lib; };
 
-  # Hyprland startup script - moved from home domain for charter compliance
+  # Hyprland startup script - system package for launch
   hyprlandStartupScript = pkgs.writeScriptBin "hyprland-startup" ''
     #!/usr/bin/env bash
     set -euo pipefail
@@ -41,5 +42,15 @@ in
     #==========================================================================
     # Provide the startup script and helper scripts as system packages
     environment.systemPackages = [ hyprlandStartupScript ] ++ hyprlandScripts;
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = cfg.enable;
+        message = "hwc.home.apps.hyprland.enable must be true for system dependencies to be active";
+      }
+    ];
   };
 }

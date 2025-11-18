@@ -1,13 +1,25 @@
 # NEW, CLEAN profiles/system.nix
 
 { lib, pkgs, ... }:
+let
+  # Helper to gather all sys.nix files from home apps (Charter v7 compliance)
+  gatherSys = dir:
+    let
+      content = builtins.readDir dir;
+      names = builtins.attrNames content;
+      validDirs = builtins.filter (name:
+        content.${name} == "directory" &&
+        builtins.pathExists (dir + "/${name}/sys.nix")
+      ) names;
+    in
+      builtins.map (name: dir + "/${name}/sys.nix") validDirs;
+in
 {
   #==========================================================================
   # IMPORTS
   #==========================================================================
-  # The import is now simpler. The main system index.nix handles
-  # aggregating all the service modules automatically.
-  imports = [ ../domains/system/index.nix ];
+  # System domain modules + co-located sys.nix files from home apps
+  imports = [ ../domains/system/index.nix ] ++ (gatherSys ../domains/home/apps);
 
   #==========================================================================
   # BASE NIXOS SETTINGS
