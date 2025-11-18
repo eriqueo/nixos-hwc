@@ -66,20 +66,39 @@ crontab -e
 */30 * * * * /home/eric/.nixos/.claude/auto-push-cron.sh
 ```
 
+## 🎯 Skills - Domain-Specific Workflows
+
+Skills automate repetitive workflows to save massive tokens on complex tasks.
+
+**Available Skills:**
+- **`agenix-secrets`** - Manage age/agenix encrypted secrets
+  - Add new secrets with auto-detection
+  - Update existing secrets
+  - Minimal questions, maximum automation
+  - Saves 500-2000 tokens per secret operation
+
+**Usage:** Just say "Add a new secret" or "Update the sonarr API key" - Claude will invoke the skill automatically.
+
+See `skills/agenix-secrets.md` for full documentation.
+
 ## 💡 Token Efficiency Tips
 
 1. **Use Task agents** - They run in separate contexts
 2. **Be specific** - "Read src/foo.ts" beats "find the foo file"
 3. **Use slash commands** - `/build` instead of explaining what to do
-4. **Break into sessions** - One feature per conversation
-5. **Read strategically** - Use `offset`/`limit` for large files
+4. **Use skills** - For domain workflows like secrets management
+5. **Break into sessions** - One feature per conversation
+6. **Read strategically** - Use `offset`/`limit` for large files
 
 ## 📁 Files
 
 - `commands/*.md` - Slash command definitions
+- `skills/*.md` - Domain-specific workflow automation
 - `setup-autopush.sh` - Install auto-push protection
+- `setup-mcp-for-machine.sh` - Configure MCP servers for laptop/server
 - `auto-push-cron.sh` - Cron job for periodic pushes (generated)
 - `auto-push.log` - Push history log (generated)
+- `MCP-SERVERS.md` - Complete MCP server documentation
 
 ## 🔄 Updating
 
