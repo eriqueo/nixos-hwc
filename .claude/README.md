@@ -16,13 +16,34 @@ Use these commands to save tokens by avoiding repetitive prompts:
 
 ## 🔧 MCP Servers
 
-MCP servers provide external capabilities without token overhead:
+MCP servers provide external capabilities without token overhead.
 
-**Configured in `.mcp.json`:**
-- `filesystem` - Advanced file operations
-- `git` - Git operations with better efficiency
+### Machine-Specific Configuration
+
+This repo has **different MCP configs for laptop vs server**:
+- `.mcp.laptop.json` - Laptop (development workstation)
+- `.mcp.server.json` - Server (infrastructure services)
+
+**Setup for your machine:**
+```bash
+bash .claude/setup-mcp-for-machine.sh
+```
+
+This creates a symlink `.mcp.json` → appropriate config based on hostname.
+
+**Laptop MCP servers:**
+- `filesystem` - Your workspace + config dirs
+- `git` - Git operations
+- `brave-search`, `github`, `sequential-thinking`, `time`, `fetch`, `memory`
+
+**Server MCP servers (adds):**
+- `postgres` - Query databases (immich, heartwood_business)
+- `prometheus` - Monitor all services & containers
+- `puppeteer` - Web UI testing
 
 **To enable:** Claude Code will prompt you to approve these servers on first use.
+
+See `.claude/MCP-SERVERS.md` for detailed documentation.
 
 ## 🛡️ Auto-Push Protection
 
