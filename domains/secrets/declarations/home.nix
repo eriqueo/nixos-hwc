@@ -27,5 +27,12 @@
       owner = "root";
       group = "secrets";
     };
+    gmail-oauth-client = {
+      file = ../parts/home/gmail-oauth-client.json.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
   };
 }
