@@ -32,6 +32,17 @@ class UniversalIRGenerator:
         self._generate_services_yml(scan_data['services'], universal_path)
         self._generate_packages_yml(scan_data['packages'], universal_path)
         self._generate_containers_yml(scan_data['containers'], universal_path)
+
+        # Generate new comprehensive components
+        if 'dotfiles' in scan_data:
+            self._generate_dotfiles_yml(scan_data['dotfiles'], universal_path)
+
+        if 'system' in scan_data:
+            self._generate_system_yml(scan_data['system'], universal_path)
+
+        if 'secrets' in scan_data:
+            self._generate_secrets_yml(scan_data['secrets'], universal_path)
+
         self._generate_readme(universal_path, scan_data)
 
         self.log(f"Generated universal IR at: {universal_path}")
@@ -332,3 +343,70 @@ This IR uses format version 1.0. The format is designed to be:
             'kitty': {'arch': 'kitty', 'ubuntu': 'kitty', 'fedora': 'kitty'},
             'hyprland': {'arch': 'hyprland', 'ubuntu': 'hyprland (PPA)', 'fedora': 'hyprland (COPR)'},
         }
+
+    def _generate_dotfiles_yml(self, dotfiles: Dict, output_path: Path):
+        """Generate dotfiles.yml"""
+        self.log("Generating dotfiles.yml...")
+
+        dotfiles_data = {
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'source': 'NixOS home-manager configuration',
+                'format_version': '1.0',
+                'note': 'Dotfiles to be managed with GNU Stow or similar'
+            },
+            'apps': dotfiles.get('apps', []),
+            'total': dotfiles.get('total', 0),
+            'categories': dotfiles.get('categories', {})
+        }
+
+        output_file = output_path / 'dotfiles.yml'
+        with open(output_file, 'w') as f:
+            yaml.dump(dotfiles_data, f, default_flow_style=False, sort_keys=False)
+
+        self.log(f"Created: {output_file}")
+
+    def _generate_system_yml(self, system: Dict, output_path: Path):
+        """Generate system.yml"""
+        self.log("Generating system.yml...")
+
+        system_data = {
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'source': 'NixOS system configuration',
+                'format_version': '1.0'
+            },
+            'users': system.get('users', []),
+            'networking': system.get('networking', {}),
+            'firewall': system.get('firewall', {}),
+            'filesystems': system.get('filesystems', {})
+        }
+
+        output_file = output_path / 'system.yml'
+        with open(output_file, 'w') as f:
+            yaml.dump(system_data, f, default_flow_style=False, sort_keys=False)
+
+        self.log(f"Created: {output_file}")
+
+    def _generate_secrets_yml(self, secrets: Dict, output_path: Path):
+        """Generate secrets.yml"""
+        self.log("Generating secrets.yml...")
+
+        secrets_data = {
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'source': 'NixOS agenix secrets',
+                'format_version': '1.0',
+                'note': 'Secret inventory (not decrypted) - use for SOPS migration'
+            },
+            'secrets': secrets.get('secrets', []),
+            'total': secrets.get('total', 0),
+            'consumers': secrets.get('consumers', {}),
+            'categories': secrets.get('categories', {})
+        }
+
+        output_file = output_path / 'secrets.yml'
+        with open(output_file, 'w') as f:
+            yaml.dump(secrets_data, f, default_flow_style=False, sort_keys=False)
+
+        self.log(f"Created: {output_file}")
