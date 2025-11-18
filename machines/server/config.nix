@@ -61,6 +61,40 @@
     firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
   };
 
+  # Backup configuration for server
+  # Supports external drives, NAS, or DAS for local backups
+  hwc.system.services.backup = {
+    enable = true;
+
+    # Local backup to external storage (NAS, DAS, or external drive)
+    local = {
+      enable = true;
+      mountPoint = "/mnt/backup";  # Mount your backup drive/NAS here
+      keepDaily = 14;   # Keep 14 daily backups (2 weeks)
+      keepWeekly = 8;   # Keep 8 weekly backups (2 months)
+      keepMonthly = 12; # Keep 12 monthly backups (1 year)
+      minSpaceGB = 50;  # Require 50GB free space for server
+      sources = [
+        "/home"
+        "/etc/nixos"
+        "/mnt/media"  # Include media storage
+        "/opt/business"  # Include business data
+      ];
+    };
+
+    # Cloud backup as additional offsite backup (optional)
+    cloud.enable = false;  # Set to true to enable cloud backup
+    protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
+
+    # Automatic scheduling
+    schedule = {
+      enable = true;
+      frequency = "weekly";  # Weekly backups for server
+      timeOfDay = "03:00";   # Run at 3 AM on the scheduled day
+      onlyOnAC = false;      # Server is always plugged in
+    };
+  };
+
   # Machine-specific GPU override for Quadro P1000 (legacy driver required)
   hwc.infrastructure.hardware.gpu = {
     enable = lib.mkForce true;

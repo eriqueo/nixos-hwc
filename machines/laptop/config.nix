@@ -68,10 +68,32 @@
     monitoring.enable = true;
   };
 
-  # Enable the backup system with Proton Drive.
+  # Backup configuration for laptop
+  # Supports plugging in external drives for local backups
   hwc.system.services.backup = {
     enable = true;
+
+    # Local backup when external drive is connected
+    local = {
+      enable = true;
+      mountPoint = "/mnt/backup";  # Mount your external drive here
+      keepDaily = 7;    # Keep 7 daily backups
+      keepWeekly = 4;   # Keep 4 weekly backups
+      keepMonthly = 3;  # Keep 3 monthly backups
+      minSpaceGB = 20;  # Require 20GB free space
+    };
+
+    # Cloud backup as fallback (optional)
+    cloud.enable = false;  # Set to true to enable cloud backup
     protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
+
+    # Automatic scheduling
+    schedule = {
+      enable = true;
+      frequency = "daily";
+      timeOfDay = "02:00";  # Run at 2 AM
+      onlyOnAC = true;  # Only backup when plugged in
+    };
   };
 
   # Enable the declarative VPN service using the official CLI.
