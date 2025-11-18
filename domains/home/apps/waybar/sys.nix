@@ -1,7 +1,8 @@
 # domains/home/apps/waybar/sys.nix - System-side validation for waybar
 { lib, config, ... }:
 let
-  cfg = config.hwc.home.apps.waybar;
+  # Check if home options are available (they might not be during system-only imports)
+  cfg = lib.attrByPath ["hwc" "home" "apps" "waybar"] { enable = false; } config;
 in
 {
   config = lib.mkIf cfg.enable {

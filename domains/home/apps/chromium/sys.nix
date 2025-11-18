@@ -6,7 +6,8 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.apps.chromium;
+  # Check if home options are available (they might not be during system-only imports)
+  cfg = lib.attrByPath ["hwc" "home" "apps" "chromium"] { enable = false; } config;
 in {
   imports = [ ./options.nix ];
   #============================================================================
