@@ -153,6 +153,12 @@
         readOnly = true;
         description = "Path to decrypted VPN password file";
       };
+      gmailOauthClientFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted Gmail OAuth client JSON file";
+      };
+
     };
 
     #==========================================================================
