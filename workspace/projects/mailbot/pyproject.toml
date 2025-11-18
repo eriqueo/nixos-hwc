@@ -1,0 +1,13 @@
+[project]
+name = "hwc-mailbot"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "google-api-python-client>=2.86.0",
+  "google-auth>=2.21.0",
+  "google-auth-oauthlib>=1.0.0",
+  "requests>=2.31.0",
+]
+
+[project.scripts]
+mailbot = "mailbot.bulk_unsubscribe:main"

@@ -1,0 +1,7 @@
+# OAuth client and token files — do NOT commit
+credentials.json
+token.json
+# Local virtualenv / caches
+.venv/
+__pycache__/
+*.pyc
