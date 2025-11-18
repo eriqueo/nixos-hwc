@@ -24,7 +24,7 @@ in
           package = pkgs.qemu_kvm;
           runAsRoot = false;
           swtpm.enable = true;
-          # OVMF is now available by default with QEMU - no configuration needed
+          # OVMF images are now available by default
           vhostUserPackages = with pkgs; [ virtiofsd ];
         };
       };

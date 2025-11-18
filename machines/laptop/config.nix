@@ -155,6 +155,7 @@
     # OVMF is now available by default with QEMU
     qemu = {
       runAsRoot = lib.mkForce true;     # fixes OVMF metadata enumeration edge cases
+      # OVMF images are now available by default in newer versions
     };
   };
 
