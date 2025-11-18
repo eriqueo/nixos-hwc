@@ -35,6 +35,8 @@ in
     
     # Email domain paths
     protonBridgePasswordFile = pathOrNull "proton-bridge-password";
+    gmailOauthClientFile = pathOrNull "gmail-oauth-client";
+
     
     # Infrastructure domain paths
     databaseNameFile = pathOrNull "database-name";
