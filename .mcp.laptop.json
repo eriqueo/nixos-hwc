@@ -19,14 +19,14 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-brave-search"],
       "env": {
-        "BRAVE_API_KEY": "GET_FROM_https://brave.com/search/api/"
+        "BSAznxmRHsms7ML-_Rd9lT_8Rzm8XuI": "GET_FROM_https://brave.com/search/api/"
       }
     },
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "GET_FROM_https://github.com/settings/tokens"
+        "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": "GET_FROM_https://github.com/settings/tokens"
       }
     },
     "sequential-thinking": {
