@@ -22,3 +22,8 @@ secrets/keys/*
 # Archive
 .archive/
 .aider*
+
+# Claude Code
+.mcp.json
+.claude/auto-push-cron.sh
+.claude/auto-push.log
