@@ -79,12 +79,74 @@ in
   };
 
   # --- Backup Module ---
-  # Enables the entire backup system, including the service, timer,
-  # scripts, and all required packages (rclone, etc.).
+  # Comprehensive backup system supporting local (external drives, NAS, DAS)
+  # and cloud (Proton Drive) backups with automatic scheduling and rotation.
   hwc.system.services.backup = {
     enable = true;
-    protonDrive.enable = lib.mkDefault false;
-    monitoring.enable = true;
+
+    # Local backup to external drives/NAS/DAS
+    local = {
+      enable = lib.mkDefault false;  # Enable per-machine
+      mountPoint = lib.mkDefault "/mnt/backup";
+      useRsync = true;  # Incremental backups with hard-link snapshots
+      keepDaily = 7;
+      keepWeekly = 4;
+      keepMonthly = 6;
+      minSpaceGB = 10;
+      sources = [ "/home" "/etc/nixos" ];
+      # Exclude patterns to reduce backup size
+      excludePatterns = [
+        ".cache"
+        "*.tmp"
+        "*.temp"
+        ".local/share/Trash"
+        "node_modules"
+        "__pycache__"
+        ".npm"
+        ".cargo/registry"
+        ".cargo/git"
+        ".mozilla/firefox/*/storage/default"
+        "Downloads/*.iso"
+        "Downloads/*.img"
+      ];
+    };
+
+    # Cloud backup (Proton Drive)
+    cloud = {
+      enable = lib.mkDefault false;  # Enable per-machine
+      provider = "proton-drive";
+      remotePath = "Backups";
+      syncMode = "sync";  # Mirror mode
+      bandwidthLimit = null;  # No limit by default
+    };
+
+    protonDrive = {
+      enable = lib.mkDefault false;
+      secretName = "rclone-proton-config";
+    };
+
+    # Automatic scheduling
+    schedule = {
+      enable = lib.mkDefault false;  # Enable per-machine
+      frequency = "daily";
+      timeOfDay = "02:00";  # 2 AM
+      randomDelay = "1h";
+      onlyOnAC = true;  # Only run on AC power (for laptops)
+    };
+
+    # Notifications
+    notifications = {
+      enable = lib.mkDefault true;
+      onSuccess = false;  # Don't notify on success (reduce noise)
+      onFailure = true;   # Always notify on failure
+    };
+
+    # Monitoring and health checks
+    monitoring = {
+      enable = true;
+      logPath = "/var/log/backup";
+      healthCheckInterval = "weekly";
+    };
   };
 
   # --- Networking Module ---

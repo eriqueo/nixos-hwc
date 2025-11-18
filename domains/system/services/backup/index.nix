@@ -1,12 +1,12 @@
-# NEW, CORRECT file: domains/system/services/backup/index.nix
+# domains/system/services/backup/index.nix
 #
 # BACKUP - System-wide backup service and tools.
 # This file aggregates the module's components and defines its core packages.
+# Supports local backups (external drives, NAS, DAS) and cloud backups (Proton Drive).
 
 { config, lib, pkgs, ... }:
 
 let
-  # This now correctly points to the API defined in options.nix
   cfg = config.hwc.system.services.backup;
 in
 {
@@ -17,8 +17,10 @@ in
   # and its implementation logic (parts).
   imports = [
     ./options.nix
-    ./parts/scripts.nix
-    ./parts/services.nix
+    ./parts/local-backup.nix
+    ./parts/cloud-backup.nix
+    ./parts/backup-utils.nix
+    ./parts/backup-scheduler.nix
   ];
 
   #=========================================================================
@@ -29,14 +31,30 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = with pkgs; [
       # Core backup tools
-      rclone
-      rsync
-      gnutar
-      gzip
-      p7zip
-      logrotate
+      rclone        # Cloud sync (Proton Drive, etc.)
+      rsync         # Incremental local backups
+      gnutar        # Archive creation
+      gzip          # Compression
+      bzip2         # Compression
+      p7zip         # Archive support
+      logrotate     # Log management
+
+      # Utilities for scripts
+      findutils     # find command
+      coreutils     # Basic utilities
+      util-linux    # mountpoint, etc.
+      gawk          # Text processing
+      gnused        # Stream editor
+      gnugrep       # Grep
+      nettools      # hostname
+      libnotify     # Desktop notifications
     ]
     # Add any extra tools defined on a per-machine basis.
     ++ cfg.extraTools;
+
+    # Warnings
+    warnings = lib.optionals (!cfg.local.enable && !cfg.cloud.enable) [
+      "Backup service is enabled but no backup methods (local or cloud) are configured"
+    ];
   };
 }
