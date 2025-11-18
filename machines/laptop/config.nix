@@ -48,6 +48,22 @@
   networking.hostName = "hwc-laptop";
   system.stateVersion = "24.05";
 
+  # Hibernation support
+  boot.resumeDevice = "/dev/disk/by-uuid/0ebc1df3-65ec-4125-9e73-2f88f7137dc7";
+  boot.kernelParams = [ "resume_offset=0" ]; # Will be auto-calculated by NixOS
+
+  # Power management for laptop
+  powerManagement.enable = true;
+  services.logind = {
+    lidSwitch = "suspend";
+    lidSwitchExternalPower = "lock";
+    extraConfig = ''
+      HandlePowerKey=hibernate
+      IdleAction=suspend
+      IdleActionSec=30min
+    '';
+  };
+
   #============================================================================
   # === [profiles/system.nix] Orchestration ====================================
   #============================================================================
@@ -69,9 +85,11 @@
   };
 
   # Enable the backup system with Proton Drive.
+  # To enable Proton Drive backups, see: domains/secrets/parts/system/README-rclone-proton.md
   hwc.system.services.backup = {
     enable = true;
-    protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
+    protonDrive.enable = true;  # Enable after creating rclone-proton-config.age secret
+    monitoring.enable = true;
   };
 
   # Enable the declarative VPN service using the official CLI.
@@ -209,7 +227,29 @@
   #============================================================================
   # LOW-LEVEL SYSTEM OVERRIDES (Use Sparingly)
   #============================================================================
-  services.thermald.enable = true;
-  services.tlp.enable = true;
+  # Power management: TLP handles thermal + power (thermald conflicts with TLP)
+  services.tlp = {
+    enable = true;
+    settings = {
+      # CPU performance settings
+      CPU_SCALING_GOVERNOR_ON_AC = "performance";
+      CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
+
+      # Battery charge thresholds (extends battery life)
+      START_CHARGE_THRESH_BAT0 = 75;  # Start charging at 75%
+      STOP_CHARGE_THRESH_BAT0 = 80;   # Stop charging at 80%
+
+      # Power saving on battery
+      WIFI_PWR_ON_BAT = "on";
+      WOL_DISABLE = "Y";
+
+      # USB autosuspend
+      USB_AUTOSUSPEND = 1;
+
+      # SATA power management
+      SATA_LINKPWR_ON_BAT = "med_power_with_dipm";
+    };
+  };
+
   programs.dconf.enable = true;
 }

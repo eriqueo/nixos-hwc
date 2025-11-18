@@ -22,7 +22,14 @@
         fsType = "vfat";
         options = [ "fmask=0022" "dmask=0022" ];
       };
-  swapDevices = [ ];
+
+  # Encrypted swap file for hibernation support
+  # Size: 16GB (recommended: 1.5x RAM for modern systems)
+  swapDevices = [{
+    device = "/var/swapfile";
+    size = 16384; # 16GB in MB
+    randomEncryption.enable = true; # Encrypt swap for security
+  }];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's

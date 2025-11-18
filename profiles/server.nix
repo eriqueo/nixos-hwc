@@ -211,10 +211,25 @@
     # Use mq-deadline for SSDs (better for mixed workloads)
     ACTION=="add|change", KERNEL=="nvme*", ATTR{queue/scheduler}="mq-deadline"
     ACTION=="add|change", KERNEL=="sd*", ENV{ID_BUS}=="ata", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="mq-deadline"
-    
+
     # Use bfq for HDDs (better for mixed workloads on servers)
     ACTION=="add|change", KERNEL=="sd*", ENV{ID_BUS}=="ata", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"
   '';
+
+  # SMART disk monitoring for early failure detection
+  services.smartd = {
+    enable = true;
+    autodetect = true;
+    notifications = {
+      mail = {
+        enable = false; # TODO: Configure email notifications when SMTP is set up
+        sender = "smartd@hwc-server";
+        recipient = "root";
+      };
+      wall.enable = true; # Send wall messages to all logged in users
+    };
+    defaults.monitored = "-a -o on -s (S/../.././02|L/../../6/03)";
+  };
 
   #============================================================================
   # LOGGING AND MONITORING
@@ -291,7 +306,8 @@
     enable = true;
     settings = {
       initialAdminUser = "admin";
-      initialAdminPassword = "il0wwlm?";
+      # Password now securely loaded from agenix secret
+      initialAdminPasswordFile = config.hwc.secrets.api.navidromeAdminPasswordFile;
       baseUrl = "/navidrome";  # Required - Navidrome receives full path from Caddy
     };
     reverseProxy.enable = true;

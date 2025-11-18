@@ -34,10 +34,31 @@ in
       trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       ];
+      # Optimize Nix store automatically
+      auto-optimise-store = true;
     };
-    gc.automatic = true;
+    # Automatic garbage collection
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 30d";
+    };
+    # Automatically detect and remove duplicate files
+    optimise = {
+      automatic = true;
+      dates = [ "weekly" ];
+    };
   };
   time.timeZone = "America/Denver";
+
+  # Enable SSD TRIM for all machines (improves SSD lifespan and performance)
+  services.fstrim = {
+    enable = true;
+    interval = "weekly"; # Run TRIM weekly
+  };
+
+  # Limit boot generations to prevent /boot partition from filling up
+  boot.loader.systemd-boot.configurationLimit = 10;
 
   #==========================================================================
   # SYSTEM PACKAGES
