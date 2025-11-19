@@ -48,6 +48,22 @@ in
           message = "hwc.server.frigate.gpu.detector = 'tensorrt' requires gpu.enable = true";
         }
         {
+          assertion = cfg.gpu.detector != "onnx" || cfg.gpu.enable;
+          message = "hwc.server.frigate.gpu.detector = 'onnx' requires gpu.enable = true";
+        }
+        {
+          assertion = cfg.gpu.detector != "openvino" || (cfg.hwaccel.type == "vaapi" || cfg.hwaccel.type == "qsv-h264" || cfg.hwaccel.type == "qsv-h265");
+          message = "hwc.server.frigate.gpu.detector = 'openvino' requires Intel hwaccel (vaapi or qsv)";
+        }
+        {
+          assertion = cfg.hwaccel.type != "nvidia" || config.hwc.infrastructure.hardware.gpu.type == "nvidia";
+          message = "hwc.server.frigate.hwaccel.type = 'nvidia' requires hwc.infrastructure.hardware.gpu.type = 'nvidia'";
+        }
+        {
+          assertion = (cfg.hwaccel.type != "vaapi" && cfg.hwaccel.type != "qsv-h264" && cfg.hwaccel.type != "qsv-h265") || config.hwc.infrastructure.hardware.gpu.type == "intel";
+          message = "hwc.server.frigate.hwaccel Intel types require hwc.infrastructure.hardware.gpu.type = 'intel'";
+        }
+        {
           assertion = !cfg.enable || (cfg.storage.mediaPath != "");
           message = "hwc.server.frigate.storage.mediaPath must be set";
         }
