@@ -92,7 +92,7 @@
           {
             # Disable Home Manager on server - it's enabled somewhere in domains
             home-manager.users.eric.home.stateVersion = "24.05";
-            home-manager.backupFileExtension = "backup";
+            home-manager.backupFileExtension = lib.mkDefault "backup";
             # Pass inputs to Home Manager modules
             home-manager.extraSpecialArgs = { inherit inputs; };
           }

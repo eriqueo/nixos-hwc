@@ -56,7 +56,7 @@ let
 
       # Environment variables
       (mkIf (environment != {}) {
-        Environment = lib.mapAttrsToList (name: value: "${name}=${value}") environment;
+        Environment = lib.mapAttrsToList (k: v: "${k}=${v}") environment;
       })
 
       # Security hardening
