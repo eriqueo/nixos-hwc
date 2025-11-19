@@ -92,7 +92,7 @@ in
       keepDaily = 7;
       keepWeekly = 4;
       keepMonthly = 6;
-      minSpaceGB = 10;
+      minSpaceGB = lib.mkDefault 10;
       sources = [ "/home" "/etc/nixos" ];
       # Exclude patterns to reduce backup size
       excludePatterns = [
