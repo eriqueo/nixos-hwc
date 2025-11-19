@@ -2,6 +2,9 @@
 let
   cfg = config.hwc.system.services.protonmail-bridge;
   bridgePkg = pkgs.protonmail-bridge;
+
+  # Get username from system configuration
+  userName = config.hwc.system.users.user.name;
 in
 {
   imports = [ ./options.nix ];
@@ -48,7 +51,7 @@ in
         PermissionsStartOnly = true;
 
         ExecStartPre = pkgs.writeShellScript "proton-bridge-init" ''
-          if ${pkgs.procps}/bin/pgrep -u eric -f "protonmail-bridge" | ${pkgs.findutils}/bin/xargs -r ${pkgs.procps}/bin/ps -p 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "/bin/protonmail-bridge"; then
+          if ${pkgs.procps}/bin/pgrep -u ${userName} -f "protonmail-bridge" | ${pkgs.findutils}/bin/xargs -r ${pkgs.procps}/bin/ps -p 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "/bin/protonmail-bridge"; then
             echo "user-scoped protonmail-bridge detected; stop it before starting system unit" >&2
             exit 1
           fi

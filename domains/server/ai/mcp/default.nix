@@ -3,6 +3,10 @@ let
   cfg = config.hwc.server.ai.mcp;
   inherit (lib) mkIf mkMerge concatStringsSep;
 
+  # Get username from system configuration
+  userName = config.hwc.system.users.user.name;
+  userHome = config.users.users.${userName}.home;
+
   #==========================================================================
   # REUSABLE MCP SERVICE TEMPLATE
   #==========================================================================
@@ -64,7 +68,7 @@ let
         # Filesystem protection (relaxed for npx compatibility)
         # npx needs access to /bin/sh and other system binaries
         ProtectSystem = "true";  # Changed from "strict" to allow /bin, /sbin access
-        ProtectHome = mkIf (user != "eric") true;  # Don't protect if running as eric
+        ProtectHome = mkIf (user != userName) true;  # Don't protect if running as primary user
 
         # Network restrictions (MCP servers typically don't need network)
         # If your MCP server needs network access, override this
@@ -120,6 +124,26 @@ in
       environment.systemPackages = with pkgs; [
         nodejs_22      # Required for @modelcontextprotocol/server-filesystem
         mcp-proxy      # stdio ↔ HTTP bridge
+      ];
+    }
+
+    #--------------------------------------------------------------------------
+    # DYNAMIC DEFAULTS - Set user-specific paths
+    #--------------------------------------------------------------------------
+    {
+      hwc.server.ai.mcp.filesystem.nixos = mkMerge [
+        (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.user == "") {
+          user = lib.mkDefault userName;
+        })
+        (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.allowedDirs == []) {
+          allowedDirs = lib.mkDefault [
+            "${userHome}/.nixos"
+            "${userHome}/.nixos-mcp-drafts"
+          ];
+        })
+        (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.draftsDir == "/tmp/.nixos-mcp-drafts") {
+          draftsDir = lib.mkDefault "${userHome}/.nixos-mcp-drafts";
+        })
       ];
     }
 

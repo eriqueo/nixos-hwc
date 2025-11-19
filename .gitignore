@@ -23,7 +23,11 @@ secrets/keys/*
 .archive/
 .aider*
 
-# Claude Code
+# Claude Code - Machine-specific and generated configs
 .mcp.json
+.mcp.laptop.json
+.mcp.server.json
+.claude/settings.local.json
+.claude/.claude/settings.local.json
 .claude/auto-push-cron.sh
 .claude/auto-push.log

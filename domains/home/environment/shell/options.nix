@@ -193,5 +193,26 @@
         description = "Enable grebuild script for NixOS rebuilding";
       };
     };
+
+    # MCP (Model Context Protocol) configuration
+    mcp = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable MCP configuration file generation for Claude Desktop";
+      };
+
+      includeConfigDir = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Include user config directory in filesystem MCP server (laptop only)";
+      };
+
+      includeServerTools = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Include server-specific MCP tools (postgres, prometheus, puppeteer)";
+      };
+    };
   };
 }
