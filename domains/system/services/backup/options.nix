@@ -202,5 +202,72 @@
       default = null;
       description = "Script to run after backup completes";
     };
+
+    #==========================================================================
+    # DATABASE CONSISTENCY OPTIONS
+    #==========================================================================
+    database = {
+      postgres = {
+        enable = lib.mkEnableOption "PostgreSQL consistent backups (pg_basebackup + WAL)";
+
+        pitr = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable Point-In-Time Recovery with WAL archiving";
+        };
+      };
+
+      mysql = {
+        enable = lib.mkEnableOption "MySQL/MariaDB consistent backups";
+      };
+
+      redis = {
+        enable = lib.mkEnableOption "Redis RDB snapshots";
+      };
+
+      docker = {
+        enable = lib.mkEnableOption "Docker volume backups";
+      };
+    };
+
+    #==========================================================================
+    # ENCRYPTION OPTIONS
+    #==========================================================================
+    encryption = {
+      local = {
+        enable = lib.mkEnableOption "Encrypt local backups at rest";
+
+        method = lib.mkOption {
+          type = lib.types.enum [ "luks" "gocryptfs" "rclone-crypt" ];
+          default = "luks";
+          description = "Encryption method for local backups";
+        };
+
+        luksDevice = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "/dev/disk/by-uuid/...";
+          description = "LUKS device path (if using LUKS encryption)";
+        };
+      };
+
+      cloud = {
+        enable = lib.mkEnableOption "Encrypt cloud backups (client-side)";
+
+        password = {
+          useSecret = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Use agenix secret for encryption password";
+          };
+
+          secretName = lib.mkOption {
+            type = lib.types.str;
+            default = "backup-encryption-password";
+            description = "Name of agenix secret containing encryption password";
+          };
+        };
+      };
+    };
   };
 }
