@@ -1,28 +1,40 @@
 # HWC Charter Module/domains/services/transcript-api.nix
 #
-# TRANSCRIPT API - Brief service description
-# TODO: Add detailed description of what this module provides
+# TRANSCRIPT API - YouTube transcript extraction REST API
+# Provides a REST API for extracting transcripts from YouTube videos and playlists
 #
 # DEPENDENCIES (Upstream):
-#   - TODO: List upstream dependencies
 #   - config.hwc.paths.* (modules/system/paths.nix)
+#   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify
 #
 # USED BY (Downstream):
-#   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.transcript-api.enable)
+#   - profiles/*.nix (enables via hwc.services.transcriptApi.enable)
 #
 # IMPORTS REQUIRED IN:
-#   - profiles/profile.nix: ../domains/services/transcript-api.nix
+#   - profiles/server.nix: ../domains/server/networking/parts/transcript-api.nix
 #
 # USAGE:
-#   hwc.services.transcript-api.enable = true;
-#   # TODO: Add specific usage examples
+#   hwc.services.transcriptApi.enable = true;
 
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.transcriptApi;
   paths = config.hwc.paths;
-  scriptPath = "${paths.nixos}/scripts/yt_transcript.py";
+
+  # Python environment with all required dependencies
+  pythonEnv = pkgs.python3.withPackages (ps: with ps; [
+    fastapi
+    uvicorn
+    pydantic
+    httpx
+    yt-dlp
+    youtube-transcript-api
+    python-slugify
+  ]);
+
+  # Source directory for transcript scripts
+  scriptDir = "${paths.nixos}/workspace/productivity/transcript-formatter";
+  apiScript = "${scriptDir}/yt-transcript-api.py";
 in {
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
@@ -32,20 +44,25 @@ in {
       description = "YouTube Transcript API";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
-      
+
       environment = {
+        API_HOST = "0.0.0.0";
         API_PORT = toString cfg.port;
-        DATA_DIR = cfg.dataDir;
+        TRANSCRIPTS_ROOT = cfg.dataDir;
+        LANGS = "en,en-US,en-GB";
+        PYTHONPATH = scriptDir;
       };
-      
+
       serviceConfig = {
-        ExecStart = "${pkgs.python3}/bin/python ${scriptPath}";
+        ExecStart = "${pythonEnv}/bin/python ${apiScript}";
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
-        DynamicUser = true;
+        WorkingDirectory = scriptDir;
+        DynamicUser = false;
+        User = "root";  # Needs access to /mnt/media
       };
     };
-    
+
     networking.firewall.allowedTCPPorts = [ cfg.port ];
   };
 }
