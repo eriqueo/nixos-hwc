@@ -19,13 +19,42 @@ in
       enable = true;
       host = cfg.settings.host;
       port = cfg.settings.port;
-      mediaLocation = cfg.settings.mediaLocation;
+      mediaLocation = if cfg.storage.enable
+        then cfg.storage.locations.library
+        else cfg.settings.mediaLocation;
       database = {
         createDB = cfg.database.createDB;
         name = cfg.database.name;
         user = cfg.database.user;
       };
       redis.enable = cfg.redis.enable;
+
+      # Configure separate storage locations via environment variables
+      environment = lib.mkIf cfg.storage.enable {
+        UPLOAD_LOCATION = cfg.storage.locations.library;
+        THUMB_LOCATION = cfg.storage.locations.thumbs;
+        ENCODED_VIDEO_LOCATION = cfg.storage.locations.encodedVideo;
+        PROFILE_LOCATION = cfg.storage.locations.profile;
+      };
+    };
+
+    # Create storage directories
+    systemd.tmpfiles.rules = lib.mkIf cfg.storage.enable [
+      "d ${cfg.storage.basePath} 0750 immich immich -"
+      "d ${cfg.storage.locations.library} 0750 immich immich -"
+      "d ${cfg.storage.locations.thumbs} 0750 immich immich -"
+      "d ${cfg.storage.locations.encodedVideo} 0750 immich immich -"
+      "d ${cfg.storage.locations.profile} 0750 immich immich -"
+      "d ${cfg.backup.databaseBackupPath} 0750 postgres postgres -"
+    ];
+
+    # PostgreSQL database backup service
+    services.postgresqlBackup = lib.mkIf (cfg.backup.enable && cfg.backup.includeDatabase) {
+      enable = true;
+      databases = [ cfg.database.name ];
+      location = cfg.backup.databaseBackupPath;
+      startAt = if cfg.backup.schedule == "hourly" then "hourly" else "*-*-* 02:00:00";
+      compression = "zstd";
     };
 
     # GPU acceleration configuration (matching /etc/nixos pattern)
@@ -43,7 +72,9 @@ in
             "/dev/nvidia-uvm-tools rw"
           ];
           # Allow access to both new uploads and external library directories
-          ReadWritePaths = [ cfg.settings.mediaLocation ];
+          ReadWritePaths = if cfg.storage.enable
+            then [ cfg.storage.basePath ]
+            else [ cfg.settings.mediaLocation ];
           ReadOnlyPaths = [ "/mnt/media/pictures" ];
           # Add user to GPU groups via supplementary groups
           SupplementaryGroups = [ "video" "render" ];
@@ -103,6 +134,20 @@ in
         assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
         message = "hwc.server.immich.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
       }
+      {
+        assertion = !cfg.storage.enable || (cfg.storage.basePath != "");
+        message = "hwc.server.immich.storage requires basePath to be set";
+      }
+      {
+        assertion = !(cfg.backup.enable && cfg.backup.includeDatabase) || config.services.postgresql.enable;
+        message = "hwc.server.immich.backup.includeDatabase requires PostgreSQL to be enabled";
+      }
     ];
+
+    #==========================================================================
+    # WARNINGS AND NOTICES
+    #==========================================================================
+    warnings = lib.optional (cfg.enable && !cfg.backup.enable)
+      "Immich backup is disabled. Your photos and database will NOT be backed up automatically!";
   };
 }
