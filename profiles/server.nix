@@ -330,6 +330,13 @@
     domain = "hwc.ocelot-wahoo.ts.net";
   };
 
+  # YouTube Transcript API
+  hwc.services.transcriptApi = {
+    enable = true;
+    port = 8099;
+    dataDir = "/mnt/media/transcripts";
+  };
+
   # Phase 6: Support Services - Storage Automation
   hwc.services.storage = {
     enable = true;
