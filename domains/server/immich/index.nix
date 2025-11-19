@@ -19,8 +19,10 @@ in
       enable = true;
       host = cfg.settings.host;
       port = cfg.settings.port;
+      # mediaLocation should be base path when storage.enable is true
+      # Immich appends /library, /thumbs, etc. automatically based on environment variables
       mediaLocation = if cfg.storage.enable
-        then cfg.storage.locations.library
+        then cfg.storage.basePath
         else cfg.settings.mediaLocation;
       database = {
         createDB = cfg.database.createDB;
@@ -30,8 +32,9 @@ in
       redis.enable = cfg.redis.enable;
 
       # Configure separate storage locations via environment variables
+      # Note: UPLOAD_LOCATION should be the base path - Immich appends /library automatically
       environment = lib.mkIf cfg.storage.enable {
-        UPLOAD_LOCATION = cfg.storage.locations.library;
+        UPLOAD_LOCATION = cfg.storage.basePath;
         THUMB_LOCATION = cfg.storage.locations.thumbs;
         ENCODED_VIDEO_LOCATION = cfg.storage.locations.encodedVideo;
         PROFILE_LOCATION = cfg.storage.locations.profile;

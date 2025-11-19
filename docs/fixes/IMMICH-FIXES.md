@@ -1,4 +1,18 @@
-# Immich Database Migration Fix
+# Immich Fixes
+
+## Issue 1: Storage Path Configuration (SOLVED ✅)
+
+**Issue:** Immich crash loop with error: `Failed to read /mnt/photos/library/library/.immich`
+
+**Root Cause:** Configuration bug causing duplicate path segments. Both `UPLOAD_LOCATION` and `mediaLocation` were set to `/mnt/photos/library`, but Immich automatically appends `/library` to the base path, creating `/mnt/photos/library/library/.immich`.
+
+**Fix Applied:** Changed both settings to use `cfg.storage.basePath` (`/mnt/photos`) instead of `cfg.storage.locations.library`.
+
+**Status:** ✅ **FIXED** - Immich now running successfully on both server instances.
+
+---
+
+## Issue 2: Database Migration Errors
 
 **Issue:** `relation "asset_metadata_audit" already exists`
 
