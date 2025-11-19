@@ -48,7 +48,10 @@ in
       ];
 
     # Environment variables
-    home.sessionVariables = cfg.sessionVariables;
+    home.sessionVariables = cfg.sessionVariables // {
+      # Override HWC_NIXOS_DIR to use dynamic home directory
+      HWC_NIXOS_DIR = "${config.home.homeDirectory}/.nixos";
+    };
 
     # Modern Unix replacements configuration
     programs.eza = lib.mkIf cfg.modernUnix {
@@ -117,7 +120,11 @@ in
         size = 5000;
         save = 5000;
       };
-      shellAliases = cfg.aliases;
+      shellAliases = cfg.aliases // {
+        # Override SSH aliases to use dynamic username
+        "homeserver" = "ssh ${config.home.username}@100.115.126.41";
+        "server" = "ssh ${config.home.username}@100.115.126.41";
+      };
       initContent = ''
         # Helper functions for enhanced shell experience
         
@@ -137,7 +144,7 @@ in
 
         # add-app shell function
         add-app() {
-          /home/eric/.nixos/workspace/infrastructure/filesystem/add-home-app.sh "$@"
+          ${config.home.homeDirectory}/.nixos/workspace/infrastructure/filesystem/add-home-app.sh "$@"
         }
       '';
     };
@@ -158,6 +165,76 @@ in
       keyMode = "vi";
       mouse = true;
       extraConfig = cfg.tmux.extraConfig;
+    };
+
+    # MCP (Model Context Protocol) configuration for Claude Desktop
+    # Generate .mcp.json with dynamic paths
+    home.file.".mcp.json" = lib.mkIf cfg.mcp.enable {
+      text = builtins.toJSON {
+        mcpServers = {
+          filesystem = {
+            command = "npx";
+            args = [
+              "-y"
+              "@modelcontextprotocol/server-filesystem"
+              "${config.home.homeDirectory}/.nixos"
+              "/etc/nixos"
+            ] ++ lib.optionals cfg.mcp.includeConfigDir [
+              "${config.xdg.configHome}"
+            ];
+          };
+          git = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-git" ];
+            cwd = "${config.home.homeDirectory}/.nixos";
+          };
+          brave-search = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-brave-search" ];
+            env = {};
+          };
+          github = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-github" ];
+            env = {};
+          };
+          sequential-thinking = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-sequential-thinking" ];
+          };
+          time = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-time" ];
+          };
+          fetch = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-fetch" ];
+          };
+          memory = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-memory" ];
+          };
+        } // lib.optionalAttrs cfg.mcp.includeServerTools {
+          postgres = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-postgres" ];
+            env = {
+              POSTGRES_CONNECTION_STRING = "postgresql://localhost:5432/postgres";
+            };
+          };
+          prometheus = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-prometheus" ];
+            env = {
+              PROMETHEUS_URL = "http://localhost:9090";
+            };
+          };
+          puppeteer = {
+            command = "npx";
+            args = [ "-y" "@modelcontextprotocol/server-puppeteer" ];
+          };
+        };
+      };
     };
   };
 

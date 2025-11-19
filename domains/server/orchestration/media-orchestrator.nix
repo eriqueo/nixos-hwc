@@ -4,6 +4,11 @@ let
   cfgRoot = "/opt/downloads";
   paths = config.hwc.paths;
   hotRoot = "/mnt/hot";
+
+  # Get username from system configuration
+  userName = config.hwc.system.users.user.name;
+  userHome = config.users.users.${userName}.home;
+  workspaceDir = "${userHome}/.nixos/workspace";
 in
 {
   options.hwc.server.orchestration.mediaOrchestrator = {
@@ -22,9 +27,9 @@ in
         mkdir -p ${cfgRoot}/scripts ${hotRoot}/events
 
         # Deploy automation scripts from workspace
-        cp /home/eric/.nixos/workspace/automation/media-orchestrator.py ${cfgRoot}/scripts/
-        cp /home/eric/.nixos/workspace/automation/qbt-finished.sh ${cfgRoot}/scripts/
-        cp /home/eric/.nixos/workspace/automation/sab-finished.py ${cfgRoot}/scripts/
+        cp ${workspaceDir}/automation/media-orchestrator.py ${cfgRoot}/scripts/
+        cp ${workspaceDir}/automation/qbt-finished.sh ${cfgRoot}/scripts/
+        cp ${workspaceDir}/automation/sab-finished.py ${cfgRoot}/scripts/
         chmod +x ${cfgRoot}/scripts/*.py ${cfgRoot}/scripts/*.sh
 
         chown -R 1000:1000 ${cfgRoot}/scripts ${hotRoot}/events
