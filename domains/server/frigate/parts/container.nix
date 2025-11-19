@@ -5,11 +5,39 @@
 let
   cfg = config.hwc.server.frigate;
 
+  # Hardware acceleration preset mapping
+  hwaccelPreset =
+    if cfg.hwaccel.preset != null then cfg.hwaccel.preset
+    else if cfg.hwaccel.type == "vaapi" then "preset-vaapi"
+    else if cfg.hwaccel.type == "qsv-h264" then "preset-intel-qsv-h264"
+    else if cfg.hwaccel.type == "qsv-h265" then "preset-intel-qsv-h265"
+    else null;  # nvidia and cpu use custom args
+
+  # Generate hwaccel_args based on acceleration type
+  hwaccelArgs =
+    if cfg.hwaccel.type == "nvidia" then ''
+hwaccel_args:
+  - -hwaccel
+  - nvdec
+  - -hwaccel_device
+  - "${cfg.hwaccel.device}"
+  - -hwaccel_output_format
+  - yuv420p''
+    else if hwaccelPreset != null then ''
+hwaccel_args: ${hwaccelPreset}''
+    else "";  # cpu mode - no hwaccel args
+
+  # Environment variables for NVIDIA GPU (object detection)
   gpuEnv = lib.optionalAttrs cfg.gpu.enable {
     NVIDIA_VISIBLE_DEVICES = "all";
     NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility";
     CUDA_VISIBLE_DEVICES = toString cfg.gpu.device;
     LD_LIBRARY_PATH = "/run/opengl-driver/lib:/run/opengl-driver-32/lib";
+  };
+
+  # Environment variables for Intel VAAPI
+  intelEnv = lib.optionalAttrs (cfg.hwaccel.type == "vaapi" || cfg.hwaccel.type == "qsv-h264" || cfg.hwaccel.type == "qsv-h265") {
+    LIBVA_DRIVER_NAME = cfg.hwaccel.vaapiDriver;
   };
 
   tensorrtEnv = lib.optionalAttrs (cfg.gpu.detector == "tensorrt") {
@@ -69,15 +97,7 @@ detectors:
 ''}
 
 ffmpeg: &ffmpeg_defaults
-  ${lib.optionalString cfg.gpu.enable ''
-hwaccel_args:
-  - -hwaccel
-  - nvdec
-  - -hwaccel_device
-  - "${toString cfg.gpu.device}"
-  - -hwaccel_output_format
-  - yuv420p
-''}
+  ${lib.optionalString (cfg.hwaccel.type != "cpu") hwaccelArgs}
   input_args:
     - -rtsp_transport
     - tcp
@@ -166,15 +186,19 @@ EOF
         "--shm-size=${cfg.resources.shmSize}"
         "--memory=${cfg.resources.memory}"
         "--cpus=${cfg.resources.cpus}"
-      ] ++ lib.optionals cfg.gpu.enable [
+      ]
+      # NVIDIA GPU device passthrough (for object detection)
+      ++ lib.optionals cfg.gpu.enable [
         "--device=nvidia.com/gpu=${toString cfg.gpu.device}"
+      ]
+      # Intel iGPU device passthrough (for VAAPI/QSV video acceleration)
+      ++ lib.optionals (cfg.hwaccel.type == "vaapi" || cfg.hwaccel.type == "qsv-h264" || cfg.hwaccel.type == "qsv-h265") [
+        "--device=${cfg.hwaccel.device}:${cfg.hwaccel.device}"
       ];
 
       environment = {
         TZ = cfg.settings.timezone;
-        LIBVA_DRIVER_NAME = lib.mkIf cfg.gpu.enable "nvidia";
-        VDPAU_DRIVER = lib.mkIf cfg.gpu.enable "nvidia";
-      } // gpuEnv // tensorrtEnv;
+      } // gpuEnv // intelEnv // tensorrtEnv;
 
       volumes = [
         "${cfg.storage.configPath}:/config"
