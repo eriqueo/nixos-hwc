@@ -89,9 +89,9 @@ in
       enable = lib.mkDefault false;  # Enable per-machine
       mountPoint = lib.mkDefault "/mnt/backup";
       useRsync = true;  # Incremental backups with hard-link snapshots
-      keepDaily = 7;
-      keepWeekly = 4;
-      keepMonthly = 6;
+      keepDaily = lib.mkDefault 7;
+      keepWeekly = lib.mkDefault 4;
+      keepMonthly = lib.mkDefault 6;
       minSpaceGB = lib.mkDefault 10;
       sources = [ "/home" "/etc/nixos" ];
       # Exclude patterns to reduce backup size
