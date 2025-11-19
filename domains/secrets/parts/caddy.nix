@@ -1,7 +1,9 @@
 # domains/secrets/parts/caddy.nix
-{ config, ... }:
+{ config, lib, ... }:
 {
-  config = {
+  # Only declare caddy secrets when reverse proxy (Caddy) is enabled
+  # Prevents chown errors on laptops that don't have the caddy user
+  config = lib.mkIf (config.options ? hwc.services.reverseProxy && config.hwc.services.reverseProxy.enable) {
     age.secrets."caddy-cert" = {
       file = ./caddy/hwc.ocelot-wahoo.ts.net.crt.age;
       owner = "caddy";
