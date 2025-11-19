@@ -91,9 +91,9 @@
     # Automatic scheduling
     schedule = {
       enable = true;
-      frequency = "weekly";  # Weekly backups for server
-      timeOfDay = "03:00";   # Run at 3 AM on the scheduled day
-      onlyOnAC = false;      # Server is always plugged in
+      frequency = lib.mkForce "weekly";  # Weekly backups for server
+      timeOfDay = lib.mkForce "03:00";   # Run at 3 AM on the scheduled day
+      onlyOnAC = lib.mkForce false;      # Server is always plugged in
     };
   };
 
@@ -169,23 +169,25 @@
   };
 
   # MCP (Model Context Protocol) server for LLM access
-  hwc.server.ai.mcp = {
-    enable = true;
-
-    # Filesystem MCP for ~/.nixos directory
-    filesystem.nixos = {
-      enable = true;
-      # Defaults:
-      # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
-      # - user: "eric"
-    };
-
-    # HTTP proxy for remote access
-    proxy.enable = true;  # Listen on localhost:6001
-
-    # Expose via Caddy at /mcp-nixos
-    reverseProxy.enable = true;
-  };
+  # TEMPORARILY DISABLED - infinite recursion in userName evaluation
+  hwc.server.ai.mcp.enable = false;
+  # hwc.server.ai.mcp = {
+  #   enable = true;
+  #
+  #   # Filesystem MCP for ~/.nixos directory
+  #   filesystem.nixos = {
+  #     enable = true;
+  #     # Defaults:
+  #     # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
+  #     # - user: "eric"
+  #   };
+  #
+  #   # HTTP proxy for remote access
+  #   proxy.enable = true;  # Listen on localhost:6001
+  #
+  #   # Expose via Caddy at /mcp-nixos
+  #   reverseProxy.enable = true;
+  # };
 
   # CouchDB for Obsidian LiveSync
   hwc.server.couchdb = {
@@ -264,12 +266,12 @@
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
-    X11Forwarding = lib.mkForce true;
+    X11Forwarding = lib.mkForce false;  # Headless server doesn't need X11 forwarding
     PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
   };
   services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
-  # Enable X11 services for forwarding
-  services.xserver.enable = true;
+  # X11 services disabled for headless server
+  # services.xserver.enable = true;
 
   # Server-specific packages moved to modules/system/server-packages.nix
   hwc.system.packages.server.enable = true;

@@ -51,10 +51,14 @@ EOF
 in
 {
   config = lib.mkIf cfg.enable {
-    # Create SLSKD configuration directory
+    # Create SLSKD configuration and download directories
     systemd.tmpfiles.rules = [
       "d /var/lib/slskd 0755 root root -"
       "d /etc/slskd 0755 root root -"
+      "d ${hotRoot}/downloads 0755 eric users -"
+      "d ${hotRoot}/downloads/incomplete 0755 eric users -"
+      "d ${hotRoot}/downloads/complete 0755 eric users -"
+      "d ${hotRoot}/downloads/music 0755 eric users -"
     ];
 
     # Systemd service to generate config from secrets before container starts

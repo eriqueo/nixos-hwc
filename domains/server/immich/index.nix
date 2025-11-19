@@ -46,6 +46,11 @@ in
       "d ${cfg.storage.locations.encodedVideo} 0750 immich immich -"
       "d ${cfg.storage.locations.profile} 0750 immich immich -"
       "d ${cfg.backup.databaseBackupPath} 0750 postgres postgres -"
+      # Create .immich marker files for mount verification
+      "f ${cfg.storage.locations.library}/.immich 0600 immich immich -"
+      "f ${cfg.storage.locations.thumbs}/.immich 0600 immich immich -"
+      "f ${cfg.storage.locations.encodedVideo}/.immich 0600 immich immich -"
+      "f ${cfg.storage.locations.profile}/.immich 0600 immich immich -"
     ];
 
     # PostgreSQL database backup service
