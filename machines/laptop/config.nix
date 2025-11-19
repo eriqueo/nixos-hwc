@@ -181,9 +181,9 @@
     };
   };
 
-  # Avoid container engines on the laptop (keep them in server profiles).
-  virtualisation.podman.enable = lib.mkForce false;
-  virtualisation.docker.enable = lib.mkForce false;
+  # Container engines enabled for Ollama AI workloads
+  # Podman is required by hwc.server.ai.ollama module
+  virtualisation.docker.enable = lib.mkForce false;  # Use podman, not docker
 
   # --- Declarative libvirt storage pool (requires NixVirt in flake) --
   # Commented out until NixVirt module is imported in flake.nix
