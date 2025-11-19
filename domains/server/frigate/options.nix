@@ -68,19 +68,67 @@ in
       };
     };
 
+    # Hardware Acceleration Configuration
+    hwaccel = {
+      type = mkOption {
+        type = types.enum [ "nvidia" "vaapi" "qsv-h264" "qsv-h265" "cpu" ];
+        default = "cpu";
+        description = ''
+          FFmpeg hardware acceleration type:
+          - nvidia: NVIDIA GPU (nvdec) - high power, good performance
+          - vaapi: Intel VAAPI - recommended, auto-detects H.264/H.265
+          - qsv-h264: Intel QuickSync for H.264 only
+          - qsv-h265: Intel QuickSync for H.265 only
+          - cpu: Software decoding (no acceleration)
+        '';
+      };
+
+      device = mkOption {
+        type = types.str;
+        default = "/dev/dri/renderD128";
+        description = "Hardware acceleration device path (Intel: /dev/dri/renderD128, NVIDIA: device number)";
+      };
+
+      vaapiDriver = mkOption {
+        type = types.enum [ "iHD" "i965" ];
+        default = "iHD";
+        description = ''
+          VAAPI driver selection:
+          - iHD: Modern Intel GPUs (6th gen+, recommended)
+          - i965: Legacy Intel GPUs (older than 6th gen, e.g., J4125)
+        '';
+      };
+
+      preset = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''
+          Override FFmpeg preset name (advanced).
+          If null, automatically uses: preset-vaapi, preset-intel-qsv-h264, etc.
+        '';
+      };
+    };
+
+    # GPU Acceleration for Object Detection (separate from video decoding)
     gpu = {
       enable = mkEnableOption "GPU acceleration for object detection";
 
       device = mkOption {
         type = types.int;
         default = 0;
-        description = "GPU device number";
+        description = "GPU device number for object detection";
       };
 
       detector = mkOption {
-        type = types.enum [ "tensorrt" "cpu" "onnx" ];
+        type = types.enum [ "tensorrt" "cpu" "onnx" "openvino" ];
         default = "cpu";
-        description = "Detector type";
+        description = ''
+          Object detector type:
+          - cpu: CPU-based detection (universal, slower)
+          - onnx: ONNX with CUDA (NVIDIA GPUs)
+          - tensorrt: TensorRT (NVIDIA, deprecated on amd64)
+          - openvino: OpenVINO (Intel iGPU, very efficient)
+        '';
       };
 
       useFP16 = mkOption {

@@ -180,11 +180,29 @@
   hwc.server.frigate = {
     enable = true;
 
+    # Hardware Acceleration for Video Decoding
+    # CURRENT: Using NVIDIA nvdec (works but power-hungry ~15-25W)
+    # RECOMMENDED: Switch to Intel VAAPI for power efficiency (~5-10W savings)
+    hwaccel = {
+      type = "nvidia";  # Options: "nvidia" | "vaapi" | "qsv-h264" | "qsv-h265" | "cpu"
+      device = "0";     # NVIDIA: device number | Intel: /dev/dri/renderD128
+      # vaapiDriver = "iHD";  # Only for Intel: "iHD" (modern) or "i965" (legacy like J4125)
+    };
+
+    # GPU Acceleration for Object Detection (separate from video decoding)
     gpu = {
       enable = true;
       detector = "onnx";  # ONNX with CUDA for GPU acceleration (TensorRT deprecated on amd64)
       useFP16 = false;  # Pascal GPU (P1000) requires FP16 disabled
     };
+
+    # TO MIGRATE TO INTEL iGPU (when enabled):
+    # 1. Enable Intel GPU: hwc.infrastructure.hardware.gpu.type = "intel"
+    # 2. Change hwaccel.type = "vaapi" (recommended, auto-detects H.264/H.265)
+    # 3. Change hwaccel.device = "/dev/dri/renderD128"
+    # 4. Set hwaccel.vaapiDriver = "iHD" (or "i965" for older CPUs)
+    # 5. Optional: Change gpu.detector = "openvino" for Intel iGPU ML acceleration
+    # Expected savings: ~50% CPU reduction, 20-40% power reduction vs NVIDIA
 
     mqtt.enable = true;
 
