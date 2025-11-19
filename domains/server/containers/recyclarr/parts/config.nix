@@ -145,16 +145,16 @@ in
     #=========================================================================
     assertions = [
       {
-        assertion = cfg.services.sonarr.enable -> (config.age.secrets ? cfg.services.sonarr.apiKeySecret);
-        message = "Recyclarr Sonarr sync requires sonarr-api-key secret to be configured";
+        assertion = !cfg.services.sonarr.enable || builtins.hasAttr cfg.services.sonarr.apiKeySecret config.age.secrets;
+        message = "Recyclarr Sonarr sync requires ${cfg.services.sonarr.apiKeySecret} secret to be configured";
       }
       {
-        assertion = cfg.services.radarr.enable -> (config.age.secrets ? cfg.services.radarr.apiKeySecret);
-        message = "Recyclarr Radarr sync requires radarr-api-key secret to be configured";
+        assertion = !cfg.services.radarr.enable || builtins.hasAttr cfg.services.radarr.apiKeySecret config.age.secrets;
+        message = "Recyclarr Radarr sync requires ${cfg.services.radarr.apiKeySecret} secret to be configured";
       }
       {
-        assertion = cfg.services.lidarr.enable -> (config.age.secrets ? cfg.services.lidarr.apiKeySecret);
-        message = "Recyclarr Lidarr sync requires lidarr-api-key secret to be configured";
+        assertion = !cfg.services.lidarr.enable || builtins.hasAttr cfg.services.lidarr.apiKeySecret config.age.secrets;
+        message = "Recyclarr Lidarr sync requires ${cfg.services.lidarr.apiKeySecret} secret to be configured";
       }
     ];
 
