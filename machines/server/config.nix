@@ -169,25 +169,24 @@
   };
 
   # MCP (Model Context Protocol) server for LLM access
-  # TEMPORARILY DISABLED - infinite recursion in userName evaluation
-  hwc.server.ai.mcp.enable = false;
-  # hwc.server.ai.mcp = {
-  #   enable = true;
-  #
-  #   # Filesystem MCP for ~/.nixos directory
-  #   filesystem.nixos = {
-  #     enable = true;
-  #     # Defaults:
-  #     # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
-  #     # - user: "eric"
-  #   };
-  #
-  #   # HTTP proxy for remote access
-  #   proxy.enable = true;  # Listen on localhost:6001
-  #
-  #   # Expose via Caddy at /mcp-nixos
-  #   reverseProxy.enable = true;
-  # };
+  # Re-enabled: infinite recursion fixed by resolving variable shadowing in MCP module
+  hwc.server.ai.mcp = {
+    enable = true;
+
+    # Filesystem MCP for ~/.nixos directory
+    filesystem.nixos = {
+      enable = true;
+      # Defaults:
+      # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
+      # - user: "eric"
+    };
+
+    # HTTP proxy for remote access
+    proxy.enable = true;  # Listen on localhost:6001
+
+    # Expose via Caddy at /mcp-nixos
+    reverseProxy.enable = true;
+  };
 
   # CouchDB for Obsidian LiveSync
   hwc.server.couchdb = {
