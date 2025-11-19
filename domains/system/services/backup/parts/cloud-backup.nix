@@ -167,12 +167,9 @@ in
 
         # Timeout after 6 hours (cloud can be slow)
         TimeoutSec = "6h";
-
+      } // lib.optionalAttrs cfg.schedule.onlyOnAC {
         # Only run on AC power for laptops
-        ${lib.optionalString cfg.schedule.onlyOnAC ''
-          # Condition for AC power (only on laptops)
-          ConditionACPower = true;
-        ''}
+        ConditionACPower = true;
       };
 
       # Only start on-demand if scheduling is disabled
