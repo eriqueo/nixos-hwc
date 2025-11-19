@@ -30,22 +30,22 @@ in
 
         allowedDirs = mkOption {
           type = types.listOf types.str;
-          default = [
-            "/home/eric/.nixos"
-            "/home/eric/.nixos-mcp-drafts"
-          ];
+          # Note: This will be dynamically set in default.nix based on actual user
+          default = [];
           description = "Directories accessible to the filesystem MCP server";
         };
 
         draftsDir = mkOption {
           type = types.path;
-          default = "/home/eric/.nixos-mcp-drafts";
+          # Note: This will be dynamically set in default.nix based on actual user
+          default = "/tmp/.nixos-mcp-drafts";
           description = "Directory for LLM-proposed changes (read/write)";
         };
 
         user = mkOption {
           type = types.str;
-          default = "eric";
+          # Note: This will be dynamically set in default.nix based on actual user config
+          default = "";
           description = "User to run the filesystem MCP server as";
         };
       };
