@@ -51,6 +51,28 @@ EOF
 in
 {
   config = lib.mkIf cfg.enable {
+
+    #=========================================================================
+    # ASSERTIONS AND VALIDATION
+    #=========================================================================
+    assertions = [
+      {
+        assertion = config.age.secrets ? slskd-web-username
+                  && config.age.secrets ? slskd-web-password
+                  && config.age.secrets ? slskd-soulseek-username
+                  && config.age.secrets ? slskd-soulseek-password
+                  && config.age.secrets ? slskd-api-key;
+        message = "SLSKD requires all secrets to be configured (web-username, web-password, soulseek-username, soulseek-password, api-key)";
+      }
+      {
+        assertion = config.hwc.paths ? hot;
+        message = "SLSKD requires hwc.paths.hot to be configured for downloads";
+      }
+    ];
+
+    #=========================================================================
+    # SYSTEMD TMPFILES
+    #=========================================================================
     # Create SLSKD configuration directory
     systemd.tmpfiles.rules = [
       "d /var/lib/slskd 0755 root root -"
@@ -70,6 +92,9 @@ in
       };
     };
 
+    #=========================================================================
+    # CONTAINER CONFIGURATION
+    #=========================================================================
     # Container definition
     virtualisation.oci-containers.containers.slskd = {
       image = cfg.image;
@@ -95,9 +120,15 @@ in
       };
     };
 
+    #=========================================================================
+    # FIREWALL CONFIGURATION
+    #=========================================================================
     # Firewall configuration - SLSKD requires dedicated port
     networking.firewall.allowedTCPPorts = [ 50300 5031 ];
 
+    #=========================================================================
+    # SYSTEMD SERVICE DEPENDENCIES
+    #=========================================================================
     # Service dependencies
     systemd.services."podman-slskd".after = [ "network-online.target" "init-media-network.service" "slskd-config-generator.service" ];
     systemd.services."podman-slskd".wants = [ "network-online.target" ];

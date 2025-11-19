@@ -7,6 +7,20 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
+
+    #=========================================================================
+    # ASSERTIONS AND VALIDATION
+    #=========================================================================
+    assertions = [
+      {
+        assertion = config.age.secrets ? vpn-username && config.age.secrets ? vpn-password;
+        message = "Gluetun requires vpn-username and vpn-password secrets to be configured";
+      }
+    ];
+
+    #=========================================================================
+    # SECRETS GENERATION
+    #=========================================================================
     # Gluetun environment file setup from agenix secrets
     systemd.services.gluetun-env-setup = {
       description = "Generate Gluetun env from agenix secrets";
@@ -33,6 +47,9 @@ EOF
       '';
     };
 
+    #=========================================================================
+    # CONTAINER CONFIGURATION
+    #=========================================================================
     # Container definition
     virtualisation.oci-containers.containers.gluetun = {
       image = cfg.image;
@@ -56,6 +73,9 @@ EOF
       };
     };
 
+    #=========================================================================
+    # SYSTEMD SERVICE DEPENDENCIES
+    #=========================================================================
     # Service dependencies
     systemd.services."podman-gluetun".after = [ "network-online.target" "init-media-network.service" ];
     systemd.services."podman-gluetun".wants = [ "network-online.target" ];

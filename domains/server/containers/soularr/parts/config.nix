@@ -8,6 +8,28 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
+
+    #=========================================================================
+    # ASSERTIONS AND VALIDATION
+    #=========================================================================
+    assertions = [
+      {
+        assertion = config.age.secrets ? lidarr-api-key && config.age.secrets ? slskd-api-key;
+        message = "Soularr requires lidarr-api-key and slskd-api-key secrets to be configured";
+      }
+      {
+        assertion = config.hwc.services.containers.lidarr.enable;
+        message = "Soularr requires Lidarr container to be enabled";
+      }
+      {
+        assertion = config.hwc.paths ? hot;
+        message = "Soularr requires hwc.paths.hot to be configured for downloads";
+      }
+    ];
+
+    #=========================================================================
+    # SECRETS GENERATION
+    #=========================================================================
     # Soularr config file generation from agenix secrets
     systemd.services.soularr-config = {
       description = "Seed Soularr /data/config.ini from agenix secrets";
@@ -60,6 +82,9 @@ EOF
       '';
     };
 
+    #=========================================================================
+    # CONTAINER CONFIGURATION
+    #=========================================================================
     # Container definition
     virtualisation.oci-containers.containers.soularr = {
       image = cfg.image;
@@ -82,6 +107,9 @@ EOF
       dependsOn = [ "lidarr" ];
     };
 
+    #=========================================================================
+    # SYSTEMD SERVICE DEPENDENCIES
+    #=========================================================================
     # Service dependencies and timing
     systemd.services."podman-soularr" = {
       after = [ "init-media-network.service" "podman-lidarr.service" "podman-slskd.service" ];

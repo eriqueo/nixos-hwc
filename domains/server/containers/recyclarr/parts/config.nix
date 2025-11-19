@@ -141,6 +141,24 @@ in
   config = lib.mkIf cfg.enable {
 
     #=========================================================================
+    # ASSERTIONS AND VALIDATION
+    #=========================================================================
+    assertions = [
+      {
+        assertion = cfg.services.sonarr.enable -> (config.age.secrets ? cfg.services.sonarr.apiKeySecret);
+        message = "Recyclarr Sonarr sync requires sonarr-api-key secret to be configured";
+      }
+      {
+        assertion = cfg.services.radarr.enable -> (config.age.secrets ? cfg.services.radarr.apiKeySecret);
+        message = "Recyclarr Radarr sync requires radarr-api-key secret to be configured";
+      }
+      {
+        assertion = cfg.services.lidarr.enable -> (config.age.secrets ? cfg.services.lidarr.apiKeySecret);
+        message = "Recyclarr Lidarr sync requires lidarr-api-key secret to be configured";
+      }
+    ];
+
+    #=========================================================================
     # SYSTEMD TIMER FOR PERIODIC SYNC
     #=========================================================================
     systemd.services.recyclarr-sync = {
