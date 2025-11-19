@@ -101,14 +101,12 @@ in
         # Timeout after 8 hours (generous for large backups)
         TimeoutSec = "8h";
 
-        # Only run on AC power for laptops
-        ${lib.optionalString cfg.schedule.onlyOnAC ''
-          ConditionACPower = true;
-        ''}
-
         # Nice level for background operation
         Nice = 10;
         IOSchedulingClass = "idle";
+      } // lib.optionalAttrs cfg.schedule.onlyOnAC {
+        # Only run on AC power for laptops
+        ConditionACPower = true;
       };
     };
 
