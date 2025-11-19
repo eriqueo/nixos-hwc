@@ -147,5 +147,14 @@
       port = 9443;  # Dedicated port for Organizr dashboard
       upstream = "http://127.0.0.1:9983";
     }
+
+    # Transcript API - preserve path (FastAPI expects /api/* endpoints)
+    {
+      name = "transcript-api";
+      mode = "subpath";
+      path = "/api";
+      upstream = "http://127.0.0.1:8099";
+      needsUrlBase = true;  # Preserve /api prefix
+    }
   ];
 }
