@@ -41,6 +41,21 @@ let
     log "Hostname: $HOSTNAME"
     log "Destination: $BACKUP_DEST"
 
+    # Acquire exclusive lock to prevent concurrent backups
+    LOCK_FILE="$BACKUP_DEST/.backup.lock"
+    LOCK_FD=200
+    eval "exec $LOCK_FD>$LOCK_FILE"
+
+    if ! ${pkgs.util-linux}/bin/flock -n $LOCK_FD; then
+      log_error "Another backup is already running (lock file: $LOCK_FILE)"
+      exit 1
+    fi
+
+    log "✓ Acquired backup lock"
+
+    # Ensure lock is released on exit
+    trap "${pkgs.util-linux}/bin/flock -u $LOCK_FD" EXIT
+
     # Check if destination is mounted
     if [[ ! -d "$BACKUP_DEST" ]]; then
       log_error "Backup destination $BACKUP_DEST does not exist"
@@ -81,7 +96,17 @@ let
     fi
 
     log "Backup type: $BACKUP_TYPE"
-    log "Backup directory: $BACKUP_DIR"
+
+    # Create backup in temporary directory first for atomicity
+    BACKUP_DIR_TEMP="$BACKUP_ROOT/.in-progress/$DATE"
+    BACKUP_DIR_FINAL="$BACKUP_ROOT/$BACKUP_TYPE/$DATE"
+
+    log "Temporary directory: $BACKUP_DIR_TEMP"
+    log "Final directory: $BACKUP_DIR_FINAL"
+
+    # Clean any stale in-progress backups
+    ${pkgs.coreutils}/bin/rm -rf "$BACKUP_ROOT/.in-progress"
+    ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_ROOT/.in-progress"
 
     # Run pre-backup script if configured
     ${lib.optionalString (cfg.preBackupScript != null) ''
@@ -101,7 +126,7 @@ let
           ${excludeArgs} \
           ${lib.optionalString (cfg.local.useRsync) "--link-dest=$BACKUP_ROOT/latest"} \
           "${source}/" \
-          "$BACKUP_DIR${source}/" \
+          "$BACKUP_DIR_TEMP${source}/" \
           >> "$LOG_FILE" 2>&1; then
           log "✓ Successfully backed up ${source}"
         else
@@ -114,29 +139,73 @@ let
     '') cfg.local.sources}
 
     if [[ "$BACKUP_SUCCESS" == true ]]; then
-      # Update 'latest' symlink
-      ${pkgs.coreutils}/bin/rm -f "$BACKUP_ROOT/latest"
-      ${pkgs.coreutils}/bin/ln -s "$BACKUP_DIR" "$BACKUP_ROOT/latest"
+      # Create completion marker for atomic snapshot detection
+      log "Creating backup completion marker..."
+      cat > "$BACKUP_DIR_TEMP/.BACKUP_COMPLETE" << EOF
+backup_date=$DATE
+backup_type=$BACKUP_TYPE
+hostname=$HOSTNAME
+completed_at=$(${pkgs.coreutils}/bin/date --iso-8601=seconds)
+backup_version=1.0
+EOF
 
-      log "Backup completed successfully"
+      # Atomically move temp backup to final location
+      log "Atomically publishing backup snapshot..."
+      ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$BACKUP_DIR_FINAL")"
+      ${pkgs.coreutils}/bin/mv "$BACKUP_DIR_TEMP" "$BACKUP_DIR_FINAL"
 
-      # Clean old backups
+      # Update 'latest' symlink atomically
+      LATEST_TMP="$BACKUP_ROOT/.latest.tmp"
+      ${pkgs.coreutils}/bin/ln -sf "$BACKUP_DIR_FINAL" "$LATEST_TMP"
+      ${pkgs.coreutils}/bin/mv -f "$LATEST_TMP" "$BACKUP_ROOT/latest"
+
+      log "✓ Backup snapshot published atomically"
+
+      # Clean old backups (only complete ones)
       log "Cleaning old backups..."
 
-      # Keep only last N daily backups
-      ${pkgs.findutils}/bin/find "$BACKUP_ROOT/daily" -maxdepth 1 -type d -mtime +${toString cfg.local.keepDaily} -exec rm -rf {} \; 2>/dev/null || true
+      # Function to check if backup is complete
+      is_complete() {
+        [[ -f "$1/.BACKUP_COMPLETE" ]]
+      }
+
+      # Clean incomplete backups immediately
+      for incomplete in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT"/{daily,weekly,monthly} -maxdepth 1 -type d 2>/dev/null); do
+        if [[ -d "$incomplete" ]] && ! is_complete "$incomplete"; then
+          log "Removing incomplete backup: $incomplete"
+          ${pkgs.coreutils}/bin/rm -rf "$incomplete"
+        fi
+      done
+
+      # Keep only last N daily backups (complete ones only)
+      for old_daily in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/daily" -maxdepth 1 -type d -mtime +${toString cfg.local.keepDaily} 2>/dev/null); do
+        if is_complete "$old_daily"; then
+          log "Removing old daily backup: $(${pkgs.coreutils}/bin/basename "$old_daily")"
+          ${pkgs.coreutils}/bin/rm -rf "$old_daily"
+        fi
+      done
 
       # Keep only last N weekly backups
-      ${pkgs.findutils}/bin/find "$BACKUP_ROOT/weekly" -maxdepth 1 -type d -mtime +$((${toString cfg.local.keepWeekly} * 7)) -exec rm -rf {} \; 2>/dev/null || true
+      for old_weekly in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/weekly" -maxdepth 1 -type d -mtime +$((${toString cfg.local.keepWeekly} * 7)) 2>/dev/null); do
+        if is_complete "$old_weekly"; then
+          log "Removing old weekly backup: $(${pkgs.coreutils}/bin/basename "$old_weekly")"
+          ${pkgs.coreutils}/bin/rm -rf "$old_weekly"
+        fi
+      done
 
       # Keep only last N monthly backups
-      ${pkgs.findutils}/bin/find "$BACKUP_ROOT/monthly" -maxdepth 1 -type d -mtime +$((${toString cfg.local.keepMonthly} * 30)) -exec rm -rf {} \; 2>/dev/null || true
+      for old_monthly in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/monthly" -maxdepth 1 -type d -mtime +$((${toString cfg.local.keepMonthly} * 30)) 2>/dev/null); do
+        if is_complete "$old_monthly"; then
+          log "Removing old monthly backup: $(${pkgs.coreutils}/bin/basename "$old_monthly")"
+          ${pkgs.coreutils}/bin/rm -rf "$old_monthly"
+        fi
+      done
 
       log "Cleanup completed"
 
       # Calculate backup statistics
-      BACKUP_SIZE=$(${pkgs.coreutils}/bin/du -sh "$BACKUP_DIR" | ${pkgs.coreutils}/bin/cut -f1)
-      TOTAL_BACKUPS=$(${pkgs.findutils}/bin/find "$BACKUP_ROOT"/{daily,weekly,monthly} -maxdepth 1 -type d | ${pkgs.coreutils}/bin/wc -l)
+      BACKUP_SIZE=$(${pkgs.coreutils}/bin/du -sh "$BACKUP_DIR_FINAL" | ${pkgs.coreutils}/bin/cut -f1)
+      TOTAL_BACKUPS=$(${pkgs.findutils}/bin/find "$BACKUP_ROOT"/{daily,weekly,monthly} -maxdepth 1 -type d -name "*_*" | ${pkgs.coreutils}/bin/wc -l)
 
       log "Backup size: $BACKUP_SIZE"
       log "Total backups on disk: $TOTAL_BACKUPS"
