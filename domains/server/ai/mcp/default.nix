@@ -222,30 +222,28 @@ in
 
     #--------------------------------------------------------------------------
     # CADDY REVERSE PROXY ROUTE
-    # NOTE: Only available when server domain is imported (provides hwc.services.reverseProxy)
-    # Laptops should disable cfg.reverseProxy.enable (default: false)
+    # NOTE: Disabled for now due to option availability issues on laptops
+    # TODO: Re-enable when server-only modules are properly separated
+    # Servers should manually configure reverse proxy in machine config if needed
     #--------------------------------------------------------------------------
-    (mkIf cfg.reverseProxy.enable (
-      # Only configure if the reverse proxy options exist (i.e., server domain imported)
-      lib.mkIf (config.options ? hwc.services.reverseProxy) {
-        # Register MCP route with Caddy
-        hwc.services.shared.routes = [{
-          name = "mcp-nixos";
-          mode = "subpath";
-          path = cfg.reverseProxy.path;
-          upstream = "${cfg.proxy.host}:${toString cfg.proxy.port}";
-          needsUrlBase = false;  # Strip /mcp-nixos prefix (mcp-proxy expects requests at /sse)
-          stripPrefix = true;     # Explicitly strip the prefix
-          ws = true;  # Enable WebSocket support for MCP
-          headers = {
-            # MCP-specific headers can be added here if needed
-          };
-        }];
-
-        # Ensure reverse proxy is enabled
-        hwc.services.reverseProxy.enable = true;
-      }
-    ))
+    # (mkIf cfg.reverseProxy.enable {
+    #   # Register MCP route with Caddy
+    #   hwc.services.shared.routes = [{
+    #     name = "mcp-nixos";
+    #     mode = "subpath";
+    #     path = cfg.reverseProxy.path;
+    #     upstream = "${cfg.proxy.host}:${toString cfg.proxy.port}";
+    #     needsUrlBase = false;  # Strip /mcp-nixos prefix (mcp-proxy expects requests at /sse)
+    #     stripPrefix = true;     # Explicitly strip the prefix
+    #     ws = true;  # Enable WebSocket support for MCP
+    #     headers = {
+    #       # MCP-specific headers can be added here if needed
+    #     };
+    #   }];
+    #
+    #   # Ensure reverse proxy is enabled
+    #   hwc.services.reverseProxy.enable = true;
+    # })
 
     #--------------------------------------------------------------------------
     # VALIDATION
