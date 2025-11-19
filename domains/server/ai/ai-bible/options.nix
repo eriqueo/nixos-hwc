@@ -36,6 +36,12 @@ in
         description = "Enable LLM integration";
       };
 
+      webApi = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable web API for querying documentation";
+      };
+
       categories = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [
@@ -44,8 +50,33 @@ in
           "hardware_gpu"
           "monitoring_observability"
           "storage_data"
+          "networking"
+          "backup"
         ];
         description = "Documentation categories";
+      };
+    };
+
+    #==========================================================================
+    # CODEBASE ANALYSIS
+    #==========================================================================
+    codebase = {
+      rootPath = lib.mkOption {
+        type = lib.types.path;
+        default = /etc/nixos;
+        description = "Root path of NixOS configuration to analyze";
+      };
+
+      scanInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "daily";
+        description = "How often to scan codebase for changes";
+      };
+
+      excludePaths = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ".git" "result" ".direnv" ];
+        description = "Paths to exclude from analysis";
       };
     };
 
