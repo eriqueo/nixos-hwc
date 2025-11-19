@@ -77,8 +77,10 @@
       sources = [
         "/home"
         "/etc/nixos"
-        "/mnt/media"  # Include media storage
-        "/opt/business"  # Include business data
+        "/mnt/media"       # Include media storage
+        "/mnt/photos"      # Immich photo library (CRITICAL)
+        "/var/backup/immich-db"  # Immich database backups
+        "/opt/business"    # Include business data
       ];
     };
 
