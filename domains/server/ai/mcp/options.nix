@@ -53,7 +53,7 @@ in
 
     # Reverse proxy configuration
     reverseProxy = {
-      enable = mkEnableOption "Expose MCP servers via Caddy reverse proxy" // { default = true; };
+      enable = mkEnableOption "Expose MCP servers via Caddy reverse proxy" // { default = false; };
 
       path = mkOption {
         type = types.str;
