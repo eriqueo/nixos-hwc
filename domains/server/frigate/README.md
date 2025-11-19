@@ -11,10 +11,12 @@
 1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [Configuration](#configuration)
-4. [Secrets Management](#secrets-management)
-5. [Common Operations](#common-operations)
-6. [Troubleshooting](#troubleshooting)
-7. [Migration History](#migration-history)
+4. [Hardware Acceleration](#hardware-acceleration)
+5. [Secrets Management](#secrets-management)
+6. [Common Operations](#common-operations)
+7. [Troubleshooting](#troubleshooting)
+8. [Migration History](#migration-history)
+9. [Additional Documentation](#additional-documentation)
 
 ---
 
@@ -191,6 +193,76 @@ Camera configuration is generated dynamically from secrets. The current setup in
 - **cobra_cam_4**: 192.168.1.104 (disabled - unreachable)
 
 To modify cameras, update the `frigate-camera-ips` secret (see [Secrets Management](#secrets-management)).
+
+**For detailed tuning instructions (resolution, FPS, recording modes)**: See [TUNING-GUIDE.md](./TUNING-GUIDE.md)
+
+---
+
+## Hardware Acceleration
+
+Frigate supports multiple hardware acceleration types for video decoding (FFmpeg) and object detection.
+
+### Quick Configuration
+
+```nix
+hwc.server.frigate = {
+  # Hardware acceleration for video decoding (FFmpeg)
+  hwaccel = {
+    type = "nvidia";  # Options: "nvidia" | "vaapi" | "qsv-h264" | "qsv-h265" | "cpu"
+    device = "0";     # NVIDIA: device number | Intel: /dev/dri/renderD128
+    vaapiDriver = "iHD";  # Only for Intel: "iHD" (modern) or "i965" (legacy)
+  };
+
+  # GPU acceleration for object detection (separate from video decoding)
+  gpu = {
+    enable = true;
+    detector = "onnx";  # Options: "cpu" | "onnx" | "tensorrt" | "openvino"
+    useFP16 = false;    # Disable for Pascal GPUs (e.g., P1000)
+  };
+};
+```
+
+### Supported Acceleration Types
+
+| Type | Hardware | Power | Performance | Use Case |
+|------|----------|-------|-------------|----------|
+| **nvidia** | NVIDIA GPU (nvdec) | High (15-25W) | Excellent | Current setup, discrete GPU |
+| **vaapi** | Intel iGPU (VAAPI) | Low (5-10W) | Excellent | **Recommended**, auto H.264/H.265 |
+| **qsv-h264** | Intel QuickSync | Low (5-10W) | Excellent | H.264 streams only |
+| **qsv-h265** | Intel QuickSync | Low (5-10W) | Excellent | H.265 streams only |
+| **cpu** | Software decoding | Minimal | Poor | Fallback only |
+
+### Migrating from NVIDIA to Intel VAAPI
+
+**Benefits**: 50% CPU reduction, 25-60% power savings (5-15W), equivalent latency
+
+**Steps**:
+
+1. Enable Intel GPU in `machines/server/config.nix`:
+   ```nix
+   hwc.infrastructure.hardware.gpu = {
+     enable = true;
+     type = "intel";  # Changed from "nvidia"
+   };
+   ```
+
+2. Update Frigate hwaccel configuration:
+   ```nix
+   hwc.server.frigate.hwaccel = {
+     type = "vaapi";  # Changed from "nvidia"
+     device = "/dev/dri/renderD128";  # Changed from "0"
+     vaapiDriver = "iHD";  # Modern Intel (6th gen+)
+   };
+   ```
+
+3. Rebuild and verify:
+   ```bash
+   sudo nixos-rebuild switch
+   podman logs frigate | grep -i vaapi
+   # Should show: "Automatically detected vaapi hwaccel"
+   ```
+
+**For comprehensive analysis and migration strategies**: See [HARDWARE-ACCELERATION.md](./HARDWARE-ACCELERATION.md)
 
 ---
 
@@ -889,6 +961,24 @@ sudo nixos-rebuild switch
 
 ---
 
+## Additional Documentation
+
+- **[HARDWARE-ACCELERATION.md](./HARDWARE-ACCELERATION.md)**: Comprehensive analysis of current vs Intel VAAPI/QuickSync setups
+  - Performance & power comparison
+  - Migration strategies (Full Intel, Hybrid, CPU fallback)
+  - Verification & troubleshooting guides
+  - Power cost analysis
+
+- **[TUNING-GUIDE.md](./TUNING-GUIDE.md)**: Quick reference for configuration adjustments
+  - Adding/removing cameras
+  - Adjusting resolution and FPS
+  - Recording modes and storage optimization
+  - Shared memory sizing
+  - Container resource limits
+  - Performance tuning matrix
+
+---
+
 ## Support & References
 
 - **Frigate Documentation**: https://docs.frigate.video/
@@ -899,6 +989,6 @@ sudo nixos-rebuild switch
 
 ---
 
-**Last Updated**: 2025-11-01
-**Module Version**: 1.0.0
+**Last Updated**: 2025-11-19
+**Module Version**: 2.0.0 (Hardware Acceleration Refactor)
 **Charter Version**: v6.0
