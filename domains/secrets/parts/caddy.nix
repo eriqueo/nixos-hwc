@@ -1,18 +1,20 @@
 # domains/secrets/parts/caddy.nix
-{ config, lib, ... }:
+{ config, ... }:
 {
-  # Only declare caddy secrets when caddy user exists (server only)
-  # Prevents chown errors on laptops that don't have the caddy user
-  config = lib.mkIf (builtins.hasAttr "caddy" config.users.users) {
+  # Use root:root ownership for caddy secrets to avoid chown errors on laptops
+  # Caddy service runs as root and can read these files
+  config = {
     age.secrets."caddy-cert" = {
       file = ./caddy/hwc.ocelot-wahoo.ts.net.crt.age;
-      owner = "caddy";
-      group = "caddy";
+      owner = "root";
+      group = "root";
+      mode = "0400";
     };
     age.secrets."caddy-key" = {
       file = ./caddy/hwc.ocelot-wahoo.ts.net.key.age;
-      owner = "caddy";
-      group = "caddy";
+      owner = "root";
+      group = "root";
+      mode = "0400";
     };
 
     hwc.secrets.caddy = {
