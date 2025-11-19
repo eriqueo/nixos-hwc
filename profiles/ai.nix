@@ -29,7 +29,7 @@
   imports = [
     ../domains/server/ai/ollama
     ../domains/server/ai/mcp
-    # ../domains/server/ai/ai-bible/ai-bible.nix  # (optional future service)
+    ../domains/server/ai/ai-bible
   ];
 
   #==========================================================================
@@ -40,16 +40,21 @@
     models = lib.mkDefault [ "llama3:8b" "codellama:13b" ];
   };
 
-  # Example (commented) placeholder for other AI services:
-  # hwc.services.aiBible = {
-  #   enable = lib.mkDefault false;
-  #   features = {
-  #     autoGeneration = lib.mkDefault true;
-  #     llmIntegration = lib.mkDefault true;
-  #   };
-  #   llm = {
-  #     provider = lib.mkDefault "ollama";
-  #     model    = lib.mkDefault "llama3:8b";
-  #   };
-  # };
+  # AI Bible - Self-documenting NixOS system
+  hwc.services.aiBible = {
+    enable = lib.mkDefault false;  # Opt-in per machine
+    features = {
+      autoGeneration = lib.mkDefault true;
+      llmIntegration = lib.mkDefault true;
+      webApi = lib.mkDefault true;
+    };
+    llm = {
+      provider = lib.mkDefault "ollama";
+      model = lib.mkDefault "llama3:8b";
+      endpoint = lib.mkDefault "http://localhost:11434";
+    };
+    codebase = {
+      scanInterval = lib.mkDefault "daily";
+    };
+  };
 }
