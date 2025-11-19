@@ -28,7 +28,7 @@
     ../../profiles/system.nix
     ../../profiles/home.nix
     ../../profiles/security.nix
-    # ../../profiles/ai.nix # This might be imported by a server profile now.
+    ../../profiles/ai.nix  # Enable local AI for laptop
 
     # Infrastructure domain for GPU only (not storage)
     ../../domains/infrastructure/hardware/index.nix
@@ -218,6 +218,56 @@
 
   # Storage paths (remains unchanged).
   hwc.paths.hot = "/home/eric/03-tech/local-storage";
+
+  #============================================================================
+  # AI SERVICES CONFIGURATION (Laptop)
+  #============================================================================
+  # Laptop has superior hardware (32GB RAM, better GPU) for larger models
+  hwc.server.ai.ollama = {
+    enable = true;
+    # Larger models suitable for 32GB RAM + RTX GPU
+    models = [
+      "qwen2.5-coder:7b"              # 4.3GB - Primary coding assistant
+      "llama3.2:3b"                   # 2.0GB - Fast queries, battery mode
+      "mistral:7b-instruct"           # 4.1GB - General reasoning
+    ];
+  };
+
+  # Local AI workflows for laptop
+  hwc.server.ai.local-workflows = {
+    enable = true;
+
+    # File cleanup for Downloads
+    fileCleanup = {
+      enable = true;
+      watchDirs = [ "/home/eric/Downloads" ];
+      schedule = "hourly";
+      model = "llama3.2:3b";  # Use smaller model for battery efficiency
+      dryRun = false;
+    };
+
+    # Journaling (less frequent on laptop)
+    journaling = {
+      enable = true;
+      outputDir = "/home/eric/Documents/HWC-AI-Journal";
+      sources = [ "systemd-journal" "nixos-rebuilds" ];
+      schedule = "weekly";  # Weekly on laptop vs daily on server
+      timeOfDay = "02:00";
+      model = "llama3.2:3b";
+    };
+
+    # Auto-documentation
+    autoDoc = {
+      enable = true;
+      model = "qwen2.5-coder:7b";  # Use larger model on laptop
+    };
+
+    # Chat CLI with better model
+    chatCli = {
+      enable = true;
+      model = "mistral:7b-instruct";  # Larger model for better quality
+    };
+  };
 
   # Static hosts for local services (remains unchanged).
   networking.hosts = {
