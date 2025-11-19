@@ -123,10 +123,49 @@
   hwc.server.ai.ollama = {
     enable = true;
     # Optimized models for 4GB VRAM GPU (Quadro P1000) - guaranteed to fit in VRAM
+    # Note: Load one at a time due to VRAM constraints (1.9GB + 2.3GB = 4.2GB)
     models = [
       "qwen2.5-coder:3b"              # 1.9GB - Best coding model that fits in 4GB VRAM
-      "phi3:3.8b-mini-instruct-4k"    # 2.3GB - General purpose, excellent quality
+      "phi3.5:3.8b"                   # 2.3GB - General purpose, excellent quality
+      "llama3.2:3b"                   # 2.0GB - Chat, summarization, journaling
     ];
+  };
+
+  # Local AI workflows and automation
+  hwc.server.ai.local-workflows = {
+    enable = true;
+
+    # AI-powered file cleanup agent
+    fileCleanup = {
+      enable = true;
+      watchDirs = [ "/mnt/hot/inbox" "/home/eric/Downloads" ];
+      schedule = "*:0/30";  # Every 30 minutes
+      model = "qwen2.5-coder:3b";
+      dryRun = false;  # Set to true for testing
+    };
+
+    # Automatic daily journaling
+    journaling = {
+      enable = true;
+      outputDir = "/home/eric/Documents/HWC-AI-Journal";
+      sources = [ "systemd-journal" "container-logs" "nixos-rebuilds" ];
+      schedule = "daily";
+      timeOfDay = "02:00";
+      model = "llama3.2:3b";
+      retentionDays = 90;
+    };
+
+    # Auto-documentation generator (CLI tool)
+    autoDoc = {
+      enable = true;
+      model = "qwen2.5-coder:3b";
+    };
+
+    # Interactive chat CLI
+    chatCli = {
+      enable = true;
+      model = "phi3.5:3.8b";
+    };
   };
 
   # MCP (Model Context Protocol) server for LLM access
@@ -147,20 +186,6 @@
     # Expose via Caddy at /mcp-nixos
     reverseProxy.enable = true;
   };
-
-  # TODO: Re-enable Fabric when Go 1.25 / nixpkgs compatibility is resolved
-  # # Fabric AI integration
-  # hwc.system.apps.fabric = {
-  #   enableApi = true;
-  #   provider = "openai";
-  #   model = "gpt-4o-mini";
-  #   api = {
-  #     listenAddress = "127.0.0.1";
-  #     port = 8080;
-  #     envFile = config.age.secrets.fabric-server-env.path;
-  #     openFirewall = false;  # Only accessible via Tailscale reverse proxy
-  #   };
-  # };
 
   # CouchDB for Obsidian LiveSync
   hwc.server.couchdb = {
