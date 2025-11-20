@@ -186,6 +186,24 @@ in
         echo "Watching: ${cfg.watchPath}"
         echo "Syncing to: ${cfg.couchdbUrl}/${cfg.database}"
       '';
+
+      #============================================================================
+        # VALIDATION
+        #============================================================================
+        config.assertions = [
+          {
+            assertion = !cfg.enable || config.hwc.server.couchdb.enable;
+            message = "hwc.services.livesyncBridge requires hwc.server.couchdb.enable = true";
+          }
+          {
+            assertion = !cfg.enable || (config.age.secrets.couchdb-admin-username.path != null);
+            message = "hwc.services.livesyncBridge requires couchdb-admin-username secret";
+          }
+          {
+            assertion = !cfg.enable || (config.age.secrets.couchdb-admin-password.path != null);
+            message = "hwc.services.livesyncBridge requires couchdb-admin-password secret";
+          }
+        ];
     };
 
     # Ensure Deno is available system-wide
@@ -195,21 +213,5 @@ in
     ];
   };
 
-  #============================================================================
-  # VALIDATION
-  #============================================================================
-  config.assertions = [
-    {
-      assertion = !cfg.enable || config.hwc.server.couchdb.enable;
-      message = "hwc.services.livesyncBridge requires hwc.server.couchdb.enable = true";
-    }
-    {
-      assertion = !cfg.enable || (config.age.secrets.couchdb-admin-username.path != null);
-      message = "hwc.services.livesyncBridge requires couchdb-admin-username secret";
-    }
-    {
-      assertion = !cfg.enable || (config.age.secrets.couchdb-admin-password.path != null);
-      message = "hwc.services.livesyncBridge requires couchdb-admin-password secret";
-    }
-  ];
+  
 }
