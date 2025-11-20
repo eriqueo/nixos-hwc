@@ -123,12 +123,12 @@ in
 
       shellIntegration.enableZshIntegration = true;
     };
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf enabled [
-    # Add dependency assertions here if needed
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      # Add dependency assertions here if needed
+    ];
+  };
 }

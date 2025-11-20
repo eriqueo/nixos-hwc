@@ -29,12 +29,12 @@ in
 
     # Ensure pass + gnupg tools exist
     home.packages = [ pkgs.pass pkgs.gnupg ];
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    # Add dependency assertions here if needed
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      # Add dependency assertions here if needed
+    ];
+  };
 }
