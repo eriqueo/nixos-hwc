@@ -78,8 +78,8 @@ in
 
     dataDir = lib.mkOption {
       type = lib.types.path;
-      default = "${paths.state}/transcript-api";
-      description = "Data directory";
+      default = "/home/eric/01-documents/01-vaults/04-transcripts";
+      description = "Transcripts vault directory (where finished .md files are saved)";
     };
 
     apiKeys = lib.mkOption {
