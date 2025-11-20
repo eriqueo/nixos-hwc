@@ -67,6 +67,43 @@ class Config:
             self.couchdb_username = os.getenv("COUCHDB_USERNAME", "")
             self.couchdb_password = os.getenv("COUCHDB_PASSWORD", "")
 
+        # Log credential loading status (without exposing secrets)
+        self._log_credential_status(creds_dir)
+
+    def _log_credential_status(self, creds_dir: Optional[str]) -> None:
+        """Log credential loading status for debugging"""
+        logger.info("=" * 70)
+        logger.info("CouchDB Configuration Status")
+        logger.info("=" * 70)
+        logger.info(f"CREDENTIALS_DIRECTORY: {creds_dir or 'NOT SET'}")
+        logger.info(f"CouchDB URL: {self.couchdb_url or 'NOT SET'}")
+        logger.info(f"CouchDB Database: {self.couchdb_database}")
+        logger.info(f"CouchDB Username loaded: {'YES' if self.couchdb_username else 'NO'}")
+        logger.info(f"CouchDB Password loaded: {'YES' if self.couchdb_password else 'NO'}")
+
+        if creds_dir:
+            creds_path = Path(creds_dir)
+            logger.info(f"Credentials directory exists: {creds_path.exists()}")
+            if creds_path.exists():
+                try:
+                    files = list(creds_path.iterdir())
+                    logger.info(f"Files in credentials directory: {[f.name for f in files]}")
+                except Exception as e:
+                    logger.error(f"Error reading credentials directory: {e}")
+
+        # Check if CouchDB sync will be enabled
+        if self.couchdb_url and self.couchdb_username and self.couchdb_password:
+            logger.info("✓ CouchDB sync is ENABLED")
+        else:
+            logger.warning("✗ CouchDB sync is DISABLED - missing configuration:")
+            if not self.couchdb_url:
+                logger.warning("  - COUCHDB_URL not set")
+            if not self.couchdb_username:
+                logger.warning("  - CouchDB username not loaded")
+            if not self.couchdb_password:
+                logger.warning("  - CouchDB password not loaded")
+        logger.info("=" * 70)
+
 
 class SubmitRequest(BaseModel):
     """Request model for transcript submission"""
@@ -230,6 +267,17 @@ app = FastAPI(
 )
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    logger.info("Starting HWC Transcript API...")
+
+    # Ensure CouchDB database exists if CouchDB is configured
+    await ensure_couchdb_database()
+
+    logger.info("HWC Transcript API startup complete")
+
+
 def require_api_key(request: Request) -> str:
     """Validate API key from request headers"""
     api_key = request.headers.get("x-api-key", "")
@@ -253,6 +301,48 @@ def free_space_gb(path: Path) -> float:
         return 0.0
 
 
+async def ensure_couchdb_database() -> bool:
+    """
+    Ensure the CouchDB database exists, creating it if necessary.
+
+    Returns:
+        bool: True if database exists or was created successfully
+    """
+    if not cfg.couchdb_url or not cfg.couchdb_username or not cfg.couchdb_password:
+        logger.info("CouchDB not configured, skipping database check")
+        return False
+
+    try:
+        auth = (cfg.couchdb_username, cfg.couchdb_password)
+        db_url = f"{cfg.couchdb_url}/{cfg.couchdb_database}"
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            # Check if database exists
+            response = await client.get(db_url, auth=auth)
+
+            if response.status_code == 200:
+                logger.info(f"✓ CouchDB database '{cfg.couchdb_database}' exists")
+                return True
+            elif response.status_code == 404:
+                # Database doesn't exist, create it
+                logger.info(f"Creating CouchDB database '{cfg.couchdb_database}'...")
+                create_response = await client.put(db_url, auth=auth)
+
+                if create_response.status_code in (201, 202):
+                    logger.info(f"✓ Successfully created CouchDB database '{cfg.couchdb_database}'")
+                    return True
+                else:
+                    logger.error(f"Failed to create database: {create_response.status_code} - {create_response.text}")
+                    return False
+            else:
+                logger.error(f"Unexpected response when checking database: {response.status_code}")
+                return False
+
+    except Exception as e:
+        logger.error(f"Error ensuring CouchDB database exists: {e}")
+        return False
+
+
 async def sync_to_couchdb(file_path: Path) -> bool:
     """
     Sync transcript markdown file to CouchDB.
@@ -263,15 +353,28 @@ async def sync_to_couchdb(file_path: Path) -> bool:
     Returns:
         bool: True if successful, False otherwise
     """
-    if not cfg.couchdb_url or not cfg.couchdb_username or not cfg.couchdb_password:
+    logger.info(f"Starting CouchDB sync for: {file_path}")
+
+    # Check configuration
+    if not cfg.couchdb_url:
+        logger.warning(f"CouchDB sync skipped for {file_path.name}: COUCHDB_URL not configured")
+        return False
+
+    if not cfg.couchdb_username or not cfg.couchdb_password:
+        logger.warning(f"CouchDB sync skipped for {file_path.name}: credentials not available")
+        logger.warning(f"  - Username present: {bool(cfg.couchdb_username)}")
+        logger.warning(f"  - Password present: {bool(cfg.couchdb_password)}")
         return False
 
     try:
         # Read the markdown file
+        logger.debug(f"Reading file: {file_path}")
         content = file_path.read_text(encoding="utf-8")
+        logger.debug(f"File size: {len(content)} bytes")
 
         # Create document ID from filename
         doc_id = file_path.stem
+        logger.debug(f"Document ID: {doc_id}")
 
         # Prepare CouchDB document
         doc = {
@@ -279,32 +382,70 @@ async def sync_to_couchdb(file_path: Path) -> bool:
             "filename": file_path.name,
             "content": content,
             "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
             "type": "transcript"
         }
 
         # Build CouchDB URL
         db_url = f"{cfg.couchdb_url}/{cfg.couchdb_database}/{doc_id}"
+        logger.info(f"Syncing to CouchDB: {db_url}")
         auth = (cfg.couchdb_username, cfg.couchdb_password)
 
         async with httpx.AsyncClient(timeout=30) as client:
             # Check if document exists
+            logger.debug("Checking if document exists in CouchDB...")
             try:
                 existing = await client.get(db_url, auth=auth)
+                logger.debug(f"GET response status: {existing.status_code}")
                 if existing.status_code == 200:
                     # Document exists, update it
                     existing_doc = existing.json()
                     doc["_rev"] = existing_doc["_rev"]
-            except Exception:
-                pass
+                    logger.info(f"Document exists, updating with revision: {doc['_rev']}")
+                elif existing.status_code == 404:
+                    logger.info("Document does not exist, creating new document")
+                else:
+                    logger.warning(f"Unexpected status when checking document: {existing.status_code}")
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    logger.info("Document does not exist (404), creating new document")
+                else:
+                    logger.warning(f"Error checking if document exists: {e}")
+            except Exception as e:
+                logger.warning(f"Error checking if document exists: {e}")
 
             # Put document to CouchDB
+            logger.debug(f"Uploading document to CouchDB...")
             response = await client.put(db_url, json=doc, auth=auth)
-            response.raise_for_status()
+            logger.debug(f"PUT response status: {response.status_code}")
 
-            return True
+            if response.status_code in (200, 201):
+                result = response.json()
+                logger.info(f"✓ Successfully synced {file_path.name} to CouchDB (rev: {result.get('rev', 'unknown')})")
+                return True
+            else:
+                logger.error(f"CouchDB sync failed with status {response.status_code}")
+                logger.error(f"Response: {response.text}")
+                response.raise_for_status()
+                return False
 
+    except httpx.HTTPStatusError as e:
+        logger.error(f"CouchDB HTTP error for {file_path.name}:")
+        logger.error(f"  Status: {e.response.status_code}")
+        logger.error(f"  Response: {e.response.text}")
+        logger.error(f"  URL: {db_url}")
+        return False
+    except httpx.RequestError as e:
+        logger.error(f"CouchDB connection error for {file_path.name}:")
+        logger.error(f"  Error: {str(e)}")
+        logger.error(f"  URL: {db_url}")
+        return False
     except Exception as e:
-        logger.error(f"CouchDB sync failed for {file_path}: {e}")
+        logger.error(f"CouchDB sync failed for {file_path.name}:")
+        logger.error(f"  Error type: {type(e).__name__}")
+        logger.error(f"  Error message: {str(e)}")
+        import traceback
+        logger.error(f"  Traceback:\n{traceback.format_exc()}")
         return False
 
 
@@ -536,6 +677,69 @@ async def health_check():
     }
 
 
+@app.get("/health/couchdb")
+async def couchdb_health_check():
+    """CouchDB connectivity and authentication check"""
+    result = {
+        "timestamp": datetime.now().isoformat(),
+        "configured": False,
+        "accessible": False,
+        "authenticated": False,
+        "database_exists": False,
+        "error": None
+    }
+
+    # Check if CouchDB is configured
+    if not cfg.couchdb_url:
+        result["error"] = "COUCHDB_URL not configured"
+        return result
+
+    result["configured"] = True
+
+    if not cfg.couchdb_username or not cfg.couchdb_password:
+        result["error"] = "CouchDB credentials not loaded"
+        return result
+
+    try:
+        auth = (cfg.couchdb_username, cfg.couchdb_password)
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            # Test basic connectivity
+            try:
+                response = await client.get(f"{cfg.couchdb_url}/", auth=auth)
+                if response.status_code == 200:
+                    result["accessible"] = True
+                    result["authenticated"] = True
+                    couchdb_info = response.json()
+                    result["couchdb_version"] = couchdb_info.get("version")
+                else:
+                    result["error"] = f"CouchDB returned status {response.status_code}"
+                    return result
+            except httpx.RequestError as e:
+                result["error"] = f"Connection error: {str(e)}"
+                return result
+
+            # Check if database exists
+            try:
+                db_response = await client.get(f"{cfg.couchdb_url}/{cfg.couchdb_database}", auth=auth)
+                if db_response.status_code == 200:
+                    result["database_exists"] = True
+                    db_info = db_response.json()
+                    result["database_doc_count"] = db_info.get("doc_count")
+                    result["database_name"] = db_info.get("db_name")
+                elif db_response.status_code == 404:
+                    result["error"] = f"Database '{cfg.couchdb_database}' does not exist"
+                else:
+                    result["error"] = f"Database check returned status {db_response.status_code}"
+            except Exception as e:
+                result["error"] = f"Database check error: {str(e)}"
+
+    except Exception as e:
+        result["error"] = f"Unexpected error: {str(e)}"
+
+    return result
+
+
 @app.get("/")
 async def root():
     """Root endpoint with API info"""
@@ -548,8 +752,10 @@ async def root():
             "status": "GET /api/status/{request_id}",
             "download": "GET /api/download/{request_id}",
             "list": "GET /api/list",
-            "health": "GET /health"
-        }
+            "health": "GET /health",
+            "couchdb_health": "GET /health/couchdb"
+        },
+        "couchdb_sync": cfg.couchdb_url and cfg.couchdb_username and cfg.couchdb_password
     }
 
 
