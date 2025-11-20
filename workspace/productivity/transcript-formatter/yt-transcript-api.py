@@ -168,18 +168,18 @@ class JobStore:
         
         return jobs
     
-    def update(self, status: JobStatus, **kwargs) -> JobStatus:
+    def update(self, job: JobStatus, **kwargs) -> JobStatus:
         """Update job status"""
         for key, value in kwargs.items():
-            setattr(status, key, value)
-        status.updated_at = datetime.now().isoformat()
-        self._persist(status)
-        return status
-    
-    def _persist(self, status: JobStatus) -> None:
+            setattr(job, key, value)
+        job.updated_at = datetime.now().isoformat()
+        self._persist(job)
+        return job
+
+    def _persist(self, job: JobStatus) -> None:
         """Save job status to disk"""
-        status_file = Path(status.out_dir) / "status.json"
-        status_file.write_text(json.dumps(status.model_dump(), indent=2))
+        status_file = Path(job.out_dir) / "status.json"
+        status_file.write_text(json.dumps(job.model_dump(), indent=2))
     
     def zip_result(self, request_id: str) -> Optional[Path]:
         """Create zip file of job results"""
