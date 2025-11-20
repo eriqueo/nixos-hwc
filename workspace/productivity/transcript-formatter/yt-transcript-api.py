@@ -54,8 +54,18 @@ class Config:
         # CouchDB configuration (optional)
         self.couchdb_url = os.getenv("COUCHDB_URL", "")
         self.couchdb_database = os.getenv("COUCHDB_DATABASE", "transcripts")
-        self.couchdb_username = os.getenv("COUCHDB_USERNAME", "")
-        self.couchdb_password = os.getenv("COUCHDB_PASSWORD", "")
+
+        # Read credentials from systemd LoadCredential if available
+        creds_dir = os.getenv("CREDENTIALS_DIRECTORY")
+        if creds_dir:
+            username_file = Path(creds_dir) / "couchdb-username"
+            password_file = Path(creds_dir) / "couchdb-password"
+            self.couchdb_username = username_file.read_text().strip() if username_file.exists() else ""
+            self.couchdb_password = password_file.read_text().strip() if password_file.exists() else ""
+        else:
+            # Fallback to environment variables
+            self.couchdb_username = os.getenv("COUCHDB_USERNAME", "")
+            self.couchdb_password = os.getenv("COUCHDB_PASSWORD", "")
 
 
 class SubmitRequest(BaseModel):

@@ -51,15 +51,22 @@ in {
         TRANSCRIPTS_ROOT = cfg.dataDir;
         LANGS = "en,en-US,en-GB";
         PYTHONPATH = scriptDir;
+        COUCHDB_URL = "http://127.0.0.1:5984";
+        COUCHDB_DATABASE = "yt-transcripts-vault";
       };
 
       serviceConfig = {
         ExecStart = "${pythonEnv}/bin/python ${apiScript}";
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
-        WorkingDirectory = scriptDir;
         DynamicUser = false;
         User = "root";  # Needs access to /mnt/media
+
+        # Load CouchDB credentials from secrets
+        LoadCredential = [
+          "couchdb-username:${config.age.secrets.couchdb-admin-username.path}"
+          "couchdb-password:${config.age.secrets.couchdb-admin-password.path}"
+        ];
       };
     };
 
