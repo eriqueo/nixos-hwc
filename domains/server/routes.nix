@@ -148,13 +148,14 @@
       upstream = "http://127.0.0.1:9983";
     }
 
-    # Transcript API - preserve path (FastAPI expects /api/* endpoints)
+    # Transcript API - preserve path (FastAPI routes expect /api prefix)
     {
       name = "transcript-api";
       mode = "subpath";
       path = "/api";
       upstream = "http://127.0.0.1:8099";
-      needsUrlBase = true;  # Preserve /api prefix
+      needsUrlBase = true;  # Preserve /api prefix - app routes expect it
+      headers = { "X-Forwarded-Prefix" = "/api"; };
     }
   ];
 }

@@ -1,0 +1,17 @@
+{
+  "name": "Big Movies",
+  "source": "/media/movies",
+  "cache": "/temp",
+  "output": "/media/movies",
+  "folderWatch": true,
+  "scanOnSave": true,
+  "scanButtons": true,
+  "priorityFilter": {
+    "sortBy": "size",
+    "sortOrder": "desc"
+  },
+  "filters": {
+    "minFileSize": 21474836480
+  },
+  "description": "Movies larger than 20GB"
+}
