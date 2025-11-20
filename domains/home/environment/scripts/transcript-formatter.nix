@@ -43,7 +43,7 @@ in
       Description = "Transcript Formatter (Ollama/Qwen → Obsidian)";
       After  = [ "graphical-session.target" "network-online.target" ];
       Wants  = [ "graphical-session.target" "network-online.target" ];
-      PartOf = [ "graphical-session.target" ];
+      # Removed PartOf to prevent session restarts during service updates
     };
     Service = {
       Type             = "simple";
