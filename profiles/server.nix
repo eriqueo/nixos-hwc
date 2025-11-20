@@ -39,6 +39,8 @@
     ../domains/server/index.nix
     # CouchDB for Obsidian LiveSync
     ../domains/server/couchdb/index.nix
+    # LiveSync Bridge for filesystem to CouchDB sync
+    ../domains/server/services/livesync-bridge.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
 
@@ -335,6 +337,14 @@
     enable = true;
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
+  };
+
+  # LiveSync Bridge - Syncs transcript files to CouchDB in proper LiveSync format
+  hwc.services.livesyncBridge = {
+    enable = true;
+    watchPath = "/home/eric/01-documents/01-vaults/04-transcripts";
+    database = "sync_transcripts";
+    passphrase = "";  # Leave empty if not using E2EE in Obsidian
   };
 
   # Phase 6: Support Services - Storage Automation
