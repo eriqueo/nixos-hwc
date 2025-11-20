@@ -302,18 +302,18 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
     """Background job processor"""
     try:
         # Load job and update to running
-        status = store.load(request_id)
-        if not status:
+        job_status = store.load(request_id)
+        if not job_status:
             return
-        
-        store.update(status, status="running", progress=0.1)
-        
+
+        store.update(job_status, status="running", progress=0.1)
+
         # Initialize transcript extractor
         transcript_config = TranscriptConfig()
         extractor = TranscriptExtractor(transcript_config)
-        
+
         # Determine job type and process
-        if "playlist" in url:
+        if extractor.is_playlist_url(url):
             # Process playlist
             playlist_dir, files = await extractor.process_playlist(
                 url,
@@ -330,7 +330,7 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
             # Update status with results
             all_files = [playlist_dir / "00-playlist-overview.md"] + files
             store.update(
-                status,
+                job_status,
                 status="complete",
                 progress=1.0,
                 files=[str(f) for f in all_files if f.exists()],
@@ -346,13 +346,13 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
 
             # Update status with result
             store.update(
-                status,
+                job_status,
                 status="complete",
                 progress=1.0,
                 files=[str(file_path)],
                 message="Video processed successfully"
             )
-        
+
         # Send webhook notification if configured
         if webhook_url and cfg.webhooks_enabled:
             try:
@@ -362,12 +362,12 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
                         await client.post(str(webhook_url), json=final_status.model_dump())
             except Exception:
                 pass  # Webhook failures shouldn't fail the job
-                
+
     except Exception as e:
         # Update job with error
-        status = store.load(request_id)
-        if status:
-            store.update(status, status="error", message=str(e))
+        job_status = store.load(request_id)
+        if job_status:
+            store.update(job_status, status="error", message=str(e))
 
 
 @app.post("/api/transcript")
