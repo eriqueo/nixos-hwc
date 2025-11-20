@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 # Branch Cleanup Script
 # These branches have been verified as fully merged into main
 # Created: 2025-11-20
