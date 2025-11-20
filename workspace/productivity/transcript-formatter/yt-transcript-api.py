@@ -35,6 +35,10 @@ current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir))
 from yt_transcript import TranscriptExtractor, Config as TranscriptConfig
 
+# Import transcript cleaners
+from cleaners.basic import BasicTranscriptCleaner
+from cleaners.llm import LLMTranscriptPolisher
+
 
 class Config:
     """API Configuration"""
@@ -117,6 +121,7 @@ class TranscriptTextRequest(BaseModel):
     """Request model for synchronous transcript-text endpoint"""
     url: str
     languages: Optional[List[str]] = None
+    format: str = Field(default="basic", pattern="^(raw|basic|llm)$")
 
 
 class JobStatus(BaseModel):
@@ -266,15 +271,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Initialize transcript cleaners (once at module level for performance)
+basic_cleaner = BasicTranscriptCleaner()
+llm_polisher = LLMTranscriptPolisher()
+
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
     logger.info("Starting HWC Transcript API...")
-
-    # Ensure CouchDB database exists if CouchDB is configured
-    await ensure_couchdb_database()
-
     logger.info("HWC Transcript API startup complete")
 
 
@@ -473,12 +478,6 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
                 mode=format_mode
             )
 
-            # NOTE: CouchDB sync disabled - LiveSync Bridge handles filesystem-to-CouchDB sync
-            # in proper Obsidian LiveSync format. See: domains/server/services/livesync-bridge.nix
-            # for file_path in files:
-            #     if file_path.exists():
-            #         await sync_to_couchdb(file_path)
-
             # Update status with results
             all_files = [playlist_dir / "00-playlist-overview.md"] + files
             store.update(
@@ -491,11 +490,6 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
         else:
             # Process single video - save directly to vault root
             file_path = await extractor.process_video(url, cfg.transcripts_root, languages, mode=format_mode)
-
-            # NOTE: CouchDB sync disabled - LiveSync Bridge handles filesystem-to-CouchDB sync
-            # in proper Obsidian LiveSync format. See: domains/server/services/livesync-bridge.nix
-            # if file_path.exists():
-            #     await sync_to_couchdb(file_path)
 
             # Update status with result
             store.update(
@@ -602,6 +596,28 @@ async def get_transcript_text(request: Request, body: TranscriptTextRequest, bac
         video_info = await extractor.get_video_info(body.url)
         title = video_info.get("title", "Unknown Title")
 
+        # Apply cleaning based on format parameter
+        format_used = body.format
+        if body.format == "llm":
+            try:
+                logger.info(f"Applying LLM polishing to transcript: {title}")
+                # Chain: basic cleaning first, then LLM polish
+                cleaned = basic_cleaner.clean(transcript_text, title)
+                transcript_text = llm_polisher.polish(cleaned, title)
+                format_used = "llm"
+                logger.info(f"LLM polishing completed for: {title}")
+            except Exception as e:
+                logger.error(f"LLM polishing failed: {e}, falling back to basic cleaning")
+                transcript_text = basic_cleaner.clean(transcript_text, title)
+                format_used = "basic_fallback"
+        elif body.format == "basic":
+            logger.info(f"Applying basic cleaning to transcript: {title}")
+            transcript_text = basic_cleaner.clean(transcript_text, title)
+            format_used = "basic"
+        else:
+            # raw format - no cleaning
+            format_used = "raw"
+
         # Copy to permanent location in vault root
         vault_root = cfg.transcripts_root
         vault_root.mkdir(parents=True, exist_ok=True)
@@ -609,16 +625,12 @@ async def get_transcript_text(request: Request, body: TranscriptTextRequest, bac
         shutil.copy2(markdown_path, dest_path)
         vault_path_str = str(dest_path)
 
-        # NOTE: CouchDB sync disabled - LiveSync Bridge handles filesystem-to-CouchDB sync
-        # in proper Obsidian LiveSync format. See: domains/server/services/livesync-bridge.nix
-        # if cfg.couchdb_username and cfg.couchdb_password:
-        #     background_tasks.add_task(sync_to_couchdb, dest_path)
-
         # Return response matching iOS Shortcut expectations
         return {
             "title": title,
             "text": transcript_text,
-            "vault_path": vault_path_str
+            "vault_path": vault_path_str,
+            "format_used": format_used
         }
 
     except Exception as e:
