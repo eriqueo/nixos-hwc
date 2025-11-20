@@ -34,6 +34,8 @@ in
       trusted-public-keys = [
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       ];
+      # Increase download buffer to prevent warnings during large downloads
+      download-buffer-size = 256 * 1024 * 1024; # 256 MiB
     };
     gc.automatic = true;
   };
