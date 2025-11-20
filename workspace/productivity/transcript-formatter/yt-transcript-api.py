@@ -755,7 +755,7 @@ async def root():
             "health": "GET /health",
             "couchdb_health": "GET /health/couchdb"
         },
-        "couchdb_sync": cfg.couchdb_url and cfg.couchdb_username and cfg.couchdb_password
+        "couchdb_sync": bool(cfg.couchdb_url and cfg.couchdb_username and cfg.couchdb_password)
     }
 
 
