@@ -334,7 +334,7 @@
   hwc.services.transcriptApi = {
     enable = true;
     port = 8099;
-    dataDir = "/mnt/media/transcripts";
+    dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
   };
 
   # Phase 6: Support Services - Storage Automation
