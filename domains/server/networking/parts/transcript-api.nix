@@ -52,7 +52,7 @@ in {
         LANGS = "en,en-US,en-GB";
         PYTHONPATH = scriptDir;
         COUCHDB_URL = "http://127.0.0.1:5984";
-        COUCHDB_DATABASE = "yt-transcripts-vault";
+        COUCHDB_DATABASE = "sync_transcripts";
       };
 
       serviceConfig = {
