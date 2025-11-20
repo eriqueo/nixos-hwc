@@ -80,7 +80,39 @@
     };
     
     lib = nixpkgs.lib;
+
+    # Helper: hwc-graph package
+    hwc-graph-pkg = pkgs.writeScriptBin "hwc-graph" ''
+      #!${pkgs.python3}/bin/python3
+      import sys
+      import os
+
+      # Add the graph directory to Python path
+      graph_dir = "${self}/workspace/utilities/graph"
+      sys.path.insert(0, graph_dir)
+
+      # Change to repo root for scanning
+      os.chdir("${self}")
+
+      # Import and run main
+      from hwc_graph import main
+      main()
+    '';
+
   in {
+    # Apps - CLI utilities
+    apps.${system} = {
+      hwc-graph = {
+        type = "app";
+        program = "${hwc-graph-pkg}/bin/hwc-graph";
+      };
+    };
+
+    # Packages - Make hwc-graph available as a package too
+    packages.${system} = {
+      hwc-graph = hwc-graph-pkg;
+    };
+
     nixosConfigurations = {
       hwc-server = lib.nixosSystem {
         inherit pkgs;
