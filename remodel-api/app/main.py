@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import get_db_pool, close_db_pool
-from app.routers import projects
+from app.routers import projects, forms
 
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(projects.router)
+app.include_router(forms.router)
 
 
 @app.get("/")

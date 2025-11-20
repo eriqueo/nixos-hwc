@@ -240,7 +240,7 @@ async def get_project(
     project_id: UUID,
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
-    """Get project details (future endpoint)"""
+    """Get project details"""
     project = await conn.fetchrow(
         "SELECT * FROM projects WHERE id = $1",
         project_id
@@ -250,3 +250,144 @@ async def get_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     return dict(project)
+
+
+@router.get("/projects/{project_id}/answers")
+async def get_project_answers(
+    project_id: UUID,
+    conn: asyncpg.Connection = Depends(get_db_connection)
+) -> Dict[str, Any]:
+    """
+    Get all saved answers for a project.
+
+    Useful for:
+    - Pre-filling the wizard when user returns
+    - Showing what they selected previously
+    - Allowing edits to submitted projects
+
+    Returns:
+        Dictionary of question_key: value pairs
+    """
+    # Verify project exists
+    project = await conn.fetchrow(
+        "SELECT id FROM projects WHERE id = $1",
+        project_id
+    )
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Fetch all answers
+    answers_rows = await conn.fetch(
+        "SELECT question_key, value_json FROM project_answers WHERE project_id = $1",
+        project_id
+    )
+
+    # Convert to dictionary
+    answers = {row['question_key']: row['value_json'] for row in answers_rows}
+
+    return answers
+
+
+@router.put("/projects/{project_id}/answers")
+async def update_project_answers(
+    project_id: UUID,
+    answers: Dict[str, Any],
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    Update answers for a project (incremental or full).
+
+    This allows:
+    - Saving progress as user goes through wizard
+    - Editing individual answers without re-submitting everything
+    - "Save for later" functionality
+
+    Only provided keys will be updated/inserted. Existing answers not
+    mentioned will be preserved.
+
+    Request body:
+    ```json
+    {
+      "bathroom_type": "primary",
+      "goals": ["convert_tub_to_shower"],
+      "tile_level": "porcelain"
+    }
+    ```
+
+    Returns:
+        Updated answers count
+    """
+    # Verify project exists
+    project = await conn.fetchrow(
+        "SELECT id FROM projects WHERE id = $1",
+        project_id
+    )
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Upsert each answer (insert or update)
+    upsert_query = """
+        INSERT INTO project_answers (project_id, question_key, value_json)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (project_id, question_key)
+        DO UPDATE SET value_json = EXCLUDED.value_json
+    """
+
+    count = 0
+    for key, value in answers.items():
+        if value is not None:  # Skip null values
+            await conn.execute(upsert_query, project_id, key, value)
+            count += 1
+
+    return {"updated": count, "project_id": str(project_id)}
+
+
+@router.post("/projects/{project_id}/report")
+async def generate_report(
+    project_id: UUID,
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    Generate PDF report for a project.
+
+    NOTE: This is a stub for MVP. Full implementation will:
+    1. Fetch project data + answers + cost results
+    2. Render HTML template
+    3. Convert to PDF with WeasyPrint
+    4. Save to storage
+    5. Return download URL
+
+    For now, returns a placeholder response.
+    """
+    # Verify project exists
+    project = await conn.fetchrow(
+        "SELECT * FROM projects WHERE id = $1",
+        project_id
+    )
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Check if estimate has been calculated
+    if not project['estimated_total_min']:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot generate report: project estimate not yet calculated"
+        )
+
+    # TODO: Implement PDF generation
+    # For now, return stub response
+    return {
+        "project_id": str(project_id),
+        "status": "stub",
+        "message": "PDF generation not yet implemented",
+        "planned_features": [
+            "Branded PDF with your logo and contact info",
+            "Project summary and scope description",
+            "Cost breakdown by module",
+            "Educational content and contractor questions",
+            "Timeline estimates"
+        ]
+    }
