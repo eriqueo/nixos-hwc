@@ -18,7 +18,7 @@ readonly NC='\033[0m' # No Color
 
 # Script directory and repo root
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+readonly REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Global counters
 TOTAL_ERRORS=0
