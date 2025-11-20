@@ -75,26 +75,28 @@ in
         allowedUDPPorts = [ cfg.dnsPort ];
       };
     }
-  ]);
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = [
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
     {
-      assertion = !cfg.enable || config.virtualisation.oci-containers.backend == "podman";
-      message = "Pi-hole requires Podman to be configured as the OCI container backend.";
+      assertions = [
+        {
+          assertion = !cfg.enable || config.virtualisation.oci-containers.backend == "podman";
+          message = "Pi-hole requires Podman to be configured as the OCI container backend.";
+        }
+        {
+          assertion = !cfg.enable || config.hwc.networking.enable;
+          message = "Pi-hole requires hwc.networking.enable = true for firewall configuration.";
+        }
+        {
+          assertion = !cfg.enable || (cfg.dnsPort != 53 || cfg.disableResolvedStub);
+          message = ''
+            Pi-hole is configured to use port 53, but systemd-resolved is using it.
+            Either set disableResolvedStub = true (recommended) or use a different dnsPort.
+          '';
+        }
+      ];
     }
-    {
-      assertion = !cfg.enable || config.hwc.networking.enable;
-      message = "Pi-hole requires hwc.networking.enable = true for firewall configuration.";
-    }
-    {
-      assertion = !cfg.enable || (cfg.dnsPort != 53 || cfg.disableResolvedStub);
-      message = ''
-        Pi-hole is configured to use port 53, but systemd-resolved is using it.
-        Either set disableResolvedStub = true (recommended) or use a different dnsPort.
-      '';
-    }
-  ];
+  ]);
 }

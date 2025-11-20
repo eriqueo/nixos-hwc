@@ -193,23 +193,23 @@ in
       deno
       git
     ];
-  };
 
-  #============================================================================
-  # VALIDATION
-  #============================================================================
-  config.assertions = [
-    {
-      assertion = !cfg.enable || config.hwc.server.couchdb.enable;
-      message = "hwc.services.livesyncBridge requires hwc.server.couchdb.enable = true";
-    }
-    {
-      assertion = !cfg.enable || (config.age.secrets.couchdb-admin-username.path != null);
-      message = "hwc.services.livesyncBridge requires couchdb-admin-username secret";
-    }
-    {
-      assertion = !cfg.enable || (config.age.secrets.couchdb-admin-password.path != null);
-      message = "hwc.services.livesyncBridge requires couchdb-admin-password secret";
-    }
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || config.hwc.server.couchdb.enable;
+        message = "hwc.services.livesyncBridge requires hwc.server.couchdb.enable = true";
+      }
+      {
+        assertion = !cfg.enable || (config.age.secrets.couchdb-admin-username.path != null);
+        message = "hwc.services.livesyncBridge requires couchdb-admin-username secret";
+      }
+      {
+        assertion = !cfg.enable || (config.age.secrets.couchdb-admin-password.path != null);
+        message = "hwc.services.livesyncBridge requires couchdb-admin-password secret";
+      }
+    ];
+  };
 }
