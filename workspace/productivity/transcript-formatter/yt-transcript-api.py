@@ -6,6 +6,7 @@ HWC NixOS Homeserver - REST API for transcript extraction with mobile integratio
 
 import asyncio
 import json
+import logging
 import os
 import shutil
 import time
@@ -38,7 +39,7 @@ from yt_transcript import TranscriptExtractor, Config as TranscriptConfig
 class Config:
     """API Configuration"""
     def __init__(self):
-        self.transcripts_root = Path(os.getenv("TRANSCRIPTS_ROOT", "/mnt/media/transcripts"))
+        self.transcripts_root = Path(os.getenv("TRANSCRIPTS_ROOT", "/home/eric/01-documents/01-vaults/04-transcripts"))
         self.hot_root = Path(os.getenv("HOT_ROOT", "/mnt/hot"))
         self.allow_languages = os.getenv("LANGS", "en,en-US,en-GB").split(",")
         self.api_host = os.getenv("API_HOST", "0.0.0.0")
@@ -50,6 +51,12 @@ class Config:
         self.webhooks_enabled = os.getenv("WEBHOOKS", "0") == "1"
         self.timezone = os.getenv("TZ", "America/Denver")
 
+        # CouchDB configuration (optional)
+        self.couchdb_url = os.getenv("COUCHDB_URL", "")
+        self.couchdb_database = os.getenv("COUCHDB_DATABASE", "transcripts")
+        self.couchdb_username = os.getenv("COUCHDB_USERNAME", "")
+        self.couchdb_password = os.getenv("COUCHDB_PASSWORD", "")
+
 
 class SubmitRequest(BaseModel):
     """Request model for transcript submission"""
@@ -57,6 +64,12 @@ class SubmitRequest(BaseModel):
     format: str = Field(default="standard", pattern="^(standard|detailed)$")
     languages: Optional[List[str]] = None
     webhook_url: Optional[AnyHttpUrl] = None
+
+
+class TranscriptTextRequest(BaseModel):
+    """Request model for synchronous transcript-text endpoint"""
+    url: str
+    languages: Optional[List[str]] = None
 
 
 class JobStatus(BaseModel):
@@ -192,6 +205,10 @@ class JobStore:
         return zip_path if zip_path.exists() else None
 
 
+# Initialize logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 # Initialize global objects
 cfg = Config()
 store = JobStore(cfg.transcripts_root)
@@ -226,6 +243,61 @@ def free_space_gb(path: Path) -> float:
         return 0.0
 
 
+async def sync_to_couchdb(file_path: Path) -> bool:
+    """
+    Sync transcript markdown file to CouchDB.
+
+    Args:
+        file_path: Path to the markdown file
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not cfg.couchdb_url or not cfg.couchdb_username or not cfg.couchdb_password:
+        return False
+
+    try:
+        # Read the markdown file
+        content = file_path.read_text(encoding="utf-8")
+
+        # Create document ID from filename
+        doc_id = file_path.stem
+
+        # Prepare CouchDB document
+        doc = {
+            "_id": doc_id,
+            "filename": file_path.name,
+            "content": content,
+            "created_at": datetime.now().isoformat(),
+            "type": "transcript"
+        }
+
+        # Build CouchDB URL
+        db_url = f"{cfg.couchdb_url}/{cfg.couchdb_database}/{doc_id}"
+        auth = (cfg.couchdb_username, cfg.couchdb_password)
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            # Check if document exists
+            try:
+                existing = await client.get(db_url, auth=auth)
+                if existing.status_code == 200:
+                    # Document exists, update it
+                    existing_doc = existing.json()
+                    doc["_rev"] = existing_doc["_rev"]
+            except Exception:
+                pass
+
+            # Put document to CouchDB
+            response = await client.put(db_url, json=doc, auth=auth)
+            response.raise_for_status()
+
+            return True
+
+    except Exception as e:
+        logger.error(f"CouchDB sync failed for {file_path}: {e}")
+        return False
+
+
 async def process_job(request_id: str, url: str, format_mode: str, languages: List[str], webhook_url: Optional[str]):
     """Background job processor"""
     try:
@@ -244,12 +316,17 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
         if "playlist" in url:
             # Process playlist
             playlist_dir, files = await extractor.process_playlist(
-                url, 
-                cfg.transcripts_root / "playlists", 
-                languages, 
+                url,
+                cfg.transcripts_root / "playlists",
+                languages,
                 mode=format_mode
             )
-            
+
+            # Sync to CouchDB if configured
+            for file_path in files:
+                if file_path.exists():
+                    await sync_to_couchdb(file_path)
+
             # Update status with results
             all_files = [playlist_dir / "00-playlist-overview.md"] + files
             store.update(
@@ -260,10 +337,13 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
                 message=f"Processed {len(files)} videos"
             )
         else:
-            # Process single video
-            date_dir = cfg.transcripts_root / "individual" / datetime.now().strftime("%Y-%m-%d")
-            file_path = await extractor.process_video(url, date_dir, languages, mode=format_mode)
-            
+            # Process single video - save directly to vault root
+            file_path = await extractor.process_video(url, cfg.transcripts_root, languages, mode=format_mode)
+
+            # Sync to CouchDB if configured
+            if file_path.exists():
+                await sync_to_couchdb(file_path)
+
             # Update status with result
             store.update(
                 status,
@@ -328,13 +408,85 @@ async def submit_transcript_request(request: Request, body: SubmitRequest, backg
     return {"request_id": status.request_id, "status": status.status}
 
 
+@app.post("/api/transcript-text")
+async def get_transcript_text(request: Request, body: TranscriptTextRequest, background_tasks: BackgroundTasks):
+    """
+    Synchronous transcript endpoint for iOS Shortcut integration.
+    Returns the transcript text immediately instead of using job queue.
+    """
+    # Validate API key (optional, use same auth as /api/transcript)
+    # Note: Not enforcing here to maintain compatibility with iOS Shortcut
+    # Uncomment the following line to enforce API key:
+    # require_api_key(request)
+
+    # Initialize transcript extractor
+    transcript_config = TranscriptConfig()
+    extractor = TranscriptExtractor(transcript_config)
+
+    # Validate URL
+    if not extractor.is_youtube_url(body.url):
+        raise HTTPException(status_code=400, detail="Invalid YouTube URL")
+
+    # Reject playlist URLs
+    if extractor.is_playlist_url(body.url):
+        raise HTTPException(status_code=400, detail="Playlists not supported. Use /api/transcript for playlists.")
+
+    # Set up languages
+    languages = body.languages if body.languages else cfg.allow_languages
+
+    # Create temporary directory for processing
+    temp_dir = cfg.hot_root / "transcript-text" / uuid.uuid4().hex[:12]
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Process the video
+        markdown_path = await extractor.process_video(body.url, temp_dir, languages, mode="standard")
+
+        # Read the generated markdown
+        transcript_text = markdown_path.read_text(encoding="utf-8")
+
+        # Get video info for title
+        video_info = await extractor.get_video_info(body.url)
+        title = video_info.get("title", "Unknown Title")
+
+        # Copy to permanent location in vault root
+        vault_root = cfg.transcripts_root
+        vault_root.mkdir(parents=True, exist_ok=True)
+        dest_path = vault_root / markdown_path.name
+        shutil.copy2(markdown_path, dest_path)
+        vault_path_str = str(dest_path)
+
+        # Schedule CouchDB sync in background if configured
+        if cfg.couchdb_username and cfg.couchdb_password:
+            background_tasks.add_task(sync_to_couchdb, dest_path)
+
+        # Return response matching iOS Shortcut expectations
+        return {
+            "title": title,
+            "text": transcript_text,
+            "vault_path": vault_path_str
+        }
+
+    except Exception as e:
+        logger.error(f"Error processing transcript-text request: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process transcript: {str(e)}")
+
+    finally:
+        # Clean up temporary directory
+        try:
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
+        except Exception as e:
+            logger.warning(f"Failed to clean up temp directory {temp_dir}: {e}")
+
+
 @app.get("/api/status/{request_id}")
 async def get_job_status(request_id: str):
     """Get job status"""
     status = store.load(request_id)
     if not status:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     return JSONResponse(status.model_dump())
 
 
@@ -381,6 +533,7 @@ async def root():
         "name": "HWC Transcript API",
         "version": "1.0.0",
         "endpoints": {
+            "simple_transcript": "POST /api/transcript-text",
             "submit": "POST /api/transcript",
             "status": "GET /api/status/{request_id}",
             "download": "GET /api/download/{request_id}",

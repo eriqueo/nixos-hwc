@@ -46,7 +46,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-DEFAULT_TRANSCRIPTS_ROOT = Path.home() / "01-documents" / "01-vaults" / "04-transcripts"
+DEFAULT_TRANSCRIPTS_ROOT = Path("/home/eric/01-documents/01-vaults/04-transcripts")
 DEFAULT_HOT_ROOT = Path("/mnt/hot")
 DEFAULT_LANGUAGES = ["en", "en-US", "en-GB"]
 DEFAULT_TIMEZONE = "America/Denver"
@@ -594,10 +594,11 @@ class TranscriptExtractor:
         # Get transcript
         segments = await self.fetch_transcript_segments(meta["id"], prefer_langs)
 
-        # Generate filename and content
+        # Generate filename with date prefix and content
         title_safe = self.sanitize_filename(meta["title"] or meta["id"])
         output_dir.mkdir(parents=True, exist_ok=True)
-        markdown_path = output_dir / f"{title_safe}.md"
+        date_prefix = datetime.now().strftime('%Y-%m-%d')
+        markdown_path = output_dir / f"{date_prefix} - {title_safe}.md"
 
         # Format markdown content
         header = self.format_header(meta)
@@ -751,9 +752,8 @@ Examples:
             )
             logger.info(f"✅ Playlist processed: {len(files)} videos in {playlist_dir}")
         else:
-            # Single video
-            date_dir = output_root / "individual" / datetime.now().strftime("%Y-%m-%d")
-            file_path = await extractor.process_video(args.url, date_dir, prefer_langs, args.format)
+            # Single video - save directly to vault root
+            file_path = await extractor.process_video(args.url, output_root, prefer_langs, args.format)
             logger.info(f"✅ Video processed: {file_path}")
 
         return 0
