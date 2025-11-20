@@ -15,6 +15,7 @@ from app.models import (
     BathroomAnswers
 )
 from app.engines import BathroomCostEngine
+from app.services.pdf_service import get_pdf_service
 
 router = APIRouter(prefix="/api", tags=["projects"])
 
@@ -352,42 +353,36 @@ async def generate_report(
     """
     Generate PDF report for a project.
 
-    NOTE: This is a stub for MVP. Full implementation will:
-    1. Fetch project data + answers + cost results
-    2. Render HTML template
-    3. Convert to PDF with WeasyPrint
-    4. Save to storage
-    5. Return download URL
+    This endpoint:
+    1. Fetches project data, answers, and cost results
+    2. Renders a professional HTML template
+    3. Converts to PDF with WeasyPrint
+    4. Saves to persistent storage
+    5. Returns download URL
 
-    For now, returns a placeholder response.
+    Returns:
+        JSON with pdf_url and filename for download
     """
-    # Verify project exists
-    project = await conn.fetchrow(
-        "SELECT * FROM projects WHERE id = $1",
-        project_id
-    )
+    pdf_service = get_pdf_service()
 
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        result = await pdf_service.generate_bathroom_report(conn, project_id)
 
-    # Check if estimate has been calculated
-    if not project['estimated_total_min']:
+        return {
+            "project_id": str(project_id),
+            "status": "success",
+            "pdf_url": result['pdf_url'],
+            "filename": result['filename'],
+            "message": "PDF report generated successfully"
+        }
+    except ValueError as e:
+        # Handle expected errors (project not found, estimate not calculated)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # Handle unexpected errors
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
-            status_code=400,
-            detail="Cannot generate report: project estimate not yet calculated"
+            status_code=500,
+            detail=f"Failed to generate PDF: {str(e)}"
         )
-
-    # TODO: Implement PDF generation
-    # For now, return stub response
-    return {
-        "project_id": str(project_id),
-        "status": "stub",
-        "message": "PDF generation not yet implemented",
-        "planned_features": [
-            "Branded PDF with your logo and contact info",
-            "Project summary and scope description",
-            "Cost breakdown by module",
-            "Educational content and contractor questions",
-            "Timeline estimates"
-        ]
-    }

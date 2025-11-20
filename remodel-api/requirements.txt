@@ -13,8 +13,9 @@ python-multipart==0.0.6  # For file uploads
 pyyaml==6.0.1  # For config files
 httpx==0.26.0  # For JobTread API (future)
 
-# PDF generation (future)
-# weasyprint==60.2
+# PDF generation
+weasyprint==60.2
+jinja2==3.1.2  # For HTML templates
 
 # Development
 pytest==7.4.4

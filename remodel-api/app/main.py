@@ -2,8 +2,10 @@
 Bathroom Remodel Planner API - Main Application
 """
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.database import get_db_pool, close_db_pool
 from app.routers import projects, forms
@@ -45,6 +47,11 @@ app.add_middleware(
 # Include routers
 app.include_router(projects.router)
 app.include_router(forms.router)
+
+# Mount PDF directory for serving generated reports
+pdf_dir = Path("/app/pdfs")
+pdf_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/pdfs", StaticFiles(directory=str(pdf_dir)), name="pdfs")
 
 
 @app.get("/")

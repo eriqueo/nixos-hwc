@@ -67,7 +67,11 @@ export function Results() {
   const handleDownloadPDF = async () => {
     try {
       const response = await api.generateReport(projectId);
-      if (response.status === 'stub') {
+
+      if (response.status === 'success' && response.pdf_url) {
+        // Open PDF in new tab for download
+        window.open(response.pdf_url, '_blank');
+      } else if (response.status === 'stub') {
         alert('PDF generation is not yet implemented. Coming soon!');
       }
     } catch (error) {
