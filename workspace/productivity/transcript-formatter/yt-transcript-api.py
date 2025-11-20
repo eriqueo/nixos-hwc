@@ -473,10 +473,11 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
                 mode=format_mode
             )
 
-            # Sync to CouchDB if configured
-            for file_path in files:
-                if file_path.exists():
-                    await sync_to_couchdb(file_path)
+            # NOTE: CouchDB sync disabled - LiveSync Bridge handles filesystem-to-CouchDB sync
+            # in proper Obsidian LiveSync format. See: domains/server/services/livesync-bridge.nix
+            # for file_path in files:
+            #     if file_path.exists():
+            #         await sync_to_couchdb(file_path)
 
             # Update status with results
             all_files = [playlist_dir / "00-playlist-overview.md"] + files
@@ -491,9 +492,10 @@ async def process_job(request_id: str, url: str, format_mode: str, languages: Li
             # Process single video - save directly to vault root
             file_path = await extractor.process_video(url, cfg.transcripts_root, languages, mode=format_mode)
 
-            # Sync to CouchDB if configured
-            if file_path.exists():
-                await sync_to_couchdb(file_path)
+            # NOTE: CouchDB sync disabled - LiveSync Bridge handles filesystem-to-CouchDB sync
+            # in proper Obsidian LiveSync format. See: domains/server/services/livesync-bridge.nix
+            # if file_path.exists():
+            #     await sync_to_couchdb(file_path)
 
             # Update status with result
             store.update(
@@ -607,9 +609,10 @@ async def get_transcript_text(request: Request, body: TranscriptTextRequest, bac
         shutil.copy2(markdown_path, dest_path)
         vault_path_str = str(dest_path)
 
-        # Schedule CouchDB sync in background if configured
-        if cfg.couchdb_username and cfg.couchdb_password:
-            background_tasks.add_task(sync_to_couchdb, dest_path)
+        # NOTE: CouchDB sync disabled - LiveSync Bridge handles filesystem-to-CouchDB sync
+        # in proper Obsidian LiveSync format. See: domains/server/services/livesync-bridge.nix
+        # if cfg.couchdb_username and cfg.couchdb_password:
+        #     background_tasks.add_task(sync_to_couchdb, dest_path)
 
         # Return response matching iOS Shortcut expectations
         return {
