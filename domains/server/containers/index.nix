@@ -19,6 +19,7 @@
     ./lidarr/index.nix
     ./navidrome/index.nix
     ./organizr/index.nix
+    ./pihole/index.nix
     ./prowlarr/index.nix
     ./qbittorrent/index.nix
     ./radarr/index.nix

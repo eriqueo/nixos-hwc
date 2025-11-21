@@ -2,6 +2,7 @@
 { config, lib, pkgs, ... }:
 
 let
+  enabled = config.hwc.home.apps.kitty.enable or false;
   T = config.hwc.home.theme or {};
   C = T.colors or T;
 
@@ -22,9 +23,15 @@ let
   urlColor    = if C ? link then C.link else (if C ? accent2 then C.accent2 else (if C ? accent then C.accent else "7daea3"));
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
-  config = lib.mkIf (config.hwc.home.apps.kitty.enable or false) {
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = lib.mkIf enabled {
     programs.kitty = {
       enable = true;
       package = pkgs.kitty;
@@ -116,5 +123,12 @@ in
 
       shellIntegration.enableZshIntegration = true;
     };
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      # Add dependency assertions here if needed
+    ];
   };
 }

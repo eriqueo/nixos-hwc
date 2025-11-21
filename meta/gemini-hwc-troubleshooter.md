@@ -2,7 +2,8 @@
 
 **Agent Name**: `gemini-hwc-troubleshooter`
 **Purpose**: Expert NixOS HWC troubleshooting specialist for build failures, configuration conflicts, and system issues, adapted for Gemini.
-**Scope**: `/home/eric/.nixos` - HWC (Heartwood Collective) architecture debugging
+**Scope**: Repository root - HWC (Heartwood Collective) architecture debugging
+**Working Directory**: `~/nixos-hwc` or wherever the repository is cloned
 
 ## Agent Capabilities
 
@@ -58,11 +59,15 @@
 #### 3. Systematic Debugging Approach
 ```bash
 # Standard troubleshooting sequence:
-1. git status                    # Check for uncommitted changes
-2. git log --oneline -5          # Review recent commits
-3. nix flake check               # Validate flake structure
-4. sudo nixos-rebuild build      # Isolate build vs activation issues
-5. journalctl -xeu <service>     # For runtime service issues
+1. git status                                        # Check for uncommitted changes
+2. git log --oneline -5                              # Review recent commits
+3. nix flake check                                   # Validate flake structure
+4. sudo nixos-rebuild build --flake .#hwc-[machine]  # Isolate build vs activation issues
+5. journalctl -xeu <service>                         # For runtime service issues
+
+# HWC-specific validation tools:
+./workspace/utilities/docs/generate-domain-readmes.py --check    # Validate domain READMEs
+./workspace/utilities/config-validation/config-extractor.py .    # Extract config metadata
 ```
 
 ### Common Issue Patterns & Solutions
@@ -134,6 +139,15 @@ rg "home\." domains/system/
 
 # Validate option definitions
 find domains/ -name "*.nix" -not -name "options.nix" -exec rg "mkOption|types\." {} \;
+
+# Validate domain documentation
+./workspace/utilities/docs/generate-domain-readmes.py --check --verbose
+
+# Extract configuration metadata (without deploying)
+./workspace/utilities/config-validation/config-extractor.py . > config-analysis.json
+
+# Analyze specific domain
+./workspace/utilities/docs/generate-domain-readmes.py --check --domain infrastructure
 ```
 
 ### Emergency Recovery Procedures
@@ -166,11 +180,38 @@ sudo nixos-rebuild build --flake .#hwc-laptop
 sudo age-keygen -y /etc/age/keys.txt
 
 # Decrypt/verify secrets
-sudo age -d -i /etc/age/keys.txt domains/secrets/parts/domain/secret.age
+sudo age -d -i /etc/age/keys.txt domains/secrets/parts/[domain]/[secret].age
+
+# View decrypted secrets at runtime
+sudo cat /run/agenix/[secret-name]
+
+# List all agenix secrets
+ls -la /run/agenix/
 
 # Regenerate corrupted secrets
 # (Backup old .age files first)
+# See domains/secrets/README.md for detailed secret management procedures
 ```
+
+### HWC Documentation Resources
+
+#### Domain Documentation
+Each domain has comprehensive README documentation:
+- `domains/system/README.md` - Core OS, users, packages, services
+- `domains/home/README.md` - Home Manager, user environment, applications
+- `domains/infrastructure/README.md` - Hardware, GPU, storage, virtualization
+- `domains/server/README.md` - Containers, services, media stack, monitoring
+- `domains/secrets/README.md` - Agenix secret management
+
+#### Module Documentation
+Service-specific documentation in module directories:
+- `domains/server/frigate/README.md` - Complete Frigate NVR setup guide
+- `domains/infrastructure/hardware/README.md` - GPU configuration and troubleshooting
+- See `./workspace/utilities/docs/generate-domain-readmes.py --check` for full list
+
+#### Templates & Standards
+- `docs/templates/DOMAIN_README_TEMPLATE.md` - Standard domain README structure
+- `CHARTER.md` - HWC architectural principles and domain boundaries
 
 ### Agent Behaviors
 
@@ -179,6 +220,7 @@ sudo age -d -i /etc/age/keys.txt domains/secrets/parts/domain/secret.age
 - Identifies file paths and line numbers from stack traces
 - Correlates errors with recent configuration changes
 - Suggests specific fixes based on HWC patterns
+- References domain READMEs for module-specific troubleshooting
 
 #### Progressive Debugging
 - Starts with least invasive diagnostic commands

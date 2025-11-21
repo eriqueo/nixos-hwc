@@ -42,3 +42,32 @@ jobs:
 
       - name: Run statix linter
         run: nix run nixpkgs#statix -- check .
+
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate domain READMEs
+        run: |
+          python3 workspace/utilities/docs/generate-domain-readmes.py --check
+
+      - name: Check for missing module READMEs
+        run: |
+          # Allow this to pass for now since we're still adding documentation
+          python3 workspace/utilities/docs/generate-domain-readmes.py --check --verbose || true
+
+      - name: Ensure top-level domain READMEs exist
+        run: |
+          for domain in domains/*/; do
+            if [ ! -f "$domain/README.md" ]; then
+              echo "❌ Missing README.md in $domain"
+              exit 1
+            fi
+          done
+          echo "✅ All top-level domains have READMEs"

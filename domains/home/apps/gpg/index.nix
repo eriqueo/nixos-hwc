@@ -3,8 +3,14 @@ let
   cfg = config.hwc.home.apps.gpg;
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     # Enable GPG and the user gpg-agent service (pinentry in TTY)
     programs.gpg.enable = true;
@@ -23,5 +29,12 @@ in
 
     # Ensure pass + gnupg tools exist
     home.packages = [ pkgs.pass pkgs.gnupg ];
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      # Add dependency assertions here if needed
+    ];
   };
 }
