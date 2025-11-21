@@ -75,12 +75,10 @@ in
     };
 
     #=========================================================================
-    # SYSTEMD TMPFILES - PRE-CREATE DIRECTORIES WITH PROPER PERMISSIONS
+    # DIRECTORY CREATION
     #=========================================================================
-    systemd.tmpfiles.rules = [
-      # Create incomplete directory with proper ownership (PUID=1000, PGID=1000)
-      "d ${paths.hot}/downloads/incomplete 0755 1000 1000 -"
-    ];
+    # Directory creation handled by container-directories-setup.service (_shared/directories.nix)
+    # No tmpfiles rules needed - eliminates duplicates and unsafe path transitions
 
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
