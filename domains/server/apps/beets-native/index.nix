@@ -4,7 +4,7 @@ let
   cfg = config.hwc.server.apps.beets-native;
 
   # Beets with all plugins enabled
-  beetsPackage = pkgs.beets-full;
+  beetsPackage = pkgs.beets;
 
   beetsConfig = pkgs.writeText "config.yaml" ''
     directory: ${cfg.musicDir}
