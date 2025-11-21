@@ -2,7 +2,7 @@
 
 **Token-Efficient Automation for Charter-Driven Architecture**
 
-This directory contains **11 specialized skills** designed to dramatically reduce token usage when working with the nixos-hwc repository. These skills encapsulate Charter v6.0 knowledge, common patterns, and automated workflows.
+This directory contains **12 specialized skills** designed to dramatically reduce token usage when working with the nixos-hwc repository. These skills encapsulate Charter v6.0 knowledge, common patterns, and automated workflows.
 
 ## 📊 Token Savings Summary
 
@@ -19,6 +19,7 @@ This directory contains **11 specialized skills** designed to dramatically reduc
 | **nixos-container-orchestrator** | Configure containers | **~75%** |
 | **nixos-charter-compliance** | Review compliance | **~85%** |
 | **media-file-manager** | Organize media files | **~90%** |
+| **beets-music-organizer** | Clean & optimize music library | **~90%** |
 
 **Average savings: ~85% token reduction** across all workflows!
 
@@ -509,7 +510,10 @@ Skills work together:
 ├── module-migrate/
 │   └── SKILL.md
 │
-└── media-file-manager/
+├── media-file-manager/
+│   └── SKILL.md
+│
+└── beets-music-organizer/
     └── SKILL.md
 ```
 
@@ -553,6 +557,9 @@ Each skill contains comprehensive instructions, examples, and patterns.
 
 **Organize media files?**
 → Use `media-file-manager` skill
+
+**Clean up music library with beets?**
+→ Use `beets-music-organizer` skill
 
 ---
 
