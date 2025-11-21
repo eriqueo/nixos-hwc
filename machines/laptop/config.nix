@@ -68,6 +68,25 @@
     monitoring.enable = true;
   };
 
+  # ntfy notification system for laptop alerts
+  hwc.system.services.ntfy = {
+    enable = true;
+    serverUrl = "https://ntfy.sh";
+    defaultTopic = "hwc-laptop-events";
+    defaultTags = [ "hwc" "laptop" ];
+    defaultPriority = 3;  # Normal priority for laptop
+    hostTag = true;       # Adds "host-hwc-laptop" tag automatically
+
+    # Authentication disabled for public topics (enable for private)
+    auth.enable = false;
+    # To enable auth, add secrets and configure:
+    # auth = {
+    #   enable = true;
+    #   method = "token";
+    #   tokenFile = "/run/secrets/ntfy-token";
+    # };
+  };
+
   # Backup configuration for laptop
   # Supports plugging in external drives for local backups
   hwc.system.services.backup = {
@@ -93,6 +112,21 @@
       frequency = "daily";
       timeOfDay = "02:00";  # Run at 2 AM
       onlyOnAC = true;  # Only backup when plugged in
+    };
+
+    # Notification configuration
+    notifications = {
+      enable = true;
+      onSuccess = false;  # Don't notify on success to reduce noise
+      onFailure = true;   # Always notify on failure
+
+      # ntfy integration for remote notifications
+      ntfy = {
+        enable = true;
+        topic = null;  # Use default topic from hwc.system.services.ntfy
+        onSuccess = false;  # No success notifications
+        onFailure = true;   # Send ntfy alert on backup failures
+      };
     };
   };
 

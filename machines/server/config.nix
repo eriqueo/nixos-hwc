@@ -61,6 +61,25 @@
     firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
   };
 
+  # ntfy notification system for server alerts
+  hwc.system.services.ntfy = {
+    enable = true;
+    serverUrl = "https://ntfy.sh";
+    defaultTopic = "hwc-server-events";
+    defaultTags = [ "hwc" "server" "production" ];
+    defaultPriority = 4;  # Higher priority for server alerts
+    hostTag = true;       # Adds "host-hwc-server" tag automatically
+
+    # Authentication disabled for public topics (enable for private)
+    auth.enable = false;
+    # To enable auth, add secrets and configure:
+    # auth = {
+    #   enable = true;
+    #   method = "token";
+    #   tokenFile = "/run/secrets/ntfy-token";
+    # };
+  };
+
   # Backup configuration for server
   # Supports external drives, NAS, or DAS for local backups
   hwc.system.services.backup = {
@@ -94,6 +113,21 @@
       frequency = lib.mkForce "weekly";  # Weekly backups for server
       timeOfDay = lib.mkForce "03:00";   # Run at 3 AM on the scheduled day
       onlyOnAC = lib.mkForce false;      # Server is always plugged in
+    };
+
+    # Notification configuration
+    notifications = {
+      enable = true;
+      onSuccess = false;  # Don't notify on success to reduce noise
+      onFailure = true;   # Always notify on failure
+
+      # ntfy integration for remote notifications
+      ntfy = {
+        enable = true;
+        topic = null;  # Use default topic from hwc.system.services.ntfy
+        onSuccess = false;  # No success notifications
+        onFailure = true;   # Send ntfy alert on backup failures
+      };
     };
   };
 
