@@ -29,5 +29,14 @@
       owner = "root";
       group = "secrets";
     };
+
+    # Rclone configuration for Proton Drive backups
+    # TODO: Create rclone-proton-config.age from template before enabling
+    # rclone-proton-config = {
+    #   file = ../parts/system/rclone-proton-config.age;
+    #   mode = "0600"; # Rclone configs need to be readable only by root
+    #   owner = "root";
+    #   group = "root";
+    # };
   };
 }

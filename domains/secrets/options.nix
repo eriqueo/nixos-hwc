@@ -80,6 +80,12 @@
         description = "Path to decrypted NTFY user credentials file";
       };
 
+      navidromeAdminPasswordFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted Navidrome admin password file";
+      };
+
       geminiApiKeyFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         readOnly = true;

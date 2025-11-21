@@ -13,9 +13,9 @@
     ../../profiles/security.nix
     ../../profiles/ai.nix
     ../../domains/server/routes.nix
+    # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services options are fixed
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
-    # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed
   ];
 
   # System identity
@@ -52,7 +52,7 @@
 
     # Safest: wait for any NetworkManager connection (no hard-coded iface names).
     waitOnline.mode = "all";
-    waitOnline.timeoutSeconds = 90;
+    waitOnline.timeoutSeconds = 30;  # Reduced from 90s for faster boot
 
     ssh.enable = true;
     tailscale.enable = true;
@@ -266,12 +266,10 @@
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
-    X11Forwarding = lib.mkForce false;  # Headless server doesn't need X11 forwarding
-    PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
+    X11Forwarding = lib.mkForce false;  # Disabled for security - use SSH tunneling instead
+    PasswordAuthentication = lib.mkForce false;  # SSH keys only for security (temporarily set to true if updating keys)
   };
   services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
-  # X11 services disabled for headless server
-  # services.xserver.enable = true;
 
   # Server-specific packages moved to modules/system/server-packages.nix
   hwc.system.packages.server.enable = true;

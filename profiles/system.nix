@@ -36,8 +36,20 @@ in
       ];
       # Increase download buffer to prevent warnings during large downloads
       download-buffer-size = 256 * 1024 * 1024; # 256 MiB
+      # Optimize Nix store automatically
+      auto-optimise-store = true;
     };
-    gc.automatic = true;
+    # Automatic garbage collection
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 30d";
+    };
+    # Automatically detect and remove duplicate files
+    optimise = {
+      automatic = true;
+      dates = [ "weekly" ];
+    };
   };
   time.timeZone = "America/Denver";
 
