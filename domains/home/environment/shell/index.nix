@@ -20,10 +20,11 @@
 
 let
   cfg = config.hwc.home.shell;
-  
+
   # Import parts (pure functions)
   grebuildScript = import ./parts/grebuild.nix { inherit pkgs; };
-  
+  journalErrorsScript = import ./parts/journal-errors.nix { inherit pkgs; };
+
 in
 {
   #============================================================================
@@ -39,12 +40,15 @@ in
   config = lib.mkIf cfg.enable {
 
     # Base packages plus optional modern Unix tools
-    home.packages = cfg.packages 
+    home.packages = cfg.packages
       ++ lib.optionals cfg.modernUnix (with pkgs; [
         eza bat procs dust zoxide
       ])
       ++ lib.optionals cfg.scripts.grebuild [
         grebuildScript
+      ]
+      ++ lib.optionals cfg.scripts.journalErrors [
+        journalErrorsScript
       ];
 
     # Environment variables
