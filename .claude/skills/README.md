@@ -2,7 +2,7 @@
 
 **Token-Efficient Automation for Charter-Driven Architecture**
 
-This directory contains **10 specialized skills** designed to dramatically reduce token usage when working with the nixos-hwc repository. These skills encapsulate Charter v6.0 knowledge, common patterns, and automated workflows.
+This directory contains **11 specialized skills** designed to dramatically reduce token usage when working with the nixos-hwc repository. These skills encapsulate Charter v6.0 knowledge, common patterns, and automated workflows.
 
 ## 📊 Token Savings Summary
 
@@ -18,6 +18,7 @@ This directory contains **10 specialized skills** designed to dramatically reduc
 | **nixos-secret-guardian** | Manage secrets | **~75%** |
 | **nixos-container-orchestrator** | Configure containers | **~75%** |
 | **nixos-charter-compliance** | Review compliance | **~85%** |
+| **media-file-manager** | Organize media files | **~90%** |
 
 **Average savings: ~85% token reduction** across all workflows!
 
@@ -505,7 +506,10 @@ Skills work together:
 ├── secret-provision/
 │   └── SKILL.md
 │
-└── module-migrate/
+├── module-migrate/
+│   └── SKILL.md
+│
+└── media-file-manager/
     └── SKILL.md
 ```
 
@@ -546,6 +550,9 @@ Each skill contains comprehensive instructions, examples, and patterns.
 
 **Review code?**
 → Use `nixos-charter-compliance` skill
+
+**Organize media files?**
+→ Use `media-file-manager` skill
 
 ---
 
