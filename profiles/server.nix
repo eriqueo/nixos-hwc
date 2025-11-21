@@ -269,7 +269,11 @@
   hwc.services.containers.sonarr.enable = true;
   hwc.services.containers.radarr.enable = true;
   hwc.services.containers.lidarr.enable = true;
-  hwc.services.containers.beets.enable = true;
+
+  # Beets music organizer - using native installation instead of container
+  hwc.services.containers.beets.enable = false;  # Container disabled
+  hwc.server.apps.beets-native.enable = true;     # Native enabled
+
   hwc.services.containers.jellyseerr.enable = true;
 
   # Phase 4: Specialized Services (Soulseek integration)
