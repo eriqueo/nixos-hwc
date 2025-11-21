@@ -161,6 +161,33 @@
         default = true;
         description = "Show notification on backup failure";
       };
+
+      # ntfy integration for cross-machine notifications
+      ntfy = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable ntfy notifications (requires hwc.system.services.ntfy.enable)";
+        };
+
+        topic = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "ntfy topic for backup notifications (null = use ntfy module's default)";
+        };
+
+        onSuccess = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Send ntfy notification on successful backup";
+        };
+
+        onFailure = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Send ntfy notification on backup failure";
+        };
+      };
     };
 
     #==========================================================================
