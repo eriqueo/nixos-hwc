@@ -31,8 +31,11 @@ web:
     jwt:
       key: "Nd5g9X1AcVck7z7Q4Yq0IuULeQ7ci/Zu7++Lmcq7jOqF0e6ZbCvp5SmWVBN3EAVE"
       ttl: 604800000
-    apiKeys:
-      soularr: $API_KEY
+    api_keys:
+      soularr:
+        key: $API_KEY
+        role: readwrite
+        cidr: 0.0.0.0/0,::/0
 directories:
   downloads: /downloads/music
   incomplete: /downloads/incomplete
