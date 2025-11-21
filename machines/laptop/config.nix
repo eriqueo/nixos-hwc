@@ -205,7 +205,11 @@
   #============================================================================
   # === [profiles/home.nix] Orchestration =====================================
   #============================================================================
-  # (Profile-driven; nothing machine-specific added here.)
+  # System-lane dependencies for home apps (co-located sys.nix files)
+  # These are enabled separately because system evaluates before Home Manager
+  hwc.system.apps.hyprland.enable = true;   # Startup script, helper scripts
+  hwc.system.apps.waybar.enable = true;     # System dependency validation
+  hwc.system.apps.chromium.enable = true;   # System integration (dconf, dbus)
 
   #============================================================================
   # === [profiles/security.nix] Orchestration =================================

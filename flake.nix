@@ -115,7 +115,7 @@
 
     nixosConfigurations = {
       hwc-server = lib.nixosSystem {
-        inherit pkgs;
+        inherit system pkgs;
         specialArgs = { inherit inputs; };
         modules = [
           agenix.nixosModules.default
@@ -131,7 +131,7 @@
         ];
       };
       hwc-laptop = lib.nixosSystem {
-        inherit pkgs;
+        inherit system pkgs;
         specialArgs = { inherit inputs; };
         modules = [
           agenix.nixosModules.default
