@@ -80,6 +80,9 @@ let
       BACKUP_DIR="$BACKUP_ROOT/monthly/$DATE"
     fi
 
+    # Ensure the concrete backup directory exists
+    ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_DIR"
+
     log "Backup type: $BACKUP_TYPE"
     log "Backup directory: $BACKUP_DIR"
 

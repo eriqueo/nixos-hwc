@@ -22,6 +22,13 @@
         fsType = "vfat";
         options = [ "fmask=0022" "dmask=0022" ];
       };
+      
+      fileSystems."/mnt/backup" = {
+        device = "/dev/disk/by-uuid/e0d00e5d-7d65-4cef-b131-d2fac497a230";
+        fsType = "ext4";
+        options = [ "nofail" ];
+      };
+      
   swapDevices = [ ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
