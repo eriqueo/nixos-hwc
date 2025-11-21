@@ -84,7 +84,7 @@ in
     };
 
     # Create storage directories
-    systemd.tmpfiles.rules = lib.mkIf cfg.storage.enable [
+    systemd.tmpfiles.rules = lib.optionals cfg.storage.enable [
       "d ${cfg.storage.basePath} 0750 immich immich -"
       "d ${cfg.storage.locations.library} 0750 immich immich -"
       "d ${cfg.storage.locations.thumbs} 0750 immich immich -"
