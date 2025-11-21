@@ -101,7 +101,6 @@ autotagger:
 web:
     host: 0.0.0.0
     port: 8337
-    cors: ''
 EOF
 
     chown -R 1000:100 ${cfgRoot}
