@@ -6,7 +6,7 @@
 
 let
   cfg = config.hwc.system.services.backup;
-
+  
 	mkOnCalendar = { frequency, timeOfDay }:
 	    if frequency == "daily" then
 	      "*-*-* ${timeOfDay}:00"
@@ -14,7 +14,9 @@ let
 	      "Mon *-*-* ${timeOfDay}:00"
 	    else
 	      "${frequency} ${timeOfDay}:00";
-	      
+
+
+
   # Main backup coordination script
   backupCoordinatorScript = pkgs.writeScriptBin "backup-coordinator" ''
     #!${pkgs.bash}/bin/bash
@@ -124,19 +126,21 @@ in
       wantedBy = [ "timers.target" ];
 
       timerConfig = {
+
         # Combine frequency with time of day
         OnCalendar = mkOnCalendar {
                   frequency = cfg.schedule.frequency;
                   timeOfDay = cfg.schedule.timeOfDay;
                 };
 
-        # Random delay to avoid thundering herd
+
         RandomizedDelaySec = cfg.schedule.randomDelay;
-                Persistent = true;
-                AccuracySec = "1h";
-   
+
+        Persistent = true;
+        AccuracySec = "1h";
       };
     };
+
 
     # Log rotation for coordinator
     services.logrotate.settings.backup-coordinator = {
