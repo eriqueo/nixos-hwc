@@ -69,10 +69,12 @@
   };
 
   # ntfy notification system for laptop alerts
+  # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
+  # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.system.services.ntfy = {
     enable = true;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale
-    defaultTopic = "hwc-laptop-events";
+    defaultTopic = "hwc-laptop-events";  # General laptop events
     defaultTags = [ "hwc" "laptop" ];
     defaultPriority = 3;  # Normal priority for laptop
     hostTag = true;       # Adds "host-hwc-laptop" tag automatically
@@ -123,9 +125,9 @@
       # ntfy integration for remote notifications
       ntfy = {
         enable = true;
-        topic = null;  # Use default topic from hwc.system.services.ntfy
-        onSuccess = false;  # No success notifications
-        onFailure = true;   # Send ntfy alert on backup failures
+        topic = "hwc-critical";  # Backup failures are critical (P5)
+        onSuccess = false;  # No success notifications (or use "hwc-backups" if desired)
+        onFailure = true;   # Send critical alert on backup failures
       };
     };
   };
