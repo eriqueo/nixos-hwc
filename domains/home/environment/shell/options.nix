@@ -145,6 +145,11 @@
         "vpncheck" = "vpnstatus";
         "which-command" = "whence";
         "run-help" = "man";
+        # Journal/log analysis aliases
+        "errors" = "journal-errors";
+        "errors-hour" = "journal-errors '1 hour ago'";
+        "errors-today" = "journal-errors 'today'";
+        "errors-tdarr" = "journal-errors '10 minutes ago' podman-tdarr";
       };
       description = "Shell aliases for zsh";
     };
@@ -192,6 +197,11 @@
         type = lib.types.bool;
         default = true;
         description = "Enable grebuild script for NixOS rebuilding";
+      };
+      journalErrors = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable journal-errors script for summarizing system error logs";
       };
     };
 
