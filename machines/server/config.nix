@@ -64,13 +64,13 @@
   # ntfy notification system for server alerts
   hwc.system.services.ntfy = {
     enable = true;
-    serverUrl = "https://ntfy.sh";
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale
     defaultTopic = "hwc-server-events";
     defaultTags = [ "hwc" "server" "production" ];
     defaultPriority = 4;  # Higher priority for server alerts
     hostTag = true;       # Adds "host-hwc-server" tag automatically
 
-    # Authentication disabled for public topics (enable for private)
+    # Authentication disabled for self-hosted (can enable if needed)
     auth.enable = false;
     # To enable auth, add secrets and configure:
     # auth = {

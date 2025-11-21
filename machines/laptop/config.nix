@@ -71,13 +71,13 @@
   # ntfy notification system for laptop alerts
   hwc.system.services.ntfy = {
     enable = true;
-    serverUrl = "https://ntfy.sh";
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale
     defaultTopic = "hwc-laptop-events";
     defaultTags = [ "hwc" "laptop" ];
     defaultPriority = 3;  # Normal priority for laptop
     hostTag = true;       # Adds "host-hwc-laptop" tag automatically
 
-    # Authentication disabled for public topics (enable for private)
+    # Authentication disabled for self-hosted (can enable if needed)
     auth.enable = false;
     # To enable auth, add secrets and configure:
     # auth = {
