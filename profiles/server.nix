@@ -302,17 +302,16 @@
   hwc.services.containers.organizr.enable = true;
 
   # Native Media Services (Charter compliant)
-  # TODO: Enable navidrome after creating navidrome-admin-password.age secret
-  # hwc.server.navidrome = {
-  #   enable = true;
-  #   settings = {
-  #     initialAdminUser = "admin";
-  #     # Password now securely loaded from agenix secret
-  #     initialAdminPasswordFile = config.hwc.secrets.api.navidromeAdminPasswordFile;
-  #     baseUrl = "/navidrome";  # Required - Navidrome receives full path from Caddy
-  #   };
-  #   reverseProxy.enable = true;
-  # };
+  hwc.server.navidrome = {
+    enable = true;
+    settings = {
+      initialAdminUser = "admin";
+      # Password securely loaded from agenix secret
+      initialAdminPasswordFile = config.hwc.secrets.api.navidromeAdminPasswordFile;
+      baseUrl = "/navidrome";  # Required - Navidrome receives full path from Caddy
+    };
+    reverseProxy.enable = true;
+  };
 
   hwc.server.jellyfin = {
     enable = true;
