@@ -2,7 +2,7 @@
 
 # This module uses a special feature of NixOS flakes to get the
 # pkgs set that corresponds to the final system configuration.
-{ config, lib, pkgs,  ... }:
+{ config, lib, pkgs, osConfig, ... }:
 
 let
   enabled = config.hwc.home.apps.waybar.enable or false;
@@ -56,6 +56,17 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
+      # Cross-lane consistency: check if system-lane is also enabled
+      {
+        assertion = !enabled || (osConfig.hwc.system.apps.waybar.enable or false);
+        message = ''
+          hwc.home.apps.waybar is enabled but hwc.system.apps.waybar is not.
+          System-lane validation checks are required for waybar dependencies.
+          Enable hwc.system.apps.waybar in machine config.
+        '';
+      }
+
+      # Home-lane dependencies
       {
         assertion = !enabled || config.hwc.home.apps.swaync.enable;
         message = "waybar requires swaync for notification center (custom/notification widget)";

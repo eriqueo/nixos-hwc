@@ -2,7 +2,7 @@
 #
 # HYPRLAND — Window manager + user session.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig, ... }:
 
 let
   enabled = config.hwc.home.apps.hyprland.enable or false;
@@ -81,6 +81,18 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
+      # Cross-lane consistency: check if system-lane is also enabled
+      # Use osConfig to access system configuration from Home Manager context
+      {
+        assertion = !enabled || (osConfig.hwc.system.apps.hyprland.enable or false);
+        message = ''
+          hwc.home.apps.hyprland is enabled but hwc.system.apps.hyprland is not.
+          System dependencies (hyprland-startup script, helper scripts) are required.
+          Enable hwc.system.apps.hyprland in machine config.
+        '';
+      }
+
+      # Home-lane dependencies
       {
         assertion = config.hwc.home.apps.waybar.enable;
         message = "hyprland requires waybar (critical dependency - forced via mkForce)";

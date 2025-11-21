@@ -1,19 +1,12 @@
-# ProtonPass • System lane
-# System-level configuration (co-located but imported by system profiles)
-{ lib, config, pkgs, ... }:
+# domains/home/apps/proton-pass/sys.nix
+# System-lane placeholder for ProtonPass
+#
+# ARCHITECTURE NOTE:
+# This file exists for consistency but has no implementation.
+# All ProtonPass dependencies are handled in Home Manager.
 
-let
-  cfg = config.hwc.home.apps.protonPass;
-in
+{ ... }:
+
 {
-  imports = [ ./options.nix ];
-  
-  config = lib.mkIf cfg.enable {
-    # System packages for ProtonPass dependencies
-    environment.systemPackages = with pkgs; [
-      # Any system-level dependencies if needed
-    ];
-    
-    # No system services needed for ProtonPass desktop client
-  };
+  # No system-lane dependencies needed for ProtonPass desktop client
 }
