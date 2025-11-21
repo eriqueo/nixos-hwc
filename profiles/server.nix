@@ -39,8 +39,6 @@
     ../domains/server/index.nix
     # CouchDB for Obsidian LiveSync
     ../domains/server/couchdb/index.nix
-    # LiveSync Bridge for filesystem to CouchDB sync
-    ../domains/server/services/livesync-bridge.nix
     # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
   ];
 

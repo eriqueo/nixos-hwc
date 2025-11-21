@@ -5,7 +5,7 @@
 #
 # DEPENDENCIES (Upstream):
 #   - config.hwc.paths.* (modules/system/paths.nix)
-#   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify
+#   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify, spacy, spacy_models.en_core_web_sm
 #
 # USED BY (Downstream):
 #   - profiles/*.nix (enables via hwc.services.transcriptApi.enable)
@@ -30,6 +30,8 @@ let
     yt-dlp
     youtube-transcript-api
     python-slugify
+    spacy
+    spacy_models.en_core_web_sm
   ]);
 
   # Source directory for transcript scripts
