@@ -14,8 +14,13 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
       ports = [];
-      volumes = [ "/opt/downloads/navidrome:/config" ];
-      environment = { };
+      volumes = [
+        "/opt/downloads/navidrome:/config"
+        "${config.hwc.paths.media}/music:/music:ro"  # Music library for streaming
+      ];
+      environment = {
+        ND_BASEURL = "/music";  # Required for Caddy subpath routing
+      };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })
   ]);
