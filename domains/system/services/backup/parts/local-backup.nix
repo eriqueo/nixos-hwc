@@ -150,9 +150,22 @@ let
         ${cfg.postBackupScript}
       ''}
 
-      # Send success notification
+      # Send success notification (desktop)
       ${lib.optionalString (cfg.notifications.enable && cfg.notifications.onSuccess) ''
         ${pkgs.libnotify}/bin/notify-send "Backup Complete" "Local backup completed successfully ($BACKUP_SIZE)" --urgency=normal
+      ''}
+
+      # Send success notification (ntfy)
+      ${lib.optionalString (config.hwc.system.services.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onSuccess) ''
+        NTFY_TOPIC="${if cfg.notifications.ntfy.topic != null then cfg.notifications.ntfy.topic else "-"}"
+        hwc-ntfy-send --tag backup,success --priority 3 \
+          "$NTFY_TOPIC" \
+          "[$HOSTNAME] Backup Success" \
+          "Local backup completed successfully.
+Type: $BACKUP_TYPE
+Size: $BACKUP_SIZE
+Total backups: $TOTAL_BACKUPS
+Log: $LOG_FILE" || log "Warning: Failed to send ntfy notification"
       ''}
 
       log "=== Local Backup Completed Successfully ==="
@@ -160,9 +173,24 @@ let
     else
       log_error "=== Backup Failed ==="
 
-      # Send failure notification
+      # Send failure notification (desktop)
       ${lib.optionalString (cfg.notifications.enable && cfg.notifications.onFailure) ''
         ${pkgs.libnotify}/bin/notify-send "Backup Failed" "Local backup encountered errors. Check logs: $LOG_FILE" --urgency=critical
+      ''}
+
+      # Send failure notification (ntfy)
+      ${lib.optionalString (config.hwc.system.services.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onFailure) ''
+        NTFY_TOPIC="${if cfg.notifications.ntfy.topic != null then cfg.notifications.ntfy.topic else "-"}"
+        hwc-ntfy-send --tag backup,failure,urgent --priority 5 \
+          "$NTFY_TOPIC" \
+          "[$HOSTNAME] Backup FAILED" \
+          "Local backup encountered errors!
+Type: $BACKUP_TYPE
+Hostname: $HOSTNAME
+Destination: $BACKUP_DEST
+Log: $LOG_FILE
+
+Check the logs for details." || log_error "Warning: Failed to send ntfy notification"
       ''}
 
       exit 1
