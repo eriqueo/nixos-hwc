@@ -30,9 +30,9 @@ in
 
       # Network configuration
       extraOptions = [
-        "--memory=4g"          # Tdarr needs more memory for transcoding
-        "--cpus=2.0"           # Allow 2 CPU cores
-        "--memory-swap=8g"
+        "--memory=${cfg.resources.memory}"
+        "--cpus=${cfg.resources.cpus}"
+        "--memory-swap=${cfg.resources.memorySwap}"
       ] ++ (
         if cfg.network.mode == "vpn"
         then [ "--network=container:gluetun" ]
@@ -64,6 +64,10 @@ in
         # SAFETY SETTINGS - Prevent file deletion/corruption
         # Keep original files until transcode is verified
         inContainer = "true";
+
+        # Memory management for FFmpeg
+        # These help prevent OOM issues during large file transcoding
+        FFMPEG_THREAD_QUEUE_SIZE = "512";  # Reduce memory usage per stream
 
         # GPU configuration (NVIDIA)
       } // lib.optionalAttrs cfg.gpu.enable {
