@@ -8,6 +8,7 @@
     # Shared infrastructure
     ./_shared/network.nix
     ./_shared/caddy.nix
+    ./_shared/directories.nix
 
     # Container services
     ./beets/index.nix
