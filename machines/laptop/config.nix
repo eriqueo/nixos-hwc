@@ -73,7 +73,7 @@
   # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.system.services.ntfy = {
     enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net";  # Self-hosted ntfy via Tailscale (root path)
     defaultTopic = "hwc-laptop-events";  # General laptop events
     defaultTags = [ "hwc" "laptop" ];
     defaultPriority = 3;  # Normal priority for laptop
