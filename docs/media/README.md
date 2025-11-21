@@ -300,10 +300,75 @@ Use in automation:
 TMDB_API_KEY=$(cat /run/agenix/tmdb-api-key)
 ```
 
+## Music Library Management with Beets
+
+Beets is a powerful music library organizer that complements the media automation system.
+
+### Quick Start with Beets
+
+1. **Analyze your library:**
+```bash
+./workspace/utilities/beets-helper.sh analyze-library
+```
+
+2. **Find duplicates:**
+```bash
+./workspace/utilities/beets-helper.sh find-duplicates
+beet duplicates -k  # Or use beets directly
+```
+
+3. **Import new music:**
+```bash
+./workspace/utilities/beets-helper.sh import /mnt/hot/manual/music/
+```
+
+4. **Fix album art:**
+```bash
+./workspace/utilities/beets-helper.sh fix-missing-art
+```
+
+### Common Beets Commands
+
+```bash
+# Search library
+beet ls artist:Ween
+beet ls album:'Quebec'
+beet ls format:FLAC
+
+# Find problems
+beet duplicates -k        # Find exact duplicates
+beet missing              # Find incomplete albums
+beet ls mb_albumid::      # Find unmatched albums
+
+# Fix issues
+beet fetchart             # Download album art
+beet scrub                # Clean metadata
+beet write                # Write tags to files
+
+# Statistics
+beet stats -e             # Library statistics
+```
+
+### Integration with Media Stack
+
+Beets works alongside:
+- **Navidrome**: Provides properly organized music
+- **Lidarr**: Can be used for acquisition
+- **SoulSeek (SLSKD)**: Import rare albums
+
+**After organizing with beets, update Navidrome:**
+```bash
+curl -X POST http://localhost:4533/api/scan
+```
+
+For detailed usage, see `docs/media/BEETS_GUIDE.md` and `docs/media/BEETS_QUICK_REFERENCE.md`.
+
 ## Related Documentation
 
 - **Skill Documentation**: `.claude/skills/media-file-manager/SKILL.md`
 - **Script Documentation**: `workspace/utilities/README-media-organizer.md`
+- **Beets Full Guide**: `docs/media/BEETS_GUIDE.md`
+- **Beets Quick Reference**: `docs/media/BEETS_QUICK_REFERENCE.md`
 - **Automation Rules**: Copy `docs/media/AUTOMATION_RULES_TEMPLATE.md` → `/mnt/media/AUTOMATION_RULES.md`
 - **Media Stack Overview**: Document your stack at `/mnt/media/MASTER_MEDIA_STACK_EXPLAINER.md`
 
