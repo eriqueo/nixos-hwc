@@ -239,6 +239,14 @@
     };
   };
 
+  # ntfy notification server (container)
+  # Provides notification server for hwc-ntfy-send client
+  hwc.services.ntfy = {
+    enable = true;
+    port = 2586;  # Use port 2586 (8080 is taken by qBittorrent)
+    dataDir = "/var/lib/hwc/ntfy";
+  };
+
   # Frigate NVR for camera surveillance
   # Access: http://server-ip:5000 (direct port, no reverse proxy)
   # Frigate doesn't support subpaths due to WebSocket/asset serving requirements
