@@ -139,6 +139,66 @@ Every **module** (app, tool, or workload) MUST include:
   - This is system-lane code imported by system profiles, **not HM boundary violations**.
 * Profiles decide which lane's files to import.
 
+### sys.nix Architecture Pattern
+
+**Problem**: System lane evaluates BEFORE Home Manager, so `sys.nix` files cannot depend on `hwc.home.apps.*.enable` options.
+
+**Solution**: `sys.nix` files must define their own system-lane options in `hwc.system.apps.*` namespace.
+
+**Example** (`domains/home/apps/hyprland/sys.nix`):
+
+```nix
+{ lib, config, pkgs, ... }:
+let
+  cfg = config.hwc.system.apps.hyprland;  # System-lane option
+in
+{
+  # OPTIONS - System-lane API
+  options.hwc.system.apps.hyprland = {
+    enable = lib.mkEnableOption "Hyprland system dependencies";
+  };
+
+  # IMPLEMENTATION - Conditional on system-lane option
+  config = lib.mkMerge [
+    (lib.mkIf cfg.enable {
+      environment.systemPackages = [ /* ... */ ];
+    })
+    {} # Placeholder for unconditional config if needed
+  ];
+}
+```
+
+**Machine Configuration** (both lanes must be enabled):
+
+```nix
+# machines/laptop/config.nix
+{
+  hwc.system.apps.hyprland.enable = true;  # System lane
+  # Home lane enabled via profiles/home.nix
+}
+```
+
+**Cross-Lane Validation** (in home module's `index.nix`):
+
+```nix
+{ config, osConfig, ... }:  # Note: osConfig to access system config
+{
+  config.assertions = [
+    {
+      # Home can check system (system evaluates first)
+      assertion = !enabled || (osConfig.hwc.system.apps.hyprland.enable or false);
+      message = "hwc.home.apps.hyprland requires hwc.system.apps.hyprland";
+    }
+  ];
+}
+```
+
+**Key Rules**:
+- System cannot validate home-lane (evaluation order)
+- Home CAN validate system-lane using `osConfig`
+- Both lanes independently toggled in machine config
+- No implicit coupling via `lib.attrByPath` fallbacks
+
 ---
 
 ## 6) Aggregators
