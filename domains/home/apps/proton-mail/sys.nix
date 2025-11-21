@@ -1,19 +1,12 @@
-# ProtonMail • System lane
-# System-level configuration (co-located but imported by system profiles)
-{ lib, config, pkgs, ... }:
+# domains/home/apps/proton-mail/sys.nix
+# System-lane placeholder for ProtonMail
+#
+# ARCHITECTURE NOTE:
+# This file exists for consistency but has no implementation.
+# All ProtonMail dependencies are handled in Home Manager.
 
-let
-  cfg = config.hwc.home.apps.protonMail;
-in
+{ ... }:
+
 {
-  imports = [ ./options.nix ];
-  
-  config = lib.mkIf cfg.enable {
-    # System packages for ProtonMail dependencies
-    environment.systemPackages = with pkgs; [
-      # Any system-level dependencies if needed
-    ];
-    
-    # No system services needed for ProtonMail desktop client
-  };
+  # No system-lane dependencies needed for ProtonMail desktop client
 }
