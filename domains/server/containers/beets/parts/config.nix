@@ -32,7 +32,7 @@ paths:
     comp: Compilations/$album%aunique{}/$track $title
 
 # Plugins
-plugins: duplicates fetchart embedart scrub replaygain missing info chroma
+plugins: duplicates fetchart embedart scrub replaygain missing info chroma web
 
 # Plugin configurations
 duplicates:
@@ -96,6 +96,12 @@ match:
 # Automatically skip when obvious - lowered for auto-acceptance
 autotagger:
     strong_rec_thresh: 0.10
+
+# Web interface
+web:
+    host: 0.0.0.0
+    port: 8337
+    cors: ''
 EOF
 
     chown -R 1000:100 ${cfgRoot}
