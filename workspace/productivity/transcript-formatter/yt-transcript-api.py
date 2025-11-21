@@ -280,6 +280,44 @@ llm_polisher = LLMTranscriptPolisher()
 async def startup_event():
     """Initialize services on startup"""
     logger.info("Starting HWC Transcript API...")
+    logger.info("=" * 70)
+
+    # Validate spaCy availability
+    if hasattr(basic_cleaner, 'SPACY_AVAILABLE'):
+        if basic_cleaner.SPACY_AVAILABLE:
+            logger.info("✓ spaCy loaded successfully")
+        else:
+            logger.warning("❌ spaCy not available! Basic cleaning will use regex fallback")
+    else:
+        logger.info("✓ Basic cleaner initialized")
+
+    # Validate Ollama availability
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ollama", "list",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5)
+
+        if proc.returncode == 0:
+            # Parse output to list available models
+            models_output = stdout.decode('utf-8')
+            if llm_polisher.model in models_output:
+                logger.info(f"✓ Ollama available with model '{llm_polisher.model}'")
+            else:
+                logger.warning(f"⚠ Ollama available but model '{llm_polisher.model}' not found")
+                logger.warning(f"  Available models:\n{models_output}")
+        else:
+            logger.warning(f"❌ Ollama command failed: {stderr.decode()}")
+    except asyncio.TimeoutError:
+        logger.warning("❌ Ollama check timed out - service may be slow to respond")
+    except FileNotFoundError:
+        logger.error("❌ Ollama not found in PATH! LLM polishing will fail")
+    except Exception as e:
+        logger.warning(f"❌ Cannot reach Ollama: {e}")
+
+    logger.info("=" * 70)
     logger.info("HWC Transcript API startup complete")
 
 
@@ -601,9 +639,9 @@ async def get_transcript_text(request: Request, body: TranscriptTextRequest, bac
         if body.format == "llm":
             try:
                 logger.info(f"Applying LLM polishing to transcript: {title}")
-                # Chain: basic cleaning first, then LLM polish
+                # Chain: basic cleaning first, then LLM polish (async)
                 cleaned = basic_cleaner.clean(transcript_text, title)
-                transcript_text = llm_polisher.polish(cleaned, title)
+                transcript_text = await llm_polisher.polish(cleaned, title)
                 format_used = "llm"
                 logger.info(f"LLM polishing completed for: {title}")
             except Exception as e:
@@ -618,11 +656,13 @@ async def get_transcript_text(request: Request, body: TranscriptTextRequest, bac
             # raw format - no cleaning
             format_used = "raw"
 
-        # Copy to permanent location in vault root
+        # Save cleaned transcript to vault root
         vault_root = cfg.transcripts_root
         vault_root.mkdir(parents=True, exist_ok=True)
         dest_path = vault_root / markdown_path.name
-        shutil.copy2(markdown_path, dest_path)
+
+        # Write the cleaned content (not the original)
+        dest_path.write_text(transcript_text, encoding="utf-8")
         vault_path_str = str(dest_path)
 
         # Return response matching iOS Shortcut expectations
