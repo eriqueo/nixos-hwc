@@ -132,6 +132,15 @@
       needsUrlBase = false;  # Strip /sync prefix - CouchDB doesn't support URL base
     }
 
+    # ntfy notification server - preserve path (ntfy handles subpath natively)
+    {
+      name = "ntfy";
+      mode = "subpath";
+      path = "/notify";
+      upstream = "http://127.0.0.1:2586";
+      needsUrlBase = false;  # ntfy works with subpath without URL base
+    }
+
     # Tdarr - port mode (WebSocket intensive, subpath issues)
     {
       name = "tdarr";
