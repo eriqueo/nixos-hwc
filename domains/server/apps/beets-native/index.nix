@@ -3,18 +3,8 @@
 let
   cfg = config.hwc.server.apps.beets-native;
 
-  beetsPackage = pkgs.beets.override {
-    pluginArgs = {
-      beatport = true;
-      copyartifacts = true;
-      fetchart = true;
-      embedart = true;
-      replaygain = true;
-      thumbnails = true;
-      chroma = true;
-      web = true;
-    };
-  };
+  # Beets with all plugins enabled
+  beetsPackage = pkgs.beets-full;
 
   beetsConfig = pkgs.writeText "config.yaml" ''
     directory: ${cfg.musicDir}
