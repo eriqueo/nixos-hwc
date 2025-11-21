@@ -1,0 +1,28 @@
+code,name,description,trade,skill_level,hourly_rate,burden_rate,overtime_multiplier,active,notes
+CARP-FRAMING,Framing Carpenter,Rough framing carpentry,Carpentry,Journeyman,45.00,0.30,1.5,true,Includes framing walls floors roofs
+CARP-FINISH,Finish Carpenter,Finish carpentry and trim,Carpentry,Journeyman,50.00,0.30,1.5,true,Trim doors cabinets
+CARP-GENERAL,General Carpenter,General carpentry work,Carpentry,Journeyman,42.00,0.30,1.5,true,All-around carpentry
+CARP-HELPER,Carpenter Helper,Carpenter assistant,Carpentry,Helper,25.00,0.25,1.5,true,General labor support
+PLUMB-MASTER,Master Plumber,Licensed master plumber,Plumbing,Master,85.00,0.35,1.5,true,Full plumbing services
+PLUMB-JOURNEY,Journeyman Plumber,Journeyman plumber,Plumbing,Journeyman,65.00,0.35,1.5,true,Rough and finish plumbing
+PLUMB-HELPER,Plumbing Helper,Plumber assistant,Plumbing,Helper,30.00,0.25,1.5,true,Assist with plumbing work
+ELEC-MASTER,Master Electrician,Licensed master electrician,Electrical,Master,90.00,0.35,1.5,true,Full electrical services
+ELEC-JOURNEY,Journeyman Electrician,Journeyman electrician,Electrical,Journeyman,70.00,0.35,1.5,true,Rough and finish electrical
+ELEC-HELPER,Electrical Helper,Electrician assistant,Electrical,Helper,32.00,0.25,1.5,true,Assist with electrical work
+DRYWALL-HANGER,Drywall Hanger,Drywall installation,Drywall,Journeyman,40.00,0.28,1.5,true,Hang drywall sheets
+DRYWALL-FINISHER,Drywall Finisher,Drywall taping and finishing,Drywall,Journeyman,42.00,0.28,1.5,true,Tape mud sand finish
+PAINTER,Painter,Interior and exterior painting,Painting,Journeyman,38.00,0.28,1.5,true,Prep prime paint
+TILE-SETTER,Tile Setter,Tile installation,Tile,Journeyman,48.00,0.30,1.5,true,Floor and wall tile
+HVAC-TECH,HVAC Technician,HVAC installation and service,HVAC,Journeyman,72.00,0.35,1.5,true,Heating cooling ventilation
+ROOFER,Roofer,Roofing installation,Roofing,Journeyman,42.00,0.30,1.5,true,Shingle installation
+SIDING-INSTALLER,Siding Installer,Siding installation,Siding,Journeyman,40.00,0.28,1.5,true,Vinyl fiber cement wood
+FLOORING-INSTALLER,Flooring Installer,Flooring installation,Flooring,Journeyman,45.00,0.28,1.5,true,Hardwood laminate vinyl
+DEMO-LABORER,Demo Laborer,Demolition and cleanup,General Labor,Laborer,28.00,0.25,1.5,true,Demo removal cleanup
+GENERAL-LABORER,General Laborer,General construction labor,General Labor,Laborer,22.00,0.22,1.5,true,Basic labor tasks
+EXCAVATOR-OPERATOR,Excavator Operator,Heavy equipment operation,Equipment Operator,Operator,55.00,0.30,1.5,true,Excavator skid steer
+CONCRETE-FINISHER,Concrete Finisher,Concrete forming and finishing,Concrete,Journeyman,48.00,0.30,1.5,true,Forms footings flatwork
+INSULATION-INSTALLER,Insulation Installer,Insulation installation,Insulation,Journeyman,35.00,0.28,1.5,true,Batt spray foam
+CABINET-INSTALLER,Cabinet Installer,Cabinet installation,Carpentry,Specialist,52.00,0.30,1.5,true,Kitchen bath cabinets
+COUNTERTOP-INSTALLER,Countertop Installer,Countertop installation,Specialty,Specialist,58.00,0.30,1.5,true,Granite quartz laminate
+PROJECT-MANAGER,Project Manager,Project management and coordination,Management,Manager,75.00,0.35,1.5,true,Job oversight coordination
+SUPERINTENDENT,Site Superintendent,On-site supervision,Management,Supervisor,65.00,0.35,1.5,true,Daily site management
