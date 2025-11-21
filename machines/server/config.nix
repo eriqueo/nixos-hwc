@@ -62,15 +62,17 @@
   };
 
   # ntfy notification system for server alerts
+  # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
+  # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.system.services.ntfy = {
     enable = true;
-    serverUrl = "https://ntfy.sh";
-    defaultTopic = "hwc-server-events";
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale
+    defaultTopic = "hwc-server-events";  # General server events
     defaultTags = [ "hwc" "server" "production" ];
     defaultPriority = 4;  # Higher priority for server alerts
     hostTag = true;       # Adds "host-hwc-server" tag automatically
 
-    # Authentication disabled for public topics (enable for private)
+    # Authentication disabled for self-hosted (can enable if needed)
     auth.enable = false;
     # To enable auth, add secrets and configure:
     # auth = {
@@ -124,9 +126,9 @@
       # ntfy integration for remote notifications
       ntfy = {
         enable = true;
-        topic = null;  # Use default topic from hwc.system.services.ntfy
-        onSuccess = false;  # No success notifications
-        onFailure = true;   # Send ntfy alert on backup failures
+        topic = "hwc-critical";  # Backup failures are critical (P5)
+        onSuccess = false;  # No success notifications (or use "hwc-backups" if desired)
+        onFailure = true;   # Send critical alert on backup failures
       };
     };
   };
