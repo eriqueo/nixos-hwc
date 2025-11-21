@@ -66,7 +66,7 @@
   # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.system.services.ntfy = {
     enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net";  # Self-hosted ntfy via Tailscale (root path)
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale at /notify subpath
     defaultTopic = "hwc-server-events";  # General server events
     defaultTags = [ "hwc" "server" "production" ];
     defaultPriority = 4;  # Higher priority for server alerts
