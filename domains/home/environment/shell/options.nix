@@ -81,6 +81,7 @@
         "nixsearch" = "nix search nixpkgs";
         "nixclean" = "nix-collect-garbage -d";
         "nixgen" = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
+        "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh";
         "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me";
         "reload" = "source ~/.zshrc";
