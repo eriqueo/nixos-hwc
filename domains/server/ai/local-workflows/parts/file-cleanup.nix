@@ -198,9 +198,10 @@ if __name__ == "__main__":
   cleanupTimer = cfg.fileCleanup.schedule;
 in
 {
-  # Create rules directory
+  # Create directories
   systemd.tmpfiles.rules = [
     "d ${cfg.fileCleanup.rulesDir} 0755 eric users -"
+    "d ${cfg.logDir} 0755 eric users -"
   ];
 
   # Install cleanup script

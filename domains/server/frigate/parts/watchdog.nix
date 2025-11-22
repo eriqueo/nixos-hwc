@@ -85,7 +85,7 @@ in
       '';
 
       startAt = cfg.monitoring.watchdog.schedule;
-      path = with pkgs; [ curl jq ];
+      path = with pkgs; [ curl jq coreutils ];
     };
   };
 }
