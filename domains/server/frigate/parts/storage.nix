@@ -65,6 +65,7 @@ in
       '';
 
       startAt = cfg.storage.pruneSchedule;
+      path = with pkgs; [ gawk coreutils findutils ];
     };
   };
 }
