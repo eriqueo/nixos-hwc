@@ -36,6 +36,7 @@ def log(message, level="INFO"):
     with open(log_file, "a") as f:
         f.write(log_line + "\n")
 
+
 def query_ollama(prompt, context=""):
     """Query Ollama API for file categorization"""
     try:
@@ -58,6 +59,7 @@ def query_ollama(prompt, context=""):
     except Exception as e:
         log(f"Error querying Ollama: {e}", "ERROR")
         return None
+
 
 def load_rules():
     """Load organization rules from YAML or use defaults"""
@@ -102,6 +104,7 @@ def load_rules():
 
     return default_rules
 
+
 def categorize_file(file_path):
     """Use AI to categorize file if extension-based rules fail"""
     prompt = f"""Analyze this file and suggest a category folder:
@@ -109,12 +112,13 @@ File: {file_path.name}
 Extension: {file_path.suffix}
 Size: {file_path.stat().st_size} bytes
 
-Available categories: Documents, Pictures, Videos, Music, Archives, Code, Projects, Work, Personal, Temp
+Categories: Documents, Pictures, Videos, Music, Archives, Code
 
 Respond with ONLY the category name, nothing else."""
 
     category = query_ollama(prompt)
     return category if category else "Uncategorized"
+
 
 def organize_files(watch_dir):
     """Organize files in a watch directory"""
@@ -160,7 +164,8 @@ def organize_files(watch_dir):
             dest_file = dest_dir / f"{stem}_{timestamp}{suffix}"
 
         if DRY_RUN:
-            log(f"[DRY RUN] Would move: {file_path.name} -> {category}/", "INFO")
+            msg = f"[DRY RUN] Would move: {file_path.name} -> {category}/"
+            log(msg, "INFO")
         else:
             try:
                 shutil.move(str(file_path), str(dest_file))
@@ -170,6 +175,7 @@ def organize_files(watch_dir):
                 log(f"Error moving {file_path.name}: {e}", "ERROR")
 
     return files_processed
+
 
 def main():
     """Main cleanup routine"""
@@ -185,6 +191,7 @@ def main():
             log(f"Error processing {watch_dir}: {e}", "ERROR")
 
     log(f"Cleanup complete. Files processed: {total_processed}")
+
 
 if __name__ == "__main__":
     main()
