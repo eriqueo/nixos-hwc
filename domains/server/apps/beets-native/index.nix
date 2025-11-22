@@ -137,15 +137,15 @@ in
         ];
       };
     };
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = builtins.pathExists cfg.musicDir || true;
-      message = "Music directory ${cfg.musicDir} should exist";
-    }
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = builtins.pathExists cfg.musicDir || true;
+        message = "Music directory ${cfg.musicDir} should exist";
+      }
+    ];
+  };
 }
