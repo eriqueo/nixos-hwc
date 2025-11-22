@@ -5,8 +5,9 @@
 { config, lib, pkgs, cfg }:
 
 let
-  cleanupScript = pkgs.writeScriptBin "ai-cleanup" ''
-    #!${pkgs.python3}/bin/python3
+  cleanupScript = pkgs.writers.writePython3Bin "ai-cleanup" {
+    libraries = with pkgs.python3Packages; [ requests pyyaml ];
+  } ''
     import os
     import sys
     import json

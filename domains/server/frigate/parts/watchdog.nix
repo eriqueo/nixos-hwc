@@ -16,6 +16,31 @@ in
 
       script = ''
         FRIGATE_API="http://localhost:${toString cfg.settings.port}/api"
+        MAX_RETRIES=3
+        RETRY_DELAY=5
+
+        # Wait for Frigate API to be ready with retries
+        check_api_ready() {
+          for i in $(seq 1 $MAX_RETRIES); do
+            if ${pkgs.curl}/bin/curl -sf "$FRIGATE_API/stats" >/dev/null 2>&1; then
+              return 0
+            fi
+            if [[ $i -lt $MAX_RETRIES ]]; then
+              echo "Frigate API not ready, retrying in $RETRY_DELAY seconds... (attempt $i/$MAX_RETRIES)"
+              sleep $RETRY_DELAY
+            fi
+          done
+          echo "Frigate API not responding after $MAX_RETRIES attempts. Service may be starting or down."
+          return 1
+        }
+
+        # Check if API is ready first
+        if ! check_api_ready; then
+          # Gracefully handle Frigate not being ready (e.g., during restart)
+          # Don't fail the service, just log and exit
+          echo "Skipping camera health check - Frigate API unavailable"
+          exit 0
+        fi
 
         check_camera() {
           local camera="$1"
@@ -54,6 +79,9 @@ in
           mv ${cfg.monitoring.prometheus.textfilePath}/frigate_cameras.prom.$$ ${cfg.monitoring.prometheus.textfilePath}/frigate_cameras.prom
         fi
         ''}
+
+        # Exit successfully - this is a monitoring script, not a critical service
+        exit 0
       '';
 
       startAt = cfg.monitoring.watchdog.schedule;

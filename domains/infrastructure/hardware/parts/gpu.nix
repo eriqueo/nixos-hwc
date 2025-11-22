@@ -168,7 +168,7 @@ in
           Restart = "always";
           RestartSec = "10";
         };
-        wantedBy = [ ];
+        wantedBy = [ "multi-user.target" ];
       };
     })
 
