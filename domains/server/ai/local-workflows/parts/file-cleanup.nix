@@ -8,10 +8,7 @@ let
   cleanupScript = pkgs.writers.writePython3Bin "ai-cleanup" {
     libraries = with pkgs.python3Packages; [ requests pyyaml ];
   } ''
-import os
-import sys
 import json
-import hashlib
 import shutil
 from pathlib import Path
 from datetime import datetime
@@ -20,10 +17,11 @@ import requests
 # Configuration
 OLLAMA_ENDPOINT = "${cfg.ollamaEndpoint}"
 MODEL = "${cfg.fileCleanup.model}"
-WATCH_DIRS = ${builtins.toJSON cfg.fileCleanup.watchDirs}
+WATCH_DIRS = json.loads('''${builtins.toJSON cfg.fileCleanup.watchDirs}''')
 RULES_DIR = "${cfg.fileCleanup.rulesDir}"
 LOG_DIR = "${cfg.logDir}"
 DRY_RUN = ${if cfg.fileCleanup.dryRun then "True" else "False"}
+
 
 def log(message, level="INFO"):
     """Log to both stdout and file"""
