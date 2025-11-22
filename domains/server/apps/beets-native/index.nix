@@ -130,11 +130,13 @@ in
       };
     };
 
-    # Validation
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
     assertions = [
       {
-        assertion = !cfg.enable || true;
-        message = "Beets native installation enabled";
+        assertion = builtins.pathExists cfg.musicDir || true;
+        message = "Music directory ${cfg.musicDir} should exist";
       }
     ];
   };
