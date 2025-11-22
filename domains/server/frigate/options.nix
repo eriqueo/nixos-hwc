@@ -12,8 +12,12 @@ in
 
     image = mkOption {
       type = types.str;
-      default = "ghcr.io/blakeblackshear/frigate:stable-tensorrt";
-      description = "Container image for Frigate NVR";
+      default = "ghcr.io/blakeblackshear/frigate:0.15.1-tensorrt";
+      description = ''
+        Container image for Frigate NVR.
+        Pinned to 0.15.1 to avoid breaking changes in 0.16.x.
+        Frigate 0.16.0+ removed TensorRT detector and requires new ONNX models.
+      '';
     };
 
     settings = {
