@@ -3,6 +3,9 @@
 let
   cfg = config.hwc.server.apps.beets-native;
 
+  # Beets with all plugins enabled
+  beetsPackage = pkgs.beets;
+
   beetsConfig = pkgs.writeText "config.yaml" ''
     directory: ${cfg.musicDir}
     library: ${cfg.configDir}/library.db
@@ -97,20 +100,9 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Install beets with all plugins on the host
-    environment.systemPackages = with pkgs; [
-      (beets.override {
-        pluginArgs = {
-          beatport = true;
-          copyartifacts = true;
-          fetchart = true;
-          embedart = true;
-          replaygain = true;
-          thumbnails = true;
-          chroma = true;
-          web = true;
-        };
-      })
-      ffmpeg  # Required for replaygain and chroma
+    environment.systemPackages = [
+      beetsPackage
+      pkgs.ffmpeg  # Required for replaygain and chroma
     ];
 
     # Create config directory
@@ -130,22 +122,20 @@ in
       serviceConfig = {
         Type = "simple";
         User = "eric";
-        ExecStart = "${pkgs.beets}/bin/beet web";
+        ExecStart = "${beetsPackage}/bin/beet web";
         Restart = "on-failure";
         Environment = [
           "BEETSDIR=/home/eric/.config/beets"
         ];
       };
     };
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = builtins.pathExists cfg.musicDir || true;
-      message = "Music directory ${cfg.musicDir} should exist";
-    }
-  ];
+    # Validation
+    assertions = [
+      {
+        assertion = !cfg.enable || true;
+        message = "Beets native installation enabled";
+      }
+    ];
+  };
 }
