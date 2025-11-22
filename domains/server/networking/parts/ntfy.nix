@@ -30,6 +30,7 @@ in {
     # Container configuration
     virtualisation.oci-containers.containers.ntfy = {
       image = "binwiederhier/ntfy:latest";
+      cmd = [ "serve" ];  # CRITICAL: Tell ntfy to run the server
       ports = [ "${toString cfg.port}:80" ];
       volumes = [
         "${cfg.dataDir}:/var/cache/ntfy"
