@@ -9,7 +9,7 @@ in
 
     image = mkOption {
       type = types.str;
-      default = "ghcr.io/haveagitgat/tdarr:latest";
+      default = "ghcr.io/haveagitgat/tdarr:2.26.01";
       description = "Container image for Tdarr server";
     };
 
@@ -45,7 +45,7 @@ in
 
     ffmpegVersion = mkOption {
       type = types.enum [ "6" "7" ];
-      default = "6";
+      default = "7";
       description = "FFmpeg version to use";
     };
 
