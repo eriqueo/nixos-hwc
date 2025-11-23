@@ -383,7 +383,130 @@ imports = [
 
 ---
 
-## 19) Related Documentation
+## 19) Complex Service Configuration Pattern
+
+### The Config-First, Nix-Second Rule
+
+For **complex services** with substantial configuration schemas (Frigate, Jellyfin, SABnzbd, Home Assistant, etc.):
+
+**Pattern Requirements**:
+
+1. **Canonical Config File**:
+   - Maintain service configuration in the format the service expects (YAML/TOML/INI/XML)
+   - Store in module directory: `domains/server/<service>/config/config.yml`
+   - This file is **version-controlled** and **human-readable**
+   - This file is **portable** - can work on non-NixOS systems with minimal changes
+
+2. **Nix Responsibilities** (infrastructure only):
+   - Container image/version pinning
+   - Volume mounts (including config file)
+   - Port mappings
+   - GPU/device passthrough
+   - Environment variables
+   - Resource limits
+   - **NOT** generating service-specific YAML/TOML/etc.
+
+3. **Module Structure**:
+   ```
+   domains/server/<service>/
+   ├── options.nix         # Nix-level options (image, ports, GPU, etc.)
+   ├── index.nix           # Container definition
+   ├── config/
+   │   └── config.yml      # Canonical service config (mounted into container)
+   └── README.md           # Service documentation
+   ```
+
+4. **Debug Workflow**:
+   - To change service behavior: **Edit `config/config.yml` directly**
+   - Restart service to apply changes
+   - Once stable, commit the config file
+   - **NOT**: Edit Nix → generate YAML → hope it's correct → debug generated output
+
+### Rationale
+
+**Why This Pattern**:
+- ✅ **Debuggability**: Config is visible, not hidden in Nix string interpolation
+- ✅ **Portability**: Config works on Docker/Podman/k8s with minimal changes
+- ✅ **Validation**: Service's native tools can validate config
+- ✅ **Documentation**: Upstream docs directly applicable
+- ✅ **Complexity Management**: Service complexity stays in service format
+
+**Anti-Pattern** (What NOT to Do):
+```nix
+# ❌ BAD: Encoding complex service config in Nix
+hwc.server.frigate = {
+  detectors.onnx = {
+    type = "onnx";
+    model = {
+      path = "/config/model.onnx";
+      input_dtype = "float";
+      # ... 50 more options
+    };
+  };
+  cameras.cam1 = {
+    # ... complex RTSP/recording/detection config
+  };
+};
+```
+
+**Why It Fails**:
+- YAML structure errors hidden in Nix indentation
+- Service schema changes require Nix module updates
+- Debugging requires inspecting generated files
+- Not portable outside NixOS
+
+**Correct Pattern**:
+```nix
+# ✅ GOOD: Nix handles infrastructure only
+hwc.server.frigate = {
+  enable = true;
+  image = "ghcr.io/blakeblackshear/frigate:0.16.2";  # Explicit version
+  gpu.enable = true;  # Infrastructure concern
+  # Config comes from domains/server/frigate/config/config.yml
+};
+```
+
+### When to Use Config-First
+
+**Use Config-First for**:
+- Services with >50 lines of configuration
+- Services with complex nested schemas (Frigate, Home Assistant, Traefik)
+- Services where upstream docs reference config files directly
+- Services you need to debug frequently
+
+**Nix Options Are Fine for**:
+- Simple services with <20 config options
+- Services where Nix options ARE the canonical interface (NixOS services)
+- Infrastructure concerns (ports, volumes, env vars)
+
+### Secrets Integration
+
+Secrets (passwords, API keys) still use agenix:
+- Reference secret files in config: `password_file: /run/agenix/service-password`
+- Or use environment variable substitution in container
+- **NOT**: Inline secrets in config files
+
+### Validation Requirements
+
+Modules using config-first pattern MUST:
+1. Document config file location in README.md
+2. Provide example/template config
+3. Include verification script if possible
+4. Document how to validate config (service's native tools)
+
+### Migration from Nix-Generated Configs
+
+When migrating from Nix-generated to config-first:
+1. Extract current runtime config: `podman exec service cat /config/config.yml`
+2. Save to `domains/server/<service>/config/config.yml`
+3. Commit as-is (baseline)
+4. Modify Nix to mount file instead of generating
+5. Verify service works identically
+6. Only then refactor config as needed
+
+---
+
+## 20) Related Documentation
 
 * **Filesystem Charter** (`FILESYSTEM-CHARTER.md`): Home directory organization (`~/`) with domain-based structure
   - 3-digit prefix system (100_hwc, 200_personal, 300_tech, etc.)
@@ -394,6 +517,10 @@ imports = [
 
 ---
 
-**Charter Version**: v6.0 - Configuration Validity & Dependency Assertions
+**Charter Version**: v7.0 - Complex Service Configuration Pattern (Config-First, Nix-Second)
+
+**Version History**:
+- v7.0 (2025-11-23): Added section 19 "Complex Service Configuration Pattern" establishing config-first rule for services like Frigate
+- v6.0: Configuration Validity & Dependency Assertions
 
 ---

@@ -1,0 +1,49 @@
+# Frigate NVR Configuration (Config-First Pattern)
+# Charter v7.0 Section 19 compliant
+#
+# PLACEHOLDER: This file will be populated with actual config extracted from
+# the running Frigate instance during Phase 1 of migration.
+#
+# To extract current config:
+#   sudo podman exec frigate cat /config/config.yaml > config/config.baseline.yml
+#
+# Then customize for frigate-v2 with:
+#   1. Update to Frigate 0.16.2 schema if needed
+#   2. Replace secrets with placeholders or references
+#   3. Modernize ONNX detector config (input_dtype: float, etc.)
+#
+# DO NOT COMMIT SECRETS TO THIS FILE!
+
+# Minimal placeholder config for testing module structure
+# Replace this entire file with extracted config when ready
+
+mqtt:
+  enabled: false  # Enable after MQTT broker is configured
+
+detectors:
+  onnx:
+    type: onnx
+    device: 0
+    num_threads: 3
+
+model:
+  model_type: yolo-generic
+  width: 640
+  height: 640
+  input_tensor: nchw
+  input_pixel_format: rgb
+  input_dtype: float  # CRITICAL: Tells Frigate to convert uint8→float
+  path: /config/models/yolov9-s-320.onnx
+  labelmap_path: /labelmap/coco-80.txt
+
+cameras:
+  placeholder_cam:
+    enabled: false  # Disabled until real cameras configured
+    ffmpeg:
+      inputs:
+        - path: rtsp://REPLACE_WITH_REAL_CAMERA:554/stream
+          roles: [detect]
+    detect:
+      width: 1280
+      height: 720
+      fps: 1
