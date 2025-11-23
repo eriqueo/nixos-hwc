@@ -85,6 +85,7 @@ ${lib.optionalString (cfg.gpu.detector == "onnx" && cfg.gpu.enable) ''
 detectors:
   onnx:
     type: onnx
+    device: ${toString cfg.gpu.device}
     num_threads: 3
 ''}
 
