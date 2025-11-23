@@ -20,7 +20,7 @@ let
   cfg = config.hwc.server.frigate-v2;
 
   # Path to canonical config file (version-controlled)
-  configFile = ./config/config.yml;
+  configTemplate = ./config/config.yml;
 
 in
 {
@@ -33,6 +33,39 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
+
+    # Config generation service (minimal - only substitutes secrets)
+    systemd.services.frigate-v2-config = {
+      description = "Generate Frigate v2 NVR configuration";
+      wantedBy = [ "podman-frigate-v2.service" ];
+      before = [ "podman-frigate-v2.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+
+      script = ''
+        mkdir -p ${cfg.storage.configPath}
+
+        # Read secrets
+        RTSP_USER=$(cat /run/agenix/frigate-rtsp-username)
+        RTSP_PASS=$(cat /run/agenix/frigate-rtsp-password)
+        RTSP_PASS_ENCODED=$(echo "$RTSP_PASS" | ${pkgs.python3}/bin/python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))")
+
+        CAMERA_IPS=$(cat /run/agenix/frigate-camera-ips)
+        CAM1_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_1')
+        CAM2_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_2')
+        CAM3_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_3')
+
+        # Substitute secrets in config template
+        export RTSP_USER RTSP_PASS_ENCODED CAM1_IP CAM2_IP CAM3_IP
+        ${pkgs.envsubst}/bin/envsubst < ${configTemplate} > ${cfg.storage.configPath}/config.yaml
+
+        chown eric:users ${cfg.storage.configPath}/config.yaml
+      '';
+
+      path = with pkgs; [ coreutils jq python3 envsubst ];
+    };
 
     # Frigate container
     virtualisation.oci-containers.containers.frigate-v2 = {
@@ -63,8 +96,8 @@ in
       };
 
       volumes = [
-        # CANONICAL CONFIG FILE (from repo, version-controlled)
-        "${configFile}:/config/config.yml:ro"
+        # GENERATED CONFIG (from template with secrets substituted)
+        "${cfg.storage.configPath}:/config"
 
         # Model cache (ONNX model file goes here)
         "${cfg.storage.configPath}/models:/config/models:ro"
@@ -119,8 +152,8 @@ in
       message = "hwc.server.frigate-v2 requires Podman as OCI container backend";
     }
     {
-      assertion = !cfg.enable || builtins.pathExists configFile;
-      message = "hwc.server.frigate-v2 requires config/config.yml to exist";
+      assertion = !cfg.enable || builtins.pathExists configTemplate;
+      message = "hwc.server.frigate-v2 requires config/config.yml template to exist";
     }
   ];
 }
