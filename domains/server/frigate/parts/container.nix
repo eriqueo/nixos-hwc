@@ -86,14 +86,16 @@ detectors:
   onnx:
     type: onnx
     num_threads: 3
-    model:
-      path: /config/models/yolov9-s-320.onnx
-      model_type: yolo-generic
-      input_tensor: nchw
-      input_pixel_format: bgr
-      width: 320
-      height: 320
-      labelmap_path: /labelmap/coco-80.txt
+
+model:
+  path: /config/models/yolov9-s-320.onnx
+  model_type: yolo-generic
+  input_tensor: nchw
+  input_pixel_format: bgr
+  input_dtype: float
+  width: 320
+  height: 320
+  labelmap_path: /labelmap/coco-80.txt
 ''}
 
 ffmpeg: &ffmpeg_defaults
