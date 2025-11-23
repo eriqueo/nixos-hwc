@@ -28,8 +28,8 @@ in
 
     port = mkOption {
       type = types.port;
-      default = 5000;
-      description = "Web UI port";
+      default = 5001;
+      description = "Web UI port (default 5001 for parallel testing with frigate on 5000)";
     };
 
     gpu = {
@@ -45,19 +45,19 @@ in
     storage = {
       configPath = mkOption {
         type = types.str;
-        default = "/opt/surveillance/frigate/config";
+        default = "/opt/surveillance/frigate-v2/config";
         description = "Configuration directory path (mounts config.yml)";
       };
 
       mediaPath = mkOption {
         type = types.str;
-        default = "/mnt/media/surveillance/frigate/media";
+        default = "/mnt/media/surveillance/frigate-v2/media";
         description = "Media storage path (recordings)";
       };
 
       bufferPath = mkOption {
         type = types.str;
-        default = "/mnt/hot/surveillance/buffer";
+        default = "/mnt/hot/surveillance/frigate-v2/buffer";
         description = "Buffer storage path (hot storage for temporary files)";
       };
     };
