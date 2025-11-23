@@ -19,10 +19,15 @@ in
 
     image = mkOption {
       type = types.str;
-      default = "ghcr.io/blakeblackshear/frigate:0.16.2";
+      default = "ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt";
       description = ''
         Container image for Frigate NVR.
-        Pinned to explicit version (not 'stable' tag) for reproducibility.
+        Uses -tensorrt variant which includes CUDA support for ONNX detector.
+
+        Note: Despite the name, this image supports both TensorRT AND ONNX with CUDA.
+        The base 0.16.2 image only has OpenVINO (Intel) + CPU, no CUDA support.
+
+        For NVIDIA GPUs with ONNX detector, you MUST use the -tensorrt variant.
       '';
     };
 
