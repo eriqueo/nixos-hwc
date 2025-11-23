@@ -13,6 +13,7 @@
     ../../profiles/security.nix
     ../../profiles/ai.nix
     ../../domains/server/routes.nix
+    ../../domains/server/frigate-v2  # Config-first pattern for parallel testing
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
     # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed
@@ -289,6 +290,25 @@
       pruneSchedule = "hourly";
     };
 
+    firewall.tailscaleOnly = true;
+  };
+
+  # Frigate v2 (Config-First Pattern) - Parallel Testing
+  # Access: http://server-ip:5001
+  # Charter v7.0 Section 19 compliant
+  hwc.server.frigate-v2 = {
+    enable = true;
+
+    # Port 5001 for parallel testing with current frigate (5000)
+    port = 5001;
+
+    # Use same GPU settings as current frigate
+    gpu = {
+      enable = true;
+      device = 0;  # NVIDIA P1000
+    };
+
+    # Firewall settings
     firewall.tailscaleOnly = true;
   };
 
