@@ -47,6 +47,11 @@ in
         "--shm-size=${cfg.resources.shmSize}"
         "--memory=${cfg.resources.memory}"
         "--cpus=${cfg.resources.cpus}"
+        # Proper HTTP healthcheck (prevents empty 400 errors in logs)
+        "--health-cmd=curl -fsS http://127.0.0.1:${toString cfg.port}/api/stats || exit 1"
+        "--health-interval=30s"
+        "--health-timeout=5s"
+        "--health-retries=3"
       ]
       # NVIDIA GPU device passthrough (for object detection)
       ++ lib.optionals cfg.gpu.enable [
