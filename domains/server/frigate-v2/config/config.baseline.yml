@@ -1,36 +1,25 @@
-# Frigate NVR Configuration (Config-First Pattern)
-# Charter v7.0 Section 19 compliant
-#
-# Secrets are provided via environment variables by Nix:
-#   - RTSP_USER: RTSP username from agenix
-#   - RTSP_PASS_ENCODED: URL-encoded RTSP password from agenix
-#   - CAM1_IP, CAM2_IP, CAM3_IP: Camera IP addresses from agenix
-#
-# DO NOT COMMIT ACTUAL SECRET VALUES TO THIS FILE!
-
 mqtt:
   enabled: true
   host: 127.0.0.1
   port: 1883
 
+
 detectors:
   onnx:
     type: onnx
-    device: 0  # GPU 0
+    device: 0
     num_threads: 3
 
-# Model configuration - IMPORTANT: Using yolov9 model_type
-# Note: Frigate 0.15.1 doesn't support 'yolo-generic', must use 'yolov9'
-# or remove model_type and let Frigate auto-detect
 model:
   path: /config/models/yolov9-s-320.onnx
-  model_type: yolov9  # Changed from yolo-generic to fix validation error
+  model_type: yolo-generic
   input_tensor: nchw
   input_pixel_format: bgr
-  input_dtype: float  # CRITICAL: Prevents uint8→float tensor type mismatch
+  input_dtype: float
   width: 320
   height: 320
   labelmap_path: /labelmap/coco-80.txt
+
 
 ffmpeg: &ffmpeg_defaults
   hwaccel_args:
@@ -52,7 +41,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM1_IP}:554/ch01/0
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0
           roles: [detect, record]
     detect:
       width: 1280
@@ -69,7 +58,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM2_IP}:554/ch01/0
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0
           roles: [detect, record]
     detect:
       width: 640
@@ -85,7 +74,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM3_IP}:554/ch01/0
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0
           roles: [detect, record]
     detect:
       width: 320
@@ -100,9 +89,10 @@ objects:
 
 go2rtc:
   streams:
-    cobra_cam_1: [rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM1_IP}:554/ch01/0]
-    cobra_cam_2: [rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM2_IP}:554/ch01/0]
-    cobra_cam_3: [rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM3_IP}:554/ch01/0]
+    cobra_cam_1: [rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0]
+    cobra_cam_2: [rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0]
+    cobra_cam_3: [rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0]
 
 ui:
   timezone: America/Denver
+version: 0.15-1
