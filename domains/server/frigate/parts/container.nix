@@ -91,6 +91,7 @@ detectors:
       model_type: yolo-generic
       input_tensor: nchw
       input_pixel_format: bgr
+      input_dtype: float32
       width: 320
       height: 320
       labelmap_path: /labelmap/coco-80.txt
