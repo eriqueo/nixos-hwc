@@ -28,6 +28,9 @@ in {
       lsof net-tools iproute2
       tcpdump nmap
 
+      # Secret management
+      age  # Encryption/decryption tool for agenix secrets
+
       # Container management
       docker-compose
       podman-compose
