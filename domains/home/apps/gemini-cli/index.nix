@@ -5,7 +5,7 @@ let
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
   imports = [ ./options.nix ];
 
@@ -13,13 +13,23 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      nodejs
-      # User can install gemini-cli manually with: npm install -g gemini-cli
+    home.packages = [
+      pkgs.gemini-cli
     ];
+
+    # Set environment variable for Gemini API key
+    home.sessionVariables = lib.mkIf (config.age.secrets ? gemini-api-key) {
+      GEMINI_API_KEY = "\${cat ${config.age.secrets.gemini-api-key.path} 2>/dev/null || echo}";
+    };
   };
 
   #==========================================================================
   # VALIDATION
   #==========================================================================
+  config.assertions = lib.mkIf cfg.enable [
+    {
+      assertion = config.age.secrets ? gemini-api-key;
+      message = "gemini-cli requires age.secrets.gemini-api-key to be configured in the secrets domain";
+    }
+  ];
 }

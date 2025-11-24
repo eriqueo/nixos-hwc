@@ -86,7 +86,14 @@
     # Cloud backup as fallback (optional)
     cloud.enable = false;  # Set to true to enable cloud backup
     protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
-
+    ntfy = {
+      enable = true;
+      serverUrl = "https://ntfy.sh";
+      defaultTopic = "hwc-laptop-events";
+      defaultTags = [ "hwc" "laptop" ];
+      hostTag = true;
+      auth.enable = false;
+    };
     # Automatic scheduling
     schedule = {
       enable = true;
