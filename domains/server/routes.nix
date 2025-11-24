@@ -47,12 +47,12 @@
       upstream = "http://127.0.0.1:2283";
     }
 
-    # Frigate - port mode (subpath-hostile)
+    # Frigate - port mode (subpath-hostile, GPU-accelerated with TensorRT)
     {
       name = "frigate";
       mode = "port";
       port = 5443;
-      upstream = "http://127.0.0.1:5000";
+      upstream = "http://127.0.0.1:5001";  # frigate-v2 with CUDA/TensorRT support
     }
 
     # Sabnzbd - preserve path (URL base set in app)
