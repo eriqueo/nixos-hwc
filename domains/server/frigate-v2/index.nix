@@ -72,8 +72,14 @@ in
       image = cfg.image;
       autoStart = true;
 
+      ports = [
+        "${toString cfg.port}:5000"  # Web UI
+        "8556:8554"  # RTSP (mapped to avoid conflict with frigate on 8554)
+        "8557:8555/tcp"  # WebRTC (mapped to avoid conflict with frigate on 8555)
+        "8557:8555/udp"  # WebRTC
+      ];
+
       extraOptions = [
-        "--network=host"
         "--security-opt=label=disable"
         "--privileged"
         "--tmpfs=/tmp/cache:size=1g"
@@ -81,7 +87,7 @@ in
         "--memory=${cfg.resources.memory}"
         "--cpus=${cfg.resources.cpus}"
         # Proper HTTP healthcheck (prevents empty 400 errors in logs)
-        "--health-cmd=curl -fsS http://127.0.0.1:${toString cfg.port}/api/stats || exit 1"
+        "--health-cmd=curl -fsS http://127.0.0.1:5000/api/stats || exit 1"
         "--health-interval=30s"
         "--health-timeout=5s"
         "--health-retries=3"
@@ -126,39 +132,39 @@ in
 
       # Optionally restrict external access to Tailscale only
       interfaces."tailscale0" = lib.mkIf cfg.firewall.tailscaleOnly {
-        allowedTCPPorts = [ cfg.port 8554 8555 ];
-        allowedUDPPorts = [ 8555 ];
+        allowedTCPPorts = [ cfg.port 8556 8557 ];  # Web UI, RTSP, WebRTC
+        allowedUDPPorts = [ 8557 ];  # WebRTC UDP
       };
     };
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = [
-    {
-      assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
-      message = "hwc.server.frigate-v2.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
-    }
-    {
-      assertion = !cfg.enable || (cfg.storage.mediaPath != "");
-      message = "hwc.server.frigate-v2.storage.mediaPath must be set";
-    }
-    {
-      assertion = !cfg.enable || (cfg.storage.bufferPath != "");
-      message = "hwc.server.frigate-v2.storage.bufferPath must be set";
-    }
-    {
-      assertion = !cfg.enable || config.hwc.secrets.enable;
-      message = "hwc.server.frigate-v2 requires hwc.secrets.enable = true for RTSP credentials";
-    }
-    {
-      assertion = !cfg.enable || (config.virtualisation.oci-containers.backend == "podman");
-      message = "hwc.server.frigate-v2 requires Podman as OCI container backend";
-    }
-    {
-      assertion = !cfg.enable || builtins.pathExists configTemplate;
-      message = "hwc.server.frigate-v2 requires config/config.yml template to exist";
-    }
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
+        message = "hwc.server.frigate-v2.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
+      }
+      {
+        assertion = !cfg.enable || (cfg.storage.mediaPath != "");
+        message = "hwc.server.frigate-v2.storage.mediaPath must be set";
+      }
+      {
+        assertion = !cfg.enable || (cfg.storage.bufferPath != "");
+        message = "hwc.server.frigate-v2.storage.bufferPath must be set";
+      }
+      {
+        assertion = !cfg.enable || config.hwc.secrets.enable;
+        message = "hwc.server.frigate-v2 requires hwc.secrets.enable = true for RTSP credentials";
+      }
+      {
+        assertion = !cfg.enable || (config.virtualisation.oci-containers.backend == "podman");
+        message = "hwc.server.frigate-v2 requires Podman as OCI container backend";
+      }
+      {
+        assertion = !cfg.enable || builtins.pathExists configTemplate;
+        message = "hwc.server.frigate-v2 requires config/config.yml template to exist";
+      }
+    ];
+  };
 }

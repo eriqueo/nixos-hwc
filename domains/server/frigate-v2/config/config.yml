@@ -16,15 +16,17 @@ mqtt:
 detectors:
   onnx:
     type: onnx
-    device: 0  # GPU 0
+    device: "0"  # GPU 0 (must be string)
     num_threads: 3
+    execution_providers:
+      - cuda
+      - cpu
 
-# Model configuration - IMPORTANT: Using yolov9 model_type
-# Note: Frigate 0.15.1 doesn't support 'yolo-generic', must use 'yolov9'
-# or remove model_type and let Frigate auto-detect
+# Model configuration - YOLOv9 using yolo-generic type
+# Note: Frigate 0.16.2 requires 'yolo-generic' for YOLOv9 models
 model:
   path: /config/models/yolov9-s-320.onnx
-  model_type: yolov9  # Changed from yolo-generic to fix validation error
+  model_type: yolo-generic  # Frigate 0.16.2 compatible
   input_tensor: nchw
   input_pixel_format: bgr
   input_dtype: float  # CRITICAL: Prevents uint8→float tensor type mismatch

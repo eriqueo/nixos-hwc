@@ -13,7 +13,7 @@
     ../../profiles/security.nix
     ../../profiles/ai.nix
     ../../domains/server/routes.nix
-    ../../domains/server/frigate-v2  # Config-first pattern for parallel testing
+    ../../domains/server/frigate-v2/index.nix  # Config-first pattern for parallel testing
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
     # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed
@@ -67,7 +67,7 @@
   # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.system.services.ntfy = {
     enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale at /notify subpath
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted ntfy via Tailscale port mode
     defaultTopic = "hwc-server-events";  # General server events
     defaultTags = [ "hwc" "server" "production" ];
     defaultPriority = 4;  # Higher priority for server alerts
