@@ -35,6 +35,14 @@
       group = "secrets";
     };
 
+    # Indexer API keys
+    ninjacentral-api-key = {
+      file = ../parts/server/ninjacentral-api-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     # SLSKD credentials
     slskd-api-key = {
       file = ../parts/server/slskd-api-key.age;
