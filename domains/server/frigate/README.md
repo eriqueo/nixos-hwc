@@ -190,6 +190,21 @@ podman logs frigate --follow
 journalctl -u podman-frigate.service -f
 ```
 
+### Health Check
+
+Comprehensive health check script available at repository root:
+
+```bash
+./frigate-health.sh
+
+# Checks:
+# - Service status (podman-frigate.service)
+# - Container status and health
+# - API availability (http://localhost:5001)
+# - Port availability (5001, 8554, 8555)
+# - GPU access and utilization
+```
+
 ### Inspecting Config
 
 ```bash
