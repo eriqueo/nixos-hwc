@@ -1,7 +1,8 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig, ... }:
 
 let
   cfg = config.hwc.home.apps.geminiCli;
+  hasGeminiSecret = osConfig.age.secrets ? gemini-api-key;
 in
 {
   #==========================================================================
@@ -17,19 +18,13 @@ in
       pkgs.gemini-cli
     ];
 
-    # Set environment variable for Gemini API key
-    home.sessionVariables = lib.mkIf (config.age.secrets ? gemini-api-key) {
-      GEMINI_API_KEY = "\${cat ${config.age.secrets.gemini-api-key.path} 2>/dev/null || echo}";
+    # Set environment variable for Gemini API key if secret is configured
+    home.sessionVariables = lib.mkIf hasGeminiSecret {
+      GEMINI_API_KEY = "\${cat ${osConfig.age.secrets.gemini-api-key.path} 2>/dev/null || echo}";
     };
   };
 
   #==========================================================================
   # VALIDATION
   #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = config.age.secrets ? gemini-api-key;
-      message = "gemini-cli requires age.secrets.gemini-api-key to be configured in the secrets domain";
-    }
-  ];
 }
