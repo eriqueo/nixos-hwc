@@ -18,10 +18,20 @@ in
       pkgs.gemini-cli
     ];
 
-    # Set environment variable for Gemini API key if secret is configured
-    home.sessionVariables = lib.mkIf hasGeminiSecret {
-      GEMINI_API_KEY = "\${cat ${osConfig.age.secrets.gemini-api-key.path} 2>/dev/null || echo}";
-    };
+    # Load Gemini API key from agenix secret in shell initialization
+    programs.zsh.initExtra = lib.mkIf hasGeminiSecret ''
+      # Source Gemini API key from agenix secret
+      if [ -f "${osConfig.age.secrets.gemini-api-key.path}" ]; then
+        source "${osConfig.age.secrets.gemini-api-key.path}"
+      fi
+    '';
+
+    programs.bash.initExtra = lib.mkIf hasGeminiSecret ''
+      # Source Gemini API key from agenix secret
+      if [ -f "${osConfig.age.secrets.gemini-api-key.path}" ]; then
+        source "${osConfig.age.secrets.gemini-api-key.path}"
+      fi
+    '';
   };
 
   #==========================================================================
