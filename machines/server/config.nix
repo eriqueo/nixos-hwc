@@ -252,7 +252,7 @@
   # Access: http://server-ip:5000 (direct port, no reverse proxy)
   # Frigate doesn't support subpaths due to WebSocket/asset serving requirements
   hwc.server.frigate = {
-    enable = true;
+    enable = false;  # Disabled in favor of frigate-v2 with GPU acceleration
 
     # Hardware Acceleration for Video Decoding
     # CURRENT: Using NVIDIA nvdec (works but power-hungry ~15-25W)
@@ -293,16 +293,16 @@
     firewall.tailscaleOnly = true;
   };
 
-  # Frigate v2 (Config-First Pattern) - Parallel Testing
-  # Access: http://server-ip:5001
-  # Charter v7.0 Section 19 compliant
+  # Frigate NVR (Config-First Pattern with GPU Acceleration)
+  # Access: https://hwc.ocelot-wahoo.ts.net:5443 (via Caddy)
+  # Charter v7.0 Section 19 compliant - TensorRT CUDA support
   hwc.server.frigate-v2 = {
     enable = true;
 
-    # Port 5001 for parallel testing with current frigate (5000)
+    # Internal port 5001 (exposed as 5443 via Caddy)
     port = 5001;
 
-    # Use same GPU settings as current frigate
+    # GPU acceleration for ONNX object detection (TensorRT + CUDA)
     gpu = {
       enable = true;
       device = 0;  # NVIDIA P1000
