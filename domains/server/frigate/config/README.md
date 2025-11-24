@@ -30,7 +30,7 @@ This directory contains the **canonical Frigate configuration** in `config.yml`.
 
 1. **Edit `config.yml` directly**:
    ```bash
-   $EDITOR domains/server/frigate-v2/config/config.yml
+   $EDITOR domains/server/frigate/config/config.yml
    ```
 
 2. **Validate config** (if Frigate provides validation):
@@ -41,22 +41,22 @@ This directory contains the **canonical Frigate configuration** in `config.yml`.
      frigate config validate
 
    # Method 2: Use our verification script
-   ./domains/server/frigate-v2/scripts/verify-config.sh
+   ./domains/server/frigate/scripts/verify-config.sh
    ```
 
 3. **Test changes**:
    ```bash
    # Restart Frigate to apply changes
-   sudo systemctl restart podman-frigate-v2.service
+   sudo systemctl restart podman-frigate.service
 
    # Watch logs for errors
-   podman logs -f frigate-v2
+   podman logs -f frigate
    ```
 
 4. **Commit when stable**:
    ```bash
-   git add domains/server/frigate-v2/config/config.yml
-   git commit -m "feat(server.frigate-v2): adjust camera detection zones"
+   git add domains/server/frigate/config/config.yml
+   git commit -m "feat(server.frigate): adjust camera detection zones"
    ```
 
 ---
@@ -163,20 +163,20 @@ Before committing config changes:
 
 ```bash
 # 1. Verify the file in the container matches your local file
-podman exec frigate-v2 cat /config/config.yml
+podman exec frigate cat /config/config.yml
 
 # 2. If it doesn't match, rebuild NixOS
 sudo nixos-rebuild switch --flake .#hwc-server
 
 # 3. Restart container
-sudo systemctl restart podman-frigate-v2.service
+sudo systemctl restart podman-frigate.service
 ```
 
 ### YAML Syntax Errors
 
 ```bash
 # Use yamllint for validation
-yamllint domains/server/frigate-v2/config/config.yml
+yamllint domains/server/frigate/config/config.yml
 
 # Or use yq for structure inspection
 yq eval '.' config.yml
@@ -189,7 +189,7 @@ yq eval '.' config.yml
 sudo podman exec frigate cat /config/config.yaml > /tmp/old-config.yml
 
 # Compare
-diff -u /tmp/old-config.yml domains/server/frigate-v2/config/config.yml
+diff -u /tmp/old-config.yml domains/server/frigate/config/config.yml
 ```
 
 ---

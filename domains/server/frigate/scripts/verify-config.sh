@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-CONFIG_PATH="${1:-domains/server/frigate-v2/config/config.yml}"
+CONFIG_PATH="${1:-domains/server/frigate/config/config.yml}"
 
 if [[ ! -f "$CONFIG_PATH" ]]; then
   echo "❌ Config file not found: $CONFIG_PATH"

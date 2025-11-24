@@ -52,7 +52,7 @@
       name = "frigate";
       mode = "port";
       port = 5443;
-      upstream = "http://127.0.0.1:5001";  # frigate-v2 with CUDA/TensorRT support
+      upstream = "http://127.0.0.1:5001";  # GPU-accelerated with CUDA/TensorRT support
     }
 
     # Sabnzbd - preserve path (URL base set in app)
