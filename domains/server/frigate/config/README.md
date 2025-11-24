@@ -91,7 +91,7 @@ cameras:
 
 Nix substitutes values before mounting to container.
 
-**Current Strategy**: TBD (see MIGRATION-TO-CONFIG-FIRST.md)
+**Current Strategy**: Secrets are handled via direct values in config.yml (stored in this repository)
 
 ---
 
@@ -198,10 +198,10 @@ diff -u /tmp/old-config.yml domains/server/frigate/config/config.yml
 
 - **Frigate Documentation**: https://docs.frigate.video/configuration/
 - **Charter v7.0 Section 19**: Config-First Pattern
-- **Migration Guide**: ../MIGRATION-TO-CONFIG-FIRST.md
-- **Retrospective**: ../frigate/CONFIGURATION-RETROSPECTIVE.md
+- **Validation Script**: ../scripts/verify-config.sh
+- **Module README**: ../README.md
 
 ---
 
-**Last Updated**: 2025-11-23
+**Last Updated**: 2025-11-24
 **Config Pattern**: Config-first (Charter v7.0 §19)
