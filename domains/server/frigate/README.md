@@ -1,21 +1,25 @@
-# Frigate NVR - Config-First Pattern (v2)
+# Frigate NVR - Config-First Pattern
 
 **Charter v7.0 Section 19 Compliant**
 **Namespace**: `hwc.server.frigate.*`
-**Status**: 🚧 Under Development (not yet deployed)
+**Status**: ✅ Production - Active
 
 ---
 
 ## Overview
 
-This is the **next-generation Frigate module** built following the **config-first, Nix-second** pattern established in Charter v7.0 Section 19.
+Frigate NVR implementation following the **config-first, Nix-second** pattern established in Charter v7.0 Section 19.
 
-**Key Differences from `domains/server/frigate/`**:
+**Key Features**:
 - ✅ Configuration in version-controlled `config/config.yml` (not Nix-generated)
 - ✅ Portable (works with Docker/Podman/k8s)
 - ✅ Debuggable (edit config directly, restart service)
-- ✅ Modern Frigate 0.16.2 (pinned)
+- ✅ Frigate 0.16.2-tensorrt (pinned with GPU support)
 - ✅ Nix handles infrastructure only (image, GPU, ports, volumes)
+- ✅ GPU-accelerated object detection (TensorRT + CUDA on NVIDIA P1000)
+- ✅ External access via Caddy reverse proxy
+
+**Access**: https://hwc.ocelot-wahoo.ts.net:5443
 
 ---
 
@@ -47,15 +51,10 @@ domains/server/frigate/
 ├── index.nix                   # Container definition (no YAML generation!)
 ├── config/
 │   ├── config.yml              # CANONICAL CONFIG (version-controlled)
-│   ├── config.baseline.yml     # Snapshot from old module (reference)
+│   ├── config.baseline.yml     # Snapshot for reference
 │   └── README.md               # Config documentation
 ├── scripts/
 │   └── verify-config.sh        # Config validation script
-├── docs/                       # Inherited documentation
-│   ├── HARDWARE-ACCELERATION.md  # (symlink to ../frigate/)
-│   ├── TUNING-GUIDE.md          # (symlink to ../frigate/)
-│   └── CONFIGURATION-RETROSPECTIVE.md  # (symlink to ../frigate/)
-├── MIGRATION-TO-CONFIG-FIRST.md  # Migration plan
 └── README.md                   # This file
 ```
 
@@ -68,33 +67,30 @@ domains/server/frigate/
 ```nix
 # machines/server/config.nix
 hwc.server.frigate = {
-  enable = true;  # Enable the new module
+  enable = true;
 
-  image = "ghcr.io/blakeblackshear/frigate:0.16.2";  # Explicit version
+  # Internal port 5001 (exposed as 5443 via Caddy)
+  port = 5001;
 
+  # GPU acceleration for ONNX object detection (TensorRT + CUDA)
   gpu = {
-    enable = true;  # GPU acceleration for object detection
-    device = 0;     # NVIDIA GPU 0
+    enable = true;
+    device = 0;  # NVIDIA P1000
   };
 
-  # Storage paths (defaults shown)
+  # Storage paths
   storage = {
-    configPath = "/opt/surveillance/frigate/config";
-    mediaPath = "/mnt/media/surveillance/frigate/media";
-    bufferPath = "/mnt/hot/surveillance/buffer";
-  };
-
-  # Container resources
-  resources = {
-    memory = "4g";
-    cpus = "1.5";
-    shmSize = "1g";
+    configPath = "/opt/surveillance/frigate-v2/config";
+    mediaPath = "/mnt/media/surveillance/frigate-v2/media";
+    bufferPath = "/mnt/hot/surveillance/frigate-v2/buffer";
   };
 
   # Firewall (restrict to Tailscale)
   firewall.tailscaleOnly = true;
 };
 ```
+
+**Note**: Storage paths currently use "frigate-v2" directories (preserving existing data). These can be renamed to "frigate" when ready.
 
 ### Frigate Configuration
 
@@ -107,6 +103,25 @@ hwc.server.frigate = {
 4. Commit when stable
 
 See [`config/README.md`](config/README.md) for detailed config documentation.
+
+### External Access
+
+Frigate is exposed externally via Caddy reverse proxy:
+
+- **Internal**: `http://localhost:5001` (container port)
+- **External**: `https://hwc.ocelot-wahoo.ts.net:5443` (Caddy via Tailscale)
+
+**Configuration**: `domains/server/routes.nix`
+```nix
+{
+  name = "frigate";
+  mode = "port";
+  port = 5443;
+  upstream = "http://127.0.0.1:5001";
+}
+```
+
+The reverse proxy is configured in port mode (not subpath) because Frigate's web UI doesn't work well with subpath routing.
 
 ---
 
@@ -121,32 +136,27 @@ See [`config/README.md`](config/README.md) for detailed config documentation.
 
 ---
 
-## Migration Status
+## Deployment Status
 
-### Current State: 🚧 Development
+### Current State: ✅ Production
 
-**Completed**:
-- [x] Charter v7.0 Section 19 added (config-first pattern)
-- [x] Module structure created
-- [x] Infrastructure-only options defined
-- [x] Container definition (config-first)
-- [x] Verification script
-- [x] Documentation
+**Deployed**:
+- ✅ Charter v7.0 Section 19 compliant (config-first pattern)
+- ✅ Module structure created and active
+- ✅ Infrastructure-only options defined
+- ✅ Container running (frigate:0.16.2-tensorrt)
+- ✅ GPU acceleration validated (TensorRT + CUDA)
+- ✅ Config validation script
+- ✅ External access via Caddy (https://hwc.ocelot-wahoo.ts.net:5443)
+- ✅ Old module removed (no ambiguity)
+- ✅ All references renamed from frigate-v2 to frigate
 
-**In Progress**:
-- [ ] Extract runtime config from current Frigate
-- [ ] Populate `config/config.yml` with real cameras
-- [ ] Handle secrets (environment vars or templating)
-- [ ] Test in parallel with current Frigate module
-- [ ] Validate GPU acceleration
-- [ ] 48-hour stability test
-
-**Not Started**:
-- [ ] Cutover from old module
-- [ ] Archive old module
-- [ ] Update server profile to use frigate
-
-See [`MIGRATION-TO-CONFIG-FIRST.md`](../frigate/MIGRATION-TO-CONFIG-FIRST.md) for full migration plan.
+**Service Details**:
+- **Service**: `podman-frigate.service`
+- **Container**: `frigate`
+- **Image**: `ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt`
+- **Status**: Active (running)
+- **GPU**: NVIDIA Quadro P1000 with TensorRT support
 
 ---
 
@@ -243,59 +253,19 @@ Unexpected input data type. Actual: (tensor(uint8)), expected: (tensor(float))
 2. Ensure `input_dtype: float` is present
 3. Validate: `./scripts/verify-config.sh`
 
-See [CONFIGURATION-RETROSPECTIVE.md](../frigate/CONFIGURATION-RETROSPECTIVE.md) for detailed analysis.
-
----
-
-## Comparison with Old Module
-
-| Aspect | Old (frigate) | New (frigate) |
-|--------|---------------|------------------|
-| **Config Source** | Nix-generated YAML | `config/config.yml` file |
-| **Debugging** | Edit Nix → rebuild → inspect generated YAML | Edit config.yml → restart |
-| **Portability** | NixOS-only | Works with Docker/Podman/k8s |
-| **Version** | 0.15.1-tensorrt (implicit) | 0.16.2 (explicit pin) |
-| **Nix Options** | 50+ options for Frigate config | 15 options for infrastructure only |
-| **Documentation** | Comprehensive (inherited) | Config-first focused |
-| **Validation** | Build-time Nix assertions | Config validation script + assertions |
-
 ---
 
 ## References
 
 - **Charter v7.0 Section 19**: Complex Service Configuration Pattern
-- **Migration Plan**: [MIGRATION-TO-CONFIG-FIRST.md](../frigate/MIGRATION-TO-CONFIG-FIRST.md)
-- **Retrospective**: [CONFIGURATION-RETROSPECTIVE.md](../frigate/CONFIGURATION-RETROSPECTIVE.md)
-- **Frigate Docs**: https://docs.frigate.video/
-- **Hardware Acceleration**: [docs/HARDWARE-ACCELERATION.md](docs/HARDWARE-ACCELERATION.md)
-
----
-
-## Development Roadmap
-
-**Phase 1**: Setup (Complete ✅)
-- Module structure
-- Config-first pattern
-- Documentation
-
-**Phase 2**: Config Extraction (Next)
-- Extract runtime config from current Frigate
-- Populate `config/config.yml`
-- Handle secrets
-
-**Phase 3**: Testing
-- Parallel deployment with current Frigate
-- GPU validation
-- Stability testing (48+ hours)
-
-**Phase 4**: Cutover
-- Switch server profile to frigate
-- Archive old module
-- Update documentation
+- **Frigate Documentation**: https://docs.frigate.video/
+- **Config Documentation**: [config/README.md](config/README.md)
+- **Validation Script**: [scripts/verify-config.sh](scripts/verify-config.sh)
 
 ---
 
 **Created**: 2025-11-23
+**Last Updated**: 2025-11-24
 **Charter Version**: v7.0
 **Module Version**: 1.0.0 (config-first)
-**Status**: Development
+**Status**: Production
