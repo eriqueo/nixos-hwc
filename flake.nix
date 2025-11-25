@@ -78,7 +78,7 @@
         })
         # Overlay to update gemini-cli to v0.17.1 from npm
         (final: prev: {
-          gemini-cli = prev.gemini-cli.overrideAttrs (old: {
+          gemini-cli = prev.gemini-cli.overrideAttrs (old: rec {
             version = "0.17.1";
             src = prev.fetchurl {
               url = "https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-0.17.1.tgz";
@@ -88,8 +88,9 @@
             # We are using a tarball, so we override that step to use the version string instead.
             preConfigure = ''
               mkdir -p packages/generated
-              echo "export const GIT_COMMIT_INFO = { commitHash: 'v0.17.1' };" > packages/generated/git-commit.ts
+              echo "export const GIT_COMMIT_INFO = { commitHash: 'v${version}' };" > packages/generated/git-commit.ts
             '';
+            npmDepsHash = prev.lib.fakeHash;
           });
         })
       ];
