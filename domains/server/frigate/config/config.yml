@@ -1,0 +1,110 @@
+# Frigate NVR Configuration (Config-First Pattern)
+# Charter v7.0 Section 19 compliant
+#
+# Secrets are provided via environment variables by Nix:
+#   - RTSP_USER: RTSP username from agenix
+#   - RTSP_PASS_ENCODED: URL-encoded RTSP password from agenix
+#   - CAM1_IP, CAM2_IP, CAM3_IP: Camera IP addresses from agenix
+#
+# DO NOT COMMIT ACTUAL SECRET VALUES TO THIS FILE!
+
+mqtt:
+  enabled: true
+  host: 127.0.0.1
+  port: 1883
+
+detectors:
+  onnx:
+    type: onnx
+    device: "0"  # GPU 0 (must be string)
+    num_threads: 3
+    execution_providers:
+      - cuda
+      - cpu
+
+# Model configuration - YOLOv9 using yolo-generic type
+# Note: Frigate 0.16.2 requires 'yolo-generic' for YOLOv9 models
+model:
+  path: /config/models/yolov9-s-320.onnx
+  model_type: yolo-generic  # Frigate 0.16.2 compatible
+  input_tensor: nchw
+  input_pixel_format: bgr
+  input_dtype: float  # CRITICAL: Prevents uint8→float tensor type mismatch
+  width: 320
+  height: 320
+  labelmap_path: /labelmap/coco-80.txt
+
+ffmpeg: &ffmpeg_defaults
+  hwaccel_args:
+    - -hwaccel
+    - nvdec
+    - -hwaccel_device
+    - '0'
+    - -hwaccel_output_format
+    - yuv420p
+  input_args:
+    - -rtsp_transport
+    - tcp
+    - -fflags
+    - +genpts+discardcorrupt
+
+cameras:
+  cobra_cam_1:
+    enabled: true
+    ffmpeg:
+      <<: *ffmpeg_defaults
+      inputs:
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM1_IP}:554/ch01/0
+          roles: [detect, record]
+    detect:
+      width: 1280
+      height: 720
+      fps: 1
+    record:
+      enabled: true
+      retain:
+        days: 7
+        mode: active_objects
+
+  cobra_cam_2:
+    enabled: true
+    ffmpeg:
+      <<: *ffmpeg_defaults
+      inputs:
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM2_IP}:554/ch01/0
+          roles: [detect, record]
+    detect:
+      width: 640
+      height: 360
+      fps: 1
+    record:
+      enabled: true
+      retain:
+        days: 7
+
+  cobra_cam_3:
+    enabled: true
+    ffmpeg:
+      <<: *ffmpeg_defaults
+      inputs:
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM3_IP}:554/ch01/0
+          roles: [detect, record]
+    detect:
+      width: 320
+      height: 240
+      fps: 1
+    zones:
+      sidewalk:
+        coordinates: 0.132,0.468,0.996,0.7,0.993,0.998,0.003,0.996,0.007,0.5
+
+objects:
+  track: [person, car, truck, bicycle, dog, cat]
+
+go2rtc:
+  streams:
+    cobra_cam_1: [rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM1_IP}:554/ch01/0]
+    cobra_cam_2: [rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM2_IP}:554/ch01/0]
+    cobra_cam_3: [rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM3_IP}:554/ch01/0]
+
+ui:
+  timezone: America/Denver

@@ -1,0 +1,85 @@
+# domains/system/services/monitoring/index.nix
+#
+# System monitoring with ntfy integration
+# Provides disk space monitoring, service failure notifications, and rebuild notifications
+
+{ config, lib, pkgs, ... }:
+
+let
+  cfg = config.hwc.system.services.monitoring;
+
+  # Import monitoring scripts from workspace
+  diskSpaceMonitorScript = builtins.readFile ../../../../workspace/utilities/monitoring/disk-space-monitor.sh;
+  systemdFailureNotifierScript = builtins.readFile ../../../../workspace/utilities/monitoring/systemd-failure-notifier.sh;
+  nixosRebuildNotifierScript = builtins.readFile ../../../../workspace/utilities/monitoring/nixos-rebuild-notifier.sh;
+
+in
+{
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  imports = [ ./options.nix ];
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = lib.mkIf cfg.enable {
+    # Install monitoring scripts as system packages
+    environment.systemPackages = [
+      (pkgs.writeShellScriptBin "disk-space-monitor" diskSpaceMonitorScript)
+      (pkgs.writeShellScriptBin "systemd-failure-notifier" systemdFailureNotifierScript)
+      (pkgs.writeShellScriptBin "nixos-rebuild-notifier" nixosRebuildNotifierScript)
+    ];
+
+    # Disk space monitoring timer (if enabled)
+    systemd.timers.disk-space-monitor = lib.mkIf cfg.diskSpace.enable {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.diskSpace.frequency;
+        Persistent = true;
+        RandomizedDelaySec = "5m";
+      };
+    };
+
+    # Disk space monitoring service (if enabled)
+    systemd.services.disk-space-monitor = lib.mkIf cfg.diskSpace.enable {
+      description = "Disk space monitoring with ntfy alerts";
+      path = with pkgs; [ coreutils gawk gnused util-linux ];
+      environment.PATH = lib.mkForce "/run/current-system/sw/bin";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.writeShellScript "disk-space-monitor.sh" diskSpaceMonitorScript}";
+        User = "root";
+      };
+    };
+
+    # Service failure notifier template service (if enabled)
+    systemd.services."service-failure-notifier@" = lib.mkIf cfg.serviceFailures.enable {
+      description = "Send ntfy notification on service failure for %i";
+      path = with pkgs; [ coreutils systemd gawk ];
+      environment.PATH = lib.mkForce "/run/current-system/sw/bin";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.writeShellScript "systemd-failure-notifier.sh" systemdFailureNotifierScript} %i";
+        User = "root";
+      };
+    };
+
+    # Attach OnFailure handlers to monitored services
+    systemd.services = lib.mkIf cfg.serviceFailures.enable (
+      lib.genAttrs cfg.serviceFailures.monitoredServices (serviceName: {
+        onFailure = [ "service-failure-notifier@%n.service" ];
+      })
+    );
+  };
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  config.assertions = lib.mkIf cfg.enable [
+    {
+      assertion = config.hwc.system.services.ntfy.enable;
+      message = "monitoring module requires ntfy to be enabled";
+    }
+  ];
+}

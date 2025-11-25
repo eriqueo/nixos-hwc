@@ -47,12 +47,12 @@
       upstream = "http://127.0.0.1:2283";
     }
 
-    # Frigate - port mode (subpath-hostile)
+    # Frigate - port mode (subpath-hostile, GPU-accelerated with TensorRT)
     {
       name = "frigate";
       mode = "port";
       port = 5443;
-      upstream = "http://127.0.0.1:5000";
+      upstream = "http://127.0.0.1:5001";  # GPU-accelerated with CUDA/TensorRT support
     }
 
     # Sabnzbd - preserve path (URL base set in app)
@@ -130,6 +130,15 @@
       path = "/sync";
       upstream = "http://127.0.0.1:5984";
       needsUrlBase = false;  # Strip /sync prefix - CouchDB doesn't support URL base
+    }
+
+    # ntfy notification server - preserve path (ntfy handles subpath natively)
+    {
+      name = "ntfy";
+      mode = "subpath";
+      path = "/notify";
+      upstream = "http://127.0.0.1:2586";
+      needsUrlBase = false;  # ntfy works with subpath without URL base
     }
 
     # Tdarr - port mode (WebSocket intensive, subpath issues)

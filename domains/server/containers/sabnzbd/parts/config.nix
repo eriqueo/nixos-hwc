@@ -85,11 +85,12 @@ in
     #=========================================================================
     systemd.services.podman-sabnzbd = {
       after = if cfg.network.mode == "vpn"
-        then [ "podman-gluetun.service" ]
-        else [ "hwc-media-network.service" ];
+        then [ "podman-gluetun.service" "mnt-hot.mount" ]
+        else [ "hwc-media-network.service" "mnt-hot.mount" ];
       wants = if cfg.network.mode == "vpn"
         then [ "podman-gluetun.service" ]
         else [ "hwc-media-network.service" ];
+      requires = [ "mnt-hot.mount" ];
     };
 
 
