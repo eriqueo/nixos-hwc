@@ -62,7 +62,7 @@ let
     log "Available space: $AVAILABLE_GB GB"
 
     # Create backup directories
-    ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_ROOT"/{daily,weekly,monthly,latest}
+    ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_ROOT"/{daily,weekly,monthly}
 
     # Determine backup type based on day
     BACKUP_TYPE="daily"
@@ -121,7 +121,7 @@ let
 
     if [[ "$BACKUP_SUCCESS" == true ]]; then
       # Update 'latest' symlink
-      ${pkgs.coreutils}/bin/rm -f "$BACKUP_ROOT/latest"
+      ${pkgs.coreutils}/bin/rm -rf "$BACKUP_ROOT/latest"
       ${pkgs.coreutils}/bin/ln -s "$BACKUP_DIR" "$BACKUP_ROOT/latest"
 
       log "Backup completed successfully"
