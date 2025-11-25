@@ -30,7 +30,7 @@
       permitRootLogin = false;
     };
 
-    audit.enable = true;
+    audit.enable = false;
   };
 
   # Security domain provides all secrets via materials facade

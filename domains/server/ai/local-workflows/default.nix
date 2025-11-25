@@ -26,7 +26,7 @@ in
     {
       # Create log directory
       systemd.tmpfiles.rules = [
-        "d ${cfg.logDir} 0755 root root -"
+        "d ${cfg.logDir} 0755 eric users -"
       ];
 
       # Shared Python environment for AI workflows

@@ -45,6 +45,12 @@
 - **Migration History**: Email system evolution
 - **Troubleshooting**: Debug logs and resolution guides
 
+### **🖥️ Infrastructure** (`infrastructure/`)
+**Infrastructure and hardware documentation**
+- **GPU Reference**: Complete NVIDIA GPU configuration guide (`gpu-reference.md`)
+- **Networking**: Network configuration and troubleshooting
+- **Hardware**: Hardware-specific guides and optimization
+
 ### **📦 Archive** (`archive/`)
 **Historical documentation no longer actively maintained**
 - **Outdated Guides**: Superseded by newer approaches
@@ -63,6 +69,8 @@
 | Architectural decision | `docs/architecture/` |
 | Application setup | `docs/applications/` |
 | Email system info | `docs/email/` |
+| GPU configuration & usage | `docs/infrastructure/gpu-reference.md` |
+| Infrastructure guides | `docs/infrastructure/` |
 | Template for new docs | `docs/templates/` |
 | Core architecture rules | `charter.md` |
 | Home directory structure | `FILESYSTEM-CHARTER.md` |

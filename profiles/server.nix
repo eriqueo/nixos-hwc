@@ -269,7 +269,11 @@
   hwc.services.containers.sonarr.enable = true;
   hwc.services.containers.radarr.enable = true;
   hwc.services.containers.lidarr.enable = true;
-  hwc.services.containers.beets.enable = true;
+
+  # Beets music organizer - using native installation instead of container
+  hwc.services.containers.beets.enable = false;  # Container disabled
+  hwc.server.apps.beets-native.enable = true;     # Native enabled
+
   hwc.services.containers.jellyseerr.enable = true;
 
   # Phase 4: Specialized Services (Soulseek integration)
@@ -279,7 +283,7 @@
   # hwc.services.containers.jellyfin.enable = true;  # Disabled - using native service
 
   # Phase 5: Media Optimization and Management
-  hwc.services.containers.tdarr.enable = true;
+  hwc.services.containers.tdarr.enable = false;
   hwc.services.containers.recyclarr = {
     enable = true;
     services.lidarr.enable = false;  # Disable Lidarr sync (not supported in current Recyclarr version)

@@ -100,8 +100,8 @@ in
     networking.firewall.allowedTCPPorts = [ 50300 5031 ];
 
     # Service dependencies
-    systemd.services."podman-slskd".after = [ "network-online.target" "init-media-network.service" "slskd-config-generator.service" ];
+    systemd.services."podman-slskd".after = [ "network-online.target" "init-media-network.service" "slskd-config-generator.service" "mnt-hot.mount" ];
     systemd.services."podman-slskd".wants = [ "network-online.target" ];
-    systemd.services."podman-slskd".requires = [ "slskd-config-generator.service" ];
+    systemd.services."podman-slskd".requires = [ "slskd-config-generator.service" "mnt-hot.mount" ];
   };
 }

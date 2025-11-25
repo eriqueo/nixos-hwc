@@ -159,7 +159,7 @@ in
           ExecStart = pkgs.writeShellScript "gpu-monitor" ''
             #!/usr/bin/env bash
             while true; do
-              ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}}/bin/nvidia-smi \
+              ${config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver}.bin}/bin/nvidia-smi \
                 --query-gpu=timestamp,name,temperature.gpu,utilization.gpu,utilization.memory,memory.used,memory.total \
                 --format=csv,noheader,nounits >> ${paths.logs}/gpu/gpu-usage.log
               sleep 60
@@ -168,7 +168,7 @@ in
           Restart = "always";
           RestartSec = "10";
         };
-        wantedBy = [ ];
+        wantedBy = [ "multi-user.target" ];
       };
     })
 

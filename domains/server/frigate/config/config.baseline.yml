@@ -1,0 +1,98 @@
+mqtt:
+  enabled: true
+  host: 127.0.0.1
+  port: 1883
+
+
+detectors:
+  onnx:
+    type: onnx
+    device: 0
+    num_threads: 3
+
+model:
+  path: /config/models/yolov9-s-320.onnx
+  model_type: yolo-generic
+  input_tensor: nchw
+  input_pixel_format: bgr
+  input_dtype: float
+  width: 320
+  height: 320
+  labelmap_path: /labelmap/coco-80.txt
+
+
+ffmpeg: &ffmpeg_defaults
+  hwaccel_args:
+    - -hwaccel
+    - nvdec
+    - -hwaccel_device
+    - '0'
+    - -hwaccel_output_format
+    - yuv420p
+  input_args:
+    - -rtsp_transport
+    - tcp
+    - -fflags
+    - +genpts+discardcorrupt
+
+cameras:
+  cobra_cam_1:
+    enabled: true
+    ffmpeg:
+      <<: *ffmpeg_defaults
+      inputs:
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0
+          roles: [detect, record]
+    detect:
+      width: 1280
+      height: 720
+      fps: 1
+    record:
+      enabled: true
+      retain:
+        days: 7
+        mode: active_objects
+
+  cobra_cam_2:
+    enabled: true
+    ffmpeg:
+      <<: *ffmpeg_defaults
+      inputs:
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0
+          roles: [detect, record]
+    detect:
+      width: 640
+      height: 360
+      fps: 1
+    record:
+      enabled: true
+      retain:
+        days: 7
+
+  cobra_cam_3:
+    enabled: true
+    ffmpeg:
+      <<: *ffmpeg_defaults
+      inputs:
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0
+          roles: [detect, record]
+    detect:
+      width: 320
+      height: 240
+      fps: 1
+    zones:
+      sidewalk:
+        coordinates: 0.132,0.468,0.996,0.7,0.993,0.998,0.003,0.996,0.007,0.5
+
+objects:
+  track: [person, car, truck, bicycle, dog, cat]
+
+go2rtc:
+  streams:
+    cobra_cam_1: [rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0]
+    cobra_cam_2: [rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0]
+    cobra_cam_3: [rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0]
+
+ui:
+  timezone: America/Denver
+version: 0.15-1

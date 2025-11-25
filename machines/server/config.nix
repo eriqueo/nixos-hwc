@@ -13,6 +13,7 @@
     ../../profiles/security.nix
     ../../profiles/ai.nix
     ../../domains/server/routes.nix
+    ../../domains/server/frigate/index.nix  # Config-first pattern NVR with GPU acceleration
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
     # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed
@@ -32,7 +33,18 @@
     cache = "/opt/cache";
   };
 
-  # Production storage mounts (from production config)
+  # Storage infrastructure configuration (Charter v6.0 compliant)
+  hwc.infrastructure.storage = {
+    hot = {
+      enable = true;
+      device = "/dev/disk/by-uuid/fd7a9820-a3e2-45cb-9c97-9fd904ee459a";
+      fsType = "ext4";
+    };
+    media.enable = true;   # Directory management only (mount defined below)
+    backup.enable = true;  # Enable backup drive automation
+  };
+
+  # Media storage mount (infrastructure module manages directories only)
   fileSystems."/mnt/media" = {
     device = "/dev/disk/by-label/media";
     fsType = "ext4";
@@ -60,6 +72,55 @@
     firewall.extraTcpPorts = [ 8096 7359 2283 4533 ];  # Jellyfin, Immich, Navidrome
     firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
   };
+
+  # ntfy notification system for server alerts
+  # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
+  # See: docs/infrastructure/ntfy-notification-classes.md
+  hwc.system.services.ntfy = {
+    enable = false;
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted ntfy via Tailscale port mode
+    defaultTopic = "hwc-server-events";  # General server events
+    defaultTags = [ "hwc" "server" "production" ];
+    defaultPriority = 4;  # Higher priority for server alerts
+    hostTag = true;       # Adds "host-hwc-server" tag automatically
+
+    # Authentication disabled for self-hosted (can enable if needed)
+    auth.enable = false;
+    # To enable auth, add secrets and configure:
+    # auth = {
+    #   enable = true;
+    #   method = "token";
+    #   tokenFile = "/run/secrets/ntfy-token";
+    # };
+  };
+
+  # System monitoring with ntfy notifications
+  # TODO: Implement monitoring module
+  # hwc.system.services.monitoring = {
+  #   enable = true;
+  #
+  #   # Disk space monitoring (hourly checks)
+  #   diskSpace = {
+  #     enable = true;
+  #     frequency = "hourly";
+  #     filesystems = [ "/" "/home" "/mnt/media" "/mnt/hot" ];
+  #   };
+  #
+  #   # Service failure notifications
+  #   serviceFailures = {
+  #     enable = true;
+  #     monitoredServices = [
+  #       "backup-local"
+  #       "podman-immich"
+  #       "podman-jellyfin"
+  #       "podman-navidrome"
+  #       "podman-frigate"
+  #       "couchdb"
+  #       "podman-ntfy"
+  #       "caddy"
+  #     ];
+  #   };
+  # };
 
   # Backup configuration for server
   # Supports external drives, NAS, or DAS for local backups
@@ -94,6 +155,21 @@
       frequency = lib.mkForce "weekly";  # Weekly backups for server
       timeOfDay = lib.mkForce "03:00";   # Run at 3 AM on the scheduled day
       onlyOnAC = lib.mkForce false;      # Server is always plugged in
+    };
+
+    # Notification configuration
+    notifications = {
+      enable = true;
+      onSuccess = false;  # Don't notify on success to reduce noise
+      onFailure = true;   # Always notify on failure
+
+      # ntfy integration for remote notifications
+      ntfy = {
+        enable = true;
+        topic = "hwc-critical";  # Backup failures are critical (P5)
+        onSuccess = false;  # No success notifications (or use "hwc-backups" if desired)
+        onFailure = true;   # Send critical alert on backup failures
+      };
     };
   };
 
@@ -203,48 +279,37 @@
     };
   };
 
-  # Frigate NVR for camera surveillance
-  # Access: http://server-ip:5000 (direct port, no reverse proxy)
-  # Frigate doesn't support subpaths due to WebSocket/asset serving requirements
+  # ntfy notification server (container)
+  # Provides notification server for hwc-ntfy-send client
+  hwc.services.ntfy = {
+    enable = false;
+    port = 9999;  # Internal port - Caddy forwards external 2586 to this
+    dataDir = "/var/lib/hwc/ntfy";
+  };
+
+  # Frigate NVR (Config-First Pattern with GPU Acceleration)
+  # Access: https://hwc.ocelot-wahoo.ts.net:5443 (via Caddy)
+  # Charter v7.0 Section 19 compliant - TensorRT CUDA support
   hwc.server.frigate = {
     enable = true;
 
-    # Hardware Acceleration for Video Decoding
-    # CURRENT: Using NVIDIA nvdec (works but power-hungry ~15-25W)
-    # RECOMMENDED: Switch to Intel VAAPI for power efficiency (~5-10W savings)
-    hwaccel = {
-      type = "nvidia";  # Options: "nvidia" | "vaapi" | "qsv-h264" | "qsv-h265" | "cpu"
-      device = "0";     # NVIDIA: device number | Intel: /dev/dri/renderD128
-      # vaapiDriver = "iHD";  # Only for Intel: "iHD" (modern) or "i965" (legacy like J4125)
-    };
+    # Internal port 5001 (exposed as 5443 via Caddy)
+    port = 5001;
 
-    # GPU Acceleration for Object Detection (separate from video decoding)
+    # GPU acceleration for ONNX object detection (TensorRT + CUDA)
     gpu = {
       enable = true;
-      detector = "onnx";  # ONNX with CUDA for GPU acceleration (TensorRT deprecated on amd64)
-      useFP16 = false;  # Pascal GPU (P1000) requires FP16 disabled
+      device = 0;  # NVIDIA P1000
     };
 
-    # TO MIGRATE TO INTEL iGPU (when enabled):
-    # 1. Enable Intel GPU: hwc.infrastructure.hardware.gpu.type = "intel"
-    # 2. Change hwaccel.type = "vaapi" (recommended, auto-detects H.264/H.265)
-    # 3. Change hwaccel.device = "/dev/dri/renderD128"
-    # 4. Set hwaccel.vaapiDriver = "iHD" (or "i965" for older CPUs)
-    # 5. Optional: Change gpu.detector = "openvino" for Intel iGPU ML acceleration
-    # Expected savings: ~50% CPU reduction, 20-40% power reduction vs NVIDIA
-
-    mqtt.enable = true;
-
-    monitoring = {
-      watchdog.enable = true;
-      prometheus.enable = true;
-    };
-
+    # Storage paths (preserving existing frigate-v2 data during rename)
     storage = {
-      maxSizeGB = 2000;
-      pruneSchedule = "hourly";
+      configPath = "/opt/surveillance/frigate-v2/config";
+      mediaPath = "/mnt/media/surveillance/frigate-v2/media";
+      bufferPath = "/mnt/hot/surveillance/frigate-v2/buffer";
     };
 
+    # Firewall settings
     firewall.tailscaleOnly = true;
   };
 

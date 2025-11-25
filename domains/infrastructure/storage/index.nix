@@ -104,7 +104,7 @@ in {
         [ "d ${cfg.media.path} 0755 root root -" ] ++
         (map (dir: "d ${cfg.media.path}/${dir} 0775 media media -") cfg.media.directories);
 
-      users.groups.media = {};
+      users.groups.media = { gid = 1000; };
     })
 
     (lib.mkIf cfg.backup.enable {

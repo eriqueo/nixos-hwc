@@ -9,7 +9,7 @@ in
 
     image = mkOption {
       type = types.str;
-      default = "ghcr.io/haveagitgat/tdarr:latest";
+      default = "ghcr.io/haveagitgat/tdarr:2.26.01";
       description = "Container image for Tdarr server";
     };
 
@@ -45,8 +45,38 @@ in
 
     ffmpegVersion = mkOption {
       type = types.enum [ "6" "7" ];
-      default = "6";
+      default = "7";
       description = "FFmpeg version to use";
+    };
+
+    resources = {
+      memory = mkOption {
+        type = types.str;
+        default = "12g";
+        description = ''
+          Memory limit for the container.
+          Transcoding large/4K files requires significant RAM.
+          Recommended: 12g minimum, 16g for 4K content.
+        '';
+      };
+
+      memorySwap = mkOption {
+        type = types.str;
+        default = "16g";
+        description = ''
+          Total memory limit (memory + swap).
+          Should be at least 4g more than memory limit.
+        '';
+      };
+
+      cpus = mkOption {
+        type = types.str;
+        default = "4.0";
+        description = ''
+          CPU limit (number of cores).
+          More CPUs help with non-GPU encode steps and parallel processing.
+        '';
+      };
     };
   };
 }
