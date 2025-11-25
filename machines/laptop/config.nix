@@ -114,6 +114,7 @@
       ntfy = {
         enable = true;
         onSuccess = false;
+        topic = "hwc-critical";  # Backup failures are critical (P5)
         onFailure = true;
       };
     };
@@ -126,20 +127,6 @@
       onlyOnAC = true;  # Only backup when plugged in
     };
 
-    # Notification configuration
-    notifications = {
-      enable = true;
-      onSuccess = false;  # Don't notify on success to reduce noise
-      onFailure = true;   # Always notify on failure
-
-      # ntfy integration for remote notifications
-      ntfy = {
-        enable = true;
-        topic = "hwc-critical";  # Backup failures are critical (P5)
-        onSuccess = false;  # No success notifications (or use "hwc-backups" if desired)
-        onFailure = true;   # Send critical alert on backup failures
-      };
-    };
   };
 
   # Enable the declarative VPN service using the official CLI.
