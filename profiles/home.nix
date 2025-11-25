@@ -88,7 +88,7 @@
 
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
-          geminiCli.enable = lib.mkDefault true;           # AI CLI tool
+          geminiCli.enable = lib.mkDefault false;           # AI CLI tool
           # codex.enable = lib.mkDefault false;            # Removed - unused AI tool
 
           # Utilities
@@ -100,6 +100,7 @@
           opencode.enable = lib.mkDefault true;
           googleCloudSdk.enable = lib.mkDefault true;
           slack.enable = lib.mkDefault true;
+          slackCli.enable = lib.mkDefault true;
         };
       };
     };
