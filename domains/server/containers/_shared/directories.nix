@@ -34,8 +34,18 @@
       # Downloads structure (shared by multiple containers)
       mkdir -p /mnt/hot/downloads
       mkdir -p /mnt/hot/downloads/incomplete
+      mkdir -p /mnt/hot/downloads/complete
+      mkdir -p /mnt/hot/downloads/tv
+      mkdir -p /mnt/hot/downloads/movies
       mkdir -p /mnt/hot/downloads/music
-     
+
+      # Event spool directory for media orchestration
+      mkdir -p /mnt/hot/events
+
+      # Processing directories for temporary operations
+      mkdir -p /mnt/hot/processing/sonarr-temp
+      mkdir -p /mnt/hot/processing/radarr-temp
+      mkdir -p /mnt/hot/processing/lidarr-temp
 
       # Container config/data directories
       mkdir -p /opt/downloads/slskd
@@ -47,24 +57,38 @@
       mkdir -p /opt/downloads/sabnzbd
       mkdir -p /opt/downloads/qbittorrent
 
+      # Scripts directory for automation hooks
+      mkdir -p /opt/downloads/scripts
+
       # slskd config directory (system-level)
       mkdir -p /etc/slskd
       mkdir -p /var/lib/slskd
 
-      # Set ownership: eric:users for everything
-      # You're the only user - no complex permissions needed
+      # Set ownership: eric:users for download directories
+      # Containers run as eric's UID, so they need write access
       chown -R eric:users /mnt/hot/downloads
+      chown -R eric:users /mnt/hot/events
+      chown -R eric:users /mnt/hot/processing
       chown -R eric:users /opt/downloads
       chown -R root:root /etc/slskd
       chown -R root:root /var/lib/slskd
 
       # Set permissions: 0755 for directories (rwxr-xr-x)
-      chmod -R 0755 /mnt/hot/downloads
-      chmod -R 0755 /opt/downloads
+      # This allows eric to write, and containers (running as eric) to access
+      find /mnt/hot/downloads -type d -exec chmod 0755 {} +
+      find /mnt/hot/events -type d -exec chmod 0755 {} +
+      find /mnt/hot/processing -type d -exec chmod 0755 {} +
+      find /opt/downloads -type d -exec chmod 0755 {} +
       chmod -R 0755 /etc/slskd
       chmod -R 0755 /var/lib/slskd
 
-      echo "Container directories created successfully"
+      # Set file permissions: 0644 for files (rw-r--r--)
+      # This ensures downloaded files are readable by all but only writable by owner
+      find /mnt/hot/downloads -type f -exec chmod 0644 {} + 2>/dev/null || true
+      find /opt/downloads/scripts -type f -name "*.sh" -exec chmod 0755 {} + 2>/dev/null || true
+      find /opt/downloads/scripts -type f -name "*.py" -exec chmod 0755 {} + 2>/dev/null || true
+
+      echo "Container directories created successfully with proper permissions"
     '';
   };
 }
