@@ -34,9 +34,8 @@
       # Downloads structure (shared by multiple containers)
       mkdir -p /mnt/hot/downloads
       mkdir -p /mnt/hot/downloads/incomplete
-      mkdir -p /mnt/hot/downloads/complete
       mkdir -p /mnt/hot/downloads/music
-      mkdir -p /mnt/hot/downloads/torrents
+     
 
       # Container config/data directories
       mkdir -p /opt/downloads/slskd

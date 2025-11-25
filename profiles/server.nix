@@ -283,7 +283,7 @@
   # hwc.services.containers.jellyfin.enable = true;  # Disabled - using native service
 
   # Phase 5: Media Optimization and Management
-  hwc.services.containers.tdarr.enable = true;
+  hwc.services.containers.tdarr.enable = false;
   hwc.services.containers.recyclarr = {
     enable = true;
     services.lidarr.enable = false;  # Disable Lidarr sync (not supported in current Recyclarr version)
