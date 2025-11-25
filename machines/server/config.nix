@@ -33,7 +33,18 @@
     cache = "/opt/cache";
   };
 
-  # Production storage mounts (from production config)
+  # Storage infrastructure configuration (Charter v6.0 compliant)
+  hwc.infrastructure.storage = {
+    hot = {
+      enable = true;
+      device = "/dev/disk/by-uuid/fd7a9820-a3e2-45cb-9c97-9fd904ee459a";
+      fsType = "ext4";
+    };
+    media.enable = true;   # Directory management only (mount defined below)
+    backup.enable = true;  # Enable backup drive automation
+  };
+
+  # Media storage mount (infrastructure module manages directories only)
   fileSystems."/mnt/media" = {
     device = "/dev/disk/by-label/media";
     fsType = "ext4";
@@ -66,7 +77,7 @@
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.system.services.ntfy = {
-    enable = true;
+    enable = false;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted ntfy via Tailscale port mode
     defaultTopic = "hwc-server-events";  # General server events
     defaultTags = [ "hwc" "server" "production" ];
@@ -271,7 +282,7 @@
   # ntfy notification server (container)
   # Provides notification server for hwc-ntfy-send client
   hwc.services.ntfy = {
-    enable = true;
+    enable = false;
     port = 9999;  # Internal port - Caddy forwards external 2586 to this
     dataDir = "/var/lib/hwc/ntfy";
   };
