@@ -76,19 +76,6 @@
             doCheck = false;
           });
         })
-        # Overlay to update gemini-cli to v0.17.1
-        (final: prev: {
-          gemini-cli = prev.gemini-cli.overrideAttrs (old: rec {
-            version = "0.17.1";
-            src = prev.fetchFromGitHub {
-              owner = "google";
-              repo = "genkit";
-              rev = "v${version}";
-              hash = prev.lib.fakeHash;
-            };
-            npmDepsHash = prev.lib.fakeHash;
-          });
-        })
       ];
     };
     
