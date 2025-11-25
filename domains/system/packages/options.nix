@@ -17,6 +17,11 @@
       enable = lib.mkEnableOption "Server-specific system packages";
     };
 
+    # ISO/CD image tools - xorriso, genisoimage, etc.
+    isoTools = {
+      enable = lib.mkEnableOption "ISO and CD image manipulation tools";
+    };
+
     # Security/backup packages - backup tools and utilities
     security = {
       enable = lib.mkEnableOption "backup system packages and utilities";

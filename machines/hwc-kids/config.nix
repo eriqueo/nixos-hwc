@@ -64,6 +64,7 @@
     keyboard.enable = true;
     audio.enable = true;
     bluetooth.enable = true;
+    joycon.enable = true;
     monitoring.enable = true;
   };
 
@@ -162,6 +163,12 @@
       "prometheus.local" "caddy.local" "server.local" "hwc.local"
     ];
   };
+
+  # ISO tools
+  environment.systemPackages = with pkgs; [
+    xorriso
+    cdrtools
+  ];
 
   #============================================================================
   # LOW-LEVEL SYSTEM OVERRIDES (Use Sparingly)

@@ -93,4 +93,9 @@
       };
     };
   };
+
+  # --- System Packages ---
+  hwc.system.packages = {
+    isoTools.enable = true;  # xorriso, genisoimage for ISO/CD manipulation
+  };
 }

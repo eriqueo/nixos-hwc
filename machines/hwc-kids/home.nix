@@ -98,6 +98,7 @@
         enable = true;
         withRoms = true;  # Include ROM files for easier setup
       };
+      hwc.home.apps.dosbox.enable = true;
 
       # RetroArch configuration (hwc-kids specific)
       hwc.home.apps.retroarch = {

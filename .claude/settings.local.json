@@ -78,7 +78,10 @@
       "Bash(done)",
       "Bash(cat:*)",
       "Bash(loginctl list-sessions:*)",
-      "Read(//home/eric/.config/**)"
+      "Read(//home/eric/.config/**)",
+      "Bash(unzip:*)",
+      "Read(//home/eric/emu/86box/isos/**)",
+      "Read(//home/eric/emu/**)"
     ],
     "deny": [],
     "ask": [],

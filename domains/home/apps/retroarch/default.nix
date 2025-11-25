@@ -65,15 +65,9 @@ in
       '')
     ];
 
-    # RetroArch configuration file
-    home.file.".config/retroarch/retroarch.cfg" = {
-      text = configHelper.generateConfig;
-      # Don't force - allow user modifications to persist
-      force = false;
-    };
-
-    # Create directory structure
-    home.activation.retroarchDirs = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    # Create directory structure and seed config files
+    home.activation.retroarchSetup = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      # Create directories
       $DRY_RUN_CMD mkdir -p ${cfg.romPath}
       $DRY_RUN_CMD mkdir -p ${cfg.saveStatePath}/states
       $DRY_RUN_CMD mkdir -p ${cfg.saveStatePath}/saves
@@ -81,6 +75,43 @@ in
       $DRY_RUN_CMD mkdir -p ~/.config/retroarch/database
       $DRY_RUN_CMD mkdir -p ~/.config/retroarch/shaders
       $DRY_RUN_CMD mkdir -p ~/.config/retroarch/cheats
+      $DRY_RUN_CMD mkdir -p ~/.config/retroarch/autoconfig/udev
+
+      # Seed retroarch.cfg if it doesn't exist (or is a symlink from old config)
+      if [ ! -f ~/.config/retroarch/retroarch.cfg ] || [ -L ~/.config/retroarch/retroarch.cfg ]; then
+        $DRY_RUN_CMD rm -f ~/.config/retroarch/retroarch.cfg
+        $DRY_RUN_CMD cp ${./files/retroarch-base.cfg} ~/.config/retroarch/retroarch.cfg
+        $DRY_RUN_CMD chmod 644 ~/.config/retroarch/retroarch.cfg
+        echo "Seeded RetroArch config from template"
+      fi
+
+      # Seed Joy-Con autoconfigs if they don't exist (or are symlinks)
+      if [ ! -f ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Combined_Joy-Cons.cfg ] || \
+         [ -L ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Combined_Joy-Cons.cfg ]; then
+        $DRY_RUN_CMD rm -f ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Combined_Joy-Cons.cfg
+        $DRY_RUN_CMD cp ${./files/Nintendo_Switch_Combined_Joy-Cons.cfg} \
+          ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Combined_Joy-Cons.cfg
+        $DRY_RUN_CMD chmod 644 ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Combined_Joy-Cons.cfg
+        echo "Seeded Combined Joy-Cons autoconfig"
+      fi
+
+      if [ ! -f ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Left_Joy-Con.cfg ] || \
+         [ -L ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Left_Joy-Con.cfg ]; then
+        $DRY_RUN_CMD rm -f ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Left_Joy-Con.cfg
+        $DRY_RUN_CMD cp ${./files/Nintendo_Switch_Left_Joy-Con.cfg} \
+          ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Left_Joy-Con.cfg
+        $DRY_RUN_CMD chmod 644 ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Left_Joy-Con.cfg
+        echo "Seeded Left Joy-Con autoconfig"
+      fi
+
+      if [ ! -f ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Right_Joy-Con.cfg ] || \
+         [ -L ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Right_Joy-Con.cfg ]; then
+        $DRY_RUN_CMD rm -f ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Right_Joy-Con.cfg
+        $DRY_RUN_CMD cp ${./files/Nintendo_Switch_Right_Joy-Con.cfg} \
+          ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Right_Joy-Con.cfg
+        $DRY_RUN_CMD chmod 644 ~/.config/retroarch/autoconfig/udev/Nintendo_Switch_Right_Joy-Con.cfg
+        echo "Seeded Right Joy-Con autoconfig"
+      fi
     '';
 
     # Desktop entry for launching RetroArch

@@ -39,6 +39,8 @@ in
     input_joypad_driver = "udev"
     input_max_users = "4"
     input_menu_toggle_gamepad_combo = "2"  # L3+R3
+    input_player1_analog_dpad_mode = "1"  # 0=none, 1=left analog, 2=right analog
+    input_autoconfig_dir = "/home/eric/.config/retroarch/autoconfig"
 
     # === Paths ===
     rgui_browser_directory = "${cfg.romPath}"
@@ -91,6 +93,7 @@ in
     menu_enable_kiosk_mode = "false"
     pause_nonactive = "true"
     quit_press_twice = "true"
+    config_save_on_exit = "false"
   '';
 
   # Directory structure to create

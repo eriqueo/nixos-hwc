@@ -123,6 +123,11 @@ in
     services.blueman.enable = lib.mkIf cfg.bluetooth.enable true;
 
     #==========================================================================
+    # JOY-CON SUPPORT
+    #==========================================================================
+    services.joycond.enable = lib.mkIf cfg.joycon.enable true;
+
+    #==========================================================================
     # CO-LOCATED HARDWARE & UTILITY PACKAGES
     #==========================================================================
     environment.systemPackages =
