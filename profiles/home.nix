@@ -80,7 +80,7 @@
 
           # Proton Suite
           protonAuthenticator.enable = lib.mkDefault true; # 2FA authenticator
-          protonPass.enable = lib.mkDefault false;         # Password manager (optional)
+          protonPass.enable = lib.mkDefault true;         # Password manager (optional)
 
           # Productivity & Office
           obsidian.enable = lib.mkDefault true;                   # Knowledge base
@@ -99,6 +99,7 @@
           localsend.enable = lib.mkDefault true;
           opencode.enable = lib.mkDefault true;
           googleCloudSdk.enable = lib.mkDefault true;
+          slack.enable = lib.mkDefault true;
         };
       };
     };

@@ -19,7 +19,7 @@ let
     BACKUP_DEST="${cfg.local.mountPoint}"
     HOSTNAME="$(${pkgs.nettools}/bin/hostname)"
     BACKUP_ROOT="$BACKUP_DEST/$HOSTNAME"
-    DATE=$(${pkgs.coreutils}/bin/date +%Y-%m-%d_%H-%M-%S)
+    DATE=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
     DAY_OF_WEEK=$(${pkgs.coreutils}/bin/date +%u)  # 1=Monday, 7=Sunday
     DAY_OF_MONTH=$(${pkgs.coreutils}/bin/date +%d)
     LOG_DIR="${cfg.monitoring.logPath}"
@@ -96,6 +96,9 @@ let
     BACKUP_SUCCESS=true
     ${lib.concatMapStringsSep "\n" (source: ''
       if [[ -d "${source}" ]]; then
+        # Create parent directory structure
+        SOURCE_PARENT="$BACKUP_DIR$(dirname "${source}")"
+        ${pkgs.coreutils}/bin/mkdir -p "$SOURCE_PARENT"
         log "Backing up ${source}..."
 
         if ${pkgs.rsync}/bin/rsync -aAXHv \
