@@ -76,20 +76,16 @@
             doCheck = false;
           });
         })
-        # Overlay to update gemini-cli to v0.17.1 from npm
+        # Overlay to update gemini-cli to v0.17.1
         (final: prev: {
           gemini-cli = prev.gemini-cli.overrideAttrs (old: rec {
             version = "0.17.1";
-            src = prev.fetchurl {
-              url = "https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-0.17.1.tgz";
-              hash = "sha256-0nyrq8mhs7hr4ccsyng75n2k8gq00xz89n6hkvpj8gvgfjx6ql3f";
+            src = prev.fetchFromGitHub {
+              owner = "google";
+              repo = "genkit";
+              rev = "v${version}";
+              hash = prev.lib.fakeHash;
             };
-            # The original package expects a git checkout and uses the git rev in `preConfigure`.
-            # We are using a tarball, so we override that step to use the version string instead.
-            preConfigure = ''
-              mkdir -p packages/generated
-              echo "export const GIT_COMMIT_INFO = { commitHash: 'v${version}' };" > packages/generated/git-commit.ts
-            '';
             npmDepsHash = prev.lib.fakeHash;
           });
         })
