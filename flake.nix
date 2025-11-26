@@ -69,25 +69,7 @@
         # Accept NVIDIA license for legacy driver support
         nvidia.acceptLicense = true;
       };
-      overlays = [
-        # Overlay to disable Tailscale tests
-        (final: prev: {
-          tailscale = prev.tailscale.overrideAttrs (oldAttrs: {
-            doCheck = false;
-          });
-        })
-
-        # Overlay to update gemini-cli to latest version (0.17.1)
-        (final: prev: {
-          gemini-cli = prev.gemini-cli.overrideAttrs (old: {
-            version = "0.17.1";
-            src = prev.fetchurl {
-              url = "https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-0.17.1.tgz";
-              hash = "sha256-0nyrq8mhs7hr4ccsyng75n2k8gq00xz89n6hkvpj8gvgfjx6ql3f";
-            };
-          });
-        })
-      ];
+      overlays = [];
     };
     
     lib = nixpkgs.lib;
