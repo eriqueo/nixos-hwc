@@ -123,6 +123,16 @@
       headers = { "X-Forwarded-Prefix" = "/prowlarr"; };
     }
 
+    # LazyLibrarian (books) - preserve path (Web Root setting in app)
+    {
+      name = "books";
+      mode = "subpath";
+      path = "/books";
+      upstream = "http://127.0.0.1:5299";
+      needsUrlBase = true;
+      headers = { "X-Forwarded-Prefix" = "/books"; };
+    }
+
     # CouchDB (Obsidian LiveSync) - strip /sync prefix
     {
       name = "couchdb";

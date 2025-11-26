@@ -12,6 +12,7 @@
 
     # Container services
     ./beets/index.nix
+    ./books/index.nix
     ./caddy/index.nix
     ./gluetun/index.nix
     ./immich/index.nix

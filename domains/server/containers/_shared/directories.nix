@@ -56,6 +56,11 @@
       mkdir -p /opt/downloads/prowlarr
       mkdir -p /opt/downloads/sabnzbd
       mkdir -p /opt/downloads/qbittorrent
+      mkdir -p /opt/downloads/books
+
+      # Books library directories
+      mkdir -p /mnt/media/books/ebooks
+      mkdir -p /mnt/media/books/audiobooks
 
       # Scripts directory for automation hooks
       mkdir -p /opt/downloads/scripts

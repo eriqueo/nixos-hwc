@@ -269,6 +269,7 @@
   hwc.services.containers.sonarr.enable = true;
   hwc.services.containers.radarr.enable = true;
   hwc.services.containers.lidarr.enable = true;
+  hwc.services.containers.books.enable = true;  # LazyLibrarian for ebooks and audiobooks
 
   # Beets music organizer - using native installation instead of container
   hwc.services.containers.beets.enable = false;  # Container disabled
