@@ -123,12 +123,14 @@
       headers = { "X-Forwarded-Prefix" = "/prowlarr"; };
     }
 
-    # LazyLibrarian (books) - port mode (subpath-hostile with query parameters)
+    # LazyLibrarian (books) - preserve path (Web Root setting in app)
     {
       name = "books";
-      mode = "port";
-      port = 8299;
+      mode = "subpath";
+      path = "/books";
       upstream = "http://127.0.0.1:5299";
+      needsUrlBase = true;
+      headers = { "X-Forwarded-Prefix" = "/books"; };
     }
 
     # CouchDB (Obsidian LiveSync) - strip /sync prefix
