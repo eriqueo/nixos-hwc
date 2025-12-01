@@ -271,9 +271,15 @@
   hwc.services.containers.lidarr.enable = true;
   hwc.services.containers.books.enable = true;  # LazyLibrarian for ebooks and audiobooks
 
-  # Beets music organizer - using native installation instead of container
-  hwc.services.containers.beets.enable = false;  # Container disabled
-  hwc.server.apps.beets-native.enable = true;     # Native enabled
+  # Beets music organizer - INTENTIONALLY DISABLED (using native installation)
+  # Container disabled in favor of native beets installation for:
+  # - Simpler integration with system
+  # - Reduced container overhead for lightweight tool
+  # - Direct access to music library without volume complexity
+  # To re-enable container: set beets.enable = true AND disable beets-native
+  # See: domains/server/containers/beets/ for container config
+  hwc.services.containers.beets.enable = false;
+  hwc.server.apps.beets-native.enable = true;
 
   hwc.services.containers.jellyseerr.enable = true;
 
@@ -284,6 +290,15 @@
   # hwc.services.containers.jellyfin.enable = true;  # Disabled - using native service
 
   # Phase 5: Media Optimization and Management
+  # Tdarr video transcoding - INTENTIONALLY DISABLED (high resource usage)
+  # Disabled because:
+  # - Resource intensive (~4 CPU cores, 12GB RAM when active)
+  # - Not needed unless active transcoding pipeline required
+  # - GPU passthrough configured but service dormant to conserve resources
+  # - Conflicts with AI workloads for GPU/CPU resources
+  # To enable: set tdarr.enable = true (all deps already configured)
+  # Verify: GPU support, storage paths, networking all ready
+  # See: domains/server/containers/tdarr/ for full config
   hwc.services.containers.tdarr.enable = false;
   hwc.services.containers.recyclarr = {
     enable = true;
