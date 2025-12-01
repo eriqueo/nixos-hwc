@@ -10,22 +10,23 @@ let
   
   # Build environment variables
   baseEnv = {
-    OLLAMA_BASE_URL = cfg.ollamaEndpoint;
+    # Access Ollama via host gateway (container uses bridge networking, not host mode)
+    OLLAMA_BASE_URL = "http://host.containers.internal:11434";
     WEBUI_AUTH = if cfg.enableAuth then "true" else "false";
     DEFAULT_MODELS = cfg.defaultModel;
-    
+
     # RAG Configuration
     ENABLE_RAG_WEB_SEARCH = "false";  # Keep it local
     CHUNK_SIZE = toString cfg.ragChunkSize;
     CHUNK_OVERLAP = toString cfg.ragOverlap;
-    
+
     # UI Customization
     WEBUI_NAME = "HWC AI Assistant";
-    
+
     # Security
     ENABLE_SIGNUP = "true";  # Allow user registration
     ENABLE_LOGIN_FORM = toString cfg.enableAuth;
-    
+
     # Performance
     NUM_WORKERS = "2";
   };
@@ -61,10 +62,8 @@ in
 
       environment = containerEnv;
 
-      extraOptions = [
-        "--network=host"  # Access Ollama on localhost
-        "--pull=always"   # Always pull latest image on restart
-      ];
+      # No extra options needed - using default bridge networking with port mapping
+      extraOptions = [];
     };
 
     # Ensure Podman is enabled
@@ -91,23 +90,23 @@ in
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0750 root root -"
     ];
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = [
-    {
-      assertion = cfg.enable -> (cfg.port > 0 && cfg.port < 65536);
-      message = "Open WebUI port must be between 1 and 65535";
-    }
-    {
-      assertion = cfg.enable -> (cfg.ragChunkSize > 0);
-      message = "RAG chunk size must be positive";
-    }
-    {
-      assertion = cfg.enable -> (cfg.ragOverlap >= 0 && cfg.ragOverlap < cfg.ragChunkSize);
-      message = "RAG overlap must be non-negative and less than chunk size";
-    }
-  ];
+    #========================================================================
+    # VALIDATION
+    #========================================================================
+    assertions = [
+      {
+        assertion = cfg.enable -> (cfg.port > 0 && cfg.port < 65536);
+        message = "Open WebUI port must be between 1 and 65535";
+      }
+      {
+        assertion = cfg.enable -> (cfg.ragChunkSize > 0);
+        message = "RAG chunk size must be positive";
+      }
+      {
+        assertion = cfg.enable -> (cfg.ragOverlap >= 0 && cfg.ragOverlap < cfg.ragChunkSize);
+        message = "RAG overlap must be non-negative and less than chunk size";
+      }
+    ];
+  };
 }
