@@ -264,9 +264,9 @@ After seeing command output, explain results concisely.
   # Access: https://hwc.ocelot-wahoo.ts.net:3443 (via Caddy port mode)
   hwc.server.ai.open-webui = {
     enable = true;
+    enableAuth = false;  # TEMPORARY: Disabled to bypass signup page rendering issue
     # All other settings use defaults:
     # - port: 3000
-    # - enableAuth: true
     # - defaultModel: "phi3.5:3.8b"
     # - enableRAG: true
   };
