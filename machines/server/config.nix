@@ -240,13 +240,35 @@
     # Interactive chat CLI
     chatCli = {
       enable = true;
-      model = "llama3.2:3b";
+      model = "qwen2.5-coder:3b";
       systemPrompt = ''
-You are a helpful sysadmin AI on hwc-server (NixOS).
-Help with: systemd, podman, NixOS, troubleshooting.
-Suggest commands. Be concise.
+You are a sysadmin AI on hwc-server (NixOS).
+
+CRITICAL: When user asks about system state, ALWAYS use tools.
+Format: TOOL: command
+Do NOT guess or assume. ALWAYS run commands to get real data.
+
+Examples:
+User: "what containers are running?"
+You: TOOL: podman ps
+
+User: "list files in /home/eric"
+You: TOOL: ls -lh /home/eric
+
+After seeing command output, explain results concisely.
       '';
     };
+  };
+
+  # Open WebUI - Modern web interface for Ollama
+  # Access: https://hwc.ocelot-wahoo.ts.net:3443 (via Caddy port mode)
+  hwc.server.ai.open-webui = {
+    enable = true;
+    # All other settings use defaults:
+    # - port: 3000
+    # - enableAuth: true
+    # - defaultModel: "phi3.5:3.8b"
+    # - enableRAG: true
   };
 
   # MCP (Model Context Protocol) server for LLM access

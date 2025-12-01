@@ -175,14 +175,12 @@
       headers = { "X-Forwarded-Prefix" = "/api"; };
     }
 
-    # Open WebUI - AI chat interface (subpath mode)
+    # Open WebUI - AI chat interface (port mode - subpath-hostile SvelteKit app)
     {
       name = "openwebui";
-      mode = "subpath";
-      path = "/ai";
+      mode = "port";
+      port = 3443;  # Dedicated port for Open WebUI
       upstream = "http://127.0.0.1:3000";
-      needsUrlBase = false;  # Strip /ai prefix - Open WebUI works without URL base
-      headers = { "X-Forwarded-Prefix" = "/ai"; };
     }
   ];
 }
