@@ -240,7 +240,12 @@
     # Interactive chat CLI
     chatCli = {
       enable = true;
-      model = "phi3.5:3.8b";
+      model = "llama3.2:3b";
+      systemPrompt = ''
+You are a helpful sysadmin AI on hwc-server (NixOS).
+Help with: systemd, podman, NixOS, troubleshooting.
+Suggest commands. Be concise.
+      '';
     };
   };
 
