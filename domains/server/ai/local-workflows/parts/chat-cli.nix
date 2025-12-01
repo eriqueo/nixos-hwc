@@ -1,6 +1,6 @@
 # domains/server/ai/local-workflows/parts/chat-cli.nix
 #
-# Interactive CLI chat interface for local AI models
+# Interactive CLI chat interface with command execution tools
 
 { config, lib, pkgs, cfg }:
 
@@ -12,6 +12,8 @@ import json
 import sqlite3
 import readline
 import atexit
+import subprocess
+import shlex
 from pathlib import Path
 from datetime import datetime
 import requests
@@ -22,7 +24,19 @@ OLLAMA_ENDPOINT = "${cfg.ollamaEndpoint}"
 DEFAULT_MODEL = "${cfg.chatCli.model}"
 HISTORY_FILE = "${cfg.chatCli.historyFile}"
 MAX_HISTORY = ${toString cfg.chatCli.maxHistoryLines}
-SYSTEM_PROMPT = """${cfg.chatCli.systemPrompt}"""
+SYSTEM_PROMPT = """${cfg.chatCli.systemPrompt}
+
+You have access to tools to execute commands on the system.
+When you need information, use the TOOL format:
+
+TOOL: command args
+Example: TOOL: podman ps
+Example: TOOL: systemctl status ollama
+
+After seeing results, respond naturally to the user.
+Available tools: ls, tree, cat, head, tail, grep, find, pwd,
+systemctl, journalctl, podman, df, free, uptime, who, mv
+"""
 
 
 class Colors:
@@ -36,10 +50,126 @@ class Colors:
     BOLD = '\033[1m'
 
 
+class CommandExecutor:
+    """Safe command execution with whitelist"""
+
+    # Whitelisted commands (read-only + mv)
+    SAFE_COMMANDS = {
+        'ls', 'tree', 'cat', 'head', 'tail', 'grep',
+        'find', 'pwd', 'df', 'free', 'uptime', 'who',
+        'systemctl', 'journalctl', 'podman', 'mv'
+    }
+
+    # Commands that need subcommand validation
+    SUBCOMMAND_RULES = {
+        'systemctl': ['status', 'list-units', 'is-active',
+                      'is-enabled', 'show'],
+        'podman': ['ps', 'logs', 'inspect', 'stats', 'images'],
+    }
+
+    # Dangerous flags to block
+    BLOCKED_FLAGS = {
+        '--force', '-f', '--delete', '-d', '--remove', '-r',
+        '--rm', '--kill', '-k', '--stop', '--restart'
+    }
+
+    def __init__(self, working_dir="/"):
+        self.working_dir = Path(working_dir)
+
+    def validate_command(self, cmd_parts):
+        """Validate command against whitelist"""
+        if not cmd_parts:
+            return False, "Empty command"
+
+        base_cmd = cmd_parts[0]
+
+        # Check if command is whitelisted
+        if base_cmd not in self.SAFE_COMMANDS:
+            return False, f"Command not allowed: {base_cmd}"
+
+        # Validate subcommands
+        if base_cmd in self.SUBCOMMAND_RULES:
+            if len(cmd_parts) < 2:
+                return False, f"{base_cmd} requires subcommand"
+
+            subcmd = cmd_parts[1]
+            allowed = self.SUBCOMMAND_RULES[base_cmd]
+
+            if subcmd not in allowed:
+                return False, (
+                    f"Subcommand not allowed: {base_cmd} {subcmd}"
+                )
+
+        # Check for dangerous flags
+        for part in cmd_parts:
+            if part in self.BLOCKED_FLAGS:
+                return False, f"Dangerous flag blocked: {part}"
+
+        # Block shell operators
+        dangerous = ['|', '>', '<', ';', '&', '$', '`']
+        for part in cmd_parts:
+            if any(op in part for op in dangerous):
+                return False, "Shell operators not allowed"
+
+        return True, "OK"
+
+    def execute(self, command_str):
+        """Execute a safe command and return output"""
+        try:
+            # Parse command
+            cmd_parts = shlex.split(command_str)
+
+            # Validate
+            valid, msg = self.validate_command(cmd_parts)
+            if not valid:
+                return {
+                    "success": False,
+                    "error": msg,
+                    "output": ""
+                }
+
+            # Execute with timeout
+            result = subprocess.run(
+                cmd_parts,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=str(self.working_dir)
+            )
+
+            # Limit output size
+            stdout = result.stdout[:5000]
+            stderr = result.stderr[:1000]
+
+            if len(result.stdout) > 5000:
+                stdout += "\n... (output truncated)"
+
+            return {
+                "success": result.returncode == 0,
+                "output": stdout,
+                "error": stderr,
+                "returncode": result.returncode
+            }
+
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "error": "Command timeout (30s)",
+                "output": ""
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "output": ""
+            }
+
+
 class ChatSession:
     def __init__(self):
         self.model = DEFAULT_MODEL
         self.context = []
+        self.executor = CommandExecutor()
         self.setup_database()
         self.setup_readline()
 
@@ -110,6 +240,53 @@ class ChatSession:
         )
         self.conn.commit()
 
+    def parse_tool_calls(self, text):
+        """Extract TOOL: commands from AI response"""
+        tools = []
+        lines = text.split('\n')
+
+        for line in lines:
+            if line.strip().startswith('TOOL:'):
+                cmd = line.strip()[5:].strip()
+                if cmd:
+                    tools.append(cmd)
+
+        return tools
+
+    def execute_tools(self, tool_calls):
+        """Execute tool calls and return results"""
+        results = []
+
+        for cmd in tool_calls:
+            print(
+                f"{Colors.CYAN}> Executing: {cmd}{Colors.ENDC}"
+            )
+            result = self.executor.execute(cmd)
+
+            if result['success']:
+                output = result['output'].strip()
+                if output:
+                    print(
+                        f"{Colors.YELLOW}{output}{Colors.ENDC}\n"
+                    )
+                    results.append({
+                        'command': cmd,
+                        'output': output
+                    })
+                else:
+                    print(
+                        f"{Colors.YELLOW}(no output){Colors.ENDC}\n"
+                    )
+            else:
+                error_msg = result['error']
+                print(f"{Colors.RED}Error: {error_msg}{Colors.ENDC}\n")
+                results.append({
+                    'command': cmd,
+                    'error': error_msg
+                })
+
+        return results
+
     def query_ollama(self, prompt, stream=True):
         """Query Ollama API with streaming"""
         try:
@@ -130,11 +307,6 @@ class ChatSession:
 
             full_response = ""
             if stream:
-                print(
-                    f"{Colors.GREEN}{Colors.BOLD}Assistant:"
-                    f"{Colors.ENDC} ",
-                    end="", flush=True
-                )
                 for line in response.iter_lines():
                     if line:
                         chunk = json.loads(line)
@@ -142,16 +314,10 @@ class ChatSession:
                             content = chunk["message"].get(
                                 "content", ""
                             )
-                            print(content, end="", flush=True)
                             full_response += content
-                print()
             else:
                 result = response.json()
                 full_response = result["message"]["content"]
-                print(
-                    f"{Colors.GREEN}{Colors.BOLD}Assistant:"
-                    f"{Colors.ENDC} {full_response}"
-                )
 
             return full_response
 
@@ -160,21 +326,79 @@ class ChatSession:
             return None
 
     def chat(self, message):
-        """Process a chat message"""
+        """Process a chat message with tool execution"""
         self.save_message("user", message)
         self.context.append({"role": "user", "content": message})
 
-        response = self.query_ollama(message)
+        # Get initial AI response (non-streaming for tool detection)
+        response = self.query_ollama(message, stream=False)
 
-        if response:
+        if not response:
+            return
+
+        # Check for tool calls
+        tool_calls = self.parse_tool_calls(response)
+
+        if tool_calls:
+            # Execute tools
+            tool_results = self.execute_tools(tool_calls)
+
+            # Build results message for AI
+            results_text = "Command results:\n"
+            for r in tool_results:
+                cmd = r['command']
+                if 'output' in r:
+                    results_text += (
+                        f"\n$ {cmd}\n{r['output'][:500]}\n"
+                    )
+                else:
+                    results_text += (
+                        f"\n$ {cmd}\nError: {r['error']}\n"
+                    )
+
+            # Add to context
+            self.context.append({
+                "role": "assistant",
+                "content": response
+            })
+            self.context.append({
+                "role": "user",
+                "content": results_text
+            })
+
+            # Get final response with results
+            print(
+                f"{Colors.GREEN}{Colors.BOLD}Assistant:"
+                f"{Colors.ENDC} ",
+                end="", flush=True
+            )
+            final_response = self.query_ollama(
+                results_text,
+                stream=True
+            )
+            print()
+
+            if final_response:
+                self.save_message("assistant", final_response)
+                self.context.append({
+                    "role": "assistant",
+                    "content": final_response
+                })
+        else:
+            # No tools, just display response
+            print(
+                f"{Colors.GREEN}{Colors.BOLD}Assistant:"
+                f"{Colors.ENDC} {response}"
+            )
             self.save_message("assistant", response)
             self.context.append({
                 "role": "assistant",
                 "content": response
             })
 
-            if len(self.context) > 20:
-                self.context = self.context[-20:]
+        # Trim context
+        if len(self.context) > 20:
+            self.context = self.context[-20:]
 
     def list_models(self):
         """List available Ollama models"""
@@ -233,6 +457,7 @@ class ChatSession:
 
 {Colors.YELLOW}Chat:{Colors.ENDC}
   Type your message and press Enter
+  AI can execute safe commands to answer questions
 
 {Colors.YELLOW}Commands:{Colors.ENDC}
   /help              Show this help
@@ -243,15 +468,13 @@ class ChatSession:
   /export            Export conversation
   /quit or /exit     Exit
 
-{Colors.YELLOW}Tips:{Colors.ENDC}
-  * Ctrl+C to interrupt generation
-  * Ctrl+D to exit
-  * Arrow keys for command history
+{Colors.YELLOW}Tool Capabilities:{Colors.ENDC}
+  AI can run: ls, tree, cat, systemctl, podman, df, etc.
+  Ask questions like "What containers are running?"
 
 {Colors.YELLOW}Current:{Colors.ENDC}
   Model: {self.model}
   Endpoint: {OLLAMA_ENDPOINT}
-  History: {HISTORY_FILE}
 """
         print(help_text)
 
@@ -275,7 +498,10 @@ class ChatSession:
         )
         for role, content, timestamp in reversed(messages):
             color = Colors.BLUE if role == "user" else Colors.GREEN
-            preview = content[:100] + "..." if len(content) > 100 else content
+            preview = (
+                content[:100] + "..."
+                if len(content) > 100 else content
+            )
             print(
                 f"{color}{role.capitalize()}:{Colors.ENDC} "
                 f"{preview}"
@@ -316,8 +542,8 @@ class ChatSession:
     def run(self):
         """Main chat loop"""
         print(
-            f"{Colors.BOLD}{Colors.BLUE}AI Chat Interface"
-            f"{Colors.ENDC}"
+            f"{Colors.BOLD}{Colors.BLUE}AI Chat Interface "
+            f"(Tool-Enabled){Colors.ENDC}"
         )
         print(f"{Colors.CYAN}Model: {self.model}{Colors.ENDC}")
         print(
