@@ -174,5 +174,15 @@
       needsUrlBase = true;  # Preserve /api prefix - app routes expect it
       headers = { "X-Forwarded-Prefix" = "/api"; };
     }
+
+    # Open WebUI - AI chat interface (subpath mode)
+    {
+      name = "openwebui";
+      mode = "subpath";
+      path = "/ai";
+      upstream = "http://127.0.0.1:3000";
+      needsUrlBase = false;  # Strip /ai prefix - Open WebUI works without URL base
+      headers = { "X-Forwarded-Prefix" = "/ai"; };
+    }
   ];
 }
