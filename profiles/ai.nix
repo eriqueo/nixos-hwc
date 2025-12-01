@@ -31,6 +31,7 @@
     ../domains/server/ai/mcp
     ../domains/server/ai/local-workflows
     ../domains/server/ai/ai-bible
+    ../domains/server/ai/open-webui
   ];
 
   #==========================================================================
