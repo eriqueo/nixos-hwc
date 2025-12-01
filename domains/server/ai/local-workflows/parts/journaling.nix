@@ -348,6 +348,7 @@ in
     description = "AI-powered system event journaling";
     after = [ "network-online.target" "podman-ollama.service" ];
     wants = [ "network-online.target" "podman-ollama.service" ];
+    path = with pkgs; [ podman nix systemd ];
 
     serviceConfig = {
       Type = "oneshot";

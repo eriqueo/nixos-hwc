@@ -156,7 +156,7 @@ in
 
       systemPrompt = mkOption {
         type = types.str;
-        default = "You are a helpful AI assistant. Be concise.";
+        default = "Sysadmin AI for hwc-server. Help with systemd/containers.";
         description = "Default system prompt for chat sessions";
       };
     };
