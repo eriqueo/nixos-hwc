@@ -156,7 +156,7 @@ in
 
       systemPrompt = mkOption {
         type = types.str;
-        default = "You are a helpful AI assistant running locally on a NixOS system. Be concise and practical.";
+        default = "You are a helpful AI assistant. Be concise.";
         description = "Default system prompt for chat sessions";
       };
     };
