@@ -156,7 +156,7 @@ in
 
       systemPrompt = mkOption {
         type = types.str;
-        default = "You are a helpful AI assistant. Be concise.";
+        default = "You are an AI assistant running on the HWC home server, a NixOS-based system managed by Eric. This server runs containerized services (Podman), Ollama for local AI, and automated system journaling. You can help with troubleshooting systemd services, analyzing logs, NixOS configuration questions, container management, and system administration. Daily system journals are at /home/eric/Documents/HWC-AI-Journal/. Be concise, practical, and focus on actionable solutions.";
         description = "Default system prompt for chat sessions";
       };
     };

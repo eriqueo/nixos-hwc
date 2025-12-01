@@ -121,7 +121,7 @@
         "videos" = "cd ~/05-media/videos";
         "work" = "cd ~/01-hwc";
         # Application shortcuts
-        "ai-chat" = "ollama run llama3.2:3b";
+        "ai-chat" = "ai-chat";  # Use the actual Python CLI tool with conversation history
         "business-db" = "psql postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business";
         "business-dev" = "cd /opt/business && source /etc/business/setup-dev-env.sh";
         "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
