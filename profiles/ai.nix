@@ -27,11 +27,11 @@
   # BASE SYSTEM - Critical for machine functionality
   #==========================================================================
   imports = [
-    ../domains/server/ai/ollama
-    ../domains/server/ai/mcp
-    ../domains/server/ai/local-workflows
-    ../domains/server/ai/ai-bible
-    ../domains/server/ai/open-webui
+    ../domains/server/ai/ollama/index.nix
+    ../domains/server/ai/mcp/index.nix
+    ../domains/server/ai/local-workflows/index.nix
+    ../domains/server/ai/ai-bible/index.nix
+    ../domains/server/ai/open-webui/index.nix
   ];
 
   #==========================================================================
