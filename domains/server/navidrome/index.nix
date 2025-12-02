@@ -24,13 +24,26 @@ in
         DataFolder = cfg.settings.dataFolder;
         # Credentials for initial setup
         ND_INITIAL_ADMIN_USER = cfg.settings.initialAdminUser;
-        ND_INITIAL_ADMIN_PASSWORD = cfg.settings.initialAdminPassword;
+        # Use password from file if provided, otherwise use plaintext (deprecated)
+        ND_INITIAL_ADMIN_PASSWORD =
+          if cfg.settings.initialAdminPasswordFile != null
+          then "" # Will be loaded via systemd credential below
+          else cfg.settings.initialAdminPassword;
       } // lib.optionalAttrs (cfg.settings.baseUrl != "") {
         BaseURL = cfg.settings.baseUrl;
       };
     };
 
-
+    # Load password from file using systemd credentials (secure method)
+    systemd.services.navidrome = lib.mkIf (cfg.settings.initialAdminPasswordFile != null) {
+      serviceConfig = {
+        LoadCredential = "navidrome-password:${cfg.settings.initialAdminPasswordFile}";
+      };
+      # Set environment variable from credential
+      environment = {
+        ND_INITIAL_ADMIN_PASSWORD = "%d/navidrome-password";
+      };
+    };
 
     # Open firewall port
     networking.firewall.allowedTCPPorts = [ cfg.settings.port ];
@@ -40,8 +53,14 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.enable || (cfg.settings.initialAdminPassword != "");
-        message = "hwc.server.navidrome requires initialAdminPassword to be set";
+        assertion = !cfg.enable ||
+                    (cfg.settings.initialAdminPassword != "" || cfg.settings.initialAdminPasswordFile != null);
+        message = "hwc.server.navidrome requires either initialAdminPassword or initialAdminPasswordFile to be set";
+      }
+      {
+        assertion = !cfg.enable ||
+                    !(cfg.settings.initialAdminPassword != "" && cfg.settings.initialAdminPasswordFile != null);
+        message = "hwc.server.navidrome: cannot set both initialAdminPassword and initialAdminPasswordFile";
       }
       {
         assertion = !cfg.reverseProxy.enable || config.hwc.services.reverseProxy.enable;

@@ -14,9 +14,9 @@
     ../../profiles/ai.nix
     ../../domains/server/routes.nix
     ../../domains/server/frigate/index.nix  # Config-first pattern NVR with GPU acceleration
+    ../../profiles/monitoring.nix   # Monitoring enabled: Prometheus + Grafana
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
-    # ../../profiles/monitoring.nix   # TODO: Enable when monitoring services are fixed
   ];
 
   # System identity
@@ -64,7 +64,7 @@
 
     # Safest: wait for any NetworkManager connection (no hard-coded iface names).
     waitOnline.mode = "all";
-    waitOnline.timeoutSeconds = 90;
+    waitOnline.timeoutSeconds = 30;  # Reduced from 90s for faster boot
 
     ssh.enable = true;
     tailscale.enable = true;
@@ -299,6 +299,10 @@ After EVERY command, provide 2-3 sentence human summary.
   #   reverseProxy.enable = true;
   # };
 
+  # Automated server backups (containers, databases, system)
+  # Backups saved to /mnt/hot/backups with daily schedule
+  hwc.server.backup.enable = true;
+
   # CouchDB for Obsidian LiveSync
   hwc.server.couchdb = {
     enable = true;
@@ -356,12 +360,12 @@ After EVERY command, provide 2-3 sentence human summary.
 
   # Reverse proxy domain handled by server profile
 
-  # Feature enablement (disabled for initial stability)
-  # hwc.features = {
-  #   media.enable = true;        # TODO: Fix sops/agenix conflict
-  #   business.enable = true;     # TODO: Enable when business containers are implemented
-  #   monitoring.enable = true;   # TODO: Enable when monitoring services are fixed
-  # };
+  # Feature enablement
+  hwc.features = {
+    monitoring.enable = true;     # Prometheus + Grafana monitoring stack
+    # media.enable = true;        # TODO: Fix sops/agenix conflict
+    # business.enable = true;     # TODO: Enable when business containers are implemented
+  };
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
@@ -387,21 +391,8 @@ After EVERY command, provide 2-3 sentence human summary.
   # Server-specific packages moved to modules/system/server-packages.nix
   hwc.system.packages.server.enable = true;
 
-  # Production I/O scheduler optimization
-  services.udev.extraRules = ''
-    # Use mq-deadline for SSDs (better for mixed workloads)
-    ACTION=="add|change", KERNEL=="nvme*", ATTR{queue/scheduler}="mq-deadline"
-    ACTION=="add|change", KERNEL=="sd*", ENV{ID_BUS}=="ata", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="mq-deadline"
-
-    # Use CFQ for HDDs (better for sequential workloads)
-    ACTION=="add|change", KERNEL=="sd*", ENV{ID_BUS}=="ata", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="cfq"
-  '';
-
-  # Enhanced logging for production server
-  services.journald.extraConfig = ''
-    SystemMaxUse=500M
-    RuntimeMaxUse=100M
-  '';
+  # I/O scheduler and journald configuration moved to profiles/server.nix to avoid duplication
+  # This eliminates conflicts between machine and profile configurations
 
   # Emergency access via security domain (safer than machine-level overrides)
   # hwc.secrets.emergency.enable is handled by security profile
