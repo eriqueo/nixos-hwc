@@ -219,31 +219,55 @@ let
       echo "  backup-restore daily/2025-01-15_02-00-00 /home/user/.config /tmp/restored-config"
     }
 
-    # List available backups
+    # Check if backup is complete
+    is_complete() {
+      [[ -f "$1/.BACKUP_COMPLETE" ]]
+    }
+
+    # List available backups (only complete ones)
     list_backups() {
       if [[ ! -d "$BACKUP_ROOT" ]]; then
         echo "No backups found at $BACKUP_ROOT"
         exit 1
       fi
 
-      echo "Available backup snapshots:"
+      echo "Available backup snapshots (complete only):"
       echo ""
       echo "Latest:"
       if [[ -L "$BACKUP_ROOT/latest" ]]; then
-        ${pkgs.coreutils}/bin/ls -lh "$BACKUP_ROOT/latest" | ${pkgs.gawk}/bin/awk '{print "  " $NF}'
+        LATEST_PATH=$(${pkgs.coreutils}/bin/readlink -f "$BACKUP_ROOT/latest")
+        if is_complete "$LATEST_PATH"; then
+          ${pkgs.coreutils}/bin/ls -lh "$BACKUP_ROOT/latest" | ${pkgs.gawk}/bin/awk '{print "  " $NF " ✓"}'
+        else
+          echo "  (incomplete - unusable)"
+        fi
       fi
       echo ""
 
       echo "Daily backups:"
-      ${pkgs.findutils}/bin/find "$BACKUP_ROOT/daily" -maxdepth 1 -type d -printf "  %f\n" 2>/dev/null | ${pkgs.gnused}/bin/sed '/^$/d' | ${pkgs.coreutils}/bin/sort -r
+      for backup in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/daily" -maxdepth 1 -type d -printf "%f\n" 2>/dev/null | ${pkgs.gnused}/bin/sed '/^$/d' | ${pkgs.coreutils}/bin/sort -r); do
+        if is_complete "$BACKUP_ROOT/daily/$backup"; then
+          echo "  $backup ✓"
+        else
+          echo "  $backup ✗ (incomplete)"
+        fi
+      done
       echo ""
 
       echo "Weekly backups:"
-      ${pkgs.findutils}/bin/find "$BACKUP_ROOT/weekly" -maxdepth 1 -type d -printf "  %f\n" 2>/dev/null | ${pkgs.gnused}/bin/sed '/^$/d' | ${pkgs.coreutils}/bin/sort -r
+      for backup in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/weekly" -maxdepth 1 -type d -printf "%f\n" 2>/dev/null | ${pkgs.gnused}/bin/sed '/^$/d' | ${pkgs.coreutils}/bin/sort -r); do
+        if is_complete "$BACKUP_ROOT/weekly/$backup"; then
+          echo "  $backup ✓"
+        fi
+      done
       echo ""
 
       echo "Monthly backups:"
-      ${pkgs.findutils}/bin/find "$BACKUP_ROOT/monthly" -maxdepth 1 -type d -printf "  %f\n" 2>/dev/null | ${pkgs.gnused}/bin/sed '/^$/d' | ${pkgs.coreutils}/bin/sort -r
+      for backup in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/monthly" -maxdepth 1 -type d -printf "%f\n" 2>/dev/null | ${pkgs.gnused}/bin/sed '/^$/d' | ${pkgs.coreutils}/bin/sort -r); do
+        if is_complete "$BACKUP_ROOT/monthly/$backup"; then
+          echo "  $backup ✓"
+        fi
+      done
     }
 
     # Parse arguments
@@ -292,6 +316,13 @@ let
       echo ""
       echo "Available snapshots:"
       list_backups
+      exit 1
+    fi
+
+    # Verify snapshot is complete
+    if ! is_complete "$SNAPSHOT_PATH"; then
+      echo "Error: Snapshot is incomplete and cannot be restored: $SNAPSHOT_PATH"
+      echo "This backup did not finish successfully."
       exit 1
     fi
 
