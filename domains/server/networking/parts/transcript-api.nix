@@ -62,13 +62,13 @@ in
         API_PORT = toString cfg.port;
         TRANSCRIPTS_ROOT = cfg.dataDir;
         LANGS = "en,en-US,en-GB";
-        PYTHONPATH = scriptDir;
+        PYTHONPATH = "${pythonEnv}/lib/python3.12/site-packages:${scriptDir}";
         COUCHDB_URL = "http://127.0.0.1:5984";
         COUCHDB_DATABASE = "sync_transcripts";
       };
 
       serviceConfig = {
-        ExecStart = "${pythonEnv}/bin/python ${apiScript}";
+        ExecStart = "${pythonEnv}/bin/python3 ${apiScript}";
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
         DynamicUser = false;
