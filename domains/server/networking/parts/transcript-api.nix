@@ -22,26 +22,17 @@ let
   paths = config.hwc.paths;
 
   # Python environment with all required dependencies
-  # Built manually with pkgs.buildEnv so we can set ignoreCollisions = true.
-  # This avoids the typer / typer-slim duplicate-file error in python3.withPackages.
-  pythonEnv = pkgs.buildEnv {
-    name = "python3-transcript-api-env";
-    paths =
-      [ pkgs.python3 ]
-      ++ (with pkgs.python3Packages; [
-        fastapi
-        uvicorn
-        pydantic
-        httpx
-        yt-dlp
-        youtube-transcript-api
-        python-slugify
-        spacy
-        spacy_models.en_core_web_sm
-      ]);
-    pathsToLink = [ "/bin" "/lib" ];
-    ignoreCollisions = true;
-  };
+  pythonEnv = pkgs.python3.withPackages (ps: with ps; [
+    fastapi
+    uvicorn
+    pydantic
+    httpx
+    yt-dlp
+    youtube-transcript-api
+    python-slugify
+    spacy
+    spacy_models.en_core_web_sm
+  ]);
 
   # Source directory for transcript scripts
   scriptDir = "${paths.nixos}/workspace/productivity/transcript-formatter";
@@ -62,7 +53,7 @@ in
         API_PORT = toString cfg.port;
         TRANSCRIPTS_ROOT = cfg.dataDir;
         LANGS = "en,en-US,en-GB";
-        PYTHONPATH = "${pythonEnv}/lib/python3.12/site-packages:${scriptDir}";
+        PYTHONPATH = scriptDir;
         COUCHDB_URL = "http://127.0.0.1:5984";
         COUCHDB_DATABASE = "sync_transcripts";
       };
