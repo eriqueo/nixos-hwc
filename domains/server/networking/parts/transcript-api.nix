@@ -37,7 +37,7 @@ let
         youtube-transcript-api
         python-slugify
         spacy
-        spacy_models.en_core_web_sm
+        spacy-models.en_core_web_sm
       ]);
     pathsToLink = [ "/bin" "/lib" ];
     ignoreCollisions = true;
