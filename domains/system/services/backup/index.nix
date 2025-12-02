@@ -21,6 +21,7 @@ in
     ./parts/cloud-backup.nix
     ./parts/backup-utils.nix
     ./parts/backup-scheduler.nix
+    ./parts/database-hooks.nix
   ];
 
   #=========================================================================
