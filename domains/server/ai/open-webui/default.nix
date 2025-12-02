@@ -11,7 +11,7 @@ let
   # Build environment variables
   baseEnv = {
     # Access Ollama via host gateway (container uses bridge networking, not host mode)
-    OLLAMA_BASE_URL = "http://host.containers.internal:11434";
+    OLLAMA_BASE_URL = "http://ollama:11434";
     WEBUI_AUTH = if cfg.enableAuth then "true" else "false";
     DEFAULT_MODELS = cfg.defaultModel;
 
