@@ -22,23 +22,26 @@ let
   paths = config.hwc.paths;
 
   # Python environment with all required dependencies
-  # Local alias: make "typer-slim" resolve to the same derivation as "typer"
-  # so buildEnv doesn't see two different paths with the same files.
-  pythonEnv = pkgs.python3.withPackages (ps:
-    let
-      ps' = ps // { "typer-slim" = ps.typer; };
-    in
-    with ps'; [
-      fastapi
-      uvicorn
-      pydantic
-      httpx
-      yt-dlp
-      youtube-transcript-api
-      python-slugify
-      spacy
-      spacy-models.en_core_web_sm
-    ]);
+  # Built manually with pkgs.buildEnv so we can set ignoreCollisions = true.
+  # This avoids the typer / typer-slim duplicate-file error in python3.withPackages.
+  pythonEnv = pkgs.buildEnv {
+    name = "python3-transcript-api-env";
+    paths =
+      [ pkgs.python3 ]
+      ++ (with pkgs.python3Packages; [
+        fastapi
+        uvicorn
+        pydantic
+        httpx
+        yt-dlp
+        youtube-transcript-api
+        python-slugify
+        spacy
+        spacy-models.en_core_web_sm
+      ]);
+    pathsToLink = [ "/bin" "/lib" ];
+    ignoreCollisions = true;
+  };
 
   # Source directory for transcript scripts
   scriptDir = "${paths.nixos}/workspace/productivity/transcript-formatter";
