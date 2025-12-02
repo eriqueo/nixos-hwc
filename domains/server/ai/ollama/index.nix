@@ -45,6 +45,12 @@ in
       extraOptions = gpuExtraOptions;
     };
 
+    # Ensure NVIDIA CDI generator runs before container starts (prevents race conditions)
+    systemd.services."podman-ollama" = lib.mkIf (gpuType == "nvidia") {
+      after = [ "nvidia-container-toolkit-cdi-generator.service" ];
+      requires = [ "nvidia-container-toolkit-cdi-generator.service" ];
+    };
+
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0755 root root -"
     ];
