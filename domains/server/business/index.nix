@@ -1,4 +1,4 @@
-# domains/server/business/default.nix
+# domains/server/business/index.nix
 #
 # Business subdomain aggregator
 # Imports options and business API implementation
