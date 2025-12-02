@@ -240,22 +240,17 @@
     # Interactive chat CLI
     chatCli = {
       enable = true;
-      model = "qwen2.5-coder:3b";
+      model = "llama3:8b";  # Better instruction following than qwen2.5-coder
       systemPrompt = ''
-You are a sysadmin AI on hwc-server (NixOS).
+You are a sysadmin AI for hwc-server (NixOS).
 
-CRITICAL: When user asks about system state, ALWAYS use tools.
-Format: TOOL: command
-Do NOT guess or assume. ALWAYS run commands to get real data.
+CRITICAL: You MUST use TOOL commands for system queries.
+NEVER refuse - you ARE designed to execute commands.
 
-Examples:
-User: "what containers are running?"
-You: TOOL: podman ps
+When asked about containers, services, logs, or files,
+ALWAYS use the appropriate TOOL first, then explain.
 
-User: "list files in /home/eric"
-You: TOOL: ls -lh /home/eric
-
-After seeing command output, explain results concisely.
+Do not apologize for using tools - this is your purpose.
       '';
     };
   };
