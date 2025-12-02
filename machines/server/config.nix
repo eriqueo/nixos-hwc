@@ -196,7 +196,7 @@
   # GPU acceleration for Immich handled by hwc.server.immich.gpu.enable in server profile
 
   # AI services configuration
-  hwc.server.ai.ollama = {
+  hwc.ai.ollama = {
     enable = true;
     # Optimized models for 4GB VRAM GPU (Quadro P1000) - guaranteed to fit in VRAM
     # Note: Load one at a time due to VRAM constraints (1.9GB + 2.3GB = 4.2GB)
@@ -208,7 +208,7 @@
   };
 
   # Local AI workflows and automation
-  hwc.server.ai.local-workflows = {
+  hwc.ai.local-workflows = {
     enable = true;
 
     # AI-powered file cleanup agent
@@ -241,35 +241,13 @@
     chatCli = {
       enable = true;
       model = "llama3:8b";  # Better instruction following than qwen2.5-coder
-      systemPrompt = ''
-Sysadmin assistant. Execute commands, explain clearly.
-
-WORKFLOW:
-1. Run TOOL: command immediately (no questions)
-2. Show output
-3. Analyze and explain in plain English
-
-BEHAVIOR:
-- Assume defaults for vague queries
-- Always explain what output means
-- Identify issues, normal operations, or "no problems found"
-- Be direct, no pleasantries
-
-EXAMPLES:
-"errors" -> TOOL: journalctl -p err -b | tail -20
-Explain: Real errors? What services? Critical?
-
-"containers" -> TOOL: podman ps
-Explain: How many? Issues? Resources OK?
-
-After EVERY command, provide 2-3 sentence human summary.
-      '';
+      # systemPrompt inherited from domain default
     };
   };
 
   # Open WebUI - Modern web interface for Ollama
   # Access: https://hwc.ocelot-wahoo.ts.net:3443 (via Caddy port mode)
-  hwc.server.ai.open-webui = {
+  hwc.ai.open-webui = {
     enable = true;
     enableAuth = false;  # TEMPORARY: Disabled to bypass signup page rendering issue
     # All other settings use defaults:
@@ -280,8 +258,8 @@ After EVERY command, provide 2-3 sentence human summary.
 
   # MCP (Model Context Protocol) server for LLM access
   # TEMPORARILY DISABLED - infinite recursion in userName evaluation
-  hwc.server.ai.mcp.enable = false;
-  # hwc.server.ai.mcp = {
+  hwc.ai.mcp.enable = false;
+  # hwc.ai.mcp = {
   #   enable = true;
   #
   #   # Filesystem MCP for ~/.nixos directory
