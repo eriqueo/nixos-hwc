@@ -84,7 +84,6 @@
     monitoring.enable = true;
   };
 
-<<<<<<< HEAD
   # ntfy notification system for laptop alerts
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md
