@@ -12,7 +12,7 @@ in
     # MONITORING SERVICES
     #==========================================================================
     imports = [
-      ../domains/server/monitoring
+      ../domains/server/monitoring/index.nix
     ];
 
     hwc.services.prometheus = {
