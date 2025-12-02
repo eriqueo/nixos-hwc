@@ -45,7 +45,15 @@ in
       };
 
       script = ''
+        # Ensure all required directories exist
         mkdir -p ${cfg.storage.configPath}
+        mkdir -p ${cfg.storage.bufferPath}
+        mkdir -p ${cfg.storage.mediaPath}
+        
+        # Set proper ownership
+        chown -R eric:users ${cfg.storage.configPath}
+        chown -R eric:users ${cfg.storage.bufferPath}
+        chown -R eric:users ${cfg.storage.mediaPath}
 
         # Read secrets
         RTSP_USER=$(cat /run/agenix/frigate-rtsp-username)

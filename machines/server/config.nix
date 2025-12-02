@@ -340,11 +340,11 @@ After EVERY command, provide 2-3 sentence human summary.
       device = 0;  # NVIDIA P1000
     };
 
-    # Storage paths (preserving existing frigate-v2 data during rename)
+    # Storage paths
     storage = {
-      configPath = "/opt/surveillance/frigate-v2/config";
-      mediaPath = "/mnt/media/surveillance/frigate-v2/media";
-      bufferPath = "/mnt/hot/surveillance/frigate-v2/buffer";
+      configPath = "/opt/surveillance/frigate/config";
+      mediaPath = "/mnt/media/surveillance/frigate/media";
+      bufferPath = "/mnt/hot/surveillance/frigate/buffer";
     };
 
     # Firewall settings
