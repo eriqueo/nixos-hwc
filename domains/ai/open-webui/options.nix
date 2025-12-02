@@ -9,7 +9,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.ai.open-webui = {
+  options.hwc.ai.open-webui = {
     enable = mkEnableOption "Open WebUI - Web interface for Ollama";
 
     port = mkOption {
@@ -20,7 +20,7 @@ in
 
     ollamaEndpoint = mkOption {
       type = types.str;
-      default = "http://127.0.0.1:11434";
+      default = "http://ollama:11434";
       description = "Ollama API endpoint";
     };
 
