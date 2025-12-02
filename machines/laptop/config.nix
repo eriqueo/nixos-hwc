@@ -215,7 +215,7 @@
   };
 
   # Container engines enabled for Ollama AI workloads
-  # Podman is required by hwc.server.ai.ollama module
+  # Podman is required by hwc.ai.ollama module
   virtualisation.docker.enable = lib.mkForce false;  # Use podman, not docker
 
   # --- Declarative libvirt storage pool (requires NixVirt in flake) --
@@ -260,7 +260,7 @@
   # AI SERVICES CONFIGURATION (Laptop)
   #============================================================================
   # Laptop has superior hardware (32GB RAM, better GPU) for larger models
-  hwc.server.ai.ollama = {
+  hwc.ai.ollama = {
     enable = true;
     # Larger models suitable for 32GB RAM + RTX GPU
     models = [
@@ -271,7 +271,7 @@
   };
 
   # Local AI workflows for laptop
-  hwc.server.ai.local-workflows = {
+  hwc.ai.local-workflows = {
     enable = true;
 
     # File cleanup for Downloads
