@@ -3,7 +3,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.ai.mcp = {
+  options.hwc.ai.mcp = {
     enable = mkEnableOption "MCP (Model Context Protocol) server infrastructure";
 
     # Proxy configuration

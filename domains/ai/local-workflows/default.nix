@@ -6,7 +6,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.ai.local-workflows;
+  cfg = config.hwc.ai.local-workflows;
   inherit (lib) mkIf mkMerge;
 in
 {
@@ -73,8 +73,8 @@ in
     {
       assertions = [
         {
-          assertion = cfg.enable -> config.hwc.server.ai.ollama.enable;
-          message = "Local AI workflows require Ollama to be enabled (hwc.server.ai.ollama.enable = true)";
+          assertion = cfg.enable -> config.hwc.ai.ollama.enable;
+          message = "Local AI workflows require Ollama to be enabled (hwc.ai.ollama.enable = true)";
         }
       ];
     }

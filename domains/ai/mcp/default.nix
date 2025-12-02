@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.server.ai.mcp;
+  cfg = config.hwc.ai.mcp;
   inherit (lib) mkIf mkMerge concatStringsSep;
 
   # Get username from system configuration
@@ -131,7 +131,7 @@ in
     # DYNAMIC DEFAULTS - Set user-specific paths
     #--------------------------------------------------------------------------
     {
-      hwc.server.ai.mcp.filesystem.nixos = mkMerge [
+      hwc.ai.mcp.filesystem.nixos = mkMerge [
         (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.user == "") {
           user = lib.mkDefault userName;
         })
