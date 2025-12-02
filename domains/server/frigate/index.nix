@@ -47,6 +47,8 @@ in
       script = ''
         # Ensure all required directories exist
         mkdir -p ${cfg.storage.configPath}
+        mkdir -p ${cfg.storage.configPath}/models
+        mkdir -p ${cfg.storage.configPath}/labelmap
         mkdir -p ${cfg.storage.bufferPath}
         mkdir -p ${cfg.storage.mediaPath}
         
