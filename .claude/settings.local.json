@@ -97,14 +97,27 @@
       "Bash(readlink:*)",
       "Read(//home/eric/nixos-hwc/**)",
       "Bash(sudo rg:*)",
-      "Bash(sudo find /opt/downloads -maxdepth 2 -type d)"
+      "Bash(sudo find /opt/downloads -maxdepth 2 -type d)",
       "Bash(sudo systemctl stop:*)",
       "Bash(sudo lsof:*)",
       "Bash(lsblk:*)",
-      "Bash(sudo rm:*)"
+      "Bash(sudo rm:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "acceptEdits"
-  }
+  },
+  "enabledMcpjsonServers": [
+    "filesystem",
+    "git",
+    "brave-search",
+    "github",
+    "sequential-thinking",
+    "time",
+    "fetch",
+    "memory"
+  ]
 }
