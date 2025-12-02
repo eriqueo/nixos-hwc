@@ -20,11 +20,6 @@
 
 let
   cfg = config.hwc.home.shell;
-
-  # Import parts (pure functions)
-  grebuildScript = import ./parts/grebuild.nix { inherit pkgs; };
-  journalErrorsScript = import ./parts/journal-errors.nix { inherit pkgs; };
-
 in
 {
   #============================================================================
@@ -43,13 +38,7 @@ in
     home.packages = cfg.packages
       ++ lib.optionals cfg.modernUnix (with pkgs; [
         eza bat procs dust zoxide
-      ])
-      ++ lib.optionals cfg.scripts.grebuild [
-        grebuildScript
-      ]
-      ++ lib.optionals cfg.scripts.journalErrors [
-        journalErrorsScript
-      ];
+      ]);
 
     # Environment variables
     home.sessionVariables = cfg.sessionVariables // {
@@ -150,8 +139,9 @@ in
         add-app() {
           ${config.home.homeDirectory}/.nixos/workspace/infrastructure/filesystem/add-home-app.sh "$@"
         }
-        # secrets-function
-         secret-update() {
+
+        # Secrets management functions
+        secret-update() {
                   if [ -z "$1" ]; then
                     echo "Usage: secret-update <secret-name>"
                     echo "Example: secret-update vpn-password"
@@ -205,8 +195,28 @@ in
                   echo "4. Encrypted files:"
                   local ENCRYPTED_COUNT=$(find domains/secrets/parts -name "*.age" 2>/dev/null | wc -l)
                   echo "  📊 $ENCRYPTED_COUNT .age files found"
-                }        
-                
+        }
+
+        # Daily driver script functions
+        grebuild() {
+          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/development/grebuild.sh "$@"
+        }
+
+        journal-errors() {
+          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/monitoring/journal-errors.sh "$@"
+        }
+
+        list-services() {
+          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/development/list-services.sh "$@"
+        }
+
+        charter-lint() {
+          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/development/charter-lint.sh "$@"
+        }
+
+        caddy-health() {
+          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/monitoring/caddy-health-check.sh "$@"
+        }
       '';
     };
 

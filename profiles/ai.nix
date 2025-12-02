@@ -4,7 +4,7 @@
   imports = [
     ../domains/ai/default.nix
     # The domain modules (ollama, open-webui, local-workflows, mcp, agent)
-    # will be imported inside domains/ai/default.nix in PR2
+    # will be imported inside domains/ai/default.nix
   ];
 
   # set high-level sensible defaults as mkDefault for downstream overrides

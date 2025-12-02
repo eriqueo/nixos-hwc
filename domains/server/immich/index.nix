@@ -84,25 +84,26 @@ in
     };
 
     # Create storage directories
-    systemd.tmpfiles.rules = lib.mkIf cfg.storage.enable [
-      "d ${cfg.storage.basePath} 0750 immich immich -"
-      "d ${cfg.storage.locations.library} 0750 immich immich -"
-      "d ${cfg.storage.locations.thumbs} 0750 immich immich -"
-      "d ${cfg.storage.locations.encodedVideo} 0750 immich immich -"
-      "d ${cfg.storage.locations.profile} 0750 immich immich -"
-      "d ${cfg.backup.databaseBackupPath} 0750 postgres postgres -"
-      # Create .immich marker files for mount verification
-      "f ${cfg.storage.locations.library}/.immich 0600 immich immich -"
-      "f ${cfg.storage.locations.thumbs}/.immich 0600 immich immich -"
-      "f ${cfg.storage.locations.encodedVideo}/.immich 0600 immich immich -"
-      "f ${cfg.storage.locations.profile}/.immich 0600 immich immich -"
-    ] ++ lib.optionals cfg.gpu.enable [
-      # GPU cache directories for ML optimizations
-      "d /var/lib/immich/.cache 0750 immich immich -"
-      "d /var/lib/immich/.cache/tensorrt 0750 immich immich -"
-      "d /var/lib/immich/.config 0750 immich immich -"
-      "d /var/lib/immich/.config/matplotlib 0750 immich immich -"
-    ];
+    systemd.tmpfiles.rules =
+      (if cfg.storage.enable then [
+        "d ${cfg.storage.basePath} 0750 immich immich -"
+        "d ${cfg.storage.locations.library} 0750 immich immich -"
+        "d ${cfg.storage.locations.thumbs} 0750 immich immich -"
+        "d ${cfg.storage.locations.encodedVideo} 0750 immich immich -"
+        "d ${cfg.storage.locations.profile} 0750 immich immich -"
+        "d ${cfg.backup.databaseBackupPath} 0750 postgres postgres -"
+        # Create .immich marker files for mount verification
+        "f ${cfg.storage.locations.library}/.immich 0600 immich immich -"
+        "f ${cfg.storage.locations.thumbs}/.immich 0600 immich immich -"
+        "f ${cfg.storage.locations.encodedVideo}/.immich 0600 immich immich -"
+        "f ${cfg.storage.locations.profile}/.immich 0600 immich immich -"
+      ] else []) ++ (if cfg.gpu.enable then [
+        # GPU cache directories for ML optimizations
+        "d /var/lib/immich/.cache 0750 immich immich -"
+        "d /var/lib/immich/.cache/tensorrt 0750 immich immich -"
+        "d /var/lib/immich/.config 0750 immich immich -"
+        "d /var/lib/immich/.config/matplotlib 0750 immich immich -"
+      ] else []);
 
     # PostgreSQL database backup service
     services.postgresqlBackup = lib.mkIf (cfg.backup.enable && cfg.backup.includeDatabase) {
@@ -243,6 +244,6 @@ in
     # WARNINGS AND NOTICES
     #==========================================================================
     warnings = lib.optional (cfg.enable && !cfg.backup.enable)
-      "Immich backup is disabled. Your photos and database will NOT be backed up automatically!";
+      [ "Immich backup is disabled. Your photos and database will NOT be backed up automatically!" ];
   };
 }

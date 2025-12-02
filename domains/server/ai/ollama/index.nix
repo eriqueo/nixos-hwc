@@ -53,6 +53,12 @@ in
 
     environment.systemPackages = [ pkgs.ollama ];
 
+    # Ensure CDI generator runs before container starts (prevents GPU device resolution race condition)
+    systemd.services.podman-ollama = lib.mkIf (gpuType == "nvidia") {
+      after = [ "nvidia-container-toolkit-cdi-generator.service" ];
+      requires = [ "nvidia-container-toolkit-cdi-generator.service" ];
+    };
+
     systemd.services.ollama-pull-models = {
       description = "Pre-download initial Ollama models";
       after = [ "network-online.target" "oci-containers-ollama.service" ];

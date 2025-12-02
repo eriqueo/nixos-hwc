@@ -59,5 +59,13 @@ in {
         }
       ];
     };
+    
+    # Ensure grafana data directory exists with proper permissions
+    systemd.tmpfiles.rules = [
+      "d ${cfg.dataDir} 0755 grafana grafana -"
+      "d ${cfg.dataDir}/plugins 0755 grafana grafana -"
+      "d ${cfg.dataDir}/png 0755 grafana grafana -"
+      "d ${paths.state}/grafana/logs 0755 grafana grafana -"
+    ];
   };
 }

@@ -35,7 +35,7 @@ in {
     services.prometheus = {
       enable = true;
       port = cfg.port;
-      stateDir = cfg.dataDir;
+      stateDir = "hwc/prometheus";
       retentionTime = cfg.retention;
       
       globalConfig = {
