@@ -1,6 +1,9 @@
 { lib, config, ... }:
 let
   cfg = config.hwc.features.monitoring;
+   imports = [
+      ../domains/server/monitoring/index.nix
+    ];
 in
 {
   options.hwc.features.monitoring = {
@@ -11,9 +14,7 @@ in
     #==========================================================================
     # MONITORING SERVICES
     #==========================================================================
-    imports = [
-      ../domains/server/monitoring/index.nix
-    ];
+   
 
     hwc.services.prometheus = {
       enable = true;
