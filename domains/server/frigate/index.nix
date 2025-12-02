@@ -45,17 +45,105 @@ in
       };
 
       script = ''
-        # Ensure all required directories exist
-        mkdir -p ${cfg.storage.configPath}
-        mkdir -p ${cfg.storage.configPath}/models
-        mkdir -p ${cfg.storage.configPath}/labelmap
-        mkdir -p ${cfg.storage.bufferPath}
-        mkdir -p ${cfg.storage.mediaPath}
-        
-        # Set proper ownership
-        chown -R eric:users ${cfg.storage.configPath}
-        chown -R eric:users ${cfg.storage.bufferPath}
-        chown -R eric:users ${cfg.storage.mediaPath}
+        # Directories created by systemd.tmpfiles.rules
+        # Only handle config file generation here
+
+        # Create COCO-80 labelmap if it doesn't exist
+        if [ ! -f ${cfg.storage.configPath}/labelmap/coco-80.txt ]; then
+          cat > ${cfg.storage.configPath}/labelmap/coco-80.txt << 'LABELMAP_EOF'
+person
+bicycle
+car
+motorcycle
+airplane
+bus
+train
+truck
+boat
+traffic light
+fire hydrant
+street sign
+stop sign
+parking meter
+bench
+bird
+cat
+dog
+horse
+sheep
+cow
+elephant
+bear
+zebra
+giraffe
+hat
+backpack
+umbrella
+shoe
+eye glasses
+handbag
+tie
+suitcase
+frisbee
+skis
+snowboard
+sports ball
+kite
+baseball bat
+baseball glove
+skateboard
+surfboard
+tennis racket
+bottle
+plate
+wine glass
+cup
+fork
+knife
+spoon
+bowl
+banana
+apple
+sandwich
+orange
+broccoli
+carrot
+hot dog
+pizza
+donut
+cake
+chair
+couch
+potted plant
+bed
+mirror
+dining table
+window
+desk
+toilet
+door
+tv
+laptop
+mouse
+remote
+keyboard
+cell phone
+microwave
+oven
+toaster
+sink
+refrigerator
+blender
+book
+clock
+vase
+scissors
+teddy bear
+hair drier
+toothbrush
+LABELMAP_EOF
+          chown eric:users ${cfg.storage.configPath}/labelmap/coco-80.txt
+        fi
 
         # Read secrets
         RTSP_USER=$(cat /run/agenix/frigate-rtsp-username)
@@ -76,6 +164,18 @@ in
 
       path = with pkgs; [ coreutils jq python3 envsubst ];
     };
+
+    # Create all required directories early in boot (Charter-compliant pattern)
+    systemd.tmpfiles.rules = [
+      # Config directories
+      "d ${cfg.storage.configPath} 0755 eric users -"
+      "d ${cfg.storage.configPath}/models 0755 eric users -"
+      "d ${cfg.storage.configPath}/labelmap 0755 eric users -"
+
+      # Storage directories
+      "d ${cfg.storage.mediaPath} 0755 eric users -"
+      "d ${cfg.storage.bufferPath} 0755 eric users -"
+    ];
 
     # Frigate container
     virtualisation.oci-containers.containers.frigate = {
@@ -162,6 +262,14 @@ in
       {
         assertion = !cfg.enable || (cfg.storage.bufferPath != "");
         message = "hwc.server.frigate.storage.bufferPath must be set";
+      }
+      {
+        assertion = !cfg.enable || (builtins.match "^/mnt/.*" cfg.storage.bufferPath != null);
+        message = "hwc.server.frigate.storage.bufferPath must be under /mnt (e.g., /mnt/hot/surveillance/frigate/buffer)";
+      }
+      {
+        assertion = !cfg.enable || (builtins.match "^/mnt/.*" cfg.storage.mediaPath != null);
+        message = "hwc.server.frigate.storage.mediaPath must be under /mnt (e.g., /mnt/media/surveillance/frigate/media)";
       }
       {
         assertion = !cfg.enable || config.hwc.secrets.enable;
