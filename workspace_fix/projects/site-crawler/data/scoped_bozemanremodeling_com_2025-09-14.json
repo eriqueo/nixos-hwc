@@ -1,0 +1,1498 @@
+{
+  "meta": {
+    "toolVersion": "2.3.0",
+    "schemaVersion": "raw-harvest-v1",
+    "harvestedAt": "2025-09-14T22:03:22.011Z",
+    "url": "https://bozemanremodeling.com/",
+    "domain": "bozemanremodeling.com",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0",
+    "scoped": true,
+    "diagnosticsMode": true,
+    "analysisTimeMs": 17
+  },
+  "extracted": {
+    "meta": {
+      "title": "Bozeman Home Remodeling | Custom Home & Remodeling Construction MT",
+      "titleLength": 66,
+      "description": "Remodel your home or design and construct a new house with Bozeman Remodeling. We're committed to the client experience, quality, and honest pricing",
+      "descriptionLength": 148,
+      "robots": "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+      "canonical": "https://bozemanremodeling.com/",
+      "language": "en-US",
+      "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0",
+      "charset": "UTF-8"
+    },
+    "metaAll": [
+      {
+        "name": null,
+        "property": null,
+        "httpEquiv": null,
+        "content": null
+      },
+      {
+        "name": null,
+        "property": null,
+        "httpEquiv": "X-UA-Compatible",
+        "content": "IE=edge"
+      },
+      {
+        "name": "description",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Remodel your home or design and construct a new house with Bozeman Remodeling. We're committed to the client experience, quality, and honest pricing"
+      },
+      {
+        "name": "robots",
+        "property": null,
+        "httpEquiv": null,
+        "content": "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+      },
+      {
+        "name": null,
+        "property": "og:url",
+        "httpEquiv": null,
+        "content": "https://bozemanremodeling.com/"
+      },
+      {
+        "name": null,
+        "property": "og:site_name",
+        "httpEquiv": null,
+        "content": "Bozeman Remodeling"
+      },
+      {
+        "name": null,
+        "property": "og:locale",
+        "httpEquiv": null,
+        "content": "en_US"
+      },
+      {
+        "name": null,
+        "property": "og:type",
+        "httpEquiv": null,
+        "content": "website"
+      },
+      {
+        "name": null,
+        "property": "og:title",
+        "httpEquiv": null,
+        "content": "Bozeman Home Remodeling | Custom Home & Remodeling Construction MT"
+      },
+      {
+        "name": null,
+        "property": "og:description",
+        "httpEquiv": null,
+        "content": "Remodel your home or design and construct a new house with Bozeman Remodeling. We're committed to the client experience, quality, and honest pricing"
+      },
+      {
+        "name": null,
+        "property": "fb:pages",
+        "httpEquiv": null,
+        "content": ""
+      },
+      {
+        "name": null,
+        "property": "fb:admins",
+        "httpEquiv": null,
+        "content": ""
+      },
+      {
+        "name": null,
+        "property": "fb:app_id",
+        "httpEquiv": null,
+        "content": ""
+      },
+      {
+        "name": "twitter:card",
+        "property": null,
+        "httpEquiv": null,
+        "content": "summary"
+      },
+      {
+        "name": "twitter:site",
+        "property": null,
+        "httpEquiv": null,
+        "content": ""
+      },
+      {
+        "name": "twitter:creator",
+        "property": null,
+        "httpEquiv": null,
+        "content": ""
+      },
+      {
+        "name": "twitter:title",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Bozeman Home Remodeling | Custom Home & Remodeling Construction MT"
+      },
+      {
+        "name": "twitter:description",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Remodel your home or design and construct a new house with Bozeman Remodeling. We're committed to the client experience, quality, and honest pricing"
+      },
+      {
+        "name": "generator",
+        "property": null,
+        "httpEquiv": null,
+        "content": "Divi Child v.3.25.2"
+      },
+      {
+        "name": "darkreader",
+        "property": null,
+        "httpEquiv": null,
+        "content": "4d2cbe29365d4171addf1c277aa59f83"
+      },
+      {
+        "name": "viewport",
+        "property": null,
+        "httpEquiv": null,
+        "content": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+      },
+      {
+        "name": "msapplication-TileImage",
+        "property": null,
+        "httpEquiv": null,
+        "content": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Bozeman-Favicon.png"
+      }
+    ],
+    "openGraph": {
+      "title": "Bozeman Home Remodeling | Custom Home & Remodeling Construction MT",
+      "description": "Remodel your home or design and construct a new house with Bozeman Remodeling. We're committed to the client experience, quality, and honest pricing",
+      "url": "https://bozemanremodeling.com/",
+      "type": "website",
+      "site_name": "Bozeman Remodeling",
+      "locale": "en_US"
+    },
+    "twitter": {
+      "card": "summary",
+      "title": "Bozeman Home Remodeling | Custom Home & Remodeling Construction MT",
+      "description": "Remodel your home or design and construct a new house with Bozeman Remodeling. We're committed to the client experience, quality, and honest pricing",
+      "site": "",
+      "creator": ""
+    },
+    "linkRels": [
+      {
+        "rel": "pingback",
+        "href": "https://bozemanremodeling.com/xmlrpc.php",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "canonical",
+        "href": "https://bozemanremodeling.com/",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "dns-prefetch",
+        "href": "//s.ksrndkehqnwntyxlhgto.com",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "dns-prefetch",
+        "href": "//fonts.googleapis.com",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://bozemanremodeling.com/feed/",
+        "as": null,
+        "type": "application/rss+xml",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://bozemanremodeling.com/comments/feed/",
+        "as": null,
+        "type": "application/rss+xml",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/assets/css/dist/gravity-forms-theme-reset.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/assets/css/dist/gravity-forms-theme-foundation.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/assets/css/dist/gravity-forms-theme-framework.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/assets/css/dist/gravity-forms-orbital-theme.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/et-cache/2/et-divi-dynamic-tb-169-2-late.css",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/et-cache/2/et-divi-dynamic-tb-169-2-late.css?ver=1735495371",
+        "as": "style",
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/et-cache/2/et-divi-dynamic-tb-169-2.css?ver=1735495371",
+        "as": "style",
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,200italic,300,300italic,regular,italic,600,600italic,700,700italic,900,900italic&subset=latin,latin-ext&display=swap",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/legacy/css/formreset.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/legacy/css/formsmain.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/legacy/css/readyclass.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/plugins/gravityforms/legacy/css/browsers.min.css?ver=2.7.2.2",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/themes/Divi-child/style.css?ver=4.27.4",
+        "as": null,
+        "type": "text/css",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "https://api.w.org/",
+        "href": "https://bozemanremodeling.com/wp-json/",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://bozemanremodeling.com/wp-json/wp/v2/pages/2",
+        "as": null,
+        "type": "application/json",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "EditURI",
+        "href": "https://bozemanremodeling.com/xmlrpc.php?rsd",
+        "as": null,
+        "type": "application/rsd+xml",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "shortlink",
+        "href": "https://bozemanremodeling.com/",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://bozemanremodeling.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fbozemanremodeling.com%2F",
+        "as": null,
+        "type": "application/json+oembed",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "alternate",
+        "href": "https://bozemanremodeling.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fbozemanremodeling.com%2F&format=xml",
+        "as": null,
+        "type": "text/xml+oembed",
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "icon",
+        "href": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Bozeman-Favicon.png",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": "32x32"
+      },
+      {
+        "rel": "icon",
+        "href": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Bozeman-Favicon.png",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": "192x192"
+      },
+      {
+        "rel": "apple-touch-icon",
+        "href": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Bozeman-Favicon.png",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/et-cache/2/et-core-unified-2.min.css?ver=1735495375",
+        "as": null,
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      },
+      {
+        "rel": "stylesheet",
+        "href": "https://bozemanremodeling.com/wp-content/et-cache/2/et-core-unified-tb-169-deferred-2.min.css?ver=1735495375",
+        "as": "style",
+        "type": null,
+        "hreflang": null,
+        "sizes": null
+      }
+    ],
+    "headings": [
+      {
+        "tag": "h2",
+        "text": "Bozeman Home Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Get Started on Your Next Project, Today!",
+        "id": null
+      },
+      {
+        "tag": "h1",
+        "text": "Revitalize Your Home with Bozeman Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Bozeman Remodeling Main Services",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Bathroom Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Kitchen Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Custom Home Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Why Choose Bozeman Remodeling?",
+        "id": null
+      },
+      {
+        "tag": "h4",
+        "text": "About Bozeman Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h4",
+        "text": "Three Decades of Experience",
+        "id": null
+      },
+      {
+        "tag": "h4",
+        "text": "Fully Licensed & Certified",
+        "id": null
+      },
+      {
+        "tag": "h4",
+        "text": "Remodeling Industry Leader",
+        "id": null
+      },
+      {
+        "tag": "h4",
+        "text": "Complete Remodeling Services",
+        "id": null
+      },
+      {
+        "tag": "h4",
+        "text": "Custom Designs",
+        "id": null
+      },
+      {
+        "tag": "h4",
+        "text": "Free Estimates",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Bathroom Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Kitchen Remodeling",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Custom Additions",
+        "id": null
+      },
+      {
+        "tag": "h2",
+        "text": "Basement Finishing",
+        "id": null
+      }
+    ],
+    "links": {
+      "counts": {
+        "total": 13,
+        "internal": 13,
+        "external": 0
+      },
+      "internal": [
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "Contact Bozeman Remodeling today",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "Bathroom Remodeling",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "More >>",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "Kitchen Remodeling",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "More >>",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "Custom Additions",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "More >>",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "Basement Finishing",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        },
+        {
+          "abs": "https://bozemanremodeling.com/#",
+          "href": "#",
+          "text": "More >>",
+          "internal": true,
+          "context": "ui",
+          "rel": null,
+          "nofollow": null,
+          "noopener": null,
+          "target": null,
+          "isMedia": false,
+          "kind": "uiControl"
+        }
+      ],
+      "external": []
+    },
+    "images": {
+      "total": 13,
+      "withAlt": 13,
+      "missingAlt": 0,
+      "items": [
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Three-Decades-of-Experience .png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Threedecadesofexperience ",
+          "title": "",
+          "loading": "",
+          "width": "",
+          "height": "",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Fully-Licensed-Certified.png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Fullylicensedcertified  ",
+          "title": "",
+          "loading": "",
+          "width": "72",
+          "height": "72",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Remodeling-Industry-Leader.png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Remodelingindustryleader ",
+          "title": "",
+          "loading": "",
+          "width": "73",
+          "height": "72",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Complete-Remodeling-Services.png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Completeremodelingservices ",
+          "title": "",
+          "loading": "",
+          "width": "73",
+          "height": "73",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Custom-Designs .png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Customdesigns  ",
+          "title": "",
+          "loading": "",
+          "width": "",
+          "height": "",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/07/Free-Estimates .png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Freeestimates  ",
+          "title": "",
+          "loading": "",
+          "width": "",
+          "height": "",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/06/Bathroom Remodeling.png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Bathroomremodeling ",
+          "title": "",
+          "loading": "",
+          "width": "",
+          "height": "",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/06/Kitchen-Remodeling .png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Kitchenremodeling  ",
+          "title": "",
+          "loading": "",
+          "width": "",
+          "height": "",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/06/Custom-Additions .png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Customadditions  ",
+          "title": "",
+          "loading": "",
+          "width": "",
+          "height": "",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/06/Basement-Finishing .png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "Basementfinishing  ",
+          "title": "",
+          "loading": "",
+          "width": "",
+          "height": "",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/02/badge-hiring-a-contractor.png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "badgehiringacontractor",
+          "title": "badge-hiring-a-contractor",
+          "loading": "",
+          "width": "106",
+          "height": "106",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/02/badge-houzz.png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "badgehouzz",
+          "title": "badge-houzz",
+          "loading": "lazy",
+          "width": "106",
+          "height": "106",
+          "fromSource": false
+        },
+        {
+          "tag": "img",
+          "src": "https://bozemanremodeling.com/wp-content/uploads/2020/02/badge-elite-service.png",
+          "dataSrc": "",
+          "srcset": "",
+          "alt": "badgeeliteservice",
+          "title": "badge-elite-service",
+          "loading": "lazy",
+          "width": "110",
+          "height": "106",
+          "fromSource": false
+        }
+      ],
+      "backgroundImages": []
+    },
+    "content": {
+      "scopedText": "\n\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\n\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tBozeman Home Remodeling\n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tGet Started on Your Next Project, Today!\n\t\t\t\t\t\t\n                \n                        Untitled* Email*\n                            \n                        Phone*Services*Tell Us About Your ProjectBathroom RemodelingKitchen RemodelingCustom Home RemodelingOther ServicesMessage\n          \n            \n            \n            \n            \n            \n            \n            \n            \n            \n        \n                        \n                        \n\t\t                \n\t\t                \n\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\tRevitalize Your Home with Bozeman Remodeling  \n\t\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\tThinking about remodeling or refinishing a part of your home? You’ve come to the right place! Bozeman Remodeling is the industry-leading remodeling and refinishing contractor  in the great state of Montana. We remodel kitchens, bathrooms, basements, garages, family rooms, living rooms, outdoor living spaces, exterior spaces, and much more—all at an unbeatable price. Whether you have a residential home or commercial property, our friendly crews will get the job done professionally and accurately. We’re based in Bozeman Montana, but our home remodeling services extend out to Belgrade, Three Forks, Livingston, Manhattan, Gallatin Gateway, and Hoppers.\n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tBozeman Remodeling Main Services  \n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tBathroom Remodeling\n\t\t\t\t\t\tRemodeling your bathroom can not only improve your quality of life, but it can also raise the value of your home! In fact, remodeling or refinishing a bathroom is well-known for having the highest return on investment (ROI) out of pretty much any remodeling project you can undertake! However, before you dive into a new bathroom remodel, it’s essential to have a thorough and well-thought-out plan. This is where having the help of a professional is absolutely invaluable! We have over three decades of experience handling bathroom remodeling jobs of all shapes and sizes! \nBozeman Remodeling will walk you through every step of the remodeling process, from picking out the highest-quality materials to deciding what aesthetic would best fit with your home. Your next bathroom remodeling project doesn’t have to be overly complicated—contact Bozeman Remodeling today!\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\nFull Assessment & Planning \nRefurbish & Repair \nTile & Vanity Options  \nPlumbing Replacement & Repair \nMultiple Material Options \nFlooring Refurbish & Repair \nBathroom Cabinet Installation \nFixture & Accessory Repair \n\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tKitchen Remodeling \n\t\t\t\t\t\tThe kitchen is often the first place you go when coming home from work or even getting up in the morning. It’s a place to spend time with your family, eat great food, and make great memories that last a lifetime. At Bozeman Remodeling, we understand the nuance of a great kitchen. A dull or broken-down kitchen can make the area feel less inviting and more like a means to an end. What can you do if your kitchen is starting to feel this way? Have your kitchen remodeled! A complete or partial remodel is often the best solution to return your kitchen to its former glory. \nSimilar to our bathroom remodeling service, we’ll help you decide what you need to do to make your kitchen great again.  Contact Bozeman Remodeling today, and one of our service members will be happy to walk you through any questions you may have! \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\nCustom Kitchen Designs \nGeneral Kitchen Repair \nVersatile Flooring Options \nFlooring Repair \nCustom Cabinets Installation \nTear Down & Refurbish \nEndless Accessory Options \nKitchen Fixture Repair \n\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tCustom Home Remodeling \n\t\t\t\t\t\tThough bathrooms and kitchens are the two most popular remodeling choices, practically every aspect of your home can be remodeled! Whether you have a brand-new home that’s lacking in personal “flair,” an older home with rooms in desperate need of remodeling, or simply have an exciting custom design idea, Bozeman Remodeling is here to help! Our custom home remodeling service covers everything from basements and flooring to outdoor spaces and home additions! \nNot many contractors offer custom remodeling services, and when they do, they often sub out the work to less-experienced crews. At Bozeman Remodeling, we have the necessary knowledge to do practically every job ourselves. On the off chance you come to us with something beyond our immediate knowledge, we are very selective about what specialists we choose to bring on. We handpick only the highest-quality subcontractors, and even supervise their work! With Bozeman Remodeling, you’ll be getting the most excellent crews, flexible prices, and the best custom home remodeling services in the state! \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\nExpert Custom Designs \nNo Subcontractor Work \nHome-Owner Designs \nRefurbish & Repairs\nPractical Design Options \nInterior & Exterior \nChoose Your Own Materials \nFlexible Pricing Options \n\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tWhy Choose Bozeman Remodeling?\n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tAbout Bozeman Remodeling\n\t\t\t\t\t\tBozeman Remodeling has over 30 years of experience remodeling and refinishing homes in Bozeman, Helena, Missoula, Billings, and surrounding areas.  At Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything!  \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tThree Decades of Experience \n\t\t\t\t\t\tWith over 30 years of experience handling remodeling jobs of all types, you can count on Bozeman Remodeling to get the job done right. \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tFully Licensed & Certified  \n\t\t\t\t\t\tBozeman Remodeling is a fully licensed, bonded, and insured construction contractor in Montana.  \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tRemodeling Industry Leader \n\t\t\t\t\t\tWe’re the industry leaders in Montana, with thousands of successfully completed remodeling projects in homes scattered across the entire state. \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tComplete Remodeling Services \n\t\t\t\t\t\tBR remodels kitchens, bathrooms, rooms, exterior spaces, and more—you name it, we can remodel it. \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tCustom Designs  \n\t\t\t\t\t\tBozeman Remodeling provides expert custom designs suitable for any home, and we’ll work with you if you have a custom design of your own. \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tFree Estimates  \n\t\t\t\t\t\tOur remodeling estimates are always free and never include any hidden or additional fees. \n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tBathroom Remodeling \n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\tA bathroom remodel is one of the best ways to both revitalize your living space and improve the value of your home. \nMore >> \n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tKitchen Remodeling  \n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\tRemodeling your kitchen can be a difficult and expensive undertaking—but not if you choose the right contractor! Bozeman Remodeling has remodeled thousands of kitchens, and we’re willing to work out a plan that fits with your budget. \nMore >> \n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tCustom Additions  \n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\tThinking about making your kitchen bigger? Want to expand your home gym? Or add an extra room for a newborn nursery? BR can make it happen with our custom addition services! \nMore >> \n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\tBasement Finishing  \n\t\t\t\t\t\t\n\t\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\tThough it’s often underappreciated, your basement is an important aspect of your home. It can extend the feel of your main floor or even act as a home within itself. If your basement is unfinished or you’d like it refinished, Basement Remodeling are the experts to contact.  \nMore >> \n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\tAt Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything!\n\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\n\t\t\t\t\n\t\t\t\t\n\t\t\t\t\t\n\t\n\t\t\t\t\t\t\n\n\t\t\t\t\n\t\t\t\t",
+      "blocks": [
+        {
+          "hash": "216c4c09",
+          "tag": "div",
+          "text": "Bozeman Home Remodeling Get Started on Your Next Project, Today! Untitled* Email* Phone*Services*Tell Us About Your ProjectBathroom RemodelingKitchen RemodelingCustom Home RemodelingOther ServicesMessage Revitalize Your Home with Bozeman Remodeling Thinking about remodeling or refinishing a part of your home? You’ve come to the right place! Bozeman Remodeling is the industry-leading remodeling and refinishing contractor in the great state of Montana. We remodel kitchens, bathrooms, basements, garages, family rooms, living rooms, outdoor living spaces, exterior spaces, and much more—all at an unbeatable price. Whether you have a residential home or commercial property, our friendly crews will get the job done professionally and accurately. We’re based in Bozeman Montana, but our home remodeling services extend out to Belgrade, Three Forks, Livingston, Manhattan, Gallatin Gateway, and Hoppers. Bozeman Remodeling Main Services Bathroom Remodeling Remodeling your bathroom can not only improve your quality of life, but it can also raise the value of your home! In fact, remodeling or refinishing a bathroom is well-known for having the highest return on investment (ROI) out of pretty much any remodeling project you can undertake! However, before you dive into a new bathroom remodel, it’s essential to have a thorough and well-thought-out plan. This is where having the help of a professional is absolutely invaluable! We have over three decades of experience handling bathroom remodeling jobs of all shapes and sizes! Bozeman Remodeling will walk you through every step of the remodeling process, from picking out the highest-quality materials to deciding what aesthetic would best fit with your home. Your next bathroom remodeling project doesn’t have to be overly complicated—contact Bozeman Remodeling today! Full Assessment & Planning Refurbish & Repair Tile & Vanity Options Plumbing Replacement & Repair Multiple Material Options Flooring Refurbish & Repair Bathroom Cabinet Installation Fixture & Accessory Repair Kitchen Remodeling The kitchen is often the first place you go when coming home from work or even getting up in the morning. It’s a place to spend time with your family, eat great food, and make great memories that last a lifetime. At Bozeman Remodeling, we understand the nuance of a great kitchen. A dull or broken-down kitchen can make the area feel less inviting and more like a means to an end. What can you do if your kitchen is starting to feel this way? Have your kitchen remodeled! A complete or partial remodel is often the best solution to return your kitchen to its former glory. Similar to our bathroom remodeling service, we’ll help you decide what you need to do to make your kitchen great again. Contact Bozeman Remodeling today, and one of our service members will be happy to walk you through any questions you may have! Custom Kitchen Designs General Kitchen Repair Versatile Flooring Options Flooring Repair Custom Cabinets Installation Tear Down & Refurbish Endless Accessory Options Kitchen Fixture Repair Custom Home Remodeling Though bathrooms and kitchens are the two most popular remodeling choices, practically every aspect of your home can be remodeled! Whether you have a brand-new home that’s lacking in personal “flair,” an older home with rooms in desperate need of remodeling, or simply have an exciting custom design idea, Bozeman Remodeling is here to help! Our custom home remodeling service covers everything from basements and flooring to outdoor spaces and home additions! Not many contractors offer custom remodeling services, and when they do, they often sub out the work to less-experienced crews. At Bozeman Remodeling, we have the necessary knowledge to do practically every job ourselves. On the off chance you come to us with something beyond our immediate knowledge, we are very selective about what specialists we choose to bring on. We handpick only the highest-quality subcontractors, and even supervise their work! With Bozeman Remodeling, you’ll be getting the most excellent crews, flexible prices, and the best custom home remodeling services in the state! Expert Custom Designs No Subcontractor Work Home-Owner Designs Refurbish & Repairs Practical Design Options Interior & Exterior Choose Your Own Materials Flexible Pricing Options Why Choose Bozeman Remodeling? About Bozeman Remodeling Bozeman Remodeling has over 30 years of experience remodeling and refinishing homes in Bozeman, Helena, Missoula, Billings, and surrounding areas. At Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything! Three Decades of Experience With over 30 years of experience handling remodeling jobs of all types, you can count on Bozeman Remodeling to get the job done right. Fully Licensed & Certified Bozeman Remodeling is a fully licensed, bonded, and insured construction contractor in Montana. Remodeling Industry Leader We’re the industry leaders in Montana, with thousands of successfully completed remodeling projects in homes scattered across the entire state. Complete Remodeling Services BR remodels kitchens, bathrooms, rooms, exterior spaces, and more—you name it, we can remodel it. Custom Designs Bozeman Remodeling provides expert custom designs suitable for any home, and we’ll work with you if you have a custom design of your own. Free Estimates Our remodeling estimates are always free and never include any hidden or additional fees. Bathroom Remodeling A bathroom remodel is one of the best ways to both revitalize your living space and improve the value of your home. More >> Kitchen Remodeling Remodeling your kitchen can be a difficult and expensive undertaking—but not if you choose the right contractor! Bozeman Remodeling has remodeled thousands of kitchens, and we’re willing to work out a plan that fits with your budget. More >> Custom Additions Thinking about making your kitchen bigger? Want to expand your home gym? Or add an extra room for a newborn nursery? BR can make it happen with our custom addition services! More >> Basement Finishing Though it’s often underappreciated, your basement is an important aspect of your home. It can extend the feel of your main floor or even act as a home within itself. If your basement is unfinished or you’d like it refinished, Basement Remodeling are the experts to contact. More >> At Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything!"
+        },
+        {
+          "hash": "67f0ffe3",
+          "tag": "div",
+          "text": "Bozeman Home Remodeling"
+        },
+        {
+          "hash": "56c89140",
+          "tag": "h2",
+          "text": "Bozeman Home Remodeling"
+        },
+        {
+          "hash": "4aabfc79",
+          "tag": "div",
+          "text": "Get Started on Your Next Project, Today! Untitled* Email* Phone*Services*Tell Us About Your ProjectBathroom RemodelingKitchen RemodelingCustom Home RemodelingOther ServicesMessage"
+        },
+        {
+          "hash": "5e46ebec",
+          "tag": "h2",
+          "text": "Get Started on Your Next Project, Today!"
+        },
+        {
+          "hash": "6bb86b6e",
+          "tag": "div",
+          "text": "Untitled* Email* Phone*Services*Tell Us About Your ProjectBathroom RemodelingKitchen RemodelingCustom Home RemodelingOther ServicesMessage"
+        },
+        {
+          "hash": "b7b40a1",
+          "tag": "li",
+          "text": "Untitled*"
+        },
+        {
+          "hash": "c4ecb672",
+          "tag": "li",
+          "text": "Email*"
+        },
+        {
+          "hash": "9f32fa4e",
+          "tag": "li",
+          "text": "Phone*"
+        },
+        {
+          "hash": "c86ae238",
+          "tag": "li",
+          "text": "Services*Tell Us About Your ProjectBathroom RemodelingKitchen RemodelingCustom Home RemodelingOther Services"
+        },
+        {
+          "hash": "7b0c713c",
+          "tag": "div",
+          "text": "Tell Us About Your ProjectBathroom RemodelingKitchen RemodelingCustom Home RemodelingOther Services"
+        },
+        {
+          "hash": "14e37bb3",
+          "tag": "li",
+          "text": "Message"
+        },
+        {
+          "hash": "79f5cd86",
+          "tag": "div",
+          "text": "Revitalize Your Home with Bozeman Remodeling Thinking about remodeling or refinishing a part of your home? You’ve come to the right place! Bozeman Remodeling is the industry-leading remodeling and refinishing contractor in the great state of Montana. We remodel kitchens, bathrooms, basements, garages, family rooms, living rooms, outdoor living spaces, exterior spaces, and much more—all at an unbeatable price. Whether you have a residential home or commercial property, our friendly crews will get the job done professionally and accurately. We’re based in Bozeman Montana, but our home remodeling services extend out to Belgrade, Three Forks, Livingston, Manhattan, Gallatin Gateway, and Hoppers."
+        },
+        {
+          "hash": "f4a73189",
+          "tag": "div",
+          "text": "Revitalize Your Home with Bozeman Remodeling"
+        },
+        {
+          "hash": "467e5ce7",
+          "tag": "h1",
+          "text": "Revitalize Your Home with Bozeman Remodeling"
+        },
+        {
+          "hash": "c449401c",
+          "tag": "div",
+          "text": "Thinking about remodeling or refinishing a part of your home? You’ve come to the right place! Bozeman Remodeling is the industry-leading remodeling and refinishing contractor in the great state of Montana. We remodel kitchens, bathrooms, basements, garages, family rooms, living rooms, outdoor living spaces, exterior spaces, and much more—all at an unbeatable price. Whether you have a residential home or commercial property, our friendly crews will get the job done professionally and accurately. We’re based in Bozeman Montana, but our home remodeling services extend out to Belgrade, Three Forks, Livingston, Manhattan, Gallatin Gateway, and Hoppers."
+        },
+        {
+          "hash": "a18e7d4b",
+          "tag": "div",
+          "text": "Bozeman Remodeling Main Services Bathroom Remodeling Remodeling your bathroom can not only improve your quality of life, but it can also raise the value of your home! In fact, remodeling or refinishing a bathroom is well-known for having the highest return on investment (ROI) out of pretty much any remodeling project you can undertake! However, before you dive into a new bathroom remodel, it’s essential to have a thorough and well-thought-out plan. This is where having the help of a professional is absolutely invaluable! We have over three decades of experience handling bathroom remodeling jobs of all shapes and sizes! Bozeman Remodeling will walk you through every step of the remodeling process, from picking out the highest-quality materials to deciding what aesthetic would best fit with your home. Your next bathroom remodeling project doesn’t have to be overly complicated—contact Bozeman Remodeling today! Full Assessment & Planning Refurbish & Repair Tile & Vanity Options Plumbing Replacement & Repair Multiple Material Options Flooring Refurbish & Repair Bathroom Cabinet Installation Fixture & Accessory Repair Kitchen Remodeling The kitchen is often the first place you go when coming home from work or even getting up in the morning. It’s a place to spend time with your family, eat great food, and make great memories that last a lifetime. At Bozeman Remodeling, we understand the nuance of a great kitchen. A dull or broken-down kitchen can make the area feel less inviting and more like a means to an end. What can you do if your kitchen is starting to feel this way? Have your kitchen remodeled! A complete or partial remodel is often the best solution to return your kitchen to its former glory. Similar to our bathroom remodeling service, we’ll help you decide what you need to do to make your kitchen great again. Contact Bozeman Remodeling today, and one of our service members will be happy to walk you through any questions you may have! Custom Kitchen Designs General Kitchen Repair Versatile Flooring Options Flooring Repair Custom Cabinets Installation Tear Down & Refurbish Endless Accessory Options Kitchen Fixture Repair Custom Home Remodeling Though bathrooms and kitchens are the two most popular remodeling choices, practically every aspect of your home can be remodeled! Whether you have a brand-new home that’s lacking in personal “flair,” an older home with rooms in desperate need of remodeling, or simply have an exciting custom design idea, Bozeman Remodeling is here to help! Our custom home remodeling service covers everything from basements and flooring to outdoor spaces and home additions! Not many contractors offer custom remodeling services, and when they do, they often sub out the work to less-experienced crews. At Bozeman Remodeling, we have the necessary knowledge to do practically every job ourselves. On the off chance you come to us with something beyond our immediate knowledge, we are very selective about what specialists we choose to bring on. We handpick only the highest-quality subcontractors, and even supervise their work! With Bozeman Remodeling, you’ll be getting the most excellent crews, flexible prices, and the best custom home remodeling services in the state! Expert Custom Designs No Subcontractor Work Home-Owner Designs Refurbish & Repairs Practical Design Options Interior & Exterior Choose Your Own Materials Flexible Pricing Options"
+        },
+        {
+          "hash": "db0a5b1d",
+          "tag": "div",
+          "text": "Bozeman Remodeling Main Services"
+        },
+        {
+          "hash": "839bb4a0",
+          "tag": "h2",
+          "text": "Bozeman Remodeling Main Services"
+        },
+        {
+          "hash": "928cb605",
+          "tag": "div",
+          "text": "Bathroom Remodeling Remodeling your bathroom can not only improve your quality of life, but it can also raise the value of your home! In fact, remodeling or refinishing a bathroom is well-known for having the highest return on investment (ROI) out of pretty much any remodeling project you can undertake! However, before you dive into a new bathroom remodel, it’s essential to have a thorough and well-thought-out plan. This is where having the help of a professional is absolutely invaluable! We have over three decades of experience handling bathroom remodeling jobs of all shapes and sizes! Bozeman Remodeling will walk you through every step of the remodeling process, from picking out the highest-quality materials to deciding what aesthetic would best fit with your home. Your next bathroom remodeling project doesn’t have to be overly complicated—contact Bozeman Remodeling today! Full Assessment & Planning Refurbish & Repair Tile & Vanity Options Plumbing Replacement & Repair Multiple Material Options Flooring Refurbish & Repair Bathroom Cabinet Installation Fixture & Accessory Repair"
+        },
+        {
+          "hash": "cca7d955",
+          "tag": "h2",
+          "text": "Bathroom Remodeling"
+        },
+        {
+          "hash": "9352ff1b",
+          "tag": "div",
+          "text": "Remodeling your bathroom can not only improve your quality of life, but it can also raise the value of your home! In fact, remodeling or refinishing a bathroom is well-known for having the highest return on investment (ROI) out of pretty much any remodeling project you can undertake! However, before you dive into a new bathroom remodel, it’s essential to have a thorough and well-thought-out plan. This is where having the help of a professional is absolutely invaluable! We have over three decades of experience handling bathroom remodeling jobs of all shapes and sizes! Bozeman Remodeling will walk you through every step of the remodeling process, from picking out the highest-quality materials to deciding what aesthetic would best fit with your home. Your next bathroom remodeling project doesn’t have to be overly complicated—contact Bozeman Remodeling today!"
+        },
+        {
+          "hash": "8016d71f",
+          "tag": "p",
+          "text": "Bozeman Remodeling will walk you through every step of the remodeling process, from picking out the highest-quality materials to deciding what aesthetic would best fit with your home. Your next bathroom remodeling project doesn’t have to be overly complicated—contact Bozeman Remodeling today!"
+        },
+        {
+          "hash": "1b11ae33",
+          "tag": "div",
+          "text": "Full Assessment & Planning Refurbish & Repair Tile & Vanity Options Plumbing Replacement & Repair Multiple Material Options Flooring Refurbish & Repair Bathroom Cabinet Installation Fixture & Accessory Repair"
+        },
+        {
+          "hash": "3bf236a4",
+          "tag": "li",
+          "text": "Full Assessment & Planning"
+        },
+        {
+          "hash": "5855ff6b",
+          "tag": "li",
+          "text": "Refurbish & Repair"
+        },
+        {
+          "hash": "4dc6f41f",
+          "tag": "li",
+          "text": "Tile & Vanity Options"
+        },
+        {
+          "hash": "89e885db",
+          "tag": "li",
+          "text": "Plumbing Replacement & Repair"
+        },
+        {
+          "hash": "cc8676a7",
+          "tag": "li",
+          "text": "Multiple Material Options"
+        },
+        {
+          "hash": "5fb3ad91",
+          "tag": "li",
+          "text": "Flooring Refurbish & Repair"
+        },
+        {
+          "hash": "c95e5f2a",
+          "tag": "li",
+          "text": "Bathroom Cabinet Installation"
+        },
+        {
+          "hash": "81f5d66",
+          "tag": "li",
+          "text": "Fixture & Accessory Repair"
+        },
+        {
+          "hash": "890c565f",
+          "tag": "div",
+          "text": "Kitchen Remodeling The kitchen is often the first place you go when coming home from work or even getting up in the morning. It’s a place to spend time with your family, eat great food, and make great memories that last a lifetime. At Bozeman Remodeling, we understand the nuance of a great kitchen. A dull or broken-down kitchen can make the area feel less inviting and more like a means to an end. What can you do if your kitchen is starting to feel this way? Have your kitchen remodeled! A complete or partial remodel is often the best solution to return your kitchen to its former glory. Similar to our bathroom remodeling service, we’ll help you decide what you need to do to make your kitchen great again. Contact Bozeman Remodeling today, and one of our service members will be happy to walk you through any questions you may have! Custom Kitchen Designs General Kitchen Repair Versatile Flooring Options Flooring Repair Custom Cabinets Installation Tear Down & Refurbish Endless Accessory Options Kitchen Fixture Repair"
+        },
+        {
+          "hash": "ea7c6e01",
+          "tag": "h2",
+          "text": "Kitchen Remodeling"
+        },
+        {
+          "hash": "3090c862",
+          "tag": "div",
+          "text": "The kitchen is often the first place you go when coming home from work or even getting up in the morning. It’s a place to spend time with your family, eat great food, and make great memories that last a lifetime. At Bozeman Remodeling, we understand the nuance of a great kitchen. A dull or broken-down kitchen can make the area feel less inviting and more like a means to an end. What can you do if your kitchen is starting to feel this way? Have your kitchen remodeled! A complete or partial remodel is often the best solution to return your kitchen to its former glory. Similar to our bathroom remodeling service, we’ll help you decide what you need to do to make your kitchen great again. Contact Bozeman Remodeling today, and one of our service members will be happy to walk you through any questions you may have!"
+        },
+        {
+          "hash": "4a4e99fe",
+          "tag": "p",
+          "text": "Similar to our bathroom remodeling service, we’ll help you decide what you need to do to make your kitchen great again. Contact Bozeman Remodeling today, and one of our service members will be happy to walk you through any questions you may have!"
+        },
+        {
+          "hash": "5e7e406",
+          "tag": "div",
+          "text": "Custom Kitchen Designs General Kitchen Repair Versatile Flooring Options Flooring Repair Custom Cabinets Installation Tear Down & Refurbish Endless Accessory Options Kitchen Fixture Repair"
+        },
+        {
+          "hash": "17b05e44",
+          "tag": "li",
+          "text": "Custom Kitchen Designs"
+        },
+        {
+          "hash": "39b63e61",
+          "tag": "li",
+          "text": "General Kitchen Repair"
+        },
+        {
+          "hash": "5768f547",
+          "tag": "li",
+          "text": "Versatile Flooring Options"
+        },
+        {
+          "hash": "7234937",
+          "tag": "li",
+          "text": "Flooring Repair"
+        },
+        {
+          "hash": "a6171ad0",
+          "tag": "li",
+          "text": "Custom Cabinets Installation"
+        },
+        {
+          "hash": "3db705d6",
+          "tag": "li",
+          "text": "Tear Down & Refurbish"
+        },
+        {
+          "hash": "cf1f98f4",
+          "tag": "li",
+          "text": "Endless Accessory Options"
+        },
+        {
+          "hash": "4222f20e",
+          "tag": "li",
+          "text": "Kitchen Fixture Repair"
+        },
+        {
+          "hash": "e8a3c523",
+          "tag": "div",
+          "text": "Custom Home Remodeling Though bathrooms and kitchens are the two most popular remodeling choices, practically every aspect of your home can be remodeled! Whether you have a brand-new home that’s lacking in personal “flair,” an older home with rooms in desperate need of remodeling, or simply have an exciting custom design idea, Bozeman Remodeling is here to help! Our custom home remodeling service covers everything from basements and flooring to outdoor spaces and home additions! Not many contractors offer custom remodeling services, and when they do, they often sub out the work to less-experienced crews. At Bozeman Remodeling, we have the necessary knowledge to do practically every job ourselves. On the off chance you come to us with something beyond our immediate knowledge, we are very selective about what specialists we choose to bring on. We handpick only the highest-quality subcontractors, and even supervise their work! With Bozeman Remodeling, you’ll be getting the most excellent crews, flexible prices, and the best custom home remodeling services in the state! Expert Custom Designs No Subcontractor Work Home-Owner Designs Refurbish & Repairs Practical Design Options Interior & Exterior Choose Your Own Materials Flexible Pricing Options"
+        },
+        {
+          "hash": "e651d537",
+          "tag": "h2",
+          "text": "Custom Home Remodeling"
+        },
+        {
+          "hash": "2f16234d",
+          "tag": "div",
+          "text": "Though bathrooms and kitchens are the two most popular remodeling choices, practically every aspect of your home can be remodeled! Whether you have a brand-new home that’s lacking in personal “flair,” an older home with rooms in desperate need of remodeling, or simply have an exciting custom design idea, Bozeman Remodeling is here to help! Our custom home remodeling service covers everything from basements and flooring to outdoor spaces and home additions! Not many contractors offer custom remodeling services, and when they do, they often sub out the work to less-experienced crews. At Bozeman Remodeling, we have the necessary knowledge to do practically every job ourselves. On the off chance you come to us with something beyond our immediate knowledge, we are very selective about what specialists we choose to bring on. We handpick only the highest-quality subcontractors, and even supervise their work! With Bozeman Remodeling, you’ll be getting the most excellent crews, flexible prices, and the best custom home remodeling services in the state!"
+        },
+        {
+          "hash": "1083c38",
+          "tag": "p",
+          "text": "Though bathrooms and kitchens are the two most popular remodeling choices, practically every aspect of your home can be remodeled! Whether you have a brand-new home that’s lacking in personal “flair,” an older home with rooms in desperate need of remodeling, or simply have an exciting custom design idea, Bozeman Remodeling is here to help! Our custom home remodeling service covers everything from basements and flooring to outdoor spaces and home additions!"
+        },
+        {
+          "hash": "1b98d362",
+          "tag": "p",
+          "text": "Not many contractors offer custom remodeling services, and when they do, they often sub out the work to less-experienced crews. At Bozeman Remodeling, we have the necessary knowledge to do practically every job ourselves. On the off chance you come to us with something beyond our immediate knowledge, we are very selective about what specialists we choose to bring on. We handpick only the highest-quality subcontractors, and even supervise their work! With Bozeman Remodeling, you’ll be getting the most excellent crews, flexible prices, and the best custom home remodeling services in the state!"
+        },
+        {
+          "hash": "f18ea1b0",
+          "tag": "div",
+          "text": "Expert Custom Designs No Subcontractor Work Home-Owner Designs Refurbish & Repairs Practical Design Options Interior & Exterior Choose Your Own Materials Flexible Pricing Options"
+        },
+        {
+          "hash": "bb2c6e3c",
+          "tag": "li",
+          "text": "Expert Custom Designs"
+        },
+        {
+          "hash": "c8c233af",
+          "tag": "li",
+          "text": "No Subcontractor Work"
+        },
+        {
+          "hash": "918696ba",
+          "tag": "li",
+          "text": "Home-Owner Designs"
+        },
+        {
+          "hash": "276092c8",
+          "tag": "li",
+          "text": "Refurbish & Repairs"
+        },
+        {
+          "hash": "db8ef36d",
+          "tag": "li",
+          "text": "Practical Design Options"
+        },
+        {
+          "hash": "b9e1f1f0",
+          "tag": "li",
+          "text": "Interior & Exterior"
+        },
+        {
+          "hash": "bbf098e2",
+          "tag": "li",
+          "text": "Choose Your Own Materials"
+        },
+        {
+          "hash": "3874784b",
+          "tag": "li",
+          "text": "Flexible Pricing Options"
+        },
+        {
+          "hash": "605c4a14",
+          "tag": "div",
+          "text": "Why Choose Bozeman Remodeling?"
+        },
+        {
+          "hash": "a053c78d",
+          "tag": "h2",
+          "text": "Why Choose Bozeman Remodeling?"
+        },
+        {
+          "hash": "94fc4372",
+          "tag": "div",
+          "text": "About Bozeman Remodeling Bozeman Remodeling has over 30 years of experience remodeling and refinishing homes in Bozeman, Helena, Missoula, Billings, and surrounding areas. At Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything! Three Decades of Experience With over 30 years of experience handling remodeling jobs of all types, you can count on Bozeman Remodeling to get the job done right. Fully Licensed & Certified Bozeman Remodeling is a fully licensed, bonded, and insured construction contractor in Montana. Remodeling Industry Leader We’re the industry leaders in Montana, with thousands of successfully completed remodeling projects in homes scattered across the entire state. Complete Remodeling Services BR remodels kitchens, bathrooms, rooms, exterior spaces, and more—you name it, we can remodel it. Custom Designs Bozeman Remodeling provides expert custom designs suitable for any home, and we’ll work with you if you have a custom design of your own. Free Estimates Our remodeling estimates are always free and never include any hidden or additional fees."
+        },
+        {
+          "hash": "776b3d12",
+          "tag": "h4",
+          "text": "About Bozeman Remodeling"
+        },
+        {
+          "hash": "be4a5b1f",
+          "tag": "div",
+          "text": "Bozeman Remodeling has over 30 years of experience remodeling and refinishing homes in Bozeman, Helena, Missoula, Billings, and surrounding areas. At Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything!"
+        },
+        {
+          "hash": "20a280d6",
+          "tag": "div",
+          "text": "Three Decades of Experience With over 30 years of experience handling remodeling jobs of all types, you can count on Bozeman Remodeling to get the job done right. Fully Licensed & Certified Bozeman Remodeling is a fully licensed, bonded, and insured construction contractor in Montana. Remodeling Industry Leader We’re the industry leaders in Montana, with thousands of successfully completed remodeling projects in homes scattered across the entire state. Complete Remodeling Services BR remodels kitchens, bathrooms, rooms, exterior spaces, and more—you name it, we can remodel it. Custom Designs Bozeman Remodeling provides expert custom designs suitable for any home, and we’ll work with you if you have a custom design of your own. Free Estimates Our remodeling estimates are always free and never include any hidden or additional fees."
+        },
+        {
+          "hash": "d45ff1bd",
+          "tag": "h4",
+          "text": "Three Decades of Experience"
+        },
+        {
+          "hash": "d8611eda",
+          "tag": "div",
+          "text": "With over 30 years of experience handling remodeling jobs of all types, you can count on Bozeman Remodeling to get the job done right."
+        },
+        {
+          "hash": "fb97190",
+          "tag": "div",
+          "text": "Fully Licensed & Certified Bozeman Remodeling is a fully licensed, bonded, and insured construction contractor in Montana."
+        },
+        {
+          "hash": "30ba8f3f",
+          "tag": "h4",
+          "text": "Fully Licensed & Certified"
+        },
+        {
+          "hash": "af5f1b82",
+          "tag": "div",
+          "text": "Bozeman Remodeling is a fully licensed, bonded, and insured construction contractor in Montana."
+        },
+        {
+          "hash": "f485e536",
+          "tag": "div",
+          "text": "Remodeling Industry Leader We’re the industry leaders in Montana, with thousands of successfully completed remodeling projects in homes scattered across the entire state."
+        },
+        {
+          "hash": "f010fcac",
+          "tag": "h4",
+          "text": "Remodeling Industry Leader"
+        },
+        {
+          "hash": "dd871e88",
+          "tag": "div",
+          "text": "We’re the industry leaders in Montana, with thousands of successfully completed remodeling projects in homes scattered across the entire state."
+        },
+        {
+          "hash": "d40239d",
+          "tag": "div",
+          "text": "Complete Remodeling Services BR remodels kitchens, bathrooms, rooms, exterior spaces, and more—you name it, we can remodel it. Custom Designs Bozeman Remodeling provides expert custom designs suitable for any home, and we’ll work with you if you have a custom design of your own. Free Estimates Our remodeling estimates are always free and never include any hidden or additional fees."
+        },
+        {
+          "hash": "263d45b1",
+          "tag": "div",
+          "text": "Complete Remodeling Services BR remodels kitchens, bathrooms, rooms, exterior spaces, and more—you name it, we can remodel it."
+        },
+        {
+          "hash": "76e1fd9c",
+          "tag": "h4",
+          "text": "Complete Remodeling Services"
+        },
+        {
+          "hash": "dae2435c",
+          "tag": "div",
+          "text": "BR remodels kitchens, bathrooms, rooms, exterior spaces, and more—you name it, we can remodel it."
+        },
+        {
+          "hash": "4bdc7ad",
+          "tag": "div",
+          "text": "Custom Designs Bozeman Remodeling provides expert custom designs suitable for any home, and we’ll work with you if you have a custom design of your own."
+        },
+        {
+          "hash": "dc671b11",
+          "tag": "h4",
+          "text": "Custom Designs"
+        },
+        {
+          "hash": "baa1e57d",
+          "tag": "div",
+          "text": "Bozeman Remodeling provides expert custom designs suitable for any home, and we’ll work with you if you have a custom design of your own."
+        },
+        {
+          "hash": "caa6c537",
+          "tag": "div",
+          "text": "Free Estimates Our remodeling estimates are always free and never include any hidden or additional fees."
+        },
+        {
+          "hash": "53dcd2c",
+          "tag": "h4",
+          "text": "Free Estimates"
+        },
+        {
+          "hash": "b3698356",
+          "tag": "div",
+          "text": "Our remodeling estimates are always free and never include any hidden or additional fees."
+        },
+        {
+          "hash": "6158df8a",
+          "tag": "div",
+          "text": "Bathroom Remodeling A bathroom remodel is one of the best ways to both revitalize your living space and improve the value of your home. More >> Kitchen Remodeling Remodeling your kitchen can be a difficult and expensive undertaking—but not if you choose the right contractor! Bozeman Remodeling has remodeled thousands of kitchens, and we’re willing to work out a plan that fits with your budget. More >> Custom Additions Thinking about making your kitchen bigger? Want to expand your home gym? Or add an extra room for a newborn nursery? BR can make it happen with our custom addition services! More >> Basement Finishing Though it’s often underappreciated, your basement is an important aspect of your home. It can extend the feel of your main floor or even act as a home within itself. If your basement is unfinished or you’d like it refinished, Basement Remodeling are the experts to contact. More >> At Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything!"
+        },
+        {
+          "hash": "63dc6735",
+          "tag": "div",
+          "text": "Bathroom Remodeling A bathroom remodel is one of the best ways to both revitalize your living space and improve the value of your home. More >>"
+        },
+        {
+          "hash": "142fc3fe",
+          "tag": "div",
+          "text": "Bathroom Remodeling"
+        },
+        {
+          "hash": "aceeb261",
+          "tag": "div",
+          "text": "A bathroom remodel is one of the best ways to both revitalize your living space and improve the value of your home. More >>"
+        },
+        {
+          "hash": "ca6ffd8a",
+          "tag": "p",
+          "text": "More >>"
+        },
+        {
+          "hash": "2e8d2d4a",
+          "tag": "div",
+          "text": "Kitchen Remodeling Remodeling your kitchen can be a difficult and expensive undertaking—but not if you choose the right contractor! Bozeman Remodeling has remodeled thousands of kitchens, and we’re willing to work out a plan that fits with your budget. More >>"
+        },
+        {
+          "hash": "9d0ea214",
+          "tag": "div",
+          "text": "Kitchen Remodeling"
+        },
+        {
+          "hash": "88045335",
+          "tag": "div",
+          "text": "Remodeling your kitchen can be a difficult and expensive undertaking—but not if you choose the right contractor! Bozeman Remodeling has remodeled thousands of kitchens, and we’re willing to work out a plan that fits with your budget. More >>"
+        },
+        {
+          "hash": "fe983b2a",
+          "tag": "div",
+          "text": "Custom Additions Thinking about making your kitchen bigger? Want to expand your home gym? Or add an extra room for a newborn nursery? BR can make it happen with our custom addition services! More >>"
+        },
+        {
+          "hash": "21bf6818",
+          "tag": "div",
+          "text": "Custom Additions"
+        },
+        {
+          "hash": "eb2a2add",
+          "tag": "h2",
+          "text": "Custom Additions"
+        },
+        {
+          "hash": "3b31b88f",
+          "tag": "div",
+          "text": "Thinking about making your kitchen bigger? Want to expand your home gym? Or add an extra room for a newborn nursery? BR can make it happen with our custom addition services! More >>"
+        },
+        {
+          "hash": "b5da2828",
+          "tag": "div",
+          "text": "Basement Finishing Though it’s often underappreciated, your basement is an important aspect of your home. It can extend the feel of your main floor or even act as a home within itself. If your basement is unfinished or you’d like it refinished, Basement Remodeling are the experts to contact. More >>"
+        },
+        {
+          "hash": "b2ffd086",
+          "tag": "div",
+          "text": "Basement Finishing"
+        },
+        {
+          "hash": "2bf393bf",
+          "tag": "h2",
+          "text": "Basement Finishing"
+        },
+        {
+          "hash": "638a291e",
+          "tag": "div",
+          "text": "Though it’s often underappreciated, your basement is an important aspect of your home. It can extend the feel of your main floor or even act as a home within itself. If your basement is unfinished or you’d like it refinished, Basement Remodeling are the experts to contact. More >>"
+        },
+        {
+          "hash": "e830ca6",
+          "tag": "div",
+          "text": "At Bozeman Remodeling, we love starting a new project and watch it all come together. Seeing that satisfied look on a customer’s face as they walk into their brand-new kitchen, bathroom, or addition is an endlessly rewarding experience. We wouldn’t trade that for anything!"
+        }
+      ]
+    },
+    "schema": {
+      "jsonLd": {
+        "count": 2,
+        "types": [
+          "WebSite",
+          "Organization"
+        ],
+        "blocks": [
+          {
+            "index": 0,
+            "types": [
+              "WebSite"
+            ],
+            "raw": "{\"@context\":\"https:\\/\\/schema.org\",\"@type\":\"WebSite\",\"name\":\"Bozeman Remodeling\",\"alternateName\":\"Bozeman Remodeling\",\"description\":\"\",\"url\":\"https:\\/\\/bozemanremodeling.com\"}"
+          },
+          {
+            "index": 1,
+            "types": [
+              "Organization"
+            ],
+            "raw": "{\"@context\":\"https:\\/\\/schema.org\",\"@type\":\"Organization\",\"name\":\"Bozeman Remodeling\",\"url\":\"https:\\/\\/bozemanremodeling.com\",\"alternateName\":\"Bozeman Remodeling\",\"description\":\"Bozeman Remodeling\"}"
+          }
+        ],
+        "errors": []
+      },
+      "microdata": {
+        "count": 0,
+        "items": []
+      },
+      "rdfa": {
+        "typeofCount": 0,
+        "propertyCount": 9
+      },
+      "opportunities": []
+    },
+    "technical": {
+      "https": true,
+      "hreflang": [],
+      "mixedContentDetected": false,
+      "perfTimings": {
+        "type": "reload",
+        "startTime": 0,
+        "ttfb": 454409,
+        "domContentLoaded": 454976,
+        "loadEvent": 455009,
+        "requestTime": 1650
+      },
+      "resources": {
+        "total": 53,
+        "byType": {
+          "img": 12,
+          "link": 15,
+          "script": 18,
+          "xmlhttprequest": 2,
+          "fetch": 4,
+          "other": 2
+        }
+      }
+    },
+    "hashes": {
+      "headHash": "11e716f3"
+    },
+    "diagnostics": {
+      "bodyWordCount": 1117,
+      "queryMonitorBlocks": 0
+    },
+    "contentMetrics": {
+      "wordCount": 1058,
+      "readabilityScore": 26,
+      "headingStructure": "valid",
+      "keywordDensity": {
+        "top": [
+          {
+            "word": "remodeling",
+            "count": 48,
+            "density": 0.04440333024976873
+          },
+          {
+            "word": "bozeman",
+            "count": 22,
+            "density": 0.020351526364477335
+          },
+          {
+            "word": "home",
+            "count": 22,
+            "density": 0.020351526364477335
+          },
+          {
+            "word": "kitchen",
+            "count": 16,
+            "density": 0.014801110083256245
+          },
+          {
+            "word": "custom",
+            "count": 13,
+            "density": 0.012025901942645698
+          },
+          {
+            "word": "bathroom",
+            "count": 12,
+            "density": 0.011100832562442183
+          },
+          {
+            "word": "services",
+            "count": 7,
+            "density": 0.0064754856614246065
+          },
+          {
+            "word": "repair",
+            "count": 7,
+            "density": 0.0064754856614246065
+          },
+          {
+            "word": "experience",
+            "count": 6,
+            "density": 0.005550416281221091
+          },
+          {
+            "word": "options",
+            "count": 6,
+            "density": 0.005550416281221091
+          },
+          {
+            "word": "work",
+            "count": 6,
+            "density": 0.005550416281221091
+          },
+          {
+            "word": "project",
+            "count": 5,
+            "density": 0.004625346901017576
+          }
+        ],
+        "totalTokens": 1081
+      }
+    }
+  }
+}
