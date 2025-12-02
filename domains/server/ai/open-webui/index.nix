@@ -1,4 +1,4 @@
-# domains/server/ai/open-webui/default.nix
+# domains/server/ai/open-webui/index.nix
 #
 # Open WebUI - Modern web interface for Ollama
 # Provides a beautiful, feature-rich UI for interacting with local LLMs

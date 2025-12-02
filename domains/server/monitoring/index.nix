@@ -1,4 +1,4 @@
-# domains/server/monitoring/default.nix
+# domains/server/monitoring/index.nix
 #
 # Server monitoring subdomain aggregator
 # Imports options and monitoring implementation files
