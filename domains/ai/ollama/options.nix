@@ -1,20 +1,7 @@
-<<<<<<< HEAD
-# domains/ai/options.nix
-{ lib, config, ... }:
-let
-  inherit (lib) mkOption mkEnableOption types;
-in
-{
-  options.hwc.ai = {
-    enable = mkEnableOption "AI domain - top level enable";
-    # provide minimal top-level defaults; submodules define details.
-  };
-}
-=======
 { lib, ... }:
 
 {
-  options.hwc.server.ai.ollama = {
+  options.hwc.ai.ollama = {
     enable = lib.mkEnableOption "Ollama local LLM service";
 
     port = lib.mkOption {
@@ -36,4 +23,3 @@ in
     };
   };
 }
->>>>>>> feat/ai-copy-modules
