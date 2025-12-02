@@ -49,7 +49,10 @@
         readOnly = true;
         description = "Path to decrypted Sonarr API key file";
       };
-
+      navidromeAdminPasswordFile = lib.mkOption {
+        type = lib.types.str;
+        description = "Path to the file containing the Navidrome admin password.";
+      };
       lidarrApiKeyFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         readOnly = true;

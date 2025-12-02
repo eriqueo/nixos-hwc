@@ -55,13 +55,19 @@
   # Power management for laptop
   powerManagement.enable = true;
   services.logind = {
-    lidSwitch = "suspend";
-    lidSwitchExternalPower = "lock";
-    extraConfig = ''
-      HandlePowerKey=hibernate
-      IdleAction=suspend
-      IdleActionSec=30min
-    '';
+    # All settings are now consolidated under the 'settings' attribute set.
+    settings = {
+      Login = {
+        # Renamed from 'lidSwitch'
+        HandleLidSwitch = "suspend";
+        # Renamed from 'lidSwitchExternalPower'
+        HandleLidSwitchExternalPower = "lock";
+        # From your previous fix
+        HandlePowerKey = "hibernate";
+        IdleAction = "suspend";
+        IdleActionSec = "30min";
+      };
+    };
   };
 
   #============================================================================

@@ -234,7 +234,7 @@ in
         message = "MySQL backup enabled but MySQL service is not running";
       }
       {
-        assertion = !cfg.database.redis.enable || config.services.redis.servers != {} or false;
+        assertion = !cfg.database.redis.enable || (config.services.redis.servers or {}) != {};
         message = "Redis backup enabled but Redis service is not running";
       }
       {
