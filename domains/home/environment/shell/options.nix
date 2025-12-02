@@ -150,6 +150,15 @@
         "errors-hour" = "journal-errors '1 hour ago'";
         "errors-today" = "journal-errors 'today'";
         "errors-tdarr" = "journal-errors '10 minutes ago' podman-tdarr";
+        # Service monitoring aliases
+        "services" = "list-services";
+        "ss" = "list-services";
+        # Development aliases
+        "rebuild" = "grebuild";
+        "lint" = "charter-lint";
+        # Health check aliases
+        "caddy" = "caddy-health";
+        "health" = "caddy-health";
       };
       description = "Shell aliases for zsh";
     };
@@ -192,18 +201,8 @@
       };
     };
 
-    scripts = {
-      grebuild = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Enable grebuild script for NixOS rebuilding";
-      };
-      journalErrors = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Enable journal-errors script for summarizing system error logs";
-      };
-    };
+    # Scripts are now defined as shell functions in index.nix
+    # No need for enable options - they're always available
 
     # MCP (Model Context Protocol) configuration
     mcp = {
