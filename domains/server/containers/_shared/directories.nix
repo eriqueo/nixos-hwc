@@ -69,31 +69,78 @@
       mkdir -p /etc/slskd
       mkdir -p /var/lib/slskd
 
-      # Set ownership: eric:users for download directories
-      # Containers run as eric's UID, so they need write access
-      chown -R eric:users /mnt/hot/downloads
-      chown -R eric:users /mnt/hot/events
-      chown -R eric:users /mnt/hot/processing
-      chown -R eric:users /opt/downloads
-      chown -R root:root /etc/slskd
-      chown -R root:root /var/lib/slskd
+      # COMPREHENSIVE PERMISSION ENFORCEMENT
+      # ALL /mnt directories must be owned by eric:users for container access
+      # Containers run as PUID=1000 (eric), PGID=100 (users)
 
+      echo "Enforcing ownership on ALL /mnt directories..."
+      chown -R eric:users /mnt/hot 2>/dev/null || true
+      chown -R eric:users /mnt/media 2>/dev/null || true
+
+      echo "Enforcing ownership on container data directories..."
+      chown -R eric:users /opt/downloads 2>/dev/null || true
+      chown -R root:root /etc/slskd 2>/dev/null || true
+      chown -R root:root /var/lib/slskd 2>/dev/null || true
+
+      echo "Setting directory permissions (0755) on ALL /mnt directories..."
       # Set permissions: 0755 for directories (rwxr-xr-x)
       # This allows eric to write, and containers (running as eric) to access
-      find /mnt/hot/downloads -type d -exec chmod 0755 {} +
-      find /mnt/hot/events -type d -exec chmod 0755 {} +
-      find /mnt/hot/processing -type d -exec chmod 0755 {} +
-      find /opt/downloads -type d -exec chmod 0755 {} +
-      chmod -R 0755 /etc/slskd
-      chmod -R 0755 /var/lib/slskd
+      find /mnt/hot -type d -exec chmod 0755 {} + 2>/dev/null || true
+      find /mnt/media -type d -exec chmod 0755 {} + 2>/dev/null || true
+      find /opt/downloads -type d -exec chmod 0755 {} + 2>/dev/null || true
+      chmod -R 0755 /etc/slskd 2>/dev/null || true
+      chmod -R 0755 /var/lib/slskd 2>/dev/null || true
 
+      echo "Setting file permissions (0644) on ALL /mnt files..."
       # Set file permissions: 0644 for files (rw-r--r--)
       # This ensures downloaded files are readable by all but only writable by owner
-      find /mnt/hot/downloads -type f -exec chmod 0644 {} + 2>/dev/null || true
+      find /mnt/hot -type f -exec chmod 0644 {} + 2>/dev/null || true
+      find /mnt/media -type f -exec chmod 0644 {} + 2>/dev/null || true
+
+      # Scripts need to be executable
       find /opt/downloads/scripts -type f -name "*.sh" -exec chmod 0755 {} + 2>/dev/null || true
       find /opt/downloads/scripts -type f -name "*.py" -exec chmod 0755 {} + 2>/dev/null || true
 
-      echo "Container directories created successfully with proper permissions"
+      echo "Container directories created and permissions enforced successfully"
     '';
+  };
+
+  # Periodic permission enforcement service
+  # Runs every hour to fix any permission drift caused by containers creating files as root
+  systemd.services.container-permissions-enforce = {
+    description = "Enforce container directory permissions";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "enforce-container-permissions" ''
+        echo "Enforcing container directory permissions..."
+
+        # Fix ownership on all /mnt directories (containers run as eric:users)
+        ${pkgs.coreutils}/bin/chown -R eric:users /mnt/hot 2>/dev/null || true
+        ${pkgs.coreutils}/bin/chown -R eric:users /mnt/media 2>/dev/null || true
+        ${pkgs.coreutils}/bin/chown -R eric:users /opt/downloads 2>/dev/null || true
+
+        # Fix directory permissions (0755)
+        ${pkgs.findutils}/bin/find /mnt/hot -type d -exec ${pkgs.coreutils}/bin/chmod 0755 {} + 2>/dev/null || true
+        ${pkgs.findutils}/bin/find /mnt/media -type d -exec ${pkgs.coreutils}/bin/chmod 0755 {} + 2>/dev/null || true
+        ${pkgs.findutils}/bin/find /opt/downloads -type d -exec ${pkgs.coreutils}/bin/chmod 0755 {} + 2>/dev/null || true
+
+        # Fix file permissions (0644)
+        ${pkgs.findutils}/bin/find /mnt/hot -type f -exec ${pkgs.coreutils}/bin/chmod 0644 {} + 2>/dev/null || true
+        ${pkgs.findutils}/bin/find /mnt/media -type f -exec ${pkgs.coreutils}/bin/chmod 0644 {} + 2>/dev/null || true
+
+        echo "Container permissions enforced successfully"
+      '';
+    };
+  };
+
+  # Timer to run permission enforcement every hour
+  systemd.timers.container-permissions-enforce = {
+    description = "Hourly container permission enforcement";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = "5min";  # Run 5 minutes after boot
+      OnUnitActiveSec = "1h";  # Run every hour
+      Persistent = true;  # Catch up on missed runs
+    };
   };
 }
