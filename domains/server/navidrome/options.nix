@@ -40,7 +40,13 @@ in
       initialAdminPassword = mkOption {
         type = types.str;
         default = "";
-        description = "Initial admin password";
+        description = "Initial admin password (plaintext, use initialAdminPasswordFile instead for security)";
+      };
+
+      initialAdminPasswordFile = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = "Path to file containing initial admin password (more secure than plaintext)";
       };
 
       baseUrl = mkOption {

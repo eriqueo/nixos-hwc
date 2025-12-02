@@ -32,6 +32,7 @@ in
     couchdbAdminUsernameFile = pathOrNull "couchdb-admin-username";
     couchdbAdminPasswordFile = pathOrNull "couchdb-admin-password";
     ntfyUserFile = pathOrNull "ntfy-user";
+    navidromeAdminPasswordFile = pathOrNull "navidrome-admin-password";
     
     # Email domain paths
     protonBridgePasswordFile = pathOrNull "proton-bridge-password";

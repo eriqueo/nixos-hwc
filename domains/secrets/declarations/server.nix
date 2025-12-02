@@ -111,6 +111,14 @@
       group = "secrets";
     };
 
+    # Navidrome music server credentials
+    navidrome-admin-password = {
+      file = ../parts/server/navidrome-admin-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     # Frigate secrets are in domains/secrets/declarations/infrastructure.nix
     # (camera/surveillance secrets belong to infrastructure domain)
   };
