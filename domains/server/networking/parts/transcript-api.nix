@@ -21,27 +21,27 @@ let
   cfg = config.hwc.services.transcriptApi;
   paths = config.hwc.paths;
 
-  # Python environment with all required dependencies
-  # Built manually with pkgs.buildEnv so we can set ignoreCollisions = true.
-  # This avoids the typer / typer-slim duplicate-file error in python3.withPackages.
-  pythonEnv = pkgs.buildEnv {
-    name = "python3-transcript-api-env";
-    paths =
-      [ pkgs.python3 ]
-      ++ (with pkgs.python3Packages; [
-        fastapi
-        uvicorn
-        pydantic
-        httpx
-        yt-dlp
-        youtube-transcript-api
-        python-slugify
-        spacy
-        spacy-models.en_core_web_sm
-      ]);
-    pathsToLink = [ "/bin" "/lib" ];
-    ignoreCollisions = true;
-  };
+  # Python packages needed
+  pythonPackages = with pkgs.python3Packages; [
+    fastapi
+    uvicorn
+    pydantic
+    httpx
+    yt-dlp
+    youtube-transcript-api
+    python-slugify
+    spacy
+    spacy-models.en_core_web_sm
+  ];
+
+  # Build Python path with transitive dependencies (handles typer/typer-slim collision)
+  pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
+
+  # Wrapper script to run the API with correct PYTHONPATH
+  transcriptApiWrapper = pkgs.writeShellScript "transcript-api-wrapper" ''
+    export PYTHONPATH="${pythonPath}:${scriptDir}"
+    exec ${pkgs.python3}/bin/python3 ${apiScript}
+  '';
 
   # Source directory for transcript scripts
   scriptDir = "${paths.nixos}/workspace/productivity/transcript-formatter";
@@ -62,13 +62,12 @@ in
         API_PORT = toString cfg.port;
         TRANSCRIPTS_ROOT = cfg.dataDir;
         LANGS = "en,en-US,en-GB";
-        PYTHONPATH = "${pythonEnv}/lib/python3.12/site-packages:${scriptDir}";
         COUCHDB_URL = "http://127.0.0.1:5984";
         COUCHDB_DATABASE = "sync_transcripts";
       };
 
       serviceConfig = {
-        ExecStart = "${pythonEnv}/bin/python3 ${apiScript}";
+        ExecStart = "${transcriptApiWrapper}";
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
         DynamicUser = false;
