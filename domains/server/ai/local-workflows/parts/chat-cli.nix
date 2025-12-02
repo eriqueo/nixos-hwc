@@ -57,11 +57,18 @@ class CommandExecutor:
     SAFE_COMMANDS = {
         'ls', 'tree', 'cat', 'head', 'tail', 'grep',
         'find', 'pwd', 'df', 'free', 'uptime', 'who',
-        'systemctl', 'journalctl', 'podman', 'mv'
+        'systemctl', 'journalctl', 'podman', 'mv', 'awk',
+        'sed', 'sort', 'uniq', 'wc', 'less', 'more'
     }
 
     # Commands that need sudo (passwordless via sudoers)
     SUDO_COMMANDS = {'systemctl', 'journalctl', 'podman'}
+
+    # Commands safe for piping (filters/processors)
+    PIPE_SAFE_COMMANDS = {
+        'grep', 'head', 'tail', 'awk', 'sed', 'sort',
+        'uniq', 'wc', 'less', 'more', 'cat'
+    }
 
     # Commands that need subcommand validation
     SUBCOMMAND_RULES = {
@@ -108,41 +115,104 @@ class CommandExecutor:
             if part in self.BLOCKED_FLAGS:
                 return False, f"Dangerous flag blocked: {part}"
 
-        # Block shell operators
-        dangerous = ['|', '>', '<', ';', '&', '$', '`']
+        # Block dangerous shell operators (but not pipe)
+        dangerous = ['>', '<', ';', '&', '$', '`']
         for part in cmd_parts:
             if any(op in part for op in dangerous):
-                return False, "Shell operators not allowed"
+                return False, "Dangerous shell operators not allowed"
+
+        return True, "OK"
+
+    def validate_pipeline(self, command_str):
+        """Validate a pipeline command"""
+        # Split on pipe
+        commands = [cmd.strip() for cmd in command_str.split('|')]
+
+        for i, cmd in enumerate(commands):
+            # Parse each command in the pipeline
+            try:
+                cmd_parts = shlex.split(cmd)
+            except ValueError as e:
+                return False, f"Invalid command syntax: {e}"
+
+            # Validate first command normally
+            if i == 0:
+                valid, msg = self.validate_command(cmd_parts)
+                if not valid:
+                    return False, msg
+            else:
+                # Subsequent commands should be safe filters
+                if not cmd_parts:
+                    return False, "Empty command in pipeline"
+
+                base_cmd = cmd_parts[0]
+                if base_cmd not in self.PIPE_SAFE_COMMANDS:
+                    return False, (
+                        f"Command not safe for piping: {base_cmd}"
+                    )
 
         return True, "OK"
 
     def execute(self, command_str):
         """Execute a safe command and return output"""
         try:
-            # Parse command
-            cmd_parts = shlex.split(command_str)
+            # Check if this is a pipeline command
+            is_pipeline = '|' in command_str
 
-            # Validate
-            valid, msg = self.validate_command(cmd_parts)
-            if not valid:
-                return {
-                    "success": False,
-                    "error": msg,
-                    "output": ""
-                }
+            if is_pipeline:
+                # Validate pipeline
+                valid, msg = self.validate_pipeline(command_str)
+                if not valid:
+                    return {
+                        "success": False,
+                        "error": msg,
+                        "output": ""
+                    }
 
-            # Prepend sudo for privileged commands
-            if cmd_parts[0] in self.SUDO_COMMANDS:
-                cmd_parts = ['sudo'] + cmd_parts
+                # Add sudo to first command if needed
+                first_cmd = command_str.split('|')[0].strip()
+                first_cmd_parts = shlex.split(first_cmd)
+                if first_cmd_parts[0] in self.SUDO_COMMANDS:
+                    # Replace first command with sudo version
+                    rest_pipeline = '|'.join(
+                        command_str.split('|')[1:]
+                    )
+                    command_str = f"sudo {first_cmd} | {rest_pipeline}"
 
-            # Execute with timeout
-            result = subprocess.run(
-                cmd_parts,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=str(self.working_dir)
-            )
+                # Execute pipeline with shell
+                result = subprocess.run(
+                    command_str,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=str(self.working_dir)
+                )
+            else:
+                # Parse command
+                cmd_parts = shlex.split(command_str)
+
+                # Validate
+                valid, msg = self.validate_command(cmd_parts)
+                if not valid:
+                    return {
+                        "success": False,
+                        "error": msg,
+                        "output": ""
+                    }
+
+                # Prepend sudo for privileged commands
+                if cmd_parts[0] in self.SUDO_COMMANDS:
+                    cmd_parts = ['sudo'] + cmd_parts
+
+                # Execute with timeout
+                result = subprocess.run(
+                    cmd_parts,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=str(self.working_dir)
+                )
 
             # Limit output size
             stdout = result.stdout[:5000]
