@@ -14,6 +14,15 @@
         default = false; # Single-user workstation default
         description = "Whether members of the 'wheel' group must enter a password for sudo.";
       };
+
+      extraRules = lib.mkOption {
+        type = with lib.types; listOf attrs;
+        default = [];
+        example = [
+          { users = [ "eric" ]; commands = [ { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; } ]; }
+        ];
+        description = "Additional sudo rules for specific commands without password.";
+      };
     };
 
     # --- Login Manager Sub-Module ---
