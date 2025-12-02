@@ -103,7 +103,6 @@
         "downloads" = "cd ~/00-inbox/downloads";
         "drives" = "cd ~/99-vaults/drives";
         "finance" = "cd ~/02-personal/01-active/finance";
-        "health" = "cd ~/02-personal/01-active/health";
         "hwc" = "cd ~/01-hwc";
         "inbox" = "cd ~/00-inbox";
         "media" = "cd /mnt/media";
