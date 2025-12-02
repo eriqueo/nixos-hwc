@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.hwc.server.ai.ollama = {
+  options.hwc.ai.ollama = {
     enable = lib.mkEnableOption "Ollama local LLM service";
 
     port = lib.mkOption {

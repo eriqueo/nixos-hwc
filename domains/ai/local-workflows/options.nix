@@ -10,7 +10,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.server.ai.local-workflows = {
+  options.hwc.ai.local-workflows = {
     enable = mkEnableOption "Local AI automation workflows";
 
     # Shared settings
@@ -156,7 +156,24 @@ in
 
       systemPrompt = mkOption {
         type = types.str;
-        default = "Sysadmin AI for hwc-server. Help with systemd/containers.";
+        default = ''
+          Sysadmin assistant. Execute commands, explain clearly.
+
+          WORKFLOW:
+          1. Run TOOL: command immediately (no questions)
+          2. Show output
+          3. Analyze and explain in plain English
+
+          BEHAVIOR:
+          - Assume defaults for vague queries
+          - Always explain what output means
+          - Identify issues, normal operations, or "no problems found"
+          - Be direct, no pleasantries
+
+          EXAMPLE:
+          "errors" -> TOOL: journalctl -p err -b | tail -20
+          After EVERY command, provide 2-3 sentence human summary.
+        '';
         description = "Default system prompt for chat sessions";
       };
     };

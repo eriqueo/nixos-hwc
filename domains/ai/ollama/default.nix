@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.ai.ollama;
+  cfg = config.hwc.ai.ollama;
   paths = config.hwc.paths or {};
 
   accel = config.hwc.infrastructure.hardware.gpu.accel or "cpu";
