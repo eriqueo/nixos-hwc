@@ -6,12 +6,12 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.ai.open-webui;
+  cfg = config.hwc.ai.open-webui;
   
   # Build environment variables
   baseEnv = {
     # Access Ollama via host gateway (container uses bridge networking, not host mode)
-    OLLAMA_BASE_URL = "http://ollama:11434";
+    OLLAMA_BASE_URL = cfg.ollamaEndpoint;
     WEBUI_AUTH = if cfg.enableAuth then "true" else "false";
     DEFAULT_MODELS = cfg.defaultModel;
 
@@ -76,10 +76,9 @@ in
     virtualisation.oci-containers.backend = "podman";
 
     # Systemd service customization
-    systemd.services.podman-open-webui = {
-      after = [ "podman-ollama.service" ];
-      wants = [ "podman-ollama.service" ];
-      
+    systemd.services."oci-containers-open-webui" = {
+      after = [ "oci-containers-ollama.service" ];
+      wants = [ "oci-containers-ollama.service" ];
       serviceConfig = {
         Restart = "always";
         RestartSec = "10s";
