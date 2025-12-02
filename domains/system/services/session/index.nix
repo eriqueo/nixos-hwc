@@ -15,6 +15,7 @@ in
     security.sudo = lib.mkIf cfg.sudo.enable {
       enable = true;
       wheelNeedsPassword = cfg.sudo.wheelNeedsPassword;
+      extraRules = cfg.sudo.extraRules;
     };
 
     #=========================================================================

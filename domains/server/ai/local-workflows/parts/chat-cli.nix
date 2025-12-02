@@ -60,6 +60,9 @@ class CommandExecutor:
         'systemctl', 'journalctl', 'podman', 'mv'
     }
 
+    # Commands that need sudo (passwordless via sudoers)
+    SUDO_COMMANDS = {'systemctl', 'journalctl', 'podman'}
+
     # Commands that need subcommand validation
     SUBCOMMAND_RULES = {
         'systemctl': ['status', 'list-units', 'is-active',
@@ -127,6 +130,10 @@ class CommandExecutor:
                     "error": msg,
                     "output": ""
                 }
+
+            # Prepend sudo for privileged commands
+            if cmd_parts[0] in self.SUDO_COMMANDS:
+                cmd_parts = ['sudo'] + cmd_parts
 
             # Execute with timeout
             result = subprocess.run(
