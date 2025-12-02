@@ -1,62 +1,41 @@
-# nixos-hwc/profiles/ai.nix
-#
-# Profile: AI Services (Orchestration Only)
-# Aggregates AI service modules and sets high-level defaults.
-# No hardware logic or user management here (Charter v3).
-#
-# DEPENDENCIES (Upstream):
-#   - ../domains/server/ai/ollama.nix
-#   - modules/infrastructure/hardware/gpu.nix (indirectly; services consume hwc.infrastructure.hardware.gpu.accel)
-#
-# USED BY (Downstream):
-#   - machines/*/config.nix  (enable/override service facts per machine)
-#
-# IMPORTS REQUIRED IN:
-#   - machines/*/config.nix: imports = [ ../../profiles/ai.nix ];
-#
-# USAGE:
-#   # This profile sets defaults; machines can override:
-#   #   hwc.services.ollama.enable = true;
-#   #   hwc.services.ollama.models = [ "llama3:8b" ... ];
-#   # GPU use is inferred from hwc.infrastructure.hardware.gpu.accel via modules/infrastructure/hardware/gpu.nix.
-
+# profiles/ai.nix
 { lib, ... }:
-
 {
-  #==========================================================================
-  # BASE SYSTEM - Critical for machine functionality
-  #==========================================================================
   imports = [
-    ../domains/server/ai/ollama
-    ../domains/server/ai/mcp
-    ../domains/server/ai/local-workflows
-    ../domains/server/ai/ai-bible
-    ../domains/server/ai/open-webui
+    ../domains/ai/default.nix
+    # The domain modules (ollama, open-webui, local-workflows, mcp, agent)
+    # will be imported inside domains/ai/default.nix in PR2
   ];
 
-  #==========================================================================
-  # OPTIONAL FEATURES - Sensible defaults, override per machine
-  #==========================================================================
-  hwc.server.ai.ollama = {
-    enable = lib.mkDefault true;
-    models = lib.mkDefault [ "llama3:8b" "codellama:13b" ];
-  };
+  # set high-level sensible defaults as mkDefault for downstream overrides
+  hwc.ai = {
+    ollama = {
+      enable = lib.mkDefault true;
+      models = lib.mkDefault [ "phi3.5:3.8b" "llama3.2:3b" ];
+    };
+    local-workflows = {
+      enable = lib.mkDefault true;
+      chatCli = {
+        model = lib.mkDefault "phi3.5:3.8b";
+        systemPrompt = lib.mkDefault ''
+          Sysadmin assistant. Execute commands, explain clearly.
 
-  # AI Bible - Self-documenting NixOS system
-  hwc.services.aiBible = {
-    enable = lib.mkDefault false;  # Opt-in per machine
-    features = {
-      autoGeneration = lib.mkDefault true;
-      llmIntegration = lib.mkDefault true;
-      webApi = lib.mkDefault true;
-    };
-    llm = {
-      provider = lib.mkDefault "ollama";
-      model = lib.mkDefault "llama3:8b";
-      endpoint = lib.mkDefault "http://localhost:11434";
-    };
-    codebase = {
-      scanInterval = lib.mkDefault "daily";
+          WORKFLOW:
+          1. Run TOOL: command immediately (no questions)
+          2. Show output
+          3. Analyze and explain in plain English
+
+          BEHAVIOR:
+          - Assume defaults for vague queries
+          - Always explain what output means
+          - Identify issues, normal operations, or "no problems found"
+          - Be direct, no pleasantries
+
+          EXAMPLE:
+          "errors" -> TOOL: journalctl -p err -b | tail -20
+          After EVERY command, provide 2-3 sentence human summary.
+        '';
+      };
     };
   };
 }
