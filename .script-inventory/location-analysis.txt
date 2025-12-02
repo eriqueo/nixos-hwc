@@ -1,0 +1,63 @@
+# Script Location Analysis
+
+## Shell Scripts by Directory
+     10 /home/ubuntu/nixos-hwc/workspace/utilities/scripts
+     10 /home/ubuntu/nixos-hwc/workspace/utilities/lints
+      9 /home/ubuntu/nixos-hwc/workspace/network
+      5 /home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/tools
+      5 /home/ubuntu/nixos-hwc/workspace/utilities/monitoring
+      5 /home/ubuntu/nixos-hwc/scripts
+      4 /home/ubuntu/nixos-hwc/workspace/infrastructure/filesystem
+      3 /home/ubuntu/nixos-hwc/workspace/utilities
+      3 /home/ubuntu/nixos-hwc/workspace/infrastructure/server
+      3 /home/ubuntu/nixos-hwc/domains/infrastructure/winapps/parts
+      3 /home/ubuntu/nixos-hwc/domains/home/mail/notmuch/parts
+      3 /home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/scripts
+      2 /home/ubuntu/nixos-hwc/workspace/utilities/config-validation
+      2 /home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter
+      2 /home/ubuntu/nixos-hwc/workspace/automation/media
+      2 /home/ubuntu/nixos-hwc/remodel-api
+      2 /home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/docker
+      2 /home/ubuntu/nixos-hwc/.claude
+      1 /home/ubuntu/nixos-hwc/workspace/projects/receipts-pipeline/monitoring
+      1 /home/ubuntu/nixos-hwc/workspace/productivity/ai-docs
+      1 /home/ubuntu/nixos-hwc/workspace/productivity
+      1 /home/ubuntu/nixos-hwc/workspace/automation/bible
+      1 /home/ubuntu/nixos-hwc/workspace/automation
+      1 /home/ubuntu/nixos-hwc/scripts/lints
+      1 /home/ubuntu/nixos-hwc/domains/server/frigate-v2/scripts
+      1 /home/ubuntu/nixos-hwc/domains/server
+      1 /home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/.devcontainer
+
+## Python Scripts by Directory
+     29 /home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/scripts
+      8 /home/ubuntu/nixos-hwc/workspace/automation/bible
+      7 /home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/scanners
+      7 /home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/src
+      6 /home/ubuntu/nixos-hwc/workspace/projects/estimate-automation/src/models
+      6 /home/ubuntu/nixos-hwc/workspace/projects/bible-plan/prompts/bible_prompts
+      6 /home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter
+      5 /home/ubuntu/nixos-hwc/workspace/projects/receipts-pipeline/src
+      4 /home/ubuntu/nixos-hwc/workspace/utilities/graph
+      4 /home/ubuntu/nixos-hwc/remodel-api/app
+      3 /home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/generators
+      3 /home/ubuntu/nixos-hwc/workspace/utilities/config-validation
+      2 /home/ubuntu/nixos-hwc/workspace/projects/site-crawler/crawler/spiders
+      2 /home/ubuntu/nixos-hwc/workspace/projects/site-crawler
+      2 /home/ubuntu/nixos-hwc/workspace/projects/estimate-automation/src/schemas
+      2 /home/ubuntu/nixos-hwc/workspace/projects/estimate-automation/src/config
+      2 /home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter/cleaners
+      2 /home/ubuntu/nixos-hwc/workspace/automation
+      2 /home/ubuntu/nixos-hwc/remodel-api/app/routers
+      1 /home/ubuntu/nixos-hwc/workspace/utilities/scripts
+      1 /home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/tools
+      1 /home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator
+      1 /home/ubuntu/nixos-hwc/workspace/utilities/docs
+      1 /home/ubuntu/nixos-hwc/workspace/projects/site-crawler/extractor
+      1 /home/ubuntu/nixos-hwc/workspace/projects/site-crawler/crawler
+      1 /home/ubuntu/nixos-hwc/workspace/projects/estimate-automation/src
+      1 /home/ubuntu/nixos-hwc/workspace/productivity/ai-docs
+      1 /home/ubuntu/nixos-hwc/workspace/automation/monitoring
+      1 /home/ubuntu/nixos-hwc/remodel-api/app/services
+      1 /home/ubuntu/nixos-hwc/remodel-api/app/engines
+      1 /home/ubuntu/nixos-hwc/domains/server/ai/ai-bible
