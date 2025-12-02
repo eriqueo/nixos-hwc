@@ -16,35 +16,21 @@
 # USAGE:
 #   hwc.services.transcriptApi.enable = true;
 
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.hwc.services.transcriptApi;
-  paths = config.hwc.paths;
-# HWC Charter Module/domains/services/transcript-api.nix
-#
-# TRANSCRIPT API - YouTube transcript extraction REST API
-# Provides a REST API for extracting transcripts from YouTube videos and playlists
-#
-# DEPENDENCIES (Upstream):
-#   - config.hwc.paths.* (modules/system/paths.nix)
-#   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify, spacy, spacy-models.en_core_web_sm
-#
-# USED BY (Downstream):
-#   - profiles/*.nix (enables via hwc.services.transcriptApi.enable)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/server.nix: ../domains/server/networking/parts/transcript-api.nix
-#
-# USAGE:
-#   hwc.services.transcriptApi.enable = true;
 
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.services.transcriptApi;
   paths = config.hwc.paths;
+
+  # Python interpreter with local package override to avoid typer / typer-slim collision
+  python3Fixed = pkgs.python3.override {
+    packageOverrides = self: super: {
+      "typer-slim" = super.typer;
+    };
+  };
 
   # Python environment with all required dependencies
-  pythonEnv = pkgs.python3.withPackages (ps: with ps; [
+  pythonEnv = python3Fixed.withPackages (ps: with ps; [
     fastapi
     uvicorn
     pydantic
