@@ -62,8 +62,13 @@ in
 
       environment = containerEnv;
 
-      # No extra options needed - using default bridge networking with port mapping
-      extraOptions = [];
+      # Health check and extra options
+      extraOptions = [] ++ lib.optionals cfg.healthCheck.enable [
+        "--health-cmd=wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1"
+        "--health-interval=${cfg.healthCheck.interval}"
+        "--health-timeout=${cfg.healthCheck.timeout}"
+        "--health-retries=${toString cfg.healthCheck.retries}"
+      ];
     };
 
     # Ensure Podman is enabled
