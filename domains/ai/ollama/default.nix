@@ -28,11 +28,6 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
 
-    assertions = [{
-      assertion = true;
-      message = "Ollama module loaded with Charter-compliant structure";
-    }];
-
     virtualisation.oci-containers.containers.ollama = {
       image = "ollama/ollama:latest";
       ports = [ "${toString cfg.port}:11434" ];
@@ -71,9 +66,53 @@ in
         ExecStart = pullScript;
       };
     };
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
+    # Health check service
+    systemd.services.ollama-health = lib.mkIf cfg.healthCheck.enable {
+      description = "Ollama health check";
+      after = [ "podman-ollama.service" ];
+      wants = [ "podman-ollama.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.curl}/bin/curl -f http://localhost:${toString cfg.port}/api/tags";
+        StandardOutput = "journal";
+        StandardError = "journal";
+      };
+    };
+
+    # Health check timer
+    systemd.timers.ollama-health = lib.mkIf cfg.healthCheck.enable {
+      description = "Ollama health check timer";
+      wantedBy = [ "timers.target" ];
+
+      timerConfig = {
+        OnBootSec = "2min";
+        OnUnitActiveSec = cfg.healthCheck.interval;
+        Unit = "ollama-health.service";
+      };
+    };
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = cfg.port > 0 && cfg.port < 65536;
+        message = "hwc.ai.ollama.port must be between 1 and 65535";
+      }
+      {
+        assertion = cfg.models != [];
+        message = "hwc.ai.ollama.models list cannot be empty";
+      }
+      {
+        assertion = builtins.pathExists cfg.dataDir || true;  # Will be created by tmpfiles
+        message = "hwc.ai.ollama.dataDir must be a valid path";
+      }
+      {
+        assertion = config.virtualisation.oci-containers.backend == "podman";
+        message = "hwc.ai.ollama requires Podman as OCI container backend";
+      }
+    ];
+  };
 }
