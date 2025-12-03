@@ -14,8 +14,8 @@ in
 
     port = mkOption {
       type = types.port;
-      default = 3000;
-      description = "Internal port for Open WebUI container";
+      default = 3001;
+      description = "Host port for Open WebUI (avoids conflict with Grafana on 3000)";
     };
 
     ollamaEndpoint = mkOption {
