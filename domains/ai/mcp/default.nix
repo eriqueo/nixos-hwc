@@ -115,110 +115,100 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = mkIf cfg.enable (mkMerge [
+  config = mkIf cfg.enable {
 
     #--------------------------------------------------------------------------
     # PACKAGES
     #--------------------------------------------------------------------------
-    {
-      environment.systemPackages = with pkgs; [
-        nodejs_22      # Required for @modelcontextprotocol/server-filesystem
-        mcp-proxy      # stdio ↔ HTTP bridge
-      ];
-    }
+    environment.systemPackages = with pkgs; [
+      nodejs_22      # Required for @modelcontextprotocol/server-filesystem
+      mcp-proxy      # stdio ↔ HTTP bridge
+    ];
 
     #--------------------------------------------------------------------------
     # DYNAMIC DEFAULTS - Set user-specific paths
     #--------------------------------------------------------------------------
-    {
-      hwc.ai.mcp.filesystem.nixos = mkMerge [
-        (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.user == "") {
-          user = lib.mkDefault userName;
-        })
-        (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.allowedDirs == []) {
-          allowedDirs = lib.mkDefault [
-            "${userHome}/.nixos"
-            "${userHome}/.nixos-mcp-drafts"
-          ];
-        })
-        (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.draftsDir == "/tmp/.nixos-mcp-drafts") {
-          draftsDir = lib.mkDefault "${userHome}/.nixos-mcp-drafts";
-        })
-      ];
-    }
+    hwc.ai.mcp.filesystem.nixos = mkMerge [
+      (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.user == "") {
+        user = lib.mkDefault userName;
+      })
+      (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.allowedDirs == []) {
+        allowedDirs = lib.mkDefault [
+          "${userHome}/.nixos"
+          "${userHome}/.nixos-mcp-drafts"
+        ];
+      })
+      (mkIf (cfg.filesystem.nixos.enable && cfg.filesystem.nixos.draftsDir == "/tmp/.nixos-mcp-drafts") {
+        draftsDir = lib.mkDefault "${userHome}/.nixos-mcp-drafts";
+      })
+    ];
 
     #--------------------------------------------------------------------------
     # FILESYSTEM MCP SERVER (nixos)
     #--------------------------------------------------------------------------
-    (mkIf cfg.filesystem.nixos.enable {
-      # Create drafts directory
-      systemd.tmpfiles.rules = [
-        "d ${cfg.filesystem.nixos.draftsDir} 0755 ${cfg.filesystem.nixos.user} users -"
-      ];
+    systemd.tmpfiles.rules = mkIf cfg.filesystem.nixos.enable [
+      "d ${cfg.filesystem.nixos.draftsDir} 0755 ${cfg.filesystem.nixos.user} users -"
+    ];
 
-      # Filesystem MCP service
-      systemd.services.mcp-filesystem-nixos = mkMcpService {
-        name = "mcp-filesystem-nixos";
-        description = "MCP Filesystem Server for ~/.nixos directory";
-        command =
-          let
-            baseCmd = [
-              "${pkgs.nodejs_22}/bin/npx"
-              "-y"
-              "@modelcontextprotocol/server-filesystem"
-            ];
-          in
-            baseCmd ++ cfg.filesystem.nixos.allowedDirs;  # Each directory as separate argument
-        user = cfg.filesystem.nixos.user;
-        workingDirectory = "/home/${cfg.filesystem.nixos.user}";
+    systemd.services.mcp-filesystem-nixos = mkIf cfg.filesystem.nixos.enable (mkMcpService {
+      name = "mcp-filesystem-nixos";
+      description = "MCP Filesystem Server for ~/.nixos directory";
+      command =
+        let
+          baseCmd = [
+            "${pkgs.nodejs_22}/bin/npx"
+            "-y"
+            "@modelcontextprotocol/server-filesystem"
+          ];
+        in
+          baseCmd ++ cfg.filesystem.nixos.allowedDirs;  # Each directory as separate argument
+      user = cfg.filesystem.nixos.user;
+      workingDirectory = "/home/${cfg.filesystem.nixos.user}";
 
-        # npx needs PATH set to find sh and other utilities
-        environment = {
-          PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
-        };
-
-        # Path restrictions removed for now - npx needs broader filesystem access
-        # TODO: Tighten security once working
+      # npx needs PATH set to find sh and other utilities
+      environment = {
+        PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
       };
-    })
+
+      # Path restrictions removed for now - npx needs broader filesystem access
+      # TODO: Tighten security once working
+    });
 
     #--------------------------------------------------------------------------
     # MCP PROXY (stdio ↔ HTTP bridge)
     #--------------------------------------------------------------------------
-    (mkIf cfg.proxy.enable {
-      systemd.services.mcp-proxy = mkMcpService {
-        name = "mcp-proxy";
-        description = "MCP Proxy - stdio to HTTP bridge";
-        command =
-          let
-            proxyCmd = [
-              "${pkgs.mcp-proxy}/bin/mcp-proxy"
-              "--host" cfg.proxy.host
-              "--port" (toString cfg.proxy.port)
-              "--"
-              "${pkgs.nodejs_22}/bin/npx"
-              "-y"
-              "@modelcontextprotocol/server-filesystem"
-            ];
-          in
-            proxyCmd ++ cfg.filesystem.nixos.allowedDirs;  # Each directory as separate argument
-        user = cfg.filesystem.nixos.user;
-        workingDirectory = "/home/${cfg.filesystem.nixos.user}";
+    systemd.services.mcp-proxy = mkIf cfg.proxy.enable (mkMcpService {
+      name = "mcp-proxy";
+      description = "MCP Proxy - stdio to HTTP bridge";
+      command =
+        let
+          proxyCmd = [
+            "${pkgs.mcp-proxy}/bin/mcp-proxy"
+            "--host" cfg.proxy.host
+            "--port" (toString cfg.proxy.port)
+            "--"
+            "${pkgs.nodejs_22}/bin/npx"
+            "-y"
+            "@modelcontextprotocol/server-filesystem"
+          ];
+        in
+          proxyCmd ++ cfg.filesystem.nixos.allowedDirs;  # Each directory as separate argument
+      user = cfg.filesystem.nixos.user;
+      workingDirectory = "/home/${cfg.filesystem.nixos.user}";
 
-        # npx needs PATH set to find sh and other utilities
-        environment = {
-          PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
-        };
-
-        # Path restrictions removed for now - npx needs broader filesystem access
-        # TODO: Tighten security once working
-
-        # Override network restrictions (proxy needs to listen on localhost)
-        extraServiceConfig = {
-          # Remove PrivateNetwork restriction for proxy
-        };
+      # npx needs PATH set to find sh and other utilities
+      environment = {
+        PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
       };
-    })
+
+      # Path restrictions removed for now - npx needs broader filesystem access
+      # TODO: Tighten security once working
+
+      # Override network restrictions (proxy needs to listen on localhost)
+      extraServiceConfig = {
+        # Remove PrivateNetwork restriction for proxy
+      };
+    });
 
     #--------------------------------------------------------------------------
     # CADDY REVERSE PROXY ROUTE
@@ -248,18 +238,15 @@ in
     #--------------------------------------------------------------------------
     # VALIDATION
     #--------------------------------------------------------------------------
-    {
-      assertions = [
-        {
-          assertion = cfg.enable -> cfg.filesystem.nixos.enable || cfg.proxy.enable;
-          message = "MCP module enabled but no services configured. Enable at least one MCP server.";
-        }
-        {
-          assertion = cfg.reverseProxy.enable -> cfg.proxy.enable;
-          message = "MCP reverse proxy requires mcp-proxy to be enabled.";
-        }
-      ];
-    }
-
-  ]);
+    assertions = [
+      {
+        assertion = cfg.filesystem.nixos.enable || cfg.proxy.enable;
+        message = "MCP module enabled but no services configured. Enable at least one MCP server.";
+      }
+      {
+        assertion = !cfg.reverseProxy.enable || cfg.proxy.enable;
+        message = "MCP reverse proxy requires mcp-proxy to be enabled.";
+      }
+    ];
+  };
 }
