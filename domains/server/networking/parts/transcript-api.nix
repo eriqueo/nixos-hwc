@@ -21,8 +21,8 @@ let
   cfg = config.hwc.services.transcriptApi;
   paths = config.hwc.paths;
 
-  # Python environment with all required dependencies
-  pythonEnv = pkgs.python3.withPackages (ps: with ps; [
+  # Python packages needed
+  pythonPackages = with pkgs.python3Packages; [
     fastapi
     uvicorn
     pydantic
@@ -32,11 +32,20 @@ let
     python-slugify
     spacy
     spacy-models.en_core_web_sm
-  ]);
+  ];
+
+  # Build Python path with transitive dependencies (handles typer/typer-slim collision)
+  pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
   # Source directory for transcript scripts
   scriptDir = "${paths.nixos}/workspace/productivity/transcript-formatter";
   apiScript = "${scriptDir}/yt-transcript-api.py";
+
+  # Wrapper script to run the API with correct PYTHONPATH
+  transcriptApiWrapper = pkgs.writeShellScript "transcript-api-wrapper" ''
+    export PYTHONPATH="${pythonPath}:${scriptDir}"
+    exec ${pkgs.python3}/bin/python3 ${apiScript}
+  '';
 in {
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
@@ -52,13 +61,12 @@ in {
         API_PORT = toString cfg.port;
         TRANSCRIPTS_ROOT = cfg.dataDir;
         LANGS = "en,en-US,en-GB";
-        PYTHONPATH = scriptDir;
         COUCHDB_URL = "http://127.0.0.1:5984";
         COUCHDB_DATABASE = "sync_transcripts";
       };
 
       serviceConfig = {
-        ExecStart = "${pythonEnv}/bin/python ${apiScript}";
+        ExecStart = "${transcriptApiWrapper}";
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
         DynamicUser = false;
