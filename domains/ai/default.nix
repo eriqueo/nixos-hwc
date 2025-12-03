@@ -10,6 +10,7 @@ in
     ./open-webui/default.nix
     ./local-workflows/default.nix
     ./mcp/default.nix
+    ./cloud/default.nix
     # agent will be added later PR 5
   ];
 
