@@ -23,6 +23,11 @@
   networking.hostName = "hwc-server";
   networking.hostId = "8425e349";
 
+  # ZFS support for backup drives
+  boot.supportedFilesystems = [ "zfs" ];
+  boot.zfs.forceImportRoot = false;
+  boot.zfs.forceImportAll = false;
+
   # Charter v3 path configuration (matching production)
   hwc.paths = {
     hot = "/mnt/hot";      # SSD hot storage
