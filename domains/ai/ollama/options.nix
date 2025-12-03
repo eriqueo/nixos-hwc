@@ -35,5 +35,33 @@
         description = "Health check interval (systemd time format)";
       };
     };
+
+    modelValidation = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Validate models after pull by testing inference";
+      };
+
+      testPrompt = lib.mkOption {
+        type = lib.types.str;
+        default = "Hello";
+        description = "Test prompt to verify model loads correctly";
+      };
+    };
+
+    modelHealth = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable periodic model health checks";
+      };
+
+      schedule = lib.mkOption {
+        type = lib.types.str;
+        default = "03:00";
+        description = "Time to run model health checks (HH:MM format)";
+      };
+    };
   };
 }

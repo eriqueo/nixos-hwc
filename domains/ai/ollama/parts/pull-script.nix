@@ -26,6 +26,20 @@ pkgs.writeShellScript "ollama-pull-models" ''
       --data '{"name":"${model}","stream":false}' \
       http://127.0.0.1:${toString cfg.port}/api/pull || exit 1
     echo "Pulled: ${model}"
+
+    ${lib.optionalString cfg.modelValidation.enable ''
+      echo "Validating ${model}..."
+      RESPONSE=$(${pkgs.curl}/bin/curl -sS -X POST -H 'Content-Type: application/json' \
+        --data '{"model":"${model}","prompt":"${cfg.modelValidation.testPrompt}","stream":false}' \
+        http://127.0.0.1:${toString cfg.port}/api/generate 2>&1)
+
+      if echo "$RESPONSE" | ${pkgs.gnugrep}/bin/grep -q '"response"'; then
+        echo "✓ Validated: ${model} (inference successful)"
+      else
+        echo "✗ Validation failed for ${model}: $RESPONSE"
+        exit 1
+      fi
+    ''}
   '') cfg.models}
 
   touch "$mark"
