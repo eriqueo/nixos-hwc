@@ -207,7 +207,7 @@
     # Note: Load one at a time due to VRAM constraints (1.9GB + 2.3GB = 4.2GB)
     models = [
       "qwen2.5-coder:3b"              # 1.9GB - Best coding model that fits in 4GB VRAM
-      "phi3.5:3.8b"                   # 2.3GB - General purpose, excellent quality
+      "phi3:3.8b"                     # 2.3GB - General purpose, excellent quality
       "llama3.2:3b"                   # 2.0GB - Chat, summarization, journaling
     ];
   };
@@ -256,8 +256,8 @@
     enable = true;
     enableAuth = false;  # TEMPORARY: Disabled to bypass signup page rendering issue
     # All other settings use defaults:
-    # - port: 3000
-    # - defaultModel: "phi3.5:3.8b"
+    # - port: 3001
+    # - defaultModel: "phi3:3.8b"
     # - enableRAG: true
   };
 
