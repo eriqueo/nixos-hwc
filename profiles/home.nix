@@ -80,7 +80,9 @@
 
           # Proton Suite
           protonAuthenticator.enable = lib.mkDefault true; # 2FA authenticator
+          protonAuthenticator.autoStart = lib.mkDefault true; # Auto-start on login
           protonPass.enable = lib.mkDefault true;         # Password manager (optional)
+          protonPass.autoStart = lib.mkDefault true;      # Auto-start on login
 
           # Productivity & Office
           obsidian.enable = lib.mkDefault true;                   # Knowledge base

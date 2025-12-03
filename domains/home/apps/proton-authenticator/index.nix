@@ -2,10 +2,11 @@
 
 let
   cfg = config.hwc.home.apps.protonAuthenticator;
+  session = import ./parts/session.nix { inherit lib pkgs config; };
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
   imports = [ ./options.nix ];
 
@@ -13,9 +14,14 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      proton-authenticator
-    ];
+    # Packages that belong with the app
+    home.packages = (session.packages or []);
+
+    # Session variables
+    home.sessionVariables = (session.env or {});
+
+    # User services
+    systemd.user.services = (session.services or {});
   };
 
   #==========================================================================
