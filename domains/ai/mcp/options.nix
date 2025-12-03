@@ -60,6 +60,17 @@ in
         default = "/mcp";
         description = "URL path for MCP proxy endpoint";
       };
+
+      authType = mkOption {
+        type = types.enum [ "none" "basic" "apikey" ];
+        default = "none";
+        description = ''
+          Authentication type for MCP reverse proxy:
+          - none: No authentication (local network only)
+          - basic: HTTP Basic authentication
+          - apikey: API key in header (X-API-Key)
+        '';
+      };
     };
   };
 }

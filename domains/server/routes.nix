@@ -182,5 +182,11 @@
       port = 3443;  # Dedicated port for Open WebUI
       upstream = "http://127.0.0.1:3001";  # Changed from 3000 to avoid conflict with Grafana
     }
+
+    # MCP (Model Context Protocol) - AI filesystem access
+    # ENABLE WITH: hwc.ai.mcp.reverseProxy.enable = true;
+    # The route is automatically added when reverse proxy is enabled in AI domain
+    # Access at: https://<domain>/mcp
+    # Note: Route configuration is managed by domains/ai/mcp/default.nix
   ];
 }
