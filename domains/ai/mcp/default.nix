@@ -65,6 +65,10 @@ let
         NoNewPrivileges = true;
         PrivateTmp = true;
 
+        # Resource limits (MCP servers are lightweight)
+        MemoryMax = "512M";
+        CPUQuota = "50%";
+
         # Filesystem protection (relaxed for npx compatibility)
         # npx needs access to /bin/sh and other system binaries
         ProtectSystem = "true";  # Changed from "strict" to allow /bin, /sbin access
@@ -170,8 +174,16 @@ in
         PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
       };
 
-      # Path restrictions removed for now - npx needs broader filesystem access
-      # TODO: Tighten security once working
+      # Read-only paths for system dependencies (npx needs Nix store)
+      allowedPaths = [
+        "/nix/store"
+        "/run/current-system"
+      ];
+
+      # Write paths for allowed directories and NPM cache
+      writablePaths = cfg.filesystem.nixos.allowedDirs ++ [
+        "/home/${cfg.filesystem.nixos.user}/.npm"
+      ];
     });
 
     #--------------------------------------------------------------------------
@@ -201,39 +213,45 @@ in
         PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
       };
 
-      # Path restrictions removed for now - npx needs broader filesystem access
-      # TODO: Tighten security once working
+      # Read-only paths for system dependencies (npx needs Nix store)
+      allowedPaths = [
+        "/nix/store"
+        "/run/current-system"
+      ];
+
+      # Write paths for allowed directories and NPM cache
+      writablePaths = cfg.filesystem.nixos.allowedDirs ++ [
+        "/home/${cfg.filesystem.nixos.user}/.npm"
+      ];
 
       # Override network restrictions (proxy needs to listen on localhost)
       extraServiceConfig = {
-        # Remove PrivateNetwork restriction for proxy
+        # Network access required for HTTP server - security exception documented
+        # Proxy listens on 127.0.0.1 only (configured in options)
       };
     });
 
     #--------------------------------------------------------------------------
     # CADDY REVERSE PROXY ROUTE
-    # NOTE: Disabled for now due to option availability issues on laptops
-    # TODO: Re-enable when server-only modules are properly separated
-    # Servers should manually configure reverse proxy in machine config if needed
+    # Only configure route if reverse proxy is enabled AND on server machine
+    # (hwc.services.shared.routes only exists on server)
     #--------------------------------------------------------------------------
-    # (mkIf cfg.reverseProxy.enable {
-    #   # Register MCP route with Caddy
-    #   hwc.services.shared.routes = [{
-    #     name = "mcp-nixos";
-    #     mode = "subpath";
-    #     path = cfg.reverseProxy.path;
-    #     upstream = "${cfg.proxy.host}:${toString cfg.proxy.port}";
-    #     needsUrlBase = false;  # Strip /mcp-nixos prefix (mcp-proxy expects requests at /sse)
-    #     stripPrefix = true;     # Explicitly strip the prefix
-    #     ws = true;  # Enable WebSocket support for MCP
-    #     headers = {
-    #       # MCP-specific headers can be added here if needed
-    #     };
-    #   }];
-    #
-    #   # Ensure reverse proxy is enabled
-    #   hwc.services.reverseProxy.enable = true;
-    # })
+    hwc.services.shared.routes = mkIf (cfg.reverseProxy.enable && (config.hwc.services ? shared)) [{
+      name = "mcp";
+      mode = "subpath";
+      path = cfg.reverseProxy.path;
+      upstream = "http://${cfg.proxy.host}:${toString cfg.proxy.port}";
+      needsUrlBase = false;  # Strip prefix - mcp-proxy expects requests at root
+      ws = true;  # Enable WebSocket support for MCP SSE
+      headers = {
+        # Forward real IP for logging
+        "X-Real-IP" = "$remote_addr";
+        "X-Forwarded-For" = "$proxy_add_x_forwarded_for";
+      };
+    }];
+
+    # Ensure reverse proxy is enabled when MCP reverse proxy is requested
+    hwc.services.reverseProxy.enable = mkIf (cfg.reverseProxy.enable && (config.hwc.services ? shared)) true;
 
     #--------------------------------------------------------------------------
     # VALIDATION
