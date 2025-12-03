@@ -50,7 +50,13 @@ in {
             targets = [ "localhost:9100" ];
           }];
         }
-      ] ++ cfg.scrapeConfigs;
+      ] ++ lib.optional config.hwc.services.transcriptApi.enable {
+        job_name = "transcript-api";
+        static_configs = [{
+          targets = [ "localhost:${toString config.hwc.services.transcriptApi.port}" ];
+        }];
+        metrics_path = "/health";
+      } ++ cfg.scrapeConfigs;
     };
     
     services.prometheus.exporters.node = {

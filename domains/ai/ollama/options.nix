@@ -21,5 +21,19 @@
       default = "/var/lib/ollama";
       description = "Directory for storing Ollama models";
     };
+
+    healthCheck = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable health check for Ollama service";
+      };
+
+      interval = lib.mkOption {
+        type = lib.types.str;
+        default = "5min";
+        description = "Health check interval (systemd time format)";
+      };
+    };
   };
 }

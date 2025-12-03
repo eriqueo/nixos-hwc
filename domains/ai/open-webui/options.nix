@@ -74,5 +74,31 @@ in
         WEBUI_NAME = "HWC AI Assistant";
       };
     };
+
+    healthCheck = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Enable health check for Open WebUI container";
+      };
+
+      interval = mkOption {
+        type = types.str;
+        default = "30s";
+        description = "Health check interval";
+      };
+
+      timeout = mkOption {
+        type = types.str;
+        default = "10s";
+        description = "Health check timeout";
+      };
+
+      retries = mkOption {
+        type = types.int;
+        default = 3;
+        description = "Health check retries before marking unhealthy";
+      };
+    };
   };
 }

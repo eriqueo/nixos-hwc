@@ -1,7 +1,7 @@
 { lib, pkgs, config }:
 
 let
-  cfg = config.hwc.server.ai.ollama;
+  cfg = config.hwc.ai.ollama;
 in
 pkgs.writeShellScript "ollama-pull-models" ''
   set -euo pipefail
