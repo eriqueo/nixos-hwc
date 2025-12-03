@@ -119,7 +119,9 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = mkIf cfg.enable {
+  config = mkMerge [
+    # Main MCP configuration
+    (mkIf cfg.enable {
 
     #--------------------------------------------------------------------------
     # PACKAGES
@@ -231,40 +233,25 @@ in
       };
     });
 
-    #--------------------------------------------------------------------------
-    # CADDY REVERSE PROXY ROUTE
-    # Only configure route if reverse proxy is enabled AND on server machine
-    # (hwc.services.shared.routes only exists on server)
-    #--------------------------------------------------------------------------
-    hwc.services.shared.routes = mkIf (cfg.reverseProxy.enable && (config.hwc.services ? shared)) [{
-      name = "mcp";
-      mode = "subpath";
-      path = cfg.reverseProxy.path;
-      upstream = "http://${cfg.proxy.host}:${toString cfg.proxy.port}";
-      needsUrlBase = false;  # Strip prefix - mcp-proxy expects requests at root
-      ws = true;  # Enable WebSocket support for MCP SSE
-      headers = {
-        # Forward real IP for logging
-        "X-Real-IP" = "$remote_addr";
-        "X-Forwarded-For" = "$proxy_add_x_forwarded_for";
-      };
-    }];
+      #--------------------------------------------------------------------------
+      # VALIDATION
+      #--------------------------------------------------------------------------
+      assertions = [
+        {
+          assertion = cfg.filesystem.nixos.enable || cfg.proxy.enable;
+          message = "MCP module enabled but no services configured. Enable at least one MCP server.";
+        }
+        {
+          assertion = !cfg.reverseProxy.enable || cfg.proxy.enable;
+          message = "MCP reverse proxy requires mcp-proxy to be enabled.";
+        }
+      ];
+    })
 
-    # Ensure reverse proxy is enabled when MCP reverse proxy is requested
-    hwc.services.reverseProxy.enable = mkIf (cfg.reverseProxy.enable && (config.hwc.services ? shared)) true;
-
-    #--------------------------------------------------------------------------
-    # VALIDATION
-    #--------------------------------------------------------------------------
-    assertions = [
-      {
-        assertion = cfg.filesystem.nixos.enable || cfg.proxy.enable;
-        message = "MCP module enabled but no services configured. Enable at least one MCP server.";
-      }
-      {
-        assertion = !cfg.reverseProxy.enable || cfg.proxy.enable;
-        message = "MCP reverse proxy requires mcp-proxy to be enabled.";
-      }
-    ];
-  };
+    # TODO: Re-enable reverse proxy route configuration with proper machine detection
+    # The reverse proxy route should only be configured on server machines.
+    # Current implementation causes circular dependency issues.
+    # Consider using networking.hostName or a machine-specific flag instead of
+    # attempting to detect hwc.services.shared existence within config evaluation.
+  ];
 }

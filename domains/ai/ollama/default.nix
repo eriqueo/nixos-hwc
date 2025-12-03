@@ -93,6 +93,58 @@ in
       };
     };
 
+    # Model health check service
+    systemd.services.ollama-model-health = lib.mkIf cfg.modelHealth.enable {
+      description = "Ollama model health check - validates all models";
+      after = [ "podman-ollama.service" ];
+      wants = [ "podman-ollama.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "ollama-model-health" ''
+          set -euo pipefail
+
+          echo "Starting model health checks..."
+          FAILED=0
+
+          ${lib.concatMapStringsSep "\n" (model: ''
+            echo "Testing model: ${model}"
+            RESPONSE=$(${pkgs.curl}/bin/curl -sS -X POST -H 'Content-Type: application/json' \
+              --data '{"model":"${model}","prompt":"${cfg.modelValidation.testPrompt}","stream":false}' \
+              http://127.0.0.1:${toString cfg.port}/api/generate 2>&1 || echo "CURL_FAILED")
+
+            if echo "$RESPONSE" | ${pkgs.gnugrep}/bin/grep -q '"response"'; then
+              echo "✓ ${model} - healthy"
+            else
+              echo "✗ ${model} - unhealthy: $RESPONSE"
+              FAILED=$((FAILED + 1))
+            fi
+          '') cfg.models}
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "Model health check failed: $FAILED/${toString (builtins.length cfg.models)} models unhealthy"
+            exit 1
+          else
+            echo "All models healthy (${toString (builtins.length cfg.models)}/${toString (builtins.length cfg.models)})"
+          fi
+        '';
+        StandardOutput = "journal";
+        StandardError = "journal";
+      };
+    };
+
+    # Model health check timer
+    systemd.timers.ollama-model-health = lib.mkIf cfg.modelHealth.enable {
+      description = "Ollama model health check timer";
+      wantedBy = [ "timers.target" ];
+
+      timerConfig = {
+        OnCalendar = cfg.modelHealth.schedule;
+        Persistent = true;
+        Unit = "ollama-model-health.service";
+      };
+    };
+
     #==========================================================================
     # VALIDATION
     #==========================================================================
