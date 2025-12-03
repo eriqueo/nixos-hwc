@@ -180,7 +180,7 @@
       name = "openwebui";
       mode = "port";
       port = 3443;  # Dedicated port for Open WebUI
-      upstream = "http://127.0.0.1:3000";
+      upstream = "http://127.0.0.1:3001";  # Changed from 3000 to avoid conflict with Grafana
     }
   ];
 }
