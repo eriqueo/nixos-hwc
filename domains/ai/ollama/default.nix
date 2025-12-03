@@ -50,9 +50,8 @@ in
       extraOptions = gpuExtraOptions;
     };
 
-    systemd.tmpfiles.rules = [
-      "d ${cfg.dataDir} 0755 root root -"
-    ];
+    # Note: No tmpfiles rule needed - OCI containers backend automatically creates
+    # ${cfg.dataDir} as a symlink to /var/lib/private/ollama for isolation
 
     networking.firewall.allowedTCPPorts = [ cfg.port ];
 
