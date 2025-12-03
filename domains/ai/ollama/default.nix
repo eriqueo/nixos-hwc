@@ -15,7 +15,17 @@ let
 
   gpuEnv = config.hwc.infrastructure.hardware.gpu.containerEnvironment or {};
 
+  # Normalize model configuration for health checks
+  normalizeModel = model:
+    if lib.isString model then
+      { name = model; autoUpdate = true; priority = 50; }
+    else
+      model // { autoUpdate = model.autoUpdate or true; priority = model.priority or 50; };
+
+  modelNames = map (m: (normalizeModel m).name) cfg.models;
+
   pullScript = import ./parts/pull-script.nix { inherit lib pkgs config; };
+  diskMonitor = import ./parts/disk-monitor.nix { inherit pkgs config; };
 in
 {
   #==========================================================================
@@ -107,25 +117,25 @@ in
           echo "Starting model health checks..."
           FAILED=0
 
-          ${lib.concatMapStringsSep "\n" (model: ''
-            echo "Testing model: ${model}"
+          ${lib.concatMapStringsSep "\n" (modelName: ''
+            echo "Testing model: ${modelName}"
             RESPONSE=$(${pkgs.curl}/bin/curl -sS -X POST -H 'Content-Type: application/json' \
-              --data '{"model":"${model}","prompt":"${cfg.modelValidation.testPrompt}","stream":false}' \
+              --data '{"model":"${modelName}","prompt":"${cfg.modelValidation.testPrompt}","stream":false}' \
               http://127.0.0.1:${toString cfg.port}/api/generate 2>&1 || echo "CURL_FAILED")
 
             if echo "$RESPONSE" | ${pkgs.gnugrep}/bin/grep -q '"response"'; then
-              echo "✓ ${model} - healthy"
+              echo "✓ ${modelName} - healthy"
             else
-              echo "✗ ${model} - unhealthy: $RESPONSE"
+              echo "✗ ${modelName} - unhealthy: $RESPONSE"
               FAILED=$((FAILED + 1))
             fi
-          '') cfg.models}
+          '') modelNames}
 
           if [ "$FAILED" -gt 0 ]; then
-            echo "Model health check failed: $FAILED/${toString (builtins.length cfg.models)} models unhealthy"
+            echo "Model health check failed: $FAILED/${toString (builtins.length modelNames)} models unhealthy"
             exit 1
           else
-            echo "All models healthy (${toString (builtins.length cfg.models)}/${toString (builtins.length cfg.models)})"
+            echo "All models healthy (${toString (builtins.length modelNames)}/${toString (builtins.length modelNames)})"
           fi
         '';
         StandardOutput = "journal";
@@ -142,6 +152,31 @@ in
         OnCalendar = cfg.modelHealth.schedule;
         Persistent = true;
         Unit = "ollama-model-health.service";
+      };
+    };
+
+    # Disk space monitoring service
+    systemd.services.ollama-disk-monitor = lib.mkIf cfg.diskMonitoring.enable {
+      description = "Ollama disk space monitoring";
+      after = [ "podman-ollama.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = diskMonitor;
+        StandardOutput = "journal";
+        StandardError = "journal";
+      };
+    };
+
+    # Disk space monitoring timer
+    systemd.timers.ollama-disk-monitor = lib.mkIf cfg.diskMonitoring.enable {
+      description = "Ollama disk space monitoring timer";
+      wantedBy = [ "timers.target" ];
+
+      timerConfig = {
+        OnBootSec = "5min";
+        OnUnitActiveSec = cfg.diskMonitoring.checkInterval;
+        Unit = "ollama-disk-monitor.service";
       };
     };
 
