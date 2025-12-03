@@ -37,17 +37,16 @@ let
   # Build Python path with transitive dependencies (handles typer/typer-slim collision)
   pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
+  # Source directory for transcript scripts
+  scriptDir = "${paths.nixos}/workspace/productivity/transcript-formatter";
+  apiScript = "${scriptDir}/yt-transcript-api.py";
+
   # Wrapper script to run the API with correct PYTHONPATH
   transcriptApiWrapper = pkgs.writeShellScript "transcript-api-wrapper" ''
     export PYTHONPATH="${pythonPath}:${scriptDir}"
     exec ${pkgs.python3}/bin/python3 ${apiScript}
   '';
-
-  # Source directory for transcript scripts
-  scriptDir = "${paths.nixos}/workspace/productivity/transcript-formatter";
-  apiScript = "${scriptDir}/yt-transcript-api.py";
-in
-{
+in {
   #============================================================================
   # IMPLEMENTATION - What actually gets configured
   #============================================================================
