@@ -11,6 +11,7 @@ in
     ./local-workflows/default.nix
     ./mcp/default.nix
     ./cloud/default.nix
+    ./router/default.nix
     # agent will be added later PR 5
   ];
 
