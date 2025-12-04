@@ -48,7 +48,7 @@
       type = lib.types.attrsOf lib.types.str;
       default = {
         "ll" = "eza -l";
-        "la" = "eza -la";
+        "la" = "eza -lh";
         "lt" = "eza --tree --level=2";
         "cd" = "z";
         "cdi" = "zi";
@@ -68,11 +68,6 @@
         "gc" = "git commit -m";
         "gp" = "git push";
         "gpl" = "git pull";
-        "gl" = "git log --oneline --graph --decorate --all";
-        "gll" = "git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
-        "gresync" = "cd \"$HWC_NIXOS_DIR\" && git fetch origin && git pull origin main && echo '✅ Git sync complete!'";
-        "gstatus" = "cd \"$HWC_NIXOS_DIR\" && git status";
-        "glog" = "cd \"$HWC_NIXOS_DIR\" && git log --oneline -10";
         "nixflake" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/flake.nix\"";
         "nixlaphome" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/machines/laptop/home.nix\"";
         "nixlapcon" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/machines/laptop/config.nix\"";
@@ -92,33 +87,18 @@
         "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
         "cdn" = "cd ~/.nixos";
         # Directory shortcuts
-        "active-personal" = "cd ~/02-personal/01-active";
-        "active-tech" = "cd ~/03-tech/01-active";
-        "active-work" = "cd ~/01-hwc/01-active";
-        "camera" = "cd ~/05-media/pictures/camera";
-        "clients" = "cd ~/01-hwc/01-active/clients";
-        "desktop" = "cd ~/00-inbox/general";
-        "dev" = "cd ~/03-tech/01-active/development";
-        "documents" = "cd ~/04-ref";
         "downloads" = "cd ~/00-inbox/downloads";
-        "drives" = "cd ~/99-vaults/drives";
-        "finance" = "cd ~/02-personal/01-active/finance";
         "hwc" = "cd ~/01-hwc";
         "inbox" = "cd ~/00-inbox";
         "media" = "cd /mnt/media";
         "movies" = "cd /mnt/media/movies";
-        "music" = "cd ~/05-media/music";
+        "music" = "cd /mnt/media/music";
         "nixos" = "cd ~/03-tech/01-active/nixos";
-        "personal" = "cd ~/02-personal";
-        "pictures" = "cd ~/05-media/pictures";
-        "ref" = "cd ~/04-ref";
         "screenshots" = "cd ~/05-media/pictures/screenshots";
         "tech" = "cd ~/03-tech";
-        "templates" = "cd ~/04-ref/templates";
         "tv" = "cd /mnt/media/tv";
         "vaults" = "cd ~/99-vaults";
-        "videos" = "cd ~/05-media/videos";
-        "work" = "cd ~/01-hwc";
+        
         # Application shortcuts
         # ai-chat is now a proper script at /run/current-system/sw/bin/ai-chat
         "business-db" = "psql postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business";
@@ -138,10 +118,8 @@
         # Tool aliases
         "eza" = "eza --icons auto --git --group-directories-first";
         "ls" = "eza";
-        "lla" = "eza -la";
         "git" = "sudo git";
         "vpn" = "vpnstatus";
-        "vpncheck" = "vpnstatus";
         "which-command" = "whence";
         "run-help" = "man";
         # Journal/log analysis aliases
