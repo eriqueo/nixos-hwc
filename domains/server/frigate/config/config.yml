@@ -48,6 +48,17 @@ ffmpeg: &ffmpeg_defaults
     - -fflags
     - +genpts+discardcorrupt
 
+# Global record retention (applies to all cameras unless overridden)
+record:
+  enabled: true
+  retain:
+    days: 7  # Keep recordings for 7 days
+    mode: all
+  events:
+    retain:
+      default: 10  # Keep event clips for 10 days
+      mode: active_objects
+
 cameras:
   cobra_cam_1:
     enabled: true
@@ -60,11 +71,7 @@ cameras:
       width: 1280
       height: 720
       fps: 1
-    record:
-      enabled: true
-      retain:
-        days: 7
-        mode: active_objects
+    # record settings inherited from global
 
   cobra_cam_2:
     enabled: true
@@ -77,10 +84,7 @@ cameras:
       width: 640
       height: 360
       fps: 1
-    record:
-      enabled: true
-      retain:
-        days: 7
+    # record settings inherited from global
 
   cobra_cam_3:
     enabled: true
@@ -93,6 +97,7 @@ cameras:
       width: 320
       height: 240
       fps: 1
+    # record settings inherited from global
     zones:
       sidewalk:
         coordinates: 0.132,0.468,0.996,0.7,0.993,0.998,0.003,0.996,0.007,0.5

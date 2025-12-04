@@ -113,7 +113,13 @@
       "Bash(sudo fdisk:*)",
       "Bash(nix-shell:*)",
       "WebFetch(domain:docs.openwebui.com)",
-      "Bash(podman logs:*)"
+      "Bash(podman logs:*)",
+      "Bash(sudo journalctl:*)",
+      "Bash(sudo dmesg:*)",
+      "Bash(sudo zpool status:*)",
+      "Bash(sudo zpool set:*)",
+      "Bash(sudo zpool list:*)",
+      "Bash(sudo zpool get:*)"
     ],
     "deny": [],
     "ask": [],
