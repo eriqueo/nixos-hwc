@@ -28,6 +28,18 @@
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
 
+  # ZFS configuration
+  services.zfs = {
+    autoScrub = {
+      enable = true;
+      interval = "monthly";  # Monthly scrub for data integrity
+    };
+    trim = {
+      enable = true;
+      interval = "weekly";  # Weekly TRIM for performance
+    };
+  };
+
   # Charter v3 path configuration (matching production)
   hwc.paths = {
     hot = "/mnt/hot";      # SSD hot storage
