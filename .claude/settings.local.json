@@ -111,7 +111,9 @@
       "Bash(git -C /home/eric/.nixos commit -m \"$(cat <<''EOF''\nrefactor(ai): consolidate to hwc.ai.* namespace (Sprint 1)\n\nSprint 1 of AI Domain Improvement Plan - Architecture & Namespace Cleanup\n\nChanges:\n- Removed hwc.server.ai.ollama.* options from domains/ai/options.nix\n- Consolidated to single hwc.ai.* namespace following Charter v7.0\n- Fixed ollama/default.nix: added proper VALIDATION section with assertions\n- Fixed mcp/default.nix: restructured to single config block (not mkMerge of configs)\n- Both modules now follow Frigate pattern: OPTIONS/IMPLEMENTATION/VALIDATION\n\nAll modules verified:\n- hwc.ai.ollama: proper structure with validations\n- hwc.ai.open-webui: already compliant\n- hwc.ai.local-workflows: already compliant  \n- hwc.ai.mcp: fixed structure\n\nValidation: nix flake check passes\n\nGenerated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git -C /home/eric/.nixos log --oneline -3)",
       "Bash(sudo fdisk:*)",
-      "Bash(nix-shell:*)"
+      "Bash(nix-shell:*)",
+      "WebFetch(domain:docs.openwebui.com)",
+      "Bash(podman logs:*)"
     ],
     "deny": [],
     "ask": [],
