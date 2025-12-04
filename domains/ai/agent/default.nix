@@ -33,29 +33,31 @@ in
       description = "HWC AI Agent - limited tool API";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
-      
+
+      # Environment for system command access
+      path = with pkgs; [ podman systemd ];
+
       serviceConfig = {
         ExecStart = "${agentScript}/bin/hwc-ai-agent --host 127.0.0.1 --port ${toString cfg.port}";
         Restart = "on-failure";
         RestartSec = "5s";
         User = "root";
-        
-        # Security hardening
-        NoNewPrivileges = true;
+
+        # Security hardening (relaxed for podman access)
+        # Note: Podman requires namespace and storage access
+        NoNewPrivileges = false;  # Podman needs privilege escalation
         PrivateTmp = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-        ReadWritePaths = [ "/var/log/hwc-ai" ];
-        
-        # Restrict capabilities
-        CapabilityBoundingSet = "";
-        AmbientCapabilities = "";
-        
+        ProtectSystem = "full";
+        ProtectHome = "read-only";  # Allow read access to root's podman config
+        ReadWritePaths = [
+          "/var/log/hwc-ai"
+          "/run/containers"
+          "/var/lib/containers/storage"
+        ];
+
         # System call filtering
         SystemCallArchitectures = "native";
-        RestrictNamespaces = true;
         RestrictRealtime = true;
-        RestrictSUIDSGID = true;
         LockPersonality = true;
         
         # Kernel restrictions

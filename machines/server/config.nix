@@ -262,25 +262,24 @@
   };
 
   # MCP (Model Context Protocol) server for LLM access
-  # TEMPORARILY DISABLED - infinite recursion in userName evaluation
-  hwc.ai.mcp.enable = false;
-  # hwc.ai.mcp = {
-  #   enable = true;
-  #
-  #   # Filesystem MCP for ~/.nixos directory
-  #   filesystem.nixos = {
-  #     enable = true;
-  #     # Defaults:
-  #     # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
-  #     # - user: "eric"
-  #   };
-  #
-  #   # HTTP proxy for remote access
-  #   proxy.enable = true;  # Listen on localhost:6001
-  #
-  #   # Expose via Caddy at /mcp-nixos
-  #   reverseProxy.enable = true;
-  # };
+  # Provides filesystem access to ~/.nixos for AI assistants
+  hwc.ai.mcp = {
+    enable = true;
+
+    # Filesystem MCP for ~/.nixos directory
+    filesystem.nixos = {
+      enable = true;
+      # Defaults:
+      # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
+      # - user: "eric"
+    };
+
+    # HTTP proxy for remote access
+    proxy.enable = true;  # Listen on localhost:6001
+
+    # Expose via Caddy at /mcp
+    reverseProxy.enable = true;
+  };
 
   # Automated server backups (containers, databases, system)
   # Backups saved to /mnt/hot/backups with daily schedule
