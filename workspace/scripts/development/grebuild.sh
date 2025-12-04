@@ -406,7 +406,7 @@ test_configuration() {
 
     log_step "🧪 Testing NixOS configuration..."
 
-    if ! execute nixos-rebuild test --flake ".#${FLAKE_TARGET}"; then
+    if ! execute sudo nixos-rebuild test --flake ".#${FLAKE_TARGET}"; then
         log_error "Configuration test failed"
 
         send_notification \
@@ -424,7 +424,7 @@ test_configuration() {
 apply_rebuild() {
     log_step "🔄 Applying NixOS rebuild..."
 
-    if ! execute nixos-rebuild switch --flake ".#${FLAKE_TARGET}"; then
+    if ! execute sudo nixos-rebuild switch --flake ".#${FLAKE_TARGET}"; then
         log_error "Rebuild failed"
 
         send_notification \
