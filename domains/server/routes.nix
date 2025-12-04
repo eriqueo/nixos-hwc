@@ -185,6 +185,17 @@ in
       port = 3443;  # Dedicated port for Open WebUI
       upstream = "http://127.0.0.1:3001";  # Changed from 3000 to avoid conflict with Grafana
     }
+
+    # Local Workflows API - HTTP API for AI workflows (Sprint 5.4)
+    # Provides chat, cleanup, journal, autodoc endpoints
+    {
+      name = "workflows-api";
+      mode = "subpath";
+      path = "/workflows";
+      upstream = "http://127.0.0.1:6021";
+      needsUrlBase = false;  # API handles requests at root
+      headers = { "X-Forwarded-Prefix" = "/workflows"; };
+    }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy
     # Enabled when hwc.ai.mcp.reverseProxy.enable = true

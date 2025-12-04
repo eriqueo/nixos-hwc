@@ -68,6 +68,87 @@ in
     }))
 
     #--------------------------------------------------------------------------
+    # WORKFLOWS HTTP API (Sprint 5.4)
+    #--------------------------------------------------------------------------
+    (mkIf cfg.api.enable (let
+      # Package the API files
+      apiPackage = pkgs.stdenv.mkDerivation {
+        name = "hwc-workflows-api";
+        src = ./api;
+        installPhase = ''
+          mkdir -p $out
+          cp -r * $out/
+        '';
+      };
+
+      # Python environment with dependencies
+      pythonEnv = pkgs.python3.withPackages (ps: with ps; [
+        fastapi
+        uvicorn
+        httpx
+        pydantic
+      ]);
+
+      # Server startup script
+      apiServer = pkgs.writeScriptBin "hwc-workflows-api" ''
+        #!${pythonEnv}/bin/python3
+        import sys
+        sys.path.insert(0, "${apiPackage}")
+        from server import app
+        import uvicorn
+        uvicorn.run(app, host="${cfg.api.host}", port=${toString cfg.api.port})
+      '';
+    in {
+      # Make Python environment available
+      environment.systemPackages = [ pythonEnv apiServer ];
+
+      # API server as a systemd service
+      systemd.services.hwc-ai-workflows-api = {
+        description = "HWC Local Workflows API - HTTP API for AI workflows";
+        after = [ "network.target" "ollama.service" ];
+        wants = [ "ollama.service" ];
+        wantedBy = [ "multi-user.target" ];
+
+        serviceConfig = {
+          Type = "simple";
+          User = "eric";  # Run as user to access home directories
+          WorkingDirectory = "/home/eric";
+          ExecStart = "${apiServer}/bin/hwc-workflows-api";
+
+          Restart = "on-failure";
+          RestartSec = "5s";
+
+          # Security hardening
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectSystem = "strict";
+          ProtectHome = "read-only";
+          ReadWritePaths = [
+            cfg.logDir
+            cfg.api.journal.outputDir
+          ];
+
+          # Resource limits
+          MemoryMax = "2G";  # Workflows can be memory-intensive
+          CPUQuota = "200%";  # Allow burst for processing
+
+          # Kernel restrictions
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectControlGroups = true;
+          SystemCallArchitectures = "native";
+          RestrictRealtime = true;
+          LockPersonality = true;
+        };
+      };
+
+      # Create journal output directory
+      systemd.tmpfiles.rules = [
+        "d ${cfg.api.journal.outputDir} 0755 eric users -"
+      ];
+    }))
+
+    #--------------------------------------------------------------------------
     # VALIDATION
     #--------------------------------------------------------------------------
     {

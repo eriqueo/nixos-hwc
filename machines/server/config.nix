@@ -248,6 +248,13 @@
       model = "llama3:8b";  # Better instruction following than qwen2.5-coder
       # systemPrompt inherited from domain default
     };
+
+    # Workflows HTTP API (Sprint 5.4)
+    api = {
+      enable = true;
+      port = 6021;
+      # All other settings use defaults from domain options
+    };
   };
 
   # Open WebUI - Modern web interface for Ollama
