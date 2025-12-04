@@ -7,7 +7,17 @@
 
 let
   cfg = config.hwc.ai.open-webui;
-  
+
+  # Package custom tools
+  customTools = pkgs.stdenv.mkDerivation {
+    name = "open-webui-custom-tools";
+    src = ./tools;
+    installPhase = ''
+      mkdir -p $out
+      cp -r * $out/
+    '';
+  };
+
   # Build environment variables
   baseEnv = {
     # Access Ollama via host gateway (container uses bridge networking, not host mode)
@@ -58,6 +68,7 @@ in
 
       volumes = [
         "${cfg.dataDir}:/app/backend/data"
+        "${customTools}:/app/backend/data/functions:ro"  # Mount tools as read-only
       ];
 
       environment = containerEnv;
@@ -90,10 +101,19 @@ in
       };
     };
 
-    # Create data directory
+    # Create data directory and tools directory
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0750 root root -"
+      "d ${cfg.dataDir}/functions 0750 root root -"
     ];
+
+    # Copy custom tools to data directory for Open WebUI to discover
+    system.activationScripts.openwebuiTools = lib.mkIf cfg.enable ''
+      mkdir -p ${cfg.dataDir}/functions
+      ${pkgs.rsync}/bin/rsync -av --delete ${customTools}/ ${cfg.dataDir}/functions/
+      chown -R root:root ${cfg.dataDir}/functions
+      chmod -R 0750 ${cfg.dataDir}/functions
+    '';
 
     #========================================================================
     # VALIDATION
