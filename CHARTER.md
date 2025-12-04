@@ -506,7 +506,138 @@ When migrating from Nix-generated to config-first:
 
 ---
 
-## 20) Related Documentation
+## 20) Data Retention & Lifecycle Management
+
+**Rule**: All data retention policies MUST be declared in NixOS configuration with automated enforcement.
+
+### Core Principles
+
+1. **Declarative-First**: Retention policies defined in configuration, never ad-hoc
+2. **Fail-Safe**: Automated enforcement even if primary application fails
+3. **Predictable**: Time-based and size-based limits clearly documented
+4. **Observable**: All cleanup operations logged to systemd journal
+5. **Reproducible**: Version-controlled policies deployable to any machine
+
+### Retention Policy Structure
+
+Every data store with retention requirements MUST define:
+
+```nix
+{
+  # Primary enforcement (application-level)
+  retention = {
+    days = 7;        # or weeks/months
+    mode = "time";   # or "size" or "count"
+  };
+
+  # Fail-safe enforcement (systemd timer)
+  systemd.timers.<service>-cleanup = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
+    };
+  };
+}
+```
+
+### Data Classification System
+
+| Category | Retention | Backup | Examples |
+|----------|-----------|--------|----------|
+| **CRITICAL** | Indefinite | ✅ Weekly | Photos, configs, business data |
+| **REPLACEABLE** | Indefinite | ❌ No | Movies, TV shows, music |
+| **AUTO-MANAGED** | 7-30 days | ❌ No | Surveillance, logs |
+| **EPHEMERAL** | <7 days | ❌ No | Cache, temp files |
+
+### Example: Surveillance Retention
+
+**Pattern**: Application config + systemd timer fail-safe
+
+```nix
+# Primary: Frigate built-in retention
+domains/server/frigate/config/config.yml:
+  record:
+    retain:
+      days: 7  # Keep recordings for 7 days
+
+# Fail-safe: systemd enforcement
+machines/server/config.nix:
+  systemd.timers.frigate-cleanup = {
+    wantedBy = [ "timers.target" ];
+    timerConfig.OnCalendar = "daily";
+  };
+  systemd.services.frigate-cleanup.script = ''
+    find /mnt/media/surveillance -type f -mtime +7 -delete
+  '';
+```
+
+### Backup Source Selection
+
+**Rule**: Only back up CRITICAL and irreplaceable data. Exclude REPLACEABLE and AUTO-MANAGED data.
+
+```nix
+hwc.system.services.backup.local = {
+  sources = [
+    "/home"                  # User data, configs
+    "/mnt/media/pictures"    # IRREPLACEABLE photos
+    "/mnt/media/databases"   # Database backups
+  ];
+
+  excludePatterns = [
+    "*/movies/*"             # Can re-download
+    "*/tv/*"                 # Can re-download
+    "*/surveillance/*"       # Auto-rotates
+  ];
+};
+```
+
+### Anti-Patterns
+
+❌ **Manual cleanup scripts outside NixOS config**
+```bash
+# BAD: Ad-hoc cron job
+crontab -e
+0 0 * * * find /data -mtime +30 -delete
+```
+
+✅ **Declarative systemd timer**
+```nix
+# GOOD: In machines/server/config.nix
+systemd.timers.data-cleanup = { ... };
+```
+
+❌ **Backing up replaceable media**
+```nix
+# BAD: Wasting 3TB on replaceable movies
+sources = [ "/mnt/media/movies" ];
+```
+
+✅ **Backing up only critical data**
+```nix
+# GOOD: Only irreplaceable photos
+sources = [ "/mnt/media/pictures" ];
+```
+
+### Monitoring & Verification
+
+All retention policies MUST have verification commands documented:
+
+```bash
+# Check oldest files (should match retention period)
+find /data -type f | head -1 | xargs stat -c "%y %n"
+
+# Verify timer status
+systemctl status cleanup.timer
+journalctl -u cleanup.service -n 20
+```
+
+**Reference**: See `/docs/infrastructure/retention-and-cleanup.md` for complete policies
+
+---
+
+## 21) Related Documentation
 
 * **Filesystem Charter** (`FILESYSTEM-CHARTER.md`): Home directory organization (`~/`) with domain-based structure
   - 3-digit prefix system (100_hwc, 200_personal, 300_tech, etc.)
@@ -517,9 +648,10 @@ When migrating from Nix-generated to config-first:
 
 ---
 
-**Charter Version**: v7.0 - Complex Service Configuration Pattern (Config-First, Nix-Second)
+**Charter Version**: v8.0 - Data Retention & Lifecycle Management
 
 **Version History**:
+- v8.0 (2025-12-04): Added section 20 "Data Retention & Lifecycle Management" establishing declarative retention policies with fail-safe enforcement
 - v7.0 (2025-11-23): Added section 19 "Complex Service Configuration Pattern" establishing config-first rule for services like Frigate
 - v6.0: Configuration Validity & Dependency Assertions
 
