@@ -57,6 +57,75 @@ async def root():
     """Health check endpoint"""
     return {"status": "ok", "service": "hwc-ai-agent"}
 
+@app.get("/discovery")
+async def discovery():
+    """MCP and AI services discovery endpoint"""
+    return {
+        "version": "1.0",
+        "mcp_servers": [
+            {
+                "name": "nixos-filesystem",
+                "description": "Filesystem access to ~/.nixos and MCP drafts",
+                "type": "filesystem",
+                "stdio_service": "mcp-filesystem-nixos.service",
+                "http_proxy": {
+                    "enabled": True,
+                    "url": "http://127.0.0.1:6001/sse",
+                    "public_url": "https://hwc.ocelot-wahoo.ts.net/mcp",
+                    "protocol": "SSE"
+                },
+                "allowed_directories": [
+                    "/home/eric/.nixos",
+                    "/home/eric/.nixos-mcp-drafts"
+                ],
+                "capabilities": ["read_file", "write_file", "list_directory", "create_directory"]
+            }
+        ],
+        "ai_services": {
+            "ollama": {
+                "enabled": True,
+                "url": "http://127.0.0.1:11434",
+                "models": ["qwen2.5-coder:3b", "phi3:3.8b", "llama3.2:3b"]
+            },
+            "router": {
+                "enabled": True,
+                "url": "http://127.0.0.1:11435",
+                "strategy": "local-first",
+                "description": "Intelligent routing between local Ollama and cloud APIs"
+            },
+            "open_webui": {
+                "enabled": True,
+                "url": "http://127.0.0.1:3001",
+                "public_url": "https://hwc.ocelot-wahoo.ts.net:3443"
+            },
+            "local_workflows": {
+                "file_cleanup": {
+                    "enabled": True,
+                    "schedule": "every 30 minutes",
+                    "model": "qwen2.5-coder:3b"
+                },
+                "journaling": {
+                    "enabled": True,
+                    "schedule": "daily at 02:00",
+                    "model": "llama3.2:3b"
+                },
+                "auto_doc": {
+                    "enabled": True,
+                    "model": "qwen2.5-coder:3b"
+                },
+                "chat_cli": {
+                    "enabled": True,
+                    "model": "llama3:8b"
+                }
+            }
+        },
+        "agent": {
+            "url": "http://127.0.0.1:6020",
+            "capabilities": ["execute_commands", "mcp_discovery"],
+            "allowed_commands": ALLOWED
+        }
+    }
+
 @app.post("/run")
 async def run_command(c: Cmd, req: Request):
     """Execute a whitelisted command and return output"""
