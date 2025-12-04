@@ -59,7 +59,9 @@ readonly DEFAULT_AI_DOCS_SERVICE="post-rebuild-ai-docs"
 DRY_RUN=false
 SKIP_TEST=false
 SKIP_PUSH=false
+SKIP_COMMIT=false
 USE_SUDO=false
+AUTO_YES=false
 
 # Colors for output
 readonly RED='\033[0;31m'
@@ -75,6 +77,39 @@ log_info() { echo -e "${GREEN}✅${NC} $*"; }
 log_warn() { echo -e "${YELLOW}⚠️${NC} $*"; }
 log_error() { echo -e "${RED}❌${NC} $*" >&2; }
 log_step() { echo -e "\n${BOLD}$*${NC}"; }
+
+# Prompt user for yes/no (returns 0 for yes, 1 for no)
+prompt_user() {
+    local prompt="$1"
+
+    # Auto-yes mode
+    if [[ "$AUTO_YES" == true ]]; then
+        echo -e "${prompt} ${GREEN}[auto-yes]${NC}"
+        return 0
+    fi
+
+    # Dry-run mode
+    if [[ "$DRY_RUN" == true ]]; then
+        echo -e "${prompt} ${YELLOW}[dry-run: would prompt]${NC}"
+        return 0
+    fi
+
+    # Interactive prompt
+    while true; do
+        read -rp "$(echo -e "${prompt} ${BOLD}[y/n]${NC} ")" response
+        case "$response" in
+            [Yy]|[Yy][Ee][Ss])
+                return 0
+                ;;
+            [Nn]|[Nn][Oo])
+                return 1
+                ;;
+            *)
+                echo "Please answer yes or no."
+                ;;
+        esac
+    done
+}
 
 # Usage information
 show_usage() {
@@ -92,6 +127,7 @@ ${BOLD}OPTIONS:${NC}
     -n, --dry-run           Show what would be done without making changes
     -s, --skip-test         Skip nixos-rebuild test step (faster but riskier)
     -p, --skip-push         Skip git push (local changes only)
+    -y, --yes               Skip all prompts, auto-answer yes
     --no-sudo               Don't use sudo for git/rebuild commands
     --notify-url URL        Notification endpoint URL
                             (default: ${DEFAULT_NOTIFY_URL})
@@ -179,6 +215,10 @@ parse_args() {
                 SKIP_PUSH=true
                 shift
                 ;;
+            -y|--yes)
+                AUTO_YES=true
+                shift
+                ;;
             --no-sudo)
                 USE_SUDO=false
                 shift
@@ -210,7 +250,7 @@ parse_args() {
     fi
 }
 
-# Validate prerequisites
+# Validate prerequisites and handle git changes interactively
 validate_prerequisites() {
     log_step "🔍 Validating prerequisites..."
 
@@ -220,11 +260,6 @@ validate_prerequisites() {
         exit 1
     fi
     log_info "Git repository found"
-
-    # Check for uncommitted changes
-    if [[ -z "$(git status --porcelain)" ]]; then
-        log_warn "No changes to commit"
-    fi
 
     # Check if flake.nix exists
     if [[ ! -f "flake.nix" ]]; then
@@ -246,6 +281,42 @@ validate_prerequisites() {
         exit 1
     fi
     log_info "All dependencies found"
+
+    # Check for git changes and prompt user
+    local git_changes=$(git status --porcelain)
+
+    if [[ -z "$git_changes" ]]; then
+        # No changes to commit
+        log_info "No changes to commit"
+        echo ""
+        if prompt_user "📦 No changes detected. Rebuild anyway?"; then
+            SKIP_COMMIT=true
+            log_info "Proceeding without commit"
+        else
+            log_info "Cancelled by user"
+            exit 0
+        fi
+    else
+        # Show changes
+        log_info "Found changes:"
+        echo ""
+        git status --short
+        echo ""
+
+        if prompt_user "📦 Commit these changes and rebuild?"; then
+            SKIP_COMMIT=false
+            log_info "Will commit and rebuild"
+        else
+            # User doesn't want to commit
+            if prompt_user "🔄 Rebuild without committing?"; then
+                SKIP_COMMIT=true
+                log_info "Will rebuild without committing"
+            else
+                log_info "Cancelled by user"
+                exit 0
+            fi
+        fi
+    fi
 }
 
 # Execute command with dry-run and sudo support
@@ -291,6 +362,14 @@ send_notification() {
 
 # Git commit workflow
 git_commit() {
+    if [[ "$SKIP_COMMIT" == true ]]; then
+        log_step "📦 Skipping git commit"
+        COMMIT_HASH="no-commit"
+        SHORT_HASH="no-commit"
+        readonly COMMIT_HASH SHORT_HASH
+        return 0
+    fi
+
     log_step "📦 Git commit workflow"
 
     log_info "Adding changes to git..."
@@ -361,6 +440,13 @@ apply_rebuild() {
 
 # Push to remote
 push_to_remote() {
+    if [[ "$SKIP_COMMIT" == true ]]; then
+        log_step "📤 Skipping push (no commit made)"
+        PUSH_STATUS="⚠️ No commit to push"
+        readonly PUSH_STATUS
+        return 0
+    fi
+
     if [[ "$SKIP_PUSH" == true ]]; then
         log_step "📤 Skipping push (--skip-push specified)"
         PUSH_STATUS="⚠️ Skipped (--skip-push)"
