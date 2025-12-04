@@ -12,8 +12,8 @@ let
 
   # Local backup script using rsync with hard-link snapshots
   localBackupScript = pkgs.writeScriptBin "backup-local" ''
-    #!${pkgs.bash}/bin/bash
-    set -euo pipefail
+#!${pkgs.bash}/bin/bash
+set -euo pipefail
 
     # Configuration
     BACKUP_DEST="${cfg.local.mountPoint}"
@@ -121,8 +121,8 @@ let
     BACKUP_SUCCESS=true
     ${lib.concatMapStringsSep "\n" (source: ''
       if [[ -d "${source}" ]]; then
-        # Create parent directory structure
-        SOURCE_PARENT="$BACKUP_DIR$(dirname "${source}")"
+        # Create parent directory structure in temp location
+        SOURCE_PARENT="$BACKUP_DIR_TEMP$(dirname "${source}")"
         ${pkgs.coreutils}/bin/mkdir -p "$SOURCE_PARENT"
         log "Backing up ${source}..."
 
@@ -145,11 +145,6 @@ let
     '') cfg.local.sources}
 
     if [[ "$BACKUP_SUCCESS" == true ]]; then
-<<<<<<< HEAD
-      # Update 'latest' symlink
-      ${pkgs.coreutils}/bin/rm -rf "$BACKUP_ROOT/latest"
-      ${pkgs.coreutils}/bin/ln -s "$BACKUP_DIR" "$BACKUP_ROOT/latest"
-=======
       # Create completion marker for atomic snapshot detection
       log "Creating backup completion marker..."
       cat > "$BACKUP_DIR_TEMP/.BACKUP_COMPLETE" << EOF
@@ -159,7 +154,6 @@ hostname=$HOSTNAME
 completed_at=$(${pkgs.coreutils}/bin/date --iso-8601=seconds)
 backup_version=1.0
 EOF
->>>>>>> origin/claude/backup-system-01N1gSvQa2gtDHBeJcUjXXgd
 
       # Atomically move temp backup to final location
       log "Atomically publishing backup snapshot..."
