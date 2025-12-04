@@ -285,7 +285,15 @@
   # Automated server backups (containers, databases, system)
   # Backups saved to /mnt/hot/backups with daily schedule
   hwc.server.backup.enable = true;
-
+  # Enable AI router and agent on server
+  hwc.ai.router = {
+    enable = true;
+    port = 11435;
+  };
+  hwc.ai.agent = {
+    enable = true;
+    port = 6020;
+  };
   # CouchDB for Obsidian LiveSync
   hwc.server.couchdb = {
     enable = true;
@@ -443,3 +451,4 @@
 
   system.stateVersion = "24.05";
 }
+
