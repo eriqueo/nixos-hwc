@@ -1,10 +1,17 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.ai.agent;
-  
+
+  # Python environment with FastAPI and dependencies
+  agentPython = pkgs.python3.withPackages (ps: with ps; [
+    fastapi
+    uvicorn
+    pydantic
+  ]);
+
   # Create the agent script as a package
   agentScript = pkgs.writeScriptBin "hwc-ai-agent" ''
-    #!${pkgs.python3}/bin/python3
+    #!${agentPython}/bin/python3
     ${builtins.readFile ./hwc-ai-agent.py}
   '';
 in
@@ -12,15 +19,8 @@ in
   imports = [ ./options.nix ];
 
   config = lib.mkIf cfg.enable {
-    # Install Python with required packages
-    environment.systemPackages = with pkgs; [
-      (python3.withPackages (ps: with ps; [
-        fastapi
-        uvicorn
-        pydantic
-      ]))
-      agentScript
-    ];
+    # Install agent script (dependencies bundled in shebang)
+    environment.systemPackages = [ agentScript ];
 
     # Create log directory
     systemd.tmpfiles.rules = [
