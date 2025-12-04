@@ -175,12 +175,14 @@ EOF
         [[ -f "$1/.BACKUP_COMPLETE" ]]
       }
 
-      # Clean incomplete backups immediately
-      for incomplete in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT"/{daily,weekly,monthly} -maxdepth 1 -type d 2>/dev/null); do
-        if [[ -d "$incomplete" ]] && ! is_complete "$incomplete"; then
-          log "Removing incomplete backup: $incomplete"
-          ${pkgs.coreutils}/bin/rm -rf "$incomplete"
-        fi
+      # Clean incomplete backups immediately (skip parent dirs)
+      for type_dir in daily weekly monthly; do
+        for incomplete in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/$type_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null); do
+          if [[ -d "$incomplete" ]] && ! is_complete "$incomplete"; then
+            log "Removing incomplete backup: $incomplete"
+            ${pkgs.coreutils}/bin/rm -rf "$incomplete"
+          fi
+        done
       done
 
       # Keep only last N daily backups (complete ones only)
