@@ -177,5 +177,49 @@ in
         description = "Default system prompt for chat sessions";
       };
     };
+
+    #==========================================================================
+    # WORKFLOWS HTTP API (Sprint 5.4)
+    #==========================================================================
+    api = {
+      enable = mkEnableOption "HTTP API for local workflows (FastAPI)";
+
+      port = mkOption {
+        type = types.port;
+        default = 6021;
+        description = "Port for workflows API";
+      };
+
+      host = mkOption {
+        type = types.str;
+        default = "127.0.0.1";
+        description = "Host address to bind to (localhost only for security)";
+      };
+
+      # Workflow-specific API settings
+      cleanup = {
+        allowedDirs = mkOption {
+          type = types.listOf types.str;
+          default = [ "/mnt/hot/inbox" "/home/eric/Downloads" ];
+          description = "Directories allowed for cleanup workflow via API";
+        };
+      };
+
+      journal = {
+        outputDir = mkOption {
+          type = types.path;
+          default = "/home/eric/Documents/HWC-AI-Journal";
+          description = "Directory for journal output from API";
+        };
+      };
+
+      autodoc = {
+        allowedDirs = mkOption {
+          type = types.listOf types.str;
+          default = [ "/home/eric/.nixos" "/home/eric/projects" ];
+          description = "Directories allowed for autodoc workflow via API";
+        };
+      };
+    };
   };
 }

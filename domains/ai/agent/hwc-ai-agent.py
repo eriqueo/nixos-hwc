@@ -99,6 +99,18 @@ async def discovery():
                 "public_url": "https://hwc.ocelot-wahoo.ts.net:3443"
             },
             "local_workflows": {
+                "api": {
+                    "enabled": True,
+                    "url": "http://127.0.0.1:6021",
+                    "public_url": "https://hwc.ocelot-wahoo.ts.net/workflows",
+                    "endpoints": {
+                        "chat": "/api/workflows/chat",
+                        "cleanup": "/api/workflows/cleanup",
+                        "journal": "/api/workflows/journal",
+                        "autodoc": "/api/workflows/autodoc",
+                        "status": "/api/workflows/status"
+                    }
+                },
                 "file_cleanup": {
                     "enabled": True,
                     "schedule": "every 30 minutes",
