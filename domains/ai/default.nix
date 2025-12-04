@@ -12,7 +12,7 @@ in
     ./mcp/default.nix
     ./cloud/default.nix
     ./router/default.nix
-    # agent will be added later PR 5
+    ./agent/default.nix
   ];
 
   config = lib.mkIf cfg.enable {
