@@ -152,13 +152,37 @@
       keepWeekly = 8;   # Keep 8 weekly backups (2 months)
       keepMonthly = 12; # Keep 12 monthly backups (1 year)
       minSpaceGB = 50;  # Require 50GB free space for server
+
+      # CRITICAL DATA ONLY (fits in 2.7TB backup pool)
+      # Excludes replaceable media (movies, TV, music - can re-download)
       sources = [
-        "/home"
-        "/etc/nixos"
-        "/mnt/media"       # Include media storage
-        "/mnt/photos"      # Immich photo library (CRITICAL)
-        "/var/backup/immich-db"  # Immich database backups
-        "/opt/business"    # Include business data
+        "/home"                     # 11GB - User data, configs, nixos repo
+        "/opt/business"             # 96KB - Business data
+        "/mnt/media/pictures"       # 92GB - IRREPLACEABLE photos
+        "/mnt/media/databases"      # 252MB - Database backups
+        "/mnt/media/backups"        # 132GB - Other backups
+        # NOTE: /home/eric/.nixos is backed up via /home
+        # EXCLUDED (replaceable):
+        # "/etc/nixos"              # Symlink to flake in /home/eric/.nixos
+        # "/mnt/media/movies"       # 1.2TB - Can re-download
+        # "/mnt/media/tv"           # 2.1TB - Can re-download
+        # "/mnt/media/music"        # 261GB - Can re-download
+        # "/mnt/media/surveillance" # 650GB - Auto-rotates (7 days)
+      ];
+
+      # Exclude patterns for backup efficiency
+      excludePatterns = [
+        ".cache"
+        "*.tmp"
+        "*.temp"
+        ".local/share/Trash"
+        "node_modules"
+        "__pycache__"
+        ".npm"
+        ".cargo/registry"
+        ".cargo/git"
+        "*/frigate-v2/recordings/*"  # Surveillance auto-managed
+        "*/frigate-v2/clips/*"       # Surveillance auto-managed
       ];
     };
 
@@ -352,12 +376,46 @@
     # Storage paths
     storage = {
       configPath = "/opt/surveillance/frigate/config";
-      mediaPath = "/mnt/media/surveillance/frigate/media";
+      mediaPath = "/mnt/media/surveillance/frigate-v2/media";
       bufferPath = "/mnt/hot/surveillance/frigate/buffer";
     };
 
     # Firewall settings
     firewall.tailscaleOnly = true;
+  };
+
+  # Automated surveillance cleanup (enforce Frigate retention policy)
+  systemd.timers.frigate-cleanup = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
+    };
+  };
+
+  systemd.services.frigate-cleanup = {
+    description = "Cleanup old Frigate surveillance recordings";
+    serviceConfig = {
+      Type = "oneshot";
+      User = "root";
+    };
+    script = ''
+      # Frigate handles its own cleanup, but this provides backup enforcement
+      # Delete recordings older than 7 days (Frigate config retention)
+      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate-v2/recordings -type f -name "*.mp4" -mtime +7 -delete 2>/dev/null || true
+
+      # Delete clips older than 10 days (event retention)
+      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate-v2/clips -type f -name "*.mp4" -mtime +10 -delete 2>/dev/null || true
+
+      # Delete empty directories
+      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate-v2 -type d -empty -delete 2>/dev/null || true
+
+      # Log cleanup stats
+      RECORDINGS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate-v2/recordings 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
+      CLIPS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate-v2/clips 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
+      echo "Frigate cleanup complete - Recordings: $RECORDINGS_SIZE, Clips: $CLIPS_SIZE"
+    '';
   };
 
   # Native Media Services now handled by Charter-compliant domain modules
