@@ -90,7 +90,7 @@
 
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
-          geminiCli.enable = lib.mkDefault false;           # AI CLI tool
+          geminiCli.enable = lib.mkDefault true;           # AI CLI tool
           # codex.enable = lib.mkDefault false;            # Removed - unused AI tool
 
           # Utilities
