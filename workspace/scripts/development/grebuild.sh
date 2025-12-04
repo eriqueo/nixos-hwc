@@ -35,8 +35,23 @@ done
 #   grebuild.sh "Fix networking" --skip-test
 #   grebuild.sh "Update docs" --dry-run
 
+# Auto-detect current machine hostname for default target
+DETECTED_HOSTNAME=$(hostname)
+case "$DETECTED_HOSTNAME" in
+  hwc-laptop)
+    readonly DEFAULT_FLAKE_TARGET="hwc-laptop"
+    ;;
+  hwc-server)
+    readonly DEFAULT_FLAKE_TARGET="hwc-server"
+    ;;
+  *)
+    # Fallback: try to detect from hostname pattern
+    echo "Warning: Unknown hostname '$DETECTED_HOSTNAME', defaulting to hwc-server" >&2
+    readonly DEFAULT_FLAKE_TARGET="hwc-server"
+    ;;
+esac
+
 # Configuration (can be overridden by environment variables)
-readonly DEFAULT_FLAKE_TARGET="hwc-server"
 readonly DEFAULT_NOTIFY_URL="https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts"
 readonly DEFAULT_AI_DOCS_SERVICE="post-rebuild-ai-docs"
 
@@ -73,7 +88,7 @@ ${BOLD}USAGE:${NC}
 
 ${BOLD}OPTIONS:${NC}
     -t, --target NAME       Flake target to rebuild
-                            (default: ${DEFAULT_FLAKE_TARGET})
+                            (default: auto-detected from hostname)
     -n, --dry-run           Show what would be done without making changes
     -s, --skip-test         Skip nixos-rebuild test step (faster but riskier)
     -p, --skip-push         Skip git push (local changes only)
@@ -124,11 +139,18 @@ EOF
 
 # Parse command line arguments
 parse_args() {
+    # Check for help flag before anything else
     if [[ $# -eq 0 ]]; then
         log_error "Missing commit message"
         echo ""
         show_usage
         exit 2
+    fi
+
+    # Handle --help/-h as first argument
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        show_usage
+        exit 0
     fi
 
     COMMIT_MESSAGE="$1"
