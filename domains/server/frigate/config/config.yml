@@ -1,13 +1,5 @@
 # Frigate NVR Configuration (Config-First Pattern)
-# Charter v7.0 Section 19 compliant
-#
-# Secrets are provided via environment variables by Nix:
-#   - FRIGATE_RTSP_USER
-#   - FRIGATE_RTSP_PASS_ENCODED  (URL-encoded RTSP password)
-#   - FRIGATE_CAM1_IP, FRIGATE_CAM2_IP, FRIGATE_CAM3_IP
-#
-# NOTE: Frigate only substitutes environment variables that start with FRIGATE_
-#       using the {FRIGATE_*} syntax in supported fields.
+# Secrets are NOT using env substitution in this version to avoid startup errors.
 
 mqtt:
   enabled: true
@@ -73,7 +65,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASS_ENCODED}@{FRIGATE_CAM1_IP}:554/ch01/0
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0
           roles: [detect, record]
     detect:
       width: 1280
@@ -92,7 +84,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASS_ENCODED}@{FRIGATE_CAM2_IP}:554/ch01/0
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0
           roles: [detect, record]
     detect:
       width: 640
@@ -111,7 +103,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASS_ENCODED}@{FRIGATE_CAM3_IP}:554/ch01/0
+        - path: rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0
           roles: [detect, record]
     detect:
       width: 320
@@ -142,17 +134,22 @@ cameras:
           - dog
           - cat
 
+objects:
+  track: [person, dog, cat]
+  filters:
+    person:
+      min_score: 0.6
+      threshold: 5
+      min_area: 2000
+
 go2rtc:
-  rtsp:
-    username: "{FRIGATE_RTSP_USER}"
-    password: "{FRIGATE_RTSP_PASS_ENCODED}"
   streams:
     cobra_cam_1:
-      - rtsp://{FRIGATE_CAM1_IP}:554/ch01/0
+      - rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0
     cobra_cam_2:
-      - rtsp://{FRIGATE_CAM2_IP}:554/ch01/0
+      - rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0
     cobra_cam_3:
-      - rtsp://{FRIGATE_CAM3_IP}:554/ch01/0
+      - rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0
 
 ui:
   timezone: America/Denver
@@ -160,4 +157,4 @@ ui:
 detect:
   enabled: true
 
-version: 0.16
+version: 0.16-0
