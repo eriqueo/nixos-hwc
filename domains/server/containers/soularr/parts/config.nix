@@ -1,10 +1,8 @@
-# soularr Soulseek integration container configuration
+# soularr configuration file generator (config-only - container moved to sys.nix)
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.services.containers.soularr;
   cfgRoot = "/opt/downloads";
-  hotRoot = "/mnt/hot";
-  mediaNetworkName = "media-network";
 in
 {
   config = lib.mkIf cfg.enable {
@@ -57,47 +55,6 @@ EOF
         chmod 644 "$CONFIG_FILE"
         echo "Config file written successfully."
         echo "--- soularr-config seeder finished ---"
-      '';
-    };
-
-    # Container definition
-    virtualisation.oci-containers.containers.soularr = {
-      image = cfg.image;
-      autoStart = true;
-      extraOptions = [
-        "--network=${mediaNetworkName}"
-        "--memory=1g"
-        "--cpus=0.5"
-      ];
-      volumes = [
-        "${cfgRoot}/soularr:/config"
-        "${cfgRoot}/soularr:/data"
-        "${hotRoot}/downloads:/downloads"
-      ];
-      environment = {
-        PUID = "1000";
-        PGID = "1000";
-        TZ = config.time.timeZone or "America/Denver";
-      };
-      dependsOn = [ "lidarr" ];
-    };
-
-    # Service dependencies and timing
-    systemd.services."podman-soularr" = {
-      after = [ "init-media-network.service" "podman-lidarr.service" "podman-slskd.service" ];
-      requires = [ "podman-lidarr.service" ];
-      serviceConfig.ExecStartPre = pkgs.writeShellScript "wait-for-lidarr" ''
-        for i in 1 1 2 3 5 8; do
-          if ${pkgs.curl}/bin/curl -sf -H "X-Api-Key: $(cat ${config.age.secrets.lidarr-api-key.path})" \
-            "http://localhost:8686/lidarr/api/v1/system/status" >/dev/null 2>&1; then
-            echo "Lidarr is ready"
-            exit 0
-          fi
-          echo "Waiting for Lidarr... ($i)"
-          sleep $i
-        done
-        echo "Lidarr failed to become ready"
-        exit 1
       '';
     };
   };

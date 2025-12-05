@@ -14,14 +14,14 @@ rec {
     , extraOptions ? []
     , dependsOn ? []
     , user ? null
+    , cmd ? []
     }:
     let
       podmanNetworkOpts =
         if networkMode == "vpn" then [ "--network=container:gluetun" ] else [ "--network=media-network" ];
       gpuOpts = if (!gpuEnable) then [] else [ "--device=/dev/dri:/dev/dri" ];
       baseEnv = { PUID = "1000"; PGID = "1000"; TZ = timeZone; };
-    in {
-      virtualisation.oci-containers.containers.${name} = {
+      containerDef = {
         inherit image dependsOn user;
         autoStart = true;
         environment = baseEnv // environment;
@@ -30,5 +30,8 @@ rec {
         ports = ports;
         volumes = volumes;
       };
+    in {
+      virtualisation.oci-containers.containers.${name} =
+        if cmd != [] then containerDef // { inherit cmd; } else containerDef;
     };
 }

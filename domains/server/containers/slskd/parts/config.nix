@@ -1,9 +1,7 @@
-# slskd Soulseek daemon container configuration
+# slskd configuration file generator (config-only - container moved to sys.nix)
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.services.containers.slskd;
-  mediaNetworkName = "media-network";
-  hotRoot = "/mnt/hot";
 
   # Script to generate slskd config from secrets at runtime
   generateConfigScript = pkgs.writeShellScript "generate-slskd-config" ''
@@ -70,38 +68,5 @@ in
         ExecStart = "${generateConfigScript}";
       };
     };
-
-    # Container definition
-    virtualisation.oci-containers.containers.slskd = {
-      image = cfg.image;
-      autoStart = true;
-      extraOptions = [
-        "--network=${mediaNetworkName}"
-      ];
-      cmd = [ "--config" "/app/slskd.yml" ];
-      ports = [
-        "0.0.0.0:5031:5030"        # Web UI - SLSKD requires dedicated port
-        "0.0.0.0:50300:50300/tcp"  # P2P port
-      ];
-      volumes = [
-        "${hotRoot}/downloads/incomplete:/downloads/incomplete"
-        "${hotRoot}/downloads/music:/downloads/music"
-        "/mnt/media/music:/music:ro"
-        "/etc/slskd/slskd.yml:/app/slskd.yml:ro"
-      ];
-      environment = {
-        PUID = "1000";
-        PGID = "1000";
-        TZ = config.time.timeZone or "America/Denver";
-      };
-    };
-
-    # Firewall configuration - SLSKD requires dedicated port
-    networking.firewall.allowedTCPPorts = [ 50300 5031 ];
-
-    # Service dependencies
-    systemd.services."podman-slskd".after = [ "network-online.target" "init-media-network.service" "slskd-config-generator.service" "mnt-hot.mount" ];
-    systemd.services."podman-slskd".wants = [ "network-online.target" ];
-    systemd.services."podman-slskd".requires = [ "slskd-config-generator.service" "mnt-hot.mount" ];
   };
 }

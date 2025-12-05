@@ -16,12 +16,22 @@ in
   ];
 
   #==========================================================================
-  # IMPLEMENTATION
+  # IMPLEMENTATION & VALIDATION
   #==========================================================================
-  config = lib.mkIf cfg.enable { };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  # Add assertions and validation logic here
+  config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = config.hwc.services.containers.slskd.enable;
+        message = "soularr requires slskd to be enabled";
+      }
+      {
+        assertion = config.hwc.services.containers.lidarr.enable;
+        message = "soularr requires lidarr to be enabled";
+      }
+      {
+        assertion = config.age.secrets ? lidarr-api-key && config.age.secrets ? slskd-api-key;
+        message = "soularr requires agenix secrets: lidarr-api-key, slskd-api-key";
+      }
+    ];
+  };
 }

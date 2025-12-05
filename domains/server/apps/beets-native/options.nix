@@ -21,5 +21,21 @@
       default = "/var/lib/beets";
       description = "Beets config and database directory";
     };
+
+    automation = {
+      enable = lib.mkEnableOption "automated music import and cleanup" // { default = true; };
+
+      importInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "daily";
+        description = "How often to auto-import new music";
+      };
+
+      dedupInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "weekly";
+        description = "How often to run deduplication";
+      };
+    };
   };
 }
