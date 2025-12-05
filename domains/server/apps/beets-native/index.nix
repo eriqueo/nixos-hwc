@@ -28,7 +28,7 @@ let
     duplicates:
       checksum: ffmpeg
       full: yes
-      count:yes
+      count: yes
       copy: ""
       move: ""     
 
