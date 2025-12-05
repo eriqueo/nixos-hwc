@@ -27,9 +27,16 @@ let
 
     duplicates:
       checksum: ffmpeg
+      full: yes
+      count:yes
       copy: ""
-      move: ""
+      move: ""     
 
+    missing:
+      count: yes
+      format: $albumartist - $album: missing $missing{$track} ($title)
+      album: yes
+      
     fetchart:
       auto: yes
       cautious: yes
@@ -46,6 +53,9 @@ let
       auto: no
       backend: ffmpeg
 
+    info:
+      format: $path
+
     ui:
       color: yes
 
@@ -53,15 +63,15 @@ let
       searchlimit: 10
 
     match:
-      strong_rec_thresh: 0.15
-      medium_rec_thresh: 0.40
-      rec_gap_thresh: 0.40
+      strong_rec_thresh: 0.25
+      medium_rec_thresh: 0.60
+      rec_gap_thresh: 0.50
       max_rec:
-        missing_tracks: medium
-        unmatched_tracks: medium
+        missing_tracks: strong
+        unmatched_tracks: strong
       distance_weights:
-        source: 2.0
-        artist: 3.0
+        source: 1.5
+        artist: 2.0
         album: 3.0
         media: 1.0
         mediums: 1.0
@@ -74,7 +84,7 @@ let
         tracks: 2.0
         missing_tracks: 0.9
         unmatched_tracks: 0.6
-        track_title: 3.0
+        track_title: 2.0
         track_artist: 2.0
         track_index: 1.0
         track_length: 2.0
