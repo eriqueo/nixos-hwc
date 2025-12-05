@@ -2,11 +2,12 @@
 # Charter v7.0 Section 19 compliant
 #
 # Secrets are provided via environment variables by Nix:
-#   - RTSP_USER: RTSP username from agenix
-#   - RTSP_PASS_ENCODED: URL-encoded RTSP password from agenix
-#   - CAM1_IP, CAM2_IP, CAM3_IP: Camera IP addresses from agenix
+#   - FRIGATE_RTSP_USER
+#   - FRIGATE_RTSP_PASS_ENCODED  (URL-encoded RTSP password)
+#   - FRIGATE_CAM1_IP, FRIGATE_CAM2_IP, FRIGATE_CAM3_IP
 #
-# DO NOT COMMIT ACTUAL SECRET VALUES TO THIS FILE!
+# NOTE: Frigate only substitutes environment variables that start with FRIGATE_
+#       using the {FRIGATE_*} syntax in supported fields.
 
 mqtt:
   enabled: true
@@ -72,7 +73,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://{{ env['RTSP_USER'] }}:{{ env['RTSP_PASS_ENCODED'] }}@{{ env['CAM1_IP'] }}:554/ch01/0
+        - path: rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASS_ENCODED}@{FRIGATE_CAM1_IP}:554/ch01/0
           roles: [detect, record]
     detect:
       width: 1280
@@ -91,7 +92,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://{{ env['RTSP_USER'] }}:{{ env['RTSP_PASS_ENCODED'] }}@{{ env['CAM2_IP'] }}:554/ch01/0
+        - path: rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASS_ENCODED}@{FRIGATE_CAM2_IP}:554/ch01/0
           roles: [detect, record]
     detect:
       width: 640
@@ -110,7 +111,7 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://{{ env['RTSP_USER'] }}:{{ env['RTSP_PASS_ENCODED'] }}@{{ env['CAM3_IP'] }}:554/ch01/0
+        - path: rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASS_ENCODED}@{FRIGATE_CAM3_IP}:554/ch01/0
           roles: [detect, record]
     detect:
       width: 320
@@ -142,13 +143,16 @@ cameras:
           - cat
 
 go2rtc:
+  rtsp:
+    username: "{FRIGATE_RTSP_USER}"
+    password: "{FRIGATE_RTSP_PASS_ENCODED}"
   streams:
     cobra_cam_1:
-      - rtsp://{{ env['RTSP_USER'] }}:{{ env['RTSP_PASS_ENCODED'] }}@{{ env['CAM1_IP'] }}:554/ch01/0
+      - rtsp://{FRIGATE_CAM1_IP}:554/ch01/0
     cobra_cam_2:
-      - rtsp://{{ env['RTSP_USER'] }}:{{ env['RTSP_PASS_ENCODED'] }}@{{ env['CAM2_IP'] }}:554/ch01/0
+      - rtsp://{FRIGATE_CAM2_IP}:554/ch01/0
     cobra_cam_3:
-      - rtsp://{{ env['RTSP_USER'] }}:{{ env['RTSP_PASS_ENCODED'] }}@{{ env['CAM3_IP'] }}:554/ch01/0
+      - rtsp://{FRIGATE_CAM3_IP}:554/ch01/0
 
 ui:
   timezone: America/Denver
@@ -156,4 +160,4 @@ ui:
 detect:
   enabled: true
 
-version: 0.16-0
+version: 0.16
