@@ -34,7 +34,7 @@ let
 
     missing:
       count: yes
-      format: $albumartist - $album: missing $missing{$track} ($title)
+      format: '$albumartist - $album: missing $missing{$track} ($title)'
       album: yes
       
     fetchart:
