@@ -130,7 +130,8 @@
       "Bash(bash:*)",
       "Bash(beet import:*)",
       "Bash(beet help:*)",
-      "Bash(sudo -u postgres psql:*)"
+      "Bash(sudo -u postgres psql:*)",
+      "Bash(beet config:*)"
     ],
     "deny": [],
     "ask": [],
