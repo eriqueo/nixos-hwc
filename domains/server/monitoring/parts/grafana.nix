@@ -59,13 +59,23 @@ in {
         }
       ];
     };
-    
-    # Ensure grafana data directory exists with proper permissions
+
+    # Run grafana as eric user for simplified permissions
+    systemd.services.grafana = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+        # Disable user namespace isolation so eric can access directories
+        PrivateUsers = lib.mkForce false;
+      };
+    };
+
+    # Ensure grafana data directory exists with proper permissions (owned by eric)
     systemd.tmpfiles.rules = [
-      "d ${cfg.dataDir} 0755 grafana grafana -"
-      "d ${cfg.dataDir}/plugins 0755 grafana grafana -"
-      "d ${cfg.dataDir}/png 0755 grafana grafana -"
-      "d ${paths.state}/grafana/logs 0755 grafana grafana -"
+      "d ${cfg.dataDir} 0755 eric users -"
+      "d ${cfg.dataDir}/plugins 0755 eric users -"
+      "d ${cfg.dataDir}/png 0755 eric users -"
+      "d ${paths.state}/grafana/logs 0755 eric users -"
     ];
   };
 }

@@ -74,8 +74,8 @@ methods = GET, PUT, POST, HEAD, DELETE
 max_age = 3600
 EOF
 
-        # Set proper ownership and permissions
-        chown couchdb:couchdb ${cfg.settings.dataDir}/local.ini
+        # Set proper ownership and permissions (eric for simplified permissions)
+        chown eric:users ${cfg.settings.dataDir}/local.ini
         chmod 600 ${cfg.settings.dataDir}/local.ini
       '';
     };
@@ -86,6 +86,14 @@ EOF
       port = cfg.settings.port;
       bindAddress = cfg.settings.bindAddress;
       # Admin credentials handled via local.ini from systemd service above
+    };
+
+    # Run couchdb as eric user for simplified permissions
+    systemd.services.couchdb = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+      };
     };
 
     # Health monitoring service for Obsidian LiveSync

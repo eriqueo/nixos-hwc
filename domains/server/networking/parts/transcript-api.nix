@@ -70,7 +70,8 @@ in {
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
         DynamicUser = false;
-        User = "root";  # Needs access to /mnt/media
+        User = "eric";  # Simplified permissions (eric owns /mnt/media)
+        Group = "users";
 
         # Load CouchDB credentials from secrets
         LoadCredential = [
