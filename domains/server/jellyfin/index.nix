@@ -44,7 +44,13 @@ in
         fi
       '';
 
-      serviceConfig = lib.mkIf cfg.gpu.enable {
+      serviceConfig = {
+        # Run as eric user for simplified permissions (single-user system)
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+        # Disable user namespace isolation so eric can access directories
+        PrivateUsers = lib.mkForce false;
+      } // lib.optionalAttrs cfg.gpu.enable {
         # Add GPU device access for video transcoding
         DeviceAllow = [
           "/dev/nvidia0 rw"

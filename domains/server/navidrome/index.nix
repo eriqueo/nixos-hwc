@@ -34,13 +34,17 @@ in
       };
     };
 
-    # Load password from file using systemd credentials (secure method)
-    systemd.services.navidrome = lib.mkIf (cfg.settings.initialAdminPasswordFile != null) {
+    # Service configuration for simplified permissions and credentials
+    systemd.services.navidrome = {
       serviceConfig = {
+        # Run as eric user for simplified permissions (single-user system)
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+      } // lib.optionalAttrs (cfg.settings.initialAdminPasswordFile != null) {
         LoadCredential = "navidrome-password:${cfg.settings.initialAdminPasswordFile}";
       };
-      # Set environment variable from credential
-      environment = {
+      # Set environment variable from credential if using password file
+      environment = lib.mkIf (cfg.settings.initialAdminPasswordFile != null) {
         ND_INITIAL_ADMIN_PASSWORD = "%d/navidrome-password";
       };
     };

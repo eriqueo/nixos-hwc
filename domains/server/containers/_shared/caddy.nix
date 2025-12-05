@@ -136,6 +136,17 @@ in
       '';
     };
 
+    # Run caddy as eric user for simplified permissions
+    systemd.services.caddy = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+        # Disable security restrictions so eric can access directories
+        PrivateUsers = lib.mkForce false;
+        ProtectHome = lib.mkForce false;
+      };
+    };
+
     networking.firewall.allowedTCPPorts =
       [ 80 443 ]
       ++ (lib.map (r: r.port) (lib.filter (r: r.mode == "port") routes));

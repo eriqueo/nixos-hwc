@@ -131,7 +131,8 @@
       "Bash(beet import:*)",
       "Bash(beet help:*)",
       "Bash(sudo -u postgres psql:*)",
-      "Bash(beet config:*)"
+      "Bash(beet config:*)",
+      "Bash(podman exec:*)"
     ],
     "deny": [],
     "ask": [],

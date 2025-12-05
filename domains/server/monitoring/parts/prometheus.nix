@@ -63,5 +63,19 @@ in {
       enable = true;
       port = 9100;
     };
+
+    # Run prometheus and node-exporter as eric user for simplified permissions
+    systemd.services.prometheus = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+      };
+    };
+    systemd.services.prometheus-node-exporter = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+      };
+    };
   };
 }

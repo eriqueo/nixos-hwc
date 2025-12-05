@@ -83,26 +83,26 @@ in
       };
     };
 
-    # Create storage directories
+    # Create storage directories (owned by eric for simplified permissions)
     systemd.tmpfiles.rules =
       (if cfg.storage.enable then [
-        "d ${cfg.storage.basePath} 0750 immich immich -"
-        "d ${cfg.storage.locations.library} 0750 immich immich -"
-        "d ${cfg.storage.locations.thumbs} 0750 immich immich -"
-        "d ${cfg.storage.locations.encodedVideo} 0750 immich immich -"
-        "d ${cfg.storage.locations.profile} 0750 immich immich -"
+        "d ${cfg.storage.basePath} 0750 eric users -"
+        "d ${cfg.storage.locations.library} 0750 eric users -"
+        "d ${cfg.storage.locations.thumbs} 0750 eric users -"
+        "d ${cfg.storage.locations.encodedVideo} 0750 eric users -"
+        "d ${cfg.storage.locations.profile} 0750 eric users -"
         "d ${cfg.backup.databaseBackupPath} 0750 postgres postgres -"
         # Create .immich marker files for mount verification
-        "f ${cfg.storage.locations.library}/.immich 0600 immich immich -"
-        "f ${cfg.storage.locations.thumbs}/.immich 0600 immich immich -"
-        "f ${cfg.storage.locations.encodedVideo}/.immich 0600 immich immich -"
-        "f ${cfg.storage.locations.profile}/.immich 0600 immich immich -"
+        "f ${cfg.storage.locations.library}/.immich 0600 eric users -"
+        "f ${cfg.storage.locations.thumbs}/.immich 0600 eric users -"
+        "f ${cfg.storage.locations.encodedVideo}/.immich 0600 eric users -"
+        "f ${cfg.storage.locations.profile}/.immich 0600 eric users -"
       ] else []) ++ (if cfg.gpu.enable then [
         # GPU cache directories for ML optimizations
-        "d /var/lib/immich/.cache 0750 immich immich -"
-        "d /var/lib/immich/.cache/tensorrt 0750 immich immich -"
-        "d /var/lib/immich/.config 0750 immich immich -"
-        "d /var/lib/immich/.config/matplotlib 0750 immich immich -"
+        "d /var/lib/immich/.cache 0750 eric users -"
+        "d /var/lib/immich/.cache/tensorrt 0750 eric users -"
+        "d /var/lib/immich/.config 0750 eric users -"
+        "d /var/lib/immich/.config/matplotlib 0750 eric users -"
       ] else []);
 
     # PostgreSQL database backup service
@@ -122,6 +122,10 @@ in
         requires = [ "nvidia-container-toolkit-cdi-generator.service" ];
 
         serviceConfig = {
+          # Run as eric user for simplified permissions (single-user system)
+          User = lib.mkForce "eric";
+          Group = lib.mkForce "users";
+
           # Add GPU device access for photo/video processing
           DeviceAllow = [
             "/dev/dri/card0 rw"
@@ -160,6 +164,10 @@ in
         requires = [ "nvidia-container-toolkit-cdi-generator.service" ];
 
         serviceConfig = {
+          # Run as eric user for simplified permissions (single-user system)
+          User = lib.mkForce "eric";
+          Group = lib.mkForce "users";
+
           # Add GPU device access for ML processing
           DeviceAllow = [
             "/dev/dri/card0 rw"
