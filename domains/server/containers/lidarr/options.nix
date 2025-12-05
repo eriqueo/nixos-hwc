@@ -6,7 +6,11 @@ in
 {
   options.hwc.services.containers.lidarr = {
     enable = mkEnableOption "lidarr container";
-        image  = mkOption { type = types.str; default = "lscr.io/linuxserver/lidarr:latest"; description = "Container image"; };
+    image  = mkOption {
+      type = types.str;
+      default = "lscr.io/linuxserver/lidarr:2.13.3";
+      description = "Container image (pinned version - develop branch has NullRef bug in Distance.Clean())";
+    };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
     gpu.enable    = mkOption { type = types.bool; default = true; };
   };

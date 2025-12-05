@@ -130,6 +130,118 @@ in
       };
     };
 
+    # Auto-import service
+    systemd.services.beets-auto-import = lib.mkIf cfg.automation.enable {
+      description = "Beets automatic music import";
+      serviceConfig = {
+        Type = "oneshot";
+        User = "eric";
+        ExecStart = pkgs.writeShellScript "beets-auto-import" ''
+          set -euo pipefail
+
+          LOG_DIR="/var/log/beets-automation"
+          LOG_FILE="$LOG_DIR/auto-import-$(date +%Y%m%d-%H%M%S).log"
+          IMPORT_DIR="${cfg.importDir}"
+          LOCK_FILE="/run/beets-auto-import.lock"
+
+          mkdir -p "$LOG_DIR"
+          exec 1> >(tee -a "$LOG_FILE")
+          exec 2>&1
+
+          echo "[$(date)] Starting beets auto-import"
+
+          # Lock to prevent concurrent runs
+          if ! mkdir "$LOCK_FILE" 2>/dev/null; then
+              echo "[$(date)] Another import is running, exiting"
+              exit 0
+          fi
+          trap "rmdir '$LOCK_FILE'" EXIT
+
+          # Count files to import
+          file_count=$(${pkgs.findutils}/bin/find "$IMPORT_DIR" -type f \( -name "*.mp3" -o -name "*.flac" -o -name "*.m4a" -o -name "*.ogg" -o -name "*.opus" \) 2>/dev/null | wc -l)
+          echo "[$(date)] Found $file_count music files in $IMPORT_DIR"
+
+          if [ "$file_count" -eq 0 ]; then
+              echo "[$(date)] No files to import"
+              exit 0
+          fi
+
+          # Run import with auto mode (minimal prompts)
+          echo "[$(date)] Starting import..."
+          ${beetsPackage}/bin/beet import -q "$IMPORT_DIR" || true
+
+          echo "[$(date)] Import completed"
+          echo "[$(date)] Cleanup complete"
+        '';
+        Nice = 10;  # Lower priority
+      };
+    };
+
+    # Auto-import timer
+    systemd.timers.beets-auto-import = lib.mkIf cfg.automation.enable {
+      description = "Beets automatic import timer";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.automation.importInterval;
+        Persistent = true;
+        RandomizedDelaySec = "1h";
+      };
+    };
+
+    # Deduplication service
+    systemd.services.beets-dedup = lib.mkIf cfg.automation.enable {
+      description = "Beets deduplication and cleanup";
+      serviceConfig = {
+        Type = "oneshot";
+        User = "eric";
+        ExecStart = pkgs.writeShellScript "beets-dedup" ''
+          set -euo pipefail
+
+          LOG_DIR="/var/log/beets-automation"
+          LOG_FILE="$LOG_DIR/dedup-$(date +%Y%m%d-%H%M%S).log"
+
+          mkdir -p "$LOG_DIR"
+          exec 1> >(tee -a "$LOG_FILE")
+          exec 2>&1
+
+          echo "[$(date)] Starting beets deduplication"
+
+          # Find and list duplicates
+          echo "[$(date)] Finding duplicates..."
+          ${beetsPackage}/bin/beet duplicates -k > "$LOG_DIR/duplicates-$(date +%Y%m%d).txt" 2>&1 || true
+
+          dup_count=$(wc -l < "$LOG_DIR/duplicates-$(date +%Y%m%d).txt" || echo "0")
+          echo "[$(date)] Found $dup_count duplicate groups"
+
+          # Fetch missing album art
+          echo "[$(date)] Fetching missing album art..."
+          ${beetsPackage}/bin/beet fetchart -q 2>&1 || true
+
+          # Embed album art
+          echo "[$(date)] Embedding album art..."
+          ${beetsPackage}/bin/beet embedart -q 2>&1 || true
+
+          # Update database
+          echo "[$(date)] Updating database..."
+          ${beetsPackage}/bin/beet update 2>&1 || true
+
+          echo "[$(date)] Deduplication complete"
+        '';
+        Nice = 15;  # Even lower priority
+      };
+    };
+
+    # Deduplication timer
+    systemd.timers.beets-dedup = lib.mkIf cfg.automation.enable {
+      description = "Beets deduplication timer";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.automation.dedupInterval;
+        Persistent = true;
+        RandomizedDelaySec = "2h";
+      };
+    };
+
     #==========================================================================
     # VALIDATION
     #==========================================================================
