@@ -23,6 +23,7 @@ in {
       # Media tools (server-specific)
       picard                # Music organization
       claude-code
+      flac
       # Server monitoring and management
       htop iotop
       lsof net-tools iproute2
