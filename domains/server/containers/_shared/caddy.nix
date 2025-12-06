@@ -139,8 +139,8 @@ in
     # Run caddy as eric user for simplified permissions
     systemd.services.caddy = {
       serviceConfig = {
-        User = lib.mkForce "eric";
-        Group = lib.mkForce "users";
+        User = lib.mkForce "root";
+        Group = lib.mkForce "root";
         # Disable security restrictions so eric can access directories
         PrivateUsers = lib.mkForce false;
         ProtectHome = lib.mkForce false;

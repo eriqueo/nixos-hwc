@@ -328,7 +328,7 @@
       initialAdminUser = "admin";
       # Password now securely loaded from agenix secret
       initialAdminPasswordFile = config.hwc.secrets.api.navidromeAdminPasswordFile;
-      baseUrl = "/navidrome";  # Required - Navidrome receives full path from Caddy
+      baseUrl = "/music";  # Required - Navidrome receives full path from Caddy
     };
     reverseProxy.enable = true;
   };
