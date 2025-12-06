@@ -40,12 +40,11 @@ in
     systemd.services.media-orchestrator = {
       description = "Event-driven *Arr nudger (no file moves)";
       after = [
-        "agenix.service"
         "network-online.target"
         "media-orchestrator-install.service"
         "podman-sonarr.service" "podman-radarr.service" "podman-lidarr.service"
       ];
-      wants = [ "agenix.service" "network-online.target" ];
+      wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
       # Create environment file with agenix secrets
@@ -64,8 +63,11 @@ EOF
 
       serviceConfig = {
         Type = "simple";
-        User = "root";
-        EnvironmentFile = "/tmp/media-orchestrator.env";
+        # Run as eric user for simplified permissions (single-user system)
+        User = "eric";
+        Group = "users";
+        # The '-' prefix makes the file optional (created by preStart)
+        EnvironmentFile = "-/tmp/media-orchestrator.env";
         ExecStart = "${pythonWithRequests}/bin/python3 ${cfgRoot}/scripts/media-orchestrator.py";
         Restart = "always";
         RestartSec = "3s";
