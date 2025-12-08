@@ -44,7 +44,9 @@ in
     # n8n - Workflow automation for alert routing
     hwc.server.n8n = {
       enable = true;
-      # timezone already defaults to America/New_York
+      port = 5678;
+      dataDir = "/var/lib/hwc/n8n";
+      webhookUrl = "https://hwc.ocelot-wahoo.ts.net:2443";
     };
   };
 }
