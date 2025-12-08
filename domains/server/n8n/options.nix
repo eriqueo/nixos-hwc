@@ -30,12 +30,7 @@ in
       default = "${paths.state}/n8n";
       description = "Data directory for n8n workflows and configuration";
     };
-    # Slack webhook
-    slackWebhookUrlFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      readOnly = true;
-      description = "Path to decrypted Slack incoming webhook URL file";
-    };
+ 
 
     timezone = lib.mkOption {
       type = lib.types.str;

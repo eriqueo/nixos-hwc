@@ -76,6 +76,12 @@
         readOnly = true;
         description = "Path to decrypted CouchDB admin password file";
       };
+      # Slack webhook
+      slackWebhookUrlFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted Slack incoming webhook URL file";
+      };
 
       ntfyUserFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
