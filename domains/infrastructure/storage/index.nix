@@ -102,9 +102,7 @@ in {
     (lib.mkIf cfg.media.enable {
       systemd.tmpfiles.rules =
         [ "d ${cfg.media.path} 0755 root root -" ] ++
-        (map (dir: "d ${cfg.media.path}/${dir} 0775 media media -") cfg.media.directories);
-
-      users.groups.media = { gid = 1000; };
+        (map (dir: "d ${cfg.media.path}/${dir} 0755 eric users -") cfg.media.directories);
     })
 
     (lib.mkIf cfg.backup.enable {

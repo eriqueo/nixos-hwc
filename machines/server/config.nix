@@ -90,7 +90,7 @@
     firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
   };
 
-  # ntfy notification system for server alerts
+  # ntfy notification system CLI client for server alerts
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.system.services.ntfy = {
@@ -181,8 +181,8 @@
         ".npm"
         ".cargo/registry"
         ".cargo/git"
-        "*/frigate-v2/recordings/*"  # Surveillance auto-managed
-        "*/frigate-v2/clips/*"       # Surveillance auto-managed
+        "*/frigate/recordings/*"  # Surveillance auto-managed
+        "*/frigate/clips/*"       # Surveillance auto-managed
       ];
     };
 
@@ -351,10 +351,10 @@
   };
 
   # ntfy notification server (container)
-  # Provides notification server for hwc-ntfy-send client
+  # Provides push notification server for alerts and webhooks
   hwc.services.ntfy = {
-    enable = false;
-    port = 9999;  # Internal port - Caddy forwards external 2586 to this
+    enable = true;  # ENABLED - provides notification capabilities
+    port = 2586;    # Match routes.nix and Tailscale expectations
     dataDir = "/var/lib/hwc/ntfy";
   };
 
@@ -376,7 +376,7 @@
     # Storage paths
     storage = {
       configPath = "/opt/surveillance/frigate/config";
-      mediaPath = "/mnt/media/surveillance/frigate-v2/media";
+      mediaPath = "/mnt/media/surveillance/frigate/media";
       bufferPath = "/mnt/hot/surveillance/frigate/buffer";
     };
 
@@ -403,17 +403,17 @@
     script = ''
       # Frigate handles its own cleanup, but this provides backup enforcement
       # Delete recordings older than 7 days (Frigate config retention)
-      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate-v2/recordings -type f -name "*.mp4" -mtime +7 -delete 2>/dev/null || true
+      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate/recordings -type f -name "*.mp4" -mtime +7 -delete 2>/dev/null || true
 
       # Delete clips older than 10 days (event retention)
-      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate-v2/clips -type f -name "*.mp4" -mtime +10 -delete 2>/dev/null || true
+      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate/clips -type f -name "*.mp4" -mtime +10 -delete 2>/dev/null || true
 
       # Delete empty directories
-      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate-v2 -type d -empty -delete 2>/dev/null || true
+      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate -type d -empty -delete 2>/dev/null || true
 
       # Log cleanup stats
-      RECORDINGS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate-v2/recordings 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
-      CLIPS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate-v2/clips 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
+      RECORDINGS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate/recordings 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
+      CLIPS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate/clips 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
       echo "Frigate cleanup complete - Recordings: $RECORDINGS_SIZE, Clips: $CLIPS_SIZE"
     '';
   };
