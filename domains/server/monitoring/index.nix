@@ -1,14 +1,16 @@
 # domains/server/monitoring/index.nix
 #
-# Server monitoring subdomain aggregator
-# Imports options and monitoring implementation files
+# Monitoring Domain Aggregator
+# Charter v7.0 compliant
+#
+# Imports all monitoring modules
 
-{ lib, config, pkgs, ... }:
+{ ... }:
 
 {
   imports = [
-    ./options.nix
-    ./parts/prometheus.nix
-    ./parts/grafana.nix
+    ./prometheus/index.nix
+    ./grafana/index.nix
+    ./alertmanager/index.nix
   ];
 }

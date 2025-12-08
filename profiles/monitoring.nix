@@ -14,16 +14,37 @@ in
     #==========================================================================
     # MONITORING SERVICES
     #==========================================================================
-   
 
-    hwc.services.prometheus = {
+    # Prometheus - Metrics collection with 90-day retention
+    hwc.server.monitoring.prometheus = {
       enable = true;
       retention = "90d";
     };
 
-    hwc.services.grafana = {
+    # Grafana - Dashboards and visualization
+    hwc.server.monitoring.grafana = {
       enable = true;
       domain = "grafana.hwc.local";
+      adminPasswordFile = config.age.secrets.grafana-admin-password.path;
+    };
+
+    # Alertmanager - Alert routing to n8n webhooks
+    hwc.server.monitoring.alertmanager = {
+      enable = true;
+      # Webhook receivers configured post-deployment via n8n
+      # webhookReceivers = [
+      #   {
+      #     name = "n8n-slack";
+      #     url = "https://${config.hwc.services.shared.rootHost}/n8n/webhook/alertmanager";
+      #     sendResolved = true;
+      #   }
+      # ];
+    };
+
+    # n8n - Workflow automation for alert routing
+    hwc.server.n8n = {
+      enable = true;
+      # timezone already defaults to America/New_York
     };
   };
 }

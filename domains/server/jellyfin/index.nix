@@ -48,6 +48,8 @@ in
         # Run as eric user for simplified permissions (single-user system)
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
+        # Override state directory to use hwc structure
+        StateDirectory = lib.mkForce "hwc/jellyfin";
         # Disable user namespace isolation so eric can access directories
         PrivateUsers = lib.mkForce false;
       } // lib.optionalAttrs cfg.gpu.enable {

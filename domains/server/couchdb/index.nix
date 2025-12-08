@@ -93,6 +93,8 @@ EOF
       serviceConfig = {
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
+        # Override state directory to use hwc structure
+        StateDirectory = lib.mkForce "hwc/couchdb";
       };
     };
 
