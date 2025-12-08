@@ -105,7 +105,8 @@ in
         kernelParams = [ "nvidia-drm.modeset=1" ];
         extraModprobeConfig = ''
           # NVIDIA device file ownership/permissions
-          options nvidia NVreg_DeviceFileUID=0 NVreg_DeviceFileGID=44 NVreg_DeviceFileMode=0660
+          # Use video group (26) for device file access
+          options nvidia NVreg_DeviceFileUID=0 NVreg_DeviceFileGID=26 NVreg_DeviceFileMode=0660
           options nvidia NVreg_ModifyDeviceFiles=1
 
           # Persistence-leaning behavior
