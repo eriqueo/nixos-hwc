@@ -34,7 +34,7 @@ in
     ntfyUserFile = pathOrNull "ntfy-user";
     navidromeAdminPasswordFile = pathOrNull "navidrome-admin-password";
     slackWebhookUrlFile = pathOrNull "slack-webhook-url";
-    
+    jellyfinApiKeyFile = pathOrNull "jellyfin-api-key";
     
     # Email domain paths
     protonBridgePasswordFile = pathOrNull "proton-bridge-password";

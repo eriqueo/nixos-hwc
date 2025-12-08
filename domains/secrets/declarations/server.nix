@@ -132,6 +132,11 @@
       owner = "eric";
       group = "secrets";
     };
+    jellyfin-api-key = {
+      file = ../parts/server/jellyfin-api-key.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
 
     # Frigate secrets are in domains/secrets/declarations/infrastructure.nix
     # (camera/surveillance secrets belong to infrastructure domain)
