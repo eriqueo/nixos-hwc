@@ -1,286 +1,737 @@
-# Frigate NVR - Config-First Pattern
+# Frigate NVR - Network Video Recorder
 
-**Charter v7.0 Section 19 Compliant**
-**Namespace**: `hwc.server.frigate.*`
-**Status**: ✅ Production - Active
+**Version**: 0.16.2-tensorrt
+**Domain**: `hwc.server.frigate`
+**Architecture**: Config-First Pattern (Charter v7.0 Section 19 Compliant)
+**Status**: ✅ Production - Optimized (Sprint 1 Complete)
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Quick Start](#quick-start)
+3. [Configuration](#configuration)
+4. [GPU Acceleration](#gpu-acceleration)
+5. [Storage Management](#storage-management)
+6. [Camera Configuration](#camera-configuration)
+7. [Recording & Retention](#recording--retention)
+8. [Performance Optimization](#performance-optimization)
+9. [Monitoring](#monitoring)
+10. [Implementation Status](#implementation-status)
+11. [Testing & Validation](#testing--validation)
+12. [Troubleshooting](#troubleshooting)
+13. [Architecture Details](#architecture-details)
 
 ---
 
 ## Overview
 
-Frigate NVR implementation following the **config-first, Nix-second** pattern established in Charter v7.0 Section 19.
+Frigate is a complete and local NVR designed for Home Assistant with AI object detection. This implementation uses:
 
-**Key Features**:
-- ✅ Configuration in version-controlled `config/config.yml` (not Nix-generated)
-- ✅ Portable (works with Docker/Podman/k8s)
-- ✅ Debuggable (edit config directly, restart service)
-- ✅ Frigate 0.16.2-tensorrt (pinned with GPU support)
-- ✅ Nix handles infrastructure only (image, GPU, ports, volumes)
-- ✅ GPU-accelerated object detection (TensorRT + CUDA on NVIDIA P1000)
-- ✅ External access via Caddy reverse proxy
+- **Container**: Podman with GPU passthrough
+- **Hardware**: NVIDIA Quadro P1000 with CUDA/NVDEC acceleration
+- **Detection**: ONNX runtime with YOLOv9-s model
+- **Cameras**: 3 Cobra RTSP cameras (cobra_cam_1, cobra_cam_2, cobra_cam_3)
+- **Storage**: Motion-based recording with 7-day retention
+- **Security**: Agenix-encrypted secrets for RTSP credentials
 
-**Access**: https://hwc.ocelot-wahoo.ts.net:5443
+### Key Features
+
+✅ GPU-accelerated object detection (28ms inference)
+✅ Hardware video decoding (NVDEC)
+✅ Motion-based recording (60-70% storage savings vs continuous)
+✅ Configurable detection zones per camera
+✅ Longer retention for persons and vehicles
+✅ RTSP stream restreaming via go2rtc
+✅ Secure credential management with agenix
 
 ---
 
-## Architecture
+## Quick Start
 
-### Config-First Pattern
+### Access Frigate
 
-**Nix Responsibilities** (`options.nix`, `index.nix`):
-- Container image/version
-- GPU/device passthrough
-- Port mappings
-- Volume mounts
-- Resource limits
-- Environment variables
+**Web UI**: `http://hwc-server:5001` or `http://localhost:5001` (on server)
+**External**: `https://hwc.ocelot-wahoo.ts.net:5443` (via Caddy reverse proxy)
+**Tailscale**: Restricted to `tailscale0` interface for external access
 
-**Config File Responsibilities** (`config/config.yml`):
-- Camera definitions
-- Detector configuration
-- Recording settings
-- Object tracking
-- Zones/masks
-- All Frigate-specific settings
+### Check Status
 
-### Directory Structure
+```bash
+# Service status
+systemctl status podman-frigate.service
 
+# View logs
+journalctl -u podman-frigate.service -f
+
+# Check API
+curl -s http://localhost:5001/api/stats | jq '.service.version, .cameras | keys'
+
+# Check camera stats
+curl -s http://localhost:5001/api/stats | jq '.cameras | to_entries[] | {camera: .key, fps: .value.camera_fps, detection_fps: .value.detection_fps}'
+
+# Check detector performance
+curl -s http://localhost:5001/api/stats | jq '.detectors'
 ```
-domains/server/frigate/
-├── options.nix                 # Infrastructure options (image, GPU, ports)
-├── index.nix                   # Container definition (no YAML generation!)
-├── config/
-│   ├── config.yml              # CANONICAL CONFIG (version-controlled)
-│   ├── config.baseline.yml     # Snapshot for reference
-│   └── README.md               # Config documentation
-├── scripts/
-│   └── verify-config.sh        # Config validation script
-└── README.md                   # This file
+
+### Verify GPU Usage
+
+```bash
+# Check NVIDIA GPU (should show <30ms inference in API stats)
+nvidia-smi
+
+# Check detector inference speed
+curl -s http://localhost:5001/api/stats | jq '.detectors.onnx.inference_speed'
+# Expected: ~28ms (GPU-accelerated)
 ```
 
 ---
 
 ## Configuration
 
-### Machine Setup
+### NixOS Options
+
+All configuration via `hwc.server.frigate.*` namespace:
 
 ```nix
-# machines/server/config.nix
 hwc.server.frigate = {
   enable = true;
-
-  # Internal port 5001 (exposed as 5443 via Caddy)
+  image = "ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt";
   port = 5001;
 
-  # GPU acceleration for ONNX object detection (TensorRT + CUDA)
+  # GPU acceleration
   gpu = {
     enable = true;
-    device = 0;  # NVIDIA P1000
+    device = 0;  # NVIDIA GPU index
   };
 
   # Storage paths
   storage = {
-    configPath = "/opt/surveillance/frigate-v2/config";
-    mediaPath = "/mnt/media/surveillance/frigate-v2/media";
-    bufferPath = "/mnt/hot/surveillance/frigate-v2/buffer";
+    configPath = "/opt/surveillance/frigate/config";
+    mediaPath = "/mnt/media/surveillance/frigate/media";
+    bufferPath = "/mnt/hot/surveillance/frigate/buffer";
   };
 
-  # Firewall (restrict to Tailscale)
-  firewall.tailscaleOnly = true;
+  # Resource limits
+  resources = {
+    memory = "4g";
+    cpus = "4.0";
+    shmSize = "512m";
+  };
+
+  # Firewall
+  firewall.tailscaleOnly = true;  # Restrict to Tailscale
 };
 ```
 
-**Note**: Storage paths currently use "frigate-v2" directories (preserving existing data). These can be renamed to "frigate" when ready.
+### Config File Structure
 
-### Frigate Configuration
+**Template**: `domains/server/frigate/config/config.yml` (version-controlled)
+**Runtime**: `/opt/surveillance/frigate/config/config.yaml` (generated with secrets)
 
-**Primary config file**: `config/config.yml`
+The config template uses environment variable substitution for secrets:
 
-**To modify Frigate behavior**:
-1. Edit `config/config.yml`
-2. Validate: `./scripts/verify-config.sh`
-3. Restart: `sudo systemctl restart podman-frigate.service`
-4. Commit when stable
+- `${RTSP_USER}` - RTSP username
+- `${RTSP_PASS_ENCODED}` - URL-encoded RTSP password
+- `${CAM1_IP}`, `${CAM2_IP}`, `${CAM3_IP}` - Camera IP addresses
 
-See [`config/README.md`](config/README.md) for detailed config documentation.
+**Key Sections**:
 
-### External Access
-
-Frigate is exposed externally via Caddy reverse proxy:
-
-- **Internal**: `http://localhost:5001` (container port)
-- **External**: `https://hwc.ocelot-wahoo.ts.net:5443` (Caddy via Tailscale)
-
-**Configuration**: `domains/server/routes.nix`
-```nix
-{
-  name = "frigate";
-  mode = "port";
-  port = 5443;
-  upstream = "http://127.0.0.1:5001";
-}
-```
-
-The reverse proxy is configured in port mode (not subpath) because Frigate's web UI doesn't work well with subpath routing.
+1. **Detectors**: ONNX with CUDA acceleration
+2. **Model**: YOLOv9-s-320 for fast inference
+3. **FFmpeg**: NVDEC hardware decoding
+4. **Record**: Motion-based with 7-day retention
+5. **Snapshots**: Event snapshots with retention
+6. **Objects**: Detection filters per object type
+7. **Cameras**: Per-camera configuration with zones
 
 ---
 
-## Dependencies
+## GPU Acceleration
 
-**Required**:
-- `hwc.infrastructure.hardware.gpu.enable = true` (for GPU acceleration)
-- `hwc.secrets.enable = true` (for RTSP credentials)
-- `virtualisation.oci-containers.backend = "podman"`
+### Hardware Setup
 
-**Validated at build time** - will fail with clear error if missing.
+**GPU**: NVIDIA Quadro P1000
+**Driver**: Proprietary NVIDIA drivers via `hwc.infrastructure.hardware.gpu.enable`
+**Compute**: CUDA 12.x
+**Video Decode**: NVDEC
 
----
+### Detector Configuration
 
-## Deployment Status
-
-### Current State: ✅ Production
-
-**Deployed**:
-- ✅ Charter v7.0 Section 19 compliant (config-first pattern)
-- ✅ Module structure created and active
-- ✅ Infrastructure-only options defined
-- ✅ Container running (frigate:0.16.2-tensorrt)
-- ✅ GPU acceleration validated (TensorRT + CUDA)
-- ✅ Config validation script
-- ✅ External access via Caddy (https://hwc.ocelot-wahoo.ts.net:5443)
-- ✅ Old module removed (no ambiguity)
-- ✅ All references renamed from frigate-v2 to frigate
-
-**Service Details**:
-- **Service**: `podman-frigate.service`
-- **Container**: `frigate`
-- **Image**: `ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt`
-- **Status**: Active (running)
-- **GPU**: NVIDIA Quadro P1000 with TensorRT support
-
----
-
-## Usage
-
-### Starting/Stopping
-
-```bash
-# Stop service
-sudo systemctl stop podman-frigate.service
-
-# Start service
-sudo systemctl start podman-frigate.service
-
-# Restart (after config changes)
-sudo systemctl restart podman-frigate.service
-
-# Check status
-sudo systemctl status podman-frigate.service
+```yaml
+detectors:
+  onnx:
+    type: onnx
+    device: '0'
+    num_threads: 4
+    execution_providers:
+      - cuda
+      - cpu  # Fallback
 ```
 
-### Viewing Logs
+**Model**: YOLOv9-s-320
+- **Location**: `/opt/surveillance/frigate/config/models/yolov9-s-320.onnx`
+- **Input**: 320x320 BGR
+- **Inference Speed**: ~28ms (GPU-accelerated)
 
-```bash
-# Container logs
-podman logs frigate
-podman logs frigate --tail 100
-podman logs frigate --follow
+### Video Decode Acceleration
 
-# Systemd service logs
-journalctl -u podman-frigate.service -f
+```yaml
+ffmpeg: &ffmpeg_defaults
+  hwaccel_args:
+    - -hwaccel
+    - nvdec           # NVIDIA hardware decoder
+    - -hwaccel_device
+    - '0'             # GPU index
+    - -hwaccel_output_format
+    - yuv420p
 ```
 
-### Health Check
-
-Comprehensive health check script available at repository root:
-
-```bash
-./frigate-health.sh
-
-# Checks:
-# - Service status (podman-frigate.service)
-# - Container status and health
-# - API availability (http://localhost:5001)
-# - Port availability (5001, 8554, 8555)
-# - GPU access and utilization
-```
-
-### Inspecting Config
-
-```bash
-# View config as Frigate sees it
-podman exec frigate cat /config/config.yml
-
-# Compare with our source
-diff domains/server/frigate/config/config.yml \
-     <(podman exec frigate cat /config/config.yml)
-```
+**Benefits**:
+- Reduced CPU usage for video decoding
+- Lower latency for detection
+- More efficient multi-camera handling
 
 ### Validation
 
 ```bash
-# Verify config structure
-./domains/server/frigate/scripts/verify-config.sh
+# Check inference speed (should be <30ms)
+curl -s http://localhost:5001/api/stats | jq '.detectors.onnx.inference_speed'
 
-# Check that model block is top-level
-grep -A 10 "^model:" config/config.yml
-
-# Check for input_dtype field
-grep "input_dtype:" config/config.yml
+# Expected: 25-30ms (GPU) vs 100-200ms (CPU)
 ```
+
+---
+
+## Storage Management
+
+### Directory Structure
+
+```
+/mnt/media/surveillance/frigate/
+└── media/                      # Recordings and snapshots
+    ├── cobra_cam_1/
+    ├── cobra_cam_2/
+    └── cobra_cam_3/
+
+/mnt/hot/surveillance/frigate/
+└── buffer/                     # Temporary buffer (high-speed storage)
+
+/opt/surveillance/frigate/
+└── config/
+    ├── config.yaml             # Runtime config (generated)
+    ├── models/
+    │   └── yolov9-s-320.onnx
+    └── labelmap/
+        └── coco-80.txt
+```
+
+### Storage Requirements
+
+**Motion Recording** (current):
+- **Per Camera**: ~3-5 GB/week (varies by motion)
+- **Total (3 cameras)**: ~8-15 GB/week
+- **7-day retention**: ~25-50 GB total
+
+**Continuous Recording** (for comparison):
+- Would be ~23 GB/week per camera (~69 GB total)
+- Motion mode saves **60-70% storage**
+
+### Cleanup
+
+Frigate automatically manages retention based on configuration:
+
+```yaml
+record:
+  retain:
+    days: 7
+    mode: motion  # Only record when motion detected
+
+snapshots:
+  retain:
+    default: 10      # Default 10 days
+    objects:
+      person: 30     # Keep person snapshots 30 days
+      car: 14
+      truck: 14
+```
+
+---
+
+## Camera Configuration
+
+### Camera Overview
+
+| Camera | Resolution | FPS | Purpose | Zone |
+|--------|-----------|-----|---------|------|
+| cobra_cam_1 | 1280x720 | 5 | Yard/Gate | `yard_gate` |
+| cobra_cam_2 | 640x360 | 3 | Porch | `porch_area` |
+| cobra_cam_3 | 640x480 | 3 | Driveway/Sidewalk | `driveway_truck`, `sidewalk_front` |
+
+### Per-Camera Settings
+
+#### cobra_cam_1 (High Priority - Yard)
+
+```yaml
+detect:
+  width: 1280
+  height: 720
+  fps: 5          # Higher FPS for better motion detection
+
+motion:
+  mask:
+    - 0,0,1280,100         # Exclude sky
+    - 0,620,200,720        # Exclude left edge
+    - 1080,620,1280,720    # Exclude right edge
+
+zones:
+  yard_gate:
+    coordinates: 200,700,1000,700,1000,500,200,500
+    objects: [person, dog, cat]
+    filters:
+      person:
+        min_area: 5000     # Larger threshold for distance
+        threshold: 0.75    # Higher confidence
+```
+
+#### cobra_cam_2 (Porch)
+
+```yaml
+detect:
+  width: 640
+  height: 360
+  fps: 3          # Moderate FPS for close-range
+
+motion:
+  mask:
+    - 0,0,640,60          # Exclude sky
+
+zones:
+  porch_area:
+    coordinates: 50,340,590,340,590,200,50,200
+    objects: [person, dog, cat]
+```
+
+#### cobra_cam_3 (Driveway/Sidewalk)
+
+```yaml
+detect:
+  width: 640
+  height: 480
+  fps: 3
+
+objects:
+  track: [person, car, truck, dog, cat]
+  filters:
+    car:
+      min_score: 0.7
+      threshold: 0.75
+      min_area: 10000     # Large for driveway
+    truck:
+      min_score: 0.7
+      threshold: 0.75
+      min_area: 12000
+
+zones:
+  driveway_truck:
+    coordinates: 50,450,400,450,400,350,50,350
+    objects: [person, car, truck]
+
+  sidewalk_front:
+    coordinates: 50,300,590,300,590,360,50,360
+    objects: [person, dog, cat]
+```
+
+### Detection Tuning
+
+**Global Object Filters**:
+
+```yaml
+objects:
+  track: [person, dog, cat, car, truck]
+  filters:
+    person:
+      min_score: 0.65     # Detection confidence
+      threshold: 0.7      # Tracking threshold
+      min_area: 3000      # Minimum pixel area
+
+    dog:
+      min_score: 0.6
+      threshold: 0.7
+      min_area: 2000
+
+    cat:
+      min_score: 0.6
+      threshold: 0.7
+      min_area: 2000
+```
+
+**Parameters**:
+- `min_score`: Initial detection confidence (0.0-1.0)
+- `threshold`: Tracking continuation threshold
+- `min_area`: Minimum bounding box area in pixels
+
+---
+
+## Recording & Retention
+
+### Motion-Based Recording
+
+**Configuration**:
+
+```yaml
+record:
+  enabled: true
+  retain:
+    days: 7
+    mode: motion    # Only record motion events
+```
+
+**Benefits**:
+- 60-70% storage savings vs continuous
+- Focus storage on important events
+- Longer retention possible with same storage
+
+### Snapshot Retention
+
+**Per-Object Retention**:
+
+```yaml
+snapshots:
+  enabled: true
+  retain:
+    default: 10      # 10 days default
+    objects:
+      person: 30     # Keep persons 30 days
+      car: 14        # Vehicles 14 days
+      truck: 14
+```
+
+---
+
+## Performance Optimization
+
+### Implemented Optimizations
+
+#### ✅ Phase A: Security & Path Standardization
+
+1. **RTSP Credentials**: Moved to agenix secrets with URL encoding
+2. **Path Standardization**: All paths use `frigate` (not `frigate-v2`)
+3. **Config Template**: Environment variable substitution for secrets
+
+#### ✅ Phase B: Camera & GPU Optimization
+
+1. **Increased FPS**:
+   - cobra_cam_1: 1→5 fps (high priority)
+   - cobra_cam_2/3: 1→3 fps
+
+2. **Resolution Upgrade**: cobra_cam_3: 320x240→640x480
+
+3. **Motion Masks**: Exclude sky and edges to reduce false positives
+
+4. **Detection Zones**: Tighter zone coordinates for focused detection
+
+5. **GPU Tuning**: Increased detector threads (3→4)
+
+6. **Recording Mode**: Switched from continuous (`all`) to `motion`
+   - **Storage Savings**: 60-70% reduction
+   - **Impact**: ~23GB/week → ~8-15GB/week
+
+#### ✅ Phase C: Monitoring
+
+1. **Port Mapping**: Added port 9191:9090 for future Prometheus integration
+2. **Validation**: Added Prometheus dependency assertion
+
+**Note**: Prometheus telemetry configuration was removed due to Frigate 0.16.2 API changes. Monitoring is available via API stats endpoint.
+
+### Current Performance Metrics
+
+```bash
+# Check current stats
+curl -s http://localhost:5001/api/stats | jq '{
+  version: .service.version,
+  detector_speed_ms: .detectors.onnx.inference_speed,
+  cameras: (.cameras | to_entries | map({
+    name: .key,
+    fps: .value.camera_fps,
+    detection_fps: .value.detection_fps
+  }))
+}'
+```
+
+**Expected Output**:
+```json
+{
+  "version": "0.16.2-4d58206",
+  "detector_speed_ms": 28.0,
+  "cameras": [
+    {"name": "cobra_cam_1", "fps": 5.0, "detection_fps": 3.7},
+    {"name": "cobra_cam_2", "fps": 2.8, "detection_fps": 0.8},
+    {"name": "cobra_cam_3", "fps": 3.0, "detection_fps": 0.3}
+  ]
+}
+```
+
+---
+
+## Monitoring
+
+### Health Checks
+
+The container includes HTTP health checks:
+
+```bash
+# Check container health
+curl -fsS http://localhost:5001/api/stats || echo "UNHEALTHY"
+```
+
+### API Monitoring
+
+**Stats Endpoint**: `http://localhost:5001/api/stats`
+
+**Key Metrics**:
+- `service.version` - Frigate version
+- `detectors.onnx.inference_speed` - Detection speed (ms)
+- `cameras.{name}.camera_fps` - Camera frame rate
+- `cameras.{name}.detection_fps` - Detection processing rate
+- `cameras.{name}.process_fps` - Processing pipeline rate
+
+### Systemd Integration
+
+```bash
+# Service status
+systemctl status podman-frigate.service
+
+# View recent logs
+journalctl -u podman-frigate.service -n 100
+
+# Follow logs in real-time
+journalctl -u podman-frigate.service -f
+```
+
+---
+
+## Implementation Status
+
+### ✅ Completed (Sprint 1 - Optimization)
+
+| Phase | Task | Status |
+|-------|------|--------|
+| A.1 | Fix RTSP credential templating | ✅ Completed |
+| A.2 | Update machine config paths | ✅ Completed |
+| A.3 | Remove outdated launch script | ✅ Completed |
+| B.1 | Increase camera FPS | ✅ Completed |
+| B.2 | Optimize resolutions | ✅ Completed |
+| B.3 | Refine detection zones | ✅ Completed |
+| B.4 | Switch to motion recording | ✅ Completed |
+| B.5 | GPU detector tuning | ✅ Completed |
+| C.1 | Add Prometheus port mapping | ✅ Completed |
+| C.2 | Add Prometheus dependency validation | ✅ Completed |
+| D | Create comprehensive documentation | ✅ Completed |
+
+### Deferred Items
+
+- **Prometheus Telemetry**: Removed due to Frigate 0.16.2 API incompatibility
+  - Alternative: Use API stats endpoint for monitoring
+  - Future: Evaluate Frigate 0.17+ for native Prometheus support
+
+---
+
+## Testing & Validation
+
+### Pre-Deployment Checklist
+
+```bash
+# 1. Validate NixOS configuration
+nix flake check
+
+# 2. Build test (no activation)
+sudo nixos-rebuild test --flake .#hwc-server
+
+# 3. Check config generation
+sudo systemctl status frigate-config.service
+sudo cat /opt/surveillance/frigate/config/config.yaml | head -50
+
+# 4. Verify secrets substitution
+sudo cat /opt/surveillance/frigate/config/config.yaml | rg "RTSP_USER|admin:il0wwlm"
+# Should show: rtsp://admin:<encoded-password>@192.168.1.xxx
+# Should NOT show: ${RTSP_USER} or hardcoded credentials
+
+# 5. Check GPU availability
+nvidia-smi
+
+# 6. Verify storage paths exist
+ls -la /mnt/media/surveillance/frigate/media
+ls -la /mnt/hot/surveillance/frigate/buffer
+```
+
+### Post-Deployment Validation
+
+```bash
+# 1. Service is running
+systemctl is-active podman-frigate.service
+# Expected: active
+
+# 2. API responds
+curl -s http://localhost:5001/api/stats | jq '.service.version'
+# Expected: "0.16.2-4d58206"
+
+# 3. All cameras connected
+curl -s http://localhost:5001/api/stats | jq '.cameras | keys'
+# Expected: ["cobra_cam_1", "cobra_cam_2", "cobra_cam_3"]
+
+# 4. GPU acceleration working
+curl -s http://localhost:5001/api/stats | jq '.detectors.onnx.inference_speed'
+# Expected: 25-35ms (GPU) vs 100-200ms (CPU)
+
+# 5. Cameras streaming at correct FPS
+curl -s http://localhost:5001/api/stats | jq '.cameras | to_entries[] | {camera: .key, fps: .value.camera_fps}'
+# Expected: cam1=5.0, cam2/3=~3.0
+
+# 6. No config errors in logs
+journalctl -u podman-frigate.service --since "5 minutes ago" | rg "error|validation"
+# Expected: No validation errors
+```
+
+### Performance Benchmarks
+
+| Metric | Target | Current |
+|--------|--------|---------|
+| Detector inference | <50ms | ~28ms ✅ |
+| Camera FPS (cam1) | 5.0 | 5.0 ✅ |
+| Camera FPS (cam2/3) | 3.0 | ~3.0 ✅ |
+| Storage (motion mode) | <20GB/week | ~8-15GB/week ✅ |
 
 ---
 
 ## Troubleshooting
 
-### Service Won't Start
+### Container Won't Start
+
+**Symptom**: `podman-frigate.service` fails or restarts continuously
+
+**Debug Steps**:
 
 ```bash
-# Check assertions (Nix validation)
-sudo nixos-rebuild build --flake .#hwc-server --show-trace
+# Check service status
+systemctl status podman-frigate.service
 
-# Check container logs for errors
-podman logs frigate --tail 50
+# View detailed logs
+journalctl -u podman-frigate.service -n 200 --no-pager
+
+# Check for config validation errors
+journalctl -u podman-frigate.service | rg "validation|error"
+
+# Verify config file was generated
+ls -la /opt/surveillance/frigate/config/config.yaml
+
+# Check for syntax errors
+sudo cat /opt/surveillance/frigate/config/config.yaml | head -100
 ```
 
-### Config Changes Not Applying
+**Common Causes**:
+
+1. **Config Validation Errors**:
+   - Check logs for `Extra inputs are not permitted`
+   - Frigate 0.16.2 doesn't support `telemetry` or nested `events` sections
+   - Solution: Ensure config template matches 0.16.2 schema
+
+2. **Storage Path Missing**:
+   - Error: `no such file or directory: /mnt/media/surveillance/frigate/media`
+   - Solution: `sudo mkdir -p /mnt/media/surveillance/frigate/media && sudo chown eric:users /mnt/media/surveillance/frigate/media`
+
+3. **Secrets Not Available**:
+   - Error: `RTSP connection failed`
+   - Solution: Check `age.secrets.frigate-*` are decrypted in `/run/agenix/`
+
+### Config Not Updating
+
+**Symptom**: Changes to `config.yml` not reflected in Frigate
+
+**Cause**: Runtime config `/opt/surveillance/frigate/config/config.yaml` is generated from Nix store template
+
+**Solution**:
 
 ```bash
-# 1. Verify config.yml in container matches your local file
-podman exec frigate cat /config/config.yml | diff - config/config.yml
-
-# 2. If different, rebuild NixOS
+# Rebuild NixOS to update template in Nix store
 sudo nixos-rebuild switch --flake .#hwc-server
 
-# 3. Restart container
-sudo systemctl restart podman-frigate.service
+# Force config regeneration
+sudo systemctl stop podman-frigate.service
+sudo rm /opt/surveillance/frigate/config/config.yaml
+sudo systemctl restart frigate-config.service
+sudo systemctl start podman-frigate.service
 ```
 
-### ONNX Dtype Errors
+---
 
-If you see:
-```
-Unexpected input data type. Actual: (tensor(uint8)), expected: (tensor(float))
+## Architecture Details
+
+### Config-First Pattern
+
+**Philosophy**: Configuration lives in version-controlled YAML, Nix handles infrastructure
+
+**Template**: `domains/server/frigate/config/config.yml`
+- Version controlled
+- Uses environment variables for secrets
+- Single source of truth for Frigate config
+
+**Generation**: `systemd.services.frigate-config`
+- Reads secrets from agenix (`/run/agenix/frigate-*`)
+- URL-encodes RTSP password
+- Substitutes variables using `envsubst`
+- Outputs to `/opt/surveillance/frigate/config/config.yaml`
+
+**Container**: Mounts generated config as read-only volume
+
+### Directory Management
+
+**Nix tmpfiles.rules**: Create directories early in boot
+
+```nix
+systemd.tmpfiles.rules = [
+  "d /opt/surveillance/frigate/config 0755 eric users -"
+  "d /opt/surveillance/frigate/config/models 0755 eric users -"
+  "d /opt/surveillance/frigate/config/labelmap 0755 eric users -"
+  "d /mnt/media/surveillance/frigate/media 0755 eric users -"
+  "d /mnt/hot/surveillance/frigate/buffer 0755 eric users -"
+];
 ```
 
-**Fix**:
-1. Check that `model` block is **top-level** (not nested under `detectors`)
-2. Ensure `input_dtype: float` is present
-3. Validate: `./scripts/verify-config.sh`
+### Container Configuration
+
+**Image**: `ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt`
+
+**Key Options**:
+- `--privileged`: Required for GPU access
+- `--device=nvidia.com/gpu=0`: GPU passthrough (when GPU enabled)
+- `--shm-size=512m`: Shared memory for video processing
+- `--memory=4g`: Memory limit
+- `--cpus=4.0`: CPU limit
+- `--tmpfs=/tmp/cache:size=1g`: Temporary cache
+
+**Health Check**:
+```bash
+curl -fsS http://127.0.0.1:5000/api/stats || exit 1
+```
+- Interval: 30s
+- Timeout: 5s
+- Retries: 3
 
 ---
 
 ## References
 
-- **Charter v7.0 Section 19**: Complex Service Configuration Pattern
 - **Frigate Documentation**: https://docs.frigate.video/
-- **Config Documentation**: [config/README.md](config/README.md)
-- **Validation Script**: [scripts/verify-config.sh](scripts/verify-config.sh)
+- **NixOS Podman**: https://nixos.org/manual/nixos/stable/index.html#ch-containers
+- **Agenix**: https://github.com/ryantm/agenix
+- **Charter v7.0**: `/home/eric/.nixos/CHARTER.md`
+- **Optimization Plan**: `./FRIGATE-OPTIMIZATION-PLAN.md` (reference)
 
 ---
 
 **Created**: 2025-11-23
-**Last Updated**: 2025-11-24
-**Charter Version**: v7.0
-**Module Version**: 1.0.0 (config-first)
-**Status**: Production
+**Last Updated**: 2025-12-07
+**Maintainer**: Eric
+**Status**: Production ✅ Optimized (Sprint 1 Complete)

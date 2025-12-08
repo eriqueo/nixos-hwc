@@ -164,6 +164,132 @@ in
       enable = mkEnableOption "GPU acceleration for photo/video processing";
     };
 
+    # Observability and logging
+    observability = {
+      timezone = mkOption {
+        type = types.str;
+        default = "America/Denver";  # Will be overridden by config.time.timeZone in index.nix
+        description = ''
+          Timezone for Immich services. Ensures correct timestamps in logs and EXIF metadata processing.
+          Defaults to system timezone.
+        '';
+      };
+
+      logLevel = mkOption {
+        type = types.enum [ "verbose" "debug" "log" "warn" "error" ];
+        default = "log";
+        description = ''
+          Immich log level. Options: verbose, debug, log (info), warn, error.
+          Default: log (equivalent to info)
+        '';
+      };
+
+      metrics = {
+        enable = mkEnableOption "Prometheus metrics endpoints" // { default = true; };
+
+        apiPort = mkOption {
+          type = types.port;
+          default = 8091;
+          description = "Prometheus metrics port for immich-server (API metrics)";
+        };
+
+        microservicesPort = mkOption {
+          type = types.port;
+          default = 8092;
+          description = "Prometheus metrics port for immich-machine-learning (worker metrics)";
+        };
+      };
+    };
+
+    # Machine learning performance tuning
+    machineLearning = {
+      cpuCores = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Number of CPU cores for ML threading calculations.
+          null = auto-detect from system (recommended)
+
+          Used to compute:
+          - interOpThreads = min(2, cores - 2)
+          - intraOpThreads = max(1, cores - 2)
+        '';
+      };
+
+      modelTTL = mkOption {
+        type = types.int;
+        default = 600;
+        description = ''
+          Time-to-live for ML models in GPU memory (seconds).
+          Default: 600 (10 minutes). Increase to reduce model reload overhead,
+          decrease to free GPU memory faster.
+        '';
+      };
+
+      modelTTLPollInterval = mkOption {
+        type = types.int;
+        default = 30;
+        description = ''
+          How often to check if models should be unloaded (seconds).
+          Default: 30 seconds (vs 10s upstream default).
+        '';
+      };
+
+      threading = {
+        requestThreads = mkOption {
+          type = types.nullOr types.int;
+          default = null;
+          description = ''
+            Number of concurrent ML requests to process.
+            null = auto-detect (usually 1)
+
+            WARNING: Higher values increase GPU memory usage.
+          '';
+        };
+
+        interOpThreads = mkOption {
+          type = types.nullOr types.int;
+          default = null;
+          description = ''
+            Inter-op parallelism for ML models (parallel operations).
+            null = auto-compute as min(2, cores - 2)
+
+            Recommended: 2 for single-GPU systems
+          '';
+        };
+
+        intraOpThreads = mkOption {
+          type = types.nullOr types.int;
+          default = null;
+          description = ''
+            Intra-op parallelism for ML models (threads per operation).
+            null = auto-compute as max(1, cores - 2)
+
+            Recommended: cores - 2 to leave headroom for other processes
+          '';
+        };
+      };
+    };
+
+    # Reverse proxy configuration
+    reverseProxy = {
+      trustedProxies = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = ''
+          CIDR ranges of trusted reverse proxies for correct client IP logging.
+
+          Recommended values:
+          - "127.0.0.1" (local Caddy/nginx)
+          - "100.64.0.0/10" (Tailscale CGNAT range)
+          - Your custom proxy network CIDR
+
+          Set in machine config:
+          hwc.server.immich.reverseProxy.trustedProxies = [ "127.0.0.1" "100.64.0.0/10" ];
+        '';
+      };
+    };
+
     # Note: Immich uses direct port access, not reverse proxy (SvelteKit issues)
     directAccess = {
       tailscaleHttps = mkOption {

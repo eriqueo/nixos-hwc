@@ -73,10 +73,6 @@ in
       };
 
       preStart = ''
-        # Ensure data directory exists with correct permissions
-        mkdir -p ${cfg.dataDir}
-        chmod 755 ${cfg.dataDir}
-
         # Create database directory if using SQLite
         ${lib.optionalString (cfg.database.type == "sqlite") ''
           mkdir -p $(dirname ${cfg.database.sqlite.file})
@@ -84,9 +80,10 @@ in
       '';
     };
 
-    # Ensure data directory exists
+    # Ensure data directory exists with correct ownership
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0755 eric users -"
+      "d ${cfg.dataDir}/.n8n 0755 eric users -"
     ];
 
     # Firewall - localhost + Tailscale

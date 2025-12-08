@@ -26,6 +26,7 @@ in
   config = lib.mkIf cfg.enable {
     services.grafana = {
       enable = true;
+      dataDir = cfg.dataDir;  # Override default /var/lib/grafana
       settings = {
         server = {
           http_port = cfg.port;

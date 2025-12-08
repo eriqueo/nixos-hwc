@@ -8,20 +8,42 @@ INSECURE="${INSECURE:-0}"
 # Use '|' as a safe delimiter so http://... doesn't break parsing.
 # name|mode|public_path_or_port|upstream_url|unit_hint
 SERVICES=(
-  "jellyfin|subpath|/jellyfin|http://127.0.0.1:8096|jellyfin"
-  "jellyseerr-sub|subpath|/jellyseerr|http://127.0.0.1:5055|jellyseerr"
+  # Media services
+  "jellyfin|port|6443|http://127.0.0.1:8096|jellyfin"
   "jellyseerr|port|5543|http://127.0.0.1:5055|jellyseerr"
+  "jellyseerr-sub|subpath|/jellyseerr|http://127.0.0.1:5055|jellyseerr"
   "navidrome|subpath|/music|http://127.0.0.1:4533|navidrome"
+  "immich|port|7443|http://127.0.0.1:2283|immich-server"
+  "frigate|port|5443|http://127.0.0.1:5001|frigate"
+
+  # Media automation
   "sonarr|subpath|/sonarr|http://127.0.0.1:8989|sonarr"
   "radarr|subpath|/radarr|http://127.0.0.1:7878|radarr"
   "lidarr|subpath|/lidarr|http://127.0.0.1:8686|lidarr"
   "prowlarr|subpath|/prowlarr|http://127.0.0.1:9696|prowlarr"
+  "books|subpath|/books|http://127.0.0.1:5299|books"
+
+  # Download clients
   "sabnzbd|subpath|/sab|http://127.0.0.1:8081|sabnzbd"
   "qbittorrent|subpath|/qbt|http://127.0.0.1:8080|qbittorrent"
+  "slskd|port|8443|http://127.0.0.1:5031|slskd"
+
+  # Productivity & Automation
+  "n8n|subpath|/n8n|http://127.0.0.1:5678|n8n"
   "couchdb|subpath|/sync|http://127.0.0.1:5984|couchdb"
-  "immich|port|7443|http://127.0.0.1:2283|immich"
-  "frigate|port|5443|http://127.0.0.1:5000|frigate"
-  "slskd|port|8443|http://127.0.0.1:5030|slskd"
+  "ntfy|subpath|/notify|http://127.0.0.1:2586|ntfy"
+
+  # Monitoring & Dashboards
+  "grafana|port|4443|http://127.0.0.1:3000|grafana"
+  "organizr|port|9443|http://127.0.0.1:9983|organizr"
+
+  # AI & APIs
+  "openwebui|port|3443|http://127.0.0.1:3001|open-webui"
+  "workflows-api|subpath|/workflows|http://127.0.0.1:6021|workflows-api"
+  "transcript-api|subpath|/api|http://127.0.0.1:8099|transcript-api"
+
+  # Media processing
+  "tdarr|port|8267|http://127.0.0.1:8265|tdarr"
 )
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -87,6 +109,15 @@ for s in "${SERVICES[@]}"; do
   ttime="$(awk -F'\t' '{print $5}' <<< "$out")"
   table_r "$name" "local" "$upstream" "$http" "$ttime" ""
 done
+
+hdr "Internal services (not proxied through Caddy)"
+printf "%-20s %-10s %-30s\n" "SERVICE" "STATUS" "ENDPOINT"
+printf "%-20s %-10s %-30s\n" "prometheus" "$(systemctl is-active prometheus 2>/dev/null || echo 'inactive')" "http://localhost:9090"
+printf "%-20s %-10s %-30s\n" "alertmanager" "$(systemctl is-active alertmanager 2>/dev/null || echo 'inactive')" "http://localhost:9093"
+printf "%-20s %-10s %-30s\n" "ollama" "$(systemctl is-active podman-ollama 2>/dev/null || echo 'inactive')" "http://localhost:11434"
+printf "%-20s %-10s %-30s\n" "postgres" "$(systemctl is-active postgresql 2>/dev/null || echo 'inactive')" "localhost:5432"
+printf "%-20s %-10s %-30s\n" "redis-immich" "$(systemctl is-active redis-immich 2>/dev/null || echo 'inactive')" "localhost:6379"
+printf "%-20s %-10s %-30s\n" "immich-ml" "$(systemctl is-active immich-machine-learning 2>/dev/null || echo 'inactive')" "http://localhost:3003"
 
 hdr "Systemd units (best-effort detection)"
 # Try explicit unit names first, then fuzzy match against list-units

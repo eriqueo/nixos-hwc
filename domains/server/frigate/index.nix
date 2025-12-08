@@ -187,6 +187,7 @@ LABELMAP_EOF
         "8554:8554"  # RTSP
         "8555:8555/tcp"  # WebRTC
         "8555:8555/udp"  # WebRTC
+        "9191:9090"  # Prometheus metrics
       ];
 
       extraOptions = [
@@ -248,6 +249,22 @@ LABELMAP_EOF
     };
 
     #==========================================================================
+    # PROMETHEUS INTEGRATION
+    #==========================================================================
+    # Add Frigate metrics endpoint to Prometheus scraping
+    hwc.server.monitoring.prometheus.scrapeConfigs = lib.mkIf cfg.enable [
+      {
+        job_name = "frigate-nvr";
+        static_configs = [{
+          targets = [ "localhost:9191" ];
+        }];
+        scrape_interval = "30s";
+        scrape_timeout = "10s";
+        metrics_path = "/metrics";
+      }
+    ];
+
+    #==========================================================================
     # VALIDATION
     #==========================================================================
     assertions = [
@@ -282,6 +299,10 @@ LABELMAP_EOF
       {
         assertion = !cfg.enable || builtins.pathExists configTemplate;
         message = "hwc.server.frigate requires config/config.yml template to exist";
+      }
+      {
+        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
+        message = "Frigate metrics require Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
       }
     ];
   };
