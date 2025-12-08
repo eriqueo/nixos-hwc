@@ -484,14 +484,14 @@ trigger_ai_docs() {
         return 0
     fi
 
-    # Check if service exists
-    if ! systemctl list-unit-files | grep -q "^${AI_DOCS_SERVICE}.service"; then
+    # Check if service exists (more reliable check)
+    if ! systemctl list-unit-files "${AI_DOCS_SERVICE}.service" &>/dev/null; then
         log_warn "AI docs service not found: $AI_DOCS_SERVICE"
         return 0
     fi
 
     # Start service in background
-    if execute systemctl start "$AI_DOCS_SERVICE" & then
+    if execute systemctl start "${AI_DOCS_SERVICE}.service" & then
         log_info "AI documentation processing started"
     else
         log_warn "Failed to start AI docs service (non-fatal)"
