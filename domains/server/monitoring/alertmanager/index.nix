@@ -54,9 +54,7 @@ in
       enable = true;
       port = cfg.port;
       configuration = alertmanagerConfig;
-      extraFlags = [
-        "--storage.path=${cfg.dataDir}"
-      ];
+      # Storage path overridden in systemd ExecStart below
     };
 
     # Configure Prometheus to send alerts to Alertmanager
@@ -66,20 +64,24 @@ in
       }];
     }];
 
-    # Run as eric user
+    # Run as eric user and override storage path
     systemd.services.alertmanager = {
       serviceConfig = {
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
         StateDirectory = lib.mkForce "hwc/alertmanager";
+        DynamicUser = lib.mkForce false;  # Disable DynamicUser complexity - use simple eric user
         WorkingDirectory = lib.mkForce cfg.dataDir;
+        # Override ExecStart to use hwc storage path instead of default /var/lib/alertmanager
+        ExecStart = lib.mkForce ''
+          ${pkgs.prometheus-alertmanager}/bin/alertmanager \
+            --config.file /tmp/alert-manager-substituted.yaml \
+            --web.listen-address :${toString cfg.port} \
+            --log.level warn \
+            --storage.path ${cfg.dataDir}
+        '';
       };
     };
-
-    # Ensure data directory exists
-    systemd.tmpfiles.rules = [
-      "d ${cfg.dataDir} 0755 eric users -"
-    ];
 
     # Firewall - localhost + Tailscale
     networking.firewall.interfaces."lo".allowedTCPPorts = [ cfg.port ];
