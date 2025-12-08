@@ -1,0 +1,375 @@
+{
+  "name": "Universal Script Executor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "script-executor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "script-executor"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and sanitize script execution request\nconst request = $input.item.json;\n\nconst scriptName = request.script_name || '';\nconst args = request.args || [];\nconst async = request.async || false;\nconst callbackUrl = request.callback_url || null;\nconst requester = request.requester || 'unknown';\n\n// Whitelist of allowed scripts with their full paths\nconst allowedScripts = {\n  // System Maintenance\n  'nix-collect-garbage': '/run/current-system/sw/bin/nix-collect-garbage',\n  'service-restart': '/run/current-system/sw/bin/systemctl',\n  'backup-now': '/home/eric/.local/bin/trigger-backup',\n  \n  // Media Processing\n  'beets-import': '/home/eric/.local/bin/n8n-beets-import',\n  'jellyfin-scan': '/home/eric/.local/bin/n8n-jellyfin-scan',\n  'media-organize': '/home/eric/.local/bin/run-claude-skill',\n  'music-dedup': '/home/eric/.local/bin/run-claude-skill',\n  \n  // NixOS Operations\n  'flake-update': '/home/eric/.local/bin/n8n-flake-update',\n  'charter-check': '/home/eric/.local/bin/run-claude-skill',\n  'build-doctor': '/home/eric/.local/bin/run-claude-skill',\n  \n  // Claude Code Skills\n  'skill-system-checkup': '/home/eric/.local/bin/run-claude-skill',\n  'skill-secret-provision': '/home/eric/.local/bin/run-claude-skill',\n  'skill-add-container': '/home/eric/.local/bin/run-claude-skill',\n  'skill-beets-organize': '/home/eric/.local/bin/run-claude-skill',\n  'skill-media-organize': '/home/eric/.local/bin/run-claude-skill'\n};\n\n// Validate script is whitelisted\nif (!allowedScripts[scriptName]) {\n  throw new Error(`Security violation: Script '${scriptName}' is not whitelisted`);\n}\n\n// Sanitize arguments - remove dangerous shell characters\nconst sanitizedArgs = args.map(arg => {\n  const sanitized = String(arg).replace(/[;&|`$(){}[\\]<>\"'\\\\]/g, '');\n  return sanitized;\n});\n\n// Generate execution ID\nconst executionId = `exec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\n\n// Build command based on script type\nlet command;\nlet commandArgs;\n\nif (scriptName.startsWith('skill-')) {\n  // Claude Code skill\n  const skillName = scriptName.replace('skill-', '');\n  command = allowedScripts[scriptName];\n  commandArgs = [skillName, ...sanitizedArgs];\n} else if (scriptName === 'service-restart') {\n  command = allowedScripts[scriptName];\n  commandArgs = ['restart', ...sanitizedArgs];\n} else if (scriptName.includes('-organize') || scriptName.includes('-dedup') || scriptName === 'charter-check' || scriptName === 'build-doctor') {\n  // Claude skill wrappers\n  const skillMap = {\n    'media-organize': 'media-file-manager',\n    'music-dedup': 'beets-music-organizer',\n    'charter-check': 'charter-check',\n    'build-doctor': 'nixos-build-doctor'\n  };\n  command = allowedScripts[scriptName];\n  commandArgs = [skillMap[scriptName] || scriptName, ...sanitizedArgs];\n} else {\n  command = allowedScripts[scriptName];\n  commandArgs = sanitizedArgs;\n}\n\nreturn {\n  json: {\n    executionId: executionId,\n    scriptName: scriptName,\n    command: command,\n    args: commandArgs,\n    async: async,\n    callbackUrl: callbackUrl,\n    requester: requester,\n    timestamp: new Date().toISOString(),\n    auditLog: `${requester} requested ${scriptName} with args: ${JSON.stringify(sanitizedArgs)}`\n  }\n};"
+      },
+      "id": "validate-sanitize",
+      "name": "Validate & Sanitize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log execution request to audit trail\nconst { executionId, scriptName, requester, timestamp, auditLog } = $json;\n\nconsole.log(`[AUDIT] ${timestamp} - ${auditLog}`);\n\n// Return unchanged data\nreturn { json: $json };"
+      },
+      "id": "audit-log",
+      "name": "Audit Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.async }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-async",
+      "name": "Check if Async",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.command }}",
+        "additionalFlags": {
+          "flags": {
+            "additionalFlags": "={{ $json.args.join(' ') }}"
+          }
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "execute-sync",
+      "name": "Execute (Sync)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// For async execution, return execution ID immediately\nconst { executionId } = $json;\n\nreturn {\n  json: {\n    status: 'accepted',\n    executionId: executionId,\n    message: 'Script execution started in background'\n  }\n};"
+      },
+      "id": "async-response",
+      "name": "Async Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.command }}",
+        "additionalFlags": {
+          "flags": {
+            "additionalFlags": "={{ $json.args.join(' ') }}"
+          }
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "execute-async-bg",
+      "name": "Execute (Async Background)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse execution result\nconst executionData = $input.first().json;\nconst commandResult = $input.item.json;\n\nconst stdout = commandResult.stdout || '';\nconst stderr = commandResult.stderr || '';\nconst exitCode = commandResult.code !== undefined ? commandResult.code : commandResult.exitCode || 0;\n\nconst success = exitCode === 0;\n\nreturn {\n  json: {\n    executionId: executionData.executionId,\n    scriptName: executionData.scriptName,\n    success: success,\n    exitCode: exitCode,\n    stdout: stdout.slice(0, 1000), // Limit output length\n    stderr: stderr.slice(0, 1000),\n    duration: Date.now() - new Date(executionData.timestamp).getTime(),\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-result-sync",
+      "name": "Parse Result (Sync)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse async execution result\nconst executionData = $input.first().json;\nconst commandResult = $input.item.json;\n\nconst stdout = commandResult.stdout || '';\nconst stderr = commandResult.stderr || '';\nconst exitCode = commandResult.code !== undefined ? commandResult.code : commandResult.exitCode || 0;\n\nconst success = exitCode === 0;\n\nreturn {\n  json: {\n    executionId: executionData.executionId,\n    scriptName: executionData.scriptName,\n    success: success,\n    exitCode: exitCode,\n    stdout: stdout.slice(0, 1000),\n    stderr: stderr.slice(0, 1000),\n    callbackUrl: executionData.callbackUrl,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-result-async",
+      "name": "Parse Result (Async)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-webhook-sync",
+      "name": "Respond to Webhook (Sync)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-webhook-async",
+      "name": "Respond to Webhook (Async Accept)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.callbackUrl }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-callback",
+      "name": "Check if Callback URL",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "send-callback",
+      "name": "Send Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate notification based on execution result\nconst { scriptName, success, exitCode, stderr, stdout } = $json;\n\nlet title, message, topic, priority;\n\nif (success) {\n  title = `✅ Script Success: ${scriptName}`;\n  message = `Script completed successfully.\\n\\nExit Code: ${exitCode}`;\n  if (stdout && stdout.trim()) {\n    message += `\\n\\nOutput: ${stdout.substring(0, 200)}`;\n  }\n  topic = 'hwc-updates';\n  priority = 1;\n} else {\n  title = `⚠️ Script Failed: ${scriptName}`;\n  message = `Script execution failed.\\n\\nExit Code: ${exitCode}`;\n  if (stderr && stderr.trim()) {\n    message += `\\n\\nError: ${stderr.substring(0, 200)}`;\n  }\n  topic = 'hwc-alerts';\n  priority = 4;\n}\n\nreturn {\n  json: {\n    title: title,\n    message: message,\n    topic: topic,\n    priority: priority,\n    tags: `script,${scriptName},execution`\n  }\n};"
+      },
+      "id": "generate-notification",
+      "name": "Generate Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-ntfy",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Security violation error notification\nconst error = $input.item.json.error || $input.item.json.message || 'Unknown error';\nconst isSecurityViolation = error.includes('Security violation') || error.includes('not whitelisted');\n\nlet title, message, topic, priority, sendToSlack;\n\nif (isSecurityViolation) {\n  title = '🔴 SECURITY VIOLATION: Script Executor';\n  message = `Security violation detected!\\n\\nError: ${error}\\n\\nImmediate investigation required.`;\n  topic = 'hwc-critical';\n  priority = 5;\n  sendToSlack = true;\n} else {\n  title = '⚠️ Script Executor Error';\n  message = `Error in script executor workflow.\\n\\nError: ${error}`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = false;\n}\n\nreturn {\n  json: {\n    title: title,\n    message: message,\n    topic: topic,\n    priority: priority,\n    tags: 'error,script-executor,security',\n    sendToSlack: sendToSlack\n  }\n};"
+      },
+      "id": "error-notification",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 800]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.sendToSlack }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-slack-error",
+      "name": "Check if Slack needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-error-ntfy",
+      "name": "Send Error to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1450, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.title }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.message }}\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "send-slack-error",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1450, 900]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Validate & Sanitize", "type": "main", "index": 0 }]]
+    },
+    "Validate & Sanitize": {
+      "main": [[{ "node": "Audit Log", "type": "main", "index": 0 }]]
+    },
+    "Audit Log": {
+      "main": [[{ "node": "Check if Async", "type": "main", "index": 0 }]]
+    },
+    "Check if Async": {
+      "main": [
+        [{ "node": "Async Response", "type": "main", "index": 0 }],
+        [{ "node": "Execute (Sync)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Execute (Sync)": {
+      "main": [[{ "node": "Parse Result (Sync)", "type": "main", "index": 0 }]]
+    },
+    "Parse Result (Sync)": {
+      "main": [[{ "node": "Respond to Webhook (Sync)", "type": "main", "index": 0 }, { "node": "Generate Notification", "type": "main", "index": 0 }]]
+    },
+    "Async Response": {
+      "main": [[{ "node": "Respond to Webhook (Async Accept)", "type": "main", "index": 0 }, { "node": "Execute (Async Background)", "type": "main", "index": 0 }]]
+    },
+    "Execute (Async Background)": {
+      "main": [[{ "node": "Parse Result (Async)", "type": "main", "index": 0 }]]
+    },
+    "Parse Result (Async)": {
+      "main": [[{ "node": "Check if Callback URL", "type": "main", "index": 0 }, { "node": "Generate Notification", "type": "main", "index": 0 }]]
+    },
+    "Check if Callback URL": {
+      "main": [
+        [{ "node": "Send Callback", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Generate Notification": {
+      "main": [[{ "node": "Send to ntfy", "type": "main", "index": 0 }]]
+    },
+    "Error Notification": {
+      "main": [[{ "node": "Check if Slack needed", "type": "main", "index": 0 }]]
+    },
+    "Check if Slack needed": {
+      "main": [
+        [{ "node": "Send Error to ntfy", "type": "main", "index": 0 }, { "node": "Send to Slack", "type": "main", "index": 0 }],
+        [{ "node": "Send Error to ntfy", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "automation",
+      "id": "automation-tag"
+    },
+    {
+      "name": "scripts",
+      "id": "scripts-tag"
+    },
+    {
+      "name": "security",
+      "id": "security-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-08T00:00:00.000Z",
+  "versionId": "1"
+}

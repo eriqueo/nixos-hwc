@@ -13,6 +13,44 @@ This guide provides step-by-step instructions for building the 6 n8n automation 
 ✅ Script wrappers created in `/home/eric/.local/bin/`
 ✅ Frigate config updated with n8n webhook URL
 ✅ n8n running on `https://hwc.ocelot-wahoo.ts.net:2443`
+✅ **All 6 workflow JSON files created in `/home/eric/.nixos/domains/server/n8n/parts/workflows/`**
+
+---
+
+## Quick Start: Import Workflows
+
+All workflows are available as JSON files that can be imported directly into n8n:
+
+```bash
+# Workflow files location
+ls -la /home/eric/.nixos/domains/server/n8n/parts/workflows/
+
+01-media-pipeline-orchestration.json
+02-frigate-surveillance-intelligence.json
+03-system-monitoring-alertmanager-router.json
+04-ai-ml-service-orchestration.json
+05-cross-service-health-monitor.json
+06-universal-script-executor.json
+```
+
+### How to Import Workflows into n8n:
+
+1. **Access n8n UI:** `https://hwc.ocelot-wahoo.ts.net:2443`
+
+2. **Import each workflow:**
+   - Click "**Add workflow**" → "**Import from File**"
+   - Navigate to `/home/eric/.nixos/domains/server/n8n/parts/workflows/`
+   - Select a workflow JSON file
+   - Click "Import"
+   - The workflow will load with all nodes pre-configured
+
+3. **Activate workflows:**
+   - After importing, toggle the workflow "Active" switch in the top-right
+   - Verify webhook URLs are correct
+
+4. **Configure credentials** (see section below)
+
+5. **Test with curl** (see Testing section)
 
 ---
 
@@ -582,4 +620,65 @@ After building all workflows:
 
 ---
 
-**Next Action:** Follow Step 1 to encrypt the Slack webhook URL, then build workflows in n8n UI following the node specifications above.
+## Workflow Files Summary
+
+All workflow JSON files are stored in version control:
+
+```
+/home/eric/.nixos/domains/server/n8n/parts/workflows/
+├── 01-media-pipeline-orchestration.json          (3.1 KB)
+├── 02-frigate-surveillance-intelligence.json     (2.8 KB)
+├── 03-system-monitoring-alertmanager-router.json (3.4 KB)
+├── 04-ai-ml-service-orchestration.json           (4.2 KB)
+├── 05-cross-service-health-monitor.json          (4.5 KB)
+├── 06-universal-script-executor.json             (5.1 KB)
+└── README.md                                     (Workflow documentation)
+```
+
+**Benefits of version-controlled workflows:**
+- ✅ Reproducible deployments
+- ✅ Git history tracking
+- ✅ Easy rollback if needed
+- ✅ Charter compliance (configuration as code)
+- ✅ Documentation alongside code
+
+---
+
+## Next Actions
+
+### Immediate (Do Now):
+
+1. **Import all 6 workflows into n8n:**
+   ```bash
+   # Access n8n
+   open https://hwc.ocelot-wahoo.ts.net:2443
+
+   # Import each workflow from:
+   # /home/eric/.nixos/domains/server/n8n/parts/workflows/*.json
+   ```
+
+2. **Configure credentials** in n8n UI (Settings → Credentials)
+
+3. **Test each workflow** with curl commands from Testing section
+
+4. **Activate workflows** after successful testing
+
+### Post-Deployment (Within 24 hours):
+
+1. **Configure service webhooks** in Radarr/Sonarr/Lidarr/Frigate UIs
+
+2. **Encrypt Slack webhook URL** with agenix if not already done
+
+3. **Monitor n8n execution history** for first 24 hours
+
+4. **Tune notification priorities** if too noisy
+
+### Ongoing Maintenance:
+
+- **Weekly:** Review execution history for errors
+- **Monthly:** Export workflows as backup, update whitelist as needed
+- **Quarterly:** Audit execution logs, optimize slow workflows
+
+---
+
+**Next Action:** Import workflows into n8n UI using the Quick Start instructions above.
