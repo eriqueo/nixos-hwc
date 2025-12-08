@@ -40,6 +40,8 @@ in
         # Run as eric user for simplified permissions (single-user system)
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
+        # Override state directory to use hwc structure
+        StateDirectory = lib.mkForce "hwc/navidrome";
       } // lib.optionalAttrs (cfg.settings.initialAdminPasswordFile != null) {
         LoadCredential = "navidrome-password:${cfg.settings.initialAdminPasswordFile}";
       };

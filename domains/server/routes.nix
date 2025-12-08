@@ -56,6 +56,14 @@ in
       upstream = "http://127.0.0.1:5001";  # GPU-accelerated with CUDA/TensorRT support
     }
 
+    # Grafana - port mode (monitoring dashboards)
+    {
+      name = "grafana";
+      mode = "port";
+      port = 4443;
+      upstream = "http://127.0.0.1:3000";
+    }
+
     # Sabnzbd - preserve path (URL base set in app)
     {
       name = "sabnzbd";
@@ -195,6 +203,17 @@ in
       upstream = "http://127.0.0.1:6021";
       needsUrlBase = false;  # API handles requests at root
       headers = { "X-Forwarded-Prefix" = "/workflows"; };
+    }
+
+    # n8n - Workflow automation platform (subpath mode)
+    # Used for Alertmanager webhook handling and Slack notifications
+    {
+      name = "n8n";
+      mode = "subpath";
+      path = "/n8n";
+      upstream = "http://127.0.0.1:5678";
+      needsUrlBase = false;  # n8n handles subpath via WEBHOOK_URL env var
+      headers = { "X-Forwarded-Prefix" = "/n8n"; };
     }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy

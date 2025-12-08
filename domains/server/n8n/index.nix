@@ -1,0 +1,124 @@
+# domains/server/n8n/index.nix
+#
+# N8N - Workflow automation platform for alert routing and notifications
+#
+# NAMESPACE: hwc.server.n8n.*
+#
+# DEPENDENCIES:
+#   - hwc.paths.state (data directory)
+#   - Optional: hwc.server.monitoring.alertmanager (webhook consumer)
+
+{ config, lib, pkgs, ... }:
+
+let
+  cfg = config.hwc.server.n8n;
+  paths = config.hwc.paths;
+
+  # Build environment variables for n8n
+  n8nEnv = {
+    N8N_PORT = toString cfg.port;
+    N8N_PROTOCOL = "http";
+    N8N_HOST = "127.0.0.1";
+    WEBHOOK_URL = cfg.webhookUrl;
+    N8N_USER_FOLDER = cfg.dataDir;
+    GENERIC_TIMEZONE = cfg.timezone;
+    N8N_PERSONALIZATION_ENABLED = "false";
+    N8N_VERSION_NOTIFICATIONS_ENABLED = "false";
+    N8N_DIAGNOSTICS_ENABLED = "false";
+    N8N_HIRING_BANNER_ENABLED = "false";
+  } // (lib.optionalAttrs (cfg.database.type == "sqlite") {
+    DB_TYPE = "sqlite";
+    DB_SQLITE_DATABASE = cfg.database.sqlite.file;
+  }) // (lib.optionalAttrs (cfg.encryption.keyFile != null) {
+    N8N_ENCRYPTION_KEY = "$(<${cfg.encryption.keyFile})";
+  }) // cfg.extraEnv;
+
+in
+{
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  imports = [ ./options.nix ];
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = lib.mkIf cfg.enable {
+    # n8n systemd service
+    systemd.services.n8n = {
+      description = "n8n workflow automation platform";
+      after = [ "network.target" ];
+      wantedBy = [ "multi-user.target" ];
+
+      environment = n8nEnv;
+
+      serviceConfig = {
+        Type = "simple";
+        User = "eric";
+        Group = "users";
+        ExecStart = "${pkgs.n8n}/bin/n8n start";
+        Restart = "on-failure";
+        RestartSec = "10s";
+
+        # Security hardening
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        ReadWritePaths = [ cfg.dataDir ];
+
+        # Resource limits
+        MemoryMax = "2G";
+        CPUQuota = "200%";
+      };
+
+      preStart = ''
+        # Ensure data directory exists with correct permissions
+        mkdir -p ${cfg.dataDir}
+        chmod 755 ${cfg.dataDir}
+
+        # Create database directory if using SQLite
+        ${lib.optionalString (cfg.database.type == "sqlite") ''
+          mkdir -p $(dirname ${cfg.database.sqlite.file})
+        ''}
+      '';
+    };
+
+    # Ensure data directory exists
+    systemd.tmpfiles.rules = [
+      "d ${cfg.dataDir} 0755 eric users -"
+    ];
+
+    # Firewall - localhost + Tailscale
+    networking.firewall.interfaces."lo".allowedTCPPorts = [ cfg.port ];
+    networking.firewall.interfaces."tailscale0".allowedTCPPorts =
+      lib.optional (config.networking.interfaces ? "tailscale0") cfg.port;
+
+    # Add eric user to secrets group for encryption key access
+    users.users.eric = lib.mkIf (cfg.encryption.keyFile != null) {
+      extraGroups = [ "secrets" ];
+    };
+
+    #========================================================================
+    # VALIDATION
+    #========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || (cfg.port != 0);
+        message = "n8n port must be configured (hwc.server.n8n.port)";
+      }
+      {
+        assertion = !cfg.enable || (cfg.dataDir != "");
+        message = "n8n data directory must be configured (hwc.server.n8n.dataDir)";
+      }
+      {
+        assertion = !cfg.enable || (cfg.webhookUrl != "");
+        message = "n8n webhook URL must be configured (hwc.server.n8n.webhookUrl)";
+      }
+      {
+        assertion = !cfg.enable || (cfg.database.type == "sqlite" -> cfg.database.sqlite.file != "");
+        message = "n8n SQLite database file must be configured when using SQLite";
+      }
+    ];
+  };
+}
