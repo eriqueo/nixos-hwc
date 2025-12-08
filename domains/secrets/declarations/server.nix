@@ -137,7 +137,7 @@
       mode = "0440";
       owner = "eric";
       group = "secrets";
-
+    };
     # Frigate secrets are in domains/secrets/declarations/infrastructure.nix
     # (camera/surveillance secrets belong to infrastructure domain)
   };
