@@ -1,0 +1,315 @@
+{
+  "name": "Media Pipeline Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "media-pipeline",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "media-pipeline"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse event data from webhook\nconst queryParams = $node[\"Webhook Trigger\"].parameter.options.queryParameters || {};\nconst source = queryParams.source || new URL($input.item.json.url || '').searchParams.get('source') || 'unknown';\nconst event = $input.item.json;\n\n// Extract media information based on source\nlet title, path, quality;\n\nif (source === 'radarr') {\n  title = event.movie?.title || event.remoteMovie?.title || 'Unknown Movie';\n  path = event.movieFile?.path || event.movie?.path || '/unknown';\n  quality = event.movieFile?.quality?.quality?.name || event.quality || 'Unknown';\n} else if (source === 'sonarr') {\n  const seriesTitle = event.series?.title || 'Unknown Series';\n  const episodeInfo = event.episodes?.length > 0 \n    ? `S${String(event.episodes[0].seasonNumber).padStart(2, '0')}E${String(event.episodes[0].episodeNumber).padStart(2, '0')}`\n    : '';\n  title = `${seriesTitle} ${episodeInfo}`.trim();\n  path = event.episodeFile?.path || event.series?.path || '/unknown';\n  quality = event.episodeFile?.quality?.quality?.name || 'Unknown';\n} else if (source === 'lidarr') {\n  title = event.album?.title || event.artist?.name || 'Unknown Album';\n  path = event.trackFiles?.[0]?.path || event.album?.path || '/unknown';\n  quality = event.trackFiles?.[0]?.quality?.quality?.name || event.quality || 'Unknown';\n}\n\nreturn {\n  json: {\n    mediaType: source,\n    title: title,\n    path: path,\n    quality: quality,\n    timestamp: new Date().toISOString(),\n    eventType: event.eventType || 'Download'\n  }\n};"
+      },
+      "id": "parse-event",
+      "name": "Parse Event Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait-settlement",
+      "name": "Wait for File Settlement",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.mediaType }}",
+                    "value2": "radarr"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "movies"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.mediaType }}",
+                    "value2": "sonarr"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "tv"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.mediaType }}",
+                    "value2": "lidarr"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "music"
+            }
+          ]
+        }
+      },
+      "id": "branch-by-type",
+      "name": "Branch by Media Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8096/Library/Refresh",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-MediaBrowser-Token",
+              "value": "={{ $env.JELLYFIN_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "jellyfin-refresh-movies",
+      "name": "Jellyfin Refresh (Movies)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8096/Library/Refresh",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-MediaBrowser-Token",
+              "value": "={{ $env.JELLYFIN_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "jellyfin-refresh-tv",
+      "name": "Jellyfin Refresh (TV)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "script_name",
+              "value": "beets-import"
+            },
+            {
+              "name": "args",
+              "value": "={{ [$json.path] }}"
+            },
+            {
+              "name": "async",
+              "value": true
+            },
+            {
+              "name": "requester",
+              "value": "workflow-1-media-pipeline"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "script-exec-music",
+      "name": "Script Executor (Music)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate rich notification\nconst { mediaType, title, quality, path } = $json;\n\nconst emoji = {\n  radarr: '🎬',\n  sonarr: '📺',\n  lidarr: '🎵'\n}[mediaType] || '📦';\n\nconst mediaLabel = {\n  radarr: 'Movie',\n  sonarr: 'TV Show',\n  lidarr: 'Music'\n}[mediaType] || 'Media';\n\nreturn {\n  json: {\n    title: `${emoji} ${title}`,\n    message: `New ${mediaLabel} available\\n\\nQuality: ${quality}\\nPath: ${path}`,\n    topic: 'hwc-media',\n    priority: 2,\n    tags: `${mediaType},media,new`\n  }\n};"
+      },
+      "id": "generate-notification",
+      "name": "Generate Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-ntfy",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate error notification\nconst error = $input.item.json.error || 'Unknown error';\nconst workflow = 'Media Pipeline Orchestration';\n\nreturn {\n  json: {\n    title: '⚠️ Media Pipeline Error',\n    message: `Workflow: ${workflow}\\n\\nError: ${error}\\n\\nCheck n8n logs for details.`,\n    topic: 'hwc-alerts',\n    priority: 4,\n    tags: 'error,media,n8n'\n  }\n};"
+      },
+      "id": "error-notification",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-error-ntfy",
+      "name": "Send Error to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Parse Event Data", "type": "main", "index": 0 }]]
+    },
+    "Parse Event Data": {
+      "main": [[{ "node": "Wait for File Settlement", "type": "main", "index": 0 }]]
+    },
+    "Wait for File Settlement": {
+      "main": [[{ "node": "Branch by Media Type", "type": "main", "index": 0 }]]
+    },
+    "Branch by Media Type": {
+      "main": [
+        [{ "node": "Jellyfin Refresh (Movies)", "type": "main", "index": 0 }],
+        [{ "node": "Jellyfin Refresh (TV)", "type": "main", "index": 0 }],
+        [{ "node": "Script Executor (Music)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Jellyfin Refresh (Movies)": {
+      "main": [[{ "node": "Generate Notification", "type": "main", "index": 0 }]]
+    },
+    "Jellyfin Refresh (TV)": {
+      "main": [[{ "node": "Generate Notification", "type": "main", "index": 0 }]]
+    },
+    "Script Executor (Music)": {
+      "main": [[{ "node": "Generate Notification", "type": "main", "index": 0 }]]
+    },
+    "Generate Notification": {
+      "main": [[{ "node": "Send to ntfy", "type": "main", "index": 0 }]]
+    },
+    "Error Notification": {
+      "main": [[{ "node": "Send Error to ntfy", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "media",
+      "id": "media-tag"
+    },
+    {
+      "name": "automation",
+      "id": "automation-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-08T00:00:00.000Z",
+  "versionId": "1"
+}
