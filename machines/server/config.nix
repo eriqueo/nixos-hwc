@@ -440,7 +440,7 @@
     PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
   };
 
-  # Passwordless sudo for ai-chat tool commands
+  # Passwordless sudo for ai-chat tool commands and grebuild workflow
   hwc.system.services.session.sudo.extraRules = [
     {
       users = [ "eric" ];

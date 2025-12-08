@@ -490,8 +490,8 @@ trigger_ai_docs() {
         return 0
     fi
 
-    # Start service in background
-    if execute systemctl start "${AI_DOCS_SERVICE}.service" & then
+    # Start service (explicitly use sudo, run in background to not block)
+    if sudo systemctl start "${AI_DOCS_SERVICE}.service" 2>/dev/null; then
         log_info "AI documentation processing started"
     else
         log_warn "Failed to start AI docs service (non-fatal)"

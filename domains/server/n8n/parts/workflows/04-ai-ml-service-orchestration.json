@@ -1,0 +1,406 @@
+{
+  "name": "AI/ML Service Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "immich-upload",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-immich",
+      "name": "Webhook: Immich Upload",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 200],
+      "webhookId": "immich-upload"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-enrich",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ai-enrich",
+      "name": "Webhook: AI Enrich",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 400],
+      "webhookId": "ai-enrich"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-daily",
+      "name": "Schedule: Daily 2am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 600]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "schedule-weekly",
+      "name": "Schedule: Weekly Sunday 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 750]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-monthly",
+      "name": "Schedule: Monthly 1st 4am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 900]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Immich upload event\nconst event = $input.item.json;\nconst assetId = event.assetId || event.id;\n\nreturn {\n  json: {\n    assetId: assetId,\n    userId: event.userId,\n    uploadType: 'immich-photo',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-immich",
+      "name": "Parse Immich Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://127.0.0.1:2283/api/assets/{{ $json.assetId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.IMMICH_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "retry": {
+            "retry": {
+              "maxRetries": 3,
+              "retryInterval": 2000
+            }
+          }
+        }
+      },
+      "id": "poll-immich",
+      "name": "Poll Immich API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if ML processing is complete and extract metadata\nconst asset = $input.item.json;\n\n// Check if asset has been processed\nconst hasObjects = asset.exifInfo?.objects?.length > 0;\nconst hasFaces = asset.people?.length > 0;\nconst hasLocation = asset.exifInfo?.latitude && asset.exifInfo?.longitude;\n\n// Skip notification if no interesting content\nif (!hasObjects && !hasFaces && !hasLocation) {\n  return []; // Drop notification\n}\n\n// Build notification\nlet features = [];\nif (hasFaces) features.push(`${asset.people.length} face(s)`);\nif (hasObjects) features.push(`${asset.exifInfo.objects.length} object(s)`);\nif (hasLocation) features.push('location');\n\nreturn {\n  json: {\n    assetId: asset.id,\n    fileName: asset.originalFileName || 'Unknown',\n    features: features.join(', '),\n    hasFaces: hasFaces,\n    hasObjects: hasObjects,\n    hasLocation: hasLocation,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "extract-metadata",
+      "name": "Extract Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate notification for interesting photos\nconst { fileName, features } = $json;\n\nreturn {\n  json: {\n    title: '📸 Immich: Photo Processed',\n    message: `Photo: ${fileName}\\n\\nDetected: ${features}`,\n    topic: 'hwc-ai',\n    priority: 2,\n    tags: 'immich,photo,ai'\n  }\n};"
+      },
+      "id": "generate-photo-notif",
+      "name": "Generate Photo Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI enrichment request\nconst request = $input.item.json;\n\nreturn {\n  json: {\n    context: request.context || '',\n    task: request.task || 'summarize',\n    model: request.model || 'llama3',\n    maxTokens: request.maxTokens || 500\n  }\n};"
+      },
+      "id": "parse-enrich-request",
+      "name": "Parse Enrichment Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $json.model }}\",\n  \"prompt\": \"{{ $json.context }}\\n\\nTask: {{ $json.task }}\",\n  \"stream\": false,\n  \"options\": {\n    \"num_predict\": {{ $json.maxTokens }}\n  }\n}",
+        "options": {}
+      },
+      "id": "call-ollama",
+      "name": "Call Ollama API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { enrichedText: $json.response, model: $json.model, timestamp: new Date().toISOString() } }}"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine which scheduled job to run\nreturn {\n  json: {\n    jobType: 'face-clustering',\n    scheduleName: 'daily',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "set-daily-job",
+      "name": "Set Daily Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Set weekly job\nreturn {\n  json: {\n    jobType: 'duplicate-detection',\n    scheduleName: 'weekly',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "set-weekly-job",
+      "name": "Set Weekly Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 750]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Set monthly job\nreturn {\n  json: {\n    jobType: 'statistics-report',\n    scheduleName: 'monthly',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "set-monthly-job",
+      "name": "Set Monthly Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 900]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:2283/api/jobs/{{ $json.jobType }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.IMMICH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"command\": \"start\" }",
+        "options": {}
+      },
+      "id": "trigger-immich-job",
+      "name": "Trigger Immich Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 750]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate job completion notification\nconst { jobType, scheduleName } = $json;\n\nconst jobNames = {\n  'face-clustering': 'Face Re-clustering',\n  'duplicate-detection': 'Duplicate Detection',\n  'statistics-report': 'Statistics Report'\n};\n\nconst jobName = jobNames[jobType] || jobType;\n\nreturn {\n  json: {\n    title: `✅ Immich: ${jobName} Complete`,\n    message: `Scheduled job (${scheduleName}) completed successfully.\\n\\nJob: ${jobName}\\nTime: ${new Date().toLocaleString()}`,\n    topic: 'hwc-ai',\n    priority: 1,\n    tags: 'immich,scheduled,job'\n  }\n};"
+      },
+      "id": "generate-job-notif",
+      "name": "Generate Job Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 750]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-ntfy",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error notification\nconst error = $input.item.json.error || 'Unknown error';\nconst workflow = 'AI/ML Service Orchestration';\n\nreturn {\n  json: {\n    title: '⚠️ AI/ML Workflow Error',\n    message: `Workflow: ${workflow}\\n\\nError: ${error}\\n\\nCheck n8n and Immich logs.`,\n    topic: 'hwc-alerts',\n    priority: 4,\n    tags: 'error,ai,immich,n8n'\n  }\n};"
+      },
+      "id": "error-notification",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 1000]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-error-ntfy",
+      "name": "Send Error to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 1000]
+    }
+  ],
+  "connections": {
+    "Webhook: Immich Upload": {
+      "main": [[{ "node": "Parse Immich Event", "type": "main", "index": 0 }]]
+    },
+    "Parse Immich Event": {
+      "main": [[{ "node": "Poll Immich API", "type": "main", "index": 0 }]]
+    },
+    "Poll Immich API": {
+      "main": [[{ "node": "Extract Metadata", "type": "main", "index": 0 }]]
+    },
+    "Extract Metadata": {
+      "main": [[{ "node": "Generate Photo Notification", "type": "main", "index": 0 }]]
+    },
+    "Generate Photo Notification": {
+      "main": [[{ "node": "Send to ntfy", "type": "main", "index": 0 }]]
+    },
+    "Webhook: AI Enrich": {
+      "main": [[{ "node": "Parse Enrichment Request", "type": "main", "index": 0 }]]
+    },
+    "Parse Enrichment Request": {
+      "main": [[{ "node": "Call Ollama API", "type": "main", "index": 0 }]]
+    },
+    "Call Ollama API": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Schedule: Daily 2am": {
+      "main": [[{ "node": "Set Daily Job", "type": "main", "index": 0 }]]
+    },
+    "Schedule: Weekly Sunday 3am": {
+      "main": [[{ "node": "Set Weekly Job", "type": "main", "index": 0 }]]
+    },
+    "Schedule: Monthly 1st 4am": {
+      "main": [[{ "node": "Set Monthly Job", "type": "main", "index": 0 }]]
+    },
+    "Set Daily Job": {
+      "main": [[{ "node": "Trigger Immich Job", "type": "main", "index": 0 }]]
+    },
+    "Set Weekly Job": {
+      "main": [[{ "node": "Trigger Immich Job", "type": "main", "index": 0 }]]
+    },
+    "Set Monthly Job": {
+      "main": [[{ "node": "Trigger Immich Job", "type": "main", "index": 0 }]]
+    },
+    "Trigger Immich Job": {
+      "main": [[{ "node": "Generate Job Notification", "type": "main", "index": 0 }]]
+    },
+    "Generate Job Notification": {
+      "main": [[{ "node": "Send to ntfy", "type": "main", "index": 0 }]]
+    },
+    "Error Notification": {
+      "main": [[{ "node": "Send Error to ntfy", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "ai",
+      "id": "ai-tag"
+    },
+    {
+      "name": "immich",
+      "id": "immich-tag"
+    },
+    {
+      "name": "automation",
+      "id": "automation-tag"
+    }
+  ],
+  "triggerCount": 5,
+  "updatedAt": "2025-12-08T00:00:00.000Z",
+  "versionId": "1"
+}
