@@ -139,7 +139,9 @@
       "Bash(sudo podman inspect:*)",
       "Bash(curl:*)",
       "Bash(ss:*)",
-      "Bash(sudo netstat:*)"
+      "Bash(sudo netstat:*)",
+      "Bash(dmesg:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": [],

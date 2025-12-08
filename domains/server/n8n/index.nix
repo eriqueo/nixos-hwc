@@ -17,8 +17,9 @@ let
   # Build environment variables for n8n
   n8nEnv = {
     N8N_PORT = toString cfg.port;
-    N8N_PROTOCOL = "http";
-    N8N_HOST = "127.0.0.1";
+    N8N_PROTOCOL = "https";
+    N8N_HOST = "hwc.ocelot-wahoo.ts.net";
+    N8N_USER_MANAGEMENT_DISABLED = "true";
     WEBHOOK_URL = cfg.webhookUrl;
     N8N_USER_FOLDER = cfg.dataDir;
     GENERIC_TIMEZONE = cfg.timezone;
@@ -31,7 +32,12 @@ let
     DB_SQLITE_DATABASE = cfg.database.sqlite.file;
   }) // (lib.optionalAttrs (cfg.encryption.keyFile != null) {
     N8N_ENCRYPTION_KEY = "$(<${cfg.encryption.keyFile})";
+  }) // (lib.optionalAttrs (config.hwc.secrets.api.slackWebhookUrlFile != null) {
+    SLACK_WEBHOOK_URL = "$(<${config.hwc.secrets.api.slackWebhookUrlFile})";
   }) // cfg.extraEnv;
+
+
+
 
 in
 {

@@ -102,6 +102,12 @@
       group = "secrets";
     };
 
+    slack-webhook-url = {
+      file = ../parts/server/slack-webhook-url.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
 
     # AI/LLM API keys
     gemini-api-key = {

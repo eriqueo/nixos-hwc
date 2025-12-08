@@ -205,15 +205,13 @@ in
       headers = { "X-Forwarded-Prefix" = "/workflows"; };
     }
 
-    # n8n - Workflow automation platform (subpath mode)
+    # n8n - Workflow automation platform (port mode - subpath not properly supported)
     # Used for Alertmanager webhook handling and Slack notifications
     {
       name = "n8n";
-      mode = "subpath";
-      path = "/n8n";
+      mode = "port";
+      port = 2443;
       upstream = "http://127.0.0.1:5678";
-      needsUrlBase = false;  # n8n handles subpath via WEBHOOK_URL env var
-      headers = { "X-Forwarded-Prefix" = "/n8n"; };
     }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy

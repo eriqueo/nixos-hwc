@@ -33,6 +33,8 @@ in
     couchdbAdminPasswordFile = pathOrNull "couchdb-admin-password";
     ntfyUserFile = pathOrNull "ntfy-user";
     navidromeAdminPasswordFile = pathOrNull "navidrome-admin-password";
+    slackWebhookUrlFile = pathOrNull "slack-webhook-url";
+    
     
     # Email domain paths
     protonBridgePasswordFile = pathOrNull "proton-bridge-password";
