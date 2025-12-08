@@ -34,7 +34,6 @@ let
     N8N_ENCRYPTION_KEY = "$(<${cfg.encryption.keyFile})";
   }) // (lib.optionalAttrs (config.hwc.secrets.api.slackWebhookUrlFile != null) {
     SLACK_WEBHOOK_URL = "$(<${config.hwc.secrets.api.slackWebhookUrlFile})";
-  }) // cfg.extraEnv;
   }) // (lib.optionalAttrs (config.hwc.secrets.api.jellyfinApiKeyFile != null) {
      JELLYFIN_API_KEY = "$(<${config.hwc.secrets.api.jellyfinApiKeyFile})";
   }) // cfg.extraEnv;
