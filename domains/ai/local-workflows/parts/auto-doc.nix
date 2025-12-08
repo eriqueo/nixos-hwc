@@ -304,7 +304,7 @@ Format as a Markdown documentation block suitable for inclusion in the nixos-hwc
 
     # Configuration
     NIXOS_DIR="/home/eric/.nixos"
-    OUTPUT_DIR="/home/eric/Documents/nixos-rebuild-docs"
+    OUTPUT_DIR="/home/eric/.nixos/docs/ai-doc"
     OLLAMA_ENDPOINT="${cfg.ollamaEndpoint}"
     MODEL="${cfg.autoDoc.model}"
 
@@ -453,10 +453,10 @@ EOF
   '';
 in
 {
-  # Create templates directory
+  # Create templates and output directories
   systemd.tmpfiles.rules = [
     "d ${cfg.autoDoc.templates} 0755 eric users -"
-    "d /home/eric/Documents/nixos-rebuild-docs 0755 eric users -"
+    "d /home/eric/.nixos/docs/ai-doc 0755 eric users -"
   ];
 
   # Install auto-doc CLI script
@@ -481,7 +481,7 @@ in
       ProtectSystem = "strict";
       ProtectHome = "read-only";
       ReadWritePaths = [
-        "/home/eric/Documents/nixos-rebuild-docs"
+        "/home/eric/.nixos/docs/ai-doc"
         cfg.logDir
       ];
 
