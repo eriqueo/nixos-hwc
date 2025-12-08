@@ -1,6 +1,13 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.jellyfin;
+
+   # Custom ffmpeg with NVENC/CUDA support for GPU transcoding
+  ffmpeg-nvenc = pkgs.ffmpeg-full.override {
+    withUnfree = true;
+    withCuda   = true;
+    withNvenc  = true;
+  };
 in
 {
   #==========================================================================
@@ -20,6 +27,9 @@ in
       openFirewall = cfg.openFirewall;
       dataDir = "/var/lib/hwc/jellyfin";  # Override default /var/lib/jellyfin
       cacheDir = "/var/cache/hwc/jellyfin";  # Override default /var/cache/jellyfin
+      package = pkgs.jellyfin.override {
+        jellyfin-ffmpeg = ffmpeg-nvenc;
+      };
     };
 
 
@@ -50,13 +60,16 @@ in
         # Run as eric user for simplified permissions (single-user system)
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
-        # Override state directory to use hwc structure
+
+        # Override state/cache directories
         StateDirectory = lib.mkForce "hwc/jellyfin";
-        # Override cache directory to use hwc structure
         CacheDirectory = lib.mkForce "hwc/jellyfin";
-        # Disable user namespace isolation so eric can access directories
+
+        # Relax isolation enough to see GPU device nodes
         PrivateUsers = lib.mkForce false;
-      } // lib.optionalAttrs cfg.gpu.enable {
+        PrivateDevices = lib.mkForce false;
+        DevicePolicy = lib.mkForce "auto";
+
         # Add GPU device access for video transcoding
         DeviceAllow = [
           "/dev/nvidia0 rw"
@@ -67,6 +80,7 @@ in
           "/dev/dri/card0 rw"
           "/dev/dri/renderD128 rw"
         ];
+
         # Add user to GPU groups for hardware access
         SupplementaryGroups = [ "video" "render" ];
       };

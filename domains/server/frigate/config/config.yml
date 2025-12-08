@@ -1,6 +1,11 @@
 mqtt:
   enabled: false
 
+notifications:
+  webhook:
+    url: "https://hwc.ocelot-wahoo.ts.net:2443/webhook/frigate-events"
+    enabled: true
+
 detectors:
   onnx:
     type: onnx
@@ -21,6 +26,10 @@ model:
   labelmap_path: /labelmap/coco-80.txt
 
 ffmpeg: &ffmpeg_defaults
+  global_args:
+    - -hide_banner
+    - -loglevel
+    - warning
   hwaccel_args:
     - -hwaccel
     - nvdec
@@ -29,12 +38,24 @@ ffmpeg: &ffmpeg_defaults
     - -hwaccel_output_format
     - yuv420p
   input_args:
+    - -avoid_negative_ts
+    - make_zero
+    - -fflags
+    - nobuffer
+    - -flags
+    - low_delay
+    - -strict
+    - experimental
     - -rtsp_transport
     - tcp
-    - -fflags
-    - +genpts+discardcorrupt
+    - -stimeout
+    - '5000000'
+    - -analyzeduration
+    - '5000000'
+    - -probesize
+    - '5000000'
   output_args:
-    record: preset-record-generic-audio-copy
+    record: preset-record-generic
 
 record:
   enabled: true
@@ -70,6 +91,8 @@ objects:
 cameras:
   cobra_cam_1:
     enabled: true
+    audio:
+      enabled: false
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
@@ -100,6 +123,8 @@ cameras:
 
   cobra_cam_2:
     enabled: true
+    audio:
+      enabled: false
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
@@ -128,6 +153,8 @@ cameras:
 
   cobra_cam_3:
     enabled: true
+    audio:
+      enabled: false
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
