@@ -112,6 +112,7 @@
       "Bash(git -C /home/eric/.nixos log --oneline -3)",
       "Bash(sudo fdisk:*)",
       "Bash(nix-shell:*)",
+
       "WebFetch(domain:docs.openwebui.com)",
       "Bash(podman logs:*)",
       "Bash(sudo journalctl:*)",
@@ -130,6 +131,7 @@
       "Bash(bash:*)",
       "Bash(beet import:*)",
       "Bash(beet help:*)",
+
       "Bash(sudo -u postgres psql:*)",
       "Bash(beet config:*)",
       "Bash(podman exec:*)",
@@ -143,6 +145,10 @@
       "Bash(dmesg:*)",
       "Bash(sqlite3:*)",
       "Bash(/nix/store/1v54jhw7p59iyq4g3q7043q33csij4vi-ffmpeg-full-8.0-bin/bin/ffmpeg:*)"
+
+      "Bash(sudo journalctl:*)",
+      "Bash(sudo systemctl:*)"
+
     ],
     "deny": [],
     "ask": [],
