@@ -119,6 +119,14 @@
       group = "secrets";
     };
 
+    # Monitoring services credentials
+    grafana-admin-password = {
+      file = ../parts/server/grafana-admin-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
     # Frigate secrets are in domains/secrets/declarations/infrastructure.nix
     # (camera/surveillance secrets belong to infrastructure domain)
   };

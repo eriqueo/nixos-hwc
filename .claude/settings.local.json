@@ -132,7 +132,14 @@
       "Bash(beet help:*)",
       "Bash(sudo -u postgres psql:*)",
       "Bash(beet config:*)",
-      "Bash(podman exec:*)"
+      "Bash(podman exec:*)",
+      "Bash(sudo ss:*)",
+      "WebFetch(domain:immich.app)",
+      "WebFetch(domain:docs.immich.app)",
+      "Bash(sudo podman inspect:*)",
+      "Bash(curl:*)",
+      "Bash(ss:*)",
+      "Bash(sudo netstat:*)"
     ],
     "deny": [],
     "ask": [],

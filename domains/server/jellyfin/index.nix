@@ -18,6 +18,8 @@ in
     services.jellyfin = {
       enable = true;
       openFirewall = cfg.openFirewall;
+      dataDir = "/var/lib/hwc/jellyfin";  # Override default /var/lib/jellyfin
+      cacheDir = "/var/cache/hwc/jellyfin";  # Override default /var/cache/jellyfin
     };
 
 
@@ -32,7 +34,7 @@ in
     systemd.services.jellyfin = {
       # Fix corrupted migration files before startup to prevent crash loops
       preStart = ''
-        CONFIG_DIR="/var/lib/jellyfin/config"
+        CONFIG_DIR="/var/lib/hwc/jellyfin/config"
 
         # Remove corrupted migrations.xml that causes "Sequence contains no elements" crash
         # Jellyfin will regenerate this file on startup with correct format for 10.11+
@@ -50,6 +52,8 @@ in
         Group = lib.mkForce "users";
         # Override state directory to use hwc structure
         StateDirectory = lib.mkForce "hwc/jellyfin";
+        # Override cache directory to use hwc structure
+        CacheDirectory = lib.mkForce "hwc/jellyfin";
         # Disable user namespace isolation so eric can access directories
         PrivateUsers = lib.mkForce false;
       } // lib.optionalAttrs cfg.gpu.enable {

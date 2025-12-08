@@ -14,6 +14,9 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
+    # Override dataFolder to use hwc structure
+    hwc.server.navidrome.settings.dataFolder = lib.mkDefault "/var/lib/hwc/navidrome";
+
     # Native Navidrome service configuration
     services.navidrome = {
       enable = true;
@@ -21,7 +24,7 @@ in
         Address = cfg.settings.address;
         Port = cfg.settings.port;
         MusicFolder = cfg.settings.musicFolder;
-        DataFolder = cfg.settings.dataFolder;
+        DataFolder = "/var/lib/hwc/navidrome";  # Override default
         # Credentials for initial setup
         ND_INITIAL_ADMIN_USER = cfg.settings.initialAdminUser;
         # Use password from file if provided, otherwise use plaintext (deprecated)
@@ -42,6 +45,7 @@ in
         Group = lib.mkForce "users";
         # Override state directory to use hwc structure
         StateDirectory = lib.mkForce "hwc/navidrome";
+        WorkingDirectory = lib.mkForce cfg.settings.dataFolder;
       } // lib.optionalAttrs (cfg.settings.initialAdminPasswordFile != null) {
         LoadCredential = "navidrome-password:${cfg.settings.initialAdminPasswordFile}";
       };

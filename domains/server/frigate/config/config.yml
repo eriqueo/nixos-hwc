@@ -1,13 +1,11 @@
 mqtt:
-  enabled: true
-  host: 127.0.0.1
-  port: 1883
+  enabled: false
 
 detectors:
   onnx:
     type: onnx
     device: '0'
-    num_threads: 3
+    num_threads: 4
     execution_providers:
       - cuda
       - cpu
@@ -35,25 +33,38 @@ ffmpeg: &ffmpeg_defaults
     - tcp
     - -fflags
     - +genpts+discardcorrupt
+  output_args:
+    record: preset-record-generic-audio-copy
 
 record:
   enabled: true
   retain:
     days: 7
-    mode: all
-  alerts:
-    retain:
-      days: 10
-  detections:
-    retain:
-      days: 10
+    mode: motion
+
+snapshots:
+  enabled: true
+  retain:
+    default: 10
+    objects:
+      person: 30
+      car: 14
+      truck: 14
 
 objects:
-  track: [person, dog, cat]
+  track: [person, dog, cat, car, truck]
   filters:
     person:
+      min_score: 0.65
+      threshold: 0.7
+      min_area: 3000
+    dog:
       min_score: 0.6
-      threshold: 5
+      threshold: 0.7
+      min_area: 2000
+    cat:
+      min_score: 0.6
+      threshold: 0.7
       min_area: 2000
 
 cameras:
@@ -62,70 +73,100 @@ cameras:
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0
-          roles: [detect, record]
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM1_IP}:554/ch01/0
+          roles: [detect]
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM1_IP}:554/ch01/0
+          roles: [record]
     detect:
       width: 1280
       height: 720
-      fps: 1
+      fps: 5
+    motion:
+      mask:
+        - 0,0,1280,100
+        - 0,620,200,720
+        - 1080,620,1280,720
     zones:
       yard_gate:
-        coordinates: 0.0,1.0, 1.0,1.0, 1.0,0.7, 0.0,0.7
+        coordinates: 200,700,1000,700,1000,500,200,500
         objects:
           - person
           - dog
           - cat
+        filters:
+          person:
+            min_area: 5000
+            threshold: 0.75
 
   cobra_cam_2:
     enabled: true
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0
-          roles: [detect, record]
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM2_IP}:554/ch01/0
+          roles: [detect]
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM2_IP}:554/ch01/0
+          roles: [record]
     detect:
       width: 640
       height: 360
-      fps: 1
+      fps: 3
+    motion:
+      mask:
+        - 0,0,640,60
     zones:
       porch_area:
-        coordinates: 0.05,0.95, 0.95,0.95, 0.95,0.55, 0.05,0.55
+        coordinates: 50,340,590,340,590,200,50,200
         objects:
           - person
           - dog
           - cat
+        filters:
+          person:
+            min_area: 3000
+            threshold: 0.75
 
   cobra_cam_3:
     enabled: true
     ffmpeg:
       <<: *ffmpeg_defaults
       inputs:
-        - path: rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0
-          roles: [detect, record]
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM3_IP}:554/ch01/0
+          roles: [detect]
+        - path: rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM3_IP}:554/ch01/0
+          roles: [record]
     detect:
-      width: 320
-      height: 240
-      fps: 1
+      width: 640
+      height: 480
+      fps: 3
     objects:
       track: [person, car, truck, dog, cat]
       filters:
         car:
           min_score: 0.7
-          threshold: 10
-          min_area: 8000
+          threshold: 0.75
+          min_area: 10000
         truck:
           min_score: 0.7
-          threshold: 10
-          min_area: 8000
+          threshold: 0.75
+          min_area: 12000
+    motion:
+      mask:
+        - 0,0,640,80
     zones:
       driveway_truck:
-        coordinates: 0.0,0.75, 0.6,0.75, 0.6,1.0, 0.0,1.0
+        coordinates: 50,450,400,450,400,350,50,350
         objects:
           - person
           - car
           - truck
+        filters:
+          car:
+            min_area: 10000
+          truck:
+            min_area: 12000
       sidewalk_front:
-        coordinates: 0.0,0.6, 1.0,0.6, 1.0,0.75, 0.0,0.75
+        coordinates: 50,300,590,300,590,360,50,360
         objects:
           - person
           - dog
@@ -134,11 +175,11 @@ cameras:
 go2rtc:
   streams:
     cobra_cam_1:
-      - rtsp://admin:il0wwlm%3F@192.168.1.101:554/ch01/0
+      - rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM1_IP}:554/ch01/0
     cobra_cam_2:
-      - rtsp://admin:il0wwlm%3F@192.168.1.102:554/ch01/0
+      - rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM2_IP}:554/ch01/0
     cobra_cam_3:
-      - rtsp://admin:il0wwlm%3F@192.168.1.103:554/ch01/0
+      - rtsp://${RTSP_USER}:${RTSP_PASS_ENCODED}@${CAM3_IP}:554/ch01/0
 
 ui:
   timezone: America/Denver
