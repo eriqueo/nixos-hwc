@@ -88,6 +88,12 @@
         readOnly = true;
         description = "Path to decrypted NTFY user credentials file";
       };
+      jellyfinApiKeyFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted jelly API key file";
+       };
+      
 
       geminiApiKeyFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
