@@ -442,20 +442,15 @@
 
   # Passwordless sudo for ai-chat tool commands and grebuild workflow
   hwc.system.services.session.sudo.extraRules = [
-     {
-        users = [ "eric" ];
-        commands = [
-          # Commands originally needed for AI workflows
-          { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/journalctl"; options = [ "NOPASSWD" ]; }
-          
-          # Expanded systemctl permissions for health check script
-          { command = "/run/current-system/sw/bin/systemctl list-units *"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/systemctl is-active *"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/systemctl status *"; options = [ "NOPASSWD" ]; }
-        ];
-      }
-    ];
+    {
+      users = [ "eric" ];
+      commands = [
+        { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/journalctl"; options = [ "NOPASSWD" ]; }
+      ];
+    }
+  ];
   services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
   # X11 services disabled for headless server
   # services.xserver.enable = true;
