@@ -16,7 +16,8 @@ let
     networkmanager iw ethtool
     libnotify mesa-demos nvtopPackages.full lm_sensors acpi powertop
     speedtest-cli hyprland
-    baobab btop
+    baobab btop brightnessctl
+    power-profiles-daemon  # Provides powerprofilesctl for power profile management
   ];
 
   # Create the PATH string from scriptPkgs for runtime script execution.
