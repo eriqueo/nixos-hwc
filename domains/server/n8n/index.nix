@@ -57,7 +57,22 @@ in
       description = "n8n workflow automation platform";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
-
+       # add this:
+      path = with pkgs; [
+        bash
+        coreutils
+        findutils
+        gnugrep
+        gnused
+        systemd
+        git
+        curl
+        jq
+        python3
+        podman
+        nix
+        # add any other tools you want available in Execute Command
+      ];
       environment = n8nEnv;
 
       serviceConfig = {
