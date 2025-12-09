@@ -74,7 +74,13 @@ in
         # add any other tools you want available in Execute Command
       ];
       environment = n8nEnv;
-
+      serviceConfig = {
+              Type = "simple";
+              User = "eric";
+              Group = "users";
+              ExecStart = "${pkgs.n8n}/bin/n8n start";
+              Restart = "on-failure";
+              RestartSec = "10s";
       # Relax hardening so n8n behaves like a normal user session
       NoNewPrivileges = lib.mkForce false;
       PrivateTmp = lib.mkForce false;
