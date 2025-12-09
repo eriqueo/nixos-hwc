@@ -118,7 +118,6 @@
         # Tool aliases
         "eza" = "eza --icons auto --git --group-directories-first";
         "ls" = "eza";
-        "git" = "sudo git";
         "vpn" = "vpnstatus";
         "which-command" = "whence";
         "run-help" = "man";
