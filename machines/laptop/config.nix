@@ -283,7 +283,7 @@
   #============================================================================
   # Laptop has superior hardware (32GB RAM, better GPU) for larger models
   hwc.ai.ollama = {
-    enable = true;
+    enable = false;  # Disabled to reduce CPU load and fan noise
     # Larger models suitable for 32GB RAM + RTX GPU
     models = [
       "qwen2.5-coder:7b"              # 4.3GB - Primary coding assistant
@@ -294,7 +294,7 @@
 
   # Local AI workflows for laptop
   hwc.ai.local-workflows = {
-    enable = true;
+    enable = false;  # Disabled (requires ollama)
 
     # File cleanup for Downloads
     fileCleanup = {

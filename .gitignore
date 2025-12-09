@@ -37,3 +37,7 @@ __pycache__/
 .claude/.claude/settings.local.json
 .claude/auto-push-cron.sh
 .claude/auto-push.log
+
+# n8n workflows - exported/generated files
+domains/server/n8n/parts/workflows/*.json
+n8n-simple.json
