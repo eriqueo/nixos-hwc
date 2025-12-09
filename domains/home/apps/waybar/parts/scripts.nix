@@ -165,4 +165,153 @@ in
       kitty --title "Sensors" -e sh -c "sensors && echo 'Press Enter to close...'; read" &
     fi
   '';
+
+  "fan-monitor" = sh "waybar-fan-monitor" ''
+    # Read fan speeds from ThinkPad hwmon
+    FAN1=$(cat /sys/class/hwmon/hwmon8/fan1_input 2>/dev/null || echo "0")
+    FAN2=$(cat /sys/class/hwmon/hwmon8/fan2_input 2>/dev/null || echo "0")
+
+    # Get max fan speed for either fan
+    MAX_FAN=$(( FAN1 > FAN2 ? FAN1 : FAN2 ))
+
+    # Determine icon and class based on fan speed
+    if [[ ''$MAX_FAN -gt 4000 ]]; then
+      ICON="󰈐"  # High speed
+      CLASS="critical"
+    elif [[ ''$MAX_FAN -gt 3000 ]]; then
+      ICON="󰈐"  # Medium-high speed
+      CLASS="high"
+    elif [[ ''$MAX_FAN -gt 2000 ]]; then
+      ICON="󰈐"  # Medium speed
+      CLASS="medium"
+    elif [[ ''$MAX_FAN -gt 1000 ]]; then
+      ICON="󰈐"  # Low speed
+      CLASS="low"
+    else
+      ICON="󰈐"  # Idle
+      CLASS="idle"
+    fi
+
+    printf '{"text":"%s %s","class":"%s","tooltip":"Fan 1: %s RPM\\nFan 2: %s RPM"}\n' \
+           "''$ICON" "''$MAX_FAN" "''$CLASS" "''$FAN1" "''$FAN2"
+  '';
+
+  "load-average" = sh "waybar-load-average" ''
+    # Read load average (1min, 5min, 15min)
+    LOAD=$(cat /proc/loadavg | awk '{print $1, $2, $3}')
+    LOAD1=$(echo "''$LOAD" | awk '{print $1}')
+    LOAD5=$(echo "''$LOAD" | awk '{print $2}')
+    LOAD15=$(echo "''$LOAD" | awk '{print $3}')
+
+    # Get number of CPUs
+    NCPUS=$(nproc)
+
+    # Calculate percentage (load1 / ncpus * 100)
+    PERCENT=$(awk -v load="''$LOAD1" -v ncpus="''$NCPUS" 'BEGIN {printf "%.0f", (load/ncpus)*100}')
+
+    # Determine class based on load percentage
+    if [[ ''$PERCENT -gt 90 ]]; then
+      CLASS="critical"
+    elif [[ ''$PERCENT -gt 70 ]]; then
+      CLASS="high"
+    elif [[ ''$PERCENT -gt 50 ]]; then
+      CLASS="medium"
+    else
+      CLASS="normal"
+    fi
+
+    printf '{"text":"󰾆 %s","class":"%s","tooltip":"Load Average:\\n1min: %s\\n5min: %s\\n15min: %s\\nCPUs: %s"}\n' \
+           "''$LOAD1" "''$CLASS" "''$LOAD1" "''$LOAD5" "''$LOAD15" "''$NCPUS"
+  '';
+
+  "power-profile" = sh "waybar-power-profile" ''
+    # Try to get current power profile
+    if command -v powerprofilesctl >/dev/null 2>&1; then
+      PROFILE=$(powerprofilesctl get 2>/dev/null || echo "unknown")
+    else
+      PROFILE="unavailable"
+    fi
+
+    case "''$PROFILE" in
+      "performance")
+        ICON="󰓅"
+        CLASS="performance"
+        TOOLTIP="Power Profile: Performance"
+        ;;
+      "balanced")
+        ICON="󰾅"
+        CLASS="balanced"
+        TOOLTIP="Power Profile: Balanced"
+        ;;
+      "power-saver")
+        ICON="󰾆"
+        CLASS="powersave"
+        TOOLTIP="Power Profile: Power Saver"
+        ;;
+      *)
+        ICON="󱐋"
+        CLASS="unknown"
+        TOOLTIP="Power Profile: Unknown"
+        ;;
+    esac
+
+    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
+  '';
+
+  "power-profile-toggle" = sh "waybar-power-profile-toggle" ''
+    if ! command -v powerprofilesctl >/dev/null 2>&1; then
+      notify-send "Power Profile" "powerprofilesctl not available" -i battery
+      exit 0
+    fi
+
+    CURRENT=$(powerprofilesctl get 2>/dev/null || echo "balanced")
+
+    case "''$CURRENT" in
+      "performance")
+        powerprofilesctl set balanced
+        notify-send "Power Profile" "Switched to Balanced" -i battery
+        ;;
+      "balanced")
+        powerprofilesctl set power-saver
+        notify-send "Power Profile" "Switched to Power Saver" -i battery-low
+        ;;
+      *)
+        powerprofilesctl set performance
+        notify-send "Power Profile" "Switched to Performance" -i battery-full-charged
+        ;;
+    esac
+  '';
+
+  "disk-space" = sh "waybar-disk-space" ''
+    # Monitor key partitions
+    ROOT_USAGE=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
+    ROOT_AVAIL=$(df -h / | awk 'NR==2 {print $4}')
+
+    # Determine icon and class
+    if [[ ''$ROOT_USAGE -gt 90 ]]; then
+      ICON="󰝦"
+      CLASS="critical"
+    elif [[ ''$ROOT_USAGE -gt 75 ]]; then
+      ICON="󰝤"
+      CLASS="warning"
+    else
+      ICON="󰋊"
+      CLASS="normal"
+    fi
+
+    # Get home partition if different from root
+    HOME_PARTITION=$(df /home | tail -1 | awk '{print $1}')
+    ROOT_PARTITION=$(df / | tail -1 | awk '{print $1}')
+
+    if [[ "''$HOME_PARTITION" != "''$ROOT_PARTITION" ]]; then
+      HOME_USAGE=$(df -h /home | awk 'NR==2 {print $5}' | tr -d '%')
+      HOME_AVAIL=$(df -h /home | awk 'NR==2 {print $4}')
+      TOOLTIP="Root: ''${ROOT_USAGE}% used (''${ROOT_AVAIL} free)\\nHome: ''${HOME_USAGE}% used (''${HOME_AVAIL} free)"
+    else
+      TOOLTIP="Root: ''${ROOT_USAGE}% used (''${ROOT_AVAIL} free)"
+    fi
+
+    printf '{"text":"%s %s%%","class":"%s","tooltip":"%s"}\n' \
+           "''$ICON" "''$ROOT_USAGE" "''$CLASS" "''$TOOLTIP"
+  '';
 }

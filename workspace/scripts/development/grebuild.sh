@@ -96,12 +96,13 @@ prompt_user() {
 
     # Interactive prompt
     while true; do
-        read -rp "$(echo -e "${prompt} ${BOLD}[y/n]${NC} ")" response
+        read -rp "$(echo -e "${prompt} ${BOLD}[y/N]${NC} ")" response
+        response=${response:-n}  # Default to 'n' if empty (Enter key)
         case "$response" in
             [Yy]|[Yy][Ee][Ss])
                 return 0
                 ;;
-            [Nn]|[Nn][Oo])
+            [Nn]|[Nn][Oo]|"")
                 return 1
                 ;;
             *)
