@@ -3,7 +3,7 @@ LLM-based transcript polisher using Ollama.
 
 Features:
 - Chunks long transcripts to fit model context
-- Async subprocess for non-blocking Ollama invocation
+- Async HTTP API for non-blocking Ollama invocation
 - Parallel chunk processing with semaphore limits
 - Sentence-level deduplication for better stitching
 - LLM output validation to prevent hallucination
@@ -12,8 +12,11 @@ Features:
 
 import asyncio
 import logging
+import os
 import re
 from typing import List, Set
+
+import httpx
 
 
 class LLMTranscriptPolisher:
@@ -26,12 +29,15 @@ class LLMTranscriptPolisher:
         Args:
             model: Ollama model name (must be pulled on server)
             temperature: Generation temperature (0.0-1.0, lower = more consistent)
-            max_concurrent: Max concurrent Ollama processes
+            max_concurrent: Max concurrent Ollama HTTP requests
         """
         self.model = model
         self.temperature = temperature
         self.max_concurrent = max_concurrent
         self.logger = logging.getLogger(__name__)
+
+        # Get Ollama host from environment
+        self.ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 
         # Chunking parameters
         self.chunk_size = 6000  # Characters per chunk
@@ -68,9 +74,33 @@ class LLMTranscriptPolisher:
         self.logger.debug(f"Split text into {len(chunks)} chunks")
         return chunks
 
+    async def is_available(self) -> bool:
+        """Check if Ollama is available and has the required model."""
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                # Check Ollama is running
+                response = await client.get(f"{self.ollama_host}/api/tags")
+                response.raise_for_status()
+
+                # Check model is available
+                tags = response.json()
+                models = [m["name"] for m in tags.get("models", [])]
+
+                # Model name might include tag (e.g., "llama3.2:3b" vs "llama3.2")
+                model_base = self.model.split(":")[0]
+                available = any(model_base in m for m in models)
+
+                if not available:
+                    self.logger.warning(f"Model {self.model} not found in Ollama")
+
+                return available
+        except Exception as e:
+            self.logger.warning(f"Ollama not available: {e}")
+            return False
+
     async def polish_chunk(self, chunk: str, title: str, chunk_num: int, total_chunks: int) -> str:
         """
-        Polish one chunk using Ollama via async subprocess.
+        Polish one chunk using Ollama via HTTP API.
 
         Args:
             chunk: Text chunk to polish
@@ -82,7 +112,7 @@ class LLMTranscriptPolisher:
             Polished markdown text
 
         Raises:
-            RuntimeError: If Ollama subprocess fails
+            RuntimeError: If Ollama HTTP request fails
         """
         prompt = f"""You are a transcript editor. Your task is to clean and format this YouTube transcript segment while preserving ALL information.
 
@@ -107,24 +137,22 @@ Return ONLY the cleaned markdown, starting immediately with the content:"""
             try:
                 self.logger.debug(f"Polishing chunk {chunk_num}/{total_chunks}")
 
-                # Use async subprocess for non-blocking execution
-                proc = await asyncio.create_subprocess_exec(
-                    "ollama", "run", self.model, "--temperature", str(self.temperature),
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-
-                # Wait for completion with timeout
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(prompt.encode('utf-8')),
-                    timeout=120  # 2 minute timeout per chunk
-                )
-
-                if proc.returncode != 0:
-                    raise RuntimeError(f"Ollama failed: {stderr.decode().strip()}")
-
-                output = stdout.decode('utf-8').strip()
+                # Use HTTP API for non-blocking execution
+                async with httpx.AsyncClient(timeout=180.0) as client:
+                    response = await client.post(
+                        f"{self.ollama_host}/api/generate",
+                        json={
+                            "model": self.model,
+                            "prompt": prompt,
+                            "stream": False,
+                            "options": {
+                                "temperature": self.temperature,
+                            }
+                        }
+                    )
+                    response.raise_for_status()
+                    result = response.json()
+                    output = result["response"].strip()
 
                 # Validate output length (shouldn't be drastically shorter)
                 if len(output) < len(chunk) * 0.5:
@@ -132,12 +160,12 @@ Return ONLY the cleaned markdown, starting immediately with the content:"""
 
                 return output
 
-            except asyncio.TimeoutError:
+            except httpx.TimeoutException:
                 self.logger.error(f"Timeout polishing chunk {chunk_num}")
-                raise RuntimeError("Ollama timeout")
-            except FileNotFoundError:
-                self.logger.error("Ollama command not found - is it installed?")
-                raise RuntimeError("Ollama not found in PATH")
+                raise RuntimeError("Ollama request timed out")
+            except httpx.HTTPError as e:
+                self.logger.error(f"Ollama HTTP request failed: {e}")
+                raise RuntimeError(f"Ollama API error: {e}")
 
     def dedupe_paragraphs(self, text: str) -> str:
         """
