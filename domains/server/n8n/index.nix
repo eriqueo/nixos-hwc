@@ -75,20 +75,15 @@ in
       ];
       environment = n8nEnv;
 
-      serviceConfig = {
-        Type = "simple";
-        User = "eric";
-        Group = "users";
-        ExecStart = "${pkgs.n8n}/bin/n8n start";
-        Restart = "on-failure";
-        RestartSec = "10s";
-
-        # Security hardening
-        NoNewPrivileges = true;
-        PrivateTmp = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-        ReadWritePaths = [ cfg.dataDir ];
+      # Relax hardening so n8n behaves like a normal user session
+      NoNewPrivileges = lib.mkForce false;
+      PrivateTmp = lib.mkForce false;
+      ProtectSystem = lib.mkForce "default";
+      ProtectHome = lib.mkForce false;
+      
+              # Either drop this, or broaden it.
+              # If you omit ReadWritePaths, eric's normal permissions apply everywhere.
+      ReadWritePaths = lib.mkForce [ ];
 
         # Resource limits
         MemoryMax = "2G";
