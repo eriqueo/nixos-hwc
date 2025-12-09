@@ -96,6 +96,7 @@ in {
 
       systemd.tmpfiles.rules = [
         "d ${cfg.hot.path} 0755 root root -"
+        "d ${cfg.hot.path}/transcript-text 0755 eric users -"
       ];
     })
 
