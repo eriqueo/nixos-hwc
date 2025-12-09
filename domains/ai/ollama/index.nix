@@ -239,7 +239,7 @@ in
           echo "Ollama idle for $IDLE_TIME seconds (threshold: $IDLE_THRESHOLD)"
 
           if [[ $IDLE_TIME -gt $IDLE_THRESHOLD ]]; then
-            echo "⚠️  Ollama idle for ${cfg.idleShutdown.idleMinutes} minutes, shutting down..."
+            echo "⚠️  Ollama idle for ${toString cfg.idleShutdown.idleMinutes} minutes, shutting down..."
             ${pkgs.systemd}/bin/systemctl stop podman-ollama.service
           fi
         '';
