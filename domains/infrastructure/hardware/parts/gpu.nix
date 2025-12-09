@@ -233,8 +233,8 @@ in
               ;;
           esac
 
-          ${pkgs.procps}/bin/pkill -SIGUSR1 waybar 2>/dev/null || true
-          ${pkgs.procps}/bin/pkill -SIGUSR1 swaybar 2>/dev/null || true
+          # Note: Waybar auto-updates via interval (5s), no signal needed
+          # Previous pkill -SIGUSR1 caused waybar crashes - removed
         '')
 
         (pkgs.writeShellScriptBin "gpu-next" ''
