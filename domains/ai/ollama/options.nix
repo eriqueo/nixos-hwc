@@ -110,5 +110,98 @@
         description = "Disk space check interval (systemd time format)";
       };
     };
+
+    resourceLimits = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable resource limits to prevent runaway CPU/memory usage";
+      };
+
+      maxCpuPercent = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = ''
+          Maximum CPU usage percentage (100 = 1 core, 200 = 2 cores, etc.)
+          null = unlimited (server default), set to 200-400 for laptop
+        '';
+      };
+
+      maxMemoryMB = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = ''
+          Maximum memory in MB
+          null = unlimited (server default), set to 4096-8192 for laptop
+        '';
+      };
+
+      maxRequestSeconds = lib.mkOption {
+        type = lib.types.int;
+        default = 600;
+        description = ''
+          Maximum seconds for a single request before killing it
+          Server: 600s (10min), Laptop: 180s (3min) recommended
+        '';
+      };
+    };
+
+    idleShutdown = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Auto-stop ollama service after idle timeout
+          Recommended: true for laptop, false for server
+        '';
+      };
+
+      idleMinutes = lib.mkOption {
+        type = lib.types.int;
+        default = 15;
+        description = "Minutes of inactivity before shutting down";
+      };
+
+      checkInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "2min";
+        description = "How often to check for idle state";
+      };
+    };
+
+    thermalProtection = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Monitor CPU temperature and throttle/stop ollama if too hot
+          Recommended: true for laptop, false for server (if datacenter cooling)
+        '';
+      };
+
+      warningTemp = lib.mkOption {
+        type = lib.types.int;
+        default = 80;
+        description = "Temperature (°C) to start throttling ollama (pause new requests)";
+      };
+
+      criticalTemp = lib.mkOption {
+        type = lib.types.int;
+        default = 90;
+        description = "Temperature (°C) to immediately stop ollama";
+      };
+
+      checkInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "30s";
+        description = "How often to check CPU temperature";
+      };
+
+      cooldownMinutes = lib.mkOption {
+        type = lib.types.int;
+        default = 5;
+        description = "Minutes to wait after thermal shutdown before allowing restart";
+      };
+    };
   };
 }

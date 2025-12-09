@@ -246,6 +246,24 @@
       "phi3:3.8b"                     # 2.3GB - General purpose, excellent quality
       "llama3.2:3b"                   # 2.0GB - Chat, summarization, journaling
     ];
+
+    # Relaxed resource limits for server (monitoring, not restricting)
+    resourceLimits = {
+      enable = true;
+      maxCpuPercent = null;          # Unlimited CPU (server can use all cores)
+      maxMemoryMB = null;            # Unlimited memory
+      maxRequestSeconds = 600;       # Kill only extremely long requests (10 min)
+    };
+
+    # No idle shutdown on server (always-on service)
+    idleShutdown = {
+      enable = false;                # Server keeps ollama running
+    };
+
+    # No thermal protection on server (datacenter environment)
+    thermalProtection = {
+      enable = false;                # Server has adequate cooling
+    };
   };
 
   # Local AI workflows and automation

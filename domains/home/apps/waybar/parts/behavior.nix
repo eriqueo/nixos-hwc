@@ -9,8 +9,9 @@ let
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
       "custom/gpu" "idle_inhibitor" "mpd" "pulseaudio"
-      "custom/network" "bluetooth" "memory" "cpu" "temperature"
-      "custom/battery" "tray" "custom/notification" "custom/power"
+      "custom/network" "bluetooth" "custom/disk-space" "memory" "cpu"
+      "temperature" "custom/fan" "custom/load" "custom/power-profile"
+      "custom/battery" "backlight" "tray" "custom/notification" "custom/power"
     ];
   };
 
@@ -28,7 +29,6 @@ let
       on-click = "activate";
       on-scroll-up = "hyprctl dispatch workspace e+1";
       on-scroll-down = "hyprctl dispatch workspace e-1";
-      swap-icon-label = false;
     };
 
     "hyprland/submap" = { format = "✨ {}"; max-length = 8; tooltip = false; };
@@ -52,26 +52,32 @@ let
       state-icons = { paused = ""; playing = ""; };
       on-click = "mpc toggle";
       on-click-right = "mpc next";
-      swap-icon-label = false;
     };
 
     clock = { format = "{:%H:%M:%S}"; format-alt = "{:%Y-%m-%d %H:%M:%S}"; };
 
     "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
-    idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; swap-icon-label = false; };
-    pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; swap-icon-label = false; };
+    idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; };
+    pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
-    bluetooth = { format = "{icon}"; format-icons = { enabled = "󰂯"; disabled = "󰂲"; }; format-connected = "󰂱 {num_connections}"; on-click = "blueman-manager"; swap-icon-label = false; };
-    memory = { format = "󰍛 {percentage}%"; interval = 5; on-click = "waybar-system-monitor"; swap-icon-label = false; };
-    cpu = { format = "󰻠 {usage}%"; interval = 5; on-click = "waybar-system-monitor"; swap-icon-label = false; };
+    bluetooth = { format = "{icon}"; format-icons = { enabled = "󰂯"; disabled = "󰂲"; }; format-connected = "󰂱 {num_connections}"; on-click = "blueman-manager"; };
+    memory = { format = "󰍛 {percentage}%"; interval = 5; on-click = "waybar-system-monitor"; };
+    cpu = { format = "󰻠 {usage}%"; interval = 5; on-click = "waybar-system-monitor"; };
     temperature = {
-      hwmon-path-abs = "/sys/class/hwmon";
+      # Use coretemp device for accurate CPU package temperature
+      # hwmon-path-abs points to device hwmon directory (not hwmon/hwmonN subdirectory)
+      hwmon-path-abs = "/sys/devices/platform/coretemp.0/hwmon";
       input-filename = "temp1_input";
       critical-threshold = 80;
       format = "󰔏 {temperatureC}°C";
-      swap-icon-label = false;
+      format-critical = "󰔏 {temperatureC}°C";
     };
+    "custom/fan" = { format = "{}"; exec = "waybar-fan-monitor"; return-type = "json"; interval = 3; };
+    "custom/load" = { format = "{}"; exec = "waybar-load-average"; return-type = "json"; interval = 5; };
+    "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
+    "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
+    backlight = { format = "{icon} {percent}%"; format-icons = ["󰃞" "󰃟" "󰃠"]; on-scroll-up = "brightnessctl set +5%"; on-scroll-down = "brightnessctl set 5%-"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
   };
