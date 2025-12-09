@@ -6,7 +6,7 @@ in
 {
   imports = [
     ./options.nix
-    ./ollama  # Now uses index.nix (Charter compliant)
+    ./ollama/index.nix  # Explicitly use index.nix (Charter compliant)
     ./open-webui/default.nix  # TODO: migrate to index.nix
     ./local-workflows/default.nix  # TODO: migrate to index.nix
     ./mcp/default.nix  # TODO: migrate to index.nix
