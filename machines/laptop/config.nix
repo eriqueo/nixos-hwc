@@ -283,18 +283,42 @@
   #============================================================================
   # Laptop has superior hardware (32GB RAM, better GPU) for larger models
   hwc.ai.ollama = {
-    enable = false;  # Disabled to reduce CPU load and fan noise
+    enable = true;  # Re-enabled with smart controls for short sprints
     # Larger models suitable for 32GB RAM + RTX GPU
     models = [
       "qwen2.5-coder:7b"              # 4.3GB - Primary coding assistant
       "llama3.2:3b"                   # 2.0GB - Fast queries, battery mode
       "mistral:7b-instruct"           # 4.1GB - General reasoning
     ];
+
+    # Aggressive resource limits for laptop (prevent fan noise)
+    resourceLimits = {
+      enable = true;
+      maxCpuPercent = 300;          # Max 3 cores (leave 13 cores for other work)
+      maxMemoryMB = 6144;            # Max 6GB (out of 32GB total)
+      maxRequestSeconds = 180;       # Kill any request over 3 minutes
+    };
+
+    # Auto-shutdown after idle (perfect for grebuild sprints)
+    idleShutdown = {
+      enable = true;
+      idleMinutes = 15;              # Shutdown after 15min of inactivity
+      checkInterval = "2min";         # Check every 2 minutes
+    };
+
+    # Thermal protection (critical for laptop)
+    thermalProtection = {
+      enable = true;
+      warningTemp = 75;              # Start warning at 75°C
+      criticalTemp = 85;             # Emergency stop at 85°C
+      checkInterval = "30s";          # Check every 30 seconds
+      cooldownMinutes = 10;          # 10min cooldown after thermal shutdown
+    };
   };
 
   # Local AI workflows for laptop
   hwc.ai.local-workflows = {
-    enable = false;  # Disabled (requires ollama)
+    enable = true;  # Re-enabled with ollama smart controls
 
     # File cleanup for Downloads
     fileCleanup = {
