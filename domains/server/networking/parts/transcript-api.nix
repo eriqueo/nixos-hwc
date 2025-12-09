@@ -54,7 +54,9 @@ in {
     systemd.services.transcript-api = {
       description = "YouTube Transcript API";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network.target" ];
+      after = [ "network.target" ]
+        ++ lib.optional (config.hwc.ai.ollama.enable or false) "podman-ollama.service";
+      wants = lib.optional (config.hwc.ai.ollama.enable or false) "podman-ollama.service";
 
       environment = {
         API_HOST = "0.0.0.0";
@@ -63,6 +65,7 @@ in {
         LANGS = "en,en-US,en-GB";
         COUCHDB_URL = "http://127.0.0.1:5984";
         COUCHDB_DATABASE = "sync_transcripts";
+        OLLAMA_HOST = "http://127.0.0.1:11434";
       };
 
       serviceConfig = {

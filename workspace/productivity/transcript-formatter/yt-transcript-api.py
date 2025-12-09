@@ -291,31 +291,14 @@ async def startup_event():
     else:
         logger.info("✓ Basic cleaner initialized")
 
-    # Validate Ollama availability
+    # Validate Ollama availability via HTTP API
     try:
-        proc = await asyncio.create_subprocess_exec(
-            "ollama", "list",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5)
-
-        if proc.returncode == 0:
-            # Parse output to list available models
-            models_output = stdout.decode('utf-8')
-            if llm_polisher.model in models_output:
-                logger.info(f"✓ Ollama available with model '{llm_polisher.model}'")
-            else:
-                logger.warning(f"⚠ Ollama available but model '{llm_polisher.model}' not found")
-                logger.warning(f"  Available models:\n{models_output}")
+        if await llm_polisher.is_available():
+            logger.info(f"✓ Ollama available with model: {llm_polisher.model}")
         else:
-            logger.warning(f"❌ Ollama command failed: {stderr.decode()}")
-    except asyncio.TimeoutError:
-        logger.warning("❌ Ollama check timed out - service may be slow to respond")
-    except FileNotFoundError:
-        logger.error("❌ Ollama not found in PATH! LLM polishing will fail")
+            logger.warning(f"⚠ Ollama available but model '{llm_polisher.model}' not found - LLM polishing disabled")
     except Exception as e:
-        logger.warning(f"❌ Cannot reach Ollama: {e}")
+        logger.warning(f"❌ Ollama not available: {e} - LLM polishing disabled")
 
     logger.info("=" * 70)
     logger.info("HWC Transcript API startup complete")
