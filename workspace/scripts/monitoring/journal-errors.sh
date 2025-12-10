@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # journal-errors - Summarize and deduplicate journalctl errors
 #
-# Usage: journal-errors [time-window] [service]
+# Usage: journal-errors [time-window] [service] [--show-all]
 # Examples:
-#   journal-errors                    # Last 10 minutes, all services
-#   journal-errors "1 hour ago"       # Last hour, all services
+#   journal-errors                    # Last 10 minutes, all services (with filters)
+#   journal-errors "1 hour ago"       # Last hour, all services (with filters)
 #   journal-errors "1 hour ago" tdarr # Last hour, tdarr only
+#   journal-errors "10 minutes ago" "" --show-all  # Bypass all exclusion filters
+#
+# Configuration:
+#   Edit EXCLUDE_SERVICES and EXCLUDE_PATTERNS arrays below to customize filtering
 #
 # Dependencies: journalctl, awk, sed, grep, wc, sort, uniq, tail (standard on NixOS)
 # Location: workspace/scripts/monitoring/journal-errors.sh
@@ -34,6 +38,36 @@ done
 
 TIME_WINDOW="${1:-10 minutes ago}"
 SERVICE="${2:-}"
+SHOW_ALL=false
+
+# Check for --show-all flag in any position
+for arg in "$@"; do
+  if [[ "$arg" == "--show-all" ]]; then
+    SHOW_ALL=true
+    break
+  fi
+done
+
+# Exclusion patterns (grep -E compatible regex)
+# Add services or patterns to exclude from error reports
+EXCLUDE_SERVICES=(
+  "soularr"
+)
+
+EXCLUDE_PATTERNS=(
+  "INFO\|"
+  "DEBUG\|"
+  "\[INFO"
+  "\[DEBUG"
+  "No releases wanted"
+  "Server stats"
+  "No expired messages"
+  "No expired attachments"
+  "Removed 0 empty topic"
+  "Deleted 0 stale visitor"
+  "Manager finished"
+  "Pruned messages"
+)
 
 # Colors
 readonly RED='\033[0;31m'
@@ -57,10 +91,31 @@ if [ -n "$SERVICE" ]; then
     JOURNAL_CMD="$JOURNAL_CMD -u ${SERVICE}"
     echo -e "${CYAN}Service filter: ${SERVICE}${NC}"
 fi
+
+# Show filter status
+if [ "$SHOW_ALL" = true ]; then
+    echo -e "${YELLOW}Exclusion filters: DISABLED (--show-all)${NC}"
+else
+    echo -e "${CYAN}Exclusion filters: ${#EXCLUDE_SERVICES[@]} services, ${#EXCLUDE_PATTERNS[@]} patterns${NC}"
+    echo -e "${CYAN}(Use --show-all to bypass filters)${NC}"
+fi
 echo ""
 
-# Get raw errors
+# Get raw errors and apply filters
 RAW_ERRORS=$(eval "$JOURNAL_CMD" 2>/dev/null || echo "")
+
+# Apply exclusion filters (unless --show-all is specified)
+if [ "$SHOW_ALL" = false ]; then
+  # Apply service exclusions
+  for service in "${EXCLUDE_SERVICES[@]}"; do
+    RAW_ERRORS=$(echo "$RAW_ERRORS" | grep -v "$service" || echo "")
+  done
+
+  # Apply pattern exclusions
+  for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+    RAW_ERRORS=$(echo "$RAW_ERRORS" | grep -v "$pattern" || echo "")
+  done
+fi
 
 if [ -z "$RAW_ERRORS" ]; then
     echo -e "${GREEN}✓ No errors found!${NC}"
@@ -98,4 +153,7 @@ echo ""
 echo -e "${CYAN}Tip: Run 'journalctl --since \"${TIME_WINDOW}\" -p err' for full details${NC}"
 if [ -z "$SERVICE" ]; then
     echo -e "${CYAN}Tip: Add service name to filter: journal-errors \"${TIME_WINDOW}\" podman-tdarr${NC}"
+fi
+if [ "$SHOW_ALL" = false ]; then
+    echo -e "${CYAN}Tip: Use 'journal-errors \"${TIME_WINDOW}\" \"\" --show-all' to see all errors without filters${NC}"
 fi

@@ -228,14 +228,13 @@ Keep them in `domains/<domain>/scripts/` or `domains/<domain>/parts/`
 
 ## Migration Notes
 
-This directory consolidates scripts from:
-- `workspace/utilities/monitoring/` → `workspace/scripts/monitoring/`
-- `workspace/utilities/lints/` → `workspace/scripts/development/`
-- `workspace/utilities/scripts/` → `workspace/scripts/development/`
-- `workspace/network/` → `workspace/scripts/utils/network/`
-- `workspace/automation/` → `workspace/scripts/automation/`
+This directory consolidates scripts from legacy locations (migration completed 2025-12-10):
+- `workspace/utilities/monitoring/` → `workspace/scripts/monitoring/` ✓
+- `workspace/utilities/lints/` → `workspace/scripts/development/` ✓
+- `workspace/network/` → `workspace/scripts/utils/network/` ✓
+- `workspace/scripts/automation/` → `workspace/automation/` ✓
 
-Old locations are kept temporarily for compatibility but should be phased out.
+Some utility scripts remain in `workspace/utilities/scripts/` for deployment and setup tasks.
 
 ## See Also
 

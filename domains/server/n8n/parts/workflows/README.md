@@ -138,6 +138,83 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 
 ---
 
+### 07-transcript-orchestrator.json
+**Purpose:** Unified YouTube transcript extraction and formatting with Ollama/Qwen integration
+
+**Triggers:**
+- Webhook `/webhook/transcript-extract` (YouTube URL submission)
+- Webhook `/webhook/transcript-format` (Manual formatting requests)
+
+**Request Schema (Extraction):**
+```json
+{
+  "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
+  "format": "standard",
+  "auto_format": true,
+  "languages": "en,en-US"
+}
+```
+
+**Request Schema (Formatting):**
+```json
+{
+  "file_path": "/mnt/media/transcripts/video.md",
+  "format_mode": "llm",
+  "vault_dir": "/home/eric/01-documents/01-vaults/04-transcripts"
+}
+```
+
+**Features:**
+- **Extraction Pipeline:**
+  - Async YouTube transcript extraction
+  - Returns job_id immediately for status tracking
+  - Retry logic: 3 attempts with exponential backoff (5s, 10s, 20s)
+  - Handles network timeouts, rate limits, temporary failures
+  - Dead letter queue for failed jobs
+  - Auto-triggers formatting on successful extraction
+
+- **Formatting Pipeline:**
+  - LLM-based formatting via Ollama/Qwen 2.5:7b
+  - Retry logic: 2 attempts with 30-second backoff
+  - Fallback to basic cleaning if LLM fails
+  - Saves formatted transcripts to Obsidian vault
+  - Optional CouchDB sync support
+
+- **Error Handling:**
+  - Dead letter queue: `/home/eric/.cache/n8n/transcript-dlq.jsonl`
+  - Smart notifications:
+    - P2 (Success): Extraction/formatting completed → ntfy (hwc-transcripts)
+    - P4 (Failure): All retries exhausted → ntfy + Slack (hwc-transcripts)
+
+**Wrapper Scripts:**
+- `/home/eric/.local/bin/n8n-transcript-extract` - YouTube extraction wrapper
+- `/home/eric/.local/bin/n8n-transcript-format` - Formatting wrapper (basic/LLM modes)
+
+**Service Configuration:** None required (uses existing Python scripts)
+
+**Test Commands:**
+```bash
+# Extract YouTube transcript
+curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/transcript-extract \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
+    "auto_format": true
+  }'
+
+# Format existing file
+curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/transcript-format \
+  -H "Content-Type: application/json" \
+  -d '{
+    "file_path": "/mnt/media/transcripts/video.md",
+    "format_mode": "llm"
+  }'
+```
+
+**Coexistence:** Runs alongside existing systemd services (`transcript-api`, `transcript-formatter`) during transition period.
+
+---
+
 ## Import Instructions
 
 1. Access n8n: `https://hwc.ocelot-wahoo.ts.net:2443`
@@ -183,5 +260,5 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
-**Last Updated:** 2025-12-08
+**Last Updated:** 2025-12-10
 **Author:** Eric (with Claude assistance)
