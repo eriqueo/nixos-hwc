@@ -149,6 +149,11 @@ in
       path = "/sync";
       upstream = "http://127.0.0.1:5984";
       needsUrlBase = false;  # Strip /sync prefix - CouchDB doesn't support URL base
+      headers = {
+        Authorization = "{>Authorization}";
+        Upgrade       = "{>Upgrade}";
+        Connection    = "{>Connection}";
+      };
     }
 
     # ntfy notification server - preserve path (ntfy handles subpath natively)
