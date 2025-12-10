@@ -305,52 +305,50 @@ $(if [[ $ALIAS_COUNT -gt 30 ]]; then echo "... and $((ALIAS_COUNT - 30)) more"; 
 
 ## Recommendations
 
-### Script Organization Issues
+### Script Organization (Updated 2025-12-10)
 
-1. **Scripts consolidated in organized structure**
-   - workspace/scripts/development/ (dev tools)
-   - workspace/scripts/monitoring/ (monitoring scripts)
-   - workspace/scripts/automation/ (automation workflows)
-   - workspace/scripts/internal/ (workspace helpers)
-   - Legacy: workspace/utilities/ (being phased out)
+**Current Structure** (Purpose-Driven):
 
-2. **Inconsistent naming**
-   - Some with .sh extension, some without
-   - Mix of kebab-case and snake_case
+1. **Organized by trigger/purpose** (not arbitrary categories)
+   - workspace/nixos/ - NixOS development tools
+   - workspace/monitoring/ - System health checks
+   - workspace/hooks/ - Event-driven automation
+   - workspace/diagnostics/ - Troubleshooting tools
+   - workspace/setup/ - One-time deployment
+   - workspace/bible/ - Domain-specific automation
+   - workspace/media/ - Media management
+   - workspace/projects/ - Standalone projects
 
-3. **Duplicate functionality**
-   - Functions in Nix files vs. standalone scripts
-   - Example: \`grebuild\` is both a Nix function and a script
+2. **Naming standards**
+   - User-facing commands: via Nix wrappers (grebuild, charter-lint, etc.)
+   - Implementation scripts: kebab-case with .sh/.py extensions
+   - Three-tier architecture (Nix → workspace → domain)
 
-### Suggested Structure
+3. **No duplicates**
+   - User commands are Nix derivations wrapping workspace scripts
+   - Scripts can be edited without rebuilding NixOS
+   - Single canonical location per script
+
+### Current Structure Benefits
 
 \`\`\`
-workspace/scripts/
-├── monitoring/          # System monitoring scripts
-│   ├── disk-check
-│   ├── service-check
-│   ├── log-check
-│   └── system-health
-├── maintenance/         # Maintenance and cleanup
-│   ├── cleanup-logs
-│   ├── update-system
-│   └── backup-verify
-├── development/         # Development utilities
-│   ├── rebuild
-│   ├── lint
-│   └── test
-└── utils/              # General utilities
-    ├── service-status
-    └── container-status
+workspace/
+├── nixos/         # Clear: NixOS config development
+├── monitoring/    # Clear: System health monitoring
+├── hooks/         # Clear: Triggered by events
+├── diagnostics/   # Clear: Troubleshooting
+├── setup/         # Clear: One-time deployment
+├── bible/         # Clear: Domain-specific
+├── media/         # Clear: Media tools
+└── projects/      # Clear: Standalone projects
 \`\`\`
 
-### Next Steps
+vs. old ambiguous structure:
+- development/ - development of what?
+- automation/ - automated how?
+- utilities/ - utility for what?
 
-1. **Consolidate scripts** into \`workspace/scripts/\`
-2. **Standardize naming** (kebab-case, no .sh extension for user-facing)
-3. **Create aliases** in \`domains/home/environment/shell/options.nix\`
-4. **Remove duplicates** (choose Nix function OR script, not both)
-5. **Document** which scripts are active vs. archived
+See workspace/README.md for full documentation.
 
 EOF
 

@@ -5,8 +5,8 @@
 # Usage: grebuild.sh "commit message" [OPTIONS]
 #
 # Dependencies: git, nixos-rebuild, sudo, curl, systemctl (standard on NixOS)
-# Location: workspace/scripts/development/grebuild.sh
-# Invoked by: Shell function in domains/home/environment/shell/index.nix
+# Location: workspace/nixos/grebuild.sh
+# Invoked by: Shell wrapper in domains/home/environment/shell/parts/grebuild.nix
 
 set -euo pipefail
 

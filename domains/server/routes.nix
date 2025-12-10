@@ -150,9 +150,9 @@ in
       upstream = "http://127.0.0.1:5984";
       needsUrlBase = false;  # Strip /sync prefix - CouchDB doesn't support URL base
       headers = {
-        Authorization = "{>Authorization}";
-        Upgrade       = "{>Upgrade}";
-        Connection    = "{>Connection}";
+        Authorization = "{http.request.header.authorization}";
+        Upgrade       = "{http.request.header.upgrade}";
+        Connection    = "{http.request.header.connection}";
       };
     }
 
