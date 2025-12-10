@@ -30,7 +30,7 @@
 #    - /var/lib/immich/.config/matplotlib - Matplotlib configuration
 #
 # VALIDATION:
-# - Run: workspace/utilities/immich-gpu-check.sh
+# - Run: workspace/monitoring/immich-gpu-check.sh
 # - Monitor: watch -n 1 nvidia-smi
 # - Logs: journalctl -u immich-machine-learning -f
 #

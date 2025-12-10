@@ -1,8 +1,7 @@
 { pkgs, config, ... }:
 
 let
-  workspaceRoot = config.home.homeDirectory + "/.nixos/workspace";
-  workspaceScripts = workspaceRoot + "/scripts";
+  workspace = config.home.homeDirectory + "/.nixos/workspace";
 in
 pkgs.writeShellApplication {
   name = "grebuild";
@@ -15,6 +14,6 @@ pkgs.writeShellApplication {
     # systemctl is in system PATH
   ];
   text = ''
-    exec bash "${workspaceScripts}/development/grebuild.sh" "$@"
+    exec bash "${workspace}/nixos/grebuild.sh" "$@"
   '';
 }

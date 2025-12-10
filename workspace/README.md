@@ -1,306 +1,303 @@
-# HWC NixOS Workspace
+# HWC Workspace Directory
 
-## Purpose & Overview
+**Purpose-Driven Script Organization**
 
-The **HWC NixOS Workspace** is a **purpose-organized collection** of scripts, automation tools, development projects, and utilities that are **declaratively managed** as part of the NixOS configuration. All content is version-controlled and deployed automatically during system rebuilds.
-
-**Key Principle**: Everything in the workspace is **declaratively managed** - no manual script management, all automation version-controlled, complete reproducibility across machines.
-
-## Workspace Architecture
-
-The workspace is organized by **purpose and function** rather than machine or technology:
-
-```
-workspace/
-├── automation/                  # System & media automation scripts
-│   ├── media-orchestrator.py  # Event-driven media workflow coordinator
-│   ├── qbt-finished.sh        # qBittorrent post-processing hook
-│   └── sab-finished.py        # SABnzbd post-processing hook
-├── network/                    # Network analysis & security tools
-│   ├── quicknet.sh            # Fast network triage
-│   ├── advnetcheck.sh         # Advanced network diagnostics
-│   ├── homewifi-audit.sh      # WiFi security auditing
-│   ├── netcheck.sh           # Comprehensive network analysis
-│   ├── wifibrute.sh          # WiFi security testing
-│   ├── hw-overview.sh        # Hardware network overview
-│   ├── toolscan.sh           # Network tool scanning
-│   ├── wifisurvery.sh        # WiFi survey and analysis
-│   └── capture.pcap          # Network packet captures
-├── productivity/               # Personal productivity automation
-│   ├── transcript-formatter/  # AI-powered transcript processing
-│   │   ├── obsidian_transcript_formatter.py
-│   │   ├── formatting_prompt.txt
-│   │   └── nixos_formatter_runner.sh
-│   └── music_duplicate_detector.sh  # Music library cleanup
-├── utilities/                  # NixOS development & system utilities
-│   ├── config-validation/     # NixOS configuration validation tools
-│   ├── lints/                # Code quality and charter compliance
-│   ├── templates/            # Code templates and scaffolding
-│   ├── domains/             # Domain development utilities
-│   └── tests/               # Testing utilities
-├── infrastructure/            # System deployment & management
-│   ├── filesystem/           # Filesystem management scripts
-│   │   ├── add-home-app.sh  # Home Manager app addition
-│   │   └── update-headers.sh # File header updates
-│   └── vault-sync-system.nix # Obsidian vault synchronization
-└── projects/                  # Development projects
-    └── site-crawler/         # Web scraping and SEO analysis
-        ├── crawler/         # Scrapy-based web crawler
-        ├── extractor/       # Content extraction tools
-        ├── data/           # Scraped data and analysis
-        └── pyproject.toml  # Python project configuration
-```
-
-## Integration with NixOS
-
-### Declarative Deployment
-
-Scripts are **automatically deployed** during system rebuilds:
-
-```nix
-# domains/server/orchestration/media-orchestrator.nix
-systemd.services.media-orchestrator-install = {
-  script = ''
-    # Deploy automation scripts from workspace
-    cp /home/eric/.nixos/workspace/automation/media-orchestrator.py /opt/downloads/scripts/
-    cp /home/eric/.nixos/workspace/automation/qbt-finished.sh /opt/downloads/scripts/
-    cp /home/eric/.nixos/workspace/automation/sab-finished.py /opt/downloads/scripts/
-    chmod +x /opt/downloads/scripts/*.py /opt/downloads/scripts/*.sh
-  '';
-};
-```
-
-### Environment Integration
-
-The workspace is accessible via environment variables:
-
-```bash
-# Set by Home Manager development configuration
-export WORKSPACE="$HOME/.nixos/workspace"
-export PROJECTS="$HOME/.nixos/workspace/projects"
-export SCRIPTS="$HOME/.nixos/workspace"
-
-# Usage
-cd $WORKSPACE/automation    # Access automation scripts
-cd $PROJECTS               # Access development projects
-```
-
-### Service Integration
-
-Services automatically consume workspace content:
-
-- **SABnzbd**: Uses `automation/sab-finished.py` for post-processing
-- **qBittorrent**: Uses `automation/qbt-finished.sh` for completion hooks
-- **Media Orchestrator**: Deploys and runs `automation/media-orchestrator.py`
-- **Transcript Formatter**: Home Manager service uses `productivity/transcript-formatter/`
-
-## Workspace Categories
-
-### 🤖 Automation (`automation/`)
-**System and media workflow automation**
-
-Production automation scripts that handle real-time workflows:
-
-**Media Orchestrator** (`media-orchestrator.py`):
-- **Event-driven architecture**: Monitors `/mnt/hot/events` for completion events
-- **Cross-service integration**: Triggers rescans in Sonarr, Radarr, Lidarr
-- **Prometheus metrics**: Exports workflow metrics for monitoring
-- **Error handling**: Robust error handling and logging
-- **API integration**: Uses agenix secrets for service API access
-
-**Post-processing Hooks**:
-- `qbt-finished.sh`: qBittorrent completion → JSON event creation
-- `sab-finished.py`: SABnzbd completion → JSON event creation
-
-**Deployment**: Scripts automatically deployed to `/opt/downloads/scripts/` on system rebuild.
-
-### 🌐 Network (`network/`)
-**Network analysis, security testing, and diagnostics**
-
-Comprehensive network security and analysis toolkit:
-
-**Analysis Tools**:
-- `quicknet.sh`: Fast network triage for immediate issues
-- `netcheck.sh`: Comprehensive network diagnostics and health checks
-- `advnetcheck.sh`: Advanced network analysis with detailed reporting
-
-**Security Tools**:
-- `homewifi-audit.sh`: WiFi security auditing and vulnerability assessment
-- `wifibrute.sh`: WiFi security testing (defensive use only)
-- `wifisurvery.sh`: WiFi survey and signal analysis
-
-**Hardware Tools**:
-- `hw-overview.sh`: Hardware network interface overview
-- `toolscan.sh`: Network tool availability and capability scanning
-
-**Data**:
-- `capture.pcap`: Network packet captures for analysis
-- `wifi_report_*`: WiFi survey reports and data
-
-### 📝 Productivity (`productivity/`)
-**Personal productivity and content processing automation**
-
-**Transcript Formatter** (`transcript-formatter/`):
-- **AI-powered processing**: Uses Ollama/Qwen for transcript formatting
-- **File monitoring**: Watches for new transcript files
-- **Obsidian integration**: Formats transcripts for Obsidian vault
-- **Desktop integration**: GUI prompts for save location
-- **Error handling**: Robust processing with notifications
-
-**Music Library Management**:
-- `music_duplicate_detector.sh`: Analyzes music library for duplicates
-- **Multi-strategy detection**: Size, name patterns, content analysis
-
-### 🔧 Utilities (`utilities/`)
-**NixOS development and system management utilities**
-
-**Configuration Validation** (`config-validation/`):
-- NixOS configuration analysis and validation
-- Migration assistance and compatibility checking
-- System configuration distillation and comparison
-
-**Code Quality** (`lints/`):
-- Charter compliance checking
-- Code quality analysis
-- Automated fixes and improvements
-
-**Development Tools** (`templates/`, `domains/`, `tests/`):
-- Code templates for new modules
-- Domain development utilities
-- Testing frameworks and utilities
-
-### 🏗️ Infrastructure (`infrastructure/`)
-**System deployment and infrastructure management**
-
-**Filesystem Management** (`filesystem/`):
-- `add-home-app.sh`: Automated Home Manager application addition
-- File header management and consistency tools
-
-**Vault Synchronization**:
-- `vault-sync-system.nix`: Obsidian vault synchronization system
-- Automated backup and sync workflows
-
-### 📦 Projects (`projects/`)
-**Development projects and applications**
-
-**Site Crawler** (`site-crawler/`):
-- **Scrapy framework**: Professional web scraping infrastructure
-- **SEO analysis**: Website analysis and optimization insights
-- **Data extraction**: Structured content extraction and processing
-- **Python packaging**: Proper `pyproject.toml` configuration
-
-## Development Workflow
-
-### Adding New Scripts
-
-1. **Choose category**: Determine purpose-based location
-2. **Create script**: Add to appropriate workspace directory
-3. **Test functionality**: Verify script works correctly
-4. **Add to git**: `git add workspace/category/script.ext`
-5. **Rebuild system**: Scripts deploy automatically
-
-### Workspace Integration
-
-For scripts that need system integration:
-
-```nix
-# Example: Deploy new automation script
-systemd.services.my-automation-install = {
-  script = ''
-    cp /home/eric/.nixos/workspace/automation/my-script.py /opt/target/
-    chmod +x /opt/target/my-script.py
-  '';
-};
-```
-
-### Environment Access
-
-Scripts can access workspace content:
-
-```bash
-#!/bin/bash
-# Access other workspace scripts
-source "$WORKSPACE/utilities/lib/common.sh"
-
-# Access project data
-DATA_DIR="$WORKSPACE/projects/my-project/data"
-```
-
-## Version Control & Backup
-
-### Git Integration
-
-The entire workspace is version-controlled:
-
-```bash
-# All changes tracked
-git add workspace/
-git commit -m "feat: add new automation script"
-
-# History preserved
-git log --oneline workspace/
-```
-
-### Backup Strategy
-
-- **Primary**: Git version control with remote backup
-- **Secondary**: System backup includes workspace as part of NixOS config
-- **Disaster Recovery**: Complete workspace restoration via git clone
-
-## Security Considerations
-
-### Script Permissions
-
-- **Automated deployment**: Scripts get appropriate permissions during deployment
-- **Principle of least privilege**: Scripts run with minimal required permissions
-- **Execution control**: Only deployed scripts are executable in target locations
-
-### Sensitive Data
-
-- **No secrets in workspace**: All secrets managed via agenix
-- **API keys**: Scripts read from agenix secret paths
-- **Credentials**: No hardcoded credentials in any scripts
-
-### Network Tools
-
-- **Defensive use only**: Security tools for defensive analysis only
-- **Documentation**: Clear usage guidelines and limitations
-- **Isolation**: Network testing isolated to appropriate environments
-
-## Integration Points
-
-### With Domain System
-
-- **Server Domain**: Automation scripts deployed for container services
-- **Home Domain**: Productivity tools integrated with Home Manager
-- **Secrets Domain**: Scripts consume API keys via agenix
-- **Infrastructure Domain**: Scripts access hardware and storage paths
-
-### With External Services
-
-- **Media Services**: Automation scripts integrate with *arr APIs
-- **AI Services**: Productivity tools use Ollama for processing
-- **Monitoring**: Scripts export metrics for system monitoring
-- **Notifications**: Scripts send status via NTFY
-
-## Future Expansion
-
-### Planned Additions
-
-1. **Development Tools**: Enhanced development workflow automation
-2. **Monitoring Scripts**: System health and performance monitoring
-3. **Backup Automation**: Automated backup verification and testing
-4. **Business Tools**: Business workflow automation
-
-### Architecture Evolution
-
-- **Modular Expansion**: Add new categories as needed
-- **Cross-workspace Dependencies**: Enhanced script coordination
-- **Advanced Integration**: Deeper NixOS system integration
-- **Multi-machine Support**: Workspace sharing across multiple machines
+Reorganized 2025-12-10 to eliminate ambiguous categories (development, automation, utilities) in favor of explicit purpose-driven structure.
 
 ---
 
-**Workspace Version**: v2.0 - Purpose-organized declarative automation
-**Charter Compliance**: ✅ Full compliance with HWC Charter v6.0
-**Last Updated**: October 2024 - Post reorganization and agenix migration
+## Structure
+
+```
+workspace/
+├── nixos/           # NixOS config development tools
+├── monitoring/      # System health & status checks
+├── hooks/           # Event-driven automation scripts
+├── diagnostics/     # Troubleshooting & debugging tools
+├── setup/           # One-time deployment/installation scripts
+├── bible/           # Bible automation system (domain-specific)
+├── media/           # Media management tools
+└── projects/        # Standalone projects & integrations
+```
+
+---
+
+## Category Descriptions
+
+### nixos/ - NixOS Development Tools
+**Purpose**: Tools for developing, linting, and managing NixOS configurations
+
+**Contents**:
+- Charter compliance tools (charter-lint.sh, autofix.sh, namespace checks)
+- Build workflow (grebuild.sh)
+- Module scaffolding (add-home-app.sh, add-assertions.sh)
+- Development helpers (list-services.sh, promote-to-domain.sh)
+- Config analysis (graph/, config-validation/)
+
+**When to use**: Building, testing, or refactoring NixOS modules
+
+---
+
+### monitoring/ - System Health & Status
+**Purpose**: Continuous or periodic system health monitoring
+
+**Contents**:
+- health-check.sh (comprehensive system health with JSON output)
+- journal-errors.sh (system log analysis with filters)
+- caddy-health-check.sh (reverse proxy health checks)
+- gpu-monitor.sh, disk-space-monitor.sh
+- Service-specific health checks (frigate, immich, media)
+
+**When to use**: Scheduled timers, manual health checks, dashboards
+
+---
+
+### hooks/ - Event-Driven Automation
+**Purpose**: Scripts triggered by events (downloads, builds, failures)
+
+**Contents**:
+- Download completion hooks (qbt-finished.sh, sab-finished.py)
+- Media orchestration (media-orchestrator.py)
+- System event notifiers (systemd-failure-notifier.sh, nixos-rebuild-notifier.sh)
+- Verification hooks (slskd-verify.sh, receipt-monitor.sh)
+
+**When to use**: systemd OnFailure=, download completion callbacks, webhooks
+
+---
+
+### diagnostics/ - Troubleshooting Tools
+**Purpose**: Interactive debugging and problem investigation
+
+**Contents**:
+- **network/** - Network diagnostics (quicknet.sh, netcheck.sh, wifi tools)
+- **config-validation/** - Config analysis and validation
+- **nixos-translator/** - System migration/translation tools
+- **server/** - Service debugging (debug-slskd.sh, fix_both.sh)
+- Repair tools (fix-service-permissions.sh)
+- GPU diagnostics (check-gpu-acceleration.sh)
+
+**When to use**: Troubleshooting issues, investigating problems, system audits
+
+---
+
+### setup/ - One-Time Deployment
+**Purpose**: Initial installation and deployment scripts
+
+**Contents**:
+- deploy-age-keys.sh (encryption key deployment)
+- sops-verify.sh (secrets verification)
+- setup-monitoring.sh, setup-tdarr-auto.py
+- deploy-agent-improvements.sh
+
+**When to use**: New system setup, major deployments, infrastructure changes
+
+---
+
+### bible/ - Bible Automation System
+**Purpose**: Automated consistency management for biblical text corpus
+
+**Contents**:
+- Workflow management (bible_workflow_manager.py)
+- System lifecycle (installer, migrator, validator, cleanup)
+- Content processing (rewriter, consistency_manager)
+- Post-build hooks and debugging toolkit
+
+**When to use**: Domain-specific automation - kept together for cohesion
+
+---
+
+### media/ - Media Management Tools
+**Purpose**: Media library organization and management
+
+**Contents**:
+- beets-helper.sh, beets-container-helper.sh (music library management)
+- media-organizer.sh (file organization)
+- immich-configure-storage.sh (photo management setup)
+
+**When to use**: Media library maintenance, organization workflows
+
+---
+
+### projects/ - Standalone Projects
+**Purpose**: Self-contained projects and integrations
+
+**Structure**:
+```
+projects/
+├── productivity/        # Productivity tools
+│   ├── transcript-formatter/
+│   ├── ai-docs/
+│   └── music_duplicate_detector.sh
+├── bible-plan/          # Bible study planning
+├── estimate-automation/ # Estimation system
+├── receipts-pipeline/   # OCR receipt processing
+└── site-crawler/        # Web scraping project
+```
+
+**When to use**: Standalone tooling, planned n8n workflow integrations
+
+---
+
+## Three-Tier Architecture
+
+### Tier 1: User Commands (Nix Derivations)
+**Location**: `domains/home/environment/shell/parts/*.nix`
+**Purpose**: Production commands in PATH via Nix derivations
+**Examples**: `grebuild`, `journal-errors`, `list-services`, `charter-lint`, `caddy-health`
+
+These are Nix `writeShellApplication` derivations that wrap Tier 2 workspace scripts with proper dependency management.
+
+### Tier 2: Workspace Scripts (Implementation)
+**Location**: `workspace/{nixos,monitoring,hooks,diagnostics,setup}/`
+**Purpose**: Implementation scripts that can be edited without rebuilding NixOS
+**Type**: Bash/Python scripts
+
+These are the actual script files. The workspace scripts are editable at runtime and can be tested without NixOS rebuilds.
+
+### Tier 3: Domain-Specific Scripts
+**Location**: `domains/*/scripts/` or `domains/*/parts/`
+**Purpose**: Scripts tightly coupled to specific services or domains
+
+These scripts are domain-specific and should not be promoted to Tier 1/2.
+
+---
+
+## Adding New Scripts
+
+### For User-Facing Commands (Tier 1):
+
+1. **Create script** in appropriate workspace category:
+   ```bash
+   vim workspace/nixos/my-tool.sh
+   chmod +x workspace/nixos/my-tool.sh
+   ```
+
+2. **Create Nix derivation** in `domains/home/environment/shell/parts/`:
+   ```nix
+   # domains/home/environment/shell/parts/my-tool.nix
+   { pkgs, config, ... }:
+
+   let
+     workspace = config.home.homeDirectory + "/.nixos/workspace";
+   in
+   pkgs.writeShellApplication {
+     name = "my-tool";
+     runtimeInputs = with pkgs; [
+       bash
+       # Add dependencies
+     ];
+     text = ''
+       exec bash "${workspace}/nixos/my-tool.sh" "$@"
+     '';
+   }
+   ```
+
+3. **Import in shell module** (`domains/home/environment/shell/index.nix`):
+   ```nix
+   let
+     # Add import
+     my-tool = import ./parts/my-tool.nix { inherit pkgs config; };
+   in
+   {
+     config = lib.mkIf cfg.enable {
+       home.packages = cfg.packages ++ [
+         # ... other packages
+         my-tool  # Add here
+       ];
+     };
+   }
+   ```
+
+4. **Test and rebuild**:
+   ```bash
+   nix flake check
+   sudo nixos-rebuild test --flake .#hwc-laptop
+   which my-tool
+   sudo nixos-rebuild switch --flake .#hwc-laptop
+   ```
+
+### For Implementation Scripts (Tier 2):
+
+1. Place in appropriate workspace category based on purpose
+2. Make executable: `chmod +x script.sh`
+3. Use proper shebang: `#!/usr/bin/env bash` or `#!/usr/bin/env python3`
+4. Include usage documentation
+5. Use `set -euo pipefail` for robust error handling
+
+---
+
+## Organization Principles
+
+### Purpose Over Function
+Scripts are categorized by:
+- **What triggers them** (user command, event, timer)
+- **What domain they serve** (NixOS dev, system monitoring, media)
+- **When you use them** (setup once, diagnose problem, automate event)
+
+### Explicit > Implicit
+- `nixos/` - immediately clear: NixOS development
+- `hooks/` - immediately clear: triggered by events
+- `diagnostics/` - immediately clear: troubleshooting tools
+
+vs. old ambiguous structure:
+- `development/` - development of what? NixOS? Media? Apps?
+- `automation/` - automated how? Events? Timers? CI/CD?
+- `utilities/` - utility for what? Everything is a utility!
+
+### Domain Cohesion
+Bible automation system kept together despite spanning multiple purposes (setup, hooks, validation) because domain cohesion > strict categorization.
+
+---
+
+## Migration History
+
+**2025-12-10**: Reorganized from arbitrary categories to purpose-driven structure
+- Removed intermediate `scripts/` directory (flattened)
+- Distributed 100+ scripts across purpose-driven categories
+- Updated all references in shell wrappers and modules
+- Completes consolidation effort started in commits ff8be80 and 1568e16
+
+**Old structure** (deprecated):
+```
+workspace/
+├── scripts/           # Unnecessary intermediate directory
+│   ├── development/   # Ambiguous category
+│   ├── monitoring/    # Better, but nested under scripts/
+│   └── utils/         # Generic catch-all
+├── automation/        # Ambiguous purpose
+├── utilities/         # Another generic catch-all
+└── infrastructure/    # Unclear boundary
+```
+
+**New structure** (current):
+```
+workspace/
+├── nixos/            # NixOS config dev (clear purpose)
+├── monitoring/       # System health (clear trigger)
+├── hooks/            # Event-driven (clear trigger)
+├── diagnostics/      # Troubleshooting (clear purpose)
+├── setup/            # One-time deployment (clear usage)
+├── bible/            # Domain-specific (clear boundary)
+├── media/            # Media tools (clear domain)
+└── projects/         # Standalone projects (clear boundary)
+```
+
+---
+
+## Environment Variables
+
+- `HWC_WORKSPACE_ROOT` - Workspace root directory (default: `~/.nixos/workspace`)
+
+For runtime testing without rebuilds:
+```bash
+export HWC_WORKSPACE_ROOT="/path/to/custom/workspace"
+grebuild --help  # Now uses custom workspace location
+```
+
+---
+
+## See Also
+
+- `CLAUDE.md` - Repository guide for AI assistants
+- `domains/home/environment/shell/` - Nix command definitions (Tier 1)
+- `.claude/agents/SCRIPT-ORGANIZATION.md` - Original organization strategy
