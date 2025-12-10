@@ -1,0 +1,486 @@
+{
+  "name": "Transcript Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transcript-extract",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-extract-trigger",
+      "name": "Webhook: Extract Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "transcript-extract"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming YouTube transcript extraction request\nconst request = $input.item.json;\n\nconst url = request.url || request.body?.url || '';\nconst format = request.format || request.body?.format || 'standard';\nconst auto_format = request.auto_format || request.body?.auto_format || true;\nconst languages = request.languages || request.body?.languages || 'en,en-US';\n\n// Validate URL\nif (!url) {\n  throw new Error('YouTube URL is required');\n}\n\n// Generate unique job ID\nconst jobId = `txn-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;\n\n// Set initial retry count\nconst retryCount = 0;\n\nreturn {\n  json: {\n    jobId: jobId,\n    url: url,\n    format: format,\n    auto_format: auto_format,\n    languages: languages,\n    retryCount: retryCount,\n    timestamp: new Date().toISOString(),\n    status: 'queued'\n  }\n};"
+      },
+      "id": "parse-extract-request",
+      "name": "Parse Extract Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"job_id\": $json.jobId, \"status\": $json.status, \"message\": \"Extraction started\" } }}"
+      },
+      "id": "respond-async",
+      "name": "Respond Async",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "command": "=/home/eric/.local/bin/n8n-transcript-extract \"{{ $json.url }}\" \"/mnt/media/transcripts\" \"{{ $json.format }}\" \"{{ $json.languages }}\" \"{{ $json.jobId }}\""
+      },
+      "id": "execute-extraction",
+      "name": "Execute Extraction",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse extraction script output\nconst stdout = $input.item.json.stdout || '';\nconst stderr = $input.item.json.stderr || '';\nconst exitCode = $input.item.json.exitCode || 0;\n\n// Parse key=value output from script\nconst parseOutput = (text) => {\n  const result = {};\n  text.split('\\n').forEach(line => {\n    const match = line.match(/^([A-Z_]+)=(.+)$/);\n    if (match) {\n      result[match[1]] = match[2];\n    }\n  });\n  return result;\n};\n\nconst parsed = parseOutput(stdout);\n\nreturn {\n  json: {\n    ...$json,\n    exitCode: exitCode,\n    status: parsed.STATUS || (exitCode === 0 ? 'success' : 'failed'),\n    extractedFile: parsed.EXTRACTED_FILE || '',\n    filename: parsed.FILENAME || '',\n    outputDir: parsed.OUTPUT_DIR || '/mnt/media/transcripts',\n    stderr: stderr,\n    stdout: stdout\n  }\n};"
+      },
+      "id": "parse-extraction-output",
+      "name": "Parse Extraction Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.exitCode }}",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-extraction-success",
+      "name": "Check Extraction Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Increment retry counter\nconst retryCount = ($json.retryCount || 0) + 1;\nconst maxRetries = 3;\n\n// Calculate exponential backoff: 5s, 10s, 20s\nconst backoffSeconds = 5 * Math.pow(2, retryCount - 1);\n\nreturn {\n  json: {\n    ...$json,\n    retryCount: retryCount,\n    maxRetries: maxRetries,\n    backoffSeconds: backoffSeconds,\n    canRetry: retryCount < maxRetries,\n    nextRetryAt: new Date(Date.now() + backoffSeconds * 1000).toISOString()\n  }\n};"
+      },
+      "id": "increment-retry-counter",
+      "name": "Increment Retry Counter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 420]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.canRetry }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-can-retry",
+      "name": "Check Can Retry",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1780, 420]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.backoffSeconds }}",
+        "unit": "seconds"
+      },
+      "id": "wait-backoff",
+      "name": "Wait Backoff",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2000, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log to dead letter queue\nconst fs = require('fs');\nconst dlqPath = '/home/eric/.cache/n8n/transcript-dlq.jsonl';\n\n// Ensure directory exists\nconst dlqDir = require('path').dirname(dlqPath);\nif (!fs.existsSync(dlqDir)) {\n  fs.mkdirSync(dlqDir, { recursive: true });\n}\n\nconst dlqEntry = {\n  jobId: $json.jobId,\n  url: $json.url,\n  error: $json.stderr || 'Extraction failed',\n  timestamp: new Date().toISOString(),\n  retryCount: $json.retryCount || 0,\n  exitCode: $json.exitCode\n};\n\n// Append to DLQ file\nfs.appendFileSync(dlqPath, JSON.stringify(dlqEntry) + '\\n');\n\nconsole.log(`[DLQ] Added failed job ${$json.jobId} to dead letter queue`);\n\nreturn {\n  json: {\n    ...$json,\n    dlq: true,\n    dlqEntry: dlqEntry\n  }\n};"
+      },
+      "id": "log-to-dlq",
+      "name": "Log to Dead Letter Queue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:2586/hwc-transcripts",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "=Transcript Extraction Failed"
+            },
+            {
+              "name": "message",
+              "value": "=Job {{ $json.jobId }} failed after {{ $json.retryCount }} retries\\nURL: {{ $json.url }}\\nError: {{ $json.stderr }}"
+            },
+            {
+              "name": "priority",
+              "value": "4"
+            },
+            {
+              "name": "tags",
+              "value": "warning,transcript,failed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-failure-ntfy",
+      "name": "Notify Failure (ntfy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2220, 520]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.auto_format }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-auto-format",
+      "name": "Check Auto-Format",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:2586/hwc-transcripts",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "=Transcript Extracted"
+            },
+            {
+              "name": "message",
+              "value": "=Job {{ $json.jobId }} completed\\nFile: {{ $json.filename }}\\nStarting formatting..."
+            },
+            {
+              "name": "priority",
+              "value": "2"
+            },
+            {
+              "name": "tags",
+              "value": "success,transcript,extract"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-extract-success",
+      "name": "Notify Extract Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1780, 260]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transcript-format",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-format-trigger",
+      "name": "Webhook: Format Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 700],
+      "webhookId": "transcript-format"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse incoming formatting request\nconst request = $input.item.json;\n\n// Can come from webhook or from extraction pipeline\nconst file_path = request.file_path || request.body?.file_path || request.extractedFile || '';\nconst format_mode = request.format_mode || request.body?.format_mode || 'llm';\nconst vault_dir = request.vault_dir || request.body?.vault_dir || '/home/eric/01-documents/01-vaults/04-transcripts';\nconst jobId = request.jobId || request.body?.jobId || `fmt-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;\n\n// Validate file path\nif (!file_path) {\n  throw new Error('File path is required');\n}\n\nreturn {\n  json: {\n    jobId: jobId,\n    file_path: file_path,\n    format_mode: format_mode,\n    vault_dir: vault_dir,\n    retryCount: 0,\n    timestamp: new Date().toISOString(),\n    status: 'formatting'\n  }\n};"
+      },
+      "id": "parse-format-request",
+      "name": "Parse Format Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 700]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"job_id\": $json.jobId, \"status\": \"formatting\", \"message\": \"Formatting started\" } }}"
+      },
+      "id": "respond-format-async",
+      "name": "Respond Format Async",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 700]
+    },
+    {
+      "parameters": {
+        "command": "=/home/eric/.local/bin/n8n-transcript-format \"{{ $json.file_path }}\" \"{{ $json.format_mode }}\" \"/tmp/transcript-temp-{{ $json.jobId }}.md\" \"{{ $json.vault_dir }}\""
+      },
+      "id": "execute-formatting",
+      "name": "Execute Formatting",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [900, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse formatting script output\nconst stdout = $input.item.json.stdout || '';\nconst stderr = $input.item.json.stderr || '';\nconst exitCode = $input.item.json.exitCode || 0;\n\n// Parse key=value output from script\nconst parseOutput = (text) => {\n  const result = {};\n  text.split('\\n').forEach(line => {\n    const match = line.match(/^([A-Z_]+)=(.+)$/);\n    if (match) {\n      result[match[1]] = match[2];\n    }\n  });\n  return result;\n};\n\nconst parsed = parseOutput(stdout);\n\nreturn {\n  json: {\n    ...$json,\n    exitCode: exitCode,\n    status: parsed.STATUS || (exitCode === 0 ? 'success' : 'failed'),\n    vaultPath: parsed.VAULT_PATH || '',\n    vaultFilename: parsed.VAULT_FILENAME || '',\n    title: parsed.TITLE || '',\n    stderr: stderr,\n    stdout: stdout\n  }\n};"
+      },
+      "id": "parse-format-output",
+      "name": "Parse Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 700]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.exitCode }}",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "check-format-success",
+      "name": "Check Format Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1340, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Increment retry counter for formatting\nconst retryCount = ($json.retryCount || 0) + 1;\nconst maxRetries = 2; // Only 2 retries for formatting\n\n// Constant backoff: 30 seconds\nconst backoffSeconds = 30;\n\nreturn {\n  json: {\n    ...$json,\n    retryCount: retryCount,\n    maxRetries: maxRetries,\n    backoffSeconds: backoffSeconds,\n    canRetry: retryCount < maxRetries,\n    nextRetryAt: new Date(Date.now() + backoffSeconds * 1000).toISOString()\n  }\n};"
+      },
+      "id": "increment-format-retry",
+      "name": "Increment Format Retry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 820]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.canRetry }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-format-can-retry",
+      "name": "Check Format Can Retry",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1780, 820]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait-format-backoff",
+      "name": "Wait Format Backoff",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2000, 760]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Try basic cleaning as fallback\nconsole.log(`[Format Fallback] Attempting basic cleaning for ${$json.file_path}`);\n\nreturn {\n  json: {\n    ...$json,\n    format_mode: 'basic',\n    retryCount: 0, // Reset for fallback\n    fallback: true\n  }\n};"
+      },
+      "id": "fallback-basic-clean",
+      "name": "Fallback: Basic Cleaning",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 920]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:2586/hwc-transcripts",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "=Transcript Formatted"
+            },
+            {
+              "name": "message",
+              "value": "=Job {{ $json.jobId }} completed\\nTitle: {{ $json.title }}\\nSaved to: {{ $json.vaultFilename }}"
+            },
+            {
+              "name": "priority",
+              "value": "2"
+            },
+            {
+              "name": "tags",
+              "value": "success,transcript,formatted"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-format-success",
+      "name": "Notify Format Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1560, 640]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/transcript-format",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file_path",
+              "value": "={{ $json.extractedFile }}"
+            },
+            {
+              "name": "format_mode",
+              "value": "llm"
+            },
+            {
+              "name": "vault_dir",
+              "value": "/home/eric/01-documents/01-vaults/04-transcripts"
+            },
+            {
+              "name": "jobId",
+              "value": "={{ $json.jobId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-formatting",
+      "name": "Trigger Formatting",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1780, 120]
+    }
+  ],
+  "connections": {
+    "webhook-extract-trigger": {
+      "main": [[{ "node": "parse-extract-request", "type": "main", "index": 0 }]]
+    },
+    "parse-extract-request": {
+      "main": [[{ "node": "respond-async", "type": "main", "index": 0 }]]
+    },
+    "respond-async": {
+      "main": [[{ "node": "execute-extraction", "type": "main", "index": 0 }]]
+    },
+    "execute-extraction": {
+      "main": [[{ "node": "parse-extraction-output", "type": "main", "index": 0 }]]
+    },
+    "parse-extraction-output": {
+      "main": [[{ "node": "check-extraction-success", "type": "main", "index": 0 }]]
+    },
+    "check-extraction-success": {
+      "main": [
+        [{ "node": "check-auto-format", "type": "main", "index": 0 }],
+        [{ "node": "increment-retry-counter", "type": "main", "index": 0 }]
+      ]
+    },
+    "increment-retry-counter": {
+      "main": [[{ "node": "check-can-retry", "type": "main", "index": 0 }]]
+    },
+    "check-can-retry": {
+      "main": [
+        [{ "node": "wait-backoff", "type": "main", "index": 0 }],
+        [{ "node": "log-to-dlq", "type": "main", "index": 0 }]
+      ]
+    },
+    "wait-backoff": {
+      "main": [[{ "node": "execute-extraction", "type": "main", "index": 0 }]]
+    },
+    "log-to-dlq": {
+      "main": [[{ "node": "notify-failure-ntfy", "type": "main", "index": 0 }]]
+    },
+    "check-auto-format": {
+      "main": [
+        [{ "node": "trigger-formatting", "type": "main", "index": 0 }],
+        [{ "node": "notify-extract-success", "type": "main", "index": 0 }]
+      ]
+    },
+    "webhook-format-trigger": {
+      "main": [[{ "node": "parse-format-request", "type": "main", "index": 0 }]]
+    },
+    "parse-format-request": {
+      "main": [[{ "node": "respond-format-async", "type": "main", "index": 0 }]]
+    },
+    "respond-format-async": {
+      "main": [[{ "node": "execute-formatting", "type": "main", "index": 0 }]]
+    },
+    "execute-formatting": {
+      "main": [[{ "node": "parse-format-output", "type": "main", "index": 0 }]]
+    },
+    "parse-format-output": {
+      "main": [[{ "node": "check-format-success", "type": "main", "index": 0 }]]
+    },
+    "check-format-success": {
+      "main": [
+        [{ "node": "notify-format-success", "type": "main", "index": 0 }],
+        [{ "node": "increment-format-retry", "type": "main", "index": 0 }]
+      ]
+    },
+    "increment-format-retry": {
+      "main": [[{ "node": "check-format-can-retry", "type": "main", "index": 0 }]]
+    },
+    "check-format-can-retry": {
+      "main": [
+        [{ "node": "wait-format-backoff", "type": "main", "index": 0 }],
+        [{ "node": "fallback-basic-clean", "type": "main", "index": 0 }]
+      ]
+    },
+    "wait-format-backoff": {
+      "main": [[{ "node": "execute-formatting", "type": "main", "index": 0 }]]
+    },
+    "fallback-basic-clean": {
+      "main": [[{ "node": "execute-formatting", "type": "main", "index": 0 }]]
+    },
+    "trigger-formatting": {
+      "main": [[{ "node": "notify-extract-success", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-12-10T07:00:00.000Z",
+  "versionId": "1"
+}
