@@ -307,12 +307,12 @@ $(if [[ $ALIAS_COUNT -gt 30 ]]; then echo "... and $((ALIAS_COUNT - 30)) more"; 
 
 ### Script Organization Issues
 
-1. **Scripts scattered across multiple directories**
-   - workspace/automation/
-   - workspace/utilities/scripts/
-   - workspace/utilities/monitoring/
-   - workspace/infrastructure/
-   - workspace/network/
+1. **Scripts consolidated in organized structure**
+   - workspace/scripts/development/ (dev tools)
+   - workspace/scripts/monitoring/ (monitoring scripts)
+   - workspace/scripts/automation/ (automation workflows)
+   - workspace/scripts/internal/ (workspace helpers)
+   - Legacy: workspace/utilities/ (being phased out)
 
 2. **Inconsistent naming**
    - Some with .sh extension, some without
