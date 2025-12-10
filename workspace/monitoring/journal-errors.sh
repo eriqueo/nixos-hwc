@@ -12,8 +12,8 @@
 #   Edit EXCLUDE_SERVICES and EXCLUDE_PATTERNS arrays below to customize filtering
 #
 # Dependencies: journalctl, awk, sed, grep, wc, sort, uniq, tail (standard on NixOS)
-# Location: workspace/scripts/monitoring/journal-errors.sh
-# Invoked by: Shell function in domains/home/environment/shell/index.nix
+# Location: workspace/monitoring/journal-errors.sh
+# Invoked by: Shell wrapper in domains/home/environment/shell/parts/journal-errors.nix
 
 set -euo pipefail
 
