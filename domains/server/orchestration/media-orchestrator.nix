@@ -27,9 +27,9 @@ in
         mkdir -p ${cfgRoot}/scripts ${hotRoot}/events
 
         # Deploy automation scripts from workspace
-        cp ${workspaceDir}/automation/media-orchestrator.py ${cfgRoot}/scripts/
-        cp ${workspaceDir}/automation/qbt-finished.sh ${cfgRoot}/scripts/
-        cp ${workspaceDir}/automation/sab-finished.py ${cfgRoot}/scripts/
+        cp ${workspaceDir}/hooks/media-orchestrator.py ${cfgRoot}/scripts/
+        cp ${workspaceDir}/hooks/qbt-finished.sh ${cfgRoot}/scripts/
+        cp ${workspaceDir}/hooks/sab-finished.py ${cfgRoot}/scripts/
         chmod +x ${cfgRoot}/scripts/*.py ${cfgRoot}/scripts/*.sh
 
         chown -R 1000:1000 ${cfgRoot}/scripts ${hotRoot}/events
