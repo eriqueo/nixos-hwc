@@ -20,6 +20,13 @@
 
 let
   cfg = config.hwc.home.shell;
+
+  # Import script derivations from parts/
+  grebuild = import ./parts/grebuild.nix { inherit pkgs config; };
+  journal-errors = import ./parts/journal-errors.nix { inherit pkgs config; };
+  list-services = import ./parts/list-services.nix { inherit pkgs config; };
+  charter-lint = import ./parts/charter-lint.nix { inherit pkgs config; };
+  caddy-health = import ./parts/caddy-health.nix { inherit pkgs config; };
 in
 {
   #============================================================================
@@ -38,12 +45,24 @@ in
     home.packages = cfg.packages
       ++ lib.optionals cfg.modernUnix (with pkgs; [
         eza bat procs dust zoxide
-      ]);
+      ])
+      ++ [
+        # Daily driver script commands from workspace
+        grebuild
+        journal-errors
+        list-services
+        charter-lint
+        caddy-health
+      ];
 
     # Environment variables
     home.sessionVariables = cfg.sessionVariables // {
       # Override HWC_NIXOS_DIR to use dynamic home directory
       HWC_NIXOS_DIR = "${config.home.homeDirectory}/.nixos";
+
+      # Workspace root paths for runtime override capability
+      HWC_WORKSPACE_ROOT = "${config.home.homeDirectory}/.nixos/workspace";
+      HWC_WORKSPACE_SCRIPTS = "$HWC_WORKSPACE_ROOT/scripts";
     };
 
     # Modern Unix replacements configuration
@@ -195,27 +214,6 @@ in
                   echo "4. Encrypted files:"
                   local ENCRYPTED_COUNT=$(find domains/secrets/parts -name "*.age" 2>/dev/null | wc -l)
                   echo "  📊 $ENCRYPTED_COUNT .age files found"
-        }
-
-        # Daily driver script functions
-        grebuild() {
-          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/development/grebuild.sh "$@"
-        }
-
-        journal-errors() {
-          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/monitoring/journal-errors.sh "$@"
-        }
-
-        list-services() {
-          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/development/list-services.sh "$@"
-        }
-
-        charter-lint() {
-          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/development/charter-lint.sh "$@"
-        }
-
-        caddy-health() {
-          bash ${config.home.homeDirectory}/.nixos/workspace/scripts/monitoring/caddy-health-check.sh "$@"
         }
       '';
     };
