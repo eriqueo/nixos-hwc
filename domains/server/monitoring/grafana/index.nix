@@ -52,10 +52,12 @@ in
       datasources.settings.datasources = lib.mkIf config.hwc.server.monitoring.prometheus.enable [
         {
           name = "Prometheus";
-          type = "prometheus";
-          url = "http://localhost:${toString config.hwc.server.monitoring.prometheus.port}";
-          isDefault = true;
-        }
+                type = "prometheus";
+                uid = "prometheus";
+                url = "http://localhost:${toString config.hwc.server.monitoring.prometheus.port}";
+                access = "proxy";
+                isDefault = true;
+              }
       ];
 
       # Dashboard provisioning

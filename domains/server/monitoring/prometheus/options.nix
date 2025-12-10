@@ -36,8 +36,16 @@ in
       description = "Additional scrape configurations (extended by other modules)";
     };
     
-    blackboxExporter = {
-          enable = lib.mkEnableOption "Blackbox Exporter health checks";
-        };
+    blackbox = lib.mkOption {
+           description = "Blackbox exporter configuration";
+           default = {};
+           type = lib.types.submodule {
+             options = {
+               enable = lib.mkEnableOption "Blackbox exporter for health checks";
+             };
+           };
+         };
+     
+   
   };
 }

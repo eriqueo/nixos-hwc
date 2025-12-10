@@ -193,7 +193,7 @@ check_http_endpoints() {
     local endpoints=(
         "jellyfin|http://127.0.0.1:8096/health|2.."
         "immich|http://127.0.0.1:2283/api/server/ping|2.."
-        "frigate|http://127.0.0.1:5000/api/config|2.."
+        "frigate|http://127.0.0.1:5001/api/config|2.."
         "ntfy|http://127.0.0.1:2586/v1/health|2.."
         "n8n|http://127.0.0.1:5678/healthz|2.."
         "prometheus|http://127.0.0.1:9090/-/healthy|2.."
