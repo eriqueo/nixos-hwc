@@ -7,7 +7,7 @@
 # instead of individual service users (jellyfin, navidrome, etc.)
 #
 # IMPORTANT: Run this script BEFORE rebuilding with the new configuration!
-# sudo bash workspace/utilities/fix-service-permissions.sh
+# sudo bash workspace/diagnostics/fix-service-permissions.sh
 
 set -euo pipefail
 

@@ -29,7 +29,7 @@ def find_repo_root() -> Path:
         if (path / "flake.nix").exists():
             return path
 
-    # Fallback: assume we're in workspace/utilities/graph
+    # Fallback: assume we're in workspace/nixos/graph
     # and go up to repo root
     script_dir = Path(__file__).parent
     if script_dir.name == "graph":

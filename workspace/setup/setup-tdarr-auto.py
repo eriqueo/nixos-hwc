@@ -248,7 +248,7 @@ def main():
     # Create example configurations as reference
     print("\n💾 Creating example configuration files for reference...")
 
-    config_dir = Path("/home/eric/.nixos/workspace/utilities/config-examples/tdarr")
+    config_dir = Path("/home/eric/.nixos/workspace/media/config-examples/tdarr")
     config_dir.mkdir(parents=True, exist_ok=True)
 
     # Save library config example

@@ -5,8 +5,8 @@
 # Usage: list-services
 #
 # Dependencies: systemctl, podman, awk, grep (standard on NixOS)
-# Location: workspace/scripts/development/list-services.sh
-# Invoked by: Shell function in domains/home/environment/shell/index.nix
+# Location: workspace/nixos/list-services.sh
+# Invoked by: Shell wrapper in domains/home/environment/shell/parts/list-services.nix
 
 set -euo pipefail
 

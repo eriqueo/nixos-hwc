@@ -394,7 +394,7 @@ main() {
     log "  1. Review the generated assertions - they may need manual refinement"
     log "  2. Remove false dependencies and add missing ones"
     log "  3. Test the build: nix flake check"
-    log "  4. Run linter: ./workspace/utilities/lints/charter-lint.sh"
+    log "  4. Run linter: ./workspace/nixos/charter-lint.sh"
     log "  5. If successful: git add -A && git commit -m 'feat: add dependency assertions to modules'"
   fi
 

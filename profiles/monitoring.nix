@@ -19,6 +19,7 @@ in
     hwc.server.monitoring.prometheus = {
       enable = true;
       retention = "90d";
+      blackbox.enable = true;
     };
     
 

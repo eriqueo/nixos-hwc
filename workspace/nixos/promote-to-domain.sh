@@ -4,7 +4,7 @@
 # Usage: promote-to-domain.sh <workspace-script-path> <command-name>
 #
 # Example:
-#   promote-to-domain.sh workspace/scripts/development/my-tool.sh my-tool
+#   promote-to-domain.sh workspace/nixos/my-tool.sh my-tool
 #
 # This creates:
 #   - domains/home/environment/shell/parts/<command-name>.nix (Nix derivation)
@@ -40,7 +40,7 @@ echo "Promoting script to domain command"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Derive paths
-SCRIPT_REL_PATH="${SCRIPT_PATH#workspace/scripts/}"
+SCRIPT_REL_PATH="${SCRIPT_PATH#workspace/}"
 PARTS_FILE="domains/home/environment/shell/parts/${COMMAND_NAME}.nix"
 
 # Check if derivation already exists
@@ -65,8 +65,7 @@ cat > "$PARTS_FILE" <<EOF
 { pkgs, config, ... }:
 
 let
-  workspaceRoot = config.home.homeDirectory + "/.nixos/workspace";
-  workspaceScripts = workspaceRoot + "/scripts";
+  workspace = config.home.homeDirectory + "/.nixos/workspace";
 in
 pkgs.writeShellApplication {
   name = "${COMMAND_NAME}";
@@ -78,7 +77,7 @@ pkgs.writeShellApplication {
     bash
   ];
   text = ''
-    exec bash "\${workspaceScripts}/${SCRIPT_REL_PATH}" "\$@"
+    exec bash "\${workspace}/${SCRIPT_REL_PATH}" "\$@"
   '';
 }
 EOF

@@ -28,17 +28,29 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
       # 1. Blackbox Exporter Implementation (Only if enabled via the option)
-      services.prometheus.blackboxExporter = lib.mkIf cfg.blackboxExporter.enable {
-        enable = true;
-        modules = {
-          http_health_check = { # Module used for HTTP 200 health checks
-            prober = "http";
-            timeout = "5s";
-            http.method = "GET";
-            http.valid_status_codes = [ 200 ];
+      systemd.services.prometheus-blackbox-exporter = lib.mkIf cfg.blackbox.enable {
+            description = "Prometheus Blackbox Exporter";
+            wantedBy = [ "multi-user.target" ];
+            serviceConfig = {
+              User = "eric"; # Run as same user as Prometheus
+              Group = "users";
+              ExecStart = let
+                configFile = pkgs.writeText "blackbox.yml" (builtins.toJSON {
+                  modules = {
+                    http_health_check = {
+                      prober = "http";
+                      timeout = "15s";
+                      http = {
+                        method = "GET";
+                        valid_status_codes = [ 200 ];
+                      };
+                    };
+                  };
+                });
+              in "${pkgs.prometheus-blackbox-exporter}/bin/blackbox_exporter --config.file=${configFile}";
+              Restart = "always";
+            };
           };
-        };
-      };
   
       # 2. Prometheus Service Configuration
       services.prometheus = {
@@ -59,38 +71,19 @@ in
               targets = [ "localhost:9100" ];
             }];
           }
-        ]
-        # REMOVED: Old, incorrect direct scrape for 'transcript-api'
-        
-        # NEW: Correct Blackbox probe job (only if transcriptApi is enabled AND Blackbox is enabled)
-        ++ lib.optional (config.hwc.services.transcriptApi.enable && cfg.blackboxExporter.enable) {
-          job_name = "transcript-api-health";
-          metrics_path = "/probe"; # Blackbox Exporter endpoint
-          params = {
-            module = [ "http_health_check" ]; # Use the custom Blackbox module
-          };
-          static_configs = [{
-            # Set the target URL to be monitored
-            targets = [ "http://localhost:${toString config.hwc.services.transcriptApi.port}/health" ];
-          }];
-          relabel_configs = [
-            # Pass the target URL as a parameter to the Blackbox Exporter
-            {
-              source_labels = [ "__address__" ];
-              target_label = "__param_target";
-            }
-            # Use the original target as the 'instance' label
-            {
-              source_labels = [ "__param_target" ];
-              target_label = "instance";
-            }
-            # Rewrite the scrape address to point to the Blackbox Exporter's port (9115)
-            {
-              target_label = "__address__";
-              replacement = "localhost:9115";
-            }
-          ];
-        }
+        ]++ lib.optional (config.hwc.services.transcriptApi.enable && cfg.blackbox.enable) {
+                job_name = "transcript-api-health";
+                metrics_path = "/probe";
+                params = { module = [ "http_health_check" ]; };
+                static_configs = [{
+                  targets = [ "http://localhost:${toString config.hwc.services.transcriptApi.port}/health" ];
+                }];
+                relabel_configs = [
+                  { source_labels = [ "__address__" ]; target_label = "__param_target"; }
+                  { source_labels = [ "__param_target" ]; target_label = "instance"; }
+                  { target_label = "__address__"; replacement = "localhost:9115"; }
+                ];
+              }               
         ++ cfg.scrapeConfigs; # Include scrape configs added by other modules
   
         # Alert rules organized by severity (P5/P4/P3)
@@ -103,7 +96,7 @@ in
       enable = true;
       port = 9100;
     };
-
+    
     # Run prometheus and node-exporter as eric user for simplified permissions
     systemd.services.prometheus = {
       serviceConfig = {

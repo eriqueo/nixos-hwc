@@ -375,7 +375,7 @@ main() {
     log "Next steps:"
     log "  1. Review the changes: git diff"
     log "  2. Test the build: nix flake check"
-    log "  3. Run linter: ./workspace/utilities/lints/charter-lint.sh"
+    log "  3. Run linter: ./workspace/nixos/charter-lint.sh"
     log "  4. If successful: git add -A && git commit -m 'chore: add charter structure to modules'"
   fi
 
