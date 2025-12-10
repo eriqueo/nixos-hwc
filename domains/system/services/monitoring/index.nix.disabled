@@ -8,10 +8,10 @@
 let
   cfg = config.hwc.system.services.monitoring;
 
-  # Import monitoring scripts from workspace (paths updated 2025-12-10)
-  diskSpaceMonitorScript = builtins.readFile ../../../../workspace/scripts/monitoring/disk-space-monitor.sh;
-  systemdFailureNotifierScript = builtins.readFile ../../../../workspace/scripts/monitoring/systemd-failure-notifier.sh;
-  nixosRebuildNotifierScript = builtins.readFile ../../../../workspace/scripts/monitoring/nixos-rebuild-notifier.sh;
+  # Import monitoring scripts from workspace (paths reorganized 2025-12-10)
+  diskSpaceMonitorScript = builtins.readFile ../../../../workspace/monitoring/disk-space-monitor.sh;
+  systemdFailureNotifierScript = builtins.readFile ../../../../workspace/hooks/systemd-failure-notifier.sh;
+  nixosRebuildNotifierScript = builtins.readFile ../../../../workspace/hooks/nixos-rebuild-notifier.sh;
 
 in
 {

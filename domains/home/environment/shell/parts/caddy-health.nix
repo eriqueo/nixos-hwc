@@ -1,8 +1,7 @@
 { pkgs, config, ... }:
 
 let
-  workspaceRoot = config.home.homeDirectory + "/.nixos/workspace";
-  workspaceScripts = workspaceRoot + "/scripts";
+  workspace = config.home.homeDirectory + "/.nixos/workspace";
 in
 pkgs.writeShellApplication {
   name = "caddy-health";
@@ -14,6 +13,6 @@ pkgs.writeShellApplication {
     gawk  # awk
   ];
   text = ''
-    exec bash "${workspaceScripts}/monitoring/caddy-health-check.sh" "$@"
+    exec bash "${workspace}/monitoring/caddy-health-check.sh" "$@"
   '';
 }

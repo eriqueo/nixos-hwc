@@ -60,9 +60,8 @@ in
       # Override HWC_NIXOS_DIR to use dynamic home directory
       HWC_NIXOS_DIR = "${config.home.homeDirectory}/.nixos";
 
-      # Workspace root paths for runtime override capability
+      # Workspace root path for runtime override capability
       HWC_WORKSPACE_ROOT = "${config.home.homeDirectory}/.nixos/workspace";
-      HWC_WORKSPACE_SCRIPTS = "$HWC_WORKSPACE_ROOT/scripts";
     };
 
     # Modern Unix replacements configuration
@@ -156,7 +155,7 @@ in
 
         # add-app shell function
         add-app() {
-          ${config.home.homeDirectory}/.nixos/workspace/infrastructure/filesystem/add-home-app.sh "$@"
+          ${config.home.homeDirectory}/.nixos/workspace/nixos/add-home-app.sh "$@"
         }
 
         # Secrets management functions

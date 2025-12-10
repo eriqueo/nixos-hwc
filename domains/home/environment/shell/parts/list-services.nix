@@ -1,8 +1,7 @@
 { pkgs, config, ... }:
 
 let
-  workspaceRoot = config.home.homeDirectory + "/.nixos/workspace";
-  workspaceScripts = workspaceRoot + "/scripts";
+  workspace = config.home.homeDirectory + "/.nixos/workspace";
 in
 pkgs.writeShellApplication {
   name = "list-services";
@@ -14,6 +13,6 @@ pkgs.writeShellApplication {
     # systemctl is in system PATH (systemd)
   ];
   text = ''
-    exec bash "${workspaceScripts}/development/list-services.sh" "$@"
+    exec bash "${workspace}/nixos/list-services.sh" "$@"
   '';
 }

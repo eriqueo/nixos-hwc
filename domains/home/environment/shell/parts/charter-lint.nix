@@ -1,8 +1,7 @@
 { pkgs, config, ... }:
 
 let
-  workspaceRoot = config.home.homeDirectory + "/.nixos/workspace";
-  workspaceScripts = workspaceRoot + "/scripts";
+  workspace = config.home.homeDirectory + "/.nixos/workspace";
 in
 pkgs.writeShellApplication {
   name = "charter-lint";
@@ -15,6 +14,6 @@ pkgs.writeShellApplication {
     coreutils  # wc, sort, uniq, cut, etc
   ];
   text = ''
-    exec bash "${workspaceScripts}/development/charter-lint.sh" "$@"
+    exec bash "${workspace}/nixos/charter-lint.sh" "$@"
   '';
 }
