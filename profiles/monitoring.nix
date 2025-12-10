@@ -20,6 +20,7 @@ in
       enable = true;
       retention = "90d";
     };
+    
 
     # Grafana - Dashboards and visualization
     hwc.server.monitoring.grafana = {

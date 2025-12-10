@@ -1,26 +1,48 @@
 # Executable Python Scripts
-/home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/scripts/run.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/bible_debug_toolkit.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/bible_rewriter.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/bible_system_cleanup.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/bible_system_installer.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/bible_system_migrator.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/bible_system_validator.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/bible_workflow_manager.py
-/home/ubuntu/nixos-hwc/workspace/automation/bible/consistency_manager.py
-/home/ubuntu/nixos-hwc/workspace/automation/media-orchestrator.py
-/home/ubuntu/nixos-hwc/workspace/automation/sab-finished.py
-/home/ubuntu/nixos-hwc/workspace/productivity/ai-docs/ai-narrative-docs.py
-/home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter/formatter.py
-/home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter/obsidian_transcript_formatter.py
-/home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter/obsidian_transcript_formatter_backup.py
-/home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter/playlists.py
-/home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter/yt_transcript.py
-/home/ubuntu/nixos-hwc/workspace/utilities/config-validation/config-extractor.py
-/home/ubuntu/nixos-hwc/workspace/utilities/config-validation/sabnzbd-analyzer.py
-/home/ubuntu/nixos-hwc/workspace/utilities/config-validation/system-distiller.py
-/home/ubuntu/nixos-hwc/workspace/utilities/docs/generate-domain-readmes.py
-/home/ubuntu/nixos-hwc/workspace/utilities/graph/hwc_graph.py
-/home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/nixos-translator.py
-/home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/tools/nix-evaluator.py
-/home/ubuntu/nixos-hwc/workspace/utilities/scripts/setup-tdarr-auto.py
+/home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/scripts/run.py
+/home/eric/.nixos/workspace_fix/media_stack/media-orchestrator.py
+/home/eric/.nixos/workspace_fix/media_stack/sab-finished.py
+/home/eric/.nixos/workspace_fix/media_stack/setup-tdarr-auto.py
+/home/eric/.nixos/workspace_fix/projects/graph/hwc_graph.py
+/home/eric/.nixos/workspace_fix/projects/ai-docs/ai-narrative-docs.py
+/home/eric/.nixos/workspace_fix/projects/nixos-translator/nixos-translator.py
+/home/eric/.nixos/workspace_fix/projects/nixos-translator/tools/nix-evaluator.py
+/home/eric/.nixos/workspace_fix/projects/bible/bible_system_migrator.py
+/home/eric/.nixos/workspace_fix/projects/bible/bible_workflow_manager.py
+/home/eric/.nixos/workspace_fix/projects/bible/bible_debug_toolkit.py
+/home/eric/.nixos/workspace_fix/projects/bible/bible_rewriter.py
+/home/eric/.nixos/workspace_fix/projects/bible/bible_system_validator.py
+/home/eric/.nixos/workspace_fix/projects/bible/consistency_manager.py
+/home/eric/.nixos/workspace_fix/projects/bible/bible_system_cleanup.py
+/home/eric/.nixos/workspace_fix/projects/bible/bible_system_installer.py
+/home/eric/.nixos/workspace_fix/projects/transcript-formatter (copy 1)/yt_transcript.py
+/home/eric/.nixos/workspace_fix/projects/transcript-formatter (copy 1)/formatter.py
+/home/eric/.nixos/workspace_fix/projects/transcript-formatter (copy 1)/obsidian_transcript_formatter_backup.py
+/home/eric/.nixos/workspace_fix/projects/transcript-formatter (copy 1)/obsidian_transcript_formatter.py
+/home/eric/.nixos/workspace_fix/projects/transcript-formatter (copy 1)/playlists.py
+/home/eric/.nixos/workspace_fix/lints/generate-domain-readmes.py
+/home/eric/.nixos/workspace/monitoring/media_check.py
+/home/eric/.nixos/workspace/projects/productivity/ai-docs/ai-narrative-docs.py
+/home/eric/.nixos/workspace/projects/productivity/transcript-formatter/yt_transcript.py
+/home/eric/.nixos/workspace/projects/productivity/transcript-formatter/formatter.py
+/home/eric/.nixos/workspace/projects/productivity/transcript-formatter/obsidian_transcript_formatter.py
+/home/eric/.nixos/workspace/projects/productivity/transcript-formatter/playlists.py
+/home/eric/.nixos/workspace/diagnostics/config-validation/sabnzbd-analyzer.py
+/home/eric/.nixos/workspace/diagnostics/nixos-translator/nixos-translator.py
+/home/eric/.nixos/workspace/diagnostics/nixos-translator/tools/nix-evaluator.py
+/home/eric/.nixos/workspace/setup/setup-tdarr-auto.py
+/home/eric/.nixos/workspace/nixos/system-distiller.py
+/home/eric/.nixos/workspace/nixos/config-extractor.py
+/home/eric/.nixos/workspace/nixos/graph/hwc_graph.py
+/home/eric/.nixos/workspace/nixos/docs/generate-domain-readmes.py
+/home/eric/.nixos/workspace/hooks/media-orchestrator.py
+/home/eric/.nixos/workspace/hooks/sab-finished.py
+/home/eric/.nixos/workspace/media/hwc_status.py
+/home/eric/.nixos/workspace/bible/bible_system_migrator.py
+/home/eric/.nixos/workspace/bible/bible_workflow_manager.py
+/home/eric/.nixos/workspace/bible/bible_debug_toolkit.py
+/home/eric/.nixos/workspace/bible/bible_rewriter.py
+/home/eric/.nixos/workspace/bible/bible_system_validator.py
+/home/eric/.nixos/workspace/bible/consistency_manager.py
+/home/eric/.nixos/workspace/bible/bible_system_cleanup.py
+/home/eric/.nixos/workspace/bible/bible_system_installer.py

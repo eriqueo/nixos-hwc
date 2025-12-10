@@ -1,7 +1,7 @@
 # HWC NixOS Script Inventory
 
-**Generated:** Tue Nov 25 14:53:32 EST 2025
-**Repository:** /home/ubuntu/nixos-hwc
+**Generated:** Wed Dec 10 11:41:16 AM MST 2025
+**Repository:** /home/eric/.nixos
 
 ---
 
@@ -9,12 +9,12 @@
 
 | Category | Count |
 |----------|-------|
-| Shell Scripts (.sh) | 84 |
-| Python Scripts (.py) | 114 |
-| Nix Script Definitions | 2 |
+| Shell Scripts (.sh) | 143 |
+| Python Scripts (.py) | 189 |
+| Nix Script Definitions | 5 |
 | Shell Functions (in Nix) | 0 |
 | Shell Aliases | 0 |
-| **Total Scripts** | **198** |
+| **Total Scripts** | **332** |
 
 ---
 
@@ -22,8 +22,8 @@
 
 | Type | Executable | Non-Executable |
 |------|------------|----------------|
-| Shell | 74 | 10 |
-| Python | 25 | 89 |
+| Shell | 131 | 12 |
+| Python | 47 | 142 |
 
 ---
 
@@ -33,30 +33,30 @@
 
 ```
 ## Shell Scripts by Directory
-     10 /home/ubuntu/nixos-hwc/workspace/utilities/scripts
-     10 /home/ubuntu/nixos-hwc/workspace/utilities/lints
-      9 /home/ubuntu/nixos-hwc/workspace/network
-      5 /home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/tools
-      5 /home/ubuntu/nixos-hwc/workspace/utilities/monitoring
-      5 /home/ubuntu/nixos-hwc/scripts
-      4 /home/ubuntu/nixos-hwc/workspace/infrastructure/filesystem
-      3 /home/ubuntu/nixos-hwc/workspace/utilities
-      3 /home/ubuntu/nixos-hwc/workspace/infrastructure/server
+     20 /home/eric/.nixos/workspace/nixos
+     11 /home/eric/.nixos/workspace_fix/lints
+      9 /home/eric/.nixos/workspace/monitoring
+      9 /home/eric/.nixos/workspace_fix/zshrc
+      9 /home/eric/.nixos/workspace_fix/network
+      9 /home/eric/.nixos/workspace/diagnostics/network/network
+      8 /home/eric/.nixos/workspace_fix/monitoring
+      7 /home/eric/.nixos/workspace_fix/media_stack
+      5 /home/eric/.nixos/workspace_fix/projects/nixos-translator/tools
 ```
 
 ### Top Directories (Python Scripts)
 
 ```
 ## Python Scripts by Directory
-     29 /home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/scripts
-      8 /home/ubuntu/nixos-hwc/workspace/automation/bible
-      7 /home/ubuntu/nixos-hwc/workspace/utilities/nixos-translator/scanners
-      7 /home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/src
-      6 /home/ubuntu/nixos-hwc/workspace/projects/estimate-automation/src/models
-      6 /home/ubuntu/nixos-hwc/workspace/projects/bible-plan/prompts/bible_prompts
-      6 /home/ubuntu/nixos-hwc/workspace/productivity/transcript-formatter
-      5 /home/ubuntu/nixos-hwc/workspace/projects/receipts-pipeline/src
-      4 /home/ubuntu/nixos-hwc/workspace/utilities/graph
+     29 /home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/scripts
+      8 /home/eric/.nixos/workspace_fix/projects/bible
+      8 /home/eric/.nixos/workspace/bible
+      7 /home/eric/.nixos/workspace_fix/projects/nixos-translator/scanners
+      7 /home/eric/.nixos/workspace/diagnostics/nixos-translator/scanners
+      7 /home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/src
+      6 /home/eric/.nixos/workspace/projects/estimate-automation/src/models
+      6 /home/eric/.nixos/workspace/projects/bible-plan/prompts/bible_prompts
+      6 /home/eric/.nixos/workspace_fix/projects/transcript-formatter (copy 1)
 ```
 
 ---
@@ -66,8 +66,11 @@
 These scripts are defined using `writeShellApplication` in Nix files:
 
 ```
+domains/home/environment/shell/parts/caddy-health.nix
+domains/home/environment/shell/parts/charter-lint.nix
 domains/home/environment/shell/parts/grebuild.nix
 domains/home/environment/shell/parts/journal-errors.nix
+domains/home/environment/shell/parts/list-services.nix
 ```
 
 ---
@@ -108,50 +111,48 @@ Defined aliases (first 30):
 
 ## Recommendations
 
-### Script Organization Issues
+### Script Organization (Updated 2025-12-10)
 
-1. **Scripts scattered across multiple directories**
-   - workspace/automation/
-   - workspace/utilities/scripts/
-   - workspace/utilities/monitoring/
-   - workspace/infrastructure/
-   - workspace/network/
+**Current Structure** (Purpose-Driven):
 
-2. **Inconsistent naming**
-   - Some with .sh extension, some without
-   - Mix of kebab-case and snake_case
+1. **Organized by trigger/purpose** (not arbitrary categories)
+   - workspace/nixos/ - NixOS development tools
+   - workspace/monitoring/ - System health checks
+   - workspace/hooks/ - Event-driven automation
+   - workspace/diagnostics/ - Troubleshooting tools
+   - workspace/setup/ - One-time deployment
+   - workspace/bible/ - Domain-specific automation
+   - workspace/media/ - Media management
+   - workspace/projects/ - Standalone projects
 
-3. **Duplicate functionality**
-   - Functions in Nix files vs. standalone scripts
-   - Example: `grebuild` is both a Nix function and a script
+2. **Naming standards**
+   - User-facing commands: via Nix wrappers (grebuild, charter-lint, etc.)
+   - Implementation scripts: kebab-case with .sh/.py extensions
+   - Three-tier architecture (Nix → workspace → domain)
 
-### Suggested Structure
+3. **No duplicates**
+   - User commands are Nix derivations wrapping workspace scripts
+   - Scripts can be edited without rebuilding NixOS
+   - Single canonical location per script
+
+### Current Structure Benefits
 
 ```
-workspace/scripts/
-├── monitoring/          # System monitoring scripts
-│   ├── disk-check
-│   ├── service-check
-│   ├── log-check
-│   └── system-health
-├── maintenance/         # Maintenance and cleanup
-│   ├── cleanup-logs
-│   ├── update-system
-│   └── backup-verify
-├── development/         # Development utilities
-│   ├── rebuild
-│   ├── lint
-│   └── test
-└── utils/              # General utilities
-    ├── service-status
-    └── container-status
+workspace/
+├── nixos/         # Clear: NixOS config development
+├── monitoring/    # Clear: System health monitoring
+├── hooks/         # Clear: Triggered by events
+├── diagnostics/   # Clear: Troubleshooting
+├── setup/         # Clear: One-time deployment
+├── bible/         # Clear: Domain-specific
+├── media/         # Clear: Media tools
+└── projects/      # Clear: Standalone projects
 ```
 
-### Next Steps
+vs. old ambiguous structure:
+- development/ - development of what?
+- automation/ - automated how?
+- utilities/ - utility for what?
 
-1. **Consolidate scripts** into `workspace/scripts/`
-2. **Standardize naming** (kebab-case, no .sh extension for user-facing)
-3. **Create aliases** in `domains/home/environment/shell/options.nix`
-4. **Remove duplicates** (choose Nix function OR script, not both)
-5. **Document** which scripts are active vs. archived
+See workspace/README.md for full documentation.
 

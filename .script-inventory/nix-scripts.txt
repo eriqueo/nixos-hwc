@@ -1,2 +1,5 @@
-/home/ubuntu/nixos-hwc/domains/home/environment/shell/parts/grebuild.nix
-/home/ubuntu/nixos-hwc/domains/home/environment/shell/parts/journal-errors.nix
+/home/eric/.nixos/domains/home/environment/shell/parts/caddy-health.nix
+/home/eric/.nixos/domains/home/environment/shell/parts/charter-lint.nix
+/home/eric/.nixos/domains/home/environment/shell/parts/grebuild.nix
+/home/eric/.nixos/domains/home/environment/shell/parts/journal-errors.nix
+/home/eric/.nixos/domains/home/environment/shell/parts/list-services.nix

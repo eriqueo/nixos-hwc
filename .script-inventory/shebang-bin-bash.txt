@@ -1,11 +1,12 @@
 # Scripts with #!/bin/bash (should use /usr/bin/env)
-/home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/.devcontainer/init-firewall.sh
-/home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/docker/run-as-docker-container.sh
-/home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/docker/start-nodejs.sh
-/home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/scripts/backup.sh
-/home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/scripts/deploy.sh
-/home/ubuntu/nixos-hwc/domains/home/apps/n8n/parts/n8n-workflows/scripts/health-check.sh
-/home/ubuntu/nixos-hwc/workspace/utilities/config-validation/config-differ.sh
-/home/ubuntu/nixos-hwc/workspace/utilities/config-validation/quick-start.sh
-/home/ubuntu/nixos-hwc/workspace/utilities/scripts/check-gpu-acceleration.sh
-/home/ubuntu/nixos-hwc/workspace/utilities/scripts/deploy-agent-improvements.sh
+/home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/.devcontainer/init-firewall.sh
+/home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/scripts/health-check.sh
+/home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/scripts/deploy.sh
+/home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/scripts/backup.sh
+/home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/docker/run-as-docker-container.sh
+/home/eric/.nixos/domains/home/apps/n8n/parts/n8n-workflows/docker/start-nodejs.sh
+/home/eric/.nixos/workspace_fix/zshrc/check-gpu-acceleration.sh
+/home/eric/.nixos/workspace/diagnostics/config-validation/quick-start.sh
+/home/eric/.nixos/workspace/diagnostics/check-gpu-acceleration.sh
+/home/eric/.nixos/workspace/setup/deploy-agent-improvements.sh
+/home/eric/.nixos/workspace/nixos/config-differ.sh
