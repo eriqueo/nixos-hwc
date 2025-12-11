@@ -54,7 +54,6 @@ in
       enable = true;
       port = cfg.port;
       configuration = alertmanagerConfig;
-      # Storage path overridden in systemd ExecStart below
     };
 
     # Configure Prometheus to send alerts to Alertmanager
@@ -72,14 +71,6 @@ in
         StateDirectory = lib.mkForce "hwc/alertmanager";
         DynamicUser = lib.mkForce false;  # Disable DynamicUser complexity - use simple eric user
         WorkingDirectory = lib.mkForce cfg.dataDir;
-        # Override ExecStart to use hwc storage path instead of default /var/lib/alertmanager
-        ExecStart = lib.mkForce ''
-          ${pkgs.prometheus-alertmanager}/bin/alertmanager \
-            --config.file /tmp/alert-manager-substituted.yaml \
-            --web.listen-address :${toString cfg.port} \
-            --log.level warn \
-            --storage.path ${cfg.dataDir}
-        '';
       };
     };
 

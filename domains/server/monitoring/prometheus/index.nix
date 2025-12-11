@@ -27,31 +27,24 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-      # 1. Blackbox Exporter Implementation (Only if enabled via the option)
-      systemd.services.prometheus-blackbox-exporter = lib.mkIf cfg.blackbox.enable {
-            description = "Prometheus Blackbox Exporter";
-            wantedBy = [ "multi-user.target" ];
-            serviceConfig = {
-              User = "eric"; # Run as same user as Prometheus
-              Group = "users";
-              ExecStart = let
-                configFile = pkgs.writeText "blackbox.yml" (builtins.toJSON {
-                  modules = {
-                    http_health_check = {
-                      prober = "http";
-                      timeout = "15s";
-                      http = {
-                        method = "GET";
-                        valid_status_codes = [ 200 ];
-                      };
-                    };
-                  };
-                });
-              in "${pkgs.prometheus-blackbox-exporter}/bin/blackbox_exporter --config.file=${configFile}";
-              Restart = "always";
+      # 1. Blackbox Exporter Implementation (Using NixOS module)
+      services.prometheus.exporters.blackbox = lib.mkIf cfg.blackbox.enable {
+        enable = true;
+        port = 9115;
+        configFile = pkgs.writeText "blackbox.yml" (builtins.toJSON {
+          modules = {
+            http_health_check = {
+              prober = "http";
+              timeout = "15s";
+              http = {
+                method = "GET";
+                valid_status_codes = [ 200 ];
+              };
             };
           };
-  
+        });
+      };
+
       # 2. Prometheus Service Configuration
       services.prometheus = {
         enable = true;
@@ -97,7 +90,7 @@ in
       port = 9100;
     };
     
-    # Run prometheus and node-exporter as eric user for simplified permissions
+    # Run prometheus, node-exporter, and blackbox-exporter as eric user for simplified permissions
     systemd.services.prometheus = {
       serviceConfig = {
         User = lib.mkForce "eric";
@@ -107,6 +100,12 @@ in
       };
     };
     systemd.services.prometheus-node-exporter = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+      };
+    };
+    systemd.services.prometheus-blackbox-exporter = lib.mkIf cfg.blackbox.enable {
       serviceConfig = {
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
