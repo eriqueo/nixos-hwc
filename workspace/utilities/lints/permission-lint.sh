@@ -152,22 +152,25 @@ check_hardcoded_secret_paths() {
 check_mkforce_usage() {
     local module_file=$1
 
-    # Check if User/Group set without mkForce
-    if rg -q 'User.*=.*"eric"' "$module_file" 2>/dev/null; then
-        if ! rg -q 'User.*=.*lib\.mkForce.*"eric"' "$module_file" 2>/dev/null; then
-            local line_num=$(rg -n 'User.*=.*"eric"' "$module_file" | head -1 | cut -d: -f1)
-            lint_warning "$module_file:$line_num" \
-                "User = \"eric\" without lib.mkForce" \
-                "Use User = lib.mkForce \"eric\" to override NixOS defaults (see Pattern 2)"
+    # Only check in serviceConfig context (avoid false positives like autoLoginUser)
+    # Check if User/Group set in systemd.services without mkForce
+    if rg -q 'systemd\.services\.' "$module_file" 2>/dev/null; then
+        if rg -q '\s+User.*=.*"eric"' "$module_file" 2>/dev/null; then
+            if ! rg -q '\s+User.*=.*lib\.mkForce.*"eric"' "$module_file" 2>/dev/null; then
+                local line_num=$(rg -n '\s+User.*=.*"eric"' "$module_file" | head -1 | cut -d: -f1)
+                lint_warning "$module_file:$line_num" \
+                    "User = \"eric\" without lib.mkForce in systemd service" \
+                    "Use User = lib.mkForce \"eric\" to override NixOS defaults (see Pattern 2)"
+            fi
         fi
-    fi
 
-    if rg -q 'Group.*=.*"users"' "$module_file" 2>/dev/null; then
-        if ! rg -q 'Group.*=.*lib\.mkForce.*"users"' "$module_file" 2>/dev/null; then
-            local line_num=$(rg -n 'Group.*=.*"users"' "$module_file" | head -1 | cut -d: -f1)
-            lint_warning "$module_file:$line_num" \
-                "Group = \"users\" without lib.mkForce" \
-                "Use Group = lib.mkForce \"users\" to override NixOS defaults (see Pattern 2)"
+        if rg -q '\s+Group.*=.*"users"' "$module_file" 2>/dev/null; then
+            if ! rg -q '\s+Group.*=.*lib\.mkForce.*"users"' "$module_file" 2>/dev/null; then
+                local line_num=$(rg -n '\s+Group.*=.*"users"' "$module_file" | head -1 | cut -d: -f1)
+                lint_warning "$module_file:$line_num" \
+                    "Group = \"users\" without lib.mkForce in systemd service" \
+                    "Use Group = lib.mkForce \"users\" to override NixOS defaults (see Pattern 2)"
+            fi
         fi
     fi
 }
