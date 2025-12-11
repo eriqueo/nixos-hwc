@@ -38,8 +38,8 @@ in
 
       # Environment variables
       environment = {
-        PUID = "1000";
-        PGID = "1000";
+        PUID = "1000";  # eric UID
+        PGID = "100";   # users GID (CRITICAL - users group is GID 100, not 1000!)
         TZ = config.time.timeZone or "America/Denver";
 
         # Branch (v2-master is stable)
