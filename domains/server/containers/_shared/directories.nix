@@ -105,42 +105,7 @@
     '';
   };
 
-  # Periodic permission enforcement service
-  # Runs every hour to fix any permission drift caused by containers creating files as root
-  systemd.services.container-permissions-enforce = {
-    description = "Enforce container directory permissions";
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = pkgs.writeShellScript "enforce-container-permissions" ''
-        echo "Enforcing container directory permissions..."
-
-        # Fix ownership on all /mnt directories (containers run as eric:users)
-        ${pkgs.coreutils}/bin/chown -R eric:users /mnt/hot 2>/dev/null || true
-        ${pkgs.coreutils}/bin/chown -R eric:users /mnt/media 2>/dev/null || true
-        ${pkgs.coreutils}/bin/chown -R eric:users /opt/downloads 2>/dev/null || true
-
-        # Fix directory permissions (0755)
-        ${pkgs.findutils}/bin/find /mnt/hot -type d -exec ${pkgs.coreutils}/bin/chmod 0755 {} + 2>/dev/null || true
-        ${pkgs.findutils}/bin/find /mnt/media -type d -exec ${pkgs.coreutils}/bin/chmod 0755 {} + 2>/dev/null || true
-        ${pkgs.findutils}/bin/find /opt/downloads -type d -exec ${pkgs.coreutils}/bin/chmod 0755 {} + 2>/dev/null || true
-
-        # Fix file permissions (0644)
-        ${pkgs.findutils}/bin/find /mnt/hot -type f -exec ${pkgs.coreutils}/bin/chmod 0644 {} + 2>/dev/null || true
-        ${pkgs.findutils}/bin/find /mnt/media -type f -exec ${pkgs.coreutils}/bin/chmod 0644 {} + 2>/dev/null || true
-
-        echo "Container permissions enforced successfully"
-      '';
-    };
-  };
-
-  # Timer to run permission enforcement every hour
-  systemd.timers.container-permissions-enforce = {
-    description = "Hourly container permission enforcement";
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnBootSec = "5min";  # Run 5 minutes after boot
-      OnUnitActiveSec = "1h";  # Run every hour
-      Persistent = true;  # Catch up on missed runs
-    };
-  };
+  # NOTE: Hourly permission enforcement removed (2025-12-11)
+  # Root cause fixed: containers now use correct PGID="100" (users group)
+  # See docs/standards/permission-patterns.md for details
 }
