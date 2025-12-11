@@ -51,8 +51,8 @@ in
           "--device=/dev/dri:/dev/dri"
         ];
       baseEnv = {
-        PUID = "1000";
-        PGID = "1000";
+        PUID = "1000";  # eric UID
+        PGID = "100";   # users GID (CORRECT - users group is GID 100, not 1000!)
         TZ = timeZone;
       };
     in

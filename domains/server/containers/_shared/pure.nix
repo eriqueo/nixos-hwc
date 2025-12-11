@@ -20,7 +20,7 @@ rec {
       podmanNetworkOpts =
         if networkMode == "vpn" then [ "--network=container:gluetun" ] else [ "--network=media-network" ];
       gpuOpts = if (!gpuEnable) then [] else [ "--device=/dev/dri:/dev/dri" ];
-      baseEnv = { PUID = "1000"; PGID = "1000"; TZ = timeZone; };
+      baseEnv = { PUID = "1000"; PGID = "100"; TZ = timeZone; };  # users group is GID 100
       containerDef = {
         inherit image dependsOn user;
         autoStart = true;
