@@ -44,7 +44,7 @@ in {
     environment.systemPackages = with pkgs; [
       vim git wget curl htop tmux
       ncdu tree ripgrep fd bat eza zoxide fzf
-      which diffutils less
+      which diffutils less ethtool fping
     ];
 
     assertions = [

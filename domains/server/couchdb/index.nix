@@ -95,6 +95,8 @@ EOF
         Group = lib.mkForce "users";
         # Override state directory to use hwc structure
         StateDirectory = lib.mkForce "hwc/couchdb";
+        # Runtime directory for couchdb.uri file
+        RuntimeDirectory = "couchdb";
       };
     };
 

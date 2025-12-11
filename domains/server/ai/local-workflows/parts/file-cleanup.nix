@@ -213,8 +213,8 @@ in
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${cleanupScript}/bin/ai-cleanup";
-      User = "eric";
-      Group = "users";
+      User = lib.mkForce "eric";
+      Group = lib.mkForce "users";
     };
   };
 

@@ -19,7 +19,8 @@ in {
       file-roller           # Archive manager
       evince                # PDF viewer
       feh                   # Image viewer
-
+      fping
+      ethtool
       # Media tools (server-specific)
       picard                # Music organization
       claude-code

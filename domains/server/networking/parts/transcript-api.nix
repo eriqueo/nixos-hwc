@@ -73,8 +73,8 @@ in {
         Restart = "always";
         StateDirectory = "hwc/transcript-api";
         DynamicUser = false;
-        User = "eric";  # Simplified permissions (eric owns /mnt/media)
-        Group = "users";
+        User = lib.mkForce "eric";  # Simplified permissions (eric owns /mnt/media)
+        Group = lib.mkForce "users";
 
         # Load CouchDB credentials from secrets
         LoadCredential = [

@@ -40,7 +40,7 @@ SERVICES=(
   # AI & APIs
   "openwebui|port|3443|http://127.0.0.1:3001|open-webui"
   "workflows-api|subpath|/workflows|http://127.0.0.1:6021|workflows-api"
-  "transcript-api|subpath|/api|http://127.0.0.1:8099|transcript-api"
+  "transcript-api|subpath|/api/list|http://127.0.0.1:8099/api/list|transcript-api"
 
   # Media processing
   "tdarr|port|8267|http://127.0.0.1:8265|tdarr"

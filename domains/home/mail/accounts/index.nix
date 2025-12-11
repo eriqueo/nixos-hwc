@@ -1,3 +1,4 @@
+{ config, lib, pkgs, ... }:
 #==========================================================================
 # OPTIONS
 #==========================================================================
@@ -34,7 +35,10 @@
           realName = "Eric O'Keefe";
           address = "eriqueokeefe@gmail.com";
           login = "eriqueokeefe@gmail.com";
-          password = { mode = "agenix"; agenix = "/run/agenix/gmail-personal-password"; };
+          password = {
+            mode = "agenix";
+            agenix = config.age.secrets.gmail-personal-password.path;
+          };
           maildirName = "210_gmail-personal";
           mailboxMapping = {
             "INBOX"               = "inbox";
@@ -45,13 +49,16 @@
           send.msmtpAccount = "gmail-personal";
         };
 
-    gmail-business = {
+        gmail-business = {
           name = "gmail-business";
           type = "gmail";
           realName = "Eric O'Keefe";
           address = "heartwoodcraftmt@gmail.com";
           login = "heartwoodcraftmt@gmail.com";
-          password = { mode = "agenix"; agenix = "/run/agenix/gmail-business-password"; };
+          password = {
+            mode = "agenix";
+            agenix = config.age.secrets.gmail-business-password.path;
+          };
           maildirName = "110_gmail-business";
           mailboxMapping = {
             "INBOX"               = "inbox";
@@ -61,6 +68,7 @@
           };
           send.msmtpAccount = "gmail-business";
         };
+
 
     iheartwoodcraft = {
           name = "iheartwoodcraft";

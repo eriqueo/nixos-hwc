@@ -353,8 +353,8 @@ in
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${journalingScript}/bin/ai-journal";
-      User = "eric";
-      Group = "users";
+      User = lib.mkForce "eric";
+      Group = lib.mkForce "users";
       Restart = "on-failure";
     };
   };

@@ -62,8 +62,15 @@ in
 
       environment = containerEnv;
 
-      # No extra options needed - using default bridge networking with port mapping
-      extraOptions = [];
+      # Override healthcheck - upstream uses wget but it's not in the image
+      # Use curl instead which is available in the container
+      extraOptions = [
+        "--health-cmd=curl -f http://localhost:8080/ || exit 1"
+        "--health-interval=30s"
+        "--health-timeout=10s"
+        "--health-retries=3"
+        "--health-start-period=30s"
+      ];
     };
 
     # Ensure Podman is enabled

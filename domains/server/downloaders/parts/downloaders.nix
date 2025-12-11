@@ -60,7 +60,7 @@ let
   # Standard environment for download services
   mediaServiceEnv = {
     PUID = "1000";
-    PGID = "1000";
+    PGID = "100";
     TZ = config.time.timeZone or "America/Denver";
   };
 

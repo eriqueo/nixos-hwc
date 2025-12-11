@@ -111,7 +111,8 @@ in
 
         serviceConfig = {
           Type = "simple";
-          User = "eric";  # Run as user to access home directories
+          User = lib.mkForce "eric";
+          Group = lib.mkForce "users";  # Run as user to access home directories
           WorkingDirectory = "/home/eric";
           ExecStart = "${apiServer}/bin/hwc-workflows-api";
 

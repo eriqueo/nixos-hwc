@@ -1,11 +1,6 @@
 mqtt:
   enabled: false
 
-notifications:
-  webhook:
-    url: "https://hwc.ocelot-wahoo.ts.net:2443/webhook/frigate-events"
-    enabled: true
-
 detectors:
   onnx:
     type: onnx
@@ -48,7 +43,7 @@ ffmpeg: &ffmpeg_defaults
     - experimental
     - -rtsp_transport
     - tcp
-    - -stimeout
+    - -timeout
     - '5000000'
     - -analyzeduration
     - '5000000'
