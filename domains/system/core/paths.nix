@@ -396,6 +396,13 @@ in {
 
     # Export paths as environment variables for script integration
     environment.sessionVariables = {
+      # CRITICAL FIX: Explicitly set HOME for PAM environment
+      # NixOS 26.05 doesn't set HOME automatically in /etc/pam/environment
+      # causing HOME to default to "/" on SSH login, breaking all $HOME expansions
+      # in both /nix/store/.../set-environment and hm-session-vars.sh
+      # See: Investigation 2025-12-11 - HOME was "/" instead of "/home/eric"
+      HOME = cfg.user.home;
+
       # Storage tiers
       HWC_HOT_STORAGE = if cfg.hot != null then cfg.hot else "";
       HWC_MEDIA_STORAGE = if cfg.media != null then cfg.media else "";
