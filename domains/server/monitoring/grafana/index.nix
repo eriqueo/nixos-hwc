@@ -49,16 +49,19 @@ in
     # Prometheus datasource provisioning
     services.grafana.provision = {
       enable = true;
-      datasources.settings.datasources = lib.mkIf config.hwc.server.monitoring.prometheus.enable [
-        {
-          name = "Prometheus";
-          type = "prometheus";
-          uid = "prometheus";
-          url = "http://localhost:${toString config.hwc.server.monitoring.prometheus.port}";
-          access = "proxy";
-          isDefault = true;
-        }
-      ];
+      datasources.settings = lib.mkIf config.hwc.server.monitoring.prometheus.enable {
+        apiVersion = 1;
+        datasources = [
+          {
+            name = "Prometheus";
+            type = "prometheus";
+            uid = "prometheus";
+            url = "http://localhost:${toString config.hwc.server.monitoring.prometheus.port}";
+            access = "proxy";
+            isDefault = true;
+          }
+        ];
+      };
 
       # Dashboard provisioning
       dashboards.settings = lib.mkIf cfg.dashboards.enable {
