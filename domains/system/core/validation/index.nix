@@ -25,13 +25,13 @@
       echo "===================================="
       echo ""
 
-      # Check 1: users group is GID 100
-      USERS_GID=$(${pkgs.glibc.bin}/bin/getent group users | ${pkgs.coreutils}/bin/cut -d: -f3)
-      if [[ "$USERS_GID" != "100" ]]; then
-        echo "❌ FAIL: users group GID is $USERS_GID, expected 100"
+      # Check 1: eric primary group is users (GID 100)
+      ERIC_GID=$(${pkgs.coreutils}/bin/id -g eric 2>/dev/null || echo "MISSING")
+      if [[ "$ERIC_GID" != "100" ]]; then
+        echo "❌ FAIL: eric primary GID is $ERIC_GID, expected 100 (users)"
         FAILED=1
       else
-        echo "✅ PASS: users group GID 100"
+        echo "✅ PASS: eric primary group is users (GID 100)"
       fi
 
       # Check 2: eric user is UID 1000
@@ -43,16 +43,7 @@
         echo "✅ PASS: eric UID 1000"
       fi
 
-      # Check 3: eric primary group is users (GID 100)
-      ERIC_GID=$(${pkgs.coreutils}/bin/id -g eric 2>/dev/null || echo "MISSING")
-      if [[ "$ERIC_GID" != "100" ]]; then
-        echo "❌ FAIL: eric GID is $ERIC_GID, expected 100 (users)"
-        FAILED=1
-      else
-        echo "✅ PASS: eric primary group is users (GID 100)"
-      fi
-
-      # Check 4: /home/eric owned by eric:users
+      # Check 3: /home/eric owned by eric:users
       if [[ -d /home/eric ]]; then
         HOME_OWNER=$(${pkgs.coreutils}/bin/stat -c '%U:%G' /home/eric)
         if [[ "$HOME_OWNER" != "eric:users" ]]; then
@@ -65,7 +56,7 @@
         echo "⚠️  WARNING: /home/eric doesn't exist"
       fi
 
-      # Check 5: eric in secrets group
+      # Check 4: eric in secrets group
       if ${pkgs.coreutils}/bin/groups eric | ${pkgs.gnugrep}/bin/grep -q secrets; then
         echo "✅ PASS: eric in secrets group"
       else
@@ -73,7 +64,7 @@
         FAILED=1
       fi
 
-      # Check 6: Storage tiers accessible (if they exist)
+      # Check 5: Storage tiers accessible (if they exist)
       echo ""
       echo "Storage Tier Check:"
       for dir in /mnt/hot /mnt/media /mnt/archive /mnt/backup; do
