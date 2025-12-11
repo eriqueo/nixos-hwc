@@ -129,7 +129,83 @@ Every **module** (app, tool, or workload) MUST include:
 
 ---
 
-## 5) Lane Purity
+## 5) Permission Model
+
+### Overview
+
+The nixos-hwc system uses a **unified permission model** optimized for single-user infrastructure:
+
+**Core Principle**: All services run as `eric:users` (UID 1000, GID 100)
+
+This simplifies management in a personal environment where service isolation is achieved through directory structure rather than user separation.
+
+### Standard UID/GID Assignments
+
+| Entity | UID | GID | Purpose |
+|--------|-----|-----|---------|
+| eric (user) | 1000 | - | Primary system user |
+| users (group) | - | 100 | Primary user group |
+| secrets (group) | - | (dynamic) | Secret access control |
+| root | 0 | 0 | System administration |
+
+**CRITICAL**: The `users` group is GID **100**, not 1000!
+
+### Container Configuration Standard
+
+All containers MUST use:
+```nix
+environment = {
+  PUID = "1000";  # eric user
+  PGID = "100";   # users group (NOT 1000!)
+  TZ = config.time.timeZone;
+};
+```
+
+**Rationale**: Containers create files as the user/group specified by PUID/PGID. Using GID 100 ensures files are owned by `eric:users`, allowing direct access without permission corrections.
+
+### Service Configuration Standard
+
+Native NixOS services should override default user creation:
+```nix
+systemd.services.<service> = {
+  serviceConfig = {
+    User = lib.mkForce "eric";
+    Group = lib.mkForce "users";
+    StateDirectory = "hwc/<service>";
+  };
+};
+```
+
+### Secret Access Pattern
+
+All secrets use restrictive permissions with group-based access:
+```nix
+age.secrets.<name> = {
+  file = ../../parts/<domain>/<name>.age;
+  mode = "0440";   # Read-only for owner + group
+  owner = "root";
+  group = "secrets";
+};
+```
+
+### Validation Requirements
+
+All modules implementing services MUST:
+
+1. **Document Permission Model**: Add comment explaining why service runs as eric
+2. **Validate Dependencies**: Assert user configuration in VALIDATION section
+3. **Use Standard Patterns**: Follow `docs/standards/permission-patterns.md`
+4. **Pass Linter**: Validate with `./workspace/utilities/lints/permission-lint.sh`
+
+### Reference Documentation
+
+- **Standard Patterns**: `docs/standards/permission-patterns.md`
+- **Troubleshooting**: `docs/troubleshooting/permissions.md`
+- **Validation Linter**: `workspace/utilities/lints/permission-lint.sh`
+
+---
+
+## 6) Lane Purity
 
 * **Lanes never import each other's `index.nix`**.
 * Co-located `sys.nix` belongs to the **system lane**, even when inside `domains/home/apps/<unit>`.
@@ -201,7 +277,7 @@ in
 
 ---
 
-## 6) Aggregators
+## 7) Aggregators
 
 * Aggregators are always named **`index.nix`**.
 * Module aggregators = `domains/home/apps/waybar/index.nix`.
@@ -210,7 +286,7 @@ in
 
 ---
 
-## 7) Home Manager Boundary
+## 8) Home Manager Boundary
 
 * **HM activation is machine-specific, never in profiles.**
 * **Exception**: `profiles/home.nix` serves as the Home Manager domain feature menu
@@ -235,7 +311,7 @@ in
 
 ---
 
-## 8) Structural Rules
+## 9) Structural Rules
 
 * **Structural files** = all `.nix` sources under `domains/`, `profiles/`, `machines/` and `flake.{nix,lock}`.
 * Never apply automated regex rewrites to structural files.
@@ -243,7 +319,7 @@ in
 
 ---
 
-## 9) Theming
+## 10) Theming
 
 * Palettes (`domains/home/theme/palettes/*.nix`) define tokens.
 * Adapters (`domains/home/theme/adapters/*.nix`) transform palettes to app configs.
@@ -251,7 +327,7 @@ in
 
 ---
 
-## 10) Helpers & Parts
+## 11) Helpers & Parts
 
 * `parts/**` and `_shared/**` MUST be pure helpers:
 
@@ -261,7 +337,7 @@ in
 
 ---
 
-## 11) File Standards
+## 12) File Standards
 
 * Files/dirs: `kebab-case.nix`
 * Options: camelCase following folder structure (e.g. `hwc.home.apps.firefox.enable`)
@@ -271,7 +347,7 @@ in
 
 ---
 
-## 12) Enforcement Rules
+## 13) Enforcement Rules
 
 * Functional purity per domain.
 * Single source of truth.
@@ -282,7 +358,7 @@ in
 
 ---
 
-## 13) Validation & Anti-Patterns
+## 14) Validation & Anti-Patterns
 
 **Searches (must be empty):**
 
@@ -306,7 +382,7 @@ rg "/mnt/" domains/
 
 ---
 
-## 13) Server Workloads
+## 15) Server Workloads
 
 ### Container vs Native Service Decisions
 
@@ -329,7 +405,7 @@ rg "/mnt/" domains/
 
 ---
 
-## 14) Profiles & Import Order
+## 16) Profiles & Import Order
 
 * Profiles MUST import `options.nix` before any lane implementations.
 * Example:
@@ -343,7 +419,7 @@ imports = [
 
 ---
 
-## 15) Migration Protocol
+## 17) Migration Protocol
 
 1. **Discovery** → list features.
 2. **Classification** → Part / Adapter / Tool.
@@ -353,7 +429,7 @@ imports = [
 
 ---
 
-## 16) Status
+## 18) Status
 
 * Phase 1 (Domain separation): ✅ complete.
 * Phase 2 (Domain/Profile architecture): 🔄 in progress.
@@ -362,7 +438,7 @@ imports = [
 
 ---
 
-## 17) Charter Change Management
+## 19) Charter Change Management
 
 * Version bump on any normative change.
 * PRs require non-author review.
@@ -371,7 +447,7 @@ imports = [
 
 ---
 
-## 18) Configuration Validity & Dependency Assertions
+## 20) Configuration Validity & Dependency Assertions
 
 * **Mandatory Validation Section**: Every `index.nix` with `enable` toggle MUST include `# VALIDATION` section after `# IMPLEMENTATION`.
 * **Assertion Requirement**: Modules MUST assert all runtime dependencies (system services, binaries, configuration reads).

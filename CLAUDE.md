@@ -958,6 +958,48 @@ config.assertions = lib.mkIf enabled [
 - Add user to `extraGroups = [ "secrets" ]`
 - Verify age key exists: `sudo ls /etc/age/keys.txt`
 
+### Permission Issues
+
+**Common permission errors and resolutions:**
+
+1. **Container Permission Denied**
+   - Symptom: Container can't write to volumes
+   - Cause: Wrong PGID (1000 instead of 100)
+   - Fix: See `docs/troubleshooting/permissions.md` section 1
+
+2. **StateDirectory Access Denied**
+   - Symptom: Service can't write to /var/lib/hwc/<service>
+   - Cause: Missing User/Group in serviceConfig
+   - Fix: See `docs/troubleshooting/permissions.md` section 2
+
+3. **Secret File Not Readable**
+   - Symptom: Service can't access /run/agenix/<secret>
+   - Cause: Service user not in secrets group
+   - Fix: See `docs/troubleshooting/permissions.md` section 3
+
+4. **HOME is "/" on SSH Login**
+   - Symptom: SSH login shows HOME=/ instead of /home/eric
+   - Cause: NixOS 26.05 HOME variable issue (already fixed)
+   - Fix: Rebuild system if still broken
+
+**Diagnostic Tools**:
+```bash
+# Run permission linter
+./workspace/utilities/lints/permission-lint.sh domains/server
+
+# Check service user configuration
+systemctl show <service> | grep -E 'User=|Group='
+
+# Verify container PGID
+sudo podman inspect <container> | jq '.[0].Config.Env'
+
+# Check for GID=1000 files (should be none)
+find /mnt/hot /mnt/media -group 1000 2>/dev/null | wc -l
+```
+
+**Full Guide**: `docs/troubleshooting/permissions.md`
+**Standard Patterns**: `docs/standards/permission-patterns.md`
+
 ---
 
 ## Additional Resources
