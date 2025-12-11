@@ -77,8 +77,8 @@ in
       environment = n8nEnv;
       serviceConfig = {
               Type = "simple";
-              User = "eric";
-              Group = "users";
+              User = lib.mkForce "eric";
+              Group = lib.mkForce "users";
               ExecStart = "${pkgs.n8n}/bin/n8n start";
               Restart = "on-failure";
               RestartSec = "10s";

@@ -26,7 +26,8 @@ in
         # Security hardening
         DynamicUser = true;
         StateDirectory = "fabric-api";
-
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
         # Environment variables
         Environment = mapAttrsToList (n: v: "${n}=${v}") cfg.extraEnv;
       } // optionalAttrs (cfg.envFile != null) {

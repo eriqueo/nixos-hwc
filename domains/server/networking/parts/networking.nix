@@ -129,7 +129,7 @@ in {
       
       # VPN credentials from agenix secrets
       environmentFiles = lib.optionals config.hwc.secrets.secrets.vpn [
-        "/run/agenix/vpn-credentials"  # Will be created by setup service
+        config.age.secrets.vpn-credentials.path  # Will be created by setup service
       ];
     };
 

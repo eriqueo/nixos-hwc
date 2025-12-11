@@ -47,9 +47,10 @@ in
     };
 
     # Prometheus datasource provisioning
-    services.grafana.provision = {
+    services.grafana.provision = lib.mkIf config.hwc.server.monitoring.prometheus.enable {
       enable = true;
-      datasources.settings = lib.mkIf config.hwc.server.monitoring.prometheus.enable {
+
+      datasources.settings = {
         apiVersion = 1;
         datasources = [
           {

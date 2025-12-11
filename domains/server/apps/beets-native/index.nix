@@ -131,7 +131,8 @@ in
 
       serviceConfig = {
         Type = "simple";
-        User = "eric";
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
         ExecStart = "${beetsPackage}/bin/beet web";
         Restart = "on-failure";
         Environment = [

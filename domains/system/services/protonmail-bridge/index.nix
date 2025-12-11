@@ -27,8 +27,8 @@ in
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        User = "protonbridge";
-        Group = "protonbridge";
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
 
         StateDirectory = "proton-bridge";
         RuntimeDirectory = "proton-bridge";

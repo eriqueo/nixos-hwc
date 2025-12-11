@@ -64,8 +64,8 @@ EOF
       serviceConfig = {
         Type = "simple";
         # Run as eric user for simplified permissions (single-user system)
-        User = "eric";
-        Group = "users";
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
         # The '-' prefix makes the file optional (created by preStart)
         EnvironmentFile = "-/tmp/media-orchestrator.env";
         ExecStart = "${pythonWithRequests}/bin/python3 ${cfgRoot}/scripts/media-orchestrator.py";

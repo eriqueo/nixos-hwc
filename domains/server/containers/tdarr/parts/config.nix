@@ -46,7 +46,7 @@ in
       # Environment variables
       environment = {
         PUID = "1000";
-        PGID = "100"  # users GID;
+        PGID = "100";  # users GID;
         TZ = config.time.timeZone or "America/Denver";
 
         # Server configuration
