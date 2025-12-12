@@ -192,6 +192,13 @@
     powerManagement.smartToggle = true;
   };
 
+  # Override NVIDIA power management defaults for proper suspend/resume
+  # Fixes GPU state corruption in applications (like Kitty) after resume
+  hardware.nvidia.powerManagement = {
+    enable = true;           # Enable power management for suspend/resume
+    finegrained = false;     # Use full power management, not fine-grained
+  };
+
   #============================================================================
   # === [domains/infrastructure/virtualization] Orchestration ==================
   #============================================================================
