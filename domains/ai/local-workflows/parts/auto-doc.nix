@@ -470,8 +470,8 @@ in
 
     serviceConfig = {
       Type = "oneshot";
-      User = "eric";
-      Group = "users";
+      User = lib.mkForce "eric";
+      Group = lib.mkForce "users";
       WorkingDirectory = "/home/eric/.nixos";
       ExecStart = "${postRebuildDocsScript}/bin/post-rebuild-ai-docs";
 
