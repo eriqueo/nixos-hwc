@@ -240,8 +240,8 @@ add_secret() {
   local age_pubkey
   age_pubkey=$(get_age_pubkey)
 
-  # Encrypt secret
-  if echo "$secret_value" | age -r "$age_pubkey" > "$secret_file"; then
+  # Encrypt secret (use printf to avoid trailing newline)
+  if printf '%s' "$secret_value" | age -r "$age_pubkey" > "$secret_file"; then
     log_info "Encrypted secret saved: $secret_file"
   else
     log_error "Failed to encrypt secret"
@@ -419,8 +419,8 @@ edit_secret() {
   local age_pubkey
   age_pubkey=$(get_age_pubkey)
 
-  # Re-encrypt secret
-  if echo "$new_value" | age -r "$age_pubkey" > "$secret_file"; then
+  # Re-encrypt secret (use printf to avoid trailing newline)
+  if printf '%s' "$new_value" | age -r "$age_pubkey" > "$secret_file"; then
     log_info "Secret updated: $secret_file"
     echo ""
     echo "Next step: sudo nixos-rebuild switch --flake .#\$(hostname)"
