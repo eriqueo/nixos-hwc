@@ -21,7 +21,15 @@ in
       retention = "90d";
       blackbox.enable = true;
     };
-    
+
+    # cAdvisor - Container metrics
+    hwc.server.monitoring.cadvisor.enable = lib.mkDefault true;
+
+    # Exportarr - Arr apps metrics (Sonarr/Radarr/Lidarr/Prowlarr)
+    hwc.server.monitoring.exportarr.enable = lib.mkDefault true;
+
+    # Frigate exporter - Frigate NVR metrics
+    hwc.server.frigate.exporter.enable = lib.mkDefault true;
 
     # Grafana - Dashboards and visualization
     hwc.server.monitoring.grafana = {

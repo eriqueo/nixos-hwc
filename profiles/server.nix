@@ -358,6 +358,11 @@
     };
     redis.enable = true;
     gpu.enable = true;  # Enable GPU acceleration
+    observability.metrics = {
+      enable = true;
+      apiPort = 8091;
+      microservicesPort = 8092;
+    };
   };
 
   # Phase 5: Infrastructure Services
