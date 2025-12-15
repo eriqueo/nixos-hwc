@@ -27,6 +27,7 @@ let
   list-services = import ./parts/list-services.nix { inherit pkgs config; };
   charter-lint = import ./parts/charter-lint.nix { inherit pkgs config; };
   caddy-health = import ./parts/caddy-health.nix { inherit pkgs config; };
+  secret = import ./parts/secret.nix { inherit pkgs config; };
 in
 {
   #============================================================================
@@ -53,6 +54,7 @@ in
         list-services
         charter-lint
         caddy-health
+        secret
       ];
 
     # Environment variables
@@ -156,63 +158,6 @@ in
         # add-app shell function
         add-app() {
           ${config.home.homeDirectory}/.nixos/workspace/nixos/add-home-app.sh "$@"
-        }
-
-        # Secrets management functions
-        secret-update() {
-                  if [ -z "$1" ]; then
-                    echo "Usage: secret-update <secret-name>"
-                    echo "Example: secret-update vpn-password"
-                    return 1
-                  fi
-
-                  local SECRET_NAME="$1"
-                  local AGE_KEY=$(sudo cat /etc/age/keys.txt | grep "public key:" | awk '{print $4}')
-                  local SECRET_FILE=$(find domains/secrets/parts -name "''${SECRET_NAME}.age" 2>/dev/null | head -1)
-                
-                  if [ -z "$SECRET_FILE" ]; then
-                    echo "❌ Secret not found: $SECRET_NAME"
-                    return 1
-                  fi
-                
-                  echo "Current value:"
-                  sudo age -d -i /etc/age/keys.txt "$SECRET_FILE"
-                  echo ""
-                  echo "Enter new value (will be hidden):"
-                  read -s NEW_VALUE
-                
-                  echo "$NEW_VALUE" | age -r "$AGE_KEY" > "$SECRET_FILE"
-                  echo "✅ Secret updated: $SECRET_FILE"
-                  echo "Run: sudo nixos-rebuild switch --flake .#\$(hostname)"
-                }
-        secret-validate() {
-                  echo "=== Validating HWC Secrets Setup ==="
-                  echo ""
-                
-                  echo "1. Age key exists:"
-                  if [ -f /etc/age/keys.txt ]; then
-                    echo "  ✅ /etc/age/keys.txt exists"
-                  else
-                    echo "  ❌ /etc/age/keys.txt NOT FOUND"
-                  fi
-                  echo ""
-                
-                  echo "2. Secrets mount:"
-                  if mount | grep -q "/run/agenix"; then
-                    echo "  ✅ /run/agenix mounted"
-                  else
-                    echo "  ❌ /run/agenix NOT MOUNTED"
-                  fi
-                  echo ""
-                
-                  echo "3. Decrypted secrets:"
-                  local SECRET_COUNT=$(sudo ls /run/agenix/ 2>/dev/null | wc -l)
-                  echo "  📊 $SECRET_COUNT secrets decrypted"
-                  echo ""
-                
-                  echo "4. Encrypted files:"
-                  local ENCRYPTED_COUNT=$(find domains/secrets/parts -name "*.age" 2>/dev/null | wc -l)
-                  echo "  📊 $ENCRYPTED_COUNT .age files found"
         }
       '';
     };
