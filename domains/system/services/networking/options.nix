@@ -38,6 +38,15 @@ in
         example = [ "--operator=eric" "--advertise-exit-node" ];
         description = "Extra flags for `tailscale up`.";
       };
+      funnel = {
+        enable = lib.mkEnableOption "Enable Tailscale Funnel for public access.";
+        ports = lib.mkOption {
+          type = types.listOf types.port;
+          default = [];
+          example = [ 443 2443 ];
+          description = "Ports to expose publicly via Tailscale Funnel.";
+        };
+      };
     };
 
     # ---- Samba ----

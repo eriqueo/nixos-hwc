@@ -1,7 +1,0 @@
-name,description,job_type,material_markup_percent,labor_markup_percent,overhead_percent,profit_percent,min_margin_dollars,min_job_total,priority,active,is_default
-Default Markup,Default markup for all jobs,,25.0,15.0,10.0,15.0,500.0,1000.0,0,true,true
-Bathroom Markup,Standard bathroom remodeling markup,bathroom,28.0,18.0,12.0,15.0,750.0,2500.0,10,true,false
-Deck Markup,Deck construction markup,deck,30.0,20.0,10.0,15.0,1000.0,3000.0,10,true,false
-Siding Markup,Siding installation markup,siding,25.0,18.0,10.0,12.0,800.0,2000.0,10,true,false
-Small Job Markup,Markup for small jobs (under $5k),,35.0,25.0,15.0,20.0,300.0,500.0,5,true,false
-Large Job Markup,Markup for jobs over $50k,,22.0,12.0,8.0,12.0,2000.0,50000.0,5,true,false

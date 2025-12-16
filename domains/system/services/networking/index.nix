@@ -37,6 +37,24 @@ in
       extraUpFlags = cfg.tailscale.extraUpFlags;
     };
 
+    # Tailscale Funnel - expose ports publicly via local HTTP listener
+    # Caddy on :18080 handles /webhook/* only (plain HTTP)
+    # Funnel terminates TLS and proxies to this local HTTP origin
+    systemd.services.tailscale-funnel = lib.mkIf (cfg.tailscale.enable && cfg.tailscale.funnel.enable) {
+      description = "Tailscale Funnel - expose webhooks publicly";
+      after = [ "tailscaled.service" "network-online.target" "caddy.service" ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "simple";
+        Restart = "on-failure";
+        RestartSec = "10s";
+        # Run in foreground - tailscale funnel doesn't support --bg reliably in systemd
+        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --https=443 http://127.0.0.1:18080";
+        ExecStopPost = "${pkgs.tailscale}/bin/tailscale funnel reset || true";
+      };
+    };
+
     # =========================
     # Samba
     # =========================

@@ -52,6 +52,8 @@ in
 
       datasources.settings = {
         apiVersion = 1;
+        # Prune stale provisioned datasources to prevent drift
+        deleteDatasources = [];  # Explicit empty list
         datasources = [
           {
             name = "Prometheus";
@@ -60,6 +62,8 @@ in
             url = "http://localhost:${toString config.hwc.server.monitoring.prometheus.port}";
             access = "proxy";
             isDefault = true;
+            # Mark as provisioned to enable pruning
+            editable = false;
           }
         ];
       };

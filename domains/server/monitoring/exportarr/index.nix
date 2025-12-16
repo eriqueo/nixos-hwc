@@ -14,12 +14,20 @@
 let
   cfg = config.hwc.server.monitoring.exportarr;
 
-  # Port mapping for Arr apps
+  # Port and URL base mapping for Arr apps
   appPorts = {
     sonarr = 8989;
     radarr = 7878;
     lidarr = 8686;
     prowlarr = 9696;
+  };
+
+  # URL bases for all Arr apps
+  appUrls = {
+    sonarr = "http://127.0.0.1:8989/sonarr";
+    radarr = "http://127.0.0.1:7878/radarr";
+    lidarr = "http://127.0.0.1:8686/lidarr";
+    prowlarr = "http://127.0.0.1:9696/prowlarr";
   };
 in
 {
@@ -32,62 +40,78 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    # Exportarr container
-    virtualisation.oci-containers.containers.exportarr = {
-      image = "ghcr.io/onedr0p/exportarr:latest";
-      autoStart = true;
+    # Create separate exportarr container for each app
+    virtualisation.oci-containers.containers = lib.listToAttrs (lib.imap0 (idx: app: {
+      name = "exportarr-${app}";
+      value = let
+        exporterPort = cfg.port + idx;
+      in {
+        image = "ghcr.io/onedr0p/exportarr:latest";
+        autoStart = true;
 
-      ports = [
-        "127.0.0.1:${toString cfg.port}:${toString cfg.port}"
-      ];
+        # Use host network to access Arr apps on 127.0.0.1
+        extraOptions = [ "--network=host" ];
 
-      volumes = [
-        "/run/agenix:/run/agenix:ro"
-      ];
+        environmentFiles = [
+          "/run/exportarr/${app}-env"
+        ];
 
-      environment = {
-        PORT = toString cfg.port;
-        ENABLE_ADDITIONAL_METRICS = "true";
-        ENABLE_UNKNOWN_QUEUE_ITEMS = "true";
+        environment = {
+          PORT = toString exporterPort;
+          ENABLE_ADDITIONAL_METRICS = "true";
+          ENABLE_UNKNOWN_QUEUE_ITEMS = "true";
+        };
+
+        cmd = [
+          app
+          "-p" (toString exporterPort)
+          "-u" appUrls.${app}
+          "-a" "\${API_KEY}"
+        ];
       };
+    }) cfg.apps);
 
-      # Start exportarr for each configured app
-      cmd = lib.concatMapStringsSep " " (app:
-        "${app} --url http://127.0.0.1:${toString appPorts.${app}} --api-key-file /run/agenix/${app}-api-key"
-      ) cfg.apps;
-    };
-
-    # Ensure exportarr container has access to secrets
-    systemd.services."podman-exportarr".serviceConfig = {
-      SupplementaryGroups = [ "secrets" ];
-    };
+    # Prepare environment files with API keys
+    systemd.services = lib.listToAttrs (map (app: {
+      name = "podman-exportarr-${app}";
+      value = {
+        serviceConfig = {
+          SupplementaryGroups = [ "secrets" ];
+        };
+        preStart = ''
+          mkdir -p /run/exportarr
+          echo "API_KEY=$(cat ${config.age.secrets."${app}-api-key".path})" > /run/exportarr/${app}-env
+          chmod 600 /run/exportarr/${app}-env
+        '';
+      };
+    }) cfg.apps);
 
     # Register with Prometheus (one job per app)
-    hwc.server.monitoring.prometheus.scrapeConfigs = map (app: {
+    hwc.server.monitoring.prometheus.scrapeConfigs = lib.imap0 (idx: app: {
       job_name = "${app}-exporter";
       static_configs = [{
-        targets = [ "localhost:${toString cfg.port}" ];
+        targets = [ "localhost:${toString (cfg.port + idx)}" ];
       }];
-      metrics_path = "/${app}/metrics";
+      metrics_path = "/metrics";
       scrape_interval = "60s";
       scrape_timeout = "30s";
     }) cfg.apps;
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = [
-    {
-      assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-      message = "Exportarr requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
-    }
-    {
-      assertion = !cfg.enable || (builtins.length cfg.apps > 0);
-      message = "Exportarr requires at least one app to monitor";
-    }
-  ] ++ map (app: {
-    assertion = !cfg.enable || config.hwc.server.containers.${app}.enable;
-    message = "Exportarr monitoring ${app} requires ${app} to be enabled (hwc.server.containers.${app}.enable = true)";
-  }) cfg.apps;
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
+        message = "Exportarr requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+      }
+      {
+        assertion = !cfg.enable || (builtins.length cfg.apps > 0);
+        message = "Exportarr requires at least one app to monitor";
+      }
+    ] ++ map (app: {
+      assertion = !cfg.enable || config.hwc.services.containers.${app}.enable;
+      message = "Exportarr monitoring ${app} requires ${app} to be enabled (hwc.services.containers.${app}.enable = true)";
+    }) cfg.apps;
+  };
 }

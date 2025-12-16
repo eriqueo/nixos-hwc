@@ -29,7 +29,9 @@ Add to your server's `machines/server/config.nix`:
 {
   hwc.services.containers.pihole = {
     enable = true;
-    webPassword = "your-secure-password";  # Change this!
+    # RECOMMENDED: Use webPasswordFile with agenix secrets
+    webPasswordFile = config.age.secrets.pihole-password.path;
+    # OR (less secure): webPassword = "your-secure-password";
     timezone = "America/Denver";           # Match your server timezone
   };
 }
@@ -63,9 +65,15 @@ sudo nixos-rebuild switch
   hwc.services.containers.pihole = {
     enable = true;
 
+    # Container image (explicit version per CHARTER)
+    image = "pihole/pihole:2024.07.0";  # Default, can override
+
     # Web interface settings
     webPort = 8080;           # Default: 8080
-    webPassword = "secret";    # REQUIRED: Set a secure password
+
+    # RECOMMENDED: Use secrets file (agenix)
+    webPasswordFile = config.age.secrets.pihole-password.path;
+    # ALTERNATIVE (less secure): webPassword = "secret";
 
     # DNS settings
     dnsPort = 53;              # Default: 53 (standard DNS port)
@@ -89,8 +97,9 @@ sudo nixos-rebuild switch
 {
   hwc.services.containers.pihole = {
     enable = true;
+    image = "pihole/pihole:2024.07.0";  # Pin to specific version
     webPort = 8080;
-    webPassword = "secure-password";
+    webPasswordFile = config.age.secrets.pihole-password.path;  # Use secrets
     timezone = "America/Denver";
 
     # Use Google DNS instead of Cloudflare
@@ -180,19 +189,72 @@ sudo systemctl restart podman-pihole.service
 
 ### Update Pi-hole
 
-```bash
-# Pull latest image
-sudo podman pull pihole/pihole:latest
+**CHARTER Compliance**: This module uses explicit version pinning (not `:latest`) for reproducibility.
 
-# Restart to use new image
-sudo systemctl restart podman-pihole.service
+**⚠️  CRITICAL: v5 → v6 Migration Warning**
+
+Pi-hole v6 (starting with 2024.xx.x versions after mid-2024) makes **irreversible** changes to configuration files. Per the official Docker Pi-hole documentation:
+
+> "Upgrading from v5 to v6 will update your config files and the changes are irreversible."
+
+**Before updating from v5 to v6:**
+
+```bash
+# 1. BACKUP YOUR DATA (REQUIRED)
+sudo tar -czf /tmp/pihole-backup-$(date +%F).tar.gz ${cfg.dataDir} ${cfg.dnsmasqDir}
+
+# 2. Store backup safely
+mv /tmp/pihole-backup-*.tar.gz /mnt/media/backups/
+
+# 3. Verify backup integrity
+tar -tzf /mnt/media/backups/pihole-backup-*.tar.gz | head
 ```
 
-Or rebuild your NixOS config:
+**Update procedure:**
 
 ```bash
+# 1. Check current version
+sudo podman inspect pihole | grep -i "pihole/pihole"
+
+# 2. Check for new versions at https://github.com/pi-hole/docker-pi-hole/releases
+
+# 3. Update the image option in your config
+# machines/server/config.nix or domains/server/containers/pihole/options.nix
+hwc.services.containers.pihole.image = "pihole/pihole:2024.08.0";  # New version
+
+# 4. Rebuild NixOS
+sudo nixos-rebuild switch
+
+# 5. Verify new version and functionality
+sudo podman inspect pihole | grep Image
+curl http://localhost:8080/admin  # Check web UI loads
+```
+
+**Rollback (if needed):**
+```bash
+# Stop container
+sudo systemctl stop podman-pihole
+
+# Restore from backup
+sudo rm -rf ${cfg.dataDir} ${cfg.dnsmasqDir}
+sudo tar -xzf /mnt/media/backups/pihole-backup-YYYY-MM-DD.tar.gz -C /
+
+# Revert image version in config
+# hwc.services.containers.pihole.image = "pihole/pihole:2024.07.0";  # Old version
 sudo nixos-rebuild switch
 ```
+
+**Note**: Avoid using `:latest` tag as it breaks reproducibility (CHARTER requirement).
+
+**Advanced: SHA256 Digest Pinning**
+
+For maximum reproducibility (tags can be re-pointed, digests cannot), use digest pinning:
+
+```nix
+hwc.services.containers.pihole.image = "pihole/pihole@sha256:abcd1234...";  # Immutable
+```
+
+Find digests at https://hub.docker.com/r/pihole/pihole/tags - click on a tag to see its digest.
 
 ### Access Shell Inside Container
 
@@ -307,16 +369,41 @@ This persists across:
 
 ### Password Security
 
-**CRITICAL**: Change the default password!
+**CRITICAL**: Always use a secure password!
 
-For production, consider using secrets management:
+**RECOMMENDED**: Use agenix secrets management with `webPasswordFile`:
+
+This implementation uses **runtime environment file generation** to prevent secrets from leaking into the Nix store. The password is read from `/run/agenix` at boot time (after agenix decrypts it), not during Nix evaluation.
 
 ```nix
-# Using agenix (if set up)
+# Step 1: Create encrypted secret
+# echo "your-secure-password" | age -r <pubkey> > domains/secrets/parts/server/pihole-password.age
+
+# Step 2: Declare in domains/secrets/declarations/server.nix
+age.secrets.pihole-password = {
+  file = ../../parts/server/pihole-password.age;
+  mode = "0440";
+  group = "secrets";
+};
+
+# Step 3: Use in Pi-hole config (CHARTER-compliant: no Nix store leaks)
 hwc.services.containers.pihole = {
   enable = true;
-  webPassword = config.age.secrets.pihole-password.path;  # Example
+  webPasswordFile = config.age.secrets.pihole-password.path;  # /run/agenix/pihole-password
 };
+```
+
+**How it works:**
+1. `agenix.service` runs at boot, decrypting secrets to `/run/agenix/`
+2. `pihole-env-setup.service` runs after agenix, reading the decrypted password and generating `${dataDir}/.env`
+3. `podman-pihole.service` starts with `environmentFiles = ["${dataDir}/.env"]`, reading the password at container start
+4. **No secrets in Nix store** - password never evaluated during `nixos-rebuild`
+
+**ALTERNATIVE** (less secure): Use `webPassword` for testing only:
+```nix
+# WARNING: This stores the password in the Nix store (world-readable)
+# Only use for testing, never for production
+hwc.services.containers.pihole.webPassword = "test-only-password";
 ```
 
 ### Network Exposure

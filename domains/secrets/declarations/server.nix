@@ -138,6 +138,22 @@
       owner = "eric";
       group = "secrets";
     };
+
+    # Jellyfin user passwords
+    jellyfin-admin-password = {
+      file = ../parts/server/jellyfin/admin-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
+    jellyfin-eric-password = {
+      file = ../parts/server/jellyfin/eric-password.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
     # Frigate secrets are in domains/secrets/declarations/infrastructure.nix
     # (camera/surveillance secrets belong to infrastructure domain)
   };

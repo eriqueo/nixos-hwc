@@ -55,15 +55,15 @@ in
         scrape_interval = "30s";
       }
     ];
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = [
-    {
-      assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-      message = "cAdvisor requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
-    }
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
+        message = "cAdvisor requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+      }
+    ];
+  };
 }

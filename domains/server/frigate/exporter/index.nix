@@ -26,7 +26,7 @@ in
   config = lib.mkIf cfg.enable {
     # Frigate exporter container
     virtualisation.oci-containers.containers.frigate-exporter = {
-      image = "docker.io/rhysbailey/frigate-exporter:latest";
+      image = "ghcr.io/blakeblackshear/frigate-prometheus-exporter:latest";
       autoStart = true;
 
       ports = [
@@ -34,8 +34,7 @@ in
       ];
 
       environment = {
-        FRIGATE_URL = cfg.frigateUrl;
-        METRICS_PORT = toString cfg.port;
+        FRIGATE_STATS_URL = "${cfg.frigateUrl}/api/stats";
       };
 
       dependsOn = [ "frigate" ];
@@ -51,19 +50,19 @@ in
         scrape_interval = "30s";
       }
     ];
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = [
-    {
-      assertion = !cfg.enable || frigateCfg.enable;
-      message = "Frigate exporter requires Frigate to be enabled (hwc.server.frigate.enable = true)";
-    }
-    {
-      assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-      message = "Frigate exporter requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
-    }
-  ];
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || frigateCfg.enable;
+        message = "Frigate exporter requires Frigate to be enabled (hwc.server.frigate.enable = true)";
+      }
+      {
+        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
+        message = "Frigate exporter requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+      }
+    ];
+  };
 }

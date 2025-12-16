@@ -1,6 +1,12 @@
 mqtt:
   enabled: false
 
+telemetry:
+  stats:
+    amd_gpu_stats: false
+    intel_gpu_stats: false
+    network_bandwidth: false
+
 detectors:
   onnx:
     type: onnx

@@ -15,15 +15,10 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
-    # Add helpful system packages for Pi-hole management
-    environment.systemPackages = with pkgs; [
-      podman-compose
-    ];
-  };
+  config = lib.mkIf cfg.enable { };
 
   #==========================================================================
   # VALIDATION
   #==========================================================================
-  # Validation logic in sys.nix per Charter pattern
+  # Validation logic in sys.nix per CHARTER pattern
 }

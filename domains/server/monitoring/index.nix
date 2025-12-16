@@ -12,7 +12,7 @@
     ./prometheus/index.nix
     ./grafana/index.nix
     ./alertmanager/index.nix
-    ./cadvisor
-    ./exportarr
+    ./cadvisor/index.nix
+    ./exportarr/index.nix
   ];
 }

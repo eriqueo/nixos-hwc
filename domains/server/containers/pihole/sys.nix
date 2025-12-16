@@ -17,6 +17,26 @@ in
       ];
     }
 
+    # Generate environment file from secrets at runtime (CHARTER-compliant: no builtins.readFile)
+    (lib.mkIf (cfg.webPasswordFile != null) {
+      systemd.services.pihole-env-setup = {
+        description = "Generate Pi-hole environment file from agenix secrets";
+        before = [ "podman-pihole.service" ];
+        wantedBy = [ "podman-pihole.service" ];
+        wants = [ "agenix.service" ];
+        after = [ "agenix.service" ];
+        serviceConfig.Type = "oneshot";
+        script = ''
+          mkdir -p ${cfg.dataDir}
+          WEBPASSWORD=$(cat ${cfg.webPasswordFile})
+          cat > ${cfg.dataDir}/.env <<EOF
+WEBPASSWORD=$WEBPASSWORD
+EOF
+          chmod 600 ${cfg.dataDir}/.env
+        '';
+      };
+    })
+
     # Disable systemd-resolved DNS stub listener if requested
     (lib.mkIf cfg.disableResolvedStub {
       services.resolved = {
@@ -45,9 +65,12 @@ in
           "${cfg.dnsmasqDir}:/etc/dnsmasq.d"
         ];
 
+        # Use environmentFiles for secrets (CHARTER-compliant: no Nix store leaks)
+        environmentFiles = lib.optional (cfg.webPasswordFile != null) "${cfg.dataDir}/.env";
+
         environment = {
           TZ = cfg.timezone;
-          WEBPASSWORD = cfg.webPassword;
+          # WEBPASSWORD from environmentFiles if using secrets, otherwise from option
           PIHOLE_DNS_ = upstreamDnsString;
           DNSMASQ_LISTENING = "all";
           WEB_PORT = toString cfg.webPort;
@@ -57,7 +80,11 @@ in
           QUERY_LOGGING = "true";
           # FTL options
           FTLCONF_LOCAL_IPV4 = "0.0.0.0";
-        } // cfg.extraEnvironment;
+        } // cfg.extraEnvironment
+          // lib.optionalAttrs (cfg.webPasswordFile == null && cfg.webPassword != "") {
+            # Only set WEBPASSWORD directly if not using file
+            WEBPASSWORD = cfg.webPassword;
+          };
 
         extraOptions = [
           "--cap-add=NET_ADMIN"
@@ -75,6 +102,14 @@ in
         allowedUDPPorts = [ cfg.dnsPort ];
       };
     }
+
+    # Service dependencies (ensure agenix runs before container)
+    (lib.mkIf (cfg.webPasswordFile != null) {
+      systemd.services."podman-pihole" = {
+        after = [ "agenix.service" "pihole-env-setup.service" ];
+        wants = [ "agenix.service" ];
+      };
+    })
 
     #==========================================================================
     # VALIDATION
@@ -95,6 +130,17 @@ in
             Pi-hole is configured to use port 53, but systemd-resolved is using it.
             Either set disableResolvedStub = true (recommended) or use a different dnsPort.
           '';
+        }
+        {
+          assertion = !cfg.enable || (cfg.webPassword != "" || cfg.webPasswordFile != null);
+          message = ''
+            Pi-hole requires either webPassword or webPasswordFile to be set.
+            For production, use webPasswordFile with agenix secrets.
+          '';
+        }
+        {
+          assertion = !cfg.enable || (cfg.upstreamDns != []);
+          message = "Pi-hole requires at least one upstream DNS server in upstreamDns.";
         }
       ];
     }

@@ -9,8 +9,13 @@ in
 
     image = mkOption {
       type = types.str;
-      default = "pihole/pihole:latest";
-      description = "Container image for Pi-hole";
+      default = "pihole/pihole:2024.07.0";
+      description = ''
+        Container image for Pi-hole (explicit version per CHARTER config-first pattern).
+        For maximum reproducibility, consider using digest pinning:
+        "pihole/pihole@sha256:..." instead of tags.
+        Check https://hub.docker.com/r/pihole/pihole/tags for digests.
+      '';
     };
 
     webPort = mkOption {
@@ -30,7 +35,18 @@ in
       default = "";
       description = ''
         Web interface password. Leave empty to generate one automatically.
-        For production, use a secrets management solution.
+        DEPRECATED: Use webPasswordFile instead for better security.
+      '';
+    };
+
+    webPasswordFile = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      example = "/run/agenix/pihole-password";
+      description = ''
+        Path to file containing web interface password.
+        Recommended over webPassword for production use.
+        Use with agenix secrets: config.age.secrets.pihole-password.path
       '';
     };
 
