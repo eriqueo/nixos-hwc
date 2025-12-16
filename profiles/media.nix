@@ -3,11 +3,7 @@ let
   cfg = config.hwc.features.media;
 in
 {
-  options.hwc.features.media = {
-    enable = lib.mkEnableOption "media services (Jellyfin, *arr stack)";
-  };
 
-  config = lib.mkIf cfg.enable {
     #==========================================================================
     # MEDIA STORAGE - Storage configuration for media services
     #==========================================================================

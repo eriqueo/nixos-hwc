@@ -13,4 +13,8 @@
   "privacy.globalprivacycontrol.enabled" = true;
   "browser.urlbar.suggest.quicksuggest.sponsored" = false;
   "browser.urlbar.suggest.quicksuggest.nonsponsored" = false;
+  "browser.urlbar.suggest.searches" = false;    # disable remote suggestions
+  "browser.urlbar.suggest.history" = true;      # keep fast local history
+  "ui.prefersReducedMotion" = 1;
+  "toolkit.cosmeticAnimations.enabled" = false;
 }
