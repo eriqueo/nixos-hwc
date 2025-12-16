@@ -11,7 +11,7 @@
 #   - profiles/*.nix (enables via hwc.services.transcriptApi.enable)
 #
 # IMPORTS REQUIRED IN:
-#   - profiles/server.nix: ../domains/server/networking/parts/transcript-api.nix
+#   - profiles/server.nix: ../domains/server/native/networking/parts/transcript-api.nix
 #
 # USAGE:
 #   hwc.services.transcriptApi.enable = true;

@@ -1,7 +1,7 @@
 { lib, ... }:
 {
   imports = [
-    ../domains/server/business/index.nix
+    ../domains/server/native/business/index.nix
   ];
 
   config = {
