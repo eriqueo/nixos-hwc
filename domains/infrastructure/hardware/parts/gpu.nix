@@ -301,7 +301,11 @@ in
           fi
 
           CURRENT_MODE=$(cat "$GPU_MODE_FILE" 2>/dev/null || echo "$DEFAULT_MODE")
-          CURRENT_GPU=$(glxinfo 2>/dev/null | grep "OpenGL renderer" | cut -d: -f2 | xargs || echo "Unknown")
+
+          # Hardcoded GPU names (glxinfo removed to prevent CPU temperature spikes)
+          INTEL_GPU="Intel Graphics"
+          NVIDIA_GPU="NVIDIA RTX 2000 Ada"
+
           ${lib.optionalString (cfg.type == "nvidia") ''
             NVIDIA_POWER=$(nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
             NVIDIA_TEMP=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
@@ -311,13 +315,13 @@ in
             "intel")
               ICON="󰢮"
               CLASS="intel"
-              TOOLTIP="Intel Mode: $CURRENT_GPU"
+              TOOLTIP="Intel Mode: $INTEL_GPU"
               ;;
             "nvidia")
               ICON="󰾲"
               CLASS="nvidia"
               ${lib.optionalString (cfg.type == "nvidia") ''
-                TOOLTIP="NVIDIA Mode: $CURRENT_GPU\nPower: $NVIDIA_POWER W | Temp: $NVIDIA_TEMP°C"
+                TOOLTIP="NVIDIA Mode: $NVIDIA_GPU\nPower: $NVIDIA_POWER W | Temp: $NVIDIA_TEMP°C"
               ''}
               ;;
             "performance")
@@ -330,7 +334,7 @@ in
             *)
               ICON="󰢮"
               CLASS="intel"
-              TOOLTIP="Intel Mode (Default): $CURRENT_GPU"
+              TOOLTIP="Intel Mode (Default): $INTEL_GPU"
               ;;
           esac
 
