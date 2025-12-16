@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.navidrome;
+  cfg = config.hwc.server.containers.navidrome;
 in
 {
   #==========================================================================

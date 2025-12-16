@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.lidarr = {
+  options.hwc.server.containers.lidarr = {
     enable = mkEnableOption "lidarr container";
     image  = mkOption {
       type = types.str;

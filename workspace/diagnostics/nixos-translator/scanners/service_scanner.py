@@ -118,7 +118,7 @@ class ServiceScanner:
         if 'infrastructure' in parts:
             return 'infrastructure'
 
-        # hwc.services.containers.* → containerized services
+        # hwc.server.containers.* → containerized services
         if 'containers' in parts:
             return 'container'
 

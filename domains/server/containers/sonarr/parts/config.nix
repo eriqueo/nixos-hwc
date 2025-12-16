@@ -1,7 +1,7 @@
 # Sonarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.sonarr;
+  cfg = config.hwc.server.containers.sonarr;
 in
 {
   config = lib.mkIf cfg.enable {

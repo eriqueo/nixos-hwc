@@ -18,7 +18,7 @@ Jellyseerr is a request management and media discovery tool for Jellyfin. It pro
 ### Module Options
 
 ```nix
-hwc.services.containers.jellyseerr = {
+hwc.server.containers.jellyseerr = {
   enable = true;                                      # Enable Jellyseerr
   image = "lscr.io/linuxserver/jellyseerr:latest";   # Container image
   network.mode = "media";                             # Network mode: "media" or "vpn"
@@ -47,7 +47,7 @@ Jellyseerr depends on:
 
 1. **Enable the service** in your profile:
    ```nix
-   hwc.services.containers.jellyseerr.enable = true;
+   hwc.server.containers.jellyseerr.enable = true;
    ```
 
 2. **Rebuild NixOS**:
@@ -92,7 +92,7 @@ Jellyseerr depends on:
 ### HWC Charter Compliance
 
 - **Domain**: `domains/server/containers/jellyseerr/`
-- **Namespace**: `hwc.services.containers.jellyseerr.*`
+- **Namespace**: `hwc.server.containers.jellyseerr.*`
 - **Options**: Defined in `options.nix` only
 - **Implementation**: Uses shared container helpers from `_shared/pure.nix`
 - **Network**: Integrated with media-network via shared infrastructure

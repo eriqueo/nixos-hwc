@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.sonarr;
+  cfg = config.hwc.server.containers.sonarr;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

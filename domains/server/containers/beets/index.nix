@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.beets;
+  cfg = config.hwc.server.containers.beets;
 in
 {
   #==========================================================================

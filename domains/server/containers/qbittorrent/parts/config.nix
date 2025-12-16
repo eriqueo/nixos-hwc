@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.qbittorrent;
+  cfg = config.hwc.server.containers.qbittorrent;
   paths = config.hwc.paths;
 in
 {
@@ -11,7 +11,7 @@ in
     #=========================================================================
     assertions = [
       {
-        assertion = cfg.network.mode != "vpn" || config.hwc.services.containers.gluetun.enable;
+        assertion = cfg.network.mode != "vpn" || config.hwc.server.containers.gluetun.enable;
         message = "qBittorrent with VPN networking requires gluetun container to be enabled";
       }
       {

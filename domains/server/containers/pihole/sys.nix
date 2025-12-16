@@ -1,7 +1,7 @@
 # domains/server/containers/pihole/sys.nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.pihole;
+  cfg = config.hwc.server.containers.pihole;
   upstreamDnsString = lib.concatStringsSep ";" cfg.upstreamDns;
 in
 {

@@ -1,7 +1,7 @@
 # Beets container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.beets;
+  cfg = config.hwc.server.containers.beets;
   cfgRoot = "/opt/downloads/beets";
 
   generateConfigScript = pkgs.writeShellScript "beets-generate-config" ''

@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.tdarr = {
+  options.hwc.server.containers.tdarr = {
     enable = mkEnableOption "Tdarr video transcoding container";
 
     image = mkOption {

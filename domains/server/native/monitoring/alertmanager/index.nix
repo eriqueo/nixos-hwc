@@ -54,6 +54,9 @@ in
       enable = true;
       port = cfg.port;
       configuration = alertmanagerConfig;
+      extraFlags = [
+        "--storage.path=${cfg.dataDir}"
+      ];
     };
 
     # Configure Prometheus to send alerts to Alertmanager

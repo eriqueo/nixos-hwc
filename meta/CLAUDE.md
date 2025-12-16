@@ -213,7 +213,7 @@ sudo nixos-rebuild switch --flake .#hwc-laptop
 **Issue**: Containerized Jellyfin vs Native Service Connectivity
 
 **Problem**:
-Containerized Jellyfin (`hwc.services.containers.jellyfin`) was isolated on `media-network` container network, preventing external device access (Roku TVs, etc.) despite proper port mapping and firewall configuration.
+Containerized Jellyfin (`hwc.server.containers.jellyfin`) was isolated on `media-network` container network, preventing external device access (Roku TVs, etc.) despite proper port mapping and firewall configuration.
 
 **Root Cause**:
 - Container network isolation created routing barriers
@@ -225,7 +225,7 @@ Switch to native NixOS service for media servers requiring external device acces
 
 ```nix
 # ❌ Problematic containerized approach
-hwc.services.containers.jellyfin.enable = true;
+hwc.server.containers.jellyfin.enable = true;
 
 # ✅ Working native service approach
 services.jellyfin = {

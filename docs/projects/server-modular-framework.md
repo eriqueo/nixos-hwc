@@ -63,7 +63,7 @@ Choose with `network.mode = "media"` or `"vpn"` in the service options.
 Each app **publishes routes**:
 
 ```nix
-hwc.services.containers.reverseProxy.routes = lib.mkAfter [
+hwc.server.containers.reverseProxy.routes = lib.mkAfter [
   (shared.mkRoute { path = "/sonarr"; upstream = "127.0.0.1:8989"; })
 ];
 ```
@@ -108,7 +108,7 @@ Read at runtime from `/run/agenix/vpn_username` etc. inside oneshots or scripts.
     # ../domains/services/containers/obsidian  # if used on server
   ];
 
-  hwc.services.containers = {
+  hwc.server.containers = {
     caddy.enable      = true;
     caddy.hostname    = "media.example.internal";
 
@@ -211,7 +211,7 @@ Choose with `network.mode = "media"` or `"vpn"` in the service options.
 Each app **publishes routes**:
 
 ```nix
-hwc.services.containers.reverseProxy.routes = lib.mkAfter [
+hwc.server.containers.reverseProxy.routes = lib.mkAfter [
   (shared.mkRoute { path = "/sonarr"; upstream = "127.0.0.1:8989"; })
 ];
 ```
@@ -256,7 +256,7 @@ Read at runtime from `/run/agenix/vpn_username` etc. inside oneshots or scripts.
     # ../domains/services/containers/obsidian  # if used on server
   ];
 
-  hwc.services.containers = {
+  hwc.server.containers = {
     caddy.enable      = true;
     caddy.hostname    = "media.example.internal";
 

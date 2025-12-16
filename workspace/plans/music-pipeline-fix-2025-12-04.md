@@ -43,7 +43,7 @@ Refactor slskd and soularr to use `mkContainer` helper following lidarr's patter
 { lib, config, pkgs, ... }:
 let
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.slskd;
+  cfg = config.hwc.server.containers.slskd;
 
   # Import config generator for YAML
   configModule = import ./parts/config.nix { inherit config lib pkgs; };
@@ -96,7 +96,7 @@ Extract the YAML config generation logic, remove the `virtualisation.oci-contain
 { lib, config, pkgs, ... }:
 let
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.soularr;
+  cfg = config.hwc.server.containers.soularr;
 
   # Import config seeder
   configSeeder = import ./parts/config.nix { inherit config lib pkgs; };
@@ -147,11 +147,11 @@ config.assertions = lib.mkIf cfg.enable [
 ```nix
 config.assertions = lib.mkIf cfg.enable [
   {
-    assertion = config.hwc.services.containers.slskd.enable;
+    assertion = config.hwc.server.containers.slskd.enable;
     message = "soularr requires slskd to be enabled";
   }
   {
-    assertion = config.hwc.services.containers.lidarr.enable;
+    assertion = config.hwc.server.containers.lidarr.enable;
     message = "soularr requires lidarr to be enabled";
   }
 ];
@@ -287,7 +287,7 @@ Create automated systemd timers for:
 
 ### Files to Create/Modify
 
-#### 1. `/home/eric/.nixos/domains/server/apps/beets-native/parts/beets-auto-import.sh`
+#### 1. `/home/eric/.nixos/domains/server/beets-native/parts/beets-auto-import.sh`
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
@@ -330,7 +330,7 @@ curl -s http://localhost:4533/api/scan || true
 echo "[$(date)] Cleanup complete"
 ```
 
-#### 2. `/home/eric/.nixos/domains/server/apps/beets-native/index.nix`
+#### 2. `/home/eric/.nixos/domains/server/beets-native/index.nix`
 Add systemd services and timers:
 
 ```nix
@@ -379,7 +379,7 @@ systemd.timers.beets-weekly-cleanup = {
 };
 ```
 
-#### 3. `/home/eric/.nixos/domains/server/apps/beets-native/options.nix`
+#### 3. `/home/eric/.nixos/domains/server/beets-native/options.nix`
 Add automation options:
 
 ```nix
@@ -478,7 +478,7 @@ All changes follow Charter v6.0:
 ```bash
 ./workspace/utilities/lints/charter-lint.sh domains/server/containers/slskd
 ./workspace/utilities/lints/charter-lint.sh domains/server/containers/soularr
-./workspace/utilities/lints/charter-lint.sh domains/server/apps/beets-native
+./workspace/utilities/lints/charter-lint.sh domains/server/beets-native
 nix flake check
 ```
 

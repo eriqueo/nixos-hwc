@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.prowlarr;
+  cfg = config.hwc.server.containers.prowlarr;
 in
 {
   #==========================================================================

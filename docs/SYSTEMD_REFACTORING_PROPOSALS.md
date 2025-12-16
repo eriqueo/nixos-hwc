@@ -729,10 +729,10 @@ in {
 ```nix
 { config, lib, ... }:
 let
-  cfg = config.hwc.services.containers.radarr;
+  cfg = config.hwc.server.containers.radarr;
   paths = config.hwc.paths;
 in {
-  options.hwc.services.containers.radarr = {
+  options.hwc.server.containers.radarr = {
     enable = lib.mkEnableOption "Radarr movie management";
     # Other options...
   };

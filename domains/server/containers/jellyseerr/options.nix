@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.jellyseerr = {
+  options.hwc.server.containers.jellyseerr = {
     enable = mkEnableOption "jellyseerr container";
     image  = mkOption { type = types.str; default = "docker.io/fallenbagel/jellyseerr:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

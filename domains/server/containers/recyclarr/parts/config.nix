@@ -1,7 +1,7 @@
 # Recyclarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.recyclarr;
+  cfg = config.hwc.server.containers.recyclarr;
   cfgRoot = "/opt/downloads/recyclarr";
 
   generateConfigScript = pkgs.writeShellScript "recyclarr-generate-config" ''

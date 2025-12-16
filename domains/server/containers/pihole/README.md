@@ -14,7 +14,7 @@ Network-wide ad blocking using Pi-hole running in a Podman container.
 ## Charter Compliance
 
 - **Domain**: `domains/server/containers/pihole/` (server workload)
-- **Namespace**: `hwc.services.containers.pihole.*`
+- **Namespace**: `hwc.server.containers.pihole.*`
 - **Data location**: `/opt/networking/pihole/` (per Charter container storage pattern)
 - **Validation**: Comprehensive assertions for dependencies and conflicts
 - **Structure**: `index.nix`, `options.nix`, `sys.nix` pattern
@@ -27,7 +27,7 @@ Add to your server's `machines/server/config.nix`:
 
 ```nix
 {
-  hwc.services.containers.pihole = {
+  hwc.server.containers.pihole = {
     enable = true;
     # RECOMMENDED: Use webPasswordFile with agenix secrets
     webPasswordFile = config.age.secrets.pihole-password.path;
@@ -62,7 +62,7 @@ sudo nixos-rebuild switch
 
 ```nix
 {
-  hwc.services.containers.pihole = {
+  hwc.server.containers.pihole = {
     enable = true;
 
     # Container image (explicit version per CHARTER)
@@ -95,7 +95,7 @@ sudo nixos-rebuild switch
 
 ```nix
 {
-  hwc.services.containers.pihole = {
+  hwc.server.containers.pihole = {
     enable = true;
     image = "pihole/pihole:2024.07.0";  # Pin to specific version
     webPort = 8080;
@@ -220,7 +220,7 @@ sudo podman inspect pihole | grep -i "pihole/pihole"
 
 # 3. Update the image option in your config
 # machines/server/config.nix or domains/server/containers/pihole/options.nix
-hwc.services.containers.pihole.image = "pihole/pihole:2024.08.0";  # New version
+hwc.server.containers.pihole.image = "pihole/pihole:2024.08.0";  # New version
 
 # 4. Rebuild NixOS
 sudo nixos-rebuild switch
@@ -240,7 +240,7 @@ sudo rm -rf ${cfg.dataDir} ${cfg.dnsmasqDir}
 sudo tar -xzf /mnt/media/backups/pihole-backup-YYYY-MM-DD.tar.gz -C /
 
 # Revert image version in config
-# hwc.services.containers.pihole.image = "pihole/pihole:2024.07.0";  # Old version
+# hwc.server.containers.pihole.image = "pihole/pihole:2024.07.0";  # Old version
 sudo nixos-rebuild switch
 ```
 
@@ -251,7 +251,7 @@ sudo nixos-rebuild switch
 For maximum reproducibility (tags can be re-pointed, digests cannot), use digest pinning:
 
 ```nix
-hwc.services.containers.pihole.image = "pihole/pihole@sha256:abcd1234...";  # Immutable
+hwc.server.containers.pihole.image = "pihole/pihole@sha256:abcd1234...";  # Immutable
 ```
 
 Find digests at https://hub.docker.com/r/pihole/pihole/tags - click on a tag to see its digest.
@@ -387,7 +387,7 @@ age.secrets.pihole-password = {
 };
 
 # Step 3: Use in Pi-hole config (CHARTER-compliant: no Nix store leaks)
-hwc.services.containers.pihole = {
+hwc.server.containers.pihole = {
   enable = true;
   webPasswordFile = config.age.secrets.pihole-password.path;  # /run/agenix/pihole-password
 };
@@ -403,7 +403,7 @@ hwc.services.containers.pihole = {
 ```nix
 # WARNING: This stores the password in the Nix store (world-readable)
 # Only use for testing, never for production
-hwc.services.containers.pihole.webPassword = "test-only-password";
+hwc.server.containers.pihole.webPassword = "test-only-password";
 ```
 
 ### Network Exposure
@@ -428,13 +428,13 @@ hwc.services.containers.pihole.webPassword = "test-only-password";
 If port 8080 conflicts with other services:
 
 ```nix
-hwc.services.containers.pihole.webPort = 8888;  # Or any free port
+hwc.server.containers.pihole.webPort = 8888;  # Or any free port
 ```
 
 ### Use Different DNS Providers
 
 ```nix
-hwc.services.containers.pihole.upstreamDns = [
+hwc.server.containers.pihole.upstreamDns = [
   "9.9.9.9"    # Quad9
   "149.112.112.112"  # Quad9 secondary
 ];
@@ -443,7 +443,7 @@ hwc.services.containers.pihole.upstreamDns = [
 ### Customize Data Location
 
 ```nix
-hwc.services.containers.pihole = {
+hwc.server.containers.pihole = {
   dataDir = "/mnt/media/pihole";  # Use different storage
   dnsmasqDir = "/mnt/media/pihole/dnsmasq.d";
 };

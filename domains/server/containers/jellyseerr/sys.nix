@@ -1,7 +1,7 @@
 { lib, pkgs, config, ... }:
 let
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.jellyseerr;
+  cfg = config.hwc.server.containers.jellyseerr;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

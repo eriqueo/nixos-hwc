@@ -231,7 +231,7 @@ systemd.services.business-api = {
 
 ---
 
-#### 3.2 Fabric API (`domains/server/apps/fabric-api/index.nix`)
+#### 3.2 Fabric API (`domains/server/fabric-api/index.nix`)
 
 **✅ BEST PRACTICE EXAMPLE:**
 ```nix

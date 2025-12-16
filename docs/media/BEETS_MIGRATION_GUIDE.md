@@ -27,10 +27,10 @@ In your NixOS configuration, find where beets container is enabled (likely `prof
 
 ```nix
 # OLD - Disable this
-hwc.services.containers.beets.enable = false;  # or comment out
+hwc.server.containers.beets.enable = false;  # or comment out
 
 # NEW - Enable this instead
-hwc.server.apps.beets-native.enable = true;
+hwc.server.beets-native.enable = true;
 ```
 
 ### 3. Rebuild
@@ -109,8 +109,8 @@ If you need to go back to the container:
 
 ```bash
 # Re-enable container
-hwc.services.containers.beets.enable = true;
-hwc.server.apps.beets-native.enable = false;
+hwc.server.containers.beets.enable = true;
+hwc.server.beets-native.enable = false;
 
 # Rebuild
 sudo nixos-rebuild switch --flake .#hwc-server

@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.caddy;
+  cfg = config.hwc.server.containers.caddy;
 in
 {
   #==========================================================================

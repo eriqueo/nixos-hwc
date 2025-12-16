@@ -13,7 +13,7 @@ This guide demonstrates how to extract individual container definitions from a m
 ### Charter Requirements
 
 Each container module must follow:
-- **Namespace**: `hwc.services.containers.SERVICE`
+- **Namespace**: `hwc.server.containers.SERVICE`
 - **Unit Anatomy**: `options.nix`, `index.nix`, `parts/config.nix`, `sys.nix`
 - **Secrets**: agenix integration (not SOPS)
 - **Validation**: Proper assertions for dependencies
@@ -84,7 +84,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.gluetun = {
+  options.hwc.server.containers.gluetun = {
     enable = mkEnableOption "gluetun VPN container";
     image = mkOption {
       type = types.str;
@@ -110,7 +110,7 @@ in
 ```nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.gluetun;
+  cfg = config.hwc.server.containers.gluetun;
 in
 {
   #==========================================================================
@@ -160,7 +160,7 @@ in
 # gluetun container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.gluetun;
+  cfg = config.hwc.server.containers.gluetun;
   cfgRoot = "/opt/downloads";
   mediaNetworkName = "media-network";
 in
@@ -226,7 +226,7 @@ EOF
 ```nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.gluetun;
+  cfg = config.hwc.server.containers.gluetun;
 in
 {
   config = lib.mkIf cfg.enable {
@@ -277,7 +277,7 @@ imports = [
 ];
 
 # Container services (Charter v6 migration test)
-hwc.services.containers.gluetun.enable = true;
+hwc.server.containers.gluetun.enable = true;
 ```
 
 ### 9. Test and Validate
@@ -336,7 +336,7 @@ systemd.services."podman-SERVICE".wants = [ "network-online.target" ];
 ## Validation Checklist
 
 - [ ] **Build succeeds**: `sudo nixos-rebuild build --flake .#hwc-server`
-- [ ] **Namespace correct**: `hwc.services.containers.SERVICE`
+- [ ] **Namespace correct**: `hwc.server.containers.SERVICE`
 - [ ] **Secrets working**: agenix paths accessible
 - [ ] **No conflicts**: Single container definition per service
 - [ ] **Dependencies preserved**: Network, storage, ordering

@@ -24,16 +24,20 @@ let
   '';
 in
 {
-  systemd.services.protonmail-bridge-cert = {
-    description = "Export Proton Bridge IMAP STARTTLS certificate";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" "protonmail-bridge.service" ];
-    wants = [ "network-online.target" ];
-    requires = [ "protonmail-bridge.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${waitFor1143}";
-      ExecStartPost = "${exportCert}";
+  imports = [ ./options.nix ];
+
+  config = lib.mkIf config.hwc.system.services.protonmail-bridge-cert.enable {
+    systemd.services.protonmail-bridge-cert = {
+      description = "Export Proton Bridge IMAP STARTTLS certificate";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" "protonmail-bridge.service" ];
+      wants = [ "network-online.target" ];
+      requires = [ "protonmail-bridge.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${waitFor1143}";
+        ExecStartPost = "${exportCert}";
+      };
     };
   };
 }

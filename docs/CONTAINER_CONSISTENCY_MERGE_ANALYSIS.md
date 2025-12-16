@@ -30,7 +30,7 @@ Example from branch's sonarr/parts/config.nix:
 ```nix
 assertions = [
   {
-    assertion = cfg.network.mode != "vpn" || config.hwc.services.containers.gluetun.enable;
+    assertion = cfg.network.mode != "vpn" || config.hwc.server.containers.gluetun.enable;
     message = "Sonarr with VPN networking requires gluetun container to be enabled";
   }
   {

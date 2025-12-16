@@ -275,16 +275,16 @@
   };
 
   # Container services (Charter v6 migration test)
-  hwc.services.containers.gluetun.enable = true;
-  hwc.services.containers.qbittorrent.enable = true;
-  hwc.services.containers.sabnzbd.enable = true;
+  hwc.server.containers.gluetun.enable = true;
+  hwc.server.containers.qbittorrent.enable = true;
+  hwc.server.containers.sabnzbd.enable = true;
 
   # Phase 3: Media Management (*arr Stack)
-  hwc.services.containers.prowlarr.enable = true;
-  hwc.services.containers.sonarr.enable = true;
-  hwc.services.containers.radarr.enable = true;
-  hwc.services.containers.lidarr.enable = true;
-  hwc.services.containers.books.enable = true;  # LazyLibrarian for ebooks and audiobooks
+  hwc.server.containers.prowlarr.enable = true;
+  hwc.server.containers.sonarr.enable = true;
+  hwc.server.containers.radarr.enable = true;
+  hwc.server.containers.lidarr.enable = true;
+  hwc.server.containers.books.enable = true;  # LazyLibrarian for ebooks and audiobooks
 
   # Beets music organizer - INTENTIONALLY DISABLED (using native installation)
   # Container disabled in favor of native beets installation for:
@@ -293,16 +293,17 @@
   # - Direct access to music library without volume complexity
   # To re-enable container: set beets.enable = true AND disable beets-native
   # See: domains/server/containers/beets/ for container config
-  hwc.services.containers.beets.enable = false;
-  hwc.server.apps.beets-native.enable = true;
+  hwc.server.containers.beets.enable = false;
+  # TODO: beets-native option removed, need to create proper native service
+  # hwc.server.beets-native.enable = true;
 
-  hwc.services.containers.jellyseerr.enable = true;
+  hwc.server.containers.jellyseerr.enable = true;
 
   # Phase 4: Specialized Services (Soulseek integration)
-  hwc.services.containers.slskd.enable = true;
-  hwc.services.containers.soularr.enable = true;  # Now that Lidarr is enabled
-  # hwc.services.containers.navidrome.enable = true;  # Disabled - using native service
-  # hwc.services.containers.jellyfin.enable = true;  # Disabled - using native service
+  hwc.server.containers.slskd.enable = true;
+  hwc.server.containers.soularr.enable = true;  # Now that Lidarr is enabled
+  # hwc.server.containers.navidrome.enable = true;  # Disabled - using native service
+  # hwc.server.containers.jellyfin.enable = true;  # Disabled - using native service
 
   # Phase 5: Media Optimization and Management
   # Tdarr video transcoding - INTENTIONALLY DISABLED (high resource usage)
@@ -314,12 +315,12 @@
   # To enable: set tdarr.enable = true (all deps already configured)
   # Verify: GPU support, storage paths, networking all ready
   # See: domains/server/containers/tdarr/ for full config
-  hwc.services.containers.tdarr.enable = false;
-  hwc.services.containers.recyclarr = {
+  hwc.server.containers.tdarr.enable = false;
+  hwc.server.containers.recyclarr = {
     enable = true;
     services.lidarr.enable = false;  # Disable Lidarr sync (not supported in current Recyclarr version)
   };
-  hwc.services.containers.organizr.enable = true;
+  hwc.server.containers.organizr.enable = true;
 
   # Native Media Services (Charter compliant)
   hwc.server.navidrome = {

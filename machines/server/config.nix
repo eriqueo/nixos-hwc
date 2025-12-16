@@ -12,8 +12,8 @@
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
-    ../../domains/server/routes.nix
-    ../../domains/server/frigate/index.nix  # Config-first pattern NVR with GPU acceleration
+    ../../domains/server/native/routes.nix
+    ../../domains/server/native/frigate/index.nix  # Config-first pattern NVR with GPU acceleration
     ../../profiles/monitoring.nix   # Monitoring enabled: Prometheus + Grafana
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
@@ -546,4 +546,3 @@
 
   system.stateVersion = "24.05";
 }
-

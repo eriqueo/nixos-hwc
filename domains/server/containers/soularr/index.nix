@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.soularr;
+  cfg = config.hwc.server.containers.soularr;
 in
 {
   #==========================================================================
@@ -21,11 +21,11 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = config.hwc.services.containers.slskd.enable;
+        assertion = config.hwc.server.containers.slskd.enable;
         message = "soularr requires slskd to be enabled";
       }
       {
-        assertion = config.hwc.services.containers.lidarr.enable;
+        assertion = config.hwc.server.containers.lidarr.enable;
         message = "soularr requires lidarr to be enabled";
       }
       {

@@ -7,17 +7,20 @@
 { lib, config, pkgs, ... }:
 
 {
-  systemd.services.hwc-permission-validation = {
-    description = "Validate HWC permission model assumptions";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "local-fs.target" ];
+  imports = [ ./options.nix ];
 
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
+  config = lib.mkIf config.hwc.system.core.validation.enable {
+    systemd.services.hwc-permission-validation = {
+      description = "Validate HWC permission model assumptions";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "local-fs.target" ];
 
-    script = ''
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+
+      script = ''
       FAILED=0
 
       echo "===================================="
@@ -91,5 +94,6 @@
       echo "✅ All permission validations passed"
       echo ""
     '';
+    };
   };
 }

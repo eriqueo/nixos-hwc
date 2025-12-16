@@ -1,7 +1,7 @@
 # gluetun container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.gluetun;
+  cfg = config.hwc.server.containers.gluetun;
   cfgRoot = "/opt/downloads";
   mediaNetworkName = "media-network";
 in

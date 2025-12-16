@@ -6,10 +6,15 @@
 { lib, config, ... }:
 
 let
+  feature = config.hwc.server.business;
   cfg = config.hwc.services.businessApi;
   paths = config.hwc.paths;
 in
 {
+  options.hwc.server.business = {
+    enable = lib.mkEnableOption "business services feature flag";
+  };
+
   options.hwc.services.businessApi = {
     enable = lib.mkEnableOption "Business API services";
 

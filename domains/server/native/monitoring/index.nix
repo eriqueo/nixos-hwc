@@ -5,10 +5,10 @@
 #
 # Imports all monitoring modules
 
-{ ... }:
-
+{ lib, ... }:
 {
   imports = [
+    ./options.nix
     ./prometheus/index.nix
     ./grafana/index.nix
     ./alertmanager/index.nix

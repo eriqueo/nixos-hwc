@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.immich;
+  cfg = config.hwc.server.containers.immich;
 in
 {
   #==========================================================================

@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.jellyfin;
+  cfg = config.hwc.server.containers.jellyfin;
 in
 {
   imports = [

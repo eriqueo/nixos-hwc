@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.beets;
+  cfg = config.hwc.server.containers.beets;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

@@ -24,6 +24,12 @@
 - **Namespace Rule**: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
 - **Debugging**: Direct folder-to-namespace mapping for immediate error traceability
 
+**Namespace exceptions (documented, temporary)**:
+- `hwc.filesystem` (short for `hwc.system.core.filesystem`)
+- `hwc.networking` (short for `hwc.system.services.networking`)
+- `hwc.home.fonts` (short for `hwc.home.theme.fonts`)
+- Legacy alias: `hwc.services.containers.*` → `hwc.server.containers.*` (compat shim present; use new namespace)
+
 ### **Modules**
 - **Definition**: A single logical concern that provides one place to configure all aspects of that concern
 - **Purpose**: "One place per concern" - all hyprland config, all user config, etc. lives in one logical location
@@ -389,7 +395,7 @@ rg "/mnt/" domains/
 * **Native Services**: Use for external device connectivity (media servers, game servers)
   - Media services requiring LAN device access (Jellyfin for Roku/smart TVs)
   - Services with complex network discovery requirements
-  - Example: `services.jellyfin.enable = true` instead of `hwc.services.containers.jellyfin.enable`
+  - Example: `services.jellyfin.enable = true` instead of `hwc.server.containers.jellyfin.enable`
 
 * **Containers**: Use for internal services, isolated workloads
   - API services, databases, processing workloads

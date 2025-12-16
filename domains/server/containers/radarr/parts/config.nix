@@ -1,7 +1,7 @@
 # Radarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.radarr;
+  cfg = config.hwc.server.containers.radarr;
 in
 {
   config = lib.mkIf cfg.enable {

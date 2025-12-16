@@ -1,7 +1,7 @@
 # Tdarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.tdarr;
+  cfg = config.hwc.server.containers.tdarr;
   paths = config.hwc.paths;
 in
 {
