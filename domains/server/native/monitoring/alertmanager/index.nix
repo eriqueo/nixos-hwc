@@ -54,9 +54,6 @@ in
       enable = true;
       port = cfg.port;
       configuration = alertmanagerConfig;
-      extraFlags = [
-        "--storage.path=${cfg.dataDir}"
-      ];
     };
 
     # Configure Prometheus to send alerts to Alertmanager
@@ -66,14 +63,15 @@ in
       }];
     }];
 
-    # Run as eric user and override storage path
+    # Run as eric user
+    # Note: NixOS alertmanager module hardcodes --storage.path=/var/lib/alertmanager
+    # We create that directory and ensure eric owns it
     systemd.services.alertmanager = {
       serviceConfig = {
         User = lib.mkForce "eric";
         Group = lib.mkForce "users";
-        StateDirectory = lib.mkForce "hwc/alertmanager";
-        DynamicUser = lib.mkForce false;  # Disable DynamicUser complexity - use simple eric user
-        WorkingDirectory = lib.mkForce cfg.dataDir;
+        StateDirectory = lib.mkForce "alertmanager";  # Creates /var/lib/alertmanager owned by eric
+        DynamicUser = lib.mkForce false;
       };
     };
 
