@@ -17,4 +17,8 @@
   "browser.urlbar.suggest.history" = true;      # keep fast local history
   "ui.prefersReducedMotion" = 1;
   "toolkit.cosmeticAnimations.enabled" = false;
+  "network.proxy.type" = 0; # ensure direct connection
+  "browser.offline" = false;
+  "network.manage-offline-status" = true;
+  "network.connectivity-service.enabled" = true;
 }

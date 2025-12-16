@@ -78,6 +78,12 @@ in
       color: var(--hwc-fg) !important;
     }
 
+    .urlbarView-body-inner {
+      background: var(--hwc-bg) !important;
+      color: var(--hwc-fg) !important;
+      border: 1px solid var(--hwc-border) !important;
+    }
+
     .urlbarView-row {
       background: var(--hwc-bg) !important;
       color: var(--hwc-fg) !important;
@@ -114,6 +120,152 @@ in
     #urlbar-results,
     .urlbarView {
       border: 1px solid var(--hwc-border) !important;
+    }
+
+    /* --- More Robust Popups, Menus, and Tooltips --- */
+    :root {
+      --arrowpanel-background: var(--hwc-raised) !important;
+      --arrowpanel-color: var(--hwc-fg) !important;
+      --arrowpanel-border-color: var(--hwc-border) !important;
+    }
+
+    menupopup,
+    panel,
+    .panel-subview-body {
+      --panel-background: var(--hwc-raised) !important;
+      --panel-color: var(--hwc-fg) !important;
+      --panel-border-color: var(--hwc-border) !important;
+      background: var(--panel-background) !important;
+      color: var(--panel-color) !important;
+      border: 1px solid var(--panel-border-color) !important;
+    }
+
+    .panel-header,
+    .panel-footer {
+      background: var(--hwc-surface) !important;
+      border-bottom: 1px solid var(--hwc-border) !important;
+    }
+
+    menu,
+    menuitem,
+    .menu-iconic,
+    .menuitem-iconic {
+      -moz-appearance: none !important;
+      background: transparent !important;
+      color: var(--hwc-fg) !important;
+    }
+
+    menu:hover,
+    menuitem:hover,
+    .menu-iconic:hover,
+    .menuitem-iconic:hover {
+      background-color: var(--hwc-surface) !important;
+      color: var(--hwc-fg) !important;
+    }
+
+    menu[disabled="true"],
+    menuitem[disabled="true"] {
+      color: var(--hwc-muted) !important;
+    }
+
+    menuseparator {
+      -moz-appearance: none !important;
+      background: var(--hwc-border) !important;
+      border: none !important;
+      padding: 0 !important;
+      margin: 4px 8px !important;
+      height: 1px !important;
+    }
+
+    /* Tooltips */
+    tooltip,
+    #tooltip,
+    #customization-palette-tooltip,
+    #urlbar-tooltip,
+    .tooltip-label {
+      -moz-appearance: none !important;
+      background: var(--hwc-raised) !important;
+      color: var(--hwc-fg) !important;
+      border: 1px solid var(--hwc-border) !important;
+    }
+    /* --- End Robust Popups --- */
+
+    /* DevTools: enforce dark theme for panels and popups */
+    :root {
+      --theme-body-background: var(--hwc-bg) !important;
+      --theme-body-color: var(--hwc-fg) !important;
+      --theme-toolbar-background: var(--hwc-bg) !important;
+      --theme-toolbar-color: var(--hwc-fg) !important;
+      --theme-tab-toolbar-background: var(--hwc-bg) !important;
+      --theme-selection-background: var(--hwc-accent) !important;
+      --theme-selection-color: var(--hwc-raised) !important;
+    }
+
+    .theme-dark,
+    .devtools-toolbox,
+    .webconsole-output,
+    .theme-body,
+    .theme-toolbar,
+    .toolbox-tabbar,
+    .devtools-sidepanel,
+    .ruleview,
+    .grid-container,
+    .animation-container,
+    .inspector-tabpanel,
+    .tabview-arrowscrollbox,
+    .tabbar,
+    .theme-sidebar,
+    .theme-toolbar-panel {
+      background: var(--hwc-bg) !important;
+      color: var(--hwc-fg) !important;
+      border-color: var(--hwc-border) !important;
+    }
+
+    .theme-dark input,
+    .theme-dark textarea,
+    .theme-dark select,
+    .theme-dark .textbox-input,
+    .theme-dark .devtools-searchinput {
+      background: var(--hwc-surface) !important;
+      color: var(--hwc-fg) !important;
+      border: 1px solid var(--hwc-border) !important;
+    }
+
+    .theme-dark .toolbarbutton-1,
+    .theme-dark .devtools-button {
+      background: var(--hwc-bg) !important;
+      color: var(--hwc-fg) !important;
+      border-color: var(--hwc-border) !important;
+    }
+
+    .theme-dark .toolbarbutton-1:hover,
+    .theme-dark .devtools-button:hover,
+    .theme-dark .devtools-button[checked="true"] {
+      background: var(--hwc-surface) !important;
+      color: var(--hwc-fg) !important;
+      border-color: var(--hwc-accent) !important;
+    }
+
+    /* DevTools settings panels and menus */
+    .theme-dark menupopup,
+    .theme-dark panel,
+    .theme-dark .panel-subview-body,
+    .theme-dark .devtools-option-toolbar {
+      background: var(--hwc-bg) !important;
+      color: var(--hwc-fg) !important;
+      border: 1px solid var(--hwc-border) !important;
+    }
+
+    .theme-dark menuitem,
+    .theme-dark menu {
+      background: var(--hwc-bg) !important;
+      color: var(--hwc-fg) !important;
+    }
+
+    .theme-dark menuitem:hover,
+    .theme-dark menu:hover {
+      background: var(--hwc-surface) !important;
+      color: var(--hwc-fg) !important;
     }
 
     /* Tabs */
@@ -229,5 +381,15 @@ in
       border: 1px solid var(--hwc-border) !important;
     }
     ::selection { background: ${hex selection} !important; color: ${hex selectionFg} !important; }
+
+    /* In-page dropdowns */
+    option, optgroup {
+      background: var(--hwc-surface) !important;
+      color: var(--hwc-fg) !important;
+    }
+    option:hover, option:checked {
+      background: var(--hwc-accent) !important;
+      color: ${hex selectionFg} !important;
+    }
   '';
 }

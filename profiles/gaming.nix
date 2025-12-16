@@ -16,9 +16,10 @@
   # Auto-login for console-like UX
   hwc.system.services.session = {
     enable = true;
-    autoLogin = {
+    loginManager = {
       enable = lib.mkDefault true;
-      user = "eric";
+      autoLoginUser = lib.mkDefault "eric";
+      defaultCommand = lib.mkDefault "Hyprland";
     };
   };
 
