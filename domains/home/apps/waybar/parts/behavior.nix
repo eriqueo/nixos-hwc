@@ -10,8 +10,7 @@ let
     modules-right = [
       "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd" "pulseaudio"
       "custom/network" "bluetooth" "custom/disk-space"  
-      "temperature" "custom/fan" "custom/load" 
-      "custom/battery"  "tray" "custom/notification" "custom/power"
+      "temperature" "custom/battery"  "tray" "custom/notification" "custom/power"
     ];
   };
 
@@ -71,8 +70,6 @@ let
       format = "󰔏 {temperatureC}°C";
       format-critical = "󰔏 {temperatureC}°C";
     };
-    "custom/fan" = { format = "{}"; exec = "waybar-fan-monitor"; return-type = "json"; interval = 3; };
-    "custom/load" = { format = "{}"; exec = "waybar-load-average"; return-type = "json"; interval = 5; };
     "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };

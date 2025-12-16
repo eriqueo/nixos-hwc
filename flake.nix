@@ -13,7 +13,8 @@
 # USED BY (Downstream):
 #   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
 #   - nixosConfigurations.hwc-server -> ./machines/server/config.nix
-#   - nixosConfigurations.hwc-gaming -> ./machines/sbc-gaming/config.nix
+#   - nixosConfigurations.hwc-gaming -> ./machines/gaming/config.nix
+#   - nixosConfigurations.hwc-firestick -> ./machines/firestick/config.nix
 #
 # IMPORTS REQUIRED IN:
 #   - machines/*/config.nix import profiles/* and modules/*
@@ -64,15 +65,22 @@
     system = "x86_64-linux";
 
     # Add the overlay here - this is the safest approach
-    pkgs = import nixpkgs {
-      inherit system;
-      config = {
-        allowUnfree = true;
-        # Accept NVIDIA license for legacy driver support
-        nvidia.acceptLicense = true;
+    mkPkgs = system:
+      import nixpkgs {
+        inherit system;
+        config = {
+          allowUnfree = true;
+          # Accept NVIDIA license for legacy driver support
+          nvidia.acceptLicense = true;
+          # Allow insecure qtwebengine for jellyfin-media-player
+          permittedInsecurePackages = [
+            "qtwebengine-5.15.19"
+          ];
+        };
+        overlays = [];
       };
-      overlays = [];
-    };
+
+    pkgs = mkPkgs system;
     
     lib = nixpkgs.lib;
 
@@ -141,7 +149,22 @@
         modules = [
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
-          ./machines/sbc-gaming/config.nix
+          ./machines/gaming/config.nix
+          {
+            home-manager.users.eric.home.stateVersion = "24.05";
+            home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = { inherit inputs; };
+          }
+        ];
+      };
+      hwc-firestick = lib.nixosSystem {
+        system = "aarch64-linux";
+        pkgs = mkPkgs "aarch64-linux";
+        specialArgs = { inherit inputs; };
+        modules = [
+          agenix.nixosModules.default
+          home-manager.nixosModules.home-manager
+          ./machines/firestick/config.nix
           {
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";

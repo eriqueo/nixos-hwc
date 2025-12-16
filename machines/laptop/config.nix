@@ -85,6 +85,7 @@
     audio.enable = true;
     bluetooth.enable = true;
     monitoring.enable = true;
+    fanControl.enable = true;
   };
 
   # ntfy notification system for laptop alerts
