@@ -68,6 +68,7 @@
           # Web Browsers
           chromium.enable = lib.mkDefault true;   # Chromium browser
           librewolf.enable = lib.mkDefault true;  # Privacy-focused Firefox
+          qutebrowser.enable = lib.mkDefault true;        # Keyboard-focused browser with a minimal 
 
           # Mail Clients
           aerc.enable = lib.mkDefault true;                # TUI mail client
@@ -80,7 +81,7 @@
 
           # Proton Suite
           protonAuthenticator.enable = lib.mkDefault true; # 2FA authenticator
-          protonAuthenticator.autoStart = lib.mkDefault true; # Auto-start on login
+          protonAuthenticator.autoStart = lib.mkDefault false;      # Auto-start on login
           protonPass.enable = lib.mkDefault true;         # Password manager (optional)
           protonPass.autoStart = lib.mkDefault true;      # Auto-start on login
 

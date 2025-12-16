@@ -13,6 +13,7 @@
 # USED BY (Downstream):
 #   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
 #   - nixosConfigurations.hwc-server -> ./machines/server/config.nix
+#   - nixosConfigurations.hwc-gaming -> ./machines/sbc-gaming/config.nix
 #
 # IMPORTS REQUIRED IN:
 #   - machines/*/config.nix import profiles/* and modules/*
@@ -20,6 +21,7 @@
 # USAGE:
 #   nixos-rebuild switch --flake .#hwc-laptop
 #   nixos-rebuild switch --flake .#hwc-server
+#   nixos-rebuild switch --flake .#hwc-gaming
 
 {
   #============================================================================
@@ -131,6 +133,20 @@
           inputs.nixvirt.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/laptop/config.nix
+        ];
+      };
+      hwc-gaming = lib.nixosSystem {
+        inherit system pkgs;
+        specialArgs = { inherit inputs; };
+        modules = [
+          agenix.nixosModules.default
+          home-manager.nixosModules.home-manager
+          ./machines/sbc-gaming/config.nix
+          {
+            home-manager.users.eric.home.stateVersion = "24.05";
+            home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = { inherit inputs; };
+          }
         ];
       };
     };
