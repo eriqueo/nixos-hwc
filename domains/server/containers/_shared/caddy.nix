@@ -76,7 +76,11 @@ let
       else if r.mode == "port" then ''
         # Dedicated TLS listener on the tailscale host:port
         ${rootHost}:${toString r.port} {
-          tls { get_certificate tailscale }
+          tls {
+            get_certificate tailscale
+            protocols tls1.2 tls1.3
+            alpn h2 http/1.1
+          }
           encode zstd gzip
           ${proxyBlock}
         }

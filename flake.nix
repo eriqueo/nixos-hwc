@@ -92,6 +92,21 @@
       main()
     '';
 
+    # Audit tooling packages
+    charter-lint = pkgs.writeScriptBin "charter-lint" ''
+      #!${pkgs.bash}/bin/bash
+      cd ${self}
+      exec ${pkgs.bash}/bin/bash ${self}/scripts/audit/lint.sh "$@"
+    '';
+
+    charter-drift = pkgs.writeScriptBin "charter-drift" ''
+      #!${pkgs.python3}/bin/python3
+      import sys
+      import os
+      os.chdir("${self}")
+      exec(open("${self}/scripts/audit/drift.py").read())
+    '';
+
   in {
     # Apps - CLI utilities
     apps.${system} = {
@@ -99,11 +114,32 @@
         type = "app";
         program = "${hwc-graph-pkg}/bin/hwc-graph";
       };
+      lint = {
+        type = "app";
+        program = "${charter-lint}/bin/charter-lint";
+      };
+      drift = {
+        type = "app";
+        program = "${charter-drift}/bin/charter-drift";
+      };
     };
 
     # Packages - Make hwc-graph available as a package too
     packages.${system} = {
       hwc-graph = hwc-graph-pkg;
+      charter-lint = charter-lint;
+      charter-drift = charter-drift;
+    };
+
+    # Checks - CHARTER compliance gates
+    checks.${system} = {
+      charter-compliance = pkgs.runCommand "charter-compliance-check" {
+        buildInputs = [ pkgs.bash pkgs.ripgrep ];
+      } ''
+        cd ${self}
+        ${pkgs.bash}/bin/bash ${self}/scripts/audit/lint.sh ${self}
+        touch $out
+      '';
     };
 
     nixosConfigurations = {

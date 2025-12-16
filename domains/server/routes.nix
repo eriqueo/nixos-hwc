@@ -218,6 +218,17 @@ in
       port = 2443;
       upstream = "http://127.0.0.1:5678";
     }
+
+    # Generic webhook endpoint - forwards to n8n for external integrations (Slack, etc.)
+    # Preserves full path so n8n receives /webhook/* for routing
+    {
+      name = "webhook";
+      mode = "subpath";
+      path = "/webhook";
+      upstream = "http://127.0.0.1:5678";
+      needsUrlBase = true;  # Preserve /webhook prefix - n8n expects it for routing
+      headers = { "X-Forwarded-Prefix" = "/webhook"; };
+    }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy
     # Enabled when hwc.ai.mcp.reverseProxy.enable = true

@@ -85,6 +85,7 @@
 
     ssh.enable = true;
     tailscale.enable = true;
+    tailscale.funnel.enable = false;  # Disabled - using n8n-specific funnel on port 10000
     firewall.level = lib.mkForce "server";
     firewall.extraTcpPorts = [ 8096 7359 2283 4533 ];  # Jellyfin, Immich, Navidrome
     firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery

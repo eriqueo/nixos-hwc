@@ -19,14 +19,16 @@ let
     N8N_PORT = toString cfg.port;
     N8N_PROTOCOL = "https";
     N8N_HOST = "hwc.ocelot-wahoo.ts.net";
+    WEBHOOK_URL = "https://hwc.ocelot-wahoo.ts.net/";  # Force webhook URLs to use standard HTTPS port
     N8N_USER_MANAGEMENT_DISABLED = "true";
-    WEBHOOK_URL = cfg.webhookUrl;
     N8N_USER_FOLDER = cfg.dataDir;
     GENERIC_TIMEZONE = cfg.timezone;
     N8N_PERSONALIZATION_ENABLED = "false";
     N8N_VERSION_NOTIFICATIONS_ENABLED = "false";
     N8N_DIAGNOSTICS_ENABLED = "false";
     N8N_HIRING_BANNER_ENABLED = "false";
+    
+           
     SLACK_SIGNING_SECRET= "2e56128bbb2e1f6973e891e623f4ed0b";
   } // (lib.optionalAttrs (cfg.database.type == "sqlite") {
     DB_TYPE = "sqlite";
@@ -74,7 +76,10 @@ in
         nix
         # add any other tools you want available in Execute Command
       ];
-      environment = n8nEnv;
+      environment = n8nEnv // {
+        # Add workspace scripts to PATH for Execute Command node
+        PATH = lib.mkForce "/home/eric/.nixos/workspace/scripts:/etc/profiles/per-user/eric/bin:/run/current-system/sw/bin";
+      };
       serviceConfig = {
               Type = "simple";
               User = lib.mkForce "eric";
@@ -85,7 +90,6 @@ in
       # Relax hardening so n8n behaves like a normal user session
       NoNewPrivileges = lib.mkForce false;
       PrivateTmp = lib.mkForce false;
-      ProtectSystem = lib.mkForce "default";
       ProtectHome = lib.mkForce false;
       
               # Either drop this, or broaden it.
@@ -119,6 +123,22 @@ in
     # Add eric user to secrets group for encryption key access
     users.users.eric = lib.mkIf (cfg.encryption.keyFile != null) {
       extraGroups = [ "secrets" ];
+    };
+
+    # Tailscale Funnel service - expose /webhook publicly on port 10000
+    systemd.services.tailscale-funnel-n8n = {
+      description = "Tailscale Funnel for n8n webhook (public Slack integration)";
+      after = [ "network.target" "tailscaled.service" "n8n.service" ];
+      wants = [ "tailscaled.service" "n8n.service" ];
+      wantedBy = [ "multi-user.target" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";  # Wait for tailscaled
+        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --bg --https=10000 --set-path=/webhook http://127.0.0.1:${toString cfg.port}";
+        ExecStop = "${pkgs.tailscale}/bin/tailscale funnel --https=10000 off";
+      };
     };
 
     #========================================================================

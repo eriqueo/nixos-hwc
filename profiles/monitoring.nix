@@ -28,8 +28,8 @@ in
     # Exportarr - Arr apps metrics (Sonarr/Radarr/Lidarr/Prowlarr)
     hwc.server.monitoring.exportarr.enable = lib.mkDefault true;
 
-    # Frigate exporter - Frigate NVR metrics
-    hwc.server.frigate.exporter.enable = lib.mkDefault true;
+    # Frigate exporter - Disabled until working image is found
+    # hwc.server.frigate.exporter.enable = lib.mkDefault true;
 
     # Grafana - Dashboards and visualization
     hwc.server.monitoring.grafana = {

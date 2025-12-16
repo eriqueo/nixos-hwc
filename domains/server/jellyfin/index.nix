@@ -2,12 +2,15 @@
 let
   cfg = config.hwc.server.jellyfin;
 
-   # Custom ffmpeg with NVENC/CUDA support for GPU transcoding
+  # Custom ffmpeg with NVENC/CUDA support for GPU transcoding
   ffmpeg-nvenc = pkgs.ffmpeg-full.override {
     withUnfree = true;
     withCuda   = true;
     withNvenc  = true;
   };
+
+  # User initialization script
+  initUsersScript = import ./parts/init-users.nix { inherit pkgs config; };
 in
 {
   #==========================================================================
@@ -42,7 +45,7 @@ in
 
     # GPU acceleration and migration fix configuration
     systemd.services.jellyfin = {
-      # Fix corrupted migration files before startup to prevent crash loops
+      # Fix corrupted migration files and initialize users before startup
       preStart = ''
         CONFIG_DIR="/var/lib/hwc/jellyfin/config"
 
@@ -54,6 +57,10 @@ in
             rm -f "$CONFIG_DIR/migrations.xml"
           fi
         fi
+
+        # Initialize users before Jellyfin starts
+        echo "Initializing Jellyfin users..."
+        ${initUsersScript}
       '';
 
       serviceConfig = {
@@ -105,6 +112,10 @@ in
       {
         assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
         message = "hwc.server.jellyfin.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
+      }
+      {
+        assertion = cfg.enable -> (config.age.secrets ? jellyfin-admin-password && config.age.secrets ? jellyfin-eric-password);
+        message = "hwc.server.jellyfin requires jellyfin-admin-password and jellyfin-eric-password secrets to be defined";
       }
     ];
   };
