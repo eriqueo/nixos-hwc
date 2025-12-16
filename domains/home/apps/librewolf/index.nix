@@ -1,14 +1,14 @@
 { lib, pkgs, config, ... }:
 
 let
-  cfg = config.hwc.home.apps.librewolf;
-  theme = import ../../theme/adapters/firefox-css.nix { inherit lib config; };
+  cfg = config.hwc.home.apps.librewolf or { enable = false; };
+  theme = import ./parts/theme.nix { inherit lib config; };
 in
 {
   imports = [ ./options.nix ];
 
   config = lib.mkIf cfg.enable {
-    programs.firefox = {
+    programs.librewolf = {
       enable = true;
       package = pkgs.librewolf;
 
@@ -16,14 +16,17 @@ in
         isDefault = true;
 
         settings = lib.mkMerge [
-          (import ./parts/performance.nix { inherit lib; })
-          (import ./parts/privacy.nix { inherit lib; })
-          (import ./parts/ux.nix { inherit lib; })
+          (import ./parts/behavior.nix { inherit lib pkgs config; })
+          (import ./parts/appearance.nix { inherit lib pkgs config; })
         ];
 
-        userChrome = theme.userChrome;
+        userChrome  = theme.userChrome;
         userContent = theme.userContent;
       };
+    };
+
+    home.sessionVariables = {
+      MOZ_ENABLE_WAYLAND = "1";
     };
   };
 }
