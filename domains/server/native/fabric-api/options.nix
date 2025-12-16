@@ -1,10 +1,10 @@
-# domains/server/apps/fabric-api/options.nix
+# domains/server/fabric-api/options.nix
 #
 # Fabric REST API service - Configuration options
 { lib, ... }:
 with lib;
 {
-  options.hwc.server.apps.fabricApi = {
+  options.hwc.server.fabricApi = {
     enable = mkEnableOption "Fabric REST API service";
 
     package = mkOption {

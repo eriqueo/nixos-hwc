@@ -1,10 +1,10 @@
-# domains/server/apps/fabric-api/index.nix
+# domains/server/fabric-api/index.nix
 #
 # Fabric REST API service - systemd implementation
 { config, lib, pkgs, inputs, ... }:
 with lib;
 let
-  cfg = config.hwc.server.apps.fabricApi;
+  cfg = config.hwc.server.fabricApi;
   fabricPkg = if cfg.package != null then cfg.package else inputs.fabric.packages.${pkgs.system}.default;
   listenArg = "${cfg.listenAddress}:${toString cfg.port}";
 in

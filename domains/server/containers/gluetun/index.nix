@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.gluetun;
+  cfg = config.hwc.server.containers.gluetun;
 in
 {
   #==========================================================================

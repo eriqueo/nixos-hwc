@@ -186,7 +186,7 @@ sudo systemctl stop podman-tdarr
 
 # Disable Tdarr
 # Edit profiles/server.nix:
-hwc.services.containers.tdarr.enable = false;
+hwc.server.containers.tdarr.enable = false;
 
 # Rebuild
 sudo nixos-rebuild switch --flake .#hwc-server

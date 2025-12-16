@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.beets = {
+  options.hwc.server.containers.beets = {
     enable = mkEnableOption "beets music organizer container";
 
     image = mkOption {

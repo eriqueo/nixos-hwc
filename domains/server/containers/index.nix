@@ -5,6 +5,9 @@
 
 {
   imports = [
+    # Legacy namespace compatibility: hwc.services.containers.* → hwc.server.containers.*
+    (lib.mkRenamedOptionModule [ "hwc" "services" "containers" ] [ "hwc" "server" "containers" ])
+
     # Shared infrastructure
     ./_shared/network.nix
     ./_shared/caddy.nix

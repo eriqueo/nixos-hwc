@@ -93,7 +93,7 @@ services:
 
   containers:
     - name: sonarr
-      nixos_path: hwc.services.containers.sonarr.enable
+      nixos_path: hwc.server.containers.sonarr.enable
       type: container
       port: 8989
 ```

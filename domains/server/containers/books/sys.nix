@@ -2,7 +2,7 @@
 
 let
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.books;
+  cfg = config.hwc.server.containers.books;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

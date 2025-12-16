@@ -658,7 +658,7 @@ virtualisation.oci-containers.containers.gluetun = {
 ```nix
 Location: domains/server/containers/qbittorrent/options.nix
 
-options.hwc.services.containers.qbittorrent = {
+options.hwc.server.containers.qbittorrent = {
   network.mode = mkOption {
     type = types.enum [ "media" "vpn" ];
     default = "vpn";
@@ -1175,7 +1175,7 @@ curl https://hwc.ocelot-wahoo.ts.net:8443 # Should work (SLSKD)
 # domains/server/containers/qbittorrent/parts/config.nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.qbittorrent;
+  cfg = config.hwc.server.containers.qbittorrent;
   networkHelpers = import ../../_shared/network-helpers.nix { inherit lib; };
 in {
   config = lib.mkIf cfg.enable {
@@ -1399,7 +1399,7 @@ hwc.downloaders.vpn = {
 };
 
 # Containers declare VPN dependency
-hwc.services.containers.qbittorrent = {
+hwc.server.containers.qbittorrent = {
   enable = true;
   network.mode = "vpn";  # Automatically uses container:gluetun
 };

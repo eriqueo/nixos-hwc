@@ -1,7 +1,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.services.containers.books;
+  cfg = config.hwc.server.containers.books;
 in
 {
   #==========================================================================
@@ -25,7 +25,7 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = cfg.network.mode != "vpn" || config.hwc.services.containers.gluetun.enable;
+        assertion = cfg.network.mode != "vpn" || config.hwc.server.containers.gluetun.enable;
         message = "books container with VPN mode requires gluetun to be enabled";
       }
       {

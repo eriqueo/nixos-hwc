@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.recyclarr = {
+  options.hwc.server.containers.recyclarr = {
     enable = mkEnableOption "Recyclarr *arr configuration sync";
 
     image = mkOption {

@@ -189,10 +189,10 @@ scaffold_service() {
 let
   inherit (lib) mkOption mkEnableOption mkIf mkMerge types;
   shared = config.hwc.services.shared.lib;
-  cfg = config.hwc.services.containers.${svc};
+  cfg = config.hwc.server.containers.${svc};
 in
 {
-  options.hwc.services.containers.${svc} = {
+  options.hwc.server.containers.${svc} = {
     enable = mkEnableOption "${svc} container";
     image  = shared.mkImageOption { default = "${imageDefault}"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
@@ -217,7 +217,7 @@ NIX
 { lib, config, pkgs, ... }:
 let
   shared = config.hwc.services.shared.lib;
-  cfg = config.hwc.services.containers.${svc};
+  cfg = config.hwc.server.containers.${svc};
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -317,7 +317,7 @@ fi
 
 echo "Done. Next:"
 echo "  - import _shared/network.nix and _shared/caddy.nix in your server profile"
-echo "  - enable services via hwc.services.containers.<name>.enable = true;"
+echo "  - enable services via hwc.server.containers.<name>.enable = true;"
 echo "  - set hwc.services.reverseProxy.{enable,domain}"
 
 

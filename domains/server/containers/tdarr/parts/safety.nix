@@ -1,7 +1,7 @@
 # Tdarr Safety and Backup Configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.tdarr;
+  cfg = config.hwc.server.containers.tdarr;
   paths = config.hwc.paths;
 
   # Safety script that creates backups before transcoding

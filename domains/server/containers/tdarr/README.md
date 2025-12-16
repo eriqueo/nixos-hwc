@@ -125,7 +125,7 @@ sudo cp /mnt/media/.tdarr-originals-backup/file.mkv /mnt/media/tv/Show/
 **Disable Tdarr**:
 ```nix
 # Edit profiles/server.nix:
-hwc.services.containers.tdarr.enable = false;
+hwc.server.containers.tdarr.enable = false;
 
 # Rebuild:
 sudo nixos-rebuild switch --flake .#hwc-server

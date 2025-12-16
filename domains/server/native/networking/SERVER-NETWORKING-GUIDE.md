@@ -1378,7 +1378,7 @@ sudo ls -la /run/agenix/
 # domains/server/containers/newservice/options.nix
 { lib, ... }:
 {
-  options.hwc.services.containers.newservice = {
+  options.hwc.server.containers.newservice = {
     enable = lib.mkEnableOption "newservice container";
     image = lib.mkOption {
       type = lib.types.str;
@@ -1398,7 +1398,7 @@ sudo ls -la /run/agenix/
 # domains/server/containers/newservice/parts/config.nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.newservice;
+  cfg = config.hwc.server.containers.newservice;
 in
 {
   config = lib.mkIf cfg.enable {
@@ -1460,7 +1460,7 @@ hwc.services.shared.routes = [
 **Step 3: Enable in server profile**
 ```nix
 # profiles/server.nix
-hwc.services.containers.newservice.enable = true;
+hwc.server.containers.newservice.enable = true;
 ```
 
 **Step 4: Create config directory and rebuild**

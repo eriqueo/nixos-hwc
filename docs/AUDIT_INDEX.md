@@ -81,7 +81,7 @@
 #### By File Location:
 - `domains/infrastructure/` - 2 files
 - `domains/server/ai/` - 4 files
-- `domains/server/apps/` - 2 files
+- `domains/server/` - 2 files
 - `domains/server/backup/` - 1 file
 - `domains/server/business/` - 2 files
 - `domains/server/containers/` - 25 files

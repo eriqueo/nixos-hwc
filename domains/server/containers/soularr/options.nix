@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.soularr = {
+  options.hwc.server.containers.soularr = {
     enable = mkEnableOption "soularr container";
     image  = mkOption {
       type = types.str;

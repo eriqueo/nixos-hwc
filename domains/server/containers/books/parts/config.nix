@@ -1,7 +1,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.services.containers.books;
+  cfg = config.hwc.server.containers.books;
 in
 {
   config = lib.mkIf cfg.enable {

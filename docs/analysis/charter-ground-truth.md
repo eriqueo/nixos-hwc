@@ -47,7 +47,7 @@ With parts/: 54 (45%)
 - `domains/server/index.nix`
 
 **Category aggregators** (legitimate):
-- `domains/server/apps/index.nix`
+- `domains/server/index.nix`
 - `domains/server/containers/index.nix`
 - `domains/server/monitoring/index.nix`
 
@@ -85,9 +85,9 @@ Other mismatches: 20 (17%)
 
 | Folder | Actual | Expected |
 |--------|--------|----------|
-| `domains/server/containers/sonarr` | `hwc.services.containers.sonarr` | `hwc.server.containers.sonarr` |
-| `domains/server/containers/radarr` | `hwc.services.containers.radarr` | `hwc.server.containers.radarr` |
-| `domains/server/containers/lidarr` | `hwc.services.containers.lidarr` | `hwc.server.containers.lidarr` |
+| `domains/server/containers/sonarr` | `hwc.server.containers.sonarr` | `hwc.server.containers.sonarr` |
+| `domains/server/containers/radarr` | `hwc.server.containers.radarr` | `hwc.server.containers.radarr` |
+| `domains/server/containers/lidarr` | `hwc.server.containers.lidarr` | `hwc.server.containers.lidarr` |
 | *(+ 18 more containers)* | | |
 
 **Classification**: **LEGACY** - Systematic naming from pre-CHARTER architecture
@@ -109,8 +109,8 @@ Other mismatches: 20 (17%)
 |-------------|-------------------|--------|
 | `domains/server/jellyfin` | `hwc.server.jellyfin` | ✓ MATCH |
 | `domains/server/navidrome` | `hwc.server.navidrome` | ✓ MATCH |
-| `domains/server/containers/jellyfin` | `hwc.services.containers.jellyfin` | ✗ LEGACY |
-| `domains/server/containers/radarr` | `hwc.services.containers.radarr` | ✗ LEGACY |
+| `domains/server/containers/jellyfin` | `hwc.server.containers.jellyfin` | ✗ LEGACY |
+| `domains/server/containers/radarr` | `hwc.server.containers.radarr` | ✗ LEGACY |
 | `domains/system/services/backup` | `hwc.system.services.backup` | ✓ MATCH |
 | `domains/system/services/networking` | `hwc.networking` | ✗ SHORTCUT |
 | `domains/home/apps/hyprland` | `hwc.home.apps.hyprland` | ✓ MATCH |
@@ -165,10 +165,10 @@ Other mismatches: 20 (17%)
 
 ## 4) The "apps" Folder Ambiguity
 
-### What's Actually in domains/server/apps/
+### What's Actually in domains/server/
 
 ```
-domains/server/apps/
+domains/server/
 ├── beets-native/        # Native NixOS beets service
 │   ├── index.nix
 │   └── options.nix
@@ -191,11 +191,11 @@ domains/server/apps/
 ### Duplicate Detection: beets
 
 **Container version**: `domains/server/containers/beets/`
-- Options: `hwc.services.containers.beets.*`
+- Options: `hwc.server.containers.beets.*`
 - Implementation: Containerized beets
 
-**Native version**: `domains/server/apps/beets-native/`
-- Options: `hwc.server.apps.beets.*`
+**Native version**: `domains/server/beets-native/`
+- Options: `hwc.server.beets-native.*`
 - Implementation: Native NixOS service
 
 **Which is used?** Neither currently enabled in `machines/server/config.nix`
@@ -575,7 +575,7 @@ in {
 
 3. **Legacy namespaces**: Modules SHOULD use `hwc.server.*` not `hwc.services.*`
    - **Affected**: 21 files (all containers)
-   - **Pattern**: `hwc.services.containers.*` should be `hwc.server.containers.*`
+   - **Pattern**: `hwc.server.containers.*` should be `hwc.server.containers.*`
 
 4. **Hardcoded /mnt/ paths**: Modules SHOULD reference `config.hwc.paths.*` or `config.hwc.infrastructure.storage.*`
    - **Affected**: Unknown (not yet scanned)
@@ -591,7 +591,7 @@ in {
 
 ### Priority 1: Fix Namespace Drift (21 modules)
 
-**Bulk rename**: `hwc.services.containers.*` → `hwc.server.containers.*`
+**Bulk rename**: `hwc.server.containers.*` → `hwc.server.containers.*`
 
 **Affected modules** (all in `domains/server/containers/`):
 - sonarr, soularr, radarr, lidarr, prowlarr (arr stack)
@@ -606,7 +606,7 @@ in {
 
 **Current**:
 ```
-domains/server/apps/
+domains/server/
 ├── beets-native/
 └── fabric-api/
 ```
@@ -761,7 +761,7 @@ domains/server/
 1. ✅ Fix 2 profile option violations (`media.nix`, `business.nix`)
 2. ✅ Bulk rename `hwc.services.*` → `hwc.server.*` (21 modules)
 3. ✅ Add 10 missing `options.nix` files
-4. ✅ Eliminate `domains/server/apps/` (2 module moves)
+4. ✅ Eliminate `domains/server/` (2 module moves)
 
 ### Short-term (Medium Impact)
 

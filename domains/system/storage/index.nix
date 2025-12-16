@@ -2,7 +2,7 @@
 { lib, ... }:
 let
   dir   = builtins.readDir ./.;
-  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix") dir;
+  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix" && n != "options.nix") dir;
   subds = lib.filterAttrs (_: t: t == "directory") dir;
 
   filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
@@ -13,5 +13,5 @@ let
     ];
 in
 {
-  imports = filePaths ++ subIndex;
+  imports = [ ./options.nix ] ++ filePaths ++ subIndex;
 }

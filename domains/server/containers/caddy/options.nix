@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.caddy = {
+  options.hwc.server.containers.caddy = {
     enable = mkEnableOption "caddy container";
     image  = mkOption { type = types.str; default = "docker.io/library/caddy:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

@@ -1,7 +1,7 @@
 # Organizr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.organizr;
+  cfg = config.hwc.server.containers.organizr;
 in
 {
   config = lib.mkIf cfg.enable {

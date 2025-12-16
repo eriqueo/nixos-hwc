@@ -200,8 +200,8 @@ validate_charter_v6_compliance() {
 
   # Check namespace compliance
   if [[ -f "$container_path/options.nix" ]]; then
-    if grep -q "hwc.services.containers.$container" "$container_path/options.nix" 2>/dev/null; then
-      log_pass "$container uses correct namespace (hwc.services.containers.$container)"
+    if grep -q "hwc.server.containers.$container" "$container_path/options.nix" 2>/dev/null; then
+      log_pass "$container uses correct namespace (hwc.server.containers.$container)"
     else
       log_error "$container namespace does not match folder name"
     fi

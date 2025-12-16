@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.hwc.services.containers.books = {
+  options.hwc.server.containers.books = {
     enable = lib.mkEnableOption "LazyLibrarian books management container";
 
     image = lib.mkOption {

@@ -4,9 +4,9 @@
 # Automatically imports all core home modules
 
 { lib, ... }:
-
 {
   imports = [
+    ./options.nix
     ./xdg-dirs.nix
   ];
 }

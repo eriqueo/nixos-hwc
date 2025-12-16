@@ -1,7 +1,7 @@
 # slskd configuration file generator (config-only - container moved to sys.nix)
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.slskd;
+  cfg = config.hwc.server.containers.slskd;
 
   # Script to generate slskd config from secrets at runtime
   generateConfigScript = pkgs.writeShellScript "generate-slskd-config" ''

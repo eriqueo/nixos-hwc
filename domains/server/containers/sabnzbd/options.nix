@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.sabnzbd = {
+  options.hwc.server.containers.sabnzbd = {
     enable = mkEnableOption "SABnzbd usenet client container";
 
     image = mkOption {

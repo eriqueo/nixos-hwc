@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.qbittorrent;
+  cfg = config.hwc.server.containers.qbittorrent;
 in
 {
   #==========================================================================

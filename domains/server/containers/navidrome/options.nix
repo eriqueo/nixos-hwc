@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.navidrome = {
+  options.hwc.server.containers.navidrome = {
     enable = mkEnableOption "navidrome container";
         image  = mkOption { type = types.str; default = "deluan/navidrome:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

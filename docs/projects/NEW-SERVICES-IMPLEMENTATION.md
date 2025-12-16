@@ -88,22 +88,22 @@ Add these lines in the appropriate section (around line 275, after the other con
 
 ```nix
   # Phase 7: Media Optimization and Management
-  hwc.services.containers.tdarr.enable = true;
-  hwc.services.containers.recyclarr.enable = true;
-  hwc.services.containers.organizr.enable = true;
+  hwc.server.containers.tdarr.enable = true;
+  hwc.server.containers.recyclarr.enable = true;
+  hwc.server.containers.organizr.enable = true;
 ```
 
 **Full context** (what it should look like):
 
 ```nix
   # Phase 4: Specialized Services (Soulseek integration)
-  hwc.services.containers.slskd.enable = true;
-  hwc.services.containers.soularr.enable = true;
+  hwc.server.containers.slskd.enable = true;
+  hwc.server.containers.soularr.enable = true;
 
   # Phase 7: Media Optimization and Management
-  hwc.services.containers.tdarr.enable = true;
-  hwc.services.containers.recyclarr.enable = true;
-  hwc.services.containers.organizr.enable = true;
+  hwc.server.containers.tdarr.enable = true;
+  hwc.server.containers.recyclarr.enable = true;
+  hwc.server.containers.organizr.enable = true;
 
   # Native Media Services (Charter compliant)
   hwc.server.navidrome = {

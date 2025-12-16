@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.jellyseerr;
+  cfg = config.hwc.server.containers.jellyseerr;
 in
 {
   config = lib.mkIf cfg.enable {

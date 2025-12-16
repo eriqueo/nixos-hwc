@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.pihole = {
+  options.hwc.server.containers.pihole = {
     enable = mkEnableOption "Pi-hole network-wide ad blocking container";
 
     image = mkOption {

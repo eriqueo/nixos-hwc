@@ -15,7 +15,7 @@ Declarative wiring for Recyclarr now lives in `domains/server/containers/recycla
   - `domains/secrets/parts/server/radarr-api-key.age`
   - `domains/secrets/parts/server/lidarr-api-key.age` (optional)
 - Sonarr/Radarr/Lidarr containers exported on localhost with URL base set to `/sonarr`, `/radarr`, `/lidarr`.
-- `hwc.services.containers.recyclarr.enable = true` in the server profile.
+- `hwc.server.containers.recyclarr.enable = true` in the server profile.
 
 ## Rotating API Keys
 1. Fetch the new API key from the *arr UI.

@@ -201,7 +201,7 @@ From `profiles/server.nix` lines 307-317:
 # - Not needed unless active transcoding pipeline required
 # - GPU passthrough configured but service dormant to conserve resources
 # - Conflicts with AI workloads for GPU/CPU resources
-hwc.services.containers.tdarr.enable = false;
+hwc.server.containers.tdarr.enable = false;
 ```
 
 ### Configuration Status

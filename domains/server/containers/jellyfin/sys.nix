@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.jellyfin;
+  cfg = config.hwc.server.containers.jellyfin;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

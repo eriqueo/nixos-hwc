@@ -19,7 +19,7 @@
 - **Key Changes**:
   - ✅ SOPS → agenix secrets migration (VPN credentials)
   - ✅ Environment file generation from `config.age.secrets.vpn-{username,password}.path`
-  - ✅ Proper Charter namespace: `hwc.services.containers.gluetun.enable`
+  - ✅ Proper Charter namespace: `hwc.server.containers.gluetun.enable`
   - ✅ Validation assertions for secrets and Podman backend
   - ✅ Service dependencies: agenix → gluetun-env-setup → podman-gluetun
 - **Testing**:
@@ -79,7 +79,7 @@
   - `profiles/server.nix` - Enabled prowlarr container
 - **Key Changes**:
   - ✅ Port configuration: `127.0.0.1:9696:9696`
-  - ✅ Proper Charter namespace: `hwc.services.containers.prowlarr.enable`
+  - ✅ Proper Charter namespace: `hwc.server.containers.prowlarr.enable`
   - ✅ Base service (no external dependencies except network)
   - ✅ Foundation for other *arr services
 - **Dependencies**: None (base service)
@@ -180,7 +180,7 @@
   - `domains/secrets/declarations/server.nix` - Added slskd-api-key secret declaration
   - `domains/secrets/parts/server/slskd-api-key.age` - Created placeholder secret file
 - **Key Changes**:
-  - ✅ Enabled in server profile: `hwc.services.containers.soularr.enable = true`
+  - ✅ Enabled in server profile: `hwc.server.containers.soularr.enable = true`
   - ✅ Dependencies on lidarr and slskd containers
   - ✅ Secret management for SLSKD API integration
   - ✅ No web UI (background automation service)
@@ -198,7 +198,7 @@
 - **Files Modified**:
   - `profiles/server.nix` - Enabled Navidrome container
 - **Key Changes**:
-  - ✅ Enabled in server profile: `hwc.services.containers.navidrome.enable = true`
+  - ✅ Enabled in server profile: `hwc.server.containers.navidrome.enable = true`
   - ✅ Music streaming from `/mnt/media/music`
   - ✅ Web UI accessible at port 4533
   - ✅ Ready for reverse proxy integration
@@ -375,6 +375,6 @@
 
 ### Charter Compliance
 - ✅ **Unit Anatomy**: All modules follow Charter structure (options.nix, sys.nix, parts/)
-- ✅ **Namespace alignment**: `hwc.services.containers.*` for all services
+- ✅ **Namespace alignment**: `hwc.server.containers.*` for all services
 - ✅ **Validation assertions**: Proper dependency and configuration checks
 - ✅ **Lane purity**: No Home Manager violations in system domain

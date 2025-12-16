@@ -19,7 +19,7 @@ in
 {
   imports = [
     ./options.nix
-    ../../../server/apps/fabric-api/index.nix
+    ../../../server/fabric-api/index.nix
   ];
 
   config = mkMerge [
@@ -39,7 +39,7 @@ in
 
     # Forward to systemd service module when enableApi is true
     (mkIf cfg.enableApi {
-      hwc.server.apps.fabricApi = {
+      hwc.server.fabricApi = {
         enable = true;
         package = chosenPkg;
         listenAddress = cfg.api.listenAddress;

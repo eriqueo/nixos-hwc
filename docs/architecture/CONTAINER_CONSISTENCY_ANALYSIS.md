@@ -122,7 +122,7 @@ This analysis evaluates all 18 container services in the nixos-hwc infrastructur
 ### Charter Requirements for Containers
 
 From CHARTER.md v6.0:
-1. ✅ **Namespace Rule**: All containers use `hwc.services.containers.<name>`
+1. ✅ **Namespace Rule**: All containers use `hwc.server.containers.<name>`
 2. ⚠️ **Module Anatomy**: Not all have proper `parts/` structure
 3. ❌ **Configuration Validity**: Only 4/18 have assertions and validation
 4. ✅ **Native vs Container**: Decisions documented in `NATIVE_VS_CONTAINER_ANALYSIS.md`
@@ -306,7 +306,7 @@ Use this checklist when adding/modifying containers:
 ### 📋 Container Configuration Checklist
 
 #### Namespace & Structure
-- [ ] Option namespace: `hwc.services.containers.<name>.*`
+- [ ] Option namespace: `hwc.server.containers.<name>.*`
 - [ ] File structure: `index.nix`, `options.nix`, `sys.nix` OR `parts/config.nix`
 - [ ] Imports: Proper module imports in `containers/index.nix`
 

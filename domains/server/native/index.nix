@@ -1,3 +1,4 @@
+# Native server services aggregator
 { lib, ... }:
 let
   dir   = builtins.readDir ./.;
@@ -10,4 +11,7 @@ let
       (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
       (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
     ];
-in { imports = filePaths ++ subIndex; }
+in
+{
+  imports = filePaths ++ subIndex;
+}

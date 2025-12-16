@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.containers.slskd = {
+  options.hwc.server.containers.slskd = {
     enable = mkEnableOption "slskd container";
     image  = mkOption {
       type = types.str;

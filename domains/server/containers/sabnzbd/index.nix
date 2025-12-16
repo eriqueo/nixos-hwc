@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.sabnzbd;
+  cfg = config.hwc.server.containers.sabnzbd;
 in
 {
   #==========================================================================

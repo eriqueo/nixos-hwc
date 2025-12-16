@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.services.containers.soularr;
+  cfg = config.hwc.server.containers.soularr;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

@@ -459,7 +459,7 @@ watch -n 1 nvidia-smi
 **NixOS Configuration:**
 ```nix
 {
-  hwc.services.containers.tdarr = {
+  hwc.server.containers.tdarr = {
     enable = true;
     gpu.enable = true;
     workers = 1;                         # Adjust based on workload

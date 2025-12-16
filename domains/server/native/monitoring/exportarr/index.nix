@@ -110,8 +110,8 @@ in
         message = "Exportarr requires at least one app to monitor";
       }
     ] ++ map (app: {
-      assertion = !cfg.enable || config.hwc.services.containers.${app}.enable;
-      message = "Exportarr monitoring ${app} requires ${app} to be enabled (hwc.services.containers.${app}.enable = true)";
+      assertion = !cfg.enable || config.hwc.server.containers.${app}.enable;
+      message = "Exportarr monitoring ${app} requires ${app} to be enabled (hwc.server.containers.${app}.enable = true)";
     }) cfg.apps;
   };
 }

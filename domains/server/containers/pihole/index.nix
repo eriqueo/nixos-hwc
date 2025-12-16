@@ -1,7 +1,7 @@
 # domains/server/containers/pihole/index.nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.pihole;
+  cfg = config.hwc.server.containers.pihole;
 in
 {
   #==========================================================================

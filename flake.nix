@@ -69,7 +69,19 @@
         # Accept NVIDIA license for legacy driver support
         nvidia.acceptLicense = true;
       };
-      overlays = [];
+      overlays = [
+        # Fix n8n hash mismatch (upstream source changed)
+        (final: prev: {
+          n8n = prev.n8n.overrideAttrs (oldAttrs: {
+            src = prev.fetchFromGitHub {
+              owner = "n8n-io";
+              repo = "n8n";
+              rev = oldAttrs.version;
+              hash = "sha256-3vXJnLqQz60Sq1A8lLW0x6xAoN3DneFYVsaHAD0nzng=";
+            };
+          });
+        })
+      ];
     };
     
     lib = nixpkgs.lib;

@@ -1,7 +1,7 @@
 # Lidarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.containers.lidarr;
+  cfg = config.hwc.server.containers.lidarr;
 in
 {
   config = lib.mkIf cfg.enable {
