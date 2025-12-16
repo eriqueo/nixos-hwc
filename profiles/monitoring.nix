@@ -2,7 +2,7 @@
 let
   cfg = config.hwc.features.monitoring;
    imports = [
-      ../domains/server/monitoring/index.nix
+      ../domains/server/native/monitoring/index.nix
     ];
 in
 {

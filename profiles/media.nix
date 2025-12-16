@@ -1,7 +1,7 @@
 { lib, ... }:
 {
   imports = [
-    ../domains/server/media/index.nix
+    ../domains/server/native/media/index.nix
   ];
 
   config = {
