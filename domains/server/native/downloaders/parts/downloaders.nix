@@ -81,7 +81,7 @@ let
     ports = if cfg.useVpn then [] else ports;  # VPN exposes ports
     volumes = [
       (configVol name)
-      "${paths.hot}/downloads:/downloads"
+      "${paths.hot.root}/downloads:/downloads"
     ] ++ extraVolumes;
   };
 in {

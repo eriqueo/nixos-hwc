@@ -16,8 +16,8 @@ in
       ports = [ "127.0.0.1:7878:7878" ];
       volumes = [
         "/opt/downloads/radarr:/config"
-        "${config.hwc.paths.media}/movies:/movies"
-        "${config.hwc.paths.hot}/downloads:/downloads"
+        "${config.hwc.paths.media.root}/movies:/movies"
+        "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
         RADARR__URLBASE = "/radarr";

@@ -89,12 +89,12 @@ in
         "/opt/downloads/tdarr/logs:/app/logs"
 
         # Media libraries (read/write for transcoding)
-        "${paths.media}/tv:/media/tv"
-        "${paths.media}/movies:/media/movies"
-        "${paths.media}/music:/media/music"
+        "${paths.media.root}/tv:/media/tv"
+        "${paths.media.root}/movies:/media/movies"
+        "${paths.media.root}/music:/media/music"
 
         # Transcode cache (hot storage for speed)
-        "${paths.hot}/processing/tdarr-temp:/temp"
+        "${paths.hot.root}/processing/tdarr-temp:/temp"
       ];
 
       # Dependencies
@@ -114,8 +114,8 @@ in
 
       # Ensure tdarr-temp directory exists
       preStart = ''
-        install -d -m755 ${paths.hot}/processing/tdarr-temp
-        chown -R 1000:1000 ${paths.hot}/processing/tdarr-temp
+        install -d -m755 ${paths.hot.root}/processing/tdarr-temp
+        chown -R 1000:1000 ${paths.hot.root}/processing/tdarr-temp
       '';
     };
 

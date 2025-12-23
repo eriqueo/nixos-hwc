@@ -65,8 +65,8 @@ in
       # Volume mounts - CRITICAL: events mount is required for automation pipeline
       volumes = [
         "/opt/downloads/sabnzbd:/config"
-        "${paths.hot}/downloads:/downloads"
-        "${paths.hot}/events:/mnt/hot/events"  # CRITICAL for event processing
+        "${paths.hot.root}/downloads:/downloads"
+        "${paths.hot.root}/events:/mnt/hot/events"  # CRITICAL for event processing
         "/opt/downloads/scripts:/config/scripts:ro"  # Post-processing scripts
       ];
 

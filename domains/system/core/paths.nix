@@ -58,18 +58,49 @@ in {
     # STORAGE TIERS - Hot/Cold Architecture (Nullable - Machine Specific)
     #=========================================================================
 
-    hot = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = "Hot storage (SSD) - fast tier for active processing";
-      example = "/mnt/hot";
+    hot = {
+      root = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Hot storage base path (SSD) - fast tier for active processing";
+        example = "/mnt/hot";
+      };
+      downloads = {
+        root = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = if cfg.hot.root != null then "${cfg.hot.root}/downloads" else null;
+          description = "Downloads staging area (hot tier)";
+        };
+        music = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = if cfg.hot.root != null then "${cfg.hot.root}/downloads/music" else null;
+          description = "Music download staging (hot tier)";
+        };
+      };
+      surveillance = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = if cfg.hot.root != null then "${cfg.hot.root}/surveillance" else null;
+        description = "Surveillance buffer (hot tier)";
+      };
     };
 
-    media = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = "Cold storage (HDD) - bulk tier for media libraries";
-      example = "/mnt/media";
+    media = {
+      root = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Media storage base path (HDD) - bulk tier for media libraries";
+        example = "/mnt/media";
+      };
+      music = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = if cfg.media.root != null then "${cfg.media.root}/music" else null;
+        description = "Music library (media tier)";
+      };
+      surveillance = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = if cfg.media.root != null then "${cfg.media.root}/surveillance" else null;
+        description = "Surveillance recordings (media tier)";
+      };
     };
 
     cold = lib.mkOption {
@@ -84,6 +115,13 @@ in {
       default = null;
       description = "Backup destination - snapshot storage";
       example = "/mnt/backup";
+    };
+
+    photos = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Photo storage tier (separate from media for Immich)";
+      example = "/mnt/photos";
     };
 
     #=========================================================================
@@ -339,6 +377,25 @@ in {
         description = "Tailscale certificates";
       };
     };
+
+    #=========================================================================
+    # NETWORKING PATHS - Network Services
+    #=========================================================================
+
+    networking = {
+      root = lib.mkOption {
+        type = lib.types.str;
+        default = "/opt/networking";
+        description = "Network services root directory";
+      };
+
+      pihole = lib.mkOption {
+        type = lib.types.str;
+        default = "${cfg.networking.root}/pihole";
+        description = "Pi-hole data directory";
+      };
+    };
+
       userDirs = {
         desktop = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
         download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}/downloads"; };
@@ -381,16 +438,28 @@ in {
         message = "hwc.paths.user.home must be an absolute path";
       }
       {
-        assertion = cfg.hot == null || lib.hasPrefix "/" cfg.hot;
-        message = "hwc.paths.hot must be an absolute path if set";
+        assertion = cfg.hot.root == null || lib.hasPrefix "/" cfg.hot.root;
+        message = "hwc.paths.hot.root must be an absolute path if set";
       }
       {
-        assertion = cfg.media == null || lib.hasPrefix "/" cfg.media;
-        message = "hwc.paths.media must be an absolute path if set";
+        assertion = cfg.media.root == null || lib.hasPrefix "/" cfg.media.root;
+        message = "hwc.paths.media.root must be an absolute path if set";
       }
       {
-        assertion = cfg.hot != cfg.media || cfg.hot == null;
-        message = "hwc.paths.hot and hwc.paths.media cannot be the same path";
+        assertion = cfg.hot.root == null || cfg.media.root == null || cfg.hot.root != cfg.media.root;
+        message = "hwc.paths.hot.root and hwc.paths.media.root cannot be the same path";
+      }
+      {
+        assertion = cfg.photos == null || lib.hasPrefix "/" cfg.photos;
+        message = "hwc.paths.photos must be an absolute path if set";
+      }
+      {
+        assertion = cfg.hot.root == null || cfg.photos == null || cfg.hot.root != cfg.photos;
+        message = "hwc.paths.hot.root and hwc.paths.photos cannot be the same path";
+      }
+      {
+        assertion = cfg.media.root == null || cfg.photos == null || cfg.media.root != cfg.photos;
+        message = "hwc.paths.media.root and hwc.paths.photos cannot be the same path";
       }
     ];
 
@@ -404,10 +473,24 @@ in {
       HOME = cfg.user.home;
 
       # Storage tiers
-      HWC_HOT_STORAGE = if cfg.hot != null then cfg.hot else "";
-      HWC_MEDIA_STORAGE = if cfg.media != null then cfg.media else "";
+      HWC_HOT_STORAGE = if cfg.hot != null then cfg.hot.root else "";
+      HWC_MEDIA_STORAGE = if cfg.media != null then cfg.media.root else "";
       HWC_COLD_STORAGE = if cfg.cold != null then cfg.cold else "";
       HWC_BACKUP_STORAGE = if cfg.backup != null then cfg.backup else "";
+      HWC_PHOTOS_STORAGE = if cfg.photos != null then cfg.photos else "";
+
+      # Derived hot paths
+      HWC_HOT_DOWNLOADS = if cfg.hot.downloads.root != null then cfg.hot.downloads.root else "";
+      HWC_HOT_DOWNLOADS_MUSIC = if cfg.hot.downloads.music != null then cfg.hot.downloads.music else "";
+      HWC_HOT_SURVEILLANCE = if cfg.hot != null then cfg.hot.surveillance else "";
+
+      # Derived media paths
+      HWC_MEDIA_MUSIC = if cfg.media != null then cfg.media.music else "";
+      HWC_MEDIA_SURVEILLANCE = if cfg.media != null then cfg.media.surveillance else "";
+
+      # Networking paths
+      HWC_NETWORKING_ROOT = cfg.networking.root;
+      HWC_NETWORKING_PIHOLE = cfg.networking.pihole;
 
       # System paths
       HWC_STATE_DIR = cfg.state;
@@ -458,8 +541,8 @@ in {
 
       # Legacy compatibility (for existing scripts)
       HEARTWOOD_USER_HOME = cfg.user.home;
-      HEARTWOOD_HOT_STORAGE = if cfg.hot != null then cfg.hot else "";
-      HEARTWOOD_COLD_STORAGE = if cfg.media != null then cfg.media else "";
+      HEARTWOOD_HOT_STORAGE = if cfg.hot.root != null then cfg.hot.root else "";
+      HEARTWOOD_COLD_STORAGE = if cfg.media.root != null then cfg.media.root else "";
       HEARTWOOD_BUSINESS_ROOT = cfg.business.root;
       HEARTWOOD_AI_ROOT = cfg.ai.root;
       HEARTWOOD_SECRETS_DIR = cfg.security.secrets;

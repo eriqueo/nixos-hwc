@@ -162,8 +162,8 @@
   
   # Server storage paths (to be set in machine-specific config)
   hwc.paths = {
-    hot = "/mnt/hot";      # SSD hot storage
-    media = "/mnt/media";  # HDD media storage
+    hot.root = "/mnt/hot";      # SSD hot storage (auto-derives .downloads, .surveillance)
+    media.root = "/mnt/media";  # HDD media storage (auto-derives .music, .surveillance)
     # cold and backup can be set per-machine
   };
 
@@ -404,8 +404,8 @@
   
   assertions = [
     {
-      assertion = config.hwc.paths.hot != null && config.hwc.paths.media != null;
-      message = "Server profile requires hwc.paths.hot and hwc.paths.media to be configured";
+      assertion = config.hwc.paths.hot.root != null && config.hwc.paths.media.root != null;
+      message = "Server profile requires hwc.paths.hot.root and hwc.paths.media.root to be configured";
     }
     {
       assertion = config.hwc.secrets.enable;

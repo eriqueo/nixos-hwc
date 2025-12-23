@@ -15,8 +15,8 @@ let
     declare -A paths_to_check=(
       ["/"]="75"                              # Root partition - critical, lower threshold
       ["/var/log"]="80"                       # Log directory - where our issue occurred
-      ["${config.hwc.paths.hot}"]="$THRESHOLD"     # Hot storage
-      ["${config.hwc.paths.media}"]="$THRESHOLD"   # Media storage
+      ["${config.hwc.paths.hot.root}"]="$THRESHOLD"     # Hot storage
+      ["${config.hwc.paths.media.root}"]="$THRESHOLD"   # Media storage
     )
 
     for path in "''${!paths_to_check[@]}"; do

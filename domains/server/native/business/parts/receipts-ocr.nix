@@ -109,7 +109,7 @@ in {
 
     storageRoot = mkOption {
       type = types.str;
-      default = "${paths.hot}/receipts";
+      default = "${paths.hot.root}/receipts";
       description = "Root directory for receipt storage";
     };
 

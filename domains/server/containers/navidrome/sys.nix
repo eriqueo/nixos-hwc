@@ -16,7 +16,7 @@ in
       ports = [];
       volumes = [
         "/opt/downloads/navidrome:/config"
-        "${config.hwc.paths.media}/music:/music:ro"  # Music library for streaming
+        "${config.hwc.paths.media.root}/music:/music:ro"  # Music library for streaming
       ];
       environment = {
         ND_BASEURL = "/music";  # Required for Caddy subpath routing

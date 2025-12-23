@@ -250,8 +250,8 @@ in {
       DATABASE_URL=postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business
       REDIS_URL=redis://localhost:6379/0
       BUSINESS_DATA_PATH=${paths.business.root}
-      MEDIA_PATH=${paths.media}
-      HOT_STORAGE_PATH=${paths.hot}
+      MEDIA_PATH=${paths.media.root}
+      HOT_STORAGE_PATH=${paths.hot.root}
       COLD_STORAGE_PATH=${paths.cold}
       EOF
         fi
@@ -304,8 +304,8 @@ in {
           "DATABASE_URL=postgresql://business_user@localhost:5432/heartwood_business"
           "REDIS_URL=redis://localhost:6379/0"
           "BUSINESS_DATA_PATH=${paths.business.root}"
-          "MEDIA_PATH=${paths.media}"
-          "HOT_STORAGE_PATH=${paths.hot}"
+          "MEDIA_PATH=${paths.media.root}"
+          "HOT_STORAGE_PATH=${paths.hot.root}"
           "COLD_STORAGE_PATH=${paths.cold}"
         ];
       };

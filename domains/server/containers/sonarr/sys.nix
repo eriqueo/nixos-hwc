@@ -16,8 +16,8 @@ in
       ports = [ "127.0.0.1:8989:8989" ];
       volumes = [
         "/opt/downloads/sonarr:/config"
-        "${config.hwc.paths.media}/tv:/tv"
-        "${config.hwc.paths.hot}/downloads:/downloads"
+        "${config.hwc.paths.media.root}/tv:/tv"
+        "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
         SONARR__URLBASE = "/sonarr";

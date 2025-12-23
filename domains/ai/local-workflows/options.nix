@@ -34,7 +34,7 @@ in
 
       watchDirs = mkOption {
         type = types.listOf types.str;
-        default = [ "${paths.hot}/inbox" ];
+        default = if paths.hot.root != null then [ "${paths.hot.root}/inbox" ] else [];
         description = "Directories to monitor and organize";
       };
 

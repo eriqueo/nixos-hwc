@@ -16,8 +16,8 @@ in
       ports = [ "127.0.0.1:8686:8686" ];
       volumes = [
         "/opt/downloads/lidarr:/config"
-        "${config.hwc.paths.media}/music:/music"
-        "${config.hwc.paths.hot}/downloads:/downloads"
+        "${config.hwc.paths.media.root}/music:/music"
+        "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {
         LIDARR__URLBASE = "/lidarr";
