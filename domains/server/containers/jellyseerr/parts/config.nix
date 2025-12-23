@@ -10,6 +10,7 @@ in
         trustProxy = true;
         applicationUrl = "https://hwc.ocelot-wahoo.ts.net:5543";
         mediaServerType = 4;
+        defaultPermissions = 2110; # Auto-approve permissions (includes REQUEST, AUTO_APPROVE, REQUEST_MOVIE, REQUEST_TV)
       };
       public = {
         initialized = true;

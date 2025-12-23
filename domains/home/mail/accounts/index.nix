@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig, ... }:
 #==========================================================================
 # OPTIONS
 #==========================================================================
@@ -37,7 +37,7 @@
           login = "eriqueokeefe@gmail.com";
           password = {
             mode = "agenix";
-            agenix = config.age.secrets.gmail-personal-password.path;
+            agenix = osConfig.age.secrets.gmail-personal-password.path;
           };
           maildirName = "210_gmail-personal";
           mailboxMapping = {
@@ -57,7 +57,7 @@
           login = "heartwoodcraftmt@gmail.com";
           password = {
             mode = "agenix";
-            agenix = config.age.secrets.gmail-business-password.path;
+            agenix = osConfig.age.secrets.gmail-business-password.path;
           };
           maildirName = "110_gmail-business";
           mailboxMapping = {
