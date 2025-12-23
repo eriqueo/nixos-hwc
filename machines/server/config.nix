@@ -42,9 +42,10 @@
 
   # Charter v3 path configuration (matching production)
   hwc.paths = {
-    hot = "/mnt/hot";      # SSD hot storage
-    media = "/mnt/media";  # HDD media storage
-    cold = "/mnt/media";   # Cold storage same as media for now
+    hot.root = "/mnt/hot";      # SSD hot storage (auto-derives .downloads, .surveillance)
+    media.root = "/mnt/media";  # HDD media storage (auto-derives .music, .surveillance)
+    cold = "/mnt/media";         # Cold storage same as media for now
+    photos = "/mnt/photos";      # Photo storage (Immich)
     # Additional paths from production
     business.root = "/opt/business";
     cache = "/opt/cache";

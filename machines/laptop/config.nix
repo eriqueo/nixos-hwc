@@ -273,7 +273,7 @@
   #============================================================================
 
   # Storage paths (remains unchanged).
-  hwc.paths.hot = "/home/eric/500_media/";
+  hwc.paths.hot.root = "/home/eric/500_media/";
 
   #============================================================================
   # AI SERVICES CONFIGURATION (Laptop)

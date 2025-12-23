@@ -189,15 +189,15 @@ processing_cost_estimate = Gauge('processing_cost_estimate_monthly', 'Estimated 
 class BusinessMonitor:
     def __init__(self):
         self.media_paths = {
-            'movies': '${paths.media}/movies',
-            'tv': '${paths.media}/tv', 
-            'music': '${paths.media}/music'
+            'movies': '${paths.media.root}/movies',
+            'tv': '${paths.media.root}/tv',
+            'music': '${paths.media.root}/music'
         }
-        
+
         self.hot_paths = {
-            'downloads': '${paths.hot}/downloads',
-            'cache': '${paths.hot}/cache',
-            'processing': '${paths.hot}/processing'
+            'downloads': '${paths.hot.root}/downloads',
+            'cache': '${paths.hot.root}/cache',
+            'processing': '${paths.hot.root}/processing'
         }
         
     def calculate_library_metrics(self):
@@ -299,7 +299,7 @@ class BusinessMonitor:
         """Analyze processing pipeline efficiency"""
         try:
             # Calculate download-to-import efficiency
-            downloads_path = Path('${paths.hot}/downloads')
+            downloads_path = Path('${paths.hot.root}/downloads')
             imported_count = 0
             total_downloads = 0
             
@@ -312,7 +312,7 @@ class BusinessMonitor:
                         total_downloads += download_files
                         
                         # Rough estimate: files modified in media library in last 24h
-                        media_path = Path(f'${paths.media}/{media_type}')
+                        media_path = Path(f'${paths.media.root}/{media_type}')
                         if media_path.exists():
                             recent_imports = sum(
                                 1 for f in media_path.rglob('*') 
@@ -327,7 +327,7 @@ class BusinessMonitor:
                 processing_efficiency.labels(stage='import').set(100)
                 
             # Manual processing efficiency (lower is better)
-            manual_path = Path('${paths.hot}/manual')
+            manual_path = Path('${paths.hot.root}/manual')
             manual_files = len(list(manual_path.rglob('*'))) if manual_path.exists() else 0
             manual_efficiency = max(0, 100 - (manual_files * 5))  # Penalty for manual files
             processing_efficiency.labels(stage='manual').set(manual_efficiency)

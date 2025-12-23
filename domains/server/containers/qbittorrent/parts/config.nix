@@ -56,9 +56,9 @@ in
       # Volume mounts
       volumes = [
         "/opt/downloads/qbittorrent:/config"
-        "${paths.hot}/downloads:/downloads"
+        "${paths.hot.root}/downloads:/downloads"
         "/opt/downloads/scripts:/scripts:ro"
-        "${paths.hot}/events:/mnt/hot/events"
+        "${paths.hot.root}/events:/mnt/hot/events"
       ];
 
       # Dependencies
