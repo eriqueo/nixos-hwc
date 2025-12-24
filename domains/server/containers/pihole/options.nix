@@ -1,5 +1,5 @@
 # domains/server/containers/pihole/options.nix
-{ lib, ... }:
+{ lib, config, ... }:
 let
   inherit (lib) mkOption mkEnableOption types;
 in
@@ -66,13 +66,13 @@ in
 
     dataDir = mkOption {
       type = types.str;
-      default = "/opt/networking/pihole";
+      default = config.hwc.paths.networking.pihole;
       description = "Directory for Pi-hole persistent data";
     };
 
     dnsmasqDir = mkOption {
       type = types.str;
-      default = "/opt/networking/pihole/dnsmasq.d";
+      default = "${config.hwc.paths.networking.pihole}/dnsmasq.d";
       description = "Directory for dnsmasq configuration files";
     };
 
