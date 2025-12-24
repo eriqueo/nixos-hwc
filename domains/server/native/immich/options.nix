@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, config, ... }:
 let
   inherit (lib) mkEnableOption mkOption types;
 in
@@ -21,7 +21,7 @@ in
 
       mediaLocation = mkOption {
         type = types.str;
-        default = "/mnt/photos";
+        default = config.hwc.paths.photos or "/mnt/photos";
         description = "Path to media storage location";
       };
     };
@@ -31,7 +31,7 @@ in
 
       basePath = mkOption {
         type = types.str;
-        default = "/mnt/photos";
+        default = config.hwc.paths.photos or "/mnt/photos";
         description = ''
           Base path for all Immich storage. All storage subdirectories will be created here.
           This path will be added to backup sources automatically.
@@ -41,7 +41,7 @@ in
       locations = {
         library = mkOption {
           type = types.str;
-          default = "/mnt/photos/library";
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/library" else "/mnt/photos/library";
           description = ''
             Primary photo/video library location (UPLOAD_LOCATION).
             Storage templates configured via web UI organize files within this directory.
@@ -51,19 +51,19 @@ in
 
         thumbs = mkOption {
           type = types.str;
-          default = "/mnt/photos/thumbs";
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/thumbs" else "/mnt/photos/thumbs";
           description = "Thumbnail cache location (THUMB_LOCATION)";
         };
 
         encodedVideo = mkOption {
           type = types.str;
-          default = "/mnt/photos/encoded-video";
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/encoded-video" else "/mnt/photos/encoded-video";
           description = "Transcoded video storage (ENCODED_VIDEO_LOCATION)";
         };
 
         profile = mkOption {
           type = types.str;
-          default = "/mnt/photos/profile";
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/profile" else "/mnt/photos/profile";
           description = "User profile pictures (PROFILE_LOCATION)";
         };
       };

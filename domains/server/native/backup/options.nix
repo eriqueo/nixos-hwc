@@ -30,7 +30,7 @@ in
 
       mountPoint = lib.mkOption {
         type = lib.types.str;
-        default = "/mnt/backup";
+        default = config.hwc.paths.backup or "/mnt/backup";
         description = "External drive mount point";
       };
 

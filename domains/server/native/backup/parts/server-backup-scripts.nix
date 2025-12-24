@@ -9,7 +9,7 @@ let
     #!/usr/bin/env bash
     set -euo pipefail
 
-    BACKUP_DIR="/mnt/hot/backups/containers"
+    BACKUP_DIR="${config.hwc.paths.hot.root}/backups/containers"
     DATE=$(date +%Y%m%d_%H%M%S)
     RETENTION_DAYS=30
 
@@ -49,7 +49,7 @@ let
     #!/usr/bin/env bash
     set -euo pipefail
 
-    BACKUP_DIR="/mnt/hot/backups/databases"
+    BACKUP_DIR="${config.hwc.paths.hot.root}/backups/databases"
     DATE=$(date +%Y%m%d_%H%M%S)
     RETENTION_DAYS=30
 
@@ -87,7 +87,7 @@ let
     #!/usr/bin/env bash
     set -euo pipefail
 
-    BACKUP_DIR="/mnt/hot/backups/system"
+    BACKUP_DIR="${config.hwc.paths.hot.root}/backups/system"
     DATE=$(date +%Y%m%d_%H%M%S)
     RETENTION_DAYS=90
 
@@ -186,10 +186,10 @@ in
 
     # Create backup directories
     systemd.tmpfiles.rules = [
-      "d /mnt/hot/backups 0755 root root -"
-      "d /mnt/hot/backups/containers 0755 root root -"
-      "d /mnt/hot/backups/databases 0755 root root -"
-      "d /mnt/hot/backups/system 0755 root root -"
+      "d ${config.hwc.paths.hot.root}/backups 0755 root root -"
+      "d ${config.hwc.paths.hot.root}/backups/containers 0755 root root -"
+      "d ${config.hwc.paths.hot.root}/backups/databases 0755 root root -"
+      "d ${config.hwc.paths.hot.root}/backups/system 0755 root root -"
     ];
   };
 }
