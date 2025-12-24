@@ -364,7 +364,250 @@ in
 
 ---
 
-## 14) Validation & Anti-Patterns
+## 14) Path Management
+
+**Rule**: All filesystem paths MUST be defined in `domains/system/core/paths.nix` and referenced via `config.hwc.paths.*`. Hardcoded paths in domain modules are prohibited.
+
+### Core Principles
+
+1. **Single Source of Truth**: `domains/system/core/paths.nix` is the canonical location for all filesystem path definitions
+2. **Machine-Specific Overrides**: Machines override paths in `machines/<host>/config.nix`
+3. **Fail-Fast**: Invalid paths fail at build time, not runtime
+4. **Namespace Alignment**: Path namespace follows storage architecture (hot/media/cold, system/user, app roots)
+
+### Path Structure
+
+```nix
+hwc.paths = {
+  # Storage Tiers (Machine-Specific, Nullable)
+  hot.root = "/mnt/hot";                    # SSD fast tier
+  hot.downloads.root = "<derived>";          # Auto-derived from hot.root
+  hot.downloads.music = "<derived>";         # Auto-derived from hot.root
+  hot.surveillance = "<derived>";            # Auto-derived from hot.root
+
+  media.root = "/mnt/media";                 # HDD bulk tier
+  media.music = "<derived>";                 # Auto-derived from media.root
+  media.surveillance = "<derived>";          # Auto-derived from media.root
+
+  cold = "/mnt/media";                       # Archive tier
+  backup = "/mnt/backup";                    # Backup destination
+  photos = "/mnt/photos";                    # Photo storage (Immich)
+
+  # System Paths (Always Available)
+  state = "/var/lib/hwc";                    # Service persistent data
+  cache = "/var/cache/hwc";                  # Temporary cache
+  logs = "/var/log/hwc";                     # Service logs
+  temp = "/tmp/hwc";                         # Temporary processing
+
+  # User Paths (PARA Structure)
+  user.home = "/home/eric";
+  user.inbox = "${home}/000_inbox";
+  user.work = "${home}/100_hwc";
+  user.personal = "${home}/200_personal";
+  user.tech = "${home}/300_tech";
+  user.media = "${home}/500_media";
+  user.vaults = "${home}/900_vaults";
+
+  # Application Roots
+  business.root = "/opt/business";
+  ai.root = "/opt/ai";
+  arr.downloads = "/opt/downloads";
+  networking.root = "/opt/networking";
+  networking.pihole = "${networking.root}/pihole";
+
+  # Security & Configuration
+  security.secrets = "/etc/secrets";
+  nixos = toString ../../..;                 # Dynamic repo root
+};
+```
+
+### Usage in Modules
+
+**Pattern**: Reference paths via `config.hwc.paths.*` with fallback for backward compatibility
+
+```nix
+# domains/server/native/navidrome/options.nix
+{ lib, config, ... }:
+{
+  options.hwc.server.navidrome.settings = {
+    musicFolder = lib.mkOption {
+      type = lib.types.str;
+      default = config.hwc.paths.media.music or "/mnt/media/music";
+      description = "Path to music library";
+    };
+  };
+}
+```
+
+**Derived Paths Pattern**:
+```nix
+# For nullable paths that may not exist on all machines
+default = if config.hwc.paths.photos != null
+          then "${config.hwc.paths.photos}/library"
+          else "/mnt/photos/library";
+```
+
+**Multi-Path Lists**:
+```nix
+# domains/server/native/storage/options.nix
+cleanupPaths = lib.mkOption {
+  default = if config.hwc.paths.hot.root != null then [
+    "${config.hwc.paths.hot.root}/processing/sonarr-temp"
+    "${config.hwc.paths.hot.downloads.root}/incomplete"
+  ] else [
+    "/mnt/hot/processing/sonarr-temp"
+    "/mnt/hot/downloads/incomplete"
+  ];
+};
+```
+
+### Machine Configuration
+
+**Server** (`machines/server/config.nix`):
+```nix
+hwc.paths = {
+  hot.root = "/mnt/hot";       # Auto-derives .downloads.root, .downloads.music, .surveillance
+  media.root = "/mnt/media";   # Auto-derives .music, .surveillance
+  cold = "/mnt/media";
+  photos = "/mnt/photos";
+  business.root = "/opt/business";
+  cache = "/opt/cache";
+};
+```
+
+**Laptop** (`machines/laptop/config.nix`):
+```nix
+hwc.paths = {
+  hot.root = "/home/eric/500_media/";  # User-local storage
+  # photos = null by default (no Immich on laptop)
+};
+```
+
+### Environment Variables
+
+All paths are exported as environment variables for shell script integration:
+
+```bash
+# Storage tiers
+$HWC_HOT_STORAGE              # /mnt/hot
+$HWC_HOT_DOWNLOADS            # /mnt/hot/downloads
+$HWC_HOT_DOWNLOADS_MUSIC      # /mnt/hot/downloads/music
+$HWC_MEDIA_STORAGE            # /mnt/media
+$HWC_MEDIA_MUSIC              # /mnt/media/music
+$HWC_PHOTOS_STORAGE           # /mnt/photos
+
+# Application roots
+$HWC_NETWORKING_ROOT          # /opt/networking
+$HWC_NETWORKING_PIHOLE        # /opt/networking/pihole
+$HWC_BUSINESS_ROOT            # /opt/business
+
+# Legacy (for backward compatibility)
+$HEARTWOOD_HOT_STORAGE        # Alias for HWC_HOT_STORAGE
+$HEARTWOOD_COLD_STORAGE       # Alias for HWC_MEDIA_STORAGE
+```
+
+### Validation
+
+**Assertions** (in `paths.nix`):
+```nix
+assertions = [
+  {
+    assertion = cfg.hot.root == null || lib.hasPrefix "/" cfg.hot.root;
+    message = "hwc.paths.hot.root must be an absolute path if set";
+  }
+  {
+    assertion = cfg.hot.root == null || cfg.photos == null || cfg.hot.root != cfg.photos;
+    message = "hwc.paths.hot.root and hwc.paths.photos cannot be the same path";
+  }
+];
+```
+
+**Charter Compliance**: `rg "/mnt/" domains/` must return zero results in primary option values (fallback values in `or` patterns are acceptable)
+
+### Anti-Patterns
+
+❌ **Hardcoded paths in options.nix**:
+```nix
+# BAD
+musicFolder = lib.mkOption {
+  default = "/mnt/media/music";  # Hardcoded!
+};
+```
+
+✅ **Correct - Reference canonical path**:
+```nix
+# GOOD
+musicFolder = lib.mkOption {
+  default = config.hwc.paths.media.music or "/mnt/media/music";
+};
+```
+
+❌ **Hardcoded paths in scripts**:
+```nix
+# BAD
+script = ''
+  BACKUP_DIR="/mnt/hot/backups"  # Hardcoded!
+'';
+```
+
+✅ **Correct - Use path from config**:
+```nix
+# GOOD
+script = ''
+  BACKUP_DIR="${config.hwc.paths.hot.root}/backups"
+'';
+```
+
+### Migration Pattern
+
+When adding new services with hardcoded paths:
+
+1. **Identify all hardcoded paths** in the module
+2. **Check if path exists in paths.nix**, if not:
+   - Add to `domains/system/core/paths.nix` with appropriate tier
+   - Add to machine configs if machine-specific
+3. **Update module options** to reference `config.hwc.paths.*`
+4. **Add `config` parameter** to function signature if needed
+5. **Verify build** succeeds for all machines
+6. **Update assertions** if introducing new path dependencies
+
+### Path Architecture Guidelines
+
+**Storage Tiers**:
+- `hot.*` - SSD storage for active processing (downloads, buffers, temp files)
+- `media.*` - HDD storage for bulk media (music, video, surveillance archives)
+- `cold` - Long-term archive storage
+- `backup` - External backup destination
+- `photos` - Dedicated photo storage (separate from media for performance/organization)
+
+**System vs User**:
+- `/opt/*` - System-level application data (requires root, persists across users)
+- `/home/eric/*` - User-level data (user-owned, follows PARA structure)
+- `/var/lib/hwc/*` - Service state data (systemd DynamicUser, per-service isolation)
+
+**Derived Paths**:
+- Automatically computed from base paths (e.g., `hot.downloads.root` from `hot.root`)
+- Ensures consistency across modules
+- Changes to base path cascade to all derived paths
+
+### Breaking Changes Protocol
+
+When restructuring path definitions (e.g., simple path → nested attribute set):
+
+1. **Create feature branch** for path refactoring
+2. **Phase 1**: Restructure `paths.nix` (e.g., `hot` → `hot.root`)
+3. **Phase 2**: Update ALL machine configs
+4. **Phase 3**: Update ALL volume mounts in container configs
+5. **Phase 4**: Update ALL assertions and references
+6. **Phase 5**: Update ALL scripts and monitoring
+7. **Verify**: Both machines build successfully
+8. **Deploy**: Test on non-critical machine first
+
+**Never**: Partial updates that break builds between commits
+
+---
+
+## 15) Validation & Anti-Patterns
 
 **Searches (must be empty):**
 
@@ -373,7 +616,15 @@ rg "writeScriptBin" domains/home/
 rg "systemd\.services" domains/home/
 rg "environment\.systemPackages" domains/home/
 rg "home-manager" profiles/ --exclude profiles/home.nix
-rg "/mnt/" domains/
+```
+
+**Searches (must have zero results in primary option values):**
+
+```bash
+# Hardcoded paths prohibited (see §14 Path Management)
+# Note: Fallback values in "or" patterns (e.g., config.hwc.paths.X or "/mnt/X") are acceptable
+rg 'default\s*=\s*"/mnt/' domains/ -t nix -g '**/options.nix'
+rg 'default\s*=\s*"/opt/' domains/ -t nix -g '**/options.nix'
 ```
 
 **Hard blockers**
@@ -385,10 +636,11 @@ rg "/mnt/" domains/
 * Mixed-domain modules (e.g., `users.users` + `programs.zsh`)
 * Options defined outside `options.nix` files
 * Namespace not matching folder structure
+* Hardcoded filesystem paths in primary option defaults (must use `config.hwc.paths.*` per §14)
 
 ---
 
-## 15) Server Workloads
+## 16) Server Workloads
 
 ### Container vs Native Service Decisions
 
@@ -411,7 +663,7 @@ rg "/mnt/" domains/
 
 ---
 
-## 16) Profiles & Import Order
+## 17) Profiles & Import Order
 
 * Profiles MUST import `options.nix` before any lane implementations.
 * Example:
@@ -425,7 +677,7 @@ imports = [
 
 ---
 
-## 17) Migration Protocol
+## 18) Migration Protocol
 
 1. **Discovery** → list features.
 2. **Classification** → Part / Adapter / Tool.
@@ -435,7 +687,7 @@ imports = [
 
 ---
 
-## 18) Status
+## 19) Status
 
 * Phase 1 (Domain separation): ✅ complete.
 * Phase 2 (Domain/Profile architecture): 🔄 in progress.
@@ -444,7 +696,7 @@ imports = [
 
 ---
 
-## 19) Charter Change Management
+## 20) Charter Change Management
 
 * Version bump on any normative change.
 * PRs require non-author review.
@@ -453,7 +705,7 @@ imports = [
 
 ---
 
-## 20) Configuration Validity & Dependency Assertions
+## 21) Configuration Validity & Dependency Assertions
 
 * **Mandatory Validation Section**: Every `index.nix` with `enable` toggle MUST include `# VALIDATION` section after `# IMPLEMENTATION`.
 * **Assertion Requirement**: Modules MUST assert all runtime dependencies (system services, binaries, configuration reads).
@@ -465,7 +717,7 @@ imports = [
 
 ---
 
-## 19) Complex Service Configuration Pattern
+## 22) Complex Service Configuration Pattern
 
 ### The Config-First, Nix-Second Rule
 
@@ -588,7 +840,7 @@ When migrating from Nix-generated to config-first:
 
 ---
 
-## 20) Data Retention & Lifecycle Management
+## 23) Data Retention & Lifecycle Management
 
 **Rule**: All data retention policies MUST be declared in NixOS configuration with automated enforcement.
 
@@ -719,7 +971,7 @@ journalctl -u cleanup.service -n 20
 
 ---
 
-## 21) Related Documentation
+## 24) Related Documentation
 
 * **Filesystem Charter** (`FILESYSTEM-CHARTER.md`): Home directory organization (`~/`) with domain-based structure
   - 3-digit prefix system (100_hwc, 200_personal, 300_tech, etc.)
