@@ -1,5 +1,5 @@
 # modules/server/containers/beets/options.nix
-{ lib, ... }:
+{ lib, config, ... }:
 let
   inherit (lib) mkOption mkEnableOption types;
 in
@@ -21,19 +21,19 @@ in
 
     configDir = mkOption {
       type = types.str;
-      default = "/opt/downloads/beets";
+      default = "${config.hwc.paths.arr.downloads}/beets";
       description = "Directory to store Beets configuration and database";
     };
 
     musicDir = mkOption {
       type = types.str;
-      default = "/mnt/media/music";
+      default = config.hwc.paths.media.music or "/mnt/media/music";
       description = "Directory where organized music will be stored";
     };
 
     importDir = mkOption {
       type = types.str;
-      default = "/mnt/hot/downloads/music";
+      default = config.hwc.paths.hot.downloads.music or "/mnt/hot/downloads/music";
       description = "Directory for music imports";
     };
   };

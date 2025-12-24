@@ -9,7 +9,7 @@
 #   Nix handles: image, ports, GPU, volumes, env
 #   Config file handles: cameras, detectors, recording, zones, etc.
 #
-{ lib, ... }:
+{ lib, config, ... }:
 let
   inherit (lib) mkEnableOption mkOption types;
 in
@@ -56,13 +56,13 @@ in
 
       mediaPath = mkOption {
         type = types.str;
-        default = "/mnt/media/surveillance/frigate/media";
+        default = if config.hwc.paths.media.surveillance != null then "${config.hwc.paths.media.surveillance}/frigate/media" else "/mnt/media/surveillance/frigate/media";
         description = "Media storage path (recordings)";
       };
 
       bufferPath = mkOption {
         type = types.str;
-        default = "/mnt/hot/surveillance/frigate/buffer";
+        default = if config.hwc.paths.hot.surveillance != null then "${config.hwc.paths.hot.surveillance}/frigate/buffer" else "/mnt/hot/surveillance/frigate/buffer";
         description = "Buffer storage path (hot storage for temporary files)";
       };
     };
