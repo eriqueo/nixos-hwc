@@ -19,7 +19,7 @@ readonly CYAN='\033[0;36m'
 readonly NC='\033[0m' # No Color
 
 # Script version
-readonly VERSION="2.0.0"
+readonly VERSION="2.1.0"
 
 #==============================================================================
 # ENVIRONMENT SETUP
@@ -77,15 +77,15 @@ TEMPLATE_TYPE="auto"  # auto, simple, standard, complete
 #==============================================================================
 
 log() {
-    echo -e "${BLUE}[HWC]${NC} $1"
+    echo -e "${BLUE}[HWC]${NC} $1" >&2
 }
 
 info() {
-    echo -e "${CYAN}[INFO]${NC} $1"
+    echo -e "${CYAN}[INFO]${NC} $1" >&2
 }
 
 warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 error() {
@@ -93,7 +93,7 @@ error() {
 }
 
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
 debug() {
@@ -246,15 +246,22 @@ detect_machine() {
 
     debug "Detected hostname: $hostname"
 
+    local flake_json
+    if ! flake_json=$(nix flake show --json "path:$REPO_ROOT" 2>/dev/null); then
+        warn "Could not query flake outputs; defaulting to hostname '$hostname'"
+        echo "$hostname"
+        return 0
+    fi
+
     # Check if this matches a flake configuration
-    if nix flake show --json 2>/dev/null | jq -e ".nixosConfigurations.\"$hostname\"" &>/dev/null; then
+    if echo "$flake_json" | jq -e ".nixosConfigurations.\"$hostname\"" &>/dev/null; then
         echo "$hostname"
         return 0
     fi
 
     # Fallback: list available configurations
     local configs
-    configs=$(nix flake show --json 2>/dev/null | jq -r '.nixosConfigurations | keys[]' 2>/dev/null || echo "")
+    configs=$(echo "$flake_json" | jq -r '.nixosConfigurations | keys[]' 2>/dev/null || echo "")
 
     if [[ -n "$configs" ]]; then
         warn "Current hostname '$hostname' not found in flake configurations"
@@ -282,7 +289,7 @@ search_packages() {
     local query="$1"
     local search_file="$TEMP_DIR/search_results.json"
 
-    log "Searching for packages matching '$query'..."
+    log "Searching for packages matching '$query'..." >&2
 
     echo "$query" > "$TEMP_DIR/search_query.txt"
 
@@ -318,12 +325,16 @@ format_search_results() {
     local search_file="$1"
     local formatted_file="$TEMP_DIR/formatted_results.jsonl"
     local query_file="$TEMP_DIR/search_query.txt"
+    local jq_errors="$TEMP_DIR/jq_errors.txt"
 
     local original_query=""
     if [[ -f "$query_file" ]]; then
         original_query=$(cat "$query_file")
     fi
 
+    debug "Formatting results for query: $original_query"
+
+    # IMPROVED: Show errors instead of hiding them with 2>/dev/null
     if ! jq -r --arg query "$original_query" '
         to_entries |
         map(
@@ -334,63 +345,104 @@ format_search_results() {
                 version: (.value.version // "unknown"),
                 description: (.value.description // .value.meta.description // "No description available"),
                 relevance_score: (
+                    # IMPROVED: Better relevance scoring
                     if (.value.pname // .value.name // (.key | split(".") | last)) == $query then 100
-                    elif (.value.pname // .value.name // (.key | split(".") | last)) | test("^" + $query + "$") then 90
-                    elif (.value.pname // .value.name // (.key | split(".") | last)) | test("^" + $query + "-") then 80
-                    elif (.value.description // "") | test("dictionary|dict|hyphen|thesaurus"; "i") then 20
-                    elif (.key | split(".") | last) | test("Dicts|dicts|Dict") then 20
-                    elif (.value.pname // .value.name // (.key | split(".") | last)) | test("lib|dev|debug|unwrapped"; "i") then 30
+                    elif (.value.pname // .value.name // (.key | split(".") | last)) | test("^" + $query + "$") then 95
+                    elif (.value.pname // .value.name // (.key | split(".") | last)) | test("^" + $query + "-") then 85
+                    elif (.value.pname // .value.name // (.key | split(".") | last)) | contains($query) then 75
+                    # Penalize unwanted variants
+                    elif (.value.pname // .value.name // (.key | split(".") | last)) | test("unwrapped|debug|dev-bin|static"; "i") then 25
+                    elif (.value.pname // .value.name // (.key | split(".") | last)) | test("lib$|headers$"; "i") then 20
+                    # Penalize dict/lang packs unless searching for them
+                    elif (.value.description // "") | test("dictionary|dict|hyphen|thesaurus|language pack"; "i") and ($query | test("dict|lang|thesaurus"; "i") | not) then 15
+                    elif (.key | split(".") | last) | test("Dicts|dicts|Dict|Hunspell") and ($query | test("dict|spell"; "i") | not) then 15
                     else 50
                     end
                 )
-            } |
-            select(.pname and .pname != "" and .pname != null)
+            }
         ) |
+        map(select(.pname and .pname != "" and .pname != null and .pname != "null")) |
         sort_by([-.relevance_score, .pname]) |
-        if length > 20 and ($query | test("^(firefox|chrome|libreoffice|vscode|discord|slack|zoom)$")) then
-            map(select(.relevance_score >= 40)) | .[0:10]
-        else . end |
+        # IMPROVED: Better result limiting
+        if length > 15 then
+            if ($query | test("^(firefox|chrome|chromium|libreoffice|vscode|code|discord|slack|zoom|gimp|inkscape|blender|obs)$"; "i")) then
+                map(select(.relevance_score >= 50)) | .[0:10]
+            else
+                .[0:15]
+            end
+        else
+            .
+        end |
         .[] |
         @json
-    ' "$search_file" > "$formatted_file" 2>/dev/null; then
+    ' "$search_file" > "$formatted_file" 2>"$jq_errors"; then
         error "Failed to format search results"
+        if [[ -s "$jq_errors" ]]; then
+            warn "Formatting errors:"
+            cat "$jq_errors" | head -10
+        fi
         return 1
     fi
 
     if [[ ! -s "$formatted_file" ]]; then
         error "No valid packages found after filtering"
+        warn "This might mean:"
+        echo "  - All results were filtered out (unwrapped, debug, lib variants)"
+        echo "  - Try a more specific search term"
         return 1
     fi
+
+    local formatted_count
+    formatted_count=$(wc -l < "$formatted_file")
+    info "Showing $formatted_count most relevant results"
 
     echo "$formatted_file"
 }
 
-# Display search results and let user choose
+# Display search results and let user choose - IMPROVED UI
 select_package() {
     local results_file="$1"
     local output_file="$2"
     local -a packages=()
     local i=1
 
-    log "Found packages:"
+    echo
+    log "${CYAN}Available Packages:${NC}"
     echo
 
     while IFS= read -r line; do
         if [[ -n "$line" ]] && jq empty <<< "$line" 2>/dev/null; then
             packages+=("$line")
 
-            local pname version description attr
+            local pname version description attr score
             pname=$(jq -r '.pname // empty' <<< "$line" 2>/dev/null || echo "")
             version=$(jq -r '.version // "unknown"' <<< "$line" 2>/dev/null || echo "unknown")
             description=$(jq -r '.description // empty' <<< "$line" 2>/dev/null || echo "")
             attr=$(jq -r '.attr // empty' <<< "$line" 2>/dev/null || echo "")
+            score=$(jq -r '.relevance_score // 0' <<< "$line" 2>/dev/null || echo "0")
 
             [[ -z "$pname" ]] && pname="unknown"
             [[ -z "$description" ]] && description="No description available"
 
-            printf "%2d) ${GREEN}%s${NC} ${CYAN}(%s)${NC}\n" "$i" "$pname" "$version"
-            printf "    %s\n" "$description"
-            printf "    ${YELLOW}Attribute:${NC} %s\n" "$attr"
+            # IMPROVED: Better visual layout
+            printf "%2d) ${GREEN}%-24s${NC} ${CYAN}v%-14s${NC}" "$i" "$pname" "$version"
+
+            # Show relevance indicator
+            if [[ $score -ge 95 ]]; then
+                printf " ${GREEN}⭐ EXACT MATCH${NC}\n"
+            elif [[ $score -ge 75 ]]; then
+                printf " ${CYAN}✓ Close Match${NC}\n"
+            else
+                printf "\n"
+            fi
+
+            # Wrap description intelligently
+            if [[ ${#description} -le 76 ]]; then
+                printf "    %s\n" "$description"
+            else
+                printf "    %s\n" "${description:0:73}..."
+            fi
+            printf "    ${YELLOW}nixpkgs.%s${NC}\n" "$attr"
             echo
             ((i++))
         fi
@@ -403,7 +455,7 @@ select_package() {
 
     local choice
     while true; do
-        printf "Select package number (1-${#packages[@]}), or 'q' to quit: "
+        printf "${CYAN}Select [1-${#packages[@]}], 's' to search again, or 'q' to quit:${NC} "
         read -r choice
 
         case "$choice" in
@@ -411,8 +463,12 @@ select_package() {
                 log "Cancelled by user"
                 exit 0
                 ;;
+            [sS])
+                info "Re-searching..."
+                return 2  # Signal to restart search
+                ;;
             ''|*[!0-9]*)
-                warn "Please enter a valid number or 'q' to quit"
+                warn "Please enter a number, 's' to search again, or 'q' to quit"
                 continue
                 ;;
             *)
@@ -428,6 +484,7 @@ select_package() {
 
     local selected="${packages[$((choice-1))]}"
     echo "$selected" > "$output_file"
+    return 0
 }
 
 # Extract package information from JSON
@@ -870,17 +927,14 @@ in
     programs.PACKAGE_NAME = {
       enable = true;
     } // cfg.extraConfig;
-  };
 
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = config.programs.PACKAGE_NAME.enable or false;
-      message = "hwc.home.apps.OPTION_NAME requires programs.PACKAGE_NAME to be enabled";
-    }
-  ];
+    assertions = [
+      {
+        assertion = config.programs.PACKAGE_NAME.enable or false;
+        message = "hwc.home.apps.OPTION_NAME requires programs.PACKAGE_NAME to be enabled";
+      }
+    ];
+  };
 }
 EOF
 
@@ -917,17 +971,13 @@ in
     # - xdg.configFile for config files
     # - xdg.desktopEntries for custom launchers
     # - Theme integration with config.hwc.home.theme
+    assertions = [
+      {
+        assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
+        message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
+      }
+    ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
-      message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
-    }
-  ];
 }
 EOF
 
@@ -968,17 +1018,13 @@ in
     # - xdg.configFile for config files
     # - Shell completions
     # - Environment variables
+    assertions = [
+      {
+        assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
+        message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
+      }
+    ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
-      message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
-    }
-  ];
 }
 EOF
 
@@ -1024,17 +1070,13 @@ in
     #   };
     #   Install.WantedBy = [ "graphical-session.target" ];
     # };
+    assertions = [
+      {
+        assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
+        message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
+      }
+    ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
-      message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
-    }
-  ];
 }
 EOF
 
@@ -1065,17 +1107,13 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = [ package ];
+    assertions = [
+      {
+        assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
+        message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
+      }
+    ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-  config.assertions = lib.mkIf cfg.enable [
-    {
-      assertion = cfg.package != null || (pkgs ? PACKAGE_ATTR);
-      message = "Package PACKAGE_ATTR not found in nixpkgs and no custom package provided";
-    }
-  ];
 }
 EOF
 
@@ -1208,11 +1246,16 @@ test_configuration_quick() {
 
     log "Running quick configuration validation..."
 
-    if nix flake check --no-build 2>&1 | tee "$TEMP_DIR/flake-check.log"; then
+    # Evaluate only the target host to avoid unrelated host failures
+    local flake_ref="path:$REPO_ROOT#nixosConfigurations.${build_target}.config.system.build.toplevel"
+
+    if nix eval "$flake_ref" >/dev/null 2>&1; then
         success "Configuration validation passed"
         return 0
     else
         error "Configuration validation failed"
+        # Provide context without overwhelming the user
+        nix eval "$flake_ref" 2>&1 | tee "$TEMP_DIR/flake-check.log" >/dev/null || true
         cat "$TEMP_DIR/flake-check.log"
         return 1
     fi
@@ -1387,23 +1430,43 @@ main() {
     info "Target machine: $target_machine"
     echo
 
-    # Search for packages
-    local search_file
-    if ! search_file=$(search_packages "$package_query"); then
-        exit 1
-    fi
+    # IMPROVED: Loop to allow re-searching
+    local selected_package
+    while true; do
+        # Search for packages
+        local search_file
+        if ! search_file=$(search_packages "$package_query"); then
+            exit 1
+        fi
 
-    # Format search results
-    local results_file
-    if ! results_file=$(format_search_results "$search_file"); then
-        exit 1
-    fi
+        # Format search results
+        local results_file
+        if ! results_file=$(format_search_results "$search_file"); then
+            exit 1
+        fi
 
-    # Let user select package
-    local selection_file="$TEMP_DIR/selected_package.json"
-    if ! select_package "$results_file" "$selection_file"; then
-        exit 1
-    fi
+        # Let user select package
+        local selection_file="$TEMP_DIR/selected_package.json"
+        local select_result
+        select_package "$results_file" "$selection_file"
+        select_result=$?
+
+        if [[ $select_result -eq 2 ]]; then
+            # User wants to re-search
+            echo
+            echo -n "Enter new search term: "
+            read -r package_query
+            if [[ -z "$package_query" ]]; then
+                error "Search term cannot be empty"
+                exit 1
+            fi
+            continue  # Restart search loop
+        elif [[ $select_result -ne 0 ]]; then
+            exit 1
+        else
+            break  # Selection successful
+        fi
+    done
 
     local selected_package
     selected_package=$(cat "$selection_file")

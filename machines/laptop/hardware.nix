@@ -9,7 +9,8 @@
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "nvme" "rtsx_pci_sdmmc" ];
   boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-intel" ];
+  boot.kernelModules = [ "kvm-intel" "thinkpad_acpi" ];
+  boot.kernelParams = [ "thinkpad_acpi.fan_control=1" ];
   boot.extraModulePackages = [ ];
   
   fileSystems."/" =

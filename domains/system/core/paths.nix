@@ -194,6 +194,12 @@ in {
         description = "Cross-domain media collection";
       };
 
+      mail = lib.mkOption {
+        type = lib.types.path;
+        default = "${cfg.user.home}/400_mail";
+        description = "Mail storage (Maildir, mbox, mail configs)";
+      };
+
       vaults = lib.mkOption {
         type = lib.types.path;
         default = "${cfg.user.home}/900_vaults";
@@ -399,20 +405,20 @@ in {
       userDirs = {
         desktop = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
         download = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}/downloads"; };
-        documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/110-documents"; };
-        templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/130-reference/templates"; };
+        documents = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/110_documents"; };
+        templates = lib.mkOption { type = lib.types.path; default = "${cfg.user.work}/130_reference/templates"; };
         publicShare = lib.mkOption { type = lib.types.path; default = "${cfg.user.inbox}"; };
-        pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures"; };
-        music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/music"; };
-        videos = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/videos"; };
+        pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures"; };
+        music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/520_music"; };
+        videos = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/530_videos"; };
       };
 
       mediaPaths = {
-        pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures"; };
-        music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/music"; };
-        videos = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/videos"; };
-        screenshots = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures/01-screenshots"; };
-        picturesInbox = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/pictures/99-inbox"; };
+        pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures"; };
+        music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/520_music"; };
+        videos = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/530_videos"; };
+        screenshots = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures/511_screenshots"; };
+        picturesInbox = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures/599_inbox"; };
       };
 
     #=========================================================================
@@ -504,6 +510,7 @@ in {
       HWC_WORK_DIR = cfg.user.work;
       HWC_PERSONAL_DIR = cfg.user.personal;
       HWC_TECH_DIR = cfg.user.tech;
+      HWC_MAIL_DIR = cfg.user.mail;
       HWC_MEDIA_DIR = cfg.user.media;
       HWC_VAULTS_DIR = cfg.user.vaults;
 

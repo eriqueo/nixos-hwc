@@ -8,10 +8,9 @@ let
     modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
-      "custom/gpu" "idle_inhibitor" "mpd" "pulseaudio"
-      "custom/network" "bluetooth" "custom/disk-space" "memory" "cpu"
-      "temperature" "custom/fan" "custom/load" "custom/power-profile"
-      "custom/battery" "backlight" "tray" "custom/notification" "custom/power"
+      "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd" "pulseaudio"
+      "custom/network" "bluetooth" "custom/disk-space"  
+      "temperature" "custom/battery"  "tray" "custom/notification" "custom/power"
     ];
   };
 
@@ -57,12 +56,11 @@ let
     clock = { format = "{:%H:%M:%S}"; format-alt = "{:%Y-%m-%d %H:%M:%S}"; };
 
     "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
+    "custom/ollama" = { format = "{}"; exec = "waybar-ollama-status"; return-type = "json"; interval = 5; on-click = "waybar-ollama-toggle"; };
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
     bluetooth = { format = "{icon}"; format-icons = { enabled = "󰂯"; disabled = "󰂲"; }; format-connected = "󰂱 {num_connections}"; on-click = "blueman-manager"; };
-    memory = { format = "󰍛 {percentage}%"; interval = 5; on-click = "waybar-system-monitor"; };
-    cpu = { format = "󰻠 {usage}%"; interval = 5; on-click = "waybar-system-monitor"; };
     temperature = {
       # Use coretemp device for accurate CPU package temperature
       # hwmon-path-abs points to device hwmon directory (not hwmon/hwmonN subdirectory)
@@ -72,12 +70,9 @@ let
       format = "󰔏 {temperatureC}°C";
       format-critical = "󰔏 {temperatureC}°C";
     };
-    "custom/fan" = { format = "{}"; exec = "waybar-fan-monitor"; return-type = "json"; interval = 3; };
-    "custom/load" = { format = "{}"; exec = "waybar-load-average"; return-type = "json"; interval = 5; };
     "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
-    backlight = { format = "{icon} {percent}%"; format-icons = ["󰃞" "󰃟" "󰃠"]; on-scroll-up = "brightnessctl set +5%"; on-scroll-down = "brightnessctl set 5%-"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
   };

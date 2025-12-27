@@ -85,6 +85,7 @@
     audio.enable = true;
     bluetooth.enable = true;
     monitoring.enable = true;
+    fanControl.enable = true;
   };
 
   # ntfy notification system for laptop alerts
@@ -157,6 +158,16 @@
     loginManager.enable = true;
     loginManager.autoLoginUser = "eric";
     sudo.enable = true;
+    sudo.extraRules = [
+      # Allow eric to start/stop ollama service without password (for waybar toggle)
+      {
+        users = [ "eric" ];
+        commands = [
+          { command = "/run/current-system/sw/bin/systemctl start podman-ollama.service"; options = [ "NOPASSWD" ]; }
+          { command = "/run/current-system/sw/bin/systemctl stop podman-ollama.service"; options = [ "NOPASSWD" ]; }
+        ];
+      }
+    ];
     linger.enable = true;
     linger.users = [ "eric" ];
   };
@@ -190,6 +201,13 @@
       prime.intelBusId  = "PCI:0:2:0";
     };
     powerManagement.smartToggle = true;
+  };
+
+  # Override NVIDIA power management defaults for proper suspend/resume
+  # Fixes GPU state corruption in applications (like Kitty) after resume
+  hardware.nvidia.powerManagement = {
+    enable = true;           # Enable power management for suspend/resume
+    finegrained = false;     # Use full power management, not fine-grained
   };
 
   #============================================================================
@@ -280,7 +298,7 @@
   #============================================================================
   # Laptop has superior hardware (32GB RAM, better GPU) for larger models
   hwc.ai.ollama = {
-    enable = true;  # Re-enabled with smart controls for short sprints
+    enable = false;  # Disabled by default, toggle with waybar button
     # Larger models suitable for 32GB RAM + RTX GPU
     models = [
       "qwen2.5-coder:7b"              # 4.3GB - Primary coding assistant
@@ -315,7 +333,7 @@
 
   # Local AI workflows for laptop
   hwc.ai.local-workflows = {
-    enable = true;  # Re-enabled with ollama smart controls
+    enable = false;  # Disabled by default (requires Ollama to be running)
 
     # File cleanup for Downloads
     fileCleanup = {

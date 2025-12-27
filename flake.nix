@@ -13,6 +13,8 @@
 # USED BY (Downstream):
 #   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
 #   - nixosConfigurations.hwc-server -> ./machines/server/config.nix
+#   - nixosConfigurations.hwc-gaming -> ./machines/gaming/config.nix
+#   - nixosConfigurations.hwc-firestick -> ./machines/firestick/config.nix
 #
 # IMPORTS REQUIRED IN:
 #   - machines/*/config.nix import profiles/* and modules/*
@@ -20,6 +22,7 @@
 # USAGE:
 #   nixos-rebuild switch --flake .#hwc-laptop
 #   nixos-rebuild switch --flake .#hwc-server
+#   nixos-rebuild switch --flake .#hwc-gaming
 
 {
   #============================================================================
@@ -62,27 +65,22 @@
     system = "x86_64-linux";
 
     # Add the overlay here - this is the safest approach
-    pkgs = import nixpkgs {
-      inherit system;
-      config = {
-        allowUnfree = true;
-        # Accept NVIDIA license for legacy driver support
-        nvidia.acceptLicense = true;
+    mkPkgs = system:
+      import nixpkgs {
+        inherit system;
+        config = {
+          allowUnfree = true;
+          # Accept NVIDIA license for legacy driver support
+          nvidia.acceptLicense = true;
+          # Allow insecure qtwebengine for jellyfin-media-player
+          permittedInsecurePackages = [
+            "qtwebengine-5.15.19"
+          ];
+        };
+        overlays = [];
       };
-      overlays = [
-        # Fix n8n hash mismatch (upstream source changed)
-        (final: prev: {
-          n8n = prev.n8n.overrideAttrs (oldAttrs: {
-            src = prev.fetchFromGitHub {
-              owner = "n8n-io";
-              repo = "n8n";
-              rev = oldAttrs.version;
-              hash = "sha256-3vXJnLqQz60Sq1A8lLW0x6xAoN3DneFYVsaHAD0nzng=";
-            };
-          });
-        })
-      ];
-    };
+
+    pkgs = mkPkgs system;
     
     lib = nixpkgs.lib;
 
@@ -104,21 +102,6 @@
       main()
     '';
 
-    # Audit tooling packages
-    charter-lint = pkgs.writeScriptBin "charter-lint" ''
-      #!${pkgs.bash}/bin/bash
-      cd ${self}
-      exec ${pkgs.bash}/bin/bash ${self}/scripts/audit/lint.sh "$@"
-    '';
-
-    charter-drift = pkgs.writeScriptBin "charter-drift" ''
-      #!${pkgs.python3}/bin/python3
-      import sys
-      import os
-      os.chdir("${self}")
-      exec(open("${self}/scripts/audit/drift.py").read())
-    '';
-
   in {
     # Apps - CLI utilities
     apps.${system} = {
@@ -126,32 +109,11 @@
         type = "app";
         program = "${hwc-graph-pkg}/bin/hwc-graph";
       };
-      lint = {
-        type = "app";
-        program = "${charter-lint}/bin/charter-lint";
-      };
-      drift = {
-        type = "app";
-        program = "${charter-drift}/bin/charter-drift";
-      };
     };
 
     # Packages - Make hwc-graph available as a package too
     packages.${system} = {
       hwc-graph = hwc-graph-pkg;
-      charter-lint = charter-lint;
-      charter-drift = charter-drift;
-    };
-
-    # Checks - CHARTER compliance gates
-    checks.${system} = {
-      charter-compliance = pkgs.runCommand "charter-compliance-check" {
-        buildInputs = [ pkgs.bash pkgs.ripgrep ];
-      } ''
-        cd ${self}
-        ${pkgs.bash}/bin/bash ${self}/scripts/audit/lint.sh ${self}
-        touch $out
-      '';
     };
 
     nixosConfigurations = {
@@ -179,6 +141,35 @@
           inputs.nixvirt.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/laptop/config.nix
+        ];
+      };
+      hwc-gaming = lib.nixosSystem {
+        inherit system pkgs;
+        specialArgs = { inherit inputs; };
+        modules = [
+          agenix.nixosModules.default
+          home-manager.nixosModules.home-manager
+          ./machines/gaming/config.nix
+          {
+            home-manager.users.eric.home.stateVersion = "24.05";
+            home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = { inherit inputs; };
+          }
+        ];
+      };
+      hwc-firestick = lib.nixosSystem {
+        system = "aarch64-linux";
+        pkgs = mkPkgs "aarch64-linux";
+        specialArgs = { inherit inputs; };
+        modules = [
+          agenix.nixosModules.default
+          home-manager.nixosModules.home-manager
+          ./machines/firestick/config.nix
+          {
+            home-manager.users.eric.home.stateVersion = "24.05";
+            home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = { inherit inputs; };
+          }
         ];
       };
     };

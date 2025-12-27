@@ -4,7 +4,7 @@ let
   accounts  = config.hwc.home.mail.accounts or {};
   accVals   = lib.attrValues accounts;
   themePart = import ./theme.nix { inherit lib config; };
-  maildirBase   = "maildir://${config.home.homeDirectory}/Maildir";
+  maildirBase   = "maildir://${config.home.homeDirectory}/400_mail/Maildir";
 
   # Unified inbox: All accounts share the same maildir folders
   # source = root Maildir (shows all folders including 000_inbox, 010_sent, etc.)
@@ -34,7 +34,7 @@ let
   # Unified notmuch account (first)
   unifiedAccount = ''
     [unified]
-    source     = notmuch://${config.home.homeDirectory}/Maildir
+    source     = notmuch://${config.home.homeDirectory}/400_mail/Maildir
     from       = Eric O'Keefe <eric@iheartwoodcraft.com>
     outgoing   = exec:msmtp -a proton
     postpone   = ${maildirBase}/700_drafts

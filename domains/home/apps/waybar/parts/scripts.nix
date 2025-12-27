@@ -314,4 +314,34 @@ in
     printf '{"text":"%s %s%%","class":"%s","tooltip":"%s"}\n' \
            "''$ICON" "''$ROOT_USAGE" "''$CLASS" "''$TOOLTIP"
   '';
+
+  "ollama-status" = sh "waybar-ollama-status" ''
+    # Check if podman-ollama service is running
+    if systemctl is-active --quiet podman-ollama.service; then
+      STATUS="running"
+      ICON="🦙"
+      CLASS="running"
+      TOOLTIP="Ollama: Running\\nClick to stop"
+    else
+      STATUS="stopped"
+      ICON="🦙"
+      CLASS="stopped"
+      TOOLTIP="Ollama: Stopped\\nClick to start"
+    fi
+
+    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
+  '';
+
+  "ollama-toggle" = sh "waybar-ollama-toggle" ''
+    # Toggle podman-ollama service
+    if systemctl is-active --quiet podman-ollama.service; then
+      notify-send "Ollama" "Stopping Ollama service..." -t 2000 -i dialog-information
+      sudo systemctl stop podman-ollama.service
+      notify-send "Ollama" "Ollama stopped" -t 2000 -i dialog-information
+    else
+      notify-send "Ollama" "Starting Ollama service..." -t 2000 -i dialog-information
+      sudo systemctl start podman-ollama.service
+      notify-send "Ollama" "Ollama started" -t 2000 -i dialog-information
+    fi
+  '';
 }
