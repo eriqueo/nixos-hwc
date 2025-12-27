@@ -7,31 +7,30 @@
     [mgr]
     keymap = [
       # Space-leader: GO/NAV (Updated with numbered shortcuts)
-      { on = [ "<Space>", "g", "h" ], run = "cd ~", desc = "Go: home" },
-      { on = [ "<Space>", "g", "c" ], run = "cd ~/.config", desc = "Go: config" },
-      { on = [ "<Space>", "g", "n" ], run = "cd ~/.nixos", desc = "Go: nixos" },
+      { on = [ "<Space>", "g", "h" ], run = "plugin bookmarks --args=h", desc = "Go: home" },
+      { on = [ "<Space>", "g", "c" ], run = "plugin bookmarks --args=c", desc = "Go: config" },
+      { on = [ "<Space>", "g", "n" ], run = "plugin bookmarks --args=n", desc = "Go: nixos" },
       { on = [ "<Space>", "g", "r" ], run = "cd /", desc = "Go: root" },
       { on = [ "<Space>", "g", "t" ], run = "cd /tmp", desc = "Go: temp" },
       
       # NEW: Numbered directory shortcuts (3-digit filesystem structure)
-      { on = [ "<Space>", "g", "0" ], run = "cd ~/000_inbox", desc = "Go: inbox" },
-      { on = [ "<Space>", "g", "1" ], run = "cd ~/100_hwc", desc = "Go: work" },
-      { on = [ "<Space>", "g", "2" ], run = "cd ~/200_personal", desc = "Go: personal" },
-      { on = [ "<Space>", "g", "3" ], run = "cd ~/300_tech", desc = "Go: tech" },
-      { on = [ "<Space>", "g", "5" ], run = "cd ~/500_media", desc = "Go: media" },
-      { on = [ "<Space>", "g", "9" ], run = "cd ~/900_vaults", desc = "Go: 9_vaults" },
-    
+      { on = [ "<Space>", "g", "0" ], run = "plugin bookmarks --args=i", desc = "Go: inbox" },
+      { on = [ "<Space>", "g", "1" ], run = "plugin bookmarks --args=w", desc = "Go: work" },
+      { on = [ "<Space>", "g", "2" ], run = "plugin bookmarks --args=p", desc = "Go: personal" },
+      { on = [ "<Space>", "g", "3" ], run = "plugin bookmarks --args=t", desc = "Go: tech" },
+      { on = [ "<Space>", "g", "5" ], run = "plugin bookmarks --args=m", desc = "Go: media" },
+      { on = [ "<Space>", "g", "9" ], run = "plugin bookmarks --args=v", desc = "Go: vaults" },
+
       # Letter-based shortcuts for common locations
-      { on = [ "<Space>", "g", "d" ], run = "cd ~/000_inbox", desc = "Go: downloads/inbox" },
-      { on = [ "<Space>", "g", "n" ], run = "cd ~/.nixos", desc = "Go: nixos" },
+      { on = [ "<Space>", "g", "d" ], run = "plugin bookmarks --args=i", desc = "Go: downloads/inbox" },
       { on = [ "<Space>", "g", "p" ], run = "cd ~/500_media/pictures", desc = "Go: pictures" },
-      { on = [ "<Space>", "g", "v" ], run = "cd ~/900_vaults", desc = "Go: vaults" },
+      { on = [ "<Space>", "g", "v" ], run = "plugin bookmarks --args=v", desc = "Go: vaults" },
     
       # Space-leader: FIND/SEARCH (keeping your existing setup)
-      { on = [ "<Space>", "f", "f" ], run = "filter", desc = "Find: filter files" },
+      { on = [ "<Space>", "f", "f" ], run = "plugin smart_filter", desc = "Find: smart filter" },
+      { on = [ "<Space>", "f", "F" ], run = "filter", desc = "Find: basic filter" },
       { on = [ "<Space>", "f", "n" ], run = 'search --via=fd --args="--type f"', desc = "Find: by name (files only)" },
       { on = [ "<Space>", "f", "c" ], run = "search --via=rg", desc = "Find: content (ripgrep)" },
-      { on = [ "<Space>", "f", "z" ], run = "plugin fzf", desc = "Find: fzf (plugin)" },
       { on = [ "<Space>", "f", "d" ], run = "search --via=fd", desc = "Find: fd search" },
       { on = [ "<Space>", "f", "s" ], run = "escape --search", desc = "Find: stop search" },
     
@@ -46,7 +45,6 @@
     
       # Space-leader: TOGGLE/TABS (keeping your existing setup)
       { on = [ "<Space>", "t", "h" ], run = "hidden toggle", desc = "Toggle: hidden files" },
-      { on = [ "<Space>", "t", "p" ], run = "plugin toggle-view", desc = "Toggle: preview (plugin)" },
       { on = [ "<Space>", "t", "n" ], run = "tab_create --current", desc = "Tab: new (here)" },
       { on = [ "<Space>", "t", "c" ], run = "tab_close", desc = "Tab: close" },
       { on = [ "<Space>", "t", "1" ], run = "tab_switch 0", desc = "Tab: 1" },
@@ -81,6 +79,8 @@
       { on = [ "r" ], run = "rename", desc = "Rename" },
       { on = [ "i" ], run = "inspect", desc = "Inspect file" },
       { on = [ "z" ], run = "plugin zoxide", desc = "Jump with zoxide (plugin)" },
+      { on = [ "," ], run = "plugin bookmarks", desc = "Bookmarks menu" },
+      { on = [ "c" ], run = "plugin chmod", desc = "Change permissions" },
       { on = [ "." ], run = "hidden toggle", desc = "Toggle hidden" },
       { on = [ "?" ], run = "help", desc = "Help" },
     
@@ -93,12 +93,27 @@
       { on = [ "j" ], run = "arrow 1", desc = "Move down" },
       { on = [ "h" ], run = "leave", desc = "Go back" },
       { on = [ "l" ], run = "enter", desc = "Enter/Open" },
+      { on = [ "-" ], run = "leave", desc = "Go to parent" },
       { on = [ "g", "g" ], run = "arrow top", desc = "Go to top" },
       { on = [ "G" ], run = "arrow bot", desc = "Go to bottom" },
       { on = [ "<C-u>" ], run = "arrow -50%", desc = "Half page up" },
       { on = [ "<C-d>" ], run = "arrow 50%", desc = "Half page down" },
       { on = [ "<Enter>" ], run = "open", desc = "Open" },
-      { on = [ "q" ], run = "quit", desc = "Quit" }
+      { on = [ "q" ], run = "quit", desc = "Quit" },
+
+      # Preview navigation
+      { on = [ "E" ], run = "seek 5", desc = "Preview: scroll down" },
+      { on = [ "W" ], run = "seek -5", desc = "Preview: scroll up" },
+
+      # Shell and clipboard
+      { on = [ "!" ], run = "shell --block --confirm", desc = "Run shell command" },
+      { on = [ "<Space>", "y", "p" ], run = "copy path", desc = "Copy: full path" },
+      { on = [ "<Space>", "y", "n" ], run = "copy filename", desc = "Copy: filename" },
+      { on = [ "<Space>", "y", "d" ], run = "copy dirname", desc = "Copy: directory name" },
+
+      # Advanced file operations
+      { on = [ "s" ], run = "link", desc = "Create symlink" },
+      { on = [ "S" ], run = "link --relative", desc = "Create relative symlink" }
     ]
     
     [tasks]

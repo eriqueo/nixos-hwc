@@ -22,19 +22,20 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
       yazi micro ffmpegthumbnailer unzip jq poppler-utils fontpreview
-      fd ripgrep fzf zoxide file exiftool imagemagick p7zip
+      fd ripgrep fzf zoxide file exiftool imagemagick p7zip glow
     ];
 
     xdg.configFile =
       {
         "yazi/yazi.toml" = {
           text = ''
-            [manager]
+            [mgr]
             sort_by = "natural"
             sort_dir_first = true
             mouse_events = [ "click", "scroll" ]
             show_hidden = false
             show_symlink = true
+            show_symlink_icon = true
             linemode = "size"
             scrolloff = 5
 
@@ -51,6 +52,7 @@ in
               { run = 'micro "$@"', block = true, for = "unix" }
             ]
             open = [ { run = 'xdg-open "$@"', desc = "Open" } ]
+            office = [ { run = 'onlyoffice-desktopeditors "$@"', desc = "OnlyOffice" } ]
             extract = [ { run = '7z x -y "$@"', desc = "Extract here (7z)", for = "unix" } ]
 
             [open]
@@ -63,12 +65,16 @@ in
               { mime = "video/*", use = [ "open" ] },
               { mime = "audio/*", use = [ "open" ] },
               { mime = "image/*", use = [ "open" ] },
-              { mime = "application/pdf", use = [ "open" ] }
+              { mime = "application/pdf", use = [ "open" ] },
+              { mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", use = [ "office" ] },
+              { mime = "application/msword", use = [ "office" ] },
+              { mime = "application/vnd.oasis.opendocument.text", use = [ "office" ] }
             ]
 
             [plugin]
             previewers = [
               { name = "*/", run = "folder", sync = true },
+              { name = "*.md", run = "glow" },
               { mime = "text/*", run = "code" },
               { mime = "*/xml", run = "code" },
               { mime = "*/javascript", run = "code" },

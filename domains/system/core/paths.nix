@@ -417,7 +417,7 @@ in {
         pictures = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures"; };
         music = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/520_music"; };
         videos = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/530_videos"; };
-        screenshots = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures/511_screenshots"; };
+        screenshots = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures/screenshots"; };
         picturesInbox = lib.mkOption { type = lib.types.path; default = "${cfg.user.media}/510_pictures/599_inbox"; };
       };
 

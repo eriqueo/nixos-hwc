@@ -94,7 +94,7 @@
         "movies" = "cd /mnt/media/movies";
         "music" = "cd /mnt/media/music";
         "nixos" = "cd ~/300_tech";
-        "screenshots" = "cd ~/500_media/510_pictures/511_screenshots";
+        "screenshots" = "cd ~/500_media/510_pictures/screenshots";
         "tech" = "cd ~/300_tech";
         "tv" = "cd /mnt/media/tv";
         "vaults" = "cd ~/900_vaults";
