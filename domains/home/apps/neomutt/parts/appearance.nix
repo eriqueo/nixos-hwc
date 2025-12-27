@@ -32,13 +32,13 @@ in
       # CORE: Storage / Mailboxes
       ############################################
       set mbox_type = Maildir
-      set folder    = "~/Maildir"
+      set folder    = "~/400_mail/Maildir"
       ${lib.optionalString (primary != null) ''
         set spoolfile = "=${(primary.maildirName or (primary.name or "inbox"))}/INBOX"
       ''}
 
       # Discover all local Maildirs for sidebar (quote paths safely)
-      mailboxes `find ~/Maildir -type d -name cur -printf '"%h" ' | sort -u`
+      mailboxes `find ~/400_mail/Maildir -type d -name cur -printf '"%h" ' | sort -u`
 
       # Human labels for each account's INBOX in the sidebar
       ${lib.concatStringsSep "\n" (map (a:

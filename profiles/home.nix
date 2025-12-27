@@ -74,7 +74,7 @@
           aerc.enable = lib.mkDefault false;                # TUI mail client
           neomutt.enable = lib.mkDefault false;             # TUI mail client (alternative)
           betterbird.enable = lib.mkDefault false;          # GUI mail client (Thunderbird fork)
-          protonMail.enable = lib.mkDefault false;          # Proton Mail bridge/client
+          protonMail.enable = lib.mkDefault true;          # Proton Mail bridge/client
 
           # Security
           gpg.enable = lib.mkDefault true;
