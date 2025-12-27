@@ -19,15 +19,15 @@
 
   # Storage paths for ROMs
   hwc.paths = {
-    hot = "/home/eric/gaming";        # Local storage (SD card)
-    media = "/mnt/network-roms";      # Network mount (optional)
+    hot.root = "/home/eric/gaming";        # Local storage (SD card)
+    media.root = "/mnt/network-roms";      # Network mount (optional)
   };
 
   # Enable Samba for ROM transfer over network
   hwc.networking.samba = {
     enable = true;
     shares.roms = {
-      path = "${config.hwc.paths.hot}/roms";
+      path = "${config.hwc.paths.hot.root}/roms";
       browseable = true;
       readOnly = false;
     };
