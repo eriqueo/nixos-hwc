@@ -5,24 +5,25 @@
 { config, lib, ... }:
 
 let
-  paths = config.hwc.paths;
-  u     = paths.user;
-  ud    = paths.userDirs;
+  home = config.home.homeDirectory;
+  inbox = "${home}/000_inbox";
+  work = "${home}/100_hwc";
+  media = "${home}/500_media";
 in {
   config = {
     xdg.userDirs = {
       enable = true;
       createDirectories = true;
 
-      # Use the centralized path definitions from domains/system/core/paths.nix
-      desktop = ud.desktop;
-      download = ud.download;
-      documents = ud.documents;
-      music = ud.music;
-      pictures = ud.pictures;
-      videos = ud.videos;
-      publicShare = ud.publicShare;
-      templates = ud.templates;
+      # Declarative XDG mapping aligned to the Dewey/underscore scheme
+      desktop = inbox;
+      download = "${inbox}/downloads";
+      documents = "${work}/110_documents";
+      templates = "${work}/130_reference/templates";
+      publicShare = inbox;
+      pictures = "${media}/510_pictures";
+      music = "${media}/520_music";
+      videos = "${media}/530_videos";
     };
   };
 }
