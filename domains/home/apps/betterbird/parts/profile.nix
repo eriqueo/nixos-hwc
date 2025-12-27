@@ -539,7 +539,7 @@ in {
         echo "📧 IMAP Storage: $([ -d '${profileDir}/ImapMail' ] && echo '~/.betterbird/profiles/default/ImapMail' || echo 'not created yet')"
         echo ""
         echo "🔗 Email Architecture:"
-        echo "   • aerc ← → ~/Maildir ← → mbsync ← → IMAP Servers"
+        echo "   • aerc ← → ~/400_mail/Maildir ← → mbsync ← → IMAP Servers"
         echo "   • Thunderbird ← → ~/.betterbird/ImapMail ← → IMAP Servers"
         echo "   • Separate systems, no shared storage"
         echo ""

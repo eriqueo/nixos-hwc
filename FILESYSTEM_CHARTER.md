@@ -8,9 +8,9 @@
 
 ## Core Principles
 
-1. **3-Digit Prefix**: All top-level folders use `XXX_name` format
+1. **3-Digit Prefix**: All top-level folders use `XXX_name` format with underscores (no dashes)
 2. **Domain Separation**: Hundreds place indicates domain (100=work, 200=personal, etc.)
-3. **Nested Structure**: Each domain has internal organization (110, 120, etc.)
+3. **Nested Structure**: Dewey-style tens-place categories: `X00_inbox`, `X10_documents`, `X20_projects`, `X30_reference`, `X40_assets`, `X90_archive`
 4. **Inbox-First**: Process items through `000_inbox/` before filing
 5. **Domain-Specific Storage**: Reference materials live within their relevant domain (not cross-domain)
 
@@ -25,6 +25,7 @@
 ├── 100_hwc/                # Work domain
 ├── 200_personal/           # Personal domain
 ├── 300_tech/               # Technology/development domain
+├── 400_mail/               # Mail (Maildir, mbox)
 ├── 500_media/              # Cross-domain media library
 └── 900_vaults/             # Cloud sync (Obsidian, etc.)
 ```
@@ -33,24 +34,24 @@
 
 ## Domain-Level Structure
 
-Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
+Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern (underscores, no dashes):
 
 ```
 1XX_domain/
-├── 000-inbox/              # Domain-specific processing queue
-├── 110-documents/          # Domain documents
-├── 120-development/        # Active development work
-├── 130-reference/          # Domain reference materials
-├── 140-media/              # Domain-specific media
-└── 190-archive/            # Completed/archived items (optional)
+├── 100_inbox/              # Domain-specific processing queue
+├── 110_documents/          # Domain documents
+├── 120_projects/           # Projects / development work
+├── 130_reference/          # Domain reference materials
+├── 140_assets/             # Domain-specific assets/media
+└── 190_archive/            # Completed/archived items (optional)
 ```
 
 **Numbering Within Domains:**
 - `X00-X09`: Inbox/processing
 - `X10-X19`: Documents/files
-- `X20-X29`: Development/active work
+- `X20-X29`: Projects/development
 - `X30-X39`: Reference materials
-- `X40-X49`: Media/assets
+- `X40-X49`: Assets/media
 - `X90-X99`: Archive/completed
 
 ---
@@ -84,12 +85,16 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
 **Structure**:
 ```
 500_media/
-├── pictures/
-│   ├── 01-screenshots/
-│   └── 99-inbox/
-├── music/
-└── videos/
+├── 510_pictures/
+│   ├── 511_screenshots/
+│   └── 599_inbox/
+├── 520_music/
+└── 530_videos/
 ```
+
+### `400_mail/` - Mail
+**Purpose**: Mail storage and related configs
+**Examples**: `Maildir/`, `mbox`, mail configs (if needed)
 
 ### `900_vaults/` - Cloud Sync
 **Purpose**: Synced knowledge bases and cloud storage
@@ -100,13 +105,13 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern:
 
 ## XDG Integration
 
-System automatically maps XDG directories:
+System automatically maps XDG directories (update paths to match Dewey/underscore scheme):
 - `XDG_DOWNLOAD_DIR` → `~/000_inbox/downloads/`
-- `XDG_DOCUMENTS_DIR` → `~/100_hwc/110-documents/`
-- `XDG_TEMPLATES_DIR` → `~/100_hwc/130-reference/templates/`
-- `XDG_PICTURES_DIR` → `~/500_media/pictures/`
-- `XDG_MUSIC_DIR` → `~/500_media/music/`
-- `XDG_VIDEOS_DIR` → `~/500_media/videos/`
+- `XDG_DOCUMENTS_DIR` → `~/100_hwc/110_documents/`
+- `XDG_TEMPLATES_DIR` → `~/100_hwc/130_reference/templates/`
+- `XDG_PICTURES_DIR` → `~/500_media/510_pictures/`
+- `XDG_MUSIC_DIR` → `~/500_media/520_music/`
+- `XDG_VIDEOS_DIR` → `~/500_media/530_videos/`
 - `XDG_DESKTOP_DIR` → `~/000_inbox/`
 - `XDG_PUBLICSHARE_DIR` → `~/000_inbox/`
 

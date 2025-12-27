@@ -28,7 +28,7 @@
         send.msmtpAccount = "proton";
         primary = true;
       };
-      
+
     gmail-personal = {
           name = "gmail-personal";
           type = "gmail";

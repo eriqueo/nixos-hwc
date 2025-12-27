@@ -8,6 +8,7 @@
 {
   imports = [
     ./options.nix
-    ./parts/business-api.nix
+    # TODO: Fix business-api.nix - wrong namespace and structure
+    # ./parts/business-api.nix
   ];
 }

@@ -21,6 +21,28 @@ in
   config = lib.mkIf cfg.enable {
 
     #==========================================================================
+    # FAN CONTROL (ThinkPad)
+    #==========================================================================
+    boot.extraModprobeConfig = lib.mkIf cfg.fanControl.enable ''
+      options thinkpad_acpi fan_control=1
+    '';
+
+    services.thinkfan = lib.mkIf cfg.fanControl.enable {
+      enable = true;
+      settings = {
+        sensors = [
+          # Specific hwmon paths (hwmon numbers may vary, but generally stable across reboots)
+          { hwmon = "/sys/class/hwmon/hwmon9/temp1_input"; }  # coretemp
+          { hwmon = "/sys/class/hwmon/hwmon6/temp1_input"; }  # thinkpad
+        ];
+        fans = [
+          { tpacpi = "/proc/acpi/ibm/fan"; }
+        ];
+        levels = cfg.fanControl.levels;
+      };
+    };
+
+    #==========================================================================
     # AUDIO SYSTEM & DESKTOP PORTALS
     #==========================================================================
     security.rtkit.enable = lib.mkIf cfg.audio.enable true;

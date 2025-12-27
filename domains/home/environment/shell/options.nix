@@ -87,17 +87,17 @@
         "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
         "cdn" = "cd ~/.nixos";
         # Directory shortcuts
-        "downloads" = "cd ~/00-inbox/downloads";
-        "hwc" = "cd ~/01-hwc";
-        "inbox" = "cd ~/00-inbox";
+        "downloads" = "cd ~/000_inbox/downloads";
+        "hwc" = "cd ~/100_hwc";
+        "inbox" = "cd ~/000_inbox";
         "media" = "cd /mnt/media";
         "movies" = "cd /mnt/media/movies";
         "music" = "cd /mnt/media/music";
-        "nixos" = "cd ~/03-tech/01-active/nixos";
-        "screenshots" = "cd ~/05-media/pictures/screenshots";
-        "tech" = "cd ~/03-tech";
+        "nixos" = "cd ~/300_tech";
+        "screenshots" = "cd ~/500_media/510_pictures/511_screenshots";
+        "tech" = "cd ~/300_tech";
         "tv" = "cd /mnt/media/tv";
-        "vaults" = "cd ~/99-vaults";
+        "vaults" = "cd ~/900_vaults";
         
         # Application shortcuts
         # ai-chat is now a proper script at /run/current-system/sw/bin/ai-chat

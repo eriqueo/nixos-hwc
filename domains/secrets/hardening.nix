@@ -15,7 +15,7 @@ in {
         checkReversePath = "loose";   # anti-spoofing without breaking multi-homed
         logRefusedConnections = cfg.firewall.logRefused or true;
 
-        allowPing = !(cfg.firewall.strictMode or false);
+        allowPing = lib.mkDefault (!(cfg.firewall.strictMode or false));
         trustedInterfaces = cfg.firewall.trustedInterfaces or [];
 
         allowedTCPPorts = lib.flatten [

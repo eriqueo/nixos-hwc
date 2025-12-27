@@ -646,7 +646,7 @@ Server domain:
 Filesystem Charter mapped to system:
 ```
 XDG_DOWNLOAD_DIR      → ~/000_inbox/downloads/
-XDG_DOCUMENTS_DIR     → ~/100_hwc/110-documents/
+XDG_DOCUMENTS_DIR     → ~/100_hwc/110_documents/
 XDG_PICTURES_DIR      → ~/500_media/pictures/
 XDG_MUSIC_DIR         → ~/500_media/music/
 XDG_VIDEOS_DIR        → ~/500_media/videos/

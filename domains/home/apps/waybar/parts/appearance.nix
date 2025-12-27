@@ -38,7 +38,7 @@ window#waybar {
 #window { padding: 0 10px; }
 
 #cpu, #memory, #temperature, #network, #pulseaudio,
-#battery, #clock, #custom-gpu, #idle_inhibitor, #mpd, #tray,
+#battery, #clock, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-fan, #custom-load,
 #custom-power-profile, #custom-disk-space, #backlight, #bluetooth {
   padding: 0 10px;
@@ -60,6 +60,7 @@ window#waybar {
 #backlight { background-color: #${palette.muted}; }
 #clock { background-color: #${palette.surface1}; color: #${palette.fg}; }
 #custom-gpu { background-color: #${palette.surface2}; }
+#custom-ollama { background-color: #${palette.muted}; }
 #idle_inhibitor { background-color: #${palette.muted}; }
 #mpd { background-color: #${palette.surface1}; }
 #tray { background-color: #${palette.surface2}; }
@@ -87,4 +88,6 @@ window#waybar {
 .balanced { color: #${palette.info}; }
 .powersave { color: #${palette.good}; }
 .unknown { color: #${palette.muted}; }
+.running { color: #${palette.good}; }
+.stopped { color: #${palette.muted}; }
 ''
