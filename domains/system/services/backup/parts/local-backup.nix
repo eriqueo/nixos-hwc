@@ -24,6 +24,9 @@ set -euo pipefail
     DAY_OF_MONTH=$(${pkgs.coreutils}/bin/date +%d)
     LOG_DIR="${cfg.monitoring.logPath}"
     LOG_FILE="$LOG_DIR/backup-local.log"
+    KEEP_DAILY=${toString cfg.local.keepDaily}
+    KEEP_WEEKLY=${toString cfg.local.keepWeekly}
+    KEEP_MONTHLY=${toString cfg.local.keepMonthly}
 
     # Logging functions
     log() {
@@ -32,6 +35,87 @@ set -euo pipefail
 
     log_error() {
       echo "[$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" | ${pkgs.coreutils}/bin/tee -a "$LOG_FILE" >&2
+    }
+
+    # Helpers
+    is_complete() {
+      [[ -f "$1/.BACKUP_COMPLETE" ]]
+    }
+
+    # Remove incomplete backups before any work
+    prune_incomplete() {
+      for type_dir in daily weekly monthly; do
+        local base="$BACKUP_ROOT/$type_dir"
+        [[ -d "$base" ]] || continue
+        for incomplete in $(${pkgs.findutils}/bin/find "$base" -mindepth 1 -maxdepth 1 -type d 2>/dev/null); do
+          if [[ -d "$incomplete" ]] && ! is_complete "$incomplete"; then
+            log "Removing incomplete backup: $incomplete"
+            ${pkgs.coreutils}/bin/rm -rf "$incomplete"
+          fi
+        done
+      done
+    }
+
+    # Prune backups by count (oldest first), keeping only the newest N complete snapshots
+    prune_by_count() {
+      local type_dir="$1"
+      local keep="$2"
+      [[ "$keep" -le 0 ]] && return 0
+      local base="$BACKUP_ROOT/$type_dir"
+      [[ -d "$base" ]] || return 0
+
+      mapfile -t backups < <(${pkgs.findutils}/bin/find "$base" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | ${pkgs.coreutils}/bin/sort)
+
+      # Filter to completed backups only
+      local completed=()
+      for b in ''${backups[@]}; do
+        if is_complete "$b"; then
+          completed+=("$b")
+        fi
+      done
+
+      local count=''${#completed[@]}
+      if (( count > keep )); then
+        local to_delete=$((count - keep))
+        for ((i = 0; i < to_delete; i++)); do
+          local target="''${completed[$i]}"
+          log "Removing old ''${type_dir%/} backup: $(${pkgs.coreutils}/bin/basename "$target")"
+          ${pkgs.coreutils}/bin/rm -rf "$target"
+        done
+      fi
+    }
+
+    prune_retention() {
+      prune_by_count daily "$KEEP_DAILY"
+      prune_by_count weekly "$KEEP_WEEKLY"
+      prune_by_count monthly "$KEEP_MONTHLY"
+    }
+
+    # Last-resort pruning: remove oldest backups (preserve at least one per tier) until space meets threshold
+    emergency_prune_for_space() {
+      while true; do
+        AVAILABLE_GB=$(${pkgs.coreutils}/bin/df -BG "$BACKUP_DEST" | ${pkgs.gawk}/bin/awk 'NR==2 {print $4}' | ${pkgs.gnused}/bin/sed 's/G//')
+        (( AVAILABLE_GB >= ${toString cfg.local.minSpaceGB} )) && return 0
+
+        local removed=false
+        for type_dir in daily weekly monthly; do
+          local base="$BACKUP_ROOT/$type_dir"
+          [[ -d "$base" ]] || continue
+          mapfile -t backups < <(${pkgs.findutils}/bin/find "$base" -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | ${pkgs.coreutils}/bin/sort)
+          # Keep at least one backup per tier
+          if (( ''${#backups[@]} > 1 )); then
+            local target="''${backups[0]}"
+            log "Emergency pruning $type_dir backup to free space: $(${pkgs.coreutils}/bin/basename "$target")"
+            ${pkgs.coreutils}/bin/rm -rf "$target"
+            removed=true
+            break
+          fi
+        done
+
+        if [[ "$removed" == false ]]; then
+          return 1
+        fi
+      done
     }
 
     # Ensure log directory exists
@@ -67,11 +151,20 @@ set -euo pipefail
       exit 1
     fi
 
-    # Check available space
+    # Cleanup stale/incomplete backups before space check
+    prune_incomplete
+    prune_retention
+
+    # Check available space after pruning
     AVAILABLE_GB=$(${pkgs.coreutils}/bin/df -BG "$BACKUP_DEST" | ${pkgs.gawk}/bin/awk 'NR==2 {print $4}' | ${pkgs.gnused}/bin/sed 's/G//')
     if [[ "$AVAILABLE_GB" -lt ${toString cfg.local.minSpaceGB} ]]; then
-      log_error "Insufficient space: $AVAILABLE_GB GB available, need ${toString cfg.local.minSpaceGB} GB"
-      exit 1
+      log "Low space ($AVAILABLE_GB GB). Attempting emergency pruning to reach ${toString cfg.local.minSpaceGB} GB..."
+      if ! emergency_prune_for_space; then
+        AVAILABLE_GB=$(${pkgs.coreutils}/bin/df -BG "$BACKUP_DEST" | ${pkgs.gawk}/bin/awk 'NR==2 {print $4}' | ${pkgs.gnused}/bin/sed 's/G//')
+        log_error "Insufficient space after pruning: $AVAILABLE_GB GB available, need ${toString cfg.local.minSpaceGB} GB"
+        exit 1
+      fi
+      AVAILABLE_GB=$(${pkgs.coreutils}/bin/df -BG "$BACKUP_DEST" | ${pkgs.gawk}/bin/awk 'NR==2 {print $4}' | ${pkgs.gnused}/bin/sed 's/G//')
     fi
 
     log "Available space: $AVAILABLE_GB GB"
@@ -169,47 +262,9 @@ EOF
 
       # Clean old backups (only complete ones)
       log "Cleaning old backups..."
-
-      # Function to check if backup is complete
-      is_complete() {
-        [[ -f "$1/.BACKUP_COMPLETE" ]]
-      }
-
-      # Clean incomplete backups immediately (skip parent dirs)
-      for type_dir in daily weekly monthly; do
-        for incomplete in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/$type_dir" -mindepth 1 -maxdepth 1 -type d 2>/dev/null); do
-          if [[ -d "$incomplete" ]] && ! is_complete "$incomplete"; then
-            log "Removing incomplete backup: $incomplete"
-            ${pkgs.coreutils}/bin/rm -rf "$incomplete"
-          fi
-        done
-      done
-
-      # Keep only last N daily backups (complete ones only)
-      for old_daily in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/daily" -maxdepth 1 -type d -mtime +${toString cfg.local.keepDaily} 2>/dev/null); do
-        if is_complete "$old_daily"; then
-          log "Removing old daily backup: $(${pkgs.coreutils}/bin/basename "$old_daily")"
-          ${pkgs.coreutils}/bin/rm -rf "$old_daily"
-        fi
-      done
-
-      # Keep only last N weekly backups
-      for old_weekly in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/weekly" -maxdepth 1 -type d -mtime +$((${toString cfg.local.keepWeekly} * 7)) 2>/dev/null); do
-        if is_complete "$old_weekly"; then
-          log "Removing old weekly backup: $(${pkgs.coreutils}/bin/basename "$old_weekly")"
-          ${pkgs.coreutils}/bin/rm -rf "$old_weekly"
-        fi
-      done
-
-      # Keep only last N monthly backups
-      for old_monthly in $(${pkgs.findutils}/bin/find "$BACKUP_ROOT/monthly" -maxdepth 1 -type d -mtime +$((${toString cfg.local.keepMonthly} * 30)) 2>/dev/null); do
-        if is_complete "$old_monthly"; then
-          log "Removing old monthly backup: $(${pkgs.coreutils}/bin/basename "$old_monthly")"
-          ${pkgs.coreutils}/bin/rm -rf "$old_monthly"
-        fi
-      done
-
-      log "Cleanup completed"
+      prune_incomplete
+      prune_retention
+      log "Cleanup completed (count-based retention)"
 
       # Calculate backup statistics
       BACKUP_SIZE=$(${pkgs.coreutils}/bin/du -sh "$BACKUP_DIR_FINAL" | ${pkgs.coreutils}/bin/cut -f1)

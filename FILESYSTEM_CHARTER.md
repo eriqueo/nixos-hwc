@@ -86,7 +86,7 @@ Each domain (`100_hwc/`, `200_personal/`, `300_tech/`) follows this pattern (und
 ```
 500_media/
 ├── 510_pictures/
-│   ├── 511_screenshots/
+│   ├── screenshots/
 │   └── 599_inbox/
 ├── 520_music/
 └── 530_videos/

@@ -4,6 +4,10 @@
   "yazi/init.lua" = {
     text = ''
       require("full-border"):setup()
+      require("bookmarks"):setup()
+      require("glow")
+      require("smart_filter")
+      require("chmod")
     '';
   };
 
@@ -48,6 +52,175 @@
         end
       end
       return { setup = setup }
+    '';
+  };
+
+  # ========================================================================
+  # GLOW - Markdown previewer using glow
+  # ========================================================================
+  "yazi/plugins/glow.yazi/main.lua" = {
+    text = ''
+      local M = {}
+
+      function M:peek(job)
+        local child = Command("glow")
+          :arg("-s"):arg("dark")
+          :arg("-w"):arg(tostring(job.area.w))
+          :arg(tostring(job.file.url))
+          :stdout(Command.PIPED)
+          :stderr(Command.PIPED)
+          :spawn()
+
+        if not child then
+          return self:fallback_to_builtin(job)
+        end
+
+        local output, err = child:wait_with_output()
+        if not output then
+          return self:fallback_to_builtin(job)
+        end
+
+        return ui.Text.parse(output.stdout):area(job.area)
+      end
+
+      function M:seek(units)
+        local h = cx.active.current.hovered
+        if h and h.url then
+          ya.manager_emit("peek", { math.max(0, cx.active.preview.skip + units), only_if = tostring(h.url) })
+        end
+      end
+
+      function M:fallback_to_builtin(job)
+        local cmd = "cat"
+        local child = Command(cmd):args({ tostring(job.file.url) }):stdout(Command.PIPED):spawn()
+        if not child then return {} end
+        local output = child:wait_with_output()
+        if not output then return {} end
+        return ui.Text.parse(output.stdout):area(job.area)
+      end
+
+      return M
+    '';
+  };
+
+  # ========================================================================
+  # SMART-FILTER - Enhanced filtering with visual feedback
+  # ========================================================================
+  "yazi/plugins/smart_filter.yazi/main.lua" = {
+    text = ''
+      local function entry(self, args)
+        ya.manager_emit("filter", { smart = true })
+      end
+
+      return { entry = entry }
+    '';
+  };
+
+  # ========================================================================
+  # CHMOD - Visual permission editor
+  # ========================================================================
+  "yazi/plugins/chmod.yazi/main.lua" = {
+    text = ''
+      local function entry(_, args)
+        local h = cx.active.current.hovered
+        if not h then
+          ya.notify {
+            title = "Chmod",
+            content = "No file hovered",
+            level = "warn",
+            timeout = 3,
+          }
+          return
+        end
+
+        local value, event = ya.input {
+          title = "Change permissions (octal, e.g., 755):",
+          position = { "top-center", y = 2, w = 40 },
+        }
+
+        if event ~= 1 or not value or value == "" then
+          return
+        end
+
+        local output, err = Command("chmod")
+          :arg(value)
+          :arg(tostring(h.url))
+          :stdout(Command.PIPED)
+          :stderr(Command.PIPED)
+          :output()
+
+        if output then
+          ya.manager_emit("refresh", {})
+          ya.notify {
+            title = "Chmod",
+            content = "Permissions changed to " .. value,
+            level = "info",
+            timeout = 2,
+          }
+        else
+          ya.notify {
+            title = "Chmod",
+            content = "Failed: " .. tostring(err),
+            level = "error",
+            timeout = 3,
+          }
+        end
+      end
+
+      return { entry = entry }
+    '';
+  };
+
+  # ========================================================================
+  # BOOKMARKS - Quick directory bookmarks
+  # ========================================================================
+  "yazi/plugins/bookmarks.yazi/main.lua" = {
+    text = ''
+      local bookmarks = {
+        h = "~",
+        c = "~/.config",
+        n = "~/.nixos",
+        i = "~/000_inbox",
+        w = "~/100_hwc",
+        p = "~/200_personal",
+        t = "~/300_tech",
+        m = "~/500_media",
+        v = "~/900_vaults",
+      }
+
+      local function setup()
+        -- Setup is called from init.lua
+      end
+
+      local function entry(args)
+        local key = args[1]
+        if not key then
+          ya.notify {
+            title = "Bookmarks",
+            content = "Available: h(home) c(config) n(nixos) i(inbox) w(work) p(personal) t(tech) m(media) v(vaults)",
+            level = "info",
+            timeout = 5
+          }
+          return
+        end
+
+        local path = bookmarks[key]
+        if path then
+          ya.manager_emit("cd", { path })
+        else
+          ya.notify {
+            title = "Bookmarks",
+            content = "Unknown bookmark: " .. key,
+            level = "warn",
+            timeout = 3
+          }
+        end
+      end
+
+      return {
+        setup = setup,
+        entry = entry,
+      }
     '';
   };
 }
