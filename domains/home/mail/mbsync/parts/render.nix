@@ -3,7 +3,7 @@ let
   cfg        = config.hwc.home.mail;
   accs       = cfg.accounts or {};
   common     = import ../../parts/common.nix { inherit lib; };
-  maildirRoot = "${config.home.homeDirectory}/Maildir";
+  maildirRoot = "${config.home.homeDirectory}/400_mail/Maildir";
 
   # ---- Account ordering (left-to-right everywhere that iterates 'vals')
   desiredOrder = [ "iheartwoodcraft" "proton" "gmail-personal" "gmail-business" ];
