@@ -4,7 +4,7 @@
 { lib, ... }:
 with lib;
 {
-  options.hwc.server.fabricApi = {
+  options.hwc.server.native.fabric-api = {
     enable = mkEnableOption "Fabric REST API service";
 
     package = mkOption {

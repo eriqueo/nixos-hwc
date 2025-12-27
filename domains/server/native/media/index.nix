@@ -3,7 +3,7 @@
 
 { lib, config, ... }:
 let
-  cfg = config.hwc.server.media;
+  cfg = config.hwc.server.native.media;
 in
 {
   imports = [ ./options.nix ];

@@ -2,7 +2,7 @@
 #
 # N8N - Workflow automation platform for alert routing and notifications
 #
-# NAMESPACE: hwc.server.n8n.*
+# NAMESPACE: hwc.server.native.n8n.*
 #
 # DEPENDENCIES:
 #   - hwc.paths.state (data directory)
@@ -11,7 +11,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.n8n;
+  cfg = config.hwc.server.native.n8n;
   paths = config.hwc.paths;
 
   # Build environment variables for n8n

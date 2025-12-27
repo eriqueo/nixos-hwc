@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.apps.googleCloudSdk;
+  cfg = config.hwc.home.apps.google-cloud-sdk;
 in
 {
   #==========================================================================

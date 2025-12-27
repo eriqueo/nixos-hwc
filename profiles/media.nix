@@ -6,6 +6,6 @@
 
   config = {
     # Keep media defaults opt-in via profile
-    hwc.server.media.enable = lib.mkDefault true;
+    hwc.server.native.media.enable = lib.mkDefault true;
   };
 }

@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.apps.slackCli;
+  cfg = config.hwc.home.apps.slack-cli;
 
   # Rename binary from 'slack' to 'slack-term' to avoid collision with desktop client
   slack-cli-wrapped = pkgs.symlinkJoin {

@@ -4,7 +4,7 @@
 { config, lib, pkgs, inputs, ... }:
 with lib;
 let
-  cfg = config.hwc.server.fabricApi;
+  cfg = config.hwc.server.native.fabric-api;
   fabricPkg = if cfg.package != null then cfg.package else inputs.fabric.packages.${pkgs.system}.default;
   listenArg = "${cfg.listenAddress}:${toString cfg.port}";
 in

@@ -14,7 +14,7 @@
 
       mountPoint = lib.mkOption {
         type = lib.types.str;
-        default = "/mnt/backup";
+        default = config.hwc.paths.backup or "/mnt/backup";
         description = "Mount point for the backup destination (external drive, NAS, or DAS)";
       };
 

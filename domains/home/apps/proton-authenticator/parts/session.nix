@@ -3,7 +3,7 @@
 { lib, pkgs, config, ... }:
 
 let
-  cfg = config.hwc.home.apps.protonAuthenticator;
+  cfg = config.hwc.home.apps.proton-authenticator;
 in
 {
   # ProtonAuthenticator desktop package

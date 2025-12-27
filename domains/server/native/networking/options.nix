@@ -12,7 +12,7 @@ in
   #============================================================================
   # VPN OPTIONS
   #============================================================================
-  options.hwc.services.vpn = {
+  options.hwc.server.native.networking = {
     tailscale = {
       enable = lib.mkEnableOption "Tailscale VPN";
 
