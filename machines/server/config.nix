@@ -513,12 +513,12 @@
       # gpg.enable remains true
 
       # Proton Suite (disable GUI)
-      protonAuthenticator.enable = lib.mkForce false;
+      proton-authenticator.enable = lib.mkForce false;
       protonPass.enable = lib.mkForce false;
 
       # Productivity & Office (disable all)
       obsidian.enable = lib.mkForce false;
-      onlyofficeDesktopeditors.enable = lib.mkForce false;
+      onlyoffice-desktopeditors.enable = lib.mkForce false;
 
       # Development & Automation (keep CLI)
       n8n.enable = lib.mkForce false;
@@ -526,7 +526,7 @@
 
       # Utilities (disable GUI)
       wasistlos.enable = lib.mkForce false;
-      bottlesUnwrapped.enable = lib.mkForce false;
+      bottles-unwrapped.enable = lib.mkForce false;
       localsend.enable = lib.mkForce false;
     };
 

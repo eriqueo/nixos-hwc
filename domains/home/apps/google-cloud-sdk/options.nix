@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.hwc.home.apps.googleCloudSdk = {
+  options.hwc.home.apps.google-cloud-sdk = {
     enable = lib.mkEnableOption "Tools for the google cloud platform";
   };
 }

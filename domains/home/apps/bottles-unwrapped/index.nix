@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.apps.bottlesUnwrapped;
+  cfg = config.hwc.home.apps.bottles-unwrapped;
 in
 {
   #==========================================================================

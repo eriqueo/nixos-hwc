@@ -11,7 +11,7 @@ in
 
       path = lib.mkOption {
         type = t.path;
-        default = "/mnt/hot";
+        default = if config.hwc.paths.hot.root != null then config.hwc.paths.hot.root else "/mnt/hot";
         description = "Hot storage mount point";
       };
 
@@ -33,7 +33,7 @@ in
 
       path = lib.mkOption {
         type = t.path;
-        default = "/mnt/media";
+        default = if config.hwc.paths.media.root != null then config.hwc.paths.media.root else "/mnt/media";
         description = "Media storage mount point";
       };
 
@@ -52,7 +52,7 @@ in
 
       path = lib.mkOption {
         type = t.path;
-        default = "/mnt/backup";
+        default = if config.hwc.paths.backup != null then config.hwc.paths.backup else "/mnt/backup";
         description = "Backup storage mount point";
       };
 

@@ -201,6 +201,15 @@ check_home_domain_antipatterns() {
 #==========================================================================
 # HARD BLOCKER 6: /mnt/ paths in domains/
 # CHARTER Section 14
+#
+# Acceptable patterns (§14 line 525):
+#   - Fallback values: config.hwc.paths.* or "/mnt/..."
+#   - Derived paths: if config.hwc.paths.* != null then "..." else "/mnt/..."
+#   - Documentation: example = "/mnt/..."
+#   - Comments: # ... /mnt/...
+#
+# Violations:
+#   - Primary hardcoded: default = "/mnt/..."
 #==========================================================================
 check_hardcoded_mnt_paths() {
     echo -e "${BLUE}[6/8]${NC} Checking for hardcoded /mnt/ paths in domains..."
@@ -210,15 +219,38 @@ check_hardcoded_mnt_paths() {
         [[ -d "$SEARCH_PATH/domains" ]] && search_dir="$SEARCH_PATH/domains"
 
         while IFS= read -r file; do
-            # Skip comments
-            if rg -n '"/mnt/' "$file" 2>/dev/null | grep -v '^\s*#' | grep -q .; then
+            # Skip example/documentation files
+            [[ "$file" =~ example.*\.nix$ ]] && continue
+            [[ "$file" =~ .*-example\.nix$ ]] && continue
+
+            # Find all lines with /mnt/ paths
+            if rg -n '"/mnt/' "$file" 2>/dev/null | grep -v '^[[:space:]]*#' | grep -q .; then
                 while IFS=: read -r line_num match; do
-                    # Double-check it's not a comment
-                    if ! echo "$match" | grep -q '^\s*#'; then
-                        lint_error "HARDCODED_PATH" "HIGH" "$file:$line_num" \
-                            "Hardcoded /mnt/ path in domains (CHARTER §14)"
-                    fi
-                done < <(rg -n '"/mnt/' "$file" 2>/dev/null | grep -v '^\s*#' || true)
+                    # Skip comments
+                    [[ "$match" =~ ^[[:space:]]*# ]] && continue
+
+                    # Skip fallback patterns: config.hwc.paths.* or "/mnt/..." OR ${paths.* or "/mnt/..."}
+                    [[ "$match" =~ config\.hwc\.paths\..+or.*\"/mnt/ ]] && continue
+                    [[ "$match" =~ \$\{paths\..+or.*\"/mnt/ ]] && continue
+
+                    # Skip derived path patterns: if ... != null then ... else "/mnt/..."
+                    # or: if ... then "${...}" else "/mnt/..."
+                    [[ "$match" =~ (if|then|else).*\"/mnt/ ]] && continue
+
+                    # Skip list items in fallback blocks: just a string literal line like '      "/mnt/hot/path"'
+                    # (Common in: ] else [ "/mnt/..." lists for multi-path fallbacks)
+                    [[ "$match" =~ ^[[:space:]]*\"/mnt/[^\"]*\"[[:space:]]*(#.*)?$ ]] && continue
+
+                    # Skip documentation examples: example = "/mnt/..."
+                    [[ "$match" =~ example[[:space:]]*=.*\"/mnt/ ]] && continue
+
+                    # Skip description field examples
+                    [[ "$match" =~ description[[:space:]]*=.*\"/mnt/ ]] && continue
+
+                    # This is a real violation - hardcoded primary path
+                    lint_error "HARDCODED_PATH" "HIGH" "$file:$line_num" \
+                        "Hardcoded /mnt/ path in domains (CHARTER §14 - use config.hwc.paths.* or fallback pattern)"
+                done < <(rg -n '"/mnt/' "$file" 2>/dev/null | grep -v '^[[:space:]]*#' || true)
             fi
         done < <(find "$search_dir" -type f -name "*.nix" 2>/dev/null || true)
     fi

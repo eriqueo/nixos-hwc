@@ -79,14 +79,14 @@
           gpg.enable = lib.mkDefault true;
 
           # Proton Suite
-          protonAuthenticator.enable = lib.mkDefault true; # 2FA authenticator
-          protonAuthenticator.autoStart = lib.mkDefault true; # Auto-start on login
+          proton-authenticator.enable = lib.mkDefault true; # 2FA authenticator
+          proton-authenticator.autoStart = lib.mkDefault true; # Auto-start on login
           protonPass.enable = lib.mkDefault true;         # Password manager (optional)
           protonPass.autoStart = lib.mkDefault true;      # Auto-start on login
 
           # Productivity & Office
           obsidian.enable = lib.mkDefault true;                   # Knowledge base
-          onlyofficeDesktopeditors.enable = lib.mkDefault true;   # Office suite
+          onlyoffice-desktopeditors.enable = lib.mkDefault true;   # Office suite
 
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
@@ -96,13 +96,13 @@
           # Utilities
           ipcalc.enable = lib.mkDefault true;              # IP calculator
           wasistlos.enable = lib.mkDefault false;          # System monitor (niche)
-          bottlesUnwrapped.enable = lib.mkDefault true;
+          bottles-unwrapped.enable = lib.mkDefault true;
           thunderbird.enable = lib.mkDefault true;
           localsend.enable = lib.mkDefault true;
           opencode.enable = lib.mkDefault true;
-          googleCloudSdk.enable = lib.mkDefault true;
+          google-cloud-sdk.enable = lib.mkDefault true;
           slack.enable = lib.mkDefault true;
-          slackCli.enable = lib.mkDefault true;
+          slack-cli.enable = lib.mkDefault true;
         };
       };
     };

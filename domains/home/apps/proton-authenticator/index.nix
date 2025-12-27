@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.apps.protonAuthenticator;
+  cfg = config.hwc.home.apps.proton-authenticator;
   session = import ./parts/session.nix { inherit lib pkgs config; };
 in
 {

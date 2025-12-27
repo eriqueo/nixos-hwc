@@ -212,7 +212,7 @@ in
           ReadWritePaths = if cfg.storage.enable
             then [ cfg.storage.basePath ]
             else [ cfg.settings.mediaLocation ];
-          ReadOnlyPaths = [ "/mnt/media/pictures" ];
+          ReadOnlyPaths = [ "${config.hwc.paths.media.root or "/mnt/media"}/pictures" ];
           # Add user to GPU groups via supplementary groups
           SupplementaryGroups = [ "video" "render" ];
 
@@ -272,7 +272,7 @@ in
             "/dev/nvidia-uvm-tools rw"
           ];
           # Allow ML service to read external library for analysis
-          ReadOnlyPaths = [ "/mnt/media/pictures" ];
+          ReadOnlyPaths = [ "${config.hwc.paths.media.root or "/mnt/media"}/pictures" ];
           # Add user to GPU groups via supplementary groups
           SupplementaryGroups = [ "video" "render" ];
 

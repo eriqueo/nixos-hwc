@@ -200,7 +200,7 @@ in
       cleanup = {
         allowedDirs = mkOption {
           type = types.listOf types.str;
-          default = [ "/mnt/hot/inbox" "/home/eric/Downloads" ];
+          default = [ "${config.hwc.paths.hot.root or "/mnt/hot"}/inbox" "/home/eric/Downloads" ];
           description = "Directories allowed for cleanup workflow via API";
         };
       };

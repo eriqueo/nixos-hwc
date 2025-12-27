@@ -9,7 +9,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.server.n8n = {
+  options.hwc.server.native.n8n = {
     enable = lib.mkEnableOption "n8n workflow automation platform";
 
     port = lib.mkOption {

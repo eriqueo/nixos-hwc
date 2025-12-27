@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.apps.onlyofficeDesktopeditors;
+  cfg = config.hwc.home.apps.onlyoffice-desktopeditors;
 in
 {
   #==========================================================================

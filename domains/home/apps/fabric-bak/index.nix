@@ -4,7 +4,7 @@
 { config, lib, pkgs, inputs, ... }:
 with lib;
 let
-  cfg = config.hwc.home.apps.fabric;
+  cfg = config.hwc.home.apps.fabric-bak;
   fabricPkg = if cfg.package != null then cfg.package else inputs.fabric.packages.${pkgs.system}.default;
 in
 {

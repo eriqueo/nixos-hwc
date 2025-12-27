@@ -42,7 +42,7 @@
     hashedPasswordFile = config.hwc.secrets.api.emergencyPasswordFile;
   };
 
-  hwc.services.vpn.tailscale = {
+  hwc.server.native.networking.tailscale = {
     enable = false;
     exitNode = false;
   };

@@ -3,7 +3,7 @@
 
 { lib, ... }:
 {
-  options.hwc.server.orchestration = {
+  options.hwc.server.native.orchestration = {
     enable = lib.mkEnableOption "orchestration helpers" // { default = true; };
   };
 }

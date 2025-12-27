@@ -3,7 +3,7 @@ let
   pythonWithRequests = pkgs.python3.withPackages (ps: with ps; [ requests ]);
   cfgRoot = "/opt/downloads";
   paths = config.hwc.paths;
-  hotRoot = "/mnt/hot";
+  hotRoot = config.hwc.paths.hot.root or "/mnt/hot";
 
   # Get username from system configuration
   userName = config.hwc.system.users.user.name;
@@ -11,11 +11,11 @@ let
   workspaceDir = "${userHome}/.nixos/workspace";
 in
 {
-  options.hwc.server.orchestration.mediaOrchestrator = {
+  options.hwc.server.native.orchestration.mediaOrchestrator = {
     enable = lib.mkEnableOption "Media orchestrator service";
   };
 
-  config = lib.mkIf config.hwc.server.orchestration.mediaOrchestrator.enable {
+  config = lib.mkIf config.hwc.server.native.orchestration.mediaOrchestrator.enable {
     systemd.services.media-orchestrator-install = {
       description = "Install media orchestrator assets";
       after = [ "network-online.target" ];

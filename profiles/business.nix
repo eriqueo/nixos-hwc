@@ -6,6 +6,6 @@
 
   config = {
     # Placeholder: enable business feature flag when this profile is used
-    hwc.server.business.enable = lib.mkDefault true;
+    hwc.server.native.business.enable = lib.mkDefault true;
   };
 }

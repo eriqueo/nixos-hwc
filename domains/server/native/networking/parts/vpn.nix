@@ -20,7 +20,7 @@
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.services.vpn;
+  cfg = config.hwc.server.native.networking;
 in {
 
   #============================================================================

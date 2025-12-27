@@ -4,7 +4,7 @@
 { lib, ...}:
 with lib;
 {
-  options.hwc.home.apps.fabric = {
+  options.hwc.home.apps.fabric-bak = {
     enable = mkEnableOption "Fabric CLI for user environment";
 
     package = mkOption {

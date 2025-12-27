@@ -18,7 +18,7 @@ let
     echo -e "''${GREEN}=== Tdarr Safety Check & Backup System ===''${NC}"
 
     # Check if backup directory exists
-    BACKUP_DIR="/mnt/hot/processing/tdarr-backups"
+    BACKUP_DIR="${paths.hot.root or "/mnt/hot"}/processing/tdarr-backups"
     if [ ! -d "$BACKUP_DIR" ]; then
       echo -e "''${YELLOW}Creating backup directory: $BACKUP_DIR''${NC}"
       mkdir -p "$BACKUP_DIR"
@@ -103,7 +103,7 @@ let
     fi
 
     # Create backup reference (checksum)
-    BACKUP_DIR="/mnt/hot/processing/tdarr-backups"
+    BACKUP_DIR="${paths.hot.root or "/mnt/hot"}/processing/tdarr-backups"
     mkdir -p "$BACKUP_DIR"
 
     FILENAME=$(basename "$FILE")

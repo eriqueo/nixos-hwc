@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.hwc.home.apps.protonAuthenticator = {
+  options.hwc.home.apps.proton-authenticator = {
     enable = lib.mkEnableOption "Two-factor authentication manager with optional sync";
 
     # Auto-start configuration
