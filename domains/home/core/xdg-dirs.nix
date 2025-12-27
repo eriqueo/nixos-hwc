@@ -1,12 +1,28 @@
 # domains/home/core/xdg-dirs.nix
-#
-# XDG User Directories Configuration
-# Home Manager's built-in XDG support handles user-dirs.dirs creation
-# System-level defaults are configured in domains/system/core/paths.nix
-{ config, lib, pkgs, ... }:
+# Declarative XDG user directories (Home Manager) aligned with HWC paths
+# System defaults are set in domains/system/core/paths.nix; this keeps ~/.config/user-dirs.dirs in sync
 
-{
-  # XDG user directories are managed by Home Manager's built-in xdg.userDirs option
-  # and the system-level /etc/xdg/user-dirs.defaults file
-  config = {};
+{ config, lib, ... }:
+
+let
+  paths = config.hwc.paths;
+  u     = paths.user;
+  ud    = paths.userDirs;
+in {
+  config = {
+    xdg.userDirs = {
+      enable = true;
+      createDirectories = true;
+
+      # Use the centralized path definitions from domains/system/core/paths.nix
+      desktop = ud.desktop;
+      download = ud.download;
+      documents = ud.documents;
+      music = ud.music;
+      pictures = ud.pictures;
+      videos = ud.videos;
+      publicShare = ud.publicShare;
+      templates = ud.templates;
+    };
+  };
 }
