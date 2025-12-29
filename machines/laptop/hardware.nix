@@ -31,16 +31,27 @@
   #
   # Labels will be applied during partitioning/formatting; nofail avoids boot blocking if absent.
   fileSystems."/mnt/backup" = {
-    device = "/dev/disk/by-label/BACKUP";
+    device = "/dev/disk/by-uuid/e0d00e5d-7d65-4cef-b131-d2fac497a230";
     fsType = "ext4";
     options = [ "nofail" ];
   };
 
-  fileSystems."/mnt/vmstore" = {
-    device = "/dev/disk/by-label/VMSTORE";
-    fsType = "ext4";
-    options = [ "nofail" ];
-  };
+  # Optional VM store drive (often disconnected). Use a conditional mount so
+  # rebuilds/boot don't hang when the device is absent.
+  systemd.tmpfiles.rules = [
+    "d /mnt/vmstore 0755 root root -"
+  ];
+
+  systemd.mounts = [
+    {
+      what = "/dev/disk/by-label/VMSTORE";
+      where = "/mnt/vmstore";
+      type = "ext4";
+      options = "nofail,x-systemd.device-timeout=1s";
+      wantedBy = [ "multi-user.target" ];
+      unitConfig.ConditionPathExists = "/dev/disk/by-label/VMSTORE";
+    }
+  ];
 
   # Encrypted swap file for hibernation support
   # Size: 16GB (recommended: 1.5x RAM for modern systems)
