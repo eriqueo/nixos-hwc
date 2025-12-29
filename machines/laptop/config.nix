@@ -55,10 +55,9 @@
     # All settings are now consolidated under the 'settings' attribute set.
     settings = {
       Login = {
-        # Renamed from 'lidSwitch'
-        HandleLidSwitch = "suspend";
-        # Renamed from 'lidSwitchExternalPower'
-        HandleLidSwitchExternalPower = "lock";
+        # Ignore lid close to prevent suspend during remote access
+        HandleLidSwitch = "ignore";
+        HandleLidSwitchExternalPower = "ignore";
         # From your previous fix
         HandlePowerKey = "hibernate";
         # Disable idle suspend (laptop left running for extended period)
