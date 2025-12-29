@@ -118,8 +118,8 @@
     local = {
       enable = true;
       mountPoint = "/mnt/backup";  # Mount your external drive here
-      keepDaily = 7;    # Keep 7 daily backups
-      keepWeekly = 4;   # Keep 4 weekly backups
+      keepDaily = 5;    # Keep 5 daily backups
+      keepWeekly = 2;   # Keep 2 weekly backups
       keepMonthly = 3;  # Keep 3 monthly backups
       minSpaceGB = 20;  # Require 20GB free space
     };
@@ -139,13 +139,8 @@
       };
     };
 
-    # Automatic scheduling
-    schedule = {
-      enable = true;
-      frequency = "daily";
-      timeOfDay = "02:00";  # Run at 2 AM
-      onlyOnAC = true;  # Only backup when plugged in
-    };
+    # Disable automatic scheduling to avoid backups during rebuild; run manually when desired
+    schedule.enable = false;
 
   };
 
@@ -292,6 +287,9 @@
 
   # Storage paths (remains unchanged).
   hwc.paths.hot.root = "/home/eric/500_media/";
+
+  # Home applications
+  home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
 
   #============================================================================
   # AI SERVICES CONFIGURATION (Laptop)

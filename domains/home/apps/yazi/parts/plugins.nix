@@ -117,11 +117,11 @@
   };
 
   # ========================================================================
-  # CHMOD - Visual permission editor
+  # CHMOD - Visual permission editor (upstream minimal, Command:arg)
   # ========================================================================
   "yazi/plugins/chmod.yazi/main.lua" = {
     text = ''
-      local function entry(_, args)
+      local function entry(_)
         local h = cx.active.current.hovered
         if not h then
           ya.notify {

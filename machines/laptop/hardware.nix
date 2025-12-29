@@ -24,8 +24,20 @@
         options = [ "fmask=0022" "dmask=0022" ];
       };
 
+  # Secondary SSD layout (planned):
+  # - BACKUP (ext4, ~400G) mounted at /mnt/backup
+  # - VMSTORE (ext4, ~300G) mounted at /mnt/vmstore
+  # - Remaining space reserved for dual-boot OS installer
+  #
+  # Labels will be applied during partitioning/formatting; nofail avoids boot blocking if absent.
   fileSystems."/mnt/backup" = {
-    device = "/dev/disk/by-uuid/e0d00e5d-7d65-4cef-b131-d2fac497a230";
+    device = "/dev/disk/by-label/BACKUP";
+    fsType = "ext4";
+    options = [ "nofail" ];
+  };
+
+  fileSystems."/mnt/vmstore" = {
+    device = "/dev/disk/by-label/VMSTORE";
     fsType = "ext4";
     options = [ "nofail" ];
   };

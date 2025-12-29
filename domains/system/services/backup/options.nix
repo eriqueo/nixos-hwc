@@ -26,19 +26,19 @@
 
       keepDaily = lib.mkOption {
         type = lib.types.int;
-        default = 7;
+        default = 5;
         description = "Count of daily backups to keep (newest retained)";
       };
 
       keepWeekly = lib.mkOption {
         type = lib.types.int;
-        default = 4;
+        default = 2;
         description = "Count of weekly backups to keep (newest retained)";
       };
 
       keepMonthly = lib.mkOption {
         type = lib.types.int;
-        default = 6;
+        default = 3;
         description = "Count of monthly backups to keep (newest retained)";
       };
 

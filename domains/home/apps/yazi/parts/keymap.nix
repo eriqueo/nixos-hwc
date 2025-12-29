@@ -81,6 +81,7 @@
       { on = [ "z" ], run = "plugin zoxide", desc = "Jump with zoxide (plugin)" },
       { on = [ "," ], run = "plugin bookmarks", desc = "Bookmarks menu" },
       { on = [ "c" ], run = "plugin chmod", desc = "Change permissions" },
+      { on = [ "<Space>", "c" ], run = "plugin chmod", desc = "Change permissions" },
       { on = [ "." ], run = "hidden toggle", desc = "Toggle hidden" },
       { on = [ "?" ], run = "help", desc = "Help" },
     

@@ -152,6 +152,11 @@ in
       wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
 
+      unitConfig = lib.optionalAttrs cfg.schedule.onlyOnAC {
+        # Only run on AC power for laptops (must be in [Unit])
+        ConditionACPower = true;
+      };
+
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${cloudBackupScript}/bin/backup-cloud";
@@ -167,9 +172,6 @@ in
 
         # Timeout after 6 hours (cloud can be slow)
         TimeoutSec = "6h";
-      } // lib.optionalAttrs cfg.schedule.onlyOnAC {
-        # Only run on AC power for laptops
-        ConditionACPower = true;
       };
 
       # Only start on-demand if scheduling is disabled
