@@ -61,8 +61,9 @@
         HandleLidSwitchExternalPower = "lock";
         # From your previous fix
         HandlePowerKey = "hibernate";
-        IdleAction = "suspend";
-        IdleActionSec = "30min";
+        # Disable idle suspend (laptop left running for extended period)
+        IdleAction = "ignore";
+        # IdleActionSec = "30min";  # Disabled - no idle action configured
       };
     };
   };
