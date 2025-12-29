@@ -73,6 +73,8 @@ in
         XDG_CACHE_HOME=/var/lib/proton-bridge/cache \
         ${pkgs.protonmail-bridge}/bin/protonmail-bridge --cli
     '')
+    pkgs.parted       # Disk partitioning
+    pkgs.gptfdisk     # gdisk/sgdisk for GPT management
   ];
 
   #==========================================================================
@@ -112,9 +114,9 @@ in
       enable = lib.mkDefault false;  # Enable per-machine
       mountPoint = lib.mkDefault "/mnt/backup";
       useRsync = true;  # Incremental backups with hard-link snapshots
-      keepDaily = lib.mkDefault 7;
-      keepWeekly = lib.mkDefault 4;
-      keepMonthly = lib.mkDefault 6;
+      keepDaily = lib.mkDefault 5;
+      keepWeekly = lib.mkDefault 2;
+      keepMonthly = lib.mkDefault 3;
       minSpaceGB = lib.mkDefault 10;
       sources = [ "/home" "/etc/nixos" ];
       # Exclude patterns to reduce backup size

@@ -95,6 +95,11 @@ in
       wants = lib.optionals cfg.cloud.enable [ "network-online.target" ];
       after = [ "local-fs.target" ] ++ lib.optionals cfg.cloud.enable [ "network-online.target" ];
 
+      unitConfig = lib.optionalAttrs cfg.schedule.onlyOnAC {
+        # Only run on AC power for laptops (must be in [Unit])
+        ConditionACPower = true;
+      };
+
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${backupCoordinatorScript}/bin/backup-coordinator";
@@ -114,10 +119,10 @@ in
         # Nice level for background operation
         Nice = 10;
         IOSchedulingClass = "idle";
-      } // lib.optionalAttrs cfg.schedule.onlyOnAC {
-        # Only run on AC power for laptops
-        ConditionACPower = true;
       };
+
+      # Do not start on boot; only via timer or manual
+      wantedBy = [ ];
     };
 
     # Backup timer for scheduled execution
@@ -136,7 +141,8 @@ in
 
         RandomizedDelaySec = cfg.schedule.randomDelay;
 
-        Persistent = true;
+        # Do not catch up missed runs on reload/boot; avoids triggering during rebuilds
+        Persistent = false;
         AccuracySec = "1h";
       };
     };
