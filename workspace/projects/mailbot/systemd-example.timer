@@ -1,0 +1,33 @@
+# Example systemd user timer for scheduled mailbot runs
+#
+# Installation:
+#   1. Copy to ~/.config/systemd/user/mailbot-cleanup.timer
+#   2. Copy systemd-example.service to ~/.config/systemd/user/mailbot-cleanup.service
+#   3. Run: systemctl --user daemon-reload
+#   4. Run: systemctl --user enable --now mailbot-cleanup.timer
+#
+# Check timer status:
+#   systemctl --user list-timers
+#   systemctl --user status mailbot-cleanup.timer
+
+[Unit]
+Description=Run mailbot cleanup weekly
+Documentation=file://%h/.nixos/workspace/projects/mailbot/README.md
+
+[Timer]
+# Run every Sunday at 3 AM
+OnCalendar=Sun *-*-* 03:00:00
+
+# Alternative schedules:
+# OnCalendar=daily         # Run daily at midnight
+# OnCalendar=weekly        # Run weekly on Monday at midnight
+# OnCalendar=monthly       # Run monthly on the 1st at midnight
+
+# If system was off during scheduled time, run when it comes back online
+Persistent=true
+
+# Randomize start time by up to 1 hour to avoid load spikes
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
