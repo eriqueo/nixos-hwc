@@ -1,7 +1,7 @@
 { lib, config, ... }:
 
 {
-  options.hwc.server.beets-native = {
+  options.hwc.server.native.beets-native-native = {
     enable = lib.mkEnableOption "beets music organizer (native installation)";
 
     musicDir = lib.mkOption {

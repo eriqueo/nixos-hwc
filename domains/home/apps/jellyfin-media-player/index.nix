@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.apps.jellyfinMediaPlayer;
+  cfg = config.hwc.home.apps.jellyfin-media-player;
   enabled = cfg.enable or false;
 in
 {

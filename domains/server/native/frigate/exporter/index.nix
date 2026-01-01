@@ -6,7 +6,7 @@
 #
 # DEPENDENCIES:
 #   - hwc.server.frigate (Frigate NVR service)
-#   - hwc.server.monitoring.prometheus (metrics collector)
+#   - hwc.server.native.monitoring.prometheus (metrics collector)
 
 { config, lib, pkgs, ... }:
 
@@ -41,7 +41,7 @@ in
     };
 
     # Register with Prometheus
-    hwc.server.monitoring.prometheus.scrapeConfigs = [
+    hwc.server.native.monitoring.prometheus.scrapeConfigs = [
       {
         job_name = "frigate-exporter";
         static_configs = [{
@@ -60,8 +60,8 @@ in
         message = "Frigate exporter requires Frigate to be enabled (hwc.server.frigate.enable = true)";
       }
       {
-        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-        message = "Frigate exporter requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.server.native.monitoring.prometheus.enable;
+        message = "Frigate exporter requires Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
       }
     ];
   };

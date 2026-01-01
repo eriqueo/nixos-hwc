@@ -7,7 +7,7 @@
 { lib, ... }:
 
 {
-  options.hwc.server.monitoring.exportarr = {
+  options.hwc.server.native.monitoring.exportarr = {
     enable = lib.mkEnableOption "Exportarr metrics exporter for *arr applications";
 
     port = lib.mkOption {

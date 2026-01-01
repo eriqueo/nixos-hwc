@@ -14,7 +14,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.frigate = {
+  options.hwc.server.native.frigate = {
     enable = mkEnableOption "Frigate NVR (config-first pattern)";
 
     image = mkOption {

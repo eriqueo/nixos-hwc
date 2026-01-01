@@ -25,7 +25,7 @@ in
       systemd.tmpfiles.rules = [
         "d /opt 0755 root root -"
         "d /opt/jellyseerr 0755 1000 1000 -"
-        "d /opt/jellyseerr/config 0755 1000 1000 -"
+        # Config directory and settings.json created in parts/config.nix
       ];
     }
   ]);

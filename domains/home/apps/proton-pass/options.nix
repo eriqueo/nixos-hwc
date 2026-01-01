@@ -2,7 +2,7 @@
 { lib, ... }:
 
 {
-  options.hwc.home.apps.protonPass = {
+  options.hwc.home.apps.proton-pass = {
     enable = lib.mkEnableOption "Enable ProtonPass password manager";
     
     # Auto-start configuration

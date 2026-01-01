@@ -9,7 +9,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.server.monitoring.prometheus = {
+  options.hwc.server.native.monitoring.prometheus = {
     enable = lib.mkEnableOption "Prometheus monitoring and metrics collection";
 
     port = lib.mkOption {

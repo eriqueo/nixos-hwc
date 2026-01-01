@@ -5,12 +5,12 @@
 # NAMESPACE: hwc.server.monitoring.cadvisor.*
 #
 # DEPENDENCIES:
-#   - hwc.server.monitoring.prometheus (metrics collector)
+#   - hwc.server.native.monitoring.prometheus (metrics collector)
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.monitoring.cadvisor;
+  cfg = config.hwc.server.native.monitoring.cadvisor;
 in
 {
   #==========================================================================
@@ -46,7 +46,7 @@ in
     };
 
     # Register with Prometheus
-    hwc.server.monitoring.prometheus.scrapeConfigs = [
+    hwc.server.native.monitoring.prometheus.scrapeConfigs = [
       {
         job_name = "cadvisor";
         static_configs = [{
@@ -61,8 +61,8 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-        message = "cAdvisor requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.server.native.monitoring.prometheus.enable;
+        message = "cAdvisor requires Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
       }
     ];
   };

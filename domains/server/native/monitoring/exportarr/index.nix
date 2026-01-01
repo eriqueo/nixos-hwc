@@ -5,14 +5,14 @@
 # NAMESPACE: hwc.server.monitoring.exportarr.*
 #
 # DEPENDENCIES:
-#   - hwc.server.monitoring.prometheus (metrics collector)
+#   - hwc.server.native.monitoring.prometheus (metrics collector)
 #   - hwc.server.containers.{sonarr,radarr,lidarr,prowlarr} (target apps)
 #   - age.secrets.{sonarr,radarr,lidarr,prowlarr}-api-key (API authentication)
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.monitoring.exportarr;
+  cfg = config.hwc.server.native.monitoring.exportarr;
 
   # Port and URL base mapping for Arr apps
   appPorts = {
@@ -87,7 +87,7 @@ in
     }) cfg.apps);
 
     # Register with Prometheus (one job per app)
-    hwc.server.monitoring.prometheus.scrapeConfigs = lib.imap0 (idx: app: {
+    hwc.server.native.monitoring.prometheus.scrapeConfigs = lib.imap0 (idx: app: {
       job_name = "${app}-exporter";
       static_configs = [{
         targets = [ "localhost:${toString (cfg.port + idx)}" ];
@@ -102,8 +102,8 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-        message = "Exportarr requires Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.server.native.monitoring.prometheus.enable;
+        message = "Exportarr requires Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
       }
       {
         assertion = !cfg.enable || (builtins.length cfg.apps > 0);

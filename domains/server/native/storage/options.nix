@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.storage = {
+  options.hwc.server.native.storage = {
     enable = mkEnableOption "HWC storage automation services";
 
     cleanup = {

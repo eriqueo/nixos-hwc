@@ -9,7 +9,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.server.monitoring.grafana = {
+  options.hwc.server.native.monitoring.grafana = {
     enable = lib.mkEnableOption "Grafana dashboards and visualization";
 
     port = lib.mkOption {

@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.backup;
+  cfg = config.hwc.server.native.backup;
 
   # Backup script for containers
   containerBackupScript = pkgs.writeScriptBin "backup-containers" ''

@@ -4,7 +4,7 @@
 { lib, ... }:
 
 {
-  options.hwc.home.fonts = {
+  options.hwc.home.theme.fonts = {
     enable = lib.mkEnableOption "Enable HWC font management for user environment";
   };
 }

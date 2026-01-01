@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.navidrome;
+  cfg = config.hwc.server.native.navidrome;
 in
 {
   #==========================================================================
@@ -15,7 +15,7 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Override dataFolder to use hwc structure
-    hwc.server.navidrome.settings.dataFolder = lib.mkDefault "/var/lib/hwc/navidrome";
+    hwc.server.native.navidrome.settings.dataFolder = lib.mkDefault "/var/lib/hwc/navidrome";
 
     # Native Navidrome service configuration
     services.navidrome = {
