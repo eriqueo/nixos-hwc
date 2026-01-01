@@ -323,7 +323,7 @@
   hwc.server.containers.organizr.enable = true;
 
   # Native Media Services (Charter compliant)
-  hwc.server.navidrome = {
+  hwc.server.native.navidrome = {
     enable = true;
     settings = {
       initialAdminUser = "admin";
@@ -334,7 +334,7 @@
     reverseProxy.enable = true;
   };
 
-  hwc.server.jellyfin = {
+  hwc.server.native.jellyfin = {
     enable = true;
     openFirewall = false;  # Manual firewall management
     reverseProxy = {
@@ -345,7 +345,7 @@
     gpu.enable = true;  # Enable NVIDIA GPU acceleration for transcoding
   };
 
-  hwc.server.immich = {
+  hwc.server.native.immich = {
     enable = true;
     settings = {
       host = "0.0.0.0";
@@ -380,7 +380,7 @@
   };
 
   # Phase 6: Support Services - Storage Automation
-  hwc.services.storage = {
+  hwc.server.native.storage = {
     enable = true;
     cleanup = {
       enable = true;

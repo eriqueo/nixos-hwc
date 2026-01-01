@@ -3,7 +3,7 @@
 { lib, pkgs, config, ... }:
 
 let
-  cfg = config.hwc.home.apps.protonPass;
+  cfg = config.hwc.home.apps.proton-pass;
 in
 {
   # ProtonPass desktop package

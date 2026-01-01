@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.hwc.home.apps.jellyfinMediaPlayer = {
+  options.hwc.home.apps.jellyfin-media-player = {
     enable = lib.mkEnableOption "Enable Jellyfin Media Player (desktop client).";
 
     autoStart = lib.mkOption {

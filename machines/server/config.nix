@@ -236,7 +236,7 @@
 
   # NVIDIA license acceptance handled in flake.nix
 
-  # GPU acceleration for Immich handled by hwc.server.immich.gpu.enable in server profile
+  # GPU acceleration for Immich handled by hwc.server.native.immich.gpu.enable in server profile
 
   # AI services configuration
   hwc.ai.ollama = {
@@ -346,7 +346,7 @@
 
   # Automated server backups (containers, databases, system)
   # Backups saved to /mnt/hot/backups with daily schedule
-  hwc.server.backup.enable = true;
+  hwc.server.native.backup.enable = true;
   # Enable AI router and agent on server
   hwc.ai.router = {
     enable = true;
@@ -357,7 +357,7 @@
     port = 6020;
   };
   # CouchDB for Obsidian LiveSync
-  hwc.server.couchdb = {
+  hwc.server.native.couchdb = {
     enable = true;
     settings = {
       port = 5984;
@@ -381,7 +381,7 @@
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
   # Access: https://hwc.ocelot-wahoo.ts.net:5443 (via Caddy)
   # Charter v7.0 Section 19 compliant - TensorRT CUDA support
-  hwc.server.frigate = {
+  hwc.server.native.frigate = {
     enable = true;
 
     # Internal port 5001 (exposed as 5443 via Caddy)
@@ -439,9 +439,9 @@
   };
 
   # Native Media Services now handled by Charter-compliant domain modules
-  # - hwc.server.jellyfin via server profile
-  # - hwc.server.immich via server profile
-  # - hwc.server.navidrome via server profile
+  # - hwc.server.native.jellyfin via server profile
+  # - hwc.server.native.immich via server profile
+  # - hwc.server.native.navidrome via server profile
 
   # Navidrome configuration handled by server profile native service
 
@@ -506,7 +506,7 @@
       # aerc.enable remains true (CLI tool)
       # neomutt.enable remains true (CLI tool)
       betterbird.enable = lib.mkForce false;
-      protonMail.enable = lib.mkForce false;
+      proton-mail.enable = lib.mkForce false;
       thunderbird.enable = lib.mkForce false;
 
       # Security (keep CLI tools)
@@ -514,7 +514,7 @@
 
       # Proton Suite (disable GUI)
       proton-authenticator.enable = lib.mkForce false;
-      protonPass.enable = lib.mkForce false;
+      proton-pass.enable = lib.mkForce false;
 
       # Productivity & Office (disable all)
       obsidian.enable = lib.mkForce false;
@@ -522,7 +522,7 @@
 
       # Development & Automation (keep CLI)
       n8n.enable = lib.mkForce false;
-      # geminiCli.enable remains true (CLI tool)
+      # gemini-cli.enable remains true (CLI tool)
 
       # Utilities (disable GUI)
       wasistlos.enable = lib.mkForce false;
@@ -531,14 +531,14 @@
     };
 
     # Keep shell/CLI configuration enabled
-    hwc.home.shell.enable = true;
+    hwc.home.environment.shell.enable = true;
     hwc.home.development.enable = true;
 
     # Disable mail for server (no GUI mail needed)
     hwc.home.mail.enable = lib.mkForce false;
 
     # Disable desktop features for headless server
-    hwc.home.fonts.enable = lib.mkForce false;
+    hwc.home.theme.fonts.enable = lib.mkForce false;
 
     # Disable desktop services that try to use dconf
     targets.genericLinux.enable = false;

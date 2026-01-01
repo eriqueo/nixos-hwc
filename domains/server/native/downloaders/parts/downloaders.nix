@@ -51,7 +51,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.services.media.downloaders;
+  cfg = config.hwc.server.native.downloaders;
   paths = config.hwc.paths;
   
   # Helper functions from source

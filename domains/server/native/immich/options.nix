@@ -3,7 +3,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.immich = {
+  options.hwc.server.native.immich = {
     enable = mkEnableOption "Immich photo management server (native service)";
 
     settings = {
@@ -285,7 +285,7 @@ in
           - Your custom proxy network CIDR
 
           Set in machine config:
-          hwc.server.immich.reverseProxy.trustedProxies = [ "127.0.0.1" "100.64.0.0/10" ];
+          hwc.server.native.immich.reverseProxy.trustedProxies = [ "127.0.0.1" "100.64.0.0/10" ];
         '';
       };
     };

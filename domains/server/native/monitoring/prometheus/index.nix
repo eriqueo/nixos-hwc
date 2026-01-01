@@ -14,7 +14,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.monitoring.prometheus;
+  cfg = config.hwc.server.native.monitoring.prometheus;
   paths = config.hwc.paths;
 in
 {

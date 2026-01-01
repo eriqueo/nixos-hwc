@@ -18,7 +18,7 @@
   #============================================================================
   # OPTIONS - Shell Configuration API
   #============================================================================
-  options.hwc.home.shell = {
+  options.hwc.home.environment.shell = {
     enable = lib.mkEnableOption "Complete shell + CLI environment";
 
     modernUnix = lib.mkEnableOption "modern Unix replacements (eza, bat, etc.)";

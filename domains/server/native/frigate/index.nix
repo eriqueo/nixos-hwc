@@ -17,7 +17,7 @@
 #
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.frigate;
+  cfg = config.hwc.server.native.frigate;
 
   # Path to canonical config file (version-controlled)
   configTemplate = ./config/config.yml;
@@ -255,7 +255,7 @@ LABELMAP_EOF
     # PROMETHEUS INTEGRATION
     #==========================================================================
     # Add Frigate metrics endpoint to Prometheus scraping
-    hwc.server.monitoring.prometheus.scrapeConfigs = lib.mkIf cfg.enable [
+    hwc.server.native.monitoring.prometheus.scrapeConfigs = lib.mkIf cfg.enable [
       {
         job_name = "frigate-nvr";
         static_configs = [{
@@ -304,8 +304,8 @@ LABELMAP_EOF
         message = "hwc.server.frigate requires config/config.yml template to exist";
       }
       {
-        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-        message = "Frigate metrics require Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.server.native.monitoring.prometheus.enable;
+        message = "Frigate metrics require Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
       }
     ];
   };

@@ -21,10 +21,10 @@
       hwc.home = {
         # Theme & Fonts (BASE)
         theme.palette = lib.mkDefault "gruv";
-        fonts.enable = lib.mkDefault true;
+        theme.fonts.enable = lib.mkDefault true;
 
         # Shell Environment (BASE)
-        shell = {
+        environment.shell = {
           enable = lib.mkDefault true;
           modernUnix = lib.mkDefault true;
           git.enable = lib.mkDefault true;
@@ -73,7 +73,7 @@
           aerc.enable = lib.mkDefault true;                # TUI mail client
           neomutt.enable = lib.mkDefault true;             # TUI mail client (alternative)
           betterbird.enable = lib.mkDefault true;          # GUI mail client (Thunderbird fork)
-          protonMail.enable = lib.mkDefault true;          # Proton Mail bridge/client
+          proton-mail.enable = lib.mkDefault true;          # Proton Mail bridge/client
 
           # Security
           gpg.enable = lib.mkDefault true;
@@ -81,8 +81,8 @@
           # Proton Suite
           proton-authenticator.enable = lib.mkDefault true; # 2FA authenticator
           proton-authenticator.autoStart = lib.mkDefault true; # Auto-start on login
-          protonPass.enable = lib.mkDefault true;         # Password manager (optional)
-          protonPass.autoStart = lib.mkDefault true;      # Auto-start on login
+          proton-pass.enable = lib.mkDefault true;         # Password manager (optional)
+          proton-pass.autoStart = lib.mkDefault true;      # Auto-start on login
 
           # Productivity & Office
           obsidian.enable = lib.mkDefault true;                   # Knowledge base
@@ -90,7 +90,7 @@
 
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
-          geminiCli.enable = lib.mkDefault true;           # AI CLI tool
+          gemini-cli.enable = lib.mkDefault true;           # AI CLI tool
           codex.enable = lib.mkDefault true;             # Re-enabled AI tool (temporarily disabled for build)
 
           # Utilities

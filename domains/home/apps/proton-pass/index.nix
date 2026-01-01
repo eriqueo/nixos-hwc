@@ -6,7 +6,7 @@ let
   session    = import ./parts/session.nix    { inherit lib pkgs config; };
 
   homeDir = config.home.homeDirectory;
-  cfg = config.hwc.home.apps.protonPass;
+  cfg = config.hwc.home.apps.proton-pass;
 in
 {
   #==========================================================================

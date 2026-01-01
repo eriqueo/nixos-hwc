@@ -9,7 +9,7 @@ let
   userCfg = config.hwc.system;
 in
 {
-  options.hwc.server.backup = {
+  options.hwc.server.native.backup = {
     enable = lib.mkEnableOption "automated server backup (containers, databases, system)";
   };
 

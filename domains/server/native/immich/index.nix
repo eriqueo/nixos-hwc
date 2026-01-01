@@ -42,7 +42,7 @@
 
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.immich;
+  cfg = config.hwc.server.native.immich;
 
   # Auto-detect CPU cores from /proc/cpuinfo or use configured value
   # Fallback to safe default of 4 if detection fails
@@ -331,7 +331,7 @@ in
     # PROMETHEUS INTEGRATION
     #==========================================================================
     # Add Immich metrics endpoints to Prometheus scraping
-    hwc.server.monitoring.prometheus.scrapeConfigs = lib.mkIf (cfg.enable && cfg.observability.metrics.enable) [
+    hwc.server.native.monitoring.prometheus.scrapeConfigs = lib.mkIf (cfg.enable && cfg.observability.metrics.enable) [
       {
         job_name = "immich-api";
         static_configs = [{
@@ -418,8 +418,8 @@ in
       }
       # Phase C assertion - Prometheus integration
       {
-        assertion = !(cfg.enable && cfg.observability.metrics.enable) || config.hwc.server.monitoring.prometheus.enable;
-        message = "Immich metrics require Prometheus to be enabled (hwc.server.monitoring.prometheus.enable = true)";
+        assertion = !(cfg.enable && cfg.observability.metrics.enable) || config.hwc.server.native.monitoring.prometheus.enable;
+        message = "Immich metrics require Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
       }
     ];
 

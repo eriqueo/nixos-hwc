@@ -1,7 +1,7 @@
 { config, lib, pkgs, osConfig, ... }:
 
 let
-  cfg = config.hwc.home.apps.geminiCli;
+  cfg = config.hwc.home.apps.gemini-cli;
   hasGeminiSecret = osConfig.age.secrets ? gemini-api-key;
 in
 {

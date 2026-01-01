@@ -16,30 +16,30 @@ in
     #==========================================================================
 
     # Prometheus - Metrics collection with 90-day retention
-    hwc.server.monitoring.prometheus = {
+    hwc.server.native.monitoring.prometheus = {
       enable = true;
       retention = "90d";
       blackbox.enable = true;
     };
 
     # cAdvisor - Container metrics
-    hwc.server.monitoring.cadvisor.enable = lib.mkDefault true;
+    hwc.server.native.monitoring.cadvisor.enable = lib.mkDefault true;
 
     # Exportarr - Arr apps metrics (Sonarr/Radarr/Lidarr/Prowlarr)
-    hwc.server.monitoring.exportarr.enable = lib.mkDefault true;
+    hwc.server.native.monitoring.exportarr.enable = lib.mkDefault true;
 
     # Frigate exporter - Disabled until working image is found
-    # hwc.server.frigate.exporter.enable = lib.mkDefault true;
+    # hwc.server.native.frigate.exporter.enable = lib.mkDefault true;
 
     # Grafana - Dashboards and visualization
-    hwc.server.monitoring.grafana = {
+    hwc.server.native.monitoring.grafana = {
       enable = true;
       domain = "grafana.hwc.local";
       adminPasswordFile = config.age.secrets.grafana-admin-password.path;
     };
 
     # Alertmanager - Alert routing to n8n webhooks
-    hwc.server.monitoring.alertmanager = {
+    hwc.server.native.monitoring.alertmanager = {
       enable = true;
       # Webhook receivers configured post-deployment via n8n
       # webhookReceivers = [

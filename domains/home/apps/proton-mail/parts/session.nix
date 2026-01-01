@@ -3,7 +3,7 @@
 { lib, pkgs, config, ... }:
 
 let
-  cfg = config.hwc.home.apps.protonMail;
+  cfg = config.hwc.home.apps.proton-mail;
 in
 {
   # ProtonMail desktop package

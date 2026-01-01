@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.jellyfin;
+  cfg = config.hwc.server.native.jellyfin;
 
   # Custom ffmpeg with NVENC/CUDA support for GPU transcoding
   ffmpeg-nvenc = pkgs.ffmpeg-full.override {

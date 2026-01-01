@@ -4,7 +4,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.home.fonts;
+  cfg = config.hwc.home.theme.fonts;
 in {
   #==========================================================================
   # OPTIONS

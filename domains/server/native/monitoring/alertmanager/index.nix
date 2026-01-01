@@ -5,13 +5,13 @@
 # NAMESPACE: hwc.server.monitoring.alertmanager.*
 #
 # DEPENDENCIES:
-#   - hwc.server.monitoring.prometheus (alert source)
+#   - hwc.server.native.monitoring.prometheus (alert source)
 #   - hwc.paths.state (data directory)
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.monitoring.alertmanager;
+  cfg = config.hwc.server.native.monitoring.alertmanager;
   paths = config.hwc.paths;
 
   # Generate Alertmanager configuration
@@ -57,7 +57,7 @@ in
     };
 
     # Configure Prometheus to send alerts to Alertmanager
-    services.prometheus.alertmanagers = lib.mkIf config.hwc.server.monitoring.prometheus.enable [{
+    services.prometheus.alertmanagers = lib.mkIf config.hwc.server.native.monitoring.prometheus.enable [{
       static_configs = [{
         targets = [ "localhost:${toString cfg.port}" ];
       }];
@@ -85,8 +85,8 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.server.monitoring.prometheus.enable;
-        message = "Alertmanager requires Prometheus (hwc.server.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.server.native.monitoring.prometheus.enable;
+        message = "Alertmanager requires Prometheus (hwc.server.native.monitoring.prometheus.enable = true)";
       }
       {
         assertion = !cfg.enable || (cfg.port != 0);

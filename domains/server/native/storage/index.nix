@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.storage;
+  cfg = config.hwc.server.native.storage;
 in
 {
   #==========================================================================

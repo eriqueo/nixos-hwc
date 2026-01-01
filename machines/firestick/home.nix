@@ -13,7 +13,7 @@
       home.stateVersion = "24.05";
 
       hwc.home = {
-        shell.enable = true;
+        environment.shell.enable = true;
         development.enable = false;
         mail.enable = false;
 
@@ -22,7 +22,7 @@
           kitty.enable = true;
           yazi.enable = true;
 
-          jellyfinMediaPlayer = {
+          jellyfin-media-player = {
             enable = true;
             autoStart = true;
           };
@@ -43,9 +43,9 @@
         aerc.enable = false;
         betterbird.enable = false;
         neomutt.enable = false;
-        protonMail.enable = false;
+        proton-mail.enable = false;
         proton-authenticator.enable = false;
-        protonPass.enable = false;
+        proton-pass.enable = false;
         thunar.enable = false;
         localsend.enable = false;
         bottles-unwrapped.enable = false;

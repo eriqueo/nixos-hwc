@@ -3,7 +3,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.navidrome = {
+  options.hwc.server.native.navidrome = {
     enable = mkEnableOption "Navidrome music server (native service)";
 
     settings = {
