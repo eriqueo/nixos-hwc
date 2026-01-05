@@ -1,10 +1,12 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, nixosApiVersion ? "unstable", ... }:
 let
   common    = import ../../../mail/parts/common.nix { inherit lib; };
   accounts  = config.hwc.home.mail.accounts or {};
   accVals   = lib.attrValues accounts;
   themePart = import ./theme.nix { inherit lib config; };
   maildirBase   = "maildir://${config.home.homeDirectory}/400_mail/Maildir";
+
+  # Cross-version package compatibility will be handled inline in packages list
 
   # Unified inbox: All accounts share the same maildir folders
   # source = root Maildir (shows all folders including 000_inbox, 010_sent, etc.)
@@ -102,7 +104,7 @@ let
     application/ics = calendar
     image/* = ${pkgs.bash}/bin/bash -lc 'if [ -n "$KITTY_WINDOW_ID" ]; then ${pkgs.kitty}/bin/kitty +kitten icat --stdin yes; elif [ "$TERM_PROGRAM" = "WezTerm" ]; then ${pkgs.chafa}/bin/chafa -f sixel -s $(${pkgs.ncurses}/bin/tput cols)x0 -; else ${pkgs.chafa}/bin/chafa -f symbols -s $(${pkgs.ncurses}/bin/tput cols)x0 -; fi'
           
-    application/pdf = ${pkgs.poppler-utils}/bin/pdftotext -layout - -
+    application/pdf = ${builtins.getAttr "poppler-utils" pkgs}/bin/pdftotext -layout - -
     application/json = ${pkgs.jq}/bin/jq -C . 2>/dev/null || cat -
     application/xml  = ${pkgs.libxml2}/bin/xmllint --format - 2>/dev/null || cat -
     text/xml         = ${pkgs.libxml2}/bin/xmllint --format - 2>/dev/null || cat -
@@ -163,7 +165,9 @@ in
     ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
   packages = with pkgs; [
-    aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler-utils
+    aerc msmtp isync notmuch urlscan abook ripgrep dante chafa
+    # Use new package name (unstable/26.05+) - server disables aerc to avoid cross-version issues
+    (builtins.getAttr "poppler-utils" pkgs)
     jq libxml2 mpv unzip gnutar file xdg-utils w3m pandoc glow p7zip unrar
     util-linux ncurses ov xclip
   ];

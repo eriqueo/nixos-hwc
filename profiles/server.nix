@@ -345,7 +345,12 @@
     gpu.enable = true;  # Enable NVIDIA GPU acceleration for transcoding
   };
 
-  hwc.server.native.immich = {
+  # Immich native disabled: not available in nixpkgs-stable 24.05
+  # Native service kept in .immich-native-reference/ for documentation
+  # Using containerized version instead (works with stable 24.05)
+
+  # Immich Photo Management (Containerized - carbon copy of native service)
+  hwc.server.containers.immich = {
     enable = true;
     settings = {
       host = "0.0.0.0";
@@ -353,7 +358,8 @@
       mediaLocation = "/mnt/photos";
     };
     database = {
-      createDB = false;  # Use existing database
+      host = "localhost";
+      port = 5432;
       name = "immich";
       user = "immich";
     };
@@ -364,6 +370,7 @@
       apiPort = 8091;
       microservicesPort = 8092;
     };
+    network.mode = "media";
   };
 
   # Phase 5: Infrastructure Services
@@ -377,6 +384,29 @@
     enable = true;
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
+  };
+
+  # PostgreSQL database (required by YouTube services)
+  hwc.services.databases.postgresql = {
+    enable = lib.mkDefault true;
+    version = "16";
+  };
+
+  # YouTube Transcripts API (new job-based service with worker)
+  hwc.services.ytTranscriptsApi = {
+    enable = lib.mkDefault true;
+    port = 8100;
+    workers = 4;
+    outputDirectory = "/mnt/hot/youtube-transcripts";
+  };
+
+  # YouTube Videos API (video download and archiving)
+  hwc.services.ytVideosApi = {
+    enable = lib.mkDefault true;
+    port = 8101;
+    workers = 2;
+    outputDirectory = "/mnt/media/youtube";
+    # Note: stagingDirectory is deprecated and auto-derived as <outputDirectory>/.staging
   };
 
   # Phase 6: Support Services - Storage Automation

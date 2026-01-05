@@ -18,7 +18,8 @@ in
     services.gpg-agent = {
       enable = true;
       enableSshSupport = true;
-      pinentry.package = pkgs.pinentry-curses;
+      # HM 24.05 uses pinentryPackage
+      pinentryPackage = pkgs.pinentry-curses;
     };
 
     # Make pass the default password store (used by bridge CLI)

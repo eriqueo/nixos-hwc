@@ -1,8 +1,8 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, nixosApiVersion ? "unstable", ... }:
 let
   enabled  = config.hwc.home.apps.aerc.enable or false;
 
-  cfgPart   = import ./parts/config.nix   { inherit lib pkgs config; };
+  cfgPart   = import ./parts/config.nix   { inherit lib pkgs config nixosApiVersion; };
   bindsPart = import ./parts/behavior.nix { inherit lib pkgs config; };
   sessPart  = import ./parts/session.nix  { inherit lib pkgs config; };
   sievePart = import ./parts/sieve.nix    { inherit lib pkgs config; };

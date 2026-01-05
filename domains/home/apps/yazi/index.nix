@@ -1,5 +1,5 @@
 # domains/home/apps/yazi/index.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
 let
   cfg = config.hwc.home.apps.yazi;
@@ -8,6 +8,8 @@ let
   keymapConfig = import ./parts/keymap.nix;
   pluginsConfig = import ./parts/plugins.nix;
   themeConfig = import ./parts/theme.nix { inherit config; };
+
+  # Cross-version package compatibility will be handled inline in packages list
 
 in
 {
@@ -21,8 +23,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
-      yazi micro ffmpegthumbnailer unzip jq poppler-utils fontpreview
-      fd ripgrep fzf zoxide file exiftool imagemagick p7zip glow
+      yazi micro ffmpegthumbnailer unzip jq
+      # Use new package name (unstable/26.05+) - server disables yazi to avoid cross-version issues
+      (builtins.getAttr "poppler-utils" pkgs)
+      fontpreview fd ripgrep fzf zoxide file exiftool imagemagick p7zip glow
     ];
 
     xdg.configFile =

@@ -3,7 +3,7 @@
 # MACHINE: HWC-SERVER
 # Declares machine identity and composes profiles; states hardware reality.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs ? null, ... }:
 {
   imports = [
     ./hardware.nix
@@ -19,6 +19,70 @@
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
   ];
 
+  # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
+  assertions = [
+    {
+      assertion = inputs != null -> (
+        # Verify pkgs was built from nixpkgs-stable, not nixpkgs-unstable
+        # Check the nixpkgs path contains the stable revision
+        lib.hasInfix (inputs.nixpkgs-stable.rev or "stable") (toString pkgs.path) ||
+        # Alternative: check if pkgs.lib.version contains "24.05" (stable branch)
+        lib.hasPrefix "24.05" (pkgs.lib.trivial.release or "")
+      );
+      message = ''
+        ============================================================
+        SERVER NIXPKGS PROVENANCE VIOLATION
+        ============================================================
+        hwc-server MUST use nixpkgs-stable, not nixpkgs-unstable!
+
+        Current nixpkgs: ${toString pkgs.path}
+        Expected: nixpkgs-stable (24.05 branch)
+
+        This is a production server. Using unstable nixpkgs causes:
+        - PostgreSQL major version changes
+        - Python package compilation failures
+        - Unpredictable breaking changes
+
+        Fix in flake.nix:
+          hwc-server = lib.nixosSystem {
+            pkgs = pkgs-stable;  # NOT pkgs
+          };
+
+        See CHARTER.md section 24 "Flake Update Strategy"
+        ============================================================
+      '';
+    }
+    {
+      # CHARTER v9.0: PostgreSQL MUST be pinned to version 15
+      # Data directory is PostgreSQL 15 format - upgrading breaks compatibility
+      assertion = !config.services.postgresql.enable || (
+        lib.hasPrefix "15." config.services.postgresql.package.version
+      );
+      message = ''
+        ============================================================
+        POSTGRESQL VERSION PIN VIOLATION
+        ============================================================
+        PostgreSQL MUST be pinned to version 15.x!
+
+        Current: ${config.services.postgresql.package.version or "unknown"}
+        Expected: 15.x
+        Data directory: ${config.services.postgresql.dataDir or "/var/lib/hwc/postgresql"}
+
+        The PostgreSQL data directory was initialized with version 15.
+        Upgrading to version 16+ requires data migration:
+
+        1. Backup: pg_dumpall -f /backup/postgresql-pre-upgrade.sql
+        2. Stop PostgreSQL: systemctl stop postgresql
+        3. Migrate: pg_upgrade (see PostgreSQL docs)
+        4. Update pin in domains/server/native/networking/parts/databases.nix
+        5. Test thoroughly before production deployment
+
+        See CHARTER.md section 24 "Flake Update Strategy"
+        ============================================================
+      '';
+    }
+  ];
+
   # System identity
   networking.hostName = "hwc-server";
   networking.hostId = "8425e349";
@@ -27,6 +91,8 @@
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
+
+  # Note: boot.initrd.systemd.fido2 doesn't exist in stable 24.05 (added in later versions)
 
   # ZFS configuration
   services.zfs = {
@@ -231,7 +297,7 @@
   hardware.nvidia = {
     package = config.boot.kernelPackages.nvidiaPackages.stable;  # 580.95.05
     open = lib.mkForce false;  # Pascal doesn't support open-source modules
-    gsp.enable = lib.mkForce false;  # Pascal doesn't support GSP firmware
+    # Note: gsp option doesn't exist in NixOS 24.05 (added in later versions for newer GPUs)
   };
 
   # NVIDIA license acceptance handled in flake.nix
@@ -326,23 +392,8 @@
 
   # MCP (Model Context Protocol) server for LLM access
   # Provides filesystem access to ~/.nixos for AI assistants
-  hwc.ai.mcp = {
-    enable = true;
-
-    # Filesystem MCP for ~/.nixos directory
-    filesystem.nixos = {
-      enable = true;
-      # Defaults:
-      # - allowedDirs: ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
-      # - user: "eric"
-    };
-
-    # HTTP proxy for remote access
-    proxy.enable = true;  # Listen on localhost:6001
-
-    # Expose via Caddy at /mcp
-    reverseProxy.enable = true;
-  };
+  # DISABLED: mcp-proxy not available in nixpkgs-stable 24.05
+  hwc.ai.mcp.enable = lib.mkForce false;
 
   # Automated server backups (containers, databases, system)
   # Backups saved to /mnt/hot/backups with daily schedule
@@ -440,7 +491,7 @@
 
   # Native Media Services now handled by Charter-compliant domain modules
   # - hwc.server.native.jellyfin via server profile
-  # - hwc.server.native.immich via server profile
+  # - hwc.server.native.immich via server profile (NOT AVAILABLE in stable 24.05 - module disabled)
   # - hwc.server.native.navidrome via server profile
 
   # Navidrome configuration handled by server profile native service
@@ -494,16 +545,16 @@
       swaync.enable = lib.mkForce false;
       kitty.enable = lib.mkForce false;
 
-      # File Management (disable GUI, keep CLI)
+      # File Management (disable GUI, disable CLI to avoid cross-version issues)
       thunar.enable = lib.mkForce false;
-      # yazi.enable remains true (CLI tool)
+      yazi.enable = lib.mkForce false;  # Disabled: cross-version poppler package issue
 
       # Web Browsers (disable all)
       chromium.enable = lib.mkForce false;
       librewolf.enable = lib.mkForce false;
 
-      # Mail Clients (keep CLI, disable GUI)
-      # aerc.enable remains true (CLI tool)
+      # Mail Clients (disable CLI to avoid cross-version issues, disable GUI)
+      aerc.enable = lib.mkForce false;  # Disabled: cross-version poppler package issue
       # neomutt.enable remains true (CLI tool)
       betterbird.enable = lib.mkForce false;
       proton-mail.enable = lib.mkForce false;
@@ -522,7 +573,9 @@
 
       # Development & Automation (keep CLI)
       n8n.enable = lib.mkForce false;
+      opencode.enable = lib.mkForce false;  # Not available in nixpkgs-stable 24.05
       # gemini-cli.enable remains true (CLI tool)
+      codex.enable = lib.mkForce false;  # Not available in nixpkgs-stable 24.05
 
       # Utilities (disable GUI)
       wasistlos.enable = lib.mkForce false;
@@ -543,6 +596,10 @@
     # Disable desktop services that try to use dconf
     targets.genericLinux.enable = false;
     dconf.enable = lib.mkForce false;
+
+    # Disable Wayland notification daemon (version incompatibility with stable)
+    # Mako module from HM unstable expects APIs not in nixpkgs-stable 24.05
+    services.mako.enable = lib.mkForce false;
   };
 
   system.stateVersion = "24.05";

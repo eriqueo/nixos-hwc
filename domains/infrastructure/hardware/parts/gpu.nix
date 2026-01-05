@@ -30,12 +30,15 @@
 #       virtualisation.oci-containers.backend = "podman";
 #     (If the backend differs, CDI hint is gated and safe.)
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
 let
   cfg   = config.hwc.infrastructure.hardware.gpu;
   paths = config.hwc.paths;
   t     = lib.types;
+
+  # Cross-version API compatibility flag
+  useStableApi = nixosApiVersion == "stable";
 
   # Derive a neutral acceleration signal for service consumers.
   accelFor = type:
@@ -69,12 +72,21 @@ in
     }
 
     # --- Common graphics stack (all GPU types except 'none') ------------------
-    {
+    # Cross-version compatibility: 24.05 uses hardware.opengl, 24.11+ uses hardware.graphics
+    (if useStableApi then {
+      # NixOS 24.05 API
+      hardware.opengl = {
+        enable = true;
+        driSupport = true;
+        driSupport32Bit = true;
+      };
+    } else {
+      # NixOS 24.11+ / unstable API
       hardware.graphics = {
         enable = true;
         enable32Bit = true;
       };
-    }
+    })
 
     # --- NVIDIA ---------------------------------------------------------------
     (lib.mkIf (cfg.type == "nvidia" && cfg.nvidia.enable) {
@@ -174,35 +186,54 @@ in
     })
 
     # --- Intel ----------------------------------------------------------------
-    (lib.mkIf (cfg.type == "intel" && cfg.intel.enable) {
-      services.xserver.videoDrivers = [ "modesetting" ];
+    (lib.mkIf (cfg.type == "intel" && cfg.intel.enable) (lib.mkMerge [
+      {
+        services.xserver.videoDrivers = [ "modesetting" ];
 
-      # Keep enable flags common; only add extra packages here
-      hardware.graphics.extraPackages = with pkgs; [
-        intel-media-driver
-        intel-vaapi-driver
-        libvdpau-va-gl
-      ];
+        environment.sessionVariables = {
+          LIBVA_DRIVER_NAME = "iHD"; # prefer modern Intel driver
+        };
 
-      environment.sessionVariables = {
-        LIBVA_DRIVER_NAME = "iHD"; # prefer modern Intel driver
-      };
+        environment.systemPackages = with pkgs; [
+          libva-utils
+          intel-gpu-tools
+        ];
+      }
 
-      environment.systemPackages = with pkgs; [
-        libva-utils
-        intel-gpu-tools
-      ];
-    })
+      # Cross-version compatibility for extra packages
+      (if useStableApi then {
+        hardware.opengl.extraPackages = with pkgs; [
+          intel-media-driver
+          intel-vaapi-driver
+          libvdpau-va-gl
+        ];
+      } else {
+        hardware.graphics.extraPackages = with pkgs; [
+          intel-media-driver
+          intel-vaapi-driver
+          libvdpau-va-gl
+        ];
+      })
+    ]))
 
     # --- AMD ------------------------------------------------------------------
-    (lib.mkIf (cfg.type == "amd") {
-      services.xserver.videoDrivers = [ "amdgpu" ];
-      boot.kernelModules = [ "amdgpu" ];
+    (lib.mkIf (cfg.type == "amd") (lib.mkMerge [
+      {
+        services.xserver.videoDrivers = [ "amdgpu" ];
+        boot.kernelModules = [ "amdgpu" ];
+      }
 
-      hardware.graphics.extraPackages = with pkgs; [
-        libvdpau-va-gl
-      ];
-    })
+      # Cross-version compatibility for extra packages
+      (if useStableApi then {
+        hardware.opengl.extraPackages = with pkgs; [
+          libvdpau-va-gl
+        ];
+      } else {
+        hardware.graphics.extraPackages = with pkgs; [
+          libvdpau-va-gl
+        ];
+      })
+    ]))
 
     # --- Laptop helpers (optional) --------------------------------------------
     (lib.mkIf cfg.powerManagement.smartToggle {
