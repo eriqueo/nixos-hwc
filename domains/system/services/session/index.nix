@@ -76,8 +76,9 @@ in
     };
 
     # Keep these to avoid display-manager conflicts
-    services.displayManager.gdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
-    services.displayManager.sddm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
+    # NixOS 24.05 uses services.xserver.displayManager, later versions use services.displayManager
+    services.xserver.displayManager.gdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
+    services.xserver.displayManager.sddm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
     services.xserver.displayManager.lightdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
 
     #=========================================================================

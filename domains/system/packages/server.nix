@@ -16,18 +16,18 @@ in {
       # GUI applications (X11 forwarding support)
       # kitty and thunar moved to base-packages.nix (universal tools)
       xorg.xauth            # Required for X11 forwarding
-      file-roller           # Archive manager
+      # file-roller         # Archive manager - not available in 24.05
       evince                # PDF viewer
       feh                   # Image viewer
       fping
       ethtool
       # Media tools (server-specific)
       picard                # Music organization
-      claude-code
+      # claude-code         # Not available in 24.05
       flac
       # Server monitoring and management
       htop iotop
-      lsof net-tools iproute2
+      lsof nettools iproute2  # net-tools → nettools in 24.05
       tcpdump nmap
 
       # Secret management
@@ -50,8 +50,8 @@ in {
 
       # AI/ML tools (basic)
       python3
-      aider-chat               # AI pair programming in terminal with Ollama support
-      gemini-cli
+      # aider-chat             # AI pair programming - not available in 24.05
+      # gemini-cli             # Temporarily disabled due to npm cache build failure
       
       # Backup and archival
       borgbackup restic

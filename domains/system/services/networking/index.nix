@@ -1,8 +1,10 @@
 # HWC System Networking (declarative + per-machine wait-online policy)
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
 let
   cfg = config.hwc.networking;
+  # Cross-version API compatibility flag
+  useStableApi = nixosApiVersion == "stable";
 in
 {
   imports = [ ./options.nix ];
@@ -58,15 +60,24 @@ in
     # =========================
     # Samba
     # =========================
-    services.samba = lib.mkIf cfg.samba.enable {
+    services.samba = lib.mkIf cfg.samba.enable (if useStableApi then {
+      # NixOS 24.05 API
+      enable = true;
+      shares = cfg.samba.shares;
+      extraConfig = ''
+        workgroup = WORKGROUP
+        security = user
+      '';
+    } else {
+      # NixOS 24.11+ / unstable API
       enable = true;
       settings = {
         global = {
           workgroup = "WORKGROUP";
           security = "user";
         };
-      } // cfg.samba.shares;
-    };
+      } // lib.mapAttrs (name: value: value) cfg.samba.shares;
+    });
 
     # =========================
     # Firewall

@@ -44,9 +44,19 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    home-manager-stable = {
+      url = "github:nix-community/home-manager/release-24.05";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
+
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    agenix-stable = {
+      url = "github:ryantm/agenix/0.15.0";  # Last version compatible with NixOS 24.05
+      inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
     # Reference repo during migration (non-flake)
@@ -60,13 +70,13 @@
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, agenix, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, home-manager-stable, agenix, agenix-stable, legacy-config, ... }@inputs:
   let
     system = "x86_64-linux";
 
     # Add the overlay here - this is the safest approach
-    mkPkgs = system:
-      import nixpkgs {
+    mkPkgs = system: nixpkgsInput:
+      import nixpkgsInput {
         inherit system;
         config = {
           allowUnfree = true;
@@ -80,7 +90,9 @@
         overlays = [];
       };
 
-    pkgs = mkPkgs system;
+    # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
+    pkgs = mkPkgs system nixpkgs;
+    pkgs-stable = mkPkgs system nixpkgs-stable;
     
     lib = nixpkgs.lib;
 
@@ -117,35 +129,56 @@
     };
 
     nixosConfigurations = {
-      hwc-server = lib.nixosSystem {
-        inherit system pkgs;
-        specialArgs = { inherit inputs; };
+      # CHARTER v9.0: Server uses stable nixpkgs (packages AND NixOS modules)
+      hwc-server = nixpkgs-stable.lib.nixosSystem {
+        inherit system;
+        pkgs = pkgs-stable;  # Use nixpkgs-stable for predictable updates
+        specialArgs = {
+          inherit inputs;
+          nixosApiVersion = "stable";  # Stable API (currently 24.05, easily upgraded to 24.11)
+        };
         modules = [
-          agenix.nixosModules.default
-          home-manager.nixosModules.home-manager
+          agenix-stable.nixosModules.default  # Use stable agenix for stable nixpkgs
+          home-manager-stable.nixosModules.home-manager  # Use stable HM for stable nixpkgs
           ./machines/server/config.nix
           {
             # Disable Home Manager on server - it's enabled somewhere in domains
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
-            # Pass inputs to Home Manager modules
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            # Pass inputs and nixosApiVersion to Home Manager modules
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              nixosApiVersion = "stable";
+            };
           }
         ];
       };
       hwc-laptop = lib.nixosSystem {
         inherit system pkgs;
-        specialArgs = { inherit inputs; };
+        specialArgs = {
+          inherit inputs;
+          nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
+        };
         modules = [
           agenix.nixosModules.default
           inputs.nixvirt.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/laptop/config.nix
+          {
+            # Pass nixosApiVersion to Home Manager modules
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              nixosApiVersion = "unstable";
+            };
+          }
         ];
       };
       hwc-gaming = lib.nixosSystem {
         inherit system pkgs;
-        specialArgs = { inherit inputs; };
+        specialArgs = {
+          inherit inputs;
+          nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
+        };
         modules = [
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
@@ -153,14 +186,20 @@
           {
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              nixosApiVersion = "unstable";
+            };
           }
         ];
       };
       hwc-firestick = lib.nixosSystem {
         system = "aarch64-linux";
-        pkgs = mkPkgs "aarch64-linux";
-        specialArgs = { inherit inputs; };
+        pkgs = mkPkgs "aarch64-linux" nixpkgs;
+        specialArgs = {
+          inherit inputs;
+          nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
+        };
         modules = [
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
@@ -168,7 +207,10 @@
           {
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              nixosApiVersion = "unstable";
+            };
           }
         ];
       };
