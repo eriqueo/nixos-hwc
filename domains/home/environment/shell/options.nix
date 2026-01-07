@@ -28,7 +28,7 @@
       default = with pkgs; [
         ripgrep fd fzf bat jq curl wget unzip tree micro btop fastfetch
         rsync rclone speedtest-cli nmap traceroute dig zip p7zip yq pandoc
-        xclip diffutils less which lsof pstree git vim nano claude-code
+        xclip diffutils less which lsof pstree git vim nano claude-code uv
       ];
       description = "Base CLI/tool packages.";
     };
