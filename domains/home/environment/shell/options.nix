@@ -121,6 +121,9 @@
         "vpn" = "vpnstatus";
         "which-command" = "whence";
         "run-help" = "man";
+        # Claude Code usage monitoring
+        "claude-usage" = "claude-monitor --plan pro";
+        "usage" = "claude-monitor --plan pro";
         # Journal/log analysis aliases
         "errors" = "journal-errors";
         "errors-hour" = "journal-errors '1 hour ago'";
