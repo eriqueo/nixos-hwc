@@ -295,6 +295,16 @@
   home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
   home-manager.users.eric.hwc.home.apps.wayvnc.enable = true;
 
+  # Enable shell environment with MCP configuration
+  home-manager.users.eric.hwc.home.shell = {
+    enable = true;
+    mcp = {
+      enable = true;
+      includeConfigDir = false;  # Laptop: don't expose ~/.config to Claude
+      includeServerTools = false;  # Laptop: no server MCP tools needed
+    };
+  };
+
   #============================================================================
   # AI SERVICES CONFIGURATION (Laptop)
   #============================================================================
