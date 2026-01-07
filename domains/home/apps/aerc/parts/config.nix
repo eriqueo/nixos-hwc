@@ -157,8 +157,9 @@ in
 {
   files = profileBase:{
     ".config/aerc/aerc.conf".text = aercConf;
+    # accounts.conf contains NO secrets (passwords are in msmtp config)
+    # Safe to manage declaratively via home.file
     ".config/aerc/accounts.conf".text = accountsConf;
-        ".config/aerc/accounts.conf.source".text = accountsConf;
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
     ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
