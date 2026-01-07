@@ -144,8 +144,7 @@
       "Bash(sudo netstat:*)",
       "Bash(dmesg:*)",
       "Bash(sqlite3:*)",
-      "Bash(/nix/store/1v54jhw7p59iyq4g3q7043q33csij4vi-ffmpeg-full-8.0-bin/bin/ffmpeg:*)"
-
+      "Bash(/nix/store/1v54jhw7p59iyq4g3q7043q33csij4vi-ffmpeg-full-8.0-bin/bin/ffmpeg:*)",
       "Bash(sudo journalctl:*)",
       "Bash(sudo systemctl:*)"
 
