@@ -167,9 +167,17 @@ in
   '';
 
   "fan-monitor" = sh "waybar-fan-monitor" ''
+    # Find ThinkPad hwmon device dynamically (device numbers change across boots)
+    THINKPAD_HWMON=$(grep -l "^thinkpad$" /sys/class/hwmon/hwmon*/name 2>/dev/null | head -1 | xargs dirname)
+
+    if [[ -z "$THINKPAD_HWMON" ]]; then
+      printf '{"text":"󰈐 N/A","class":"idle","tooltip":"ThinkPad hwmon not found"}\n'
+      exit 0
+    fi
+
     # Read fan speeds from ThinkPad hwmon
-    FAN1=$(cat /sys/class/hwmon/hwmon11/fan1_input 2>/dev/null || echo "0")
-    FAN2=$(cat /sys/class/hwmon/hwmon11/fan2_input 2>/dev/null || echo "0")
+    FAN1=$(cat "$THINKPAD_HWMON/fan1_input" 2>/dev/null || echo "0")
+    FAN2=$(cat "$THINKPAD_HWMON/fan2_input" 2>/dev/null || echo "0")
 
     # Get max fan speed for either fan
     MAX_FAN=$(( FAN1 > FAN2 ? FAN1 : FAN2 ))
