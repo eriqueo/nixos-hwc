@@ -32,8 +32,8 @@ in
       settings = {
         sensors = [
           # Specific hwmon paths (hwmon numbers may vary, but generally stable across reboots)
-          { hwmon = "/sys/class/hwmon/hwmon12/temp1_input"; }  # coretemp
-          { hwmon = "/sys/class/hwmon/hwmon2/temp1_input"; }  # thinkpad
+          { hwmon = "/sys/class/hwmon/hwmon8/temp1_input"; }  # coretemp
+          { hwmon = "/sys/class/hwmon/hwmon11/temp1_input"; }  # thinkpad
         ];
         fans = [
           { tpacpi = "/proc/acpi/ibm/fan"; }

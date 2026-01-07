@@ -168,8 +168,8 @@ in
 
   "fan-monitor" = sh "waybar-fan-monitor" ''
     # Read fan speeds from ThinkPad hwmon
-    FAN1=$(cat /sys/class/hwmon/hwmon2/fan1_input 2>/dev/null || echo "0")
-    FAN2=$(cat /sys/class/hwmon/hwmon2/fan2_input 2>/dev/null || echo "0")
+    FAN1=$(cat /sys/class/hwmon/hwmon11/fan1_input 2>/dev/null || echo "0")
+    FAN2=$(cat /sys/class/hwmon/hwmon11/fan2_input 2>/dev/null || echo "0")
 
     # Get max fan speed for either fan
     MAX_FAN=$(( FAN1 > FAN2 ? FAN1 : FAN2 ))
