@@ -37,6 +37,9 @@
     ../../domains/infrastructure/winapps/index.nix
   ];
 
+  # Add desktop modeling tool used with external presets in ~/500_media/540_blender
+  home-manager.users.eric.home.packages = lib.mkAfter [ pkgs.blender ];
+
   #============================================================================
   # SYSTEM IDENTITY & BOOT
   #============================================================================
@@ -290,6 +293,7 @@
 
   # Home applications
   home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
+  home-manager.users.eric.hwc.home.apps.wayvnc.enable = true;
 
   #============================================================================
   # AI SERVICES CONFIGURATION (Laptop)

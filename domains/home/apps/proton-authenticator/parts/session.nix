@@ -24,6 +24,9 @@ in
         ExecStart = "${pkgs.proton-authenticator}/bin/proton-authenticator";
         Restart = "on-failure";
         RestartSec = "5s";
+        Environment = [
+          "PATH=${config.home.profileDirectory}/bin"
+        ];
       };
     };
   };
