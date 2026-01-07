@@ -26,6 +26,7 @@ in
         RestartSec = "5s";
         Environment = [
           "PATH=${config.home.profileDirectory}/bin"
+          "WEBKIT_DISABLE_DMABUF_RENDERER=1"
         ];
       };
     };

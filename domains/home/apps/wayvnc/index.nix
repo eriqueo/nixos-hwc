@@ -13,9 +13,24 @@ let
     }
     // (lib.optionalAttrs cfg.virtualOutput.enable { output = cfg.virtualOutput.name; });
 
-  virtualOutputCmd =
-    "${pkgs.wlr-randr}/bin/wlr-randr --output ${cfg.virtualOutput.name} --on --mode ${cfg.virtualOutput.mode}"
-    + (lib.optionalString (cfg.virtualOutput.position != "") " --pos ${cfg.virtualOutput.position}");
+  # Create a headless output in Hyprland if missing, then set its mode/position.
+  ensureVirtualOutput = pkgs.writeShellScript "wayvnc-ensure-virtual-output" ''
+    set -euo pipefail
+    HYPRCTL="${pkgs.hyprland}/bin/hyprctl"
+    JQ="${pkgs.jq}/bin/jq"
+
+    OUT="${cfg.virtualOutput.name}"
+    MODE="${cfg.virtualOutput.mode}"
+    POS="${cfg.virtualOutput.position}"
+
+    # Create headless output if not present
+    if ! "$HYPRCTL" -j monitors | "$JQ" -e ".[] | select(.name == \"$OUT\")" >/dev/null 2>&1; then
+      "$HYPRCTL" output create headless
+    fi
+
+    # Configure resolution/position
+    "$HYPRCTL" keyword monitor "${cfg.virtualOutput.name},$MODE,$POS,1"
+  '';
 in
 {
   #==========================================================================
@@ -27,7 +42,7 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.wlr-randr ];
+    home.packages = [ pkgs.jq pkgs.hyprland ];
 
     services.wayvnc = {
       enable = true;
@@ -39,7 +54,7 @@ in
     };
 
     systemd.user.services.wayvnc = lib.mkIf cfg.virtualOutput.enable {
-      Service.ExecStartPre = [ virtualOutputCmd ];
+      Service.ExecStartPre = [ ensureVirtualOutput ];
     };
 
     #======================================================================
