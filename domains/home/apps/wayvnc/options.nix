@@ -29,8 +29,8 @@
 
       name = lib.mkOption {
         type = lib.types.str;
-        default = "VIRTUAL1";
-        description = "Virtual output name passed to wlr-randr and wayvnc.";
+        default = "HEADLESS-1";
+        description = "Virtual output name passed to wayvnc; Hyprland headless outputs default to HEADLESS-1.";
       };
 
       mode = lib.mkOption {
