@@ -37,8 +37,8 @@
     ../../domains/infrastructure/winapps/index.nix
   ];
 
-  # Add desktop modeling tool used with external presets in ~/500_media/540_blender
-  home-manager.users.eric.home.packages = lib.mkAfter [ pkgs.blender ];
+  # Blender 3D modeling with GPU rendering support (configured in profiles/home.nix)
+  # External presets stored in ~/500_media/540_blender
 
   #============================================================================
   # SYSTEM IDENTITY & BOOT

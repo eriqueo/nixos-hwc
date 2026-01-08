@@ -520,6 +520,9 @@
       obsidian.enable = lib.mkForce false;
       onlyoffice-desktopeditors.enable = lib.mkForce false;
 
+      # Creative & Media (disable all GUI)
+      blender.enable = lib.mkForce false;
+
       # Development & Automation (keep CLI)
       n8n.enable = lib.mkForce false;
       # geminiCli.enable remains true (CLI tool)

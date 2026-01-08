@@ -88,6 +88,9 @@
           obsidian.enable = lib.mkDefault true;                   # Knowledge base
           onlyoffice-desktopeditors.enable = lib.mkDefault true;   # Office suite
 
+          # Creative & Media
+          blender.enable = lib.mkDefault true;             # 3D creation suite with GPU rendering
+
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
           geminiCli.enable = lib.mkDefault true;           # AI CLI tool
