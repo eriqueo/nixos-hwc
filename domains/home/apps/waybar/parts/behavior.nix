@@ -79,8 +79,8 @@ let
 
   # External monitor base configuration
   externalConfig = {
-    # Match any non-laptop display; Waybar supports glob patterns.
-    output = [ "DP-*" "HDMI-A-*" ];
+    # Match any non-laptop display (handles DP/HDMI/USB-C docks); if none present, Waybar skips this bar.
+    output = [ "^(DP|HDMI|DVI|USB-C|Virtual).*" ];
     layer = "top";
     position = "top";
     height = 60;
@@ -93,9 +93,9 @@ in
   # External monitor(s) - merge base config with modules and widgets
   (externalConfig // commonModules // commonWidgets)
 
-  # Laptop monitor (eDP-1) - explicitly define with same modules but different sizing
+  # Laptop monitor (eDP-*) - explicitly define with same modules but different sizing
   ({
-    output = "eDP-1";
+    output = "eDP-*";
     layer = "top";
     position = "top";
     height = 80;  # Larger for laptop screen
