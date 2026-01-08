@@ -73,7 +73,7 @@ in
       hardware.graphics = {
         enable = true;
         enable32Bit = true;
-        extraPackages = (config.hardware.graphics.extraPackages or [ ]) ++ [
+        extraPackages = [
           pkgs.cudaPackages.cudatoolkit
         ];
       };
