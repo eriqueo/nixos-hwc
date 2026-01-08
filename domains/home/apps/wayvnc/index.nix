@@ -10,26 +10,20 @@ let
     {
       address = cfg.network.address;
       port = cfg.network.port;
-    }
-    // (lib.optionalAttrs cfg.virtualOutput.enable { output = cfg.virtualOutput.name; });
+    };
 
-  # Create a headless output in Hyprland if missing, then set its mode/position.
+  # Create (or find) a headless output in Hyprland and configure it.
   ensureVirtualOutput = pkgs.writeShellScript "wayvnc-ensure-virtual-output" ''
     set -euo pipefail
     HYPRCTL="${pkgs.hyprland}/bin/hyprctl"
-    JQ="${pkgs.jq}/bin/jq"
 
     OUT="${cfg.virtualOutput.name}"
     MODE="${cfg.virtualOutput.mode}"
     POS="${cfg.virtualOutput.position}"
-
-    # Create headless output if not present
-    if ! "$HYPRCTL" -j monitors | "$JQ" -e ".[] | select(.name == \"$OUT\")" >/dev/null 2>&1; then
-      "$HYPRCTL" output create headless
-    fi
-
-    # Configure resolution/position
-    "$HYPRCTL" keyword monitor "${cfg.virtualOutput.name},$MODE,$POS,1"
+    # Create a headless output (Hyprland names it HEADLESS-1, HEADLESS-2, ...)
+    "$HYPRCTL" output create headless >/dev/null 2>&1 || true
+    # Configure resolution/position on the requested name
+    "$HYPRCTL" keyword monitor "''${OUT},''${MODE},''${POS},1"
   '';
 in
 {
@@ -42,7 +36,7 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.jq pkgs.hyprland ];
+    home.packages = [ pkgs.hyprland ];
 
     services.wayvnc = {
       enable = true;
@@ -55,6 +49,8 @@ in
 
     systemd.user.services.wayvnc = lib.mkIf cfg.virtualOutput.enable {
       Service.ExecStartPre = [ ensureVirtualOutput ];
+      # Override the HM module's single ExecStart with one line
+      Service.ExecStart = lib.mkForce "${pkgs.wayvnc}/bin/wayvnc --output ${cfg.virtualOutput.name}";
     };
 
     #======================================================================

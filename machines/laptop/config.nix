@@ -293,7 +293,7 @@
 
   # Home applications
   home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
-  home-manager.users.eric.hwc.home.apps.wayvnc.enable = true;
+  home-manager.users.eric.hwc.home.apps.wayvnc.enable = false;
 
   # Enable shell environment with MCP configuration
   home-manager.users.eric.hwc.home.shell = {

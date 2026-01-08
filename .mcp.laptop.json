@@ -11,9 +11,8 @@
       ]
     },
     "git": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-git"],
-      "cwd": "/home/eric/.nixos"
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "/home/eric/.nixos"]
     },
     "brave-search": {
       "command": "npx",
@@ -33,12 +32,12 @@
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "time": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-time"]
+      "command": "uvx",
+      "args": ["mcp-server-time"]
     },
     "fetch": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
     },
     "memory": {
       "command": "npx",

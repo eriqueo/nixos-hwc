@@ -5,7 +5,8 @@
 with lib;
 let
   cfg = config.hwc.server.native.fabric-api;
-  fabricPkg = if cfg.package != null then cfg.package else inputs.fabric.packages.${pkgs.system}.default;
+  system = pkgs.stdenv.hostPlatform.system;
+  fabricPkg = if cfg.package != null then cfg.package else inputs.fabric.packages.${system}.default;
   listenArg = "${cfg.listenAddress}:${toString cfg.port}";
 in
 {
