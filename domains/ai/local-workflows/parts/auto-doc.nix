@@ -307,6 +307,10 @@ Format as a Markdown documentation block suitable for inclusion in the nixos-hwc
     OUTPUT_DIR="/home/eric/.nixos/docs/ai-doc"
     OLLAMA_ENDPOINT="${cfg.ollamaEndpoint}"
     MODEL="${cfg.autoDoc.model}"
+    CURL="${pkgs.curl}/bin/curl"
+    SYSTEMCTL="${pkgs.systemd}/bin/systemctl"
+    CURL_CHECK_OPTS=(--fail --silent --show-error --max-time 5)
+    CURL_GENERATE_OPTS=(--fail --silent --show-error --max-time 300)
 
     # Colors
     BLUE='\033[94m'
@@ -321,8 +325,14 @@ Format as a Markdown documentation block suitable for inclusion in the nixos-hwc
     log_error() { echo -e "''${RED}❌''${NC} $*" >&2; }
     log_header() { echo -e "\n''${BOLD}''${BLUE}$*''${NC}"; }
 
+    # Short-circuit if Ollama is not running
+    if ! "''${SYSTEMCTL}" is-active --quiet ollama.service; then
+      log_warn "Ollama service not active; skipping documentation generation"
+      exit 0
+    fi
+
     # Check if Ollama is available
-    if ! ${pkgs.curl}/bin/curl -sf "''${OLLAMA_ENDPOINT}/api/tags" >/dev/null 2>&1; then
+    if ! "''${CURL}" "''${CURL_CHECK_OPTS[@]}" "''${OLLAMA_ENDPOINT}/api/tags" >/dev/null 2>&1; then
       log_warn "Ollama not available at ''${OLLAMA_ENDPOINT}, skipping documentation generation"
       exit 0
     fi
@@ -378,7 +388,7 @@ Format as a Markdown documentation block suitable for inclusion in the nixos-hwc
     Format in clear, professional Markdown. Focus on actionable information."
 
     # Query Ollama
-    RESPONSE=$(${pkgs.curl}/bin/curl -sf \
+    RESPONSE=$("''${CURL}" "''${CURL_GENERATE_OPTS[@]}" \
       -X POST \
       "''${OLLAMA_ENDPOINT}/api/generate" \
       -H "Content-Type: application/json" \
