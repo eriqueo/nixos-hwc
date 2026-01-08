@@ -7,9 +7,11 @@ let
   # Access system GPU config via osConfig (available in Home Manager)
   gpuCfg = osConfig.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
 
-  # Use regular binary-cached Blender (no CUDA rebuild needed!)
-  # GPU rendering works via NVIDIA offload environment variables
-  blenderPackage = pkgs.blender;
+  # Build Blender with CUDA support for Cycles GPU rendering
+  blenderPackage = pkgs.blender.override {
+    cudaSupport = cfg.cudaSupport && (gpuCfg.type == "nvidia");
+    hipSupport = cfg.hipSupport && (gpuCfg.type == "amd");
+  };
 
   # Create a GPU-enabled wrapper for NVIDIA systems
   # Note: The system already provides blender-offload script in gpu.nix
