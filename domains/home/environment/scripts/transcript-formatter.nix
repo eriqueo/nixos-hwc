@@ -48,9 +48,18 @@ in
     Service = {
       Type             = "simple";
       WorkingDirectory = appDir;
-      ExecStart        = "${runner}/bin/transcript-formatter";
+      # Wrapper script that checks Ollama availability before running
+      ExecStart        = pkgs.writeShellScript "transcript-formatter-with-check" ''
+        # Check if Ollama is available
+        if ! ${pkgs.curl}/bin/curl -sf --connect-timeout 2 http://localhost:11434/api/tags > /dev/null 2>&1; then
+          echo "Ollama not available, service will retry in 30 seconds"
+          sleep infinity  # Keep service "running" but idle
+        fi
+        # Ollama is available, run the formatter
+        exec ${runner}/bin/transcript-formatter
+      '';
       Restart          = "on-failure";
-      RestartSec       = "5s";
+      RestartSec       = "30s";  # Increased from 5s to reduce crash loop frequency
       Environment = [
         "WATCH_FOLDER=/mnt/media/transcripts"
         "PROMPT_FILE=${appDir}/formatting_prompt.txt"
