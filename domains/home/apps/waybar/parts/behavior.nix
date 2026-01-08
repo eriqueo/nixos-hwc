@@ -79,6 +79,7 @@ let
 
   # External monitor base configuration
   externalConfig = {
+    name = "external";
     # Match any non-laptop display (handles DP/HDMI/USB-C docks); if none present, Waybar skips this bar.
     output = [ "^(DP|HDMI|DVI|USB-C|Virtual).*" ];
     layer = "top";
@@ -95,6 +96,7 @@ in
 
   # Laptop monitor (eDP-*) - explicitly define with same modules but different sizing
   ({
+    name = "internal";
     output = "eDP-*";
     layer = "top";
     position = "top";

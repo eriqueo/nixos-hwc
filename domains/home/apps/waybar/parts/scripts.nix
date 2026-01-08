@@ -8,6 +8,51 @@ let
   '';
 in
 {
+  "launch" = sh "waybar-launch" ''
+    CONFIG_SRC="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config"
+    STYLE_SRC="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+
+    if [[ ! -f "''$CONFIG_SRC" ]]; then
+      echo "waybar-launch: missing config at ''$CONFIG_SRC" >&2
+      exit 1
+    fi
+
+    MONITORS=$(hyprctl monitors -j 2>/dev/null || true)
+
+    INTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name' | head -1)
+    if [[ -z "''$INTERNAL" ]]; then
+      INTERNAL=$(echo "''$MONITORS" | jq -r '.[0].name' 2>/dev/null || "")
+    fi
+
+    if [[ -z "''$INTERNAL" ]]; then
+      echo "waybar-launch: no monitors detected; exiting" >&2
+      exit 0
+    fi
+
+    EXTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")==false) | .name' | head -1)
+
+    TMP_CONFIG=$(mktemp)
+    trap 'rm -f "''$TMP_CONFIG"' EXIT
+    jq --arg internal "''$INTERNAL" --arg external "''$EXTERNAL" '
+      map(
+        (.name // "") as $name |
+        if $name == "internal" then
+          .output = $internal
+        elif $name == "external" then
+          if ($external | length) > 0 then
+            .output = $external
+          else
+            empty
+          end
+        else
+          .
+        end
+      )
+    ' "''$CONFIG_SRC" > "''$TMP_CONFIG"
+
+    waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC"
+  '';
+
   "workspace-switcher" = sh "waybar-workspace-switcher" ''
     if [[ ''$# -eq 0 ]]; then
       exit 1

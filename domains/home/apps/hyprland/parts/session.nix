@@ -28,7 +28,7 @@ in
 
     "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
     "hyprland-startup"
-    "waybar"
+    "waybar-launch"
     "hyprpaper"
     "wl-paste --type text --watch cliphist store"
     "wl-paste --type image --watch cliphist store"
