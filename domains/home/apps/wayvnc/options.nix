@@ -41,8 +41,8 @@
 
       position = lib.mkOption {
         type = lib.types.str;
-        default = "0,0";
-        description = "Position for the virtual output relative to other displays.";
+        default = "0x0";
+        description = "Position for the virtual output relative to other displays (Hyprland format: XxY).";
       };
     };
 

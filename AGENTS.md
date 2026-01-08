@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+- Always align with the latest `CHARTER.md`; if in doubt, read it first and re-check for updates after changes.
+
 ## Project Structure & Module Organization
 - Root `flake.nix` defines inputs/outputs and delegates to machine configs in `machines/*/config.nix` with matching `hardware.nix` per host.
 - Domain modules live under `domains/*/` (e.g., `domains/server`, `domains/home`, `domains/secrets`); keep logic and options inside the relevant domain to avoid cross-coupling.
@@ -19,6 +21,12 @@
 - Nix files use 2-space indentation, lowercase attr names, and prefer `lib.mkIf`/`lib.mkDefault` patterns already in `domains/*/index.nix`.
 - Module anatomy: keep `index.nix` (wiring), `options.nix` (interfaces), and `sys.nix` or `parts/` (implementation) aligned with Charter expectations; avoid mixing Home Manager logic in NixOS modules.
 - Shell/Python scripts: shebang plus `set -euo pipefail` (bash) and clear usage output; place scripts in the correct workspace directory by purpose.
+- Path canon: all filesystem paths defined in `domains/system/core/paths.nix` and consumed via `config.hwc.paths.*`; no hardcoded `/mnt`/`/opt` defaults except as explicit fallbacks.
+- Permission model: services/containers run as `eric:users` (UID 1000/GID 100), containers use `PUID=1000`/`PGID=100`, secrets via `group = "secrets"` and `mode = "0440"`.
+- Lane purity: system/home lanes stay separate; `sys.nix` lives with modules but exposes system-lane options under `hwc.system.*`; Home can assert system via `osConfig`, never the reverse.
+- Validation: every toggleable module needs a `# VALIDATION` section with assertions for required dependencies.
+- Complex services use config-first pattern: keep canonical YAML/TOML under `domains/server/<svc>/config/`, mount via Nix; Nix handles infra (image, mounts, env, ports) only.
+- Data retention is declarative: define retention policies in Nix with fail-safe systemd timers; back up only critical/irreplaceable data.
 
 ## Testing Guidelines
 - Prefer `nix flake check` before rebuilds; follow with `nixos-rebuild test` on the target host to catch activation issues.
