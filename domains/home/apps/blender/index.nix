@@ -7,11 +7,20 @@ let
   # Access system GPU config via osConfig (available in Home Manager)
   gpuCfg = osConfig.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
 
-  # Build Blender with appropriate GPU support
-  blenderPackage = pkgs.blender.override {
-    cudaSupport = cfg.cudaSupport && (gpuCfg.type == "nvidia");
-    hipSupport = cfg.hipSupport && (gpuCfg.type == "amd");
-  };
+  # Use regular binary-cached Blender (no CUDA rebuild needed!)
+  # GPU rendering works via NVIDIA offload environment variables
+  blenderPackage = pkgs.blender;
+
+  # Create a GPU-enabled wrapper for NVIDIA systems
+  # Note: The system already provides blender-offload script in gpu.nix
+  blenderGpuWrapper = pkgs.writeShellScriptBin "blender-gpu" ''
+    #!/usr/bin/env bash
+    # Launch Blender with NVIDIA GPU offload enabled
+    export __NV_PRIME_RENDER_OFFLOAD=1
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export __VK_LAYER_NV_optimus=NVIDIA_only
+    exec ${blenderPackage}/bin/blender "$@"
+  '';
 in
 {
   #==========================================================================
@@ -23,13 +32,13 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf enabled {
-    home.packages = [ blenderPackage ];
-
-    # Set environment variables for CUDA if enabled
-    home.sessionVariables = lib.mkIf (cfg.cudaSupport && gpuCfg.type == "nvidia") {
-      # Blender respects these for CUDA rendering
-      CYCLES_CUDA_EXTRA_CFLAGS = "-I${pkgs.cudaPackages.cudatoolkit}/include";
-    };
+    # Install regular Blender (binary-cached, no rebuild!)
+    home.packages = [
+      blenderPackage
+    ] ++ lib.optionals (cfg.cudaSupport && gpuCfg.type == "nvidia") [
+      # Add GPU wrapper for convenient GPU-enabled launches
+      blenderGpuWrapper
+    ];
 
     #==========================================================================
     # VALIDATION

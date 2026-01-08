@@ -7,7 +7,11 @@
     cudaSupport = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Enable CUDA support for GPU rendering (NVIDIA)";
+      description = ''
+        Enable CUDA GPU rendering support (NVIDIA).
+        Provides blender-gpu wrapper and configures GPU offload.
+        Uses binary-cached Blender (no rebuild required).
+      '';
     };
 
     hipSupport = lib.mkOption {
