@@ -21,6 +21,10 @@ in
     # - xdg.configFile for config files
     # - xdg.desktopEntries for custom launchers
     # - Theme integration with config.hwc.home.theme
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
     assertions = [
       {
         assertion = cfg.package != null || (pkgs ? qutebrowser);
