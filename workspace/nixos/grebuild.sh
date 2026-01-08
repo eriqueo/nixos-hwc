@@ -341,6 +341,7 @@ send_notification() {
     local title="$1"
     local message="$2"
     local priority="${3:-default}"
+    local curl_opts=(--silent --show-error --fail --connect-timeout 3 --max-time 10)
 
     if [[ "$DRY_RUN" == true ]]; then
         log_info "Would send notification: $title"
@@ -352,7 +353,7 @@ send_notification() {
         return 0
     fi
 
-    if ! curl -sf \
+    if ! curl "${curl_opts[@]}" \
         -H "Title: $title" \
         -H "Priority: $priority" \
         -d "$message" \
