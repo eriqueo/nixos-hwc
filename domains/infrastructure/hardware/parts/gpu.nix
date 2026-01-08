@@ -73,6 +73,9 @@ in
       hardware.graphics = {
         enable = true;
         enable32Bit = true;
+        extraPackages = (config.hardware.graphics.extraPackages or [ ]) ++ [
+          pkgs.cudaPackages.cudatoolkit
+        ];
       };
     }
 
@@ -86,7 +89,7 @@ in
         modesetting.enable = lib.mkDefault true;
         powerManagement.enable      = lib.mkDefault false;
         powerManagement.finegrained = lib.mkDefault false;
-        open           = lib.mkDefault true;   # set false if you prefer proprietary
+        open           = lib.mkDefault false;   # proprietary driver for CUDA/OptiX
         nvidiaSettings = lib.mkDefault true;
         package        = config.boot.kernelPackages.nvidiaPackages.${cfg.nvidia.driver};
       };
@@ -289,6 +292,18 @@ in
               exec "$@"
               ;;
           esac
+        '')
+
+        (pkgs.writeShellScriptBin "blender-offload" ''
+          #!/usr/bin/env bash
+          if ! command -v blender >/dev/null 2>&1; then
+            echo "blender not found on PATH"
+            exit 1
+          fi
+          export __NV_PRIME_RENDER_OFFLOAD=1
+          export __GLX_VENDOR_LIBRARY_NAME=nvidia
+          export __VK_LAYER_NV_optimus=NVIDIA_only
+          exec blender "$@"
         '')
 
         (pkgs.writeShellScriptBin "gpu-status" ''
