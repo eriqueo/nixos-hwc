@@ -35,10 +35,9 @@ in
     trap 'rm -f "''$TMP_CONFIG"' EXIT
     jq --arg internal "''$INTERNAL" --arg external "''$EXTERNAL" '
       map(
-        (.name // "") as $name |
-        if $name == "internal" then
+        if .output == "__INTERNAL_OUTPUT__" then
           .output = $internal
-        elif $name == "external" then
+        elif .output == "__EXTERNAL_OUTPUT__" then
           if ($external | length) > 0 then
             .output = $external
           else

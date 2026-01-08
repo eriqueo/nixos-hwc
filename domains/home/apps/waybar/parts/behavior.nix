@@ -79,9 +79,8 @@ let
 
   # External monitor base configuration
   externalConfig = {
-    name = "external";
-    # Match any non-laptop display (handles DP/HDMI/USB-C docks); if none present, Waybar skips this bar.
-    output = [ "^(DP|HDMI|DVI|USB-C|Virtual).*" ];
+    # Placeholder output resolved at runtime by waybar-launch; if none found the bar is dropped.
+    output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
     height = 60;
@@ -96,8 +95,8 @@ in
 
   # Laptop monitor (eDP-*) - explicitly define with same modules but different sizing
   ({
-    name = "internal";
-    output = "eDP-*";
+    # Placeholder output resolved at runtime by waybar-launch; always present (falls back to first monitor).
+    output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
     height = 80;  # Larger for laptop screen
