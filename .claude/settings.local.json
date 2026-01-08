@@ -144,7 +144,9 @@
       "Bash(sqlite3:*)",
       "Bash(/nix/store/1v54jhw7p59iyq4g3q7043q33csij4vi-ffmpeg-full-8.0-bin/bin/ffmpeg:*)",
       "Bash(sudo journalctl:*)",
-      "Bash(sudo systemctl:*)"
+      "Bash(sudo systemctl:*)",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__directory_tree"
     ],
     "deny": [],
     "ask": [],
