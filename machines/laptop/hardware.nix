@@ -48,7 +48,8 @@
       where = "/mnt/vmstore";
       type = "ext4";
       options = "nofail,x-systemd.device-timeout=1s";
-      wantedBy = [ "multi-user.target" ];
+      # Removed wantedBy to prevent boot delays when device is absent
+      # Mount will be available but not auto-started; can mount manually when device appears
       unitConfig.ConditionPathExists = "/dev/disk/by-label/VMSTORE";
     }
   ];
