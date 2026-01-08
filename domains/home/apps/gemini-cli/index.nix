@@ -19,7 +19,7 @@ in
     ];
 
     # Load Gemini API key from agenix secret in shell initialization
-    programs.zsh.initExtra = lib.mkIf hasGeminiSecret ''
+    programs.zsh.initContent = lib.mkIf hasGeminiSecret ''
       # Source Gemini API key from agenix secret
       if [ -f "${osConfig.age.secrets.gemini-api-key.path}" ]; then
         source "${osConfig.age.secrets.gemini-api-key.path}"
