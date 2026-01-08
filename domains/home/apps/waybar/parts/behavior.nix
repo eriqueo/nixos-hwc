@@ -78,8 +78,9 @@ let
   };
 
   # External monitor base configuration
-  dp4Config = {
-    output = "DP-4";
+  externalConfig = {
+    # Match any non-laptop display; Waybar supports glob patterns.
+    output = [ "DP-*" "HDMI-A-*" ];
     layer = "top";
     position = "top";
     height = 60;
@@ -89,8 +90,8 @@ let
 
 in
 [
-  # External monitor (DP-4) - merge base config with modules and widgets
-  (dp4Config // commonModules // commonWidgets)
+  # External monitor(s) - merge base config with modules and widgets
+  (externalConfig // commonModules // commonWidgets)
 
   # Laptop monitor (eDP-1) - explicitly define with same modules but different sizing
   ({
