@@ -62,15 +62,21 @@ in
         };
         Service = {
           Type = "oneshot";
-          # Check if ProtonMail Bridge certificate is valid before syncing
-          ExecStartPre = pkgs.writeShellScript "check-proton-cert" ''
+          # Wrap sync-mail to check certificate validity first
+          ExecStart = pkgs.writeShellScript "mail-sync-wrapper" ''
+            set -euo pipefail
+
             cert_file="/etc/ssl/local/proton-bridge.pem"
+
+            # Check if certificate exists and is not empty
             if [ ! -s "$cert_file" ]; then
               echo "ProtonMail Bridge certificate not available or empty, skipping sync"
               exit 0
             fi
+
+            # Certificate exists, run sync
+            exec ${config.home.homeDirectory}/.local/bin/sync-mail
           '';
-          ExecStart = "${config.home.homeDirectory}/.local/bin/sync-mail";
         };
       };
 
