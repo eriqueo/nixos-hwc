@@ -14,7 +14,6 @@
     "thinkpad_acpi.fan_control=1"
     # NVMe max performance (disable Autonomous Power State Transition)
     # Tradeoff: +5-10% performance, -2-3% battery life
-    "nvme_core.default_ps_max_latency_us=0"
   ];
   boot.extraModulePackages = [ ];
   
@@ -23,8 +22,7 @@
         fsType = "ext4";
         options = [
           "noatime"        # Don't update access times (10-15% faster)
-          "commit=60"      # Sync every 60s instead of 5s (faster writes)
-            # Async TRIM for better SSD performance
+          "commit=15"      # Sync every 60s instead of 5s (faster writes)
         ];
       };
 
