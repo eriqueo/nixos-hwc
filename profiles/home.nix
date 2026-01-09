@@ -41,9 +41,9 @@
 
         # Mail & Communication
         mail = {
-          enable = lib.mkDefault true;
+          enable = lib.mkDefault false;  # DISABLED: mbsync failures, temporarily disabled
           # Bridge managed by Home Manager user service
-          bridge.enable = true;
+          bridge.enable = false;
 
           # Notmuch configuration per runbook
           notmuch = {
@@ -69,11 +69,11 @@
           chromium.enable = lib.mkDefault true;   # Chromium browser
           librewolf.enable = lib.mkDefault true;  # Privacy-focused Firefox
 
-          # Mail Clients
-          aerc.enable = lib.mkDefault true;                # TUI mail client
-          neomutt.enable = lib.mkDefault true;             # TUI mail client (alternative)
-          betterbird.enable = lib.mkDefault true;          # GUI mail client (Thunderbird fork)
-          protonMail.enable = lib.mkDefault true;          # Proton Mail bridge/client
+          # Mail Clients (DISABLED with mail infrastructure)
+          aerc.enable = lib.mkDefault false;                # TUI mail client
+          neomutt.enable = lib.mkDefault false;             # TUI mail client (alternative)
+          betterbird.enable = lib.mkDefault false;          # GUI mail client (Thunderbird fork)
+          protonMail.enable = lib.mkDefault false;          # Proton Mail bridge/client
 
           # Security
           gpg.enable = lib.mkDefault true;

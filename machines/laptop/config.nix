@@ -48,9 +48,9 @@
   networking.hostName = "hwc-laptop";
   system.stateVersion = "24.05";
 
-  # Hibernation support
-  boot.resumeDevice = "/dev/disk/by-uuid/0ebc1df3-65ec-4125-9e73-2f88f7137dc7";
-  boot.kernelParams = [ "resume_offset=0" ]; # Will be auto-calculated by NixOS
+  # Hibernation disabled (using zram swap for better performance)
+  # boot.resumeDevice = "/dev/disk/by-uuid/0ebc1df3-65ec-4125-9e73-2f88f7137dc7";
+  # boot.kernelParams = [ "resume_offset=0" ];
 
   # Power management for laptop
   powerManagement.enable = true;
@@ -61,8 +61,8 @@
         # Ignore lid close to prevent suspend during remote access
         HandleLidSwitch = "ignore";
         HandleLidSwitchExternalPower = "ignore";
-        # From your previous fix
-        HandlePowerKey = "hibernate";
+        # Suspend on power button (hibernation disabled with zram)
+        HandlePowerKey = "suspend";
         # Disable idle suspend (laptop left running for extended period)
         IdleAction = "ignore";
         # IdleActionSec = "30min";  # Disabled - no idle action configured
@@ -163,6 +163,8 @@
         commands = [
           { command = "/run/current-system/sw/bin/systemctl start podman-ollama.service"; options = [ "NOPASSWD" ]; }
           { command = "/run/current-system/sw/bin/systemctl stop podman-ollama.service"; options = [ "NOPASSWD" ]; }
+          # Performance mode: allow CPU governor changes
+          { command = "/run/current-system/sw/bin/tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"; options = [ "NOPASSWD" ]; }
         ];
       }
     ];
@@ -308,22 +310,23 @@
   #============================================================================
   # AI SERVICES CONFIGURATION (Laptop)
   #============================================================================
-  # Laptop has superior hardware (32GB RAM, better GPU) for larger models
+  # Laptop has superior hardware (32GB RAM, RTX 2000 Ada GPU) - optimized for performance
   hwc.ai.ollama = {
     enable = false;  # Disabled by default, toggle with waybar button
-    # Larger models suitable for 32GB RAM + RTX GPU
+    # GPU-accelerated models leveraging NVIDIA RTX 2000 (8GB VRAM)
     models = [
-      "qwen2.5-coder:7b"              # 4.3GB - Primary coding assistant
+      "qwen2.5-coder:14b-q5_K_M"      # 9.7GB - Primary coding, GPU accelerated
+      "deepseek-coder:6.7b-instruct"  # 3.9GB - Excellent code generation
       "llama3.2:3b"                   # 2.0GB - Fast queries, battery mode
-      "mistral:7b-instruct"           # 4.1GB - General reasoning
+      "phi-3:14b"                     # 7.9GB - Microsoft's efficient model
     ];
 
-    # Aggressive resource limits for laptop (prevent fan noise)
+    # Balanced resource limits (50% of system capacity)
     resourceLimits = {
       enable = true;
-      maxCpuPercent = 300;          # Max 3 cores (leave 13 cores for other work)
-      maxMemoryMB = 6144;            # Max 6GB (out of 32GB total)
-      maxRequestSeconds = 180;       # Kill any request over 3 minutes
+      maxCpuPercent = 800;          # 8 cores (50% of 16 cores)
+      maxMemoryMB = 16384;           # 16GB (50% of 32GB RAM)
+      maxRequestSeconds = 300;       # 5 minutes for larger models
     };
 
     # Auto-shutdown after idle (perfect for grebuild sprints)
@@ -333,13 +336,13 @@
       checkInterval = "2min";         # Check every 2 minutes
     };
 
-    # Thermal protection (critical for laptop)
+    # Thermal protection tuned for modern CPU (can handle higher temps)
     thermalProtection = {
       enable = true;
-      warningTemp = 75;              # Start warning at 75°C
-      criticalTemp = 85;             # Emergency stop at 85°C
+      warningTemp = 85;              # Intel Core Ultra 9 safe operating temp
+      criticalTemp = 95;             # Emergency stop (before CPU throttles at 100°C)
       checkInterval = "30s";          # Check every 30 seconds
-      cooldownMinutes = 10;          # 10min cooldown after thermal shutdown
+      cooldownMinutes = 5;           # Faster recovery after thermal event
     };
   };
 
@@ -410,7 +413,7 @@
       # Boost control (disable turbo on battery for cooler operation)
       CPU_BOOST_ON_AC = 1;
       CPU_BOOST_ON_BAT = 0;
-      
+
       # Power saving on battery
       WIFI_PWR_ON_BAT = "on";
       WOL_DISABLE = "Y";
@@ -422,6 +425,51 @@
       SATA_LINKPWR_ON_BAT = "med_power_with_dipm";
     };
   };
+
+  #============================================================================
+  # PERFORMANCE TUNING (32GB RAM, dual NVMe system)
+  #============================================================================
+  boot.kernel.sysctl = {
+    # Memory management for high-RAM system
+    "vm.swappiness" = 10;              # Rarely use swap (have 32GB RAM + zram)
+    "vm.vfs_cache_pressure" = 50;      # Keep file cache longer
+    "vm.dirty_ratio" = 40;             # Allow more dirty memory before blocking
+    "vm.dirty_background_ratio" = 10;  # Background writeback threshold
+
+    # Network performance tuning
+    "net.core.rmem_max" = 134217728;   # 128MB receive buffer
+    "net.core.wmem_max" = 134217728;   # 128MB send buffer
+    "net.ipv4.tcp_rmem" = "4096 87380 67108864";  # TCP receive buffer
+    "net.ipv4.tcp_wmem" = "4096 65536 67108864";  # TCP send buffer
+    "net.ipv4.tcp_congestion_control" = "bbr";    # Modern TCP congestion control
+
+    # File descriptor limits for development workloads
+    "fs.file-max" = 2097152;
+    "fs.inotify.max_user_watches" = 524288;
+  };
+
+  # Performance mode wrappers for CPU-intensive tasks
+  # TODO: Consider moving to domains/system/services/performance/ module
+  environment.systemPackages = with pkgs; [
+    (writeShellScriptBin "perf-mode" ''
+      #!/usr/bin/env bash
+      # Temporarily switch to maximum CPU performance
+      echo "⚡ Switching to Performance Mode..."
+      echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+      ${pkgs.libnotify}/bin/notify-send "Performance Mode" "CPU governors set to maximum performance" -i cpu -u normal
+      echo "CPU governors set to 'performance'"
+      echo "Use 'balanced-mode' to restore power-efficient operation"
+    '')
+
+    (writeShellScriptBin "balanced-mode" ''
+      #!/usr/bin/env bash
+      # Restore balanced power-efficient mode
+      echo "🔋 Restoring Balanced Mode..."
+      echo powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+      ${pkgs.libnotify}/bin/notify-send "Balanced Mode" "CPU governors restored to power-efficient mode" -i cpu -u normal
+      echo "CPU governors set to 'powersave' (dynamic scaling)"
+    '')
+  ];
 
   programs.dconf.enable = true;
 }
