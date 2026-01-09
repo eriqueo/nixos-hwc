@@ -57,7 +57,7 @@ in
     # Run waybar via systemd so it survives rebuilds and restarts cleanly.
     systemd.user.services.waybar = {
       Unit = {
-        Description = "Waybar status bar";
+        Description = lib.mkForce "Waybar status bar";
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
       };
