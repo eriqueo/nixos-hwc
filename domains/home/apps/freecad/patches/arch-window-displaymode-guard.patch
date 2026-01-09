@@ -1,10 +1,8 @@
 diff --git a/src/Mod/BIM/Arch.py b/src/Mod/BIM/Arch.py
-index 8d123ba384..47f9f29dfd 100644
+index ceac09e..eb8052e 100644
 --- a/src/Mod/BIM/Arch.py
 +++ b/src/Mod/BIM/Arch.py
-@@ -1133,8 +1133,16 @@ def makeWindow(baseobj=None,width=None,height=None,parts=None,name=None):
-                     for p in baseobj.PropertiesList:
-                         if (p == prop) or p.endswith("_"+prop):
+@@ -1135,7 +1135,14 @@ def makeWindow(baseobj=None,width=None,height=None,parts=None,name=None):
                              obj.setExpression(prop, baseobj.Name+"."+p)
  
      if obj.Base and FreeCAD.GuiUp:
