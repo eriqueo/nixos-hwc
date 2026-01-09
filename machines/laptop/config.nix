@@ -396,7 +396,7 @@
     enable = true;
     settings = {
       # CPU performance settings
-      CPU_SCALING_GOVERNOR_ON_AC = "schedutil";
+      CPU_SCALING_GOVERNOR_ON_AC = "powersave";
       CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
 
       # Battery charge thresholds (extends battery life)
@@ -404,7 +404,7 @@
       STOP_CHARGE_THRESH_BAT0 = 90;   # Stop charging at 90%
 
       # Add CPU energy/performance preferences
-      CPU_ENERGY_PERF_POLICY_ON_AC = "balance_performance";
+      CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power";
       CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
 
       # Boost control (disable turbo on battery for cooler operation)

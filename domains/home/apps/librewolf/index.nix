@@ -3,6 +3,9 @@
 let
   cfg = config.hwc.home.apps.librewolf or { enable = false; };
   theme = import ./parts/theme.nix { inherit lib config; };
+  paletteName = lib.attrByPath [ "hwc" "home" "theme" "palette" ] null config;
+  palettePath = if paletteName != null then ../../theme/palettes/${paletteName}.nix else null;
+  paletteExists = palettePath == null || builtins.pathExists palettePath;
 in
 {
   #==========================================================================
@@ -40,9 +43,13 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = true;
-        message = "librewolf module loaded";
+        assertion = config.programs.librewolf.enable or false;
+        message = "programs.librewolf must remain enabled when hwc.home.apps.librewolf is set";
       }
+    ];
+
+    warnings = lib.optionals (paletteName != null && !paletteExists) [
+      "Palette \"${paletteName}\" not found under domains/home/theme/palettes; falling back to deep-nord."
     ];
   };
 }
