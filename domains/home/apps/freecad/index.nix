@@ -7,6 +7,11 @@ let
   # Access system GPU config via osConfig (available in Home Manager)
   gpuCfg = osConfig.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
 
+  # Patch FreeCAD to avoid forcing unsupported display modes on hosts (e.g., BuildingPart)
+  freecadPkg = pkgs.freecad.overrideAttrs (old: {
+    patches = (old.patches or []) ++ [ ./patches/arch-window-displaymode-guard.patch ];
+  });
+
   # Create a GPU-enabled wrapper for NVIDIA PRIME systems
   # FreeCAD uses OpenGL for GPU-accelerated 3D rendering
   freecadGpuWrapper = pkgs.writeShellScriptBin "freecad-gpu" ''
@@ -26,7 +31,7 @@ let
     # Disable Qt's native Wayland rendering (use XWayland instead)
     export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 
-    exec ${pkgs.freecad}/bin/freecad "$@"
+    exec ${freecadPkg}/bin/freecad "$@"
   '';
 
   # Regular FreeCAD wrapper with OpenGL optimizations (non-NVIDIA or integrated GPU)
@@ -40,7 +45,7 @@ let
     export QT_QPA_PLATFORM=xcb
     export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 
-    exec ${pkgs.freecad}/bin/freecad "$@"
+    exec ${freecadPkg}/bin/freecad "$@"
   '';
 in
 {
@@ -55,7 +60,7 @@ in
   config = lib.mkIf enabled {
     # Install FreeCAD package (binary-cached)
     home.packages = [
-      pkgs.freecad
+      freecadPkg
     ] ++ lib.optionals cfg.gpuAcceleration (
       if gpuCfg.type == "nvidia" && gpuCfg.enable then [
         # NVIDIA PRIME: provide explicit GPU offload wrapper
