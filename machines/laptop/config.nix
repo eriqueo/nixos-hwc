@@ -407,8 +407,8 @@
       STOP_CHARGE_THRESH_BAT0 = 90;   # Stop charging at 90%
 
       # Add CPU energy/performance preferences
-      CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power";
-      CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
+      CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
+      CPU_ENERGY_PERF_POLICY_ON_BAT = "balance-power";
 
       # Boost control (disable turbo on battery for cooler operation)
       CPU_BOOST_ON_AC = 1;
@@ -429,12 +429,13 @@
   #============================================================================
   # PERFORMANCE TUNING (32GB RAM, dual NVMe system)
   #============================================================================
+  services.thermald.enable = true;
   boot.kernel.sysctl = {
     # Memory management for high-RAM system
-    "vm.swappiness" = 10;              # Rarely use swap (have 32GB RAM + zram)
+    "vm.swappiness" = 100;              # Rarely use swap (have 32GB RAM + zram)
     "vm.vfs_cache_pressure" = 50;      # Keep file cache longer
-    "vm.dirty_ratio" = 40;             # Allow more dirty memory before blocking
-    "vm.dirty_background_ratio" = 10;  # Background writeback threshold
+    "vm.dirty_ratio" = 6;             # Allow more dirty memory before blocking
+    "vm.dirty_background_ratio" = 3;  # Background writeback threshold
 
     # Network performance tuning
     "net.core.rmem_max" = 134217728;   # 128MB receive buffer
