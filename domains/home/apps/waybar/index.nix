@@ -30,6 +30,7 @@ let
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
   scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
+  launchPkg = scripts.launch;
 
 in
 {
@@ -48,10 +49,24 @@ in
       enable = true;
       package = pkgs.waybar;
       settings = behavior;
-      systemd.enable = false;
+      systemd.enable = true;
     };
 
     xdg.configFile."waybar/style.css".text = appearance;
+
+    # Run waybar via systemd so it survives rebuilds and restarts cleanly.
+    systemd.user.services.waybar = {
+      Unit = {
+        Description = "Waybar status bar";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = lib.mkForce "${launchPkg}/bin/waybar-launch";
+        Restart = "on-failure";
+      };
+      Install = { WantedBy = [ "graphical-session.target" ]; };
+    };
 
     #==========================================================================
     # VALIDATION
