@@ -56,13 +56,13 @@ in
 
       mediaPath = mkOption {
         type = types.str;
-        default = if config.hwc.paths.media.surveillance != null then "${config.hwc.paths.media.surveillance}/frigate/media" else "/mnt/media/surveillance/frigate/media";
+        default = "${config.hwc.paths.media.surveillance}/frigate/media";
         description = "Media storage path (recordings)";
       };
 
       bufferPath = mkOption {
         type = types.str;
-        default = if config.hwc.paths.hot.surveillance != null then "${config.hwc.paths.hot.surveillance}/frigate/buffer" else "/mnt/hot/surveillance/frigate/buffer";
+        default = "${config.hwc.paths.hot.surveillance}/frigate/buffer";
         description = "Buffer storage path (hot storage for temporary files)";
       };
     };

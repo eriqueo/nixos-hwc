@@ -4,7 +4,7 @@
 # Declares machine identity and composes profiles; states hardware reality.
 # Follows the refactored system domain architecture.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, modulesPath, ... }:
 
 {
   ##############################################################################
@@ -19,6 +19,7 @@
   imports = [
     # Hardware-specific definitions for this machine (e.g., filesystems).
     ./hardware.nix
+    "${modulesPath}/hardware/cpu/intel-npu.nix"
 
     # Profiles that define the machine's capabilities.
     # The system.nix profile is now the main entry point for all system services.
@@ -452,38 +453,36 @@
     "fs.inotify.max_user_watches" = 524288;
   };
 
-  # Device rules: NPU access for render group and kyber scheduler on NVMe
+  # Device rules: kyber scheduler on NVMe
   services.udev.extraRules = lib.mkAfter ''
-    SUBSYSTEM=="accel", KERNEL=="accel*", GROUP="render", MODE="0660"
-    ACTION=="add|change", KERNEL=="nvme[0-9]*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="kyber"
+    ACTION=="add|change", KERNEL=="nvme*n*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="kyber"
   '';
+
+  # Intel NPU support (permissions, firmware, Level Zero loader)
+  hardware.cpu.intel.npu.enable = true;
 
   # Performance mode wrappers for CPU-intensive tasks
   # TODO: Consider moving to domains/system/services/performance/ module
-  environment.systemPackages =
-    (with pkgs; [
-      (writeShellScriptBin "perf-mode" ''
-        #!/usr/bin/env bash
-        # Temporarily switch to maximum CPU performance
-        echo "⚡ Switching to Performance Mode..."
-        echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
-        ${pkgs.libnotify}/bin/notify-send "Performance Mode" "CPU governors set to maximum performance" -i cpu -u normal
-        echo "CPU governors set to 'performance'"
-        echo "Use 'balanced-mode' to restore power-efficient operation"
-      '')
+  environment.systemPackages = with pkgs; [
+    (writeShellScriptBin "perf-mode" ''
+      #!/usr/bin/env bash
+      # Temporarily switch to maximum CPU performance
+      echo "⚡ Switching to Performance Mode..."
+      echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+      ${pkgs.libnotify}/bin/notify-send "Performance Mode" "CPU governors set to maximum performance" -i cpu -u normal
+      echo "CPU governors set to 'performance'"
+      echo "Use 'balanced-mode' to restore power-efficient operation"
+    '')
 
-      (writeShellScriptBin "balanced-mode" ''
-        #!/usr/bin/env bash
-        # Restore balanced power-efficient mode
-        echo "🔋 Restoring Balanced Mode..."
-        echo powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
-        ${pkgs.libnotify}/bin/notify-send "Balanced Mode" "CPU governors restored to power-efficient mode" -i cpu -u normal
-        echo "CPU governors set to 'powersave' (dynamic scaling)"
-      '')
-    ])
-    ++ lib.optionals (pkgs ? intel-npu-driver) [ pkgs.intel-npu-driver ]
-    ++ lib.optionals (pkgs ? intel-level-zero-npu) [ pkgs.intel-level-zero-npu ]
-    ++ lib.optionals (pkgs ? openvino) [ pkgs.openvino ];
+    (writeShellScriptBin "balanced-mode" ''
+      #!/usr/bin/env bash
+      # Restore balanced power-efficient mode
+      echo "🔋 Restoring Balanced Mode..."
+      echo powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+      ${pkgs.libnotify}/bin/notify-send "Balanced Mode" "CPU governors restored to power-efficient mode" -i cpu -u normal
+      echo "CPU governors set to 'powersave' (dynamic scaling)"
+    '')
+  ];
 
   programs.dconf.enable = true;
 }

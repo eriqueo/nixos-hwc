@@ -7,7 +7,6 @@
 {
   imports = [
     ./options.nix
-    ./apps.nix
     ./caddy.nix
     ../parts/caddy.nix
     ./home.nix
