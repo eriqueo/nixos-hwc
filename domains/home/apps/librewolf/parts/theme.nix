@@ -2,7 +2,9 @@
 
 let
   # chosen palette name (fallback to deep-nord)
-  paletteName = if config.hwc.home.theme.palette != null then config.hwc.home.theme.palette else "deep-nord";
+  paletteName =
+    let chosen = lib.attrByPath [ "hwc" "home" "theme" "palette" ] null config;
+    in if chosen != null then chosen else "deep-nord";
 
   # path from apps/librewolf/parts/ -> domains/home/theme/palettes/
   palettePath = ../../../theme/palettes/${paletteName}.nix;

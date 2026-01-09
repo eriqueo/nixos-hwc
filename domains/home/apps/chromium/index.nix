@@ -41,7 +41,7 @@ in {
     assertions = [
       # Cross-lane consistency: check if system-lane is also enabled
       {
-        assertion = !cfg.enable || (osConfig.hwc.system.apps.chromium.enable or false);
+        assertion = !cfg.enable || lib.attrByPath [ "hwc" "system" "apps" "chromium" "enable" ] false osConfig;
         message = ''
           hwc.home.apps.chromium is enabled but hwc.system.apps.chromium is not.
           System integration (dconf, dbus) is required for chromium.

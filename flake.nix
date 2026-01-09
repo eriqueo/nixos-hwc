@@ -108,6 +108,10 @@
       hwc-graph = {
         type = "app";
         program = "${hwc-graph-pkg}/bin/hwc-graph";
+        meta = {
+          description = "NixOS HWC dependency graph CLI";
+          license = lib.licenses.mit;
+        };
       };
     };
 

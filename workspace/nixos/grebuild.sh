@@ -127,8 +127,8 @@ ${BOLD}OPTIONS:${NC}
                             (default: auto-detected from hostname)
     -n, --dry-run           Show what would be done without making changes
     -s, --skip-test         Skip nixos-rebuild test step (faster but riskier)
-    -p, --skip-push         Skip git push (local changes only)
-    -y, --yes               Skip all prompts, auto-answer yes
+    -p, --skip-push         Skip git push prompt and push step entirely
+    -y, --yes               Skip all prompts, auto-answer yes (including push)
     --no-sudo               Don't use sudo for git/rebuild commands
     --notify-url URL        Notification endpoint URL
                             (default: ${DEFAULT_NOTIFY_URL})
@@ -160,7 +160,7 @@ ${BOLD}WORKFLOW STEPS:${NC}
     2. Commit changes to git
     3. Test NixOS configuration (optional with --skip-test)
     4. Apply NixOS rebuild
-    5. Push to remote (optional with --skip-push)
+    5. Prompt to push to remote (can skip interactively or with --skip-push)
     6. Trigger AI documentation generation
     7. Send notifications
 
@@ -457,6 +457,14 @@ push_to_remote() {
     fi
 
     log_step "📤 Pushing to remote repository..."
+
+    # Prompt user unless --yes was specified
+    if ! prompt_user "📤 Push changes to remote repository?"; then
+        log_info "Skipping push (user declined)"
+        PUSH_STATUS="⚠️ Skipped by user"
+        readonly PUSH_STATUS
+        return 0
+    fi
 
     if execute git push; then
         log_info "Push successful"
