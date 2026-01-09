@@ -1,8 +1,13 @@
-{ config, lib, pkgs, osConfig, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.geminiCli;
-  hasGeminiSecret = osConfig.age.secrets ? gemini-api-key;
+
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
+
+  # Check for gemini-api-key secret (only on NixOS hosts with age secrets)
+  hasGeminiSecret = isNixOSHost && (osConfig ? age) && (osConfig.age.secrets ? gemini-api-key);
 in
 {
   #==========================================================================

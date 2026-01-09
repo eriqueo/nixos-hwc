@@ -2,10 +2,13 @@
 
 # This module uses a special feature of NixOS flakes to get the
 # pkgs set that corresponds to the final system configuration.
-{ config, lib, pkgs, osConfig, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   enabled = config.hwc.home.apps.waybar.enable or false;
+
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
 
   # scriptPkgs: All runtime dependencies needed by waybar custom scripts.
   # NVIDIA tools (nvidia-smi, nvidia-settings) are provided by system configuration
@@ -72,9 +75,11 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
-      # Cross-lane consistency: check if system-lane is also enabled
+      # Cross-lane consistency: check if system-lane is also enabled (NixOS only)
+      # Feature Detection: Only enforce on NixOS hosts where system config is available
+      # On non-NixOS hosts, user is responsible for system-lane dependencies
       {
-        assertion = !enabled || (osConfig.hwc.system.apps.waybar.enable or false);
+        assertion = !enabled || !isNixOSHost || (osConfig.hwc.system.apps.waybar.enable or false);
         message = ''
           hwc.home.apps.waybar is enabled but hwc.system.apps.waybar is not.
           System-lane validation checks are required for waybar dependencies.

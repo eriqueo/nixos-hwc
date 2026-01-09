@@ -4,6 +4,9 @@ let
   enabled = config.hwc.home.apps.freecad.enable or false;
   cfg = config.hwc.home.apps.freecad;
 
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
+
   # Access system GPU config via osConfig (available in Home Manager)
   gpuCfg = osConfig.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
 
@@ -132,8 +135,11 @@ EOF
     # VALIDATION
     #========================================================================
     assertions = [
+      # GPU hardware validation (NixOS only)
+      # Feature Detection: Only enforce on NixOS hosts where GPU config is available
+      # On non-NixOS hosts, user is responsible for GPU driver setup
       {
-        assertion = !cfg.gpuAcceleration || gpuCfg.enable || gpuCfg.type == "none";
+        assertion = !cfg.gpuAcceleration || !isNixOSHost || gpuCfg.enable || gpuCfg.type == "none";
         message = ''
           FreeCAD GPU acceleration requires either:
           - hwc.infrastructure.hardware.gpu.enable = true (with type = "nvidia"/"intel"/"amd")

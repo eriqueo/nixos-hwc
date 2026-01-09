@@ -1,10 +1,13 @@
 # domains/home/apps/wayvnc/index.nix
 # Wayland VNC server with optional virtual output for second-screen setups.
 
-{ config, lib, pkgs, osConfig, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.wayvnc;
+
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
 
   baseSettings =
     {
@@ -57,8 +60,11 @@ in
     # VALIDATION
     #======================================================================
     assertions = [
+      # Cross-lane consistency: check if system-lane hyprland is enabled (NixOS only)
+      # Feature Detection: Only enforce on NixOS hosts where system config is available
+      # On non-NixOS hosts, user is responsible for Wayland session dependencies
       {
-        assertion = osConfig.hwc.system.apps.hyprland.enable or false;
+        assertion = !isNixOSHost || (osConfig.hwc.system.apps.hyprland.enable or false);
         message = "hwc.home.apps.wayvnc requires hwc.system.apps.hyprland enabled to ensure the Wayland session and helpers.";
       }
       {

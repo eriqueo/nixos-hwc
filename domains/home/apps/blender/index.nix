@@ -4,6 +4,9 @@ let
   enabled = config.hwc.home.apps.blender.enable or false;
   cfg = config.hwc.home.apps.blender;
 
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
+
   # Access system GPU config via osConfig (available in Home Manager)
   gpuCfg = osConfig.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
 
@@ -46,12 +49,15 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
+      # GPU hardware validation (NixOS only)
+      # Feature Detection: Only enforce on NixOS hosts where GPU config is available
+      # On non-NixOS hosts, user is responsible for GPU driver setup
       {
-        assertion = !cfg.cudaSupport || (gpuCfg.enable && gpuCfg.type == "nvidia");
+        assertion = !cfg.cudaSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "nvidia");
         message = "Blender CUDA support requires hwc.infrastructure.hardware.gpu.type = \"nvidia\" and GPU to be enabled";
       }
       {
-        assertion = !cfg.hipSupport || (gpuCfg.enable && gpuCfg.type == "amd");
+        assertion = !cfg.hipSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "amd");
         message = "Blender HIP support requires hwc.infrastructure.hardware.gpu.type = \"amd\" and GPU to be enabled";
       }
     ];
