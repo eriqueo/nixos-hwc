@@ -14,22 +14,43 @@ let
     ];
   };
 
-  # Define shared widget configurations
-  commonWidgets = {
-    "hyprland/workspaces" = {
-      disable-scroll = true;
-      all-outputs = false;
-      warp-on-scroll = false;
-      format = "{name}";
-      persistent-workspaces = {
-        "1" = []; "2" = []; "3" = []; "4" = [];
-        "5" = []; "6" = []; "7" = []; "8" = [];
-      };
-      on-click = "activate";
-      on-scroll-up = "hyprctl dispatch workspace e+1";
-      on-scroll-down = "hyprctl dispatch workspace e-1";
+  # Workspace widgets are monitor-specific to keep 1-8 per monitor even though Hyprland uses 11-18 for the second.
+  workspaceInternal = {
+    disable-scroll = true;
+    all-outputs = false;
+    warp-on-scroll = false;
+    format = "{name}";
+    persistent-workspaces = {
+      "1" = []; "2" = []; "3" = []; "4" = [];
+      "5" = []; "6" = []; "7" = []; "8" = [];
     };
+    on-click = "activate";
+    on-scroll-up = "hyprctl dispatch workspace e+1";
+    on-scroll-down = "hyprctl dispatch workspace e-1";
+  };
 
+  # External monitor shows 1-8 but targets Hyprland workspaces 11-18.
+  workspaceExternal = {
+    disable-scroll = true;
+    all-outputs = false;
+    warp-on-scroll = false;
+    format = "{icon}";
+    format-icons = {
+      "11" = "1"; "12" = "2"; "13" = "3"; "14" = "4";
+      "15" = "5"; "16" = "6"; "17" = "7"; "18" = "8";
+      "default" = "{name}";
+    };
+    persistent-workspaces = {
+      "11" = []; "12" = []; "13" = []; "14" = [];
+      "15" = []; "16" = []; "17" = []; "18" = [];
+    };
+    on-click = "activate";
+    on-scroll-up = "hyprctl dispatch workspace e+1";
+    on-scroll-down = "hyprctl dispatch workspace e-1";
+  };
+
+  # Define shared widget configurations (non-workspace widgets)
+  commonWidgetsBase = {
     "hyprland/submap" = { format = "✨ {}"; max-length = 8; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
@@ -88,10 +109,13 @@ let
     tray = { spacing = 10; icon-size = 18; };
   };
 
+  internalWidgets = commonWidgetsBase // { "hyprland/workspaces" = workspaceInternal; };
+  externalWidgets = commonWidgetsBase // { "hyprland/workspaces" = workspaceExternal; };
+
 in
 [
   # External monitor(s) - merge base config with modules and widgets
-  (externalConfig // commonModules // commonWidgets)
+  (externalConfig // commonModules // externalWidgets)
 
   # Laptop monitor (eDP-*) - explicitly define with same modules but different sizing
   ({
@@ -102,5 +126,5 @@ in
     height = 80;  # Larger for laptop screen
     spacing = 6;
     tray = { spacing = 12; icon-size = 20; };  # Override for laptop
-  } // commonModules // commonWidgets)
+  } // commonModules // internalWidgets)
 ]
