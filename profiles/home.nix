@@ -90,6 +90,7 @@
 
           # Creative & Media
           blender.enable = lib.mkDefault true;             # 3D creation suite with GPU rendering
+          freecad.enable = lib.mkDefault true;             # Parametric 3D CAD with GPU acceleration
 
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
