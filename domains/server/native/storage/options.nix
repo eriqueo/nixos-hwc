@@ -21,18 +21,11 @@ in
       };
       paths = mkOption {
         type = types.listOf types.str;
-        default = if config.hwc.paths.hot.root != null then [
+        default = [
           "${config.hwc.paths.hot.root}/processing/sonarr-temp"
           "${config.hwc.paths.hot.root}/processing/radarr-temp"
           "${config.hwc.paths.hot.root}/processing/lidarr-temp"
           "${config.hwc.paths.hot.downloads.root}/incomplete"
-          "/var/tmp/hwc"
-          "/var/cache/hwc"
-        ] else [
-          "/mnt/hot/processing/sonarr-temp"
-          "/mnt/hot/processing/radarr-temp"
-          "/mnt/hot/processing/lidarr-temp"
-          "/mnt/hot/downloads/incomplete"
           "/var/tmp/hwc"
           "/var/cache/hwc"
         ];

@@ -47,6 +47,37 @@
 
 let
   cfg = config.hwc.paths;
+
+  #============================================================================
+  # AUTO-DETECTION - Universal Username & Home Discovery
+  #============================================================================
+  # Detects primary user from NixOS config for portable path defaults
+  # Supports both NixOS (config.users.users) and standalone contexts
+
+  # Detect primary user: prefer 'eric', fall back to first normal user, then 'user'
+  primaryUser =
+    if config.users ? users && config.users.users ? eric
+    then "eric"
+    else if config.users ? users
+    then
+      let
+        # Find all normal (non-system) users
+        nonSystemUsers = lib.filter (name:
+          let u = config.users.users.${name};
+          in u.isNormalUser or false
+        ) (lib.attrNames config.users.users);
+      in
+        if nonSystemUsers != []
+        then lib.head nonSystemUsers  # Use first normal user
+        else "user"  # Fallback for standalone contexts
+    else "user";  # Fallback when no users config available
+
+  # Detect home directory from user config or construct default
+  detectedHome =
+    if config.users ? users && config.users.users ? ${primaryUser}
+    then config.users.users.${primaryUser}.home
+    else "/home/${primaryUser}";
+
 in {
   #============================================================================
   # OPTIONS - Comprehensive Path Structure
@@ -55,71 +86,73 @@ in {
   options.hwc.paths = {
 
     #=========================================================================
-    # STORAGE TIERS - Hot/Cold Architecture (Nullable - Machine Specific)
+    # STORAGE TIERS - Hot/Cold Architecture (Home-Relative Defaults)
     #=========================================================================
+    # NOTE: Defaults to ${HOME}/storage/* for portability
+    # Machines with dedicated storage should override (e.g., /mnt/hot)
 
     hot = {
       root = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
+        type = lib.types.str;
+        default = "${detectedHome}/storage/hot";
         description = "Hot storage base path (SSD) - fast tier for active processing";
         example = "/mnt/hot";
       };
       downloads = {
         root = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = if cfg.hot.root != null then "${cfg.hot.root}/downloads" else null;
+          type = lib.types.str;
+          default = "${cfg.hot.root}/downloads";
           description = "Downloads staging area (hot tier)";
         };
         music = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = if cfg.hot.root != null then "${cfg.hot.root}/downloads/music" else null;
+          type = lib.types.str;
+          default = "${cfg.hot.root}/downloads/music";
           description = "Music download staging (hot tier)";
         };
       };
       surveillance = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = if cfg.hot.root != null then "${cfg.hot.root}/surveillance" else null;
+        type = lib.types.str;
+        default = "${cfg.hot.root}/surveillance";
         description = "Surveillance buffer (hot tier)";
       };
     };
 
     media = {
       root = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
+        type = lib.types.str;
+        default = "${detectedHome}/storage/media";
         description = "Media storage base path (HDD) - bulk tier for media libraries";
         example = "/mnt/media";
       };
       music = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = if cfg.media.root != null then "${cfg.media.root}/music" else null;
+        type = lib.types.str;
+        default = "${cfg.media.root}/music";
         description = "Music library (media tier)";
       };
       surveillance = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = if cfg.media.root != null then "${cfg.media.root}/surveillance" else null;
+        type = lib.types.str;
+        default = "${cfg.media.root}/surveillance";
         description = "Surveillance recordings (media tier)";
       };
     };
 
     cold = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
+      type = lib.types.path;
+      default = "${detectedHome}/storage/archive";
       description = "Archive storage - long-term backup tier";
       example = "/mnt/archive";
     };
 
     backup = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
+      type = lib.types.path;
+      default = "${detectedHome}/storage/backup";
       description = "Backup destination - snapshot storage";
       example = "/mnt/backup";
     };
 
     photos = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
+      type = lib.types.str;
+      default = "${detectedHome}/storage/photos";
       description = "Photo storage tier (separate from media for Immich)";
       example = "/mnt/photos";
     };
@@ -155,12 +188,13 @@ in {
     #=========================================================================
     # USER PATHS - PARA Structure
     #=========================================================================
+    # NOTE: user.home auto-detected from system config for portability
 
     user = {
       home = lib.mkOption {
         type = lib.types.path;
-        default = "/home/eric";
-        description = "User home directory";
+        default = detectedHome;
+        description = "User home directory (auto-detected: ${primaryUser})";
       };
 
       # Domain Structure (3-digit prefix)
@@ -444,27 +478,27 @@ in {
         message = "hwc.paths.user.home must be an absolute path";
       }
       {
-        assertion = cfg.hot.root == null || lib.hasPrefix "/" cfg.hot.root;
-        message = "hwc.paths.hot.root must be an absolute path if set";
+        assertion = lib.hasPrefix "/" cfg.hot.root;
+        message = "hwc.paths.hot.root must be an absolute path";
       }
       {
-        assertion = cfg.media.root == null || lib.hasPrefix "/" cfg.media.root;
-        message = "hwc.paths.media.root must be an absolute path if set";
+        assertion = lib.hasPrefix "/" cfg.media.root;
+        message = "hwc.paths.media.root must be an absolute path";
       }
       {
-        assertion = cfg.hot.root == null || cfg.media.root == null || cfg.hot.root != cfg.media.root;
+        assertion = cfg.hot.root != cfg.media.root;
         message = "hwc.paths.hot.root and hwc.paths.media.root cannot be the same path";
       }
       {
-        assertion = cfg.photos == null || lib.hasPrefix "/" cfg.photos;
-        message = "hwc.paths.photos must be an absolute path if set";
+        assertion = lib.hasPrefix "/" cfg.photos;
+        message = "hwc.paths.photos must be an absolute path";
       }
       {
-        assertion = cfg.hot.root == null || cfg.photos == null || cfg.hot.root != cfg.photos;
+        assertion = cfg.hot.root != cfg.photos;
         message = "hwc.paths.hot.root and hwc.paths.photos cannot be the same path";
       }
       {
-        assertion = cfg.media.root == null || cfg.photos == null || cfg.media.root != cfg.photos;
+        assertion = cfg.media.root != cfg.photos;
         message = "hwc.paths.media.root and hwc.paths.photos cannot be the same path";
       }
     ];
@@ -475,24 +509,24 @@ in {
       # NixOS 26.05 doesn't set HOME automatically in /etc/pam/environment
       # causing HOME to default to "/" on SSH login, breaking all $HOME expansions
       # in both /nix/store/.../set-environment and hm-session-vars.sh
-      # See: Investigation 2025-12-11 - HOME was "/" instead of "/home/eric"
+      # NOTE: Now auto-detected from system config for portability
       HOME = cfg.user.home;
 
-      # Storage tiers
-      HWC_HOT_STORAGE = if cfg.hot != null then cfg.hot.root else "";
-      HWC_MEDIA_STORAGE = if cfg.media != null then cfg.media.root else "";
-      HWC_COLD_STORAGE = if cfg.cold != null then cfg.cold else "";
-      HWC_BACKUP_STORAGE = if cfg.backup != null then cfg.backup else "";
-      HWC_PHOTOS_STORAGE = if cfg.photos != null then cfg.photos else "";
+      # Storage tiers (always set with sensible defaults)
+      HWC_HOT_STORAGE = cfg.hot.root;
+      HWC_MEDIA_STORAGE = cfg.media.root;
+      HWC_COLD_STORAGE = cfg.cold;
+      HWC_BACKUP_STORAGE = cfg.backup;
+      HWC_PHOTOS_STORAGE = cfg.photos;
 
-      # Derived hot paths
-      HWC_HOT_DOWNLOADS = if cfg.hot.downloads.root != null then cfg.hot.downloads.root else "";
-      HWC_HOT_DOWNLOADS_MUSIC = if cfg.hot.downloads.music != null then cfg.hot.downloads.music else "";
-      HWC_HOT_SURVEILLANCE = if cfg.hot != null then cfg.hot.surveillance else "";
+      # Derived hot paths (always set)
+      HWC_HOT_DOWNLOADS = cfg.hot.downloads.root;
+      HWC_HOT_DOWNLOADS_MUSIC = cfg.hot.downloads.music;
+      HWC_HOT_SURVEILLANCE = cfg.hot.surveillance;
 
-      # Derived media paths
-      HWC_MEDIA_MUSIC = if cfg.media != null then cfg.media.music else "";
-      HWC_MEDIA_SURVEILLANCE = if cfg.media != null then cfg.media.surveillance else "";
+      # Derived media paths (always set)
+      HWC_MEDIA_MUSIC = cfg.media.music;
+      HWC_MEDIA_SURVEILLANCE = cfg.media.surveillance;
 
       # Networking paths
       HWC_NETWORKING_ROOT = cfg.networking.root;
@@ -548,8 +582,8 @@ in {
 
       # Legacy compatibility (for existing scripts)
       HEARTWOOD_USER_HOME = cfg.user.home;
-      HEARTWOOD_HOT_STORAGE = if cfg.hot.root != null then cfg.hot.root else "";
-      HEARTWOOD_COLD_STORAGE = if cfg.media.root != null then cfg.media.root else "";
+      HEARTWOOD_HOT_STORAGE = cfg.hot.root;
+      HEARTWOOD_COLD_STORAGE = cfg.media.root;
       HEARTWOOD_BUSINESS_ROOT = cfg.business.root;
       HEARTWOOD_AI_ROOT = cfg.ai.root;
       HEARTWOOD_SECRETS_DIR = cfg.security.secrets;

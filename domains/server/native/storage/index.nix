@@ -16,14 +16,6 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    assertions = [
-      {
-        assertion = config.hwc.paths.hot.root != null;
-        message = "Storage automation requires hwc.paths.hot.root to be configured";
-      }
-    ];
+    # No validation required - paths.nix always provides non-null paths
   };
 }

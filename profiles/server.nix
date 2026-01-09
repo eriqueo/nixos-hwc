@@ -404,8 +404,8 @@
   
   assertions = [
     {
-      assertion = config.hwc.paths.hot.root != null && config.hwc.paths.media.root != null;
-      message = "Server profile requires hwc.paths.hot.root and hwc.paths.media.root to be configured";
+      assertion = lib.hasPrefix "/mnt" config.hwc.paths.hot.root || lib.hasPrefix "/mnt" config.hwc.paths.media.root;
+      message = "Server profile expects dedicated storage mounts (hot or media should use /mnt/* paths, not home-relative defaults)";
     }
     {
       assertion = config.hwc.secrets.enable;
