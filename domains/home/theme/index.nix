@@ -44,8 +44,10 @@ in
 
     # Pull in all adapters so consumers can read config.hwc.home.theme.adapters.*
     # without importing each adapter in machines/<host>/home.nix.
+  };
 
   #==========================================================================
   # VALIDATION
   #==========================================================================
+  config.assertions = [];
 }
