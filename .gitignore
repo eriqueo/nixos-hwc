@@ -18,6 +18,9 @@ secrets/keys/*
 *.tmp
 *.swp
 .DS_Store
+.cache/
+.lint-reports/
+.script-inventory/
 
 # Python
 __pycache__/

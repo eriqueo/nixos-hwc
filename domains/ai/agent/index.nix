@@ -9,10 +9,14 @@ let
     pydantic
   ]);
 
-  # Create the agent script as a package
+  # Create the agent script as a package with dynamic path substitution
   agentScript = pkgs.writeScriptBin "hwc-ai-agent" ''
     #!${agentPython}/bin/python3
-    ${builtins.readFile ./hwc-ai-agent.py}
+    ${builtins.replaceStrings
+      ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
+      [config.hwc.paths.nixos "${config.hwc.paths.user.home}/.nixos-mcp-drafts"]
+      (builtins.readFile ./hwc-ai-agent.py)
+    }
   '';
 in
 {

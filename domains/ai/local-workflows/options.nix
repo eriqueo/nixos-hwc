@@ -40,7 +40,7 @@ in
 
       rulesDir = mkOption {
         type = types.path;
-        default = "/home/eric/.config/ai-cleanup/rules";
+        default = "${paths.user.home}/.config/ai-cleanup/rules";
         description = "Directory containing organization rules";
       };
 
@@ -71,7 +71,7 @@ in
 
       outputDir = mkOption {
         type = types.path;
-        default = "/home/eric/Documents/HWC-AI-Journal";
+        default = "${paths.user.home}/Documents/HWC-AI-Journal";
         description = "Directory for journal entries";
       };
 
@@ -125,7 +125,7 @@ in
 
       templates = mkOption {
         type = types.path;
-        default = "/home/eric/.config/ai-doc/templates";
+        default = "${paths.user.home}/.config/ai-doc/templates";
         description = "Directory containing documentation templates";
       };
     };
@@ -144,7 +144,7 @@ in
 
       historyFile = mkOption {
         type = types.path;
-        default = "/home/eric/.local/share/ai-chat/history.db";
+        default = "${paths.user.home}/.local/share/ai-chat/history.db";
         description = "SQLite database for chat history";
       };
 
@@ -200,7 +200,7 @@ in
       cleanup = {
         allowedDirs = mkOption {
           type = types.listOf types.str;
-          default = [ "${config.hwc.paths.hot.root or "/mnt/hot"}/inbox" "/home/eric/Downloads" ];
+          default = [ "${config.hwc.paths.hot.root or "/mnt/hot"}/inbox" "${paths.user.home}/Downloads" ];
           description = "Directories allowed for cleanup workflow via API";
         };
       };
@@ -208,7 +208,7 @@ in
       journal = {
         outputDir = mkOption {
           type = types.path;
-          default = "/home/eric/Documents/HWC-AI-Journal";
+          default = "${paths.user.home}/Documents/HWC-AI-Journal";
           description = "Directory for journal output from API";
         };
       };
@@ -216,7 +216,7 @@ in
       autodoc = {
         allowedDirs = mkOption {
           type = types.listOf types.str;
-          default = [ "/home/eric/.nixos" "/home/eric/projects" ];
+          default = [ paths.nixos "${paths.user.home}/projects" ];
           description = "Directories allowed for autodoc workflow via API";
         };
       };

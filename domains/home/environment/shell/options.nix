@@ -39,7 +39,7 @@
         LIBVIRT_DEFAULT_URI = "qemu:///system";
         EDITOR = "micro";
         VISUAL = "micro";
-        HWC_NIXOS_DIR = "/home/eric/.nixos";
+        # HWC_NIXOS_DIR is set dynamically in index.nix based on home directory
       };
       description = "Environment variables for the user session.";
     };

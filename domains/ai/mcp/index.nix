@@ -116,6 +116,17 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = mkMerge [
+    # Set dynamic defaults for filesystem MCP server paths (mkDefault allows machine overrides)
+    (mkIf cfg.filesystem.nixos.enable {
+      hwc.ai.mcp.filesystem.nixos = {
+        allowedDirs = lib.mkDefault [
+          config.hwc.paths.nixos
+          "${config.hwc.paths.user.home}/.nixos-mcp-drafts"
+        ];
+        draftsDir = lib.mkDefault "${config.hwc.paths.user.home}/.nixos-mcp-drafts";
+      };
+    })
+
     # Main MCP configuration
     (mkIf cfg.enable {
 
