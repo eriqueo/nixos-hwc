@@ -1,5 +1,5 @@
 # domains/home/apps/yazi/index.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.yazi;

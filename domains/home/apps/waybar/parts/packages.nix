@@ -1,6 +1,6 @@
 # Waybar Part: Packages (Expanded)
 # Defines all package dependencies for Waybar, its modules, and all helper scripts.
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 
 with pkgs; [
   # Core Waybar package

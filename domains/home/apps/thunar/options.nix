@@ -1,5 +1,5 @@
 # modules/home/apps/thunar/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.thunar.enable =

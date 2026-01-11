@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 let
   accVals = lib.attrValues (config.hwc.home.mail.accounts or {});
   imap0 = lib.lists.imap0;

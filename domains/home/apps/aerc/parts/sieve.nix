@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 let
   userFilters = (config.hwc.home.apps.aerc.sieve.filters or {});
 

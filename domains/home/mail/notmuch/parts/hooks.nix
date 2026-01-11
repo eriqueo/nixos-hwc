@@ -1,4 +1,4 @@
-{ lib, pkgs, special, rulesText, extraHook }:
+{ lib, pkgs, special, rulesText, extraHook, osConfig ? {}}:
 let
   nm = "${pkgs.notmuch}/bin/notmuch";
 

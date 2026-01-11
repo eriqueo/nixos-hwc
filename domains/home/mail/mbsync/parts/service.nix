@@ -1,4 +1,4 @@
-{ lib, pkgs, haveProton }:
+{ lib, pkgs, haveProton, osConfig ? {}}:
 {
   systemd.user.services.mbsync = {
     Unit = {

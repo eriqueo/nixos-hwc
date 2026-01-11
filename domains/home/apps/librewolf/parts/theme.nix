@@ -1,4 +1,4 @@
-{ lib, config, ... }:
+{ lib, config, osConfig ? {}, ...}:
 
 let
   # Determine palette

@@ -1,5 +1,5 @@
 # domains/home/apps/swaync/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.swaync = {

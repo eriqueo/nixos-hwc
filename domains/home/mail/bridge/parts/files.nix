@@ -1,4 +1,4 @@
-{ lib, br }:
+{ lib, br, osConfig ? {}}:
 let
   setup =
     if (br.setupScript.enable or true) then {

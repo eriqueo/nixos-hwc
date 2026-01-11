@@ -1,6 +1,6 @@
 # Waybar Part: Behavior
 # Defines the module layout and configuration for each bar instance.
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 
 let
   # Define shared module lists and configurations

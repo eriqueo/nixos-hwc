@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 
 let
   sessionVars = lib.attrByPath [ "home" "sessionVariables" ] {} config;

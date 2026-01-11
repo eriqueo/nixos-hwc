@@ -1,6 +1,6 @@
 # ProtonMail • Session part
 # Session-scoped things only: packages, user services, env.
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.protonMail;

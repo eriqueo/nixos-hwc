@@ -1,6 +1,6 @@
 # ProtonMail • Appearance part
 # Theming and visual configuration.
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 
 {
   files = profileBase: {

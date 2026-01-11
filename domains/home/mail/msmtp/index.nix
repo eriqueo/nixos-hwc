@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ...}:
 let
   on =
     (config.hwc.home.mail.enable or true) &&

@@ -4,7 +4,7 @@
 # It is a simple function that returns a single string of CSS.
 # It is imported by the main waybar/index.nix module.
 
-{ config, lib, ... }:
+{ config, lib, osConfig ? {}, ... }:
 
 let
   # 1. Read the active color palette from the central config location.
@@ -51,4 +51,3 @@ in
 # 4. Directly return the final value.
 #    Join the list of lines into a single string, separated by newlines.
 lib.concatStringsSep "\n" lines
-

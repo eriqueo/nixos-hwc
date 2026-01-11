@@ -1,4 +1,4 @@
-{ lib, cfg }:
+{ lib, cfg, osConfig ? {}}:
 let
   R = cfg.rules or {};
   orJoin = xs: lib.concatStringsSep " OR " xs;

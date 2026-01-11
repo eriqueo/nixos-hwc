@@ -1,5 +1,5 @@
 # modules/home/apps/hyprland/parts/behavior.nix
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 let
   mod = "SUPER";
 in
@@ -153,4 +153,3 @@ in
     "immediate,class:^(steam_app_).*"
   ];
 }
-

@@ -18,7 +18,7 @@
 #   hwc.home.development.languages.python = true;
 #   hwc.home.development.editors.neovim = true;
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.development;

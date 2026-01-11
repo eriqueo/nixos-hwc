@@ -1,5 +1,5 @@
 # modules/home/apps/hyprland/parts/session.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cur = config.hwc.home.theme.cursor or {};

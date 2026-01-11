@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, osConfig ? {}, ...}:
 let t = lib.types; in
 {
   options.hwc.home.mail = {
