@@ -114,6 +114,16 @@ profile_structure_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; ((TOTAL_WARN
 duplicate_paths_warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$1"; ((TOTAL_WARNINGS+=1)); ((DUPLICATE_PATHS_WARNINGS+=1)); }
 
 # ------------------------------------------------------------
+# Charter version check (script targets Charter v5.x)
+# ------------------------------------------------------------
+CHARTER_VERSION="$(sed -n 's/^\*\*Charter Version\*\*: //p' "$REPO_ROOT/CHARTER.md" | head -n 1 || true)"
+CHARTER_MAJOR="${CHARTER_VERSION#v}"
+CHARTER_MAJOR="${CHARTER_MAJOR%%.*}"
+if [[ -n "$CHARTER_VERSION" && "$CHARTER_MAJOR" != "5" ]]; then
+  warn "Charter version is ${CHARTER_VERSION:-unknown}, but this linter targets v5.x; results may be noisy or outdated."
+fi
+
+# ------------------------------------------------------------
 # Args
 # ------------------------------------------------------------
 DOMAIN_FILTER=""
