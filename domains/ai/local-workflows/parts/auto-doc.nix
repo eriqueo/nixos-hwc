@@ -303,8 +303,8 @@ Format as a Markdown documentation block suitable for inclusion in the nixos-hwc
     set -euo pipefail
 
     # Configuration
-    NIXOS_DIR="/home/eric/.nixos"
-    OUTPUT_DIR="/home/eric/.nixos/docs/ai-doc"
+    NIXOS_DIR="${config.hwc.paths.nixos}"
+    OUTPUT_DIR="${config.hwc.paths.nixos}/docs/ai-doc"
     OLLAMA_ENDPOINT="${cfg.ollamaEndpoint}"
     MODEL="${cfg.autoDoc.model}"
     CURL="${pkgs.curl}/bin/curl"
@@ -466,7 +466,7 @@ in
   # Create templates and output directories
   systemd.tmpfiles.rules = [
     "d ${cfg.autoDoc.templates} 0755 eric users -"
-    "d /home/eric/.nixos/docs/ai-doc 0755 eric users -"
+    "d ${config.hwc.paths.nixos}/docs/ai-doc 0755 eric users -"
   ];
 
   # Install auto-doc CLI script
@@ -482,7 +482,7 @@ in
       Type = "oneshot";
       User = lib.mkForce "eric";
       Group = lib.mkForce "users";
-      WorkingDirectory = "/home/eric/.nixos";
+      WorkingDirectory = config.hwc.paths.nixos;
       ExecStart = "${postRebuildDocsScript}/bin/post-rebuild-ai-docs";
 
       # Security hardening
@@ -491,7 +491,7 @@ in
       ProtectSystem = "strict";
       ProtectHome = "read-only";
       ReadWritePaths = [
-        "/home/eric/.nixos/docs/ai-doc"
+        "${config.hwc.paths.nixos}/docs/ai-doc"
         cfg.logDir
       ];
 

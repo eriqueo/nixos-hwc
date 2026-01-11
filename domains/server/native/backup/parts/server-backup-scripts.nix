@@ -98,8 +98,9 @@ let
 
     # Backup system configuration
     echo "Backing up NixOS configuration..."
-    if [ -d "/home/eric/.nixos" ]; then
-      ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/nixos-config-$DATE.tar.gz" -C /home/eric .nixos
+    NIXOS_DIR="${config.hwc.paths.nixos}"
+    if [ -d "$NIXOS_DIR" ]; then
+      ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/nixos-config-$DATE.tar.gz" -C "$(dirname "$NIXOS_DIR")" "$(basename "$NIXOS_DIR")"
     fi
 
     # Backup important system files
