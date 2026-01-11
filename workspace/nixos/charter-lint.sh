@@ -18,7 +18,20 @@ readonly NC='\033[0m' # No Color
 
 # Script directory and repo root
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+find_repo_root() {
+  local dir="$SCRIPT_DIR"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -d "$dir/domains" && -d "$dir/profiles" && -f "$dir/flake.nix" ]]; then
+      printf "%s" "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+
+  printf "${RED}[ERROR]${NC} Could not locate repository root (missing domains/, profiles/, or flake.nix)\n" >&2
+  exit 1
+}
+readonly REPO_ROOT="$(find_repo_root)"
 
 # Global counters
 TOTAL_ERRORS=0
