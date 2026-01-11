@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 let
   common    = import ../../../mail/parts/common.nix { inherit lib; };
   accounts  = config.hwc.home.mail.accounts or {};

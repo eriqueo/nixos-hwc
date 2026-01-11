@@ -6,9 +6,10 @@ let
 
   # Feature Detection: Check if we're on a NixOS host with HWC system config
   isNixOSHost = osConfig ? hwc;
+  osCfg = if isNixOSHost then osConfig else {};
 
   # Access system GPU config via osConfig (available in Home Manager)
-  gpuCfg = osConfig.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
+  gpuCfg = osCfg.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
 
   # Build Blender with CUDA support for Cycles GPU rendering
   blenderPackage = pkgs.blender.override {

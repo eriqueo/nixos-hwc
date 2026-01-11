@@ -1,5 +1,5 @@
 # modules/home/environment/scripts/transcript-formatter.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   # Assets dir: from modules/home/environment/scripts -> up 4 -> workspace/projects/productivity/transcript-formatter

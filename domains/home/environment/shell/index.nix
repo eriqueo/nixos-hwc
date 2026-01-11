@@ -16,7 +16,7 @@
 # USAGE:
 #   hwc.home.shell.enable = true;
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.shell;

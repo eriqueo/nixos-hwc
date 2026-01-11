@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 let
   enabled  = config.hwc.home.apps.aerc.enable or false;
 

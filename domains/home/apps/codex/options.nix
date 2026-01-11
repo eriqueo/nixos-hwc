@@ -1,7 +1,7 @@
 # domains/home/apps/codex/options.nix
 #
 # OpenAI Codex CLI - Configuration options
-{ lib, ...}:
+{ lib, osConfig ? {}, ... }:
 with lib;
 {
   options.hwc.home.apps.codex = {

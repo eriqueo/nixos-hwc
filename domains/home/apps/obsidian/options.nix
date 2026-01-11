@@ -1,5 +1,5 @@
 # modules/home/apps/obsidian/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.obsidian.enable =

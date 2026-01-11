@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ...}:
 
 let
   enabled = config.hwc.home.apps.mpv.enable or false;

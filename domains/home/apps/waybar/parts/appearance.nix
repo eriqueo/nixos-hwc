@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ...}:
 let
   # Use the active theme from central configuration
   palette = config.hwc.home.theme.colors;

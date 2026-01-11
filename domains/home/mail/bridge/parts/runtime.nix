@@ -1,4 +1,4 @@
-{ lib, pkgs, br }:
+{ lib, pkgs, br, osConfig ? {}}:
 let
   args = lib.concatStringsSep " " (["--noninteractive" "--log-level" (br.logLevel or "warn")] ++ (br.extraArgs or []));
 

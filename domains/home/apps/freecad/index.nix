@@ -6,9 +6,10 @@ let
 
   # Feature Detection: Check if we're on a NixOS host with HWC system config
   isNixOSHost = osConfig ? hwc;
+  osCfg = if isNixOSHost then osConfig else {};
 
   # Access system GPU config via osConfig (available in Home Manager)
-  gpuCfg = osConfig.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
+  gpuCfg = osCfg.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
 
   # Patch FreeCAD to avoid forcing unsupported display modes on hosts (e.g., BuildingPart)
   freecadPkg = pkgs.freecad.overrideAttrs (old: {

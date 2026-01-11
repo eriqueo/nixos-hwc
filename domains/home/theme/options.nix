@@ -1,5 +1,5 @@
 # modules/home/theme/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.theme = {

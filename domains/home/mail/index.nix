@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 let
   dir = builtins.readDir ./.;
 
@@ -15,8 +15,17 @@ let
   haveAccounts = builtins.pathExists (./accounts/index.nix);
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports =
     [ ./options.nix ]
     ++ lib.optional haveAccounts (./accounts/index.nix)
     ++ children;
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = {};
+
 }

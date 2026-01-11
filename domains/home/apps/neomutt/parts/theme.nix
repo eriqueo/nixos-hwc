@@ -1,6 +1,6 @@
 # modules/home/apps/neomutt/parts/theme.nix
 # Adapter: palette → NeoMutt color tokens (names only; fixed style)
-{ config, lib, ... }:
+{ config, lib, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.neomutt or {};

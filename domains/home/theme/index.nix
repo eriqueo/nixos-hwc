@@ -17,7 +17,7 @@
 #   - No system packages/services here (UI-only module)
 #   - Required sections: OPTIONS / IMPLEMENTATION / VALIDATION
 #
-{ config, lib, ... }:
+{ config, lib, osConfig ? {}, ... }:
 
 let
   palettes = rec {
@@ -26,14 +26,18 @@ let
   };
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [
-      ./templates/gtk.nix
-      ./fonts/index.nix
-      ./options.nix
-    ];
-#============================================================================
-# IMPLEMENTATION - What actually gets configured
-#============================================================================
+    ./templates/gtk.nix
+    ./fonts/index.nix
+    ./options.nix
+  ];
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = {
     # Materialize the selected palette as a read-only token set for adapters/apps.
     hwc.home.theme.colors = palettes.${config.hwc.home.theme.palette};
@@ -41,18 +45,7 @@ in
     # Pull in all adapters so consumers can read config.hwc.home.theme.adapters.*
     # without importing each adapter in machines/<host>/home.nix.
 
-
-
-#============================================================================
-# VALIDATION - Assertions and checks
-#============================================================================
-    assertions = [
-      {
-        assertion = true;
-        message = "Theme root loaded.";
-      }
-    ];
-  };
-
-
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
 }

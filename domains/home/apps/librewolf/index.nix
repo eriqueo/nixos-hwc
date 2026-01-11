@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 
 let
   cfg = config.hwc.home.apps.librewolf or { enable = false; };

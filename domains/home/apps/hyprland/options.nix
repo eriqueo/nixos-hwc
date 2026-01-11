@@ -1,5 +1,5 @@
 # modules/home/apps/hyprland/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.hyprland = {

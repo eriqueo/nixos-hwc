@@ -5,7 +5,7 @@
 # This file exists for consistency but has no implementation.
 # All ProtonPass dependencies are handled in Home Manager.
 
-{ ... }:
+{ osConfig ? {}, ... }:
 
 {
   # No system-lane dependencies needed for ProtonPass desktop client

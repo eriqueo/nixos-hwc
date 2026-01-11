@@ -3,7 +3,7 @@
 # Consolidated options for home environment subdomain
 # Charter-compliant: ALL environment options defined here
 
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 let
   t = lib.types;

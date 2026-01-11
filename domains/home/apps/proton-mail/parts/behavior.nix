@@ -1,6 +1,6 @@
 # ProtonMail • Behavior part
 # Behavioral configuration and settings.
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 
 {
   files = profileBase: {

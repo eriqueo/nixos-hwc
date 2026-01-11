@@ -1,7 +1,7 @@
 # modules/home/fonts/options.nix
 # Font domain options
 
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.fonts = {

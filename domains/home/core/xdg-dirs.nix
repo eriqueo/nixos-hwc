@@ -2,7 +2,7 @@
 # Declarative XDG user directories (Home Manager) aligned with HWC paths
 # System defaults are set in domains/system/core/paths.nix; this keeps ~/.config/user-dirs.dirs in sync
 
-{ config, lib, ... }:
+{ config, lib, osConfig ? {}, ... }:
 
 let
   home = config.home.homeDirectory;
