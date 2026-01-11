@@ -1,10 +1,10 @@
-# HWC Architecture Charter v9.1
+# HWC Architecture Charter v10.1
 
 **Owner**: Eric  
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files  
 **Goal**: Deterministic, maintainable, scalable, reproducible NixOS configuration via strict domain separation, explicit APIs, and user-centric organization.  
 **Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs and `docs/patterns/`.  
-**Current Date**: January 10, 2026
+**Current Date**: January 11, 2026
 
 ## 0. Preserve-First Doctrine
 
@@ -166,6 +166,35 @@ All persistent data stores **must** declare retention policy in Nix.
 
 **Violation**: Persistent volume without documented retention + timer.
 
+### Law 9: Filesystem Materialization Discipline
+
+Directory materialization for core paths **must** live in `domains/system/core/filesystem.nix`.
+
+**Requirements**:
+- Use systemd.tmpfiles for minimal bootstrap directories.
+- Keep tmpfiles entries minimal and path-derived from `config.hwc.paths.*`.
+
+**Violation**: Ad-hoc tmpfiles entries in unrelated modules for core path creation.
+
+### Law 10: Primitive Module Exception
+
+**Primitive Module Exception (sole current exception)**
+
+The file `domains/paths/paths.nix` is permitted to co-locate option declarations and implementation
+as the single foundational primitive for universal filesystem abstraction.
+
+Requirements:
+
+1. The file must contain a top-of-file header justifying the exception and referencing this law.
+2. The module's scope must remain narrow: path references, overrides, exports, assertions, and only
+   minimal bootstrap tmpfiles. The module must not grow payload (dotfiles/templates).
+3. The module must provide a documented, discoverable per-machine override mechanism
+   (e.g., `hwc.paths.overrides`) that supports nested/recursive overrides.
+4. The mechanical linter suite may whitelist this file for the `mkOption` rule; no other file
+   is exempt.
+5. The exception is revocable: if the module acquires payload or grows complex, it must be split
+   into `options.nix` + `index.nix` + `parts/` and this exception removed.
+
 ## 2. Domain Architecture Overview
 
 Each domain has a **unique interaction boundary** with the system.  
@@ -208,7 +237,7 @@ rg 'osConfig\.' domains/home --type nix | rg -v '\?|\bor false'
 rg 'hwc\.services\.|hwc\.features\.' domains
 rg '="/mnt/|="/home/eric/|="/opt/' domains --glob '!paths.nix' --glob '!*.md'
 ./workspace/utilities/lints/permission-lint.sh
-rg 'options\.hwc\.' domains --type nix --glob '!options.nix' --glob '!sys.nix'
+rg 'options\.hwc\.' domains --type nix --glob '!options.nix' --glob '!sys.nix' --glob '!paths/paths.nix'
 rg 'import.*sys.nix' domains/home/*/index.nix
 rg 'oci-containers\.containers\.[^=]+=' domains/server --glob '!mkContainer'
 rg -L 'retain:|retention:|cleanup.timer' domains/server
@@ -230,7 +259,8 @@ rg -L 'retain:|retention:|cleanup.timer' domains/server
 - Version bump on normative change
 
 **Version History** (excerpt):  
+- **v10.1 (2026-01-11)**: Added Law 9 (Filesystem Materialization) and Law 10 (Primitive Module Exception)  
 - **v9.1 (2026-01-10)**: Added Law 5 (mkContainer), Law 8 (Retention), refined violation searches, enforcement levels  
 - **v9.0 (2026-01-10)**: Laws + mechanical validation focus
 
-**End of Charter v9.1**
+**End of Charter v10.1**
