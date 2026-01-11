@@ -1,8 +1,10 @@
-# HWC Architecture Charter
+# HWC Architecture Charter v9.0
 
 **Owner**: Eric
-**Scope**: `nixos-hwc/` — all machines, domains, profiles, HM, and supporting files
+**Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
 **Goal**: Deterministic, maintainable, scalable, and reproducible NixOS via strict domain separation, explicit APIs, predictable patterns, and user-centric organization.
+
+**Philosophy**: This Charter defines **architectural laws** (cross-domain rules) and provides **brief domain overviews** with pointers to domain-specific documentation. Implementation details live in domain READMEs and `docs/patterns/`.
 
 ---
 
@@ -15,164 +17,81 @@
 
 ---
 
-## 1) Core Architectural Concepts
+## 1) Architectural Laws (Cross-Domain Rules)
 
-### **Domains**
-- **Definition**: A folder of modules organized around a common interaction boundary (how they talk to the system), where each module handles one logical concern and follows the namespace pattern of its folder path
-- **Purpose**: Clear separation of concerns based on system interaction boundaries
-- **Location**: `domains/` folder
-- **Namespace Rule**: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
-- **Debugging**: Direct folder-to-namespace mapping for immediate error traceability
+These laws are **testable** and violations are **mechanically detectable**. Each law has a violation type for tracking compliance.
 
-**Namespace exceptions (documented, temporary)**:
-- `hwc.filesystem` (short for `hwc.system.core.filesystem`)
-- `hwc.networking` (short for `hwc.system.services.networking`)
-- `hwc.home.fonts` (short for `hwc.home.theme.fonts`)
-- Legacy alias: `hwc.services.containers.*` → `hwc.server.containers.*` (compat shim present; use new namespace)
+### Law 1: The Handshake Protocol (Cross-Distro Detection)
 
-### **Modules**
-- **Definition**: A single logical concern that provides one place to configure all aspects of that concern
-- **Purpose**: "One place per concern" - all hyprland config, all user config, etc. lives in one logical location
-- **Example**: `domains/home/apps/firefox/` contains everything firefox-related
+**Rule**: Home-lane modules must support non-NixOS hosts via optional `osConfig`.
 
-### **Profiles**
-- **Definition**: Domain-specific feature menus that aggregate modules to serve machine composition purposes
-- **Structure**: Two clear sections per profile:
-  - **BASE**: Required imports/options for domain functionality (won't boot/breaks without)
-  - **OPTIONAL FEATURES**: Sensible defaults that can be overridden per machine
-- **Types**: `system.nix`, `home.nix`, `infrastructure.nix`, `server.nix`
-- **Machine Composition**: Machines import combination of domain profiles needed
-
-### **Profile Pattern**
-Each domain profile follows this structure:
 ```nix
-# profiles/system.nix
-{
-  #==========================================================================
-  # BASE SYSTEM - Critical for machine functionality  
-  #==========================================================================
-  # Essential imports, users, permissions, secrets, networking
-  
-  #==========================================================================
-  # OPTIONAL FEATURES - Sensible defaults, override per machine
-  #==========================================================================
-  # Development tools, media packages, security levels, etc.
-}
+# Function signature (REQUIRED)
+{ config, lib, pkgs, osConfig ? {}, ... }:
+
+# Feature detection (REQUIRED)
+let
+  isNixOSHost = osConfig ? hwc;
+in
 ```
 
-**Base Determination**: Anything required for basic machine operation - boot, management, permissions, authentication.
+**Requirement**: Home modules must evaluate successfully when `osConfig = {}`.
 
----
+**Violation Type 1**: Home module blocking evaluation on empty `osConfig` (assertions without `isNixOSHost` guard).
 
-## 2) Core Layering & Flow
+### Law 2: The 1:1 Namespace Rule
 
-**NixOS system flow**
-`flake.nix` → `machines/<host>/config.nix` → `profiles/*` → `domains/{system,infrastructure,server}/`
+**Rule**: Option namespace MUST match folder structure for immediate error traceability.
 
-**Home Manager flow**
-`machines/<host>/home.nix` → `domains/home/`
-
-**Machine Composition Flow**
 ```
-profiles/system.nix → domains/system/*
-profiles/home.nix → domains/home/*
-profiles/infrastructure.nix → domains/infrastructure/*
-profiles/server.nix → domains/server/*
-         ↓
-machines/laptop/config.nix imports needed profiles
+domains/home/apps/firefox/  →  hwc.home.apps.firefox.*
+domains/system/core/paths/  →  hwc.system.core.paths.*
+domains/server/jellyfin/    →  hwc.server.jellyfin.*
 ```
 
-**Rules**
+**Blessed Shortcuts** (permanent exceptions, documented):
+- `hwc.paths` — Universal path abstraction (special cross-domain API)
+- `hwc.filesystem` — Short for `hwc.system.core.filesystem`
+- `hwc.networking` — Short for `hwc.system.services.networking`
+- `hwc.home.fonts` — Short for `hwc.home.theme.fonts`
 
-* Modules **implement** capabilities behind `options.nix`.
-* Profiles **provide domain feature menus with base/optional structure**.
-* Machines **declare hardware facts and import needed domain profiles**.
-* **No cycles**: dependency direction is always downward.
-* Home Manager lives at machine level, not profile level.
+**Violation Type 2**: Namespace mismatch or use of deprecated namespaces:
+- ❌ `hwc.services.*` (should be `hwc.server.*` or `hwc.system.services.*`)
+- ❌ `hwc.features.*` (deprecated)
+- ❌ Option path not matching folder path
 
----
+### Law 3: The Path Abstraction Contract
 
-## 3) Domain Boundaries & Responsibilities
+**Rule**: No hardcoded filesystem paths in implementation. All paths via `config.hwc.paths.*`.
 
-| Domain             | Purpose                          | Location                  | Must Contain                                                       | Must Not Contain                             |
-| ------------------ | -------------------------------- | ------------------------- | ------------------------------------------------------------------ | -------------------------------------------- |
-| **Infrastructure** | Hardware mgmt + cross-domain orchestration | `domains/infrastructure/` | GPU, power, udev, virtualization, filesystem structure             | HM configs                                   |
-| **System**         | Core OS + accounts + OS services | `domains/system/`         | users, sudo, networking, security, paths, system packages          | HM configs, secret declarations              |
-| **Secrets**        | Encrypted secrets via agenix     | `domains/secrets/`        | age declarations, secret API, emergency access, hardening          | Secret values (only encrypted .age files)    |
-| **Server**         | Host-provided workloads          | `domains/server/`         | containers, reverse proxy, databases, media stacks, monitoring     | HM configs                                   |
-| **Home**           | User environment (HM)            | `domains/home/`           | `programs.*`, `home.*`, DE/WM configs, shells                      | systemd.services, environment.systemPackages |
-| **Profiles**       | Domain feature menus             | `profiles/`               | domain imports, base/optional toggles                              | HM activation (except hm.nix), implementation |
-| **Machines**       | Hardware facts + profile composition | `machines/<host>/`        | `config.nix`, `home.nix`, storage, GPU type                        | Shared logic, profile-like orchestration     |
-
-**Key Principles**
-
-* User accounts → `domains/system/users/eric.nix`
-* User env → `domains/home/` imported by `machines/<host>/home.nix`
-* Secrets → `domains/secrets/` with stable API facade at `/run/agenix`
-  - **Permission Model**: All secrets use `group = "secrets"; mode = "0440"` for shared access
-  - **Service Access**: All service users must include `extraGroups = [ "secrets" ]`
-  - **Age Key Management**: `sudo age-keygen -y /etc/age/keys.txt` for public key
-  - **Secret Updates**: `echo "value" | age -r <pubkey> > domains/secrets/parts/domain/name.age`
-  - **Verification**: `sudo age -d -i /etc/age/keys.txt path/to/secret.age`
-* Cross-domain orchestrators → `domains/infrastructure/` (filesystem structure, etc.)
-* Namespace follows folder structure: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
-
----
-
-## 4) Unit Anatomy
-
-Every **module** (app, tool, or workload) MUST include:
-
-* `index.nix` → aggregator, imports options.nix, implements functionality
-* `options.nix` → mandatory, API definition following folder→namespace pattern
-* `sys.nix` → system-lane implementation, co-located but imported only by system profiles
-* `parts/**` → pure functions, no options, no side-effects
-
-**Rules**
-* `options.nix` always exists - options never defined ad hoc in other files
-* Namespace matches folder structure: `domains/home/apps/firefox/options.nix` defines `hwc.home.apps.firefox.*`
-* One logical concern per module directory
-
----
-
-## 5) Permission Model
-
-### Overview
-
-The nixos-hwc system uses a **unified permission model** optimized for single-user infrastructure:
-
-**Core Principle**: All services run as `eric:users` (UID 1000, GID 100)
-
-This simplifies management in a personal environment where service isolation is achieved through directory structure rather than user separation.
-
-### Standard UID/GID Assignments
-
-| Entity | UID | GID | Purpose |
-|--------|-----|-----|---------|
-| eric (user) | 1000 | - | Primary system user |
-| users (group) | - | 100 | Primary user group |
-| secrets (group) | - | (dynamic) | Secret access control |
-| root | 0 | 0 | System administration |
-
-**CRITICAL**: The `users` group is GID **100**, not 1000!
-
-### Container Configuration Standard
-
-All containers MUST use:
 ```nix
+# ✓ CORRECT
+volumes = [ "${config.hwc.paths.media.music}:/music:ro" ];
+
+# ✗ VIOLATION
+volumes = [ "/mnt/media/music:/music:ro" ];
+```
+
+**Auto-Detection**: `paths.nix` auto-detects primary user and provides home-relative defaults:
+- `primaryUser` — Detected from `config.users.users` (prefers "eric", falls back to first normal user)
+- `detectedHome` — Primary user's home directory
+- All storage tiers default to `${detectedHome}/storage/*` (never null)
+
+**Violation Type 3**: Hardcoded `/mnt/` or `/home/` paths in `domains/` (excluding `paths.nix` and documentation).
+
+### Law 4: The 1000:100 Permission Standard
+
+**Rule**: All services run as primary user (UID 1000) with primary group (GID 100).
+
+```nix
+# Containers (REQUIRED)
 environment = {
-  PUID = "1000";  # eric user
+  PUID = "1000";  # Primary user
   PGID = "100";   # users group (NOT 1000!)
   TZ = config.time.timeZone;
 };
-```
 
-**Rationale**: Containers create files as the user/group specified by PUID/PGID. Using GID 100 ensures files are owned by `eric:users`, allowing direct access without permission corrections.
-
-### Service Configuration Standard
-
-Native NixOS services should override default user creation:
-```nix
+# Native services (REQUIRED)
 systemd.services.<service> = {
   serviceConfig = {
     User = lib.mkForce "eric";
@@ -180,813 +99,399 @@ systemd.services.<service> = {
     StateDirectory = "hwc/<service>";
   };
 };
-```
 
-### Secret Access Pattern
-
-All secrets use restrictive permissions with group-based access:
-```nix
+# Secrets (REQUIRED)
 age.secrets.<name> = {
   file = ../../parts/<domain>/<name>.age;
   mode = "0440";   # Read-only for owner + group
   owner = "root";
   group = "secrets";
 };
+
+# Service user secret access (REQUIRED)
+users.users.eric.extraGroups = [ "secrets" ];
 ```
 
-### Validation Requirements
+**Rationale**: Single-user infrastructure model. GID 100 (`users`) ensures files are owned by `eric:users` for direct access.
 
-All modules implementing services MUST:
+**Violation Type 4**:
+- Container using PGID 1000 instead of 100
+- Service not in `secrets` group when accessing secrets
+- Secrets without `mode = "0440"` or `group = "secrets"`
 
-1. **Document Permission Model**: Add comment explaining why service runs as eric
-2. **Validate Dependencies**: Assert user configuration in VALIDATION section
-3. **Use Standard Patterns**: Follow `docs/standards/permission-patterns.md`
-4. **Pass Linter**: Validate with `./workspace/utilities/lints/permission-lint.sh`
+### Law 5: The Three Sections Pattern
 
-### Reference Documentation
-
-- **Standard Patterns**: `docs/standards/permission-patterns.md`
-- **Troubleshooting**: `docs/troubleshooting/permissions.md`
-- **Validation Linter**: `workspace/utilities/lints/permission-lint.sh`
-
----
-
-## 6) Lane Purity
-
-* **Lanes never import each other's `index.nix`**.
-* Co-located `sys.nix` belongs to the **system lane**, even when inside `domains/home/apps/<unit>`.
-* **Examples of valid sys.nix content**:
-  - `domains/home/apps/kitty/sys.nix` → `environment.systemPackages = [ pkgs.kitty-themes ];`
-  - `domains/home/apps/firefox/sys.nix` → `programs.firefox.policies = { ... };`
-  - This is system-lane code imported by system profiles, **not HM boundary violations**.
-* Profiles decide which lane's files to import.
-
-### sys.nix Architecture Pattern
-
-**Problem**: System lane evaluates BEFORE Home Manager, so `sys.nix` files cannot depend on `hwc.home.apps.*.enable` options.
-
-**Solution**: `sys.nix` files must define their own system-lane options in `hwc.system.apps.*` namespace.
-
-**Example** (`domains/home/apps/hyprland/sys.nix`):
+**Rule**: Every `index.nix` must have exactly three sections in order.
 
 ```nix
-{ lib, config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.system.apps.hyprland;  # System-lane option
+  enabled = config.hwc.<domain>.<module>.enable or false;
+  cfg = config.hwc.<domain>.<module>;
 in
 {
-  # OPTIONS - System-lane API
-  options.hwc.system.apps.hyprland = {
-    enable = lib.mkEnableOption "Hyprland system dependencies";
+  #==========================================================================
+  # OPTIONS (MANDATORY)
+  #==========================================================================
+  imports = [ ./options.nix ];
+
+  #==========================================================================
+  # IMPLEMENTATION (MANDATORY)
+  #==========================================================================
+  config = lib.mkIf enabled {
+    # Module implementation
   };
 
-  # IMPLEMENTATION - Conditional on system-lane option
-  config = lib.mkMerge [
-    (lib.mkIf cfg.enable {
-      environment.systemPackages = [ /* ... */ ];
-    })
-    {} # Placeholder for unconditional config if needed
-  ];
-}
-```
-
-**Machine Configuration** (both lanes must be enabled):
-
-```nix
-# machines/laptop/config.nix
-{
-  hwc.system.apps.hyprland.enable = true;  # System lane
-  # Home lane enabled via profiles/home.nix
-}
-```
-
-**Cross-Lane Validation** (in home module's `index.nix`):
-
-```nix
-{ config, osConfig, ... }:  # Note: osConfig to access system config
-{
-  config.assertions = [
+  #==========================================================================
+  # VALIDATION (MANDATORY if dependencies exist)
+  #==========================================================================
+  config.assertions = lib.mkIf enabled [
     {
-      # Home can check system (system evaluates first)
-      assertion = !enabled || (osConfig.hwc.system.apps.hyprland.enable or false);
-      message = "hwc.home.apps.hyprland requires hwc.system.apps.hyprland";
+      assertion = !enabled || config.hwc.dependency.enable;
+      message = "Module X requires dependency Y to be enabled";
     }
   ];
 }
 ```
 
-**Key Rules**:
-- System cannot validate home-lane (evaluation order)
-- Home CAN validate system-lane using `osConfig`
-- Both lanes independently toggled in machine config
-- No implicit coupling via `lib.attrByPath` fallbacks
+**Violation Type 5**:
+- Missing VALIDATION section when module has dependencies
+- Options defined outside `options.nix`
+- Implementation not wrapped in `lib.mkIf enabled`
 
----
+### Law 6: The sys.nix Co-location Pattern
 
-## 7) Aggregators
+**Rule**: Home apps requiring system-level support use co-located `sys.nix` for system-lane code.
 
-* Aggregators are always named **`index.nix`**.
-* Module aggregators = `domains/home/apps/waybar/index.nix`.
-* Domain aggregators = `domains/home/index.nix`, `domains/server/index.nix`.
-* Profiles may import domain aggregators and individual module indices.
-
----
-
-## 8) Home Manager Boundary
-
-* **HM activation is machine-specific, never in profiles.**
-* **Exception**: `profiles/home.nix` serves as the Home Manager domain feature menu
-* Example (`machines/laptop/home.nix`):
-
-```nix
-{ config, pkgs, lib, ... }: {
-  home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
-    users.eric = {
-      imports = [
-        ../../domains/home/apps/hyprland
-        ../../domains/home/apps/waybar
-        ../../domains/home/apps/kitty
-      ];
-      home.stateVersion = "24.05";
-    };
-  };
-}
+```
+domains/home/apps/hyprland/
+├── options.nix    # hwc.home.apps.hyprland.* (Home-lane API)
+├── index.nix      # Home Manager implementation
+├── sys.nix        # hwc.system.apps.hyprland.* (System-lane API)
+└── parts/         # Pure helpers
 ```
 
----
+**Critical Rules**:
+- `sys.nix` belongs to **system lane**, imported by system profiles
+- `sys.nix` defines its own options in `hwc.system.apps.*` namespace (evaluation order requirement)
+- `index.nix` (Home-lane) **never imports** `sys.nix` (System-lane)
+- Valid `sys.nix` content: `environment.systemPackages`, `programs.*.policies`, udev rules
 
-## 9) Structural Rules
-
-* **Structural files** = all `.nix` sources under `domains/`, `profiles/`, `machines/` and `flake.{nix,lock}`.
-* Never apply automated regex rewrites to structural files.
-* Generated artifacts (systemd units, container manifests) are not structural.
-
----
-
-## 10) Theming
-
-* Palettes (`domains/home/theme/palettes/*.nix`) define tokens.
-* Adapters (`domains/home/theme/adapters/*.nix`) transform palettes to app configs.
-* No hardcoded colors in app configs.
+**Violation Type 6**:
+- Home `index.nix` importing `sys.nix`
+- `sys.nix` importing home modules
+- `sys.nix` depending on `hwc.home.apps.*` options (evaluation order violation)
 
 ---
 
-## 11) Helpers & Parts
+## 2) Domain Architecture Overview
 
-* `parts/**` and `_shared/**` MUST be pure helpers:
+Each domain has a **unique interaction boundary** with the system. Domain READMEs contain implementation details.
 
-  * No options
-  * No side effects
-  * No direct system mutation
+### domains/home/ — User Environment (Home Manager)
+
+**Boundary**: User-space configs, desktop environment, window manager, applications, dotfiles
+
+**Contains**:
+- `programs.*`, `home.*`, `xdg.*` (Home Manager options)
+- Application configurations
+- User theme and appearance
+
+**Never Contains**:
+- `systemd.services` (system services)
+- `environment.systemPackages` (system packages)
+- `users.*` (user account creation)
+
+**Unique Pattern**: `sys.nix` co-location for system-lane support (Law 6)
+
+**Details**: See `domains/home/README.md`
+
+### domains/system/ — Core OS & Services
+
+**Boundary**: User accounts, networking, security policies, system packages, OS services
+
+**Contains**:
+- User account definitions (`domains/system/users/`)
+- Core system services (`domains/system/services/`)
+- System package collections
+- **Path abstraction layer** (`domains/system/core/paths.nix`)
+
+**Never Contains**:
+- Home Manager configs (`programs.*`, `home.*`, `xdg.*`)
+- Secret declarations (those live in `domains/secrets/`)
+
+**Unique Pattern**: `paths.nix` provides universal path abstraction (Law 3)
+
+**Details**: See `domains/system/README.md`
+
+### domains/infrastructure/ — Hardware & Cross-Domain Orchestration
+
+**Boundary**: Hardware management, GPU, power, peripherals, virtualization, filesystem structure
+
+**Contains**:
+- Hardware drivers and configuration
+- Power management
+- Virtualization (libvirt, winapps)
+- Storage infrastructure layer
+
+**Never Contains**:
+- Home Manager configs
+- High-level application logic
+
+**Unique Pattern**: Orchestrates across system/home boundaries for hardware concerns
+
+**Details**: See `domains/infrastructure/README.md`
+
+### domains/server/ — Host Workloads
+
+**Boundary**: Containers, databases, web services, media servers, reverse proxy
+
+**Contains**:
+- OCI containers (`domains/server/containers/`)
+- Native services (`domains/server/native/`)
+- Reverse proxy routing
+- Media orchestration
+
+**Never Contains**:
+- Home Manager configs
+
+**Unique Patterns**:
+- **mkContainer helper** — Pure function reducing container boilerplate (~50 lines → ~18 lines)
+  - Location: `domains/server/containers/_shared/pure.nix`
+  - Standard: PUID=1000, PGID=100, timezone auto-set
+- **Config-First rule** — Complex services (Frigate, Jellyfin) use canonical config files (YAML/TOML) mounted into containers, NOT Nix-generated configs
+
+**Details**: See `domains/server/README.md`
+
+### domains/secrets/ — Encrypted Secrets (agenix)
+
+**Boundary**: Age secret declarations, encrypted `.age` files, secret API at `/run/agenix`
+
+**Contains**:
+- Secret declarations in `age.secrets.*`
+- Encrypted `.age` files in `parts/`
+- Secret API facade (`secrets-api.nix`)
+
+**Never Contains**:
+- Unencrypted secrets
+- Secret values in git (only encrypted `.age` files)
+
+**Permission Model**: All secrets `mode = "0440"`, `group = "secrets"` (Law 4)
+
+**Details**: See `domains/secrets/README.md`
+
+### domains/ai/ — AI/ML Services
+
+**Boundary**: Ollama, Open WebUI, MCP servers, AI workflows, model routing
+
+**Contains**:
+- Local AI infrastructure (Ollama)
+- AI interfaces (Open WebUI)
+- MCP servers for Claude Code integration
+- Automated workflows
+
+**Never Contains**:
+- Home Manager configs (AI services are system/server-lane)
+
+**Unique Pattern**: Router facade for local-first with cloud fallback
+
+**Details**: See `domains/ai/README.md`
 
 ---
 
-## 12) File Standards
+## 3) Universal Patterns (Cross-Domain Standards)
 
-* Files/dirs: `kebab-case.nix`
-* Options: camelCase following folder structure (e.g. `hwc.home.apps.firefox.enable`)
-* Scripts: `domain-purpose` (e.g. `waybar-gpu-status`)
-* All modules include: **OPTIONS / IMPLEMENTATION / VALIDATION** sections
-* Namespace matches folder: `domains/home/apps/firefox/` → `hwc.home.apps.firefox.*`
+### Module Anatomy
 
----
+All modules follow this structure:
 
-## 13) Enforcement Rules
-
-* Functional purity per domain.
-* Single source of truth.
-* No multiple writers to same path.
-* Profiles provide feature menus, machines compose profiles.
-* One logical concern per module directory.
-* Namespace follows folder structure for debugging.
-
----
-
-## 14) Path Management
-
-**Rule**: All filesystem paths MUST be defined in `domains/system/core/paths.nix` and referenced via `config.hwc.paths.*`. Hardcoded paths in domain modules are prohibited.
-
-### Core Principles
-
-1. **Single Source of Truth**: `domains/system/core/paths.nix` is the canonical location for all filesystem path definitions
-2. **Machine-Specific Overrides**: Machines override paths in `machines/<host>/config.nix`
-3. **Fail-Fast**: Invalid paths fail at build time, not runtime
-4. **Namespace Alignment**: Path namespace follows storage architecture (hot/media/cold, system/user, app roots)
-
-### Path Structure
-
-```nix
-hwc.paths = {
-  # Storage Tiers (Machine-Specific, Nullable)
-  hot.root = "/mnt/hot";                    # SSD fast tier
-  hot.downloads.root = "<derived>";          # Auto-derived from hot.root
-  hot.downloads.music = "<derived>";         # Auto-derived from hot.root
-  hot.surveillance = "<derived>";            # Auto-derived from hot.root
-
-  media.root = "/mnt/media";                 # HDD bulk tier
-  media.music = "<derived>";                 # Auto-derived from media.root
-  media.surveillance = "<derived>";          # Auto-derived from media.root
-
-  cold = "/mnt/media";                       # Archive tier
-  backup = "/mnt/backup";                    # Backup destination
-  photos = "/mnt/photos";                    # Photo storage (Immich)
-
-  # System Paths (Always Available)
-  state = "/var/lib/hwc";                    # Service persistent data
-  cache = "/var/cache/hwc";                  # Temporary cache
-  logs = "/var/log/hwc";                     # Service logs
-  temp = "/tmp/hwc";                         # Temporary processing
-
-  # User Paths (PARA Structure)
-  user.home = "/home/eric";
-  user.inbox = "${home}/000_inbox";
-  user.work = "${home}/100_hwc";
-  user.personal = "${home}/200_personal";
-  user.tech = "${home}/300_tech";
-  user.media = "${home}/500_media";
-  user.vaults = "${home}/900_vaults";
-
-  # Application Roots
-  business.root = "/opt/business";
-  ai.root = "/opt/ai";
-  arr.downloads = "/opt/downloads";
-  networking.root = "/opt/networking";
-  networking.pihole = "${networking.root}/pihole";
-
-  # Security & Configuration
-  security.secrets = "/etc/secrets";
-  nixos = toString ../../..;                 # Dynamic repo root
-};
+```
+domains/<domain>/<category>/<module>/
+├── options.nix    # API definition (MANDATORY)
+├── index.nix      # Implementation (Three Sections: OPTIONS/IMPLEMENTATION/VALIDATION)
+├── sys.nix        # System-lane co-located config (optional, home apps only)
+├── parts/         # Pure helper functions (optional)
+│   ├── config.nix
+│   ├── scripts.nix
+│   └── theme.nix
+└── README.md      # Usage documentation (recommended)
 ```
 
-### Usage in Modules
+**Rules**:
+- `options.nix` always exists — options never defined ad hoc in other files
+- Namespace matches folder structure: `domains/home/apps/firefox/options.nix` → `hwc.home.apps.firefox.*`
+- One logical concern per module directory
+- `parts/` contains pure functions only (no options, no side effects)
 
-**Pattern**: Reference paths via `config.hwc.paths.*` with fallback for backward compatibility
+### Profiles — Domain Feature Menus
 
+**Purpose**: Aggregate domain modules into BASE + OPTIONAL structure for machine composition.
+
+**Structure**:
 ```nix
-# domains/server/native/navidrome/options.nix
-{ lib, config, ... }:
+# profiles/<domain>.nix
+{ config, lib, pkgs, ... }:
 {
-  options.hwc.server.navidrome.settings = {
-    musicFolder = lib.mkOption {
-      type = lib.types.str;
-      default = config.hwc.paths.media.music or "/mnt/media/music";
-      description = "Path to music library";
-    };
-  };
+  imports = [
+    ../domains/<domain>/index.nix
+    # ... other domain imports
+  ];
+
+  #==========================================================================
+  # BASE — Critical for machine functionality
+  #==========================================================================
+  # Essential imports, required for domain to function
+
+  #==========================================================================
+  # OPTIONAL FEATURES — Sensible defaults, override per machine
+  #==========================================================================
+  hwc.<domain>.<module>.enable = lib.mkDefault true;
+  # ... other feature toggles
 }
 ```
 
-**Derived Paths Pattern**:
+**Types**: `system.nix`, `home.nix`, `infrastructure.nix`, `server.nix`, `ai.nix`, `security.nix`, `media.nix`, etc.
+
+**Machine Composition**: Machines import combination of profiles needed:
 ```nix
-# For nullable paths that may not exist on all machines
-default = if config.hwc.paths.photos != null
-          then "${config.hwc.paths.photos}/library"
-          else "/mnt/photos/library";
-```
-
-**Multi-Path Lists**:
-```nix
-# domains/server/native/storage/options.nix
-cleanupPaths = lib.mkOption {
-  default = if config.hwc.paths.hot.root != null then [
-    "${config.hwc.paths.hot.root}/processing/sonarr-temp"
-    "${config.hwc.paths.hot.downloads.root}/incomplete"
-  ] else [
-    "/mnt/hot/processing/sonarr-temp"
-    "/mnt/hot/downloads/incomplete"
-  ];
-};
-```
-
-### Machine Configuration
-
-**Server** (`machines/server/config.nix`):
-```nix
-hwc.paths = {
-  hot.root = "/mnt/hot";       # Auto-derives .downloads.root, .downloads.music, .surveillance
-  media.root = "/mnt/media";   # Auto-derives .music, .surveillance
-  cold = "/mnt/media";
-  photos = "/mnt/photos";
-  business.root = "/opt/business";
-  cache = "/opt/cache";
-};
-```
-
-**Laptop** (`machines/laptop/config.nix`):
-```nix
-hwc.paths = {
-  hot.root = "/home/eric/500_media/";  # User-local storage
-  # photos = null by default (no Immich on laptop)
-};
-```
-
-### Environment Variables
-
-All paths are exported as environment variables for shell script integration:
-
-```bash
-# Storage tiers
-$HWC_HOT_STORAGE              # /mnt/hot
-$HWC_HOT_DOWNLOADS            # /mnt/hot/downloads
-$HWC_HOT_DOWNLOADS_MUSIC      # /mnt/hot/downloads/music
-$HWC_MEDIA_STORAGE            # /mnt/media
-$HWC_MEDIA_MUSIC              # /mnt/media/music
-$HWC_PHOTOS_STORAGE           # /mnt/photos
-
-# Application roots
-$HWC_NETWORKING_ROOT          # /opt/networking
-$HWC_NETWORKING_PIHOLE        # /opt/networking/pihole
-$HWC_BUSINESS_ROOT            # /opt/business
-
-# Legacy (for backward compatibility)
-$HEARTWOOD_HOT_STORAGE        # Alias for HWC_HOT_STORAGE
-$HEARTWOOD_COLD_STORAGE       # Alias for HWC_MEDIA_STORAGE
-```
-
-### Validation
-
-**Assertions** (in `paths.nix`):
-```nix
-assertions = [
-  {
-    assertion = cfg.hot.root == null || lib.hasPrefix "/" cfg.hot.root;
-    message = "hwc.paths.hot.root must be an absolute path if set";
-  }
-  {
-    assertion = cfg.hot.root == null || cfg.photos == null || cfg.hot.root != cfg.photos;
-    message = "hwc.paths.hot.root and hwc.paths.photos cannot be the same path";
-  }
+# machines/laptop/config.nix
+imports = [
+  ../../profiles/system.nix
+  ../../profiles/home.nix
+  ../../profiles/infrastructure.nix
 ];
 ```
 
-**Charter Compliance**: `rg "/mnt/" domains/` must return zero results in primary option values (fallback values in `or` patterns are acceptable)
+### Layering & Flow
 
-### Anti-Patterns
-
-❌ **Hardcoded paths in options.nix**:
-```nix
-# BAD
-musicFolder = lib.mkOption {
-  default = "/mnt/media/music";  # Hardcoded!
-};
+**NixOS System Flow**:
+```
+flake.nix
+  → machines/<host>/config.nix (hardware facts + profile imports)
+    → profiles/* (domain feature menus)
+      → domains/{system,infrastructure,server,ai}/ (implementations)
 ```
 
-✅ **Correct - Reference canonical path**:
-```nix
-# GOOD
-musicFolder = lib.mkOption {
-  default = config.hwc.paths.media.music or "/mnt/media/music";
-};
+**Home Manager Flow**:
+```
+machines/<host>/home.nix (HM activation point)
+  → domains/home/ (user environment implementations)
 ```
 
-❌ **Hardcoded paths in scripts**:
-```nix
-# BAD
-script = ''
-  BACKUP_DIR="/mnt/hot/backups"  # Hardcoded!
-'';
-```
+**Critical Rule**: Home Manager activation ONLY in `machines/<host>/home.nix`, never in profiles.
 
-✅ **Correct - Use path from config**:
-```nix
-# GOOD
-script = ''
-  BACKUP_DIR="${config.hwc.paths.hot.root}/backups"
-'';
-```
-
-### Migration Pattern
-
-When adding new services with hardcoded paths:
-
-1. **Identify all hardcoded paths** in the module
-2. **Check if path exists in paths.nix**, if not:
-   - Add to `domains/system/core/paths.nix` with appropriate tier
-   - Add to machine configs if machine-specific
-3. **Update module options** to reference `config.hwc.paths.*`
-4. **Add `config` parameter** to function signature if needed
-5. **Verify build** succeeds for all machines
-6. **Update assertions** if introducing new path dependencies
-
-### Path Architecture Guidelines
-
-**Storage Tiers**:
-- `hot.*` - SSD storage for active processing (downloads, buffers, temp files)
-- `media.*` - HDD storage for bulk media (music, video, surveillance archives)
-- `cold` - Long-term archive storage
-- `backup` - External backup destination
-- `photos` - Dedicated photo storage (separate from media for performance/organization)
-
-**System vs User**:
-- `/opt/*` - System-level application data (requires root, persists across users)
-- `/home/eric/*` - User-level data (user-owned, follows PARA structure)
-- `/var/lib/hwc/*` - Service state data (systemd DynamicUser, per-service isolation)
-
-**Derived Paths**:
-- Automatically computed from base paths (e.g., `hot.downloads.root` from `hot.root`)
-- Ensures consistency across modules
-- Changes to base path cascade to all derived paths
-
-### Breaking Changes Protocol
-
-When restructuring path definitions (e.g., simple path → nested attribute set):
-
-1. **Create feature branch** for path refactoring
-2. **Phase 1**: Restructure `paths.nix` (e.g., `hot` → `hot.root`)
-3. **Phase 2**: Update ALL machine configs
-4. **Phase 3**: Update ALL volume mounts in container configs
-5. **Phase 4**: Update ALL assertions and references
-6. **Phase 5**: Update ALL scripts and monitoring
-7. **Verify**: Both machines build successfully
-8. **Deploy**: Test on non-critical machine first
-
-**Never**: Partial updates that break builds between commits
+**Dependency Direction**: Always downward (flake → machines → profiles → domains).
 
 ---
 
-## 15) Validation & Anti-Patterns
+## 4) Mechanical Validation (Enforcement)
 
-**Searches (must be empty):**
+These searches identify architectural violations. All MUST return empty or zero results.
+
+### Law 1: Handshake Protocol Violations
 
 ```bash
-rg "writeScriptBin" domains/home/
-rg "systemd\.services" domains/home/
-rg "environment\.systemPackages" domains/home/
-rg "home-manager" profiles/ --exclude profiles/home.nix
+# Home modules without optional osConfig
+rg 'osConfig,' domains/home --type nix | rg -v 'osConfig \?'
 ```
 
-**Searches (must have zero results in primary option values):**
+### Law 2: Namespace Violations
 
 ```bash
-# Hardcoded paths prohibited (see §14 Path Management)
-# Note: Fallback values in "or" patterns (e.g., config.hwc.paths.X or "/mnt/X") are acceptable
-rg 'default\s*=\s*"/mnt/' domains/ -t nix -g '**/options.nix'
-rg 'default\s*=\s*"/opt/' domains/ -t nix -g '**/options.nix'
+# Deprecated hwc.services.* namespace (should be hwc.server.* or hwc.system.services.*)
+rg 'options\.hwc\.services\.' domains --glob '!_shared/*'
+
+# Deprecated hwc.features.* namespace
+rg 'options\.hwc\.features\.' domains
 ```
 
-**Hard blockers**
-
-* HM activation in profiles (except profiles/home.nix domain menu)
-* NixOS modules in HM
-* HM modules in system/server
-* User creation outside `domains/system/users/`
-* Mixed-domain modules (e.g., `users.users` + `programs.zsh`)
-* Options defined outside `options.nix` files
-* Namespace not matching folder structure
-* Hardcoded filesystem paths in primary option defaults (must use `config.hwc.paths.*` per §14)
-
----
-
-## 16) Server Workloads
-
-### Container vs Native Service Decisions
-
-* **Native Services**: Use for external device connectivity (media servers, game servers)
-  - Media services requiring LAN device access (Jellyfin for Roku/smart TVs)
-  - Services with complex network discovery requirements
-  - Example: `services.jellyfin.enable = true` instead of `hwc.server.containers.jellyfin.enable`
-
-* **Containers**: Use for internal services, isolated workloads
-  - API services, databases, processing workloads
-  - Services without external device connectivity requirements
-  - Better security isolation for untrusted workloads
-
-### Container Architecture Rules
-
-* Reverse proxy authority is central in `domains/server/containers/caddy/`.
-* When host-level Caddy aggregator is enabled, containerized proxy units MUST be disabled.
-* Per-unit container state defaults to `/opt/<category>/<unit>:/config`. Override only for ephemeral workloads, host storage policy, or multiple instances.
-* Container networks create routing barriers - external devices may not reach containerized services despite proper port mapping.
-
----
-
-## 17) Profiles & Import Order
-
-* Profiles MUST import `options.nix` before any lane implementations.
-* Example:
-
-```nix
-imports = [
-  ../domains/system/index.nix
-  ../domains/server/index.nix
-] ++ (gatherSys ../domains/home/apps);
-```
-
----
-
-## 18) Migration Protocol
-
-1. **Discovery** → list features.
-2. **Classification** → Part / Adapter / Tool.
-3. **Relocation** → Parts & adapters → Home, Tools → Infra.
-4. **Interface** → canonical tool names only.
-5. **Validation** → build-only → smoke → switch.
-
----
-
-## 19) Status
-
-* Phase 1 (Domain separation): ✅ complete.
-* Phase 2 (Domain/Profile architecture): 🔄 in progress.
-* Phase 3 (Namespace alignment): ⏳ pending.
-* Phase 4 (Validation & optimization): ⏳ pending.
-
----
-
-## 20) Charter Change Management
-
-* Version bump on any normative change.
-* PRs require non-author review.
-* Linter (`tools/hwc-lint.sh`) updated in same PR.
-* Include "Impact & Migration" notes for breaking changes.
-
----
-
-## 21) Configuration Validity & Dependency Assertions
-
-* **Mandatory Validation Section**: Every `index.nix` with `enable` toggle MUST include `# VALIDATION` section after `# IMPLEMENTATION`.
-* **Assertion Requirement**: Modules MUST assert all runtime dependencies (system services, binaries, configuration reads).
-* **Assertion Template**: `{ assertion = !enabled || config.hwc.dep.enable; message = "X requires Y"; }`
-* **Sub-Toggle Policy**: Sub-toggles default to master state unless overridden. Dependents assert specific sub-toggle, not master.
-* **Linting**: Charter linter verifies assertion presence and cross-domain dependency coverage.
-* **Fail-Fast Principle**: Invalid configurations MUST fail at build time, never at runtime.
-* **Examples**: See `domains/home/apps/waybar/index.nix`, `domains/home/apps/hyprland/index.nix` for reference patterns.
-
----
-
-## 22) Complex Service Configuration Pattern
-
-### The Config-First, Nix-Second Rule
-
-For **complex services** with substantial configuration schemas (Frigate, Jellyfin, SABnzbd, Home Assistant, etc.):
-
-**Pattern Requirements**:
-
-1. **Canonical Config File**:
-   - Maintain service configuration in the format the service expects (YAML/TOML/INI/XML)
-   - Store in module directory: `domains/server/<service>/config/config.yml`
-   - This file is **version-controlled** and **human-readable**
-   - This file is **portable** - can work on non-NixOS systems with minimal changes
-
-2. **Nix Responsibilities** (infrastructure only):
-   - Container image/version pinning
-   - Volume mounts (including config file)
-   - Port mappings
-   - GPU/device passthrough
-   - Environment variables
-   - Resource limits
-   - **NOT** generating service-specific YAML/TOML/etc.
-
-3. **Module Structure**:
-   ```
-   domains/server/<service>/
-   ├── options.nix         # Nix-level options (image, ports, GPU, etc.)
-   ├── index.nix           # Container definition
-   ├── config/
-   │   └── config.yml      # Canonical service config (mounted into container)
-   └── README.md           # Service documentation
-   ```
-
-4. **Debug Workflow**:
-   - To change service behavior: **Edit `config/config.yml` directly**
-   - Restart service to apply changes
-   - Once stable, commit the config file
-   - **NOT**: Edit Nix → generate YAML → hope it's correct → debug generated output
-
-### Rationale
-
-**Why This Pattern**:
-- ✅ **Debuggability**: Config is visible, not hidden in Nix string interpolation
-- ✅ **Portability**: Config works on Docker/Podman/k8s with minimal changes
-- ✅ **Validation**: Service's native tools can validate config
-- ✅ **Documentation**: Upstream docs directly applicable
-- ✅ **Complexity Management**: Service complexity stays in service format
-
-**Anti-Pattern** (What NOT to Do):
-```nix
-# ❌ BAD: Encoding complex service config in Nix
-hwc.server.frigate = {
-  detectors.onnx = {
-    type = "onnx";
-    model = {
-      path = "/config/model.onnx";
-      input_dtype = "float";
-      # ... 50 more options
-    };
-  };
-  cameras.cam1 = {
-    # ... complex RTSP/recording/detection config
-  };
-};
-```
-
-**Why It Fails**:
-- YAML structure errors hidden in Nix indentation
-- Service schema changes require Nix module updates
-- Debugging requires inspecting generated files
-- Not portable outside NixOS
-
-**Correct Pattern**:
-```nix
-# ✅ GOOD: Nix handles infrastructure only
-hwc.server.frigate = {
-  enable = true;
-  image = "ghcr.io/blakeblackshear/frigate:0.16.2";  # Explicit version
-  gpu.enable = true;  # Infrastructure concern
-  # Config comes from domains/server/frigate/config/config.yml
-};
-```
-
-### When to Use Config-First
-
-**Use Config-First for**:
-- Services with >50 lines of configuration
-- Services with complex nested schemas (Frigate, Home Assistant, Traefik)
-- Services where upstream docs reference config files directly
-- Services you need to debug frequently
-
-**Nix Options Are Fine for**:
-- Simple services with <20 config options
-- Services where Nix options ARE the canonical interface (NixOS services)
-- Infrastructure concerns (ports, volumes, env vars)
-
-### Secrets Integration
-
-Secrets (passwords, API keys) still use agenix:
-- Reference secret files in config: `password_file: /run/agenix/service-password`
-- Or use environment variable substitution in container
-- **NOT**: Inline secrets in config files
-
-### Validation Requirements
-
-Modules using config-first pattern MUST:
-1. Document config file location in README.md
-2. Provide example/template config
-3. Include verification script if possible
-4. Document how to validate config (service's native tools)
-
-### Migration from Nix-Generated Configs
-
-When migrating from Nix-generated to config-first:
-1. Extract current runtime config: `podman exec service cat /config/config.yml`
-2. Save to `domains/server/<service>/config/config.yml`
-3. Commit as-is (baseline)
-4. Modify Nix to mount file instead of generating
-5. Verify service works identically
-6. Only then refactor config as needed
-
----
-
-## 23) Data Retention & Lifecycle Management
-
-**Rule**: All data retention policies MUST be declared in NixOS configuration with automated enforcement.
-
-### Core Principles
-
-1. **Declarative-First**: Retention policies defined in configuration, never ad-hoc
-2. **Fail-Safe**: Automated enforcement even if primary application fails
-3. **Predictable**: Time-based and size-based limits clearly documented
-4. **Observable**: All cleanup operations logged to systemd journal
-5. **Reproducible**: Version-controlled policies deployable to any machine
-
-### Retention Policy Structure
-
-Every data store with retention requirements MUST define:
-
-```nix
-{
-  # Primary enforcement (application-level)
-  retention = {
-    days = 7;        # or weeks/months
-    mode = "time";   # or "size" or "count"
-  };
-
-  # Fail-safe enforcement (systemd timer)
-  systemd.timers.<service>-cleanup = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "daily";
-      Persistent = true;
-      RandomizedDelaySec = "1h";
-    };
-  };
-}
-```
-
-### Data Classification System
-
-| Category | Retention | Backup | Examples |
-|----------|-----------|--------|----------|
-| **CRITICAL** | Indefinite | ✅ Weekly | Photos, configs, business data |
-| **REPLACEABLE** | Indefinite | ❌ No | Movies, TV shows, music |
-| **AUTO-MANAGED** | 7-30 days | ❌ No | Surveillance, logs |
-| **EPHEMERAL** | <7 days | ❌ No | Cache, temp files |
-
-### Example: Surveillance Retention
-
-**Pattern**: Application config + systemd timer fail-safe
-
-```nix
-# Primary: Frigate built-in retention
-domains/server/frigate/config/config.yml:
-  record:
-    retain:
-      days: 7  # Keep recordings for 7 days
-
-# Fail-safe: systemd enforcement
-machines/server/config.nix:
-  systemd.timers.frigate-cleanup = {
-    wantedBy = [ "timers.target" ];
-    timerConfig.OnCalendar = "daily";
-  };
-  systemd.services.frigate-cleanup.script = ''
-    find /mnt/media/surveillance -type f -mtime +7 -delete
-  '';
-```
-
-### Backup Source Selection
-
-**Rule**: Only back up CRITICAL and irreplaceable data. Exclude REPLACEABLE and AUTO-MANAGED data.
-
-```nix
-hwc.system.services.backup.local = {
-  sources = [
-    "/home"                  # User data, configs
-    "/mnt/media/pictures"    # IRREPLACEABLE photos
-    "/mnt/media/databases"   # Database backups
-  ];
-
-  excludePatterns = [
-    "*/movies/*"             # Can re-download
-    "*/tv/*"                 # Can re-download
-    "*/surveillance/*"       # Auto-rotates
-  ];
-};
-```
-
-### Anti-Patterns
-
-❌ **Manual cleanup scripts outside NixOS config**
-```bash
-# BAD: Ad-hoc cron job
-crontab -e
-0 0 * * * find /data -mtime +30 -delete
-```
-
-✅ **Declarative systemd timer**
-```nix
-# GOOD: In machines/server/config.nix
-systemd.timers.data-cleanup = { ... };
-```
-
-❌ **Backing up replaceable media**
-```nix
-# BAD: Wasting 3TB on replaceable movies
-sources = [ "/mnt/media/movies" ];
-```
-
-✅ **Backing up only critical data**
-```nix
-# GOOD: Only irreplaceable photos
-sources = [ "/mnt/media/pictures" ];
-```
-
-### Monitoring & Verification
-
-All retention policies MUST have verification commands documented:
+### Law 3: Path Abstraction Violations
 
 ```bash
-# Check oldest files (should match retention period)
-find /data -type f | head -1 | xargs stat -c "%y %n"
-
-# Verify timer status
-systemctl status cleanup.timer
-journalctl -u cleanup.service -n 20
+# Hardcoded /mnt/ or /home/ paths (excluding paths.nix and docs)
+rg '="/mnt/|="/home/' domains --glob '!paths.nix' --glob '!*.md'
 ```
 
-**Reference**: See `/docs/infrastructure/retention-and-cleanup.md` for complete policies
+### Law 4: Permission Standard Violations
+
+```bash
+# Permission linter (checks PGID 100, secrets group, etc.)
+./workspace/utilities/lints/permission-lint.sh domains
+```
+
+### Law 5: Module Structure Violations
+
+```bash
+# Options defined outside options.nix
+rg 'options\.hwc\.' domains --type nix --glob '!options.nix' --glob '!sys.nix'
+```
+
+### Cross-Domain Boundary Violations
+
+```bash
+# Home Manager configs in system/infrastructure/server domains
+rg 'programs\.|home\.|xdg\.' domains/system/ domains/infrastructure/ domains/server/
+
+# System configs in home domain
+rg 'systemd\.services|environment\.systemPackages|users\.users\.' domains/home/
+
+# Home Manager activation in profiles (except profiles/home.nix)
+rg 'home-manager\.users\.' profiles/ --glob '!home.nix'
+```
 
 ---
 
-## 24) Related Documentation
+## 5) Related Documentation
 
-* **Filesystem Charter** (`FILESYSTEM-CHARTER.md`): Home directory organization (`~/`) with domain-based structure
-  - 3-digit prefix system (100_hwc, 200_personal, 300_tech, etc.)
-  - XDG integration configured in `domains/system/core/paths.nix`
-  - GTD-style inbox processing workflow
-* **Claude Instructions** (`CLAUDE.md`): AI assistant working instructions and quick reference
-* **Documentation Index** (`GEMINI.md`): Dynamic index to all authoritative sources
+### Domain-Specific Details
+
+Each domain has a comprehensive README with implementation patterns:
+
+- **domains/home/README.md** — Home Manager patterns, sys.nix usage, app modules
+- **domains/system/README.md** — User management, path system, core services
+- **domains/infrastructure/README.md** — Hardware abstraction, storage, virtualization
+- **domains/server/README.md** — Container patterns, native services, routing
+- **domains/secrets/README.md** — Secret management workflow, agenix usage
+- **domains/ai/README.md** — AI service architecture, router pattern, workflows
+
+### Implementation Patterns
+
+Detailed recipes for common tasks:
+
+- **docs/patterns/config-first-services.md** — Complex service configuration (Frigate, Jellyfin, etc.)
+- **docs/patterns/container-standard.md** — mkContainer helper usage and examples
+- **docs/patterns/path-system.md** — Path abstraction details and override patterns
+
+### Standards & Policies
+
+- **docs/standards/permission-patterns.md** — Permission model examples and troubleshooting
+- **docs/policies/data-retention.md** — Retention rules and lifecycle management
+
+### Troubleshooting
+
+- **docs/troubleshooting/permissions.md** — Common permission issues and resolutions
+- **docs/troubleshooting/build-failures.md** — Debugging evaluation and build errors
 
 ---
 
-**Charter Version**: v8.0 - Data Retention & Lifecycle Management
+## 6) Charter Change Management
+
+**Proposal Process**:
+1. Draft changes in `workspace/claude_plans/<descriptive-name>.md`
+2. Include rationale and migration impact assessment
+3. Review against existing domain READMEs
+4. Version bump triggers domain README review cycle
 
 **Version History**:
-- v8.0 (2025-12-04): Added section 20 "Data Retention & Lifecycle Management" establishing declarative retention policies with fail-safe enforcement
-- v7.0 (2025-11-23): Added section 19 "Complex Service Configuration Pattern" establishing config-first rule for services like Frigate
+- **v9.0 (2026-01-10)**: Architectural Laws & Domain Pointer Philosophy — Streamlined Charter to testable laws with domain README pointers
+- v8.0 (2025-12-04): Data Retention & Lifecycle Management
+- v7.0 (2025-11-23): Complex Service Configuration Pattern (Config-First Rule)
 - v6.0: Configuration Validity & Dependency Assertions
 
+**Current Version**: **v9.0**
+
+**Philosophy Evolution**: Charter is **architectural law**, not implementation cookbook. Laws are testable. Details live in domain READMEs and `docs/patterns/`. This Charter defines cross-domain rules and provides pointers to domain-specific documentation.
+
 ---
+
+**End of Charter v9.0**
