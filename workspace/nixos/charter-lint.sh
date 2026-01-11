@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# HWC Charter Compliance Linter v9.1
-# Validates against Charter v9.1 Architectural Laws
+# HWC Charter Compliance Linter v10.1
+# Validates against Charter v10.1 Architectural Laws
 # Usage: ./workspace/nixos/charter-lint.sh [--fix] [--verbose] [domain]
 
 set -Eeuo pipefail
@@ -37,7 +37,7 @@ FIX_MODE=false
 DOMAIN_FILTER=""
 TOTAL_VIOLATIONS=0
 declare -A LAW_COUNTS=(
-  [1]=0 [2]=0 [3]=0 [4]=0 [5]=0 [6]=0 [7]=0 [8]=0
+  [1]=0 [2]=0 [3]=0 [4]=0 [5]=0 [6]=0 [7]=0 [8]=0 [9]=0 [10]=0
 )
 declare -A LAW_NAMES=(
   [1]="Handshake (home osConfig guard)"
@@ -48,6 +48,8 @@ declare -A LAW_NAMES=(
   [6]="Three sections & validation"
   [7]="sys.nix lane purity"
   [8]="Data retention contract"
+  [9]="Filesystem materialization discipline"
+  [10]="Primitive module exception"
 )
 declare -A LAW_HINTS=(
   [1]="Add osConfig ? {} to home module args; guard osConfig.* and assertions with isNixOS."
@@ -58,9 +60,11 @@ declare -A LAW_HINTS=(
   [6]="Ensure index.nix has # OPTIONS/# IMPLEMENTATION/# VALIDATION and assertions are mkIf cfg.enable; move options to options.nix."
   [7]="Do not import sys.nix from home index; keep system-only logic in sys.nix and avoid home->system references."
   [8]="Document retention policy and add cleanup timer for persistent volumes (retain/retention/cleanup.timer)."
+  [9]="Materialize core directories only in domains/system/core/filesystem.nix via tmpfiles."
+  [10]="Only domains/paths/paths.nix may co-locate options and implementation; keep exception scoped."
 )
 declare -A LAW_LOGS
-for i in {1..8}; do
+for i in {1..10}; do
   LAW_LOGS[$i]="$TMP_DIR/law-$i.log"
   : > "${LAW_LOGS[$i]}"
 done
@@ -189,7 +193,7 @@ check_law2_namespace() {
   fi
 
   local options_outside="$TMP_DIR/options-outside.txt"
-  if run_rg_to_file "$options_outside" 'options\.hwc\.' "$ns_path" --type nix --glob '!options.nix' --glob '!sys.nix'; then
+  if run_rg_to_file "$options_outside" 'options\.hwc\.' "$ns_path" --type nix --glob '!options.nix' --glob '!sys.nix' --glob '!paths/paths.nix'; then
     if [[ -s "$options_outside" ]]; then
       cat "$options_outside" >> "${LAW_LOGS[2]}"
       [[ "$VERBOSE" == "true" ]] && cat "$options_outside"
@@ -334,7 +338,7 @@ check_law8_retention() {
 # Main Execution
 # ------------------------------------------------------------
 main() {
-  log "HWC Charter v9.1 Compliance Linter"
+  log "HWC Charter v10.1 Compliance Linter"
   log "Repo root: $REPO_ROOT"
 
   check_law1_handshake
@@ -347,7 +351,7 @@ main() {
   check_law8_retention
 
   printf "\n${BLUE}Summary:${NC}\n"
-  for i in {1..8}; do
+  for i in {1..10}; do
     count=${LAW_COUNTS[$i]}
     local name="${LAW_NAMES[$i]}"
     local log_file="${LAW_LOGS[$i]}"
@@ -377,7 +381,7 @@ main() {
     printf "  Cleanup: set KEEP_LOGS=0 to auto-remove temp logs after run.\n"
     printf "\n${BLUE}Next steps:${NC}\n"
     # Show top three offending laws with hints
-    for law in $(for i in {1..8}; do printf "%s:%s\n" "${LAW_COUNTS[$i]}" "$i"; done | sort -t: -k1,1nr | head -3 | awk -F: '$1>0 {print $2}'); do
+    for law in $(for i in {1..10}; do printf "%s:%s\n" "${LAW_COUNTS[$i]}" "$i"; done | sort -t: -k1,1nr | head -3 | awk -F: '$1>0 {print $2}'); do
       printf "  Law %s: %s\n" "$law" "${LAW_HINTS[$law]}"
     done
     exit 1
