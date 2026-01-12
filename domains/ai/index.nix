@@ -4,8 +4,12 @@ let
   cfg = config.hwc.ai;
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [
     ./options.nix
+    ./framework/index.nix     # Hardware-agnostic AI framework (NEW)
     ./ollama/index.nix
     ./open-webui/index.nix
     ./local-workflows/index.nix
@@ -15,10 +19,14 @@ in
     ./agent/index.nix
   ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     assertions = [{
       assertion = true;
       message = "AI domain loaded";
     }];
   };
+
 }

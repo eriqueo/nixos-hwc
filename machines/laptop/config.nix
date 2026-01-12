@@ -312,79 +312,53 @@
   };
 
   #============================================================================
-  # AI SERVICES CONFIGURATION (Laptop)
+  # AI FRAMEWORK CONFIGURATION (Laptop)
   #============================================================================
-  # Laptop has superior hardware (32GB RAM, RTX 2000 Ada GPU) - optimized for performance
-  hwc.ai.ollama = {
-    enable = false;  # Disabled by default, toggle with waybar button
-    # GPU-accelerated models leveraging NVIDIA RTX 2000 (8GB VRAM)
-    models = [
-      "qwen2.5-coder:14b-q5_K_M"      # 9.7GB - Primary coding, GPU accelerated
-      "deepseek-coder:6.7b-instruct"  # 3.9GB - Excellent code generation
-      "llama3.2:3b"                   # 2.0GB - Fast queries, battery mode
-      "phi-3:14b"                     # 7.9GB - Microsoft's efficient model
-    ];
+  # Hardware-agnostic AI framework with thermal awareness and Charter integration
+  # Auto-detects laptop profile: conservative limits, aggressive thermal protection
+  hwc.ai.framework = {
+    enable = true;
 
-    # Balanced resource limits (50% of system capacity)
-    resourceLimits = {
-      enable = true;
-      maxCpuPercent = 800;          # 8 cores (50% of 16 cores)
-      maxMemoryMB = 16384;           # 16GB (50% of 32GB RAM)
-      maxRequestSeconds = 300;       # 5 minutes for larger models
+    # Framework auto-detects "laptop" profile based on:
+    # - GPU: nvidia (present)
+    # - RAM: 32GB (< 16GB threshold for server classification)
+    # Result: Conservative thermal limits, smaller models, quick idle shutdown
+
+    # Thermal configuration (override defaults for laptop safety)
+    thermal = {
+      warningTemp = 70;   # Start warnings early (default: 75)
+      criticalTemp = 80;  # Emergency stop before hardware throttle (default: 85)
     };
 
-    # Auto-shutdown after idle (perfect for grebuild sprints)
-    idleShutdown = {
+    # Model selection by task complexity (using framework defaults)
+    # small:  llama3.2:1b  (1.3GB, 5W, <2s)  - Quick lookups
+    # medium: llama3.2:3b  (2.0GB, 10W, <10s) - Documentation
+    # large:  phi3.5:3.8b  (2.3GB, 15W, <30s) - Analysis
+
+    # Charter integration (enabled by default)
+    charter = {
       enable = true;
-      idleMinutes = 15;              # Shutdown after 15min of inactivity
-      checkInterval = "2min";         # Check every 2 minutes
+      charterPath = "/home/eric/.nixos/CHARTER.md";
+      citeLaws = true;  # Require outputs to cite Charter Laws
     };
 
-    # Thermal protection tuned for modern CPU (can handle higher temps)
-    thermalProtection = {
+    # Logging (enabled by default)
+    logging = {
       enable = true;
-      warningTemp = 85;              # Intel Core Ultra 9 safe operating temp
-      criticalTemp = 95;             # Emergency stop (before CPU throttles at 100°C)
-      checkInterval = "30s";          # Check every 30 seconds
-      cooldownMinutes = 5;           # Faster recovery after thermal event
-    };
-  };
-
-  # Local AI workflows for laptop
-  hwc.ai.local-workflows = {
-    enable = false;  # Disabled by default (requires Ollama to be running)
-
-    # File cleanup for Downloads
-    fileCleanup = {
-      enable = true;
-      watchDirs = [ "/home/eric/Downloads" ];
-      schedule = "hourly";
-      model = "llama3.2:3b";  # Use smaller model for battery efficiency
-      dryRun = false;
-    };
-
-    # Journaling (less frequent on laptop)
-    journaling = {
-      enable = true;
-      outputDir = "/home/eric/Documents/HWC-AI-Journal";
-      sources = [ "systemd-journal" "nixos-rebuilds" ];
-      schedule = "weekly";  # Weekly on laptop vs daily on server
-      timeOfDay = "02:00";
-      model = "llama3.2:3b";
-    };
-
-    # Auto-documentation
-    autoDoc = {
-      enable = true;
-      model = "qwen2.5-coder:7b";  # Use larger model on laptop
-    };
-
-    # Chat CLI with better model
-    chatCli = {
-      enable = true;
-      model = "mistral:7b-instruct";  # Larger model for better quality
+      logDir = "/var/log/hwc-ai";
+      logThermal = true;  # Log temperatures with each AI task
     };
   };
+
+  # Framework automatically configures Ollama with profile-based limits:
+  # - CPU: 200% (2 cores max)
+  # - Memory: 4096MB (4GB max)
+  # - Timeout: 60s per request
+  # - Idle shutdown: 5 minutes
+  # - Models: llama3.2:1b, llama3.2:3b, phi3.5:3.8b
+
+  # Local AI workflows disabled by default (can enable if needed)
+  hwc.ai.local-workflows.enable = false;
 
   # Static hosts for local services (remains unchanged).
   networking.hosts = {
