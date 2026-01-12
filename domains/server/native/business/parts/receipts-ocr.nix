@@ -4,21 +4,21 @@
 # Systemd service for processing receipt images with OCR and PostgreSQL storage
 #
 # DEPENDENCIES (Upstream):
-#   - config.hwc.services.databases.postgresql (PostgreSQL database)
+#   - config.hwc.server.databases.postgresql (PostgreSQL database)
 #   - config.hwc.paths.* (Storage paths)
 #
 # USED BY (Downstream):
 #   - domains/server/business/api.nix
 #
 # USAGE:
-#   hwc.services.business.receipts-ocr.enable = true;
+#   hwc.server.business.receipts-ocr.enable = true;
 
 { config, lib, pkgs, ... }:
 
 with lib;
 
 let
-  cfg = config.hwc.services.business.receipts-ocr;
+  cfg = config.hwc.server.business.receipts-ocr;
   paths = config.hwc.paths;
 
   # Python environment with all dependencies
@@ -62,7 +62,7 @@ in {
   # OPTIONS
   ####################################################################
 
-  options.hwc.services.business.receipts-ocr = {
+  options.hwc.server.business.receipts-ocr = {
     enable = mkEnableOption "Receipts OCR service for processing receipt images";
 
     host = mkOption {
@@ -135,7 +135,7 @@ in {
     # Assertions
     assertions = [
       {
-        assertion = config.hwc.services.databases.postgresql.enable;
+        assertion = config.hwc.server.databases.postgresql.enable;
         message = "Receipts OCR service requires PostgreSQL to be enabled";
       }
       {

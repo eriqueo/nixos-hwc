@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.database.enable)
+#   - profiles/*.nix (enables via hwc.server.database.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/business/database.nix
 #
 # USAGE:
-#   hwc.services.database.enable = true;
+#   hwc.server.database.enable = true;
 #   # TODO: Add specific usage examples
 
 # modules/services/business/database.nix
@@ -26,7 +26,7 @@
 with lib;
 
 let 
-  cfg = config.hwc.services.business.database;
+  cfg = config.hwc.server.business.database;
   paths = config.hwc.paths;
 in {
   
@@ -36,7 +36,7 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.services.business.database = {
+  options.hwc.server.business.database = {
     enable = mkEnableOption "business database services";
     
     postgresql = {

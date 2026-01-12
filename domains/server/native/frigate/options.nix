@@ -56,7 +56,7 @@ in
 
       mediaPath = mkOption {
         type = types.str;
-        default = "${config.hwc.paths.media.surveillance}/frigate/media";
+        default = "${config.hwc.paths.media.root}/surveillance/frigate/media";
         description = "Media storage path (recordings)";
       };
 

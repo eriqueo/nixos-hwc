@@ -5,24 +5,24 @@
 #
 # DEPENDENCIES (Upstream):
 #   - config.hwc.paths.* (modules/system/paths.nix)
-#   - config.hwc.services.business.monitoring.networking (networking config)
+#   - config.hwc.server.business.monitoring.networking (networking config)
 #
 # USED BY (Downstream):
-#   - profiles/server.nix (enables via hwc.services.business.metrics.enable)
+#   - profiles/server.nix (enables via hwc.server.business.metrics.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/server.nix: ../domains/services/business/metrics.nix
 #
 # USAGE:
-#   hwc.services.business.metrics.enable = true;
-#   hwc.services.business.metrics.port = 9999;
+#   hwc.server.business.metrics.enable = true;
+#   hwc.server.business.metrics.port = 9999;
 
 { config, lib, pkgs, ... }:
 
 with lib;
 
 let
-  cfg = config.hwc.services.business.metrics;
+  cfg = config.hwc.server.business.metrics;
   paths = config.hwc.paths;
 in {
 
@@ -30,7 +30,7 @@ in {
   # OPTIONS - Service Configuration Interface
   #============================================================================
 
-  options.hwc.services.business.metrics = {
+  options.hwc.server.business.metrics = {
     enable = mkEnableOption "business metrics collection and export";
 
     port = mkOption {
@@ -54,13 +54,13 @@ in {
     networking = {
       useMediaNetwork = mkOption {
         type = types.bool;
-        default = config.hwc.services.business.monitoring.networking.useMediaNetwork or false;
+        default = config.hwc.server.business.monitoring.networking.useMediaNetwork or false;
         description = "Use media network for metrics";
       };
       
       networkName = mkOption {
         type = types.str;
-        default = config.hwc.services.business.monitoring.networking.networkName or "hwc-media";
+        default = config.hwc.server.business.monitoring.networking.networkName or "hwc-media";
         description = "Network name for metrics";
       };
     };

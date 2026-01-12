@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.api.enable)
+#   - profiles/*.nix (enables via hwc.server.api.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/business/api.nix
 #
 # USAGE:
-#   hwc.services.api.enable = true;
+#   hwc.server.api.enable = true;
 #   # TODO: Add specific usage examples
 
 # modules/services/business/api.nix
@@ -26,7 +26,7 @@
 with lib;
 
 let 
-  cfg = config.hwc.services.business.api;
+  cfg = config.hwc.server.business.api;
   paths = config.hwc.paths;
 in {
   
@@ -36,7 +36,7 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.services.business.api = {
+  options.hwc.server.business.api = {
     enable = mkEnableOption "business API development environment and services";
     
     development = {
@@ -129,14 +129,14 @@ in {
     assertions = [
       {
         assertion = cfg.service.enable -> cfg.packages.enable;
-        message = "Business API service requires packages to be enabled (hwc.services.business.api.packages.enable = true)";
+        message = "Business API service requires packages to be enabled (hwc.server.business.api.packages.enable = true)";
       }
       {
-        assertion = cfg.service.enable -> config.hwc.services.business.database.postgresql.enable;
+        assertion = cfg.service.enable -> config.hwc.server.business.database.postgresql.enable;
         message = "Business API service requires PostgreSQL database to be enabled";
       }
       {
-        assertion = cfg.service.enable -> config.hwc.services.business.database.redis.enable;
+        assertion = cfg.service.enable -> config.hwc.server.business.database.redis.enable;
         message = "Business API service requires Redis to be enabled";
       }
     ];
@@ -284,12 +284,12 @@ in {
       after = [ 
         "postgresql.service" 
         "redis-business.service"
-      ] ++ optionals config.hwc.services.ai.ollama.enable [ "ollama.service" ];
+      ] ++ optionals config.hwc.server.ai.ollama.enable [ "ollama.service" ];
       
       wants = [ 
         "postgresql.service" 
         "redis-business.service"
-      ] ++ optionals config.hwc.services.ai.ollama.enable [ "ollama.service" ];
+      ] ++ optionals config.hwc.server.ai.ollama.enable [ "ollama.service" ];
       
       serviceConfig = {
         Type = "simple";

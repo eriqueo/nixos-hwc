@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.hwc.features.media = {
+  options.hwc.server.media = {
     enable = lib.mkEnableOption "media services (Jellyfin, *arr stack)";
   };
 }

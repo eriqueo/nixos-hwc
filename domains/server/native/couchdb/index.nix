@@ -145,8 +145,8 @@ EOF
         message = "hwc.server.couchdb requires couchdb-admin-password secret (via hwc.secrets.api or cfg.secrets.adminPassword)";
       }
       {
-        assertion = !cfg.reverseProxy.enable || config.hwc.services.reverseProxy.enable;
-        message = "hwc.server.couchdb.reverseProxy requires hwc.services.reverseProxy.enable = true";
+        assertion = !cfg.reverseProxy.enable || config.hwc.server.reverseProxy.enable;
+        message = "hwc.server.couchdb.reverseProxy requires hwc.server.reverseProxy.enable = true";
       }
       {
         assertion = cfg.settings.bindAddress == "127.0.0.1" || cfg.settings.bindAddress == "0.0.0.0";

@@ -5,24 +5,24 @@
 #
 # DEPENDENCIES (Upstream):
 #   - config.hwc.paths.* (modules/system/paths.nix)
-#   - config.hwc.services.business.monitoring.networking (networking config)
+#   - config.hwc.server.business.monitoring.networking (networking config)
 #
 # USED BY (Downstream):
-#   - profiles/server.nix (enables via hwc.services.business.dashboard.enable)
+#   - profiles/server.nix (enables via hwc.server.business.dashboard.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/server.nix: ../domains/services/business/dashboard.nix
 #
 # USAGE:
-#   hwc.services.business.dashboard.enable = true;
-#   hwc.services.business.dashboard.port = 8501;
+#   hwc.server.business.dashboard.enable = true;
+#   hwc.server.business.dashboard.port = 8501;
 
 { config, lib, pkgs, ... }:
 
 with lib;
 
 let
-  cfg = config.hwc.services.business.dashboard;
+  cfg = config.hwc.server.business.dashboard;
   paths = config.hwc.paths;
 in {
 
@@ -30,7 +30,7 @@ in {
   # OPTIONS - Service Configuration Interface
   #============================================================================
 
-  options.hwc.services.business.dashboard = {
+  options.hwc.server.business.dashboard = {
     enable = mkEnableOption "business analytics dashboard (Streamlit)";
 
     port = mkOption {
@@ -54,13 +54,13 @@ in {
     networking = {
       useMediaNetwork = mkOption {
         type = types.bool;
-        default = config.hwc.services.business.monitoring.networking.useMediaNetwork or false;
+        default = config.hwc.server.business.monitoring.networking.useMediaNetwork or false;
         description = "Use media network for dashboard";
       };
       
       networkName = mkOption {
         type = types.str;
-        default = config.hwc.services.business.monitoring.networking.networkName or "hwc-media";
+        default = config.hwc.server.business.monitoring.networking.networkName or "hwc-media";
         description = "Network name for dashboard";
       };
     };

@@ -42,7 +42,7 @@ in
     webPasswordFile = mkOption {
       type = types.nullOr types.path;
       default = null;
-      example = "/run/agenix/pihole-password";
+      example = "config.age.secrets.pihole-password.path";
       description = ''
         Path to file containing web interface password.
         Recommended over webPassword for production use.
@@ -66,13 +66,13 @@ in
 
     dataDir = mkOption {
       type = types.str;
-      default = config.hwc.paths.networking.pihole;
+      default = "/opt/networking/pihole";
       description = "Directory for Pi-hole persistent data";
     };
 
     dnsmasqDir = mkOption {
       type = types.str;
-      default = "${config.hwc.paths.networking.pihole}/dnsmasq.d";
+      default = "/opt/networking/pihole/dnsmasq.d";
       description = "Directory for dnsmasq configuration files";
     };
 

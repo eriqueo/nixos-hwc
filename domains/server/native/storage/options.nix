@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.services.storage = {
+  options.hwc.server.storage = {
     enable = mkEnableOption "HWC storage automation services";
 
     cleanup = {
@@ -25,7 +25,7 @@ in
           "${config.hwc.paths.hot.root}/processing/sonarr-temp"
           "${config.hwc.paths.hot.root}/processing/radarr-temp"
           "${config.hwc.paths.hot.root}/processing/lidarr-temp"
-          "${config.hwc.paths.hot.downloads.root}/incomplete"
+          "${config.hwc.paths.hot.downloads}/incomplete"
           "/var/tmp/hwc"
           "/var/cache/hwc"
         ];
