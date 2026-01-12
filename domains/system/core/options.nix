@@ -7,19 +7,6 @@
 
 {
   #============================================================================
-  # POLKIT OPTIONS
-  #============================================================================
-  options.hwc.system.core.polkit = {
-    enable = lib.mkEnableOption "polkit directory management";
-
-    createMissingDirectories = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Create missing polkit rule directories to silence warnings";
-    };
-  };
-
-  #============================================================================
   # THERMAL OPTIONS
   #============================================================================
   options.hwc.system.core.thermal = {
@@ -49,54 +36,54 @@
   };
 
   #============================================================================
-  # NETWORKING OPTIONS
+  # FILESYSTEM OPTIONS (alias: hwc.filesystem)
   #============================================================================
-  options.hwc.networking = {
-    vlans = lib.mkOption {
-      type = lib.types.attrsOf lib.types.attrs;
-      default = {};
-      description = "VLAN configurations";
-      example = {
-        management = { id = 10; interface = "eth0"; };
-        storage = { id = 20; interface = "eth0"; };
-      };
-    };
+  options.hwc.system.core.filesystem = {
+    enable = lib.mkEnableOption "filesystem scaffolding (tmpfiles) driven by hwc.paths" // { default = true; };
 
-    bridges = lib.mkOption {
-      type = lib.types.attrsOf lib.types.attrs;
-      default = {};
-      description = "Bridge configurations";
-    };
-
-    routeInterface = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Network interface to apply static routes to (e.g., eth0, eno1). If null, routes are not configured.";
-      example = "eth0";
-    };
-
-    staticRoutes = lib.mkOption {
-      type = lib.types.listOf lib.types.attrs;
+    structure.dirs = lib.mkOption {
+      type = lib.types.listOf (lib.types.submodule ({ lib, ... }: {
+        options = {
+          path  = lib.mkOption { type = lib.types.str; };
+          mode  = lib.mkOption { type = lib.types.str; default = "0755"; };
+          user  = lib.mkOption { type = lib.types.str; default = "root"; };
+          group = lib.mkOption { type = lib.types.str; default = "root"; };
+        };
+      }));
       default = [];
-      description = "Static routes";
+      description = "Extra directories to create via tmpfiles.d (alias available at hwc.filesystem.structure.dirs).";
     };
+  };
 
-    dnsServers = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "1.1.1.1" "8.8.8.8" ];
-      description = "DNS servers";
-    };
+  #============================================================================
+  # PACKAGES OPTIONS
+  #============================================================================
+  options.hwc.system.core.packages = {
+    enable = lib.mkEnableOption "core package bundles" // { default = true; };
 
-    search = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "local" ];
-      description = "DNS search domains";
-    };
+    base.enable = lib.mkEnableOption "essential system packages for all machines" // { default = true; };
 
-    mtu = lib.mkOption {
-      type = lib.types.int;
-      default = 1500;
-      description = "Default MTU";
+    server.enable = lib.mkEnableOption "server-focused system packages";
+
+    security = {
+      enable = lib.mkEnableOption "backup/security tooling bundle";
+
+      protonDrive.enable = lib.mkEnableOption "Proton Drive integration helpers";
+
+      extraTools = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [];
+        description = "Additional security/backup packages to install";
+      };
+
+      monitoring.enable = lib.mkEnableOption "security/backup monitoring helpers";
     };
+  };
+
+  #============================================================================
+  # VALIDATION OPTIONS
+  #============================================================================
+  options.hwc.system.core.validation = {
+    enable = lib.mkEnableOption "permission model validation service" // { default = true; };
   };
 }

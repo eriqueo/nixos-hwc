@@ -48,6 +48,8 @@ declare -A LAW_NAMES=(
   [6]="Three sections & validation"
   [7]="sys.nix lane purity"
   [8]="Data retention contract"
+  [9]="Filesystem materialization discipline"
+  [10]="Primitive module exception"
 )
 declare -A LAW_HINTS=(
   [1]="Add osConfig ? {} to home module args; guard osConfig.* and assertions with isNixOS."
@@ -58,9 +60,11 @@ declare -A LAW_HINTS=(
   [6]="Ensure index.nix has # OPTIONS/# IMPLEMENTATION/# VALIDATION and assertions are mkIf cfg.enable; move options to options.nix."
   [7]="Do not import sys.nix from home index; keep system-only logic in sys.nix and avoid home->system references."
   [8]="Document retention policy and add cleanup timer for persistent volumes (retain/retention/cleanup.timer)."
+  [9]="Materialize core directories only in domains/system/core/filesystem.nix via tmpfiles; avoid dangerous chown operations."
+  [10]="Only domains/paths/paths.nix may co-locate options and implementation; keep exception scoped and narrow."
 )
 declare -A LAW_LOGS
-for i in {1..8}; do
+for i in {1..10}; do
   LAW_LOGS[$i]="$TMP_DIR/law-$i.log"
   : > "${LAW_LOGS[$i]}"
 done

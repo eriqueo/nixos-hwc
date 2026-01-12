@@ -8,12 +8,13 @@
 ## Layout
 ```
 domains/system/
-├── apps/                 # System-lane app shims
 ├── core/
-│   ├── filesystem/       # Filesystem paths + tmpfiles (namespace: hwc.filesystem.*)
-│   ├── parts/
-│   └── validation/       # Domain-wide assertions
-├── packages/             # Base/server/desktop package bundles
+│   ├── filesystem.nix    # Filesystem tmpfiles; options at hwc.system.core.filesystem (alias: hwc.filesystem)
+│   ├── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
+│   ├── paths.nix         # Path source of truth (hwc.paths.*)
+│   ├── polkit.nix (moved to services/polkit)
+│   ├── thermal.nix
+│   └── validation.nix    # Domain-wide assertions
 ├── services/
 │   ├── backup/           # Backup timers/services
 │   ├── hardware/         # Input/audio/system behavior
@@ -30,11 +31,11 @@ domains/system/
 ```
 
 ## Subdomain Notes
-- **filesystem/** – Defines `hwc.filesystem.paths` and `hwc.filesystem.structure`; enforces absolute paths and renders tmpfiles entries. All path consumers should use `config.hwc.paths.*` facades defined in the paths module.
-- **services/** – Backup, monitoring, networking, ntfy, VPN, Proton Bridge, session, shell, and hardware behavior live here. Each subdirectory exposes its own options under `hwc.system.services.<name>.*` (or Charter-approved short names).
+- **filesystem.nix** – Creates tmpfiles scaffolding from `hwc.paths.*` plus extra dirs (`hwc.filesystem.structure.dirs` alias).
+- **services/** – Backup, monitoring, networking, polkit, ntfy, VPN, Proton Bridge, session, shell, and hardware behavior live here. Each subdirectory exposes its own options under `hwc.system.services.<name>.*` (or Charter-approved short names).
 - **storage/** – Houses storage policy modules (tiers, cleanup/retention timers) to satisfy the data retention contract.
-- **validation/** – Central assertions to keep the domain self-consistent and Charter-compliant.
-- **apps/** / **packages/** / **users/** – System-level apps, package bundles, and account definitions required by other domains.
+- **packages.nix** – Core package bundles (base/server/security) under `hwc.system.core.packages.*`.
+- **users/** – System-level accounts required by other domains.
 
 ## Usage
 - Import `domains/system/index.nix` from machine configs; enable modules via `hwc.system.*` and `hwc.filesystem.*` options.

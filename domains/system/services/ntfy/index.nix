@@ -222,6 +222,9 @@ in
   #==========================================================================
   # MODULE AGGREGATION
   #==========================================================================
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [
     ./options.nix
   ];
@@ -253,4 +256,5 @@ in
     warnings = lib.optional (cfg.auth.enable && cfg.auth.method == "token" && cfg.auth.tokenFile == null) "ntfy token auth enabled but tokenFile not set"
       ++ lib.optional (cfg.auth.enable && cfg.auth.method == "basic" && (cfg.auth.userFile == null || cfg.auth.passFile == null)) "ntfy basic auth enabled but userFile or passFile not set";
   };
+
 }
