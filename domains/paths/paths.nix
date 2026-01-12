@@ -1,4 +1,4 @@
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, ... }:
 
 # domains/paths/paths.nix
 #
@@ -18,8 +18,10 @@
 # - Revocable if complexity grows
 
 let
-  # Correct isNixOS detection - check if osConfig has hwc namespace
-  isNixOS = osConfig ? hwc;
+  # Correct isNixOS detection - check if we're in system context (not Home Manager)
+  # In NixOS: config has system.build.toplevel
+  # In Home Manager: config has home.* options
+  isNixOS = config ? system;
 
   # Reference to original config (before overrides)
   cfgRef = config.hwc.paths;
@@ -33,8 +35,8 @@ let
 
   # Detect user home from system config when available
   userHomeDefault =
-    if isNixOS && osConfig ? users && osConfig.users ? users && osConfig.users.users ? eric
-    then osConfig.users.users.eric.home
+    if isNixOS && config ? users && config.users ? users && config.users.users ? eric
+    then config.users.users.eric.home
     else "/home/eric";
 
   # Environment variables exported from merged/authoritative config
