@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.vpn.enable)
+#   - profiles/*.nix (enables via hwc.server.vpn.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/vpn.nix
 #
 # USAGE:
-#   hwc.services.vpn.enable = true;
+#   hwc.server.vpn.enable = true;
 #   # TODO: Add specific usage examples
 
 { config, lib, pkgs, ... }:

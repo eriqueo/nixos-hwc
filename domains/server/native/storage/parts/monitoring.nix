@@ -1,8 +1,8 @@
 # Storage monitoring automation
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.services.storage.monitoring;
-  storageCfg = config.hwc.services.storage;
+  cfg = config.hwc.server.storage.monitoring;
+  storageCfg = config.hwc.server.storage;
 
   monitorScript = pkgs.writeShellScript "storage-monitor" ''
     set -euo pipefail

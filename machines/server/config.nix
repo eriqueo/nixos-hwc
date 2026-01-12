@@ -40,15 +40,13 @@
     };
   };
 
-  # Charter v3 path configuration (matching production)
-  hwc.paths = {
+  # Charter v10.1 path configuration (using overrides pattern)
+  hwc.paths.overrides = {
     hot.root = "/mnt/hot";      # SSD hot storage (auto-derives .downloads, .surveillance)
-    media.root = "/mnt/media";  # HDD media storage (auto-derives .music, .surveillance)
+    media.root = "/mnt/media";  # HDD media storage (auto-derives .music)
     cold = "/mnt/media";         # Cold storage same as media for now
     photos = "/mnt/photos";      # Photo storage (Immich)
-    # Additional paths from production
     business.root = "/opt/business";
-    cache = "/opt/cache";
   };
 
   # Storage infrastructure configuration (Charter v6.0 compliant)
@@ -476,7 +474,7 @@
   # services.xserver.enable = true;
 
   # Server-specific packages moved to modules/system/server-packages.nix
-  hwc.system.packages.server.enable = true;
+  hwc.system.core.packages.server.enable = true;
 
   # I/O scheduler and journald configuration moved to profiles/server.nix to avoid duplication
   # This eliminates conflicts between machine and profile configurations

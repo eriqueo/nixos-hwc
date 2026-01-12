@@ -21,7 +21,7 @@ in
 
     configDir = mkOption {
       type = types.str;
-      default = "${config.hwc.paths.arr.downloads}/beets";
+      default = "/opt/downloads/beets";
       description = "Directory to store Beets configuration and database";
     };
 
@@ -33,7 +33,7 @@ in
 
     importDir = mkOption {
       type = types.str;
-      default = config.hwc.paths.hot.downloads.music or "/mnt/hot/downloads/music";
+      default = "${config.hwc.paths.hot.downloads}/music";
       description = "Directory for music imports";
     };
   };

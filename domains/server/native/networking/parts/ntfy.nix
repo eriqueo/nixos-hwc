@@ -9,18 +9,18 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.ntfy.enable)
+#   - profiles/*.nix (enables via hwc.server.ntfy.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/ntfy.nix
 #
 # USAGE:
-#   hwc.services.ntfy.enable = true;
+#   hwc.server.ntfy.enable = true;
 #   # TODO: Add specific usage examples
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.services.ntfy;
+  cfg = config.hwc.server.ntfy;
   paths = config.hwc.paths;
 in {
   #============================================================================

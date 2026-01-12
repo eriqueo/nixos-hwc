@@ -9,7 +9,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.services.aiBible = {
+  options.hwc.server.aiBible = {
     enable = lib.mkEnableOption "AI Bible documentation system";
 
     port = lib.mkOption {

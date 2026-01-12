@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.networking.enable)
+#   - profiles/*.nix (enables via hwc.server.networking.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/media/networking.nix
 #
 # USAGE:
-#   hwc.services.networking.enable = true;
+#   hwc.server.networking.enable = true;
 #   # TODO: Add specific usage examples
 
 # modules/services/media/networking.nix
@@ -39,9 +39,9 @@
 #   - profiles/server.nix: ../domains/services/media/networking.nix
 #
 # USAGE:
-#   hwc.services.media.networking.enable = true;      # Enable media networking
-#   hwc.services.media.networking.vpn.enable = true;  # Enable VPN for downloads
-#   hwc.services.media.networking.mediaNetwork = "media-network";
+#   hwc.server.media.networking.enable = true;      # Enable media networking
+#   hwc.server.media.networking.vpn.enable = true;  # Enable VPN for downloads
+#   hwc.server.media.networking.mediaNetwork = "media-network";
 #
 # VALIDATION:
 #   - Requires hwc.secrets.secrets.vpn = true for VPN credentials
@@ -50,7 +50,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.services.media.networking;
+  cfg = config.hwc.server.media.networking;
 in {
   #============================================================================
   # IMPLEMENTATION - Media Networking Services

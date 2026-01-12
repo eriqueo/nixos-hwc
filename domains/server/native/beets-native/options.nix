@@ -12,7 +12,7 @@
 
     importDir = lib.mkOption {
       type = lib.types.str;
-      default = config.hwc.paths.hot.downloads.music or "/mnt/hot/downloads/music";
+      default = "${config.hwc.paths.hot.downloads}/music";
       description = "Import staging directory";
     };
 

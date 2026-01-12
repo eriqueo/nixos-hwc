@@ -10,8 +10,14 @@ let
   listenArg = "${cfg.listenAddress}:${toString cfg.port}";
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = mkIf cfg.enable {
     systemd.services.fabric-api = {
       description = "Fabric REST API";
@@ -39,5 +45,7 @@ in
     networking.firewall = mkIf cfg.openFirewall {
       allowedTCPPorts = [ cfg.port ];
     };
+    assertions = [];
   };
+
 }

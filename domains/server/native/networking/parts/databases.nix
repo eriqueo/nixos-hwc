@@ -9,18 +9,18 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.databases.enable)
+#   - profiles/*.nix (enables via hwc.server.databases.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/databases.nix
 #
 # USAGE:
-#   hwc.services.databases.enable = true;
+#   hwc.server.databases.enable = true;
 #   # TODO: Add specific usage examples
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.services.databases;
+  cfg = config.hwc.server.databases;
   paths = config.hwc.paths;
 in {
   #============================================================================
