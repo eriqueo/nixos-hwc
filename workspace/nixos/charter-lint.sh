@@ -37,7 +37,7 @@ FIX_MODE=false
 DOMAIN_FILTER=""
 TOTAL_VIOLATIONS=0
 declare -A LAW_COUNTS=(
-  [1]=0 [2]=0 [3]=0 [4]=0 [5]=0 [6]=0 [7]=0 [8]=0
+  [1]=0 [2]=0 [3]=0 [4]=0 [5]=0 [6]=0 [7]=0 [8]=0 [9]=0 [10]=0
 )
 declare -A LAW_NAMES=(
   [1]="Handshake (home osConfig guard)"
