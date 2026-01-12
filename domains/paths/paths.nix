@@ -277,6 +277,25 @@ in
       };
     };
 
+    # System directories (created by filesystem materializer)
+    state = lib.mkOption {
+      type = lib.types.path;
+      default = "/var/lib/hwc";
+      description = "Service persistent data directory";
+    };
+
+    cache = lib.mkOption {
+      type = lib.types.path;
+      default = "/var/cache/hwc";
+      description = "Temporary/regeneratable cache directory";
+    };
+
+    logs = lib.mkOption {
+      type = lib.types.path;
+      default = "/var/log/hwc";
+      description = "Service logs and monitoring data";
+    };
+
     nixos = lib.mkOption {
       type = lib.types.path;
       default = "${userHomeDefault}/.nixos";
