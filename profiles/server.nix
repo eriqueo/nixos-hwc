@@ -39,49 +39,55 @@
     ../domains/server/index.nix
     # CouchDB for Obsidian LiveSync
     ../domains/server/native/couchdb/index.nix
-    # Server packages now in modules/system/packages/server.nix (auto-imported via base.nix)
+  # Server packages now in domains/system/core/packages.nix (auto-imported via base.nix)
   ];
 
   #==========================================================================
   # OPTIONAL FEATURES - Sensible defaults, override per machine
   #==========================================================================
-  # Enable complete server filesystem structure
-  hwc.filesystem = {
-    enable = true;
-    structure.dirs = [
-      # Business intelligence and AI directories
-      { path = "/opt/business"; }
-      { path = "/opt/ai"; }
-
-      # Service configuration directories
-      { path = "/opt/arr"; }
-      { path = "/opt/media"; }
-      { path = "/opt/monitoring"; }
-      { path = "/opt/downloads"; }  # Container base directory
-
-      # Container-specific directories
-      { path = "/opt/downloads/jellyfin"; }
-      { path = "/opt/downloads/jellyseerr"; }
-      { path = "/mnt/hot/downloads"; }  # Already exists, keep for safety
-      { path = "/mnt/hot/downloads/incomplete"; }  # SLSKD incomplete downloads
-      { path = "/mnt/hot/downloads/complete"; }  # SLSKD completed downloads
-      { path = "/mnt/hot/events"; }  # Critical for SABnzbd automation
-      { path = "/mnt/hot/processing"; }  # Already exists, keep for safety
-      { path = "/mnt/hot/processing/sonarr-temp"; }
-      { path = "/mnt/hot/processing/radarr-temp"; }
-      { path = "/mnt/hot/processing/lidarr-temp"; }
-      { path = "/opt/downloads/scripts"; }  # Post-processing scripts
-
-      # HWC standard directories
-      { path = "/var/lib/hwc"; }
-      { path = "/var/cache/hwc"; }
-      { path = "/var/log/hwc"; }
-      { path = "/var/tmp/hwc"; }
-
-      # Security directories
-      { path = "/var/lib/hwc/secrets"; mode = "0700"; }
-    ];
-  };
+  # NOTE: Filesystem structure creation disabled with paths refactor (Charter v10.1)
+  # The new minimal materializer only creates /var/lib/hwc, /var/cache/hwc, /var/log/hwc
+  # Services should create their own directories as needed via systemd.tmpfiles
+  #
+  # TODO: If these directories are needed, add tmpfiles rules to individual services
+  # or restore filesystem.structure options in domains/system/core/filesystem.nix
+  #
+  # hwc.filesystem = {
+  #   enable = true;
+  #   structure.dirs = [
+  #     # Business intelligence and AI directories
+  #     { path = "/opt/business"; }
+  #     { path = "/opt/ai"; }
+  #
+  #     # Service configuration directories
+  #     { path = "/opt/arr"; }
+  #     { path = "/opt/media"; }
+  #     { path = "/opt/monitoring"; }
+  #     { path = "/opt/downloads"; }  # Container base directory
+  #
+  #     # Container-specific directories
+  #     { path = "/opt/downloads/jellyfin"; }
+  #     { path = "/opt/downloads/jellyseerr"; }
+  #     { path = "/mnt/hot/downloads"; }  # Already exists, keep for safety
+  #     { path = "/mnt/hot/downloads/incomplete"; }  # SLSKD incomplete downloads
+  #     { path = "/mnt/hot/downloads/complete"; }  # SLSKD completed downloads
+  #     { path = "/mnt/hot/events"; }  # Critical for SABnzbd automation
+  #     { path = "/mnt/hot/processing"; }  # Already exists, keep for safety
+  #     { path = "/mnt/hot/processing/sonarr-temp"; }
+  #     { path = "/mnt/hot/processing/radarr-temp"; }
+  #     { path = "/mnt/hot/processing/lidarr-temp"; }
+  #     { path = "/opt/downloads/scripts"; }  # Post-processing scripts
+  #
+  #     # HWC standard directories
+  #     { path = "/var/lib/hwc"; }
+  #     { path = "/var/cache/hwc"; }
+  #     { path = "/var/log/hwc"; }
+  #     { path = "/var/tmp/hwc"; }
+  #
+  #     # Security directories
+  #     { path = "/var/lib/hwc/secrets"; mode = "0700"; }
+  #   ];
+  # };
 
   #============================================================================
   # SECURITY AND SECRETS (Server extends base secrets)
@@ -190,7 +196,7 @@
   # SYSTEM PACKAGES - Moved to modules/system/server-packages.nix
   #============================================================================
   
-  hwc.system.packages.server.enable = true;
+  hwc.system.core.packages.server.enable = true;
 
   #============================================================================
   # PERFORMANCE OPTIMIZATIONS
