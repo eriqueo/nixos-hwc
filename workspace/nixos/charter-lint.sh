@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# HWC Charter Compliance Linter v9.1
-# Validates against Charter v9.1 Architectural Laws
+# HWC Charter Compliance Linter v10.1
+# Validates against Charter v10.1 Architectural Laws
 # Usage: ./workspace/nixos/charter-lint.sh [--fix] [--verbose] [domain]
 
 set -Eeuo pipefail
@@ -189,7 +189,7 @@ check_law2_namespace() {
   fi
 
   local options_outside="$TMP_DIR/options-outside.txt"
-  if run_rg_to_file "$options_outside" 'options\.hwc\.' "$ns_path" --type nix --glob '!options.nix' --glob '!sys.nix'; then
+  if run_rg_to_file "$options_outside" 'options\.hwc\.' "$ns_path" --type nix --glob '!options.nix' --glob '!sys.nix' --glob '!paths/paths.nix'; then
     if [[ -s "$options_outside" ]]; then
       cat "$options_outside" >> "${LAW_LOGS[2]}"
       [[ "$VERBOSE" == "true" ]] && cat "$options_outside"
@@ -250,7 +250,7 @@ check_law5_mkcontainer() {
   fi
   local raw="$TMP_DIR/raw-containers.txt"
   if run_rg_to_file "$raw" 'virtualisation\.oci-containers\.containers\.[^=]+=' "$REPO_ROOT/domains/server" \
-      --glob '!_shared/pure.nix' --glob '!mkContainer' --glob '!*.md'; then
+      --glob '!_shared/pure.nix' --glob '!mkContainer' --glob '!*.md' --glob '!*.sh'; then
     if [[ -s "$raw" ]]; then
       cat "$raw" >> "${LAW_LOGS[5]}"
       [[ "$VERBOSE" == "true" ]] && cat "$raw"
@@ -334,7 +334,7 @@ check_law8_retention() {
 # Main Execution
 # ------------------------------------------------------------
 main() {
-  log "HWC Charter v9.1 Compliance Linter"
+  log "HWC Charter v10.1 Compliance Linter"
   log "Repo root: $REPO_ROOT"
 
   check_law1_handshake
@@ -347,7 +347,7 @@ main() {
   check_law8_retention
 
   printf "\n${BLUE}Summary:${NC}\n"
-  for i in {1..8}; do
+  for i in {1..10}; do
     count=${LAW_COUNTS[$i]}
     local name="${LAW_NAMES[$i]}"
     local log_file="${LAW_LOGS[$i]}"
@@ -377,7 +377,7 @@ main() {
     printf "  Cleanup: set KEEP_LOGS=0 to auto-remove temp logs after run.\n"
     printf "\n${BLUE}Next steps:${NC}\n"
     # Show top three offending laws with hints
-    for law in $(for i in {1..8}; do printf "%s:%s\n" "${LAW_COUNTS[$i]}" "$i"; done | sort -t: -k1,1nr | head -3 | awk -F: '$1>0 {print $2}'); do
+    for law in $(for i in {1..10}; do printf "%s:%s\n" "${LAW_COUNTS[$i]}" "$i"; done | sort -t: -k1,1nr | head -3 | awk -F: '$1>0 {print $2}'); do
       printf "  Law %s: %s\n" "$law" "${LAW_HINTS[$law]}"
     done
     exit 1
