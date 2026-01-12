@@ -368,9 +368,9 @@
     };
   };
 
-  # ntfy notification server (container)
+  # ntfy notification server (native service)
   # Provides push notification server for alerts and webhooks
-  hwc.services.ntfy = {
+  hwc.server.ntfy = {
     enable = true;  # ENABLED - provides notification capabilities
     port = 2586;    # Match routes.nix and Tailscale expectations
     dataDir = "/var/lib/hwc/ntfy";
