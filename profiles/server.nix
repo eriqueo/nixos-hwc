@@ -379,14 +379,14 @@
   };
 
   # YouTube Transcript API
-  hwc.services.transcriptApi = {
+  hwc.server.transcriptApi = {
     enable = true;
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
   };
 
   # Phase 6: Support Services - Storage Automation
-  hwc.services.storage = {
+  hwc.server.storage = {
     enable = true;
     cleanup = {
       enable = true;
