@@ -373,7 +373,7 @@
   };
 
   # Phase 5: Infrastructure Services
-  hwc.services.reverseProxy = {
+  hwc.server.reverseProxy = {
     enable = true;
     domain = "hwc.ocelot-wahoo.ts.net";
   };
