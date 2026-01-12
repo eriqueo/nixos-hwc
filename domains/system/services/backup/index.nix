@@ -15,6 +15,9 @@ in
   #=========================================================================
   # This file assembles the backup module by importing its API (options)
   # and its implementation logic (parts).
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [
     ./options.nix
     ./parts/local-backup.nix
@@ -29,6 +32,9 @@ in
   #=========================================================================
   # This is the single source of truth for all packages required by this module.
   # The parts files can then assume these packages are available.
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     environment.systemPackages = with pkgs; [
       # Core backup tools
@@ -57,5 +63,7 @@ in
     warnings = lib.optionals (!cfg.local.enable && !cfg.cloud.enable) [
       "Backup service is enabled but no backup methods (local or cloud) are configured"
     ];
+    assertions = [];
   };
+
 }

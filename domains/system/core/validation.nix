@@ -2,13 +2,6 @@
 { config, lib, pkgs, ... }:
 {
   #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.system.core.validation = {
-    enable = lib.mkEnableOption "permission model validation service" // { default = true; };
-  };
-
-  #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf config.hwc.system.core.validation.enable {

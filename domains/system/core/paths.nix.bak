@@ -605,12 +605,5 @@ in {
     # Install xdg-user-dirs package for xdg-user-dirs-update command
     environment.systemPackages = [ pkgs.xdg-user-dirs ];
 
-    # Create system path directories (always available)
-    systemd.tmpfiles.rules = [
-      "d ${cfg.state} 0755 root root -"
-      "d ${cfg.cache} 0755 root root -"
-      "d ${cfg.logs} 0755 root root -"
-      "d ${cfg.temp} 0755 root root -"
-    ];
   };
 }

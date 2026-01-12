@@ -4,6 +4,9 @@
 # Imports all secret declarations, API facade, emergency access, and hardening
 { lib, config, ... }:
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [
     ./options.nix            # Consolidated options (charter-compliant)
     ./declarations/index.nix # Age secret declarations organized by domain
@@ -13,6 +16,9 @@
   ];
 
   # Core agenix configuration
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf config.hwc.secrets.enable {
     # Ensure age identity paths are configured
     age.identityPaths = lib.mkDefault [ "/etc/age/keys.txt" ];
@@ -27,5 +33,7 @@
       HWC_SECRETS_DIR = "/run/agenix";
     };
 
+    assertions = [];
   };
+
 }
