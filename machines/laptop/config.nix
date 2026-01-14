@@ -294,15 +294,11 @@
   # MISCELLANEOUS MACHINE-SPECIFIC SETTINGS
   #============================================================================
 
-  # Storage paths (Charter v10.1 override pattern for laptop)
-  # Laptop doesn't have separate storage tiers, so use subdirectories within existing media
-  hwc.paths.overrides = {
-    hot.root = "/home/eric/500_media/hot";           # Active/working files
-    media.root = "/home/eric/500_media";             # Main media library (existing)
-    cold = "/home/eric/500_media/archive";           # Archived content
-    backup = "/home/eric/500_media/backup";          # Local backups
-    photos = "/home/eric/500_media/510_pictures";    # Existing pictures directory
-  };
+  # Storage paths (Charter v10.1 - hostname-based defaults with overrides)
+  # Laptop defaults from paths.nix match most values, only override exceptions
+  # Defaults: media.root=/home/eric/500_media, photos=.../510_pictures, backup=.../backup
+  hwc.paths.hot.root = "/home/eric/500_media/hot";     # Override: laptop uses hot for active work
+  hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
 
   # Home applications
   home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
@@ -337,10 +333,12 @@
       criticalTemp = 80;  # Emergency stop before hardware throttle (default: 85)
     };
 
-    # Model selection by task complexity (using framework defaults)
-    # small:  llama3.2:1b  (1.3GB, 5W, <2s)  - Quick lookups
-    # medium: llama3.2:3b  (2.0GB, 10W, <10s) - Documentation
-    # large:  phi3.5:3.8b  (2.3GB, 15W, <30s) - Analysis
+    # Model selection - using existing downloaded models
+    models = {
+      small = "llama3.2:3b";         # Use 3b for small (1b not downloaded)
+      medium = "llama3.2:3b";        # 2.0GB, 10W, <10s - Documentation
+      large = "deepseek-coder:6.7b"; # Use deepseek instead of phi3.5
+    };
 
     # Charter integration (enabled by default)
     charter = {

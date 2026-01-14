@@ -40,14 +40,14 @@
     };
   };
 
-  # Charter v10.1 path configuration (using overrides pattern)
-  hwc.paths.overrides = {
-    hot.root = "/mnt/hot";      # SSD hot storage (auto-derives .downloads, .surveillance)
-    media.root = "/mnt/media";  # HDD media storage (auto-derives .music)
-    cold = "/mnt/media";         # Cold storage same as media for now
-    photos = "/mnt/photos";      # Photo storage (Immich)
-    business.root = "/opt/business";
-  };
+  # Charter v10.1 path configuration (hostname-based defaults)
+  # Server hostname detection provides all correct defaults:
+  #   hot.root = "/mnt/hot"          (SSD hot storage, auto-derives .downloads, .surveillance)
+  #   media.root = "/mnt/media"      (HDD media storage, auto-derives .music)
+  #   cold = "/mnt/media"            (Cold storage, same as media)
+  #   photos = "/mnt/photos"         (Photo storage for Immich)
+  #   business.root = "/opt/business"
+  # No overrides needed - all defaults match server requirements
 
   # Storage infrastructure configuration (Charter v6.0 compliant)
   hwc.infrastructure.storage = {
