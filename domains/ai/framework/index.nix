@@ -49,10 +49,11 @@ let
   # Grebuild integration script
   grebuildDocsTool = pkgs.writeScript "grebuild-docs" (''
     #!${pkgs.bash}/bin/bash
-    export PATH="${lib.makeBinPath [ pkgs.coreutils pkgs.curl pkgs.git pkgs.systemd ollamaWrapperTool ]}:$PATH"
+    export PATH="${lib.makeBinPath [ pkgs.coreutils pkgs.curl pkgs.git pkgs.systemd pkgs.util-linux pkgs.libnotify pkgs.nettools ollamaWrapperTool ]}:$PATH"
     export NIXOS_DIR="/home/eric/.nixos"
     export OUTPUT_DIR="/home/eric/.nixos/docs/ai-generated"
     export OLLAMA_ENDPOINT="http://localhost:11434"
+    export VERBOSE="false"
   '' + builtins.readFile ./parts/grebuild-docs.sh);
 
 in

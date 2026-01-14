@@ -24,15 +24,33 @@ log_warn() { echo -e "${YELLOW}⚠️${NC} $*"; }
 log_error() { echo -e "${RED}❌${NC} $*" >&2; }
 log_header() { echo -e "\n${BOLD}${BLUE}$*${NC}"; }
 
-# Check if Ollama is running
+# Check if Ollama is running, start it if needed
 check_ollama() {
+  # Check if service is active
   if ! systemctl is-active --quiet podman-ollama.service; then
-    log_warn "Ollama service not active; skipping documentation generation"
+    log_info "Ollama service idle, waking it up..."
+    systemctl start podman-ollama.service || {
+      log_error "Failed to start Ollama service"
+      return 1
+    }
+
+    # Wait for Ollama to be ready (up to 30 seconds)
+    log_info "Waiting for Ollama to be ready..."
+    for i in {1..30}; do
+      if curl --fail --silent --max-time 2 "$OLLAMA_ENDPOINT/api/tags" >/dev/null 2>&1; then
+        log_info "Ollama is ready!"
+        return 0
+      fi
+      sleep 1
+    done
+
+    log_error "Ollama failed to start within 30 seconds"
     return 1
   fi
 
-  if ! curl --fail --silent --show-error --max-time 5 "$OLLAMA_ENDPOINT/api/tags" >/dev/null 2>&1; then
-    log_warn "Ollama not available at $OLLAMA_ENDPOINT, skipping documentation generation"
+  # Service is active, check if API is responding
+  if ! curl --fail --silent --max-time 5 "$OLLAMA_ENDPOINT/api/tags" >/dev/null 2>&1; then
+    log_warn "Ollama service active but API not responding"
     return 1
   fi
 
@@ -192,6 +210,9 @@ EOF
     xargs -r rm -f
 
   log_info "Post-rebuild documentation complete!"
+
+  # Send desktop notification
+  su - eric -c "DISPLAY=:0 notify-send 'AI Documentation Complete' 'Rebuild docs generated: $(basename $OUTPUT_FILE)' -u normal -t 10000" 2>/dev/null || true
 
   # Show preview (first 20 lines)
   echo ""
