@@ -294,8 +294,15 @@
   # MISCELLANEOUS MACHINE-SPECIFIC SETTINGS
   #============================================================================
 
-  # Storage paths (remains unchanged).
-  hwc.paths.hot.root = "/home/eric/500_media/";
+  # Storage paths (Charter v10.1 override pattern for laptop)
+  # Laptop doesn't have separate storage tiers, so use subdirectories within existing media
+  hwc.paths.overrides = {
+    hot.root = "/home/eric/500_media/hot";           # Active/working files
+    media.root = "/home/eric/500_media";             # Main media library (existing)
+    cold = "/home/eric/500_media/archive";           # Archived content
+    backup = "/home/eric/500_media/backup";          # Local backups
+    photos = "/home/eric/500_media/510_pictures";    # Existing pictures directory
+  };
 
   # Home applications
   home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
