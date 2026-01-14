@@ -148,7 +148,8 @@
       "mcp__filesystem__list_directory",
       "mcp__filesystem__directory_tree",
       "Bash(timeout 180 nix flake check:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(sudo mkfs.exfat:*)"
     ],
     "deny": [],
     "ask": [],

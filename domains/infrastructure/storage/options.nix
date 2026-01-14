@@ -51,9 +51,9 @@ in
       enable = lib.mkEnableOption "Backup storage infrastructure";
 
       path = lib.mkOption {
-        type = t.path;
+        type = t.nullOr t.path;
         default = config.hwc.paths.backup;
-        description = "Backup storage mount point";
+        description = "Backup storage mount point (null if not applicable to machine)";
       };
 
       externalDrive = {

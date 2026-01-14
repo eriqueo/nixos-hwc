@@ -46,6 +46,15 @@ let
     ${ollamaWrapperTool}/bin/ollama-wrapper lint small "$@"
   '';
 
+  # Grebuild integration script
+  grebuildDocsTool = pkgs.writeScript "grebuild-docs" (''
+    #!${pkgs.bash}/bin/bash
+    export PATH="${lib.makeBinPath [ pkgs.coreutils pkgs.curl pkgs.git pkgs.systemd ollamaWrapperTool ]}:$PATH"
+    export NIXOS_DIR="/home/eric/.nixos"
+    export OUTPUT_DIR="/home/eric/.nixos/docs/ai-generated"
+    export OLLAMA_ENDPOINT="http://localhost:11434"
+  '' + builtins.readFile ./parts/grebuild-docs.sh);
+
 in
 {
   #==========================================================================
@@ -190,6 +199,20 @@ in
           fi
         '';
         StandardOutput = "journal";
+      };
+    };
+
+    # Post-rebuild AI documentation service (grebuild integration)
+    systemd.services.post-rebuild-ai-docs = {
+      description = "AI Framework - Post-rebuild documentation generator";
+      after = [ "network-online.target" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        User = "root";
+        ExecStart = "${pkgs.bash}/bin/bash ${grebuildDocsTool}";
+        StandardOutput = "journal";
+        StandardError = "journal";
       };
     };
 
