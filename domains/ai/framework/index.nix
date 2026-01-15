@@ -147,8 +147,9 @@ PY
     fi
 
     echo "Downloading NPU model ${cfg.npu.modelId} -> $MODEL_DIR"
-    unset HF_HUB_ENABLE_HF_TRANSFER
-    HF_HUB_DISABLE_TELEMETRY=1 "$CLI" download \
+    export HF_HUB_ENABLE_HF_TRANSFER=0
+    export HF_HUB_DISABLE_TELEMETRY=1
+    "$CLI" download \
       "$MODEL_ID" \
       --local-dir "$MODEL_DIR" \
       --local-dir-use-symlinks False \
