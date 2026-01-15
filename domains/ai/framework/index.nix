@@ -8,6 +8,80 @@
 let
   cfg = config.hwc.ai.framework;
 
+  npuEnabled = cfg.npu.enable;
+
+  pythonNpuEnv = pkgs.python312.withPackages (ps: [
+    ps.openvino
+    ps.huggingface-hub
+  ]);
+
+  aiNpuTool = pkgs.writeShellScriptBin "ai-npu" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    VERBOSE="''${VERBOSE:-false}"
+    MODEL_DIR="''${HWC_NPU_MODEL_DIR:-${cfg.npu.modelDir}}"
+
+    log_debug() {
+      [[ "$VERBOSE" == "true" ]] && echo "[DEBUG] $*" >&2 || true
+    }
+
+    if [[ ! -d "$MODEL_DIR" ]]; then
+      echo "NPU model directory missing: $MODEL_DIR" >&2
+      exit 1
+    fi
+
+    # Read full prompt from stdin
+    prompt=$(cat)
+    if [[ -z "$prompt" ]]; then
+      echo "No prompt provided on stdin" >&2
+      exit 1
+    fi
+
+    # Run inference with OpenVINO GenAI
+    MODEL_DIR="$MODEL_DIR" ${pythonNpuEnv}/bin/python - "$@" <<'PY'
+import os
+import sys
+
+try:
+    from openvino_genai import LLMPipeline, GenerationConfig
+except Exception as exc:  # pragma: no cover - runtime safety
+    print(f"Failed to import OpenVINO GenAI: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+MODEL_DIR = os.environ.get("MODEL_DIR")
+PROMPT = sys.stdin.read()
+
+if not MODEL_DIR:
+    print("MODEL_DIR not set", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    pipeline = LLMPipeline(MODEL_DIR, device="NPU")
+except Exception as exc:  # pragma: no cover
+    print(f"Failed to load model at {MODEL_DIR}: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+config = GenerationConfig(
+    max_new_tokens=1024,
+    temperature=0.7,
+    top_p=0.9,
+    do_sample=True,
+)
+
+try:
+    for token in pipeline.generate(PROMPT, generation_config=config, stream=True):
+        sys.stdout.write(token)
+        sys.stdout.flush()
+except Exception as exc:  # pragma: no cover
+    print(f"NPU inference failed: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+sys.stdout.write("\n")
+sys.stdout.flush()
+PY
+  '';
+
   # Import hardware profiles
   hwProfiles = import ./parts/hardware-profiles.nix { inherit config lib; };
 
@@ -24,6 +98,9 @@ let
     export THERMAL_CRITICAL="${toString (hwProfiles.activeProfile.thermal.criticalTemp or cfg.thermal.criticalTemp)}"
     export PROFILE="${hwProfiles.detectedProfile}"
     export VERBOSE="${if cfg.logging.enable then "true" else "false"}"
+    export NPU_ENABLED="${if cfg.npu.enable then "true" else "false"}"
+    export AI_NPU_BIN="${aiNpuTool}/bin/ai-npu"
+    export HWC_NPU_MODEL_DIR="${cfg.npu.modelDir}"
 
   '' + builtins.readFile ./parts/ollama-wrapper.sh);
 
@@ -31,12 +108,20 @@ let
   aiDocTool = pkgs.writeScriptBin "ai-doc" ''
     #!${pkgs.bash}/bin/bash
     # Quick documentation generator using ollama-wrapper
+    if [[ "''${1:-}" == "--npu" ]]; then
+      export AI_FORCE_NPU=true
+      shift
+    fi
     ${ollamaWrapperTool}/bin/ollama-wrapper doc medium "$@"
   '';
 
   aiCommitTool = pkgs.writeScriptBin "ai-commit" ''
     #!${pkgs.bash}/bin/bash
     # Quick commit documentation using ollama-wrapper
+    if [[ "''${1:-}" == "--npu" ]]; then
+      export AI_FORCE_NPU=true
+      shift
+    fi
     ${ollamaWrapperTool}/bin/ollama-wrapper commit small "$@"
   '';
 
@@ -44,6 +129,30 @@ let
     #!${pkgs.bash}/bin/bash
     # Charter compliance checker using ollama-wrapper
     ${ollamaWrapperTool}/bin/ollama-wrapper lint small "$@"
+  '';
+
+  npuModelDownload = pkgs.writeShellScript "ai-npu-download" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    MODEL_ID="${cfg.npu.modelId}"
+    MODEL_DIR="${cfg.npu.modelDir}"
+    CLI=${pkgs.python312Packages.huggingface-hub}/bin/huggingface-cli
+
+    mkdir -p "$MODEL_DIR"
+
+    if [[ -f "$MODEL_DIR/config.json" || -f "$MODEL_DIR/model_index.json" ]]; then
+      echo "NPU model already present in $MODEL_DIR"
+      exit 0
+    fi
+
+    echo "Downloading NPU model ${cfg.npu.modelId} -> $MODEL_DIR"
+    unset HF_HUB_ENABLE_HF_TRANSFER
+    HF_HUB_DISABLE_TELEMETRY=1 "$CLI" download \
+      "$MODEL_ID" \
+      --local-dir "$MODEL_DIR" \
+      --local-dir-use-symlinks False \
+      --resume-download
   '';
 
   # Grebuild integration script
@@ -68,6 +177,12 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
 
+    boot.kernelModules = lib.mkIf cfg.npu.enable (lib.mkAfter [ "intel_vpu" ]);
+    boot.initrd.kernelModules = lib.mkIf cfg.npu.enable (lib.mkAfter [ "intel_vpu" ]);
+    hardware.firmware = lib.mkIf cfg.npu.enable (lib.mkAfter [
+      pkgs.linux-firmware
+    ]);
+
     # Install framework tools
     environment.systemPackages = [
       charterSearchTool
@@ -75,6 +190,11 @@ in
       aiDocTool
       aiCommitTool
       aiLintTool
+    ] ++ lib.optionals cfg.npu.enable [
+      pkgs.openvino
+      pythonNpuEnv
+      pkgs.python312Packages.huggingface-hub
+      aiNpuTool
     ] ++ lib.optionals cfg.logging.enable [
       # Add ai-status command when logging is enabled
       (pkgs.writeScriptBin "ai-status" ''
@@ -84,10 +204,14 @@ in
       '')
     ];
 
-    # Create log directory
-    systemd.tmpfiles.rules = lib.mkIf cfg.logging.enable [
-      "d ${cfg.logging.logDir} 0755 eric users -"
-    ];
+    # Create log and model directories
+    systemd.tmpfiles.rules =
+      lib.optionals cfg.logging.enable [
+        "d ${cfg.logging.logDir} 0755 eric users -"
+      ]
+      ++ lib.optionals cfg.npu.enable [
+        "d ${cfg.npu.modelDir} 0755 eric users -"
+      ];
 
     # Configure Ollama with profile-based limits
     hwc.ai.ollama = {
@@ -178,6 +302,31 @@ in
           echo "Hardware:"
           echo "  - GPU: ${if hwProfiles.hardware.hasGPU then hwProfiles.hardware.gpuType else "none"}"
           echo "  - RAM: ${toString hwProfiles.hardware.totalRAM_GB}GB"
+          if ${if cfg.npu.enable then "true" else "false"}; then
+            if ls /dev/accel* >/dev/null 2>&1; then
+              echo "  - NPU: detected ($(ls /dev/accel* 2>/dev/null | tr '\n' ' '))"
+            else
+              echo "  - NPU: enabled but not detected (/dev/accel* missing)"
+            fi
+            echo ""
+            echo "Tier-0 NPU:"
+            if dmesg | ${pkgs.gnugrep}/bin/grep -q "intel_vpu.*Firmware:.*vpu_37xx_v0.0.bin"; then
+              echo "  - Firmware: Loaded (37xx blob)"
+            elif dmesg | ${pkgs.gnugrep}/bin/grep -q "Failed to request firmware: -2"; then
+              echo "  - Firmware: MISSING/MISMATCHED (probe failed -2)"
+              echo "    -> Run: lspci -nn | grep -i npu (identify generation)"
+              echo "    -> If Lunar Lake, switch firmware to vpu_40xx_v0.0.bin"
+            else
+              echo "  - Firmware: Status unknown (check: dmesg | grep -i vpu)"
+            fi
+            if [ -d "${cfg.npu.modelDir}" ]; then
+              echo "  - Model cache: ${cfg.npu.modelDir}"
+            else
+              echo "  - Model cache: missing (${cfg.npu.modelDir})"
+            fi
+          else
+            echo "  - NPU: disabled"
+          fi
           echo ""
           echo "Active Configuration:"
           echo "  - Models: small=${hwProfiles.activeProfile.models.small}, medium=${hwProfiles.activeProfile.models.medium}, large=${hwProfiles.activeProfile.models.large or "none"}"
@@ -212,6 +361,23 @@ in
         Type = "oneshot";
         User = "root";
         ExecStart = "${pkgs.bash}/bin/bash ${grebuildDocsTool}";
+        StandardOutput = "journal";
+        StandardError = "journal";
+      };
+    };
+
+    # NPU model cache (downloaded once)
+    systemd.services.ai-npu-model = lib.mkIf cfg.npu.enable {
+      description = "AI Framework - NPU model cache";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        Environment = "HWC_NPU_MODEL_DIR=${cfg.npu.modelDir}";
+        ExecStart = npuModelDownload;
         StandardOutput = "journal";
         StandardError = "journal";
       };

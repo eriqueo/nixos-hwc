@@ -321,6 +321,7 @@
   # Auto-detects laptop profile: conservative limits, aggressive thermal protection
   hwc.ai.framework = {
     enable = true;
+    npu.enable = true;
 
     # Framework auto-detects "laptop" profile based on:
     # - GPU: nvidia (present)

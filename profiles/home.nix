@@ -64,7 +64,7 @@
           # File Management
           thunar.enable = lib.mkDefault true;     # GUI file manager
           yazi.enable = lib.mkDefault true;       # TUI file manager
-
+          analysis.enable = lib.mkDefault true;
           # Web Browsers
           chromium.enable = lib.mkDefault true;   # Chromium browser
           librewolf.enable = lib.mkDefault true;  # Privacy-focused Firefox

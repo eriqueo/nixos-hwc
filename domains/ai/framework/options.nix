@@ -159,5 +159,26 @@
         description = "Log temperature readings with each AI task";
       };
     };
+
+    # NPU (Intel AI Boost) tier for lightweight, always-on inference
+    npu = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable Tier 0 NPU inference (Intel AI Boost) for lightweight tasks";
+      };
+
+      modelId = lib.mkOption {
+        type = lib.types.str;
+        default = "OpenVINO/Phi-3.5-mini-instruct-int4-ov";
+        description = "HuggingFace model repo to fetch the OpenVINO-optimized int4 model";
+      };
+
+      modelDir = lib.mkOption {
+        type = lib.types.path;
+        default = "/var/lib/hwc-ai/npu-models/phi-3.5-mini";
+        description = "Local directory to cache the NPU-optimized model";
+      };
+    };
   };
 }
