@@ -148,6 +148,7 @@ PY
 
     echo "Downloading NPU model ${cfg.npu.modelId} -> $MODEL_DIR"
     export HF_HUB_ENABLE_HF_TRANSFER=0
+    export HF_HUB_DISABLE_HF_TRANSFER=1
     export HF_HUB_DISABLE_TELEMETRY=1
     "$CLI" download \
       "$MODEL_ID" \
@@ -377,7 +378,12 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        Environment = "HWC_NPU_MODEL_DIR=${cfg.npu.modelDir}";
+        Environment = [
+          "HWC_NPU_MODEL_DIR=${cfg.npu.modelDir}"
+          "HF_HUB_ENABLE_HF_TRANSFER=0"
+          "HF_HUB_DISABLE_HF_TRANSFER=1"
+          "HF_HUB_DISABLE_TELEMETRY=1"
+        ];
         ExecStart = npuModelDownload;
         StandardOutput = "journal";
         StandardError = "journal";

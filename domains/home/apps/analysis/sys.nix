@@ -4,8 +4,8 @@ let
   inherit (lib) mkIf;
 in {
   options.hwc.system.apps.analysis = {
-    enable = mkOption {
-      type = types.bool;
+    enable = lib.mkOption {
+      type = lib.types.bool;
       default = false;
       description = "Enable system-level support for analysis tool (e.g., for system packages if needed).";
     };
