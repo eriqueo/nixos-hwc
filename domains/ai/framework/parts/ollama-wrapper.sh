@@ -14,6 +14,10 @@ THERMAL_WARNING="${THERMAL_WARNING:-75}"
 THERMAL_CRITICAL="${THERMAL_CRITICAL:-85}"
 PROFILE="${PROFILE:-auto}"
 VERBOSE="${VERBOSE:-false}"
+NPU_ENABLED="${NPU_ENABLED:-false}"
+AI_FORCE_NPU="${AI_FORCE_NPU:-false}"
+AI_NPU_BIN="${AI_NPU_BIN:-ai-npu}"
+HWC_NPU_MODEL_DIR="${HWC_NPU_MODEL_DIR:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -158,6 +162,67 @@ check_ollama() {
   return 0
 }
 
+should_use_npu() {
+  local prompt="$1"
+  local complexity="$2"
+
+  if [[ "$NPU_ENABLED" != "true" ]]; then
+    return 1
+  fi
+
+  if [[ "$AI_FORCE_NPU" == "true" ]]; then
+    return 0
+  fi
+
+  if [[ "$complexity" == "large" ]]; then
+    return 1
+  fi
+
+  # Skip NPU for long or explicitly complex prompts
+  local len=${#prompt}
+  if (( len >= 8000 )); then
+    return 1
+  fi
+
+  if echo "$prompt" | grep -qiE "(^|[^A-Za-z0-9])(large|complex|deep)([^A-Za-z0-9]|$)"; then
+    return 1
+  fi
+
+  return 0
+}
+
+execute_npu() {
+  local prompt="$1"
+  local log_file="$2"
+
+  if ! command -v "$AI_NPU_BIN" >/dev/null 2>&1; then
+    log_error "NPU requested but ai-npu binary not found"
+    return 1
+  fi
+
+  log_header "⚡ Executing AI Task on NPU"
+  log_info "Model dir: ${HWC_NPU_MODEL_DIR:-"(default)"}"
+
+  local response
+  if ! response=$(printf "%s" "$prompt" | "$AI_NPU_BIN"); then
+    log_error "NPU execution failed"
+    return 1
+  fi
+
+  if [[ -n "$log_file" ]]; then
+    {
+      echo "# AI NPU Task Execution Log"
+      echo "Timestamp: $(date)"
+      echo "Model dir: ${HWC_NPU_MODEL_DIR:-"(default)"}"
+      echo "---"
+      echo "$response"
+    } >> "$log_file" 2>/dev/null || log_warn "Failed to write NPU log file"
+  fi
+
+  echo "$response"
+  return 0
+}
+
 # Execute Ollama request with thermal monitoring
 execute_ollama() {
   local model="$1"
@@ -256,15 +321,17 @@ execute_ollama() {
 
 # Main workflow
 main() {
+  if [[ "${1:-}" == "--npu" ]]; then
+    AI_FORCE_NPU="true"
+    shift
+  fi
+
   local task_type="${1:-doc}"        # doc/commit/readme/lint
   local complexity="${2:-medium}"     # small/medium/large
   local file_path="${3:-.}"          # File being documented/analyzed
   local output_file="${4:-}"         # Optional output file
 
   log_header "🚀 AI Framework - Thermal-Aware Execution"
-
-  # Check Ollama availability
-  check_ollama || exit 1
 
   # Thermal check
   local thermal_state
@@ -372,9 +439,19 @@ Report any violations with Law citations."
   # Log file
   local log_file="$LOG_DIR/task-$(date +%Y%m%d-%H%M%S).log"
 
+  local use_npu="false"
+  if should_use_npu "$prompt" "$complexity"; then
+    use_npu="true"
+  fi
+
   # Execute
   local result
-  result=$(execute_ollama "$model" "$prompt" "$timeout" "$log_file") || exit 1
+  if [[ "$use_npu" == "true" ]]; then
+    result=$(execute_npu "$prompt" "$log_file") || exit 1
+  else
+    check_ollama || exit 1
+    result=$(execute_ollama "$model" "$prompt" "$timeout" "$log_file") || exit 1
+  fi
 
   # Output result
   if [[ -n "$output_file" ]]; then
@@ -396,9 +473,10 @@ show_usage() {
 ${BOLD}Ollama Wrapper - Thermal-Aware AI Execution${NC}
 
 USAGE:
-    ollama-wrapper <task> <complexity> <file> [output]
+    ollama-wrapper [--npu] <task> <complexity> <file> [output]
 
 ARGUMENTS:
+    --npu        Force Tier 0 NPU path (bypass Ollama)
     task         Task type: commit|readme|doc|lint
     complexity   Model size: small|medium|large
     file         File path for context
@@ -417,6 +495,10 @@ ENVIRONMENT:
     PROFILE              Hardware profile: auto|laptop|server|cpu-only
     VERBOSE              Enable debug output (default: false)
     LOG_DIR              Log directory (default: /var/log/hwc-ai)
+    NPU_ENABLED          Enable Tier 0 NPU path when true
+    AI_FORCE_NPU         Force NPU path (auto-routing otherwise)
+    AI_NPU_BIN           Override ai-npu binary (default: ai-npu)
+    HWC_NPU_MODEL_DIR    Override NPU model directory
 
 THERMAL SAFETY:
     - Monitors CPU temperature every 5 seconds
