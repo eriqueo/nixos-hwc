@@ -5,12 +5,12 @@ let
 
   cfg = config.hwc.home.apps.analysis;
 
-  isNixOS = osConfig ? hwc;
+  isNixOS = osConfig ? hwc;  # Clean boolean check (no 'or false' needed)
 in {
   # OPTIONS (mandatory)
   imports = [ ./options.nix ];
 
-  # IMPLEMENTATION (mandatory)
+  # IMPLEMENTATION + VALIDATION (merged into one config block)
   config = mkIf cfg.enable {
     home.packages = with pkgs; let
       pythonEnv = python3.withPackages (ps: with ps; [
@@ -18,20 +18,20 @@ in {
         jupyterlab
         itables
         hvplot
-        pandas  # For compatibility if needed
+        pandas   # Optional compatibility
         numpy
         pyarrow
       ] ++ cfg.extraPackages);
     in [ pythonEnv ];
-  };
 
-  # VALIDATION (mandatory when dependencies exist)
-  config.assertions = mkIf cfg.enable [
-    {
-      assertion = pkgs ? python3;
-      message = "Python 3 must be available in pkgs.";
-    }
-  ] ++ lib.mkIf isNixOS [
-    # Add any NixOS-specific assertions here, e.g., for system deps
-  ];
+    # Assertions go here inside the same config
+    assertions = [
+      {
+        assertion = pkgs ? python3;
+        message = "Python 3 must be available in pkgs.";
+      }
+    ] ++ lib.mkIf isNixOS [
+      # Add any NixOS-specific assertions here (rarely needed for home modules)
+    ];
+  };
 }
