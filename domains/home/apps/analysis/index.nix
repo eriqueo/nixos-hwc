@@ -5,7 +5,7 @@ let
 
   cfg = config.hwc.home.apps.analysis;
 
-  isNixOS = osConfig ? hwc or false;
+  isNixOS = osConfig ? hwc;
 in {
   # OPTIONS (mandatory)
   imports = [ ./options.nix ];
