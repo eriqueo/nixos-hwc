@@ -1,7 +1,7 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
-  inherit (lib) mkOption types;
+  inherit (lib) mkIf;
 in {
   options.hwc.system.apps.analysis = {
     enable = mkOption {
@@ -11,7 +11,7 @@ in {
     };
   };
 
-  config = mkIf config.hwc.system.apps.analysis.enable {
+  config = lib.mkIf config.hwc.system.apps.analysis.enable {
     # System packages if required (e.g., for non-Home use)
     environment.systemPackages = [];  # Empty for now; add if needed
   };
