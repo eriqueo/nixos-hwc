@@ -12,11 +12,15 @@ let
 
   openvinoRuntime = pkgs.python312Packages.buildPythonPackage rec {
     pname = "openvino";
-    version = "2025.4.1.0-20426";
+    version = "2024.3.0-16041";
     format = "wheel";
 
-    # Vendored wheel to avoid CDN/SSL/404 issues (wheel in vendor/)
-    src = ./vendor/openvino-2025.4.1-20426-cp312-cp312-manylinux2014_x86_64.whl;
+    # Downgraded to 2024.3 - last version before NPU_MAX_TILES (added in 2024.4)
+    # NPU_MAX_TILES is unsupported on Meteor Lake NPU (3720)
+    src = pkgs.fetchurl {
+      url = "https://files.pythonhosted.org/packages/a1/04/f27f3dbf2d390d6f7c921b65cf537e50ff65f1cc3911b9438d28e4959173/openvino-2024.3.0-16041-cp312-cp312-manylinux2014_x86_64.whl";
+      hash = "sha256-AC85xBRkCTV79PE9jc87u4XLTYQc9NWxiiMgjN3ZQOw=";
+    };
 
     nativeBuildInputs = [ pkgs.unzip ];
     doCheck = false;
@@ -29,12 +33,12 @@ let
 
   openvinoTokenizers = pkgs.python312Packages.buildPythonPackage rec {
     pname = "openvino-tokenizers";
-    version = "2025.4.1.0";
+    version = "2024.3.0.0";
     format = "wheel";
 
     src = pkgs.fetchurl {
-      url = "https://files.pythonhosted.org/packages/py3/o/openvino-tokenizers/openvino_tokenizers-2025.4.1.0-py3-none-manylinux2014_x86_64.whl";
-      hash = "sha256-N2w/ihpkMt4mnetcJErkhF2No737AnlI6bzHIa8L4ag=";
+      url = "https://files.pythonhosted.org/packages/75/09/529c60d0cc057b85ea9e77f923a4aeb2b77df1bf932b1425f2ca19888fd1/openvino_tokenizers-2024.3.0.0-py3-none-manylinux2014_x86_64.whl";
+      hash = "sha256-Q+SUNx+3JtLTluHsH0g5FCCbSiKQn1SV3z1JXdKblQo=";
     };
 
     nativeBuildInputs = [ pkgs.unzip ];
@@ -53,12 +57,12 @@ let
 
   openvinoGenai = pkgs.python312Packages.buildPythonPackage rec {
     pname = "openvino-genai";
-    version = "2025.4.1.0-1901";
+    version = "2024.3.0.0";
     format = "wheel";
 
     src = pkgs.fetchurl {
-      url = "https://files.pythonhosted.org/packages/61/88/2c16eb3970af048a3413fe9d42c1a3d88d1126a953a5bb0bd28e15dc2896/openvino_genai-2025.4.1.0-1901-cp312-cp312-manylinux2014_x86_64.whl";
-      hash = "sha256-jjXyqQXWzZxtAuWRIFPiDJhixBUmFxMJpAVWQOCTA98=";
+      url = "https://files.pythonhosted.org/packages/1a/e1/f1e482cd0ae99ef8ff282b5b3280f1b976d983da2560d71240b5a1d2672f/openvino_genai-2024.3.0.0-cp312-cp312-manylinux2014_x86_64.whl";
+      hash = "sha256-Yt5Qsjub41Iq5OBMMjyPY5gmmJ630TF1JvWx71u6lr0=";
     };
 
     nativeBuildInputs = [ pkgs.unzip ];
