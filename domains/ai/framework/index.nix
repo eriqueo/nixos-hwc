@@ -99,7 +99,7 @@ let
     MODEL_DIR="''${HWC_NPU_MODEL_DIR:-${cfg.npu.modelDir}}"
 
     export LD_LIBRARY_PATH="''${LD_LIBRARY_PATH:-}:"
-    export LD_LIBRARY_PATH="${openvinoGenai}/lib:${openvinoGenai}/lib/python3.12/site-packages/openvino_genai:${openvinoRuntime}/lib/python3.12/site-packages/openvino/libs:$LD_LIBRARY_PATH"
+    export LD_LIBRARY_PATH="${pkgs.intel-npu-driver}/lib:${pkgs.level-zero}/lib:${openvinoGenai}/lib:${openvinoGenai}/lib/python3.12/site-packages/openvino_genai:${openvinoRuntime}/lib/python3.12/site-packages/openvino/libs:$LD_LIBRARY_PATH"
 
     log_debug() {
       [[ "$VERBOSE" == "true" ]] && echo "[DEBUG] $*" >&2 || true
