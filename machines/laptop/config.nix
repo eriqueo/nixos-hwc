@@ -321,7 +321,12 @@
   # Auto-detects laptop profile: conservative limits, aggressive thermal protection
   hwc.ai.framework = {
     enable = true;
-    npu.enable = true;
+    npu = {
+      enable = true;
+      # Use NPU-specific model (Qwen3-1.7B optimized for Meteor Lake NPU)
+      modelId = "FluidInference/qwen3-1.7b-int4-ov-npu";
+      modelDir = "/var/lib/hwc-ai/npu-models/qwen3-1.7b";
+    };
 
     # Framework auto-detects "laptop" profile based on:
     # - GPU: nvidia (present)
@@ -440,6 +445,12 @@
 
   # Intel NPU support (permissions, firmware, Level Zero loader)
   hardware.cpu.intel.npu.enable = true;
+
+  # Add Level Zero and OpenCL runtime for NPU backend
+  hardware.graphics.extraPackages = with pkgs; [
+    level-zero
+    intel-compute-runtime
+  ];
 
   # Performance mode wrappers for CPU-intensive tasks
   # TODO: Consider moving to domains/system/services/performance/ module
