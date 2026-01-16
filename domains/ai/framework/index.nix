@@ -10,10 +10,86 @@ let
 
   npuEnabled = cfg.npu.enable;
 
-  pythonNpuEnv = pkgs.python312.withPackages (ps: [
-    ps.openvino
+  openvinoRuntime = pkgs.python312Packages.buildPythonPackage rec {
+    pname = "openvino";
+    version = "2025.4.1.0-20426";
+    format = "wheel";
+
+    # Vendored wheel to avoid CDN/SSL/404 issues (wheel in vendor/)
+    src = ./vendor/openvino-2025.4.1-20426-cp312-cp312-manylinux2014_x86_64.whl;
+
+    nativeBuildInputs = [ pkgs.unzip ];
+    doCheck = false;
+
+    postFixup = ''
+      LIBS_PATH="$out/lib/python3.12/site-packages/openvino/libs"
+      find $out -type f -name '*.so' -exec ${pkgs.patchelf}/bin/patchelf --set-rpath "$LIBS_PATH:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.libgcc}/lib" {} \;
+    '';
+  };
+
+  openvinoTokenizers = pkgs.python312Packages.buildPythonPackage rec {
+    pname = "openvino-tokenizers";
+    version = "2025.4.1.0";
+    format = "wheel";
+
+    src = pkgs.fetchurl {
+      url = "https://files.pythonhosted.org/packages/py3/o/openvino-tokenizers/openvino_tokenizers-2025.4.1.0-py3-none-manylinux2014_x86_64.whl";
+      hash = "sha256-N2w/ihpkMt4mnetcJErkhF2No737AnlI6bzHIa8L4ag=";
+    };
+
+    nativeBuildInputs = [ pkgs.unzip ];
+
+    propagatedBuildInputs = [
+      openvinoRuntime
+    ];
+
+    doCheck = false;
+
+    postFixup = ''
+      ov_path="${openvinoRuntime}/lib/python3.12/site-packages/openvino/libs"
+      find $out -type f -name '*.so' -exec ${pkgs.patchelf}/bin/patchelf --set-rpath "$ov_path:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.libgcc}/lib" {} \;
+    '';
+  };
+
+  openvinoGenai = pkgs.python312Packages.buildPythonPackage rec {
+    pname = "openvino-genai";
+    version = "2025.4.1.0-1901";
+    format = "wheel";
+
+    src = pkgs.fetchurl {
+      url = "https://files.pythonhosted.org/packages/61/88/2c16eb3970af048a3413fe9d42c1a3d88d1126a953a5bb0bd28e15dc2896/openvino_genai-2025.4.1.0-1901-cp312-cp312-manylinux2014_x86_64.whl";
+      hash = "sha256-jjXyqQXWzZxtAuWRIFPiDJhixBUmFxMJpAVWQOCTA98=";
+    };
+
+    nativeBuildInputs = [ pkgs.unzip ];
+
+    propagatedBuildInputs = [
+      openvinoRuntime
+      openvinoTokenizers
+      pkgs.python312Packages.numpy
+      pkgs.python312Packages.pillow
+      pkgs.python312Packages.tokenizers
+    ];
+
+    doCheck = false;
+
+    postFixup = ''
+      ov_path="${openvinoRuntime}/lib/python3.12/site-packages/openvino/libs"
+      target="$out/lib/python3.12/site-packages/openvino_genai"
+      rpath="$ov_path:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.stdenv.cc.cc.lib}/lib64:${pkgs.zlib}/lib:${pkgs.libgcc}/lib:$out/lib:$target"
+      find $out -type f -name '*.so' -exec ${pkgs.patchelf}/bin/patchelf --set-rpath "$rpath" {} \;
+    '';
+  };
+
+  npuPythonEnv = pkgs.python312.withPackages (ps: [
+    openvinoGenai
+    openvinoRuntime
+    openvinoTokenizers
+    ps.numpy
+    ps.pillow
+    ps.tokenizers
     ps.huggingface-hub
-  ]);
+  ] ++ lib.optional (ps ? hf-transfer) ps.hf-transfer);
 
   aiNpuTool = pkgs.writeShellScriptBin "ai-npu" ''
     #!/usr/bin/env bash
@@ -21,6 +97,9 @@ let
 
     VERBOSE="''${VERBOSE:-false}"
     MODEL_DIR="''${HWC_NPU_MODEL_DIR:-${cfg.npu.modelDir}}"
+
+    export LD_LIBRARY_PATH="''${LD_LIBRARY_PATH:-}:"
+    export LD_LIBRARY_PATH="${openvinoGenai}/lib:${openvinoGenai}/lib/python3.12/site-packages/openvino_genai:${openvinoRuntime}/lib/python3.12/site-packages/openvino/libs:$LD_LIBRARY_PATH"
 
     log_debug() {
       [[ "$VERBOSE" == "true" ]] && echo "[DEBUG] $*" >&2 || true
@@ -39,7 +118,7 @@ let
     fi
 
     # Run inference with OpenVINO GenAI
-    MODEL_DIR="$MODEL_DIR" ${pythonNpuEnv}/bin/python - "$@" <<'PY'
+    MODEL_DIR="$MODEL_DIR" ${npuPythonEnv}/bin/python - "$@" <<'PY'
 import os
 import sys
 
@@ -58,9 +137,16 @@ if not MODEL_DIR:
 
 try:
     pipeline = LLMPipeline(MODEL_DIR, device="NPU")
-except Exception as exc:  # pragma: no cover
-    print(f"Failed to load model at {MODEL_DIR}: {exc}", file=sys.stderr)
-    sys.exit(1)
+except Exception as npu_exc:  # pragma: no cover
+    # NPU compilation can fail for model compatibility reasons
+    # Fall back to CPU with a warning
+    print(f"⚠️  NPU compilation failed, falling back to CPU: {npu_exc}", file=sys.stderr)
+    try:
+        pipeline = LLMPipeline(MODEL_DIR, device="CPU")
+        print("ℹ️  Running on CPU instead of NPU", file=sys.stderr)
+    except Exception as cpu_exc:
+        print(f"Failed to load model at {MODEL_DIR}: {cpu_exc}", file=sys.stderr)
+        sys.exit(1)
 
 config = GenerationConfig(
     max_new_tokens=1024,
@@ -131,31 +217,24 @@ PY
     ${ollamaWrapperTool}/bin/ollama-wrapper lint small "$@"
   '';
 
-  npuModelDownload = pkgs.writeShellScript "ai-npu-download" ''
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    MODEL_ID="${cfg.npu.modelId}"
-    MODEL_DIR="${cfg.npu.modelDir}"
-    CLI=${pkgs.python312Packages.huggingface-hub}/bin/huggingface-cli
-
-    mkdir -p "$MODEL_DIR"
-
-    if [[ -f "$MODEL_DIR/config.json" || -f "$MODEL_DIR/model_index.json" ]]; then
-      echo "NPU model already present in $MODEL_DIR"
-      exit 0
-    fi
-
-    echo "Downloading NPU model ${cfg.npu.modelId} -> $MODEL_DIR"
-    export HF_HUB_ENABLE_HF_TRANSFER=0
-    export HF_HUB_DISABLE_HF_TRANSFER=1
-    export HF_HUB_DISABLE_TELEMETRY=1
-    "$CLI" download \
-      "$MODEL_ID" \
-      --local-dir "$MODEL_DIR" \
-      --local-dir-use-symlinks False \
-      --resume-download
-  '';
+  npuModelDownloadCmd =
+    let
+      basePath = "${npuPythonEnv}/bin:${pkgs.coreutils}/bin";
+    in
+    ''
+      ${pkgs.coreutils}/bin/env -i \
+        PATH=${basePath} \
+        HOME=/var/lib/hwc-ai \
+        HF_HUB_DISABLE_TELEMETRY=1 \
+        HF_HUB_ENABLE_HF_TRANSFER=0 \
+        HF_HUB_DISABLE_HF_TRANSFER=1 \
+        HF_HUB_DISABLE_XET=1 \
+        HF_HUB_OFFLINE=0 \
+        huggingface-cli download ${cfg.npu.modelId} \
+          --local-dir ${cfg.npu.modelDir} \
+          --cache-dir /var/cache/hwc-ai/hf-cache \
+          --resume-download
+    '';
 
   # Grebuild integration script
   grebuildDocsTool = pkgs.writeScript "grebuild-docs" (''
@@ -192,12 +271,13 @@ in
       aiDocTool
       aiCommitTool
       aiLintTool
-    ] ++ lib.optionals cfg.npu.enable [
-      pkgs.openvino
-      pythonNpuEnv
-      pkgs.python312Packages.huggingface-hub
-      aiNpuTool
-    ] ++ lib.optionals cfg.logging.enable [
+    ] ++ lib.optionals cfg.npu.enable (
+      [
+        npuPythonEnv
+        aiNpuTool
+      ]
+      ++ lib.optional (pkgs.python312Packages ? hf-transfer) pkgs.python312Packages.hf-transfer
+    ) ++ lib.optionals cfg.logging.enable [
       # Add ai-status command when logging is enabled
       (pkgs.writeScriptBin "ai-status" ''
         #!${pkgs.bash}/bin/bash
@@ -213,6 +293,7 @@ in
       ]
       ++ lib.optionals cfg.npu.enable [
         "d ${cfg.npu.modelDir} 0755 eric users -"
+        "d /var/cache/hwc-ai/hf-cache 0755 eric users -"
       ];
 
     # Configure Ollama with profile-based limits
@@ -383,8 +464,24 @@ in
           "HF_HUB_ENABLE_HF_TRANSFER=0"
           "HF_HUB_DISABLE_HF_TRANSFER=1"
           "HF_HUB_DISABLE_TELEMETRY=1"
+          "HF_HUB_DISABLE_XET=1"
+          "HF_HUB_OFFLINE=0"
         ];
-        ExecStart = npuModelDownload;
+        ExecStart = pkgs.writeShellScript "ai-npu-download" ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          mkdir -p ${cfg.npu.modelDir}
+          mkdir -p /var/cache/hwc-ai/hf-cache
+
+          if [[ -f "${cfg.npu.modelDir}/config.json" || -f "${cfg.npu.modelDir}/model_index.json" ]]; then
+            echo "NPU model already present in ${cfg.npu.modelDir}"
+            exit 0
+          fi
+
+          echo "Downloading NPU model ${cfg.npu.modelId} -> ${cfg.npu.modelDir}"
+          ${npuModelDownloadCmd}
+        '';
         StandardOutput = "journal";
         StandardError = "journal";
       };
