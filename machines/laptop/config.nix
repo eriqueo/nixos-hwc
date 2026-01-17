@@ -368,6 +368,14 @@
   # - Idle shutdown: 5 minutes
   # - Models: llama3.2:1b, llama3.2:3b, phi3.5:3.8b
 
+  # Fix Ollama systemd service - change from Type=notify to Type=forking to prevent premature shutdown
+  # The container's sd-notify doesn't work reliably, causing systemd to kill it after ~5 seconds
+  systemd.services.podman-ollama.serviceConfig = {
+    Type = lib.mkForce "forking";
+    # Remove NotifyAccess since we're not using notify type
+    NotifyAccess = lib.mkForce "none";
+  };
+
   # Local AI workflows disabled by default (can enable if needed)
   hwc.ai.local-workflows.enable = false;
 
