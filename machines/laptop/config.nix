@@ -323,9 +323,9 @@
     enable = true;
     npu = {
       enable = true;
-      # Use NPU-specific model (Qwen3-1.7B optimized for Meteor Lake NPU)
-      modelId = "FluidInference/qwen3-1.7b-int4-ov-npu";
-      modelDir = "/var/lib/hwc-ai/npu-models/qwen3-1.7b";
+      # Use Phi-3 Mini (compatible with OpenVINO 2024.3 on Meteor Lake NPU)
+      modelId = "OpenVINO/phi-3-mini-4k-instruct-int4-ov";
+      modelDir = "/var/lib/hwc-ai/npu-models/phi-3-mini";
     };
 
     # Framework auto-detects "laptop" profile based on:

@@ -51,7 +51,8 @@ let
 
     postFixup = ''
       ov_path="${openvinoRuntime}/lib/python3.12/site-packages/openvino/libs"
-      find $out -type f -name '*.so' -exec ${pkgs.patchelf}/bin/patchelf --set-rpath "$ov_path:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.libgcc}/lib" {} \;
+      tok_path="$out/lib/python3.12/site-packages/openvino_tokenizers/lib"
+      find $out -type f -name '*.so' -exec ${pkgs.patchelf}/bin/patchelf --set-rpath "$tok_path:$ov_path:${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.libgcc}/lib" {} \;
     '';
   };
 
