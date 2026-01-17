@@ -113,8 +113,14 @@ in
           Type = "simple";
           User = lib.mkForce "eric";
           Group = lib.mkForce "users";  # Run as user to access home directories
-          WorkingDirectory = "/home/eric";
+          WorkingDirectory = config.hwc.paths.user.home;
           ExecStart = "${apiServer}/bin/hwc-workflows-api";
+
+          # Pass configured paths as environment variables
+          Environment = [
+            "JOURNAL_DIR=${cfg.api.journal.outputDir}"
+            "CLEANUP_DIRS=${lib.concatStringsSep ":" cfg.api.cleanup.allowedDirs}"
+          ];
 
           Restart = "on-failure";
           RestartSec = "5s";

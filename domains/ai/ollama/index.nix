@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, aiProfile ? null, aiProfileName ? "laptop", ... }:
 
 let
   cfg = config.hwc.ai.ollama;
@@ -15,6 +15,18 @@ let
 
   gpuEnv = config.hwc.infrastructure.hardware.gpu.containerEnvironment or {};
 
+  # Models: use profile defaults only if user didn't set explicitly
+  effectiveModels =
+    if cfg.models != null
+    then cfg.models
+    else if aiProfile != null
+    then [
+      aiProfile.models.small
+      aiProfile.models.medium
+      aiProfile.models.large
+    ]
+    else [ "llama3.2:3b" ];  # Fallback if no profile available
+
   # Normalize model configuration for health checks
   normalizeModel = model:
     if lib.isString model then
@@ -22,7 +34,7 @@ let
     else
       model // { autoUpdate = model.autoUpdate or true; priority = model.priority or 50; };
 
-  modelNames = map (m: (normalizeModel m).name) cfg.models;
+  modelNames = map (m: (normalizeModel m).name) effectiveModels;
 
   pullScript = import ./parts/pull-script.nix { inherit lib pkgs config; };
   diskMonitor = import ./parts/disk-monitor.nix { inherit pkgs config; };
@@ -36,8 +48,33 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    # Apply profile-based defaults if profile available
+    (lib.mkIf (aiProfile != null) {
+      hwc.ai.ollama.resourceLimits = {
+        enable = lib.mkDefault true;
+        maxCpuPercent = lib.mkDefault aiProfile.ollama.maxCpuPercent;
+        maxMemoryMB = lib.mkDefault aiProfile.ollama.maxMemoryMB;
+        maxRequestSeconds = lib.mkDefault aiProfile.ollama.maxRequestSeconds;
+      };
 
+      hwc.ai.ollama.thermalProtection = {
+        enable = lib.mkDefault aiProfile.idle.enable;  # Follows idle behavior
+        warningTemp = lib.mkDefault aiProfile.thermal.warningTemp;
+        criticalTemp = lib.mkDefault aiProfile.thermal.criticalTemp;
+        checkInterval = lib.mkDefault aiProfile.thermal.checkInterval;
+        cooldownMinutes = lib.mkDefault aiProfile.thermal.cooldownMinutes;
+      };
+
+      hwc.ai.ollama.idleShutdown = {
+        enable = lib.mkDefault aiProfile.idle.enable;
+        idleMinutes = lib.mkDefault aiProfile.idle.shutdownMinutes;
+        checkInterval = lib.mkDefault aiProfile.idle.checkInterval;
+      };
+    })
+
+    # Service implementation
+    {
     virtualisation.oci-containers.containers.ollama = {
       image = "ollama/ollama:latest";
       ports = [ "${toString cfg.port}:11434" ];
@@ -354,8 +391,8 @@ in
         message = "hwc.ai.ollama.port must be between 1 and 65535";
       }
       {
-        assertion = cfg.models != [];
-        message = "hwc.ai.ollama.models list cannot be empty";
+        assertion = effectiveModels != [];
+        message = "hwc.ai.ollama effective models list cannot be empty (check profile or explicit config)";
       }
       {
         assertion = builtins.pathExists cfg.dataDir || true;  # Will be created by tmpfiles
@@ -366,5 +403,6 @@ in
         message = "hwc.ai.ollama requires Podman as OCI container backend";
       }
     ];
-  };
+    }  # End service implementation block
+  ]);  # End mkMerge + mkIf cfg.enable
 }

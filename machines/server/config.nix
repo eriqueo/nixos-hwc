@@ -236,78 +236,86 @@
 
   # GPU acceleration for Immich handled by hwc.server.immich.gpu.enable in server profile
 
-  # AI services configuration
-  hwc.ai.ollama = {
-    enable = true;
-    # Optimized models for 4GB VRAM GPU (Quadro P1000) - guaranteed to fit in VRAM
-    # Note: Load one at a time due to VRAM constraints (1.9GB + 2.3GB = 4.2GB)
-    models = [
-      "qwen2.5-coder:3b"              # 1.9GB - Best coding model that fits in 4GB VRAM
-      "phi3:3.8b"                     # 2.3GB - General purpose, excellent quality
-      "llama3.2:3b"                   # 2.0GB - Chat, summarization, journaling
-    ];
-
-    # Relaxed resource limits for server (monitoring, not restricting)
-    resourceLimits = {
-      enable = true;
-      maxCpuPercent = null;          # Unlimited CPU (server can use all cores)
-      maxMemoryMB = null;            # Unlimited memory
-      maxRequestSeconds = 600;       # Kill only extremely long requests (10 min)
-    };
-
-    # No idle shutdown on server (always-on service)
-    idleShutdown = {
-      enable = false;                # Server keeps ollama running
-    };
-
-    # No thermal protection on server (datacenter environment)
-    thermalProtection = {
-      enable = false;                # Server has adequate cooling
-    };
-  };
-
-  # Local AI workflows and automation
-  hwc.ai.local-workflows = {
+  # AI DOMAIN CONFIGURATION (Server)
+  #============================================================================
+  # Profile auto-detection: server (GPU: nvidia, RAM: 32GB >= 16GB threshold)
+  # Result: Relaxed limits (4 cores, 8GB, 80°C warning, 90°C critical)
+  hwc.ai = {
     enable = true;
 
-    # AI-powered file cleanup agent
-    fileCleanup = {
+    # Explicit server profile selection
+    profiles.selected = "server";
+
+    # AI CLI tools disabled on server (headless environment)
+    tools.enable = false;
+
+    # Ollama LLM service with profile-based defaults
+    ollama = {
       enable = true;
-      watchDirs = [ "/mnt/hot/inbox" "/home/eric/Downloads" ];
-      schedule = "*:0/30";  # Every 30 minutes
-      model = "qwen2.5-coder:3b";
-      dryRun = false;  # Set to true for testing
+
+      # Explicit model list for 4GB VRAM GPU (Quadro P1000)
+      # Note: Load one at a time due to VRAM constraints
+      models = [
+        "qwen2.5-coder:3b"   # 1.9GB - Best coding model
+        "phi3:3.8b"          # 2.3GB - General purpose
+        "llama3.2:3b"        # 2.0GB - Chat, journaling
+      ];
+
+      # Override profile defaults for server (unlimited resources)
+      resourceLimits = {
+        enable = true;
+        maxCpuPercent = null;         # Unlimited CPU
+        maxMemoryMB = null;           # Unlimited memory
+        maxRequestSeconds = 600;      # 10 minute timeout
+      };
+
+      idleShutdown.enable = false;    # Always-on service
+      thermalProtection.enable = false; # Datacenter cooling
     };
 
-    # Automatic daily journaling
-    journaling = {
+    # Local AI workflows and automation
+    local-workflows = {
       enable = true;
-      outputDir = "/home/eric/Documents/HWC-AI-Journal";
-      sources = [ "systemd-journal" "container-logs" "nixos-rebuilds" ];
-      schedule = "daily";
-      timeOfDay = "02:00";
-      model = "llama3.2:3b";
-      retentionDays = 90;
-    };
 
-    # Auto-documentation generator (CLI tool)
-    autoDoc = {
-      enable = true;
-      model = "qwen2.5-coder:3b";
-    };
+      # AI-powered file cleanup agent
+      fileCleanup = {
+        enable = true;
+        watchDirs = [ "/mnt/hot/inbox" "/home/eric/Downloads" ];
+        schedule = "*:0/30";  # Every 30 minutes
+        model = "qwen2.5-coder:3b";
+        dryRun = false;  # Set to true for testing
+      };
 
-    # Interactive chat CLI
-    chatCli = {
-      enable = true;
-      model = "llama3:8b";  # Better instruction following than qwen2.5-coder
-      # systemPrompt inherited from domain default
-    };
+      # Automatic daily journaling
+      journaling = {
+        enable = true;
+        outputDir = "/home/eric/Documents/HWC-AI-Journal";
+        sources = [ "systemd-journal" "container-logs" "nixos-rebuilds" ];
+        schedule = "daily";
+        timeOfDay = "02:00";
+        model = "llama3.2:3b";
+        retentionDays = 90;
+      };
 
-    # Workflows HTTP API (Sprint 5.4)
-    api = {
-      enable = true;
-      port = 6021;
-      # All other settings use defaults from domain options
+      # Auto-documentation generator (CLI tool)
+      autoDoc = {
+        enable = true;
+        model = "qwen2.5-coder:3b";
+      };
+
+      # Interactive chat CLI
+      chatCli = {
+        enable = true;
+        model = "llama3:8b";  # Better instruction following than qwen2.5-coder
+        # systemPrompt inherited from domain default
+      };
+
+      # Workflows HTTP API (Sprint 5.4)
+      api = {
+        enable = true;
+        port = 6021;
+        # All other settings use defaults from domain options
+      };
     };
   };
 
