@@ -315,75 +315,51 @@
   };
 
   #============================================================================
-  # AI FRAMEWORK CONFIGURATION (Laptop)
+  # AI DOMAIN CONFIGURATION (Laptop)
   #============================================================================
-  # Hardware-agnostic AI framework with thermal awareness and Charter integration
-  # Auto-detects laptop profile: conservative limits, aggressive thermal protection
-  hwc.ai.framework = {
+  # Profile auto-detection: laptop (GPU: nvidia, RAM: 32GB < 16GB threshold)
+  # Result: Conservative limits (2 cores, 4GB, 70°C warning, 80°C critical)
+  hwc.ai = {
     enable = true;
-    npu = {
+
+    # Profile selection (auto-detects laptop based on RAM/GPU)
+    profiles.selected = "auto";
+
+    # AI CLI tools (charter-search, ai-doc, ai-commit, ai-lint)
+    tools = {
       enable = true;
-      # Use Phi-3 Mini (compatible with OpenVINO 2024.3 on Meteor Lake NPU)
-      modelId = "OpenVINO/phi-3-mini-4k-instruct-int4-ov";
-      modelDir = "/var/lib/hwc-ai/npu-models/phi-3-mini";
+      logging.enable = true;
     };
 
-    # Framework auto-detects "laptop" profile based on:
-    # - GPU: nvidia (present)
-    # - RAM: 32GB (< 16GB threshold for server classification)
-    # Result: Conservative thermal limits, smaller models, quick idle shutdown
-
-    # Thermal configuration (override defaults for laptop safety)
-    thermal = {
-      warningTemp = 70;   # Start warnings early (default: 75)
-      criticalTemp = 80;  # Emergency stop before hardware throttle (default: 85)
-    };
-
-    # Model selection - using existing downloaded models
-    models = {
-      small = "llama3.2:3b";         # Use 3b for small (1b not downloaded)
-      medium = "llama3.2:3b";        # 2.0GB, 10W, <10s - Documentation
-      large = "deepseek-coder:6.7b"; # Use deepseek instead of phi3.5
-    };
-
-    # Charter integration (enabled by default)
-    charter = {
+    # Ollama LLM service with profile-based defaults
+    ollama = {
       enable = true;
-      charterPath = "/home/eric/.nixos/CHARTER.md";
-      citeLaws = true;  # Require outputs to cite Charter Laws
+
+      # Explicit model list (overrides profile defaults without mkForce)
+      models = [
+        "llama3.2:3b"          # 2.0GB, 10W, <10s - Documentation
+        "deepseek-coder:6.7b"  # 4GB - Coding tasks
+      ];
+
+      # Override profile defaults for instant GPU inference
+      # Profile would enable these for battery/thermal protection, but GPU can handle it
+      idleShutdown.enable = false;
+      thermalProtection.enable = false;
+
+      # Profile automatically applies:
+      # - resourceLimits: CPU=200%, Memory=4GB, Timeout=60s
+      # - Models pulled on first boot
     };
 
-    # Logging (enabled by default)
-    logging = {
-      enable = true;
-      logDir = "/var/log/hwc-ai";
-      logThermal = true;  # Log temperatures with each AI task
-    };
+    # Local AI workflows disabled (can enable if needed)
+    local-workflows.enable = false;
   };
 
-  # Override: Disable Ollama safeguards for instant GPU inference
-  # The laptop profile enables these by default for battery/thermal protection,
-  # but we want Ollama to stay running for fast GPU responses
-  hwc.ai.ollama.idleShutdown.enable = lib.mkForce false;
-  hwc.ai.ollama.thermalProtection.enable = lib.mkForce false;
-
-  # Framework automatically configures Ollama with profile-based limits:
-  # - CPU: 200% (2 cores max)
-  # - Memory: 4096MB (4GB max)
-  # - Timeout: 60s per request
-  # - Idle shutdown: DISABLED (overridden above for GPU performance)
-  # - Models: llama3.2:1b, llama3.2:3b, phi3.5:3.8b
-
-  # Fix Ollama systemd service - change from Type=notify to Type=forking to prevent premature shutdown
-  # The container's sd-notify doesn't work reliably, causing systemd to kill it after ~5 seconds
+  # Fix Ollama systemd service type (container sd-notify unreliable)
   systemd.services.podman-ollama.serviceConfig = {
     Type = lib.mkForce "forking";
-    # Remove NotifyAccess since we're not using notify type
     NotifyAccess = lib.mkForce "none";
   };
-
-  # Local AI workflows disabled by default (can enable if needed)
-  hwc.ai.local-workflows.enable = false;
 
   # Static hosts for local services (remains unchanged).
   networking.hosts = {

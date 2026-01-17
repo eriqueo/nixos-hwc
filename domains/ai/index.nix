@@ -9,14 +9,15 @@ in
   #==========================================================================
   imports = [
     ./options.nix
-    ./framework/index.nix     # Hardware-agnostic AI framework (NEW)
-    ./ollama/index.nix
-    ./open-webui/index.nix
-    ./local-workflows/index.nix
-    ./mcp/index.nix
-    ./cloud/index.nix
-    ./router/index.nix
-    ./agent/index.nix
+    ./profiles          # Hardware profile detection and defaults
+    ./tools             # AI CLI tools (charter-search, ai-doc, ai-commit, etc.)
+    ./ollama            # Local LLM service
+    ./open-webui        # Web UI for Ollama
+    ./local-workflows   # Automation workflows
+    ./mcp               # Model Context Protocol servers
+    ./cloud             # Cloud AI API integration
+    ./router            # Local/cloud routing
+    ./agent             # HTTP tool agent
   ];
 
   #==========================================================================

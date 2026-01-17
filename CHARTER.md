@@ -1,10 +1,10 @@
-# HWC Architecture Charter v10.1
+# HWC Architecture Charter v10.3
 
 **Owner**: Eric  
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files  
 **Goal**: Deterministic, maintainable, scalable, reproducible NixOS configuration via strict domain separation, explicit APIs, and user-centric organization.  
-**Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs and `docs/patterns/`.  
-**Current Date**: January 11, 2026
+**Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs and `docs/patterns/`.
+**Current Date**: January 17, 2026
 
 ## 0. Preserve-First Doctrine
 
@@ -33,14 +33,26 @@ let isNixOS = osConfig ? hwc or false;
 in { ... }
 ```
 
-**All assertions and `osConfig` accesses must be guarded**:
+**Safe access patterns (ONLY these are permitted)**:
 ```nix
+# Pattern 1: Guard with isNixOS check
 assertions = lib.mkIf isNixOS [ ... ];
-# or
-osConfig.hwc.something or null
+
+# Pattern 2: Provide empty fallback for entire namespace
+let osHwc = osConfig.hwc or {};
+in osHwc.paths.media or "/fallback"
+
+# Pattern 3: Use attrByPath for deep access
+lib.attrByPath ["hwc" "paths" "media"] "/fallback" osConfig
 ```
 
-**Violation**: Unguarded `osConfig` access or assertion that fails when `osConfig = {}`.
+**Unsafe patterns (FORBIDDEN)**:
+```nix
+osConfig.hwc.something or null  # Fails when osConfig = {}
+osConfig.hwc.paths.media        # No fallback, crashes on non-NixOS
+```
+
+**Violation**: Unguarded `osConfig` access, use of unsafe access patterns, or assertion that fails when `osConfig = {}`.
 
 ### Law 2: Strict Namespace Fidelity
 
@@ -76,26 +88,34 @@ volumes = [ "/mnt/media/music:/music:ro" ];
 
 **Violation**: Any hardcoded `/mnt/`, `/home/eric/`, `/opt/` (except in `paths/index.nix` itself and documentation).
 
-### Law 4: Unified Permission Model (1000:100)
+### Law 4: Unified Permission Model (Source-of-Truth Identity)
 
 All services **must** run as primary user (UID 1000) : `users` group (GID 100).
 
-**Containers**:
+**Source of truth**: `hwc.system.identity.{puid,pgid,user,group}` options defined in `domains/system/core/identity.nix` (to be implemented).
+
+**Containers** (use identity options):
 ```nix
-environment.PUID = "1000";
-environment.PGID = "100";  # NOT 1000!
+let
+  identity = config.hwc.system.identity;
+in
+environment.PUID = toString identity.puid;  # "1000"
+environment.PGID = toString identity.pgid;  # "100"
 ```
 
-**Native services**:
+**Native services** (use identity options):
 ```nix
+let
+  identity = config.hwc.system.identity;
+in
 serviceConfig = {
-  User = lib.mkForce "eric";
-  Group = lib.mkForce "users";
+  User = lib.mkForce identity.user;          # "eric"
+  Group = lib.mkForce identity.group;        # "users"
   StateDirectory = "hwc/<service>";
 };
 ```
 
-**Secrets**:
+**Secrets** (standard pattern):
 ```nix
 age.secrets.<name> = {
   mode = "0440";
@@ -104,7 +124,9 @@ age.secrets.<name> = {
 };
 ```
 
-**Violation**: PGID=1000, missing `secrets` group membership, secrets without 0440 mode.
+**Literal fallback**: When identity options aren't in scope (e.g., `mkContainer` helper), hardcoded `1000` and `100` are permitted with a justifying comment.
+
+**Violation**: PGID=1000 (should be 100), hardcoded UID/GID/user/group when identity options are available, missing `secrets` group membership, secrets without 0440 mode.
 
 ### Law 5: Container Standard (mkContainer)
 
@@ -120,9 +142,9 @@ Location: `domains/server/containers/_shared/pure.nix`
 
 **Violation**: Raw `virtualisation.oci-containers.containers` blocks without justification comment.
 
-### Law 6: Three Sections & Validation Discipline
+### Law 6: Three Mandatory Sections & Validation Discipline
 
-Every `index.nix` **must** contain exactly three sections:
+Every `index.nix` **must** contain three mandatory sections in order:
 
 ```nix
 # OPTIONS (mandatory)
@@ -135,9 +157,20 @@ config = lib.mkIf cfg.enable { ... };
 config.assertions = lib.mkIf cfg.enable [ ... ];
 ```
 
+**Optional HELPERS section** (if needed):
+```nix
+# HELPERS (optional, must be clearly labeled)
+let
+  scriptHelpers = import ./parts/scripts.nix { inherit pkgs lib; };
+  # ... other pure helpers
+in
+```
+
+Place HELPERS section **before** OPTIONS section when used. Helpers must be pure functions with no side effects.
+
 Cross-cutting assertions (spanning multiple submodules) must live in the highest relevant parent `index.nix`, but no more than one level up from the submodules involved. All must be guarded by the enabling option(s).
 
-**Violation**: Missing section, options outside `options.nix`, unguarded assertions, assertions not placed at the appropriate level.
+**Violation**: Missing mandatory section, wrong section order, options outside `options.nix`, unguarded assertions, assertions not placed at the appropriate level, unlabeled helper code.
 
 ### Law 7: sys.nix Lane Purity
 
@@ -169,13 +202,13 @@ All persistent data stores (anywhere in the config) **must** declare retention p
 
 Modules must follow a strict shape based on complexity:
 
-- **Leaf module** = single `.nix` file. Use for simple, self-contained config with no payload management (e.g., package sets, basic toggles). No `options.nix`, `index.nix`, or `parts/`.
+- **Leaf module** = single `.nix` file. Use for simple, self-contained config with no payload management (e.g., package sets, basic toggles). **Leaf modules are implementation-only** and must NOT declare `hwc.*` options. No `options.nix`, `index.nix`, or `parts/`.
 
-- **Directory module** = folder with `options.nix` + `index.nix` (+ `parts/` if needed). Use **only** when the module owns payload: multiple generated files, dotfiles bundle, or internal helpers/fragments.
+- **Directory module** = folder with `options.nix` + `index.nix` (+ `parts/` if needed). Use **only** when the module owns a namespace (declares `hwc.*` options) or manages payload: multiple generated files, dotfiles bundle, or internal helpers/fragments. **Directory modules own their namespace** via `options.nix`.
 
-Litmus test: If it only sets `packages/programs/services.*` and has no dotfiles/fragments/helpers → leaf. Otherwise → directory.
+Litmus test: If it only sets `packages/programs/services.*` and has no dotfiles/fragments/helpers → leaf. If it declares any `hwc.*` options → directory.
 
-**Violation**: Directory without justified payload, leaf file with scattered options/impl.
+**Violation**: Directory without justified payload or namespace ownership, leaf file declaring options, leaf file with scattered impl, directory missing `options.nix`.
 
 ### Law 10: Option Declaration Purity
 
@@ -197,7 +230,9 @@ Requirements:
 
 ### Law 11: Domain Evaluation Order
 
-Domains must respect a safe evaluation dependency direction: paths → system → home → server → ai → secrets (reverse dependencies forbidden).
+Domains must respect a safe evaluation dependency direction: paths → system → infrastructure → home → server → ai → secrets (reverse dependencies forbidden).
+
+Note: Infrastructure will eventually merge into system, at which point this order becomes: paths → system → home → server → ai → secrets.
 
 **Violation**: Cyclic or reverse dependencies (e.g., server depending on home options).
 
@@ -216,11 +251,17 @@ Domain READMEs contain implementation details, patterns, and known limitations.
   Never contains: systemd.services, environment.systemPackages, users.users  
   Unique: sys.nix co-location for system-lane support (Law 7)
 
-- **domains/system/** — Core OS & Services  
-  Boundary: Accounts, networking, security, system packages  
-  Never contains: Home Manager configs, secret declarations  
-  Unique: Relies on paths domain for abstractions (Law 3)  
+- **domains/system/** — Core OS & Services
+  Boundary: Accounts, networking, security, system packages
+  Never contains: Home Manager configs, secret declarations
+  Unique: Relies on paths domain for abstractions (Law 3)
   Note: Avoid `services/` as a god-directory; promote semantic subdomains (e.g., networking, storage, session) and flatten simple modules to leaves.
+  Future: Hardware management from infrastructure domain will migrate here (system/hardware/, system/virtualization/)
+
+- **domains/infrastructure/** — Hardware Management & Orchestration
+  Boundary: GPU, power, peripherals, storage tiers, virtualization, udev rules
+  Never contains: Home Manager configs, high-level app logic
+  Status: **MIGRATION PENDING** - Content will be absorbed into domains/system/ as semantic subdomains (system/hardware/, system/virtualization/, system/storage/)
 
 - **domains/server/** — Host Workloads  
   Boundary: Containers, databases, media servers, reverse proxy  
@@ -241,18 +282,71 @@ Domain READMEs contain implementation details, patterns, and known limitations.
 Run these regularly / in CI. All **must return zero violations**.
 
 ```bash
-rg 'osConfig\.' domains/home --type nix | rg -v '\?|\bor false'
-rg 'hwc\.services\.|hwc\.features\.|hwc\.paths|hwc\.filesystem|hwc\.networking|hwc\.home\.fonts' domains  # Check for deprecated shortcuts
-rg '="/mnt/|="/home/eric/|="/opt/' domains --glob '!paths/*' --glob '!*.md'
+# Law 1: Safe osConfig access (allowlist-based)
+# Flag any osConfig usage NOT matching safe patterns: (osConfig.hwc or {}), attrByPath, or isNixOS guard
+rg 'osConfig\.' domains/home --type nix | rg -v 'osConfig\.hwc or \{\}|attrByPath|lib\.mkIf isNixOS'
+
+# Law 2: Namespace fidelity (deprecated shortcuts)
+rg 'hwc\.services\.|hwc\.features\.|hwc\.paths|hwc\.filesystem|hwc\.networking|hwc\.home\.fonts' domains
+
+# Law 3: Path abstraction (hardened - matches any hardcoded path string)
+rg '"/mnt/|"/home/eric/|"/opt/|'\''/mnt/|'\''/home/eric/|'\''/opt/' domains --type nix --glob '!domains/paths/**' --glob '!*.md'
+
+# Law 4: Permission model
 ./workspace/utilities/lints/permission-lint.sh
+
+# Law 10: Option declaration purity
 rg 'options\.hwc\.' domains --type nix --glob '!options.nix' --glob '!sys.nix'
+rg 'mkOption' domains --type nix --glob '!options.nix' --glob '!domains/paths/paths.nix'
+
+# Law 7: sys.nix lane purity
 rg 'import.*sys.nix' domains/home/*/index.nix
+
+# Law 5: Container standard
 rg 'oci-containers\.containers\.[^=]+=' domains/server --glob '!mkContainer'
-rg -L 'retain:|retention:|cleanup.timer' domains # Generalized to all domains
-rg 'mkOption' domains --type nix --glob '!options.nix' --glob '!domains/paths/paths.nix'  # Whitelist primitive
+
+# Law 8: Data retention
+rg -L 'retain:|retention:|cleanup.timer' domains
 ```
 
-## 4. Enforcement Levels
+**Nix-level validations** (fail at eval/build, not just lint):
+- Path absoluteness/non-null: Enforced in `domains/paths/index.nix` via assertions
+- Container PUID/PGID: Enforced in `mkContainer` helper via default values
+- Missing dependencies: Enforced via module VALIDATION sections
+
+## 4. Exception Annotation Protocol
+
+Laws may permit exceptions when architecturally justified. All exceptions **must** be documented with formal annotations.
+
+**Annotation format**:
+```nix
+# HWC-EXCEPTION(Law X): <brief reason>
+# Justification: <detailed explanation>
+# Plan: <link to workspace/plans/ or "permanent by design">
+# Revocable: <yes/no>
+```
+
+**Example**:
+```nix
+# HWC-EXCEPTION(Law 10): Primitive module co-location
+# Justification: paths.nix is foundational bootstrap layer requiring atomic option+impl
+# Plan: permanent by design (see CHARTER.md Law 10 primitive exception)
+# Revocable: yes (if module acquires payload, must split)
+```
+
+**Current exceptions**:
+- **Law 10**: `domains/paths/paths.nix` primitive module (documented in law itself)
+
+**No exceptions permitted**:
+- **Law 2**: Strict namespace fidelity (never)
+
+Exceptions require:
+1. Charter documentation (for structural exceptions like Law 10 primitive)
+2. In-code annotation using format above
+3. Revocation conditions when temporary
+4. Lint whitelist entry where applicable
+
+## 5. Enforcement Levels
 
 | Severity | Description                        | Action                     |
 |----------|------------------------------------|----------------------------|
@@ -267,10 +361,20 @@ rg 'mkOption' domains --type nix --glob '!options.nix' --glob '!domains/paths/pa
 - Proposals in `workspace/plans/`
 - Version bump on normative change
 
-**Version History** (excerpt):  
-- **v10.1 (2026-01-11)**: Added `domains/paths/` as a new domain; updated Law 3 to reference `hwc.paths.*`; adjusted Law 11 evaluation order to include paths first; updated lints for paths; refined Law 6 for assertion passing (one parent max).  
-- **v10.0 (2026-01-11)**: Removed all blessed namespace exceptions (Law 2 strict); added Laws 9 (module shapes), 10 (option purity), 11 (evaluation order); simplified validation placement (Law 6); generalized Law 8; removed non-existent `domains/infrastructure`; aspirational push against `services/` god-directory; updated lints.  
-- **v9.1 (2026-01-10)**: Added Law 5 (mkContainer), Law 8 (Retention), refined violation searches, enforcement levels  
+**Version History** (excerpt):
+- **v10.3 (2026-01-17)**: Hardened Charter laws for production readiness:
+  - Law 1: Replaced unsafe `osConfig.hwc.x or null` with safe canonical patterns (attrByPath, namespace fallback, isNixOS guard); updated lint to allowlist-based check
+  - Law 4: Introduced `hwc.system.identity.*` source-of-truth options; forbid hardcoded UID/GID when identity options available; literal fallback permitted with justification
+  - Law 6: Relaxed from "exactly three sections" to "three mandatory sections" (OPTIONS/IMPLEMENTATION/VALIDATION) with optional clearly-labeled HELPERS section
+  - Law 9: Clarified that leaf modules are implementation-only (no `hwc.*` options), directory modules own namespaces via `options.nix`
+  - Law 3 lint: Hardened to match any hardcoded path string (not just `="..."`), explicit exclude for `domains/paths/**`
+  - Added Section 4: Exception Annotation Protocol (formal HWC-EXCEPTION format); Law 2 permits no exceptions
+  - Strengthened mechanical detection: documented Nix-level validations (paths, container PUID/PGID, dependencies) that fail at eval/build
+  - Reorganized mechanical validation suite with law-labeled comments
+- **v10.2 (2026-01-17)**: Corrected Charter to reflect reality - `domains/infrastructure/` still exists and is active. Documented migration vision: infrastructure will be absorbed into system domain as semantic subdomains. Updated Law 11 evaluation order to include infrastructure. Marked infrastructure domain as MIGRATION PENDING.
+- **v10.1 (2026-01-11)**: Added `domains/paths/` as a new domain; updated Law 3 to reference `hwc.paths.*`; adjusted Law 11 evaluation order to include paths first; updated lints for paths; refined Law 6 for assertion passing (one parent max).
+- **v10.0 (2026-01-11)**: Removed all blessed namespace exceptions (Law 2 strict); added Laws 9 (module shapes), 10 (option purity), 11 (evaluation order); simplified validation placement (Law 6); generalized Law 8; erroneously claimed removal of infrastructure domain; aspirational push against `services/` god-directory; updated lints.
+- **v9.1 (2026-01-10)**: Added Law 5 (mkContainer), Law 8 (Retention), refined violation searches, enforcement levels
 - **v9.0 (2026-01-10)**: Laws + mechanical validation focus
 
-**End of Charter v10.1**
+**End of Charter v10.3**
