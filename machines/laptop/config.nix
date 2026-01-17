@@ -351,6 +351,15 @@
       # - Models pulled on first boot
     };
 
+    # AnythingLLM - Local AI assistant with file access
+    # Access: http://localhost:3002
+    anything-llm = {
+      enable = true;
+      # Mount ~/.nixos for AI to read/analyze NixOS configs
+      workspace.nixosDir = true;
+      # Default uses llama3.2:3b and nomic-embed-text from Ollama
+    };
+
     # Local AI workflows disabled (can enable if needed)
     local-workflows.enable = false;
   };
