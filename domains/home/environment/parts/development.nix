@@ -51,10 +51,12 @@ in
       
     ] ++ lib.optionals cfg.languages.python [
       # Python development
+      pyright
+    # Avoid adding a second Python interpreter when the analysis app already supplies one.
+    ] ++ lib.optionals (cfg.languages.python && !config.hwc.home.apps.analysis.enable) [
       python3
       python3Packages.pip
       python3Packages.virtualenv
-      pyright
       
     ] ++ lib.optionals cfg.languages.javascript [
       # JavaScript development
