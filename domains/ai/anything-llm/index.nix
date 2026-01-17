@@ -70,17 +70,16 @@ in
           --rm \
           --name anything-llm \
           --detach \
-          --publish 127.0.0.1:${toString cfg.port}:3001 \
-          --add-host host.containers.internal:host-gateway \
+          --network host \
           ${lib.concatMapStringsSep " " (v: "--volume ${v}") volumeMounts} \
           --env "LLM_PROVIDER=ollama" \
-          --env "OLLAMA_BASE_PATH=${cfg.ollama.endpoint}" \
+          --env "OLLAMA_BASE_PATH=http://127.0.0.1:11434" \
           --env "OLLAMA_MODEL_PREF=${cfg.ollama.defaultModel}" \
           --env "EMBEDDING_ENGINE=${cfg.embeddings.provider}" \
           --env "EMBEDDING_MODEL_PREF=${cfg.embeddings.model}" \
           --env "STORAGE_DIR=/app/server/storage" \
           --env "DISABLE_TELEMETRY=true" \
-          --env "SERVER_PORT=3001" \
+          --env "SERVER_PORT=${toString cfg.port}" \
           mintplexlabs/anythingllm:latest
       '';
 

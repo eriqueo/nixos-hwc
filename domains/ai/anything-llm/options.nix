@@ -45,8 +45,8 @@
     ollama = {
       endpoint = lib.mkOption {
         type = lib.types.str;
-        default = "http://host.containers.internal:11434";
-        description = "Ollama API endpoint (use host.containers.internal for container access)";
+        default = "http://127.0.0.1:11434";
+        description = "Ollama API endpoint (uses host networking for direct access)";
       };
 
       defaultModel = lib.mkOption {
