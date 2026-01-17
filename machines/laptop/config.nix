@@ -361,11 +361,16 @@
     };
   };
 
+  # Override: Disable Ollama idle shutdown for instant GPU inference
+  # The laptop profile enables 5-minute idle shutdown by default for battery savings,
+  # but we want Ollama to stay running for fast GPU responses
+  hwc.ai.ollama.idleShutdown.enable = false;
+
   # Framework automatically configures Ollama with profile-based limits:
   # - CPU: 200% (2 cores max)
   # - Memory: 4096MB (4GB max)
   # - Timeout: 60s per request
-  # - Idle shutdown: 5 minutes
+  # - Idle shutdown: DISABLED (overridden above for GPU performance)
   # - Models: llama3.2:1b, llama3.2:3b, phi3.5:3.8b
 
   # Fix Ollama systemd service - change from Type=notify to Type=forking to prevent premature shutdown
