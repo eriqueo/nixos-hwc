@@ -33,9 +33,10 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
 
-    # Create data directory
+    # Create data directory with proper permissions for container
     systemd.tmpfiles.rules = [
-      "d ${cfg.dataDir} 0755 root root -"
+      "d ${cfg.dataDir} 0777 root root -"
+      "d ${cfg.dataDir}/vector-cache 0777 root root -"
     ];
 
     # AnythingLLM container service
@@ -58,6 +59,10 @@ in
 
       preStart = ''
         ${pkgs.podman}/bin/podman pull mintplexlabs/anythingllm:latest
+
+        # Ensure storage directory exists and is writable
+        mkdir -p ${cfg.dataDir}
+        chmod -R 777 ${cfg.dataDir}
       '';
 
       script = ''
