@@ -364,8 +364,8 @@
   # Override: Disable Ollama safeguards for instant GPU inference
   # The laptop profile enables these by default for battery/thermal protection,
   # but we want Ollama to stay running for fast GPU responses
-  hwc.ai.ollama.idleShutdown.enable = false;
-  hwc.ai.ollama.thermalProtection.enable = false;
+  hwc.ai.ollama.idleShutdown.enable = lib.mkForce false;
+  hwc.ai.ollama.thermalProtection.enable = lib.mkForce false;
 
   # Framework automatically configures Ollama with profile-based limits:
   # - CPU: 200% (2 cores max)
