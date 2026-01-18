@@ -9,8 +9,8 @@ let
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
       "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd" "pulseaudio"
-      "custom/network" "bluetooth" "custom/disk-space"  
-      "temperature" "custom/battery"  "tray" "custom/notification" "custom/power"
+      "custom/network" "bluetooth" "custom/disk-space"
+      "temperature" "custom/battery" "custom/proton-auth" "tray" "custom/notification" "custom/power"
     ];
   };
 
@@ -94,6 +94,7 @@ let
     "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
+    "custom/proton-auth" = { format = "󰦝"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
   };
