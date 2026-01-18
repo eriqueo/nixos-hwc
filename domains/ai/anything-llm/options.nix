@@ -69,5 +69,40 @@
         description = "Embedding model name";
       };
     };
+
+    resourceLimits = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable resource limits to prevent runaway CPU/memory usage";
+      };
+
+      maxCpuPercent = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = ''
+          Maximum CPU usage percentage (100 = 1 core, 200 = 2 cores, etc.)
+          null = unlimited (server default), set to 100-200 for laptop
+        '';
+      };
+
+      maxMemoryMB = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = ''
+          Maximum memory in MB
+          null = unlimited (server default), set to 2048-4096 for laptop
+        '';
+      };
+    };
+
+    autoRestart = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Automatically restart service on failure
+        Recommended: false for laptop (manual control), true for server
+      '';
+    };
   };
 }
