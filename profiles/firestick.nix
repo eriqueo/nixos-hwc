@@ -9,7 +9,7 @@
 
   # No backups or Samba on the stick.
   hwc.system.services.backup.enable = lib.mkForce false;
-  hwc.networking.samba.enable = lib.mkForce false;
+  hwc.system.networking.samba.enable = lib.mkForce false;
 
   # Keep audio, trim monitoring/key remapping to stay lightweight.
   hwc.system.services.hardware = {
@@ -18,7 +18,7 @@
   };
 
   # Networking tuned for quick boot and Tailscale-only access.
-  hwc.networking = {
+  hwc.system.networking = {
     waitOnline.mode = "off";
     firewall.level = lib.mkForce "basic";
     tailscale = {

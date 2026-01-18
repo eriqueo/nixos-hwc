@@ -187,14 +187,14 @@ in {
     #=========================================================================
     
     # Add download service ports when not using VPN
-    hwc.networking.firewall.extraTcpPorts = lib.optionals (!cfg.useVpn) [
+    hwc.system.networking.firewall.extraTcpPorts = lib.optionals (!cfg.useVpn) [
       cfg.qbittorrent.webPort  # 8080
       cfg.sabnzbd.webPort      # 8081
       cfg.slskd.webPort        # 5030
     ];
     
     # UDP ports for P2P
-    hwc.networking.firewall.extraUdpPorts = lib.optionals (!cfg.useVpn) [
+    hwc.system.networking.firewall.extraUdpPorts = lib.optionals (!cfg.useVpn) [
       50300  # SLSKD P2P
     ];
   };

@@ -177,7 +177,7 @@ in
   # --- Networking Module ---
   # This is the best example of the new simplicity.
   # We now define the machine's networking role with a few high-level toggles.
-  hwc.networking = {
+  hwc.system.networking = {
     enable = true;
     ssh.enable = true;
     tailscale.enable = lib.mkDefault true;

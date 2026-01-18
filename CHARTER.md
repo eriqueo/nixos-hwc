@@ -287,7 +287,8 @@ Run these regularly / in CI. All **must return zero violations**.
 rg 'osConfig\.' domains/home --type nix | rg -v 'osConfig\.hwc or \{\}|attrByPath|lib\.mkIf isNixOS'
 
 # Law 2: Namespace fidelity (deprecated shortcuts)
-rg 'hwc\.services\.|hwc\.features\.|hwc\.paths|hwc\.filesystem|hwc\.networking|hwc\.home\.fonts' domains
+# Note: hwc.paths.* is valid (domains/paths/), hwc.system.networking.* is valid (domains/system/networking/)
+rg 'hwc\.services\.|hwc\.features\.|hwc\.filesystem|hwc\.home\.fonts|\bhwc\.networking\b' domains
 
 # Law 3: Path abstraction (hardened - matches any hardcoded path string)
 rg '"/mnt/|"/home/eric/|"/opt/|'\''/mnt/|'\''/home/eric/|'\''/opt/' domains --type nix --glob '!domains/paths/**' --glob '!*.md'

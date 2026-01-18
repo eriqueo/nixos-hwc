@@ -71,7 +71,7 @@ in {
     ]);
     
     # Declare firewall requirements through networking module
-    hwc.networking.firewall = {
+    hwc.system.networking.firewall = {
       extraTcpPorts = [ 631 ]; # CUPS web interface
       extraUdpPorts = lib.optionals cfg.avahi [ 5353 ]; # mDNS
     };

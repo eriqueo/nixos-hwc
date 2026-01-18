@@ -88,12 +88,12 @@ in {
     };
 
     # Firewall configuration
-    hwc.networking.firewall.extraTcpPorts = mkIf config.hwc.networking.enable [
+    hwc.system.networking.firewall.extraTcpPorts = mkIf config.hwc.system.networking.enable [
       cfg.port
     ];
 
     # Allow dashboard access on Tailscale
-    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.networking.tailscale.enable {
+    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.system.networking.tailscale.enable {
       allowedTCPPorts = [ cfg.port ];
     };
   };

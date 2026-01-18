@@ -331,12 +331,12 @@ in {
     # NETWORKING INTEGRATION  
     ####################################################################
     # Register business API ports with Charter v3 networking
-    hwc.networking.firewall.extraTcpPorts = mkIf (cfg.service.enable && config.hwc.networking.enable) [
+    hwc.system.networking.firewall.extraTcpPorts = mkIf (cfg.service.enable && config.hwc.system.networking.enable) [
       cfg.service.port
     ];
 
     # Allow business API access on Tailscale interface
-    networking.firewall.interfaces."tailscale0" = mkIf (cfg.service.enable && config.hwc.networking.tailscale.enable) {
+    networking.firewall.interfaces."tailscale0" = mkIf (cfg.service.enable && config.hwc.system.networking.tailscale.enable) {
       allowedTCPPorts = [ cfg.service.port ];
     };
   };

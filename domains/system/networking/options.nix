@@ -4,7 +4,7 @@ let
   types = lib.types;
 in
 {
-  options.hwc.networking = {
+  options.hwc.system.networking = {
     enable = lib.mkEnableOption "Enable HWC networking (SSH, Tailscale, Samba, firewall, NM).";
 
     # ---- NetworkManager ----
