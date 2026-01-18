@@ -76,6 +76,7 @@ in
           --env "OLLAMA_BASE_PATH=http://127.0.0.1:11434" \
           --env "OLLAMA_MODEL_PREF=${cfg.ollama.defaultModel}" \
           --env "EMBEDDING_ENGINE=${cfg.embeddings.provider}" \
+          --env "EMBEDDING_BASE_PATH=http://127.0.0.1:11434" \
           --env "EMBEDDING_MODEL_PREF=${cfg.embeddings.model}" \
           --env "STORAGE_DIR=/app/server/storage" \
           --env "DISABLE_TELEMETRY=true" \
