@@ -1,6 +1,7 @@
 {
   "mcpServers": {
-    "filesystem": {
+    "_filesystem_DISABLED": {
+      "_comment": "Disabled: npx causes npm to hang and spike CPU to 200%",
       "command": "npx",
       "args": [
         "-y",
@@ -14,20 +15,23 @@
       "command": "uvx",
       "args": ["mcp-server-git", "--repository", "/home/eric/.nixos"]
     },
-    "brave-search": {
+    "_brave-search_DISABLED": {
+      "_comment": "Disabled: npx causes npm to hang and spike CPU to 200%",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-brave-search"],
       "env": {
       }
     },
-    "github": {
+    "_github_DISABLED": {
+      "_comment": "Disabled: npx causes npm to hang and spike CPU to 200%",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
 
       }
     },
-    "sequential-thinking": {
+    "_sequential-thinking_DISABLED": {
+      "_comment": "Disabled: npx causes npm to hang and spike CPU to 200%",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
@@ -39,7 +43,8 @@
       "command": "uvx",
       "args": ["mcp-server-fetch"]
     },
-    "memory": {
+    "_memory_DISABLED": {
+      "_comment": "Disabled: npx causes npm to hang and spike CPU to 200%",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"]
     }

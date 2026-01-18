@@ -333,7 +333,7 @@
 
     # Ollama LLM service with profile-based defaults
     ollama = {
-      enable = true;
+      enable = false;
 
       # Explicit model list (overrides profile defaults without mkForce)
       models = [
@@ -354,7 +354,7 @@
     # AnythingLLM - Local AI assistant with file access
     # Access: http://localhost:3002
     anything-llm = {
-      enable = true;
+      enable = false;
       # Mount ~/.nixos for AI to read/analyze NixOS configs
       workspace.nixosDir = true;
       # Default uses llama3.2:3b and nomic-embed-text from Ollama
@@ -395,7 +395,7 @@
       STOP_CHARGE_THRESH_BAT0 = 90;   # Stop charging at 90%
 
       # Add CPU energy/performance preferences
-      CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
+      CPU_ENERGY_PERF_POLICY_ON_AC = "balance_power";  # Changed from "performance" to reduce heat
       CPU_ENERGY_PERF_POLICY_ON_BAT = "balance-power";
 
       # Boost control (disable turbo on battery for cooler operation)
@@ -417,7 +417,9 @@
   #============================================================================
   # PERFORMANCE TUNING (32GB RAM, dual NVMe system)
   #============================================================================
-  services.thermald.enable = true;
+  # Disabled: thermald doesn't support Intel Core Ultra 9 185H (Meteor Lake)
+  # TLP handles power/thermal management instead
+  services.thermald.enable = false;
   boot.kernel.sysctl = {
     # Memory management for high-RAM system
     "vm.swappiness" = 100;              # Rarely use swap (have 32GB RAM + zram)

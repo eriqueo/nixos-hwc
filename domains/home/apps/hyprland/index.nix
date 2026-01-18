@@ -56,7 +56,7 @@ in
       settings = lib.mkMerge [
         {
           debug = {
-            enable_stdout_logs = true;
+            enable_stdout_logs = false;
           };
         }
 

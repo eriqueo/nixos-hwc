@@ -166,6 +166,11 @@
     "brave-search",
     "github",
     "sequential-thinking",
-    "memory"
+    "memory",
+    "_filesystem_DISABLED",
+    "_brave-search_DISABLED",
+    "_github_DISABLED",
+    "_sequential-thinking_DISABLED",
+    "_memory_DISABLED"
   ]
 }
