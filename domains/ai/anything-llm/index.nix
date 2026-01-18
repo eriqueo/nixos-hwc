@@ -40,7 +40,8 @@ in
         maxMemoryMB = lib.mkDefault (aiProfile.ollama.maxMemoryMB / 2); # Half of Ollama's limit
       };
 
-      hwc.ai.anything-llm.autoRestart = lib.mkDefault aiProfile.idle.enable; # Don't restart if using idle shutdown
+      # Don't auto-restart if using idle shutdown (let it stay stopped)
+      hwc.ai.anything-llm.autoRestart = lib.mkDefault false;
     })
 
     # Service implementation
@@ -58,7 +59,7 @@ in
       description = "AnythingLLM - Local AI assistant with file access";
       after = [ "network-online.target" "podman-ollama.service" ];
       wants = [ "network-online.target" ];
-      wantedBy = [ "multi-user.target" ];
+      wantedBy = [ ]; # Don't auto-start on boot
 
       path = [ pkgs.podman ];
 

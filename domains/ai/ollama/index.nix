@@ -76,6 +76,7 @@ in
     # Service implementation
     {
     virtualisation.oci-containers.containers.ollama = {
+      autoStart = false;  # Don't auto-start on boot
       image = "ollama/ollama:latest";
       ports = [ "${toString cfg.port}:11434" ];
       volumes = [ "${cfg.dataDir}:/root/.ollama" ];
