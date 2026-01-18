@@ -3,7 +3,7 @@
 # AnythingLLM implementation - Local AI assistant with file system access
 # Provides ChatGPT-like interface for interacting with local files via Ollama
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, aiProfile ? null, aiProfileName ? "laptop", ... }:
 
 let
   cfg = config.hwc.ai.anything-llm;
@@ -31,8 +31,20 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    # Apply profile-based defaults if profile available
+    (lib.mkIf (aiProfile != null) {
+      hwc.ai.anything-llm.resourceLimits = {
+        enable = lib.mkDefault true;
+        maxCpuPercent = lib.mkDefault (aiProfile.ollama.maxCpuPercent / 2); # Half of Ollama's limit
+        maxMemoryMB = lib.mkDefault (aiProfile.ollama.maxMemoryMB / 2); # Half of Ollama's limit
+      };
 
+      hwc.ai.anything-llm.autoRestart = lib.mkDefault aiProfile.idle.enable; # Don't restart if using idle shutdown
+    })
+
+    # Service implementation
+    {
     # Create data directory with proper permissions for container
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0777 root root -"
@@ -50,12 +62,24 @@ in
 
       path = [ pkgs.podman ];
 
-      serviceConfig = {
-        Type = "forking";
-        Restart = "always";
-        RestartSec = "10s";
-        TimeoutStartSec = "120s";
-      };
+      serviceConfig = lib.mkMerge [
+        {
+          Type = "forking";
+          Restart = if cfg.autoRestart then "always" else "no";
+          RestartSec = "10s";
+          TimeoutStartSec = "120s";
+        }
+        # Apply resource limits if enabled
+        (lib.mkIf cfg.resourceLimits.enable (lib.mkMerge [
+          (lib.mkIf (cfg.resourceLimits.maxCpuPercent != null) {
+            CPUQuota = "${toString cfg.resourceLimits.maxCpuPercent}%";
+          })
+          (lib.mkIf (cfg.resourceLimits.maxMemoryMB != null) {
+            MemoryMax = "${toString (cfg.resourceLimits.maxMemoryMB * 1024 * 1024)}";
+            MemoryHigh = "${toString (cfg.resourceLimits.maxMemoryMB * 1024 * 1024 * 90 / 100)}";
+          })
+        ]))
+      ];
 
       preStart = ''
         ${pkgs.podman}/bin/podman pull mintplexlabs/anythingllm:latest
@@ -108,6 +132,17 @@ in
         assertion = cfg.workspace.nixosDir || cfg.workspace.homeDir || (cfg.workspace.customPaths != []);
         message = "AnythingLLM requires at least one workspace path to be enabled";
       }
+      {
+        assertion = !cfg.resourceLimits.enable ||
+          (cfg.resourceLimits.maxCpuPercent == null || cfg.resourceLimits.maxCpuPercent > 0);
+        message = "hwc.ai.anything-llm.resourceLimits.maxCpuPercent must be positive if set";
+      }
+      {
+        assertion = !cfg.resourceLimits.enable ||
+          (cfg.resourceLimits.maxMemoryMB == null || cfg.resourceLimits.maxMemoryMB > 0);
+        message = "hwc.ai.anything-llm.resourceLimits.maxMemoryMB must be positive if set";
+      }
     ];
-  };
+    } # End service implementation block
+  ]); # End mkMerge + mkIf cfg.enable
 }
