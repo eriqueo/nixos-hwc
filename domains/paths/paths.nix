@@ -165,6 +165,12 @@ in
       description = "Photo storage";
     };
 
+    screenshots = mkOption {
+      type = types.nullOr types.path;
+      default = if isLaptop then "${laptopPhotos}/screenshots" else null;
+      description = "Screenshot save location - laptop only";
+    };
+
     # -------------------------------------------------------------------------
     # PARA STRUCTURE (Laptop only)
     # -------------------------------------------------------------------------
@@ -375,6 +381,7 @@ in
     HWC_COLD_STORAGE = cfg.cold;
     HWC_BACKUP_STORAGE = cfg.backup;
     HWC_PHOTOS_STORAGE = cfg.photos;
+    HWC_SCREENSHOTS_DIR = cfg.screenshots;
 
     # PARA structure
     HWC_INBOX_DIR = cfg.user.inbox;
