@@ -324,7 +324,7 @@ EOF
     ####################################################################
 
     # Open port on Tailscale interface (not public)
-    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.networking.tailscale.enable {
+    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.system.networking.tailscale.enable {
       allowedTCPPorts = [ cfg.port ];
     };
   };

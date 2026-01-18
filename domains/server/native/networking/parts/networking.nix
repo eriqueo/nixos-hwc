@@ -176,7 +176,7 @@ in {
     #=========================================================================
     
     # Add VPN and media service ports to firewall
-    hwc.networking.firewall = lib.mkIf cfg.firewall.allowMediaPorts {
+    hwc.system.networking.firewall = lib.mkIf cfg.firewall.allowMediaPorts {
       extraTcpPorts = cfg.firewall.vpnPorts;
     };
 

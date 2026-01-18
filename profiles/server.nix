@@ -102,7 +102,7 @@
   #============================================================================
   
   # Server networking extends base configuration
-  hwc.networking = {
+  hwc.system.networking = {
     # Base networking already enabled in base.nix
     #ssh.x11Forwarding = true;  # For remote GUI applications
     
@@ -418,7 +418,7 @@
       message = "Server profile requires hwc.secrets.enable = true";
     }
     {
-      assertion = config.hwc.networking.tailscale.enable;
+      assertion = config.hwc.system.networking.tailscale.enable;
       message = "Server profile requires Tailscale for secure remote access";
     }
   ];

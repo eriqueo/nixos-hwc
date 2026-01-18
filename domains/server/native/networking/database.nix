@@ -278,13 +278,13 @@ in {
     # NETWORKING INTEGRATION
     ####################################################################
     # Register business database ports with Charter v3 networking
-    hwc.networking.firewall.extraTcpPorts = mkIf config.hwc.networking.enable (
+    hwc.system.networking.firewall.extraTcpPorts = mkIf config.hwc.system.networking.enable (
       optional cfg.postgresql.enable 5432 ++
       optional cfg.redis.enable cfg.redis.port
     );
 
     # Allow business database access on Tailscale interface
-    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.networking.tailscale.enable {
+    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.system.networking.tailscale.enable {
       allowedTCPPorts = 
         optional cfg.postgresql.enable 5432 ++
         optional cfg.redis.enable cfg.redis.port;

@@ -596,13 +596,13 @@ EOF
     # NETWORKING INTEGRATION
     ####################################################################
     # Register business monitoring ports with Charter v3 networking
-    hwc.networking.firewall.extraTcpPorts = mkIf config.hwc.networking.enable (
+    hwc.system.networking.firewall.extraTcpPorts = mkIf config.hwc.system.networking.enable (
       optional cfg.dashboard.enable cfg.dashboard.port ++
       optional cfg.metrics.enable cfg.metrics.port
     );
 
     # Allow business monitoring access on Tailscale interface
-    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.networking.tailscale.enable {
+    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.system.networking.tailscale.enable {
       allowedTCPPorts = 
         optional cfg.dashboard.enable cfg.dashboard.port ++
         optional cfg.metrics.enable cfg.metrics.port;

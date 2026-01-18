@@ -74,7 +74,7 @@
   # allowUnfree set in flake.nix
 
   # --- Networking Configuration (Server: DO wait for network) ---
-  hwc.networking = {
+  hwc.system.networking = {
     enable = true;
     networkManager.enable = true;
 

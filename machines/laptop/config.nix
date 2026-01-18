@@ -177,7 +177,7 @@
   };
 
   # --- Networking Configuration (Laptop: do NOT block boot on network) ---
-  hwc.networking = {
+  hwc.system.networking = {
     enable = true;
     networkManager.enable = true;
 

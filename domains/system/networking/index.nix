@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.networking;
+  cfg = config.hwc.system.networking;
 in
 {
   #==========================================================================
