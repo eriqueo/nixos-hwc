@@ -22,6 +22,9 @@ in
 
     # User services
     systemd.user.services = (session.services or {});
+
+    # XDG config files (autostart entries, etc.)
+    xdg.configFile = (session.autostartFiles or {});
   };
 
   #==========================================================================
