@@ -23,15 +23,15 @@
       }
     },
     "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "command": "/run/current-system/sw/bin/node",
+      "args": ["/home/eric/.npm-global/lib/node_modules/@modelcontextprotocol/server-github/dist/index.js"],
       "env": {
 
       }
     },
     "sequential-thinking": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+      "command": "/run/current-system/sw/bin/node",
+      "args": ["/home/eric/.npm-global/lib/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js"]
     },
     "time": {
       "command": "uvx",
@@ -42,8 +42,8 @@
       "args": ["mcp-server-fetch"]
     },
     "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"]
+      "command": "/run/current-system/sw/bin/node",
+      "args": ["/home/eric/.npm-global/lib/node_modules/@modelcontextprotocol/server-memory/dist/index.js"]
     }
   }
 }

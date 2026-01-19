@@ -6,7 +6,7 @@
 
     musicDir = lib.mkOption {
       type = lib.types.str;
-      default = config.hwc.paths.media.music or "/mnt/media/music";
+      default = config.hwc.paths.media.music or "${config.hwc.paths.media.music}";
       description = "Music library directory";
     };
 

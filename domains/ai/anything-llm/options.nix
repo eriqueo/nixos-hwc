@@ -38,7 +38,7 @@
         type = lib.types.listOf lib.types.str;
         default = [];
         description = "Additional custom paths to mount (read-only)";
-        example = [ "/etc/nixos" "/mnt/media/documents" ];
+        example = [ config.hwc.paths.nixos "${config.hwc.paths.user.work}/documents" ];
       };
     };
 

@@ -14,7 +14,7 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:5055:5055" ];
       volumes = [
-        "/opt/jellyseerr/config:/app/config:rw"
+        "${config.hwc.paths.hot.downloads}/jellyseerr/config:/app/config:rw"
       ];
       environment = { };
       extraOptions = [ ];

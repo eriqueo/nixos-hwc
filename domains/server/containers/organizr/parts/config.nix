@@ -53,7 +53,7 @@ in
 
       # Volume mounts
       volumes = [
-        "/opt/downloads/organizr:/config"
+        "${config.hwc.paths.hot.downloads}/organizr:/config"
       ];
 
       # Dependencies

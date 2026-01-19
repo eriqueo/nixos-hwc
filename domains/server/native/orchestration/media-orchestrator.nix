@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 let
   pythonWithRequests = pkgs.python3.withPackages (ps: with ps; [ requests ]);
-  cfgRoot = "/opt/downloads";
+  cfgRoot = config.hwc.paths.hot.downloads;
   paths = config.hwc.paths;
   hotRoot = config.hwc.paths.hot.root or "/mnt/hot";
 

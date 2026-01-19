@@ -17,7 +17,7 @@ in
         "${cfg.configDir}:/config"
         "${cfg.musicDir}:/music"
         "${cfg.importDir}:/imports"
-        "/mnt/media/quarantine:/quarantine"
+        "${config.hwc.paths.media.root}/quarantine:/quarantine"
       ];
       environment = {
         PUID = "1000";

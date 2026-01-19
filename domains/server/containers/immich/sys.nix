@@ -14,7 +14,7 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
       ports = [];
-      volumes = [ "/opt/downloads/immich:/config" ];
+      volumes = [ "${config.hwc.paths.hot.downloads}/immich:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })

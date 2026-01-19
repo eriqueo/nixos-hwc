@@ -14,7 +14,7 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
       ports = [ "0.0.0.0:8096:8096" ];
-      volumes = [ "/opt/downloads/jellyfin:/config" ];
+      volumes = [ "${config.hwc.paths.hot.downloads}/jellyfin:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })
