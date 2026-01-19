@@ -84,9 +84,9 @@ in
       # Volume mounts
       volumes = [
         # Config and database
-        "/opt/downloads/tdarr/server:/app/server"
-        "/opt/downloads/tdarr/configs:/app/configs"
-        "/opt/downloads/tdarr/logs:/app/logs"
+        "${config.hwc.paths.hot.downloads}/tdarr/server:/app/server"
+        "${config.hwc.paths.hot.downloads}/tdarr/configs:/app/configs"
+        "${config.hwc.paths.hot.downloads}/tdarr/logs:/app/logs"
 
         # Media libraries (read/write for transcoding)
         "${paths.media.root}/tv:/media/tv"

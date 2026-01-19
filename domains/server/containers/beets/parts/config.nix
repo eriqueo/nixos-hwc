@@ -2,7 +2,7 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.beets;
-  cfgRoot = "/opt/downloads/beets";
+  cfgRoot = "${config.hwc.paths.hot.downloads}/beets";
 
   generateConfigScript = pkgs.writeShellScript "beets-generate-config" ''
     set -euo pipefail

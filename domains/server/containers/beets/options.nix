@@ -21,13 +21,13 @@ in
 
     configDir = mkOption {
       type = types.str;
-      default = "/opt/downloads/beets";
+      default = "${config.hwc.paths.hot.downloads}/beets";
       description = "Directory to store Beets configuration and database";
     };
 
     musicDir = mkOption {
       type = types.str;
-      default = config.hwc.paths.media.music or "/mnt/media/music";
+      default = config.hwc.paths.media.music or "${config.hwc.paths.media.music}";
       description = "Directory where organized music will be stored";
     };
 

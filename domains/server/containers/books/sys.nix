@@ -15,7 +15,7 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:5299:5299" ];
       volumes = [
-        "/opt/downloads/books:/config"
+        "${config.hwc.paths.hot.downloads}/books:/config"
         "${config.hwc.paths.hot.root}/downloads:/downloads"
         "${config.hwc.paths.media.root}/books:/books"
       ];

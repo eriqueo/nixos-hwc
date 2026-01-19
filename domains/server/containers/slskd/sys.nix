@@ -18,9 +18,9 @@ in
         "0.0.0.0:50300:50300/tcp"  # P2P port
       ];
       volumes = [
-        "/mnt/hot/downloads/incomplete:/downloads/incomplete"
-        "/mnt/hot/downloads/music:/downloads/music"
-        "/mnt/media/music:/music:ro"
+        "${config.hwc.paths.hot.downloads}/incomplete:/downloads/incomplete"
+        "${config.hwc.paths.hot.downloads}/music:/downloads/music"
+        "${config.hwc.paths.media.music}:/music:ro"
         "/etc/slskd/slskd.yml:/app/slskd.yml:ro"
       ];
       environment = {};

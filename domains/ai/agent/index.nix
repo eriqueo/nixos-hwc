@@ -13,7 +13,7 @@ let
   agentScript = pkgs.writeScriptBin "hwc-ai-agent" ''
     #!${agentPython}/bin/python3
     ${builtins.replaceStrings
-      ["/home/eric/.nixos" "/home/eric/.nixos-mcp-drafts"]
+      ["${config.hwc.paths.nixos}" "${config.hwc.paths.user.home}/.nixos-mcp-drafts"]
       [config.hwc.paths.nixos "${config.hwc.paths.user.home}/.nixos-mcp-drafts"]
       (builtins.readFile ./hwc-ai-agent.py)
     }

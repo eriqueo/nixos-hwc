@@ -66,7 +66,7 @@ in {
       # Predefined SketchUp share
       // lib.optionalAttrs cfg.enableSketchupShare {
         "skpshare" = {
-          path = "/opt/sketchup/vm/shared";
+          path = "${config.hwc.paths.state}/sketchup/vm/shared";
           browseable = "yes";
           "read only" = "no";
           "guest ok" = "yes";
@@ -81,7 +81,7 @@ in {
     
     # Ensure SketchUp share directory exists
     systemd.tmpfiles.rules = lib.optionals cfg.enableSketchupShare [
-      "d /opt/sketchup/vm/shared 0777 nobody nogroup -"
+      "d ${config.hwc.paths.state}/sketchup/vm/shared 0777 nobody nogroup -"
     ];
     
     # Include samba client tools

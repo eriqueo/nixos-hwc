@@ -21,7 +21,7 @@ in
 
       musicFolder = mkOption {
         type = types.str;
-        default = config.hwc.paths.media.music or "/mnt/media/music";
+        default = config.hwc.paths.media.music or "${config.hwc.paths.media.music}";
         description = "Path to music library";
       };
 
