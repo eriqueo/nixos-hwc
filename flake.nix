@@ -13,6 +13,7 @@
 # USED BY (Downstream):
 #   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
 #   - nixosConfigurations.hwc-server -> ./machines/server/config.nix
+#   - nixosConfigurations.hwc-xps -> ./machines/xps/config.nix
 #   - nixosConfigurations.hwc-gaming -> ./machines/gaming/config.nix
 #   - nixosConfigurations.hwc-firestick -> ./machines/firestick/config.nix
 #
@@ -22,6 +23,7 @@
 # USAGE:
 #   nixos-rebuild switch --flake .#hwc-laptop
 #   nixos-rebuild switch --flake .#hwc-server
+#   nixos-rebuild switch --flake .#hwc-xps
 #   nixos-rebuild switch --flake .#hwc-gaming
 
 {
@@ -130,6 +132,22 @@
           ./machines/server/config.nix
           {
             # Disable Home Manager on server - it's enabled somewhere in domains
+            home-manager.users.eric.home.stateVersion = "24.05";
+            home-manager.backupFileExtension = "backup";
+            # Pass inputs to Home Manager modules
+            home-manager.extraSpecialArgs = { inherit inputs; };
+          }
+        ];
+      };
+      hwc-xps = lib.nixosSystem {
+        inherit system pkgs;
+        specialArgs = { inherit inputs; };
+        modules = [
+          agenix.nixosModules.default
+          home-manager.nixosModules.home-manager
+          ./machines/xps/config.nix
+          {
+            # Home Manager configured separately in machines/xps/home.nix
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
             # Pass inputs to Home Manager modules
