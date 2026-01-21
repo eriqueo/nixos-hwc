@@ -154,6 +154,9 @@
   # Enable the declarative VPN service using the official CLI.
   hwc.system.services.vpn.protonvpn.enable = true;
 
+  # Enable Proton Mail Bridge system service (headless, certificate-exporting)
+  hwc.system.services.protonmail-bridge.enable = true;
+
   # Enable session management (greetd autologin, sudo, lingering).
   hwc.system.services.session = {
     enable = true;

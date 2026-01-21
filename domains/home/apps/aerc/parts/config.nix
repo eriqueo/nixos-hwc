@@ -4,19 +4,19 @@ let
   accounts  = config.hwc.home.mail.accounts or {};
   accVals   = lib.attrValues accounts;
   themePart = import ./theme.nix { inherit lib config; };
-  maildirBase   = "maildir://${config.home.homeDirectory}/400_mail/Maildir";
+  maildirBase   = "${config.home.homeDirectory}/Maildir";
 
-  # Unified inbox: All accounts share the same maildir folders
-  # source = root Maildir (shows all folders including 000_inbox, 010_sent, etc.)
-  # Each account is just a sending identity
+  # Per-account views using maildir-account-path
+  # Each account shows only its own folders within the unified Maildir
   accountBlock = a: ''
     [${a.name}]
+    source               = notmuch://${maildirBase}
+    maildir-store        = ${maildirBase}
+    maildir-account-path = ${a.maildirName}
+    multi-file-strategy  = act-one-delete-rest
     from                 = ${a.realName or ""} <${a.address}>
-    source               = ${maildirBase}
     outgoing             = exec:msmtp -a ${a.send.msmtpAccount}
-    postpone             = ${maildirBase}/011_drafts
-    copy-to              = ${maildirBase}/010_sent
-    ${if a.primary or false then "default = INBOX" else ""}
+    ${if a.primary or false then "default = inbox" else ""}
   '';
 
   # Saved searches shown as folders under the notmuch unified account
@@ -31,16 +31,16 @@ let
     gpers  = tag:acc:gpers AND NOT tag:trash AND NOT tag:spam
   '';
 
-  # Unified notmuch account (first)
+  # Unified notmuch account (first) - shows all mail across all accounts
   unifiedAccount = ''
     [unified]
-    source     = notmuch://${config.home.homeDirectory}/400_mail/Maildir
-    from       = Eric O'Keefe <eric@iheartwoodcraft.com>
-    outgoing   = exec:msmtp -a proton
-    postpone   = ${maildirBase}/700_drafts
-    copy-to    = ${maildirBase}/600_sent
-    query-map  = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
-    default    = inbox
+    source              = notmuch://${maildirBase}
+    maildir-store       = ${maildirBase}
+    multi-file-strategy = act-one-delete-rest
+    query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
+    from                = Eric O'Keefe <eric@iheartwoodcraft.com>
+    outgoing            = exec:msmtp -a iheartwoodcraft
+    default             = inbox
   '';
 
   # Make unified FIRST, then the IMAP accounts

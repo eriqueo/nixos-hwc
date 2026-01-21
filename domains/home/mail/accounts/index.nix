@@ -30,7 +30,7 @@ in
         type = "proton-bridge";
         realName = "Eric";
         address = "eriqueo@proton.me";
-        login = "eric@iheartwoodcraft.com";
+        login = "eriqueo";
         password = { mode = "pass"; pass = "email/proton/bridge"; };
         maildirName = "200_personal";
         mailboxMapping = {
@@ -90,7 +90,7 @@ in
           type = "proton-bridge";
           realName = "Eric";
           address = "eric@iheartwoodcraft.com";
-          login = "eric@iheartwoodcraft.com";
+          login = "eriqueo";
           password = { mode = "pass"; pass = "email/proton/bridge"; };
           maildirName = "100_hwc";
           mailboxMapping = {
