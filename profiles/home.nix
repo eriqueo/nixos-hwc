@@ -41,15 +41,25 @@
 
         # Mail & Communication
         mail = {
-          enable = lib.mkDefault false;  # DISABLED: mbsync failures, temporarily disabled
-          # Bridge managed by Home Manager user service
+          enable = lib.mkDefault true;  # ENABLED: Using system-level bridge service
+          # Bridge managed by system service (NOT Home Manager)
           bridge.enable = false;
 
-          # Notmuch configuration per runbook
+          # Notmuch configuration for unified inbox view
           notmuch = {
+            maildirRoot = lib.mkDefault "$HOME/Maildir";
             userName = "Eric O'Keefe";
             primaryEmail = "eric@iheartwoodcraft.com";
+            otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
             newTags = [ "unread" "inbox" ];
+            excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
+            savedSearches = {
+              inbox = "tag:inbox and not tag:archived";
+              unread = "tag:unread";
+              work = "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
+              personal = "from:*@proton.me or from:*eriqueokeefe@gmail.com";
+              urgent = "tag:urgent or tag:important";
+            };
           };
         };
 
@@ -69,11 +79,11 @@
           chromium.enable = lib.mkDefault true;   # Chromium browser
           librewolf.enable = lib.mkDefault true;  # Privacy-focused Firefox
 
-          # Mail Clients (DISABLED with mail infrastructure)
-          aerc.enable = lib.mkDefault false;                # TUI mail client
+          # Mail Clients (aerc with notmuch backend for unified inbox)
+          aerc.enable = lib.mkDefault true;                 # TUI mail client with notmuch
           neomutt.enable = lib.mkDefault false;             # TUI mail client (alternative)
           betterbird.enable = lib.mkDefault false;          # GUI mail client (Thunderbird fork)
-          protonMail.enable = lib.mkDefault false;          # Proton Mail bridge/client
+          protonMail.enable = lib.mkDefault true;           # Proton Mail desktop client
 
           # Security
           gpg.enable = lib.mkDefault true;
