@@ -4,7 +4,11 @@ let
   accounts  = config.hwc.home.mail.accounts or {};
   accVals   = lib.attrValues accounts;
   themePart = import ./theme.nix { inherit lib config; };
-  maildirBase   = "${config.home.homeDirectory}/Maildir";
+  # Keep aerc in lockstep with the notmuch maildir root
+  maildirBase =
+    let nmRoot = config.hwc.home.mail.notmuch.maildirRoot or "";
+        pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
+    in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
   # Per-account views using maildir-account-path
   # Each account shows only its own folders within the unified Maildir
@@ -25,10 +29,10 @@ let
     unread = tag:unread AND NOT tag:trash AND NOT tag:spam
     all    = NOT tag:trash AND NOT tag:spam
 
-    hwc    = tag:acc:hwc   AND NOT tag:trash AND NOT tag:spam
-    gbiz   = tag:acc:gbiz  AND NOT tag:trash AND NOT tag:spam
-    pers   = tag:acc:pers  AND NOT tag:trash AND NOT tag:spam
-    gpers  = tag:acc:gpers AND NOT tag:trash AND NOT tag:spam
+    hwc         = to:eric@iheartwoodcraft.com AND NOT tag:trash AND NOT tag:spam
+    personal    = to:eriqueo@proton.me AND NOT tag:trash AND NOT tag:spam
+    gmail-biz   = to:heartwoodcraftmt@gmail.com AND NOT tag:trash AND NOT tag:spam
+    gmail-pers  = to:eriqueokeefe@gmail.com AND NOT tag:trash AND NOT tag:spam
   '';
 
   # Unified notmuch account (first) - shows all mail across all accounts
@@ -45,6 +49,7 @@ let
 
   # Make unified FIRST, then the IMAP accounts
   accountsConf = unifiedAccount + "\n\n" + lib.concatStringsSep "\n\n" (map accountBlock accVals);
+  accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
 
   stylesetConf = let
     tokens = themePart.tokens;
@@ -154,14 +159,9 @@ let
     application/* = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R --mouse -+S -X
   '';
 in
-  {
+{
   files = profileBase:{
     ".config/aerc/aerc.conf".text = aercConf;
-    # accounts.conf contains NO secrets (passwords are in msmtp config)
-    ".config/aerc/accounts.conf" = {
-      text = accountsConf;
-      mode = "0600";
-    };
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
     ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
@@ -170,4 +170,5 @@ in
     jq libxml2 mpv unzip gnutar file xdg-utils w3m pandoc glow p7zip unrar
     util-linux ncurses ov xclip
   ];
+  inherit accountsFile;
 }

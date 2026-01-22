@@ -5,10 +5,7 @@ let
   paths = import ./parts/paths.nix { inherit lib config cfg; };
   ident = import ./parts/identity.nix { inherit lib cfg; };
   afewCfg = config.hwc.home.mail.afew or {};
-  afewPkg = import (builtins.path { path = ../afew/package.nix; name = "afew-patched-package"; }) {
-    inherit lib pkgs;
-    cfg = afewCfg;
-  };
+  afewPkg = import ../afew/package.nix { inherit lib pkgs; cfg = afewCfg; };
 
   cfgPart = import ./parts/config.nix {
     inherit lib pkgs;

@@ -25,22 +25,35 @@ in
   # IMPLEMENTATION
   #==========================================================================
   hwc.home.mail.accounts = {
-    proton = {
-        name = "proton";
+    proton-unified = {
+        name = "proton-unified";
         type = "proton-bridge";
         realName = "Eric";
-        address = "eriqueo@proton.me";
-        login = "eriqueo";
+        address = "eric@iheartwoodcraft.com";  # Primary address for sending
+        login = "eriqueo";  # Bridge username (NOT email address)
         password = { mode = "pass"; pass = "email/proton/bridge"; };
-        maildirName = "200_personal";
+        maildirName = "100_proton";  # Single maildir for all Proton mail
         mailboxMapping = {
-          "personal_inbox" = "inbox";    # Server-side filtered folder
-          "Sent"           = "sent";
-          "Drafts"         = "drafts";
-          "Archive"        = "archive";
+          "Folders/hwc_inbox"      = "hwc-inbox";
+          "Folders/personal_inbox" = "personal-inbox";
+          "Sent"                   = "sent";
+          "Drafts"                 = "drafts";
+          "Archive"                = "archive";
         };
-        sync.wildcards = [ "Folders/*" "Labels/*" ];
-        send.msmtpAccount = "proton";
+        sync.wildcards = [];  # Explicit folders only - no wildcards
+        send.msmtpAccount = "proton-hwc";  # Default to work identity
+        # Add second identity for personal address
+        extraMsmtp = ''
+          account proton-personal
+          host 127.0.0.1
+          port 1025
+          tls off
+          tls_starttls off
+          auth plain
+          from eriqueo@proton.me
+          user eriqueo
+          passwordeval "pass show email/proton/bridge"
+        '';
         primary = true;
       };
 
@@ -82,25 +95,6 @@ in
             "[Gmail]/Starred"     = "starred";
           };
           send.msmtpAccount = "gmail-business";
-        };
-
-
-    iheartwoodcraft = {
-          name = "iheartwoodcraft";
-          type = "proton-bridge";
-          realName = "Eric";
-          address = "eric@iheartwoodcraft.com";
-          login = "eriqueo";
-          password = { mode = "pass"; pass = "email/proton/bridge"; };
-          maildirName = "100_hwc";
-          mailboxMapping = {
-            "hwc_inbox" = "inbox";    # Server-side filtered folder (note: underscore, not hyphen)
-            "Sent"      = "sent";
-            "Drafts"    = "drafts";
-            "Archive"   = "archive";
-          };
-          sync.wildcards = [ "Folders/*" ];
-          send.msmtpAccount = "iheartwoodcraft";
         };
   };
 
