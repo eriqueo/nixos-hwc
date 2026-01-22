@@ -24,6 +24,14 @@
   networking.hostName = "hwc-xps";
   networking.hostId = "a7c3d821";  # Generated: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' '
 
+  # MIGRATION FIX: Use actual working password hash from hwc-kids
+  # This overrides the fallback password from domains/system/users/options.nix
+  # Using hashedPassword directly since secrets/age not configured yet
+  users.users.eric.hashedPassword = "$6$XeiiTwbz$qYPx.U2Gj0K4BiKqqniBbI9m2WWU9.rKelkJceqjXlgbnXRcbsbQ8idxmj28FK2mjjtOqU5aKV4oYQt3Wa91f.";
+
+  # Keep mutableUsers = false for security (declarative password management)
+  # users.mutableUsers stays false (default from domains/system/users/eric.nix)
+
   # ZFS support for backup drives (if needed)
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;
@@ -51,15 +59,15 @@
   # No overrides needed - all defaults match requirements
 
   # Storage infrastructure configuration (Charter v10.1 compliant)
-  # NOTE: UUIDs below are PLACEHOLDERS - update during installation
+  # DISABLED: External storage not yet configured
   hwc.infrastructure.storage = {
     hot = {
-      enable = true;
-      device = "/dev/disk/by-uuid/PLACEHOLDER-HOT-UUID";  # TODO: Update during install
-      fsType = "ext4";
+      enable = false;  # DISABLED: No /mnt/hot partition yet
+      # device = "/dev/disk/by-uuid/PLACEHOLDER-HOT-UUID";
+      # fsType = "ext4";
     };
-    media.enable = true;   # Directory management only (mount defined below)
-    backup.enable = true;  # Enable backup drive automation
+    media.enable = false;   # DISABLED: External DAS not connected yet
+    backup.enable = false;  # DISABLED: External backup drive not configured yet
   };
 
   # Root filesystem mount (will be generated in hardware.nix)
@@ -76,18 +84,18 @@
   # };
 
   # Media storage mount (external DAS with 2x3TB HDDs)
-  # Update UUID during installation
-  fileSystems."/mnt/media" = {
-    device = "/dev/disk/by-label/media";  # Or use UUID after setup
-    fsType = "ext4";
-  };
+  # DISABLED: External DAS not connected yet
+  # fileSystems."/mnt/media" = {
+  #   device = "/dev/disk/by-label/media";  # Or use UUID after setup
+  #   fsType = "ext4";
+  # };
 
   # Backup storage mount (external DAS partition)
-  # Update path/UUID during installation
-  fileSystems."/mnt/backup" = {
-    device = "/dev/disk/by-label/backup";  # Or use UUID after setup
-    fsType = "ext4";
-  };
+  # DISABLED: External backup drive not configured yet
+  # fileSystems."/mnt/backup" = {
+  #   device = "/dev/disk/by-label/backup";  # Or use UUID after setup
+  #   fsType = "ext4";
+  # };
 
   # Swap file for laptop (16GB recommended)
   swapDevices = [ { device = "/var/swapfile"; size = 16384; } ];
@@ -154,11 +162,11 @@
 
   # Backup configuration for XPS server
   hwc.system.services.backup = {
-    enable = true;
+    enable = lib.mkForce false;  # DISABLED: /mnt/backup not configured yet
 
     # Local backup to external DAS
     local = {
-      enable = true;
+      enable = lib.mkForce false;  # DISABLED: /mnt/backup not mounted
       mountPoint = "/mnt/backup";  # External DAS backup partition
       keepDaily = 7;    # Keep 7 daily backups (1 week)
       keepWeekly = 4;   # Keep 4 weekly backups (1 month)
@@ -168,9 +176,9 @@
       # CRITICAL DATA ONLY (smaller backup than main server)
       sources = [
         "/home"                     # User data, configs, nixos repo
-        "/opt/business"             # Business data (if any)
-        "/mnt/media/databases"      # Database backups
-        "/mnt/media/backups"        # Other backups
+        # "/opt/business"           # Business data (if any) - DISABLED: not configured yet
+        # "/mnt/media/databases"    # Database backups - DISABLED: /mnt/media not mounted
+        # "/mnt/media/backups"      # Other backups - DISABLED: /mnt/media not mounted
         # NOTE: /home/eric/.nixos is backed up via /home
         # EXCLUDED (replaceable):
         # "/mnt/media/movies"       # Can re-download
@@ -235,6 +243,16 @@
     # };
   };
 
+  # Disable heavyweight creative/productivity apps on the backup laptop build
+  home-manager.users.eric.hwc.home.apps = {
+    blender.enable = lib.mkForce false;
+    freecad.enable = lib.mkForce false;
+    obsidian.enable = lib.mkForce false;
+    onlyoffice-desktopeditors.enable = lib.mkForce false;
+    slack.enable = lib.mkForce false;
+    bottles-unwrapped.enable = lib.mkForce false;
+  };
+
   # Desktop Environment - System-lane dependencies
   hwc.system.apps.hyprland.enable = true;  # Startup script, helper scripts
   hwc.system.apps.waybar.enable = true;    # Waybar system dependencies
@@ -263,79 +281,17 @@
     # AI CLI tools disabled (conflicts with local-workflows post-rebuild-ai-docs service)
     tools.enable = false;
 
-    # Ollama LLM service with laptop profile (conservative limits)
-    ollama = {
-      enable = true;
+    # Ollama could be enabled later for on-device LLMs
+    ollama.enable = false;
 
-      # Same models as main server (4GB VRAM if NVIDIA MX150)
-      models = [
-        "qwen2.5-coder:3b"   # 1.9GB - Best coding model
-        "phi3:3.8b"          # 2.3GB - General purpose
-        "llama3.2:3b"        # 2.0GB - Chat, journaling
-      ];
-
-      # Laptop profile defaults (conservative)
-      resourceLimits = {
-        enable = true;
-        maxCpuPercent = 80;           # Limit to 80% CPU
-        maxMemoryMB = 4096;           # 4GB memory limit
-        maxRequestSeconds = 600;      # 10 minute timeout
-      };
-
-      # Thermal protection for laptop
-      thermalProtection = {
-        enable = true;
-        warningTemp = 75;             # Start throttling at 75°C
-        criticalTemp = 85;            # Emergency stop at 85°C (lower than server's 90°C)
-      };
-
-      idleShutdown = {
-        enable = true;                # Shutdown when idle to save power/heat
-        idleMinutes = 30;             # 30 minutes of inactivity before shutdown
-      };
-    };
-
-    # Local AI workflows and automation (same as server)
+    # Disable automation workloads for the lightweight laptop build
     local-workflows = {
-      enable = true;
-
-      # AI-powered file cleanup agent
-      fileCleanup = {
-        enable = true;
-        watchDirs = [ "/mnt/hot/inbox" "/home/eric/Downloads" ];
-        schedule = "*:0/30";  # Every 30 minutes
-        model = "qwen2.5-coder:3b";
-        dryRun = false;
-      };
-
-      # Automatic daily journaling
-      journaling = {
-        enable = true;
-        outputDir = "/home/eric/Documents/HWC-AI-Journal";
-        sources = [ "systemd-journal" "container-logs" "nixos-rebuilds" ];
-        schedule = "daily";
-        timeOfDay = "02:00";
-        model = "llama3.2:3b";
-        retentionDays = 90;
-      };
-
-      # Auto-documentation generator (CLI tool)
-      autoDoc = {
-        enable = true;
-        model = "qwen2.5-coder:3b";
-      };
-
-      # Interactive chat CLI
-      chatCli = {
-        enable = true;
-        model = "llama3:8b";
-      };
-
-      # Workflows HTTP API
-      api = {
-        enable = true;
-        port = 6021;
-      };
+      enable = false;
+      fileCleanup.enable = false;
+      journaling.enable = false;
+      autoDoc.enable = false;
+      chatCli.enable = false;
+      api.enable = false;
     };
   };
 
@@ -343,7 +299,7 @@
   # Access: https://hwc-xps.ocelot-wahoo.ts.net:3443 (via Caddy port mode)
   # TODO: Update Tailscale domain in routes.nix
   hwc.ai.open-webui = {
-    enable = true;
+    enable = false;
     enableAuth = false;  # TEMPORARY: Disabled to bypass signup page rendering issue
     # All other settings use defaults:
     # - port: 3001
@@ -353,7 +309,7 @@
 
   # MCP (Model Context Protocol) server for LLM access
   hwc.ai.mcp = {
-    enable = true;
+    enable = false;
 
     # Filesystem MCP for ~/.nixos directory
     filesystem.nixos = {
@@ -369,11 +325,11 @@
 
   # Enable AI router and agent
   hwc.ai.router = {
-    enable = true;
+    enable = false;
     port = 11435;
   };
   hwc.ai.agent = {
-    enable = true;
+    enable = false;
     port = 6020;
   };
 

@@ -1,0 +1,10 @@
+# HWC-XPS Age Public Key
+# Generated: 2026-01-21
+# Machine: hwc-xps (Dell XPS 2018)
+#
+# This public key needs to be added to all .age files in domains/secrets/parts/
+# to allow hwc-xps to decrypt secrets.
+#
+# Re-encryption must be done from hwc-laptop or hwc-server (machines with existing keys).
+
+age19wqs2awjlqg5zywzme9jxr8yrvlk76samyk2tu472kas0k4weuwqe2udpf
