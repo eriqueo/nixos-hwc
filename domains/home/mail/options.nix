@@ -8,7 +8,7 @@ let t = lib.types; in
     afew.package = lib.mkOption {
       type = t.nullOr t.package;
       default = null;
-      description = "Optional override for the afew package (patched by default to drop pkg_resources).";
+      description = "Optional override for the afew package (patched to drop pkg_resources; override is patched too).";
     };
 
     accounts = lib.mkOption {

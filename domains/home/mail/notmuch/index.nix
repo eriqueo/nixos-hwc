@@ -4,16 +4,11 @@ let
   cfg = config.hwc.home.mail.notmuch or {};
   paths = import ./parts/paths.nix { inherit lib config cfg; };
   ident = import ./parts/identity.nix { inherit lib cfg; };
-
-  afewPatch = ../afew/patches/afew-importlib-metadata.patch;
-
-  afewPkg =
-    let base = if (config.hwc.home.mail.afew.package or null) != null
-               then config.hwc.home.mail.afew.package
-               else pkgs.afew;
-    in base.overrideAttrs (old: {
-      patches = (old.patches or []) ++ [ afewPatch ];
-    });
+  afewCfg = config.hwc.home.mail.afew or {};
+  afewPkg = import (builtins.path { path = ../afew/package.nix; name = "afew-patched-package"; }) {
+    inherit lib pkgs;
+    cfg = afewCfg;
+  };
 
   cfgPart = import ./parts/config.nix {
     inherit lib pkgs;
@@ -28,6 +23,7 @@ let
 
   hookTxt = import ./parts/hooks.nix {
     inherit lib pkgs special afewPkg;
+    afewEnabled = afewCfg.enable or false;
     rulesText = rules.text;
     extraHook = cfg.postNewHook or "";
   };

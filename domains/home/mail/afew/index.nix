@@ -3,14 +3,11 @@ let
   cfg   = config.hwc.home.mail.afew or {};
   nmCfg = config.hwc.home.mail.notmuch or {};
 
-  patchPath = ./patches/afew-importlib-metadata.patch;
-
-  baseAfew =
-    if cfg.package != null then cfg.package else pkgs.afew;
-
-  afewPkg = baseAfew.overrideAttrs (old: {
-    patches = (old.patches or []) ++ [ patchPath ];
-  });
+  afewSrc = builtins.path { path = ./.; name = "afew-module-src"; };
+  afewPkg = import (afewSrc + "/package.nix") {
+    inherit lib pkgs;
+    cfg = cfg;
+  };
 
   mailRoot =
     let base = nmCfg.maildirRoot or "";
