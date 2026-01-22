@@ -1,4 +1,4 @@
-{ lib, pkgs, special, rulesText, extraHook, osConfig ? {}}:
+{ lib, pkgs, special, afewPkg, rulesText, extraHook, osConfig ? {}}:
 let
   nm = "${pkgs.notmuch}/bin/notmuch";
 
@@ -15,13 +15,16 @@ let
     umask 077
 
     # Minimal, predictable PATH for systemd
-    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.gnugrep pkgs.gnused pkgs.findutils pkgs.ripgrep pkgs.notmuch ]}
+    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.gnugrep pkgs.gnused pkgs.findutils pkgs.ripgrep pkgs.notmuch afewPkg ]}
 
     # Ensure we use your hm-generated config
     export NOTMUCH_CONFIG="$HOME/.notmuch-config"
   '';
 
   body = ''
+    # Automated tagging via afew (non-fatal on errors)
+    ${afewPkg}/bin/afew --tag --new || true
+
     ${mk special.sent    "+sent"     "-inbox -unread"}
     ${mk special.drafts  "+draft"    "-inbox -unread"}
     ${mk special.trash   "+trash"    "-inbox -unread"}

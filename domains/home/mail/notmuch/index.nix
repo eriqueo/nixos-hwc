@@ -5,6 +5,16 @@ let
   paths = import ./parts/paths.nix { inherit lib config cfg; };
   ident = import ./parts/identity.nix { inherit lib cfg; };
 
+  afewPatch = ../afew/patches/afew-importlib-metadata.patch;
+
+  afewPkg =
+    let base = if (config.hwc.home.mail.afew.package or null) != null
+               then config.hwc.home.mail.afew.package
+               else pkgs.afew;
+    in base.overrideAttrs (old: {
+      patches = (old.patches or []) ++ [ afewPatch ];
+    });
+
   cfgPart = import ./parts/config.nix {
     inherit lib pkgs;
     maildirRoot = paths.maildirRoot;
@@ -17,7 +27,7 @@ let
   rules   = import ./parts/rules.nix { inherit lib cfg; };
 
   hookTxt = import ./parts/hooks.nix {
-    inherit lib pkgs special;
+    inherit lib pkgs special afewPkg;
     rulesText = rules.text;
     extraHook = cfg.postNewHook or "";
   };

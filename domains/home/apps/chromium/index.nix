@@ -29,9 +29,33 @@ in {
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.chromium ];
-    # If you want chromium flags later:
-    # xdg.desktopEntries.chromium.settings = { ... };
+    # Use regular chromium with proprietary codecs enabled for video playback
+    home.packages = [
+      (pkgs.chromium.override {
+        enableWideVine = true;  # Includes H.264/AAC codecs + WideVine DRM
+      })
+    ];
+
+    # Custom desktop entry with GPU acceleration and hardware video decode
+    xdg.desktopEntries.chromium-browser = {
+      name = "Chromium";
+      genericName = "Web Browser";
+      exec = "chromium --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=desktop --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist %U";
+      icon = "chromium";
+      type = "Application";
+      categories = [ "Network" "WebBrowser" ];
+      mimeType = [ "text/html" "text/xml" "application/xhtml+xml" "x-scheme-handler/http" "x-scheme-handler/https" ];
+      actions = {
+        new-window = {
+          name = "New Window";
+          exec = "chromium --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=desktop --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist";
+        };
+        new-private-window = {
+          name = "New Incognito Window";
+          exec = "chromium --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=desktop --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --incognito";
+        };
+      };
+    };
 
     # Future: Add universal domain parts
     # behavior = import ./parts/behavior.nix { inherit lib pkgs config; };

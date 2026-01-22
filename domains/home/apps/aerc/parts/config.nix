@@ -159,7 +159,6 @@ in
     ".config/aerc/aerc.conf".text = aercConf;
     # accounts.conf contains NO secrets (passwords are in msmtp config)
     # Safe to manage declaratively via home.file
-    ".config/aerc/accounts.conf".text = accountsConf;
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
     ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
@@ -168,4 +167,15 @@ in
     jq libxml2 mpv unzip gnutar file xdg-utils w3m pandoc glow p7zip unrar
     util-linux ncurses ov xclip
   ];
+
+  # Materialize accounts.conf with 0600 perms after HM writes files
+  home.activation.aercAccountsConf = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    target="$HOME/.config/aerc/accounts.conf"
+    tmp="$(mktemp)"
+    cat > "$tmp" <<'EOF'
+${accountsConf}
+EOF
+    install -m 600 -D "$tmp" "$target"
+    rm -f "$tmp"
+  '';
 }
