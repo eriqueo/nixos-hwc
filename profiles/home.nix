@@ -47,7 +47,7 @@
 
           # Notmuch configuration for unified inbox view
           notmuch = {
-            maildirRoot = lib.mkDefault "\${HOME}/Maildir";
+            maildirRoot = lib.mkDefault "\${HOME}/400_mail/Maildir";
             userName = "Eric O'Keefe";
             primaryEmail = "eric@iheartwoodcraft.com";
             otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
