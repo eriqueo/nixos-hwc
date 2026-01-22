@@ -62,12 +62,13 @@ in
             exit 1
           fi
 
-          ${pkgs.coreutils}/bin/install -d -m 700 -o protonbridge -g protonbridge /var/lib/proton-bridge/config/protonmail/bridge-v3/insecure
-          ${pkgs.coreutils}/bin/install -d -m 700 -o protonbridge -g protonbridge /var/lib/proton-bridge/data
+          ${pkgs.coreutils}/bin/install -d -m 700 -o eric -g users /var/lib/proton-bridge/config/protonmail/bridge-v3/insecure
+          ${pkgs.coreutils}/bin/install -d -m 700 -o eric -g users /var/lib/proton-bridge/data
+          ${pkgs.coreutils}/bin/install -d -m 700 -o eric -g users /var/lib/proton-bridge/cache
 
           if [ ! -f /var/lib/proton-bridge/config/protonmail/bridge-v3/keychain.json ]; then
             printf '{"Helper":"","DisableTest":true}\n' > /var/lib/proton-bridge/config/protonmail/bridge-v3/keychain.json
-            ${pkgs.coreutils}/bin/chown protonbridge:protonbridge /var/lib/proton-bridge/config/protonmail/bridge-v3/keychain.json
+            ${pkgs.coreutils}/bin/chown eric:users /var/lib/proton-bridge/config/protonmail/bridge-v3/keychain.json
             ${pkgs.coreutils}/bin/chmod 600 /var/lib/proton-bridge/config/protonmail/bridge-v3/keychain.json
           fi
         '';
