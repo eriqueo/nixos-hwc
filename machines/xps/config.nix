@@ -333,6 +333,12 @@
     port = 6020;
   };
 
+  # Server reverse proxy configuration (Tailscale domain)
+  hwc.server.shared = {
+    tailscaleDomain = "hwc-xps.ocelot-wahoo.ts.net";
+    rootHost = "hwc-xps.ocelot-wahoo.ts.net";
+  };
+
   # Automated server backups (containers, databases, system)
   hwc.server.backup.enable = true;
 
