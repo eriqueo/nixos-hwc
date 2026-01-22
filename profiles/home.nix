@@ -41,9 +41,9 @@
 
         # Mail & Communication
         mail = {
-          enable = lib.mkDefault true;  # ENABLED: Using system-level bridge service
-          # Bridge managed by system service (NOT Home Manager)
-          bridge.enable = false;
+          enable = lib.mkDefault true;
+          # Bridge managed by Home Manager user service (already configured)
+          bridge.enable = true;
 
           # Notmuch configuration for unified inbox view
           notmuch = {

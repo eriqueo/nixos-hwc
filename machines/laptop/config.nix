@@ -154,8 +154,8 @@
   # Enable the declarative VPN service using the official CLI.
   hwc.system.services.vpn.protonvpn.enable = true;
 
-  # Enable Proton Mail Bridge system service (headless, certificate-exporting)
-  hwc.system.services.protonmail-bridge.enable = true;
+  # Proton Mail Bridge managed by Home Manager user service (NOT system service)
+  # hwc.system.services.protonmail-bridge.enable = false;  # Disabled in profile
 
   # Enable session management (greetd autologin, sudo, lingering).
   hwc.system.services.session = {
