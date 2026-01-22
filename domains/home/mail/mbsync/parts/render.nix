@@ -3,10 +3,14 @@ let
   cfg        = config.hwc.home.mail;
   accs       = cfg.accounts or {};
   common     = import ../../parts/common.nix { inherit lib; };
-  maildirRoot = "${config.home.homeDirectory}/400_mail/Maildir";
+  # Use notmuch maildirRoot or fallback to default
+  maildirRoot =
+    let nmRoot = cfg.notmuch.maildirRoot or "";
+        fallback = "${config.home.homeDirectory}/Maildir";
+    in if nmRoot != "" then nmRoot else fallback;
 
   # ---- Account ordering (left-to-right everywhere that iterates 'vals')
-  desiredOrder = [ "iheartwoodcraft" "proton" "gmail-personal" "gmail-business" ];
+  desiredOrder = [ "proton-unified" "gmail-personal" "gmail-business" ];
   allNames     = builtins.attrNames accs;
   orderedNames =
     (lib.filter (n: lib.elem n allNames) desiredOrder)
@@ -98,13 +102,15 @@ let
       cmd   = common.passCmd a;
       imapH = getOr a "imapHost" (common.imapHost a);
       imapP = getOr a "imapPort" (common.imapPort a);
-      tlsT  = getOr a "imapTls"  (common.tlsType a);
+      tlsT  =
+        if a.type == "proton-bridge" then "None"
+        else getOr a "imapTls"  (common.tlsType a);
       extra = getOr a "extraMbsync" "";
       channels = channelsFor a;
       channelsStr = lib.concatStringsSep "\n" channels;
-      # Proton Bridge uses STARTTLS with a self-signed leaf; pin by file.
+      # Proton Bridge uses local IMAP; skip cert pinning when TLSType=None
       certFile = if a.type == "proton-bridge"
-                 then "CertificateFile /etc/ssl/local/proton-bridge.pem"
+                 then ""
                  else "";
       tlsFingerprint = "";
     in ''
