@@ -24,7 +24,7 @@ let
   yt-core = pkgs.python3Packages.buildPythonPackage {
     pname = "yt-core";
     version = "0.1.0";
-    src = "${paths.nixos}/workspace/projects/youtube-services/packages/yt_core";
+    src = lib.cleanSource "${paths.nixos}/workspace/projects/youtube-services/packages/yt_core";
     format = "pyproject";
 
     propagatedBuildInputs = with pkgs.python3Packages; [
@@ -50,7 +50,7 @@ let
   yt-transcripts-api = pkgs.python3Packages.buildPythonPackage {
     pname = "yt-transcripts-api";
     version = "0.1.0";
-    src = "${paths.nixos}/workspace/projects/youtube-services/packages/yt_transcripts_api";
+    src = lib.cleanSource "${paths.nixos}/workspace/projects/youtube-services/packages/yt_transcripts_api";
     format = "pyproject";
 
     propagatedBuildInputs = with pkgs.python3Packages; [
@@ -166,7 +166,7 @@ in
         Group = "yt-transcripts-api";
         StateDirectory = "hwc/yt-transcripts-api";
         LoadCredential = [
-          "db-url:${config.age.secrets.youtube-db-url.path}"
+          "db-url:${config.age.secrets.youtube-transcripts-db-url.path}"
         ];
       };
     };
@@ -189,7 +189,7 @@ in
 
         # Load credentials via systemd LoadCredential
         LoadCredential = [
-          "db-url:${config.age.secrets.youtube-db-url.path}"
+          "db-url:${config.age.secrets.youtube-transcripts-db-url.path}"
         ] ++ lib.optional (config.age.secrets.youtube-api-key or null != null)
           "youtube-api-key:${config.age.secrets.youtube-api-key.path}";
 
@@ -218,7 +218,7 @@ in
         StateDirectory = "hwc/yt-transcripts-api";
 
         LoadCredential = [
-          "db-url:${config.age.secrets.youtube-db-url.path}"
+          "db-url:${config.age.secrets.youtube-transcripts-db-url.path}"
         ] ++ lib.optional (config.age.secrets.youtube-api-key or null != null)
           "youtube-api-key:${config.age.secrets.youtube-api-key.path}";
 
@@ -250,19 +250,17 @@ in
 
     # Also allow on Tailscale interface
     networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ cfg.port ];
-  };
 
-  #============================================================================
-  # VALIDATION
-  #============================================================================
-  assertions = [
-    {
-      assertion = !cfg.enable || config.hwc.services.databases.postgresql.enable;
-      message = "yt-transcripts-api requires PostgreSQL to be enabled";
-    }
-    {
-      assertion = !cfg.enable || (config.age.secrets.youtube-db-url or null != null);
-      message = "yt-transcripts-api requires age.secrets.youtube-db-url to be configured";
-    }
-  ];
+    # Validation assertions
+    assertions = [
+      {
+        assertion = !cfg.enable || config.hwc.services.databases.postgresql.enable;
+        message = "yt-transcripts-api requires PostgreSQL to be enabled";
+      }
+      {
+        assertion = !cfg.enable || (config.age.secrets.youtube-transcripts-db-url or null != null);
+        message = "yt-transcripts-api requires age.secrets.youtube-transcripts-db-url to be configured";
+      }
+    ];
+  };
 }
