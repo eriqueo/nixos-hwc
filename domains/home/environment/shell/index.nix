@@ -19,7 +19,7 @@
 { config, lib, pkgs, osConfig ? {}, ... }:
 
 let
-  cfg = config.hwc.home.environment.shell;
+  cfg = config.hwc.home.shell;
 
   # Import script derivations from parts/
   grebuild = import ./parts/grebuild.nix { inherit pkgs config; };

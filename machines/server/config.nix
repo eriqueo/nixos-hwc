@@ -593,7 +593,7 @@
     };
 
     # Keep shell/CLI configuration enabled
-    hwc.home.environment.shell.enable = true;
+    hwc.home.shell.enable = true;
     hwc.home.development.enable = true;
 
     # Disable mail for server (no GUI mail needed)
