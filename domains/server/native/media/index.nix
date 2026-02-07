@@ -6,8 +6,14 @@ let
   cfg = config.hwc.server.native.media;
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     #==========================================================================
     # MEDIA STORAGE - Storage configuration for media services
@@ -28,5 +34,7 @@ in
 
     # Jellyfin will be enabled when the appropriate container service is added
     # For now, this profile just ensures media storage is properly configured
+    assertions = [];
   };
+
 }

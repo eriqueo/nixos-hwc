@@ -21,10 +21,10 @@
       hwc.home = {
         # Theme & Fonts (BASE)
         theme.palette = lib.mkDefault "gruv";
-        theme.fonts.enable = lib.mkDefault true;
+        fonts.enable = lib.mkDefault true;
 
         # Shell Environment (BASE)
-        environment.shell = {
+        shell = {
           enable = lib.mkDefault true;
           modernUnix = lib.mkDefault true;
           git.enable = lib.mkDefault true;
@@ -41,9 +41,9 @@
 
         # Mail & Communication
         mail = {
-          enable = lib.mkDefault true;
+          enable = lib.mkDefault false;  # DISABLED: mbsync failures, temporarily disabled
           # Bridge managed by Home Manager user service
-          bridge.enable = true;
+          bridge.enable = false;
 
           # Notmuch configuration per runbook
           notmuch = {
@@ -64,16 +64,16 @@
           # File Management
           thunar.enable = lib.mkDefault true;     # GUI file manager
           yazi.enable = lib.mkDefault true;       # TUI file manager
-
+          analysis.enable = lib.mkDefault true;
           # Web Browsers
           chromium.enable = lib.mkDefault true;   # Chromium browser
           librewolf.enable = lib.mkDefault true;  # Privacy-focused Firefox
 
-          # Mail Clients
-          aerc.enable = lib.mkDefault true;                # TUI mail client
-          neomutt.enable = lib.mkDefault true;             # TUI mail client (alternative)
-          betterbird.enable = lib.mkDefault true;          # GUI mail client (Thunderbird fork)
-          proton-mail.enable = lib.mkDefault true;          # Proton Mail bridge/client
+          # Mail Clients (DISABLED with mail infrastructure)
+          aerc.enable = lib.mkDefault false;                # TUI mail client
+          neomutt.enable = lib.mkDefault false;             # TUI mail client (alternative)
+          betterbird.enable = lib.mkDefault false;          # GUI mail client (Thunderbird fork)
+          protonMail.enable = lib.mkDefault false;          # Proton Mail bridge/client
 
           # Security
           gpg.enable = lib.mkDefault true;
@@ -81,16 +81,20 @@
           # Proton Suite
           proton-authenticator.enable = lib.mkDefault true; # 2FA authenticator
           proton-authenticator.autoStart = lib.mkDefault true; # Auto-start on login
-          proton-pass.enable = lib.mkDefault true;         # Password manager (optional)
-          proton-pass.autoStart = lib.mkDefault true;      # Auto-start on login
+          protonPass.enable = lib.mkDefault true;         # Password manager (optional)
+          protonPass.autoStart = lib.mkDefault true;      # Auto-start on login
 
           # Productivity & Office
           obsidian.enable = lib.mkDefault true;                   # Knowledge base
           onlyoffice-desktopeditors.enable = lib.mkDefault true;   # Office suite
 
+          # Creative & Media
+          blender.enable = lib.mkDefault true;             # 3D creation suite with GPU rendering
+          freecad.enable = lib.mkDefault true;             # Parametric 3D CAD with GPU acceleration
+
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
-          gemini-cli.enable = lib.mkDefault false;          # AI CLI tool (disabled due to npm build failure)
+          geminiCli.enable = lib.mkDefault true;           # AI CLI tool
           codex.enable = lib.mkDefault true;             # Re-enabled AI tool (temporarily disabled for build)
 
           # Utilities

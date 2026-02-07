@@ -9,18 +9,18 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.business-api.enable)
+#   - profiles/*.nix (enables via hwc.server.business-api.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/business-api.nix
 #
 # USAGE:
-#   hwc.services.business-api.enable = true;
+#   hwc.server.business-api.enable = true;
 #   # TODO: Add specific usage examples
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.services.businessApi;
+  cfg = config.hwc.server.businessApi;
 in {
   #============================================================================
   # IMPLEMENTATION - What actually gets configured

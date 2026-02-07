@@ -360,8 +360,9 @@ in
         TimeoutSec = "4h";
       };
 
-      # Only start on-demand if scheduling is disabled
-      wantedBy = lib.mkIf (!cfg.schedule.enable) [ "multi-user.target" ];
+      # Never auto-start at boot; only via timer, coordinator, or manual invocation
+      # This prevents the backup from running during system activation/rebuild
+      wantedBy = [ ];
     };
 
     # Log rotation

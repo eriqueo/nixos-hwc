@@ -18,7 +18,7 @@
 #   }
 #
 
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 let
   # Dependencies for scripts
   inherit (pkgs) hyprland jq libnotify;

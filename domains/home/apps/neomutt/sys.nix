@@ -6,7 +6,7 @@
 # All neomutt dependencies are handled in Home Manager.
 # Mail transport handled by msmtp/isync in Home Manager.
 
-{ ... }:
+{ osConfig ? {}, ... }:
 
 {
   # No system-lane dependencies needed for neomutt

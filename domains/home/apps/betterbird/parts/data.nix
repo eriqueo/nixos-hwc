@@ -1,4 +1,4 @@
-{ }:
+{ osConfig ? {}}:
 {
   # List your tags here; tools.nix will write proper prefs lines.
   tags = [

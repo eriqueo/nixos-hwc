@@ -6,13 +6,13 @@
 
     musicDir = lib.mkOption {
       type = lib.types.str;
-      default = config.hwc.paths.media.music or "/mnt/media/music";
+      default = config.hwc.paths.media.music or "${config.hwc.paths.media.music}";
       description = "Music library directory";
     };
 
     importDir = lib.mkOption {
       type = lib.types.str;
-      default = config.hwc.paths.hot.downloads.music or "/mnt/hot/downloads/music";
+      default = "${config.hwc.paths.hot.downloads}/music";
       description = "Import staging directory";
     };
 

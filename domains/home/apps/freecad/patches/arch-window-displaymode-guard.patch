@@ -1,0 +1,21 @@
+diff --git a/src/Mod/BIM/Arch.py b/src/Mod/BIM/Arch.py
+index ceac09e..eb8052e 100644
+--- a/src/Mod/BIM/Arch.py
++++ b/src/Mod/BIM/Arch.py
+@@ -1135,7 +1135,14 @@ def makeWindow(baseobj=None,width=None,height=None,parts=None,name=None):
+                             obj.setExpression(prop, baseobj.Name+"."+p)
+ 
+     if obj.Base and FreeCAD.GuiUp:
+-        obj.Base.ViewObject.DisplayMode = "Wireframe"
+-        obj.Base.ViewObject.hide()
++        view_obj = obj.Base.ViewObject
++        if view_obj:
++            try:
++                modes = view_obj.listDisplayModes()
++            except Exception:
++                modes = []
++            if "Wireframe" in modes:
++                view_obj.DisplayMode = "Wireframe"
++            view_obj.hide()
+         todo.delay(ArchWindow.recolorize,[obj.Document.Name,obj.Name])
+     return obj

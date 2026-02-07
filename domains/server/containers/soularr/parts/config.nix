@@ -2,7 +2,7 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.soularr;
-  cfgRoot = "/opt/downloads";
+  cfgRoot = config.hwc.paths.hot.downloads;
 in
 {
   config = lib.mkIf cfg.enable {

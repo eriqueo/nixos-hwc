@@ -1,4 +1,19 @@
-{ config, lib, pkgs, osConfig, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
+
+let
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
+  osCfg = if isNixOSHost then osConfig else {};
+
+  # Safe access to age secrets (only available on NixOS hosts)
+  gmailPersonalSecretPath = if (osCfg ? age) && (osCfg.age.secrets ? gmail-personal-password)
+                            then osCfg.age.secrets.gmail-personal-password.path
+                            else "/dev/null";  # Fallback path on non-NixOS (user must override)
+
+  gmailBusinessSecretPath = if (osCfg ? age) && (osCfg.age.secrets ? gmail-business-password)
+                            then osCfg.age.secrets.gmail-business-password.path
+                            else "/dev/null";  # Fallback path on non-NixOS (user must override)
+in
 #==========================================================================
 # OPTIONS
 #==========================================================================
@@ -37,7 +52,7 @@
           login = "eriqueokeefe@gmail.com";
           password = {
             mode = "agenix";
-            agenix = osConfig.age.secrets.gmail-personal-password.path;
+            agenix = gmailPersonalSecretPath;
           };
           maildirName = "210_gmail-personal";
           mailboxMapping = {
@@ -57,7 +72,7 @@
           login = "heartwoodcraftmt@gmail.com";
           password = {
             mode = "agenix";
-            agenix = osConfig.age.secrets.gmail-business-password.path;
+            agenix = gmailBusinessSecretPath;
           };
           maildirName = "110_gmail-business";
           mailboxMapping = {

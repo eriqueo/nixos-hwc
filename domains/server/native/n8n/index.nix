@@ -78,7 +78,7 @@ in
       ];
       environment = n8nEnv // {
         # Add workspace scripts to PATH for Execute Command node
-        PATH = lib.mkForce "/home/eric/.nixos/workspace/scripts:/etc/profiles/per-user/eric/bin:/run/current-system/sw/bin";
+        PATH = lib.mkForce "${config.hwc.paths.nixos}/workspace/scripts:/etc/profiles/per-user/eric/bin:/run/current-system/sw/bin";
       };
       serviceConfig = {
               Type = "simple";

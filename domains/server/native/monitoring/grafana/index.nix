@@ -31,7 +31,7 @@ in
         server = {
           http_port = cfg.port;
           domain = cfg.domain;
-          root_url = "https://${config.hwc.services.shared.rootHost}:4443";  # Via Caddy reverse proxy
+          root_url = "https://${config.hwc.server.shared.rootHost}:4443";  # Via Caddy reverse proxy
         };
 
         paths = {

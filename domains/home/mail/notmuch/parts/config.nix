@@ -1,4 +1,4 @@
-{ lib, pkgs, maildirRoot, userName, primaryEmail, otherEmails, newTags, excludeFolders ? [] }:
+{ lib, pkgs, maildirRoot, userName, primaryEmail, otherEmails, newTags, excludeFolders ? [], osConfig ? {}}:
 let
   mkSemi = xs: lib.concatStringsSep ";" xs;
 in {

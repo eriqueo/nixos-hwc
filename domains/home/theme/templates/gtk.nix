@@ -1,6 +1,6 @@
 # modules/home/theme/adapters/gtk.nix
 # GTK Theme Adapter (v7 — palette -> GTK 2/3/4 + assets, HM-owned; no options, no recursion)
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 let
   # ----------------------------
   # Palette tokens (with defaults)

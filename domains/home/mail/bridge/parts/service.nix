@@ -1,4 +1,4 @@
-{ lib, pkgs, br, runtime }:
+{ lib, pkgs, br, runtime, osConfig ? {}}:
 {
   systemd.user.services.protonmail-bridge = {
     Unit = {

@@ -1,5 +1,5 @@
 # domains/home/apps/swaync/index.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   enabled = config.hwc.home.apps.swaync.enable or false;

@@ -1,7 +1,7 @@
 # domains/home/apps/codex/index.nix
 #
 # OpenAI Codex CLI for user environment - Home Manager implementation
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.codex;

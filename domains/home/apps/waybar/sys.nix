@@ -5,7 +5,7 @@
 # This sys.nix file defines system-lane options because system evaluates
 # before Home Manager. See CHARTER.md Section 5 for sys.nix pattern.
 
-{ lib, config, ... }:
+{ lib, config, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.system.apps.waybar;
@@ -36,8 +36,8 @@ in
           message = "waybar's bluetooth module requires hwc.system.services.hardware.bluetooth.enable = true";
         }
         {
-          assertion = config.hwc.networking.enable;
-          message = "waybar's network module requires hwc.networking.enable = true (for NetworkManager)";
+          assertion = config.hwc.system.networking.enable;
+          message = "waybar's network module requires hwc.system.networking.enable = true (for NetworkManager)";
         }
       ];
     })

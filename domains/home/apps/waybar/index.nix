@@ -2,10 +2,13 @@
 
 # This module uses a special feature of NixOS flakes to get the
 # pkgs set that corresponds to the final system configuration.
-{ config, lib, pkgs, osConfig, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   enabled = config.hwc.home.apps.waybar.enable or false;
+
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
 
   # scriptPkgs: All runtime dependencies needed by waybar custom scripts.
   # NVIDIA tools (nvidia-smi, nvidia-settings) are provided by system configuration
@@ -30,6 +33,7 @@ let
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
   scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
+  launchPkg = scripts.launch;
 
 in
 {
@@ -48,18 +52,34 @@ in
       enable = true;
       package = pkgs.waybar;
       settings = behavior;
-      systemd.enable = false;
+      systemd.enable = true;
     };
 
     xdg.configFile."waybar/style.css".text = appearance;
+
+    # Run waybar via systemd so it survives rebuilds and restarts cleanly.
+    systemd.user.services.waybar = {
+      Unit = {
+        Description = lib.mkForce "Waybar status bar";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = lib.mkForce "${launchPkg}/bin/waybar-launch";
+        Restart = "on-failure";
+      };
+      Install = { WantedBy = [ "graphical-session.target" ]; };
+    };
 
     #==========================================================================
     # VALIDATION
     #==========================================================================
     assertions = [
-      # Cross-lane consistency: check if system-lane is also enabled
+      # Cross-lane consistency: check if system-lane is also enabled (NixOS only)
+      # Feature Detection: Only enforce on NixOS hosts where system config is available
+      # On non-NixOS hosts, user is responsible for system-lane dependencies
       {
-        assertion = !enabled || (osConfig.hwc.system.apps.waybar.enable or false);
+        assertion = !enabled || !isNixOSHost || (osConfig.hwc.system.apps.waybar.enable or false);
         message = ''
           hwc.home.apps.waybar is enabled but hwc.system.apps.waybar is not.
           System-lane validation checks are required for waybar dependencies.

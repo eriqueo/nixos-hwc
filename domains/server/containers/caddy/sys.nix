@@ -14,7 +14,7 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
       ports = [];
-      volumes = [ "/opt/downloads/caddy:/config" ];
+      volumes = [ "${config.hwc.paths.hot.downloads}/caddy:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })

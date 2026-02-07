@@ -13,7 +13,7 @@
 #   let scripts = import ./parts/scripts.nix { inherit pkgs lib; };
 #   in { environment.systemPackages = scripts; }
 
-{ pkgs, lib, ... }:
+{ pkgs, lib, osConfig ? {}, ... }:
 
 with pkgs;
 

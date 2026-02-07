@@ -1,6 +1,6 @@
 # Betterbird • Session part
 # Session-scoped things only: packages, user services, env.
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 
 {
   # Thunderbird (betterbird removed from nixpkgs)

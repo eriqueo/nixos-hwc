@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ...}:
 
 let
   cfg = config.hwc.home.apps.slack-cli;

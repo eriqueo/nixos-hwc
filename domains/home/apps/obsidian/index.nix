@@ -1,5 +1,5 @@
 # modules/home/apps/obsidian/index.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 {
   #==========================================================================

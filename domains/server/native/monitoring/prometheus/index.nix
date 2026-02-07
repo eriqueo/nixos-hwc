@@ -64,12 +64,12 @@ in
               targets = [ "localhost:9100" ];
             }];
           }
-        ]++ lib.optional (config.hwc.services.transcriptApi.enable && cfg.blackbox.enable) {
+        ]++ lib.optional (config.hwc.server.transcriptApi.enable && cfg.blackbox.enable) {
                 job_name = "transcript-api-health";
                 metrics_path = "/probe";
                 params = { module = [ "http_health_check" ]; };
                 static_configs = [{
-                  targets = [ "http://localhost:${toString config.hwc.services.transcriptApi.port}/health" ];
+                  targets = [ "http://localhost:${toString config.hwc.server.transcriptApi.port}/health" ];
                 }];
                 relabel_configs = [
                   { source_labels = [ "__address__" ]; target_label = "__param_target"; }

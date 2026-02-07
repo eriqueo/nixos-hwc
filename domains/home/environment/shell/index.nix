@@ -16,7 +16,7 @@
 # USAGE:
 #   hwc.home.shell.enable = true;
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.environment.shell;
@@ -158,6 +158,85 @@ in
         # add-app shell function
         add-app() {
           ${config.home.homeDirectory}/.nixos/workspace/nixos/add-home-app.sh "$@"
+        }
+
+        # Interactive graph function for hwc-graph tool
+        graph() {
+          local graph_script="${config.home.homeDirectory}/.nixos/workspace/nixos/graph/hwc_graph.py"
+
+          # If arguments provided, pass directly to script
+          if [ $# -gt 0 ]; then
+            python3 "$graph_script" "$@"
+            return
+          fi
+
+          # Interactive mode
+          echo "📊 HWC Dependency Graph Analyzer"
+          echo "================================"
+          echo ""
+
+          PS3=$'\n'"Choose a command (1-6): "
+          select cmd in "List all modules" "Show module details" "Impact analysis" "Requirements analysis" "Graph statistics" "Export to JSON" "Exit"; do
+            case $REPLY in
+              1)
+                python3 "$graph_script" list
+                break
+                ;;
+              2)
+                echo ""
+                echo -n "Enter module name (supports partial match): "
+                read module_name
+                if [ -n "$module_name" ]; then
+                  python3 "$graph_script" show "$module_name"
+                else
+                  echo "❌ Module name required"
+                fi
+                break
+                ;;
+              3)
+                echo ""
+                echo -n "Enter module name to analyze impact: "
+                read module_name
+                if [ -n "$module_name" ]; then
+                  python3 "$graph_script" impact "$module_name"
+                else
+                  echo "❌ Module name required"
+                fi
+                break
+                ;;
+              4)
+                echo ""
+                echo -n "Enter module name to analyze requirements: "
+                read module_name
+                if [ -n "$module_name" ]; then
+                  python3 "$graph_script" requirements "$module_name"
+                else
+                  echo "❌ Module name required"
+                fi
+                break
+                ;;
+              5)
+                python3 "$graph_script" stats
+                break
+                ;;
+              6)
+                echo ""
+                echo -n "Output file (default: graph.json): "
+                read output_file
+                output_file=''${output_file:-graph.json}
+                python3 "$graph_script" export --format=json > "$output_file"
+                echo "✅ Exported to $output_file"
+                break
+                ;;
+              7)
+                echo "👋 Goodbye!"
+                break
+                ;;
+              *)
+                echo "❌ Invalid option. Please choose 1-7."
+                ;;
+            esac
+          done
         }
       '';
     };

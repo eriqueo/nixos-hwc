@@ -41,14 +41,14 @@ in
     # Alertmanager - Alert routing to n8n webhooks
     hwc.server.native.monitoring.alertmanager = {
       enable = true;
-      # Webhook receivers configured post-deployment via n8n
-      # webhookReceivers = [
-      #   {
-      #     name = "n8n-slack";
-      #     url = "https://${config.hwc.services.shared.rootHost}/n8n/webhook/alertmanager";
-      #     sendResolved = true;
-      #   }
-      # ];
+      # Webhook receivers route alerts to n8n for processing
+      webhookReceivers = [
+        {
+          name = "n8n-webhook";
+          url = "https://hwc.ocelot-wahoo.ts.net:2443/webhook/alertmanager";
+          sendResolved = true;
+        }
+      ];
     };
 
     # n8n - Workflow automation for alert routing

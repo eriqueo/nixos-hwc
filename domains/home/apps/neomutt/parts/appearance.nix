@@ -1,5 +1,5 @@
 # domains/home/apps/neomutt/parts/appearance.nix (drop-in)
-{ lib, pkgs, config, theme, ... }:
+{ lib, pkgs, config, theme, osConfig ? {}, ... }:
 
 let
   # Accounts (now under hwc.home.mail.accounts)

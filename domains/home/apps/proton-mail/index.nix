@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 
 let
   behavior   = import ./parts/behavior.nix   { inherit lib pkgs config; };

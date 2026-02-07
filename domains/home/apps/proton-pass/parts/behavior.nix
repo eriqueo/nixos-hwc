@@ -1,6 +1,6 @@
 # ProtonPass • Behavior part
 # Behavioral configuration and settings.
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.proton-pass;

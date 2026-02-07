@@ -1,7 +1,7 @@
 #==========================================================================
 # OPTIONS
 #==========================================================================
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.mail;
   on  = (cfg.enable or true) && (cfg.abook.enable or true);in

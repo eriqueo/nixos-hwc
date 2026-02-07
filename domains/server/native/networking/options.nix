@@ -48,7 +48,7 @@ in
   #============================================================================
   # NTFY NOTIFICATION SERVICE OPTIONS
   #============================================================================
-  options.hwc.services.ntfy = {
+  options.hwc.server.ntfy = {
     enable = lib.mkEnableOption "ntfy notification service";
 
     port = lib.mkOption {
@@ -67,7 +67,7 @@ in
   #============================================================================
   # TRANSCRIPT API OPTIONS
   #============================================================================
-  options.hwc.services.transcriptApi = {
+  options.hwc.server.transcriptApi = {
     enable = lib.mkEnableOption "YouTube transcript API";
 
     port = lib.mkOption {
@@ -78,7 +78,7 @@ in
 
     dataDir = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/01-documents/01-vaults/04-transcripts";
+      default = "${config.hwc.paths.vaults}/transcripts";
       description = "Transcripts vault directory (where finished .md files are saved)";
     };
 
@@ -222,7 +222,7 @@ in
   #============================================================================
   # DATABASES OPTIONS
   #============================================================================
-  options.hwc.services.databases = {
+  options.hwc.server.databases = {
     postgresql = {
       enable = lib.mkEnableOption "PostgreSQL database";
 
@@ -285,7 +285,7 @@ in
   #============================================================================
   # MEDIA NETWORKING OPTIONS
   #============================================================================
-  options.hwc.services.media.networking = {
+  options.hwc.server.media.networking = {
     enable = lib.mkEnableOption "media services networking and VPN";
 
     mediaNetwork = {

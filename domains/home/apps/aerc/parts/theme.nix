@@ -1,6 +1,6 @@
 # aerc theme.nix - Adapter from palette to aerc styleset tokens
 # Generates comprehensive aerc styleset with hex colors
-{ config, lib, ... }:
+{ config, lib, osConfig ? {}, ... }:
 
 let
   # Consume global theme colors from config.hwc.home.theme.colors

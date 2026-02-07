@@ -1,6 +1,7 @@
 {
   "mcpServers": {
-    "filesystem": {
+    "_filesystem_DISABLED": {
+      "_comment": "Disabled: redundant with built-in Read/Write/Edit/Glob/Grep tools",
       "command": "npx",
       "args": [
         "-y",
@@ -11,38 +12,38 @@
       ]
     },
     "git": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-git"],
-      "cwd": "/home/eric/.nixos"
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "/home/eric/.nixos"]
     },
-    "brave-search": {
+    "_brave-search_DISABLED": {
+      "_comment": "Disabled: redundant with built-in WebSearch tool",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-brave-search"],
       "env": {
       }
     },
     "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "command": "/run/current-system/sw/bin/node",
+      "args": ["/home/eric/.npm-global/lib/node_modules/@modelcontextprotocol/server-github/dist/index.js"],
       "env": {
 
       }
     },
     "sequential-thinking": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+      "command": "/run/current-system/sw/bin/node",
+      "args": ["/home/eric/.npm-global/lib/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js"]
     },
     "time": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-time"]
+      "command": "uvx",
+      "args": ["mcp-server-time"]
     },
     "fetch": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
     },
     "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"]
+      "command": "/run/current-system/sw/bin/node",
+      "args": ["/home/eric/.npm-global/lib/node_modules/@modelcontextprotocol/server-memory/dist/index.js"]
     }
   }
 }

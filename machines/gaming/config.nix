@@ -24,7 +24,7 @@
   };
 
   # Enable Samba for ROM transfer over network
-  hwc.networking.samba = {
+  hwc.system.networking.samba = {
     enable = true;
     shares.roms = {
       path = "${config.hwc.paths.hot.root}/roms";

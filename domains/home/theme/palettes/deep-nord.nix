@@ -1,7 +1,7 @@
 # HWC Charter Module/domains/home/theme/palettes/deep-nord.nix
 # Deep Nord — expanded tokens for apps & adapters (Charter v6)
 
-{ }:
+{ osConfig ? {} }:
 {
   name = "deep-nord";
 
@@ -123,11 +123,6 @@
   fileExec     = "A3BE8C"; # Green: executables
   fileOrphan   = "c34043"; # Dark red: broken links
   fileDir      = "88c0d0"; # Cyan: directories
-
-  # Legacy keys kept for back-compat (can be removed after adapters migrate)
-  gruvboxTeal  = "7daea3ff";
-  gruvboxGreen = "89b482ff";
-  gruvboxMuted = "45403daa";
 
   # --- Pointer theme config (palette-driven)
   # GTK/Qt use XCursor; Hyprland uses Hyprcursor. Keep them in sync here.

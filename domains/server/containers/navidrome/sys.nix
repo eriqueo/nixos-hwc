@@ -15,7 +15,7 @@ in
       timeZone = "UTC";   # Static default - timezone detection deferred
       ports = [];
       volumes = [
-        "/opt/downloads/navidrome:/config"
+        "${config.hwc.paths.hot.downloads}/navidrome:/config"
         "${config.hwc.paths.media.root}/music:/music:ro"  # Music library for streaming
       ];
       environment = {

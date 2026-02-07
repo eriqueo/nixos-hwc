@@ -106,8 +106,8 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.reverseProxy.enable || config.hwc.services.reverseProxy.enable;
-        message = "hwc.server.jellyfin.reverseProxy requires hwc.services.reverseProxy.enable = true";
+        assertion = !cfg.reverseProxy.enable || config.hwc.server.reverseProxy.enable;
+        message = "hwc.server.jellyfin.reverseProxy requires hwc.server.reverseProxy.enable = true";
       }
       {
         assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;

@@ -1,7 +1,7 @@
 # modules/home/fonts/index.nix
 # Font management for user environment
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.theme.fonts;

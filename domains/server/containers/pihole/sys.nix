@@ -121,8 +121,8 @@ EOF
           message = "Pi-hole requires Podman to be configured as the OCI container backend.";
         }
         {
-          assertion = !cfg.enable || config.hwc.networking.enable;
-          message = "Pi-hole requires hwc.networking.enable = true for firewall configuration.";
+          assertion = !cfg.enable || config.hwc.system.networking.enable;
+          message = "Pi-hole requires hwc.system.networking.enable = true for firewall configuration.";
         }
         {
           assertion = !cfg.enable || (cfg.dnsPort != 53 || cfg.disableResolvedStub);

@@ -2,7 +2,7 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.gluetun;
-  cfgRoot = "/opt/downloads";
+  cfgRoot = config.hwc.paths.hot.downloads;
   mediaNetworkName = "media-network";
 in
 {

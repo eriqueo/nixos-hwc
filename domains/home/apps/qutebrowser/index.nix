@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ...}:
 
 let
   cfg = config.hwc.home.apps.qutebrowser;
@@ -21,6 +21,10 @@ in
     # - xdg.configFile for config files
     # - xdg.desktopEntries for custom launchers
     # - Theme integration with config.hwc.home.theme
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
     assertions = [
       {
         assertion = cfg.package != null || (pkgs ? qutebrowser);

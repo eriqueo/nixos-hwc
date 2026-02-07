@@ -2,7 +2,7 @@
 # Yazi theme adapter - Consumes config.hwc.home.theme.colors
 # Generates comprehensive Yazi theme with all UI sections
 
-{ config, ... }:
+{ config, osConfig ? {}, ... }:
 
 let
   # Consume global theme colors

@@ -1,5 +1,5 @@
 # modules/home/apps/waybar/parts/scripts.nix
-{ pkgs, lib, pathBin }:
+{ pkgs, lib, pathBin, osConfig ? {} }:
 let
   sh = name: text: pkgs.writeShellScriptBin name ''
     set -euo pipefail
@@ -8,6 +8,50 @@ let
   '';
 in
 {
+  "launch" = sh "waybar-launch" ''
+    CONFIG_SRC="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config"
+    STYLE_SRC="''${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
+
+    if [[ ! -f "''$CONFIG_SRC" ]]; then
+      echo "waybar-launch: missing config at ''$CONFIG_SRC" >&2
+      exit 1
+    fi
+
+    MONITORS=$(hyprctl monitors -j 2>/dev/null || true)
+
+    INTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name' | head -1)
+    if [[ -z "''$INTERNAL" ]]; then
+      INTERNAL=$(echo "''$MONITORS" | jq -r '.[0].name' 2>/dev/null || "")
+    fi
+
+    if [[ -z "''$INTERNAL" ]]; then
+      echo "waybar-launch: no monitors detected; exiting" >&2
+      exit 0
+    fi
+
+    EXTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")==false) | .name' | head -1)
+
+    TMP_CONFIG=$(mktemp)
+    trap 'rm -f "''$TMP_CONFIG"' EXIT
+    jq --arg internal "''$INTERNAL" --arg external "''$EXTERNAL" '
+      map(
+        if .output == "__INTERNAL_OUTPUT__" then
+          .output = $internal
+        elif .output == "__EXTERNAL_OUTPUT__" then
+          if ($external | length) > 0 then
+            .output = $external
+          else
+            empty
+          end
+        else
+          .
+        end
+      )
+    ' "''$CONFIG_SRC" > "''$TMP_CONFIG"
+
+    waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC"
+  '';
+
   "workspace-switcher" = sh "waybar-workspace-switcher" ''
     if [[ ''$# -eq 0 ]]; then
       exit 1
@@ -167,9 +211,17 @@ in
   '';
 
   "fan-monitor" = sh "waybar-fan-monitor" ''
+    # Find ThinkPad hwmon device dynamically (device numbers change across boots)
+    THINKPAD_HWMON=$(grep -l "^thinkpad$" /sys/class/hwmon/hwmon*/name 2>/dev/null | head -1 | xargs dirname)
+
+    if [[ -z "$THINKPAD_HWMON" ]]; then
+      printf '{"text":"󰈐 N/A","class":"idle","tooltip":"ThinkPad hwmon not found"}\n'
+      exit 0
+    fi
+
     # Read fan speeds from ThinkPad hwmon
-    FAN1=$(cat /sys/class/hwmon/hwmon8/fan1_input 2>/dev/null || echo "0")
-    FAN2=$(cat /sys/class/hwmon/hwmon8/fan2_input 2>/dev/null || echo "0")
+    FAN1=$(cat "$THINKPAD_HWMON/fan1_input" 2>/dev/null || echo "0")
+    FAN2=$(cat "$THINKPAD_HWMON/fan2_input" 2>/dev/null || echo "0")
 
     # Get max fan speed for either fan
     MAX_FAN=$(( FAN1 > FAN2 ? FAN1 : FAN2 ))

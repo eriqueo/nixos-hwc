@@ -1,5 +1,5 @@
 # modules/home/apps/librewolf/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.librewolf.enable =

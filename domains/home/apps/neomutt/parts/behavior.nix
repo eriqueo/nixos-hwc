@@ -1,5 +1,5 @@
 # domains/home/apps/neomutt/parts/behavior.nix
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 let
   # Pull shared mail accounts (may be empty during refactors)
   mailAccs  = config.hwc.home.mail.accounts or {};

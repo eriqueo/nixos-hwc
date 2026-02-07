@@ -84,8 +84,14 @@ let
     fi
   '';
 in {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkMerge [
     (lib.mkIf cfg.hot.enable {
       fileSystems."${cfg.hot.path}" = {
@@ -106,7 +112,7 @@ in {
         (map (dir: "d ${cfg.media.path}/${dir} 0755 eric users -") cfg.media.directories);
     })
 
-    (lib.mkIf cfg.backup.enable {
+    (lib.mkIf (cfg.backup.enable && cfg.backup.path != null) {
       systemd.tmpfiles.rules = [
         "d ${cfg.backup.path} 0750 root root -"
       ];
@@ -116,7 +122,7 @@ in {
       ];
     })
 
-    (lib.mkIf (cfg.backup.enable && cfg.backup.externalDrive.autoMount) {
+    (lib.mkIf (cfg.backup.enable && cfg.backup.externalDrive.autoMount && cfg.backup.path != null) {
       environment.systemPackages = with pkgs; [
         util-linux
         libnotify
@@ -148,5 +154,12 @@ in {
         "d ${cfg.backup.path} 0755 root root -"
       ];
     })
+
+    #========================================================================
+    # VALIDATION
+    #========================================================================
+    {
+      assertions = [];
+    }
   ];
 }

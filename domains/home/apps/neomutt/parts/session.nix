@@ -1,6 +1,6 @@
 # modules/home/apps/neomutt/parts/session.nix
 # NeoMutt • Session part (packages/env/services only)
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 
 {
   # App-scoped deps that make your behavior/appearance work out of the box

@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 {
   files = profileBase: {
     "${profileBase}/user.js".text = ''

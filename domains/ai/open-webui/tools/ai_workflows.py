@@ -55,17 +55,23 @@ class Tools:
 
     async def organize_downloads(
         self,
-        directory: str = "/home/eric/Downloads",
+        directory: str = None,
         dry_run: bool = True,
         __event_emitter__: Callable[[dict], Any] = None
     ) -> str:
         """
         Use AI to analyze and organize files in a directory.
 
-        :param directory: Directory to organize (default: Downloads)
+        :param directory: Directory to organize (default: Downloads from env or ~/Downloads)
         :param dry_run: If True, only analyze without moving files
         :return: List of recommended file organization actions
         """
+        # Use configured directory or fallback to user's Downloads
+        if directory is None:
+            import os
+            from pathlib import Path
+            directory = os.getenv("DOWNLOADS_DIR", str(Path.home() / "Downloads"))
+
         emitter = EventEmitter(__event_emitter__)
         await emitter.progress_update(f"Analyzing files in {directory}...")
 

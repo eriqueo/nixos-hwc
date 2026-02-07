@@ -14,7 +14,7 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:9696:9696" ];
-      volumes = [ "/opt/downloads/prowlarr:/config" ];
+      volumes = [ "${config.hwc.paths.hot.downloads}/prowlarr:/config" ];
       environment = {
         PROWLARR__URLBASE = "/prowlarr";
       };

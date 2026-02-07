@@ -13,10 +13,13 @@
 #   Import this module in profiles/workstation.nix home imports
 #   Universal domains: behavior.nix (keybindings/shortcuts), session.nix (services), appearance.nix (styling)
 
-{ lib, pkgs, config, osConfig, ... }:
+{ lib, pkgs, config, osConfig ? {}, ... }:
 
-let 
+let
   cfg = config.hwc.home.apps.chromium;
+
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
 in {
   #==========================================================================
   # OPTIONS 
@@ -39,9 +42,11 @@ in {
     # VALIDATION
     #==========================================================================
     assertions = [
-      # Cross-lane consistency: check if system-lane is also enabled
+      # Cross-lane consistency: check if system-lane is also enabled (NixOS only)
+      # Feature Detection: Only enforce on NixOS hosts where system config is available
+      # On non-NixOS hosts, user is responsible for system-lane dependencies
       {
-        assertion = !cfg.enable || (osConfig.hwc.system.apps.chromium.enable or false);
+        assertion = !cfg.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "chromium" "enable" ] false osConfig;
         message = ''
           hwc.home.apps.chromium is enabled but hwc.system.apps.chromium is not.
           System integration (dconf, dbus) is required for chromium.

@@ -16,8 +16,14 @@ let
   cfg = config.hwc.system.services.hardware;
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
 
     #==========================================================================
@@ -31,9 +37,17 @@ in
       enable = true;
       settings = {
         sensors = [
-          # Specific hwmon paths (hwmon numbers may vary, but generally stable across reboots)
-          { hwmon = "/sys/class/hwmon/hwmon9/temp1_input"; }  # coretemp
-          { hwmon = "/sys/class/hwmon/hwmon6/temp1_input"; }  # thinkpad
+          # Use name-based matching - hwmon device numbers change across boots
+          {
+            hwmon = "/sys/class/hwmon";
+            name = "coretemp";
+            indices = [1];
+          }
+          {
+            hwmon = "/sys/class/hwmon";
+            name = "thinkpad";
+            indices = [1];
+          }
         ];
         fans = [
           { tpacpi = "/proc/acpi/ibm/fan"; }
@@ -155,5 +169,7 @@ in
         pkgs.pavucontrol
         pkgs.seahorse
       ]);
+    assertions = [];
   };
+
 }
