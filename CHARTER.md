@@ -971,7 +971,178 @@ journalctl -u cleanup.service -n 20
 
 ---
 
-## 24) Related Documentation
+## 24) Flake Update Strategy & Stability
+
+### Problem Statement
+
+Every `nix flake update` causes production breakage:
+- PostgreSQL major version changes break data compatibility
+- Python package updates fail to compile
+- npm/node packages break with build system changes
+- No incremental testing before applying system-wide
+
+### Multi-Layered Protection Strategy
+
+#### Layer 1: Stable Base for Production
+
+**RULE**: Server MUST use `nixpkgs-stable` for predictable, tested updates
+
+```nix
+# flake.nix - Server configuration
+hwc-server = lib.nixosSystem {
+  system = "x86_64-linux";
+  pkgs = import nixpkgs-stable {  # NOT nixpkgs-unstable
+    inherit system;
+    config.allowUnfree = true;
+  };
+  # ...
+};
+```
+
+**Benefits:**
+- Major version changes only on NixOS stable releases (~6 months)
+- All packages tested together before stable release
+- Security updates without breaking changes
+
+**Laptop** can use `nixpkgs-unstable` for latest features (breakage acceptable)
+
+#### Layer 2: Explicit Version Pinning
+
+Services with persistent data MUST explicitly pin versions:
+
+```nix
+# MANDATORY: Always pin databases
+services.postgresql.package = pkgs.postgresql_15;  # Explicit, not dynamic
+
+# MANDATORY: Pin any service with persistent state
+services.influxdb2.package = pkgs.influxdb2_2_7;
+
+# OPTIONAL: Pin critical infrastructure for stability
+services.caddy.package = pkgs.caddy;  # Can use latest
+```
+
+**Pin these categories:**
+1. **Databases**: PostgreSQL, MySQL, Redis (with persistence), InfluxDB
+2. **Data stores**: Any service with non-reproducible state
+3. **Core infrastructure** (optional): Web servers, reverse proxies if stability critical
+
+#### Layer 3: Pre-Update Validation
+
+**MANDATORY workflow** before any flake update:
+
+```bash
+# 1. Build without switching (catches build failures)
+nixos-rebuild build --flake .#hwc-server
+
+# 2. Check for known breakage (version changes, etc.)
+./workspace/utilities/update-validator.sh
+
+# 3. Test without activation (starts services, doesn't switch boot)
+sudo nixos-rebuild test --flake .#hwc-server
+
+# 4. Verify critical services
+systemctl status postgresql tailscaled
+podman ps
+
+# 5. ONLY THEN apply
+sudo nixos-rebuild switch --flake .#hwc-server
+```
+
+**NEVER** run `nixos-rebuild switch` directly after `nix flake update`
+
+#### Layer 4: Gradual Updates
+
+Update inputs **individually**, not all at once:
+
+```bash
+# Update only stable nixpkgs (server)
+nix flake lock --update-input nixpkgs-stable
+nixos-rebuild test --flake .#hwc-server  # Test first!
+
+# If successful, update home-manager separately
+nix flake lock --update-input home-manager
+nixos-rebuild test --flake .#hwc-server  # Test again!
+
+# NEVER: nix flake update (updates everything blindly)
+```
+
+#### Layer 5: Emergency Rollback
+
+**If update breaks production:**
+
+```bash
+# Immediate rollback to previous generation
+sudo nixos-rebuild switch --rollback
+
+# Revert flake.lock to last known good
+git checkout HEAD~1 flake.lock
+nixos-rebuild switch --flake .#hwc-server
+
+# List available generations
+nix profile history --profile /nix/var/nix/profiles/system
+```
+
+### Update Frequency
+
+| Machine | Channel | Frequency | Notes |
+|---------|---------|-----------|-------|
+| hwc-server | nixpkgs-stable | Monthly security updates | Test thoroughly |
+| hwc-server | Major version | Only on NixOS stable releases | Requires migration testing |
+| hwc-laptop | nixpkgs-unstable | Weekly/as needed | Breakage acceptable |
+
+### Version Migration Workflow
+
+When upgrading pinned services (PostgreSQL 15 → 16):
+
+1. **NEVER** change version without data migration plan
+2. **Document** migration steps in service module
+3. **Test** migration on non-production data first
+4. **Backup** all persistent data before migration
+5. **Verify** compatibility: `nix log /nix/store/...-postgresql-16.drv`
+
+### Enforcement
+
+**Hard Assertions (Build-Time):**
+
+```nix
+# machines/server/config.nix - Server must use stable nixpkgs
+assertions = [
+  {
+    assertion = inputs != null -> (
+      lib.hasPrefix "24.05" (pkgs.lib.trivial.release or "")
+    );
+    message = "hwc-server MUST use nixpkgs-stable!";
+  }
+  {
+    # PostgreSQL MUST be version 15
+    assertion = !config.services.postgresql.enable || (
+      lib.hasPrefix "15." config.services.postgresql.package.version
+    );
+    message = "PostgreSQL MUST remain 15.x until data migration!";
+  }
+];
+```
+
+**Validation Tools:**
+
+| Tool | Purpose | Usage |
+|------|---------|-------|
+| `update-validator.sh` | Pre-update checks with nix eval proofs | `./workspace/utilities/update-validator.sh` |
+| `zfs-pre-switch-snapshot.sh` | Create ZFS snapshots before switch | `./workspace/utilities/zfs-pre-switch-snapshot.sh` |
+| `review-lockfile-update.sh` | Incremental lockfile updates | `./workspace/utilities/review-lockfile-update.sh nixpkgs-stable` |
+
+**Proof-Based Validation (Not Policy):**
+- ✅ Proves server uses stable via `nix eval .#nixosConfigurations.hwc-server.pkgs.lib.trivial.release`
+- ✅ Proves PostgreSQL 15 via `nix eval .#nixosConfigurations.hwc-server.config.services.postgresql.package.version`
+- ✅ Checks ZFS health via `zpool status -x`
+- ✅ Validates disk space before updates
+- ✅ Verifies critical service health
+
+**Reference**: Complete tooling in `workspace/utilities/`
+
+---
+
+## 25) Related Documentation
 
 * **Filesystem Charter** (`FILESYSTEM-CHARTER.md`): Home directory organization (`~/`) with domain-based structure
   - 3-digit prefix system (100_hwc, 200_personal, 300_tech, etc.)
@@ -982,9 +1153,10 @@ journalctl -u cleanup.service -n 20
 
 ---
 
-**Charter Version**: v8.0 - Data Retention & Lifecycle Management
+**Charter Version**: v9.0 - Flake Update Strategy & Stability
 
 **Version History**:
+- v9.0 (2026-01-03): Added section 24 "Flake Update Strategy & Stability" establishing multi-layered protection against update breakage
 - v8.0 (2025-12-04): Added section 20 "Data Retention & Lifecycle Management" establishing declarative retention policies with fail-safe enforcement
 - v7.0 (2025-11-23): Added section 19 "Complex Service Configuration Pattern" establishing config-first rule for services like Frigate
 - v6.0: Configuration Validity & Dependency Assertions

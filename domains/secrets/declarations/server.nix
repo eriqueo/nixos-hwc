@@ -156,5 +156,28 @@
 
     # Frigate secrets are in domains/secrets/declarations/infrastructure.nix
     # (camera/surveillance secrets belong to infrastructure domain)
+
+    # YouTube services credentials
+    youtube-transcripts-db-url = {
+      file = ../parts/server/youtube-db-url.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    youtube-videos-db-url = {
+      file = ../parts/server/youtube-videos-db-url.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    youtube-api-key = {
+      file = ../parts/server/youtube-api-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }
+

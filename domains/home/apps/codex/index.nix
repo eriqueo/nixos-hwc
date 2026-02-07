@@ -7,8 +7,8 @@ let
   cfg = config.hwc.home.apps.codex;
   enabled = cfg.enable or false;
 
-  # Use package from config if specified, otherwise use nixpkgs
-  codexPkg = if cfg.package != null then cfg.package else pkgs.codex;
+  # Use package from config if specified, otherwise try nixpkgs (may not exist in stable)
+  codexPkg = if cfg.package != null then cfg.package else (pkgs.codex or null);
 in
 {
   #==========================================================================

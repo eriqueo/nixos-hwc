@@ -35,7 +35,8 @@ in
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       ];
       # Increase download buffer to prevent warnings during large downloads
-      download-buffer-size = 256 * 1024 * 1024; # 256 MiB
+      # NOTE: download-buffer-size not available in Nix 2.18.8 (nixpkgs-stable 24.05)
+      # download-buffer-size = 256 * 1024 * 1024; # 256 MiB
       # Optimize Nix store automatically
       auto-optimise-store = true;
     };

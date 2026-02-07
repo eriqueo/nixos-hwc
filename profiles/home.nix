@@ -90,7 +90,7 @@
 
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
-          gemini-cli.enable = lib.mkDefault true;           # AI CLI tool
+          gemini-cli.enable = lib.mkDefault false;          # AI CLI tool (disabled due to npm build failure)
           codex.enable = lib.mkDefault true;             # Re-enabled AI tool (temporarily disabled for build)
 
           # Utilities
