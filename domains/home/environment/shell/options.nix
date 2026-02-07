@@ -80,8 +80,8 @@
         "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me";
         "reload" = "source ~/.zshrc";
-        "homeserver" = "ssh eric@100.115.126.41";
-        "server" = "ssh eric@100.115.126.41";
+        "homeserver" = "ssh eric@100.114.232.124";
+        "server" = "ssh server";  # Use SSH config host
         "vpnon" = "sudo wg-quick up protonvpn";
         "vpnoff" = "sudo wg-quick down protonvpn";
         "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
@@ -182,6 +182,44 @@
 
     # Scripts are now defined as shell functions in index.nix
     # No need for enable options - they're always available
+
+    # SSH configuration
+    ssh = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable SSH client configuration";
+      };
+
+      matchBlocks = lib.mkOption {
+        type = lib.types.attrsOf (lib.types.submodule {
+          options = {
+            hostname = lib.mkOption {
+              type = lib.types.str;
+              description = "Hostname or IP address";
+            };
+            user = lib.mkOption {
+              type = lib.types.str;
+              default = "eric";
+              description = "Username for SSH connection";
+            };
+            forwardAgent = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Enable SSH agent forwarding";
+            };
+          };
+        });
+        default = {
+          server = {
+            hostname = "100.114.232.124";  # hwc-server Tailscale IP
+            user = "eric";
+            forwardAgent = true;
+          };
+        };
+        description = "SSH host configurations";
+      };
+    };
 
     # MCP (Model Context Protocol) configuration
     mcp = {
