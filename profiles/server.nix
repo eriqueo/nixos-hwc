@@ -393,16 +393,18 @@
   };
 
   # YouTube Transcripts API (new job-based service with worker)
+  # DISABLED: Python packages not ready yet (workspace files untracked)
   hwc.services.ytTranscriptsApi = {
-    enable = lib.mkDefault true;
+    enable = lib.mkDefault false;
     port = 8100;
     workers = 4;
     outputDirectory = "/mnt/hot/youtube-transcripts";
   };
 
   # YouTube Videos API (video download and archiving)
+  # DISABLED: Python packages not ready yet (workspace files untracked)
   hwc.services.ytVideosApi = {
-    enable = lib.mkDefault true;
+    enable = lib.mkDefault false;
     port = 8101;
     workers = 2;
     outputDirectory = "/mnt/media/youtube";
