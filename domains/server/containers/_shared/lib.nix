@@ -3,7 +3,7 @@ let
   inherit (lib) mkOption mkEnableOption types mkIf mkDefault mkMerge concatLists concatStringsSep;
 in
 {
-  options.hwc.services.shared = {
+  options.hwc.server.shared = {
     # accumulator used by services to publish reverse proxy routes
     routes = mkOption {
       internal = true;
@@ -14,7 +14,7 @@ in
   };
 
   # exported helpers - NOW PURE (no config reads)
-  config.hwc.services.shared.lib = rec {
+  config.hwc.server.shared.lib = rec {
     mkBoolOption = { default ? false, description ? "" }:
       mkOption { type = types.bool; inherit default description; };
 

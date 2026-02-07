@@ -1,5 +1,5 @@
 # The NEW, CORRECT, and AUTOMATED domains/system/services/index.nix
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
   # Read the current directory
@@ -21,6 +21,9 @@ let
 in
 {
   # The imports block is now incredibly simple and clean.
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports =
     [
       # It imports the master options for this domain...
@@ -28,4 +31,14 @@ in
     ]
     # ...and then automatically imports every valid module it finds.
     ++ subIndex;
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = {};
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+    config.assertions = lib.mkIf (config ? enable && config.enable) [];
+
 }

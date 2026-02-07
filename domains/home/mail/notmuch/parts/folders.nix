@@ -1,4 +1,4 @@
-{ lib, config }:
+{ lib, config, osConfig ? {}}:
 let
   common = import ../../parts/common.nix { inherit lib; };
   accs = lib.attrValues (config.hwc.home.mail.accounts or {});

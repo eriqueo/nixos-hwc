@@ -228,7 +228,7 @@ in
     #--------------------------------------------------------------------------
     # (mkIf cfg.reverseProxy.enable {
     #   # Register MCP route with Caddy
-    #   hwc.services.shared.routes = [{
+    #   hwc.server.shared.routes = [{
     #     name = "mcp-nixos";
     #     mode = "subpath";
     #     path = cfg.reverseProxy.path;
@@ -242,7 +242,7 @@ in
     #   }];
     #
     #   # Ensure reverse proxy is enabled
-    #   hwc.services.reverseProxy.enable = true;
+    #   hwc.server.reverseProxy.enable = true;
     # })
 
     #--------------------------------------------------------------------------

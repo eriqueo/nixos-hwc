@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 with lib; {
   options.hwc.home.mail.bridge = {
     enable = mkEnableOption "Proton Mail Bridge";

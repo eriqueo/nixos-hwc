@@ -1,5 +1,5 @@
 # modules/home/apps/hyprland/parts/behavior.nix
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 let
   mod = "SUPER";
 in
@@ -30,6 +30,7 @@ in
     "${mod},TAB,exec,hyprland-workspace-overview"
     "${mod} SHIFT,T,togglefloating"
     "${mod} SHIFT,H,exec,hyprland-system-health-checker"
+    "${mod},A,exec,proton-authenticator-toggle"
 
     ",PRINT,exec,hyprshot -m region -c -o $HWC_SCREENSHOTS_DIR/"
 
@@ -137,6 +138,11 @@ in
     "opacity 0.95,class:^(kitty)$"
     "opacity 0.90,class:^(yazi)$"
 
+    # Proton Authenticator - tile on workspace 7, normal window behavior
+    "tile,class:^(Proton Pass Authenticator)$"
+    "workspace 7 silent,class:^(Proton Pass Authenticator)$"
+    "size 400 600,class:^(Proton Pass Authenticator)$"
+
     # PiP
     "float,title:^(Picture-in-Picture)$"
     "pin,title:^(Picture-in-Picture)$"
@@ -153,4 +159,3 @@ in
     "immediate,class:^(steam_app_).*"
   ];
 }
-

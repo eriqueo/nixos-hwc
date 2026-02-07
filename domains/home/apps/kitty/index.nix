@@ -1,5 +1,5 @@
 # modules/home/apps/kitty/index.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   enabled = config.hwc.home.apps.kitty.enable or false;

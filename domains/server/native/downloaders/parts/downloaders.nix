@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.downloaders.enable)
+#   - profiles/*.nix (enables via hwc.server.native.downloaders.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/media/downloaders.nix
 #
 # USAGE:
-#   hwc.services.downloaders.enable = true;
+#   hwc.server.native.downloaders.enable = true;
 #   # TODO: Add specific usage examples
 
 # modules/services/media/downloaders.nix
@@ -39,9 +39,9 @@
 #   - profiles/server.nix: ../domains/services/media/downloaders.nix
 #
 # USAGE:
-#   hwc.services.media.downloaders.enable = true;        # Enable all downloaders
-#   hwc.services.media.downloaders.qbittorrent.enable = true;  # Individual services
-#   hwc.services.media.downloaders.useVpn = true;        # Use VPN for downloads
+#   hwc.server.native.downloaders.enable = true;        # Enable all downloaders
+#   hwc.server.native.downloaders.qbittorrent.enable = true;  # Individual services
+#   hwc.server.native.downloaders.useVpn = true;        # Use VPN for downloads
 #
 # VALIDATION:
 #   - Requires VPN network when useVpn is enabled
@@ -96,8 +96,8 @@ in {
     #=========================================================================
     assertions = [
       {
-        assertion = !cfg.useVpn || config.hwc.services.media.networking.vpn.enable;
-        message = "Download services with VPN require hwc.services.media.networking.vpn.enable = true";
+        assertion = !cfg.useVpn || config.hwc.server.native.networking.vpn.enable;
+        message = "Download services with VPN require hwc.server.native.networking.vpn.enable = true";
       }
       {
         assertion = paths.hot != null;
@@ -187,14 +187,14 @@ in {
     #=========================================================================
     
     # Add download service ports when not using VPN
-    hwc.networking.firewall.extraTcpPorts = lib.optionals (!cfg.useVpn) [
+    hwc.system.networking.firewall.extraTcpPorts = lib.optionals (!cfg.useVpn) [
       cfg.qbittorrent.webPort  # 8080
       cfg.sabnzbd.webPort      # 8081
       cfg.slskd.webPort        # 5030
     ];
     
     # UDP ports for P2P
-    hwc.networking.firewall.extraUdpPorts = lib.optionals (!cfg.useVpn) [
+    hwc.system.networking.firewall.extraUdpPorts = lib.optionals (!cfg.useVpn) [
       50300  # SLSKD P2P
     ];
   };

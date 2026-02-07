@@ -12,13 +12,13 @@
 #
 # NAMESPACE: hwc.home.shell.*
 
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 
 {
   #============================================================================
   # OPTIONS - Shell Configuration API
   #============================================================================
-  options.hwc.home.environment.shell = {
+  options.hwc.home.shell = {
     enable = lib.mkEnableOption "Complete shell + CLI environment";
 
     modernUnix = lib.mkEnableOption "modern Unix replacements (eza, bat, etc.)";
@@ -28,8 +28,8 @@
       default = with pkgs; [
         ripgrep fd fzf bat jq curl wget unzip tree micro btop fastfetch
         rsync rclone speedtest-cli nmap traceroute dig zip p7zip yq pandoc
-        xclip diffutils less which lsof pstree git vim nano
-      ] ++ lib.optional (pkgs ? claude-code) pkgs.claude-code;
+        xclip diffutils less which lsof pstree git vim nano claude-code uv
+      ];
       description = "Base CLI/tool packages.";
     };
 
@@ -39,7 +39,7 @@
         LIBVIRT_DEFAULT_URI = "qemu:///system";
         EDITOR = "micro";
         VISUAL = "micro";
-        HWC_NIXOS_DIR = "/home/eric/.nixos";
+        # HWC_NIXOS_DIR is set dynamically in index.nix based on home directory
       };
       description = "Environment variables for the user session.";
     };
@@ -116,11 +116,14 @@
         "receipt-process" = "cd /opt/business/receipts && python3 ../api/services/ocr_processor.py";
         "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
         # Tool aliases
-        # "eza" alias is auto-created by programs.eza module in HM
+        "eza" = "eza --icons auto --git --group-directories-first";
         "ls" = "eza";
         "vpn" = "vpnstatus";
         "which-command" = "whence";
         "run-help" = "man";
+        # Claude Code usage monitoring
+        "claude-usage" = "claude-monitor --plan pro";
+        "usage" = "claude-monitor --plan pro";
         # Journal/log analysis aliases
         "errors" = "journal-errors";
         "errors-hour" = "journal-errors '1 hour ago'";

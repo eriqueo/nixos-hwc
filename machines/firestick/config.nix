@@ -15,7 +15,7 @@
   hwc.system.apps.waybar.enable = true;
 
   # Tailscale-first networking; keep boot fast in travel scenarios.
-  hwc.networking = {
+  hwc.system.networking = {
     enable = true;
     waitOnline.mode = "off";
     ssh.enable = true;

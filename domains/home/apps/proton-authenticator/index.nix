@@ -1,8 +1,9 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ...}:
 
 let
   cfg = config.hwc.home.apps.proton-authenticator;
   session = import ./parts/session.nix { inherit lib pkgs config; };
+  toggleScript = import ./parts/toggle-script.nix { inherit pkgs; };
 in
 {
   #==========================================================================
@@ -15,13 +16,16 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Packages that belong with the app
-    home.packages = (session.packages or []);
+    home.packages = (session.packages or []) ++ [ toggleScript ];
 
     # Session variables
     home.sessionVariables = (session.env or {});
 
     # User services
     systemd.user.services = (session.services or {});
+
+    # XDG config files (autostart entries, etc.)
+    xdg.configFile = (session.autostartFiles or {});
   };
 
   #==========================================================================

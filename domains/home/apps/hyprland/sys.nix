@@ -9,7 +9,7 @@
 # 3. Must be independently controlled from machine config
 # 4. Validation assertions ensure consistency between system and home lanes
 
-{ lib, config, pkgs, ... }:
+{ lib, config, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.system.apps.hyprland;

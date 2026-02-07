@@ -1,4 +1,4 @@
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, osConfig ? {}, ...}:
 
 let
   cfg = config.hwc.home.apps.librewolf or { enable = false; };
@@ -6,10 +6,21 @@ let
 
   # Check if HM version supports profiles (unstable) or uses old API (24.05)
   hasProfiles = builtins.hasAttr "profiles" (config.programs.librewolf or {});
+
+  # Palette validation (from remote)
+  paletteName = lib.attrByPath [ "hwc" "home" "theme" "palette" ] null config;
+  palettePath = if paletteName != null then ../../theme/palettes/${paletteName}.nix else null;
+  paletteExists = palettePath == null || builtins.pathExists palettePath;
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     programs.librewolf = {
       enable = true;
@@ -39,5 +50,19 @@ in
     home.sessionVariables = {
       MOZ_ENABLE_WAYLAND = "1";
     };
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = config.programs.librewolf.enable or false;
+        message = "programs.librewolf must remain enabled when hwc.home.apps.librewolf is set";
+      }
+    ];
+
+    warnings = lib.optionals (paletteName != null && !paletteExists) [
+      "Palette \"${paletteName}\" not found under domains/home/theme/palettes; falling back to deep-nord."
+    ];
   };
 }

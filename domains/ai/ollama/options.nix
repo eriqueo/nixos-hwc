@@ -11,7 +11,7 @@
     };
 
     models = lib.mkOption {
-      type = lib.types.listOf (lib.types.either lib.types.str (lib.types.submodule {
+      type = lib.types.nullOr (lib.types.listOf (lib.types.either lib.types.str (lib.types.submodule {
         options = {
           name = lib.mkOption {
             type = lib.types.str;
@@ -28,10 +28,13 @@
             description = "Pull priority (lower = pulled first, useful for dependencies)";
           };
         };
-      }));
-      default = [ "llama3:8b" "codellama:13b" ];
+      })));
+      default = null;
       description = ''
         Models to pre-download and keep available.
+        If null (default), profile-based defaults are used.
+        If set explicitly, overrides profile without needing mkForce.
+
         Can be either strings (e.g., "llama3:8b") or attribute sets with configuration:
         { name = "llama3.2:3b"; autoUpdate = false; priority = 10; }
       '';

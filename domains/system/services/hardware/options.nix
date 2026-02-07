@@ -18,14 +18,15 @@ in {
 
       levels = lib.mkOption {
         type = t.listOf (t.listOf (t.either t.int t.str));
-        # Quieter curve with a wide idle band; last entry is a safety handoff to firmware
+        # Smooth fan curve with gradual ramp-up to reduce thermal cycling
         default = [
-          [ 0             0   60 ]
-          [ 1            58   70 ]
-          [ 2            62   76 ]
-          [ 3            68   82 ]
-          [ 5            74   88 ]
-          [ "level auto" 86 32767 ]
+          [ 0             0   55 ]   # Silent zone
+          [ 1            53   62 ]   # Gentle ramp
+          [ 2            60   68 ]   # Gradual increase
+          [ 3            66   74 ]   # Medium cooling
+          [ 4            72   80 ]   # Higher cooling (eliminates jump to level 5)
+          [ 5            78   88 ]   # Maximum manual control
+          [ "level auto" 86 32767 ]  # Emergency firmware handoff
         ];
         description = "Thinkfan level table (value, lower temp C, upper temp C).";
       };

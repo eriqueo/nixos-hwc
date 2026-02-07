@@ -1,4 +1,4 @@
-{ pkgs, config, ... }:
+{ pkgs, config, osConfig ? {}, ...}:
 
 let
   workspace = config.home.homeDirectory + "/.nixos/workspace";

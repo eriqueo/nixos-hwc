@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.services.monitoring.enable)
+#   - profiles/*.nix (enables via hwc.server.monitoring.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/business/monitoring.nix
 #
 # USAGE:
-#   hwc.services.monitoring.enable = true;
+#   hwc.server.monitoring.enable = true;
 #   # TODO: Add specific usage examples
 
 # modules/services/business/monitoring.nix
@@ -26,9 +26,9 @@
 with lib;
 
 let 
-  cfg = config.hwc.services.business.monitoring;
+  cfg = config.hwc.server.business.monitoring;
   paths = config.hwc.paths;
-  networkName = config.hwc.services.media.networking.networkName;
+  networkName = config.hwc.server.media.networking.networkName;
 in {
   
   ####################################################################
@@ -37,7 +37,7 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.services.business.monitoring = {
+  options.hwc.server.business.monitoring = {
     enable = mkEnableOption "business intelligence and analytics monitoring";
     
     dashboard = {
@@ -124,7 +124,7 @@ in {
         message = "Business monitoring requires Podman to be enabled (virtualisation.podman.enable = true)";
       }
       {
-        assertion = (cfg.dashboard.enable || cfg.metrics.enable) -> cfg.networking.useMediaNetwork -> config.hwc.services.media.networking.enable;
+        assertion = (cfg.dashboard.enable || cfg.metrics.enable) -> cfg.networking.useMediaNetwork -> config.hwc.server.media.networking.enable;
         message = "Business monitoring with media network requires media networking to be enabled";
       }
     ];
@@ -584,25 +584,25 @@ EOF
     # BUSINESS ANALYTICS DASHBOARD CONTAINER
     ####################################################################
     # Business Dashboard moved to modules/services/business/dashboard.nix
-    # hwc.services.business.dashboard.enable = true; # Enable in profiles/
+    # hwc.server.business.dashboard.enable = true; # Enable in profiles/
 
     ####################################################################
     # BUSINESS METRICS EXPORTER CONTAINER
     ####################################################################
     # Business Metrics moved to modules/services/business/metrics.nix
-    # hwc.services.business.metrics.enable = true; # Enable in profiles/
+    # hwc.server.business.metrics.enable = true; # Enable in profiles/
 
     ####################################################################
     # NETWORKING INTEGRATION
     ####################################################################
     # Register business monitoring ports with Charter v3 networking
-    hwc.networking.firewall.extraTcpPorts = mkIf config.hwc.networking.enable (
+    hwc.system.networking.firewall.extraTcpPorts = mkIf config.hwc.system.networking.enable (
       optional cfg.dashboard.enable cfg.dashboard.port ++
       optional cfg.metrics.enable cfg.metrics.port
     );
 
     # Allow business monitoring access on Tailscale interface
-    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.networking.tailscale.enable {
+    networking.firewall.interfaces."tailscale0" = mkIf config.hwc.system.networking.tailscale.enable {
       allowedTCPPorts = 
         optional cfg.dashboard.enable cfg.dashboard.port ++
         optional cfg.metrics.enable cfg.metrics.port;

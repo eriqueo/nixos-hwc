@@ -1,4 +1,4 @@
-{ lib, cfg }:
+{ lib, cfg, osConfig ? {}}:
 let
   defaults = {
     inbox = "tag:inbox AND tag:unread";

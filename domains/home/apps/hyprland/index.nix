@@ -2,10 +2,13 @@
 #
 # HYPRLAND — Window manager + user session.
 
-{ config, lib, pkgs, osConfig, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   enabled = config.hwc.home.apps.hyprland.enable or false;
+
+  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  isNixOSHost = osConfig ? hwc;
 
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; };
   behavior   = import ./parts/behavior.nix   { inherit config lib pkgs; };
@@ -53,7 +56,7 @@ in
       settings = lib.mkMerge [
         {
           debug = {
-            enable_stdout_logs = true;
+            enable_stdout_logs = false;
           };
         }
 
@@ -81,10 +84,11 @@ in
     # VALIDATION
     #==========================================================================
     assertions = [
-      # Cross-lane consistency: check if system-lane is also enabled
-      # Use osConfig to access system configuration from Home Manager context
+      # Cross-lane consistency: check if system-lane is also enabled (NixOS only)
+      # Feature Detection: Only enforce on NixOS hosts where system config is available
+      # On non-NixOS hosts, user is responsible for system-lane dependencies
       {
-        assertion = !enabled || (osConfig.hwc.system.apps.hyprland.enable or false);
+        assertion = !enabled || !isNixOSHost || (osConfig.hwc.system.apps.hyprland.enable or false);
         message = ''
           hwc.home.apps.hyprland is enabled but hwc.system.apps.hyprland is not.
           System dependencies (hyprland-startup script, helper scripts) are required.

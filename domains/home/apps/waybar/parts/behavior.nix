@@ -1,6 +1,6 @@
 # Waybar Part: Behavior
 # Defines the module layout and configuration for each bar instance.
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 
 let
   # Define shared module lists and configurations
@@ -9,27 +9,48 @@ let
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
       "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd" "pulseaudio"
-      "custom/network" "bluetooth" "custom/disk-space"  
-      "temperature" "custom/battery"  "tray" "custom/notification" "custom/power"
+      "custom/network" "bluetooth" "custom/disk-space"
+      "temperature" "custom/battery" "custom/proton-auth" "tray" "custom/notification" "custom/power"
     ];
   };
 
-  # Define shared widget configurations
-  commonWidgets = {
-    "hyprland/workspaces" = {
-      disable-scroll = true;
-      all-outputs = false;
-      warp-on-scroll = false;
-      format = "{name}";
-      persistent-workspaces = {
-        "1" = []; "2" = []; "3" = []; "4" = [];
-        "5" = []; "6" = []; "7" = []; "8" = [];
-      };
-      on-click = "activate";
-      on-scroll-up = "hyprctl dispatch workspace e+1";
-      on-scroll-down = "hyprctl dispatch workspace e-1";
+  # Workspace widgets are monitor-specific to keep 1-8 per monitor even though Hyprland uses 11-18 for the second.
+  workspaceInternal = {
+    disable-scroll = true;
+    all-outputs = false;
+    warp-on-scroll = false;
+    format = "{name}";
+    persistent-workspaces = {
+      "1" = []; "2" = []; "3" = []; "4" = [];
+      "5" = []; "6" = []; "7" = []; "8" = [];
     };
+    on-click = "activate";
+    on-scroll-up = "hyprctl dispatch workspace e+1";
+    on-scroll-down = "hyprctl dispatch workspace e-1";
+  };
 
+  # External monitor shows 1-8 but targets Hyprland workspaces 11-18.
+  workspaceExternal = {
+    disable-scroll = true;
+    all-outputs = false;
+    warp-on-scroll = false;
+    format = "{icon}";
+    format-icons = {
+      "11" = "1"; "12" = "2"; "13" = "3"; "14" = "4";
+      "15" = "5"; "16" = "6"; "17" = "7"; "18" = "8";
+      "default" = "{name}";
+    };
+    persistent-workspaces = {
+      "11" = []; "12" = []; "13" = []; "14" = [];
+      "15" = []; "16" = []; "17" = []; "18" = [];
+    };
+    on-click = "activate";
+    on-scroll-up = "hyprctl dispatch workspace e+1";
+    on-scroll-down = "hyprctl dispatch workspace e-1";
+  };
+
+  # Define shared widget configurations (non-workspace widgets)
+  commonWidgetsBase = {
     "hyprland/submap" = { format = "✨ {}"; max-length = 8; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
@@ -73,13 +94,15 @@ let
     "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
+    "custom/proton-auth" = { format = "󰦝"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
   };
 
   # External monitor base configuration
-  dp4Config = {
-    output = "DP-4";
+  externalConfig = {
+    # Placeholder output resolved at runtime by waybar-launch; if none found the bar is dropped.
+    output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
     height = 60;
@@ -87,18 +110,22 @@ let
     tray = { spacing = 10; icon-size = 18; };
   };
 
+  internalWidgets = commonWidgetsBase // { "hyprland/workspaces" = workspaceInternal; };
+  externalWidgets = commonWidgetsBase // { "hyprland/workspaces" = workspaceExternal; };
+
 in
 [
-  # External monitor (DP-4) - merge base config with modules and widgets
-  (dp4Config // commonModules // commonWidgets)
+  # External monitor(s) - merge base config with modules and widgets
+  (externalConfig // commonModules // externalWidgets)
 
-  # Laptop monitor (eDP-1) - explicitly define with same modules but different sizing
+  # Laptop monitor (eDP-*) - explicitly define with same modules but different sizing
   ({
-    output = "eDP-1";
+    # Placeholder output resolved at runtime by waybar-launch; always present (falls back to first monitor).
+    output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
     height = 80;  # Larger for laptop screen
     spacing = 6;
     tray = { spacing = 12; icon-size = 20; };  # Override for laptop
-  } // commonModules // commonWidgets)
+  } // commonModules // internalWidgets)
 ]

@@ -10,16 +10,16 @@
 #   - Ollama service (optional, for LLM-powered documentation)
 #
 # USED BY (Downstream):
-#   - profiles/ai.nix (enables via hwc.services.aiBible.enable)
+#   - profiles/ai.nix (enables via hwc.server.aiBible.enable)
 #
 # USAGE:
-#   hwc.services.aiBible.enable = true;
+#   hwc.server.aiBible.enable = true;
 #   # Access web UI at http://localhost:8888
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.services.aiBible;
+  cfg = config.hwc.server.aiBible;
   paths = config.hwc.paths;
 
   # Python environment with all dependencies

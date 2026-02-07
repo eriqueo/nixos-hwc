@@ -3,11 +3,13 @@
 # Aggregates all domain secret declarations into a single import
 # Each domain file contains only age.secrets declarations, no logic
 # Organized by HWC domain structure: home, system, server, infrastructure, apps
-{ lib, ... }:
+{ config, lib, ... }:
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [
     ./options.nix
-    ./apps.nix
     ./caddy.nix
     ../parts/caddy.nix
     ./home.nix
@@ -15,4 +17,14 @@
     ./server.nix
     ./infrastructure.nix
   ];
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = {};
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+    config.assertions = lib.mkIf (config ? enable && config.enable) [];
+
 }

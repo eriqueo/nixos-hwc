@@ -1,7 +1,8 @@
 # CLAUDE.md - AI Assistant Guide for nixos-hwc
 
-**Version**: 1.0
-**Last Updated**: 2025-11-18
+**Version**: 2.0
+**Last Updated**: 2026-01-18
+**Charter Version**: v10.3 (January 17, 2026)
 **Purpose**: Comprehensive guide for AI assistants working on the HWC NixOS configuration repository
 
 ---
@@ -28,12 +29,13 @@ This is a **NixOS flake-based configuration repository** managing multiple machi
 **Key Facts:**
 - **Language**: Nix (declarative configuration language)
 - **Architecture**: Domain-driven design with strict boundaries
+- **Charter Version**: v10.3 (January 17, 2026)
 - **Machines**: `hwc-laptop` (workstation), `hwc-server` (infrastructure)
 - **Build System**: Nix flakes with Home Manager integration
 - **Primary User**: `eric`
 
 **Related Documentation:**
-- `CHARTER.md` - Authoritative architectural rules and patterns
+- `CHARTER.md` v10.3 - Authoritative architectural rules and patterns (PRIMARY AUTHORITY)
 - `FILESYSTEM_CHARTER.md` - Home directory organization (`~/` structure)
 - `AGENTS.md` - Repository agent guidelines (condensed version)
 - `workspace/utilities/lints/README.md` - Linting and validation tools

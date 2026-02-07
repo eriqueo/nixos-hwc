@@ -45,19 +45,19 @@ let
       services = {
         # Data from the 'networking' module
         networking = {
-          enabled = config.hwc.networking.enable;
-          firewallLevel = config.hwc.networking.firewall.level;
+          enabled = config.hwc.system.networking.enable;
+          firewallLevel = config.hwc.system.networking.firewall.level;
           ssh = {
-            enabled = config.hwc.networking.ssh.enable;
-            port = config.hwc.networking.ssh.port;
+            enabled = config.hwc.system.networking.ssh.enable;
+            port = config.hwc.system.networking.ssh.port;
           };
           tailscale = {
-            enabled = config.hwc.networking.tailscale.enable;
+            enabled = config.hwc.system.networking.tailscale.enable;
           };
           samba = {
-            enabled = config.hwc.networking.samba.enable;
+            enabled = config.hwc.system.networking.samba.enable;
             # We can even count the number of configured shares.
-            shareCount = lib.length (lib.attrNames config.hwc.networking.samba.shares);
+            shareCount = lib.length (lib.attrNames config.hwc.system.networking.samba.shares);
           };
         };
 
@@ -159,6 +159,6 @@ in
 
     # Ensure the firewall, if managed by our networking module, allows access
     # to this API endpoint.
-    hwc.networking.firewall.extraTcpPorts = [ 8080 ];
+    hwc.system.networking.firewall.extraTcpPorts = [ 8080 ];
   };
 }

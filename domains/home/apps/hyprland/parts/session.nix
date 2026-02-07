@@ -1,5 +1,5 @@
 # modules/home/apps/hyprland/parts/session.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cur = config.hwc.home.theme.cursor or {};
@@ -28,10 +28,7 @@ in
 
     "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
     "hyprland-startup"
-    "waybar"
     "hyprpaper"
-    "wl-paste --type text --watch cliphist store"
-    "wl-paste --type image --watch cliphist store"
   ];
 
   env = [

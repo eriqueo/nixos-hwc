@@ -1,5 +1,5 @@
 # modules/home/apps/proton-pass/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.proton-pass = {

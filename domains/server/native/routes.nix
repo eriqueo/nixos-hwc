@@ -3,7 +3,7 @@ let
   mcpCfg = config.hwc.ai.mcp;
 in
 {
-  hwc.services.shared.routes = [
+  hwc.server.shared.routes = [
     # Jellyfin - port mode (reliable, no base URL config needed)
     {
       name = "jellyfin";

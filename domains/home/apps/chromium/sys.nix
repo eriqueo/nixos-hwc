@@ -5,7 +5,7 @@
 # This sys.nix file defines system-lane options because system evaluates
 # before Home Manager. See CHARTER.md Section 5 for sys.nix pattern.
 
-{ config, lib, ... }:
+{ config, lib, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.system.apps.chromium;

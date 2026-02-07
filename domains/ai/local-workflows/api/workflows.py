@@ -161,7 +161,7 @@ class WorkflowExecutor:
 
         # Save to file if configured
         output_path = None
-        journal_dir = Path("/home/eric/Documents/HWC-AI-Journal")
+        journal_dir = Path(os.getenv("JOURNAL_DIR", "~/Documents/HWC-AI-Journal")).expanduser()
         if journal_dir.exists():
             filename = f"journal-{datetime.now().strftime('%Y-%m-%d')}.md"
             output_path = journal_dir / filename

@@ -15,9 +15,9 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [];  # No web UI, internal only
       volumes = [
-        "/opt/downloads/soularr:/config"
-        "/opt/downloads/soularr:/data"
-        "/mnt/hot/downloads:/downloads"
+        "${config.hwc.paths.hot.downloads}/soularr:/config"
+        "${config.hwc.paths.hot.downloads}/soularr:/data"
+        "${config.hwc.paths.hot.downloads}:/downloads"
       ];
       environment = {};
       extraOptions = [ "--memory=1g" "--cpus=0.5" ];

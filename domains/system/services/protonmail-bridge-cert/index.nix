@@ -24,8 +24,14 @@ let
   '';
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf config.hwc.system.services.protonmail-bridge-cert.enable {
     systemd.services.protonmail-bridge-cert = {
       description = "Export Proton Bridge IMAP STARTTLS certificate";
@@ -39,5 +45,7 @@ in
         ExecStartPost = "${exportCert}";
       };
     };
+    assertions = [];
   };
+
 }

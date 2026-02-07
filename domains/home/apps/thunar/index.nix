@@ -1,7 +1,7 @@
 # HWC Charter Module/domains/home/apps/thunar.nix
 # ... (header is the same)
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.apps.thunar;
 in

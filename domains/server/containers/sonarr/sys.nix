@@ -15,7 +15,7 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:8989:8989" ];
       volumes = [
-        "/opt/downloads/sonarr:/config"
+        "${config.hwc.paths.hot.downloads}/sonarr:/config"
         "${config.hwc.paths.media.root}/tv:/tv"
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];

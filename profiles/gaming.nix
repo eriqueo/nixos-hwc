@@ -31,7 +31,7 @@
   };
 
   # Network for ROM management
-  hwc.networking = {
+  hwc.system.networking = {
     enable = true;
     ssh.enable = lib.mkDefault true;
     tailscale.enable = lib.mkDefault true;
@@ -53,7 +53,7 @@
   #==========================================================================
 
   # Samba for ROM transfer
-  hwc.networking.samba = {
+  hwc.system.networking.samba = {
     enable = lib.mkDefault false;  # Enable per machine as needed
   };
 }

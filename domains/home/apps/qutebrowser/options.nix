@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, osConfig ? {}, ...}:
 
 {
   options.hwc.home.apps.qutebrowser = {

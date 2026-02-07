@@ -40,7 +40,7 @@ in
 
       rulesDir = mkOption {
         type = types.path;
-        default = "/home/eric/.config/ai-cleanup/rules";
+        default = "${config.hwc.paths.user.config}/ai-cleanup/rules";
         description = "Directory containing organization rules";
       };
 
@@ -71,7 +71,7 @@ in
 
       outputDir = mkOption {
         type = types.path;
-        default = "/home/eric/Documents/HWC-AI-Journal";
+        default = "${config.hwc.paths.user.work}/HWC-AI-Journal";
         description = "Directory for journal entries";
       };
 
@@ -125,7 +125,7 @@ in
 
       templates = mkOption {
         type = types.path;
-        default = "/home/eric/.config/ai-doc/templates";
+        default = "${config.hwc.paths.user.config}/ai-doc/templates";
         description = "Directory containing documentation templates";
       };
     };
@@ -144,7 +144,7 @@ in
 
       historyFile = mkOption {
         type = types.path;
-        default = "/home/eric/.local/share/ai-chat/history.db";
+        default = "${config.hwc.paths.user.home}/.local/share/ai-chat/history.db";
         description = "SQLite database for chat history";
       };
 

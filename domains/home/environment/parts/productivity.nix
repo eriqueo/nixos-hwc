@@ -22,7 +22,7 @@
 #     communication.thunderbird = true;
 #   };
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.productivity;

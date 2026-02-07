@@ -1,6 +1,6 @@
 # Waybar Part: Packages (Expanded)
 # Defines all package dependencies for Waybar, its modules, and all helper scripts.
-{ lib, pkgs, ... }:
+{ lib, pkgs, osConfig ? {}, ... }:
 
 with pkgs; [
   # Core Waybar package
@@ -33,6 +33,6 @@ with pkgs; [
   btop
   mission-center
   nvtopPackages.full
-] ++ lib.optionals (pkgs.system == "x86_64-linux") [
+] ++ lib.optionals (pkgs.stdenv.hostPlatform.system == "x86_64-linux") [
   linuxPackages.nvidia_x11.settings
 ]

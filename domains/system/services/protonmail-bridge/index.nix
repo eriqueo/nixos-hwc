@@ -7,8 +7,14 @@ let
   userName = config.hwc.system.users.user.name;
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ];
 
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkIf cfg.enable {
     users.groups.protonbridge = {};
     users.users.protonbridge = {
@@ -94,5 +100,7 @@ in
         SystemCallFilter = [ "@system-service" ];
       };
     };
+    assertions = [];
   };
+
 }

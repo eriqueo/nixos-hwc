@@ -1,0 +1,24 @@
+# OAuth credentials (DO NOT COMMIT)
+credentials.json
+token.json
+
+# Python virtualenv and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,8 +1,8 @@
 # Storage cleanup automation
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.storage.cleanup;
-  storageCfg = config.hwc.server.native.storage;
+  cfg = config.hwc.server.storage.cleanup;
+  storageCfg = config.hwc.server.storage;
 
   cleanupScript = pkgs.writeShellScript "media-cleanup" ''
     set -euo pipefail

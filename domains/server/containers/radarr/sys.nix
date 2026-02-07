@@ -15,7 +15,7 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:7878:7878" ];
       volumes = [
-        "/opt/downloads/radarr:/config"
+        "${config.hwc.paths.hot.downloads}/radarr:/config"
         "${config.hwc.paths.media.root}/movies:/movies"
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];

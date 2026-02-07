@@ -11,7 +11,7 @@ in
     #=========================================================================
     assertions = [
       {
-        assertion = config.hwc.services.reverseProxy.enable;
+        assertion = config.hwc.server.reverseProxy.enable;
         message = "Organizr works best with reverse proxy enabled for service integration";
       }
     ];
@@ -53,7 +53,7 @@ in
 
       # Volume mounts
       volumes = [
-        "/opt/downloads/organizr:/config"
+        "${config.hwc.paths.hot.downloads}/organizr:/config"
       ];
 
       # Dependencies

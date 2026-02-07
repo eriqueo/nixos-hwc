@@ -1,5 +1,5 @@
 # domains/home/apps/swaync/parts/appearance.nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   colors = config.hwc.home.theme.colors;

@@ -1,4 +1,4 @@
-{ lib }:
+{ lib, osConfig ? {}}:
 let
   hasField = a: n: builtins.hasAttr n a;
   getField = a: n: if hasField a n then builtins.getAttr n a else null;

@@ -8,17 +8,17 @@
 #   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify, spacy, spacy-models.en_core_web_sm
 #
 # USED BY (Downstream):
-#   - profiles/*.nix (enables via hwc.services.transcriptApi.enable)
+#   - profiles/*.nix (enables via hwc.server.transcriptApi.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/server.nix: ../domains/server/native/networking/parts/transcript-api.nix
 #
 # USAGE:
-#   hwc.services.transcriptApi.enable = true;
+#   hwc.server.transcriptApi.enable = true;
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.services.transcriptApi;
+  cfg = config.hwc.server.transcriptApi;
   paths = config.hwc.paths;
 
   # Python packages needed

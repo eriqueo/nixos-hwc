@@ -1,5 +1,5 @@
 # modules/home/apps/betterbird/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.betterbird = {

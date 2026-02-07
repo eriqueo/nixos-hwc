@@ -1,5 +1,5 @@
 # modules/system/storage/index.nix — aggregates storage and filesystem configuration
-{ lib, ... }:
+{ config, lib, ... }:
 let
   dir   = builtins.readDir ./.;
   files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix" && n != "options.nix") dir;
@@ -13,5 +13,18 @@ let
     ];
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
   imports = [ ./options.nix ] ++ filePaths ++ subIndex;
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = {};
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+    config.assertions = lib.mkIf (config ? enable && config.enable) [];
+
 }

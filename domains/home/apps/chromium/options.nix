@@ -1,5 +1,5 @@
 # modules/home/apps/chromium/options.nix
-{ lib, ... }:
+{ lib, osConfig ? {}, ... }:
 
 {
   options.hwc.home.apps.chromium = {
