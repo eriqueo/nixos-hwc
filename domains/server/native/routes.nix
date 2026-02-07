@@ -191,6 +191,32 @@ in
       headers = { "X-Forwarded-Prefix" = "/api"; };
     }
 
+    # YouTube Transcripts API - FastAPI transcript extraction service
+    {
+      name = "yt-transcripts-api";
+      mode = "subpath";
+      path = "/api/transcripts";
+      upstream = "http://127.0.0.1:8100";
+      needsUrlBase = false;  # Strip prefix - app routes at root
+      headers = {
+        "X-Forwarded-For" = "{remote_host}";
+        "X-Forwarded-Proto" = "{scheme}";
+      };
+    }
+
+    # YouTube Videos API - FastAPI video download service
+    {
+      name = "yt-videos-api";
+      mode = "subpath";
+      path = "/api/videos";
+      upstream = "http://127.0.0.1:8101";
+      needsUrlBase = false;  # Strip prefix - app routes at root
+      headers = {
+        "X-Forwarded-For" = "{remote_host}";
+        "X-Forwarded-Proto" = "{scheme}";
+      };
+    }
+
     # Open WebUI - AI chat interface (port mode - subpath-hostile SvelteKit app)
     {
       name = "openwebui";

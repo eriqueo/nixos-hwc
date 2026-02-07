@@ -32,7 +32,7 @@ let
   pkgByName = name:
     if (builtins.typeOf name == "string") && (lib.hasAttr name pkgs)
     then builtins.getAttr name pkgs
-    else pkgs.adwaita-icon-theme;
+    else (pkgs.adwaita-icon-theme or pkgs.gnome.adwaita-icon-theme or null);
 
   toGtk = colorStr:
     if colorStr == null then "#888888" else "#" + (lib.removePrefix "#" colorStr);
@@ -42,7 +42,7 @@ let
   # ----------------------------
   gtkPkg        = pkgByName (gtkThemeTok.package or "gnome-themes-extra");
   iconPkg       = pkgByName (icons.package or "papirus-icon-theme");
-  xcurPkg       = pkgByName (xcur.package or "adwaita-icon-theme");
+  xcurPkg       = pkgByName (xcur.package or (if pkgs ? adwaita-icon-theme then "adwaita-icon-theme" else "gnome.adwaita-icon-theme"));
 
   gtkThemeName  = gtkThemeTok.name or "Adwaita-dark";
   iconThemeName = icons.name or "Papirus-Dark";

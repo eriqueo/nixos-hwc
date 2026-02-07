@@ -28,8 +28,8 @@
       default = with pkgs; [
         ripgrep fd fzf bat jq curl wget unzip tree micro btop fastfetch
         rsync rclone speedtest-cli nmap traceroute dig zip p7zip yq pandoc
-        xclip diffutils less which lsof pstree git vim nano claude-code
-      ];
+        xclip diffutils less which lsof pstree git vim nano
+      ] ++ lib.optional (pkgs ? claude-code) pkgs.claude-code;
       description = "Base CLI/tool packages.";
     };
 
@@ -116,7 +116,7 @@
         "receipt-process" = "cd /opt/business/receipts && python3 ../api/services/ocr_processor.py";
         "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
         # Tool aliases
-        "eza" = "eza --icons auto --git --group-directories-first";
+        # "eza" alias is auto-created by programs.eza module in HM
         "ls" = "eza";
         "vpn" = "vpnstatus";
         "which-command" = "whence";
