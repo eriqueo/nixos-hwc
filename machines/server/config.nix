@@ -573,9 +573,9 @@
 
       # Development & Automation (keep CLI)
       n8n.enable = lib.mkForce false;
-      opencode.enable = lib.mkForce false;  # Not available in nixpkgs-stable 24.05
+      opencode.enable = lib.mkForce false;  # Not available in stable 24.05
       # gemini-cli.enable remains true (CLI tool)
-      codex.enable = lib.mkForce false;  # Not available in nixpkgs-stable 24.05
+      codex.enable = lib.mkForce false;  # Not available in stable 24.05, using claude-code instead
 
       # Utilities (disable GUI)
       wasistlos.enable = lib.mkForce false;

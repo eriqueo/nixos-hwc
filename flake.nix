@@ -92,7 +92,19 @@
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs;
-    pkgs-stable = mkPkgs system nixpkgs-stable;
+
+    # pkgs-stable with claude-code overlay (backport from unstable)
+    pkgs-stable = import nixpkgs-stable {
+      inherit system;
+      config = {
+        allowUnfree = true;
+        nvidia.acceptLicense = true;
+        permittedInsecurePackages = [ "qtwebengine-5.15.19" ];
+      };
+      overlays = [
+        (import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; })
+      ];
+    };
     
     lib = nixpkgs.lib;
 
