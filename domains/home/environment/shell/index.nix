@@ -124,6 +124,12 @@ in
       };
     };
 
+    # SSH configuration
+    programs.ssh = lib.mkIf cfg.ssh.enable {
+      enable = true;
+      matchBlocks = cfg.ssh.matchBlocks;
+    };
+
     # Zsh configuration
     programs.zsh = lib.mkIf cfg.zsh.enable {
       enable = true;
@@ -133,11 +139,7 @@ in
         size = 5000;
         save = 5000;
       };
-      shellAliases = cfg.aliases // {
-        # Override SSH aliases to use dynamic username
-        "homeserver" = "ssh ${config.home.username}@100.115.126.41";
-        "server" = "ssh ${config.home.username}@100.115.126.41";
-      };
+      shellAliases = cfg.aliases;
       initExtra = ''
         # Helper functions for enhanced shell experience
         
