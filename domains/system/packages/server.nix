@@ -50,6 +50,7 @@ in {
 
       # AI/ML tools (basic)
       python3
+      claude-code            # Claude Code CLI (backported via overlay)
       # aider-chat             # AI pair programming - not available in 24.05
       # gemini-cli             # Temporarily disabled due to npm cache build failure
       
