@@ -5,7 +5,7 @@
 # No hardware driver logic or service details here (Charter v3).
 #
 # DEPENDENCIES (Upstream):
-#   - nixpkgs (nixos-unstable), nixpkgs-stable (24.05)
+#   - nixpkgs (nixos-unstable), nixpkgs-stable (25.05)
 #   - home-manager (follows nixpkgs)
 #   - agenix (follows nixpkgs)
 #   - legacy-config (non-flake, for migration reference)
@@ -34,7 +34,7 @@
 
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-25.05";
 
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
@@ -47,7 +47,7 @@
     };
 
     home-manager-stable = {
-      url = "github:nix-community/home-manager/release-24.05";
+      url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
@@ -57,7 +57,7 @@
     };
 
     agenix-stable = {
-      url = "github:ryantm/agenix/0.15.0";  # Last version compatible with NixOS 24.05
+      url = "github:ryantm/agenix";  # Compatible with NixOS 25.05
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
@@ -95,7 +95,7 @@
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs;
 
-    # pkgs-stable with claude-code overlay (backport from unstable)
+    # pkgs-stable (25.05 - includes claude-code natively)
     pkgs-stable = import nixpkgs-stable {
       inherit system;
       config = {
@@ -103,9 +103,6 @@
         nvidia.acceptLicense = true;
         permittedInsecurePackages = [ "qtwebengine-5.15.19" ];
       };
-      overlays = [
-        (import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; })
-      ];
     };
     
     lib = nixpkgs.lib;

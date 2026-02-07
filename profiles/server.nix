@@ -393,7 +393,7 @@
   };
 
   # PostgreSQL database (required by YouTube services)
-  hwc.services.databases.postgresql = {
+  hwc.server.databases.postgresql = {
     enable = lib.mkDefault true;
     version = "16";
   };

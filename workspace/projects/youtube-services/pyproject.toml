@@ -1,0 +1,21 @@
+[project]
+name = "youtube-services"
+version = "0.1.0"
+description = "YouTube transcript and video download services for hwc-server"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["packages/*/tests"]
+pythonpath = [
+    "packages/yt_core/src",
+    "packages/yt_transcripts_api/src",
+    "packages/yt_videos_api/src"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

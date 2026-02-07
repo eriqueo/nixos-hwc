@@ -1,0 +1,18 @@
+[project]
+name = "yt-transcripts-api"
+version = "0.1.0"
+description = "YouTube transcript extraction API"
+requires-python = ">=3.11"
+dependencies = [
+    "yt-core",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "youtube-transcript-api>=0.6",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
