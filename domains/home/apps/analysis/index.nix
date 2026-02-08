@@ -16,8 +16,8 @@ in {
       pythonEnv = python3.withPackages (ps: with ps; [
         polars
         jupyterlab
-        itables
-        hvplot
+        # itables  # Not available in nixpkgs 25.05
+        # hvplot   # Not available in nixpkgs 25.05
         pandas   # Optional compatibility
         numpy
         pyarrow

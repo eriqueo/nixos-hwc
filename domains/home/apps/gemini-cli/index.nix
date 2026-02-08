@@ -20,12 +20,14 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [
+    # gemini-cli not available in nixpkgs 24.05, only in unstable
+    home.packages = lib.optionals (pkgs ? gemini-cli) [
       pkgs.gemini-cli
     ];
 
     # Load Gemini API key from agenix secret in shell initialization
-    programs.zsh.initContent = lib.mkIf hasGeminiSecret ''
+    # Note: initExtra for 24.05 compatibility (renamed to initContent in later versions)
+    programs.zsh.initExtra = lib.mkIf hasGeminiSecret ''
       # Source Gemini API key from agenix secret
       if [ -f "${osCfg.age.secrets.gemini-api-key.path}" ]; then
         source "${osCfg.age.secrets.gemini-api-key.path}"

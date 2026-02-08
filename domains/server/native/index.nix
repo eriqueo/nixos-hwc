@@ -8,6 +8,7 @@ let
   filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
   subIndex  =
     lib.pipe (lib.attrNames subds) [
+      (ns: lib.filter (n: !lib.hasPrefix "." n) ns)  # Exclude dot-prefixed directories
       (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
       (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
     ];

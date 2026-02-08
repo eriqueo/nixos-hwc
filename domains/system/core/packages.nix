@@ -47,12 +47,12 @@ in
 
       # Server bundle
       ++ (lib.optionals cfg.server.enable (with pkgs; [
-        xorg.xauth file-roller evince feh fping ethtool
+        xorg.xauth evince feh fping ethtool  # file-roller not available in 24.05
         picard claude-code flac
-        htop iotop lsof net-tools iproute2 tcpdump nmap
+        htop iotop lsof nettools iproute2 tcpdump nmap
         age docker-compose podman-compose rsync rclone unzip p7zip
         postgresql redis ffmpeg imagemagick mediainfo
-        python3 aider-chat gemini-cli
+        python3  # aider-chat and gemini-cli not available in 24.05
         borgbackup restic
       ]))
 
