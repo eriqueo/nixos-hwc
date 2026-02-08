@@ -39,8 +39,8 @@ let
 
   # Cross-version API compatibility flag
   # 24.05 uses hardware.opengl, 25.05+ uses hardware.graphics
-  # Since we're on 25.05, always use the new API
-  useStableApi = false;
+  # Since we're on 24.05, use the stable API
+  useStableApi = true;
 
   # Derive a neutral acceleration signal for service consumers.
   accelFor = type:

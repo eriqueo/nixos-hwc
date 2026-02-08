@@ -5,7 +5,7 @@
 # No hardware driver logic or service details here (Charter v3).
 #
 # DEPENDENCIES (Upstream):
-#   - nixpkgs (nixos-unstable), nixpkgs-stable (25.05)
+#   - nixpkgs (nixos-unstable), nixpkgs-stable (24.05)
 #   - home-manager (follows nixpkgs)
 #   - agenix (follows nixpkgs)
 #   - legacy-config (non-flake, for migration reference)
@@ -34,7 +34,7 @@
 
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.05";
 
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
@@ -47,7 +47,7 @@
     };
 
     home-manager-stable = {
-      url = "github:nix-community/home-manager/release-25.05";
+      url = "github:nix-community/home-manager/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
@@ -57,7 +57,7 @@
     };
 
     agenix-stable = {
-      url = "github:ryantm/agenix";  # Compatible with NixOS 25.05
+      url = "github:ryantm/agenix/0.15.0";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
@@ -87,6 +87,7 @@
           # Allow insecure qtwebengine for jellyfin-media-player
           permittedInsecurePackages = [
             "qtwebengine-5.15.19"
+            "n8n-1.91.3"  # CVE-2025-68613 - workflow automation tool
           ];
         };
         overlays = [];
@@ -95,14 +96,20 @@
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs;
 
-    # pkgs-stable (25.05 - includes claude-code natively)
+    # pkgs-stable (24.05 - with claude-code overlay from unstable)
     pkgs-stable = import nixpkgs-stable {
       inherit system;
       config = {
         allowUnfree = true;
         nvidia.acceptLicense = true;
-        permittedInsecurePackages = [ "qtwebengine-5.15.19" ];
+        permittedInsecurePackages = [
+          "qtwebengine-5.15.19"
+          "n8n-1.91.3"  # CVE-2025-68613 - workflow automation tool
+        ];
       };
+      overlays = [
+        (import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; })
+      ];
     };
     
     lib = nixpkgs.lib;

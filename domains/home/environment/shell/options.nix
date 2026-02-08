@@ -115,8 +115,7 @@
         "jobtread-sync" = "cd /opt/business/api && python3 services/jobtread_sync.py";
         "receipt-process" = "cd /opt/business/receipts && python3 ../api/services/ocr_processor.py";
         "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
-        # Tool aliases
-        "eza" = "eza --icons auto --git --group-directories-first";
+        # Tool aliases (eza alias is handled by programs.eza module)
         "ls" = "eza";
         "vpn" = "vpnstatus";
         "which-command" = "whence";

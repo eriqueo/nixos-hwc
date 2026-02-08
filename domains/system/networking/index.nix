@@ -64,14 +64,14 @@ in
     # =========================
     # Samba
     # =========================
+    # Cross-version compatibility: 24.05 uses shares+extraConfig, 24.11+ uses settings
     services.samba = lib.mkIf cfg.samba.enable {
       enable = true;
-      settings = {
-        global = {
-          workgroup = "WORKGROUP";
-          security = "user";
-        };
-      } // cfg.samba.shares;
+      shares = cfg.samba.shares;
+      extraConfig = ''
+        workgroup = WORKGROUP
+        security = user
+      '';
     };
 
     # =========================
