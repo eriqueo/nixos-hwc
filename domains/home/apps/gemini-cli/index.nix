@@ -1,7 +1,7 @@
 { config, lib, pkgs, osConfig ? {}, ... }:
 
 let
-  cfg = config.hwc.home.apps.geminiCli;
+  cfg = config.hwc.home.apps.gemini-cli;
 
   # Feature Detection: Check if we're on a NixOS host with HWC system config
   isNixOSHost = osConfig ? hwc;
