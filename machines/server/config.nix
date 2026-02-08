@@ -26,8 +26,8 @@
         # Verify pkgs was built from nixpkgs-stable, not nixpkgs-unstable
         # Check the nixpkgs path contains the stable revision
         lib.hasInfix (inputs.nixpkgs-stable.rev or "stable") (toString pkgs.path) ||
-        # Alternative: check if pkgs.lib.version contains "24.05" (stable branch)
-        lib.hasPrefix "24.05" (pkgs.lib.trivial.release or "")
+        # Alternative: check if pkgs.lib.version contains "25.05" (stable branch)
+        lib.hasPrefix "25.05" (pkgs.lib.trivial.release or "")
       );
       message = ''
         ============================================================
@@ -36,7 +36,7 @@
         hwc-server MUST use nixpkgs-stable, not nixpkgs-unstable!
 
         Current nixpkgs: ${toString pkgs.path}
-        Expected: nixpkgs-stable (24.05 branch)
+        Expected: nixpkgs-stable (25.05 branch)
 
         This is a production server. Using unstable nixpkgs causes:
         - PostgreSQL major version changes
