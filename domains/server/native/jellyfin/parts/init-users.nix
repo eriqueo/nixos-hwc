@@ -48,7 +48,7 @@ pkgs.writeShellScript "jellyfin-init-users" ''
       ${pkgs.sqlite}/bin/sqlite3 "$DB_PATH" <<SQL
 INSERT INTO Users (
   Id, Username, Password, EnableLocalPassword,
-  InternalId, MaxActiveSessions, MaxParentalRatingScore,
+  InternalId, MaxActiveSessions, MaxParentalAgeRating,
   EnableAutoLogin, EnableNextEpisodeAutoPlay, EnableUserPreferenceAccess,
   DisplayCollectionsView, DisplayMissingEpisodes, HidePlayedInLatest,
   PlayDefaultAudioTrack, RememberAudioSelections, RememberSubtitleSelections,

@@ -2,6 +2,13 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.lidarr;
+  arrConfig = import ../../_shared/arr-config.nix { inherit lib pkgs; };
+  configPath = "${config.hwc.paths.hot.downloads}/lidarr";
+  enforceScript = arrConfig.mkArrConfigScript {
+    name = "lidarr";
+    inherit configPath;
+    urlBase = "/lidarr";
+  };
 in
 {
   config = lib.mkIf cfg.enable {
@@ -10,6 +17,9 @@ in
     systemd.services."podman-lidarr".wants = [ "network-online.target" "agenix.service" ];
     systemd.services."podman-lidarr".requires = [ "mnt-hot.mount" ];
 
-
+    # Enforce correct config.xml settings before container starts
+    systemd.services."podman-lidarr".serviceConfig.ExecStartPre = [
+      "+${enforceScript}"  # + prefix runs as root
+    ];
   };
 }

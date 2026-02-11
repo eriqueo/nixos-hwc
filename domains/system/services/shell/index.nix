@@ -87,7 +87,7 @@ in
         # Neovim/Editor support tools
         python3Packages.pip
         python3Packages.pynvim
-        nodePackages.neovim
+        # nodePackages.neovim removed in 24.11 - no longer needed
         tree-sitter
         universal-ctags
       ]);

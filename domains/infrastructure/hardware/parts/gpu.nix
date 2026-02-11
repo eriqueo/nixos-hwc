@@ -38,9 +38,10 @@ let
   t     = lib.types;
 
   # Cross-version API compatibility flag
-  # 24.05 uses hardware.opengl, 25.05+ uses hardware.graphics
-  # Since we're on 24.05, use the stable API
-  useStableApi = true;
+  # 24.05 uses hardware.opengl, 24.11+ uses hardware.graphics
+  # nixosApiVersion is passed from flake.nix ("stable" for server, "unstable" for laptop)
+  # 24.11 stable now uses hardware.graphics API
+  useStableApi = false;  # 24.11+ uses hardware.graphics
 
   # Derive a neutral acceleration signal for service consumers.
   accelFor = type:

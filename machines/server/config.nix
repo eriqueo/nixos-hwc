@@ -26,8 +26,9 @@
         # Verify pkgs was built from nixpkgs-stable, not nixpkgs-unstable
         # Check the nixpkgs path contains the stable revision
         lib.hasInfix (inputs.nixpkgs-stable.rev or "stable") (toString pkgs.path) ||
-        # Alternative: check if pkgs.lib.version contains "24.05" (stable branch)
-        lib.hasPrefix "24.05" (pkgs.lib.trivial.release or "")
+        # Alternative: check if pkgs.lib.version contains stable branch (24.05 or 24.11)
+        lib.hasPrefix "24.05" (pkgs.lib.trivial.release or "") ||
+        lib.hasPrefix "24.11" (pkgs.lib.trivial.release or "")
       );
       message = ''
         ============================================================
@@ -36,7 +37,7 @@
         hwc-server MUST use nixpkgs-stable, not nixpkgs-unstable!
 
         Current nixpkgs: ${toString pkgs.path}
-        Expected: nixpkgs-stable (24.05 branch)
+        Expected: nixpkgs-stable (24.11 branch)
 
         This is a production server. Using unstable nixpkgs causes:
         - PostgreSQL major version changes
@@ -227,13 +228,13 @@
         "/mnt/media/pictures"       # 92GB - IRREPLACEABLE photos
         "/mnt/media/databases"      # 252MB - Database backups
         "/mnt/media/backups"        # 132GB - Other backups
+        "/mnt/media/surveillance"   # ~60GB - Surveillance recordings (7-day retention)
         # NOTE: /home/eric/.nixos is backed up via /home
         # EXCLUDED (replaceable):
         # "/etc/nixos"              # Symlink to flake in /home/eric/.nixos
         # "/mnt/media/movies"       # 1.2TB - Can re-download
         # "/mnt/media/tv"           # 2.1TB - Can re-download
         # "/mnt/media/music"        # 261GB - Can re-download
-        # "/mnt/media/surveillance" # 650GB - Auto-rotates (7 days)
       ];
 
       # Exclude patterns for backup efficiency
@@ -247,8 +248,6 @@
         ".npm"
         ".cargo/registry"
         ".cargo/git"
-        "*/frigate/recordings/*"  # Surveillance auto-managed
-        "*/frigate/clips/*"       # Surveillance auto-managed
       ];
     };
 

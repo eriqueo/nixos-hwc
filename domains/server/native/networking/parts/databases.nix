@@ -32,15 +32,25 @@ in {
         enable = true;
         # CHARTER v9.0: Explicitly pin PostgreSQL 15 to prevent data format breakage
         # Data directory initialized with PostgreSQL 15 - upgrading requires migration
+        # Include pgvecto.rs for Immich vector search support
         package = pkgs.postgresql_15;
+        extensions = ps: [ ps.pgvecto-rs ];
         dataDir = cfg.postgresql.dataDir;
 
         ensureDatabases = cfg.postgresql.databases;
+
+        # Listen on localhost and container network gateway
+        settings.listen_addresses = lib.mkForce "localhost,10.89.0.1";
+
+        # pgvecto.rs requires shared preload
+        settings.shared_preload_libraries = "vectors";
 
         authentication = ''
           local all all trust
           host all all 127.0.0.1/32 trust
           host all all ::1/128 trust
+          # Allow connections from Podman media-network (10.89.0.0/16)
+          host all all 10.89.0.0/16 trust
         '';
       };
 

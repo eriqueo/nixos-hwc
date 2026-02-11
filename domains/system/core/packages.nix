@@ -36,7 +36,7 @@ in
         # Language servers and dev toolchain
         lua-language-server nil pyright nodePackages.typescript-language-server
         gopls clang-tools gcc gnumake cmake pkg-config nodejs python3 cargo go
-        python3Packages.pip python3Packages.pynvim nodePackages.neovim tree-sitter universal-ctags
+        python3Packages.pip python3Packages.pynvim tree-sitter universal-ctags
 
         # GitHub CLI
         gh

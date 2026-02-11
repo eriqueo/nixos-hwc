@@ -64,14 +64,15 @@ in
     # =========================
     # Samba
     # =========================
-    # Cross-version compatibility: 24.05 uses shares+extraConfig, 24.11+ uses settings
+    # NixOS 24.11+ uses settings API
     services.samba = lib.mkIf cfg.samba.enable {
       enable = true;
-      shares = cfg.samba.shares;
-      extraConfig = ''
-        workgroup = WORKGROUP
-        security = user
-      '';
+      settings = {
+        global = {
+          workgroup = "WORKGROUP";
+          security = "user";
+        };
+      } // cfg.samba.shares;
     };
 
     # =========================
@@ -88,7 +89,7 @@ in
       allowedUDPPorts =
         cfg.firewall.extraUdpPorts
         ++ (lib.optionals cfg.samba.enable [ 137 138 ]);
-      trustedInterfaces = [ "eno1" ] ++ (lib.optionals cfg.tailscale.enable [ "tailscale0" ]);
+      trustedInterfaces = [ "eno1" "podman0" "podman1" ] ++ (lib.optionals cfg.tailscale.enable [ "tailscale0" ]);
     };
 
     # =========================
