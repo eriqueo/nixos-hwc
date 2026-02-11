@@ -63,7 +63,15 @@ let
       # Wildcard channels (e.g., Folders/*) - use pattern-based channel
       wildcardChannel = if wildcards != [] then
         let
-          wildcardPatterns = lib.concatStringsSep " " (map confQuote wildcards);
+          # Handle negation patterns (starting with !) differently - don't quote the whole thing
+          quotePattern = p:
+            if lib.hasPrefix "!" p
+            then let
+              # For negation patterns like "!\"All Mail\"", split into ! and the quoted part
+              rest = lib.removePrefix "!" p;
+            in "!${confQuote rest}"
+            else confQuote p;
+          wildcardPatterns = lib.concatStringsSep " " (map quotePattern wildcards);
         in ''
           Channel ${a.name}-wildcards
           Far :${a.name}-remote:

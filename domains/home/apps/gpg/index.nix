@@ -12,14 +12,17 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    # Enable GPG and the user gpg-agent service (pinentry in TTY)
+    # Enable GPG and the user gpg-agent service
     programs.gpg.enable = true;
 
     services.gpg-agent = {
       enable = true;
       enableSshSupport = true;
-      # HM 24.05 uses pinentryPackage
-      pinentryPackage = pkgs.pinentry-curses;
+      # Use GUI pinentry for systemd services (Bridge, etc.)
+      pinentryPackage = pkgs.pinentry-gnome3;
+      # Cache passphrase for 2 hours to reduce prompts
+      defaultCacheTtl = 7200;
+      maxCacheTtl = 7200;
     };
 
     # Make pass the default password store (used by bridge CLI)

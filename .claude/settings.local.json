@@ -120,7 +120,9 @@
       "Bash(ZE_ENABLE_LOADER_DEBUG_TRACE=1 LD_LIBRARY_PATH=/nix/store/2a75wdjyfk5swbxl81jbmqhnl8vq81hd-intel-npu-driver-1.26.0/lib:/nix/store/px1b7q4abbk4lls5m3rz50dc19rbfihi-level-zero-1.25.2/lib:/nix/store/2wjf1g1yqlf7ghqhmbypq6988j9nap7b-python3.12-openvino-2025.4.1.0-20426/lib/python3.12/site-packages/openvino/libs /nix/store/gmyvks3qdc4g6mcp7cf26wy1c1khs6zz-python3-3.12.12-env/bin/python:*)",
       "Bash(npm config:*)",
       "Bash(./workspace/utilities/lints/charter-lint.sh:*)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "Bash(mbsync:*)",
+      "Bash(du:*)"
     ],
     "deny": [],
     "ask": [],

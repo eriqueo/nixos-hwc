@@ -10,29 +10,35 @@ let
         pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
     in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
-  # Per-account views using maildir-account-path
-  # Each account shows only its own folders within the unified Maildir
-  accountBlock = a: ''
-    [${a.name}]
-    source               = notmuch://${maildirBase}
-    maildir-store        = ${maildirBase}
-    maildir-account-path = ${a.maildirName}
-    multi-file-strategy  = act-one-delete-rest
-    from                 = ${a.realName or ""} <${a.address}>
-    outgoing             = exec:msmtp -a ${a.send.msmtpAccount}
-    ${if a.primary or false then "default = inbox" else ""}
+  # Query maps per account (minimal, no per-account prefixes)
+  queriesUnified = ''
+    inbox = tag:inbox AND NOT tag:trash
+    unread = tag:unread AND NOT tag:trash
+    sent = tag:sent
+    drafts = tag:draft
+    trash = tag:trash
+    starred = tag:starred AND NOT tag:trash
+    important = tag:important AND NOT tag:trash
   '';
 
-  # Saved searches shown as folders under the notmuch unified account
-  notmuchQueries = ''
-    inbox  = tag:inbox AND NOT tag:trash AND NOT tag:spam
-    unread = tag:unread AND NOT tag:trash AND NOT tag:spam
-    all    = NOT tag:trash AND NOT tag:spam
+  queriesWork = ''
+    inbox = tag:hwc AND tag:inbox AND NOT tag:trash
+    unread = tag:hwc AND tag:unread AND NOT tag:trash
+    sent = tag:hwc AND tag:sent
+    drafts = tag:hwc AND tag:draft
+    trash = tag:hwc AND tag:trash
+    starred = tag:hwc AND tag:starred AND NOT tag:trash
+    important = tag:hwc AND tag:important AND NOT tag:trash
+  '';
 
-    hwc         = to:eric@iheartwoodcraft.com AND NOT tag:trash AND NOT tag:spam
-    personal    = to:eriqueo@proton.me AND NOT tag:trash AND NOT tag:spam
-    gmail-biz   = to:heartwoodcraftmt@gmail.com AND NOT tag:trash AND NOT tag:spam
-    gmail-pers  = to:eriqueokeefe@gmail.com AND NOT tag:trash AND NOT tag:spam
+  queriesPersonal = ''
+    inbox = tag:personal AND tag:inbox AND NOT tag:trash
+    unread = tag:personal AND tag:unread AND NOT tag:trash
+    sent = tag:personal AND tag:sent
+    drafts = tag:personal AND tag:draft
+    trash = tag:personal AND tag:trash
+    starred = tag:personal AND tag:starred AND NOT tag:trash
+    important = tag:personal AND tag:important AND NOT tag:trash
   '';
 
   # Unified notmuch account (first) - shows all mail across all accounts
@@ -40,15 +46,48 @@ let
     [unified]
     source              = notmuch://${maildirBase}
     maildir-store       = ${maildirBase}
+    # Hide per-account Maildirs (dot-prefixed) and noisy server folders
+    folders-exclude     = ~^\\.,[Gmail]/All Mail,spam,trash
     multi-file-strategy = act-one-delete-rest
-    query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
+    query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries-unified
     from                = Eric O'Keefe <eric@iheartwoodcraft.com>
     outgoing            = exec:msmtp -a iheartwoodcraft
     default             = inbox
   '';
 
-  # Make unified FIRST, then the IMAP accounts
-  accountsConf = unifiedAccount + "\n\n" + lib.concatStringsSep "\n\n" (map accountBlock accVals);
+  workAccount = ''
+    [work]
+    source              = notmuch://${maildirBase}
+    maildir-store       = ${maildirBase}
+    folders-exclude     = ~^\\.,[Gmail]/All Mail,spam,trash
+    exclude-tags        = personal
+    multi-file-strategy = act-one-delete-rest
+    query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries-work
+    from                = Eric O'Keefe <eric@iheartwoodcraft.com>
+    outgoing            = exec:msmtp -a proton-hwc
+    default             = inbox
+  '';
+
+  personalAccount = ''
+    [personal]
+    source              = notmuch://${maildirBase}
+    maildir-store       = ${maildirBase}
+    folders-exclude     = ~^\\.,[Gmail]/All Mail,spam,trash
+    exclude-tags        = hwc
+    multi-file-strategy = act-one-delete-rest
+    query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries-personal
+    from                = Eric O'Keefe <eriqueokeefe@gmail.com>
+    outgoing            = exec:msmtp -a gmail-personal
+    default             = inbox
+  '';
+
+  # Tag-based unified inbox: Only the unified notmuch account with virtual folders
+  # Plus per-account tabs for work/personal
+  accountsConf = lib.concatStringsSep "\n" [
+    unifiedAccount
+    workAccount
+    personalAccount
+  ];
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
 
   stylesetConf = let
@@ -81,6 +120,7 @@ let
     styleset-name=hwc-theme
     dirlist-tree=true
     dirlist-collapse=1
+    dirlist-exclude = ^\..*
     column-date = {{.DateAutoFormat .Date.Local}}
     column-name = {{index (.From | names) 0}}
     column-flags = {{.Flags | join ""}}
@@ -163,7 +203,9 @@ in
   files = profileBase:{
     ".config/aerc/aerc.conf".text = aercConf;
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
-    ".config/aerc/notmuch-queries".text = notmuchQueries;
+    ".config/aerc/notmuch-queries-unified".text = queriesUnified;
+    ".config/aerc/notmuch-queries-work".text = queriesWork;
+    ".config/aerc/notmuch-queries-personal".text = queriesPersonal;
   };
   packages = with pkgs; [
     aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler-utils

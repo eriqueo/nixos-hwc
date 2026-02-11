@@ -32,7 +32,7 @@ in
     "${mod} SHIFT,H,exec,hyprland-system-health-checker"
     "${mod},A,exec,proton-authenticator-toggle"
 
-    ",PRINT,exec,hyprshot -m region -c -o $HWC_SCREENSHOTS_DIR/"
+    ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
 
     "${mod},left,movefocus,l"
     "${mod},right,movefocus,r"

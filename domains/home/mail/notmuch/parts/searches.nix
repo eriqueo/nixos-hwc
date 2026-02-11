@@ -9,17 +9,24 @@ let
     sent = "tag:sent";
     archive = "tag:archive";
   };
-   savedSearches = {
+
+  # Built-in saved searches for unified inbox workflow
+  builtinSearches = {
+    # Unified view: All inbox mail from all accounts with color coding
+    "unified" = "tag:inbox";
+
+    # Per-account inbox views
     "inbox:hwc"    = "tag:inbox AND tag:hwc";
     "inbox:proton" = "tag:inbox AND tag:proton";
     "inbox:gmail-personal" = "tag:inbox AND tag:gmail-personal";
     "inbox:gmail-business" = "tag:inbox AND tag:gmail-business";
-    
-    # Rollups now super clean:
+
+    # Rollups by domain
     "all:work"  = "tag:inbox AND tag:hwc";
     "all:personal" = "tag:inbox AND (tag:proton OR tag:gmail-personal)";
   };
-  all = defaults // (cfg.savedSearches or {});
+
+  all = defaults // builtinSearches // (cfg.savedSearches or {});
   lines = lib.mapAttrsToList (n: q: "${n}=${q}") all;
   text = lib.concatStringsSep "\n" lines + "\n";
 in { inherit text; }

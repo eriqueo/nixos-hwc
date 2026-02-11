@@ -30,17 +30,11 @@ in
         type = "proton-bridge";
         realName = "Eric";
         address = "eric@iheartwoodcraft.com";  # Primary address for sending
-        login = "eriqueo";  # Bridge username (NOT email address)
+        login = "eric@iheartwoodcraft.com";  # Bridge IMAP username (split mode requires email address)
         password = { mode = "pass"; pass = "email/proton/bridge"; };
-        maildirName = "100_proton";  # Single maildir for all Proton mail
-        mailboxMapping = {
-          "Folders/hwc_inbox"      = "hwc-inbox";
-          "Folders/personal_inbox" = "personal-inbox";
-          "Sent"                   = "sent";
-          "Drafts"                 = "drafts";
-          "Archive"                = "archive";
-        };
-        sync.wildcards = [];  # Explicit folders only - no wildcards
+        maildirName = ".100_proton";  # Hidden account sync folder
+        # Sync ALL Proton folders except "All Mail" (virtual folder causes issues with Expunge)
+        sync.wildcards = [ "*" "!All Mail" ];
         send.msmtpAccount = "proton-hwc";  # Default to work identity
         # Add second identity for personal address
         extraMsmtp = ''
@@ -67,13 +61,9 @@ in
             mode = "agenix";
             agenix = gmailPersonalSecretPath;
           };
-          maildirName = "210_gmail-personal";
-          mailboxMapping = {
-            "INBOX"               = "inbox";
-            "[Gmail]/Sent Mail"   = "sent";
-            "[Gmail]/Drafts"      = "drafts";
-            "[Gmail]/Starred"     = "starred";
-          };
+          maildirName = ".210_gmail-personal";
+          # Sync inbox plus all Gmail label folders
+          sync.wildcards = [ "INBOX" "[Gmail]/*" ];
           send.msmtpAccount = "gmail-personal";
         };
 
@@ -87,13 +77,9 @@ in
             mode = "agenix";
             agenix = gmailBusinessSecretPath;
           };
-          maildirName = "110_gmail-business";
-          mailboxMapping = {
-            "INBOX"               = "inbox";
-            "[Gmail]/Sent Mail"   = "sent";
-            "[Gmail]/Drafts"      = "drafts";
-            "[Gmail]/Starred"     = "starred";
-          };
+          maildirName = ".110_gmail-business";
+          # Sync inbox plus all Gmail label folders
+          sync.wildcards = [ "INBOX" "[Gmail]/*" ];
           send.msmtpAccount = "gmail-business";
         };
   };

@@ -7,19 +7,16 @@ in {
   programs.notmuch = {
     enable = true;
     new.tags = newTags;
-    extraConfig = lib.mkMerge [
-      {
-        database.path = maildirRoot;
-        user = {
-          name = userName;
-          primary_email = primaryEmail;
-          other_email = mkSemi otherEmails;
-        };
-        maildir.synchronize_flags = "true";
-      }
-      (lib.optionalAttrs (excludeFolders != []) {
-        new.ignore = mkSemi excludeFolders;
-      })
-    ];
+    # Only ignore folders explicitly passed in; default is none.
+    new.ignore = excludeFolders;
+    extraConfig = {
+      database.path = maildirRoot;
+      user = {
+        name = userName;
+        primary_email = primaryEmail;
+        other_email = mkSemi otherEmails;
+      };
+      maildir.synchronize_flags = "true";
+    };
   };
 }
