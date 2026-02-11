@@ -10,6 +10,7 @@
     ./hardware.nix
     ../../profiles/system.nix
     ../../profiles/home.nix         # Home Manager domain menu
+    ./home.nix
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
@@ -243,15 +244,7 @@
     # };
   };
 
-  # Disable heavyweight creative/productivity apps on the backup laptop build
-  home-manager.users.eric.hwc.home.apps = {
-    blender.enable = lib.mkForce false;
-    freecad.enable = lib.mkForce false;
-    obsidian.enable = lib.mkForce false;
-    onlyoffice-desktopeditors.enable = lib.mkForce false;
-    slack.enable = lib.mkForce false;
-    bottles-unwrapped.enable = lib.mkForce false;
-  };
+  # Machine-specific Home Manager overrides live in ./home.nix
 
   # Desktop Environment - System-lane dependencies
   hwc.system.apps.hyprland.enable = true;  # Startup script, helper scripts
@@ -410,7 +403,6 @@
   # Home Manager Configuration - Desktop Environment for Hybrid Laptop/Server
   # Unlike hwc-server (headless), hwc-xps needs GUI for local work
   # profiles/home.nix provides defaults; we override for desktop environment needs
-  # NOTE: home-manager.users.eric already defined in profiles/home.nix, we just override specific apps
 
   system.stateVersion = "24.05";
 }
