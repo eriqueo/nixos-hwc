@@ -25,6 +25,7 @@
     # The system.nix profile is now the main entry point for all system services.
     ../../profiles/system.nix
     ../../profiles/home.nix
+    ./home.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix  # Enable local AI for laptop
 
@@ -303,20 +304,7 @@
   hwc.paths.hot.root = "/home/eric/500_media/hot";     # Override: laptop uses hot for active work
   hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
 
-  # Home applications
-  home-manager.users.eric.hwc.home.apps.imv.enable = true;
-  home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
-  home-manager.users.eric.hwc.home.apps.wayvnc.enable = false;
-
-  # Enable shell environment with MCP configuration
-  home-manager.users.eric.hwc.home.shell = {
-    enable = true;
-    mcp = {
-      enable = true;
-      includeConfigDir = false;  # Laptop: don't expose ~/.config to Claude
-      includeServerTools = false;  # Laptop: no server MCP tools needed
-    };
-  };
+  # Machine-specific Home Manager overrides live in ./home.nix
 
   #============================================================================
   # AI DOMAIN CONFIGURATION (Laptop)
