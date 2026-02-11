@@ -14,7 +14,7 @@ let
   # Build Blender with CUDA support for Cycles GPU rendering
   blenderPackage = pkgs.blender.override {
     cudaSupport = cfg.cudaSupport && (gpuCfg.type == "nvidia");
-    hipSupport = cfg.hipSupport && (gpuCfg.type == "amd");
+    rocmSupport = cfg.rocmSupport && (gpuCfg.type == "amd");
   };
 
   # Create a GPU-enabled wrapper for NVIDIA systems
@@ -58,8 +58,8 @@ in
         message = "Blender CUDA support requires hwc.infrastructure.hardware.gpu.type = \"nvidia\" and GPU to be enabled";
       }
       {
-        assertion = !cfg.hipSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "amd");
-        message = "Blender HIP support requires hwc.infrastructure.hardware.gpu.type = \"amd\" and GPU to be enabled";
+        assertion = !cfg.rocmSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "amd");
+        message = "Blender ROCm support requires hwc.infrastructure.hardware.gpu.type = \"amd\" and GPU to be enabled";
       }
     ];
   };
