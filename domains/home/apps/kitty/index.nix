@@ -116,8 +116,20 @@ in
       # Mouse mappings not representable via the 'settings' attrset
       # Use extraConfig for raw kitty directives.
       extraConfig = ''
+        # Ungrabbed mode: select text or open URLs
         mouse_map left release ungrabbed mouse_click_url_or_select
-        mouse_map ctrl+left release grabbed mouse_click_url
+
+        # Grabbed mode: pass clicks through to application (aerc, vim, etc.)
+        # This allows clicking in aerc's UI to select messages, folders, tabs
+        mouse_map left press grabbed mouse_send
+        mouse_map left click grabbed mouse_send
+        mouse_map left release grabbed mouse_send
+
+        # Double-click inside grabbed apps (aerc) -> send Enter to open items
+        mouse_map left doublepress grabbed send_text all "\r"
+
+        # Allow Ctrl+click for URLs even when grabbed
+        mouse_map ctrl+left release grabbed,ungrabbed mouse_click_url
 
       '';
 

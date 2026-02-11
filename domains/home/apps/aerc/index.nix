@@ -25,6 +25,11 @@ in
     };
     home.shellAliases = (sessPart.shellAliases or {});
 
+    home.activation.aercAccounts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      # Ensure aerc accounts.conf is a real file with restrictive perms
+      install -m600 -D ${cfgPart.accountsFile} "$HOME/.config/aerc/accounts.conf"
+    '';
+
     #==========================================================================
     # VALIDATION
     #==========================================================================

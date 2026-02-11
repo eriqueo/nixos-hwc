@@ -40,15 +40,20 @@ let
     if (builtins.isString extraHook && extraHook != "") then "\n" + extraHook else "";
 
   accountTags = ''
-    # Tag by per-account Maildir root (following runbook exactly)
-    ${nm} tag +acc:hwc   -- 'path:100_hwc/**'
-    ${nm} tag +acc:gbiz  -- 'path:110_gmail-business/**'
-    ${nm} tag +acc:pers  -- 'path:200_personal/**'
-    ${nm} tag +acc:gpers -- 'path:210_gmail-personal/**'
+    # Domain tags (work HWC vs personal)
+    ${nm} tag +hwc -- 'path:.100_proton/** OR path:.110_gmail-business/**'
+    ${nm} tag +personal -- 'path:.210_gmail-personal/**'
 
-    # (Optional) reconstruct inbox/unread by folder names
-    ${nm} tag +inbox  -- 'folder:inbox and not tag:trash and not tag:spam'
-    ${nm} tag +unread -- 'folder:new   and not tag:trash and not tag:spam'
+    # Account-specific tags (for granular filtering)
+    ${nm} tag +proton-hwc -- 'path:.100_proton/**'
+    ${nm} tag +gmail-business -- 'path:.110_gmail-business/**'
+    ${nm} tag +gmail-personal -- 'path:.210_gmail-personal/**'
+
+    # Folder state tags (apply to all accounts)
+    ${nm} tag +inbox -- 'folder:**/INBOX OR folder:**/inbox AND NOT tag:trash'
+    ${nm} tag +sent -- 'folder:**/Sent OR folder:**/"[Gmail].Sent Mail" AND NOT tag:trash'
+    ${nm} tag +draft -- 'folder:**/Drafts OR folder:**/"[Gmail].Drafts" AND NOT tag:trash'
+    ${nm} tag +trash -- 'folder:**/Trash OR folder:**/"[Gmail].Trash" OR folder:**/"[Gmail].Bin"'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
 in

@@ -46,16 +46,28 @@ in {
     msglist_marked = token (hex c.bg1) (hex c.marked) true;
     msglist_result = token (hex c.accent) "default" true;
 
-   # ===== SOURCE ACCOUNT COLORS (Header-based dynamic styling) =====
-     # Colors are now sourced from your global Gruvbox theme palette for consistency.
+    # ===== SOURCE ACCOUNT COLORS (Colored text, not background) =====
+    # Match against To/Cc/From headers to color by account in unified view.
+    # Using subtle colors for text to preserve selection highlighting
+    # Work primary (iheartwoodcraft.com) - green
+    "msglist_*.To,~iheartwoodcraft.com"   = token (hex c.success) "default" false;
+    "msglist_*.Cc,~iheartwoodcraft.com"   = token (hex c.success) "default" false;
+    "msglist_*.From,~iheartwoodcraft.com" = token (hex c.success) "default" false;
 
-     # --- Work Domain (Cool Colors) ---
-     "[messages].From:iheartwoodcraft.com"        = token (hex c.selection)   "default" false; #// Primary Work: Blue
-     "[messages].From:heartwoodcraftmt@gmail.com" = token (hex c.accent)   "default" false; #// Secondary Work: Aqua
+    # Gmail business (heartwoodcraftmt@gmail.com) - teal/aqua
+    "msglist_*.To,~heartwoodcraftmt@gmail.com"   = token (hex c.accent) "default" false;
+    "msglist_*.Cc,~heartwoodcraftmt@gmail.com"   = token (hex c.accent) "default" false;
+    "msglist_*.From,~heartwoodcraftmt@gmail.com" = token (hex c.accent) "default" false;
 
-     # --- Personal Domain (Warm Colors) ---
-     "[messages].From:eriqueokeefe@gmail.com"     = token (hex c.accentAlt) "default" false; #// Primary Personal: Purple
-     "[messages].From:proton.me"                  = token (hex c.marked)    "default" false; #// Secondary Personal: Red/Magenta
+    # Gmail personal (eriqueokeefe@gmail.com) - purple
+    "msglist_*.To,~eriqueokeefe@gmail.com"   = token (hex c.accentAlt) "default" false;
+    "msglist_*.Cc,~eriqueokeefe@gmail.com"   = token (hex c.accentAlt) "default" false;
+    "msglist_*.From,~eriqueokeefe@gmail.com" = token (hex c.accentAlt) "default" false;
+
+    # Proton personal (eriqueo@proton.me) - orange/yellow
+    "msglist_*.To,~eriqueo@proton.me"   = token (hex c.warning) "default" false;
+    "msglist_*.Cc,~eriqueo@proton.me"   = token (hex c.warning) "default" false;
+    "msglist_*.From,~eriqueo@proton.me" = token (hex c.warning) "default" false;
 
 
     # Official: Additional message states
@@ -105,15 +117,8 @@ in {
    # index_size = token (hex c.fg3) "default" false;
    # index_subject = token (hex c.fg1) "default" false;
 
-    # ===== NOTMUCH TAG-BASED COLORS (Option B: Phase 4) =====
-    # MOVED TO END FOR HIGHEST PRECEDENCE - OVERRIDE msglist styles
-    # Account-specific tags for colored badges
-    "[messages].Tag:hwc_email"     = token (hex c.selection)   "default" false; #// HWC: Blue
-    "[messages].Tag:gmail_work"    = token (hex c.accent)      "default" false; #// Gmail Work: Aqua
-    "[messages].Tag:proton_pers"   = token (hex c.marked)      "default" false; #// Proton: Red/Magenta
-    "[messages].Tag:gmail_pers"    = token (hex c.accentAlt)   "default" false; #// Gmail Personal: Purple
-
-    # Domain-level tags
+    # ===== NOTMUCH TAG-BASED COLORS (legacy/optional) =====
+    # Domain-level tags (use only these to color messages)
     "[messages].Tag:work"          = token (hex c.info)        "default" true;  #// Work domain: Bold info color
     "[messages].Tag:personal"      = token (hex c.success)     "default" true;  #// Personal domain: Bold success color
 

@@ -80,8 +80,9 @@
         "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me";
         "reload" = "source ~/.zshrc";
-        "homeserver" = "ssh eric@100.114.232.124";
-        "server" = "ssh server";  # Use SSH config host
+        "homeserver" = "ssh eric@100.115.126.41";
+        "server" = "ssh eric@100.114.232.124";
+        "xps" = "ssh eric@100.126.80.42";
         "vpnon" = "sudo wg-quick up protonvpn";
         "vpnoff" = "sudo wg-quick down protonvpn";
         "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";

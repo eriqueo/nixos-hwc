@@ -20,6 +20,9 @@ let
   hyprcursorSource =
     if (hc ? assetPathRel) then ../../.. + "/${hc.assetPathRel}" else null;
 
+  # Get screenshots path from osConfig if available, fallback to default
+  screenshotsDir = lib.attrByPath ["hwc" "paths" "screenshots"] "/home/eric/500_media/510_pictures/screenshots" osConfig;
+
 in
 {
   # FLAT KEYS (NO nested `settings = {}`!)
@@ -37,6 +40,7 @@ in
     "XCURSOR_THEME,${xcursorName}"
     "XCURSOR_SIZE,${cursorSize}"
     "XCURSOR_PATH,${xcPkg}/share/icons"
+    "HWC_SCREENSHOTS_DIR,${screenshotsDir}"
   ];
 
   packages = [ ]; # hyprland-startup script now provided by system packages

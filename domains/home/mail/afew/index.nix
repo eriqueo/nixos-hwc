@@ -20,31 +20,22 @@ let
   financeClause      = joinFrom (rules.financeSenders or []);
   actionClause       = joinFrom (rules.actionSubjects or []);
 
-  filters = lib.concatStringsSep "\n" (lib.filter (s: s != "") [
-    (if newsletterClause != "" then ''
-[Filter "tag-newsletters"]
-query = ${newsletterClause}
-tags = +newsletter
-'' else "")
+  # Afew 3.0+ uses numbered filter sections: [Filter.1], [Filter.2], etc.
+  filterList = lib.filter (f: f.clause != "") [
+    { num = 1; clause = newsletterClause; tag = "newsletter"; msg = "Tag newsletters"; }
+    { num = 2; clause = notificationClause; tag = "notification"; msg = "Tag notifications"; }
+    { num = 3; clause = financeClause; tag = "finance"; msg = "Tag finance emails"; }
+    { num = 4; clause = actionClause; tag = "action"; msg = "Tag actionable emails"; }
+  ];
 
-    (if notificationClause != "" then ''
-[Filter "tag-notifications"]
-query = ${notificationClause}
-tags = +notification
-'' else "")
+  makeFilter = f: ''
+[Filter.${toString f.num}]
+query = ${f.clause}
+tags = +${f.tag}
+message = ${f.msg}
+'';
 
-    (if financeClause != "" then ''
-[Filter "tag-finance"]
-query = ${financeClause}
-tags = +finance
-'' else "")
-
-    (if actionClause != "" then ''
-[Filter "tag-actionable"]
-query = ${actionClause}
-tags = +action
-'' else "")
-  ]);
+  filters = lib.concatStringsSep "\n" (map makeFilter filterList);
 
   conf = ''
 [global]

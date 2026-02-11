@@ -55,48 +55,6 @@ in
         executable = true;
       };
     })
-
-    # Auto-sync service and timer
-    {
-      systemd.user.services.mail-sync = {
-        Unit = {
-          Description = "Sync mail and update notmuch index";
-          After = [ "network.target" ];
-        };
-        Service = {
-          Type = "oneshot";
-          # Wrap sync-mail to check certificate validity first
-          ExecStart = pkgs.writeShellScript "mail-sync-wrapper" ''
-            set -euo pipefail
-
-            cert_file="/etc/ssl/local/proton-bridge.pem"
-
-            # Check if certificate exists and is not empty
-            if [ ! -s "$cert_file" ]; then
-              echo "ProtonMail Bridge certificate not available or empty, skipping sync"
-              exit 0
-            fi
-
-            # Certificate exists, run sync
-            exec ${config.home.homeDirectory}/.local/bin/sync-mail
-          '';
-        };
-      };
-
-      systemd.user.timers.mail-sync = {
-        Unit = {
-          Description = "Timer for mail sync";
-          Requires = [ "mail-sync.service" ];
-        };
-        Timer = {
-          OnCalendar = "*:0/5";  # Every 5 minutes
-          Persistent = true;
-        };
-        Install = {
-          WantedBy = [ "timers.target" ];
-        };
-      };
-    }
   ]);
 }
 

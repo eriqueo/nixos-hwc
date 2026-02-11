@@ -11,6 +11,104 @@ let
             md = acc.maildirName or acc.name or "INBOX";
         in " # ,g${n}: :cf ${md}<Enter>"
       ) accVals);
+
+  # Dynamic keybind help generator - parses binds.conf and formats as markdown
+  keybindHelp = pkgs.writeShellScript "aerc-keybind-help" ''
+    set -euo pipefail
+
+    binds_file="$HOME/.config/aerc/binds.conf"
+
+    # Header
+    cat << 'HEADER'
+# Aerc Keybindings - Quick Reference
+*Dynamically generated from your binds.conf*
+
+HEADER
+
+    ${pkgs.gawk}/bin/awk '
+      BEGIN {
+        current_section = "Global"
+        print "## " current_section " Keybindings\n"
+        last_comment = ""
+      }
+
+      # Track section changes
+      /^\[/ {
+        gsub(/[\[\]]/, "")
+        current_section = $1
+        print "\n## [" current_section "] Context\n"
+        last_comment = ""
+        next
+      }
+
+      # Skip empty lines and special directives
+      /^[[:space:]]*$/ { next }
+      /^\$/ { next }
+
+      # Capture comments
+      /^[[:space:]]*#/ {
+        comment = $0
+        gsub(/^[[:space:]]*#[[:space:]]*/, "", comment)
+        # Skip section dividers
+        if (comment ~ /^=+$/ || comment ~ /^-+$/) next
+        if (length(comment) > 0) {
+          last_comment = comment
+        }
+        next
+      }
+
+      # Parse keybindings
+      /=/ {
+        # Clean up line
+        gsub(/^[[:space:]]+/, "")
+
+        # Split on first =
+        eq_pos = index($0, "=")
+        if (eq_pos == 0) next
+
+        key = substr($0, 1, eq_pos - 1)
+        action = substr($0, eq_pos + 1)
+
+        # Trim whitespace
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", action)
+
+        # Format key for display
+        display_key = key
+        gsub(/<Enter>/, "↵", display_key)
+        gsub(/<Space>/, "␣", display_key)
+        gsub(/<C-/, "Ctrl+", display_key)
+        gsub(/<S-/, "Shift+", display_key)
+        gsub(/>/, "", display_key)
+
+        # Format action for display
+        display_action = action
+        gsub(/<Enter>/, "", display_action)
+        gsub(/^:/, "", display_action)
+
+        # Print with description if available
+        if (length(last_comment) > 0) {
+          printf "**%s** - %s  \n", display_key, last_comment
+          printf "  → `%s`\n\n", display_action
+          last_comment = ""
+        } else {
+          printf "**%s** → `%s`\n\n", display_key, display_action
+        }
+      }
+    ' "$binds_file"
+
+    # Footer with tips
+    cat << 'FOOTER'
+
+---
+
+## Tips
+- Press `?` to view raw binds.conf
+- Press `<Space>?` to see this help (formatted)
+- Use `/` to search within this view
+- Leader key: `<Space>` opens submenu options
+FOOTER
+  '';
 in
 {
   files = profileBase: {
@@ -29,14 +127,16 @@ in
       <C-k> = :prev-folder<Enter>
       <C-p> = :next-account<Enter>
       <C-n> = :prev-account<Enter>
-      ?     = :help keys<Enter>
+      # Show your actual binds.conf instead of built-in defaults
+      ?     = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
+      # Show formatted keybind cheat sheet (dynamically generated)
+      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${keybindHelp} | ${pkgs.glow}/bin/glow -p'<Enter>
       <C-r> = :exec mbsync -a<Enter>
 
-      # Quick account switching
-      ,n = :cd notmuch<Enter>
-      ,g = :cd gmail-business<Enter>
-      ,p = :cd proton<Enter>
-      ,h = :cd iheartwoodcraft<Enter>
+      # Quick virtual folder switching (all accounts share same query names)
+      ,i = :cf inbox<Enter>
+      ,u = :cf unread<Enter>
+      ,s = :cf starred<Enter>
 
       [messages]
       j = :next<Enter>
@@ -55,19 +155,29 @@ in
       r = :read<Enter>
       u = :unread<Enter>
 
-      aa = :archive flat<Enter>
-      a1 = :mv 190_hwc-archive<Enter>
-      a2 = :mv 290_pers-archive<Enter>
-      S = :mv 800_spam<Enter>
-      D = :delete<Enter>
+      # Tag-based operations (replaces physical folder moves)
+      a = :modify-labels +archive -inbox<Enter>
+      d = :modify-labels +trash -inbox<Enter>
+      s = :modify-labels +starred<Enter>
+      S = :modify-labels -starred<Enter>
+      i = :modify-labels +important<Enter>
+      I = :modify-labels -important<Enter>
       c = :compose<Enter>
       C = :reply -aq<Enter>
+      ? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
+      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${keybindHelp} | ${pkgs.glow}/bin/glow -p'<Enter>
 
-      # --- Filing with <Space>m (Move to domain folders) ---
-      <Space>mp1 = :mv 120_hwc-dev<Enter>
-      <Space>mp2 = :mv 220_pers-dev<Enter>
-      <Space>mi = :mv 210_pers-important<Enter>
-      <Space>ms = :mv 800_spam<Enter>
+      # --- Tag filing with <Space>m (Modify labels) ---
+      # Archive message (remove from inbox)
+      <Space>ma = :modify-labels +archive -inbox<Enter>
+      # Move to trash
+      <Space>mt = :modify-labels +trash -inbox<Enter>
+      # Untrash / restore from trash
+      <Space>mu = :modify-labels -trash +inbox<Enter>
+      # Star message
+      <Space>ms = :modify-labels +starred<Enter>
+      # Mark as important
+      <Space>mi = :modify-labels +important<Enter>
       
       # --- Uppercase Verb for Flexible Path ---
       X = :mv<space>
@@ -76,22 +186,34 @@ in
       # ---------------------------------------------
       # <Space> Leader Menu (Tier 2 Actions)
       # ---------------------------------------------
-      # <Space>g - Go (Navigate to folders)
-      <Space>gi = :cf 000_inbox<Enter>
-      <Space>gs = :cf 010_sent<Enter>
-      <Space>gd = :cf 011_drafts<Enter>
-      <Space>ga1 = :cf 190_hwc-archive<Enter>
-      <Space>ga2 = :cf 290_pers-archive<Enter>
-      <Space>gp1 = :cf 120_hwc-dev<Enter>
-      <Space>gp2 = :cf 220_pers-dev<Enter>
+      # <Space>g - Go (Navigate to virtual folders / saved queries)
+      # Goto inbox
+      <Space>gi = :cf inbox<Enter>
+      # Goto unread messages
+      <Space>gu = :cf unread<Enter>
+      # Goto sent mail
+      <Space>gs = :cf sent<Enter>
+      # Goto drafts
+      <Space>gd = :cf drafts<Enter>
+      # Goto trash
+      <Space>gt = :cf trash<Enter>
+      # Goto important messages
+      <Space>gp = :cf important<Enter>
+      # Goto starred messages
+      <Space>gx = :cf starred<Enter>
       
-      # <Space>f - Find
+      # <Space>f - Find / Filter messages
+      # Filter messages (interactive prompt)
       <Space>ff = :filter<space>
+      # Search messages (interactive prompt)
       <Space>fs = :search<space>
-      
-      # <Space>s - Sort
+
+      # <Space>s - Sort messages by field
+      # Sort by date (newest first)
       <Space>sd = :sort -r date<Enter>
+      # Sort by sender (From field)
       <Space>sf = :sort from<Enter>
+      # Sort by subject line
       <Space>ss = :sort subject<Enter>
       
       # <Space>t - Tabs/Toggles
@@ -110,16 +232,17 @@ in
       q = :close<Enter>
       j = :next<Enter>
       k = :prev<Enter>
-      d = :archive flat<Enter>:close<Enter>
-      D = :delete<Enter>:close<Enter>
+      a = :modify-labels +archive -inbox<Enter>:close<Enter>
+      d = :modify-labels +trash -inbox<Enter>:close<Enter>
       c = :compose<Enter>
       C = :reply -aq<Enter>
+      ? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
+      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${keybindHelp} | ${pkgs.glow}/bin/glow -p'<Enter>
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
-      aa = :archive flat<Enter>:close<Enter>
-      a1 = :mv 190_hwc-archive<Enter>:close<Enter>
-      a2 = :mv 290_pers-archive<Enter>:close<Enter>
+      s = :modify-labels +starred<Enter>
+      i = :modify-labels +important<Enter>
       O = :open<Enter>
       S = :save<space>
       U = :pipe -mb urlscan -r<Enter>
