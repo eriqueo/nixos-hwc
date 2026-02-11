@@ -15,7 +15,7 @@
       # Minimal app selection - gaming focused
       hwc.home = {
         # Core utilities
-        environment.shell.enable = true;
+        shell.enable = true;
         apps.kitty.enable = true;      # Terminal for troubleshooting
         apps.yazi.enable = true;       # File browser for ROM management
 
