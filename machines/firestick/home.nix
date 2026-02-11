@@ -13,7 +13,7 @@
       home.stateVersion = "24.05";
 
       hwc.home = {
-        environment.shell.enable = true;
+        shell.enable = true;
         development.enable = false;
         mail.enable = false;
 
