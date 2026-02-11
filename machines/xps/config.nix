@@ -343,7 +343,7 @@
   hwc.server.native.backup.enable = true;
 
   # CouchDB for Obsidian LiveSync
-  hwc.server.couchdb = {
+  hwc.server.native.couchdb = {
     enable = true;
     settings = {
       port = 5984;
@@ -364,11 +364,11 @@
   };
 
   # Frigate NVR - DISABLED (no cameras at remote location)
-  hwc.server.frigate.enable = lib.mkForce false;
+  hwc.server.native.frigate.enable = lib.mkForce false;
 
   # Immich - DISABLED (primary photo library stays at home)
   # Must use mkForce to override server profile default
-  hwc.server.immich.enable = lib.mkForce false;
+  hwc.server.containers.immich.enable = lib.mkForce false;
 
   # Media Services (independent libraries or synced from home server)
   # Jellyfin, Navidrome, *arr stack all enabled via server profile
