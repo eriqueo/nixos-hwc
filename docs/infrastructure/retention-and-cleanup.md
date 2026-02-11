@@ -37,9 +37,9 @@ This document defines the declarative retention and cleanup policies for the HWC
 
 | Type | Retention Period | Auto-Cleanup | Storage Path |
 |------|------------------|--------------|--------------|
-| **Recordings** | 7 days | ✅ Daily | `/mnt/media/surveillance/frigate-v2/recordings/` |
-| **Event Clips** | 10 days | ✅ Daily | `/mnt/media/surveillance/frigate-v2/clips/` |
-| **Snapshots** | 10 days | ✅ Daily | `/mnt/media/surveillance/frigate-v2/clips/snapshots/` |
+| **Recordings** | 7 days | ✅ Daily | `/mnt/media/surveillance/frigate/recordings/` |
+| **Event Clips** | 10 days | ✅ Daily | `/mnt/media/surveillance/frigate/clips/` |
+| **Snapshots** | 10 days | ✅ Daily | `/mnt/media/surveillance/frigate/clips/snapshots/` |
 
 ### Implementation
 
@@ -84,13 +84,13 @@ systemd.timers.frigate-cleanup = {
 
 ```bash
 # Check current surveillance storage
-du -sh /mnt/media/surveillance/frigate-v2/*
+du -sh /mnt/media/surveillance/frigate/*
 
 # Check oldest recordings (should be < 7 days)
-find /mnt/media/surveillance/frigate-v2/recordings -type f -name "*.mp4" | head -1 | xargs stat -c "%y %n"
+find /mnt/media/surveillance/frigate/recordings -type f -name "*.mp4" | head -1 | xargs stat -c "%y %n"
 
 # Check oldest clips (should be < 10 days)
-find /mnt/media/surveillance/frigate-v2/clips -type f -name "*.mp4" | head -1 | xargs stat -c "%y %n"
+find /mnt/media/surveillance/frigate/clips -type f -name "*.mp4" | head -1 | xargs stat -c "%y %n"
 
 # Check cleanup timer status
 systemctl status frigate-cleanup.timer
@@ -118,17 +118,17 @@ sources = [
   "/opt/business"             # 96KB - Business data
   "/mnt/media/pictures"       # 92GB - IRREPLACEABLE photos
   "/mnt/media/databases"      # 252MB - Database backups
-  "/mnt/media/backups"        # 132GB - Other backups
+  "/mnt/media/backups"        # ~0GB - Other backups
+  "/mnt/media/surveillance"   # ~777GB - Surveillance (7-day retention)
 ];
 
-# Total: ~235GB (9% of 2.7TB pool)
+# Total: ~880GB (33% of 2.7TB pool)
 ```
 
 **Excluded (Replaceable Data):**
 - `/mnt/media/movies` (1.2TB) - Can re-download
 - `/mnt/media/tv` (2.1TB) - Can re-download
 - `/mnt/media/music` (261GB) - Can re-download
-- `/mnt/media/surveillance` (646GB) - Auto-rotates every 7 days
 
 ### Backup Schedule
 
@@ -335,7 +335,7 @@ journalctl -u frigate-cleanup.service --since "30 days ago" | grep "complete"
 
 ### Surveillance Storage Not Decreasing
 
-**Symptom:** `/mnt/media/surveillance/frigate-v2` stays above 100GB
+**Symptom:** `/mnt/media/surveillance/frigate` stays above 100GB
 
 **Diagnosis:**
 ```bash
@@ -347,7 +347,7 @@ journalctl -u frigate-cleanup.service -n 20
 grep -A 5 "retain:" domains/server/frigate/config/config.yml
 
 # Check oldest files
-find /mnt/media/surveillance/frigate-v2 -type f -name "*.mp4" -mtime +7 -ls
+find /mnt/media/surveillance/frigate -type f -name "*.mp4" -mtime +7 -ls
 ```
 
 **Solutions:**

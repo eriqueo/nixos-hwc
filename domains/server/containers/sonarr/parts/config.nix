@@ -2,6 +2,13 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.sonarr;
+  arrConfig = import ../../_shared/arr-config.nix { inherit lib pkgs; };
+  configPath = "${config.hwc.paths.hot.downloads}/sonarr";
+  enforceScript = arrConfig.mkArrConfigScript {
+    name = "sonarr";
+    inherit configPath;
+    urlBase = "/sonarr";
+  };
 in
 {
   config = lib.mkIf cfg.enable {
@@ -10,6 +17,9 @@ in
     systemd.services."podman-sonarr".wants = [ "network-online.target" "agenix.service" ];
     systemd.services."podman-sonarr".requires = [ "mnt-hot.mount" ];
 
-
+    # Enforce correct config.xml settings before container starts
+    systemd.services."podman-sonarr".serviceConfig.ExecStartPre = [
+      "+${enforceScript}"  # + prefix runs as root
+    ];
   };
 }

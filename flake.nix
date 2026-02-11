@@ -34,7 +34,7 @@
 
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.11";
 
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
@@ -47,7 +47,7 @@
     };
 
     home-manager-stable = {
-      url = "github:nix-community/home-manager/release-24.05";
+      url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
@@ -57,7 +57,7 @@
     };
 
     agenix-stable = {
-      url = "github:ryantm/agenix/0.15.0";
+      url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 

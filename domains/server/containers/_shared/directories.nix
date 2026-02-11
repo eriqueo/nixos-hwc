@@ -19,6 +19,12 @@
       "podman-prowlarr.service"
       "podman-sabnzbd.service"
       "podman-qbittorrent.service"
+      "podman-books.service"
+      "podman-jellyseerr.service"
+      "podman-organizr.service"
+      "podman-immich-redis.service"
+      "podman-immich-server.service"
+      "podman-immich-ml.service"
     ];
     after = [ "local-fs.target" ];  # Wait for filesystems to be mounted
     wants = [ "local-fs.target" ];
@@ -47,16 +53,23 @@
       mkdir -p /mnt/hot/processing/radarr-temp
       mkdir -p /mnt/hot/processing/lidarr-temp
 
-      # Container config/data directories
-      mkdir -p /opt/downloads/slskd
-      mkdir -p /opt/downloads/soularr
-      mkdir -p /opt/downloads/lidarr
-      mkdir -p /opt/downloads/radarr
-      mkdir -p /opt/downloads/sonarr
-      mkdir -p /opt/downloads/prowlarr
-      mkdir -p /opt/downloads/sabnzbd
-      mkdir -p /opt/downloads/qbittorrent
-      mkdir -p /opt/downloads/books
+      # Container config/data directories (mounted as /config in containers)
+      mkdir -p /mnt/hot/downloads/slskd
+      mkdir -p /mnt/hot/downloads/soularr
+      mkdir -p /mnt/hot/downloads/lidarr
+      mkdir -p /mnt/hot/downloads/radarr
+      mkdir -p /mnt/hot/downloads/sonarr
+      mkdir -p /mnt/hot/downloads/prowlarr
+      mkdir -p /mnt/hot/downloads/sabnzbd
+      mkdir -p /mnt/hot/downloads/qbittorrent
+      mkdir -p /mnt/hot/downloads/books
+      mkdir -p /mnt/hot/downloads/jellyseerr/config
+      mkdir -p /mnt/hot/downloads/organizr
+
+      # Immich directories
+      mkdir -p /opt/immich/redis
+      mkdir -p /opt/immich/ml-cache
+      mkdir -p /opt/immich/uploads
 
       # Books library directories
       mkdir -p /mnt/media/books/ebooks
@@ -78,7 +91,7 @@
       chown -R eric:users /mnt/media 2>/dev/null || true
 
       echo "Enforcing ownership on container data directories..."
-      chown -R eric:users /opt/downloads 2>/dev/null || true
+      chown -R eric:users /opt/immich 2>/dev/null || true
       chown -R root:root /etc/slskd 2>/dev/null || true
       chown -R root:root /var/lib/slskd 2>/dev/null || true
 
@@ -87,7 +100,7 @@
       # This allows eric to write, and containers (running as eric) to access
       find /mnt/hot -type d -exec chmod 0755 {} + 2>/dev/null || true
       find /mnt/media -type d -exec chmod 0755 {} + 2>/dev/null || true
-      find /opt/downloads -type d -exec chmod 0755 {} + 2>/dev/null || true
+      find /opt/immich -type d -exec chmod 0755 {} + 2>/dev/null || true
       chmod -R 0755 /etc/slskd 2>/dev/null || true
       chmod -R 0755 /var/lib/slskd 2>/dev/null || true
 

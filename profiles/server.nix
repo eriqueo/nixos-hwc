@@ -364,7 +364,7 @@
       mediaLocation = "/mnt/photos";
     };
     database = {
-      host = "localhost";
+      host = "10.89.0.1";  # media-network gateway (containers can't use localhost)
       port = 5432;
       name = "immich";
       user = "immich";

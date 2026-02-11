@@ -9,8 +9,11 @@ let
     withNvenc  = true;
   };
 
-  # User initialization script
-  initUsersScript = import ./parts/init-users.nix { inherit pkgs config; };
+  # NOTE: User initialization script removed (2026-02-08)
+  # The init-users.nix script is incompatible with Jellyfin 10.9.11+ EF Core migrations.
+  # Users should be created through the Jellyfin web UI wizard on first boot.
+  # The old script wrote to the legacy SQLite Users table, but Jellyfin 10.9.11
+  # expects users in EF Core format with migrations from LocalUsersv2.
 in
 {
   #==========================================================================
@@ -45,22 +48,72 @@ in
 
     # GPU acceleration and migration fix configuration
     systemd.services.jellyfin = {
-      # Fix corrupted migration files and initialize users before startup
+      # Fix migration issues before startup
+      # Jellyfin 10.9.11+ has migration routines that fail on fresh installs
+      # because they expect old database tables that don't exist.
       preStart = ''
+        DATA_DIR="/var/lib/hwc/jellyfin/data"
         CONFIG_DIR="/var/lib/hwc/jellyfin/config"
+        MIGRATIONS_FILE="$CONFIG_DIR/migrations.xml"
 
-        # Remove corrupted migrations.xml that causes "Sequence contains no elements" crash
-        # Jellyfin will regenerate this file on startup with correct format for 10.11+
-        if [ -f "$CONFIG_DIR/migrations.xml" ]; then
-          if grep -q "CreateNetworkConfiguration" "$CONFIG_DIR/migrations.xml" 2>/dev/null; then
-            echo "Removing old-format migrations.xml (pre-10.11 format incompatible)"
-            rm -f "$CONFIG_DIR/migrations.xml"
+        # Remove invalid database files that cause migration failures
+        for db in activitylog.db displaypreferences.db authentication.db; do
+          if [ -f "$DATA_DIR/$db" ]; then
+            if [ ! -s "$DATA_DIR/$db" ]; then
+              echo "Removing empty $db"
+              rm -f "$DATA_DIR/$db"
+            fi
           fi
-        fi
+        done
 
-        # Initialize users before Jellyfin starts
-        echo "Initializing Jellyfin users..."
-        ${initUsersScript}
+        # Pre-seed migrations.xml with problematic migrations marked as complete
+        # These migrations fail on fresh installs because they expect old database tables
+        if [ ! -f "$MIGRATIONS_FILE" ]; then
+          echo "Creating migrations.xml with pre-seeded migrations..."
+          cat > "$MIGRATIONS_FILE" << 'MIGRATIONS_EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<MigrationOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Applied>
+    <ValueTupleOfGuidString>
+      <Item1>9b354818-94d5-4b68-ac49-e35cb85f9d84</Item1>
+      <Item2>CreateNetworkConfiguration</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>a6dcacf4-c057-4ef9-80d3-61cef9ddb4f0</Item1>
+      <Item2>MigrateMusicBrainzTimeout</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>4fb5c950-1991-11ee-9b4b-0800200c9a66</Item1>
+      <Item2>MigrateNetworkConfiguration</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>4124c2cd-e939-4ffb-9be9-9b311c413638</Item1>
+      <Item2>DisableTranscodingThrottling</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>ef103419-8451-40d8-9f34-d1a8e93a1679</Item1>
+      <Item2>CreateLoggingConfigHeirarchy</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>3793eb59-bc8c-456c-8b9f-bd5a62a42978</Item1>
+      <Item2>MigrateActivityLogDatabase</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>5c4b82a2-f053-4009-bd05-b6fcad82f14c</Item1>
+      <Item2>MigrateUserDatabase</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>06387815-c3cc-421f-a888-fb5f9992bea8</Item1>
+      <Item2>MigrateDisplayPreferencesDatabase</Item2>
+    </ValueTupleOfGuidString>
+    <ValueTupleOfGuidString>
+      <Item1>5bd72f41-e6f3-4f60-90aa-09869abe0e22</Item1>
+      <Item2>MigrateAuthenticationDatabase</Item2>
+    </ValueTupleOfGuidString>
+  </Applied>
+</MigrationOptions>
+MIGRATIONS_EOF
+        fi
       '';
 
       serviceConfig = {
@@ -113,10 +166,9 @@ in
         assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
         message = "hwc.server.jellyfin.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
       }
-      {
-        assertion = cfg.enable -> (config.age.secrets ? jellyfin-admin-password && config.age.secrets ? jellyfin-eric-password);
-        message = "hwc.server.jellyfin requires jellyfin-admin-password and jellyfin-eric-password secrets to be defined";
-      }
+      # NOTE: Secret assertions removed (2026-02-08)
+      # User initialization via secrets is incompatible with Jellyfin 10.9.11+ EF Core.
+      # Users should be created through the web UI wizard instead.
     ];
   };
 }
