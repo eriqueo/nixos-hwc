@@ -14,10 +14,10 @@
       '';
     };
 
-    hipSupport = lib.mkOption {
+    rocmSupport = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Enable HIP support for GPU rendering (AMD)";
+      description = "Enable ROCm/HIP support for GPU rendering (AMD)";
     };
   };
 }
