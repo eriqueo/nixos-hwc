@@ -304,6 +304,7 @@
   hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
 
   # Home applications
+  home-manager.users.eric.hwc.home.apps.imv.enable = true;
   home-manager.users.eric.hwc.home.apps.qbittorrent.enable = true;
   home-manager.users.eric.hwc.home.apps.wayvnc.enable = false;
 
