@@ -1,0 +1,31 @@
+diff --git a/afew/FilterRegistry.py b/afew/FilterRegistry.py
+index 3ac1d10..f2c8d9a 100644
+--- a/afew/FilterRegistry.py
++++ b/afew/FilterRegistry.py
+@@ -2,7 +2,16 @@
+ # Copyright (c) Justus Winter <4winter@informatik.uni-hamburg.de>
+ 
+-import pkg_resources
++# pkg_resources is deprecated; use importlib.metadata entry_points instead
++try:
++    from importlib.metadata import entry_points
++except ImportError:  # pragma: no cover (older Python)
++    from importlib_metadata import entry_points  # type: ignore
++
++def _iter_entry_points(group):
++    eps = entry_points()
++    if hasattr(eps, 'select'):
++        return eps.select(group=group)
++    return eps.get(group, [])
+ 
+ RAISEIT = object()
+@@ -45,7 +54,7 @@ class FilterRegistry:
+     def items(self):
+         return self.filter.items()
+ 
+ 
+-all_filters = FilterRegistry(pkg_resources.iter_entry_points('afew.filter'))
++all_filters = FilterRegistry(_iter_entry_points('afew.filter'))
+ 
+ 
+ def register_filter(klass):

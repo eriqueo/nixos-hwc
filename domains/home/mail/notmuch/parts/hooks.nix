@@ -1,11 +1,11 @@
-{ lib, pkgs, special, rulesText, extraHook, osConfig ? {}}:
+{ lib, pkgs, special, afewPkg, afewEnabled ? true, rulesText, extraHook, osConfig ? {}}:
 let
   nm = "${pkgs.notmuch}/bin/notmuch";
 
   # Rewrite any ‘notmuch ’ occurrences coming from rulesText into the absolute path.
   rulesPatched = builtins.replaceStrings [ "notmuch " ] [ "${nm} " ] rulesText;
 
-   mk = clause: tag: minus:
+  mk = clause: tag: minus:
     if clause == "" then "" else ''
   ${pkgs.notmuch}/bin/notmuch tag ${tag} ${minus} -- '${clause}'
   '';
@@ -15,13 +15,17 @@ let
     umask 077
 
     # Minimal, predictable PATH for systemd
-    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.gnugrep pkgs.gnused pkgs.findutils pkgs.ripgrep pkgs.notmuch ]}
+    export PATH=${lib.makeBinPath ([ pkgs.coreutils pkgs.gnugrep pkgs.gnused pkgs.findutils pkgs.ripgrep pkgs.notmuch ] ++ lib.optional afewEnabled afewPkg)}
 
     # Ensure we use your hm-generated config
     export NOTMUCH_CONFIG="$HOME/.notmuch-config"
   '';
 
   body = ''
+    ${lib.optionalString afewEnabled ''    # Automated tagging via afew (non-fatal on errors)
+    ${afewPkg}/bin/afew --tag --new || true
+''}
+
     ${mk special.sent    "+sent"     "-inbox -unread"}
     ${mk special.drafts  "+draft"    "-inbox -unread"}
     ${mk special.trash   "+trash"    "-inbox -unread"}

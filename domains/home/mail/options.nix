@@ -4,6 +4,13 @@ let t = lib.types; in
   options.hwc.home.mail = {
     enable = lib.mkEnableOption "Mail domain" // { default = true; };
 
+    afew.enable = lib.mkEnableOption "Enable afew tagging and hook integration" // { default = true; };
+    afew.package = lib.mkOption {
+      type = t.nullOr t.package;
+      default = null;
+      description = "Optional override for the afew package (patched to drop pkg_resources; override is patched too).";
+    };
+
     accounts = lib.mkOption {
       type = t.attrsOf (t.submodule ({ name, ... }: {
         options = {
