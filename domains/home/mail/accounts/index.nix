@@ -34,7 +34,9 @@ in
         password = { mode = "pass"; pass = "email/proton/bridge"; };
         maildirName = ".100_proton";  # Hidden account sync folder
         # Sync ALL Proton folders except "All Mail" (virtual folder causes issues with Expunge)
-        sync.wildcards = [ "*" "!All Mail" ];
+        # Exclude "All Mail" (virtual) and lowercase duplicates exposed by Bridge
+        # (Bridge exposes both "Sent" and "sent", "Archive" and "archive", etc.)
+        sync.wildcards = [ "*" "!All Mail" "!archive" "!drafts" "!sent" "!starred" ];
         send.msmtpAccount = "proton-hwc";  # Default to work identity
         # Add second identity for personal address
         extraMsmtp = ''
