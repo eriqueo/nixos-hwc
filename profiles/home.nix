@@ -99,8 +99,8 @@
           onlyoffice-desktopeditors.enable = lib.mkDefault true;   # Office suite
 
           # Creative & Media
-          blender.enable = lib.mkDefault true;             # 3D creation suite with GPU rendering
-          freecad.enable = lib.mkDefault true;             # Parametric 3D CAD with GPU acceleration
+          blender.enable = lib.mkDefault false;            # 3D creation suite (disabled - CUDA forces source compile)
+          freecad.enable = lib.mkDefault false;            # Parametric 3D CAD (disabled - heavy compile)
 
           # Development & Automation
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
