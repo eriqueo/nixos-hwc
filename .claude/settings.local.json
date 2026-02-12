@@ -136,6 +136,8 @@
     "sequential-thinking",
     "time",
     "fetch",
-    "memory"
+    "memory",
+    "_filesystem_DISABLED",
+    "_brave-search_DISABLED"
   ]
 }
