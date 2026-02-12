@@ -122,7 +122,8 @@
       "Bash(./workspace/utilities/lints/charter-lint.sh:*)",
       "Bash(xargs ls:*)",
       "Bash(mbsync:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "mcp__filesystem__read_text_file"
     ],
     "deny": [],
     "ask": [],
