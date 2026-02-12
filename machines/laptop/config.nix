@@ -366,7 +366,7 @@
 
   # Static hosts for local services (remains unchanged).
   networking.hosts = {
-    "100.115.126.41" = [
+    "100.114.232.124" = [
       "sonarr.local" "radarr.local" "prowlarr.local" "jellyfin.local"
       "lidarr.local" "qbittorrent.local" "grafana.local" "dashboard.local"
       "prometheus.local" "caddy.local" "server.local" "hwc.local"
