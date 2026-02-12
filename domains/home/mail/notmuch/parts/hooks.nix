@@ -50,9 +50,10 @@ let
     ${nm} tag +gmail-personal -- 'path:.210_gmail-personal/**'
 
     # Folder state tags (apply to all accounts)
-    ${nm} tag +inbox -- 'folder:**/INBOX OR folder:**/inbox AND NOT tag:trash'
-    ${nm} tag +sent -- 'folder:**/Sent OR folder:**/"[Gmail].Sent Mail" AND NOT tag:trash'
-    ${nm} tag +draft -- 'folder:**/Drafts OR folder:**/"[Gmail].Drafts" AND NOT tag:trash'
+    # NOTE: parentheses required - AND binds tighter than OR in notmuch query syntax
+    ${nm} tag +inbox -- '(folder:**/INBOX OR folder:**/inbox) AND NOT tag:trash'
+    ${nm} tag +sent -- '(folder:**/Sent OR folder:**/"[Gmail].Sent Mail") AND NOT tag:trash'
+    ${nm} tag +draft -- '(folder:**/Drafts OR folder:**/"[Gmail].Drafts") AND NOT tag:trash'
     ${nm} tag +trash -- 'folder:**/Trash OR folder:**/"[Gmail].Trash" OR folder:**/"[Gmail].Bin"'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
