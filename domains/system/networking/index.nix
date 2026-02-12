@@ -97,9 +97,11 @@ in
     # =========================
     services.resolved = {
       enable = true;
-      fallbackDns = [ "1.1.1.1" "8.8.8.8" "9.9.9.9" ];
-      dnssec = "false";
-      domains = [ "~." ];
+      settings.Resolve = {
+        FallbackDNS = [ "1.1.1.1" "8.8.8.8" "9.9.9.9" ];
+        DNSSEC = "false";
+        Domains = [ "~." ];
+      };
     };
 
     # =========================

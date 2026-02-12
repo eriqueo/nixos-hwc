@@ -70,7 +70,7 @@ in
     programs.eza = lib.mkIf cfg.modernUnix {
       enable = true;
       git = true;
-      icons = true;  # HM 24.05 only accepts boolean, not "auto"
+      icons = "auto";
       extraOptions = [ "--group-directories-first" ];
     };
 
@@ -116,9 +116,9 @@ in
     # Git configuration
     programs.git = lib.mkIf cfg.git.enable {
       enable = true;
-      userName = cfg.git.userName;
-      userEmail = cfg.git.userEmail;
-      extraConfig = {
+      settings = {
+        user.name = cfg.git.userName;
+        user.email = cfg.git.userEmail;
         init.defaultBranch = "main";
         core.editor = "micro";
       };
@@ -140,7 +140,7 @@ in
         save = 5000;
       };
       shellAliases = cfg.aliases;
-      initExtra = ''
+      initContent = ''
         # Helper functions for enhanced shell experience
         
         # Fuzzy finding function

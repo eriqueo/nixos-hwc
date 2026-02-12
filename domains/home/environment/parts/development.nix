@@ -44,7 +44,7 @@ in
     ] ++ lib.optionals cfg.languages.nix [
       # Nix development
       nil
-      nixfmt-rfc-style
+      nixfmt
       statix
       deadnix
       alejandra

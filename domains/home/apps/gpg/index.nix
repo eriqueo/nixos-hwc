@@ -19,7 +19,7 @@ in
       enable = true;
       enableSshSupport = true;
       # Use GUI pinentry for systemd services (Bridge, etc.)
-      pinentryPackage = pkgs.pinentry-gnome3;
+      pinentry.package = pkgs.pinentry-gnome3;
       # Cache passphrase for 2 hours to reduce prompts
       defaultCacheTtl = 7200;
       maxCacheTtl = 7200;
