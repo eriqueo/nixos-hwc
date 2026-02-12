@@ -32,16 +32,16 @@ in
     # These settings are only merged if `hwc.home.apps.thunar.enable` is true.
     #==========================================================================
     home.packages = lib.mkIf cfg.enable (with pkgs; [
-      xfce.thunar
-      xfce.thunar-volman
-      xfce.thunar-archive-plugin
-      xfce.thunar-media-tags-plugin
+      thunar
+      thunar-volman
+      thunar-archive-plugin
+      thunar-media-tags-plugin
       gvfs
       udisks2
       shared-mime-info
       desktop-file-utils
       file-roller
-      xfce.tumbler
+      tumbler
       ffmpegthumbnailer
       trash-cli
     ]);
