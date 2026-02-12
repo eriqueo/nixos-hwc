@@ -5,7 +5,7 @@
 # No hardware driver logic or service details here (Charter v3).
 #
 # DEPENDENCIES (Upstream):
-#   - nixpkgs (nixos-unstable), nixpkgs-stable (24.05)
+#   - nixpkgs (nixos-unstable), nixpkgs-stable (25.11)
 #   - home-manager (follows nixpkgs)
 #   - agenix (follows nixpkgs)
 #   - legacy-config (non-flake, for migration reference)
@@ -34,7 +34,7 @@
 
   inputs = {
     nixpkgs.url         = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs-stable.url  = "github:NixOS/nixpkgs/nixos-25.11";
 
     nixvirt = {
         url = "github:AshleyYakeley/NixVirt";
@@ -47,7 +47,7 @@
     };
 
     home-manager-stable = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
@@ -96,21 +96,8 @@
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs;
 
-    # pkgs-stable (24.05 - with claude-code overlay from unstable)
-    pkgs-stable = import nixpkgs-stable {
-      inherit system;
-      config = {
-        allowUnfree = true;
-        nvidia.acceptLicense = true;
-        permittedInsecurePackages = [
-          "qtwebengine-5.15.19"
-          "n8n-1.91.3"  # CVE-2025-68613 - workflow automation tool
-        ];
-      };
-      overlays = [
-        (import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; })
-      ];
-    };
+    # pkgs-stable (25.11 - claude-code now available natively)
+    pkgs-stable = mkPkgs system nixpkgs-stable;
     
     lib = nixpkgs.lib;
 
@@ -157,7 +144,7 @@
         pkgs = pkgs-stable;  # Use nixpkgs-stable for predictable updates
         specialArgs = {
           inherit inputs;
-          nixosApiVersion = "stable";  # Stable API (currently 24.05, easily upgraded to 24.11)
+          nixosApiVersion = "stable";  # Stable API (nixos-25.11)
         };
         modules = [
           agenix-stable.nixosModules.default  # Use stable agenix for stable nixpkgs
@@ -175,19 +162,24 @@
           }
         ];
       };
-      hwc-xps = lib.nixosSystem {
-        inherit system pkgs;
-        specialArgs = { inherit inputs; };
+      hwc-xps = nixpkgs-stable.lib.nixosSystem {
+        inherit system;
+        pkgs = pkgs-stable;
+        specialArgs = {
+          inherit inputs;
+          nixosApiVersion = "stable";
+        };
         modules = [
-          agenix.nixosModules.default
-          home-manager.nixosModules.home-manager
+          agenix-stable.nixosModules.default
+          home-manager-stable.nixosModules.home-manager
           ./machines/xps/config.nix
           {
-            # Home Manager configured separately in machines/xps/home.nix
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
-            # Pass inputs to Home Manager modules
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              nixosApiVersion = "stable";
+            };
           }
         ];
       };

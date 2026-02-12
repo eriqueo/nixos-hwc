@@ -22,14 +22,8 @@
   # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
   assertions = [
     {
-      assertion = inputs != null -> (
-        # Verify pkgs was built from nixpkgs-stable, not nixpkgs-unstable
-        # Check the nixpkgs path contains the stable revision
-        lib.hasInfix (inputs.nixpkgs-stable.rev or "stable") (toString pkgs.path) ||
-        # Alternative: check if pkgs.lib.version contains stable branch (24.05 or 24.11)
-        lib.hasPrefix "24.05" (pkgs.lib.trivial.release or "") ||
-        lib.hasPrefix "24.11" (pkgs.lib.trivial.release or "")
-      );
+      # pkgs.lib.trivial.release returns e.g. "25.11" for nixos-25.11 stable
+      assertion = lib.hasPrefix "25" (pkgs.lib.trivial.release or "");
       message = ''
         ============================================================
         SERVER NIXPKGS PROVENANCE VIOLATION
@@ -37,19 +31,13 @@
         hwc-server MUST use nixpkgs-stable, not nixpkgs-unstable!
 
         Current nixpkgs: ${toString pkgs.path}
-        Expected: nixpkgs-stable (24.11 branch)
-
-        This is a production server. Using unstable nixpkgs causes:
-        - PostgreSQL major version changes
-        - Python package compilation failures
-        - Unpredictable breaking changes
+        Current release: ${pkgs.lib.trivial.release or "unknown"}
+        Expected: nixpkgs-stable (25.11 branch)
 
         Fix in flake.nix:
-          hwc-server = lib.nixosSystem {
+          hwc-server = nixpkgs-stable.lib.nixosSystem {
             pkgs = pkgs-stable;  # NOT pkgs
           };
-
-        See CHARTER.md section 24 "Flake Update Strategy"
         ============================================================
       '';
     }

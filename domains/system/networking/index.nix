@@ -1,5 +1,5 @@
 # HWC System Networking (declarative + per-machine wait-online policy)
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
 let
   cfg = config.hwc.system.networking;
@@ -95,14 +95,21 @@ in
     # =========================
     # DNS (systemd-resolved)
     # =========================
-    services.resolved = {
-      enable = true;
-      settings.Resolve = {
-        FallbackDNS = [ "1.1.1.1" "8.8.8.8" "9.9.9.9" ];
-        DNSSEC = "false";
-        Domains = [ "~." ];
-      };
-    };
+    services.resolved = lib.mkMerge [
+      { enable = true; }
+      # nixos-25.11 stable uses flat options; unstable uses settings.Resolve.*
+      (if nixosApiVersion == "stable" then {
+        dnssec = "false";
+        fallbackDns = [ "1.1.1.1" "8.8.8.8" "9.9.9.9" ];
+        domains = [ "~." ];
+      } else {
+        settings.Resolve = {
+          FallbackDNS = [ "1.1.1.1" "8.8.8.8" "9.9.9.9" ];
+          DNSSEC = "false";
+          Domains = [ "~." ];
+        };
+      })
+    ];
 
     # =========================
     # Tooling
