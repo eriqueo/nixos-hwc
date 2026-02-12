@@ -154,12 +154,14 @@ let
     application/* = ${pkgs.file}/bin/file {} | ${pkgs.less}/bin/less -R --mouse -+S -X
   '';
 in
-{
+  {
   files = profileBase:{
     ".config/aerc/aerc.conf".text = aercConf;
     # accounts.conf contains NO secrets (passwords are in msmtp config)
-    # Safe to manage declaratively via home.file
-    ".config/aerc/accounts.conf".text = accountsConf;
+    ".config/aerc/accounts.conf" = {
+      text = accountsConf;
+      mode = "0600";
+    };
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
     ".config/aerc/notmuch-queries".text = notmuchQueries;
   };
