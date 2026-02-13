@@ -1,4 +1,4 @@
-{ config, pkgs, lib, inputs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   #==========================================================================
@@ -106,12 +106,18 @@
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
           gemini-cli.enable = lib.mkDefault true;           # AI CLI tool
           codex.enable = lib.mkDefault true;             # Re-enabled AI tool (temporarily disabled for build)
-          codex.package = lib.mkDefault (
-            inputs.codex.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
-              nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.pkg-config ];
-              buildInputs = (old.buildInputs or []) ++ [ pkgs.libcap ];
-            })
-          );
+          codex.package = lib.mkDefault (pkgs.stdenv.mkDerivation {
+            pname = "codex";
+            version = "0.101.0";
+            src = pkgs.fetchurl {
+              url = "https://github.com/openai/codex/releases/download/rust-v0.101.0/codex-x86_64-unknown-linux-gnu.tar.gz";
+              sha256 = "09vjigsikklz4xa1hnpph5g9m0qxhidis69r3cpd69bix165r2r1";
+            };
+            dontUnpack = true;
+            installPhase = ''
+              install -Dm755 "$src" "$out/bin/codex"
+            '';
+          });
 
           # Utilities
           ipcalc.enable = lib.mkDefault true;              # IP calculator
