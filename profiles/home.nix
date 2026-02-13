@@ -111,11 +111,13 @@
             version = "0.101.0";
             src = pkgs.fetchurl {
               url = "https://github.com/openai/codex/releases/download/rust-v0.101.0/codex-x86_64-unknown-linux-gnu.tar.gz";
-              sha256 = "09vjigsikklz4xa1hnpph5g9m0qxhidis69r3cpd69bix165r2r1";
+              sha256 = "sha256-6XMt47hw32o5zkukRplhDvWBhDlneTRX+O8R86WlgjY=";
             };
             dontUnpack = true;
             installPhase = ''
-              install -Dm755 "$src" "$out/bin/codex"
+              install -d "$out/bin"
+              ${pkgs.gzip}/bin/gunzip -c "$src" > "$out/bin/codex"
+              chmod 755 "$out/bin/codex"
             '';
           });
 
