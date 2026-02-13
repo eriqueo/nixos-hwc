@@ -49,12 +49,19 @@ let
     ${nm} tag +gmail-business -- 'path:.110_gmail-business/**'
     ${nm} tag +gmail-personal -- 'path:.210_gmail-personal/**'
 
-    # Folder state tags (apply to all accounts)
-    # NOTE: parentheses required - AND binds tighter than OR in notmuch query syntax
-    ${nm} tag +inbox -- '(folder:**/INBOX OR folder:**/inbox) AND NOT tag:trash'
-    ${nm} tag +sent -- '(folder:**/Sent OR folder:**/"[Gmail].Sent Mail") AND NOT tag:trash'
-    ${nm} tag +draft -- '(folder:**/Drafts OR folder:**/"[Gmail].Drafts") AND NOT tag:trash'
-    ${nm} tag +trash -- 'folder:**/Trash OR folder:**/"[Gmail].Trash" OR folder:**/"[Gmail].Bin"'
+    # Folder state tags - use explicit path: queries (folder: globs don't work in notmuch)
+    ${nm} tag +inbox -- \
+      'path:.100_proton/inbox/** OR path:.110_gmail-business/inbox/** OR path:.210_gmail-personal/inbox/**'
+    ${nm} tag +sent -inbox -unread -- \
+      'path:.100_proton/Sent/** OR path:.110_gmail-business/[Gmail]/Sent\ Mail/** OR path:.210_gmail-personal/[Gmail]/Sent\ Mail/**'
+    ${nm} tag +draft -inbox -unread -- \
+      'path:.100_proton/Drafts/** OR path:.110_gmail-business/[Gmail]/Drafts/** OR path:.210_gmail-personal/[Gmail]/Drafts/**'
+    ${nm} tag +trash -inbox -unread -- \
+      'path:.100_proton/Trash/** OR path:.110_gmail-business/[Gmail]/Trash/** OR path:.210_gmail-personal/[Gmail]/Trash/**'
+    ${nm} tag +spam -inbox -unread -- \
+      'path:.100_proton/Spam/** OR path:.110_gmail-business/[Gmail]/Spam/** OR path:.210_gmail-personal/[Gmail]/Spam/**'
+    ${nm} tag +archive -inbox -- \
+      'path:.100_proton/Archive/** OR path:.110_gmail-business/[Gmail]/All\ Mail/** OR path:.210_gmail-personal/[Gmail]/All\ Mail/**'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
 in
