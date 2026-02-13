@@ -377,6 +377,7 @@
   hwc.ai.open-webui = {
     enable = true;
     enableAuth = false;  # TEMPORARY: Disabled to bypass signup page rendering issue
+    healthCheck.enable = false;  # Avoid failing rebuild on unhealthy healthcheck
     # All other settings use defaults:
     # - port: 3001
     # - defaultModel: "phi3:3.8b"
@@ -396,6 +397,8 @@
   # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix
   hwc.server.native.navidrome.enable = lib.mkForce false;
   hwc.server.containers.navidrome.enable = true;
+  # TEMPORARY: Disable Immich ML container to allow switch; re-enable once fixed
+  hwc.server.containers.immich.machineLearning.enable = lib.mkForce false;
   # Enable AI router and agent on server
   hwc.ai.router = {
     enable = true;

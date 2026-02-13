@@ -217,7 +217,7 @@ in
     #=========================================================================
     # IMMICH MACHINE LEARNING CONTAINER
     #=========================================================================
-    virtualisation.oci-containers.containers.immich-machine-learning = {
+    virtualisation.oci-containers.containers.immich-machine-learning = lib.mkIf cfg.machineLearning.enable {
       image = cfg.images.machineLearning;
       autoStart = true;
       dependsOn = lib.optionals cfg.redis.enable [ "immich-redis" ];
@@ -298,7 +298,7 @@ in
         wants = [ "network-online.target" ];
       };
 
-      "podman-immich-machine-learning" = {
+      "podman-immich-machine-learning" = lib.mkIf cfg.machineLearning.enable {
         after = [ "network-online.target" "postgresql.service" "podman-immich-server.service" ]
           ++ lib.optional cfg.redis.enable "podman-immich-redis.service"
           ++ lib.optional (cfg.network.mode == "media") "init-media-network.service"
@@ -323,7 +323,7 @@ in
     #=========================================================================
     # PROMETHEUS INTEGRATION
     #=========================================================================
-    hwc.server.native.monitoring.prometheus.scrapeConfigs = lib.mkIf (cfg.enable && cfg.observability.metrics.enable) [
+    hwc.server.native.monitoring.prometheus.scrapeConfigs = lib.mkIf (cfg.enable && cfg.observability.metrics.enable) ([
       {
         job_name = "immich-api";
         static_configs = [{
@@ -332,6 +332,7 @@ in
         scrape_interval = "30s";
         scrape_timeout = "10s";
       }
+    ] ++ lib.optionals cfg.machineLearning.enable [
       {
         job_name = "immich-workers";
         static_configs = [{
@@ -340,7 +341,7 @@ in
         scrape_interval = "30s";
         scrape_timeout = "10s";
       }
-    ];
+    ]);
 
     #=========================================================================
     # VALIDATION
