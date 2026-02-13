@@ -172,6 +172,8 @@ in
 
     # Machine learning performance tuning
     machineLearning = {
+      enable = mkEnableOption "Immich machine learning container" // { default = true; };
+
       cpuCores = mkOption {
         type = types.nullOr types.int;
         default = null;
