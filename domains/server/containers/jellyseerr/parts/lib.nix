@@ -3,6 +3,7 @@ let
   cfg = config.hwc.server.containers.jellyseerr;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/jellyseerr/config";
+  settings = import ./settings.nix { inherit config pkgs; };
 
   # Script to ensure all users have auto-approve permissions (222)
   updateUserPermissions = pkgs.writeShellScript "jellyseerr-update-permissions" ''
@@ -15,6 +16,11 @@ let
         "UPDATE user SET permissions = 222 WHERE permissions != 222;" || true
     fi
   '';
+
+  ensureSettings = pkgs.writeShellScript "jellyseerr-ensure-settings" ''
+    install -d -m 0755 -o 1000 -g 100 "${configPath}"
+    install -m 0644 -o 1000 -g 100 "${settings.settingsFile}" "${configPath}/settings.json"
+  '';
 in
 {
   config = lib.mkIf cfg.enable {
@@ -23,6 +29,7 @@ in
 
     # Ensure user permissions are set to auto-approve on every start
     systemd.services."podman-jellyseerr".preStart = ''
+      ${ensureSettings}
       ${updateUserPermissions}
     '';
   };
