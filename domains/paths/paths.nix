@@ -38,7 +38,7 @@ let
   # Laptop defaults
   laptopMediaRoot = "/home/eric/500_media";
   laptopPhotos = "${laptopMediaRoot}/510_pictures";
-  laptopBackup = "${laptopMediaRoot}/backup";
+  laptopBackup = "/mnt/backup";
   laptopInbox = "/home/eric/000_inbox";
   laptopWork = "/home/eric/100_hwc";
   laptopPersonal = "/home/eric/200_personal";

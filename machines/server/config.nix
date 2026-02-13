@@ -572,7 +572,7 @@
       n8n.enable = lib.mkForce false;
       opencode.enable = lib.mkForce false;  # Not available in stable 24.05
       # gemini-cli.enable remains true (CLI tool)
-      codex.enable = lib.mkForce false;  # Not available in stable 24.05, using claude-code instead
+      codex.enable = lib.mkForce true;  # Pinned via flake input (openai/codex rust-v0.101.0)
 
       # Utilities (disable GUI)
       wasistlos.enable = lib.mkForce false;

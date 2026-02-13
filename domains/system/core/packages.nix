@@ -42,7 +42,7 @@ in
         gh
 
         # Desktop-capable tools (works over X11 forwarding too)
-        kitty xfce.thunar
+        kitty
       ]))
 
       # Server bundle

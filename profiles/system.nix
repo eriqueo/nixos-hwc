@@ -1,6 +1,6 @@
 # NEW, CLEAN profiles/system.nix
 
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 let
   # Helper to gather all sys.nix files from home apps (Charter v7 compliance)
   gatherSys = dir:
@@ -108,12 +108,12 @@ in
   # Comprehensive backup system supporting local (external drives, NAS, DAS)
   # and cloud (Proton Drive) backups with automatic scheduling and rotation.
   hwc.system.services.backup = {
-    enable = true;
+    enable = lib.mkDefault false;
 
     # Local backup to external drives/NAS/DAS
     local = {
       enable = lib.mkDefault false;  # Enable per-machine
-      mountPoint = lib.mkDefault "/mnt/backup";
+      mountPoint = lib.mkDefault (config.hwc.paths.backup or "/mnt/backup");
       useRsync = true;  # Incremental backups with hard-link snapshots
       keepDaily = lib.mkDefault 5;
       keepWeekly = lib.mkDefault 2;

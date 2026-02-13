@@ -125,7 +125,7 @@
     # Local backup when external drive is connected
     local = {
       enable = true;
-      mountPoint = "/mnt/backup";  # Mount your external drive here
+      mountPoint = config.hwc.paths.backup;  # Laptop backup SSD
       keepDaily = 5;    # Keep 5 daily backups
       keepWeekly = 2;   # Keep 2 weekly backups
       keepMonthly = 3;  # Keep 3 monthly backups

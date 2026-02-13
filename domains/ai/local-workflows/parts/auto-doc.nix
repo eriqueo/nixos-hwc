@@ -475,8 +475,8 @@ in
   # Post-rebuild documentation systemd service
   systemd.services.post-rebuild-ai-docs = {
     description = "AI-powered documentation generator for NixOS rebuilds";
-    after = [ "network.target" "ollama.service" ];
-    wants = [ "network.target" "ollama.service" ];
+    after = [ "network-online.target" "ollama.service" ];
+    wants = [ "network-online.target" "ollama.service" ];
 
     serviceConfig = {
       Type = "oneshot";
