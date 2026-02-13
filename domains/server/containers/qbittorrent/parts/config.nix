@@ -2,6 +2,8 @@
 let
   cfg = config.hwc.server.containers.qbittorrent;
   paths = config.hwc.paths;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/qbittorrent/config";
 in
 {
   config = lib.mkIf cfg.enable {
@@ -55,7 +57,7 @@ in
 
       # Volume mounts
       volumes = [
-        "${config.hwc.paths.hot.downloads}/qbittorrent:/config"
+        "${configPath}:/config"
         "${paths.hot.root}/downloads:/downloads"
         "${config.hwc.paths.hot.downloads}/scripts:/scripts:ro"
         "${paths.hot.root}/events:/mnt/hot/events"

@@ -2,7 +2,8 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.recyclarr;
-  cfgRoot = "${config.hwc.paths.hot.downloads}/recyclarr";
+  appsRoot = config.hwc.paths.apps.root;
+  cfgRoot = "${appsRoot}/recyclarr";
 
   generateConfigScript = pkgs.writeShellScript "recyclarr-generate-config" ''
     set -euo pipefail

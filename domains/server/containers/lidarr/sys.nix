@@ -3,6 +3,8 @@ let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.server.containers.lidarr;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/lidarr/config";
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -15,7 +17,7 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:8686:8686" ];
       volumes = [
-        "${config.hwc.paths.hot.downloads}/lidarr:/config"
+        "${configPath}:/config"
         "${config.hwc.paths.media.root}/music:/music"
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];

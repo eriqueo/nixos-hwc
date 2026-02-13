@@ -3,7 +3,8 @@
 let
   cfg = config.hwc.server.containers.radarr;
   arrConfig = import ../../_shared/arr-config.nix { inherit lib pkgs; };
-  configPath = "${config.hwc.paths.hot.downloads}/radarr";
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/radarr/config";
   enforceScript = arrConfig.mkArrConfigScript {
     name = "radarr";
     inherit configPath;

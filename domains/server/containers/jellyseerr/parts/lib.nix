@@ -1,10 +1,12 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.jellyseerr;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/jellyseerr/config";
 
   # Script to ensure all users have auto-approve permissions (222)
   updateUserPermissions = pkgs.writeShellScript "jellyseerr-update-permissions" ''
-    DB_PATH="/opt/jellyseerr/config/db/db.sqlite3"
+    DB_PATH="${configPath}/db/db.sqlite3"
 
     # Wait for database to exist
     if [ -f "$DB_PATH" ]; then

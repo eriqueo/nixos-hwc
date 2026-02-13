@@ -2,7 +2,8 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.soularr;
-  cfgRoot = config.hwc.paths.hot.downloads;
+  appsRoot = config.hwc.paths.apps.root;
+  soularrRoot = "${appsRoot}/soularr";
 in
 {
   config = lib.mkIf cfg.enable {
@@ -21,7 +22,7 @@ in
         set -e
         echo "--- Running soularr-config seeder (Charter Version) ---"
 
-        CONFIG_FILE="${cfgRoot}/soularr/config.ini"
+        CONFIG_FILE="${soularrRoot}/config/config.ini"
 
         # Remove old config file to ensure changes are applied
         echo "Removing old config file at $CONFIG_FILE..."
@@ -34,7 +35,7 @@ in
         echo "DEBUG: LIDARR Key found: $([ -n "$LIDARR_API_KEY" ] && echo 'yes' || echo 'no')"
         echo "DEBUG: SLSKD Key found:  $([ -n "$SLSKD_API_KEY" ] && echo 'yes' || echo 'no')"
 
-        mkdir -p "${cfgRoot}/soularr"
+        mkdir -p "${soularrRoot}/config"
         echo "Writing new config file to $CONFIG_FILE..."
 
         # Generate config.ini with API keys

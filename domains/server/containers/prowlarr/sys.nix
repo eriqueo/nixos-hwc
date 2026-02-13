@@ -3,6 +3,8 @@ let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.server.containers.prowlarr;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/prowlarr/config";
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -14,7 +16,7 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:9696:9696" ];
-      volumes = [ "${config.hwc.paths.hot.downloads}/prowlarr:/config" ];
+      volumes = [ "${configPath}:/config" ];
       environment = {
         PROWLARR__URLBASE = "/prowlarr";
       };

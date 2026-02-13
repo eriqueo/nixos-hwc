@@ -1,124 +1,94 @@
-# Shared directory setup for all container services
-# Creates all required directories with proper ownership BEFORE containers start
-# Eliminates tmpfiles conflicts and unsafe path transition issues
-{ lib, config, pkgs, ... }:
+# Shared directory setup for container services (declarative tmpfiles)
+{ lib, config, ... }:
+let
+  paths = config.hwc.paths;
+  appsRoot = paths.apps.root;
+  hotRoot = paths.hot.root;
+  downloadsRoot = paths.hot.downloads;
+  mediaRoot = paths.media.root;
 
+  containerEnabled = name:
+    lib.attrByPath [ "hwc" "server" "containers" name "enable" ] false config;
+
+  mkDir = path: "d ${path} 0755 1000 100 -";
+  mkRootDir = path: "d ${path} 0755 root root -";
+
+  appRoot = name: "${appsRoot}/${name}";
+  appConfig = name: "${(appRoot name)}/config";
+
+  mkConfigDirs = names:
+    lib.concatMap (name: lib.optionals (containerEnabled name) [ (mkDir (appConfig name)) ]) names;
+in
 {
-  # Single systemd service to set up ALL container directories
-  # Runs once at boot, before any container services start
-  systemd.services.container-directories-setup = {
-    description = "Create all container download and data directories";
-    wantedBy = [ "multi-user.target" ];
-    before = [
-      # Ensure this runs before ALL container services
-      "podman-slskd.service"
-      "podman-soularr.service"
-      "podman-lidarr.service"
-      "podman-radarr.service"
-      "podman-sonarr.service"
-      "podman-prowlarr.service"
-      "podman-sabnzbd.service"
-      "podman-qbittorrent.service"
-      "podman-books.service"
-      "podman-jellyseerr.service"
-      "podman-organizr.service"
-      "podman-immich-redis.service"
-      "podman-immich-server.service"
-      "podman-immich-ml.service"
+  config = {
+    systemd.tmpfiles.rules = lib.flatten [
+      # Shared downloads structure (hot storage)
+      (lib.optionals (downloadsRoot != null) [
+        (mkDir downloadsRoot)
+        (mkDir "${downloadsRoot}/incomplete")
+        (mkDir "${downloadsRoot}/complete")
+        (mkDir "${downloadsRoot}/tv")
+        (mkDir "${downloadsRoot}/movies")
+        (mkDir "${downloadsRoot}/music")
+        (mkDir "${downloadsRoot}/scripts")
+      ])
+
+      # Event spool + processing areas
+      (lib.optionals (hotRoot != null) [
+        (mkDir "${hotRoot}/events")
+        (mkDir "${hotRoot}/processing")
+        (mkDir "${hotRoot}/processing/sonarr-temp")
+        (mkDir "${hotRoot}/processing/radarr-temp")
+        (mkDir "${hotRoot}/processing/lidarr-temp")
+        (mkDir "${hotRoot}/processing/tdarr-temp")
+        (mkDir "${hotRoot}/processing/tdarr-backups")
+      ])
+
+      # Books library structure
+      (lib.optionals (mediaRoot != null) [
+        (mkDir "${mediaRoot}/books/ebooks")
+        (mkDir "${mediaRoot}/books/audiobooks")
+      ])
+
+      # Container config roots (/opt)
+      (lib.optionals (appsRoot != null) ([ (mkRootDir appsRoot) ] ++ mkConfigDirs [
+        "beets"
+        "books"
+        "caddy"
+        "jellyfin"
+        "lidarr"
+        "navidrome"
+        "organizr"
+        "prowlarr"
+        "qbittorrent"
+        "radarr"
+        "recyclarr"
+        "sabnzbd"
+        "sonarr"
+        "soularr"
+      ]))
+
+      # Containers with non-standard config layouts
+      (lib.optionals (appsRoot != null && containerEnabled "gluetun") [
+        (mkDir (appRoot "gluetun"))
+      ])
+      (lib.optionals (appsRoot != null && containerEnabled "soularr") [
+        (mkDir "${(appRoot "soularr")}/data")
+      ])
+      (lib.optionals (appsRoot != null && containerEnabled "tdarr") [
+        (mkDir "${(appRoot "tdarr")}/server")
+        (mkDir "${(appRoot "tdarr")}/configs")
+        (mkDir "${(appRoot "tdarr")}/logs")
+      ])
+      (lib.optionals (appsRoot != null && containerEnabled "recyclarr") [
+        (mkDir "${(appRoot "recyclarr")}/cache")
+      ])
+
+      # System-level config dirs
+      (lib.optionals (containerEnabled "slskd") [
+        (mkRootDir "/etc/slskd")
+        (mkRootDir "/var/lib/slskd")
+      ])
     ];
-    after = [ "local-fs.target" ];  # Wait for filesystems to be mounted
-    wants = [ "local-fs.target" ];
-
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-
-    script = ''
-      echo "Setting up container directories..."
-
-      # Downloads structure (shared by multiple containers)
-      mkdir -p /mnt/hot/downloads
-      mkdir -p /mnt/hot/downloads/incomplete
-      mkdir -p /mnt/hot/downloads/complete
-      mkdir -p /mnt/hot/downloads/tv
-      mkdir -p /mnt/hot/downloads/movies
-      mkdir -p /mnt/hot/downloads/music
-
-      # Event spool directory for media orchestration
-      mkdir -p /mnt/hot/events
-
-      # Processing directories for temporary operations
-      mkdir -p /mnt/hot/processing/sonarr-temp
-      mkdir -p /mnt/hot/processing/radarr-temp
-      mkdir -p /mnt/hot/processing/lidarr-temp
-
-      # Container config/data directories (mounted as /config in containers)
-      mkdir -p /mnt/hot/downloads/slskd
-      mkdir -p /mnt/hot/downloads/soularr
-      mkdir -p /mnt/hot/downloads/lidarr
-      mkdir -p /mnt/hot/downloads/radarr
-      mkdir -p /mnt/hot/downloads/sonarr
-      mkdir -p /mnt/hot/downloads/prowlarr
-      mkdir -p /mnt/hot/downloads/sabnzbd
-      mkdir -p /mnt/hot/downloads/qbittorrent
-      mkdir -p /mnt/hot/downloads/books
-      mkdir -p /mnt/hot/downloads/jellyseerr/config
-      mkdir -p /mnt/hot/downloads/organizr
-
-      # Immich directories
-      mkdir -p /opt/immich/redis
-      mkdir -p /opt/immich/ml-cache
-      mkdir -p /opt/immich/uploads
-
-      # Books library directories
-      mkdir -p /mnt/media/books/ebooks
-      mkdir -p /mnt/media/books/audiobooks
-
-      # Scripts directory for automation hooks
-      mkdir -p /opt/downloads/scripts
-
-      # slskd config directory (system-level)
-      mkdir -p /etc/slskd
-      mkdir -p /var/lib/slskd
-
-      # COMPREHENSIVE PERMISSION ENFORCEMENT
-      # ALL /mnt directories must be owned by eric:users for container access
-      # Containers run as PUID=1000 (eric), PGID=100 (users)
-
-      echo "Enforcing ownership on ALL /mnt directories..."
-      chown -R eric:users /mnt/hot 2>/dev/null || true
-      chown -R eric:users /mnt/media 2>/dev/null || true
-
-      echo "Enforcing ownership on container data directories..."
-      chown -R eric:users /opt/immich 2>/dev/null || true
-      chown -R root:root /etc/slskd 2>/dev/null || true
-      chown -R root:root /var/lib/slskd 2>/dev/null || true
-
-      echo "Setting directory permissions (0755) on ALL /mnt directories..."
-      # Set permissions: 0755 for directories (rwxr-xr-x)
-      # This allows eric to write, and containers (running as eric) to access
-      find /mnt/hot -type d -exec chmod 0755 {} + 2>/dev/null || true
-      find /mnt/media -type d -exec chmod 0755 {} + 2>/dev/null || true
-      find /opt/immich -type d -exec chmod 0755 {} + 2>/dev/null || true
-      chmod -R 0755 /etc/slskd 2>/dev/null || true
-      chmod -R 0755 /var/lib/slskd 2>/dev/null || true
-
-      echo "Setting file permissions (0644) on ALL /mnt files..."
-      # Set file permissions: 0644 for files (rw-r--r--)
-      # This ensures downloaded files are readable by all but only writable by owner
-      find /mnt/hot -type f -exec chmod 0644 {} + 2>/dev/null || true
-      find /mnt/media -type f -exec chmod 0644 {} + 2>/dev/null || true
-
-      # Scripts need to be executable
-      find /opt/downloads/scripts -type f -name "*.sh" -exec chmod 0755 {} + 2>/dev/null || true
-      find /opt/downloads/scripts -type f -name "*.py" -exec chmod 0755 {} + 2>/dev/null || true
-
-      echo "Container directories created and permissions enforced successfully"
-    '';
   };
-
-  # NOTE: Hourly permission enforcement removed (2025-12-11)
-  # Root cause fixed: containers now use correct PGID="100" (users group)
-  # See docs/standards/permission-patterns.md for details
 }

@@ -52,16 +52,14 @@ EOF
 in
 {
   config = lib.mkIf cfg.enable {
-    # Directory creation handled by container-directories-setup.service (_shared/directories.nix)
-    # No tmpfiles rules needed - eliminates duplicates and unsafe path transitions
+    # Directory creation handled via systemd.tmpfiles (_shared/directories.nix)
 
     # Systemd service to generate config from secrets before container starts
     systemd.services.slskd-config-generator = {
       description = "Generate slskd configuration from agenix secrets";
       wantedBy = [ "multi-user.target" ];
       before = [ "podman-slskd.service" ];
-      after = [ "agenix.service" "container-directories-setup.service" ];
-      requires = [ "container-directories-setup.service" ];
+      after = [ "agenix.service" ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;

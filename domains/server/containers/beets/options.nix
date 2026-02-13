@@ -21,7 +21,7 @@ in
 
     configDir = mkOption {
       type = types.str;
-      default = "${config.hwc.paths.hot.downloads}/beets";
+      default = "${config.hwc.paths.apps.root}/beets/config";
       description = "Directory to store Beets configuration and database";
     };
 

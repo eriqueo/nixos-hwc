@@ -3,6 +3,8 @@
 let
   cfg = config.hwc.server.containers.tdarr;
   paths = config.hwc.paths;
+  hotRoot = paths.hot.root;
+  mediaRoot = paths.media.root;
 
   # Safety script that creates backups before transcoding
   tdarrSafetyScript = pkgs.writeShellScriptBin "tdarr-safety-check" ''
@@ -18,7 +20,7 @@ let
     echo -e "''${GREEN}=== Tdarr Safety Check & Backup System ===''${NC}"
 
     # Check if backup directory exists
-    BACKUP_DIR="${paths.hot.root or "/mnt/hot"}/processing/tdarr-backups"
+    BACKUP_DIR="${hotRoot}/processing/tdarr-backups"
     if [ ! -d "$BACKUP_DIR" ]; then
       echo -e "''${YELLOW}Creating backup directory: $BACKUP_DIR''${NC}"
       mkdir -p "$BACKUP_DIR"
@@ -28,19 +30,19 @@ let
     # Check available space
     echo ""
     echo -e "''${GREEN}Storage Status:''${NC}"
-    df -h /mnt/media | tail -1
-    df -h /mnt/hot | tail -1
+    df -h "${mediaRoot}" | tail -1
+    df -h "${hotRoot}" | tail -1
 
-    MEDIA_AVAIL=$(df /mnt/media | tail -1 | awk '{print $4}')
-    HOT_AVAIL=$(df /mnt/hot | tail -1 | awk '{print $4}')
+    MEDIA_AVAIL=$(df "${mediaRoot}" | tail -1 | awk '{print $4}')
+    HOT_AVAIL=$(df "${hotRoot}" | tail -1 | awk '{print $4}')
 
     # Warn if less than 100GB free
     if [ "$MEDIA_AVAIL" -lt 100000000 ]; then
-      echo -e "''${RED}WARNING: Less than 100GB free on /mnt/media''${NC}"
+      echo -e "''${RED}WARNING: Less than 100GB free on ${mediaRoot}''${NC}"
     fi
 
     if [ "$HOT_AVAIL" -lt 50000000 ]; then
-      echo -e "''${RED}WARNING: Less than 50GB free on /mnt/hot''${NC}"
+      echo -e "''${RED}WARNING: Less than 50GB free on ${hotRoot}''${NC}"
     fi
 
     # Check Tdarr container is running
@@ -103,7 +105,7 @@ let
     fi
 
     # Create backup reference (checksum)
-    BACKUP_DIR="${paths.hot.root or "/mnt/hot"}/processing/tdarr-backups"
+    BACKUP_DIR="${hotRoot}/processing/tdarr-backups"
     mkdir -p "$BACKUP_DIR"
 
     FILENAME=$(basename "$FILE")
@@ -195,7 +197,7 @@ in
 
     # Create backup directory on boot
     systemd.tmpfiles.rules = [
-      "d /mnt/hot/processing/tdarr-backups 0755 1000 1000 -"
+      "d ${hotRoot}/processing/tdarr-backups 0755 1000 100 -"
     ];
 
     # Daily safety check timer

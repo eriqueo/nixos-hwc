@@ -2,7 +2,8 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.gluetun;
-  cfgRoot = config.hwc.paths.hot.downloads;
+  appsRoot = config.hwc.paths.apps.root;
+  cfgRoot = "${appsRoot}/gluetun";
   mediaNetworkName = "media-network";
 in
 {
@@ -52,7 +53,7 @@ EOF
         "0.0.0.0:8080:8080"  # qBittorrent UI
         "0.0.0.0:8081:8085"  # SABnzbd (container uses 8085 internally)
       ];
-      volumes = [ "${cfgRoot}/gluetun:/gluetun" ];
+      volumes = [ "${cfgRoot}:/gluetun" ];
       environmentFiles = [ "${cfgRoot}/.env" ];
       environment = {
         TZ = config.time.timeZone or "America/Denver";

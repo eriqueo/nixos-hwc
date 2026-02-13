@@ -2,6 +2,8 @@
 let
   cfg = config.hwc.server.containers.sabnzbd;
   paths = config.hwc.paths;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/sabnzbd/config";
 in
 {
   config = lib.mkIf cfg.enable {
@@ -64,7 +66,7 @@ in
 
       # Volume mounts - CRITICAL: events mount is required for automation pipeline
       volumes = [
-        "${config.hwc.paths.hot.downloads}/sabnzbd:/config"
+        "${configPath}:/config"
         "${paths.hot.root}/downloads:/downloads"
         "${paths.hot.root}/events:/mnt/hot/events"  # CRITICAL for event processing
         "${config.hwc.paths.hot.downloads}/scripts:/config/scripts:ro"  # Post-processing scripts
@@ -73,12 +75,6 @@ in
       # Dependencies
       dependsOn = lib.optionals (cfg.network.mode == "vpn") [ "gluetun" ];
     };
-
-    #=========================================================================
-    # DIRECTORY CREATION
-    #=========================================================================
-    # Directory creation handled by container-directories-setup.service (_shared/directories.nix)
-    # No tmpfiles rules needed - eliminates duplicates and unsafe path transitions
 
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
