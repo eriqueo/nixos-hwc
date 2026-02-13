@@ -125,6 +125,7 @@
         7878   # Radarr
         8989   # Sonarr
         8686   # Lidarr
+        8787   # Readarr
         9696   # Prowlarr
         5055   # Jellyseerr
         4533   # Navidrome
@@ -290,6 +291,7 @@
   hwc.server.containers.sonarr.enable = true;
   hwc.server.containers.radarr.enable = true;
   hwc.server.containers.lidarr.enable = true;
+  hwc.server.containers.readarr.enable = true;  # Readarr for ebooks and audiobooks
   hwc.server.containers.books.enable = true;  # LazyLibrarian for ebooks and audiobooks
 
   # Beets music organizer - INTENTIONALLY DISABLED (using native installation)

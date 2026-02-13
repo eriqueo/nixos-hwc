@@ -31,6 +31,7 @@
     ./prowlarr/index.nix
     ./qbittorrent/index.nix
     ./radarr/index.nix
+    ./readarr/index.nix
     ./recyclarr/index.nix
     ./sabnzbd/index.nix
     ./slskd/index.nix

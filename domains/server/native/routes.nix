@@ -122,6 +122,16 @@ in
       headers = { "X-Forwarded-Prefix" = "/lidarr"; };
     }
 
+    # Readarr - preserve path (URL base set in app)
+    {
+      name = "readarr";
+      mode = "subpath";
+      path = "/readarr";
+      upstream = "http://127.0.0.1:8787";
+      needsUrlBase = true;
+      headers = { "X-Forwarded-Prefix" = "/readarr"; };
+    }
+
     # Prowlarr - preserve path (URL base set in app)
     {
       name = "prowlarr";
