@@ -23,8 +23,6 @@ let
     ]
     ++ (lib.mapAttrsToList (name: model: "${name}:${model}") cfg.extraAliases);
 
-  aliasYaml = lib.concatMapStrings (entry: "  - ${builtins.toJSON entry}\n") aliasList;
-
   secretInit = lib.concatStringsSep "\n" (
     lib.filter (line: line != "") [
       (lib.optionalString (openaiSecretPath != null) ''
@@ -40,16 +38,13 @@ let
     ]
   );
 
-  aiderConfig = ''
-    # Managed by Home Manager (domains/home/apps/aider)
-    # Cloud auth: set OPENAI_API_KEY and/or ANTHROPIC_API_KEY in your environment.
-
-    model: ${cfg.cloudModel}
-    weak-model: ${cfg.localModel}
-    ollama-api-base: ${cfg.ollamaApiBase}
-    alias:
-${aliasYaml}    check-update: false
-  '';
+  aiderConfig = lib.generators.toYAML {} {
+    model = cfg.cloudModel;
+    weak-model = cfg.localModel;
+    ollama-api-base = cfg.ollamaApiBase;
+    alias = aliasList;
+    check-update = false;
+  };
 in
 {
   #==========================================================================
