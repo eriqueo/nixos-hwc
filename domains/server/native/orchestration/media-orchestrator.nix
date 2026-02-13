@@ -3,7 +3,7 @@ let
   pythonWithRequests = pkgs.python3.withPackages (ps: with ps; [ requests ]);
   cfgRoot = config.hwc.paths.hot.downloads;
   paths = config.hwc.paths;
-  hotRoot = config.hwc.paths.hot.root or "/mnt/hot";
+  hotRoot = config.hwc.paths.hot.root;
 
   # Get username from system configuration
   userName = config.hwc.system.users.user.name;

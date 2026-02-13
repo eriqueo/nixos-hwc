@@ -395,6 +395,7 @@
   # TEMPORARY: Disable navidrome due to pkg-config build failure in NixOS 25.11
   # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix
   hwc.server.native.navidrome.enable = lib.mkForce false;
+  hwc.server.containers.navidrome.enable = true;
   # Enable AI router and agent on server
   hwc.ai.router = {
     enable = true;
@@ -576,7 +577,7 @@
       n8n.enable = lib.mkForce false;
       opencode.enable = lib.mkForce false;  # Not available in stable 24.05
       # gemini-cli.enable remains true (CLI tool)
-      codex.enable = lib.mkForce false;  # Not available in stable 24.05, using claude-code instead
+      codex.enable = lib.mkForce true;  # Not available in stable 24.05, using claude-code instead
 
       # Utilities (disable GUI)
       wasistlos.enable = lib.mkForce false;

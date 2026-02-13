@@ -235,6 +235,14 @@ in
     # APPLICATION ROOTS (Server only)
     # -------------------------------------------------------------------------
 
+    apps = {
+      root = mkOption {
+        type = types.nullOr types.path;
+        default = if isServer then "/opt" else null;
+        description = "Application config root (server only)";
+      };
+    };
+
     business = {
       root = mkOption {
         type = types.nullOr types.path;
@@ -393,6 +401,7 @@ in
     HWC_VAULTS_DIR = cfg.user.vaults;
 
     # Application roots
+    HWC_APPS_ROOT = cfg.apps.root;
     HWC_BUSINESS_ROOT = cfg.business.root;
     HWC_AI_ROOT = cfg.ai.root;
     HWC_ADHD_ROOT = cfg.adhd.root;
@@ -464,6 +473,11 @@ in
     {
       assertion = cfg.surveillance.root == null || lib.hasPrefix "/" cfg.surveillance.root;
       message = "hwc.paths.surveillance.root must be null or absolute";
+    }
+
+    {
+      assertion = cfg.apps.root == null || lib.hasPrefix "/" cfg.apps.root;
+      message = "hwc.paths.apps.root must be null or absolute";
     }
   ];
 }

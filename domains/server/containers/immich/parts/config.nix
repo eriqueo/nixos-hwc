@@ -4,6 +4,12 @@
 let
   cfg = config.hwc.server.containers.immich;
   paths = config.hwc.paths;
+  appsRoot = config.hwc.paths.apps.root;
+  immichRoot = "${appsRoot}/immich";
+  immichCacheRoot = "${immichRoot}/cache";
+  immichConfigRoot = "${immichRoot}/config";
+  immichModelCache = "${immichRoot}/model-cache";
+  immichRedis = "${immichRoot}/redis";
 
   # Auto-detect CPU cores from /proc/cpuinfo or use configured value
   detectedCpuCores = let
@@ -71,13 +77,14 @@ in
         "f ${cfg.storage.locations.profile}/.immich 0600 eric users -"
       ] else []) ++ (if cfg.gpu.enable then [
         # GPU cache directories for ML optimizations
-        "d /opt/immich/cache 0750 eric users -"
-        "d /opt/immich/cache/tensorrt 0750 eric users -"
-        "d /opt/immich/config 0750 eric users -"
-        "d /opt/immich/config/matplotlib 0750 eric users -"
+        "d ${immichCacheRoot} 0750 eric users -"
+        "d ${immichCacheRoot}/tensorrt 0750 eric users -"
+        "d ${immichConfigRoot} 0750 eric users -"
+        "d ${immichConfigRoot}/matplotlib 0750 eric users -"
       ] else []) ++ [
         # Container-specific directories
-        "d /opt/immich/model-cache 0750 eric users -"
+        "d ${immichModelCache} 0750 eric users -"
+        "d ${immichRedis} 0750 eric users -"
       ];
 
     #=========================================================================
@@ -118,7 +125,7 @@ in
       ];
 
       volumes = [
-        "/opt/immich/redis:/data:rw"
+        "${immichRedis}:/data:rw"
       ];
 
       cmd = [ "redis-server" "--save" "60" "1" "--loglevel" "warning" ];
@@ -203,7 +210,7 @@ in
         "${cfg.storage.locations.encodedVideo}:/usr/src/app/upload/encoded-video:rw"
         "${cfg.storage.locations.profile}:/usr/src/app/upload/profile:rw"
       ] ++ [
-        "${config.hwc.paths.media.root or "/mnt/media"}/pictures:/mnt/media/pictures:ro"
+        "${config.hwc.paths.media.root}/pictures:/mnt/media/pictures:ro"
       ];
     };
 
@@ -269,12 +276,12 @@ in
       };
 
       volumes = [
-        "/opt/immich/model-cache:/cache:rw"
-        "${config.hwc.paths.media.root or "/mnt/media"}/pictures:/mnt/media/pictures:ro"
+        "${immichModelCache}:/cache:rw"
+        "${config.hwc.paths.media.root}/pictures:/mnt/media/pictures:ro"
       ] ++ lib.optionals cfg.gpu.enable [
-        "/opt/immich/cache:/cache:rw"
-        "/opt/immich/cache/tensorrt:/cache/tensorrt:rw"
-        "/opt/immich/config/matplotlib:/cache/matplotlib:rw"
+        "${immichCacheRoot}:/cache:rw"
+        "${immichCacheRoot}/tensorrt:/cache/tensorrt:rw"
+        "${immichConfigRoot}/matplotlib:/cache/matplotlib:rw"
       ];
     };
 
@@ -338,9 +345,9 @@ in
     #=========================================================================
     # VALIDATION
     #=========================================================================
-    assertions = [
-      {
-        assertion = !cfg.enable || (cfg.settings.mediaLocation != "");
+      assertions = [
+        {
+        assertion = !cfg.enable || (cfg.settings.mediaLocation != null);
         message = "hwc.server.containers.immich requires mediaLocation to be set";
       }
       {
@@ -360,7 +367,7 @@ in
         message = "hwc.server.containers.immich.gpu requires NVIDIA kernel modules to be loaded (check hwc.infrastructure.hardware.gpu configuration)";
       }
       {
-        assertion = !cfg.storage.enable || (cfg.storage.basePath != "");
+        assertion = !cfg.storage.enable || (cfg.storage.basePath != null);
         message = "hwc.server.containers.immich.storage requires basePath to be set";
       }
       {

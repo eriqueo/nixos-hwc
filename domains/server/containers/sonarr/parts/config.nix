@@ -3,7 +3,8 @@
 let
   cfg = config.hwc.server.containers.sonarr;
   arrConfig = import ../../_shared/arr-config.nix { inherit lib pkgs; };
-  configPath = "${config.hwc.paths.hot.downloads}/sonarr";
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/sonarr/config";
   enforceScript = arrConfig.mkArrConfigScript {
     name = "sonarr";
     inherit configPath;

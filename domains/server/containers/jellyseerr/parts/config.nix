@@ -1,6 +1,8 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.jellyseerr;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/jellyseerr/config";
 
   # Jellyseerr permission flags (bitmask)
   # REQUEST = 2, AUTO_APPROVE = 4, REQUEST_MOVIE = 8, AUTO_APPROVE_MOVIE = 16,
@@ -26,13 +28,13 @@ let
       jellyfin = { enabled = true; };
     };
     jellyfin = {
-      ip = "10.89.0.1";
+      ip = "192.168.0.97";
       port = 8096;
       useSsl = false;
       urlBase = "";
       externalHostname = "";
-      serverId = "a2cf771ab06740d9b85ec285a0a96de4";
-      apiKey = "cc0974fe24464c208bdd4b2570a01541";
+      serverId = "016e351828c841fb83af163a59198649";
+      apiKey = "26d513d02f27467aa94d70e4b43688f8";
     };
   };
 in
@@ -40,8 +42,9 @@ in
   config = lib.mkIf cfg.enable {
     # Create settings.json in the container's config directory
     systemd.tmpfiles.rules = [
-      "d /opt/jellyseerr/config 0755 1000 1000 -"
-      "f /opt/jellyseerr/config/settings.json 0644 1000 1000 - ${pkgs.writeText "jellyseerr-settings.json" settingsJson}"
+      "d ${configPath} 0755 1000 100 -"
+      # Use C+ to copy file content (not path string)
+      "Z ${configPath}/settings.json 0644 1000 100 - ${pkgs.writeText "jellyseerr-settings.json" settingsJson}"
     ];
 
     systemd.services."podman-jellyseerr".after = [ "network-online.target" "init-media-network.service" ];

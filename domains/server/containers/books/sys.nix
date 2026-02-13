@@ -3,6 +3,8 @@
 let
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.server.containers.books;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/books/config";
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -15,7 +17,7 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [ "127.0.0.1:5299:5299" ];
       volumes = [
-        "${config.hwc.paths.hot.downloads}/books:/config"
+        "${configPath}:/config"
         "${config.hwc.paths.hot.root}/downloads:/downloads"
         "${config.hwc.paths.media.root}/books:/books"
       ];

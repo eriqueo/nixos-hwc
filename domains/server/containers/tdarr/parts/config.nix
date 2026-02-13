@@ -3,6 +3,8 @@
 let
   cfg = config.hwc.server.containers.tdarr;
   paths = config.hwc.paths;
+  appsRoot = config.hwc.paths.apps.root;
+  tdarrRoot = "${appsRoot}/tdarr";
 in
 {
   config = lib.mkIf cfg.enable {
@@ -84,9 +86,9 @@ in
       # Volume mounts
       volumes = [
         # Config and database
-        "${config.hwc.paths.hot.downloads}/tdarr/server:/app/server"
-        "${config.hwc.paths.hot.downloads}/tdarr/configs:/app/configs"
-        "${config.hwc.paths.hot.downloads}/tdarr/logs:/app/logs"
+        "${tdarrRoot}/server:/app/server"
+        "${tdarrRoot}/configs:/app/configs"
+        "${tdarrRoot}/logs:/app/logs"
 
         # Media libraries (read/write for transcoding)
         "${paths.media.root}/tv:/media/tv"

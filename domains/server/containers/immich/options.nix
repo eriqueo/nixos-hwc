@@ -41,8 +41,8 @@ in
       };
 
       mediaLocation = mkOption {
-        type = types.str;
-        default = config.hwc.paths.photos or "/mnt/photos";
+        type = types.nullOr types.path;
+        default = config.hwc.paths.photos;
         description = "Path to media storage location";
       };
     };
@@ -51,8 +51,8 @@ in
       enable = mkEnableOption "Advanced storage layout with separate directories" // { default = true; };
 
       basePath = mkOption {
-        type = types.str;
-        default = config.hwc.paths.photos or "/mnt/photos";
+        type = types.nullOr types.path;
+        default = config.hwc.paths.photos;
         description = ''
           Base path for all Immich storage. All storage subdirectories will be created here.
           This path will be added to backup sources automatically.
@@ -61,8 +61,8 @@ in
 
       locations = {
         library = mkOption {
-          type = types.str;
-          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/library" else "/mnt/photos/library";
+          type = types.nullOr types.path;
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/library" else null;
           description = ''
             Primary photo/video library location (UPLOAD_LOCATION).
             Storage templates configured via web UI organize files within this directory.
@@ -71,20 +71,20 @@ in
         };
 
         thumbs = mkOption {
-          type = types.str;
-          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/thumbs" else "/mnt/photos/thumbs";
+          type = types.nullOr types.path;
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/thumbs" else null;
           description = "Thumbnail cache location (THUMB_LOCATION)";
         };
 
         encodedVideo = mkOption {
-          type = types.str;
-          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/encoded-video" else "/mnt/photos/encoded-video";
+          type = types.nullOr types.path;
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/encoded-video" else null;
           description = "Transcoded video storage (ENCODED_VIDEO_LOCATION)";
         };
 
         profile = mkOption {
-          type = types.str;
-          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/profile" else "/mnt/photos/profile";
+          type = types.nullOr types.path;
+          default = if config.hwc.paths.photos != null then "${config.hwc.paths.photos}/profile" else null;
           description = "User profile pictures (PROFILE_LOCATION)";
         };
       };

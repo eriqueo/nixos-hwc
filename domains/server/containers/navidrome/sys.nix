@@ -3,6 +3,8 @@ let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.server.containers.navidrome;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/navidrome/config";
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -13,9 +15,9 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
-      ports = [];
+      ports = [ "127.0.0.1:4533:4533" ];
       volumes = [
-        "${config.hwc.paths.hot.downloads}/navidrome:/config"
+        "${configPath}:/config"
         "${config.hwc.paths.media.root}/music:/music:ro"  # Music library for streaming
       ];
       environment = {

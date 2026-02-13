@@ -3,7 +3,8 @@
 let
   cfg = config.hwc.server.containers.prowlarr;
   arrConfig = import ../../_shared/arr-config.nix { inherit lib pkgs; };
-  configPath = "${config.hwc.paths.hot.downloads}/prowlarr";
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/prowlarr/config";
   enforceScript = arrConfig.mkArrConfigScript {
     name = "prowlarr";
     inherit configPath;

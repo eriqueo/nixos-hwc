@@ -3,6 +3,8 @@ let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.server.containers.caddy;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/caddy/config";
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -14,7 +16,7 @@ in
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
       ports = [];
-      volumes = [ "${config.hwc.paths.hot.downloads}/caddy:/config" ];
+      volumes = [ "${configPath}:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })

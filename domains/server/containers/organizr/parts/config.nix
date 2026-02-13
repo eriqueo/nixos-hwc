@@ -2,6 +2,8 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.server.containers.organizr;
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/organizr/config";
 in
 {
   config = lib.mkIf cfg.enable {
@@ -53,7 +55,7 @@ in
 
       # Volume mounts
       volumes = [
-        "${config.hwc.paths.hot.downloads}/organizr:/config"
+        "${configPath}:/config"
       ];
 
       # Dependencies

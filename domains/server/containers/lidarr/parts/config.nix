@@ -3,7 +3,8 @@
 let
   cfg = config.hwc.server.containers.lidarr;
   arrConfig = import ../../_shared/arr-config.nix { inherit lib pkgs; };
-  configPath = "${config.hwc.paths.hot.downloads}/lidarr";
+  appsRoot = config.hwc.paths.apps.root;
+  configPath = "${appsRoot}/lidarr/config";
   enforceScript = arrConfig.mkArrConfigScript {
     name = "lidarr";
     inherit configPath;

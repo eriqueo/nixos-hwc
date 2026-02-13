@@ -3,6 +3,8 @@ let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.server.containers.soularr;
+  appsRoot = config.hwc.paths.apps.root;
+  soularrRoot = "${appsRoot}/soularr";
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -15,8 +17,8 @@ in
       timeZone = config.time.timeZone or "UTC";
       ports = [];  # No web UI, internal only
       volumes = [
-        "${config.hwc.paths.hot.downloads}/soularr:/config"
-        "${config.hwc.paths.hot.downloads}/soularr:/data"
+        "${soularrRoot}/config:/config"
+        "${soularrRoot}/data:/data"
         "${config.hwc.paths.hot.downloads}:/downloads"
       ];
       environment = {};
