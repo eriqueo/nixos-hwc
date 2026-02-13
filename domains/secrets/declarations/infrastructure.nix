@@ -79,5 +79,12 @@
       owner = "root";
       group = "secrets";
     };
+
+    vpn-wireguard-private-key = {
+      file = ../parts/infrastructure/vpn-wireguard-private-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }

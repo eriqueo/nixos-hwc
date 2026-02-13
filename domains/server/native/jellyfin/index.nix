@@ -51,10 +51,12 @@ in
       # Fix migration issues before startup
       # Jellyfin 10.9.11+ has migration routines that fail on fresh installs
       # because they expect old database tables that don't exist.
+      # NOTE: migrations.xml pre-seeding removed (2026-02-13)
+      # Jellyfin 10.11.x uses EF Core migrations stored in the database, not XML.
+      # The old XML-based migrations.xml causes "Sequence contains no elements" crash.
       preStart = ''
         DATA_DIR="/var/lib/hwc/jellyfin/data"
         CONFIG_DIR="/var/lib/hwc/jellyfin/config"
-        MIGRATIONS_FILE="$CONFIG_DIR/migrations.xml"
 
         # Remove invalid database files that cause migration failures
         for db in activitylog.db displaypreferences.db authentication.db; do
@@ -66,53 +68,10 @@ in
           fi
         done
 
-        # Pre-seed migrations.xml with problematic migrations marked as complete
-        # These migrations fail on fresh installs because they expect old database tables
-        if [ ! -f "$MIGRATIONS_FILE" ]; then
-          echo "Creating migrations.xml with pre-seeded migrations..."
-          cat > "$MIGRATIONS_FILE" << 'MIGRATIONS_EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<MigrationOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <Applied>
-    <ValueTupleOfGuidString>
-      <Item1>9b354818-94d5-4b68-ac49-e35cb85f9d84</Item1>
-      <Item2>CreateNetworkConfiguration</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>a6dcacf4-c057-4ef9-80d3-61cef9ddb4f0</Item1>
-      <Item2>MigrateMusicBrainzTimeout</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>4fb5c950-1991-11ee-9b4b-0800200c9a66</Item1>
-      <Item2>MigrateNetworkConfiguration</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>4124c2cd-e939-4ffb-9be9-9b311c413638</Item1>
-      <Item2>DisableTranscodingThrottling</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>ef103419-8451-40d8-9f34-d1a8e93a1679</Item1>
-      <Item2>CreateLoggingConfigHeirarchy</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>3793eb59-bc8c-456c-8b9f-bd5a62a42978</Item1>
-      <Item2>MigrateActivityLogDatabase</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>5c4b82a2-f053-4009-bd05-b6fcad82f14c</Item1>
-      <Item2>MigrateUserDatabase</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>06387815-c3cc-421f-a888-fb5f9992bea8</Item1>
-      <Item2>MigrateDisplayPreferencesDatabase</Item2>
-    </ValueTupleOfGuidString>
-    <ValueTupleOfGuidString>
-      <Item1>5bd72f41-e6f3-4f60-90aa-09869abe0e22</Item1>
-      <Item2>MigrateAuthenticationDatabase</Item2>
-    </ValueTupleOfGuidString>
-  </Applied>
-</MigrationOptions>
-MIGRATIONS_EOF
+        # Remove old-style migrations.xml if present - incompatible with 10.11.x
+        if [ -f "$CONFIG_DIR/migrations.xml" ]; then
+          echo "Removing obsolete migrations.xml (incompatible with Jellyfin 10.11.x)"
+          rm -f "$CONFIG_DIR/migrations.xml"
         fi
       '';
 

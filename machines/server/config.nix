@@ -391,6 +391,10 @@
   # Automated server backups (containers, databases, system)
   # Backups saved to /mnt/hot/backups with daily schedule
   hwc.server.native.backup.enable = true;
+
+  # TEMPORARY: Disable navidrome due to pkg-config build failure in NixOS 25.11
+  # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix
+  hwc.server.native.navidrome.enable = lib.mkForce false;
   # Enable AI router and agent on server
   hwc.ai.router = {
     enable = true;
