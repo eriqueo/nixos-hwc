@@ -10,7 +10,7 @@ let
     in if nmRoot != "" then nmRoot else fallback;
 
   # ---- Account ordering (left-to-right everywhere that iterates 'vals')
-  desiredOrder = [ "proton-unified" "gmail-personal" "gmail-business" ];
+  desiredOrder = [ "proton" "gmail-personal" "gmail-business" ];
   allNames     = builtins.attrNames accs;
   orderedNames =
     (lib.filter (n: lib.elem n allNames) desiredOrder)

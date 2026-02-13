@@ -25,20 +25,19 @@ in
   # IMPLEMENTATION
   #==========================================================================
   hwc.home.mail.accounts = {
-    proton-unified = {
-        name = "proton-unified";
+    proton = {
+        name = "proton";
         type = "proton-bridge";
         realName = "Eric";
         address = "eric@iheartwoodcraft.com";  # Primary address for sending
-        login = "eric@iheartwoodcraft.com";  # Bridge IMAP username (split mode requires email address)
+        login = "eric@iheartwoodcraft.com";
         password = { mode = "pass"; pass = "email/proton/bridge"; };
-        maildirName = ".100_proton";  # Hidden account sync folder
-        # Sync ALL Proton folders except "All Mail" (virtual folder causes issues with Expunge)
-        # Exclude "All Mail" (virtual) and lowercase duplicates exposed by Bridge
-        # (Bridge exposes both "Sent" and "sent", "Archive" and "archive", etc.)
+        maildirName = "proton";
+        # Sync ALL Proton folders except "All Mail" (virtual) and lowercase
+        # duplicates exposed by Bridge (Sent/sent, Archive/archive, etc.)
         sync.wildcards = [ "*" "!All Mail" "!archive" "!drafts" "!sent" "!starred" ];
         send.msmtpAccount = "proton-hwc";  # Default to work identity
-        # Add second identity for personal address
+        # Additional sending identities for other addresses on this account
         extraMsmtp = ''
           account proton-personal
           host 127.0.0.1
@@ -47,43 +46,53 @@ in
           tls_starttls off
           auth plain
           from eriqueo@proton.me
-          user eriqueo
+          user eriqueo@proton.me
+          passwordeval "pass show email/proton/bridge"
+
+          account proton-office
+          host 127.0.0.1
+          port 1025
+          tls off
+          tls_starttls off
+          auth plain
+          from office@iheartwoodcraft.com
+          user office@iheartwoodcraft.com
           passwordeval "pass show email/proton/bridge"
         '';
         primary = true;
       };
 
     gmail-personal = {
-          name = "gmail-personal";
-          type = "gmail";
-          realName = "Eric O'Keefe";
-          address = "eriqueokeefe@gmail.com";
-          login = "eriqueokeefe@gmail.com";
-          password = {
-            mode = "agenix";
-            agenix = gmailPersonalSecretPath;
-          };
-          maildirName = ".210_gmail-personal";
-          # Sync inbox plus all Gmail label folders
-          sync.wildcards = [ "INBOX" "[Gmail]/*" ];
-          send.msmtpAccount = "gmail-personal";
+        name = "gmail-personal";
+        type = "gmail";
+        realName = "Eric O'Keefe";
+        address = "eriqueokeefe@gmail.com";
+        login = "eriqueokeefe@gmail.com";
+        password = {
+          mode = "agenix";
+          agenix = gmailPersonalSecretPath;
         };
+        maildirName = "gmail-personal";
+        # Sync inbox plus all Gmail label folders
+        sync.wildcards = [ "INBOX" "[Gmail]/*" ];
+        send.msmtpAccount = "gmail-personal";
+      };
 
-        gmail-business = {
-          name = "gmail-business";
-          type = "gmail";
-          realName = "Eric O'Keefe";
-          address = "heartwoodcraftmt@gmail.com";
-          login = "heartwoodcraftmt@gmail.com";
-          password = {
-            mode = "agenix";
-            agenix = gmailBusinessSecretPath;
-          };
-          maildirName = ".110_gmail-business";
-          # Sync inbox plus all Gmail label folders
-          sync.wildcards = [ "INBOX" "[Gmail]/*" ];
-          send.msmtpAccount = "gmail-business";
+    gmail-business = {
+        name = "gmail-business";
+        type = "gmail";
+        realName = "Eric O'Keefe";
+        address = "heartwoodcraftmt@gmail.com";
+        login = "heartwoodcraftmt@gmail.com";
+        password = {
+          mode = "agenix";
+          agenix = gmailBusinessSecretPath;
         };
+        maildirName = "gmail-business";
+        # Sync inbox plus all Gmail label folders
+        sync.wildcards = [ "INBOX" "[Gmail]/*" ];
+        send.msmtpAccount = "gmail-business";
+      };
   };
 
   #==========================================================================
