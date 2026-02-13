@@ -106,7 +106,12 @@
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
           gemini-cli.enable = lib.mkDefault true;           # AI CLI tool
           codex.enable = lib.mkDefault true;             # Re-enabled AI tool (temporarily disabled for build)
-          codex.package = lib.mkDefault inputs.codex.packages.${pkgs.stdenv.hostPlatform.system}.default;
+          codex.package = lib.mkDefault (
+            inputs.codex.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
+              nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.pkg-config ];
+              buildInputs = (old.buildInputs or []) ++ [ pkgs.libcap ];
+            })
+          );
 
           # Utilities
           ipcalc.enable = lib.mkDefault true;              # IP calculator
