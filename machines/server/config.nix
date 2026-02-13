@@ -573,6 +573,7 @@
       opencode.enable = lib.mkForce false;  # Not available in stable 24.05
       # gemini-cli.enable remains true (CLI tool)
       codex.enable = lib.mkForce true;  # Pinned via flake input (openai/codex rust-v0.101.0)
+      aider.enable = lib.mkForce true;  # AI pair-programming CLI for cloud and local Ollama models
 
       # Utilities (disable GUI)
       wasistlos.enable = lib.mkForce false;
