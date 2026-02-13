@@ -106,6 +106,7 @@
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
           gemini-cli.enable = lib.mkDefault true;           # AI CLI tool
           codex.enable = lib.mkDefault true;             # Re-enabled AI tool (temporarily disabled for build)
+          aider.enable = lib.mkDefault true;             # AI pair-programming CLI (cloud + local Ollama)
           codex.package = lib.mkDefault (pkgs.stdenv.mkDerivation {
             pname = "codex";
             version = "0.101.0";

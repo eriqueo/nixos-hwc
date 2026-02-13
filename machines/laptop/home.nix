@@ -13,6 +13,7 @@
     hwc.home.apps = {
       imv.enable = true;
       qbittorrent.enable = true;
+      aider.enable = true;
     };
 
     # Shell: MCP configured for laptop context
