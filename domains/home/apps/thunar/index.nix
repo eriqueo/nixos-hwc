@@ -4,6 +4,11 @@
 { config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.apps.thunar;
+  thunarPkg = if pkgs ? thunar then pkgs.thunar else pkgs.xfce.thunar;
+  thunarVolmanPkg = if pkgs ? thunar-volman then pkgs.thunar-volman else pkgs.xfce.thunar-volman;
+  thunarArchivePkg = if pkgs ? thunar-archive-plugin then pkgs.thunar-archive-plugin else pkgs.xfce.thunar-archive-plugin;
+  thunarMediaTagsPkg = if pkgs ? thunar-media-tags-plugin then pkgs.thunar-media-tags-plugin else pkgs.xfce.thunar-media-tags-plugin;
+  tumblerPkg = if pkgs ? tumbler then pkgs.tumbler else pkgs.xfce.tumbler;
 in
 {
   #==========================================================================
@@ -32,16 +37,16 @@ in
     # These settings are only merged if `hwc.home.apps.thunar.enable` is true.
     #==========================================================================
     home.packages = lib.mkIf cfg.enable (with pkgs; [
-      xfce.thunar
-      xfce.thunar-volman
-      xfce.thunar-archive-plugin
-      xfce.thunar-media-tags-plugin
+      thunarPkg
+      thunarVolmanPkg
+      thunarArchivePkg
+      thunarMediaTagsPkg
       gvfs
       udisks2
       shared-mime-info
       desktop-file-utils
       file-roller
-      xfce.tumbler
+      tumblerPkg
       ffmpegthumbnailer
       trash-cli
     ]);

@@ -61,6 +61,11 @@
       inputs.nixpkgs.follows = "nixpkgs-stable";
     };
 
+    codex = {
+      url = "github:openai/codex?ref=rust-v0.101.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Reference repo during migration (non-flake)
     legacy-config = {
       url = "github:eriqueo/nixos-hwc";

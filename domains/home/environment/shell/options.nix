@@ -80,7 +80,6 @@
         "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me";
         "reload" = "source ~/.zshrc";
-        "homeserver" = "ssh eric@100.115.126.41";
         "server" = "ssh eric@100.114.232.124";
         "xps" = "ssh eric@100.126.80.42";
         "vpnon" = "sudo wg-quick up protonvpn";
@@ -105,15 +104,6 @@
         "business-db" = "psql postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business";
         "business-dev" = "cd /opt/business && source /etc/business/setup-dev-env.sh";
         "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
-        "context-snap" = "python3 /opt/adhd-tools/scripts/context-snapshot.py";
-        "cost-dashboard" = "cd /opt/business/dashboard && streamlit run dashboard.py";
-        "energy-log" = "python3 /etc/adhd-tools/energy-tracker.py";
-        "focus-mode" = "systemctl --user start context-monitor";
-        "focus-off" = "systemctl --user stop context-monitor";
-        "frigate-logs" = "sudo podman logs -f frigate";
-        "ha-logs" = "sudo podman logs -f home-assistant";
-        "home-assistant" = "echo 'Home Assistant: http://100.115.126.41:8123'";
-        "jobtread-sync" = "cd /opt/business/api && python3 services/jobtread_sync.py";
         "receipt-process" = "cd /opt/business/receipts && python3 ../api/services/ocr_processor.py";
         "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
         # Tool aliases (eza alias is handled by programs.eza module)
