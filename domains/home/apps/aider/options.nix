@@ -19,7 +19,7 @@ with lib;
 
     localModel = mkOption {
       type = types.str;
-      default = "ollama/qwen2.5-coder:7b";
+      default = "ollama/llama3.2:3b";
       description = "Default local model for aider via Ollama.";
     };
 

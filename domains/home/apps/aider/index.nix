@@ -38,10 +38,18 @@ let
     ]
   );
 
+  shellInit = lib.concatStringsSep "\n" (
+    [
+      "export OLLAMA_API_BASE=\"${cfg.ollamaApiBase}\""
+    ]
+    ++ lib.optionals (secretInit != "") [
+      secretInit
+    ]
+  );
+
   aiderConfig = lib.generators.toYAML {} {
     model = cfg.cloudModel;
     weak-model = cfg.localModel;
-    ollama-api-base = cfg.ollamaApiBase;
     alias = aliasList;
     check-update = false;
   };
@@ -57,17 +65,18 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = lib.optionals (aiderPkg != null) [ aiderPkg ];
+    home.sessionVariables.OLLAMA_API_BASE = cfg.ollamaApiBase;
 
     home.file.".aider.conf.yml".text = aiderConfig;
 
-    programs.zsh.initContent = lib.mkIf (secretInit != "") (lib.mkAfter ''
-      # Source optional aider API key secrets from agenix.
-      ${secretInit}
-    '');
+    programs.zsh.initContent = lib.mkAfter ''
+      # Aider local model endpoint + optional API key secrets.
+      ${shellInit}
+    '';
 
-    programs.bash.initExtra = lib.mkIf (secretInit != "") ''
-      # Source optional aider API key secrets from agenix.
-      ${secretInit}
+    programs.bash.initExtra = ''
+      # Aider local model endpoint + optional API key secrets.
+      ${shellInit}
     '';
 
     #======================================================================

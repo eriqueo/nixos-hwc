@@ -34,5 +34,12 @@
       group = "secrets";
     };
 
+    openai-api-key = {
+      file = ../parts/home/openai-api-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
   };
 }
