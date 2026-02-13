@@ -14,7 +14,7 @@ in
       gpuEnable = false;  # slskd doesn't need GPU
       timeZone = config.time.timeZone or "UTC";
       ports = [
-        "0.0.0.0:5031:5030"        # Web UI
+        "127.0.0.1:5031:5030"      # Web UI (Caddy proxies to localhost)
         "0.0.0.0:50300:50300/tcp"  # P2P port
       ];
       volumes = [

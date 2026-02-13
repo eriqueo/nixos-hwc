@@ -15,7 +15,7 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
-      ports = [ "0.0.0.0:8096:8096" ];
+      ports = [ "127.0.0.1:8096:8096" ];
       volumes = [ "${configPath}:/config" ];
       environment = { };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];

@@ -113,6 +113,15 @@ in
       };
     };
 
+    # Ensure Jellyfin data/cache dirs are owned by eric (service runs as eric)
+    systemd.tmpfiles.rules = [
+      "d /var/lib/hwc/jellyfin 0750 eric users -"
+      "d /var/lib/hwc/jellyfin/config 0750 eric users -"
+      "d /var/lib/hwc/jellyfin/data 0750 eric users -"
+      "d /var/lib/hwc/jellyfin/log 0750 eric users -"
+      "d /var/cache/hwc/jellyfin 0750 eric users -"
+    ];
+
     #==========================================================================
     # VALIDATION
     #==========================================================================

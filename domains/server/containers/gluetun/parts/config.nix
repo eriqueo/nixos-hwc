@@ -50,8 +50,8 @@ EOF
         "--privileged"
       ];
       ports = [
-        "0.0.0.0:8080:8080"  # qBittorrent UI
-        "0.0.0.0:8081:8085"  # SABnzbd (container uses 8085 internally)
+        "127.0.0.1:8080:8080"  # qBittorrent UI (Caddy proxies to localhost)
+        "127.0.0.1:8081:8085"  # SABnzbd (container uses 8085 internally)
       ];
       volumes = [ "${cfgRoot}:/gluetun" ];
       environmentFiles = [ "${cfgRoot}/.env" ];
