@@ -66,8 +66,9 @@ let
       'path:proton/Trash/** OR path:gmail-business/[Gmail]/Trash/** OR path:gmail-personal/[Gmail]/Trash/**'
     ${nm} tag +spam -inbox -unread -- \
       'path:proton/Spam/** OR path:gmail-business/[Gmail]/Spam/** OR path:gmail-personal/[Gmail]/Spam/**'
-    ${nm} tag +archive -inbox -- \
-      'path:proton/Archive/** OR path:gmail-business/[Gmail]/All\ Mail/** OR path:gmail-personal/[Gmail]/All\ Mail/**'
+    # Archive: Proton only. Gmail [Gmail]/All Mail is a superset of all messages
+    # (including inbox) so tagging it +archive would clobber inbox messages.
+    ${nm} tag +archive -inbox -- 'path:proton/Archive/**'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
 in
