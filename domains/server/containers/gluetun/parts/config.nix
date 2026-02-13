@@ -17,14 +17,17 @@ in
       serviceConfig.Type = "oneshot";
       script = ''
         mkdir -p ${cfgRoot}
-        VPN_USERNAME=$(cat ${config.age.secrets.vpn-username.path})
-        VPN_PASSWORD=$(cat ${config.age.secrets.vpn-password.path})
+        WG_PRIVATE_KEY=$(cat ${config.age.secrets.vpn-wireguard-private-key.path})
         cat > ${cfgRoot}/.env <<EOF
-VPN_SERVICE_PROVIDER=protonvpn
-VPN_TYPE=openvpn
-OPENVPN_USER=$VPN_USERNAME
-OPENVPN_PASSWORD=$VPN_PASSWORD
-SERVER_COUNTRIES=Netherlands
+# WireGuard config for ProtonVPN P2P server (US-UT#52)
+VPN_SERVICE_PROVIDER=custom
+VPN_TYPE=wireguard
+WIREGUARD_PRIVATE_KEY=$WG_PRIVATE_KEY
+WIREGUARD_ADDRESSES=10.2.0.2/32
+WIREGUARD_PUBLIC_KEY=fDSDNxB7yfHbaemo7cAFMWBsEm31bVAAradL4hbBEG0=
+WIREGUARD_ENDPOINT_IP=74.63.204.210
+WIREGUARD_ENDPOINT_PORT=51820
+WIREGUARD_PERSISTENT_KEEPALIVE_INTERVAL=25s
 HEALTH_VPN_DURATION_INITIAL=30s
 HEALTH_TARGET_ADDRESS=1.1.1.1:443
 EOF
@@ -53,6 +56,8 @@ EOF
       environmentFiles = [ "${cfgRoot}/.env" ];
       environment = {
         TZ = config.time.timeZone or "America/Denver";
+        DOT = "off";  # Disable DNS over TLS - was causing timeouts and slow downloads
+        DNS_ADDRESS = "1.1.1.1";  # Use Cloudflare DNS
       };
     };
 
