@@ -40,20 +40,35 @@ let
     if (builtins.isString extraHook && extraHook != "") then "\n" + extraHook else "";
 
   accountTags = ''
-    # Domain tags (work HWC vs personal)
-    ${nm} tag +hwc -- 'path:.100_proton/** OR path:.110_gmail-business/**'
-    ${nm} tag +personal -- 'path:.210_gmail-personal/**'
+    # Proton: tag by destination address (all addresses share one IMAP connection)
+    # HWC addresses: eric@iheartwoodcraft.com, office@, admin@, g_hwcmt@proton.me
+    ${nm} tag +proton-hwc -- \
+      'path:proton/** AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com OR to:g_hwcmt@proton.me OR from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com OR from:g_hwcmt@proton.me)'
+    # Personal Proton addresses: eriqueo@proton.me, g_erique@proton.me
+    ${nm} tag +proton-personal -- 'path:proton/** AND NOT tag:proton-hwc'
 
-    # Account-specific tags (for granular filtering)
-    ${nm} tag +proton-hwc -- 'path:.100_proton/**'
-    ${nm} tag +gmail-business -- 'path:.110_gmail-business/**'
-    ${nm} tag +gmail-personal -- 'path:.210_gmail-personal/**'
+    # Gmail account tags
+    ${nm} tag +gmail-business -- 'path:gmail-business/**'
+    ${nm} tag +gmail-personal -- 'path:gmail-personal/**'
 
-    # Folder state tags (apply to all accounts)
-    ${nm} tag +inbox -- 'folder:**/INBOX OR folder:**/inbox AND NOT tag:trash'
-    ${nm} tag +sent -- 'folder:**/Sent OR folder:**/"[Gmail].Sent Mail" AND NOT tag:trash'
-    ${nm} tag +draft -- 'folder:**/Drafts OR folder:**/"[Gmail].Drafts" AND NOT tag:trash'
-    ${nm} tag +trash -- 'folder:**/Trash OR folder:**/"[Gmail].Trash" OR folder:**/"[Gmail].Bin"'
+    # Domain rollup tags (work vs personal)
+    ${nm} tag +hwc -- 'tag:proton-hwc OR path:gmail-business/**'
+    ${nm} tag +personal -- 'tag:proton-personal OR path:gmail-personal/**'
+
+    # Folder state tags - use explicit path: queries (folder: globs don't work in notmuch)
+    ${nm} tag +inbox -- \
+      'path:proton/inbox/** OR path:gmail-business/inbox/** OR path:gmail-personal/inbox/**'
+    ${nm} tag +sent -inbox -unread -- \
+      'path:proton/Sent/** OR path:gmail-business/[Gmail]/Sent\ Mail/** OR path:gmail-personal/[Gmail]/Sent\ Mail/**'
+    ${nm} tag +draft -inbox -unread -- \
+      'path:proton/Drafts/** OR path:gmail-business/[Gmail]/Drafts/** OR path:gmail-personal/[Gmail]/Drafts/**'
+    ${nm} tag +trash -inbox -unread -- \
+      'path:proton/Trash/** OR path:gmail-business/[Gmail]/Trash/** OR path:gmail-personal/[Gmail]/Trash/**'
+    ${nm} tag +spam -inbox -unread -- \
+      'path:proton/Spam/** OR path:gmail-business/[Gmail]/Spam/** OR path:gmail-personal/[Gmail]/Spam/**'
+    # Archive: Proton only. Gmail [Gmail]/All Mail is a superset of all messages
+    # (including inbox) so tagging it +archive would clobber inbox messages.
+    ${nm} tag +archive -inbox -- 'path:proton/Archive/**'
   '';
   tail = rulesPatched + "\n" + accountTags + extra;
 in
