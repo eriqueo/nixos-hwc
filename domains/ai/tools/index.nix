@@ -84,6 +84,7 @@ in
     systemd.services.post-rebuild-ai-docs = {
       description = "AI Tools - Post-rebuild documentation generator";
       after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
 
       serviceConfig = {
         Type = "oneshot";

@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 
 {
   #==========================================================================
@@ -106,6 +106,7 @@
           n8n.enable = lib.mkDefault false;                # Workflow automation (resource-heavy)
           gemini-cli.enable = lib.mkDefault true;           # AI CLI tool
           codex.enable = lib.mkDefault true;             # Re-enabled AI tool (temporarily disabled for build)
+          codex.package = lib.mkDefault inputs.codex.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
           # Utilities
           ipcalc.enable = lib.mkDefault true;              # IP calculator

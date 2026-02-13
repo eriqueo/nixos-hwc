@@ -25,10 +25,7 @@
   networking.hostName = "hwc-xps";
   networking.hostId = "a7c3d821";  # Generated: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' '
 
-  # MIGRATION FIX: Use actual working password hash from hwc-kids
-  # This overrides the fallback password from domains/system/users/options.nix
-  # Using hashedPassword directly since secrets/age not configured yet
-  users.users.eric.hashedPassword = "$6$XeiiTwbz$qYPx.U2Gj0K4BiKqqniBbI9m2WWU9.rKelkJceqjXlgbnXRcbsbQ8idxmj28FK2mjjtOqU5aKV4oYQt3Wa91f.";
+  # MIGRATION NOTE: password managed via secrets/fallback in domains/system/users
 
   # Keep mutableUsers = false for security (declarative password management)
   # users.mutableUsers stays false (default from domains/system/users/eric.nix)
