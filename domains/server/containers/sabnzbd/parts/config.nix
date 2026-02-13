@@ -61,7 +61,7 @@ in
 
       # Port exposure - only when not using VPN (gluetun exposes ports)
       ports = lib.optionals (cfg.network.mode != "vpn") [
-        "${toString cfg.webPort}:${toString cfg.webPort}"
+        "127.0.0.1:${toString cfg.webPort}:${toString cfg.webPort}"
       ];
 
       # Volume mounts - CRITICAL: events mount is required for automation pipeline

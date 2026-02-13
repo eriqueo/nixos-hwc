@@ -151,7 +151,7 @@ in
 
       # Expose port for external access
       ports = if cfg.network.mode != "host" then [
-        "${toString cfg.settings.port}:3001"
+        "127.0.0.1:${toString cfg.settings.port}:3001"
       ] else [];
 
       environment = {
