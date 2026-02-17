@@ -689,6 +689,33 @@ options.hwc.home.apps.firefox.enable = ...  # Matches folder path
 
 ### Implementation Anti-Patterns
 
+❌ **Duplicate config attribute (assertions outside config block)**
+```nix
+# BAD: config defined twice - causes "attribute 'config' already defined" error
+config = lib.mkIf cfg.enable {
+  environment.systemPackages = [ pkgs.myapp ];
+};
+
+config.assertions = lib.mkIf cfg.enable [  # WRONG! Second config attribute
+  { assertion = true; message = "test"; }
+];
+
+# GOOD: assertions INSIDE the config block
+config = lib.mkIf cfg.enable {
+  environment.systemPackages = [ pkgs.myapp ];
+
+  #==========================================================================
+  # VALIDATION
+  #==========================================================================
+  assertions = [
+    {
+      assertion = someDependency.enable;
+      message = "myapp requires someDependency";
+    }
+  ];
+};
+```
+
 ❌ **Missing VALIDATION section**
 ```nix
 # BAD: No dependency assertions
@@ -696,13 +723,17 @@ config = lib.mkIf enabled {
   # Uses hyprland but doesn't assert dependency
 };
 
-# GOOD:
-config.assertions = lib.mkIf enabled [
-  {
-    assertion = config.hwc.home.apps.hyprland.enable;
-    message = "waybar requires hyprland";
-  }
-];
+# GOOD: Include assertions inside config block
+config = lib.mkIf enabled {
+  # ... implementation ...
+
+  assertions = [
+    {
+      assertion = config.hwc.home.apps.hyprland.enable;
+      message = "waybar requires hyprland";
+    }
+  ];
+};
 ```
 
 ❌ **Impure parts/ functions**
