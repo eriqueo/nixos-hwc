@@ -14,22 +14,26 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";
       timeZone = config.time.timeZone or "UTC";
-      ports = [
-        "127.0.0.1:${toString cfg.ports.desktop}:8080"   # Desktop interface (KasmVNC web)
-        "127.0.0.1:${toString cfg.ports.webserver}:8181" # Content server
-        "0.0.0.0:5909:5900"                              # Standard VNC for client access (Tailscale)
-      ];
-      volumes = [
-        "${configPath}:/config"
-        "${cfg.libraries.ebooks}:/books/ebooks"
-        "${cfg.libraries.audiobooks}:/books/audiobooks"
-        "${config.hwc.paths.hot.root}/downloads:/downloads"
-      ];
-      environment = {
-        # Calibre-specific environment variables
-        CALIBRE_USE_DARK_PALETTE = "1";
-      };
-      dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [];
-    })
-  ]);
+      # 1. REMOVE PORTS - Gluetun handles these now
+            ports = []; 
+      
+            volumes = [
+              "${configPath}:/config"
+              "${cfg.libraries.ebooks}:/books/ebooks"
+              "${cfg.libraries.audiobooks}:/books/audiobooks"
+              "${config.hwc.paths.hot.root}/downloads:/downloads"
+            ];
+      
+            environment = {
+              CALIBRE_USE_DARK_PALETTE = "1";
+              # 2. SHIFT INTERNAL PORTS
+              # Force Desktop UI to 8082 (avoids 8080 conflict with qBit)
+              CUSTOM_PORT = "8082"; 
+              # Force Content Server to 8090
+              CALIBRE_SERVER_PORT = "8090"; 
+            };
+      
+            dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [];
+          })
+        ]);
 }

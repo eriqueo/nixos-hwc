@@ -52,6 +52,8 @@ EOF
       ports = [
         "127.0.0.1:8080:8080"  # qBittorrent UI (Caddy proxies to localhost)
         "127.0.0.1:8081:8085"  # SABnzbd (container uses 8085 internally)
+        "127.0.0.1:8083:8082" # Calibre Desktop (Redirected from Gluetun)
+        "127.0.0.1:8090:8090" # Calibre Content Server
       ];
       volumes = [ "${cfgRoot}:/gluetun" ];
       environmentFiles = [ "${cfgRoot}/.env" ];
