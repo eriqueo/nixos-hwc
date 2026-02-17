@@ -124,7 +124,11 @@
       "Bash(mbsync:*)",
       "Bash(du:*)",
       "mcp__filesystem__read_text_file",
-      "mcp__filesystem__read_multiple_files"
+      "mcp__filesystem__read_multiple_files",
+      "Bash(nmap:*)",
+      "Bash(sudo arp-scan:*)",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": [],

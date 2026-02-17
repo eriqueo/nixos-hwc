@@ -35,11 +35,11 @@ web:
         role: readwrite
         cidr: 0.0.0.0/0,::/0
 directories:
-  downloads: /downloads/music
-  incomplete: /downloads/incomplete
+  downloads: ${cfg.directories.downloads}
+  incomplete: ${cfg.directories.incomplete}
 shares:
   directories:
-    - "[Downloads]/downloads/music"
+    - "[Downloads]${cfg.directories.downloads}"
     - "[Library]/music"
 soulseek:
   username: $SOULSEEK_USERNAME

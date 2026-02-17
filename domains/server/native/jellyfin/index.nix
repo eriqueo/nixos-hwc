@@ -122,6 +122,62 @@ in
       "d /var/cache/hwc/jellyfin 0750 eric users -"
     ];
 
+    # Apply user policies via API after Jellyfin starts
+    systemd.services.jellyfin-apply-policies = lib.mkIf (cfg.users != {} && cfg.apiKey != "") {
+      description = "Apply Jellyfin user policies";
+      after = [ "jellyfin.service" ];
+      requires = [ "jellyfin.service" ];
+      wantedBy = [ "multi-user.target" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+
+      script = let
+        applyUserPolicy = username: userCfg: ''
+          echo "Applying policy for user: ${username}"
+
+          # Get user ID
+          USER_ID=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users" \
+            -H "X-Emby-Token: ${cfg.apiKey}" | \
+            ${pkgs.jq}/bin/jq -r '.[] | select(.Name == "${username}") | .Id')
+
+          if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
+            echo "User ${username} not found, skipping"
+            return
+          fi
+
+          # Get current policy
+          POLICY=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users/$USER_ID" \
+            -H "X-Emby-Token: ${cfg.apiKey}" | \
+            ${pkgs.jq}/bin/jq '.Policy')
+
+          # Update MaxActiveSessions
+          UPDATED_POLICY=$(echo "$POLICY" | ${pkgs.jq}/bin/jq '.MaxActiveSessions = ${toString userCfg.maxActiveSessions}')
+
+          # Apply policy
+          ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/$USER_ID/Policy" \
+            -H "X-Emby-Token: ${cfg.apiKey}" \
+            -H "Content-Type: application/json" \
+            -d "$UPDATED_POLICY"
+
+          echo "Policy applied for ${username}"
+        '';
+      in ''
+        # Wait for Jellyfin to be ready
+        for i in $(seq 1 30); do
+          if ${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/System/Info" -H "X-Emby-Token: ${cfg.apiKey}" > /dev/null 2>&1; then
+            break
+          fi
+          echo "Waiting for Jellyfin to be ready..."
+          sleep 2
+        done
+
+        ${lib.concatStringsSep "\n" (lib.mapAttrsToList applyUserPolicy cfg.users)}
+      '';
+    };
+
     #==========================================================================
     # VALIDATION
     #==========================================================================

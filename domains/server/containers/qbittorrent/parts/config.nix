@@ -4,6 +4,25 @@ let
   paths = config.hwc.paths;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/qbittorrent/config";
+  qbtConfigDir = "${configPath}/qBittorrent";
+
+  # Generate categories.json content from Nix options
+  categoriesJson = builtins.toJSON (
+    lib.mapAttrs (name: cat: { save_path = cat.savePath; }) cfg.categories
+  );
+
+  # Script to enforce categories.json before container starts
+  enforceCategoriesScript = pkgs.writeShellScript "qbittorrent-enforce-categories" ''
+    set -euo pipefail
+
+    mkdir -p "${qbtConfigDir}"
+
+    cat > "${qbtConfigDir}/categories.json" << 'EOF'
+${categoriesJson}
+EOF
+
+    chown -R 1000:100 "${qbtConfigDir}/categories.json"
+  '';
 in
 {
   config = lib.mkIf cfg.enable {
@@ -71,6 +90,9 @@ in
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
     systemd.services.podman-qbittorrent = {
+      serviceConfig.ExecStartPre = [
+        "+${enforceCategoriesScript}"  # + prefix runs as root
+      ];
       after = if cfg.network.mode == "vpn"
         then [ "podman-gluetun.service" "mnt-hot.mount" ]
         else [ "hwc-media-network.service" "mnt-hot.mount" ];

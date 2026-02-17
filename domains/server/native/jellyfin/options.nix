@@ -31,5 +31,25 @@ in
     gpu = {
       enable = mkEnableOption "GPU acceleration for video transcoding";
     };
+
+    users = mkOption {
+      type = types.attrsOf (types.submodule {
+        options = {
+          maxActiveSessions = mkOption {
+            type = types.int;
+            default = 0;
+            description = "Maximum active sessions (0 = unlimited)";
+          };
+        };
+      });
+      default = {};
+      description = "User policy overrides applied via API after startup";
+    };
+
+    apiKey = mkOption {
+      type = types.str;
+      default = "";
+      description = "Jellyfin API key for policy management";
+    };
   };
 }
