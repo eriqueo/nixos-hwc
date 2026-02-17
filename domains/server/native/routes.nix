@@ -152,6 +152,24 @@ in
       headers = { "X-Forwarded-Prefix" = "/books"; };
     }
 
+    # Calibre - port mode for desktop interface (KasmVNC)
+    {
+      name = "calibre";
+      mode = "port";
+      port = 1443;  # Dedicated port for Calibre desktop
+      upstream = "http://127.0.0.1:8083";
+    }
+
+    # Calibre content server - subpath for ebook access
+    {
+      name = "calibre-server";
+      mode = "subpath";
+      path = "/calibre";
+      upstream = "http://127.0.0.1:8181";
+      needsUrlBase = false;  # Content server works without URL base
+      headers = { "X-Forwarded-Prefix" = "/calibre"; };
+    }
+
     # CouchDB (Obsidian LiveSync) - strip /sync prefix
     {
       name = "couchdb";

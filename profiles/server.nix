@@ -300,6 +300,7 @@
   hwc.server.containers.lidarr.enable = true;
   hwc.server.containers.readarr.enable = true;  # Readarr for ebooks and audiobooks
   hwc.server.containers.books.enable = true;  # LazyLibrarian for ebooks and audiobooks
+  hwc.server.containers.calibre.enable = true;  # Calibre for ebook library management (integrates with Readarr)
 
   # Beets music organizer - INTENTIONALLY DISABLED (using native installation)
   # Container disabled in favor of native beets installation for:

@@ -20,6 +20,7 @@
     ./beets/index.nix
     ./books/index.nix
     ./caddy/index.nix
+    ./calibre/index.nix
     ./gluetun/index.nix
     ./immich/index.nix
     ./jellyfin/index.nix
