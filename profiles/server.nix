@@ -392,6 +392,31 @@
     };
   };
 
+  # WebDAV server for RetroArch save state sync (iOS/iPad/TV)
+  # Access: https://hwc.ocelot-wahoo.ts.net/retroarch-sync/
+  hwc.server.native.webdav = {
+    enable = true;
+
+    # Credentials from agenix secrets
+    auth = {
+      usernameFile = config.hwc.secrets.api.webdavUsernameFile;
+      passwordFile = config.hwc.secrets.api.webdavPasswordFile;
+    };
+
+    # RetroArch save directories
+    retroarch = {
+      enable = true;
+      syncSaves = true;   # .srm files
+      syncStates = true;  # save states
+    };
+
+    # Expose via Caddy reverse proxy (Tailscale only)
+    reverseProxy = {
+      enable = true;
+      path = "/retroarch-sync";
+    };
+  };
+
   # Immich native disabled: not available in nixpkgs-stable 24.05
   # Native service kept in .immich-native-reference/ for documentation
   # Using containerized version instead (works with stable 24.05)

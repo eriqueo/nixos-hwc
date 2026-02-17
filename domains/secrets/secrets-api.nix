@@ -52,6 +52,10 @@ in
     # Networking domain paths
     vpnUsernameFile = pathOrNull "vpn-username";
     vpnPasswordFile = pathOrNull "vpn-password";
+
+    # WebDAV server credentials
+    webdavUsernameFile = pathOrNull "webdav-username";
+    webdavPasswordFile = pathOrNull "webdav-password";
   };
 
   #============================================================================

@@ -174,6 +174,19 @@
         description = "Path to decrypted Gmail OAuth client JSON file";
       };
 
+      # WebDAV server credentials
+      webdavUsernameFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted WebDAV username file";
+      };
+
+      webdavPasswordFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted WebDAV password file";
+      };
+
     };
 
     #==========================================================================
