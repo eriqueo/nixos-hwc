@@ -14,8 +14,14 @@ in
 
     romsDir = mkOption {
       type = types.path;
-      default = "/mnt/ext/retroarch/roms";
+      default = "/mnt/media/retroarch/roms";
       description = "Directory containing ROM files";
+    };
+
+    systemDir = mkOption {
+      type = types.path;
+      default = "/mnt/media/retroarch/system";
+      description = "Directory containing BIOS and system files";
     };
 
     gpu = {

@@ -369,7 +369,7 @@
   # RetroArch Emulation with Sunshine Game Streaming
   hwc.server.native.retroarch = {
     enable = true;
-    romsDir = "/mnt/ext/retroarch/roms";
+    # ROMs and BIOS at /mnt/media/retroarch/ (defaults)
     gpu.enable = true;  # Enable GPU acceleration for emulation
 
     # Enable cores for the game library
