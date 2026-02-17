@@ -15,7 +15,7 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";
       timeZone = config.time.timeZone or "UTC";
-      ports = [ "127.0.0.1:8787:8787" ];
+      ports = [];
       volumes = [
         "${configPath}:/config"
         "${config.hwc.paths.media.root}/books:/books"

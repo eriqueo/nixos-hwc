@@ -54,6 +54,7 @@ EOF
         "127.0.0.1:8081:8085"  # SABnzbd (container uses 8085 internally)
         "127.0.0.1:8083:8082" # Calibre Desktop (Redirected from Gluetun)
         "127.0.0.1:8090:8090" # Calibre Content Server
+        "127.0.0.1:8787:8787" # ADD THIS: Readarr UI
       ];
       volumes = [ "${cfgRoot}:/gluetun" ];
       environmentFiles = [ "${cfgRoot}/.env" ];

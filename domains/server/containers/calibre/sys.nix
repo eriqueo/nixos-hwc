@@ -31,6 +31,7 @@ in
               CUSTOM_PORT = "8082"; 
               # Force Content Server to 8090
               CALIBRE_SERVER_PORT = "8090"; 
+              CALIBRE_SERVER_LISTEN_ON = "0.0.0.0";
             };
       
             dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [];
