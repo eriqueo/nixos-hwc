@@ -15,8 +15,9 @@ in
       gpuMode = "intel";
       timeZone = config.time.timeZone or "UTC";
       ports = [
-        "127.0.0.1:${toString cfg.ports.desktop}:8080"   # Desktop interface (KasmVNC)
+        "127.0.0.1:${toString cfg.ports.desktop}:8080"   # Desktop interface (KasmVNC web)
         "127.0.0.1:${toString cfg.ports.webserver}:8181" # Content server
+        "0.0.0.0:5909:5900"                              # Standard VNC for client access (Tailscale)
       ];
       volumes = [
         "${configPath}:/config"
