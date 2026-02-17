@@ -17,13 +17,16 @@ let
       exit 0
     fi
 
-    ${pkgs.python3}/bin/python3 - <<'PY'
+    CATEGORIES_JSON='${categoriesJson}'
+
+    ${pkgs.python3}/bin/python3 - "$CATEGORIES_JSON" <<'PY'
 import json
 import re
+import sys
 from pathlib import Path
 
 ini_path = Path("${iniPath}")
-categories = json.loads('''${categoriesJson}''')
+categories = json.loads(sys.argv[1])
 
 text = ini_path.read_text()
 
