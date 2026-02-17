@@ -178,6 +178,21 @@
       owner = "root";
       group = "secrets";
     };
+
+    # WebDAV server credentials (for RetroArch sync)
+    webdav-username = {
+      file = ../parts/server/webdav-username.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    webdav-password = {
+      file = ../parts/server/webdav-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }
 
