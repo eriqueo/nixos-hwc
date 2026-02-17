@@ -13,5 +13,18 @@ in
     };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };
     gpu.enable    = mkOption { type = types.bool; default = true; };
+
+    directories = {
+      downloads = mkOption {
+        type = types.str;
+        default = "/downloads/music";
+        description = "Completed downloads directory (inside container)";
+      };
+      incomplete = mkOption {
+        type = types.str;
+        default = "/downloads/incomplete";
+        description = "Incomplete downloads directory (inside container)";
+      };
+    };
   };
 }

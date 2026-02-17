@@ -21,5 +21,11 @@
       default = false;
       description = "Enable GPU support (not typically needed for LazyLibrarian)";
     };
+
+    httpRoot = lib.mkOption {
+      type = lib.types.str;
+      default = "/books";
+      description = "HTTP root path for reverse proxy (e.g., /books)";
+    };
   };
 }

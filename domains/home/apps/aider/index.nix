@@ -27,7 +27,7 @@ let
     lib.filter (line: line != "") [
       (lib.optionalString (openaiSecretPath != null) ''
         if [ -f "${openaiSecretPath}" ]; then
-          if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' "${openaiSecretPath}"; then
+          if grep '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' "${openaiSecretPath}"; then
             source "${openaiSecretPath}"
           else
             export OPENAI_API_KEY="$(tr -d '\r\n' < "${openaiSecretPath}")"
@@ -36,7 +36,7 @@ let
       '')
       (lib.optionalString (anthropicSecretPath != null) ''
         if [ -f "${anthropicSecretPath}" ]; then
-          if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' "${anthropicSecretPath}"; then
+          if grep '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=' "${anthropicSecretPath}"; then
             source "${anthropicSecretPath}"
           else
             export ANTHROPIC_API_KEY="$(tr -d '\r\n' < "${anthropicSecretPath}")"

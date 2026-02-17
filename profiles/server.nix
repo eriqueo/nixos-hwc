@@ -147,11 +147,18 @@
         
         # AI services
         11434  # Ollama
+
+        # Game streaming (Sunshine)
+        47984 47989 47990  # Sunshine HTTPS, Web UI, RTSP
+        48010              # Sunshine video stream
       ];
       extraUdpPorts = [
         7359   # Jellyfin discovery
         50300  # SLSKD
         8555   # Frigate
+
+        # Game streaming (Sunshine)
+        47998 47999 48000 48010  # Sunshine control, video, audio
       ];
     };
   };
@@ -351,6 +358,38 @@
       upstream = "localhost:8096";
     };
     gpu.enable = true;  # Enable NVIDIA GPU acceleration for transcoding
+
+    # User policy management via API
+    apiKey = "26d513d02f27467aa94d70e4b43688f8";
+    users.eric = {
+      maxActiveSessions = 0;  # Unlimited sessions
+    };
+  };
+
+  # RetroArch Emulation with Sunshine Game Streaming
+  hwc.server.native.retroarch = {
+    enable = true;
+    romsDir = "/mnt/ext/retroarch/roms";
+    gpu.enable = true;  # Enable GPU acceleration for emulation
+
+    # Enable cores for the game library
+    cores = {
+      dosbox-pure = true;    # DOS/Windows games (educational games, etc.)
+      snes9x = true;         # SNES
+      mgba = true;           # GBA
+      mupen64plus = true;    # N64
+      genesis-plus-gx = true; # Sega Genesis
+      nestopia = true;       # NES
+      beetle-psx-hw = true;  # PlayStation (hardware renderer)
+      flycast = true;        # Dreamcast
+    };
+
+    # Sunshine for remote game streaming (Moonlight client compatible)
+    sunshine = {
+      enable = true;
+      openFirewall = true;
+      capSysAdmin = true;  # Required for mouse/keyboard emulation
+    };
   };
 
   # Immich native disabled: not available in nixpkgs-stable 24.05

@@ -30,5 +30,21 @@ in
       default = false;
       description = "Enable GPU acceleration (not typically needed for qBittorrent)";
     };
+
+    categories = mkOption {
+      type = types.attrsOf (types.submodule {
+        options.savePath = mkOption {
+          type = types.str;
+          description = "Save path for this category (relative to /downloads inside container)";
+        };
+      });
+      default = {
+        movies = { savePath = "/downloads/movies"; };
+        tv = { savePath = "/downloads/tv"; };
+        music = { savePath = "/downloads/music"; };
+        books = { savePath = "/downloads/books"; };
+      };
+      description = "Download categories with their save paths";
+    };
   };
 }
