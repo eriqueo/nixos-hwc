@@ -148,6 +148,9 @@
         # AI services
         11434  # Ollama
 
+        # Calibre VNC
+        5909   # Calibre desktop VNC
+
         # Game streaming (Sunshine)
         47984 47989 47990  # Sunshine HTTPS, Web UI, RTSP
         48010              # Sunshine video stream
