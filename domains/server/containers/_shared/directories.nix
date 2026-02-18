@@ -48,13 +48,17 @@ in
       (lib.optionals (mediaRoot != null) [
         (mkDir "${mediaRoot}/books/ebooks")
         (mkDir "${mediaRoot}/books/audiobooks")
+        (mkDir "${mediaRoot}/books/.audiobookshelf-metadata")
+        (mkDir "${mediaRoot}/podcasts")
       ])
 
       # Container config roots (/opt)
       (lib.optionals (appsRoot != null) ([ (mkRootDir appsRoot) ] ++ mkConfigDirs [
+        "audiobookshelf"
         "beets"
         "books"
         "caddy"
+        "calibre"
         "jellyfin"
         "lidarr"
         "navidrome"

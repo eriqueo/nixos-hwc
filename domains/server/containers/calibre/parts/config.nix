@@ -9,17 +9,15 @@ let
     set -euo pipefail
 
     CONFIG_DIR="${configPath}"
-    EBOOKS_DIR="${cfg.libraries.ebooks}"
-    AUDIOBOOKS_DIR="${cfg.libraries.audiobooks}"
+    LIBRARY_DIR="${cfg.library}"
 
     # Create config directory if it doesn't exist
     mkdir -p "$CONFIG_DIR"
     chown 1000:100 "$CONFIG_DIR"
 
-    # Ensure library directories exist
-    mkdir -p "$EBOOKS_DIR"
-    mkdir -p "$AUDIOBOOKS_DIR"
-    chown -R 1000:100 "$EBOOKS_DIR" "$AUDIOBOOKS_DIR"
+    # Ensure library directory exists
+    mkdir -p "$LIBRARY_DIR"
+    chown -R 1000:100 "$LIBRARY_DIR"
   '';
 in
 {

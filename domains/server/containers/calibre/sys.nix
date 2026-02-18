@@ -20,8 +20,7 @@ in
       ];
       volumes = [
         "${configPath}:/config"
-        "${cfg.libraries.ebooks}:/books/ebooks"
-        "${cfg.libraries.audiobooks}:/books/audiobooks"
+        "${cfg.library}:/books"
         "${config.hwc.paths.hot.root}/downloads:/downloads"
       ];
       environment = {

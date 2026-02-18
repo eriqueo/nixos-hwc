@@ -17,6 +17,7 @@
     ./_shared/directories.nix
 
     # Container services
+    ./audiobookshelf/index.nix
     ./beets/index.nix
     ./books/index.nix
     ./caddy/index.nix

@@ -39,18 +39,10 @@ in
       };
     };
 
-    libraries = {
-      ebooks = mkOption {
-        type = types.path;
-        default = "/mnt/media/books/ebooks";
-        description = "Path to ebooks library (Readarr root folder)";
-      };
-
-      audiobooks = mkOption {
-        type = types.path;
-        default = "/mnt/media/books/audiobooks";
-        description = "Path to audiobooks library (Readarr root folder)";
-      };
+    library = mkOption {
+      type = types.path;
+      default = "/mnt/media/books/ebooks";
+      description = "Path to ebooks library";
     };
   };
 }
