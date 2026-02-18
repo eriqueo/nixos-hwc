@@ -152,6 +152,16 @@ in
       headers = { "X-Forwarded-Prefix" = "/books"; };
     }
 
+    # Audiobookshelf - audiobook and podcast server
+    {
+      name = "audiobookshelf";
+      mode = "subpath";
+      path = "/audiobooks";
+      upstream = "http://127.0.0.1:13378";
+      needsUrlBase = false;  # Audiobookshelf handles subpaths natively
+      headers = { "X-Forwarded-Prefix" = "/audiobooks"; };
+    }
+
     # Calibre - port mode for desktop interface (KasmVNC)
     {
       name = "calibre";

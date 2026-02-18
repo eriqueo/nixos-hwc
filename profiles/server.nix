@@ -329,6 +329,7 @@ in
   hwc.server.containers.readarr.enable = lib.mkDefault isPrimary;  # Readarr for ebooks and audiobooks
   hwc.server.containers.books.enable = lib.mkDefault isPrimary;  # LazyLibrarian for ebooks and audiobooks
   hwc.server.containers.calibre.enable = lib.mkDefault isPrimary;  # Calibre for ebook library management
+  hwc.server.containers.audiobookshelf.enable = lib.mkDefault isPrimary;  # Audiobookshelf for audiobooks
 
   # Beets music organizer - INTENTIONALLY DISABLED (using native installation)
   hwc.server.containers.beets.enable = false;
