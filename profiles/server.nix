@@ -24,7 +24,13 @@
 #   - Requires agenix secrets to be configured
 #   - Assumes server hardware (storage, GPU)
 
-{ lib, pkgs, config, ... }: {
+{ lib, pkgs, config, ... }:
+
+let
+  cfg = config.hwc.server;
+  isPrimary = cfg.role == "primary";
+in
+{
 
   #==========================================================================
   # BASE SYSTEM - Critical for machine functionality
@@ -282,10 +288,14 @@
   #============================================================================
   # SERVICE ENABLEMENT (Charter v6 migration in progress)
   #============================================================================
+  # Role-based defaults:
+  # - primary: All services enabled (main production server)
+  # - secondary: Core services only, override to enable more
 
   # Infrastructure services (minimal GPU configuration)
+  # GPU enabled only if present - machines should override type
   hwc.infrastructure.hardware.gpu = {
-    enable = true;
+    enable = lib.mkDefault true;
     type = "nvidia";
     nvidia = {
       driver = "stable";
@@ -294,60 +304,53 @@
     };
   };
 
-  # Container services (Charter v6 migration test)
-  hwc.server.containers.gluetun.enable = true;
-  hwc.server.containers.qbittorrent.enable = true;
-  hwc.server.containers.sabnzbd.enable = true;
+  # -------------------------------------------------------------------------
+  # CORE SERVICES - Always enabled for any server
+  # -------------------------------------------------------------------------
+  hwc.server.reverseProxy = {
+    enable = lib.mkDefault true;
+    domain = "hwc.ocelot-wahoo.ts.net";
+  };
 
-  # Phase 3: Media Management (*arr Stack)
-  hwc.server.containers.prowlarr.enable = true;
-  hwc.server.containers.sonarr.enable = true;
-  hwc.server.containers.radarr.enable = true;
-  hwc.server.containers.lidarr.enable = true;
-  hwc.server.containers.readarr.enable = true;  # Readarr for ebooks and audiobooks
-  hwc.server.containers.books.enable = true;  # LazyLibrarian for ebooks and audiobooks
-  hwc.server.containers.calibre.enable = true;  # Calibre for ebook library management (integrates with Readarr)
+  # -------------------------------------------------------------------------
+  # MEDIA SERVICES - Primary server only by default
+  # -------------------------------------------------------------------------
+
+  # Download stack (VPN + clients)
+  hwc.server.containers.gluetun.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.qbittorrent.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.sabnzbd.enable = lib.mkDefault isPrimary;
+
+  # *arr Stack (media management)
+  hwc.server.containers.prowlarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.sonarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.radarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.lidarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.readarr.enable = lib.mkDefault isPrimary;  # Readarr for ebooks and audiobooks
+  hwc.server.containers.books.enable = lib.mkDefault isPrimary;  # LazyLibrarian for ebooks and audiobooks
+  hwc.server.containers.calibre.enable = lib.mkDefault isPrimary;  # Calibre for ebook library management
 
   # Beets music organizer - INTENTIONALLY DISABLED (using native installation)
-  # Container disabled in favor of native beets installation for:
-  # - Simpler integration with system
-  # - Reduced container overhead for lightweight tool
-  # - Direct access to music library without volume complexity
-  # To re-enable container: set beets.enable = true AND disable beets-native
-  # See: domains/server/containers/beets/ for container config
   hwc.server.containers.beets.enable = false;
-  # TODO: beets-native option removed, need to create proper native service
-  # hwc.server.beets-native.enable = true;
 
-  hwc.server.containers.jellyseerr.enable = true;
+  hwc.server.containers.jellyseerr.enable = lib.mkDefault isPrimary;
 
-  # Phase 4: Specialized Services (Soulseek integration)
-  hwc.server.containers.slskd.enable = true;
-  hwc.server.containers.soularr.enable = true;  # Now that Lidarr is enabled
-  # hwc.server.containers.navidrome.enable = true;  # Disabled - using native service
-  # hwc.server.containers.jellyfin.enable = true;  # Disabled - using native service
+  # Soulseek integration
+  hwc.server.containers.slskd.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.soularr.enable = lib.mkDefault isPrimary;
 
-  # Phase 5: Media Optimization and Management
   # Tdarr video transcoding - INTENTIONALLY DISABLED (high resource usage)
-  # Disabled because:
-  # - Resource intensive (~4 CPU cores, 12GB RAM when active)
-  # - Not needed unless active transcoding pipeline required
-  # - GPU passthrough configured but service dormant to conserve resources
-  # - Conflicts with AI workloads for GPU/CPU resources
-  # To enable: set tdarr.enable = true (all deps already configured)
-  # Verify: GPU support, storage paths, networking all ready
-  # See: domains/server/containers/tdarr/ for full config
   hwc.server.containers.tdarr.enable = false;
   hwc.server.containers.recyclarr = {
-    enable = true;
+    enable = lib.mkDefault isPrimary;
     services.lidarr.enable = false;  # Disable Lidarr sync (not supported in current Recyclarr version)
   };
-  hwc.server.containers.organizr.enable = true;
-  hwc.server.containers.pinchflat.enable = true;  # YouTube subscription manager
+  hwc.server.containers.organizr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.pinchflat.enable = lib.mkDefault isPrimary;  # YouTube subscription manager
 
   # Native Media Services (Charter compliant)
   hwc.server.native.navidrome = {
-    enable = true;
+    enable = lib.mkDefault isPrimary;
     settings = {
       initialAdminUser = "admin";
       # Password now securely loaded from agenix secret
@@ -358,7 +361,7 @@
   };
 
   hwc.server.native.jellyfin = {
-    enable = true;
+    enable = lib.mkDefault isPrimary;
     openFirewall = false;  # Manual firewall management
     reverseProxy = {
       enable = true;
@@ -376,7 +379,7 @@
 
   # RetroArch Emulation with Sunshine Game Streaming
   hwc.server.native.retroarch = {
-    enable = true;
+    enable = lib.mkDefault isPrimary;
     # ROMs and BIOS at /mnt/media/retroarch/ (defaults)
     gpu.enable = true;  # Enable GPU acceleration for emulation
 
@@ -403,7 +406,7 @@
   # WebDAV server for RetroArch save state sync (iOS/iPad/TV)
   # Access: https://hwc.ocelot-wahoo.ts.net/retroarch-sync/
   hwc.server.native.webdav = {
-    enable = true;
+    enable = lib.mkDefault isPrimary;
 
     # Credentials from agenix secrets
     auth = {
@@ -425,13 +428,13 @@
     };
   };
 
-  # Immich native disabled: not available in nixpkgs-stable 24.05
-  # Native service kept in .immich-native-reference/ for documentation
-  # Using containerized version instead (works with stable 24.05)
+  # -------------------------------------------------------------------------
+  # PHOTO MANAGEMENT - Primary server only by default
+  # -------------------------------------------------------------------------
 
-  # Immich Photo Management (Containerized - carbon copy of native service)
+  # Immich Photo Management (Containerized)
   hwc.server.containers.immich = {
-    enable = true;
+    enable = lib.mkDefault isPrimary;
     settings = {
       host = "0.0.0.0";
       port = 2283;
@@ -453,22 +456,20 @@
     network.mode = "media";
   };
 
-  # Phase 5: Infrastructure Services
-  hwc.server.reverseProxy = {
-    enable = true;
-    domain = "hwc.ocelot-wahoo.ts.net";
-  };
+  # -------------------------------------------------------------------------
+  # YOUTUBE & TRANSCRIPT SERVICES - Primary server only by default
+  # -------------------------------------------------------------------------
 
   # YouTube Transcript API
   hwc.server.transcriptApi = {
-    enable = true;
+    enable = lib.mkDefault isPrimary;
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
   };
 
-  # PostgreSQL database (required by YouTube services)
+  # PostgreSQL database (required by YouTube services and Immich)
   hwc.server.databases.postgresql = {
-    enable = lib.mkDefault true;
+    enable = lib.mkDefault true;  # Always enabled for database needs
     version = "16";
   };
 
@@ -491,16 +492,18 @@
     # Note: stagingDirectory is deprecated and auto-derived as <outputDirectory>/.staging
   };
 
-  # Phase 6: Support Services - Storage Automation
+  # -------------------------------------------------------------------------
+  # STORAGE AUTOMATION - All servers
+  # -------------------------------------------------------------------------
   hwc.server.storage = {
-    enable = true;
+    enable = lib.mkDefault true;
     cleanup = {
-      enable = true;
+      enable = lib.mkDefault true;
       schedule = "daily";
       retentionDays = 7;
     };
     monitoring = {
-      enable = true;
+      enable = lib.mkDefault true;
       alertThreshold = 85;
     };
   };
@@ -516,8 +519,12 @@
   
   assertions = [
     {
-      assertion = lib.hasPrefix "/mnt" config.hwc.paths.hot.root || lib.hasPrefix "/mnt" config.hwc.paths.media.root;
-      message = "Server profile expects dedicated storage mounts (hot or media should use /mnt/* paths, not home-relative defaults)";
+      # Storage paths: primary requires /mnt paths, secondary can have null paths
+      assertion = !isPrimary || (
+        (config.hwc.paths.hot.root != null && lib.hasPrefix "/mnt" config.hwc.paths.hot.root) ||
+        (config.hwc.paths.media.root != null && lib.hasPrefix "/mnt" config.hwc.paths.media.root)
+      );
+      message = "Primary server requires dedicated storage mounts (hot or media should use /mnt/* paths)";
     }
     {
       assertion = config.hwc.secrets.enable;

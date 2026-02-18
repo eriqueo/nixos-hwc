@@ -4,6 +4,7 @@
   # OPTIONS
   #==========================================================================
   imports = [
+    ./options.nix
     ./containers/index.nix
     ./native/index.nix
   ];

@@ -23,7 +23,9 @@ let
 
   hostname = config.networking.hostName or "unknown";
   isLaptop = lib.hasSuffix "laptop" hostname;
-  isServer = lib.hasSuffix "server" hostname;
+  # Use explicit hwc.server.enable flag instead of hostname detection
+  # This supports multiple servers (hwc-server, hwc-xps, etc.)
+  isServer = config.hwc.server.enable or false;
 
   # User home detection (universal)
   userHome =
