@@ -145,6 +145,40 @@
     firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
   };
 
+  # Samba file sharing for RetroArch ROMs (Google TV access)
+  services.samba = {
+    enable = true;
+    openFirewall = true;
+
+    settings = {
+      global = {
+        workgroup = "WORKGROUP";
+        "server string" = "hwc-server";
+        security = "user";
+        "map to guest" = "Bad User";
+        "guest account" = "nobody";
+        # Modern SMB protocols
+        "server min protocol" = "SMB2_10";
+        "server max protocol" = "SMB3";
+      };
+
+      # RetroArch ROMs - read-only guest access
+      retroarch = {
+        path = "/mnt/media/retroarch";
+        browseable = "yes";
+        "read only" = "yes";
+        "guest ok" = "yes";
+        comment = "RetroArch ROMs and BIOS";
+      };
+    };
+  };
+
+  # Samba discovery (optional, helps Google TV find the share)
+  services.samba-wsdd = {
+    enable = true;
+    openFirewall = true;
+  };
+
   # ntfy notification system CLI client for server alerts
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md

@@ -128,7 +128,9 @@
       "Bash(nmap:*)",
       "Bash(sudo arp-scan:*)",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(sudo cat:*)",
+      "Bash(sudo podman exec:*)"
     ],
     "deny": [],
     "ask": [],

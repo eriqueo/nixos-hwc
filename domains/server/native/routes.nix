@@ -209,6 +209,14 @@ in
       upstream = "http://127.0.0.1:9983";
     }
 
+    # Pinchflat - YouTube subscription manager (port mode - subpath-hostile)
+    {
+      name = "pinchflat";
+      mode = "port";
+      port = 8943;  # Dedicated port for Pinchflat
+      upstream = "http://127.0.0.1:8945";
+    }
+
     # Transcript API - preserve path (FastAPI routes expect /api prefix)
     {
       name = "transcript-api";
