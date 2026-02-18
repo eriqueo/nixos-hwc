@@ -14,25 +14,19 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";
       timeZone = config.time.timeZone or "UTC";
-      # 1. REMOVE PORTS - Gluetun handles these now
-            ports = []; 
-      
-            volumes = [
-              "${configPath}:/config"
-              "${cfg.libraries.ebooks}:/books/ebooks"
-              "${cfg.libraries.audiobooks}:/books/audiobooks"
-              "${config.hwc.paths.hot.root}/downloads:/downloads"
-            ];
-      
-            environment = {
-              CALIBRE_USE_DARK_PALETTE = "1";
-              # 2. SHIFT INTERNAL PORTS
-              # Force Desktop UI to 8082 (avoids 8080 conflict with qBit)
-              CUSTOM_PORT = "8082"; 
-              # Force Content Server to 8090
-              CALIBRE_SERVER_PORT = "8090"; 
-              CALIBRE_SERVER_LISTEN_ON = "0.0.0.0";
-            };
+      ports = [
+        "127.0.0.1:8083:8080"  # Desktop interface (Selkies web, default 8080)
+        "127.0.0.1:8090:8090"  # Content Server (direct, no nginx)
+      ];
+      volumes = [
+        "${configPath}:/config"
+        "${cfg.libraries.ebooks}:/books/ebooks"
+        "${cfg.libraries.audiobooks}:/books/audiobooks"
+        "${config.hwc.paths.hot.root}/downloads:/downloads"
+      ];
+      environment = {
+        CALIBRE_USE_DARK_PALETTE = "1";
+      };
       
             dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [];
           })

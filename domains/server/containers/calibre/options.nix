@@ -15,7 +15,7 @@ in
 
     network.mode = mkOption {
       type = types.enum [ "media" "vpn" ];
-      default = "vpn";
+      default = "media";
       description = "Network mode: media or vpn (through Gluetun)";
     };
 

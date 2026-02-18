@@ -165,7 +165,7 @@ in
       name = "calibre-server";
       mode = "subpath";
       path = "/calibre";
-      upstream = "http://127.0.0.1:8181";
+      upstream = "http://127.0.0.1:8090";
       needsUrlBase = false;  # Content server works without URL base
       headers = { "X-Forwarded-Prefix" = "/calibre"; };
     }
