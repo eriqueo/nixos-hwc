@@ -103,59 +103,42 @@ in
 
   bindm = [ ];
 
-  windowrulev2 = [
-    "tile,class:^(Chromium-browser)$,title:^.*JobTread.*$"
-    "tile,class:^(chromium-.*|Chromium-.*)$"
+  windowrule = [
+    # Chromium tiling
+    "match:class ^(Chromium-browser)$, match:title ^.*JobTread.*$, tile on"
+    "match:class ^(chromium-.*|Chromium-.*)$, tile on"
 
-    # File pickers
-    "float,title:^(Open).*"
-    "float,title:^(Save).*"
-    "float,title:^(Choose).*"
-    "float,title:^(Select).*"
-    "float,title:^(Upload).*"
-    "float,class:^(file_dialog)$"
-    "float,class:^(xdg-desktop-portal-gtk)$"
-    "float,class:^(org.gtk.FileChooserDialog)$"
-    "move 50 100,title:^(Open).*"
-    "move 50 100,title:^(Save).*"
-    "move 50 100,title:^(Choose).*"
-    "move 50 100,title:^(Select).*"
-    "move 50 100,title:^(Upload).*"
-    "move 50 100,class:^(xdg-desktop-portal-gtk)$"
-    "move 50 100,class:^(org.gtk.FileChooserDialog)$"
-    "size 1000 700,title:^(Open).*"
-    "size 1000 700,title:^(Save).*"
-    "size 1000 700,title:^(Choose).*"
-    "size 1000 700,title:^(Select).*"
-    "size 1000 700,title:^(Upload).*"
+    # File pickers - float and position
+    "match:title ^(Open).*, float on, move 50 100, size 1000 700"
+    "match:title ^(Save).*, float on, move 50 100, size 1000 700"
+    "match:title ^(Choose).*, float on, move 50 100, size 1000 700"
+    "match:title ^(Select).*, float on, move 50 100, size 1000 700"
+    "match:title ^(Upload).*, float on, move 50 100, size 1000 700"
+    "match:class ^(file_dialog)$, float on"
+    "match:class ^(xdg-desktop-portal-gtk)$, float on, move 50 100"
+    "match:class ^(org.gtk.FileChooserDialog)$, float on, move 50 100"
 
-    # Floating
-    "float,class:^(pavucontrol)$"
-    "float,class:^(blueman-manager)$"
-    "size 800 600,class:^(pavucontrol)$"
+    # Floating utilities
+    "match:class ^(pavucontrol)$, float on, size 800 600"
+    "match:class ^(blueman-manager)$, float on"
 
     # Opacity
-    "opacity 0.95,class:^(kitty)$"
-    "opacity 0.90,class:^(yazi)$"
+    "match:class ^(kitty)$, opacity 0.95"
+    "match:class ^(yazi)$, opacity 0.90"
 
-    # Proton Authenticator - tile on workspace 7, normal window behavior
-    "tile,class:^(Proton Pass Authenticator)$"
-    "workspace 7 silent,class:^(Proton Pass Authenticator)$"
-    "size 400 600,class:^(Proton Pass Authenticator)$"
+    # Proton Authenticator - tile on workspace 7
+    "match:class ^(Proton Pass Authenticator)$, tile on, workspace 7 silent, size 400 600"
 
     # PiP
-    "float,title:^(Picture-in-Picture)$"
-    "pin,title:^(Picture-in-Picture)$"
-    "size 640 360,title:^(Picture-in-Picture)$"
+    "match:title ^(Picture-in-Picture)$, float on, pin on, size 640 360"
 
     # Misc
-    "noshadow,floating:0"
-    "idleinhibit focus,class:^(mpv|vlc|youtube)$"
-    "idleinhibit fullscreen,class:^(firefox|chromium)$"
-    "immediate,class:^(kitty|yazi)$"
+    "match:float 0, no_shadow on"
+    "match:class ^(mpv|vlc|youtube)$, idle_inhibit focus"
+    "match:class ^(firefox|chromium)$, idle_inhibit fullscreen"
+    "match:class ^(kitty|yazi)$, immediate on"
 
     # Gaming
-    "fullscreen,class:^(steam_app_).*"
-    "immediate,class:^(steam_app_).*"
+    "match:class ^(steam_app_).*, fullscreen on, immediate on"
   ];
 }

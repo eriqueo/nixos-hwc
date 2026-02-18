@@ -1,0 +1,34 @@
+Super Solvers: Gizmos & Gadgets   version 1.0
+For DOS or Windows 95
+
+Upacking the archive:
+Just create a directory on your hard drive and unzip the download into it.
+It's best if the directory name is not more than 8 characters long.
+
+Playing the game:
+Run SSG.BAT to start the game.
+If you don't get any sound, you first want to be sure that sound is enabled.
+Enter one of the buildings, click on the "Options" menu at the top of the
+screen, and click on Sound & Music.
+
+There are a few command line switches that you can try if you have problems
+getting the game to work.
+To make sound adjustments:
+-si  pc speaker
+-sb  Sound Blaster
+-sm  Microsoft Sound System
+-sn  sound off
+Graphics adjustments:
+-gv  VGA
+
+For example, to run with Sound Blaster settings you'd type
+ssg -sb  (enter)
+to start the game.
+
+There are in-game instructions available in the Options menu.
+
+Have fun!
+Repacked/reworked by Joan O. Arc for Home of the Underdogs. August 2001
+Changed the archive to a pre-installed version so the subst command is no
+longer needed to get a working copy.
+Visit us at http://www.theunderdogs.org/

@@ -5,7 +5,9 @@ let
   toHypr = colorStr:
     let
       hex = if colorStr == null then "888888" else lib.removePrefix "#" colorStr;
-    in "0x${hex}";
+      # Legacy 0x format requires ARGB order, add full opacity alpha if missing
+      hexWithAlpha = if builtins.stringLength hex == 6 then "ff${hex}" else hex;
+    in "0x${hexWithAlpha}";
 
   activeBorder1 = toHypr (c.accent or null);
   activeBorder2 = toHypr (c.accentAlt or (c.accent or null));
@@ -36,7 +38,7 @@ in
       enabled = true;
       range = 8;
       render_power = 2;
-      color = "rgba(0, 0, 0, 0.4)";
+      color = "rgba(0,0,0,0.4)";
     };
     dim_inactive = false;
   };
@@ -75,6 +77,6 @@ in
     animate_manual_resizes = true;
     animate_mouse_windowdragging = true;
     focus_on_activate = true;
-    new_window_takes_over_fullscreen = 2;
+    on_focus_under_fullscreen = 2;
   };
 }
