@@ -151,6 +151,9 @@
         # Calibre VNC
         5909   # Calibre desktop VNC
 
+        # YouTube
+        8943   # Pinchflat (YouTube subscriptions)
+
         # Game streaming (Sunshine)
         47984 47989 47990  # Sunshine HTTPS, Web UI, RTSP
         48010              # Sunshine video stream
@@ -340,6 +343,7 @@
     services.lidarr.enable = false;  # Disable Lidarr sync (not supported in current Recyclarr version)
   };
   hwc.server.containers.organizr.enable = true;
+  hwc.server.containers.pinchflat.enable = true;  # YouTube subscription manager
 
   # Native Media Services (Charter compliant)
   hwc.server.native.navidrome = {

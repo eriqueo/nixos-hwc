@@ -29,6 +29,7 @@
     ./navidrome/index.nix
     ./organizr/index.nix
     ./pihole/index.nix
+    ./pinchflat/index.nix
     ./prowlarr/index.nix
     ./qbittorrent/index.nix
     ./radarr/index.nix
