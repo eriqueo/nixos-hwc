@@ -76,6 +76,12 @@
   networking.hostName = "hwc-server";
   networking.hostId = "8425e349";
 
+  # Server identity (Charter v10.3 multi-server support)
+  hwc.server = {
+    enable = true;
+    role = "primary";  # Main production server - all services enabled
+  };
+
   # ZFS support for backup drives
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;

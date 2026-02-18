@@ -25,6 +25,12 @@
   networking.hostName = "hwc-xps";
   networking.hostId = "a7c3d821";  # Generated: head -c 8 /dev/urandom | od -A n -t x1 | tr -d ' '
 
+  # Server identity (Charter v10.3 multi-server support)
+  hwc.server = {
+    enable = true;
+    role = "secondary";  # Backup/remote server - core services only by default
+  };
+
   # MIGRATION NOTE: password managed via secrets/fallback in domains/system/users
 
   # Keep mutableUsers = false for security (declarative password management)
@@ -231,7 +237,7 @@
   # If NVIDIA MX150 present, enable GPU support
   # If Intel integrated only, keep disabled or configure for VA-API
   hwc.infrastructure.hardware.gpu = {
-    enable = lib.mkDefault false;  # Disabled by default, enable if GPU detected
+    enable = false;  # Disabled - no discrete GPU detected (Intel integrated only)
     # Uncomment and configure if NVIDIA MX150 present:
     # type = "nvidia";
     # nvidia = {
@@ -356,12 +362,10 @@
   # Frigate NVR - DISABLED (no cameras at remote location)
   hwc.server.native.frigate.enable = lib.mkForce false;
 
-  # Immich - DISABLED (primary photo library stays at home)
-  # Must use mkForce to override server profile default
-  hwc.server.containers.immich.enable = lib.mkForce false;
-
-  # Media Services (independent libraries or synced from home server)
-  # Jellyfin, Navidrome, *arr stack all enabled via server profile
+  # Media Services - role-based defaults (secondary = disabled)
+  # As a secondary server, media services are disabled by default.
+  # To enable specific services, override like:
+  #   hwc.server.containers.jellyfin.enable = true;
 
   # Feature enablement
   hwc.features = {
@@ -369,6 +373,9 @@
     # media.enable = true;        # TODO: Fix sops/agenix conflict
     # business.enable = true;     # TODO: Enable when business containers are implemented
   };
+
+  # Disable exportarr monitoring (no *arr services on secondary server)
+  hwc.server.native.monitoring.exportarr.enable = lib.mkForce false;
 
   # Enhanced SSH configuration
   services.openssh.settings = {
