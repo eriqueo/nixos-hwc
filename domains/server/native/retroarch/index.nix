@@ -92,23 +92,10 @@ in
       KERNEL=="hidraw*", ATTRS{idVendor}=="057e", MODE="0666"
     '';
 
-    # Sunshine systemd service enhancements for GPU access
-    systemd.services.sunshine = lib.mkIf cfg.sunshine.enable {
-      serviceConfig = lib.mkIf cfg.gpu.enable {
-        # GPU device access for hardware encoding
-        DeviceAllow = [
-          "/dev/nvidia0 rw"
-          "/dev/nvidiactl rw"
-          "/dev/nvidia-modeset rw"
-          "/dev/nvidia-uvm rw"
-          "/dev/nvidia-uvm-tools rw"
-          "/dev/dri/card0 rw"
-          "/dev/dri/renderD128 rw"
-          "/dev/uinput rw"  # For virtual input devices
-        ];
-        SupplementaryGroups = [ "video" "render" "input" ];
-      };
-      environment = lib.mkIf cfg.gpu.enable {
+    # Sunshine user service enhancements for GPU access
+    # NOTE: Sunshine runs as a user service (systemd.user.services), not a system service
+    systemd.user.services.sunshine = lib.mkIf (cfg.sunshine.enable && cfg.gpu.enable) {
+      environment = {
         NVIDIA_VISIBLE_DEVICES = "all";
         NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility,graphics";
         LD_LIBRARY_PATH = "/run/opengl-driver/lib:/run/opengl-driver-32/lib";
