@@ -16,7 +16,7 @@
     ../../domains/server/native/frigate/index.nix  # Config-first pattern NVR with GPU acceleration
     ../../profiles/monitoring.nix   # Monitoring enabled: Prometheus + Grafana
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
-    # ../../profiles/business.nix      # TODO: Enable when business services are implemented
+    ../../profiles/business.nix
   ];
 
   # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs

@@ -16,7 +16,7 @@ in
     images = {
       core = mkOption {
         type = types.str;
-        default = "fireflyiii/core:latest";
+        default = "docker.io/fireflyiii/core:latest";
         description = "Firefly III core container image";
       };
 

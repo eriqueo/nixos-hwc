@@ -306,6 +306,7 @@ in
       mode = "port";
       port = 10443;
       upstream = "http://127.0.0.1:8085";
+      headers = { "X-Forwarded-Port" = "10443"; };
     }
 
     # Firefly-Pico - mobile companion (port mode - Nuxt.js subpath issues)
@@ -314,6 +315,17 @@ in
       mode = "port";
       port = 11443;
       upstream = "http://127.0.0.1:8086";
+      headers = { "X-Forwarded-Port" = "11443"; };
+    }
+
+    # Paperless-NGX - document management (preserve path)
+    {
+      name = "paperless";
+      mode = "subpath";
+      path = "/docs";
+      upstream = "http://127.0.0.1:8102";
+      needsUrlBase = true;
+      headers = { "X-Forwarded-Prefix" = "/docs"; };
     }
 
     # Generic webhook endpoint - forwards to n8n for external integrations (Slack, etc.)

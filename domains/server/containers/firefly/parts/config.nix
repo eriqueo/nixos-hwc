@@ -11,6 +11,7 @@ let
   fireflyRoot = "${appsRoot}/firefly";
   fireflyUpload = "${fireflyRoot}/upload";
   fireflyPicoRoot = "${fireflyRoot}/pico";
+  fireflyEnvFile = "${fireflyRoot}/.env";
 
   # Network configuration
   mediaNetworkName = "media-network";
@@ -29,11 +30,12 @@ in
     #=========================================================================
     systemd.tmpfiles.rules = [
       # Firefly III directories
-      "d ${fireflyRoot} 0750 eric users -"
-      "d ${fireflyUpload} 0750 eric users -"
+      "d ${fireflyRoot} 0755 eric users -"
+      # Upload dir needs to be writable by www-data (UID 33) inside container
+      "d ${fireflyUpload} 0777 eric users -"
     ] ++ lib.optionals cfg.pico.enable [
       # Firefly-Pico directories
-      "d ${fireflyPicoRoot} 0750 eric users -"
+      "d ${fireflyPicoRoot} 0755 eric users -"
     ];
 
     #=========================================================================
@@ -48,6 +50,8 @@ in
         "--memory=${cfg.resources.core.memory}"
         "--cpus=${cfg.resources.core.cpus}"
         "--memory-swap=2g"
+        # Load APP_KEY from env file (generated at service start)
+        "--env-file=${fireflyEnvFile}"
       ];
 
       # Expose port for external access
@@ -59,8 +63,6 @@ in
         # ================================================================
         # CORE CONFIGURATION
         # ================================================================
-        PUID = "1000";
-        PGID = "100";
         TZ = cfg.settings.timezone;
 
         # App URL (for OAuth, redirects, etc.)
@@ -87,16 +89,11 @@ in
         CACHE_DRIVER = "file";
         SESSION_DRIVER = "file";
 
-        # ================================================================
-        # SECURITY
-        # ================================================================
-        # APP_KEY is loaded via entrypoint script from secret file
-        APP_KEY_FILE = "/run/secrets/app-key";
+        # APP_KEY loaded via --env-file from ${fireflyEnvFile}
       };
 
       volumes = [
         "${fireflyUpload}:/var/www/html/storage/upload:rw"
-        "${appKeyFile}:/run/secrets/app-key:ro"
       ];
     };
 
@@ -159,6 +156,13 @@ in
           # Ensure the APP_KEY secret is readable
           SupplementaryGroups = [ "secrets" ];
         };
+        # Generate env file with APP_KEY from agenix secret
+        # Mode 644 so www-data (UID 33) inside container can read it
+        preStart = lib.mkAfter ''
+          APP_KEY=$(cat ${appKeyFile})
+          echo "APP_KEY=base64:$APP_KEY" > ${fireflyEnvFile}
+          chmod 644 ${fireflyEnvFile}
+        '';
       };
 
       "podman-firefly-pico" = lib.mkIf cfg.pico.enable {
