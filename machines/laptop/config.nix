@@ -87,6 +87,7 @@
     bluetooth.enable = true;
     monitoring.enable = true;
     fanControl.enable = true;
+    touchpadFix.enable = true;  # Reload i2c_hid_acpi at boot for Sensel touchpad scroll
   };
 
   # ntfy notification system for laptop alerts

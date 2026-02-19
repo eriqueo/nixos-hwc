@@ -30,6 +30,10 @@ in
     bluetooth.enable = lib.mkEnableOption "Enable Bluetooth support";
     monitoring.enable = lib.mkEnableOption "Enable hardware monitoring tools (sensors, smartctl, etc.)";
 
+    touchpadFix = {
+      enable = lib.mkEnableOption "Reload i2c_hid_acpi at boot (fixes Sensel touchpad scrolling)";
+    };
+
     fanControl = {
       enable = lib.mkEnableOption "Enable ThinkPad fan control via thinkfan";
 
@@ -90,6 +94,20 @@ in
         naturalScrolling = true;
         tapping = true;
         disableWhileTyping = true;
+      };
+    };
+
+    #==========================================================================
+    # TOUCHPAD FIX (Sensel i2c touchpad - reload module for scroll support)
+    #==========================================================================
+    systemd.services.touchpad-fix = lib.mkIf cfg.touchpadFix.enable {
+      description = "Reload i2c_hid_acpi to fix Sensel touchpad scrolling";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "systemd-modules-load.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${pkgs.kmod}/bin/modprobe -r i2c_hid_acpi && ${pkgs.coreutils}/bin/sleep 1 && ${pkgs.kmod}/bin/modprobe i2c_hid_acpi";
       };
     };
 
