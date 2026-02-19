@@ -163,13 +163,12 @@ in
     }
 
     # Mousehole - MAM seedbox IP updater (runs through Gluetun VPN)
+    # Port mode because app redirects to /web without base path support
     {
       name = "mousehole";
-      mode = "subpath";
-      path = "/mousehole";
+      mode = "port";
+      port = 5043;
       upstream = "http://127.0.0.1:5010";
-      needsUrlBase = false;
-      headers = { "X-Forwarded-Prefix" = "/mousehole"; };
     }
 
     # Calibre - port mode for desktop interface (KasmVNC)
