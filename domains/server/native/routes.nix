@@ -156,10 +156,10 @@ in
     {
       name = "audiobookshelf";
       mode = "subpath";
-      path = "/audiobooks";
+      path = "/audiobookshelf";
       upstream = "http://127.0.0.1:13378";
-      needsUrlBase = false;  # Audiobookshelf handles subpaths natively
-      headers = { "X-Forwarded-Prefix" = "/audiobooks"; };
+      needsUrlBase = true;  # Audiobookshelf has hardcoded /audiobookshelf/ base path
+      headers = { "X-Forwarded-Prefix" = "/audiobookshelf"; };
     }
 
     # Mousehole - MAM seedbox IP updater (runs through Gluetun VPN)
@@ -298,6 +298,22 @@ in
       mode = "port";
       port = 2443;
       upstream = "http://127.0.0.1:5678";
+    }
+
+    # Firefly III - personal finance manager (port mode - Laravel subpath-hostile)
+    {
+      name = "firefly";
+      mode = "port";
+      port = 10443;
+      upstream = "http://127.0.0.1:8085";
+    }
+
+    # Firefly-Pico - mobile companion (port mode - Nuxt.js subpath issues)
+    {
+      name = "firefly-pico";
+      mode = "port";
+      port = 11443;
+      upstream = "http://127.0.0.1:8086";
     }
 
     # Generic webhook endpoint - forwards to n8n for external integrations (Slack, etc.)

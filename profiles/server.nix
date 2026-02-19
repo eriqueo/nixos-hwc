@@ -317,7 +317,14 @@ in
   # -------------------------------------------------------------------------
 
   # Download stack (VPN + clients)
-  hwc.server.containers.gluetun.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.gluetun = {
+    enable = lib.mkDefault isPrimary;
+    portForwarding = {
+      enable = lib.mkDefault isPrimary;
+      syncToQbittorrent = lib.mkDefault true;
+      checkInterval = 60;  # Check every 60 seconds
+    };
+  };
   hwc.server.containers.qbittorrent.enable = lib.mkDefault isPrimary;
   hwc.server.containers.sabnzbd.enable = lib.mkDefault isPrimary;
   hwc.server.containers.mousehole.enable = lib.mkDefault isPrimary;  # MAM IP updater
@@ -331,6 +338,9 @@ in
   hwc.server.containers.books.enable = lib.mkDefault isPrimary;  # LazyLibrarian for ebooks and audiobooks
   hwc.server.containers.calibre.enable = lib.mkDefault isPrimary;  # Calibre for ebook library management
   hwc.server.containers.audiobookshelf.enable = lib.mkDefault isPrimary;  # Audiobookshelf for audiobooks
+
+  # Audiobook copier (copies MAM downloads to Audiobookshelf library)
+  hwc.server.native.orchestration.audiobookCopier.enable = lib.mkDefault isPrimary;
 
   # Beets music organizer - INTENTIONALLY DISABLED (using native installation)
   hwc.server.containers.beets.enable = false;
@@ -428,6 +438,19 @@ in
       enable = true;
       path = "/retroarch-sync";
     };
+  };
+
+  # -------------------------------------------------------------------------
+  # PERSONAL FINANCE - Primary server only by default
+  # -------------------------------------------------------------------------
+
+  # Firefly III Personal Finance (Containerized)
+  hwc.server.containers.firefly = {
+    enable = lib.mkDefault isPrimary;
+    # Uses defaults from options.nix:
+    # - Firefly III at port 10443, Firefly-Pico at port 11443
+    # - PostgreSQL databases: firefly, firefly_pico
+    # - APP_KEY from agenix secret
   };
 
   # -------------------------------------------------------------------------

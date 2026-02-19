@@ -364,9 +364,43 @@ class EventProcessor:
             success = self.media_client.rescan_lidarr(str(path.parent))
             return ProcessingResult("lidarr_rescan", "ok" if success else "fail")
 
+        elif "book" in category:
+            return self._process_audiobook(path)
+
         else:
             logger.debug(f"Unknown category: {category}")
             return ProcessingResult("ignored", "unknown_category")
+
+    def _process_audiobook(self, path: Path) -> ProcessingResult:
+        """Process audiobook by calling audiobook-copier script."""
+        # Path to audiobook-copier script
+        copier_script = Path("/mnt/hot/downloads/scripts/audiobook-copier.py")
+
+        if not copier_script.exists():
+            logger.warning(f"Audiobook copier script not found: {copier_script}")
+            return ProcessingResult("audiobook_copy", "script_not_found")
+
+        try:
+            result = subprocess.run(
+                ["/run/current-system/sw/bin/python3", str(copier_script), str(path)],
+                capture_output=True,
+                text=True,
+                timeout=3600  # 1 hour timeout for large audiobooks
+            )
+
+            if result.returncode == 0:
+                logger.info(f"Audiobook copied: {path}")
+                return ProcessingResult("audiobook_copy", "ok")
+            else:
+                logger.warning(f"Audiobook copy failed: {result.stderr}")
+                return ProcessingResult("audiobook_copy", "fail")
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"Audiobook copy timed out: {path}")
+            return ProcessingResult("audiobook_copy", "timeout")
+        except Exception as e:
+            logger.error(f"Error processing audiobook: {e}")
+            return ProcessingResult("audiobook_copy", "error")
 
     def _process_soulseek(self, path: Path) -> ProcessingResult:
         """Process event from Soulseek."""
