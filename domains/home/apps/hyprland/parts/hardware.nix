@@ -69,7 +69,6 @@ in
       tap-to-click = true;
       drag_lock = false;
       disable_while_typing = true;
-      scroll_method = "2fg";  # two-finger scroll
     };
     sensitivity = 0.0;  # -1.0 to 1.0, 0 = no modification
   };

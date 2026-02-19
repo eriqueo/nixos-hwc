@@ -81,6 +81,19 @@ in
   config = lib.mkIf cfg.enable {
 
     #==========================================================================
+    # LIBINPUT (touchpad/mouse input handling for Wayland)
+    #==========================================================================
+    services.libinput = {
+      enable = true;
+      touchpad = {
+        scrollMethod = "twofinger";
+        naturalScrolling = true;
+        tapping = true;
+        disableWhileTyping = true;
+      };
+    };
+
+    #==========================================================================
     # FAN CONTROL (ThinkPad)
     #==========================================================================
     boot.extraModprobeConfig = lib.mkIf cfg.fanControl.enable ''
