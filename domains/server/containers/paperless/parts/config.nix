@@ -3,7 +3,7 @@ let
   helpers = import ../../_shared/pure.nix { inherit lib pkgs; };
   cfg = config.hwc.server.containers.paperless;
 
-  envDir = "/run/paperless";
+  envDir = "/run/paperless-env";
   envFile = "${envDir}/paperless.env";
 
   ocrLanguages = lib.concatStringsSep "+" cfg.ocr.languages;

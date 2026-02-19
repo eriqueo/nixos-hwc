@@ -4,7 +4,7 @@ let
   paths = config.hwc.paths;
   appsRoot = paths.apps.root;
   paperlessRoot = if appsRoot != null then "${appsRoot}/paperless" else null;
-  envDir = "/run/paperless";
+  envDir = "/run/paperless-env";
 in
 {
   config = lib.mkIf cfg.enable {
