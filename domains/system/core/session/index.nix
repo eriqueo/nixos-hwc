@@ -113,7 +113,8 @@ in
             # Keep logs useful
             export HYPRLAND_LOG_WLR=1
 
-            exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/Hyprland
+            # Use start-hyprland wrapper (watchdog + proper env setup)
+            exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/start-hyprland
           '';
         in
         {
