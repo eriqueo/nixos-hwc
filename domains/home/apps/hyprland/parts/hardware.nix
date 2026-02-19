@@ -65,7 +65,12 @@ in
     follow_mouse = 1;
     touchpad = {
       natural_scroll = true;
+      scroll_factor = 1.0;
+      tap-to-click = true;
+      drag_lock = false;
+      disable_while_typing = true;
     };
+    sensitivity = 0.0;  # -1.0 to 1.0, 0 = no modification
   };
 
   # Tools moved to parts/system.nix for system-wide access
