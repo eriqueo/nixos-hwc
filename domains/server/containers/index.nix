@@ -42,6 +42,7 @@
     ./sonarr/index.nix
     ./soularr/index.nix
     ./tdarr/index.nix
+    ./firefly/index.nix
   ];
 
   #==========================================================================

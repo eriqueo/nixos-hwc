@@ -193,6 +193,22 @@
       owner = "root";
       group = "secrets";
     };
+
+    # Audiobookshelf API key (for audiobook copier library scans)
+    audiobookshelf-api-key = {
+      file = ../parts/server/audiobookshelf-api-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    # Firefly III app key (Laravel encryption key)
+    firefly-app-key = {
+      file = ../parts/server/firefly-app-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }
 

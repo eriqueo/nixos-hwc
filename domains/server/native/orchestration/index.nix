@@ -9,6 +9,7 @@ in
   imports = [
     ./options.nix
     ./media-orchestrator.nix
+    ./audiobook-copier/index.nix
   ];
 
   #==========================================================================

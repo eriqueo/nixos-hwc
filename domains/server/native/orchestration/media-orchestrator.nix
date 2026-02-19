@@ -55,9 +55,14 @@ SONARR_API_KEY=$(cat ${config.age.secrets.sonarr-api-key.path})
 RADARR_API_KEY=$(cat ${config.age.secrets.radarr-api-key.path})
 LIDARR_API_KEY=$(cat ${config.age.secrets.lidarr-api-key.path})
 PROWLARR_API_KEY=$(cat ${config.age.secrets.prowlarr-api-key.path})
+AUDIOBOOKSHELF_API_KEY=$(cat ${config.age.secrets.audiobookshelf-api-key.path})
 SONARR_URL=http://localhost:8989
 RADARR_URL=http://localhost:7878
 LIDARR_URL=http://localhost:8686
+AUDIOBOOKSHELF_URL=http://localhost:13378
+SOURCE_DIR=${config.hwc.paths.hot.downloads}/books
+DEST_DIR=${config.hwc.paths.media.root}/books/audiobooks
+STATE_DIR=/var/lib/hwc/audiobook-copier
 EOF
       '';
 
