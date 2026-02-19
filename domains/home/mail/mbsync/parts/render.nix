@@ -54,6 +54,7 @@ let
           Far :${a.name}-remote:${quotedRemote}
           Near :${a.name}-local:${quotedLocal}
           ${createPolicy}
+          Remove Near
           Expunge Both
           SyncState *
         '';
@@ -72,12 +73,15 @@ let
             in "!${confQuote rest}"
             else confQuote p;
           wildcardPatterns = lib.concatStringsSep " " (map quotePattern wildcards);
+          # Remove Near auto-deletes local folders when server folders are removed
+          removePolicy = "Remove Near";
         in ''
           Channel ${a.name}-wildcards
           Far :${a.name}-remote:
           Near :${a.name}-local:
           Patterns ${wildcardPatterns}
           ${createPolicy}
+          ${removePolicy}
           Expunge Both
           SyncState *
         ''
@@ -93,6 +97,7 @@ let
           Near :${a.name}-local:
           Patterns "INBOX"
           ${createPolicy}
+          Remove Near
           Expunge Both
           SyncState *
         '']
