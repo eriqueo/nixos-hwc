@@ -187,6 +187,19 @@
         description = "Path to decrypted WebDAV password file";
       };
 
+      # Paperless-NGX secrets
+      paperlessSecretKeyFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted Paperless secret key file";
+      };
+
+      paperlessAdminPasswordFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted Paperless admin password file";
+      };
+
     };
 
     #==========================================================================

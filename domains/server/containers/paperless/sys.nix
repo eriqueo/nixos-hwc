@@ -6,7 +6,7 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = with pkgs; [
       tesseract
-      poppler_utils
+      poppler-utils
     ];
   };
 }

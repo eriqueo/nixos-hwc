@@ -35,6 +35,8 @@ in
     navidromeAdminPasswordFile = pathOrNull "navidrome-admin-password";
     slackWebhookUrlFile = pathOrNull "slack-webhook-url";
     jellyfinApiKeyFile = pathOrNull "jellyfin-api-key";
+    paperlessSecretKeyFile = pathOrNull "paperless-secret-key";
+    paperlessAdminPasswordFile = pathOrNull "paperless-admin-password";
     
     # Email domain paths
     protonBridgePasswordFile = pathOrNull "proton-bridge-password";

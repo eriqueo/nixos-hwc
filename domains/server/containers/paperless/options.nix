@@ -15,7 +15,7 @@ in
 
     port = mkOption {
       type = types.port;
-      default = 8000;
+      default = 8102;
       description = "Internal HTTP port for Paperless";
     };
 

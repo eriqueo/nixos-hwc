@@ -15,6 +15,10 @@ rec {
     , dependsOn ? []
     , user ? null
     , cmd ? []
+    , environmentFiles ? []
+    , memory ? "2g"
+    , cpus ? "1.0"
+    , memorySwap ? "4g"
     }:
     let
       podmanNetworkOpts =
@@ -25,8 +29,9 @@ rec {
         inherit image dependsOn user;
         autoStart = true;
         environment = baseEnv // environment;
+        environmentFiles = environmentFiles;
         extraOptions = podmanNetworkOpts ++ gpuOpts ++ extraOptions
-          ++ [ "--memory=2g" "--cpus=1.0" "--memory-swap=4g" ];
+          ++ [ "--memory=${memory}" "--cpus=${cpus}" "--memory-swap=${memorySwap}" ];
         ports = ports;
         volumes = volumes;
       };

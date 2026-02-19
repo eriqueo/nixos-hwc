@@ -209,6 +209,20 @@
       owner = "root";
       group = "secrets";
     };
+
+    # Paperless-NGX secrets
+    paperless-secret-key = {
+      file = ../parts/server/paperless-secret-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    paperless-admin-password = {
+      file = ../parts/server/paperless-admin-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }
-

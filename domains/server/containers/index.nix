@@ -33,6 +33,7 @@
     ./pihole/index.nix
     ./pinchflat/index.nix
     ./prowlarr/index.nix
+    ./paperless/index.nix
     ./qbittorrent/index.nix
     ./radarr/index.nix
     ./readarr/index.nix
