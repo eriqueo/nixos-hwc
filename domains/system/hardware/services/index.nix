@@ -107,8 +107,12 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStart = "${pkgs.kmod}/bin/modprobe -r i2c_hid_acpi && ${pkgs.coreutils}/bin/sleep 1 && ${pkgs.kmod}/bin/modprobe i2c_hid_acpi";
       };
+      script = ''
+        ${pkgs.kmod}/bin/modprobe -r i2c_hid_acpi
+        ${pkgs.coreutils}/bin/sleep 1
+        ${pkgs.kmod}/bin/modprobe i2c_hid_acpi
+      '';
     };
 
     #==========================================================================

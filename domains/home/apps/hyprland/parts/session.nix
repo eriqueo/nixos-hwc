@@ -34,6 +34,10 @@ in
     "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
     "hyprland-startup"
     "hyprpaper"
+
+    # Proton apps - start on workspace 8 (windowrules handle placement)
+    "proton-authenticator"
+    "proton-pass"
   ];
 
   env = [
