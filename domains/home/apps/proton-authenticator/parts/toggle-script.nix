@@ -18,8 +18,8 @@ pkgs.writeShellScriptBin "proton-authenticator-toggle" ''
     WINDOW_WORKSPACE=$(${pkgs.hyprland}/bin/hyprctl clients -j | ${pkgs.jq}/bin/jq -r ".[] | select(.class == \"$WINDOW_CLASS\") | .workspace.id")
 
     if [ "$CURRENT_WORKSPACE" = "$WINDOW_WORKSPACE" ]; then
-      # Window is on current workspace, minimize it by moving to workspace 7 (scratchpad-like)
-      ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent 7,address:$WINDOW_INFO
+      # Window is on current workspace, minimize it by moving to workspace 8 (scratchpad-like)
+      ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspacesilent 8,address:$WINDOW_INFO
     else
       # Window is on different workspace, bring it to current workspace and focus
       ${pkgs.hyprland}/bin/hyprctl dispatch movetoworkspace "$(${pkgs.hyprland}/bin/hyprctl activeworkspace -j | ${pkgs.jq}/bin/jq -r .id),address:$WINDOW_INFO"
