@@ -320,6 +320,7 @@ in
   hwc.server.containers.gluetun.enable = lib.mkDefault isPrimary;
   hwc.server.containers.qbittorrent.enable = lib.mkDefault isPrimary;
   hwc.server.containers.sabnzbd.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.mousehole.enable = lib.mkDefault isPrimary;  # MAM IP updater
 
   # *arr Stack (media management)
   hwc.server.containers.prowlarr.enable = lib.mkDefault isPrimary;

@@ -162,6 +162,16 @@ in
       headers = { "X-Forwarded-Prefix" = "/audiobooks"; };
     }
 
+    # Mousehole - MAM seedbox IP updater (runs through Gluetun VPN)
+    {
+      name = "mousehole";
+      mode = "subpath";
+      path = "/mousehole";
+      upstream = "http://127.0.0.1:5010";
+      needsUrlBase = false;
+      headers = { "X-Forwarded-Prefix" = "/mousehole"; };
+    }
+
     # Calibre - port mode for desktop interface (KasmVNC)
     {
       name = "calibre";

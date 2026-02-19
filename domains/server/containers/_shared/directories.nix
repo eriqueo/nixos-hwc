@@ -59,6 +59,7 @@ in
         "books"
         "caddy"
         "calibre"
+        "mousehole"
         "jellyfin"
         "lidarr"
         "navidrome"

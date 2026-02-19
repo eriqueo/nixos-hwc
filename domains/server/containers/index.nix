@@ -19,6 +19,7 @@
     # Container services
     ./audiobookshelf/index.nix
     ./beets/index.nix
+    ./mousehole/index.nix
     ./books/index.nix
     ./caddy/index.nix
     ./calibre/index.nix
