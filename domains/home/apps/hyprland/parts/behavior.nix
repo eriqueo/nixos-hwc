@@ -127,7 +127,7 @@ in
     "match:class ^(yazi)$, opacity 0.90"
 
     # Proton Authenticator - tile on workspace 8, suppress fullscreen
-    "match:class ^(Proton Pass Authenticator)$, tile on, workspace 8 silent, size 400 600, suppress_event fullscreen"
+    "match:class ^(Proton-authenticator)$, tile on, workspace 8 silent, size 400 600, suppress_event fullscreen"
 
     # Proton Pass - tile on workspace 8
     "match:class ^(Proton Pass)$, tile on, workspace 8 silent"
