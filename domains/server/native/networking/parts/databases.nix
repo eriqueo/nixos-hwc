@@ -32,9 +32,11 @@ in {
         enable = true;
         # CHARTER v9.0: Explicitly pin PostgreSQL 15 to prevent data format breakage
         # Data directory initialized with PostgreSQL 15 - upgrading requires migration
-        # Include pgvecto.rs for Immich vector search support
+        # Include pgvector and vectorchord for Immich vector search support
+        # pgvector provides "vector" extension, vectorchord provides "vchord" extension
+        # Note: pgvecto-rs removed due to library path issues after NixOS 25.11 update
         package = pkgs.postgresql_15;
-        extensions = ps: [ ps.pgvecto-rs ];
+        extensions = ps: [ ps.pgvector ps.vectorchord ];
         dataDir = cfg.postgresql.dataDir;
 
         ensureDatabases = cfg.postgresql.databases;
@@ -42,8 +44,8 @@ in {
         # Listen on localhost and container network gateway
         settings.listen_addresses = lib.mkForce "localhost,10.89.0.1";
 
-        # pgvecto.rs requires shared preload
-        settings.shared_preload_libraries = "vectors";
+        # vectorchord requires shared preload
+        settings.shared_preload_libraries = "vchord";
 
         authentication = ''
           local all all trust
@@ -102,7 +104,9 @@ in {
       services.redis.servers.main = {
         enable = true;
         port = cfg.redis.port;
+        bind = cfg.redis.bind;
         settings = {
+          protected-mode = "no";
           maxmemory = cfg.redis.maxMemory;
           maxmemory-policy = "allkeys-lru";
         };

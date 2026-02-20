@@ -7,7 +7,7 @@ let
   envFile = "${envDir}/paperless.env";
 
   ocrLanguages = lib.concatStringsSep "+" cfg.ocr.languages;
-  paperlessUrl = "https://${config.hwc.server.reverseProxy.domain}${cfg.reverseProxy.path}";
+  paperlessUrlBase = "https://${config.hwc.server.reverseProxy.domain}";
 
   generateEnvScript = pkgs.writeShellScript "generate-paperless-env" ''
     set -euo pipefail
@@ -23,8 +23,10 @@ let
     PAPERLESS_ADMIN_PASSWORD=$ADMIN_PASSWORD
     PAPERLESS_ADMIN_EMAIL=${cfg.admin.email}
 
-    PAPERLESS_URL=${paperlessUrl}
+    PAPERLESS_URL=${paperlessUrlBase}
     PAPERLESS_FORCE_SCRIPT_NAME=${cfg.reverseProxy.path}
+    PAPERLESS_CORS_ALLOWED_ORIGINS=${paperlessUrlBase}
+    PAPERLESS_CSRF_TRUSTED_ORIGINS=${paperlessUrlBase}
 
     PAPERLESS_TIME_ZONE=${config.time.timeZone or "UTC"}
 

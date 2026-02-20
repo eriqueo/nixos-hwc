@@ -264,6 +264,12 @@ in
         description = "Redis port";
       };
 
+      bind = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1 10.89.0.1";
+        description = "Bind addresses for Redis (include media-network gateway for containers)";
+      };
+
       maxMemory = lib.mkOption {
         type = lib.types.str;
         default = "2gb";
