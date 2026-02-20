@@ -108,9 +108,8 @@ in
       redis.enable = cfg.redis.enable;
 
       # Configure separate storage locations via environment variables
-      # Note: UPLOAD_LOCATION should be the base path - Immich appends /library automatically
       environment = lib.mkIf cfg.storage.enable {
-        UPLOAD_LOCATION = cfg.storage.basePath;
+        UPLOAD_LOCATION = cfg.storage.locations.upload;
         THUMB_LOCATION = cfg.storage.locations.thumbs;
         ENCODED_VIDEO_LOCATION = cfg.storage.locations.encodedVideo;
         PROFILE_LOCATION = cfg.storage.locations.profile;
@@ -131,16 +130,21 @@ in
     systemd.tmpfiles.rules =
       (if cfg.storage.enable then [
         "z ${cfg.storage.basePath} 0755 eric users -"  # 'z' sets ownership even if directory exists, 755 for traversal
-        "d ${cfg.storage.locations.library} 0750 eric users -"
+        # Immich expects these subdirectories under basePath with .immich marker files
+        "d ${cfg.storage.locations.upload} 0750 eric users -"  # "library" - where uploads go
+        "d ${cfg.storage.basePath}/upload 0750 eric users -"   # Immich checks for this too
         "d ${cfg.storage.locations.thumbs} 0750 eric users -"
         "d ${cfg.storage.locations.encodedVideo} 0750 eric users -"
         "d ${cfg.storage.locations.profile} 0750 eric users -"
+        "d ${cfg.storage.basePath}/backups 0750 eric users -"  # Immich expects backups dir
         "d ${cfg.backup.databaseBackupPath} 0750 postgres postgres -"
-        # Create .immich marker files for mount verification
-        "f ${cfg.storage.locations.library}/.immich 0600 eric users -"
+        # Create .immich marker files for mount verification (Immich startup checks)
+        "f ${cfg.storage.locations.upload}/.immich 0600 eric users -"
+        "f ${cfg.storage.basePath}/upload/.immich 0600 eric users -"
         "f ${cfg.storage.locations.thumbs}/.immich 0600 eric users -"
         "f ${cfg.storage.locations.encodedVideo}/.immich 0600 eric users -"
         "f ${cfg.storage.locations.profile}/.immich 0600 eric users -"
+        "f ${cfg.storage.basePath}/backups/.immich 0600 eric users -"
       ] else []) ++ (if cfg.gpu.enable then [
         # GPU cache directories for ML optimizations
         "d /var/lib/immich/.cache 0750 eric users -"
@@ -200,8 +204,8 @@ in
 
           # Add GPU device access for photo/video processing
           DeviceAllow = [
-            "/dev/dri/card0 rw"
-            "/dev/dri/renderD128 rw"
+            "/dev/dri/card2 rw"       # NVIDIA at PCI 01:00.0
+            "/dev/dri/renderD129 rw"  # NVIDIA render node
             "/dev/nvidia0 rw"
             "/dev/nvidiactl rw"
             "/dev/nvidia-modeset rw"
@@ -263,8 +267,8 @@ in
 
           # Add GPU device access for ML processing
           DeviceAllow = [
-            "/dev/dri/card0 rw"
-            "/dev/dri/renderD128 rw"
+            "/dev/dri/card2 rw"       # NVIDIA at PCI 01:00.0
+            "/dev/dri/renderD129 rw"  # NVIDIA render node
             "/dev/nvidia0 rw"
             "/dev/nvidiactl rw"
             "/dev/nvidia-modeset rw"

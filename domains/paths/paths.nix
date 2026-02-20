@@ -54,7 +54,7 @@ let
   # Server defaults
   serverHotRoot = "/mnt/hot";
   serverMediaRoot = "/mnt/media";
-  serverPhotos = "/mnt/photos";
+  serverPhotos = "/mnt/media/photos";  # Under media for unified storage
   serverBusinessRoot = "/opt/business";
   serverAiRoot = "/opt/ai";
   serverAdhdRoot = "/opt/adhd";

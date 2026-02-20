@@ -457,28 +457,42 @@ in
   # PHOTO MANAGEMENT - Primary server only by default
   # -------------------------------------------------------------------------
 
-  # Immich Photo Management (Containerized)
-  hwc.server.containers.immich = {
+  # Immich Photo Management (Container - DISABLED, using native module)
+  hwc.server.containers.immich.enable = lib.mkForce false;
+
+  # Immich Photo Management (Native NixOS module)
+  # Storage layout (Immich's required structure):
+  #   /mnt/media/photos/library/       - Phone uploads (Immich's naming convention)
+  #   /mnt/media/photos/thumbs/        - Thumbnail cache
+  #   /mnt/media/photos/encoded-video/ - Transcoded videos
+  #   /mnt/media/photos/profile/       - Profile pictures
+  #   /mnt/media/photos/archive/       - External library (add via web UI)
+  hwc.server.native.immich = {
     enable = lib.mkDefault isPrimary;
     settings = {
       host = "0.0.0.0";
       port = 2283;
-      mediaLocation = "/mnt/photos";
+      mediaLocation = "/mnt/media/photos/immich";
+    };
+    storage = {
+      enable = true;
+      basePath = "/mnt/media/photos/immich/";
+      # Use Immich's expected subdirectory names
+      locations = {
+        upload = "/mnt/media/photos/immich/library";  # Immich requires "library" naming
+        thumbs = "/mnt/media/photos/immich/thumbs";
+        encodedVideo = "/mnt/media/photos/immich/encoded-video";
+        profile = "/mnt/media/photos/immich/profile";
+      };
     };
     database = {
-      host = "10.89.0.1";  # media-network gateway (containers can't use localhost)
-      port = 5432;
+      createDB = true;
       name = "immich";
       user = "immich";
     };
     redis.enable = true;
-    gpu.enable = true;  # Enable GPU acceleration
-    observability.metrics = {
-      enable = true;
-      apiPort = 8091;
-      microservicesPort = 8092;
-    };
-    network.mode = "media";
+    gpu.enable = true;
+    observability.metrics.enable = true;
   };
 
   # -------------------------------------------------------------------------

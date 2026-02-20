@@ -39,11 +39,11 @@ in
       };
 
       locations = {
-        library = mkOption {
+        upload = mkOption {
           type = types.str;
-          default = "${config.hwc.paths.photos}/library";
+          default = "${config.hwc.paths.photos or "/mnt/photos"}/upload";
           description = ''
-            Primary photo/video library location (UPLOAD_LOCATION).
+            Primary photo/video upload location (UPLOAD_LOCATION).
             Storage templates configured via web UI organize files within this directory.
             Recommended storage template: {{y}}/{{MM}}/{{dd}}/{{filename}}
           '';
@@ -51,19 +51,19 @@ in
 
         thumbs = mkOption {
           type = types.str;
-          default = "${config.hwc.paths.photos}/thumbs";
+          default = "${config.hwc.paths.photos or "/mnt/photos"}/thumbs";
           description = "Thumbnail cache location (THUMB_LOCATION)";
         };
 
         encodedVideo = mkOption {
           type = types.str;
-          default = "${config.hwc.paths.photos}/encoded-video";
+          default = "${config.hwc.paths.photos or "/mnt/photos"}/encoded-video";
           description = "Transcoded video storage (ENCODED_VIDEO_LOCATION)";
         };
 
         profile = mkOption {
           type = types.str;
-          default = "${config.hwc.paths.photos}/profile";
+          default = "${config.hwc.paths.photos or "/mnt/photos"}/profile";
           description = "User profile pictures (PROFILE_LOCATION)";
         };
       };
