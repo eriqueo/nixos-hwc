@@ -37,6 +37,7 @@ in
     jellyfinApiKeyFile = pathOrNull "jellyfin-api-key";
     paperlessSecretKeyFile = pathOrNull "paperless-secret-key";
     paperlessAdminPasswordFile = pathOrNull "paperless-admin-password";
+    n8nOwnerPasswordHashFile = pathOrNull "n8n-owner-password-hash";
     
     # Email domain paths
     protonBridgePasswordFile = pathOrNull "proton-bridge-password";

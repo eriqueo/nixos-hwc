@@ -106,6 +106,24 @@ in
         ${lib.optionalString (cfg.database.type == "sqlite") ''
           mkdir -p $(dirname ${cfg.database.sqlite.file})
         ''}
+
+        # Declarative owner account setup
+        ${lib.optionalString (cfg.owner.passwordHashFile != null) ''
+          DB="${cfg.database.sqlite.file}"
+          if [ -f "$DB" ]; then
+            HASH=$(cat ${cfg.owner.passwordHashFile})
+            # Check if user exists
+            USER_EXISTS=$(${pkgs.sqlite}/bin/sqlite3 "$DB" "SELECT COUNT(*) FROM user WHERE email='${cfg.owner.email}';")
+            if [ "$USER_EXISTS" -gt 0 ]; then
+              # Update existing user's password
+              ${pkgs.sqlite}/bin/sqlite3 "$DB" "UPDATE user SET password='$HASH', firstName='${cfg.owner.firstName}', lastName='${cfg.owner.lastName}' WHERE email='${cfg.owner.email}';"
+            else
+              # Create owner user if doesn't exist
+              UUID=$(${pkgs.util-linux}/bin/uuidgen)
+              ${pkgs.sqlite}/bin/sqlite3 "$DB" "INSERT INTO user (id, email, firstName, lastName, password, roleSlug) VALUES ('$UUID', '${cfg.owner.email}', '${cfg.owner.firstName}', '${cfg.owner.lastName}', '$HASH', 'global:owner');"
+            fi
+          fi
+        ''}
       '';
     };
 

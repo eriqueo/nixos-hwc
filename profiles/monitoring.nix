@@ -57,6 +57,7 @@ in
       port = 5678;
       dataDir = "/var/lib/hwc/n8n";
       webhookUrl = "https://hwc.ocelot-wahoo.ts.net:2443";
+      owner.passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
     };
   };
 }

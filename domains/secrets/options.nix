@@ -200,6 +200,13 @@
         description = "Path to decrypted Paperless admin password file";
       };
 
+      # n8n workflow automation secrets
+      n8nOwnerPasswordHashFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted n8n owner bcrypt password hash file";
+      };
+
     };
 
     #==========================================================================
