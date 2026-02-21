@@ -25,8 +25,8 @@ VPN_SERVICE_PROVIDER=custom
 VPN_TYPE=wireguard
 WIREGUARD_PRIVATE_KEY=$WG_PRIVATE_KEY
 WIREGUARD_ADDRESSES=10.2.0.2/32
-WIREGUARD_PUBLIC_KEY=fDSDNxB7yfHbaemo7cAFMWBsEm31bVAAradL4hbBEG0=
-WIREGUARD_ENDPOINT_IP=74.63.204.210
+WIREGUARD_PUBLIC_KEY="g98KJeIEtR9wbwgVmmaQXR9rEPV+T2RJWf2UE4gB1Ss="
+WIREGUARD_ENDPOINT_IP=95.173.221.158
 WIREGUARD_ENDPOINT_PORT=51820
 WIREGUARD_PERSISTENT_KEEPALIVE_INTERVAL=25s
 VPN_PORT_FORWARDING=on
@@ -77,7 +77,7 @@ EOF
       requires = [ "podman-gluetun.service" ];
       wantedBy = [ "multi-user.target" ];
 
-      path = with pkgs; [ curl jq ];
+      path = with pkgs; [ curl jq gawk ];
 
       serviceConfig = {
         Type = "simple";
@@ -117,7 +117,7 @@ EOF
 
             # Get qBittorrent SID (login)
             SID=$(curl -sf -c - "$QBT_API/api/v2/auth/login" \
-              --data "username=admin&password=adminadmin" 2>/dev/null | grep -oP 'SID=\K[^;]+' || true)
+              --data "username=admin&password=il0wwlm?" 2>/dev/null | awk '/SID/ {print $NF}' || true)
 
             if [ -n "$SID" ]; then
               # Update qBittorrent listening port
