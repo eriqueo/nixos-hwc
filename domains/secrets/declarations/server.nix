@@ -224,5 +224,13 @@
       owner = "root";
       group = "secrets";
     };
+
+    # n8n workflow automation credentials
+    n8n-owner-password-hash = {
+      file = ../parts/server/n8n-owner-password-hash.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
   };
 }

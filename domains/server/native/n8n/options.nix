@@ -71,5 +71,31 @@ in
         N8N_LOG_LEVEL = "info";
       };
     };
+
+    owner = {
+      email = lib.mkOption {
+        type = lib.types.str;
+        default = "eric@iheartwoodcraft.com";
+        description = "Owner account email address";
+      };
+
+      firstName = lib.mkOption {
+        type = lib.types.str;
+        default = "Eric";
+        description = "Owner account first name";
+      };
+
+      lastName = lib.mkOption {
+        type = lib.types.str;
+        default = "Okeefe";
+        description = "Owner account last name";
+      };
+
+      passwordHashFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing bcrypt password hash for owner account (via agenix)";
+      };
+    };
   };
 }
