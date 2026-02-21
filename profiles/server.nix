@@ -492,8 +492,9 @@ in
       user = "eric";  # Use eric user for peer auth compatibility
     };
     redis = {
-      enable = true;
-      host = "127.0.0.1";  # Host network mode - Redis on localhost
+      enable = true;   # Dedicated Redis for Immich
+      host = "127.0.0.1";
+      port = 6380;     # Different port to avoid conflict with redis-main
     };
     gpu.enable = true;
     machineLearning.enable = true;

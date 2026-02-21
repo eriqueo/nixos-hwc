@@ -283,13 +283,16 @@ in
       };
 
       volumes = [
-        "${immichModelCache}:/cache:rw"
         "${config.hwc.paths.media.root}/pictures:/mnt/media/pictures:ro"
-      ] ++ lib.optionals cfg.gpu.enable [
+      ] ++ (if cfg.gpu.enable then [
+        # GPU mode: use dedicated cache directories with TensorRT
         "${immichCacheRoot}:/cache:rw"
         "${immichCacheRoot}/tensorrt:/cache/tensorrt:rw"
         "${immichConfigRoot}/matplotlib:/cache/matplotlib:rw"
-      ];
+      ] else [
+        # CPU mode: simpler cache
+        "${immichModelCache}:/cache:rw"
+      ]);
     };
 
     #=========================================================================
