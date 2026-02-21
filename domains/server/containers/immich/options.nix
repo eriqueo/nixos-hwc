@@ -10,14 +10,14 @@ in
     images = {
       server = mkOption {
         type = types.str;
-        default = "ghcr.io/immich-app/immich-server:release";
-        description = "Immich server container image";
+        default = "ghcr.io/immich-app/immich-server:v2";
+        description = "Immich server container image (v2 tracks latest stable)";
       };
 
       machineLearning = mkOption {
         type = types.str;
-        default = "ghcr.io/immich-app/immich-machine-learning:release";
-        description = "Immich machine learning container image";
+        default = "ghcr.io/immich-app/immich-machine-learning:v2-cuda";
+        description = "Immich machine learning container image (v2-cuda for GPU acceleration)";
       };
 
       redis = mkOption {
@@ -93,8 +93,8 @@ in
     database = {
       host = mkOption {
         type = types.str;
-        default = "localhost";
-        description = "PostgreSQL host";
+        default = "127.0.0.1";
+        description = "PostgreSQL host (use 127.0.0.1 for host network mode)";
       };
 
       port = mkOption {
@@ -127,8 +127,8 @@ in
 
       host = mkOption {
         type = types.str;
-        default = "immich-redis";
-        description = "Redis host";
+        default = "127.0.0.1";
+        description = "Redis host (use 127.0.0.1 for host network mode)";
       };
 
       port = mkOption {

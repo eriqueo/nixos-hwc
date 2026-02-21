@@ -457,17 +457,18 @@ in
   # PHOTO MANAGEMENT - Primary server only by default
   # -------------------------------------------------------------------------
 
-  # Immich Photo Management (Container - DISABLED, using native module)
-  hwc.server.containers.immich.enable = lib.mkForce false;
+  # Immich Photo Management (Native NixOS module - DISABLED)
+  # Native module requires compiling from source which takes 24+ hours and crashes the system
+  hwc.server.native.immich.enable = lib.mkForce false;
 
-  # Immich Photo Management (Native NixOS module)
+  # Immich Photo Management (Container - uses pre-built Docker images)
   # Storage layout (Immich's required structure):
-  #   /mnt/media/photos/library/       - Phone uploads (Immich's naming convention)
-  #   /mnt/media/photos/thumbs/        - Thumbnail cache
-  #   /mnt/media/photos/encoded-video/ - Transcoded videos
-  #   /mnt/media/photos/profile/       - Profile pictures
-  #   /mnt/media/photos/archive/       - External library (add via web UI)
-  hwc.server.native.immich = {
+  #   /mnt/media/photos/immich/library/       - Phone uploads (Immich's naming convention)
+  #   /mnt/media/photos/immich/thumbs/        - Thumbnail cache
+  #   /mnt/media/photos/immich/encoded-video/ - Transcoded videos
+  #   /mnt/media/photos/immich/profile/       - Profile pictures
+  #   /mnt/media/pictures/                    - External library (read-only)
+  hwc.server.containers.immich = {
     enable = lib.mkDefault isPrimary;
     settings = {
       host = "0.0.0.0";
@@ -476,23 +477,28 @@ in
     };
     storage = {
       enable = true;
-      basePath = "/mnt/media/photos/immich/";
-      # Use Immich's expected subdirectory names
+      basePath = "/mnt/media/photos/immich";
       locations = {
-        upload = "/mnt/media/photos/immich/library";  # Immich requires "library" naming
+        library = "/mnt/media/photos/immich/library";
         thumbs = "/mnt/media/photos/immich/thumbs";
         encodedVideo = "/mnt/media/photos/immich/encoded-video";
         profile = "/mnt/media/photos/immich/profile";
       };
     };
     database = {
-      createDB = true;
+      host = "127.0.0.1";  # Host network mode - access PostgreSQL directly
+      port = 5432;
       name = "immich";
-      user = "immich";
+      user = "eric";  # Use eric user for peer auth compatibility
     };
-    redis.enable = true;
+    redis = {
+      enable = true;
+      host = "127.0.0.1";  # Host network mode - Redis on localhost
+    };
     gpu.enable = true;
+    machineLearning.enable = true;
     observability.metrics.enable = true;
+    network.mode = "host";  # Simplest for accessing host PostgreSQL
   };
 
   # -------------------------------------------------------------------------

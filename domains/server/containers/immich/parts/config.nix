@@ -119,16 +119,18 @@ in
       autoStart = true;
 
       extraOptions = networkOpts ++ [
-        "--network-alias=${cfg.redis.host}"
         "--memory=512m"
         "--cpus=0.5"
+      ] ++ lib.optionals (cfg.network.mode != "host") [
+        "--network-alias=immich-redis"
       ];
 
       volumes = [
         "${immichRedis}:/data:rw"
       ];
 
-      cmd = [ "redis-server" "--save" "60" "1" "--loglevel" "warning" ];
+      # Bind to configured port (default 6379)
+      cmd = [ "redis-server" "--port" (toString cfg.redis.port) "--save" "60" "1" "--loglevel" "warning" ];
     };
 
     #=========================================================================
@@ -140,16 +142,17 @@ in
       dependsOn = lib.optionals cfg.redis.enable [ "immich-redis" ];
 
       extraOptions = networkOpts ++ [
-        "--network-alias=immich-server"
         "--memory=${cfg.resources.server.memory}"
         "--cpus=${cfg.resources.server.cpus}"
         "--memory-swap=4g"
+      ] ++ lib.optionals (cfg.network.mode != "host") [
+        "--network-alias=immich-server"
       ] ++ lib.optionals cfg.gpu.enable [
         # NVIDIA GPU passthrough using CDI
         "--device=nvidia.com/gpu=0"
       ];
 
-      # Expose port for external access
+      # Expose port for external access (not needed in host mode)
       ports = if cfg.network.mode != "host" then [
         "127.0.0.1:${toString cfg.settings.port}:3001"
       ] else [];
@@ -159,6 +162,9 @@ in
         # CORE CONFIGURATION
         # ================================================================
         TZ = config.time.timeZone or "America/Denver";
+
+        # Server port (critical for host network mode)
+        IMMICH_PORT = toString cfg.settings.port;
 
         # Database connection
         DB_URL = dbUrl;
@@ -223,10 +229,11 @@ in
       dependsOn = lib.optionals cfg.redis.enable [ "immich-redis" ];
 
       extraOptions = networkOpts ++ [
-        "--network-alias=immich-machine-learning"
         "--memory=${cfg.resources.machineLearning.memory}"
         "--cpus=${cfg.resources.machineLearning.cpus}"
         "--memory-swap=8g"
+      ] ++ lib.optionals (cfg.network.mode != "host") [
+        "--network-alias=immich-machine-learning"
       ] ++ lib.optionals cfg.gpu.enable [
         # NVIDIA GPU passthrough using CDI
         "--device=nvidia.com/gpu=0"
