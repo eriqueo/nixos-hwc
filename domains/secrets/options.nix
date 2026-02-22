@@ -207,6 +207,13 @@
         description = "Path to decrypted n8n owner bcrypt password hash file";
       };
 
+      # Slack integration secrets
+      slackSigningSecretFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted Slack signing secret file";
+      };
+
     };
 
     #==========================================================================

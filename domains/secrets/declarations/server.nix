@@ -232,5 +232,13 @@
       owner = "eric";
       group = "secrets";
     };
+
+    # Slack integration secrets
+    slack-signing-secret = {
+      file = ../parts/server/slack-signing-secret.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
   };
 }
