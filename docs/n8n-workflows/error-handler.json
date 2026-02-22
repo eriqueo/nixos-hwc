@@ -1,0 +1,147 @@
+{
+  "name": "HWC Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "error-handler",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "webhook-error",
+      "name": "Webhook: /error-handler",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "hwc-error-handler"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error for Slack with retry tracking\nconst input = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\n\n// Initialize retry tracking\nif (!staticData.errorRetries) {\n  staticData.errorRetries = {};\n}\n\nconst workflowName = input.workflow?.name || input.workflowName || 'Unknown Workflow';\nconst workflowId = input.workflow?.id || input.workflowId || 'unknown';\nconst executionId = input.execution?.id || input.executionId || 'unknown';\nconst nodeName = input.node?.name || input.nodeName || 'Unknown Node';\nconst errorMessage = input.error?.message || input.errorMessage || input.message || 'Unknown error';\nconst errorStack = input.error?.stack || input.errorStack || '';\nconst timestamp = new Date().toISOString();\n\n// Create unique error key for deduplication\nconst errorKey = `${workflowId}:${nodeName}:${errorMessage.substring(0, 50)}`;\n\n// Track retry attempts\nconst retryInfo = staticData.errorRetries[errorKey] || { count: 0, firstSeen: timestamp };\nretryInfo.count++;\nretryInfo.lastSeen = timestamp;\nstaticData.errorRetries[errorKey] = retryInfo;\n\n// Clean old error tracking (older than 1 hour)\nconst now = Date.now();\nObject.keys(staticData.errorRetries).forEach(key => {\n  const info = staticData.errorRetries[key];\n  if (now - new Date(info.lastSeen).getTime() > 60 * 60 * 1000) {\n    delete staticData.errorRetries[key];\n  }\n});\n\n// Truncate stack trace\nconst stackPreview = errorStack.length > 500 \n  ? errorStack.substring(0, 500) + '...' \n  : errorStack;\n\n// Build Slack blocks\nconst blocks = [\n  {\n    type: 'header',\n    text: { type: 'plain_text', text: ':rotating_light: Workflow Error', emoji: true }\n  },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Workflow:*\\n${workflowName}` },\n      { type: 'mrkdwn', text: `*Failed Node:*\\n${nodeName}` }\n    ]\n  },\n  {\n    type: 'section',\n    text: { type: 'mrkdwn', text: `*Error:*\\n\\`\\`\\`${errorMessage}\\`\\`\\`` }\n  }\n];\n\nif (stackPreview) {\n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: `*Stack:*\\n\\`\\`\\`${stackPreview}\\`\\`\\`` }\n  });\n}\n\nblocks.push(\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Execution:*\\n\\`${executionId}\\`` },\n      { type: 'mrkdwn', text: `*Occurrences:*\\n${retryInfo.count} time(s)` }\n    ]\n  },\n  {\n    type: 'context',\n    elements: [{ type: 'mrkdwn', text: `Error at ${new Date(timestamp).toLocaleString('en-US', { timeZone: 'America/Denver' })}` }]\n  },\n  {\n    type: 'actions',\n    elements: [\n      {\n        type: 'button',\n        text: { type: 'plain_text', text: 'View in n8n', emoji: true },\n        url: `https://hwc.ocelot-wahoo.ts.net:2443/workflow/${workflowId}/executions/${executionId}`,\n        action_id: 'view_execution'\n      }\n    ]\n  }\n);\n\nreturn {\n  json: {\n    channel: '#hwc-alerts',\n    text: `:rotating_light: Workflow Error: ${workflowName} - ${errorMessage.substring(0, 100)}`,\n    blocks,\n    errorKey,\n    retryCount: retryInfo.count,\n    workflowId,\n    executionId\n  }\n};"
+      },
+      "id": "format-error",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#hwc-alerts",
+          "mode": "name"
+        },
+        "text": "={{ $json.text }}",
+        "blocksUi": "={{ JSON.stringify($json.blocks) }}",
+        "otherOptions": {}
+      },
+      "id": "slack-error",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [440, 0],
+      "credentials": {
+        "slackApi": {
+          "id": "oqCsazQ1a4gdXCDQ",
+          "name": "Slack account"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if Slack failed, use ntfy as fallback\nconst input = $input.first().json;\n\nif (input.error) {\n  return {\n    json: {\n      useFallback: true,\n      ntfyMessage: {\n        topic: 'hwc-alerts',\n        title: 'n8n Workflow Error (Slack failed)',\n        message: input.text || 'Workflow error occurred',\n        priority: 5,\n        tags: ['rotating_light', 'warning']\n      },\n      slackError: input.error.message\n    }\n  };\n}\n\nreturn { json: { useFallback: false, success: true } };"
+      },
+      "id": "check-slack-result",
+      "name": "Check Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.useFallback }}", "value2": true }]
+        }
+      },
+      "id": "if-fallback",
+      "name": "Fallback Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:2586/hwc-alerts",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "title", "value": "={{ $json.ntfyMessage.title }}" },
+            { "name": "message", "value": "={{ $json.ntfyMessage.message }}" },
+            { "name": "priority", "value": "={{ $json.ntfyMessage.priority }}" },
+            { "name": "tags", "value": "={{ $json.ntfyMessage.tags.join(',') }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ntfy-fallback",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, fallbackUsed: $json.useFallback || false }) }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 100]
+    }
+  ],
+  "connections": {
+    "Webhook: /error-handler": {
+      "main": [[{ "node": "Format Error", "type": "main", "index": 0 }]]
+    },
+    "Format Error": {
+      "main": [[{ "node": "Send to Slack", "type": "main", "index": 0 }]]
+    },
+    "Send to Slack": {
+      "main": [[{ "node": "Check Result", "type": "main", "index": 0 }]]
+    },
+    "Check Result": {
+      "main": [[{ "node": "Fallback Needed?", "type": "main", "index": 0 }]]
+    },
+    "Fallback Needed?": {
+      "main": [
+        [{ "node": "Send to ntfy", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send to ntfy": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "global": {
+      "errorRetries": {}
+    }
+  },
+  "tags": [
+    { "name": "foundation" },
+    { "name": "error-handling" }
+  ]
+}

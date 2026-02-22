@@ -27,10 +27,17 @@ let
     N8N_VERSION_NOTIFICATIONS_ENABLED = "false";
     N8N_DIAGNOSTICS_ENABLED = "false";
     N8N_HIRING_BANNER_ENABLED = "false";
-    
-           
-    SLACK_SIGNING_SECRET= "2e56128bbb2e1f6973e891e623f4ed0b";
-  } // (lib.optionalAttrs (cfg.database.type == "sqlite") {
+  } // (lib.optionalAttrs (config.hwc.secrets.api.slackSigningSecretFile != null) {
+    SLACK_SIGNING_SECRET = "$(<${config.hwc.secrets.api.slackSigningSecretFile})";
+  }) // (lib.optionalAttrs (config.hwc.secrets.api.sonarrApiKeyFile != null) {
+    SONARR_API_KEY = "$(<${config.hwc.secrets.api.sonarrApiKeyFile})";
+  }) // (lib.optionalAttrs (config.hwc.secrets.api.radarrApiKeyFile != null) {
+    RADARR_API_KEY = "$(<${config.hwc.secrets.api.radarrApiKeyFile})";
+  }) // (lib.optionalAttrs (config.hwc.secrets.api.lidarrApiKeyFile != null) {
+    LIDARR_API_KEY = "$(<${config.hwc.secrets.api.lidarrApiKeyFile})";
+  }) // (lib.optionalAttrs (config.hwc.secrets.api.prowlarrApiKeyFile != null) {
+    PROWLARR_API_KEY = "$(<${config.hwc.secrets.api.prowlarrApiKeyFile})";
+  }) // (lib.optionalAttrs (cfg.database.type == "sqlite") {
     DB_TYPE = "sqlite";
     DB_SQLITE_DATABASE = cfg.database.sqlite.file;
   }) // (lib.optionalAttrs (cfg.encryption.keyFile != null) {

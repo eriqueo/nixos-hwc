@@ -38,6 +38,7 @@ in
     paperlessSecretKeyFile = pathOrNull "paperless-secret-key";
     paperlessAdminPasswordFile = pathOrNull "paperless-admin-password";
     n8nOwnerPasswordHashFile = pathOrNull "n8n-owner-password-hash";
+    slackSigningSecretFile = pathOrNull "slack-signing-secret";
     
     # Email domain paths
     protonBridgePasswordFile = pathOrNull "proton-bridge-password";
