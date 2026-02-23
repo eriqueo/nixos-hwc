@@ -130,7 +130,9 @@
       "Bash(fi)",
       "Bash(done)",
       "Bash(sudo cat:*)",
-      "Bash(sudo podman exec:*)"
+      "Bash(sudo podman exec:*)",
+      "Bash(sudo -u eric N8N_USER_FOLDER=/var/lib/hwc/n8n /nix/store/3rwkanf6s031k9iksgsi6ir3vqw7j5jr-n8n-1.123.17/bin/n8n import:workflow:*)",
+      "Bash(/home/eric/.nixos/workspace/utilities/lints/charter-lint.sh:*)"
     ],
     "deny": [],
     "ask": [],

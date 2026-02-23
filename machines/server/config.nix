@@ -17,6 +17,7 @@
     ../../profiles/monitoring.nix   # Monitoring enabled: Prometheus + Grafana
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     ../../profiles/business.nix
+    ../../profiles/alerts.nix        # Centralized alert routing to Slack via n8n
   ];
 
   # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
@@ -206,33 +207,39 @@
     # };
   };
 
-  # System monitoring with ntfy notifications
-  # TODO: Implement monitoring module
-  # hwc.system.services.monitoring = {
-  #   enable = true;
-  #
-  #   # Disk space monitoring (hourly checks)
-  #   diskSpace = {
-  #     enable = true;
-  #     frequency = "hourly";
-  #     filesystems = [ "/" "/home" "/mnt/media" "/mnt/hot" ];
-  #   };
-  #
-  #   # Service failure notifications
-  #   serviceFailures = {
-  #     enable = true;
-  #     monitoredServices = [
-  #       "backup-local"
-  #       "podman-immich"
-  #       "podman-jellyfin"
-  #       "podman-navidrome"
-  #       "podman-frigate"
-  #       "couchdb"
-  #       "podman-ntfy"
-  #       "caddy"
-  #     ];
-  #   };
-  # };
+  # Centralized alerts via n8n -> Slack (replaces ntfy monitoring)
+  # Uses hwc.alerts domain for all system notifications
+  hwc.alerts = {
+    enable = true;
+
+    # Disk space monitoring
+    sources.diskSpace = {
+      enable = true;
+      frequency = "hourly";
+      filesystems = [ "/" "/home" "/mnt/media" "/mnt/hot" ];
+      warningThreshold = 80;
+      criticalThreshold = 95;
+    };
+
+    # Service failure notifications (auto-detect critical services)
+    sources.serviceFailures = {
+      enable = true;
+      autoDetect = true;
+    };
+
+    # SMART disk monitoring
+    sources.smartd.enable = true;
+
+    # Backup notifications
+    sources.backup = {
+      enable = true;
+      onSuccess = false;  # Don't spam on success
+      onFailure = true;   # Always alert on failure
+    };
+
+    # CLI tool for manual alerts
+    cli.enable = true;
+  };
 
   # Backup configuration for server
   # Supports external drives, NAS, or DAS for local backups
