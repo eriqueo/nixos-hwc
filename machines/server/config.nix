@@ -91,6 +91,8 @@
   # Note: boot.initrd.systemd.fido2 doesn't exist in stable 24.05 (added in later versions)
 
   # ZFS configuration
+  boot.zfs.extraPools = [ "backup-pool" ];  # Auto-import backup pool on boot
+
   services.zfs = {
     autoScrub = {
       enable = true;
@@ -242,75 +244,85 @@
   };
 
   # Backup configuration for server
-  # Supports external drives, NAS, or DAS for local backups
+  # Backs up IRREPLACEABLE data to ZFS mirror every 3 days
+  # NixOS config excluded - it's a git repo (github.com)
   hwc.system.services.backup = {
     enable = true;
 
-    # Local backup to external storage (NAS, DAS, or external drive)
+    # Local backup to ZFS mirror (sdd/sde)
     local = {
       enable = true;
-      mountPoint = "/mnt/backup";  # Mount your backup drive/NAS here
-      keepDaily = 14;   # Keep 14 daily backups (2 weeks)
-      keepWeekly = 8;   # Keep 8 weekly backups (2 months)
-      keepMonthly = 12; # Keep 12 monthly backups (1 year)
-      minSpaceGB = 50;  # Require 50GB free space for server
+      mountPoint = "/mnt/backup";
+      keepDaily = 10;   # ~1 month at 3-day intervals
+      keepWeekly = 4;   # 1 month of weekly snapshots
+      keepMonthly = 6;  # 6 months of monthly snapshots
+      minSpaceGB = 100; # Require 100GB free before backup
 
-      # CRITICAL DATA ONLY (fits in 2.7TB backup pool)
-      # Excludes replaceable media (movies, TV, music - can re-download)
-      sources = [
-        "/home"                     # 11GB - User data, configs, nixos repo
-        "/opt/business"             # 96KB - Business data
-        "/mnt/media/pictures"       # 92GB - IRREPLACEABLE photos
-        "/mnt/media/databases"      # 252MB - Database backups
-        "/mnt/media/backups"        # 132GB - Other backups
-        "/mnt/media/surveillance"   # ~60GB - Surveillance recordings (7-day retention)
-        # NOTE: /home/eric/.nixos is backed up via /home
-        # EXCLUDED (replaceable):
-        # "/etc/nixos"              # Symlink to flake in /home/eric/.nixos
-        # "/mnt/media/movies"       # 1.2TB - Can re-download
-        # "/mnt/media/tv"           # 2.1TB - Can re-download
-        # "/mnt/media/music"        # 261GB - Can re-download
+      # IRREPLACEABLE data only - config is in git
+      sources = lib.mkForce [
+        "/mnt/media/surveillance/frigate"  # Security camera recordings
+        "/mnt/media/photos"                # Immich photos (CRITICAL)
+        "/var/lib/hwc"                     # Service state directories
       ];
 
-      # Exclude patterns for backup efficiency
       excludePatterns = [
         ".cache"
         "*.tmp"
         "*.temp"
-        ".local/share/Trash"
         "node_modules"
         "__pycache__"
-        ".npm"
-        ".cargo/registry"
-        ".cargo/git"
       ];
     };
 
-    # Cloud backup as additional offsite backup (optional)
-    cloud.enable = false;  # Set to true to enable cloud backup
-    protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
+    # Database dumps before backup (PostgreSQL + CouchDB)
+    # Uses /run/current-system/sw/bin paths for tools (always available)
+    preBackupScript = ''
+      DUMP_DIR="/mnt/backup/hwc-server/database-dumps"
+      mkdir -p "$DUMP_DIR"
+      DATE=$(date +%Y-%m-%d)
+      JQ=/run/current-system/sw/bin/jq
+      CURL=/run/current-system/sw/bin/curl
 
-    # Automatic scheduling
+      echo "Dumping PostgreSQL databases..."
+      if systemctl is-active --quiet postgresql; then
+        sudo -u postgres /run/current-system/sw/bin/pg_dumpall > "$DUMP_DIR/postgresql-$DATE.sql" 2>/dev/null || echo "PostgreSQL dump failed"
+      fi
+
+      echo "Dumping CouchDB databases..."
+      if systemctl is-active --quiet couchdb; then
+        COUCH_USER=$(cat /run/agenix/couchdb-admin-username 2>/dev/null || echo "admin")
+        COUCH_PASS_RAW=$(cat /run/agenix/couchdb-admin-password 2>/dev/null || echo "")
+        # URL-encode special characters in password
+        COUCH_PASS=$(printf '%s' "$COUCH_PASS_RAW" | $JQ -sRr @uri)
+        if [ -n "$COUCH_PASS" ]; then
+          for db in $($CURL -sf "http://$COUCH_USER:$COUCH_PASS@127.0.0.1:5984/_all_dbs" | $JQ -r '.[]' 2>/dev/null | grep -v "^_"); do
+            $CURL -sf "http://$COUCH_USER:$COUCH_PASS@127.0.0.1:5984/$db/_all_docs?include_docs=true" > "$DUMP_DIR/couchdb-$db-$DATE.json" 2>/dev/null || echo "CouchDB $db dump failed"
+          done
+        fi
+      fi
+
+      # Cleanup old dumps (keep 30 days)
+      find "$DUMP_DIR" -name "*.sql" -mtime +30 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -name "*.json" -mtime +30 -delete 2>/dev/null || true
+      echo "Database dumps complete"
+    '';
+
+    # Cloud backup disabled
+    cloud.enable = false;
+    protonDrive.enable = false;
+
+    # Every 3 days at 3 AM (Mon, Thu, Sun)
     schedule = {
       enable = true;
-      frequency = lib.mkForce "weekly";  # Weekly backups for server
-      timeOfDay = lib.mkForce "03:00";   # Run at 3 AM on the scheduled day
-      onlyOnAC = lib.mkForce false;      # Server is always plugged in
+      frequency = lib.mkForce "Mon,Thu,Sun";
+      timeOfDay = lib.mkForce "03:00";
+      onlyOnAC = lib.mkForce false;
     };
 
-    # Notification configuration
+    # Notifications via alerts domain (Slack)
     notifications = {
-      enable = true;
-      onSuccess = false;  # Don't notify on success to reduce noise
-      onFailure = true;   # Always notify on failure
-
-      # ntfy integration for remote notifications
-      ntfy = {
-        enable = true;
-        topic = "hwc-critical";  # Backup failures are critical (P5)
-        onSuccess = false;  # No success notifications (or use "hwc-backups" if desired)
-        onFailure = true;   # Send critical alert on backup failures
-      };
+      enable = false;
+      ntfy.enable = false;
     };
   };
 
@@ -436,9 +448,9 @@
   # DISABLED: mcp-proxy not available in nixpkgs-stable 24.05
   hwc.ai.mcp.enable = lib.mkForce false;
 
-  # Automated server backups (containers, databases, system)
-  # Backups saved to /mnt/hot/backups with daily schedule
-  hwc.server.native.backup.enable = true;
+  # Server-backup DISABLED - NixOS config is in git, databases handled by backup-local preBackupScript
+  # Container volumes (music) too large and replaceable - not worth backing up
+  hwc.server.native.backup.enable = false;
 
   # TEMPORARY: Disable navidrome due to pkg-config build failure in NixOS 25.11
   # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix

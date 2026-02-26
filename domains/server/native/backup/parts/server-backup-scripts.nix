@@ -6,7 +6,7 @@ let
 
   # Backup script for containers
   containerBackupScript = pkgs.writeScriptBin "backup-containers" ''
-    #!/usr/bin/env bash
+    #!${pkgs.bash}/bin/bash
     set -euo pipefail
 
     BACKUP_DIR="${config.hwc.paths.hot.root}/backups/containers"
@@ -31,8 +31,12 @@ let
       if [ -n "$VOLUMES" ]; then
         echo "$VOLUMES" | while read volume; do
           volume_name=$(basename "$volume")
-          echo "  Backing up volume: $volume_name"
-          ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/$container-$volume_name-$DATE.tar.gz" -C "$(dirname "$volume")" "$volume_name"
+          if [ -e "$volume" ]; then
+            echo "  Backing up volume: $volume_name"
+            ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/$container-$volume_name-$DATE.tar.gz" -C "$(dirname "$volume")" "$volume_name" 2>/dev/null || echo "    Warning: Failed to backup $volume_name"
+          else
+            echo "  Skipping $volume_name: path does not exist"
+          fi
         done
       fi
     done
@@ -46,7 +50,7 @@ let
 
   # Backup script for databases
   databaseBackupScript = pkgs.writeScriptBin "backup-databases" ''
-    #!/usr/bin/env bash
+    #!${pkgs.bash}/bin/bash
     set -euo pipefail
 
     BACKUP_DIR="${config.hwc.paths.hot.root}/backups/databases"
@@ -58,15 +62,20 @@ let
     # Create backup directory
     mkdir -p "$BACKUP_DIR"
 
-    # Backup CouchDB
+    # Backup CouchDB (skip if auth required or not responding)
     if systemctl is-active --quiet couchdb; then
       echo "Backing up CouchDB..."
-      ${pkgs.curl}/bin/curl -X GET http://127.0.0.1:5984/_all_dbs | ${pkgs.jq}/bin/jq -r '.[]' | while read db; do
-        if [ "$db" != "_replicator" ] && [ "$db" != "_users" ]; then
-          echo "  Backing up database: $db"
-          ${pkgs.curl}/bin/curl -X GET "http://127.0.0.1:5984/$db/_all_docs?include_docs=true" > "$BACKUP_DIR/couchdb-$db-$DATE.json"
-        fi
-      done
+      COUCHDB_RESPONSE=$(${pkgs.curl}/bin/curl -sf http://127.0.0.1:5984/_all_dbs 2>/dev/null || echo "")
+      if [ -n "$COUCHDB_RESPONSE" ] && echo "$COUCHDB_RESPONSE" | ${pkgs.jq}/bin/jq -e 'type == "array"' >/dev/null 2>&1; then
+        echo "$COUCHDB_RESPONSE" | ${pkgs.jq}/bin/jq -r '.[]' | while read db; do
+          if [ "$db" != "_replicator" ] && [ "$db" != "_users" ]; then
+            echo "  Backing up database: $db"
+            ${pkgs.curl}/bin/curl -sf "http://127.0.0.1:5984/$db/_all_docs?include_docs=true" > "$BACKUP_DIR/couchdb-$db-$DATE.json" 2>/dev/null || echo "    Warning: Failed to backup $db"
+          fi
+        done
+      else
+        echo "  Skipping CouchDB: requires authentication or not responding"
+      fi
     fi
 
     # Backup Immich database (if running)
@@ -84,7 +93,7 @@ let
 
   # System configuration backup
   systemBackupScript = pkgs.writeScriptBin "backup-system" ''
-    #!/usr/bin/env bash
+    #!${pkgs.bash}/bin/bash
     set -euo pipefail
 
     BACKUP_DIR="${config.hwc.paths.hot.root}/backups/system"
@@ -112,16 +121,17 @@ let
       /etc/machine-id \
       2>/dev/null || true
 
-    # List installed packages
+    # List installed packages (system packages from NixOS config)
     echo "Saving package list..."
-    nix-env -q > "$BACKUP_DIR/packages-$DATE.txt"
+    ${pkgs.coreutils}/bin/ls -la /run/current-system/sw/bin > "$BACKUP_DIR/system-binaries-$DATE.txt" 2>/dev/null || true
+    ${pkgs.nix}/bin/nix profile list --profile /nix/var/nix/profiles/system > "$BACKUP_DIR/system-profile-$DATE.txt" 2>/dev/null || true
 
     # Save system info
     echo "Saving system information..."
     {
       echo "Hostname: $(hostname)"
       echo "Kernel: $(uname -r)"
-      echo "NixOS Version: $(nixos-version)"
+      echo "NixOS Version: $(/run/current-system/sw/bin/nixos-version)"
       echo "Backup Date: $(date)"
       df -h
       free -h
@@ -136,7 +146,7 @@ let
 
   # Master backup script
   masterBackupScript = pkgs.writeScriptBin "backup-all" ''
-    #!/usr/bin/env bash
+    #!${pkgs.bash}/bin/bash
     set -euo pipefail
 
     echo "======================================"
@@ -166,6 +176,21 @@ in
     # Systemd service for automated backups
     systemd.services.server-backup = {
       description = "Automated server backup (containers, databases, system)";
+      # Provide PATH for unqualified commands used in scripts
+      path = with pkgs; [
+        coreutils      # date, mkdir, basename, dirname, df, uname
+        findutils      # find
+        gnutar         # tar
+        gzip           # required by tar -czf
+        gnugrep        # grep
+        curl           # CouchDB backup
+        jq             # JSON parsing
+        podman         # container inspection
+        postgresql     # pg_dump for database backups
+        nix            # nix profile list
+        nettools       # hostname
+        procps         # free
+      ];
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${masterBackupScript}/bin/backup-all";

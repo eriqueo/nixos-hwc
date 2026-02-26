@@ -185,11 +185,7 @@ set -euo pipefail
     # Monthly backup on the 1st
     if [[ "$DAY_OF_MONTH" -eq 1 ]]; then
       BACKUP_TYPE="monthly"
-      BACKUP_DIR="$BACKUP_ROOT/monthly/$DATE"
     fi
-
-    # Ensure the concrete backup directory exists
-    ${pkgs.coreutils}/bin/mkdir -p "$BACKUP_DIR"
 
     log "Backup type: $BACKUP_TYPE"
 
@@ -297,6 +293,12 @@ Total backups: $TOTAL_BACKUPS
 Log: $LOG_FILE" || log "Warning: Failed to send ntfy notification"
       ''}
 
+      # Send success notification (Slack via alerts domain)
+      ${lib.optionalString (config.hwc.alerts.enable or false && config.hwc.alerts.sources.backup.enable or false && config.hwc.alerts.sources.backup.onSuccess or false) ''
+        hwc-backup-notify success "local" "Type: $BACKUP_TYPE, Size: $BACKUP_SIZE, Total backups: $TOTAL_BACKUPS" \
+          || log "Warning: Failed to send Slack notification"
+      ''}
+
       log "=== Local Backup Completed Successfully ==="
       exit 0
     else
@@ -320,6 +322,12 @@ Destination: $BACKUP_DEST
 Log: $LOG_FILE
 
 Check the logs for details." || log_error "Warning: Failed to send ntfy notification"
+      ''}
+
+      # Send failure notification (Slack via alerts domain)
+      ${lib.optionalString (config.hwc.alerts.enable or false && config.hwc.alerts.sources.backup.enable or false && config.hwc.alerts.sources.backup.onFailure or false) ''
+        hwc-backup-notify failure "local" "Backup encountered errors. Check logs: $LOG_FILE" \
+          || log_error "Warning: Failed to send Slack notification"
       ''}
 
       exit 1
