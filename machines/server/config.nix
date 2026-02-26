@@ -285,7 +285,7 @@
 
       echo "Dumping PostgreSQL databases..."
       if systemctl is-active --quiet postgresql; then
-        sudo -u postgres /run/current-system/sw/bin/pg_dumpall > "$DUMP_DIR/postgresql-$DATE.sql" 2>/dev/null || echo "PostgreSQL dump failed"
+        /run/wrappers/bin/su - postgres -s /bin/sh -c "/run/current-system/sw/bin/pg_dumpall" > "$DUMP_DIR/postgresql-$DATE.sql" 2>/dev/null || echo "PostgreSQL dump failed"
       fi
 
       echo "Dumping CouchDB databases..."
@@ -324,6 +324,79 @@
       enable = false;
       ntfy.enable = false;
     };
+  };
+
+  # Borg Backup - Primary deduplicating backup (daily)
+  # Rsync above is fallback (Mon/Thu/Sun)
+  hwc.system.services.borg = {
+    enable = true;
+
+    repo.path = "/mnt/backup/borg-hwc-server";
+
+    # Same sources as rsync, plus database dumps
+    sources = [
+      "/mnt/media/photos"                # Immich photos (CRITICAL)
+      "/mnt/media/surveillance/frigate"  # Security camera recordings
+      "/var/lib/hwc"                     # Service state directories
+      "/var/lib/backups"                 # Database dumps
+    ];
+
+    excludePatterns = [
+      ".cache"
+      "*.tmp"
+      "*.temp"
+      "node_modules"
+      "__pycache__"
+      "*.log"
+    ];
+
+    # Daily at 2 AM (before rsync fallback at 3 AM on its days)
+    schedule = {
+      frequency = "daily";
+      timeOfDay = "02:00";
+      randomDelay = "30m";
+    };
+
+    # Retention (dedup makes this cheap)
+    retention = {
+      daily = 7;
+      weekly = 4;
+      monthly = 6;
+    };
+
+    # Database dumps before backup
+    preBackupScript = ''
+      DUMP_DIR="/var/lib/backups"
+      mkdir -p "$DUMP_DIR"
+      DATE=$(date +%Y-%m-%d)
+      JQ=/run/current-system/sw/bin/jq
+      CURL=/run/current-system/sw/bin/curl
+
+      echo "Dumping PostgreSQL databases..."
+      if systemctl is-active --quiet postgresql; then
+        /run/wrappers/bin/su - postgres -s /bin/sh -c "/run/current-system/sw/bin/pg_dumpall" > "$DUMP_DIR/postgresql-$DATE.sql" 2>/dev/null || echo "PostgreSQL dump failed"
+      fi
+
+      echo "Dumping CouchDB databases..."
+      if systemctl is-active --quiet couchdb; then
+        COUCH_USER=$(cat /run/agenix/couchdb-admin-username 2>/dev/null || echo "admin")
+        COUCH_PASS_RAW=$(cat /run/agenix/couchdb-admin-password 2>/dev/null || echo "")
+        COUCH_PASS=$(printf '%s' "$COUCH_PASS_RAW" | $JQ -sRr @uri)
+        if [ -n "$COUCH_PASS" ]; then
+          for db in $($CURL -sf "http://$COUCH_USER:$COUCH_PASS@127.0.0.1:5984/_all_dbs" | $JQ -r '.[]' 2>/dev/null | grep -v "^_"); do
+            $CURL -sf "http://$COUCH_USER:$COUCH_PASS@127.0.0.1:5984/$db/_all_docs?include_docs=true" > "$DUMP_DIR/couchdb-$db-$DATE.json" 2>/dev/null || echo "CouchDB $db dump failed"
+          done
+        fi
+      fi
+
+      # Cleanup old dumps (keep 14 days - Borg handles long-term retention)
+      find "$DUMP_DIR" -name "*.sql" -mtime +14 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -name "*.json" -mtime +14 -delete 2>/dev/null || true
+      echo "Database dumps complete"
+    '';
+
+    monitoring.enable = true;
+    notifications.onFailure = true;
   };
 
   # Machine-specific GPU override for Quadro P1000 (legacy driver required)

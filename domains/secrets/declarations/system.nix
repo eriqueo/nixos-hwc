@@ -37,5 +37,13 @@
       owner = "root";
       group = "root";
     };
+
+    # Borg backup repository passphrase
+    borg-passphrase = {
+      file = ../parts/system/borg-passphrase.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
+    };
   };
 }
