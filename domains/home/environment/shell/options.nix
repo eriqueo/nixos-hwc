@@ -128,6 +128,8 @@
         # Health check aliases
         "caddy" = "caddy-health";
         "health" = "caddy-health";
+        # Photo tools
+        "photo-dedup" = "nix-shell -p rmlint czkawka jq bc --run '$HWC_NIXOS_DIR/workspace/utilities/photo-dedup/photo-dedup.sh'";
       };
       description = "Shell aliases for zsh";
     };
