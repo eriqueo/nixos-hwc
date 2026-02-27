@@ -97,19 +97,23 @@ in
     # =======================================================================
     # SMARTD NOTIFICATIONS
     # =======================================================================
-    # Configure smartd to use our notification script
+    # Configure smartd to use our notification script via the mail mailer
+    # NixOS smartd module internally uses -M exec with a wrapper script
+    # that calls the configured mailer, so we point mailer to our webhook script
     services.smartd = lib.mkIf cfg.sources.smartd.enable {
       notifications = {
-        # Disable built-in notification methods (we use webhook)
-        mail.enable = lib.mkForce false;
+        # Use mail notification with our custom "mailer" (webhook script)
+        mail = {
+          enable = lib.mkForce true;
+          sender = "smartd@hwc-server";
+          recipient = "root";  # Required but unused - our script ignores it
+          mailer = "${webhookScripts.smartdNotify}/bin/hwc-smartd-notify";
+        };
+        # Disable other notification methods
         x11.enable = lib.mkForce false;
         wall.enable = lib.mkForce false;
         test = lib.mkForce false;
       };
-      # Use -M exec to call our script
-      extraOptions = [
-        "-M exec ${webhookScripts.smartdNotify}/bin/hwc-smartd-notify"
-      ];
     };
 
     # =======================================================================

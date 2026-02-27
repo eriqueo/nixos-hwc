@@ -1,10 +1,10 @@
-# HWC Architecture Charter v10.3
+# HWC Architecture Charter v10.4
 
-**Owner**: Eric  
-**Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files  
-**Goal**: Deterministic, maintainable, scalable, reproducible NixOS configuration via strict domain separation, explicit APIs, and user-centric organization.  
-**Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs and `docs/patterns/`.
-**Current Date**: January 17, 2026
+**Owner**: Eric
+**Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
+**Goal**: Deterministic, maintainable, scalable, reproducible NixOS configuration via strict domain separation, explicit APIs, and user-centric organization.
+**Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs (per Law 12).
+**Current Date**: February 26, 2026
 
 ## 0. Preserve-First Doctrine
 
@@ -236,6 +236,44 @@ Note: Infrastructure will eventually merge into system, at which point this orde
 
 **Violation**: Cyclic or reverse dependencies (e.g., server depending on home options).
 
+### Law 12: Domain Documentation Contract
+
+Every domain and subdomain **must** have a `README.md` that serves as the canonical reference for that hierarchy's intent, boundaries, and structure.
+
+**Required sections** (minimal, in order):
+```markdown
+# [Domain/Subdomain Name]
+
+## Purpose
+[1-3 sentences: What this hierarchy manages and why it exists]
+
+## Boundaries
+- ✅ Manages: [list]
+- ❌ Does NOT manage: [list with "→ goes to X" redirects]
+
+## Structure
+[Current directory tree or module list]
+
+## Changelog
+[Most recent entries first, appended on commits touching this hierarchy]
+- YYYY-MM-DD: [Brief description of change]
+```
+
+**Update trigger**: When a commit modifies files within a domain/subdomain, the README's Structure and Changelog sections **must** be updated. This is enforced via pre-commit hook or `/commit` skill.
+
+**Changelog format**: Single line per logical change. Reference commit hash optional. Pruning permitted after 6 months.
+
+**Violation**: Missing README, missing required section, README not updated after structural changes, changelog older than last structural commit.
+
+**Lint**:
+```bash
+# Law 12: Domain README presence
+for d in domains/*/; do [ -f "$d/README.md" ] || echo "Missing: $d/README.md"; done
+
+# Law 12: Required sections present
+rg -L '^## Purpose|^## Boundaries|^## Structure|^## Changelog' domains/*/README.md
+```
+
 ## 2. Domain Architecture Overview
 
 Each domain has a **unique interaction boundary** with the system.  
@@ -308,6 +346,10 @@ rg 'oci-containers\.containers\.[^=]+=' domains/server --glob '!mkContainer'
 
 # Law 8: Data retention
 rg -L 'retain:|retention:|cleanup.timer' domains
+
+# Law 12: Domain README presence and sections
+for d in domains/*/; do [ -f "$d/README.md" ] || echo "Missing: $d/README.md"; done
+rg -L '^## Purpose|^## Boundaries|^## Structure|^## Changelog' domains/*/README.md
 ```
 
 **Nix-level validations** (fail at eval/build, not just lint):
@@ -363,6 +405,7 @@ Exceptions require:
 - Version bump on normative change
 
 **Version History** (excerpt):
+- **v10.4 (2026-02-26)**: Added Law 12 (Domain Documentation Contract) requiring minimal README.md for each domain with Purpose, Boundaries, Structure, and Changelog sections. Update triggered by commits touching the hierarchy. Removed reference to `docs/patterns/` in favor of domain READMEs as single source of truth.
 - **v10.3 (2026-01-17)**: Hardened Charter laws for production readiness:
   - Law 1: Replaced unsafe `osConfig.hwc.x or null` with safe canonical patterns (attrByPath, namespace fallback, isNixOS guard); updated lint to allowlist-based check
   - Law 4: Introduced `hwc.system.identity.*` source-of-truth options; forbid hardcoded UID/GID when identity options available; literal fallback permitted with justification

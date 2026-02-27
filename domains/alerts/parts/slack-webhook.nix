@@ -34,7 +34,7 @@ let
     TITLE="''${2:-Alert}"
     MESSAGE="''${3:-No message provided}"
     SEVERITY="''${4:-info}"
-    EXTRA_FIELDS="''${5:-{}}"
+    EXTRA_FIELDS="''${5:-"{}"}"
 
     LOG_DIR="${logDir}"
     LOG_FILE="$LOG_DIR/webhook.log"
