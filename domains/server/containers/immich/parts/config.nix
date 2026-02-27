@@ -121,6 +121,9 @@ in
       extraOptions = networkOpts ++ [
         "--memory=512m"
         "--cpus=0.5"
+        # Charter Law 4: Run as primary user (UID 1000) : users group (GID 100)
+        # Required for BGSAVE to write to /data directory owned by eric:users
+        "--user=1000:100"
       ] ++ lib.optionals (cfg.network.mode != "host") [
         "--network-alias=immich-redis"
       ];

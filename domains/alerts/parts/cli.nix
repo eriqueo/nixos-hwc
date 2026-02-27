@@ -164,7 +164,7 @@ EOF
         # Parse key=value and add to extra fields
         KEY=$(echo "$2" | cut -d= -f1)
         VALUE=$(echo "$2" | cut -d= -f2-)
-        EXTRA_FIELDS=$(echo "$EXTRA_FIELDS" | ${pkgs.jq}/bin/jq --arg k "$KEY" --arg v "$VALUE" '. + {($k): $v}')
+        EXTRA_FIELDS=$(echo "$EXTRA_FIELDS" | ${pkgs.jq}/bin/jq -c --arg k "$KEY" --arg v "$VALUE" '. + {($k): $v}')
         shift 2
         ;;
       -*)
@@ -242,7 +242,7 @@ EOF
   esac
 
   # Add source field
-  EXTRA_FIELDS=$(echo "$EXTRA_FIELDS" | ${pkgs.jq}/bin/jq '. + {source: "cli"}')
+  EXTRA_FIELDS=$(echo "$EXTRA_FIELDS" | ${pkgs.jq}/bin/jq -c '. + {source: "cli"}')
 
   # Dry run mode
   if [ "$DRY_RUN" = true ]; then
