@@ -171,6 +171,31 @@ in
     };
 
     #==========================================================================
+    # NTFY SERVER (notification infrastructure)
+    #==========================================================================
+    server = {
+      enable = lib.mkEnableOption "ntfy notification server (container)";
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8080;
+        description = "ntfy web port";
+      };
+
+      dataDir = lib.mkOption {
+        type = lib.types.path;
+        default = "${paths.state or "/var/lib"}/ntfy";
+        description = "Data directory for ntfy server";
+      };
+
+      image = lib.mkOption {
+        type = lib.types.str;
+        default = "binwiederhier/ntfy:latest";
+        description = "ntfy container image";
+      };
+    };
+
+    #==========================================================================
     # INTERNAL OPTIONS (for cross-domain access)
     #==========================================================================
     _internal = {

@@ -14,6 +14,7 @@
     ../../profiles/server.nix
     ../../profiles/security.nix
     ../../profiles/ai.nix
+    ../../profiles/alerts.nix
     ../../domains/server/native/routes.nix
     # NOTE: Frigate NOT imported - no surveillance cameras at remote location
     ../../profiles/monitoring.nix   # Monitoring enabled: Prometheus + Grafana
@@ -352,8 +353,8 @@
     };
   };
 
-  # ntfy notification server (native service)
-  hwc.server.ntfy = {
+  # ntfy notification server (alerts domain)
+  hwc.alerts.server = {
     enable = true;
     port = 2586;
     dataDir = "/var/lib/hwc/ntfy";

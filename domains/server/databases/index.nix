@@ -1,40 +1,40 @@
-# HWC Charter Module/domains/services/databases.nix
+# domains/server/databases/index.nix
 #
-# DATABASES - Brief service description
-# TODO: Add detailed description of what this module provides
+# Database services - PostgreSQL, Redis, InfluxDB
 #
-# DEPENDENCIES (Upstream):
-#   - TODO: List upstream dependencies
-#   - config.hwc.paths.* (modules/system/paths.nix)
+# NAMESPACE: hwc.server.databases.*
 #
-# USED BY (Downstream):
-#   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.server.databases.enable)
+# DEPENDENCIES:
+#   - hwc.paths (for dataDir defaults)
 #
-# IMPORTS REQUIRED IN:
-#   - profiles/profile.nix: ../domains/services/databases.nix
-#
-# USAGE:
-#   hwc.server.databases.enable = true;
-#   # TODO: Add specific usage examples
+# USED BY:
+#   - Containers: immich, paperless, firefly
+#   - Native services: n8n, business APIs
+#   - profiles/server.nix, profiles/business.nix
 
 { config, lib, pkgs, ... }:
+
 let
   cfg = config.hwc.server.databases;
   paths = config.hwc.paths;
-in {
-  #============================================================================
-  # IMPLEMENTATION - What actually gets configured
-  #============================================================================
+in
+{
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  imports = [ ./options.nix ];
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = lib.mkMerge [
+    # PostgreSQL
     (lib.mkIf cfg.postgresql.enable {
       services.postgresql = {
         enable = true;
         # CHARTER v9.0: Explicitly pin PostgreSQL 15 to prevent data format breakage
         # Data directory initialized with PostgreSQL 15 - upgrading requires migration
         # Include pgvector and vectorchord for Immich vector search support
-        # pgvector provides "vector" extension, vectorchord provides "vchord" extension
-        # Note: pgvecto-rs removed due to library path issues after NixOS 25.11 update
         package = pkgs.postgresql_15;
         extensions = ps: [ ps.pgvector ps.vectorchord ];
         dataDir = cfg.postgresql.dataDir;
@@ -56,31 +56,6 @@ in {
         '';
       };
 
-      # CHARTER v9.0: Prevent accidental PostgreSQL version upgrades
-      assertions = [{
-        assertion =
-          builtins.match "15\\..*" config.services.postgresql.package.version != null;
-        message = ''
-          ============================================================
-          POSTGRESQL VERSION CHANGE DETECTED
-          ============================================================
-          Current: ${config.services.postgresql.package.version}
-          Expected: 15.x
-
-          PostgreSQL data directory is PostgreSQL 15 format.
-          Upgrading requires data migration:
-
-          1. Backup: pg_dumpall -f /backup/postgresql-pre-upgrade.sql
-          2. Stop PostgreSQL: systemctl stop postgresql
-          3. Migrate data: pg_upgrade or pg_dumpall/restore
-          4. Update pin: package = pkgs.postgresql_16;
-          5. Test thoroughly before applying
-
-          See CHARTER.md section 24 "Flake Update Strategy"
-          ============================================================
-        '';
-      }];
-
       # Backup service
       systemd.services.postgresql-backup = lib.mkIf cfg.postgresql.backup.enable {
         description = "PostgreSQL backup";
@@ -90,7 +65,7 @@ in {
           ExecStart = "${pkgs.postgresql}/bin/pg_dumpall -f ${paths.backup}/postgresql-$(date +%Y%m%d).sql";
         };
       };
-      
+
       systemd.timers.postgresql-backup = lib.mkIf cfg.postgresql.backup.enable {
         wantedBy = [ "timers.target" ];
         timerConfig = {
@@ -99,7 +74,8 @@ in {
         };
       };
     })
-    
+
+    # Redis
     (lib.mkIf cfg.redis.enable {
       services.redis.servers.main = {
         enable = true;
@@ -112,7 +88,8 @@ in {
         };
       };
     })
-    
+
+    # InfluxDB
     (lib.mkIf cfg.influxdb.enable {
       services.influxdb2 = {
         enable = true;
@@ -120,8 +97,37 @@ in {
           http-bind-address = ":${toString cfg.influxdb.port}";
         };
       };
-      
+
       networking.firewall.allowedTCPPorts = [ cfg.influxdb.port ];
+    })
+
+    # Validation
+    (lib.mkIf cfg.postgresql.enable {
+      assertions = [
+        {
+          assertion =
+            builtins.match "15\\..*" config.services.postgresql.package.version != null;
+          message = ''
+            ============================================================
+            POSTGRESQL VERSION CHANGE DETECTED
+            ============================================================
+            Current: ${config.services.postgresql.package.version}
+            Expected: 15.x
+
+            PostgreSQL data directory is PostgreSQL 15 format.
+            Upgrading requires data migration:
+
+            1. Backup: pg_dumpall -f /backup/postgresql-pre-upgrade.sql
+            2. Stop PostgreSQL: systemctl stop postgresql
+            3. Migrate data: pg_upgrade or pg_dumpall/restore
+            4. Update pin in domains/server/databases/index.nix
+            5. Test thoroughly before applying
+
+            See CHARTER.md section "Flake Update Strategy"
+            ============================================================
+          '';
+        }
+      ];
     })
   ];
 }

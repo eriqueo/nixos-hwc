@@ -1,7 +1,9 @@
-# domains/server/native/networking/parts/yt-videos-api/index.nix
+# domains/server/native/youtube/parts/yt-videos-api/default.nix
 #
 # YOUTUBE VIDEOS API - Video download and archiving REST API with worker
 # Provides async job-based video downloads from YouTube with atomic finalization
+#
+# NAMESPACE: hwc.server.native.youtube.videos.*
 #
 # ARCHITECTURE:
 #   - API Server: FastAPI with --workers 1 (single process)
@@ -11,7 +13,7 @@
 #   - Deduplication: Global downloads table prevents re-downloads
 #
 # DEPENDENCIES:
-#   - PostgreSQL (hwc.services.databases.postgresql)
+#   - PostgreSQL (hwc.server.databases.postgresql)
 #   - yt-dlp (for downloads)
 #   - ffmpeg-full (for metadata embedding)
 #   - YouTube API key (optional, for playlist expansion)
@@ -19,7 +21,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.services.ytVideosApi;
+  cfg = config.hwc.server.native.youtube.videos;
   paths = config.hwc.paths;
 
   # Build Python packages with repo-relative paths
@@ -273,7 +275,7 @@ in
     # Validation assertions
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.services.databases.postgresql.enable;
+        assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
         message = "yt-videos-api requires PostgreSQL to be enabled";
       }
       {
