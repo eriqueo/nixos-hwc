@@ -180,6 +180,9 @@ in
         REDIS_HOSTNAME = cfg.redis.host;
         REDIS_PORT = toString cfg.redis.port;
 
+        # Machine Learning connection (uses IPv6 on host network)
+        IMMICH_MACHINE_LEARNING_URL = "http://localhost:3003";
+
         # ================================================================
         # STORAGE CONFIGURATION
         # ================================================================
@@ -220,6 +223,8 @@ in
         "${cfg.storage.locations.profile}:/usr/src/app/upload/profile:rw"
       ] ++ [
         "${config.hwc.paths.media.root}/pictures:/mnt/media/pictures:ro"
+        # External library (archive) - must be mounted for library scanning
+        "${config.hwc.paths.photos}/archive:/mnt/media/photos/archive:ro"
       ];
     };
 
