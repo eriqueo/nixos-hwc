@@ -168,7 +168,33 @@ in
       ++ (lib.optionals cfg.audio.enable [
         pkgs.pavucontrol
         pkgs.seahorse
+      ])
+      ++ (lib.optionals cfg.peripherals.guiTools [
+        pkgs.cups                    # CUPS command line tools
+        pkgs.system-config-printer   # GUI printer configuration
       ]);
+
+    #==========================================================================
+    # PERIPHERALS (PRINTING)
+    #==========================================================================
+    services.printing = lib.mkIf cfg.peripherals.enable {
+      enable = true;
+      drivers = cfg.peripherals.drivers;
+    };
+
+    # Network printer discovery
+    services.avahi = lib.mkIf (cfg.peripherals.enable && cfg.peripherals.avahi) {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+    };
+
+    # Declare firewall requirements through networking module
+    hwc.system.networking.firewall = lib.mkIf cfg.peripherals.enable {
+      extraTcpPorts = [ 631 ]; # CUPS web interface
+      extraUdpPorts = lib.optionals cfg.peripherals.avahi [ 5353 ]; # mDNS
+    };
+
     assertions = [];
   };
 

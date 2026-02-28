@@ -29,14 +29,10 @@
     ../../profiles/security.nix
     ../../profiles/ai.nix  # Enable local AI for laptop
 
-    # Infrastructure domain for GPU only (not storage)
-    ../../domains/infrastructure/hardware/index.nix
-
-    # Virtualization domain for WinApps/VMs (without full infrastructure profile)
-    ../../domains/infrastructure/virtualization/index.nix
-
-    # WinApps domain for Windows application integration
-    ../../domains/infrastructure/winapps/index.nix
+    # Hardware and virtualization are now in domains/system/ and imported via profiles/base.nix
+    # GPU config: hwc.system.hardware.gpu.*
+    # Virtualization: hwc.system.virtualization.*
+    # WinApps: hwc.system.virtualization.winapps.*
   ];
 
   # Blender 3D modeling with GPU rendering support (configured in profiles/home.nix)
@@ -195,11 +191,11 @@
   };
 
   #============================================================================
-  # === [domains/infrastructure/hardware] Orchestration ========================
+  # === [domains/system/hardware] Orchestration ================================
   #============================================================================
 
   # GPU capability (remains unchanged).
-  hwc.infrastructure.hardware.gpu = {
+  hwc.system.hardware.gpu = {
     enable = true;
     type = "nvidia";
     nvidia = {
@@ -219,16 +215,16 @@
   };
 
   #============================================================================
-  # === [domains/infrastructure/virtualization] Orchestration ==================
+  # === [domains/system/virtualization] Orchestration ==========================
   #============================================================================
   # Minimal virtualization for WinApps/VMs. We avoid pulling full infra profile.
-  hwc.infrastructure.virtualization = {
+  hwc.system.virtualization = {
     enable = true;
     spiceSupport = false;  # no SPICE USB redirection on laptop
   };
 
   # WinApps configuration for Excel access
-  hwc.infrastructure.winapps = {
+  hwc.system.virtualization.winapps = {
     enable = true;
     rdpSettings = {
       vmName = "RDPWindows";

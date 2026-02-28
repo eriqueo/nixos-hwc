@@ -107,8 +107,8 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
-        message = "hwc.server.native.retroarch.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
+        assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
+        message = "hwc.server.native.retroarch.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       {
         assertion = !(cfg.sunshine.enable && !cfg.gpu.enable);

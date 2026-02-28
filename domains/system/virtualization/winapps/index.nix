@@ -1,9 +1,18 @@
-# domains/infrastructure/winapps/index.nix
+# domains/system/virtualization/winapps/index.nix
+#
+# WinApps - Windows applications integration via RDP
+# Provides seamless Windows application integration for Linux desktop.
+#
+# USAGE:
+#   hwc.system.virtualization.winapps.enable = true;
+#   hwc.system.virtualization.winapps.rdpSettings.user = "eric";
+#   hwc.system.virtualization.winapps.rdpSettings.ip = "192.168.122.10";
+
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.infrastructure.winapps;
-  virt = config.hwc.infrastructure.virtualization;
+  cfg = config.hwc.system.virtualization.winapps;
+  virt = config.hwc.system.virtualization;
 in
 {
   #==========================================================================
@@ -131,13 +140,13 @@ EOF
     #==========================================================================
 
     warnings = lib.optionals (cfg.rdpSettings.user == "") [
-      "WinApps RDP user not configured. Set hwc.infrastructure.winapps.rdpSettings.user in your machine config."
+      "WinApps RDP user not configured. Set hwc.system.virtualization.winapps.rdpSettings.user in your machine config."
     ];
 
     assertions = [
       {
         assertion = virt.enable;
-        message = "WinApps requires virtualization to be enabled (hwc.infrastructure.virtualization.enable = true)";
+        message = "WinApps requires virtualization to be enabled (hwc.system.virtualization.enable = true)";
       }
       {
         assertion = cfg.rdpSettings.ip != "";

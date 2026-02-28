@@ -1,15 +1,34 @@
-# domains/infrastructure/virtualization/index.nix
+# domains/system/virtualization/index.nix
+#
+# QEMU/KVM Virtualization with libvirtd
+# Provides VM management, container networking, and SPICE support.
+#
+# USAGE:
+#   hwc.system.virtualization.enable = true;
+#   hwc.system.virtualization.spiceSupport = true;
+
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.infrastructure.virtualization;
+  cfg = config.hwc.system.virtualization;
   t = lib.types;
+
+  dir   = builtins.readDir ./.;
+  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix" && n != "options.nix") dir;
+  subds = lib.filterAttrs (_: t: t == "directory") dir;
+
+  filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
+  subIndex  =
+    lib.pipe (lib.attrNames subds) [
+      (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
+      (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
+    ];
 in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  imports = [ ./options.nix ] ++ filePaths ++ subIndex;
 
   #==========================================================================
   # IMPLEMENTATION

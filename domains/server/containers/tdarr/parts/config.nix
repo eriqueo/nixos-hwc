@@ -18,8 +18,8 @@ in
         message = "Tdarr requires hwc.paths.hot and hwc.paths.media to be configured";
       }
       {
-        assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
-        message = "Tdarr GPU acceleration requires hwc.infrastructure.hardware.gpu.enable = true";
+        assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
+        message = "Tdarr GPU acceleration requires hwc.system.hardware.gpu.enable = true";
       }
     ];
 

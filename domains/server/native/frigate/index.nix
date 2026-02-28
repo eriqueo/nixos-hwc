@@ -11,7 +11,7 @@
 #   - Config file: domains/server/frigate/config/config.yml
 #
 # DEPENDENCIES:
-#   - hwc.infrastructure.hardware.gpu (for GPU acceleration)
+#   - hwc.system.hardware.gpu (for GPU acceleration)
 #   - hwc.secrets (for RTSP credentials)
 #   - virtualisation.oci-containers.backend = "podman"
 #
@@ -272,8 +272,8 @@ LABELMAP_EOF
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
-        message = "hwc.server.frigate.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
+        assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
+        message = "hwc.server.frigate.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       {
         assertion = !cfg.enable || (cfg.storage.mediaPath != "");
