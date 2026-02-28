@@ -8,12 +8,11 @@
 
 {
   #==========================================================================
-  # IMPORTS – Foundational system + infra modules (single root orchestrator)
+  # IMPORTS – Foundational system modules (single root orchestrator)
   #==========================================================================
   imports = [
     ../domains/system/index.nix
-    ../domains/infrastructure/index.nix
-
+    # Infrastructure domain migrated to system/ per Charter v10.4
   ];
 
   #==========================================================================

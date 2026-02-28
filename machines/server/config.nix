@@ -113,8 +113,8 @@
   #   business.root = "/opt/business"
   # No overrides needed - all defaults match server requirements
 
-  # Storage infrastructure configuration (Charter v6.0 compliant)
-  hwc.infrastructure.storage = {
+  # Storage configuration (Charter v6.0 compliant)
+  hwc.system.storage = {
     hot = {
       enable = true;
       device = "/dev/disk/by-uuid/fd7a9820-a3e2-45cb-9c97-9fd904ee459a";
@@ -400,7 +400,7 @@
   };
 
   # Machine-specific GPU override for Quadro P1000 (legacy driver required)
-  hwc.infrastructure.hardware.gpu = {
+  hwc.system.hardware.gpu = {
     enable = lib.mkForce true;
     type = "nvidia";
     nvidia = {

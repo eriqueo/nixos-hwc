@@ -1,28 +1,25 @@
-# HWC Charter Module/domains/system/gpu.nix
+# domains/system/hardware/gpu/index.nix
 #
 # GPU Hardware Acceleration Management
 # Provides NVIDIA, Intel, AMD GPU support with hardware acceleration for services.
 #
 # DEPENDENCIES (Upstream):
-#   - config.hwc.paths.cache  (modules/system/paths.nix)
-#   - config.hwc.paths.logs   (modules/system/paths.nix)
+#   - config.hwc.paths.cache  (domains/paths/paths.nix)
+#   - config.hwc.paths.logs   (domains/paths/paths.nix)
 #   - config.time.timeZone    (system configuration)
 #
 # USED BY (Downstream):
-#   - modules/services/media/jellyfin.nix  (GPU transcoding)
-#   - modules/services/media/immich.nix    (ML acceleration)
-#   - modules/services/ai/ollama.nix       (consumes accel = cuda/intel/rocm/cpu)
-#   - profiles/*                           (orchestration)
-#   - machines/*/config.nix                (declares hwc.infrastructure.hardware.gpu.type)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/base.nix: ../domains/system/gpu.nix
+#   - domains/server/native/jellyfin/  (GPU transcoding)
+#   - domains/server/native/immich/    (ML acceleration)
+#   - domains/ai/ollama/               (consumes accel = cuda/intel/rocm/cpu)
+#   - profiles/*                       (orchestration)
+#   - machines/*/config.nix            (declares hwc.system.hardware.gpu.type)
 #
 # USAGE:
-#   hwc.infrastructure.hardware.gpu.type = "nvidia";  # or "intel" | "amd" | "none"
-#   hwc.infrastructure.hardware.gpu.nvidia.driver = "stable";  # "stable" | "beta" | "production"
-#   hwc.infrastructure.hardware.gpu.nvidia.containerRuntime = true;   # enables nvidia-container-toolkit
-#   hwc.infrastructure.hardware.gpu.nvidia.enableMonitoring = true;   # nvidia-smi logging service
+#   hwc.system.hardware.gpu.type = "nvidia";  # or "intel" | "amd" | "none"
+#   hwc.system.hardware.gpu.nvidia.driver = "stable";  # "stable" | "beta" | "production"
+#   hwc.system.hardware.gpu.nvidia.containerRuntime = true;   # enables nvidia-container-toolkit
+#   hwc.system.hardware.gpu.nvidia.enableMonitoring = true;   # nvidia-smi logging service
 #
 # NOTES:
 #   - This file assumes Podman is the OCI engine (recommended repo-wide):
@@ -33,7 +30,7 @@
 { config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
 let
-  cfg   = config.hwc.infrastructure.hardware.gpu;
+  cfg   = config.hwc.system.hardware.gpu;
   paths = config.hwc.paths;
   t     = lib.types;
 
@@ -55,6 +52,11 @@ let
 
 in
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  imports = [ ./options.nix ];
+
   #============================================================================
   # IMPLEMENTATION - GPU hardware acceleration
   #============================================================================
@@ -65,11 +67,11 @@ in
       assertions = [
         {
           assertion = (!cfg.nvidia.containerRuntime) || (cfg.type != "none");
-          message   = "GPU container runtime requires hwc.infrastructure.hardware.gpu.type to be nvidia/intel/amd (not 'none').";
+          message   = "GPU container runtime requires hwc.system.hardware.gpu.type to be nvidia/intel/amd (not 'none').";
         }
         {
           assertion = (!cfg.nvidia.enableMonitoring) || (cfg.type == "nvidia");
-          message   = "NVIDIA monitoring requires hwc.infrastructure.hardware.gpu.type = \"nvidia\".";
+          message   = "NVIDIA monitoring requires hwc.system.hardware.gpu.type = \"nvidia\".";
         }
       ];
     }

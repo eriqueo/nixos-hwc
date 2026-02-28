@@ -1,11 +1,11 @@
-# domains/infrastructure/virtualization/options.nix
+# domains/system/virtualization/options.nix
 { lib, ... }:
 
 let
   t = lib.types;
 in
 {
-  options.hwc.infrastructure.virtualization = {
+  options.hwc.system.virtualization = {
     enable = lib.mkEnableOption "QEMU/KVM virtualization with libvirtd";
     enableGpu = lib.mkEnableOption "GPU passthrough support (placeholder toggles)";
     spiceSupport = lib.mkOption {

@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 let
   t = lib.types;
@@ -29,6 +29,31 @@ in {
           [ "level auto" 86 32767 ]  # Emergency firmware handoff
         ];
         description = "Thinkfan level table (value, lower temp C, upper temp C).";
+      };
+    };
+
+    # Peripherals (printing)
+    peripherals = {
+      enable = lib.mkEnableOption "CUPS printing support with drivers";
+
+      drivers = lib.mkOption {
+        type = t.listOf t.package;
+        default = with pkgs; [
+          gutenprint
+          hplip
+          brlaser
+          brgenml1lpr
+          cnijfilter2
+        ];
+        description = "Printer driver packages to install";
+      };
+
+      avahi = lib.mkEnableOption "Avahi for network printer discovery";
+
+      guiTools = lib.mkOption {
+        type = t.bool;
+        default = true;
+        description = "Install GUI printer management tools";
       };
     };
   };

@@ -39,13 +39,12 @@ in
   #============================================================================
   
   imports = [
-    # Core system modules only (legacy services disabled until Charter v6 migration complete)
-    ../domains/infrastructure/index.nix
+    # Infrastructure domain merged into system/ per Charter v10.4
     # Server domain modules (includes containers and other server services)
     ../domains/server/index.nix
     # CouchDB for Obsidian LiveSync
     ../domains/server/native/couchdb/index.nix
-  # Server packages now in domains/system/core/packages.nix (auto-imported via base.nix)
+    # Server packages now in domains/system/core/packages.nix (auto-imported via base.nix)
   ];
 
   #==========================================================================
@@ -292,9 +291,9 @@ in
   # - primary: All services enabled (main production server)
   # - secondary: Core services only, override to enable more
 
-  # Infrastructure services (minimal GPU configuration)
+  # Hardware services (minimal GPU configuration)
   # GPU enabled only if present - machines should override type
-  hwc.infrastructure.hardware.gpu = {
+  hwc.system.hardware.gpu = {
     enable = lib.mkDefault true;
     type = "nvidia";
     nvidia = {

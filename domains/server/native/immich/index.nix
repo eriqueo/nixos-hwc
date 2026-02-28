@@ -363,20 +363,20 @@ in
         message = "hwc.server.immich requires mediaLocation to be set";
       }
       {
-        assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
-        message = "hwc.server.immich.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
+        assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
+        message = "hwc.server.immich.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       {
-        assertion = !cfg.gpu.enable || (config.hwc.infrastructure.hardware.gpu.type == "nvidia");
-        message = "hwc.server.immich.gpu currently only supports NVIDIA GPUs (hwc.infrastructure.hardware.gpu.type must be 'nvidia')";
+        assertion = !cfg.gpu.enable || (config.hwc.system.hardware.gpu.type == "nvidia");
+        message = "hwc.server.immich.gpu currently only supports NVIDIA GPUs (hwc.system.hardware.gpu.type must be 'nvidia')";
       }
       {
-        assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.nvidia.containerRuntime;
-        message = "hwc.server.immich.gpu requires hwc.infrastructure.hardware.gpu.nvidia.containerRuntime = true for nvidia-container-toolkit";
+        assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.nvidia.containerRuntime;
+        message = "hwc.server.immich.gpu requires hwc.system.hardware.gpu.nvidia.containerRuntime = true for nvidia-container-toolkit";
       }
       {
         assertion = !cfg.gpu.enable || (builtins.elem "nvidia" config.boot.kernelModules);
-        message = "hwc.server.immich.gpu requires NVIDIA kernel modules to be loaded (check hwc.infrastructure.hardware.gpu configuration)";
+        message = "hwc.server.immich.gpu requires NVIDIA kernel modules to be loaded (check hwc.system.hardware.gpu configuration)";
       }
       {
         assertion = !cfg.storage.enable || (cfg.storage.basePath != "");

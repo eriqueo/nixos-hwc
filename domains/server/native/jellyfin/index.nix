@@ -187,8 +187,8 @@ in
         message = "hwc.server.jellyfin.reverseProxy requires hwc.server.reverseProxy.enable = true";
       }
       {
-        assertion = !cfg.gpu.enable || config.hwc.infrastructure.hardware.gpu.enable;
-        message = "hwc.server.jellyfin.gpu requires hwc.infrastructure.hardware.gpu.enable = true";
+        assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
+        message = "hwc.server.jellyfin.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       # NOTE: Secret assertions removed (2026-02-08)
       # User initialization via secrets is incompatible with Jellyfin 10.9.11+ EF Core.

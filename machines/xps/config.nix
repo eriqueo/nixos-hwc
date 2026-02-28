@@ -63,9 +63,9 @@
   #   business.root = "/opt/business"
   # No overrides needed - all defaults match requirements
 
-  # Storage infrastructure configuration (Charter v10.1 compliant)
+  # Storage configuration (Charter v10.1 compliant)
   # DISABLED: External storage not yet configured
-  hwc.infrastructure.storage = {
+  hwc.system.storage = {
     hot = {
       enable = false;  # DISABLED: No /mnt/hot partition yet
       # device = "/dev/disk/by-uuid/PLACEHOLDER-HOT-UUID";
@@ -237,7 +237,7 @@
   # Check during installation: lspci | grep -i vga
   # If NVIDIA MX150 present, enable GPU support
   # If Intel integrated only, keep disabled or configure for VA-API
-  hwc.infrastructure.hardware.gpu = {
+  hwc.system.hardware.gpu = {
     enable = false;  # Disabled - no discrete GPU detected (Intel integrated only)
     # Uncomment and configure if NVIDIA MX150 present:
     # type = "nvidia";

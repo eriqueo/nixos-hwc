@@ -9,7 +9,7 @@ let
   osCfg = if isNixOSHost then osConfig else {};
 
   # Access system GPU config via osConfig (available in Home Manager)
-  gpuCfg = osCfg.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
+  gpuCfg = osCfg.hwc.system.hardware.gpu or { type = "none"; enable = false; };
 
   # Patch FreeCAD to avoid forcing unsupported display modes on hosts (e.g., BuildingPart)
   freecadPkg = pkgs.freecad.overrideAttrs (old: {
@@ -143,7 +143,7 @@ EOF
         assertion = !cfg.gpuAcceleration || !isNixOSHost || gpuCfg.enable || gpuCfg.type == "none";
         message = ''
           FreeCAD GPU acceleration requires either:
-          - hwc.infrastructure.hardware.gpu.enable = true (with type = "nvidia"/"intel"/"amd")
+          - hwc.system.hardware.gpu.enable = true (with type = "nvidia"/"intel"/"amd")
           - OR disable GPU acceleration: hwc.home.apps.freecad.gpuAcceleration = false
         '';
       }

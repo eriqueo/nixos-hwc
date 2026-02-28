@@ -4,16 +4,16 @@ let
   cfg = config.hwc.server.ai.ollama;
   paths = config.hwc.paths or {};
 
-  accel = config.hwc.infrastructure.hardware.gpu.accel or "cpu";
-  gpuType = config.hwc.infrastructure.hardware.gpu.type or "none";
+  accel = config.hwc.system.hardware.gpu.accel or "cpu";
+  gpuType = config.hwc.system.hardware.gpu.type or "none";
 
   # For NVIDIA, use CDI annotation for proper driver mounting
   gpuExtraOptions = if gpuType == "nvidia" then [
     "--device=nvidia.com/gpu=all"
     "--security-opt=label=disable"
-  ] else config.hwc.infrastructure.hardware.gpu.containerOptions or [];
+  ] else config.hwc.system.hardware.gpu.containerOptions or [];
 
-  gpuEnv = config.hwc.infrastructure.hardware.gpu.containerEnvironment or {};
+  gpuEnv = config.hwc.system.hardware.gpu.containerEnvironment or {};
 
   pullScript = import ./parts/pull-script.nix { inherit lib pkgs config; };
 in

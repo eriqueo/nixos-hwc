@@ -9,7 +9,7 @@ let
   osCfg = if isNixOSHost then osConfig else {};
 
   # Access system GPU config via osConfig (available in Home Manager)
-  gpuCfg = osCfg.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
+  gpuCfg = osCfg.hwc.system.hardware.gpu or { type = "none"; enable = false; };
 
   # Build Blender with CUDA support for Cycles GPU rendering
   blenderPackage = pkgs.blender.override {
@@ -55,11 +55,11 @@ in
       # On non-NixOS hosts, user is responsible for GPU driver setup
       {
         assertion = !cfg.cudaSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "nvidia");
-        message = "Blender CUDA support requires hwc.infrastructure.hardware.gpu.type = \"nvidia\" and GPU to be enabled";
+        message = "Blender CUDA support requires hwc.system.hardware.gpu.type = \"nvidia\" and GPU to be enabled";
       }
       {
         assertion = !cfg.rocmSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "amd");
-        message = "Blender ROCm support requires hwc.infrastructure.hardware.gpu.type = \"amd\" and GPU to be enabled";
+        message = "Blender ROCm support requires hwc.system.hardware.gpu.type = \"amd\" and GPU to be enabled";
       }
     ];
   };

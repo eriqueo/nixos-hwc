@@ -1,11 +1,11 @@
-# domains/infrastructure/winapps/options.nix
+# domains/system/virtualization/winapps/options.nix
 { lib, ... }:
 
 let
   t = lib.types;
 in
 {
-  options.hwc.infrastructure.winapps = {
+  options.hwc.system.virtualization.winapps = {
     enable = lib.mkEnableOption "WinApps - Windows applications integration via RDP";
 
     rdpSettings = {
