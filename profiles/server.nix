@@ -506,8 +506,8 @@ in
   # YOUTUBE & TRANSCRIPT SERVICES - Primary server only by default
   # -------------------------------------------------------------------------
 
-  # YouTube Transcript API
-  hwc.server.transcriptApi = {
+  # Legacy YouTube Transcript API
+  hwc.server.native.youtube.legacyApi = {
     enable = lib.mkDefault isPrimary;
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
@@ -521,7 +521,7 @@ in
 
   # YouTube Transcripts API (new job-based service with worker)
   # DISABLED: Python packages not ready yet (workspace files untracked)
-  hwc.services.ytTranscriptsApi = {
+  hwc.server.native.youtube.transcripts = {
     enable = lib.mkDefault false;
     port = 8100;
     workers = 4;
@@ -530,12 +530,12 @@ in
 
   # YouTube Videos API (video download and archiving)
   # DISABLED: Python packages not ready yet (workspace files untracked)
-  hwc.services.ytVideosApi = {
+  hwc.server.native.youtube.videos = {
     enable = lib.mkDefault false;
     port = 8101;
     workers = 2;
     outputDirectory = "/mnt/media/youtube";
-    # Note: stagingDirectory is deprecated and auto-derived as <outputDirectory>/.staging
+    # Note: stagingDirectory is auto-derived as <outputDirectory>/.staging
   };
 
   # -------------------------------------------------------------------------

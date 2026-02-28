@@ -1,14 +1,27 @@
-{ lib, config, ... }:
+# domains/server/native/youtube/index.nix
+#
+# YouTube content acquisition domain aggregator
+# Consolidates transcript and video download services
+#
+# NAMESPACE: hwc.server.native.youtube.*
+#
+# USED BY:
+#   - domains/server/native/index.nix
+#   - profiles/server.nix
+
+{ lib, config, pkgs, ... }:
+
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
   imports = [
     ./options.nix
-    ./containers/index.nix
-    ./databases/index.nix
-    ./native/index.nix
+    ./parts/legacy-api.nix
+    ./parts/yt-transcripts-api
+    ./parts/yt-videos-api
   ];
+
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
@@ -17,5 +30,5 @@
   #==========================================================================
   # VALIDATION
   #==========================================================================
-  config.assertions = [];
+  # Assertions are defined in individual part files
 }

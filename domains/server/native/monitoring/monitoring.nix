@@ -25,10 +25,9 @@
 
 with lib;
 
-let 
+let
   cfg = config.hwc.server.business.monitoring;
   paths = config.hwc.paths;
-  networkName = config.hwc.server.media.networking.networkName;
 in {
   
   ####################################################################
@@ -123,10 +122,7 @@ in {
         assertion = cfg.enable -> config.virtualisation.podman.enable;
         message = "Business monitoring requires Podman to be enabled (virtualisation.podman.enable = true)";
       }
-      {
-        assertion = (cfg.dashboard.enable || cfg.metrics.enable) -> cfg.networking.useMediaNetwork -> config.hwc.server.media.networking.enable;
-        message = "Business monitoring with media network requires media networking to be enabled";
-      }
+      # NOTE: Media networking assertion removed - using container-based gluetun instead
     ];
 
     ####################################################################

@@ -96,8 +96,8 @@ in {
     #=========================================================================
     assertions = [
       {
-        assertion = !cfg.useVpn || config.hwc.server.native.networking.vpn.enable;
-        message = "Download services with VPN require hwc.server.native.networking.vpn.enable = true";
+        assertion = !cfg.useVpn || config.hwc.server.containers.gluetun.enable;
+        message = "Download services with VPN require hwc.server.containers.gluetun.enable = true";
       }
       {
         assertion = paths.hot != null;

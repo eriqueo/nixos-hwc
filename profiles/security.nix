@@ -42,8 +42,5 @@
     hashedPasswordFile = config.hwc.secrets.api.emergencyPasswordFile;
   };
 
-  hwc.server.native.networking.tailscale = {
-    enable = false;
-    exitNode = false;
-  };
+  # NOTE: Tailscale config moved to hwc.system.networking.tailscale
 }

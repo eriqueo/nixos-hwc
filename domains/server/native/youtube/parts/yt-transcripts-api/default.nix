@@ -1,7 +1,9 @@
-# domains/server/native/networking/parts/yt-transcripts-api/index.nix
+# domains/server/native/youtube/parts/yt-transcripts-api/default.nix
 #
 # YOUTUBE TRANSCRIPTS API - Transcript extraction REST API with worker
 # Provides async job-based transcript extraction from YouTube videos/playlists/channels
+#
+# NAMESPACE: hwc.server.native.youtube.transcripts.*
 #
 # ARCHITECTURE:
 #   - API Server: FastAPI with --workers 1 (single process)
@@ -10,14 +12,14 @@
 #   - Deduplication: Global transcripts table prevents re-extraction
 #
 # DEPENDENCIES:
-#   - PostgreSQL (hwc.services.databases.postgresql)
+#   - PostgreSQL (hwc.server.databases.postgresql)
 #   - YouTube API key (optional, for playlist expansion)
 #   - yt_core and yt_transcripts_api Python packages
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.services.ytTranscriptsApi;
+  cfg = config.hwc.server.native.youtube.transcripts;
   paths = config.hwc.paths;
 
   # Build Python packages with repo-relative paths for reproducibility
@@ -254,7 +256,7 @@ in
     # Validation assertions
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.services.databases.postgresql.enable;
+        assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
         message = "yt-transcripts-api requires PostgreSQL to be enabled";
       }
       {

@@ -1,24 +1,20 @@
-# HWC Charter Module/domains/services/transcript-api.nix
+# domains/server/native/youtube/parts/legacy-api.nix
 #
-# TRANSCRIPT API - YouTube transcript extraction REST API
+# LEGACY TRANSCRIPT API - YouTube transcript extraction REST API
 # Provides a REST API for extracting transcripts from YouTube videos and playlists
 #
+# NAMESPACE: hwc.server.native.youtube.legacyApi.*
+#
 # DEPENDENCIES (Upstream):
-#   - config.hwc.paths.* (modules/system/paths.nix)
-#   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify, spacy, spacy-models.en_core_web_sm
+#   - config.hwc.paths.* (domains/paths/paths.nix)
+#   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify, spacy
 #
 # USED BY (Downstream):
-#   - profiles/*.nix (enables via hwc.server.transcriptApi.enable)
-#
-# IMPORTS REQUIRED IN:
-#   - profiles/server.nix: ../domains/server/native/networking/parts/transcript-api.nix
-#
-# USAGE:
-#   hwc.server.transcriptApi.enable = true;
+#   - profiles/server.nix (enables via hwc.server.native.youtube.legacyApi.enable)
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.server.transcriptApi;
+  cfg = config.hwc.server.native.youtube.legacyApi;
   paths = config.hwc.paths;
 
   # Python packages needed

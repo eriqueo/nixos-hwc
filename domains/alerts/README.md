@@ -6,7 +6,7 @@ Centralized alert routing to Slack via n8n webhooks. Provides fail-graceful aler
 
 ## Boundaries
 
-- **Manages**: Alert routing, webhook delivery, service failure detection, disk space monitoring, SMART alerts, backup notifications
+- **Manages**: ntfy notification server, alert routing, webhook delivery, service failure detection, disk space monitoring, SMART alerts, backup notifications
 - **Does NOT manage**: n8n configuration (→ `domains/server/native/n8n`), Slack workspace setup (external), individual service monitoring logic (→ respective domains)
 
 ## Structure
@@ -17,10 +17,21 @@ domains/alerts/
 ├── options.nix         # hwc.alerts.* options
 └── parts/
     ├── cli.nix         # hwc-alert CLI tool
+    ├── server.nix      # ntfy notification server container
     └── slack-webhook.nix # Webhook scripts with retry logic
 ```
 
 ## Configuration
+
+### ntfy Notification Server
+
+```nix
+hwc.alerts.server = {
+  enable = true;
+  port = 2586;
+  dataDir = "/var/lib/hwc/ntfy";
+};
+```
 
 ### Basic Usage
 
@@ -99,5 +110,6 @@ Expects n8n webhooks at:
 
 ## Changelog
 
+- 2026-02-27: Added ntfy server (migrated from server/native/networking/)
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2026-02-22: Initial domain implementation
