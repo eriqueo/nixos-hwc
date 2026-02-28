@@ -1,10 +1,10 @@
-# HWC Architecture Charter v10.4
+# HWC Architecture Charter v10.5
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
 **Goal**: Deterministic, maintainable, scalable, reproducible NixOS configuration via strict domain separation, explicit APIs, and user-centric organization.
 **Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs (per Law 12).
-**Current Date**: February 26, 2026
+**Current Date**: February 28, 2026
 
 ## 0. Preserve-First Doctrine
 
@@ -230,9 +230,7 @@ Requirements:
 
 ### Law 11: Domain Evaluation Order
 
-Domains must respect a safe evaluation dependency direction: paths → system → infrastructure → home → server → ai → secrets (reverse dependencies forbidden).
-
-Note: Infrastructure will eventually merge into system, at which point this order becomes: paths → system → home → server → ai → secrets.
+Domains must respect a safe evaluation dependency direction: paths → system → home → server → ai → secrets (reverse dependencies forbidden).
 
 **Violation**: Cyclic or reverse dependencies (e.g., server depending on home options).
 
@@ -289,17 +287,12 @@ Domain READMEs contain implementation details, patterns, and known limitations.
   Never contains: systemd.services, environment.systemPackages, users.users  
   Unique: sys.nix co-location for system-lane support (Law 7)
 
-- **domains/system/** — Core OS & Services
-  Boundary: Accounts, networking, security, system packages
+- **domains/system/** — Core OS, Hardware & Services
+  Boundary: Accounts, networking, security, system packages, GPU, storage tiers, virtualization, peripherals
   Never contains: Home Manager configs, secret declarations
   Unique: Relies on paths domain for abstractions (Law 3)
-  Note: Avoid `services/` as a god-directory; promote semantic subdomains (e.g., networking, storage, session) and flatten simple modules to leaves.
-  Future: Hardware management from infrastructure domain will migrate here (system/hardware/, system/virtualization/)
-
-- **domains/infrastructure/** — Hardware Management & Orchestration
-  Boundary: GPU, power, peripherals, storage tiers, virtualization, udev rules
-  Never contains: Home Manager configs, high-level app logic
-  Status: **MIGRATION PENDING** - Content will be absorbed into domains/system/ as semantic subdomains (system/hardware/, system/virtualization/, system/storage/)
+  Note: Avoid `services/` as a god-directory; promote semantic subdomains (e.g., networking, storage, hardware, virtualization) and flatten simple modules to leaves.
+  Subdomains: hardware/ (GPU, drivers), virtualization/ (QEMU/KVM, Podman, WinApps), storage/ (hot/media/backup tiers), services/hardware/ (audio, peripherals)
 
 - **domains/server/** — Host Workloads  
   Boundary: Containers, databases, media servers, reverse proxy  
@@ -405,6 +398,7 @@ Exceptions require:
 - Version bump on normative change
 
 **Version History** (excerpt):
+- **v10.5 (2026-02-28)**: Completed infrastructure domain migration. All modules from `domains/infrastructure/` now live in `domains/system/`: GPU → `system/hardware/gpu/`, Virtualization/WinApps → `system/virtualization/`, Storage tiers → `system/storage/`, Peripherals → `system/services/hardware/`. Updated Law 11 evaluation order (removed infrastructure). Updated domain overview to reflect consolidated system domain structure.
 - **v10.4 (2026-02-26)**: Added Law 12 (Domain Documentation Contract) requiring minimal README.md for each domain with Purpose, Boundaries, Structure, and Changelog sections. Update triggered by commits touching the hierarchy. Removed reference to `docs/patterns/` in favor of domain READMEs as single source of truth.
 - **v10.3 (2026-01-17)**: Hardened Charter laws for production readiness:
   - Law 1: Replaced unsafe `osConfig.hwc.x or null` with safe canonical patterns (attrByPath, namespace fallback, isNixOS guard); updated lint to allowlist-based check
@@ -421,4 +415,4 @@ Exceptions require:
 - **v9.1 (2026-01-10)**: Added Law 5 (mkContainer), Law 8 (Retention), refined violation searches, enforcement levels
 - **v9.0 (2026-01-10)**: Laws + mechanical validation focus
 
-**End of Charter v10.3**
+**End of Charter v10.5**
