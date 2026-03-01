@@ -1,6 +1,10 @@
 # domains/server/containers/pihole/sys.nix
 { lib, config, pkgs, ... }:
 let
+  # Import infrastructure container helper
+  infraHelpers = import ../_shared/infra.nix { inherit lib pkgs; };
+  inherit (infraHelpers) mkInfraContainer;
+
   cfg = config.hwc.server.containers.pihole;
   upstreamDnsString = lib.concatStringsSep ";" cfg.upstreamDns;
 in
@@ -17,26 +21,6 @@ in
       ];
     }
 
-    # Generate environment file from secrets at runtime (CHARTER-compliant: no builtins.readFile)
-    (lib.mkIf (cfg.webPasswordFile != null) {
-      systemd.services.pihole-env-setup = {
-        description = "Generate Pi-hole environment file from agenix secrets";
-        before = [ "podman-pihole.service" ];
-        wantedBy = [ "podman-pihole.service" ];
-        wants = [ "agenix.service" ];
-        after = [ "agenix.service" ];
-        serviceConfig.Type = "oneshot";
-        script = ''
-          mkdir -p ${cfg.dataDir}
-          WEBPASSWORD=$(cat ${cfg.webPasswordFile})
-          cat > ${cfg.dataDir}/.env <<EOF
-WEBPASSWORD=$WEBPASSWORD
-EOF
-          chmod 600 ${cfg.dataDir}/.env
-        '';
-      };
-    })
-
     # Disable systemd-resolved DNS stub listener if requested
     (lib.mkIf cfg.disableResolvedStub {
       services.resolved = {
@@ -48,73 +32,64 @@ EOF
       networking.nameservers = [ "127.0.0.1" ];
     })
 
-    # Pi-hole OCI Container
-    {
-      virtualisation.oci-containers.containers.pihole = {
-        image = cfg.image;
-        autoStart = true;
+    # Pi-hole OCI Container using mkInfraContainer
+    (mkInfraContainer {
+      name = "pihole";
+      image = cfg.image;
 
-        ports = [
-          "${toString cfg.dnsPort}:53/tcp"
-          "${toString cfg.dnsPort}:53/udp"
-          "${toString cfg.webPort}:80/tcp"
-        ];
+      # Network configuration - host mode for DNS
+      networkMode = "host";
 
-        volumes = [
-          "${cfg.dataDir}:/etc/pihole"
-          "${cfg.dnsmasqDir}:/etc/dnsmasq.d"
-        ];
+      # Infrastructure capabilities
+      capabilities = [ "NET_ADMIN" ];
+      dnsServers = [ "127.0.0.1" "1.1.1.1" ];
 
-        # Use environmentFiles for secrets (CHARTER-compliant: no Nix store leaks)
-        environmentFiles = lib.optional (cfg.webPasswordFile != null) "${cfg.dataDir}/.env";
+      # Ports (needed for firewall even in host mode)
+      ports = [
+        "${toString cfg.dnsPort}:53/tcp"
+        "${toString cfg.dnsPort}:53/udp"
+        "${toString cfg.webPort}:80/tcp"
+      ];
 
-        environment = {
-          TZ = cfg.timezone;
-          # WEBPASSWORD from environmentFiles if using secrets, otherwise from option
-          PIHOLE_DNS_ = upstreamDnsString;
-          DNSMASQ_LISTENING = "all";
-          WEB_PORT = toString cfg.webPort;
-          # Enable IPv6 support
-          IPv6 = "true";
-          # Query logging for statistics
-          QUERY_LOGGING = "true";
-          # FTL options
-          FTLCONF_LOCAL_IPV4 = "0.0.0.0";
-        } // cfg.extraEnvironment
-          // lib.optionalAttrs (cfg.webPasswordFile == null && cfg.webPassword != "") {
-            # Only set WEBPASSWORD directly if not using file
-            WEBPASSWORD = cfg.webPassword;
-          };
+      # Volume mounts
+      volumes = [
+        "${cfg.dataDir}:/etc/pihole"
+        "${cfg.dnsmasqDir}:/etc/dnsmasq.d"
+      ];
 
-        extraOptions = [
-          "--cap-add=NET_ADMIN"
-          "--dns=127.0.0.1"
-          "--dns=1.1.1.1"
-          "--network=host"
-        ];
-      };
-    }
+      # Environment from agenix-generated file (if using secrets)
+      environmentFiles = lib.optional (cfg.webPasswordFile != null) "${cfg.dataDir}/.env";
 
-    # Firewall Configuration
-    {
-      networking.firewall = {
-        allowedTCPPorts = [ cfg.dnsPort cfg.webPort ];
-        allowedUDPPorts = [ cfg.dnsPort ];
-      };
-    }
+      # Static environment
+      environment = {
+        TZ = cfg.timezone;
+        PIHOLE_DNS_ = upstreamDnsString;
+        DNSMASQ_LISTENING = "all";
+        WEB_PORT = toString cfg.webPort;
+        IPv6 = "true";
+        QUERY_LOGGING = "true";
+        FTLCONF_LOCAL_IPV4 = "0.0.0.0";
+      } // cfg.extraEnvironment
+        // lib.optionalAttrs (cfg.webPasswordFile == null && cfg.webPassword != "") {
+          WEBPASSWORD = cfg.webPassword;
+        };
 
-    # Service dependencies (ensure agenix runs before container)
-    (lib.mkIf (cfg.webPasswordFile != null) {
-      systemd.services."podman-pihole" = {
-        after = [ "agenix.service" "pihole-env-setup.service" ];
-        wants = [ "agenix.service" ];
-      };
-    })
+      # Pre-start script to generate env file from agenix secrets
+      preStartScript = lib.optionalString (cfg.webPasswordFile != null) ''
+        mkdir -p ${cfg.dataDir}
+        WEBPASSWORD=$(cat ${cfg.webPasswordFile})
+        cat > ${cfg.dataDir}/.env <<EOF
+WEBPASSWORD=$WEBPASSWORD
+EOF
+        chmod 600 ${cfg.dataDir}/.env
+      '';
+      preStartDeps = lib.optionals (cfg.webPasswordFile != null) [ "agenix.service" ];
 
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    {
+      # Firewall rules
+      firewallTcp = [ cfg.dnsPort cfg.webPort ];
+      firewallUdp = [ cfg.dnsPort ];
+
+      # Assertions
       assertions = [
         {
           assertion = !cfg.enable || config.virtualisation.oci-containers.backend == "podman";
@@ -143,6 +118,6 @@ EOF
           message = "Pi-hole requires at least one upstream DNS server in upstreamDns.";
         }
       ];
-    }
+    })
   ]);
 }

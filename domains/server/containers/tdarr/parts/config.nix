@@ -1,56 +1,50 @@
 # Tdarr container configuration
 { lib, config, pkgs, ... }:
 let
+  # Import PURE helper library
+  helpers = import ../../_shared/pure.nix { inherit lib pkgs; };
+  inherit (helpers) mkContainer;
+
   cfg = config.hwc.server.containers.tdarr;
   paths = config.hwc.paths;
   appsRoot = config.hwc.paths.apps.root;
   tdarrRoot = "${appsRoot}/tdarr";
 in
 {
-  config = lib.mkIf cfg.enable {
-
+  config = lib.mkIf cfg.enable (lib.mkMerge [
     #=========================================================================
     # ASSERTIONS AND VALIDATION
     #=========================================================================
-    assertions = [
-      {
-        assertion = paths.hot != null && paths.media != null;
-        message = "Tdarr requires hwc.paths.hot and hwc.paths.media to be configured";
-      }
-      {
-        assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
-        message = "Tdarr GPU acceleration requires hwc.system.hardware.gpu.enable = true";
-      }
-    ];
+    {
+      assertions = [
+        {
+          assertion = paths.hot != null && paths.media != null;
+          message = "Tdarr requires hwc.paths.hot and hwc.paths.media to be configured";
+        }
+        {
+          assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
+          message = "Tdarr GPU acceleration requires hwc.system.hardware.gpu.enable = true";
+        }
+      ];
+    }
 
     #=========================================================================
     # CONTAINER CONFIGURATION
     #=========================================================================
-    virtualisation.oci-containers.containers.tdarr = {
+    (mkContainer {
+      name = "tdarr";
       image = cfg.image;
-      autoStart = true;
+      networkMode = if cfg.network.mode == "vpn" then "vpn" else "media";
+      gpuEnable = cfg.gpu.enable;
+      gpuMode = "nvidia-cdi";  # P1000 uses CDI
+      timeZone = config.time.timeZone or "America/Denver";
 
-      # Network configuration
-      extraOptions = [
-        "--memory=${cfg.resources.memory}"
-        "--cpus=${cfg.resources.cpus}"
-        "--memory-swap=${cfg.resources.memorySwap}"
-      ] ++ (
-        if cfg.network.mode == "vpn"
-        then [ "--network=container:gluetun" ]
-        else [ "--network=media-network" ]
-      ) ++ lib.optionals cfg.gpu.enable [
-        # NVIDIA GPU passthrough (P1000 supports NVENC/NVDEC)
-        # Use CDI (Container Device Interface) with nvidia-container-toolkit
-        "--device=nvidia.com/gpu=0"
-      ];
+      # Resource limits
+      memory = cfg.resources.memory;
+      cpus = cfg.resources.cpus;
+      memorySwap = cfg.resources.memorySwap;
 
-      # Environment variables
       environment = {
-        PUID = "1000";
-        PGID = "100";  # users GID;
-        TZ = config.time.timeZone or "America/Denver";
-
         # Server configuration
         serverIP = "0.0.0.0";
         serverPort = toString cfg.serverPort;
@@ -61,17 +55,13 @@ in
 
         # Node configuration
         nodeName = "TdarrNode";
-        internalNode = "true";  # Enable worker node in same container
+        internalNode = "true";
 
-        # SAFETY SETTINGS - Prevent file deletion/corruption
-        # Keep original files until transcode is verified
+        # Container identification
         inContainer = "true";
 
         # Memory management for FFmpeg
-        # These help prevent OOM issues during large file transcoding
-        FFMPEG_THREAD_QUEUE_SIZE = "512";  # Reduce memory usage per stream
-
-        # GPU configuration (NVIDIA)
+        FFMPEG_THREAD_QUEUE_SIZE = "512";
       } // lib.optionalAttrs cfg.gpu.enable {
         NVIDIA_VISIBLE_DEVICES = "all";
         NVIDIA_DRIVER_CAPABILITIES = "compute,video,utility";
@@ -79,54 +69,51 @@ in
 
       # Port exposure
       ports = lib.optionals (cfg.network.mode != "vpn") [
-        "127.0.0.1:${toString cfg.webPort}:${toString cfg.webPort}"    # Web UI
-        "127.0.0.1:${toString cfg.serverPort}:${toString cfg.serverPort}"  # Server
+        "127.0.0.1:${toString cfg.webPort}:${toString cfg.webPort}"
+        "127.0.0.1:${toString cfg.serverPort}:${toString cfg.serverPort}"
       ];
 
       # Volume mounts
       volumes = [
-        # Config and database
         "${tdarrRoot}/server:/app/server"
         "${tdarrRoot}/configs:/app/configs"
         "${tdarrRoot}/logs:/app/logs"
-
-        # Media libraries (read/write for transcoding)
         "${paths.media.root}/tv:/media/tv"
         "${paths.media.root}/movies:/media/movies"
         "${paths.media.root}/music:/media/music"
-
-        # Transcode cache (hot storage for speed)
         "${paths.hot.root}/processing/tdarr-temp:/temp"
       ];
 
-      # Dependencies
       dependsOn = lib.optionals (cfg.network.mode == "vpn") [ "gluetun" ];
-    };
+    })
 
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
-    systemd.services.podman-tdarr = {
-      after = if cfg.network.mode == "vpn"
-        then [ "podman-gluetun.service" ]
-        else [ "init-media-network.service" ];
-      wants = if cfg.network.mode == "vpn"
-        then [ "podman-gluetun.service" ]
-        else [ "init-media-network.service" ];
+    {
+      systemd.services.podman-tdarr = {
+        after = if cfg.network.mode == "vpn"
+          then [ "podman-gluetun.service" ]
+          else [ "init-media-network.service" ];
+        wants = if cfg.network.mode == "vpn"
+          then [ "podman-gluetun.service" ]
+          else [ "init-media-network.service" ];
 
-      # Ensure tdarr-temp directory exists
-      preStart = ''
-        install -d -m755 ${paths.hot.root}/processing/tdarr-temp
-        chown -R 1000:1000 ${paths.hot.root}/processing/tdarr-temp
-      '';
-    };
+        preStart = ''
+          install -d -m755 ${paths.hot.root}/processing/tdarr-temp
+          chown -R 1000:1000 ${paths.hot.root}/processing/tdarr-temp
+        '';
+      };
+    }
 
     #=========================================================================
     # FIREWALL CONFIGURATION
     #=========================================================================
-    networking.firewall.allowedTCPPorts = lib.optionals (cfg.network.mode != "vpn") [
-      cfg.webPort
-      cfg.serverPort
-    ];
-  };
+    {
+      networking.firewall.allowedTCPPorts = lib.optionals (cfg.network.mode != "vpn") [
+        cfg.webPort
+        cfg.serverPort
+      ];
+    }
+  ]);
 }
