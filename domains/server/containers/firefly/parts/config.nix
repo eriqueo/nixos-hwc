@@ -5,6 +5,10 @@
 { lib, config, pkgs, ... }:
 
 let
+  # Import PURE helper library
+  helpers = import ../../_shared/pure.nix { inherit lib pkgs; };
+  inherit (helpers) mkContainer;
+
   cfg = config.hwc.server.containers.firefly;
   paths = config.hwc.paths;
   appsRoot = paths.apps.root;
@@ -15,56 +19,52 @@ let
 
   # Network configuration
   mediaNetworkName = "media-network";
-  networkOpts = if cfg.network.mode == "media"
-    then [ "--network=${mediaNetworkName}" ]
-    else [ "--network=host" ];
 
   # Secret file path
   appKeyFile = config.age.secrets.firefly-app-key.path;
 in
 {
-  config = lib.mkIf cfg.enable {
-
+  config = lib.mkIf cfg.enable (lib.mkMerge [
     #=========================================================================
     # STORAGE DIRECTORIES
     #=========================================================================
-    systemd.tmpfiles.rules = [
-      # Firefly III directories
-      "d ${fireflyRoot} 0755 eric users -"
-      # Upload dir needs to be writable by www-data (UID 33) inside container
-      "d ${fireflyUpload} 0777 eric users -"
-    ] ++ lib.optionals cfg.pico.enable [
-      # Firefly-Pico directories
-      "d ${fireflyPicoRoot} 0755 eric users -"
-    ];
+    {
+      systemd.tmpfiles.rules = [
+        "d ${fireflyRoot} 0755 eric users -"
+        "d ${fireflyUpload} 0777 eric users -"
+      ] ++ lib.optionals cfg.pico.enable [
+        "d ${fireflyPicoRoot} 0755 eric users -"
+      ];
+    }
 
     #=========================================================================
     # FIREFLY III CORE CONTAINER
     #=========================================================================
-    virtualisation.oci-containers.containers.firefly = {
+    (mkContainer {
+      name = "firefly";
       image = cfg.images.core;
-      autoStart = true;
+      networkMode = if cfg.network.mode == "media" then "media" else "host";
+      gpuEnable = false;
+      timeZone = cfg.settings.timezone;
 
-      extraOptions = networkOpts ++ [
+      # Resource limits
+      memory = cfg.resources.core.memory;
+      cpus = cfg.resources.core.cpus;
+      memorySwap = "2g";
+
+      # Environment files for APP_KEY
+      environmentFiles = [ fireflyEnvFile ];
+
+      # Extra options for network alias
+      extraOptions = lib.optionals (cfg.network.mode != "host") [
         "--network-alias=firefly"
-        "--memory=${cfg.resources.core.memory}"
-        "--cpus=${cfg.resources.core.cpus}"
-        "--memory-swap=2g"
-        # Load APP_KEY from env file (generated at service start)
-        "--env-file=${fireflyEnvFile}"
       ];
 
-      # Expose port for external access
-      ports = if cfg.network.mode != "host" then [
+      ports = lib.optionals (cfg.network.mode != "host") [
         "127.0.0.1:${toString cfg.reverseProxy.coreInternalPort}:8080"
-      ] else [];
+      ];
 
       environment = {
-        # ================================================================
-        # CORE CONFIGURATION
-        # ================================================================
-        TZ = cfg.settings.timezone;
-
         # App URL (for OAuth, redirects, etc.)
         APP_URL = cfg.settings.appUrl;
         TRUSTED_PROXIES = cfg.settings.trustedProxies;
@@ -73,65 +73,52 @@ in
         DEFAULT_LOCALE = cfg.settings.locale;
         DEFAULT_LANGUAGE = "en_US";
 
-        # ================================================================
-        # DATABASE CONFIGURATION
-        # ================================================================
+        # Database configuration
         DB_CONNECTION = "pgsql";
         DB_HOST = cfg.database.host;
         DB_PORT = toString cfg.database.port;
         DB_DATABASE = cfg.database.name;
         DB_USERNAME = cfg.database.user;
-        # No password needed - using peer/trust auth for eric user
 
-        # ================================================================
-        # CACHE AND SESSION
-        # ================================================================
+        # Cache and session
         CACHE_DRIVER = "file";
         SESSION_DRIVER = "file";
-
-        # APP_KEY loaded via --env-file from ${fireflyEnvFile}
       };
 
       volumes = [
         "${fireflyUpload}:/var/www/html/storage/upload:rw"
       ];
-    };
+    })
 
     #=========================================================================
     # FIREFLY-PICO MOBILE COMPANION CONTAINER
     #=========================================================================
-    virtualisation.oci-containers.containers.firefly-pico = lib.mkIf cfg.pico.enable {
+    (lib.mkIf cfg.pico.enable (mkContainer {
+      name = "firefly-pico";
       image = cfg.images.pico;
-      autoStart = true;
-      dependsOn = [ "firefly" ];
+      networkMode = if cfg.network.mode == "media" then "media" else "host";
+      gpuEnable = false;
+      timeZone = cfg.settings.timezone;
 
-      extraOptions = networkOpts ++ [
+      # Resource limits
+      memory = cfg.resources.pico.memory;
+      cpus = cfg.resources.pico.cpus;
+      memorySwap = "1g";
+
+      # Extra options for network alias
+      extraOptions = lib.optionals (cfg.network.mode != "host") [
         "--network-alias=firefly-pico"
-        "--memory=${cfg.resources.pico.memory}"
-        "--cpus=${cfg.resources.pico.cpus}"
-        "--memory-swap=1g"
       ];
 
-      # Expose port for external access
-      ports = if cfg.network.mode != "host" then [
+      ports = lib.optionals (cfg.network.mode != "host") [
         "127.0.0.1:${toString cfg.reverseProxy.picoInternalPort}:80"
-      ] else [];
+      ];
 
       environment = {
-        # ================================================================
-        # CORE CONFIGURATION
-        # ================================================================
-        TZ = cfg.settings.timezone;
-
-        # ================================================================
-        # FIREFLY CONNECTION
-        # ================================================================
-        # Pico connects to Firefly III via container network
+        # Firefly connection
         FIREFLY_URL = cfg.pico.fireflyUrl;
 
-        # ================================================================
-        # DATABASE CONFIGURATION (Pico has its own DB)
-        # ================================================================
+        # Database configuration
         DB_CONNECTION = "pgsql";
         DB_HOST = cfg.database.host;
         DB_PORT = toString cfg.database.port;
@@ -142,76 +129,82 @@ in
       volumes = [
         "${fireflyPicoRoot}:/app/storage:rw"
       ];
-    };
+
+      dependsOn = [ "firefly" ];
+    }))
 
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
-    systemd.services = {
-      "podman-firefly" = {
-        after = [ "network-online.target" "postgresql.service" ]
-          ++ lib.optional (cfg.network.mode == "media") "init-media-network.service";
-        wants = [ "network-online.target" ];
-        serviceConfig = {
-          # Ensure the APP_KEY secret is readable
-          SupplementaryGroups = [ "secrets" ];
+    {
+      systemd.services = {
+        "podman-firefly" = {
+          after = [ "network-online.target" "postgresql.service" ]
+            ++ lib.optional (cfg.network.mode == "media") "init-media-network.service";
+          wants = [ "network-online.target" ];
+          serviceConfig = {
+            SupplementaryGroups = [ "secrets" ];
+          };
+          # Generate env file with APP_KEY from agenix secret
+          preStart = lib.mkAfter ''
+            APP_KEY=$(cat ${appKeyFile})
+            echo "APP_KEY=base64:$APP_KEY" > ${fireflyEnvFile}
+            chmod 644 ${fireflyEnvFile}
+          '';
         };
-        # Generate env file with APP_KEY from agenix secret
-        # Mode 644 so www-data (UID 33) inside container can read it
-        preStart = lib.mkAfter ''
-          APP_KEY=$(cat ${appKeyFile})
-          echo "APP_KEY=base64:$APP_KEY" > ${fireflyEnvFile}
-          chmod 644 ${fireflyEnvFile}
-        '';
-      };
 
-      "podman-firefly-pico" = lib.mkIf cfg.pico.enable {
-        after = [ "network-online.target" "postgresql.service" "podman-firefly.service" ]
-          ++ lib.optional (cfg.network.mode == "media") "init-media-network.service";
-        wants = [ "network-online.target" ];
+        "podman-firefly-pico" = lib.mkIf cfg.pico.enable {
+          after = [ "network-online.target" "postgresql.service" "podman-firefly.service" ]
+            ++ lib.optional (cfg.network.mode == "media") "init-media-network.service";
+          wants = [ "network-online.target" ];
+        };
       };
-    };
+    }
 
     #=========================================================================
     # FIREWALL CONFIGURATION
     #=========================================================================
-    # Open firewall ports only on Tailscale interface (not public)
-    networking.firewall.interfaces."tailscale0".allowedTCPPorts = [
-      cfg.reverseProxy.coreInternalPort
-    ] ++ lib.optionals cfg.pico.enable [
-      cfg.reverseProxy.picoInternalPort
-    ];
+    {
+      networking.firewall.interfaces."tailscale0".allowedTCPPorts = [
+        cfg.reverseProxy.coreInternalPort
+      ] ++ lib.optionals cfg.pico.enable [
+        cfg.reverseProxy.picoInternalPort
+      ];
+    }
 
     #=========================================================================
     # DATABASE REGISTRATION
     #=========================================================================
-    # Register databases with PostgreSQL service
-    hwc.server.databases.postgresql.databases = [
-      cfg.database.name
-    ] ++ lib.optionals cfg.pico.enable [
-      cfg.database.picoName
-    ];
+    {
+      hwc.server.databases.postgresql.databases = [
+        cfg.database.name
+      ] ++ lib.optionals cfg.pico.enable [
+        cfg.database.picoName
+      ];
+    }
 
     #=========================================================================
     # VALIDATION
     #=========================================================================
-    assertions = [
-      {
-        assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
-        message = "hwc.server.containers.firefly requires PostgreSQL to be enabled (hwc.server.databases.postgresql.enable = true)";
-      }
-      {
-        assertion = !cfg.enable || config.age.secrets ? firefly-app-key;
-        message = "hwc.server.containers.firefly requires firefly-app-key secret to be defined in domains/secrets/declarations/server.nix";
-      }
-      {
-        assertion = cfg.reverseProxy.corePort != cfg.reverseProxy.picoPort;
-        message = "Firefly III and Firefly-Pico must use different external TLS ports";
-      }
-      {
-        assertion = cfg.reverseProxy.coreInternalPort != cfg.reverseProxy.picoInternalPort;
-        message = "Firefly III and Firefly-Pico must use different internal ports";
-      }
-    ];
-  };
+    {
+      assertions = [
+        {
+          assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
+          message = "hwc.server.containers.firefly requires PostgreSQL to be enabled (hwc.server.databases.postgresql.enable = true)";
+        }
+        {
+          assertion = !cfg.enable || config.age.secrets ? firefly-app-key;
+          message = "hwc.server.containers.firefly requires firefly-app-key secret to be defined in domains/secrets/declarations/server.nix";
+        }
+        {
+          assertion = cfg.reverseProxy.corePort != cfg.reverseProxy.picoPort;
+          message = "Firefly III and Firefly-Pico must use different external TLS ports";
+        }
+        {
+          assertion = cfg.reverseProxy.coreInternalPort != cfg.reverseProxy.picoInternalPort;
+          message = "Firefly III and Firefly-Pico must use different internal ports";
+        }
+      ];
+    }
+  ]);
 }

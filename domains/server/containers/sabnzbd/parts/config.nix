@@ -1,5 +1,9 @@
 { lib, config, pkgs, ... }:
 let
+  # Import PURE helper library
+  helpers = import ../../_shared/pure.nix { inherit lib pkgs; };
+  inherit (helpers) mkContainer;
+
   cfg = config.hwc.server.containers.sabnzbd;
   paths = config.hwc.paths;
   appsRoot = config.hwc.paths.apps.root;
@@ -91,48 +95,34 @@ PY
   '';
 in
 {
-  config = lib.mkIf cfg.enable {
-
+  config = lib.mkIf cfg.enable (lib.mkMerge [
     #=========================================================================
     # ASSERTIONS AND VALIDATION
     #=========================================================================
-    assertions = [
-      {
-        assertion = cfg.network.mode != "vpn" || config.hwc.server.containers.gluetun.enable;
-        message = "SABnzbd with VPN networking requires gluetun container to be enabled";
-      }
-      {
-        assertion = paths.hot != null;
-        message = "SABnzbd requires hwc.paths.hot to be configured for downloads and events";
-      }
-    ];
+    {
+      assertions = [
+        {
+          assertion = cfg.network.mode != "vpn" || config.hwc.server.containers.gluetun.enable;
+          message = "SABnzbd with VPN networking requires gluetun container to be enabled";
+        }
+        {
+          assertion = paths.hot != null;
+          message = "SABnzbd requires hwc.paths.hot to be configured for downloads and events";
+        }
+      ];
+    }
 
     #=========================================================================
     # CONTAINER CONFIGURATION
     #=========================================================================
-    virtualisation.oci-containers.containers.sabnzbd = {
+    (mkContainer {
+      name = "sabnzbd";
       image = cfg.image;
-      autoStart = true;
+      networkMode = if cfg.network.mode == "vpn" then "vpn" else "media";
+      gpuEnable = cfg.gpu.enable;
+      timeZone = config.time.timeZone or "America/Denver";
 
-      # Network configuration - use gluetun network namespace for VPN mode
-      extraOptions = [
-        "--memory=2g"
-        "--cpus=1.0"
-        "--memory-swap=4g"
-      ] ++ (
-        if cfg.network.mode == "vpn"
-        then [ "--network=container:gluetun" ]
-        else [ "--network=media-network" ]
-      ) ++ lib.optionals cfg.gpu.enable [
-        "--device=/dev/dri:/dev/dri"
-      ];
-
-      # Environment variables
       environment = {
-        PUID = "1000";  # eric UID
-        PGID = "100";   # users GID (CRITICAL - users group is GID 100, not 1000!)
-        TZ = config.time.timeZone or "America/Denver";
-        # Set SABnzbd download directories
         SABNZBD_COMPLETE_DIR = "/downloads";
         SABNZBD_INCOMPLETE_DIR = "/config/incomplete";
       } // lib.optionalAttrs (cfg.network.mode == "vpn") {
@@ -140,7 +130,6 @@ in
         # but gluetun exposes it as 8081 externally
         SABNZBD_PORT = "8085";
       } // lib.optionalAttrs (cfg.network.mode != "vpn") {
-        # When not using VPN, use the configured webPort directly
         SABNZBD_PORT = toString cfg.webPort;
       };
 
@@ -153,38 +142,39 @@ in
       volumes = [
         "${configPath}:/config"
         "${paths.hot.root}/downloads:/downloads"
-        "${paths.hot.root}/events:/mnt/hot/events"  # CRITICAL for event processing
-        "${config.hwc.paths.hot.downloads}/scripts:/config/scripts:ro"  # Post-processing scripts
+        "${paths.hot.root}/events:/mnt/hot/events"
+        "${config.hwc.paths.hot.downloads}/scripts:/config/scripts:ro"
       ];
 
-      # Dependencies
       dependsOn = lib.optionals (cfg.network.mode == "vpn") [ "gluetun" ];
-    };
+    })
 
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
-    systemd.services.podman-sabnzbd = {
-      serviceConfig.ExecStartPre = [
-        "+${enforceCategoriesScript}"
-        "+${enforceHostWhitelist}"
-      ];
-      after = if cfg.network.mode == "vpn"
-        then [ "podman-gluetun.service" "mnt-hot.mount" ]
-        else [ "hwc-media-network.service" "mnt-hot.mount" ];
-      wants = if cfg.network.mode == "vpn"
-        then [ "podman-gluetun.service" ]
-        else [ "hwc-media-network.service" ];
-      requires = [ "mnt-hot.mount" ];
-    };
-
-
+    {
+      systemd.services.podman-sabnzbd = {
+        serviceConfig.ExecStartPre = [
+          "+${enforceCategoriesScript}"
+          "+${enforceHostWhitelist}"
+        ];
+        after = if cfg.network.mode == "vpn"
+          then [ "podman-gluetun.service" "mnt-hot.mount" ]
+          else [ "hwc-media-network.service" "mnt-hot.mount" ];
+        wants = if cfg.network.mode == "vpn"
+          then [ "podman-gluetun.service" ]
+          else [ "hwc-media-network.service" ];
+        requires = [ "mnt-hot.mount" ];
+      };
+    }
 
     #=========================================================================
     # FIREWALL CONFIGURATION
     #=========================================================================
-    networking.firewall.allowedTCPPorts = lib.optionals (cfg.network.mode != "vpn") [
-      cfg.webPort
-    ];
-  };
+    {
+      networking.firewall.allowedTCPPorts = lib.optionals (cfg.network.mode != "vpn") [
+        cfg.webPort
+      ];
+    }
+  ]);
 }

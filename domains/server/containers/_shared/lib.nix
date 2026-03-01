@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  inherit (lib) mkOption mkEnableOption types mkIf mkDefault mkMerge concatLists concatStringsSep;
+  inherit (lib) mkOption types;
 in
 {
   options.hwc.server.shared = {
@@ -13,59 +13,12 @@ in
     };
   };
 
-  # exported helpers - NOW PURE (no config reads)
-  config.hwc.server.shared.lib = rec {
-    mkBoolOption = { default ? false, description ? "" }:
-      mkOption { type = types.bool; inherit default description; };
-
-    mkImageOption = { default, description ? "" }:
-      mkOption { type = types.str; inherit default description; };
-
-    mkPathOption = { default ? null, description ? "" }:
-      mkOption { type = types.nullOr types.path; inherit default description; };
-
+  # NOTE: Container helpers are in pure.nix (mkContainer) and infra.nix (mkInfraContainer)
+  # Import them directly: import ../_shared/pure.nix { inherit lib pkgs; }
+  # These module-based helpers are kept for backwards compatibility only
+  config.hwc.server.shared.lib = {
+    # Route helper for reverse proxy configuration
     mkRoute = { path, upstream, stripPrefix ? false }:
       { inherit path upstream stripPrefix; };
-
-    # PURE: accepts GPU mode and timezone as arguments
-    mkContainer = {
-      name, image, networkMode ? "media", gpuEnable ? true,
-      gpuMode ? "intel", timeZone ? "UTC",
-      ports ? [], volumes ? [], environment ? {}, extraOptions ? [], dependsOn ? []
-    }:
-    let
-      podmanNetworkOpts =
-        if networkMode == "vpn"
-        then [ "--network=container:gluetun" ]
-        else [ "--network=media-network" ];
-      gpuOpts =
-        if (!gpuEnable) then []
-        else if gpuMode == "cuda" then [
-          "--device=/dev/nvidia0:/dev/nvidia0:rwm"
-          "--device=/dev/nvidiactl:/dev/nvidiactl:rwm"
-          "--device=/dev/nvidia-modeset:/dev/nvidia-modeset:rwm"
-          "--device=/dev/nvidia-uvm:/dev/nvidia-uvm:rwm"
-          "--device=/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools:rwm"
-          "--device=/dev/dri:/dev/dri:rwm"
-        ] else [
-          "--device=/dev/dri:/dev/dri"
-        ];
-      baseEnv = {
-        PUID = "1000";  # eric UID
-        PGID = "100";   # users GID (CORRECT - users group is GID 100, not 1000!)
-        TZ = timeZone;
-      };
-    in
-    {
-      virtualisation.oci-containers.containers.${name} = {
-        inherit image dependsOn;
-        autoStart = true;
-        environment = baseEnv // environment;
-        extraOptions = podmanNetworkOpts ++ gpuOpts ++ extraOptions
-          ++ [ "--memory=2g" "--cpus=1.0" "--memory-swap=4g" ];
-        ports = ports;
-        volumes = volumes;
-      };
-    };
   };
 }

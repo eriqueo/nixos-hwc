@@ -1,84 +1,80 @@
 # Organizr container configuration
 { lib, config, pkgs, ... }:
 let
+  # Import PURE helper library
+  helpers = import ../../_shared/pure.nix { inherit lib pkgs; };
+  inherit (helpers) mkContainer;
+
   cfg = config.hwc.server.containers.organizr;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/organizr/config";
 in
 {
-  config = lib.mkIf cfg.enable {
-
+  config = lib.mkIf cfg.enable (lib.mkMerge [
     #=========================================================================
     # ASSERTIONS AND VALIDATION
     #=========================================================================
-    assertions = [
-      {
-        assertion = config.hwc.server.reverseProxy.enable;
-        message = "Organizr works best with reverse proxy enabled for service integration";
-      }
-    ];
+    {
+      assertions = [
+        {
+          assertion = config.hwc.server.reverseProxy.enable;
+          message = "Organizr works best with reverse proxy enabled for service integration";
+        }
+      ];
+    }
 
     #=========================================================================
     # CONTAINER CONFIGURATION
     #=========================================================================
-    virtualisation.oci-containers.containers.organizr = {
+    (mkContainer {
+      name = "organizr";
       image = cfg.image;
-      autoStart = true;
+      networkMode = if cfg.network.mode == "vpn" then "vpn" else "media";
+      gpuEnable = cfg.gpu.enable;
+      timeZone = config.time.timeZone or "America/Denver";
 
-      # Network configuration
-      extraOptions = [
-        "--memory=1g"
-        "--cpus=0.5"
-        "--memory-swap=2g"
-      ] ++ (
-        if cfg.network.mode == "vpn"
-        then [ "--network=container:gluetun" ]
-        else [ "--network=media-network" ]
-      ) ++ lib.optionals cfg.gpu.enable [
-        "--device=/dev/dri:/dev/dri"
-      ];
+      # Resource limits (lighter than default)
+      memory = "1g";
+      cpus = "0.5";
+      memorySwap = "2g";
 
-      # Environment variables
       environment = {
-        PUID = "1000";  # eric UID
-        PGID = "100";   # users GID (CRITICAL - users group is GID 100, not 1000!)
-        TZ = config.time.timeZone or "America/Denver";
-
-        # Branch (v2-master is stable)
-        branch = "v2-master";
+        branch = "v2-master";  # v2-master is stable
       };
 
-      # Port exposure
+      # Port exposure (80 is container internal port)
       ports = lib.optionals (cfg.network.mode != "vpn") [
         "127.0.0.1:${toString cfg.webPort}:80"
       ];
 
-      # Volume mounts
       volumes = [
         "${configPath}:/config"
       ];
 
-      # Dependencies
       dependsOn = lib.optionals (cfg.network.mode == "vpn") [ "gluetun" ];
-    };
+    })
 
     #=========================================================================
     # SYSTEMD SERVICE DEPENDENCIES
     #=========================================================================
-    systemd.services.podman-organizr = {
-      after = if cfg.network.mode == "vpn"
-        then [ "podman-gluetun.service" ]
-        else [ "init-media-network.service" ];
-      wants = if cfg.network.mode == "vpn"
-        then [ "podman-gluetun.service" ]
-        else [ "init-media-network.service" ];
-    };
+    {
+      systemd.services.podman-organizr = {
+        after = if cfg.network.mode == "vpn"
+          then [ "podman-gluetun.service" ]
+          else [ "init-media-network.service" ];
+        wants = if cfg.network.mode == "vpn"
+          then [ "podman-gluetun.service" ]
+          else [ "init-media-network.service" ];
+      };
+    }
 
     #=========================================================================
     # FIREWALL CONFIGURATION
     #=========================================================================
-    networking.firewall.allowedTCPPorts = lib.optionals (cfg.network.mode != "vpn") [
-      cfg.webPort
-    ];
-  };
+    {
+      networking.firewall.allowedTCPPorts = lib.optionals (cfg.network.mode != "vpn") [
+        cfg.webPort
+      ];
+    }
+  ]);
 }
