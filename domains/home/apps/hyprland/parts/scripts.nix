@@ -52,36 +52,39 @@ with pkgs;
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # Get list of connected monitors
-    MONITORS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[].name')
-    LAPTOP=$(echo "$MONITORS" | ${gnugrep}/bin/grep -E "(eDP|LVDS)" | head -1)
-    EXTERNAL=$(echo "$MONITORS" | ${gnugrep}/bin/grep -v -E "(eDP|LVDS)" | head -1)
+    # Get monitor data once
+    MONITOR_DATA=$(${hyprland}/bin/hyprctl monitors -j)
+
+    # Identify laptop and external monitors
+    LAPTOP=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.name | test("eDP|LVDS")) | .name' | head -1)
+    EXTERNAL=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.name | test("eDP|LVDS") | not) | .name' | head -1)
 
     if [[ -z "$EXTERNAL" ]]; then
       ${libnotify}/bin/notify-send "Monitor" "No external monitor detected" -t 2000 -i display
       exit 1
     fi
 
-    # Get current positions
-    LAPTOP_POS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .x")
-    EXTERNAL_POS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | .x")
+    # Get current laptop position
+    LAPTOP_POS=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .x")
 
-    # Get monitor specs
-    LAPTOP_SPEC=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | \"\(.width)x\(.height)@\(.refreshRate)\"")
-    EXTERNAL_SPEC=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | \"\(.width)x\(.height)@\(.refreshRate)\"")
-    LAPTOP_WIDTH=$(echo "$LAPTOP_SPEC" | cut -d'x' -f1)
-    EXTERNAL_WIDTH=$(echo "$EXTERNAL_SPEC" | cut -d'x' -f1)
+    # Get monitor specs (resolution@refresh,position,scale)
+    LAPTOP_SPEC=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | \"\(.width)x\(.height)@\(.refreshRate | floor)\"")
+    EXTERNAL_SPEC=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | \"\(.width)x\(.height)@\(.refreshRate | floor)\"")
+    LAPTOP_SCALE=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .scale")
+    EXTERNAL_SCALE=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | .scale")
+
+    # Calculate effective widths (accounting for scale)
+    LAPTOP_WIDTH=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | (.width / .scale | floor)")
+    EXTERNAL_WIDTH=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | (.width / .scale | floor)")
 
     if [[ $LAPTOP_POS -eq 0 ]]; then
-      # Laptop is on left, move external to left
-      ${hyprland}/bin/hyprctl keyword monitor "$EXTERNAL,$EXTERNAL_SPEC,0x0,1"
-      ${hyprland}/bin/hyprctl keyword monitor "$LAPTOP,$LAPTOP_SPEC,''${EXTERNAL_WIDTH}x0,1"
-      ${libnotify}/bin/notify-send "Monitor" "External monitor moved to left" -t 2000 -i display
+      # Laptop is on left, move external to left (use --batch for atomic change)
+      ${hyprland}/bin/hyprctl --batch "keyword monitor $EXTERNAL,$EXTERNAL_SPEC,0x0,$EXTERNAL_SCALE ; keyword monitor $LAPTOP,$LAPTOP_SPEC,''${EXTERNAL_WIDTH}x0,$LAPTOP_SCALE"
+      ${libnotify}/bin/notify-send "Monitor" "External on left" -t 1500 -i display
     else
       # Laptop is on right, move external to right
-      ${hyprland}/bin/hyprctl keyword monitor "$LAPTOP,$LAPTOP_SPEC,0x0,1"
-      ${hyprland}/bin/hyprctl keyword monitor "$EXTERNAL,$EXTERNAL_SPEC,''${LAPTOP_WIDTH}x0,1"
-      ${libnotify}/bin/notify-send "Monitor" "External monitor moved to right" -t 2000 -i display
+      ${hyprland}/bin/hyprctl --batch "keyword monitor $LAPTOP,$LAPTOP_SPEC,0x0,$LAPTOP_SCALE ; keyword monitor $EXTERNAL,$EXTERNAL_SPEC,''${LAPTOP_WIDTH}x0,$EXTERNAL_SCALE"
+      ${libnotify}/bin/notify-send "Monitor" "External on right" -t 1500 -i display
     fi
   '')
 
