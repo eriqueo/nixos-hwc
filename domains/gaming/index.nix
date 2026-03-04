@@ -2,8 +2,7 @@
 #
 # Gaming Domain - Emulation and game streaming services
 #
-# NAMESPACE: hwc.server.native.retroarch.*, hwc.server.native.webdav.*
-#   (namespace migration deferred to later phase)
+# NAMESPACE: hwc.gaming.{retroarch,webdav}.*
 #
 # USED BY:
 #   - machines/server/config.nix

@@ -25,19 +25,15 @@ domains/gaming/
 ## Configuration
 
 ```nix
-hwc.server.native.retroarch = {
+hwc.gaming.retroarch = {
   enable = true;
   dataDir = "/mnt/media/retroarch";
-  cores = {
-    snes9x = true;
-    mgba = true;
-    # ...
-  };
+  cores = { snes9x = true; mgba = true; };
   sunshine.enable = true;
   gpu.enable = true;
 };
 
-hwc.server.native.webdav = {
+hwc.gaming.webdav = {
   enable = true;
   auth.usernameFile = config.age.secrets.webdav-username.path;
   auth.passwordFile = config.age.secrets.webdav-password.path;
@@ -46,4 +42,5 @@ hwc.server.native.webdav = {
 
 ## Changelog
 
+- 2026-03-04: Namespace migration hwc.server.native.{retroarch,webdav} → hwc.gaming.*
 - 2026-03-04: Created gaming domain, moved retroarch and webdav from domains/server/native/

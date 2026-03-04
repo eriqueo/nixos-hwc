@@ -7,7 +7,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.native.webdav = {
+  options.hwc.gaming.webdav = {
     enable = mkEnableOption "WebDAV server using dufs for file synchronization";
 
     settings = {

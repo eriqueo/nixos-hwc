@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.retroarch;
+  cfg = config.hwc.gaming.retroarch;
 
   # RetroArch with selected cores
   retroarchWithCores = pkgs.retroarch.withCores (cores:
@@ -108,11 +108,11 @@ in
     assertions = [
       {
         assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
-        message = "hwc.server.native.retroarch.gpu requires hwc.system.hardware.gpu.enable = true";
+        message = "hwc.gaming.retroarch.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       {
         assertion = !(cfg.sunshine.enable && !cfg.gpu.enable);
-        message = "Sunshine streaming requires GPU acceleration (hwc.server.native.retroarch.gpu.enable = true)";
+        message = "Sunshine streaming requires GPU acceleration (hwc.gaming.retroarch.gpu.enable = true)";
       }
     ];
   };

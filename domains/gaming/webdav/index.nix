@@ -4,7 +4,7 @@
 # Lightweight Rust-based WebDAV server for RetroArch save sync
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.webdav;
+  cfg = config.hwc.gaming.webdav;
 
   # Build the dufs command with authentication and paths
   # dufs supports basic auth via --auth user:pass@/path format
@@ -118,15 +118,15 @@ in
     assertions = [
       {
         assertion = !cfg.reverseProxy.enable || config.hwc.networking.reverseProxy.enable;
-        message = "hwc.server.native.webdav.reverseProxy requires hwc.networking.reverseProxy.enable = true";
+        message = "hwc.gaming.webdav.reverseProxy requires hwc.networking.reverseProxy.enable = true";
       }
       {
         assertion = cfg.auth.usernameFile != null && cfg.auth.passwordFile != null;
-        message = "hwc.server.native.webdav requires auth.usernameFile and auth.passwordFile to be set for security";
+        message = "hwc.gaming.webdav requires auth.usernameFile and auth.passwordFile to be set for security";
       }
       {
-        assertion = !cfg.retroarch.enable || config.hwc.server.native.retroarch.enable;
-        message = "hwc.server.native.webdav.retroarch requires hwc.server.native.retroarch.enable = true";
+        assertion = !cfg.retroarch.enable || config.hwc.gaming.retroarch.enable;
+        message = "hwc.gaming.webdav.retroarch requires hwc.gaming.retroarch.enable = true";
       }
     ];
   };
