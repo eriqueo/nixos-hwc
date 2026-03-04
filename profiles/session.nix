@@ -107,7 +107,7 @@
           onlyoffice-desktopeditors.enable = lib.mkDefault true;
 
           # Creative & Media
-          blender.enable = lib.mkDefault false;
+          blender.enable = lib.mkDefault true;
           freecad.enable = lib.mkDefault false;
 
           # Development & Automation

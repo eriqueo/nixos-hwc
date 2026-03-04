@@ -31,7 +31,16 @@
     ../../domains/automation/index.nix
     ../../domains/networking/index.nix
   ];
-
+  nix.settings = {
+    substituters = [
+      "https://cache.nixos.org/"
+      "https://cache.nixos-cuda.org"
+    ];
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
+    ];
+  };
   # Blender 3D modeling with GPU rendering support (configured in profiles/home.nix)
   # External presets stored in ~/500_media/540_blender
 
@@ -432,4 +441,7 @@
   ];
 
   programs.dconf.enable = true;
+
+  # Allow password auth for SSH (same as server)
+  services.openssh.settings.PasswordAuthentication = lib.mkForce true;
 }
