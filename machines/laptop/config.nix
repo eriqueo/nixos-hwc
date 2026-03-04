@@ -21,18 +21,13 @@
     ./hardware.nix
     "${modulesPath}/hardware/cpu/intel-npu.nix"
 
-    # Profiles that define the machine's capabilities.
-    # The system.nix profile is now the main entry point for all system services.
-    ../../profiles/system.nix
-    ../../profiles/home.nix
-    ./home.nix
-    ../../profiles/security.nix
-    ../../profiles/ai.nix  # Enable local AI for laptop
+    # Profiles — core (system/paths/secrets) + session (GUI/audio/HM)
+    ../../profiles/core.nix
+    ../../profiles/session.nix
+    ./home.nix  # Machine-specific HM overrides
 
-    # Hardware and virtualization are now in domains/system/ and imported via profiles/base.nix
-    # GPU config: hwc.system.hardware.gpu.*
-    # Virtualization: hwc.system.virtualization.*
-    # WinApps: hwc.system.virtualization.winapps.*
+    # Domains — laptop-specific capabilities
+    ../../domains/ai/index.nix
   ];
 
   # Blender 3D modeling with GPU rendering support (configured in profiles/home.nix)

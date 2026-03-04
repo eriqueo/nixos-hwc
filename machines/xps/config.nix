@@ -8,16 +8,18 @@
 {
   imports = [
     ./hardware.nix
-    ../../profiles/system.nix
-    ../../profiles/home.nix         # Home Manager domain menu
-    ./home.nix
-    ../../profiles/server.nix
-    ../../profiles/security.nix
-    ../../profiles/ai.nix
-    ../../profiles/alerts.nix
-    ../../domains/server/native/routes.nix
-    # NOTE: Frigate NOT imported - no surveillance cameras at remote location
-    ../../profiles/monitoring.nix   # Monitoring enabled: Prometheus + Grafana
+
+    # Profiles — core (system/paths/secrets) + session (GUI/audio/HM)
+    ../../profiles/core.nix
+    ../../profiles/session.nix
+    ./home.nix  # Machine-specific HM overrides
+
+    # Domains — xps-specific capabilities (still using old paths until migration)
+    ../../profiles/server.nix         # TODO Phase 10: replace with direct domain imports
+    ../../domains/ai/index.nix
+    ../../domains/alerts/index.nix
+    ../../domains/server/native/routes.nix  # TODO Phase 3: move to domains/networking
+    ../../profiles/monitoring.nix     # TODO Phase 4: replace with domains/monitoring
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
   ];

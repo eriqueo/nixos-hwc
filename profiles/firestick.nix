@@ -1,10 +1,9 @@
 { lib, ... }:
 
 {
-  # Lean travel-TV stack: reuse system profile defaults, then strip extras.
+  # Lean travel-TV stack: reuse core profile defaults, then strip extras.
   imports = [
-    ./system.nix
-    ./security.nix
+    ./core.nix
   ];
 
   # No backups or Samba on the stick.

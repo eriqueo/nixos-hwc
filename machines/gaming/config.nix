@@ -2,11 +2,12 @@
 
 {
   imports = [
-    ./hardware.nix                    # Auto-generated when SBC available
-    ./home.nix                        # Home Manager activation
-    ../../profiles/system.nix         # Base system (users, shell, hardware)
-    ../../profiles/security.nix       # Secrets and security hardening
-    ../../profiles/gaming.nix         # Gaming profile
+    ./hardware.nix
+    ./home.nix                        # Machine-specific HM (gaming has custom lean HM)
+
+    # Core profile — system/paths/secrets
+    ../../profiles/core.nix
+    ../../profiles/gaming.nix         # Gaming-specific config (session, audio, perf tuning)
   ];
 
   # Machine identity
