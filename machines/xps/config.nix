@@ -15,7 +15,7 @@
     ./home.nix  # Machine-specific HM overrides
 
     # Domains — xps-specific capabilities
-    ../../profiles/server.nix         # TODO Phase 10: replace with direct domain imports
+    ../../domains/server/index.nix    # Server options + caddy + shared container dirs
     ../../domains/ai/index.nix
     ../../domains/alerts/index.nix
     ../../domains/networking/index.nix
