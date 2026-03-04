@@ -368,12 +368,7 @@
   # To enable specific services, override like:
   #   hwc.server.containers.jellyfin.enable = true;
 
-  # Feature enablement
-  hwc.features = {
-    monitoring.enable = true;     # Prometheus + Grafana monitoring stack
-    # media.enable = true;        # TODO: Fix sops/agenix conflict
-    # business.enable = true;     # TODO: Enable when business containers are implemented
-  };
+  # Monitoring enabled via profiles/monitoring.nix import (direct enablement, no hwc.features gate)
 
   # Disable exportarr monitoring (no *arr services on secondary server)
   hwc.server.native.monitoring.exportarr.enable = lib.mkForce false;

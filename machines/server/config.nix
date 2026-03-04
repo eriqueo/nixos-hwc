@@ -629,12 +629,7 @@
 
   # Reverse proxy domain handled by server profile
 
-  # Feature enablement
-  hwc.features = {
-    monitoring.enable = true;     # Prometheus + Grafana monitoring stack
-    # media.enable = true;        # TODO: Fix sops/agenix conflict
-    # business.enable = true;     # TODO: Enable when business containers are implemented
-  };
+  # Monitoring enabled via profiles/monitoring.nix import (direct enablement, no hwc.features gate)
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
