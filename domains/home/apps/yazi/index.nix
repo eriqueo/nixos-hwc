@@ -86,6 +86,14 @@ in
             ]
 
             tmtheme = "~/.config/yazi/Kanagawa.tmTheme"
+            [which]
+                cols = 2
+                separator = " → "
+                separator_style = { fg = "accent" }
+                mask = { bg = "bg0" }
+                rest = { fg = "fg3" }
+                cand = { fg = "accent" }
+                desc = { fg = "fg2" }
           '';
         };
       }
