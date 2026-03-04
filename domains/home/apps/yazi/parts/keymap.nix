@@ -5,13 +5,11 @@
     text = ''
     # ~/.config/yazi/keymap.toml
     [mgr]
-    keymap = [
+    prepend_keymap = [
       # Space-leader: GO/NAV (Updated with numbered shortcuts)
       { on = [ "<Space>", "g", "h" ], run = "plugin bookmarks --args=h", desc = "Go: home" },
       { on = [ "<Space>", "g", "c" ], run = "plugin bookmarks --args=c", desc = "Go: config" },
       { on = [ "<Space>", "g", "n" ], run = "plugin bookmarks --args=n", desc = "Go: nixos" },
-      { on = [ "<Space>", "g", "r" ], run = "cd /", desc = "Go: root" },
-      { on = [ "<Space>", "g", "t" ], run = "cd /tmp", desc = "Go: temp" },
       
       # NEW: Numbered directory shortcuts (3-digit filesystem structure)
       { on = [ "<Space>", "g", "0" ], run = "plugin bookmarks --args=i", desc = "Go: inbox" },
@@ -27,8 +25,7 @@
       { on = [ "<Space>", "g", "v" ], run = "plugin bookmarks --args=v", desc = "Go: vaults" },
     
       # Space-leader: FIND/SEARCH (keeping your existing setup)
-      { on = [ "<Space>", "f", "f" ], run = "plugin smart_filter", desc = "Find: smart filter" },
-      { on = [ "<Space>", "f", "F" ], run = "filter", desc = "Find: basic filter" },
+      { on = [ "<Space>", "f", "f" ], run = "plugin smart-filter", desc = "Find: smart filter" },
       { on = [ "<Space>", "f", "n" ], run = 'search --via=fd --args="--type f"', desc = "Find: by name (files only)" },
       { on = [ "<Space>", "f", "c" ], run = "search --via=rg", desc = "Find: content (ripgrep)" },
       { on = [ "<Space>", "f", "d" ], run = "search --via=fd", desc = "Find: fd search" },

@@ -6,7 +6,7 @@
       require("full-border"):setup()
       require("bookmarks"):setup()
       require("glow")
-      require("smart_filter")
+      require("smart-filter")
       require("chmod")
     '';
   };
@@ -106,7 +106,7 @@
   # ========================================================================
   # SMART-FILTER - Enhanced filtering with visual feedback
   # ========================================================================
-  "yazi/plugins/smart_filter.yazi/main.lua" = {
+  "yazi/plugins/smart-filter.yazi/main.lua" = {
     text = ''
       local function entry(self, args)
         ya.manager_emit("filter", { smart = true })
@@ -192,12 +192,12 @@
         -- Setup is called from init.lua
       end
 
-      local function entry(args)
-        local key = args[1]
+      local function entry(_, job)
+        local key = job.args[1]
         if not key then
           ya.notify {
             title = "Bookmarks",
-            content = "Available: h(home) c(config) n(nixos) i(inbox) w(work) p(personal) t(tech) m(media) v(vaults)",
+            content = "Available: (home) (config) (nixos) (inbox) (work) (personal) t(tech) m(media) v(vaults)",
             level = "info",
             timeout = 5
           }
@@ -205,16 +205,19 @@
         end
 
         local path = bookmarks[key]
-        if path then
-          ya.manager_emit("cd", { path })
-        else
+        if not path then
           ya.notify {
             title = "Bookmarks",
-            content = "Unknown bookmark: " .. key,
+            content = "Unknown: " .. key,
             level = "warn",
-            timeout = 3
+            timeout = 2
           }
+          return
         end
+
+        -- Expand ~ and cd --
+        local expanded = ya.expand(path)  
+        ya.manager_emit("cd", { expanded })
       end
 
       return {
