@@ -5,7 +5,7 @@
 # NAMESPACE: hwc.alerts.*
 #
 # DEPENDENCIES:
-#   - hwc.server.native.n8n (webhook receiver)
+#   - hwc.automation.n8n (webhook receiver)
 #   - hwc.secrets.api.slackWebhookUrlFile (Slack webhook URL)
 
 { lib, config, ... }:
