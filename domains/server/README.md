@@ -42,13 +42,13 @@ All services migrated out of domains/server/:
 ## Namespace
 
 - `hwc.server.enable` — enables server workloads
-- `hwc.server.role` — `"primary"` or `"secondary"` (controls isPrimary defaults in machine config)
 - `hwc.server.containers.*` — still used by moved container modules (namespace unchanged)
 - `hwc.server.native.*` — still used by moved native modules (namespace unchanged)
 - `hwc.server.reverseProxy.*` — defined in `domains/networking/reverseProxy.nix`
 
 ## Changelog
 
+- 2026-03-04: Removed hwc.server.role option and isPrimary indirection
 - 2026-03-04: Removed stale domains/server/media/ (orphaned stub, never imported)
 - 2026-03-04: DDD migration complete — all services moved to dedicated domains; native/ deleted; README updated
 - 2026-02-26: Created README per Law 12
