@@ -119,4 +119,36 @@ with pkgs;
     # If all checks pass, show success
     ${libnotify}/bin/notify-send "System Health" "All systems nominal ✓\nDisk: $DISK_USAGE% | Memory: $MEM_USAGE% | CPU: $TEMP°C" -t 3000 -i emblem-ok-symbolic
   '')
+
+  #============================================================================
+  # KEYBINDS VIEWER - Display all Hyprland keybindings in searchable wofi
+  #============================================================================
+  (writeShellScriptBin "hyprland-keybinds-viewer" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Get keybinds as JSON and format for display
+    KEYBINDS=$(${hyprland}/bin/hyprctl binds -j | ${jq}/bin/jq -r '
+      .[] |
+      # Build modifier string
+      (
+        (if .modmask | . > 0 then
+          (
+            (if (. % 2) == 1 then ["SHIFT"] else [] end) +
+            (if (. / 4 | floor % 2) == 1 then ["CTRL"] else [] end) +
+            (if (. / 8 | floor % 2) == 1 then ["ALT"] else [] end) +
+            (if (. / 64 | floor % 2) == 1 then ["SUPER"] else [] end)
+          ) | join("+")
+        else "" end) as $mods |
+        if $mods != "" then $mods + "+" else "" end
+      ) +
+      .key +
+      " → " +
+      .dispatcher +
+      (if .arg != "" then " " + .arg else "" end)
+    ' | sort)
+
+    # Display in wofi
+    echo "$KEYBINDS" | ${wofi}/bin/wofi --dmenu --prompt "Keybindings:" --lines 20 --width 600
+  '')
 ]
