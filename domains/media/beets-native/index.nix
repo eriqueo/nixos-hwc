@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.media.beets-native-native;
+  cfg = config.hwc.media.beetsNative;
 
   # Beets with all plugins enabled
   beetsPackage = pkgs.beets;
