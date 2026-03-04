@@ -340,10 +340,10 @@
   };
 
   # Automated server backups (containers, databases, system)
-  hwc.server.native.backup.enable = true;
+  hwc.data.backup.enable = true;
 
   # CouchDB for Obsidian LiveSync
-  hwc.server.native.couchdb = {
+  hwc.data.couchdb = {
     enable = true;
     settings = {
       port = 5984;

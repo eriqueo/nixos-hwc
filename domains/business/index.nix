@@ -6,7 +6,7 @@
 #
 # DEPENDENCIES:
 #   - hwc.paths (storage paths)
-#   - hwc.server.databases.postgresql (database backend)
+#   - hwc.data.databases.postgresql (database backend)
 #   - Optional: hwc.ai.ollama (for OCR LLM normalization)
 #
 # USED BY:
@@ -24,7 +24,7 @@ let
 
   # Check if PostgreSQL is available
   postgresqlAvailable =
-    (config.hwc.server.databases.postgresql.enable or false) ||
+    (config.hwc.data.databases.postgresql.enable or false) ||
     (config.services.postgresql.enable or false);
 
 in
@@ -140,7 +140,7 @@ in
         assertion = !cfg.receiptsOcr.enable || postgresqlAvailable;
         message = ''
           hwc.business.receiptsOcr requires PostgreSQL to be enabled.
-          Enable with: hwc.server.databases.postgresql.enable = true
+          Enable with: hwc.data.databases.postgresql.enable = true
           Or: services.postgresql.enable = true
         '';
       }

@@ -12,7 +12,7 @@
 #   - Deduplication: Global transcripts table prevents re-extraction
 #
 # DEPENDENCIES:
-#   - PostgreSQL (hwc.server.databases.postgresql)
+#   - PostgreSQL (hwc.data.databases.postgresql)
 #   - YouTube API key (optional, for playlist expansion)
 #   - yt_core and yt_transcripts_api Python packages
 
@@ -256,7 +256,7 @@ in
     # Validation assertions
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
+        assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
         message = "yt-transcripts-api requires PostgreSQL to be enabled";
       }
       {

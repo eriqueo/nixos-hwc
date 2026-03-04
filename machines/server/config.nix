@@ -580,7 +580,7 @@
 
   # Server-backup DISABLED - NixOS config is in git, databases handled by backup-local preBackupScript
   # Container volumes (music) too large and replaceable - not worth backing up
-  hwc.server.native.backup.enable = false;
+  hwc.data.backup.enable = false;
 
   # TEMPORARY: Disable navidrome due to pkg-config build failure in NixOS 25.11
   # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix
@@ -596,7 +596,7 @@
     port = 6020;
   };
   # CouchDB for Obsidian LiveSync
-  hwc.server.native.couchdb = {
+  hwc.data.couchdb = {
     enable = true;
     settings = {
       port = 5984;
@@ -944,13 +944,13 @@
 
   # PostgreSQL (always enabled — used by many services)
   # Version pinned to 15 in domains/data/databases/index.nix (data format lock)
-  hwc.server.databases.postgresql = {
+  hwc.data.databases.postgresql = {
     enable = lib.mkDefault true;
     version = "15";
   };
 
   # Storage automation
-  hwc.server.storage = {
+  hwc.data.storage = {
     enable = lib.mkDefault true;
     cleanup = {
       enable = lib.mkDefault true;

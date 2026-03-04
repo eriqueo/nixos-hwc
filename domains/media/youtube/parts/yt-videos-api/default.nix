@@ -13,7 +13,7 @@
 #   - Deduplication: Global downloads table prevents re-downloads
 #
 # DEPENDENCIES:
-#   - PostgreSQL (hwc.server.databases.postgresql)
+#   - PostgreSQL (hwc.data.databases.postgresql)
 #   - yt-dlp (for downloads)
 #   - ffmpeg-full (for metadata embedding)
 #   - YouTube API key (optional, for playlist expansion)
@@ -275,7 +275,7 @@ in
     # Validation assertions
     assertions = [
       {
-        assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
+        assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
         message = "yt-videos-api requires PostgreSQL to be enabled";
       }
       {

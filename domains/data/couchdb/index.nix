@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.couchdb;
+  cfg = config.hwc.data.couchdb;
   generateConfig = import ./config-generator.nix;
 
   # Use secrets API with fallback

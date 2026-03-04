@@ -3,7 +3,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.native.couchdb = {
+  options.hwc.data.couchdb = {
     enable = mkEnableOption "CouchDB database server for Obsidian LiveSync";
 
     settings = {
