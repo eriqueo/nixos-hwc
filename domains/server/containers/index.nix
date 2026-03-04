@@ -12,10 +12,6 @@
     # Shared infrastructure (directories.nix still needed for tmpfiles)
     ./_shared/directories.nix
 
-    # Business containers (TODO Phase 8: move to domains/business/)
-    ./paperless/index.nix
-    ./firefly/index.nix
-
     # Caddy container (unused/stub — kept for option compatibility)
     ./caddy/index.nix
   ];
