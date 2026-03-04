@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.jellyseerr;
+  cfg = config.hwc.media.jellyseerr;
 in
 {
   #==========================================================================

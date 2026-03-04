@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.tdarr;
+  cfg = config.hwc.media.tdarr;
 in
 {
   config = lib.mkIf cfg.enable {

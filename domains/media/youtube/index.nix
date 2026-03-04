@@ -3,7 +3,7 @@
 # YouTube content acquisition domain aggregator
 # Consolidates transcript and video download services
 #
-# NAMESPACE: hwc.server.native.youtube.*
+# NAMESPACE: hwc.media.youtube.*
 #
 # USED BY:
 #   - domains/server/native/index.nix

@@ -4,7 +4,7 @@ let
   helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
-  cfg = config.hwc.server.containers.sabnzbd;
+  cfg = config.hwc.media.sabnzbd;
   paths = config.hwc.paths;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/sabnzbd/config";

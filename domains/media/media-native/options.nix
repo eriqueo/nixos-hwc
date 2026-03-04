@@ -4,7 +4,7 @@
 
 { lib, ... }:
 {
-  options.hwc.server.native.media = {
+  options.hwc.media.media = {
     enable = lib.mkEnableOption "media services defaults (storage scaffolding)";
   };
 }

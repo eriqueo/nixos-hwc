@@ -1,7 +1,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.containers.books;
+  cfg = config.hwc.media.books;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/books/config";
   iniPath = "${configPath}/config.ini";

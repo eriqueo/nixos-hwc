@@ -1,7 +1,7 @@
 # Lidarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.lidarr;
+  cfg = config.hwc.media.lidarr;
   arrConfig = import ../../../lib/arr-config.nix { inherit lib pkgs; };
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/lidarr/config";

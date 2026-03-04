@@ -476,7 +476,7 @@
 
   # NVIDIA license acceptance handled in flake.nix
 
-  # GPU acceleration for Immich handled by hwc.server.native.immich.gpu.enable in server profile
+  # GPU acceleration for Immich handled by hwc.media.immich.gpu.enable in server profile
 
   # AI DOMAIN CONFIGURATION (Server)
   #============================================================================
@@ -584,8 +584,8 @@
 
   # TEMPORARY: Disable navidrome due to pkg-config build failure in NixOS 25.11
   # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix
-  hwc.server.native.navidrome.enable = lib.mkForce false;
-  hwc.server.containers.navidrome.enable = true;
+  hwc.media.navidrome.enable = lib.mkForce false;
+  hwc.media.navidrome.enable = true;
   # Enable AI router and agent on server
   hwc.ai.router = {
     enable = true;
@@ -620,7 +620,7 @@
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
   # Access: https://hwc.ocelot-wahoo.ts.net:5443 (via Caddy)
   # Charter v7.0 Section 19 compliant - TensorRT CUDA support
-  hwc.server.native.frigate = {
+  hwc.media.frigate = {
     enable = true;
 
     # Internal port 5001 (exposed as 5443 via Caddy)
@@ -678,9 +678,9 @@
   };
 
   # Native Media Services now handled by Charter-compliant domain modules
-  # - hwc.server.native.jellyfin via server profile
-  # - hwc.server.native.immich via server profile (NOT AVAILABLE in stable 24.05 - module disabled)
-  # - hwc.server.native.navidrome via server profile
+  # - hwc.media.jellyfin via server profile
+  # - hwc.media.immich via server profile (NOT AVAILABLE in stable 24.05 - module disabled)
+  # - hwc.media.navidrome via server profile
 
   # Navidrome configuration handled by server profile native service
 
@@ -797,40 +797,40 @@
       checkInterval = 60;
     };
   };
-  hwc.server.containers.qbittorrent.enable = lib.mkDefault true;
-  hwc.server.containers.sabnzbd.enable = lib.mkDefault true;
-  hwc.server.containers.mousehole.enable = lib.mkDefault true;
+  hwc.media.qbittorrent.enable = lib.mkDefault true;
+  hwc.media.sabnzbd.enable = lib.mkDefault true;
+  hwc.media.mousehole.enable = lib.mkDefault true;
 
   # *arr stack
-  hwc.server.containers.prowlarr.enable = lib.mkDefault true;
-  hwc.server.containers.sonarr.enable = lib.mkDefault true;
-  hwc.server.containers.radarr.enable = lib.mkDefault true;
-  hwc.server.containers.lidarr.enable = lib.mkDefault true;
-  hwc.server.containers.readarr.enable = lib.mkDefault true;
-  hwc.server.containers.books.enable = lib.mkDefault true;
-  hwc.server.containers.calibre.enable = lib.mkDefault true;
-  hwc.server.containers.audiobookshelf.enable = lib.mkDefault true;
-  hwc.server.native.orchestration.audiobookCopier.enable = lib.mkDefault true;
+  hwc.media.prowlarr.enable = lib.mkDefault true;
+  hwc.media.sonarr.enable = lib.mkDefault true;
+  hwc.media.radarr.enable = lib.mkDefault true;
+  hwc.media.lidarr.enable = lib.mkDefault true;
+  hwc.media.readarr.enable = lib.mkDefault true;
+  hwc.media.books.enable = lib.mkDefault true;
+  hwc.media.calibre.enable = lib.mkDefault true;
+  hwc.media.audiobookshelf.enable = lib.mkDefault true;
+  hwc.media.orchestration.audiobookCopier.enable = lib.mkDefault true;
 
   # Beets music organizer (using native installation)
-  hwc.server.containers.beets.enable = false;
+  hwc.media.beets.enable = false;
 
   # Media discovery + download management
-  hwc.server.containers.jellyseerr.enable = lib.mkDefault true;
-  hwc.server.containers.slskd.enable = lib.mkDefault true;
-  hwc.server.containers.soularr.enable = lib.mkDefault true;
+  hwc.media.jellyseerr.enable = lib.mkDefault true;
+  hwc.media.slskd.enable = lib.mkDefault true;
+  hwc.media.soularr.enable = lib.mkDefault true;
 
   # Video transcoding (disabled — high resource usage)
-  hwc.server.containers.tdarr.enable = false;
-  hwc.server.containers.recyclarr = {
+  hwc.media.tdarr.enable = false;
+  hwc.media.recyclarr = {
     enable = lib.mkDefault true;
     services.lidarr.enable = false;
   };
-  hwc.server.containers.organizr.enable = lib.mkDefault true;
-  hwc.server.containers.pinchflat.enable = lib.mkDefault true;
+  hwc.media.organizr.enable = lib.mkDefault true;
+  hwc.media.pinchflat.enable = lib.mkDefault true;
 
   # Native media services
-  hwc.server.native.jellyfin = {
+  hwc.media.jellyfin = {
     enable = lib.mkDefault true;
     openFirewall = false;
     reverseProxy = {
@@ -888,8 +888,8 @@
   };
 
   # Immich photo management
-  hwc.server.native.immich.enable = lib.mkForce false;  # Native: disabled
-  hwc.server.containers.immich = {
+  hwc.media.immich.enable = lib.mkForce false;  # Native: disabled
+  hwc.media.immich = {
     enable = lib.mkDefault true;
     settings = {
       host = "0.0.0.0";
@@ -924,18 +924,18 @@
   };
 
   # YouTube services
-  hwc.server.native.youtube.legacyApi = {
+  hwc.media.youtube.legacyApi = {
     enable = lib.mkDefault true;
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
   };
-  hwc.server.native.youtube.transcripts = {
+  hwc.media.youtube.transcripts = {
     enable = lib.mkDefault false;
     port = 8100;
     workers = 4;
     outputDirectory = "/mnt/hot/youtube-transcripts";
   };
-  hwc.server.native.youtube.videos = {
+  hwc.media.youtube.videos = {
     enable = lib.mkDefault false;
     port = 8101;
     workers = 2;
@@ -964,7 +964,7 @@
   };
 
   # Navidrome native (disabled — pkg-config build failure in 25.11; using container instead)
-  # hwc.server.native.navidrome set below with mkForce false
+  # hwc.media.navidrome set below with mkForce false
 
   # Headless server — minimal Home Manager (CLI only, no GUI)
   # Server does NOT import session.nix, so no GUI defaults are inherited.

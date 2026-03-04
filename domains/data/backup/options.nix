@@ -13,7 +13,7 @@ in
     enable = lib.mkEnableOption "automated server backup (containers, databases, system)";
   };
 
-  options.hwc.server.backup.user = {
+  options.hwc.data.backup.user = {
     enable = lib.mkEnableOption "intelligent user data backup service";
 
     username = lib.mkOption {

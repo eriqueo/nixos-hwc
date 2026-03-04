@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.server.monitoring.enable)
+#   - profiles/*.nix (enables via hwc.monitoring.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/business/monitoring.nix
 #
 # USAGE:
-#   hwc.server.monitoring.enable = true;
+#   hwc.monitoring.enable = true;
 #   # TODO: Add specific usage examples
 
 # modules/services/business/monitoring.nix
@@ -26,7 +26,7 @@
 with lib;
 
 let
-  cfg = config.hwc.server.business.monitoring;
+  cfg = config.hwc.monitoring.monitoring;
   paths = config.hwc.paths;
 in {
   
@@ -36,7 +36,7 @@ in {
   #============================================================================
   # OPTIONS - What can be configured
   #============================================================================
-  options.hwc.server.business.monitoring = {
+  options.hwc.monitoring.monitoring = {
     enable = mkEnableOption "business intelligence and analytics monitoring";
     
     dashboard = {
@@ -580,13 +580,13 @@ EOF
     # BUSINESS ANALYTICS DASHBOARD CONTAINER
     ####################################################################
     # Business Dashboard moved to modules/services/business/dashboard.nix
-    # hwc.server.business.dashboard.enable = true; # Enable in profiles/
+    # hwc.monitoring.dashboard.enable = true; # Enable in profiles/
 
     ####################################################################
     # BUSINESS METRICS EXPORTER CONTAINER
     ####################################################################
     # Business Metrics moved to modules/services/business/metrics.nix
-    # hwc.server.business.metrics.enable = true; # Enable in profiles/
+    # hwc.monitoring.metrics.enable = true; # Enable in profiles/
 
     ####################################################################
     # NETWORKING INTEGRATION

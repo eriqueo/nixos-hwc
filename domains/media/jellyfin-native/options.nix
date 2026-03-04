@@ -3,7 +3,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.native.jellyfin = {
+  options.hwc.media.jellyfin = {
     enable = mkEnableOption "Jellyfin media server (native service)";
 
     openFirewall = mkOption {

@@ -2,17 +2,17 @@
 #
 # Frigate Prometheus Exporter - Converts Frigate stats API to Prometheus metrics
 #
-# NAMESPACE: hwc.server.frigate.exporter.*
+# NAMESPACE: hwc.media.frigate.exporter.*
 #
 # DEPENDENCIES:
-#   - hwc.server.frigate (Frigate NVR service)
+#   - hwc.media.frigate (Frigate NVR service)
 #   - hwc.monitoring.prometheus (metrics collector)
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.frigate.exporter;
-  frigateCfg = config.hwc.server.frigate;
+  cfg = config.hwc.media.frigate.exporter;
+  frigateCfg = config.hwc.media.frigate;
 in
 {
   #==========================================================================
@@ -57,7 +57,7 @@ in
     assertions = [
       {
         assertion = !cfg.enable || frigateCfg.enable;
-        message = "Frigate exporter requires Frigate to be enabled (hwc.server.frigate.enable = true)";
+        message = "Frigate exporter requires Frigate to be enabled (hwc.media.frigate.enable = true)";
       }
       {
         assertion = !cfg.enable || config.hwc.monitoring.prometheus.enable;

@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.sonarr = {
+  options.hwc.media.sonarr = {
     enable = mkEnableOption "sonarr container";
         image  = mkOption { type = types.str; default = "lscr.io/linuxserver/sonarr:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

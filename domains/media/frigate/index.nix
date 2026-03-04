@@ -3,7 +3,7 @@
 # Frigate NVR - Config-First Pattern
 # Charter v7.0 Section 19 compliant
 #
-# NAMESPACE: hwc.server.frigate.*
+# NAMESPACE: hwc.media.frigate.*
 #
 # ARCHITECTURE:
 #   - Nix: Container infrastructure (image, GPU, volumes, ports)
@@ -17,7 +17,7 @@
 #
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.frigate;
+  cfg = config.hwc.media.frigate;
 
   # Path to canonical config file (version-controlled)
   configTemplate = ./config/config.yml;
@@ -273,35 +273,35 @@ LABELMAP_EOF
     assertions = [
       {
         assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
-        message = "hwc.server.frigate.gpu requires hwc.system.hardware.gpu.enable = true";
+        message = "hwc.media.frigate.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       {
         assertion = !cfg.enable || (cfg.storage.mediaPath != "");
-        message = "hwc.server.frigate.storage.mediaPath must be set";
+        message = "hwc.media.frigate.storage.mediaPath must be set";
       }
       {
         assertion = !cfg.enable || (cfg.storage.bufferPath != "");
-        message = "hwc.server.frigate.storage.bufferPath must be set";
+        message = "hwc.media.frigate.storage.bufferPath must be set";
       }
       {
         assertion = !cfg.enable || (builtins.match "^/mnt/.*" cfg.storage.bufferPath != null);
-        message = "hwc.server.frigate.storage.bufferPath must be under /mnt (e.g., /mnt/hot/surveillance/frigate/buffer)";
+        message = "hwc.media.frigate.storage.bufferPath must be under /mnt (e.g., /mnt/hot/surveillance/frigate/buffer)";
       }
       {
         assertion = !cfg.enable || (builtins.match "^/mnt/.*" cfg.storage.mediaPath != null);
-        message = "hwc.server.frigate.storage.mediaPath must be under /mnt (e.g., /mnt/media/surveillance/frigate/media)";
+        message = "hwc.media.frigate.storage.mediaPath must be under /mnt (e.g., /mnt/media/surveillance/frigate/media)";
       }
       {
         assertion = !cfg.enable || config.hwc.secrets.enable;
-        message = "hwc.server.frigate requires hwc.secrets.enable = true for RTSP credentials";
+        message = "hwc.media.frigate requires hwc.secrets.enable = true for RTSP credentials";
       }
       {
         assertion = !cfg.enable || (config.virtualisation.oci-containers.backend == "podman");
-        message = "hwc.server.frigate requires Podman as OCI container backend";
+        message = "hwc.media.frigate requires Podman as OCI container backend";
       }
       {
         assertion = !cfg.enable || builtins.pathExists configTemplate;
-        message = "hwc.server.frigate requires config/config.yml template to exist";
+        message = "hwc.media.frigate requires config/config.yml template to exist";
       }
       {
         assertion = !cfg.enable || config.hwc.monitoring.prometheus.enable;

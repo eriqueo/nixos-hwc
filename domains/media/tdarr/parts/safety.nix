@@ -1,7 +1,7 @@
 # Tdarr Safety and Backup Configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.tdarr;
+  cfg = config.hwc.media.tdarr;
   paths = config.hwc.paths;
   hotRoot = paths.hot.root;
   mediaRoot = paths.media.root;

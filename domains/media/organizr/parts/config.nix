@@ -5,7 +5,7 @@ let
   helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
-  cfg = config.hwc.server.containers.organizr;
+  cfg = config.hwc.media.organizr;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/organizr/config";
 in

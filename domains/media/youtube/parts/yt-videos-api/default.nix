@@ -3,7 +3,7 @@
 # YOUTUBE VIDEOS API - Video download and archiving REST API with worker
 # Provides async job-based video downloads from YouTube with atomic finalization
 #
-# NAMESPACE: hwc.server.native.youtube.videos.*
+# NAMESPACE: hwc.media.youtube.videos.*
 #
 # ARCHITECTURE:
 #   - API Server: FastAPI with --workers 1 (single process)
@@ -21,7 +21,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.native.youtube.videos;
+  cfg = config.hwc.media.youtube.videos;
   paths = config.hwc.paths;
 
   # Build Python packages with repo-relative paths

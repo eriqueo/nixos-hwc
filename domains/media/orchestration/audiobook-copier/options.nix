@@ -8,7 +8,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.native.orchestration.audiobookCopier = {
+  options.hwc.media.orchestration.audiobookCopier = {
     enable = mkEnableOption "Audiobook copier service";
 
     sourceDir = mkOption {

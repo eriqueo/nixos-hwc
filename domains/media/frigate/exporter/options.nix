@@ -2,12 +2,12 @@
 #
 # Frigate Prometheus Exporter - Converts Frigate stats API to Prometheus metrics
 #
-# NAMESPACE: hwc.server.frigate.exporter.*
+# NAMESPACE: hwc.media.frigate.exporter.*
 
 { lib, ... }:
 
 {
-  options.hwc.server.frigate.exporter = {
+  options.hwc.media.frigate.exporter = {
     enable = lib.mkEnableOption "Frigate Prometheus exporter";
 
     port = lib.mkOption {

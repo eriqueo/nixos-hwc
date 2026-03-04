@@ -1,7 +1,7 @@
 # Beets container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.beets;
+  cfg = config.hwc.media.beets;
   appsRoot = config.hwc.paths.apps.root;
   cfgRoot = "${appsRoot}/beets";
 

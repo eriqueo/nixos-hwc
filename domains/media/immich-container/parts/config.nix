@@ -6,7 +6,7 @@ let
   helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
-  cfg = config.hwc.server.containers.immich;
+  cfg = config.hwc.media.immich;
   paths = config.hwc.paths;
   appsRoot = config.hwc.paths.apps.root;
   immichRoot = "${appsRoot}/immich";
@@ -329,27 +329,27 @@ in
       assertions = [
         {
           assertion = !cfg.enable || (cfg.settings.mediaLocation != null);
-          message = "hwc.server.containers.immich requires mediaLocation to be set";
+          message = "hwc.media.immich requires mediaLocation to be set";
         }
         {
           assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
-          message = "hwc.server.containers.immich.gpu requires hwc.system.hardware.gpu.enable = true";
+          message = "hwc.media.immich.gpu requires hwc.system.hardware.gpu.enable = true";
         }
         {
           assertion = !cfg.gpu.enable || (config.hwc.system.hardware.gpu.type == "nvidia");
-          message = "hwc.server.containers.immich.gpu currently only supports NVIDIA GPUs (hwc.system.hardware.gpu.type must be 'nvidia')";
+          message = "hwc.media.immich.gpu currently only supports NVIDIA GPUs (hwc.system.hardware.gpu.type must be 'nvidia')";
         }
         {
           assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.nvidia.containerRuntime;
-          message = "hwc.server.containers.immich.gpu requires hwc.system.hardware.gpu.nvidia.containerRuntime = true for nvidia-container-toolkit";
+          message = "hwc.media.immich.gpu requires hwc.system.hardware.gpu.nvidia.containerRuntime = true for nvidia-container-toolkit";
         }
         {
           assertion = !cfg.gpu.enable || (builtins.elem "nvidia" config.boot.kernelModules);
-          message = "hwc.server.containers.immich.gpu requires NVIDIA kernel modules to be loaded (check hwc.system.hardware.gpu configuration)";
+          message = "hwc.media.immich.gpu requires NVIDIA kernel modules to be loaded (check hwc.system.hardware.gpu configuration)";
         }
         {
           assertion = !cfg.storage.enable || (cfg.storage.basePath != null);
-          message = "hwc.server.containers.immich.storage requires basePath to be set";
+          message = "hwc.media.immich.storage requires basePath to be set";
         }
         {
           assertion = !cfg.observability.metrics.enable || (cfg.observability.metrics.apiPort != cfg.observability.metrics.microservicesPort);

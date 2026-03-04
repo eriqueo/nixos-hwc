@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.soularr;
+  cfg = config.hwc.media.soularr;
   appsRoot = config.hwc.paths.apps.root;
   soularrRoot = "${appsRoot}/soularr";
 in

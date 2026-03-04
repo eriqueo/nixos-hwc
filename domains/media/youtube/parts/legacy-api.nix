@@ -3,18 +3,18 @@
 # LEGACY TRANSCRIPT API - YouTube transcript extraction REST API
 # Provides a REST API for extracting transcripts from YouTube videos and playlists
 #
-# NAMESPACE: hwc.server.native.youtube.legacyApi.*
+# NAMESPACE: hwc.media.youtube.legacyApi.*
 #
 # DEPENDENCIES (Upstream):
 #   - config.hwc.paths.* (domains/paths/paths.nix)
 #   - Python packages: fastapi, uvicorn, pydantic, httpx, yt-dlp, youtube-transcript-api, python-slugify, spacy
 #
 # USED BY (Downstream):
-#   - profiles/server.nix (enables via hwc.server.native.youtube.legacyApi.enable)
+#   - profiles/server.nix (enables via hwc.media.youtube.legacyApi.enable)
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.youtube.legacyApi;
+  cfg = config.hwc.media.youtube.legacyApi;
   paths = config.hwc.paths;
 
   # Python packages needed

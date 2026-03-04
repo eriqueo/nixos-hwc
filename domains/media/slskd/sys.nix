@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.slskd;
+  cfg = config.hwc.media.slskd;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

@@ -2,7 +2,7 @@
 #
 # YouTube content acquisition APIs - transcripts and video downloads
 #
-# NAMESPACE: hwc.server.native.youtube.*
+# NAMESPACE: hwc.media.youtube.*
 #
 # USED BY:
 #   - profiles/server.nix
@@ -14,7 +14,7 @@ let
   paths = config.hwc.paths or {};
 in
 {
-  options.hwc.server.native.youtube = {
+  options.hwc.media.youtube = {
     #==========================================================================
     # TRANSCRIPTS API (newer, FastAPI-based)
     #==========================================================================

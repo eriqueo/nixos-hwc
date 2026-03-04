@@ -1,7 +1,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.containers.books;
+  cfg = config.hwc.media.books;
 in
 {
   #==========================================================================

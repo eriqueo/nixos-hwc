@@ -3,7 +3,7 @@
 # YOUTUBE TRANSCRIPTS API - Transcript extraction REST API with worker
 # Provides async job-based transcript extraction from YouTube videos/playlists/channels
 #
-# NAMESPACE: hwc.server.native.youtube.transcripts.*
+# NAMESPACE: hwc.media.youtube.transcripts.*
 #
 # ARCHITECTURE:
 #   - API Server: FastAPI with --workers 1 (single process)
@@ -19,7 +19,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.native.youtube.transcripts;
+  cfg = config.hwc.media.youtube.transcripts;
   paths = config.hwc.paths;
 
   # Build Python packages with repo-relative paths for reproducibility

@@ -1,7 +1,7 @@
 # Radarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.radarr;
+  cfg = config.hwc.media.radarr;
   arrConfig = import ../../../lib/arr-config.nix { inherit lib pkgs; };
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/radarr/config";

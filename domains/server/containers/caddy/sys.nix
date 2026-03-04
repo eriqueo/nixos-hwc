@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../_shared/pure.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.caddy;
+  cfg = config.hwc.media.caddy;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/caddy/config";
 in

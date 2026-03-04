@@ -6,10 +6,10 @@
 { lib, config, ... }:
 
 let
-  cfg = config.hwc.server.native.downloaders;
+  cfg = config.hwc.media.downloaders;
 in
 {
-  options.hwc.server.native.downloaders = {
+  options.hwc.media.downloaders = {
     enable = lib.mkEnableOption "media download clients";
 
     #==========================================================================

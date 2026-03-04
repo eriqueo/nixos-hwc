@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.pinchflat = {
+  options.hwc.media.pinchflat = {
     enable = mkEnableOption "pinchflat container (YouTube subscription manager)";
     image = mkOption {
       type = types.str;

@@ -2,7 +2,7 @@
 #
 # cAdvisor - Container Advisor for resource usage and performance metrics
 #
-# NAMESPACE: hwc.server.monitoring.cadvisor.*
+# NAMESPACE: hwc.monitoring.cadvisor.*
 
 { lib, ... }:
 

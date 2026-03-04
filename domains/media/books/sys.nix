@@ -2,7 +2,7 @@
 
 let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.books;
+  cfg = config.hwc.media.books;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/books/config";
 in

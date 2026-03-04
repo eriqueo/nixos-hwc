@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.jellyseerr;
+  cfg = config.hwc.media.jellyseerr;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/jellyseerr/config";
   settings = import ./settings.nix { inherit config pkgs; };

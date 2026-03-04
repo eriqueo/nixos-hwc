@@ -3,7 +3,7 @@
 
 { lib, config, ... }:
 let
-  cfg = config.hwc.server.native.media;
+  cfg = config.hwc.media.media;
 in
 {
   #==========================================================================

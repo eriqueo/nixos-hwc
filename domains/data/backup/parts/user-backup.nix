@@ -10,21 +10,21 @@
 #   - rclone package (modules/system/backup-packages.nix)
 #
 # USED BY (Downstream):
-#   - profiles/*.nix (enables via hwc.server.backup.user.enable)
+#   - profiles/*.nix (enables via hwc.data.backup.user.enable)
 #   - machines/*.nix (configures external drive settings)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/workstation.nix or profiles/server.nix: ../domains/services/backup/user-backup.nix
 #
 # USAGE:
-#   hwc.server.backup.user.enable = true;
-#   hwc.server.backup.user.externalDrive.enable = true;
-#   hwc.server.backup.user.protonDrive.enable = true;
+#   hwc.data.backup.user.enable = true;
+#   hwc.data.backup.user.externalDrive.enable = true;
+#   hwc.data.backup.user.protonDrive.enable = true;
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.backup.user;
+  cfg = config.hwc.data.backup.user;
   paths = config.hwc.paths;
   userCfg = config.hwc.system.users;
   

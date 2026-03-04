@@ -2,7 +2,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.containers.audiobookshelf;
+  cfg = config.hwc.media.audiobookshelf;
 in
 {
   #==========================================================================

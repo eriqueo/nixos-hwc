@@ -2,11 +2,11 @@
 #
 # Exportarr - Prometheus exporter for *arr applications
 #
-# NAMESPACE: hwc.server.monitoring.exportarr.*
+# NAMESPACE: hwc.monitoring.exportarr.*
 #
 # DEPENDENCIES:
 #   - hwc.monitoring.prometheus (metrics collector)
-#   - hwc.server.containers.{sonarr,radarr,lidarr,prowlarr} (target apps)
+#   - hwc.media.{sonarr,radarr,lidarr,prowlarr} (target apps)
 #   - age.secrets.{sonarr,radarr,lidarr,prowlarr}-api-key (API authentication)
 
 { config, lib, pkgs, ... }:
@@ -110,8 +110,8 @@ in
         message = "Exportarr requires at least one app to monitor";
       }
     ] ++ map (app: {
-      assertion = !cfg.enable || config.hwc.server.containers.${app}.enable;
-      message = "Exportarr monitoring ${app} requires ${app} to be enabled (hwc.server.containers.${app}.enable = true)";
+      assertion = !cfg.enable || config.hwc.media.${app}.enable;
+      message = "Exportarr monitoring ${app} requires ${app} to be enabled (hwc.media.${app}.enable = true)";
     }) cfg.apps;
   };
 }

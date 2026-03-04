@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.audiobookshelf = {
+  options.hwc.media.audiobookshelf = {
     enable = mkEnableOption "Audiobookshelf audiobook and podcast server";
 
     image = mkOption {

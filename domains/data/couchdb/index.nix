@@ -138,19 +138,19 @@ EOF
     assertions = [
       {
         assertion = !cfg.enable || (adminUsernamePath != null);
-        message = "hwc.server.couchdb requires couchdb-admin-username secret (via hwc.secrets.api or cfg.secrets.adminUsername)";
+        message = "hwc.data.couchdb requires couchdb-admin-username secret (via hwc.secrets.api or cfg.secrets.adminUsername)";
       }
       {
         assertion = !cfg.enable || (adminPasswordPath != null);
-        message = "hwc.server.couchdb requires couchdb-admin-password secret (via hwc.secrets.api or cfg.secrets.adminPassword)";
+        message = "hwc.data.couchdb requires couchdb-admin-password secret (via hwc.secrets.api or cfg.secrets.adminPassword)";
       }
       {
         assertion = !cfg.reverseProxy.enable || config.hwc.networking.reverseProxy.enable;
-        message = "hwc.server.couchdb.reverseProxy requires hwc.networking.reverseProxy.enable = true";
+        message = "hwc.data.couchdb.reverseProxy requires hwc.networking.reverseProxy.enable = true";
       }
       {
         assertion = cfg.settings.bindAddress == "127.0.0.1" || cfg.settings.bindAddress == "0.0.0.0";
-        message = "hwc.server.couchdb bindAddress should be 127.0.0.1 (localhost) or 0.0.0.0 (all interfaces)";
+        message = "hwc.data.couchdb bindAddress should be 127.0.0.1 (localhost) or 0.0.0.0 (all interfaces)";
       }
     ];
   };

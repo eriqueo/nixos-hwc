@@ -4,7 +4,7 @@ let
   helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
-  cfg = config.hwc.server.containers.qbittorrent;
+  cfg = config.hwc.media.qbittorrent;
   paths = config.hwc.paths;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/qbittorrent/config";
