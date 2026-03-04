@@ -15,14 +15,18 @@ Provides reusable container helper functions for Law 5 compliance. All container
 ```
 _shared/
 ├── README.md           # This file
-├── pure.nix            # mkContainer - for application containers (media apps, *arr)
-├── infra.nix           # mkInfraContainer - for infrastructure containers (gluetun, pihole)
+├── pure.nix            # Re-exports lib/mkContainer.nix (backwards compat)
+├── infra.nix           # Re-exports lib/mkInfraContainer.nix (backwards compat)
+├── arr-config.nix      # Re-exports lib/arr-config.nix (backwards compat)
 ├── lib.nix             # Module-based helpers (routes accumulator)
 ├── network.nix         # Media network initialization service
 ├── directories.nix     # Shared directory structures
-├── arr-config.nix      # *arr-specific configuration helpers
 └── caddy.nix           # Reverse proxy route helpers
 ```
+
+> **Note**: The pure helper functions (mkContainer, mkInfraContainer, mkArrConfigScript)
+> have been extracted to `lib/` at the repo root. The files here are thin re-export
+> wrappers for backwards compatibility. New code should import from `lib/` directly.
 
 ## Usage
 
@@ -129,3 +133,4 @@ All parameters from mkContainer plus:
 - 2026-02-28: Initial creation with mkContainer and mkInfraContainer helpers for Law 5 compliance
 - 2026-02-28: Updated pure.nix with nvidia-cdi GPU mode support
 - 2026-02-28: Cleaned up lib.nix to remove duplicate mkContainer
+- 2026-03-04: Extracted pure helpers to lib/ at repo root; pure.nix, infra.nix, arr-config.nix now re-export
