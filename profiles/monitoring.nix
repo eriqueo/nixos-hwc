@@ -6,6 +6,7 @@
 {
   imports = [
     ../domains/monitoring/index.nix
+    ../domains/automation/index.nix
   ];
 
   #==========================================================================
