@@ -9,6 +9,7 @@ let
 
   blenderPackage = pkgs.blender.override {
     cudaSupport = cfg.cudaSupport && (gpuCfg.type == "nvidia");
+    
     rocmSupport = cfg.rocmSupport && (gpuCfg.type == "amd");
   };
 
