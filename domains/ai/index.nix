@@ -19,6 +19,7 @@ in
     ./cloud             # Cloud AI API integration
     ./router            # Local/cloud routing
     ./agent             # HTTP tool agent
+    ./ai-bible          # AI-powered documentation system
   ];
 
   #==========================================================================
