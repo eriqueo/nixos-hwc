@@ -24,7 +24,8 @@ domains/ai/
 ├── open-webui/         # Web UI for Ollama
 ├── profiles/           # Hardware profile detection and defaults
 ├── router/             # Local/cloud routing decisions
-└── tools/              # AI CLI tools (charter-search, ai-doc, ai-commit)
+├── tools/              # AI CLI tools (charter-search, ai-doc, ai-commit)
+└── ai-bible/           # AI-powered documentation system
 ```
 
 ## Configuration
@@ -65,4 +66,5 @@ Auto-detects and configures based on available hardware:
 
 ## Changelog
 
+- 2026-03-04: Moved ai-bible from domains/server/native/ai/ into domain; removed dead native/ai/ sub-modules
 - 2026-02-26: Created README per Law 12
