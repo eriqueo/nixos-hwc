@@ -6,8 +6,8 @@ Business services including OCR processing, receipt management, and future invoi
 
 ## Boundaries
 
-- **Manages**: Receipts OCR service, business API endpoints, business data processing
-- **Does NOT manage**: Document storage (→ Paperless-NGX in `domains/server/containers/`), database hosting (→ `domains/server/databases/`), general file storage (→ `domains/infrastructure/storage/`)
+- **Manages**: Receipts OCR service, business API endpoints, business data processing, Paperless-NGX (document management), Firefly III (personal finance)
+- **Does NOT manage**: Database hosting (→ `domains/data/`), general file storage (→ `domains/data/storage/`)
 
 ## Structure
 
@@ -15,6 +15,9 @@ Business services including OCR processing, receipt management, and future invoi
 domains/business/
 ├── index.nix           # Domain aggregator
 ├── options.nix         # hwc.business.* options
+├── containers/
+│   ├── paperless/      # Paperless-NGX document management
+│   └── firefly/        # Firefly III personal finance + Pico mobile app
 └── parts/
     ├── receipts-ocr.nix  # OCR service implementation
     └── api.nix           # Business API (placeholder)
@@ -90,5 +93,6 @@ If source not deployed, service returns stub response with deployment instructio
 
 ## Changelog
 
+- 2026-03-04: Moved paperless and firefly containers from domains/server/containers/ into domains/business/containers/
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2026-02-22: Initial domain implementation
