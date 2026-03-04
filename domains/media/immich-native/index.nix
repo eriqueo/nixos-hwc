@@ -335,7 +335,7 @@ in
     # PROMETHEUS INTEGRATION
     #==========================================================================
     # Add Immich metrics endpoints to Prometheus scraping
-    hwc.server.native.monitoring.prometheus.scrapeConfigs = lib.mkIf (cfg.enable && cfg.observability.metrics.enable) [
+    hwc.monitoring.prometheus.scrapeConfigs = lib.mkIf (cfg.enable && cfg.observability.metrics.enable) [
       {
         job_name = "immich-api";
         static_configs = [{
@@ -422,8 +422,8 @@ in
       }
       # Phase C assertion - Prometheus integration
       {
-        assertion = !(cfg.enable && cfg.observability.metrics.enable) || config.hwc.server.native.monitoring.prometheus.enable;
-        message = "Immich metrics require Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
+        assertion = !(cfg.enable && cfg.observability.metrics.enable) || config.hwc.monitoring.prometheus.enable;
+        message = "Immich metrics require Prometheus to be enabled (hwc.monitoring.prometheus.enable = true)";
       }
     ];
 

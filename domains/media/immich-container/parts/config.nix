@@ -301,7 +301,7 @@ in
     # PROMETHEUS INTEGRATION
     #=========================================================================
     (lib.mkIf cfg.observability.metrics.enable {
-      hwc.server.native.monitoring.prometheus.scrapeConfigs = [
+      hwc.monitoring.prometheus.scrapeConfigs = [
         {
           job_name = "immich-api";
           static_configs = [{
@@ -372,8 +372,8 @@ in
           message = "Immich machineLearning.modelTTLPollInterval must be positive (time in seconds)";
         }
         {
-          assertion = !(cfg.enable && cfg.observability.metrics.enable) || config.hwc.server.native.monitoring.prometheus.enable;
-          message = "Immich metrics require Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
+          assertion = !(cfg.enable && cfg.observability.metrics.enable) || config.hwc.monitoring.prometheus.enable;
+          message = "Immich metrics require Prometheus to be enabled (hwc.monitoring.prometheus.enable = true)";
         }
       ];
     }

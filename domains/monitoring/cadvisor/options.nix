@@ -7,7 +7,7 @@
 { lib, ... }:
 
 {
-  options.hwc.server.native.monitoring.cadvisor = {
+  options.hwc.monitoring.cadvisor = {
     enable = lib.mkEnableOption "cAdvisor container metrics exporter";
 
     port = lib.mkOption {

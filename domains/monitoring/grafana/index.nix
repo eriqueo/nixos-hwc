@@ -5,13 +5,13 @@
 # NAMESPACE: hwc.server.monitoring.grafana.*
 #
 # DEPENDENCIES:
-#   - hwc.server.native.monitoring.prometheus (datasource)
+#   - hwc.monitoring.prometheus (datasource)
 #   - hwc.paths.state (data directory)
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.native.monitoring.grafana;
+  cfg = config.hwc.monitoring.grafana;
   paths = config.hwc.paths;
 in
 {
@@ -47,7 +47,7 @@ in
     };
 
     # Prometheus datasource provisioning
-    services.grafana.provision = lib.mkIf config.hwc.server.native.monitoring.prometheus.enable {
+    services.grafana.provision = lib.mkIf config.hwc.monitoring.prometheus.enable {
       enable = true;
 
       datasources.settings = {
@@ -59,7 +59,7 @@ in
             name = "Prometheus";
             type = "prometheus";
             uid = "prometheus";
-            url = "http://localhost:${toString config.hwc.server.native.monitoring.prometheus.port}";
+            url = "http://localhost:${toString config.hwc.monitoring.prometheus.port}";
             access = "proxy";
             isDefault = true;
             # Mark as provisioned to enable pruning
@@ -118,8 +118,8 @@ in
         message = "Grafana domain must be configured";
       }
       {
-        assertion = !cfg.enable || config.hwc.server.native.monitoring.prometheus.enable;
-        message = "Grafana requires Prometheus to be enabled (hwc.server.native.monitoring.prometheus.enable = true)";
+        assertion = !cfg.enable || config.hwc.monitoring.prometheus.enable;
+        message = "Grafana requires Prometheus to be enabled (hwc.monitoring.prometheus.enable = true)";
       }
     ];
   };

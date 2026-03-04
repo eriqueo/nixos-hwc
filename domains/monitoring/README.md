@@ -3,7 +3,7 @@
 ## Purpose
 
 Self-contained observability stack: Prometheus, Grafana, Alertmanager, cAdvisor, Exportarr.
-Other domains register their scrape configs via `hwc.server.native.monitoring.prometheus.scrapeConfigs`.
+Other domains register their scrape configs via `hwc.monitoring.prometheus.scrapeConfigs`.
 
 ## Boundaries
 
@@ -17,7 +17,7 @@ Other domains register their scrape configs via `hwc.server.native.monitoring.pr
 monitoring/
 ├── index.nix           # Domain aggregator
 ├── README.md           # This file
-├── options.nix         # Base toggle (hwc.server.native.monitoring.enable)
+├── options.nix         # Base toggle (hwc.monitoring.enable)
 ├── prometheus/         # Metrics collection + alert rules
 │   ├── index.nix
 │   ├── options.nix
@@ -39,4 +39,5 @@ monitoring/
 
 ## Changelog
 
+- 2026-03-04: Namespace migration hwc.server.native.monitoring.* → hwc.monitoring.*
 - 2026-03-04: Moved from domains/server/native/monitoring/ (Phase 4 of DDD migration)

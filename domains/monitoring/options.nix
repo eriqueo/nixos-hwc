@@ -3,7 +3,7 @@
 
 { lib, ... }:
 {
-  options.hwc.server.native.monitoring = {
+  options.hwc.monitoring = {
     enable = lib.mkEnableOption "monitoring stack (Prometheus, Grafana, exporters)" // {
       default = true;
     };

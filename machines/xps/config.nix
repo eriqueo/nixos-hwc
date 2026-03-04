@@ -374,7 +374,7 @@
   # Monitoring enabled via profiles/monitoring.nix import (direct enablement, no hwc.features gate)
 
   # Disable exportarr monitoring (no *arr services on secondary server)
-  hwc.server.native.monitoring.exportarr.enable = lib.mkForce false;
+  hwc.monitoring.exportarr.enable = lib.mkForce false;
 
   # Enhanced SSH configuration
   services.openssh.settings = {
