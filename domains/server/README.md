@@ -49,5 +49,6 @@ All services migrated out of domains/server/:
 
 ## Changelog
 
+- 2026-03-04: Removed stale domains/server/media/ (orphaned stub, never imported)
 - 2026-03-04: DDD migration complete — all services moved to dedicated domains; native/ deleted; README updated
 - 2026-02-26: Created README per Law 12
