@@ -11,10 +11,10 @@
     # Core profile — system/paths/secrets (NO session.nix — headless server)
     ../../profiles/core.nix
 
-    # Domains — server imports what it needs directly (still using old paths until migration)
+    # Domains — server imports what it needs directly
     ../../profiles/server.nix         # TODO Phase 10: replace with direct domain imports
     ../../domains/ai/index.nix
-    ../../domains/server/native/routes.nix  # TODO Phase 3: move to domains/networking
+    ../../domains/networking/index.nix
     ../../domains/server/native/frigate/index.nix  # TODO Phase 7d: move to domains/media
     ../../profiles/monitoring.nix     # TODO Phase 4: replace with domains/monitoring
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
