@@ -17,7 +17,7 @@ in
     {
       assertions = [
         {
-          assertion = config.hwc.server.reverseProxy.enable;
+          assertion = config.hwc.networking.reverseProxy.enable;
           message = "Organizr works best with reverse proxy enabled for service integration";
         }
       ];

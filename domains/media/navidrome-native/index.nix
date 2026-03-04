@@ -73,8 +73,8 @@ in
         message = "hwc.server.navidrome: cannot set both initialAdminPassword and initialAdminPasswordFile";
       }
       {
-        assertion = !cfg.reverseProxy.enable || config.hwc.server.reverseProxy.enable;
-        message = "hwc.server.navidrome.reverseProxy requires hwc.server.reverseProxy.enable = true";
+        assertion = !cfg.reverseProxy.enable || config.hwc.networking.reverseProxy.enable;
+        message = "hwc.server.navidrome.reverseProxy requires hwc.networking.reverseProxy.enable = true";
       }
     ];
   };

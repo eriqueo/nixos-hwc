@@ -334,7 +334,7 @@
   };
 
   # Server reverse proxy configuration (Tailscale domain)
-  hwc.server.shared = {
+  hwc.networking.shared = {
     tailscaleDomain = "hwc-xps.ocelot-wahoo.ts.net";
     rootHost = "hwc-xps.ocelot-wahoo.ts.net";
   };

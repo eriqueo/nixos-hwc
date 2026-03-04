@@ -26,7 +26,7 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = cfg.network.mode != "vpn" || config.hwc.server.containers.gluetun.enable;
+        assertion = cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable;
         message = "audiobookshelf container with VPN mode requires gluetun to be enabled";
       }
       {

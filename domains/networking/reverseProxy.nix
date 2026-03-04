@@ -2,9 +2,9 @@
 let
   inherit (lib) mkEnableOption mkOption types mkIf concatStringsSep;
 
-  tailscaleDomain = config.hwc.server.shared.tailscaleDomain;
-  rootHost        = config.hwc.server.shared.rootHost;
-  routes          = config.hwc.server.shared.routes;
+  tailscaleDomain = config.hwc.networking.shared.tailscaleDomain;
+  rootHost        = config.hwc.networking.shared.rootHost;
+  routes          = config.hwc.networking.shared.routes;
 
   # Render a route -> Caddy snippet
   renderRoute = r:
@@ -89,7 +89,7 @@ let
 
 in
 {
-  options.hwc.server.reverseProxy = {
+  options.hwc.networking.reverseProxy = {
     enable = mkEnableOption "Reverse proxy service (Caddy)";
     domain = mkOption {
       type = types.str;
@@ -98,7 +98,7 @@ in
     };
   };
 
-  options.hwc.server.shared = {
+  options.hwc.networking.shared = {
     tailscaleDomain = mkOption {
       type = types.str;
       default = "hwc.ocelot-wahoo.ts.net";
@@ -120,7 +120,7 @@ in
     };
   };
 
-  config = mkIf config.hwc.server.reverseProxy.enable {
+  config = mkIf config.hwc.networking.reverseProxy.enable {
     services.caddy = {
       enable = true;
       extraConfig = ''
