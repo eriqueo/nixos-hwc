@@ -16,9 +16,8 @@
     ../../domains/ai/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
-    ../../domains/server/native/frigate/index.nix  # TODO Phase 7d: move to domains/media
+    ../../domains/media/index.nix
     ../../profiles/monitoring.nix
-    # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/alerts/index.nix    # Direct domain import (no profile wrapper)
   ];
