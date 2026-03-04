@@ -86,6 +86,9 @@ with pkgs;
       ${hyprland}/bin/hyprctl --batch "keyword monitor $LAPTOP,$LAPTOP_SPEC,0x0,$LAPTOP_SCALE ; keyword monitor $EXTERNAL,$EXTERNAL_SPEC,''${LAPTOP_WIDTH}x0,$EXTERNAL_SCALE"
       ${libnotify}/bin/notify-send "Monitor" "External on right" -t 1500 -i display
     fi
+
+    # Restart waybar to pick up monitor changes
+    ${systemd}/bin/systemctl --user restart waybar
   '')
 
   #============================================================================
