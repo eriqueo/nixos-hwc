@@ -949,9 +949,10 @@ in
   };
 
   # PostgreSQL (always enabled — used by many services)
+  # Version pinned to 15 in domains/data/databases/index.nix (data format lock)
   hwc.server.databases.postgresql = {
     enable = lib.mkDefault true;
-    version = "16";
+    version = "15";
   };
 
   # Storage automation
