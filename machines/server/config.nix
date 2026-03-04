@@ -15,8 +15,9 @@
     ../../profiles/server.nix         # TODO Phase 10: replace with direct domain imports
     ../../domains/ai/index.nix
     ../../domains/networking/index.nix
+    ../../domains/data/index.nix
     ../../domains/server/native/frigate/index.nix  # TODO Phase 7d: move to domains/media
-    ../../profiles/monitoring.nix     # TODO Phase 4: replace with domains/monitoring
+    ../../profiles/monitoring.nix
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/alerts/index.nix    # Direct domain import (no profile wrapper)

@@ -6,7 +6,7 @@
   imports = [
     ./options.nix
     ./containers/index.nix
-    ./databases/index.nix
+    # databases moved to domains/data/
     ./native/index.nix
   ];
   #==========================================================================
