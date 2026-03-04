@@ -14,12 +14,13 @@
     ../../profiles/session.nix
     ./home.nix  # Machine-specific HM overrides
 
-    # Domains — xps-specific capabilities (still using old paths until migration)
+    # Domains — xps-specific capabilities
     ../../profiles/server.nix         # TODO Phase 10: replace with direct domain imports
     ../../domains/ai/index.nix
     ../../domains/alerts/index.nix
-    ../../domains/server/native/routes.nix  # TODO Phase 3: move to domains/networking
-    ../../profiles/monitoring.nix     # TODO Phase 4: replace with domains/monitoring
+    ../../domains/networking/index.nix
+    ../../domains/data/index.nix
+    ../../profiles/monitoring.nix
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
     # ../../profiles/business.nix      # TODO: Enable when business services are implemented
   ];
