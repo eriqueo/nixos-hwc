@@ -11,26 +11,22 @@
     # Legacy namespace compatibility: hwc.server.containers.* → hwc.server.containers.*
     (lib.mkRenamedOptionModule [ "hwc" "services" "containers" ] [ "hwc" "server" "containers" ])
 
-    # Shared infrastructure
-    ./_shared/network.nix
-    ./_shared/caddy.nix
+    # Shared infrastructure (caddy.nix and network.nix moved to domains/networking/)
     ./_shared/directories.nix
 
-    # Container services
+    # Container services (gluetun, pihole moved to domains/networking/)
     ./audiobookshelf/index.nix
     ./beets/index.nix
     ./mousehole/index.nix
     ./books/index.nix
     ./caddy/index.nix
     ./calibre/index.nix
-    ./gluetun/index.nix
     ./immich/index.nix
     ./jellyfin/index.nix
     ./jellyseerr/index.nix
     ./lidarr/index.nix
     ./navidrome/index.nix
     ./organizr/index.nix
-    ./pihole/index.nix
     ./pinchflat/index.nix
     ./prowlarr/index.nix
     ./paperless/index.nix
