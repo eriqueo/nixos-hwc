@@ -1,9 +1,13 @@
 # profiles/monitoring.nix
 #
-# Monitoring profile — enables Prometheus, Grafana, Alertmanager, n8n.
-# Will be removed in Phase 4 when machines import domains/monitoring directly.
+# Monitoring profile — imports monitoring domain and enables all services.
+# TODO Phase 10: machines should import domains/monitoring directly and set their own values.
 { lib, config, ... }:
 {
+  imports = [
+    ../domains/monitoring/index.nix
+  ];
+
   #==========================================================================
   # MONITORING SERVICES
   #==========================================================================
