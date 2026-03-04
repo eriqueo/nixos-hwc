@@ -9,7 +9,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.server.containers.firefly = {
+  options.hwc.business.firefly = {
     enable = mkEnableOption "Firefly III personal finance manager (containerized)";
 
     # Container images

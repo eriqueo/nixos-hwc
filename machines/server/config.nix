@@ -883,7 +883,7 @@
   };
 
   # Firefly III personal finance
-  hwc.server.containers.firefly = {
+  hwc.business.firefly = {
     enable = lib.mkDefault true;
   };
 

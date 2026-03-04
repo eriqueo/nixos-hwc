@@ -4,7 +4,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.server.containers.paperless = {
+  options.hwc.business.paperless = {
     enable = mkEnableOption "Paperless-NGX document management (containerized)";
 
     image = mkOption {
