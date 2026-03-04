@@ -4,9 +4,6 @@
 # Declares machine identity and composes profiles; states hardware reality.
 
 { config, lib, pkgs, inputs ? null, ... }:
-let
-  isPrimary = config.hwc.server.role == "primary";
-in
 {
   imports = [
     ./hardware.nix
@@ -29,11 +26,11 @@ in
   assertions = [
     # Server role assertions
     {
-      assertion = !isPrimary || (
+      assertion = (
         (config.hwc.paths.hot.root != null && lib.hasPrefix "/mnt" config.hwc.paths.hot.root) ||
         (config.hwc.paths.media.root != null && lib.hasPrefix "/mnt" config.hwc.paths.media.root)
       );
-      message = "Primary server requires dedicated storage mounts (hot or media should use /mnt/* paths)";
+      message = "Server requires dedicated storage mounts (hot or media should use /mnt/* paths)";
     }
     {
       assertion = config.hwc.secrets.enable;
@@ -100,10 +97,7 @@ in
   networking.hostId = "8425e349";
 
   # Server identity (Charter v10.3 multi-server support)
-  hwc.server = {
-    enable = true;
-    role = "primary";  # Main production server - all services enabled
-  };
+  hwc.server.enable = true;
 
   # ZFS support for backup drives
   boot.supportedFilesystems = [ "zfs" ];
@@ -796,48 +790,48 @@ in
 
   # Download stack (VPN + clients)
   hwc.server.containers.gluetun = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
     portForwarding = {
-      enable = lib.mkDefault isPrimary;
+      enable = lib.mkDefault true;
       syncToQbittorrent = lib.mkDefault true;
       checkInterval = 60;
     };
   };
-  hwc.server.containers.qbittorrent.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.sabnzbd.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.mousehole.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.qbittorrent.enable = lib.mkDefault true;
+  hwc.server.containers.sabnzbd.enable = lib.mkDefault true;
+  hwc.server.containers.mousehole.enable = lib.mkDefault true;
 
   # *arr stack
-  hwc.server.containers.prowlarr.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.sonarr.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.radarr.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.lidarr.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.readarr.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.books.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.calibre.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.audiobookshelf.enable = lib.mkDefault isPrimary;
-  hwc.server.native.orchestration.audiobookCopier.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.prowlarr.enable = lib.mkDefault true;
+  hwc.server.containers.sonarr.enable = lib.mkDefault true;
+  hwc.server.containers.radarr.enable = lib.mkDefault true;
+  hwc.server.containers.lidarr.enable = lib.mkDefault true;
+  hwc.server.containers.readarr.enable = lib.mkDefault true;
+  hwc.server.containers.books.enable = lib.mkDefault true;
+  hwc.server.containers.calibre.enable = lib.mkDefault true;
+  hwc.server.containers.audiobookshelf.enable = lib.mkDefault true;
+  hwc.server.native.orchestration.audiobookCopier.enable = lib.mkDefault true;
 
   # Beets music organizer (using native installation)
   hwc.server.containers.beets.enable = false;
 
   # Media discovery + download management
-  hwc.server.containers.jellyseerr.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.slskd.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.soularr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.jellyseerr.enable = lib.mkDefault true;
+  hwc.server.containers.slskd.enable = lib.mkDefault true;
+  hwc.server.containers.soularr.enable = lib.mkDefault true;
 
   # Video transcoding (disabled — high resource usage)
   hwc.server.containers.tdarr.enable = false;
   hwc.server.containers.recyclarr = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
     services.lidarr.enable = false;
   };
-  hwc.server.containers.organizr.enable = lib.mkDefault isPrimary;
-  hwc.server.containers.pinchflat.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.organizr.enable = lib.mkDefault true;
+  hwc.server.containers.pinchflat.enable = lib.mkDefault true;
 
   # Native media services
   hwc.server.native.jellyfin = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
     openFirewall = false;
     reverseProxy = {
       enable = true;
@@ -851,7 +845,7 @@ in
 
   # RetroArch emulation with Sunshine game streaming
   hwc.server.native.retroarch = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
     gpu.enable = true;
     cores = {
       dosbox-pure = true;
@@ -872,7 +866,7 @@ in
 
   # WebDAV for RetroArch save sync
   hwc.server.native.webdav = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
     auth = {
       usernameFile = config.hwc.secrets.api.webdavUsernameFile;
       passwordFile = config.hwc.secrets.api.webdavPasswordFile;
@@ -890,13 +884,13 @@ in
 
   # Firefly III personal finance
   hwc.server.containers.firefly = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
   };
 
   # Immich photo management
   hwc.server.native.immich.enable = lib.mkForce false;  # Native: disabled
   hwc.server.containers.immich = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
     settings = {
       host = "0.0.0.0";
       port = 2283;
@@ -931,7 +925,7 @@ in
 
   # YouTube services
   hwc.server.native.youtube.legacyApi = {
-    enable = lib.mkDefault isPrimary;
+    enable = lib.mkDefault true;
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
   };
