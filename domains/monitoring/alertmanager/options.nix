@@ -9,7 +9,7 @@ let
   paths = config.hwc.paths;
 in
 {
-  options.hwc.server.native.monitoring.alertmanager = {
+  options.hwc.monitoring.alertmanager = {
     enable = lib.mkEnableOption "Prometheus Alertmanager for alert routing and notification";
 
     port = lib.mkOption {
