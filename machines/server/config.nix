@@ -779,7 +779,7 @@
   #============================================================================
   # REVERSE PROXY
   #============================================================================
-  hwc.server.reverseProxy = {
+  hwc.networking.reverseProxy = {
     enable = lib.mkDefault true;
     domain = "hwc.ocelot-wahoo.ts.net";
   };
@@ -789,7 +789,7 @@
   #============================================================================
 
   # Download stack (VPN + clients)
-  hwc.server.containers.gluetun = {
+  hwc.networking.gluetun = {
     enable = lib.mkDefault true;
     portForwarding = {
       enable = lib.mkDefault true;

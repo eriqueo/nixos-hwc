@@ -26,7 +26,7 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = config.hwc.server.containers.gluetun.enable;
+        assertion = config.hwc.networking.gluetun.enable;
         message = "mousehole requires gluetun to be enabled (runs inside VPN tunnel)";
       }
     ];

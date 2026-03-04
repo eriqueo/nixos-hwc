@@ -102,7 +102,7 @@ in
     {
       assertions = [
         {
-          assertion = cfg.network.mode != "vpn" || config.hwc.server.containers.gluetun.enable;
+          assertion = cfg.network.mode != "vpn" || config.hwc.networking.gluetun.enable;
           message = "SABnzbd with VPN networking requires gluetun container to be enabled";
         }
         {

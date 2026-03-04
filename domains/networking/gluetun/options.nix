@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.gluetun = {
+  options.hwc.networking.gluetun = {
     enable = mkEnableOption "gluetun container";
     image  = mkOption { type = types.str; default = "qmcgaw/gluetun:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

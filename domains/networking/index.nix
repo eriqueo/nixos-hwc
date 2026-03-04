@@ -3,15 +3,14 @@
 # Networking domain — reverse proxy, VPN, DNS, podman network infrastructure.
 # Provides the backbone that other domains depend on for service routing.
 #
-# Namespace: hwc.server.reverseProxy.*, hwc.server.shared.*, hwc.server.containers.{gluetun,pihole}
-# TODO Phase 8: Migrate to hwc.networking.*
+# Namespace: hwc.networking.{reverseProxy,gluetun,pihole}.*
 
 { lib, config, ... }:
 
 {
   imports = [
     # Reverse proxy (Caddy NixOS service + route rendering)
-    # Also declares hwc.server.shared.{routes,tailscaleDomain,rootHost}
+    # Also declares hwc.networking.shared.{routes,tailscaleDomain,rootHost}
     ./reverseProxy.nix
 
     # NOTE: routes-lib.nix NOT imported — was dead code in _shared/lib.nix

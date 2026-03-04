@@ -20,8 +20,8 @@ in
 
     webhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://${config.hwc.server.shared.rootHost}";
-      defaultText = "https://\${config.hwc.server.shared.rootHost}";
+      default = "https://${config.hwc.networking.shared.rootHost}";
+      defaultText = "https://\${config.hwc.networking.shared.rootHost}";
       description = "Base URL for webhook callbacks";
     };
 

@@ -5,7 +5,7 @@ let
   infraHelpers = import ../../../lib/mkInfraContainer.nix { inherit lib pkgs; };
   inherit (infraHelpers) mkInfraContainer;
 
-  cfg = config.hwc.server.containers.pihole;
+  cfg = config.hwc.networking.pihole;
   upstreamDnsString = lib.concatStringsSep ";" cfg.upstreamDns;
 in
 {

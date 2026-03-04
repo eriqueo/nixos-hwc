@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.gluetun;
+  cfg = config.hwc.networking.gluetun;
 in
 {
   config = lib.mkIf cfg.enable {

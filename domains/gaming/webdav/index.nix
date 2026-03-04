@@ -99,7 +99,7 @@ in
     ];
 
     # Register route with shared routes for Caddy reverse proxy
-    hwc.server.shared.routes = lib.mkIf cfg.reverseProxy.enable [
+    hwc.networking.shared.routes = lib.mkIf cfg.reverseProxy.enable [
       {
         name = "webdav-retroarch";
         mode = "subpath";
@@ -117,8 +117,8 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !cfg.reverseProxy.enable || config.hwc.server.reverseProxy.enable;
-        message = "hwc.server.native.webdav.reverseProxy requires hwc.server.reverseProxy.enable = true";
+        assertion = !cfg.reverseProxy.enable || config.hwc.networking.reverseProxy.enable;
+        message = "hwc.server.native.webdav.reverseProxy requires hwc.networking.reverseProxy.enable = true";
       }
       {
         assertion = cfg.auth.usernameFile != null && cfg.auth.passwordFile != null;

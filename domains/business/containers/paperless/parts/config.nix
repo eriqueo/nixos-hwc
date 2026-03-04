@@ -7,7 +7,7 @@ let
   envFile = "${envDir}/paperless.env";
 
   ocrLanguages = lib.concatStringsSep "+" cfg.ocr.languages;
-  paperlessUrlBase = "https://${config.hwc.server.reverseProxy.domain}";
+  paperlessUrlBase = "https://${config.hwc.networking.reverseProxy.domain}";
 
   generateEnvScript = pkgs.writeShellScript "generate-paperless-env" ''
     set -euo pipefail
