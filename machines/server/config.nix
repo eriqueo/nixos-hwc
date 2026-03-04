@@ -20,6 +20,7 @@
     ../../profiles/monitoring.nix
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/alerts/index.nix    # Direct domain import (no profile wrapper)
+    ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
   ];
 
   # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
