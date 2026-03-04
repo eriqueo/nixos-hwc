@@ -130,22 +130,21 @@ with pkgs;
     # Get keybinds as JSON and format for display
     KEYBINDS=$(${hyprland}/bin/hyprctl binds -j | ${jq}/bin/jq -r '
       .[] |
-      # Build modifier string
+      .modmask as $m |
+      # Build modifier string from bitmask
       (
-        (if .modmask | . > 0 then
-          (
-            (if (. % 2) == 1 then ["SHIFT"] else [] end) +
-            (if (. / 4 | floor % 2) == 1 then ["CTRL"] else [] end) +
-            (if (. / 8 | floor % 2) == 1 then ["ALT"] else [] end) +
-            (if (. / 64 | floor % 2) == 1 then ["SUPER"] else [] end)
-          ) | join("+")
-        else "" end) as $mods |
-        if $mods != "" then $mods + "+" else "" end
-      ) +
+        [
+          (if ($m % 2) == 1 then "SHIFT" else empty end),
+          (if (($m / 4 | floor) % 2) == 1 then "CTRL" else empty end),
+          (if (($m / 8 | floor) % 2) == 1 then "ALT" else empty end),
+          (if (($m / 64 | floor) % 2) == 1 then "SUPER" else empty end)
+        ] | join("+")
+      ) as $mods |
+      (if ($mods | length) > 0 then $mods + "+" else "" end) +
       .key +
-      " → " +
+      " -> " +
       .dispatcher +
-      (if .arg != "" then " " + .arg else "" end)
+      (if (.arg | length) > 0 then " " + .arg else "" end)
     ' | sort)
 
     # Display in wofi
