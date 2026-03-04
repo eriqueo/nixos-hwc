@@ -4,7 +4,7 @@
 #
 # DEPENDENCIES:
 #   - domains/business (business services implementation)
-#   - hwc.server.containers.paperless (document management)
+#   - hwc.business.paperless (document management)
 #   - hwc.data.databases.redis (caching)
 #
 # USED BY:
@@ -42,7 +42,7 @@
 
   # Related services - enabled when business profile is used
   # Paperless-NGX for document management
-  hwc.server.containers.paperless.enable = lib.mkDefault true;
+  hwc.business.paperless.enable = lib.mkDefault true;
 
   # Redis for caching
   hwc.data.databases.redis.enable = lib.mkDefault true;

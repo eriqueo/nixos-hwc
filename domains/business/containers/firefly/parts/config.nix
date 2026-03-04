@@ -9,7 +9,7 @@ let
   helpers = import ../../../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
-  cfg = config.hwc.server.containers.firefly;
+  cfg = config.hwc.business.firefly;
   paths = config.hwc.paths;
   appsRoot = paths.apps.root;
   fireflyRoot = "${appsRoot}/firefly";
@@ -190,11 +190,11 @@ in
       assertions = [
         {
           assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
-          message = "hwc.server.containers.firefly requires PostgreSQL to be enabled (hwc.data.databases.postgresql.enable = true)";
+          message = "hwc.business.firefly requires PostgreSQL to be enabled (hwc.data.databases.postgresql.enable = true)";
         }
         {
           assertion = !cfg.enable || config.age.secrets ? firefly-app-key;
-          message = "hwc.server.containers.firefly requires firefly-app-key secret to be defined in domains/secrets/declarations/server.nix";
+          message = "hwc.business.firefly requires firefly-app-key secret to be defined in domains/secrets/declarations/server.nix";
         }
         {
           assertion = cfg.reverseProxy.corePort != cfg.reverseProxy.picoPort;

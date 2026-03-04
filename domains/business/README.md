@@ -93,6 +93,7 @@ If source not deployed, service returns stub response with deployment instructio
 
 ## Changelog
 
+- 2026-03-04: Namespace migration hwc.server.containers.{paperless,firefly} → hwc.business.*
 - 2026-03-04: Moved paperless and firefly containers from domains/server/containers/ into domains/business/containers/
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2026-02-22: Initial domain implementation

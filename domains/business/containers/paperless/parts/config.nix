@@ -1,7 +1,7 @@
 { lib, config, pkgs, ... }:
 let
   helpers = import ../../../../lib/mkContainer.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.paperless;
+  cfg = config.hwc.business.paperless;
 
   envDir = "/run/paperless-env";
   envFile = "${envDir}/paperless.env";

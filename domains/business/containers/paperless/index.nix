@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.paperless;
+  cfg = config.hwc.business.paperless;
 in
 {
   #=========================================================================

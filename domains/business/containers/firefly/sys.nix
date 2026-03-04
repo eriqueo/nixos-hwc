@@ -5,7 +5,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.containers.firefly;
+  cfg = config.hwc.business.firefly;
 in
 {
   config = lib.mkIf cfg.enable {

@@ -1,6 +1,6 @@
 { lib, config, ... }:
 let
-  cfg = config.hwc.server.containers.paperless;
+  cfg = config.hwc.business.paperless;
   paths = config.hwc.paths;
   appsRoot = paths.apps.root;
   paperlessRoot = if appsRoot != null then "${appsRoot}/paperless" else null;
