@@ -30,6 +30,7 @@ in
     "${mod},TAB,exec,hyprland-workspace-overview"
     "${mod} SHIFT,T,togglefloating"
     "${mod} SHIFT,H,exec,hyprland-system-health-checker"
+    "${mod},comma,exec,hyprland-keybinds-viewer"
     "${mod},A,exec,proton-authenticator-toggle"
 
     ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
