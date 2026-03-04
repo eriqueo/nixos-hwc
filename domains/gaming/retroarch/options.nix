@@ -3,7 +3,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.native.retroarch = {
+  options.hwc.gaming.retroarch = {
     enable = mkEnableOption "RetroArch emulator with game streaming via Sunshine";
 
     dataDir = mkOption {

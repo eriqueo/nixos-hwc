@@ -844,7 +844,7 @@
   };
 
   # RetroArch emulation with Sunshine game streaming
-  hwc.server.native.retroarch = {
+  hwc.gaming.retroarch = {
     enable = lib.mkDefault true;
     gpu.enable = true;
     cores = {
@@ -865,7 +865,7 @@
   };
 
   # WebDAV for RetroArch save sync
-  hwc.server.native.webdav = {
+  hwc.gaming.webdav = {
     enable = lib.mkDefault true;
     auth = {
       usernameFile = config.hwc.secrets.api.webdavUsernameFile;
