@@ -29,20 +29,20 @@ let
     on-scroll-down = "hyprctl dispatch workspace e-1";
   };
 
-  # External monitor shows 1-8 but targets Hyprland workspaces 11-18.
+  # External monitor shows 1-8 but targets Hyprland workspaces 9-16 (hyprsome offset).
   workspaceExternal = {
     disable-scroll = true;
     all-outputs = false;
     warp-on-scroll = false;
     format = "{icon}";
     format-icons = {
-      "11" = "1"; "12" = "2"; "13" = "3"; "14" = "4";
-      "15" = "5"; "16" = "6"; "17" = "7"; "18" = "8";
-      "default" = "{name}";
+      "9" = "1"; "10" = "2"; "11" = "3"; "12" = "4";
+      "13" = "5"; "14" = "6"; "15" = "7"; "16" = "8";
+      "default" = "•";
     };
     persistent-workspaces = {
-      "11" = []; "12" = []; "13" = []; "14" = [];
-      "15" = []; "16" = []; "17" = []; "18" = [];
+      "9" = []; "10" = []; "11" = []; "12" = [];
+      "13" = []; "14" = []; "15" = []; "16" = [];
     };
     on-click = "activate";
     on-scroll-up = "hyprctl dispatch workspace e+1";
