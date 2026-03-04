@@ -1,6 +1,12 @@
 # profiles/monitoring.nix
 #
 # Monitoring profile — imports monitoring domain and enables all services.
+#
+# WARNING: References age secrets (grafana-admin-password, n8n-owner-password-hash).
+# All machines importing this profile MUST have their host key as a recipient
+# in the corresponding .age files. n8n-owner-password-hash.age currently has
+# only 1 recipient — re-encrypt to include XPS key if XPS uses this profile.
+#
 # TODO Phase 10: machines should import domains/monitoring directly and set their own values.
 { lib, config, ... }:
 {
