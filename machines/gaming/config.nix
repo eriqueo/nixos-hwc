@@ -5,9 +5,7 @@
     ./hardware.nix
     ./home.nix                        # Machine-specific HM (gaming has custom lean HM)
 
-    # Core profile — system/paths/secrets
-    ../../profiles/core.nix
-    ../../profiles/gaming.nix         # Gaming-specific config (session, audio, perf tuning)
+    ../../profiles/gaming.nix         # Includes core.nix + gaming-specific config
   ];
 
   # Machine identity
