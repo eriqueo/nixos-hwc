@@ -5,7 +5,7 @@
 # NAMESPACE: hwc.alerts.*
 #
 # DEPENDENCIES:
-#   - hwc.server.native.n8n (webhook receiver)
+#   - hwc.automation.n8n (webhook receiver)
 #   - hwc.secrets (slack webhook URL)
 #
 # USED BY:
@@ -65,7 +65,7 @@ let
   # Check if n8n is available (either native or we're on server)
   # Use lazy evaluation to avoid recursion
   n8nAvailable =
-    (config.hwc.server.native.n8n.enable or false);
+    (config.hwc.automation.n8n.enable or false);
 
 in
 {
@@ -259,7 +259,7 @@ in
         assertion = !enabled || n8nAvailable;
         message = ''
           hwc.alerts requires n8n to be enabled for webhook routing.
-          Enable n8n with: hwc.server.native.n8n.enable = true
+          Enable n8n with: hwc.automation.n8n.enable = true
 
           Alternatively, configure a different webhook.baseUrl pointing to
           your alert receiver.

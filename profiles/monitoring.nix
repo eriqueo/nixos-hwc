@@ -47,7 +47,7 @@
   };
 
   # n8n - Workflow automation for alert routing
-  hwc.server.native.n8n = {
+  hwc.automation.n8n = {
     enable = lib.mkDefault true;
     port = 5678;
     dataDir = "/var/lib/hwc/n8n";

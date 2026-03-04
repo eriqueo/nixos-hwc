@@ -24,4 +24,5 @@ automation/
 
 ## Changelog
 
+- 2026-03-04: Namespace migration hwc.server.native.n8n.* → hwc.automation.n8n.*
 - 2026-03-04: Created automation domain; moved n8n from domains/server/native/ (Phase 6 of DDD migration)
