@@ -4,6 +4,7 @@ let
   cfg = config.hwc.home.apps.yazi;
 
   # Import the parts as local variables
+  tomlConfig = import ./parts/toml.nix;
   keymapConfig = import ./parts/keymap.nix;
   pluginsConfig = import ./parts/plugins.nix;
   themeConfig = import ./parts/theme.nix { inherit config; };
@@ -24,81 +25,20 @@ in
       yazi micro ffmpegthumbnailer unzip jq poppler-utils fontpreview
       fd ripgrep fzf zoxide file exiftool imagemagick p7zip glow
     ];
-
-    xdg.configFile =
-      {
-        "yazi/yazi.toml" = {
-          text = ''
-            [mgr]
-            sort_by = "natural"
-            sort_dir_first = true
-            mouse_events = [ "click", "scroll" ]
-            show_hidden = false
-            show_symlink = true
-            show_symlink_icon = true
-            linemode = "size"
-            scrolloff = 5
-
-            [preview]
-            max_width = 600
-            max_height = 900
-            cache_dir = ""
-            ueberzug_scale = 1
-            ueberzug_offset = [ 0, 0, 0, 0 ]
-
-            [opener]
-            edit = [
-              { run = 'micro "$@"', block = true, for = "text" },
-              { run = 'micro "$@"', block = true, for = "unix" }
-            ]
-            open = [ { run = 'xdg-open "$@"', desc = "Open" } ]
-            office = [ { run = 'onlyoffice-desktopeditors "$@"', desc = "OnlyOffice" } ]
-            extract = [ { run = '7z x -y "$@"', desc = "Extract here (7z)", for = "unix" } ]
-
-            [open]
-            prepend_rules = [
-              { mime = "application/{zip,gzip,x-7z-compressed,x-xz,x-bzip*,x-rar,x-tar}", use = ["extract"] }
-            ]
-            rules = [
-              { name = "*/", use = [ "open" ] },
-              { mime = "text/*", use = [ "edit" ] },
-              { mime = "video/*", use = [ "open" ] },
-              { mime = "audio/*", use = [ "open" ] },
-              { mime = "image/*", use = [ "open" ] },
-              { mime = "application/pdf", use = [ "open" ] },
-              { mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", use = [ "office" ] },
-              { mime = "application/msword", use = [ "office" ] },
-              { mime = "application/vnd.oasis.opendocument.text", use = [ "office" ] }
-            ]
-
-            [plugin]
-            previewers = [
-              { name = "*/", run = "folder", sync = true },
-              { name = "*.md", run = "glow" },
-              { mime = "text/*", run = "code" },
-              { mime = "*/xml", run = "code" },
-              { mime = "*/javascript", run = "code" },
-              { mime = "*/x-wine-extension-ini", run = "code" },
-              { mime = "image/*", run = "image" },
-              { mime = "video/*", run = "video" },
-              { mime = "application/pdf", run = "pdf" },
-              { mime = "application/json", run = "json" }
-            ]
-
-            tmtheme = "~/.config/yazi/Kanagawa.tmTheme"
-            [which]
-                cols = 2
-                separator = " → "
-                separator_style = { fg = "accent" }
-                mask = { bg = "bg0" }
-                rest = { fg = "fg3" }
-                cand = { fg = "accent" }
-                desc = { fg = "fg2" }
-          '';
+  xdg.configFile = {
+      "yazi/yazi.toml".text = tomlConfig."yazi/yazi.toml".text;  
+      "yazi/keymap.toml".text = keymapConfig."yazi/keymap.toml".text;
+      "yazi/theme.toml".text = themeConfig."yazi/theme.toml".text;
+    };
+   home.file = let
+     plugins = import ./parts/plugins.nix;
+   in {
+          "yazi/init.lua".text = plugins."yazi/init.lua".text;
+          "yazi/plugins/full-border.yazi/main.lua".text = plugins."yazi/plugins/full-border.yazi/main.lua".text;
+          "yazi/plugins/glow.yazi/main.lua".text = plugins."yazi/plugins/glow.yazi/main.lua".text;
+          "yazi/plugins/smart-filter.yazi/main.lua".text = plugins."yazi/plugins/smart-filter.yazi/main.lua".text;
+          "yazi/plugins/chmod.yazi/main.lua".text = plugins."yazi/plugins/chmod.yazi/main.lua".text;
+          "yazi/plugins/bookmarks.yazi/main.lua".text = plugins."yazi/plugins/bookmarks.yazi/main.lua".text;
+          "yazi/Kanagawa.tmTheme".text = themeConfig."yazi/Kanagawa.tmTheme".text;
         };
-      }
-      // keymapConfig
-      // pluginsConfig
-      // themeConfig;
-  };
 }
