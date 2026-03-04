@@ -4,6 +4,9 @@
 # Declares machine identity and composes profiles; states hardware reality.
 
 { config, lib, pkgs, inputs ? null, ... }:
+let
+  isPrimary = config.hwc.server.role == "primary";
+in
 {
   imports = [
     ./hardware.nix
@@ -11,8 +14,8 @@
     # Core profile — system/paths/secrets (NO session.nix — headless server)
     ../../profiles/core.nix
 
-    # Domains — server imports what it needs directly
-    ../../profiles/server.nix         # TODO Phase 10: replace with direct domain imports
+    # Server domain (options + caddy container + shared dirs)
+    ../../domains/server/index.nix
     ../../domains/ai/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
@@ -23,8 +26,24 @@
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
   ];
 
-  # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
   assertions = [
+    # Server role assertions
+    {
+      assertion = !isPrimary || (
+        (config.hwc.paths.hot.root != null && lib.hasPrefix "/mnt" config.hwc.paths.hot.root) ||
+        (config.hwc.paths.media.root != null && lib.hasPrefix "/mnt" config.hwc.paths.media.root)
+      );
+      message = "Primary server requires dedicated storage mounts (hot or media should use /mnt/* paths)";
+    }
+    {
+      assertion = config.hwc.secrets.enable;
+      message = "Server machine requires hwc.secrets.enable = true";
+    }
+    {
+      assertion = config.hwc.system.networking.tailscale.enable;
+      message = "Server machine requires Tailscale for secure remote access";
+    }
+    # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
     {
       # pkgs.lib.trivial.release returns e.g. "25.11" for nixos-25.11 stable
       assertion = lib.hasPrefix "25" (pkgs.lib.trivial.release or "");
@@ -152,9 +171,50 @@
     ssh.enable = true;
     tailscale.enable = true;
     tailscale.funnel.enable = false;  # Disabled - using n8n-specific funnel on port 10000
+    tailscale.extraUpFlags = [ "--advertise-tags=tag:server" "--accept-routes" ];
     firewall.level = lib.mkForce "server";
-    firewall.extraTcpPorts = [ 8096 7359 2283 4533 ];  # Jellyfin, Immich, Navidrome
-    firewall.extraUdpPorts = [ 7359 ];  # Jellyfin discovery
+    firewall.extraTcpPorts = [
+      # Media services
+      5000   # Frigate
+      8080   # qBittorrent (via Gluetun)
+      7878   # Radarr
+      8989   # Sonarr
+      8686   # Lidarr
+      8787   # Readarr
+      9696   # Prowlarr
+      5055   # Jellyseerr
+      4533   # Navidrome
+      8096   # Jellyfin
+      2283   # Immich
+      8081   # SABnzbd
+      5030   # SLSKD
+      # Business services
+      8888   # Receipt API
+      8501   # Streamlit apps
+      5432   # PostgreSQL (internal)
+      6379   # Redis (internal)
+      # Monitoring services
+      3000   # Grafana
+      9090   # Prometheus
+      9093   # Alertmanager
+      # AI services
+      11434  # Ollama
+      # Calibre VNC
+      5909   # Calibre desktop VNC
+      # YouTube
+      8943   # Pinchflat (YouTube subscriptions)
+      # Game streaming (Sunshine)
+      47984 47989 47990  # Sunshine HTTPS, Web UI, RTSP
+      48010              # Sunshine video stream
+      7359               # Jellyfin discovery (also UDP)
+    ];
+    firewall.extraUdpPorts = [
+      7359   # Jellyfin discovery
+      50300  # SLSKD
+      8555   # Frigate
+      # Game streaming (Sunshine)
+      47998 47999 48000 48010
+    ];
   };
 
   # Samba file sharing for RetroArch ROMs (Google TV access)
@@ -655,11 +715,261 @@
   # X11 services disabled for headless server
   # services.xserver.enable = true;
 
-  # Server-specific packages moved to modules/system/server-packages.nix
+  # Server-specific packages
   hwc.system.core.packages.server.enable = true;
 
-  # I/O scheduler and journald configuration moved to profiles/server.nix to avoid duplication
-  # This eliminates conflicts between machine and profile configurations
+  #============================================================================
+  # STORAGE PATHS
+  #============================================================================
+  hwc.paths = {
+    hot.root = "/mnt/hot";      # SSD hot storage
+    media.root = "/mnt/media";  # HDD media storage
+  };
+
+  #============================================================================
+  # CONTAINER RUNTIME
+  #============================================================================
+  virtualisation = {
+    docker.enable = lib.mkForce false;
+    podman = {
+      enable = true;
+      dockerCompat = true;
+      defaultNetwork.settings.dns_enabled = true;
+    };
+    oci-containers.backend = "podman";
+  };
+
+  #============================================================================
+  # PERFORMANCE TUNING
+  #============================================================================
+  boot.kernel.sysctl = {
+    "vm.dirty_ratio" = lib.mkDefault 15;
+    "vm.dirty_background_ratio" = lib.mkDefault 5;
+    "vm.swappiness" = lib.mkDefault 10;
+  };
+
+  # I/O scheduler optimizations for server workloads
+  services.udev.extraRules = lib.mkAfter ''
+    ACTION=="add|change", KERNEL=="nvme*", ATTR{queue/scheduler}="mq-deadline"
+    ACTION=="add|change", KERNEL=="sd*", ENV{ID_BUS}=="ata", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="mq-deadline"
+    ACTION=="add|change", KERNEL=="sd*", ENV{ID_BUS}=="ata", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"
+  '';
+
+  # SMART disk monitoring
+  services.smartd = {
+    enable = true;
+    autodetect = true;
+    notifications.wall.enable = true;
+    defaults.monitored = "-a -o on -s (S/../.././02|L/../../6/03)";
+  };
+
+  # Enhanced logging for server
+  services.journald.extraConfig = ''
+    SystemMaxUse=1G
+    RuntimeMaxUse=200M
+    SystemMaxFileSize=100M
+    MaxRetentionSec=1month
+  '';
+
+  # Log rotation for container logs
+  services.logrotate.settings.docker = {
+    files = [ "/var/lib/docker/containers/*/*.log" ];
+    frequency = "daily";
+    rotate = 7;
+    compress = true;
+    missingok = true;
+    notifempty = true;
+    sharedscripts = true;
+  };
+
+  #============================================================================
+  # REVERSE PROXY
+  #============================================================================
+  hwc.server.reverseProxy = {
+    enable = lib.mkDefault true;
+    domain = "hwc.ocelot-wahoo.ts.net";
+  };
+
+  #============================================================================
+  # SERVICE ENABLEMENT
+  #============================================================================
+
+  # Download stack (VPN + clients)
+  hwc.server.containers.gluetun = {
+    enable = lib.mkDefault isPrimary;
+    portForwarding = {
+      enable = lib.mkDefault isPrimary;
+      syncToQbittorrent = lib.mkDefault true;
+      checkInterval = 60;
+    };
+  };
+  hwc.server.containers.qbittorrent.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.sabnzbd.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.mousehole.enable = lib.mkDefault isPrimary;
+
+  # *arr stack
+  hwc.server.containers.prowlarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.sonarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.radarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.lidarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.readarr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.books.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.calibre.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.audiobookshelf.enable = lib.mkDefault isPrimary;
+  hwc.server.native.orchestration.audiobookCopier.enable = lib.mkDefault isPrimary;
+
+  # Beets music organizer (using native installation)
+  hwc.server.containers.beets.enable = false;
+
+  # Media discovery + download management
+  hwc.server.containers.jellyseerr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.slskd.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.soularr.enable = lib.mkDefault isPrimary;
+
+  # Video transcoding (disabled — high resource usage)
+  hwc.server.containers.tdarr.enable = false;
+  hwc.server.containers.recyclarr = {
+    enable = lib.mkDefault isPrimary;
+    services.lidarr.enable = false;
+  };
+  hwc.server.containers.organizr.enable = lib.mkDefault isPrimary;
+  hwc.server.containers.pinchflat.enable = lib.mkDefault isPrimary;
+
+  # Native media services
+  hwc.server.native.jellyfin = {
+    enable = lib.mkDefault isPrimary;
+    openFirewall = false;
+    reverseProxy = {
+      enable = true;
+      path = "/media";
+      upstream = "localhost:8096";
+    };
+    gpu.enable = true;
+    apiKey = "26d513d02f27467aa94d70e4b43688f8";
+    users.eric.maxActiveSessions = 0;
+  };
+
+  # RetroArch emulation with Sunshine game streaming
+  hwc.server.native.retroarch = {
+    enable = lib.mkDefault isPrimary;
+    gpu.enable = true;
+    cores = {
+      dosbox-pure = true;
+      snes9x = true;
+      mgba = true;
+      mupen64plus = true;
+      genesis-plus-gx = true;
+      nestopia = true;
+      beetle-psx-hw = true;
+      flycast = true;
+    };
+    sunshine = {
+      enable = true;
+      openFirewall = true;
+      capSysAdmin = true;
+    };
+  };
+
+  # WebDAV for RetroArch save sync
+  hwc.server.native.webdav = {
+    enable = lib.mkDefault isPrimary;
+    auth = {
+      usernameFile = config.hwc.secrets.api.webdavUsernameFile;
+      passwordFile = config.hwc.secrets.api.webdavPasswordFile;
+    };
+    retroarch = {
+      enable = true;
+      syncSaves = true;
+      syncStates = true;
+    };
+    reverseProxy = {
+      enable = true;
+      path = "/retroarch-sync";
+    };
+  };
+
+  # Firefly III personal finance
+  hwc.server.containers.firefly = {
+    enable = lib.mkDefault isPrimary;
+  };
+
+  # Immich photo management
+  hwc.server.native.immich.enable = lib.mkForce false;  # Native: disabled
+  hwc.server.containers.immich = {
+    enable = lib.mkDefault isPrimary;
+    settings = {
+      host = "0.0.0.0";
+      port = 2283;
+      mediaLocation = "/mnt/media/photos/immich";
+    };
+    storage = {
+      enable = true;
+      basePath = "/mnt/media/photos/immich";
+      locations = {
+        library = "/mnt/media/photos/immich/library";
+        thumbs = "/mnt/media/photos/immich/thumbs";
+        encodedVideo = "/mnt/media/photos/immich/encoded-video";
+        profile = "/mnt/media/photos/immich/profile";
+      };
+    };
+    database = {
+      host = "127.0.0.1";
+      port = 5432;
+      name = "immich";
+      user = "eric";
+    };
+    redis = {
+      enable = true;
+      host = "127.0.0.1";
+      port = 6380;
+    };
+    gpu.enable = true;
+    machineLearning.enable = true;
+    observability.metrics.enable = true;
+    network.mode = "host";
+  };
+
+  # YouTube services
+  hwc.server.native.youtube.legacyApi = {
+    enable = lib.mkDefault isPrimary;
+    port = 8099;
+    dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
+  };
+  hwc.server.native.youtube.transcripts = {
+    enable = lib.mkDefault false;
+    port = 8100;
+    workers = 4;
+    outputDirectory = "/mnt/hot/youtube-transcripts";
+  };
+  hwc.server.native.youtube.videos = {
+    enable = lib.mkDefault false;
+    port = 8101;
+    workers = 2;
+    outputDirectory = "/mnt/media/youtube";
+  };
+
+  # PostgreSQL (always enabled — used by many services)
+  hwc.server.databases.postgresql = {
+    enable = lib.mkDefault true;
+    version = "16";
+  };
+
+  # Storage automation
+  hwc.server.storage = {
+    enable = lib.mkDefault true;
+    cleanup = {
+      enable = lib.mkDefault true;
+      schedule = "daily";
+      retentionDays = 7;
+    };
+    monitoring = {
+      enable = lib.mkDefault true;
+      alertThreshold = 85;
+    };
+  };
+
+  # Navidrome native (disabled — pkg-config build failure in 25.11; using container instead)
+  # hwc.server.native.navidrome set below with mkForce false
 
   # Headless server — minimal Home Manager (CLI only, no GUI)
   # Server does NOT import session.nix, so no GUI defaults are inherited.

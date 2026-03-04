@@ -6,8 +6,7 @@
   imports = [
     ./options.nix
     ./containers/index.nix
-    # databases moved to domains/data/
-    ./native/index.nix
+    # native/ removed — all services moved to their respective domains
   ];
   #==========================================================================
   # IMPLEMENTATION
