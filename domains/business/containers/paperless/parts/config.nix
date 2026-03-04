@@ -114,7 +114,7 @@ in
       };
 
       # Register database with PostgreSQL service
-      hwc.server.databases.postgresql.databases = [
+      hwc.data.databases.postgresql.databases = [
         cfg.database.name
       ];
 
@@ -151,12 +151,12 @@ in
       # VALIDATION
       assertions = [
         {
-          assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
-          message = "paperless requires PostgreSQL (hwc.server.databases.postgresql.enable = true)";
+          assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
+          message = "paperless requires PostgreSQL (hwc.data.databases.postgresql.enable = true)";
         }
         {
-          assertion = !cfg.enable || config.hwc.server.databases.redis.enable;
-          message = "paperless requires Redis (hwc.server.databases.redis.enable = true)";
+          assertion = !cfg.enable || config.hwc.data.databases.redis.enable;
+          message = "paperless requires Redis (hwc.data.databases.redis.enable = true)";
         }
         {
           assertion = !cfg.enable || (config.age.secrets ? paperless-secret-key);

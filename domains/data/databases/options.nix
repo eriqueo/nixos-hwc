@@ -2,7 +2,7 @@
 #
 # Database services for server workloads
 #
-# NAMESPACE: hwc.server.databases.*
+# NAMESPACE: hwc.data.databases.*
 #
 # USED BY:
 #   - domains/server/containers/paperless (PostgreSQL)
@@ -17,7 +17,7 @@ let
   paths = config.hwc.paths or {};
 in
 {
-  options.hwc.server.databases = {
+  options.hwc.data.databases = {
     postgresql = {
       enable = lib.mkEnableOption "PostgreSQL database";
 

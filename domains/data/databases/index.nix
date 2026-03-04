@@ -2,7 +2,7 @@
 #
 # Database services - PostgreSQL, Redis, InfluxDB
 #
-# NAMESPACE: hwc.server.databases.*
+# NAMESPACE: hwc.data.databases.*
 #
 # DEPENDENCIES:
 #   - hwc.paths (for dataDir defaults)
@@ -15,7 +15,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.databases;
+  cfg = config.hwc.data.databases;
   paths = config.hwc.paths;
 in
 {

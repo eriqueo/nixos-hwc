@@ -6,7 +6,7 @@
 #
 # DEPENDENCIES:
 #   - hwc.paths (storage paths)
-#   - hwc.server.databases.postgresql (database backend)
+#   - hwc.data.databases.postgresql (database backend)
 
 { lib, config, ... }:
 

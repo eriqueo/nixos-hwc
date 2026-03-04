@@ -5,7 +5,7 @@
 # DEPENDENCIES:
 #   - domains/business (business services implementation)
 #   - hwc.server.containers.paperless (document management)
-#   - hwc.server.databases.redis (caching)
+#   - hwc.data.databases.redis (caching)
 #
 # USED BY:
 #   - machines/server/config.nix
@@ -45,5 +45,5 @@
   hwc.server.containers.paperless.enable = lib.mkDefault true;
 
   # Redis for caching
-  hwc.server.databases.redis.enable = lib.mkDefault true;
+  hwc.data.databases.redis.enable = lib.mkDefault true;
 }

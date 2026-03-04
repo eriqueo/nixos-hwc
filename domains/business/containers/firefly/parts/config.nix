@@ -176,7 +176,7 @@ in
     # DATABASE REGISTRATION
     #=========================================================================
     {
-      hwc.server.databases.postgresql.databases = [
+      hwc.data.databases.postgresql.databases = [
         cfg.database.name
       ] ++ lib.optionals cfg.pico.enable [
         cfg.database.picoName
@@ -189,8 +189,8 @@ in
     {
       assertions = [
         {
-          assertion = !cfg.enable || config.hwc.server.databases.postgresql.enable;
-          message = "hwc.server.containers.firefly requires PostgreSQL to be enabled (hwc.server.databases.postgresql.enable = true)";
+          assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
+          message = "hwc.server.containers.firefly requires PostgreSQL to be enabled (hwc.data.databases.postgresql.enable = true)";
         }
         {
           assertion = !cfg.enable || config.age.secrets ? firefly-app-key;

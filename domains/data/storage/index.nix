@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.storage;
+  cfg = config.hwc.data.storage;
 in
 {
   #==========================================================================
