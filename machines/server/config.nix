@@ -7,17 +7,19 @@
 {
   imports = [
     ./hardware.nix
-    ../../profiles/system.nix
-    ../../profiles/home.nix
-    ../../profiles/server.nix
-    ../../profiles/security.nix
-    ../../profiles/ai.nix
-    ../../domains/server/native/routes.nix
-    ../../domains/server/native/frigate/index.nix  # Config-first pattern NVR with GPU acceleration
-    ../../profiles/monitoring.nix   # Monitoring enabled: Prometheus + Grafana
+
+    # Core profile — system/paths/secrets (NO session.nix — headless server)
+    ../../profiles/core.nix
+
+    # Domains — server imports what it needs directly (still using old paths until migration)
+    ../../profiles/server.nix         # TODO Phase 10: replace with direct domain imports
+    ../../domains/ai/index.nix
+    ../../domains/server/native/routes.nix  # TODO Phase 3: move to domains/networking
+    ../../domains/server/native/frigate/index.nix  # TODO Phase 7d: move to domains/media
+    ../../profiles/monitoring.nix     # TODO Phase 4: replace with domains/monitoring
     # ../../profiles/media.nix         # TODO: Fix sops/agenix conflict in orchestrator
-    ../../profiles/business.nix
-    ../../profiles/alerts.nix        # Centralized alert routing to Slack via n8n
+    ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
+    ../../domains/alerts/index.nix    # Direct domain import (no profile wrapper)
   ];
 
   # CHARTER v9.0: Hard enforcement that server MUST use stable nixpkgs
@@ -658,79 +660,51 @@
   # I/O scheduler and journald configuration moved to profiles/server.nix to avoid duplication
   # This eliminates conflicts between machine and profile configurations
 
-  # Emergency access via security domain (safer than machine-level overrides)
-  # hwc.secrets.emergency.enable is handled by security profile
+  # Headless server — minimal Home Manager (CLI only, no GUI)
+  # Server does NOT import session.nix, so no GUI defaults are inherited.
+  # Only CLI tools needed for server administration.
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
 
-  # Override home profile for headless server - only CLI/shell tools
-  home-manager.users.eric = {
-    # Disable all GUI applications for headless server
-    hwc.home.apps = {
-      # Desktop Environment (disable all)
-      hyprland.enable = lib.mkForce false;
-      waybar.enable = lib.mkForce false;
-      swaync.enable = lib.mkForce false;
-      kitty.enable = lib.mkForce false;
+    users.eric = {
+      imports = [ ../../domains/home/index.nix ];
+      home.stateVersion = "24.05";
 
-      # File Management (disable GUI, disable CLI to avoid cross-version issues)
-      thunar.enable = lib.mkForce false;
-      yazi.enable = lib.mkForce false;  # Disabled: cross-version poppler package issue
+      hwc.home = {
+        # CLI tools only
+        shell = {
+          enable = true;
+          modernUnix = true;
+          git.enable = true;
+          zsh = {
+            enable = true;
+            starship = true;
+            autosuggestions = true;
+            syntaxHighlighting = true;
+          };
+        };
 
-      # Web Browsers (disable all)
-      chromium.enable = lib.mkForce false;
-      librewolf.enable = lib.mkForce false;
+        development.enable = true;
 
-      # Mail Clients (disable CLI to avoid cross-version issues, disable GUI)
-      aerc.enable = lib.mkForce false;  # Disabled: cross-version poppler package issue
-      # neomutt.enable remains true (CLI tool)
-      betterbird.enable = lib.mkForce false;
-      proton-mail.enable = lib.mkForce false;
-      thunderbird.enable = lib.mkForce false;
+        # No GUI, no mail, no theme
+        mail.enable = false;
+        theme.fonts.enable = false;
 
-      # Security (keep CLI tools)
-      # gpg.enable remains true
+        # CLI-only apps
+        apps = {
+          gpg.enable = true;
+          codex.enable = true;
+          aider.enable = true;
+          gemini-cli.enable = true;
+        };
+      };
 
-      # Proton Suite (disable GUI)
-      proton-authenticator.enable = lib.mkForce false;
-      proton-pass.enable = lib.mkForce false;
-
-      # Productivity & Office (disable all)
-      obsidian.enable = lib.mkForce false;
-      onlyoffice-desktopeditors.enable = lib.mkForce false;
-
-      # Creative & Media (disable all GUI)
-      blender.enable = lib.mkForce false;
-      freecad.enable = lib.mkForce false;  # Build fails on 24.05 - patch issue
-
-      # Development & Automation (keep CLI)
-      n8n.enable = lib.mkForce false;
-      opencode.enable = lib.mkForce false;  # Not available in stable 24.05
-      # gemini-cli.enable remains true (CLI tool)
-      codex.enable = lib.mkForce true;  # Pinned via flake input (openai/codex rust-v0.101.0)
-      aider.enable = lib.mkForce true;  # AI pair-programming CLI for cloud and local Ollama models
-
-      # Utilities (disable GUI)
-      wasistlos.enable = lib.mkForce false;
-      bottles-unwrapped.enable = lib.mkForce false;
-      localsend.enable = lib.mkForce false;
+      # Disable desktop services
+      targets.genericLinux.enable = false;
+      dconf.enable = lib.mkForce false;
+      services.mako.enable = lib.mkForce false;
     };
-
-    # Keep shell/CLI configuration enabled
-    hwc.home.shell.enable = true;
-    hwc.home.development.enable = true;
-
-    # Disable mail for server (no GUI mail needed)
-    hwc.home.mail.enable = lib.mkForce false;
-
-    # Disable desktop features for headless server
-    hwc.home.theme.fonts.enable = lib.mkForce false;
-
-    # Disable desktop services that try to use dconf
-    targets.genericLinux.enable = false;
-    dconf.enable = lib.mkForce false;
-
-    # Disable Wayland notification daemon (version incompatibility with stable)
-    # Mako module from HM unstable expects APIs not in nixpkgs-stable 24.05
-    services.mako.enable = lib.mkForce false;
   };
 
   system.stateVersion = "24.05";
