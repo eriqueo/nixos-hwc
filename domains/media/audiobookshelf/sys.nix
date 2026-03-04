@@ -2,7 +2,7 @@
 { lib, config, pkgs, ... }:
 let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.audiobookshelf;
+  cfg = config.hwc.media.audiobookshelf;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/audiobookshelf/config";
 in

@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.radarr;
+  cfg = config.hwc.media.radarr;
 in
 {
   #==========================================================================

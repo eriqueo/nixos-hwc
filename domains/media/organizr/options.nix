@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.organizr = {
+  options.hwc.media.organizr = {
     enable = mkEnableOption "Organizr unified dashboard";
 
     image = mkOption {

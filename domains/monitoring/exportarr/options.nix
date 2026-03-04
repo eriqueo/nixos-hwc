@@ -2,7 +2,7 @@
 #
 # Exportarr - Prometheus exporter for *arr applications (Sonarr/Radarr/Lidarr/Prowlarr)
 #
-# NAMESPACE: hwc.server.monitoring.exportarr.*
+# NAMESPACE: hwc.monitoring.exportarr.*
 
 { lib, ... }:
 

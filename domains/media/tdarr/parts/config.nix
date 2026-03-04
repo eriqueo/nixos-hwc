@@ -5,7 +5,7 @@ let
   helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
-  cfg = config.hwc.server.containers.tdarr;
+  cfg = config.hwc.media.tdarr;
   paths = config.hwc.paths;
   appsRoot = config.hwc.paths.apps.root;
   tdarrRoot = "${appsRoot}/tdarr";

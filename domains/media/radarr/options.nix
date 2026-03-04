@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.radarr = {
+  options.hwc.media.radarr = {
     enable = mkEnableOption "radarr container";
         image  = mkOption { type = types.str; default = "lscr.io/linuxserver/radarr:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

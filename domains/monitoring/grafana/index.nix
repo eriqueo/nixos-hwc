@@ -2,7 +2,7 @@
 #
 # GRAFANA - Dashboards and visualization
 #
-# NAMESPACE: hwc.server.monitoring.grafana.*
+# NAMESPACE: hwc.monitoring.grafana.*
 #
 # DEPENDENCIES:
 #   - hwc.monitoring.prometheus (datasource)

@@ -364,12 +364,12 @@
   };
 
   # Frigate NVR - DISABLED (no cameras at remote location)
-  hwc.server.native.frigate.enable = lib.mkForce false;
+  hwc.media.frigate.enable = lib.mkForce false;
 
   # Media Services - role-based defaults (secondary = disabled)
   # As a secondary server, media services are disabled by default.
   # To enable specific services, override like:
-  #   hwc.server.containers.jellyfin.enable = true;
+  #   hwc.media.jellyfin.enable = true;
 
   # Monitoring enabled via profiles/monitoring.nix import (direct enablement, no hwc.features gate)
 

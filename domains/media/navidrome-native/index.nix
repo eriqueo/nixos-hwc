@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.navidrome;
+  cfg = config.hwc.media.navidrome;
 in
 {
   #==========================================================================
@@ -15,7 +15,7 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Override dataFolder to use hwc structure
-    hwc.server.native.navidrome.settings.dataFolder = lib.mkDefault "/var/lib/hwc/navidrome";
+    hwc.media.navidrome.settings.dataFolder = lib.mkDefault "/var/lib/hwc/navidrome";
 
     # Native Navidrome service configuration
     services.navidrome = {
@@ -65,16 +65,16 @@ in
       {
         assertion = !cfg.enable ||
                     (cfg.settings.initialAdminPassword != "" || cfg.settings.initialAdminPasswordFile != null);
-        message = "hwc.server.navidrome requires either initialAdminPassword or initialAdminPasswordFile to be set";
+        message = "hwc.media.navidrome requires either initialAdminPassword or initialAdminPasswordFile to be set";
       }
       {
         assertion = !cfg.enable ||
                     !(cfg.settings.initialAdminPassword != "" && cfg.settings.initialAdminPasswordFile != null);
-        message = "hwc.server.navidrome: cannot set both initialAdminPassword and initialAdminPasswordFile";
+        message = "hwc.media.navidrome: cannot set both initialAdminPassword and initialAdminPasswordFile";
       }
       {
         assertion = !cfg.reverseProxy.enable || config.hwc.networking.reverseProxy.enable;
-        message = "hwc.server.navidrome.reverseProxy requires hwc.networking.reverseProxy.enable = true";
+        message = "hwc.media.navidrome.reverseProxy requires hwc.networking.reverseProxy.enable = true";
       }
     ];
   };

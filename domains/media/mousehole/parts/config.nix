@@ -1,7 +1,7 @@
 # domains/server/containers/mousehole/parts/config.nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.mousehole;
+  cfg = config.hwc.media.mousehole;
   appsRoot = config.hwc.paths.apps.root;
   dataPath = "${appsRoot}/mousehole/data";
 

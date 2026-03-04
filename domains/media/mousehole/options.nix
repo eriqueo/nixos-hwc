@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.mousehole = {
+  options.hwc.media.mousehole = {
     enable = mkEnableOption "Mousehole - MyAnonamouse seedbox IP updater";
 
     image = mkOption {

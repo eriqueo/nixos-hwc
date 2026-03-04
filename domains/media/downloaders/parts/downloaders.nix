@@ -9,13 +9,13 @@
 #
 # USED BY (Downstream):
 #   - TODO: List downstream consumers
-#   - profiles/*.nix (enables via hwc.server.native.downloaders.enable)
+#   - profiles/*.nix (enables via hwc.media.downloaders.enable)
 #
 # IMPORTS REQUIRED IN:
 #   - profiles/profile.nix: ../domains/services/media/downloaders.nix
 #
 # USAGE:
-#   hwc.server.native.downloaders.enable = true;
+#   hwc.media.downloaders.enable = true;
 #   # TODO: Add specific usage examples
 
 # modules/services/media/downloaders.nix
@@ -39,9 +39,9 @@
 #   - profiles/server.nix: ../domains/services/media/downloaders.nix
 #
 # USAGE:
-#   hwc.server.native.downloaders.enable = true;        # Enable all downloaders
-#   hwc.server.native.downloaders.qbittorrent.enable = true;  # Individual services
-#   hwc.server.native.downloaders.useVpn = true;        # Use VPN for downloads
+#   hwc.media.downloaders.enable = true;        # Enable all downloaders
+#   hwc.media.downloaders.qbittorrent.enable = true;  # Individual services
+#   hwc.media.downloaders.useVpn = true;        # Use VPN for downloads
 #
 # VALIDATION:
 #   - Requires VPN network when useVpn is enabled
@@ -51,7 +51,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.native.downloaders;
+  cfg = config.hwc.media.downloaders;
   paths = config.hwc.paths;
   
   # Helper functions from source

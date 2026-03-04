@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.native.jellyfin;
+  cfg = config.hwc.media.jellyfin;
 
   # Custom ffmpeg with NVENC/CUDA support for GPU transcoding
   ffmpeg-nvenc = pkgs.ffmpeg-full.override {
@@ -184,11 +184,11 @@ in
     assertions = [
       {
         assertion = !cfg.reverseProxy.enable || config.hwc.networking.reverseProxy.enable;
-        message = "hwc.server.jellyfin.reverseProxy requires hwc.networking.reverseProxy.enable = true";
+        message = "hwc.media.jellyfin.reverseProxy requires hwc.networking.reverseProxy.enable = true";
       }
       {
         assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
-        message = "hwc.server.jellyfin.gpu requires hwc.system.hardware.gpu.enable = true";
+        message = "hwc.media.jellyfin.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       # NOTE: Secret assertions removed (2026-02-08)
       # User initialization via secrets is incompatible with Jellyfin 10.9.11+ EF Core.

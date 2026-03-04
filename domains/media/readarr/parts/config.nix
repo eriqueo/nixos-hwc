@@ -1,7 +1,7 @@
 # Readarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.readarr;
+  cfg = config.hwc.media.readarr;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/readarr/config";
 

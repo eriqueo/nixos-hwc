@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.calibre = {
+  options.hwc.media.calibre = {
     enable = mkEnableOption "Calibre ebook management container";
 
     image = mkOption {

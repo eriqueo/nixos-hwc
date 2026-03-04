@@ -2,7 +2,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.containers.mousehole;
+  cfg = config.hwc.media.mousehole;
 in
 {
   #==========================================================================

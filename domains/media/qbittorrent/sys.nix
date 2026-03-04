@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.qbittorrent;
+  cfg = config.hwc.media.qbittorrent;
 in
 {
   # Charter v6 migration: Container implementation moved to parts/config.nix

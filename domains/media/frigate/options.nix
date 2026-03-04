@@ -3,7 +3,7 @@
 # Frigate NVR (Config-First Pattern) - Infrastructure Options Only
 # Charter v7.0 Section 19 compliant
 #
-# NAMESPACE: hwc.server.frigate.*
+# NAMESPACE: hwc.media.frigate.*
 #
 # PHILOSOPHY:
 #   Nix handles: image, ports, GPU, volumes, env
@@ -14,7 +14,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.native.frigate = {
+  options.hwc.media.frigate = {
     enable = mkEnableOption "Frigate NVR (config-first pattern)";
 
     image = mkOption {

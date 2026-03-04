@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.recyclarr;
+  cfg = config.hwc.media.recyclarr;
 in
 {
   config = lib.mkIf cfg.enable {

@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.prowlarr = {
+  options.hwc.media.prowlarr = {
     enable = mkEnableOption "prowlarr container";
         image  = mkOption { type = types.str; default = "lscr.io/linuxserver/prowlarr:latest"; description = "Container image"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

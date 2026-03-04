@@ -11,11 +11,11 @@ let
   workspaceDir = "${userHome}/.nixos/workspace";
 in
 {
-  options.hwc.server.native.orchestration.mediaOrchestrator = {
+  options.hwc.media.orchestration.mediaOrchestrator = {
     enable = lib.mkEnableOption "Media orchestrator service";
   };
 
-  config = lib.mkIf config.hwc.server.native.orchestration.mediaOrchestrator.enable {
+  config = lib.mkIf config.hwc.media.orchestration.mediaOrchestrator.enable {
     systemd.services.media-orchestrator-install = {
       description = "Install media orchestrator assets";
       after = [ "network-online.target" ];

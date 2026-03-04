@@ -1,7 +1,7 @@
 # Recyclarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.recyclarr;
+  cfg = config.hwc.media.recyclarr;
   appsRoot = config.hwc.paths.apps.root;
   cfgRoot = "${appsRoot}/recyclarr";
 

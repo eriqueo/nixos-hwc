@@ -56,4 +56,5 @@ media/
 
 ## Changelog
 
+- 2026-03-04: Namespace migration hwc.server.{containers,native}.* → hwc.media.*
 - 2026-03-04: Created media domain; moved all media containers and native services from domains/server/ (Phase 7 of DDD migration)

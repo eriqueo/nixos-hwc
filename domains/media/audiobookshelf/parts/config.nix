@@ -1,7 +1,7 @@
 # domains/server/containers/audiobookshelf/parts/config.nix
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.audiobookshelf;
+  cfg = config.hwc.media.audiobookshelf;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/audiobookshelf/config";
 

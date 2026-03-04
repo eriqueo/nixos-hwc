@@ -1,7 +1,7 @@
 # soularr configuration file generator (config-only - container moved to sys.nix)
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.soularr;
+  cfg = config.hwc.media.soularr;
   appsRoot = config.hwc.paths.apps.root;
   soularrRoot = "${appsRoot}/soularr";
 in

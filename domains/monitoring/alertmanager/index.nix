@@ -2,7 +2,7 @@
 #
 # ALERTMANAGER - Alert routing and notification management
 #
-# NAMESPACE: hwc.server.monitoring.alertmanager.*
+# NAMESPACE: hwc.monitoring.alertmanager.*
 #
 # DEPENDENCIES:
 #   - hwc.monitoring.prometheus (alert source)

@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.caddy;
+  cfg = config.hwc.media.caddy;
 in
 {
   #==========================================================================

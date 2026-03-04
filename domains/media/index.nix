@@ -3,8 +3,7 @@
 # Media domain — streaming, acquisition, processing, photos, video.
 # The largest domain, encompassing all media-related services.
 #
-# Namespace: hwc.server.containers.*, hwc.server.native.*
-# TODO Phase 8: Migrate to hwc.media.*
+# Namespace: hwc.media.*
 
 { lib, config, ... }:
 

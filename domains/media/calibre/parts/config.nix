@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.calibre;
+  cfg = config.hwc.media.calibre;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/calibre/config";
 

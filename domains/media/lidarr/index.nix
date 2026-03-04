@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.lidarr;
+  cfg = config.hwc.media.lidarr;
 in
 {
   #==========================================================================

@@ -1,7 +1,7 @@
 # Prowlarr container configuration
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.prowlarr;
+  cfg = config.hwc.media.prowlarr;
   arrConfig = import ../../../lib/arr-config.nix { inherit lib pkgs; };
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/prowlarr/config";

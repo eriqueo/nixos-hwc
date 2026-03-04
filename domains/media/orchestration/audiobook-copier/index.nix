@@ -6,7 +6,7 @@
 
 { config, pkgs, lib, ... }:
 let
-  cfg = config.hwc.server.native.orchestration.audiobookCopier;
+  cfg = config.hwc.media.orchestration.audiobookCopier;
   enabled = cfg.enable;
 
   pythonWithRequests = pkgs.python3.withPackages (ps: with ps; [ requests ]);
@@ -63,7 +63,7 @@ in
         message = "audiobook-copier requires hwc.paths.media.root to be defined";
       }
       {
-        assertion = !cfg.triggerLibraryScan || config.hwc.server.containers.audiobookshelf.enable;
+        assertion = !cfg.triggerLibraryScan || config.hwc.media.audiobookshelf.enable;
         message = "audiobook-copier triggerLibraryScan requires audiobookshelf container to be enabled";
       }
     ];

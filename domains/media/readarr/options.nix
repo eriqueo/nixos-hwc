@@ -7,7 +7,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.readarr = {
+  options.hwc.media.readarr = {
     enable = mkEnableOption "Bookshelf (Readarr revival) container for ebook/audiobook management";
     image  = mkOption { type = types.str; default = "ghcr.io/pennydreadful/bookshelf:hardcover"; description = "Container image (Bookshelf with Hardcover metadata)"; };
     network.mode = mkOption { type = types.enum [ "media" "vpn" ]; default = "media"; };

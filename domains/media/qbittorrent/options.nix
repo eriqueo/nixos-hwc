@@ -4,7 +4,7 @@ let
   inherit (lib) mkOption mkEnableOption types;
 in
 {
-  options.hwc.server.containers.qbittorrent = {
+  options.hwc.media.qbittorrent = {
     enable = mkEnableOption "qBittorrent torrent client container";
 
     image = mkOption {

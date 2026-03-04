@@ -6,7 +6,7 @@
 #
 # DEPENDENCIES:
 #   - hwc.paths.state (data directory)
-#   - Optional: hwc.server.monitoring.alertmanager (webhook consumer)
+#   - Optional: hwc.monitoring.alertmanager (webhook consumer)
 
 { config, lib, pkgs, ... }:
 
@@ -172,15 +172,15 @@ in
     assertions = [
       {
         assertion = !cfg.enable || (cfg.port != 0);
-        message = "n8n port must be configured (hwc.server.n8n.port)";
+        message = "n8n port must be configured (hwc.automation.n8n.port)";
       }
       {
         assertion = !cfg.enable || (cfg.dataDir != "");
-        message = "n8n data directory must be configured (hwc.server.n8n.dataDir)";
+        message = "n8n data directory must be configured (hwc.automation.n8n.dataDir)";
       }
       {
         assertion = !cfg.enable || (cfg.webhookUrl != "");
-        message = "n8n webhook URL must be configured (hwc.server.n8n.webhookUrl)";
+        message = "n8n webhook URL must be configured (hwc.automation.n8n.webhookUrl)";
       }
       {
         assertion = !cfg.enable || (cfg.database.type == "sqlite" -> cfg.database.sqlite.file != "");

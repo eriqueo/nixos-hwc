@@ -3,7 +3,7 @@ let
   inherit (lib) mkEnableOption mkOption types;
 in
 {
-  options.hwc.server.containers.immich = {
+  options.hwc.media.immich = {
     enable = mkEnableOption "Immich photo management server (containerized)";
 
     # Container images

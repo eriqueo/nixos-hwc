@@ -1,6 +1,6 @@
 { lib, config, ... }:
 let
-  cfg = config.hwc.server.native.orchestration;
+  cfg = config.hwc.media.orchestration;
 in
 {
   #==========================================================================
@@ -17,7 +17,7 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Enable media orchestrator by default for server
-    hwc.server.native.orchestration.mediaOrchestrator.enable = lib.mkDefault true;  # Fixed: now uses agenix
+    hwc.media.orchestration.mediaOrchestrator.enable = lib.mkDefault true;  # Fixed: now uses agenix
     assertions = [];
   };
 

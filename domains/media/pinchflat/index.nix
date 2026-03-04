@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.pinchflat;
+  cfg = config.hwc.media.pinchflat;
 in
 {
   #==========================================================================

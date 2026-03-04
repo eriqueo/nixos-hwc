@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.sabnzbd;
+  cfg = config.hwc.media.sabnzbd;
 in
 {
   # Charter v6 migration: Container implementation moved to parts/config.nix

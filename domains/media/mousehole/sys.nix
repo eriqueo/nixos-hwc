@@ -5,7 +5,7 @@ let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
-  cfg = config.hwc.server.containers.mousehole;
+  cfg = config.hwc.media.mousehole;
   appsRoot = config.hwc.paths.apps.root;
   dataPath = "${appsRoot}/mousehole/data";
 in

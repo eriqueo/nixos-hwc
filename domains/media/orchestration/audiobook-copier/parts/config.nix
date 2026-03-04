@@ -4,7 +4,7 @@
 
 { config, lib, ... }:
 let
-  cfg = config.hwc.server.native.orchestration.audiobookCopier;
+  cfg = config.hwc.media.orchestration.audiobookCopier;
 in
 {
   config = lib.mkIf cfg.enable {

@@ -16,7 +16,7 @@
   # - GPU acceleration for performance
   # - Redis caching
 
-  hwc.server.immich = {
+  hwc.media.immich = {
     enable = true;
 
     # Storage configuration with automatic directory creation
@@ -70,7 +70,7 @@
   # Use this if you want to separate storage types across different drives
   # For example: thumbnails on SSD, videos on HDD
 
-  # hwc.server.immich = {
+  # hwc.media.immich = {
   #   enable = true;
   #
   #   storage = {
@@ -105,7 +105,7 @@
   # ============================================================================
   # Simplest configuration using all defaults
 
-  # hwc.server.immich = {
+  # hwc.media.immich = {
   #   enable = true;
   #   redis.enable = true;
   #   gpu.enable = true;
@@ -122,7 +122,7 @@
   # ============================================================================
   # Optimized for performance with frequent backups
 
-  # hwc.server.immich = {
+  # hwc.media.immich = {
   #   enable = true;
   #
   #   storage.enable = true;
@@ -162,7 +162,7 @@
   # Configuration for multiple family members
   # Each user gets their own namespace automatically
 
-  # hwc.server.immich = {
+  # hwc.media.immich = {
   #   enable = true;
   #
   #   storage = {

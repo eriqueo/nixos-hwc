@@ -2,7 +2,7 @@
 let
   # Import PURE helper library - no circular dependencies
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
-  cfg = config.hwc.server.containers.jellyfin;
+  cfg = config.hwc.media.jellyfin;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/jellyfin/config";
 in

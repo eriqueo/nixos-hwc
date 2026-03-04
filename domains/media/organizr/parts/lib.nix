@@ -1,6 +1,6 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.hwc.server.containers.organizr;
+  cfg = config.hwc.media.organizr;
 in
 {
   config = lib.mkIf cfg.enable {

@@ -1,7 +1,7 @@
 { lib, config, pkgs, ... }:
 
 let
-  cfg = config.hwc.server.containers.calibre;
+  cfg = config.hwc.media.calibre;
 in
 {
   #==========================================================================
