@@ -18,7 +18,7 @@ in
     #==========================================================================
     # MEDIA STORAGE - Storage configuration for media services
     #==========================================================================
-    hwc.system.storage = {
+    hwc.system.mounts = {
       media = {
         enable = true;
         directories = [

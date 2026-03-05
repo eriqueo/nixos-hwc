@@ -1,4 +1,4 @@
-# domains/business/containers/firefly/parts/config.nix
+# domains/business/firefly/parts/config.nix
 #
 # Firefly III Container Configuration
 # Containerized personal finance manager with Firefly-Pico mobile companion
@@ -194,7 +194,7 @@ in
         }
         {
           assertion = !cfg.enable || config.age.secrets ? firefly-app-key;
-          message = "hwc.business.firefly requires firefly-app-key secret to be defined in domains/secrets/declarations/server.nix";
+          message = "hwc.business.firefly requires firefly-app-key secret to be defined in domains/secrets/declarations/services.nix";
         }
         {
           assertion = cfg.reverseProxy.corePort != cfg.reverseProxy.picoPort;

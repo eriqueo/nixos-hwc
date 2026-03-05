@@ -34,8 +34,8 @@ in
   #==========================================================================
   imports = [
     ./options.nix
-    ./containers/paperless/index.nix
-    ./containers/firefly/index.nix
+    ./paperless/index.nix
+    ./firefly/index.nix
   ];
 
   #==========================================================================

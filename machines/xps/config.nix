@@ -48,7 +48,7 @@
   };
 
   # Storage — external DAS not yet connected
-  hwc.system.storage = {
+  hwc.system.mounts = {
     hot.enable = false;
     media.enable = false;
     backup.enable = false;

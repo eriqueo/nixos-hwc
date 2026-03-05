@@ -1,14 +1,9 @@
 # domains/media/frigate/index.nix
 #
-# Frigate NVR - Config-First Pattern
-# Charter v7.0 Section 19 compliant
+# Frigate NVR — nix-native configuration
+# Namespace: hwc.media.frigate.*
 #
-# NAMESPACE: hwc.media.frigate.*
-#
-# ARCHITECTURE:
-#   - Nix: Container infrastructure (image, GPU, volumes, ports)
-#   - YAML: Frigate configuration (cameras, detectors, recording)
-#   - Config file: domains/server/frigate/config/config.yml
+# Config is generated from nix (parts/config.nix) with runtime secret substitution.
 #
 # DEPENDENCIES:
 #   - hwc.system.hardware.gpu (for GPU acceleration)
@@ -18,26 +13,17 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.frigate;
-
-  # Path to canonical config file (version-controlled)
-  configTemplate = ./config/config.yml;
-
 in
 {
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
   imports = [
     ./options.nix
+    ./parts/config.nix
     ./exporter/index.nix
   ];
 
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
   config = lib.mkIf cfg.enable {
 
-    # Config generation service (minimal - only substitutes secrets)
+    # Config generation service (substitutes secrets into nix-generated YAML template)
     systemd.services.frigate-config = {
       description = "Generate Frigate NVR configuration";
       wantedBy = [ "podman-frigate.service" ];
@@ -48,9 +34,6 @@ in
       };
 
       script = ''
-        # Directories created by systemd.tmpfiles.rules
-        # Only handle config file generation here
-
         # Create COCO-80 labelmap if it doesn't exist
         if [ ! -f ${cfg.storage.configPath}/labelmap/coco-80.txt ]; then
           cat > ${cfg.storage.configPath}/labelmap/coco-80.txt << 'LABELMAP_EOF'
@@ -158,9 +141,9 @@ LABELMAP_EOF
         CAM2_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_2')
         CAM3_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_3')
 
-        # Substitute secrets in config template
+        # Substitute secrets into nix-generated config template
         export RTSP_USER RTSP_PASS_ENCODED CAM1_IP CAM2_IP CAM3_IP
-        ${pkgs.envsubst}/bin/envsubst < ${configTemplate} > ${cfg.storage.configPath}/config.yaml
+        ${pkgs.envsubst}/bin/envsubst < ${cfg._configTemplate} > ${cfg.storage.configPath}/config.yaml
 
         chown eric:users ${cfg.storage.configPath}/config.yaml
       '';
@@ -168,14 +151,11 @@ LABELMAP_EOF
       path = with pkgs; [ coreutils jq python3 envsubst ];
     };
 
-    # Create all required directories early in boot (Charter-compliant pattern)
+    # Create all required directories
     systemd.tmpfiles.rules = [
-      # Config directories
       "d ${cfg.storage.configPath} 0755 eric users -"
       "d ${cfg.storage.configPath}/models 0755 eric users -"
       "d ${cfg.storage.configPath}/labelmap 0755 eric users -"
-
-      # Storage directories
       "d ${cfg.storage.mediaPath} 0755 eric users -"
       "d ${cfg.storage.bufferPath} 0755 eric users -"
     ];
@@ -186,11 +166,11 @@ LABELMAP_EOF
       autoStart = true;
 
       ports = [
-        "${toString cfg.port}:5000"  # Web UI
-        "8554:8554"  # RTSP
-        "8555:8555/tcp"  # WebRTC
-        "8555:8555/udp"  # WebRTC
-        "9191:9090"  # Prometheus metrics
+        "${toString cfg.port}:5000"
+        "8554:8554"
+        "8555:8555/tcp"
+        "8555:8555/udp"
+        "9191:9090"
       ];
 
       extraOptions = [
@@ -200,13 +180,11 @@ LABELMAP_EOF
         "--shm-size=${cfg.resources.shmSize}"
         "--memory=${cfg.resources.memory}"
         "--cpus=${cfg.resources.cpus}"
-        # Proper HTTP healthcheck (prevents empty 400 errors in logs)
         "--health-cmd=curl -fsS http://127.0.0.1:5000/api/stats || exit 1"
         "--health-interval=30s"
         "--health-timeout=5s"
         "--health-retries=3"
       ]
-      # NVIDIA GPU device passthrough (for object detection)
       ++ lib.optionals cfg.gpu.enable [
         "--device=nvidia.com/gpu=${toString cfg.gpu.device}"
       ];
@@ -221,91 +199,67 @@ LABELMAP_EOF
       };
 
       volumes = [
-        # GENERATED CONFIG (from template with secrets substituted)
         "${cfg.storage.configPath}:/config"
-
-        # Model cache (ONNX model file goes here)
         "${cfg.storage.configPath}/models:/config/models:ro"
-
-        # Labelmap (coco-80.txt)
         "${cfg.storage.configPath}/labelmap:/labelmap:ro"
-
-        # Storage
         "${cfg.storage.mediaPath}:/media/frigate"
         "${cfg.storage.bufferPath}:/tmp/frigate"
-
-        # System time
         "/etc/localtime:/etc/localtime:ro"
       ];
     };
 
     # Firewall rules
     networking.firewall = {
-      # Always allow localhost for reverse proxy
       interfaces."lo".allowedTCPPorts = [ cfg.port ];
-
-      # Optionally restrict external access to Tailscale only
       interfaces."tailscale0" = lib.mkIf cfg.firewall.tailscaleOnly {
-        allowedTCPPorts = [ cfg.port 8554 8555 ];  # Web UI, RTSP, WebRTC
-        allowedUDPPorts = [ 8555 ];  # WebRTC UDP
+        allowedTCPPorts = [ cfg.port 8554 8555 ];
+        allowedUDPPorts = [ 8555 ];
       };
     };
 
-    #==========================================================================
-    # PROMETHEUS INTEGRATION
-    #==========================================================================
-    # Add Frigate metrics endpoint to Prometheus scraping
-    hwc.monitoring.prometheus.scrapeConfigs = lib.mkIf cfg.enable [
+    # Prometheus integration
+    hwc.monitoring.prometheus.scrapeConfigs = [
       {
         job_name = "frigate-nvr";
-        static_configs = [{
-          targets = [ "localhost:9191" ];
-        }];
+        static_configs = [{ targets = [ "localhost:9191" ]; }];
         scrape_interval = "30s";
         scrape_timeout = "10s";
         metrics_path = "/metrics";
       }
     ];
 
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
     assertions = [
       {
         assertion = !cfg.gpu.enable || config.hwc.system.hardware.gpu.enable;
         message = "hwc.media.frigate.gpu requires hwc.system.hardware.gpu.enable = true";
       }
       {
-        assertion = !cfg.enable || (cfg.storage.mediaPath != "");
+        assertion = cfg.storage.mediaPath != "";
         message = "hwc.media.frigate.storage.mediaPath must be set";
       }
       {
-        assertion = !cfg.enable || (cfg.storage.bufferPath != "");
+        assertion = cfg.storage.bufferPath != "";
         message = "hwc.media.frigate.storage.bufferPath must be set";
       }
       {
-        assertion = !cfg.enable || (builtins.match "^/mnt/.*" cfg.storage.bufferPath != null);
-        message = "hwc.media.frigate.storage.bufferPath must be under /mnt (e.g., /mnt/hot/surveillance/frigate/buffer)";
+        assertion = builtins.match "^/mnt/.*" cfg.storage.bufferPath != null;
+        message = "hwc.media.frigate.storage.bufferPath must be under /mnt";
       }
       {
-        assertion = !cfg.enable || (builtins.match "^/mnt/.*" cfg.storage.mediaPath != null);
-        message = "hwc.media.frigate.storage.mediaPath must be under /mnt (e.g., /mnt/media/surveillance/frigate/media)";
+        assertion = builtins.match "^/mnt/.*" cfg.storage.mediaPath != null;
+        message = "hwc.media.frigate.storage.mediaPath must be under /mnt";
       }
       {
-        assertion = !cfg.enable || config.hwc.secrets.enable;
+        assertion = config.hwc.secrets.enable;
         message = "hwc.media.frigate requires hwc.secrets.enable = true for RTSP credentials";
       }
       {
-        assertion = !cfg.enable || (config.virtualisation.oci-containers.backend == "podman");
+        assertion = config.virtualisation.oci-containers.backend == "podman";
         message = "hwc.media.frigate requires Podman as OCI container backend";
       }
       {
-        assertion = !cfg.enable || builtins.pathExists configTemplate;
-        message = "hwc.media.frigate requires config/config.yml template to exist";
-      }
-      {
-        assertion = !cfg.enable || config.hwc.monitoring.prometheus.enable;
-        message = "Frigate metrics require Prometheus to be enabled (hwc.monitoring.prometheus.enable = true)";
+        assertion = config.hwc.monitoring.prometheus.enable;
+        message = "Frigate metrics require Prometheus (hwc.monitoring.prometheus.enable = true)";
       }
     ];
   };
