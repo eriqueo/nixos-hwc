@@ -86,6 +86,9 @@ in
   # Shell — core CLI environment (git, neovim, tmux, etc.)
   hwc.system.core.shell.enable = true;
 
+  # Hardware monitoring tools (smartctl, sensors, etc.) — all machines
+  hwc.system.hardware.monitoring.enable = true;
+
   # Backup — defaults off, machines enable per-need
   hwc.data.backup = {
     enable = lib.mkDefault false;
