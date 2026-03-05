@@ -1,5 +1,5 @@
-# domains/system/storage/options.nix
-# Storage tier configuration options
+# domains/system/mounts/options.nix
+# Storage mount and filesystem tier configuration
 
 { lib, config, ... }:
 
@@ -7,8 +7,8 @@ let
   t = lib.types;
 in
 {
-  options.hwc.system.storage = {
-    enable = lib.mkEnableOption "system storage aggregation" // { default = true; };
+  options.hwc.system.mounts = {
+    enable = lib.mkEnableOption "system mount management" // { default = true; };
 
     hot = {
       enable = lib.mkEnableOption "Hot storage tier";

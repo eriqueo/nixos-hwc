@@ -128,7 +128,7 @@
   # No overrides needed - all defaults match server requirements
 
   # Storage configuration (Charter v6.0 compliant)
-  hwc.system.storage = {
+  hwc.system.mounts = {
     hot = {
       enable = true;
       device = "/dev/disk/by-uuid/fd7a9820-a3e2-45cb-9c97-9fd904ee459a";

@@ -1,18 +1,13 @@
-# domains/system/storage/index.nix — aggregates storage and filesystem configuration
+# domains/system/mounts/index.nix — filesystem mount and storage tier management
 #
 # Provides hot/media/backup storage tier management with filesystem mounts,
 # directory structure creation, and external drive auto-mounting.
 #
-# USAGE:
-#   hwc.system.storage.hot.enable = true;
-#   hwc.system.storage.hot.device = "/dev/disk/by-uuid/...";
-#   hwc.system.storage.media.enable = true;
-#   hwc.system.storage.backup.enable = true;
-#   hwc.system.storage.backup.externalDrive.autoMount = true;
+# Namespace: hwc.system.mounts.*
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.system.storage;
+  cfg = config.hwc.system.mounts;
   paths = config.hwc.paths;
 
   dir   = builtins.readDir ./.;

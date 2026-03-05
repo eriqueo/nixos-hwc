@@ -94,5 +94,11 @@ in
         description = "Restrict access to Tailscale interface only";
       };
     };
+
+    _configTemplate = mkOption {
+      type = types.package;
+      internal = true;
+      description = "Generated YAML config template (set by parts/config.nix)";
+    };
   };
 }

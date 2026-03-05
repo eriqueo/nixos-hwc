@@ -1,4 +1,4 @@
-# domains/business/containers/firefly/sys.nix
+# domains/business/firefly/sys.nix
 #
 # Firefly III System Lane Configuration
 # PostgreSQL database grants and setup
