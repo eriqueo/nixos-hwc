@@ -35,5 +35,5 @@
   };
 
   # No backups on the travel stick.
-  hwc.system.services.backup.enable = lib.mkForce false;
+  hwc.data.backup.enable = lib.mkForce false;
 }

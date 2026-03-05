@@ -8,12 +8,12 @@
 # - Automatic pruning with configurable retention
 # - Pre/post backup hooks for database dumps
 #
-# Namespace: hwc.system.services.borg.*
+# Namespace: hwc.data.borg.*
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.borg;
+  cfg = config.hwc.data.borg;
   enabled = cfg.enable;
 
   # Job name for systemd service
@@ -138,7 +138,7 @@ in
     assertions = [
       {
         assertion = cfg.sources != [];
-        message = "hwc.system.services.borg.sources must not be empty";
+        message = "hwc.data.borg.sources must not be empty";
       }
       {
         assertion = cfg.encryption.mode != "none" || cfg.repo.remote.enable == false;

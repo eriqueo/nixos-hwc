@@ -90,7 +90,7 @@
   # ntfy notification system for laptop alerts
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md
-  hwc.system.services.ntfy = {
+  hwc.automation.ntfy = {
     enable = true;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale at /notify subpath
     defaultTopic = "hwc-laptop-events";  # General laptop events
@@ -110,7 +110,7 @@
 
   # Backup configuration for laptop
   # Supports plugging in external drives for local backups
-  hwc.system.services.backup = {
+  hwc.data.backup = {
     enable = true;
 
     # Local backup when external drive is connected

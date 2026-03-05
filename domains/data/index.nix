@@ -10,9 +10,8 @@
 {
   imports = [
     ./databases/index.nix
-    ./backup/index.nix              # hwc.data.backup — user/server backup (canonical)
-    ./backup-scheduler/index.nix    # hwc.system.services.backup — TODO: migrate namespace to hwc.data.*
-    ./borg/index.nix                # hwc.system.services.borg — TODO: migrate namespace to hwc.data.*
+    ./backup/index.nix      # hwc.data.backup — merged backup system
+    ./borg/index.nix         # hwc.data.borg — BorgBackup engine
     ./storage/index.nix
     ./couchdb/index.nix
   ];

@@ -5,7 +5,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.backup;
+  cfg = config.hwc.data.backup;
 
   # PostgreSQL backup hook (WAL archiving + base backup)
   postgresBackupHook = pkgs.writeScriptBin "postgres-backup-hook" ''

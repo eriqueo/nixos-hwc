@@ -3,7 +3,7 @@
 { lib, ... }:
 
 {
-  options.hwc.system.services.ntfy = {
+  options.hwc.automation.ntfy = {
     enable = lib.mkEnableOption "Enable ntfy notification system";
 
     #==========================================================================

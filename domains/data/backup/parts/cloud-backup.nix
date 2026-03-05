@@ -5,7 +5,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.backup;
+  cfg = config.hwc.data.backup;
 
   # Build exclude arguments for rclone
   excludeArgs = lib.concatMapStringsSep " " (pattern: "--exclude='${pattern}'") cfg.local.excludePatterns;

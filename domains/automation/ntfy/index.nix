@@ -7,7 +7,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.ntfy;
+  cfg = config.hwc.automation.ntfy;
 
   # Build the hwc-ntfy-send CLI tool
   ntfySendScript = pkgs.writeScriptBin "hwc-ntfy-send" ''

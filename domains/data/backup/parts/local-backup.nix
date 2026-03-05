@@ -5,7 +5,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.backup;
+  cfg = config.hwc.data.backup;
 
   # Build exclude arguments for rsync
   excludeArgs = lib.concatMapStringsSep " " (pattern: "--exclude='${pattern}'") cfg.local.excludePatterns;
@@ -281,7 +281,7 @@ EOF
       ''}
 
       # Send success notification (ntfy)
-      ${lib.optionalString (config.hwc.system.services.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onSuccess) ''
+      ${lib.optionalString (config.hwc.automation.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onSuccess) ''
         NTFY_TOPIC="${if cfg.notifications.ntfy.topic != null then cfg.notifications.ntfy.topic else "-"}"
         hwc-ntfy-send --tag backup,success --priority 3 \
           "$NTFY_TOPIC" \
@@ -310,7 +310,7 @@ Log: $LOG_FILE" || log "Warning: Failed to send ntfy notification"
       ''}
 
       # Send failure notification (ntfy)
-      ${lib.optionalString (config.hwc.system.services.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onFailure) ''
+      ${lib.optionalString (config.hwc.automation.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onFailure) ''
         NTFY_TOPIC="${if cfg.notifications.ntfy.topic != null then cfg.notifications.ntfy.topic else "-"}"
         hwc-ntfy-send --tag backup,failure,urgent --priority 5 \
           "$NTFY_TOPIC" \

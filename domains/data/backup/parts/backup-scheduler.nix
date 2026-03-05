@@ -5,7 +5,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.backup;
+  cfg = config.hwc.data.backup;
   
 	mkOnCalendar = { frequency, timeOfDay }:
 	    if frequency == "daily" then
