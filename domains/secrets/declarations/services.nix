@@ -233,6 +233,13 @@
       group = "secrets";
     };
 
+    n8n-api-key = {
+      file = ../parts/services/n8n-api-key.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
     # Slack integration secrets
     slack-signing-secret = {
       file = ../parts/services/slack-signing-secret.age;
