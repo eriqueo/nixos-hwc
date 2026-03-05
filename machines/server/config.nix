@@ -577,9 +577,8 @@
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
   # NixOS config excluded - it's in git. Databases handled by preBackupScript.
 
-  # TEMPORARY: Disable navidrome due to pkg-config build failure in NixOS 25.11
-  # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix
-  hwc.media.navidrome.enable = lib.mkForce false;
+  # Navidrome music streaming (container)
+  hwc.media.navidrome.enable = true;
   # Enable AI router and agent on server
   hwc.ai.router = {
     enable = true;
@@ -955,9 +954,6 @@
       alertThreshold = 85;
     };
   };
-
-  # Navidrome native (disabled — pkg-config build failure in 25.11; using container instead)
-  # hwc.media.navidrome set below with mkForce false
 
   # Headless server — minimal Home Manager (CLI only, no GUI)
   # Server does NOT import session.nix, so no GUI defaults are inherited.
