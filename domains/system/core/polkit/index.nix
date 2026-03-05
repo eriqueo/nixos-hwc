@@ -1,4 +1,5 @@
-# POLKIT - PolicyKit configuration and directory management
+# domains/system/core/polkit/index.nix
+# PolicyKit configuration and directory management
 { config, lib, ... }:
 
 let
@@ -7,7 +8,7 @@ in {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ../options.nix ];
+  imports = [ ./options.nix ];
 
   #==========================================================================
   # IMPLEMENTATION
