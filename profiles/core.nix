@@ -30,6 +30,9 @@ in
 
     # Secrets domain (absorbed from profiles/security.nix)
     ../domains/secrets/index.nix
+
+    # Data domain (required for backup defaults below)
+    ../domains/data/index.nix
   ] ++ (gatherSys ../domains/home/apps)
     ++ (gatherSys ../domains/home/mail);
 

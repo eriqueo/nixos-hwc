@@ -28,6 +28,8 @@
 
     # Domains — laptop-specific capabilities
     ../../domains/ai/index.nix
+    ../../domains/automation/index.nix
+    ../../domains/networking/index.nix
   ];
 
   # Blender 3D modeling with GPU rendering support (configured in profiles/home.nix)

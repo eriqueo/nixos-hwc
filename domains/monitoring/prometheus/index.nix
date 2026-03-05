@@ -64,7 +64,7 @@ in
               targets = [ "localhost:9100" ];
             }];
           }
-        ]++ lib.optional (config.hwc.media.youtube.legacyApi.enable && cfg.blackbox.enable) {
+        ]++ lib.optional ((config.hwc.media.youtube.legacyApi.enable or false) && cfg.blackbox.enable) {
                 job_name = "transcript-api-health";
                 metrics_path = "/probe";
                 params = { module = [ "http_health_check" ]; };

@@ -174,6 +174,9 @@
 
   hwc.data.backup.enable = true;
 
+  # Reverse proxy for local services
+  hwc.networking.reverseProxy.enable = true;
+
   # CouchDB for Obsidian LiveSync
   hwc.data.couchdb = {
     enable = true;
