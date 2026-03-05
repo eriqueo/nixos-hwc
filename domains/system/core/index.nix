@@ -13,6 +13,9 @@
     ./filesystem.nix
     ./thermal.nix
     ./validation.nix
+    ./polkit/index.nix    # MOVED from domains/system/services/polkit
+    ./session/index.nix   # MOVED from domains/system/services/session
+    ./shell/index.nix     # MOVED from domains/system/services/shell
   ];
 
   #==========================================================================
