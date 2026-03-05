@@ -1,4 +1,4 @@
-# domains/server/native/orchestration/audiobook-copier/parts/config.nix
+# domains/media/orchestration/audiobook-copier/parts/config.nix
 #
 # Systemd tmpfiles for audiobook copier state directory
 

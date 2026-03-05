@@ -1,4 +1,4 @@
-# domains/server/n8n/options.nix
+# domains/automation/n8n/options.nix
 #
 # n8n Workflow Automation Options
 # Charter v7.0 compliant

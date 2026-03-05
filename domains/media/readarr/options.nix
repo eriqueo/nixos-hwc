@@ -1,4 +1,4 @@
-# domains/server/containers/readarr/options.nix
+# domains/media/readarr/options.nix
 # NOTE: Using Bookshelf (Readarr revival) instead of original Readarr
 # Original Readarr's metadata service (api.bookinfo.club) is dead
 # Bookshelf uses Hardcover.app for working metadata

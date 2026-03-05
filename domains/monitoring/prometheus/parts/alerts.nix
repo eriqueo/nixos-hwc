@@ -1,4 +1,4 @@
-# domains/server/monitoring/prometheus/parts/alerts.nix
+# domains/monitoring/prometheus/parts/alerts.nix
 #
 # Prometheus Alert Rules - Organized by Severity
 # P5 = Critical, P4 = Warning, P3 = Info

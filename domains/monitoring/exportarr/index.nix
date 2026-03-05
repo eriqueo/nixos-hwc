@@ -1,4 +1,4 @@
-# domains/server/monitoring/exportarr/index.nix
+# domains/monitoring/exportarr/index.nix
 #
 # Exportarr - Prometheus exporter for *arr applications
 #

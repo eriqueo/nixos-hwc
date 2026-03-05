@@ -1,4 +1,4 @@
-# domains/server/ai/ai-bible/parts/ai-bible.nix
+# domains/ai/ai-bible/parts/ai-bible.nix
 #
 # AI Bible - Self-documenting NixOS configuration system
 #

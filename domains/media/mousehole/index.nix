@@ -1,4 +1,4 @@
-# domains/server/containers/mousehole/index.nix
+# domains/media/mousehole/index.nix
 { lib, config, pkgs, ... }:
 
 let

@@ -1,4 +1,4 @@
-# domains/server/monitoring/cadvisor/index.nix
+# domains/monitoring/cadvisor/index.nix
 #
 # cAdvisor - Container Advisor for resource usage and performance metrics
 #

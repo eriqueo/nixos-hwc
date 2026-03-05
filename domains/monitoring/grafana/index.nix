@@ -1,4 +1,4 @@
-# domains/server/monitoring/grafana/index.nix
+# domains/monitoring/grafana/index.nix
 #
 # GRAFANA - Dashboards and visualization
 #

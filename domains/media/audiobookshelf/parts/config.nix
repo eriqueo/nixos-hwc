@@ -1,4 +1,4 @@
-# domains/server/containers/audiobookshelf/parts/config.nix
+# domains/media/audiobookshelf/parts/config.nix
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.audiobookshelf;

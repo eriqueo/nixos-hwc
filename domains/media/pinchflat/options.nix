@@ -1,4 +1,4 @@
-# domains/server/containers/pinchflat/options.nix
+# domains/media/pinchflat/options.nix
 { lib, ... }:
 let
   inherit (lib) mkOption mkEnableOption types;

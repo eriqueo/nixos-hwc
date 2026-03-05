@@ -1,4 +1,4 @@
-# domains/server/monitoring/alertmanager/index.nix
+# domains/monitoring/alertmanager/index.nix
 #
 # ALERTMANAGER - Alert routing and notification management
 #

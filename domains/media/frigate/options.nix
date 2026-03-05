@@ -1,4 +1,4 @@
-# domains/server/frigate/options.nix
+# domains/media/frigate/options.nix
 #
 # Frigate NVR (Config-First Pattern) - Infrastructure Options Only
 # Charter v7.0 Section 19 compliant

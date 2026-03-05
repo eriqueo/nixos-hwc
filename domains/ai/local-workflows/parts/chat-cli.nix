@@ -1,4 +1,4 @@
-# domains/server/ai/local-workflows/parts/chat-cli.nix
+# domains/ai/local-workflows/parts/chat-cli.nix
 #
 # Interactive CLI chat interface with command execution tools
 

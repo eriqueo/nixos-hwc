@@ -1,4 +1,4 @@
-# domains/server/containers/calibre/options.nix
+# domains/media/calibre/options.nix
 { lib, ... }:
 let
   inherit (lib) mkOption mkEnableOption types;

@@ -1,4 +1,4 @@
-# domains/server/media/index.nix
+# domains/media/media-native/index.nix
 # Media profile defaults (storage scaffolding) extracted from profiles/media.nix
 
 { lib, config, ... }:

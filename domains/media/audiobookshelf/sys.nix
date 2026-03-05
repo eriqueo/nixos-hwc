@@ -1,4 +1,4 @@
-# domains/server/containers/audiobookshelf/sys.nix
+# domains/media/audiobookshelf/sys.nix
 { lib, config, pkgs, ... }:
 let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };

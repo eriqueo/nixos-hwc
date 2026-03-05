@@ -1,4 +1,4 @@
-# domains/server/ai/local-workflows/parts/journaling.nix
+# domains/ai/local-workflows/parts/journaling.nix
 #
 # Automatic system event journaling with AI summaries
 

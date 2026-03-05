@@ -1,4 +1,4 @@
-# domains/server/monitoring/alertmanager/options.nix
+# domains/monitoring/alertmanager/options.nix
 #
 # Alertmanager Alert Routing Options
 # Charter v7.0 compliant

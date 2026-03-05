@@ -1,4 +1,4 @@
-# domains/server/containers/mousehole/options.nix
+# domains/media/mousehole/options.nix
 { lib, ... }:
 let
   inherit (lib) mkOption mkEnableOption types;

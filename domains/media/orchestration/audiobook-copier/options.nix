@@ -1,4 +1,4 @@
-# domains/server/native/orchestration/audiobook-copier/options.nix
+# domains/media/orchestration/audiobook-copier/options.nix
 #
 # Audiobook Copier - Copies audiobooks from qBittorrent downloads to Audiobookshelf library
 # Preserves source files for continued seeding

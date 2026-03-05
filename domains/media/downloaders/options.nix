@@ -1,4 +1,4 @@
-# domains/server/downloaders/options.nix
+# domains/media/downloaders/options.nix
 #
 # Consolidated options for server downloaders subdomain
 # Charter-compliant: ALL downloaders options defined here

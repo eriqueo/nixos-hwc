@@ -1,4 +1,4 @@
-# domains/server/couchdb/config-generator.nix
+# domains/data/couchdb/config-generator.nix
 #
 # Pure function to generate CouchDB local.ini configuration
 # This is a helper function with no side effects, following Charter Section 10

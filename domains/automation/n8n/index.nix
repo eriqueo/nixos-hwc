@@ -1,4 +1,4 @@
-# domains/server/n8n/index.nix
+# domains/automation/n8n/index.nix
 #
 # N8N - Workflow automation platform for alert routing and notifications
 #

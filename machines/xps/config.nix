@@ -15,7 +15,6 @@
     ./home.nix  # Machine-specific HM overrides
 
     # Domains — xps-specific capabilities
-    ../../domains/server/index.nix    # Server options + caddy + shared container dirs
     ../../domains/ai/index.nix
     ../../domains/alerts/index.nix
     ../../domains/networking/index.nix

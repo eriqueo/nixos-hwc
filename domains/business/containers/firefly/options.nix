@@ -1,4 +1,4 @@
-# domains/server/containers/firefly/options.nix
+# domains/business/containers/firefly/options.nix
 #
 # Firefly III Personal Finance Manager Options
 # Includes both Firefly III core and Firefly-Pico mobile companion
