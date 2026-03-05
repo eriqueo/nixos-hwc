@@ -1,4 +1,4 @@
-# domains/server/monitoring/options.nix
+# domains/monitoring/options.nix
 # Feature toggle for monitoring stack (Prometheus, Grafana, etc.)
 
 { lib, ... }:

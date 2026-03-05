@@ -1,4 +1,4 @@
-# domains/server/monitoring/grafana/options.nix
+# domains/monitoring/grafana/options.nix
 #
 # Grafana Dashboards and Visualization Options
 # Charter v7.0 compliant

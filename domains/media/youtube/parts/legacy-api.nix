@@ -1,4 +1,4 @@
-# domains/server/native/youtube/parts/legacy-api.nix
+# domains/media/youtube/parts/legacy-api.nix
 #
 # LEGACY TRANSCRIPT API - YouTube transcript extraction REST API
 # Provides a REST API for extracting transcripts from YouTube videos and playlists

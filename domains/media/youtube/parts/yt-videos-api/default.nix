@@ -1,4 +1,4 @@
-# domains/server/native/youtube/parts/yt-videos-api/default.nix
+# domains/media/youtube/parts/yt-videos-api/default.nix
 #
 # YOUTUBE VIDEOS API - Video download and archiving REST API with worker
 # Provides async job-based video downloads from YouTube with atomic finalization

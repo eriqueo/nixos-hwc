@@ -1,4 +1,4 @@
-# domains/server/monitoring/prometheus/index.nix
+# domains/monitoring/prometheus/index.nix
 #
 # PROMETHEUS - Metrics collection and monitoring
 #

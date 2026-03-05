@@ -1,4 +1,4 @@
-# domains/server/databases/options.nix
+# domains/data/databases/options.nix
 #
 # Database services for server workloads
 #

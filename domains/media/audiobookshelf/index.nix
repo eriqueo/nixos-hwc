@@ -1,4 +1,4 @@
-# domains/server/containers/audiobookshelf/index.nix
+# domains/media/audiobookshelf/index.nix
 { lib, config, pkgs, ... }:
 
 let

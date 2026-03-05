@@ -1,4 +1,4 @@
-# domains/server/containers/firefly/parts/config.nix
+# domains/business/containers/firefly/parts/config.nix
 #
 # Firefly III Container Configuration
 # Containerized personal finance manager with Firefly-Pico mobile companion

@@ -1,4 +1,4 @@
-# domains/server/containers/audiobookshelf/options.nix
+# domains/media/audiobookshelf/options.nix
 { lib, ... }:
 let
   inherit (lib) mkOption mkEnableOption types;

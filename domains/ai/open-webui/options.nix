@@ -1,4 +1,4 @@
-# domains/server/ai/open-webui/options.nix
+# domains/ai/open-webui/options.nix
 #
 # Options for Open WebUI - Modern web interface for Ollama
 # Charter v6.0 compliant

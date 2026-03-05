@@ -1,4 +1,4 @@
-# domains/server/containers/mousehole/parts/config.nix
+# domains/media/mousehole/parts/config.nix
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.mousehole;

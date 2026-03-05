@@ -1,4 +1,4 @@
-# domains/server/downloaders/index.nix
+# domains/media/downloaders/index.nix
 #
 # Downloaders subdomain aggregator
 # Imports options and downloaders implementation

@@ -49,5 +49,6 @@
     ./downloaders/index.nix
     ./orchestration/index.nix
     ./media-native/index.nix
+    ./directories.nix
   ];
 }

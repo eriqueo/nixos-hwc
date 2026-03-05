@@ -1,4 +1,4 @@
-# domains/server/monitoring/prometheus/options.nix
+# domains/monitoring/prometheus/options.nix
 #
 # Prometheus Monitoring Options
 # Charter v7.0 compliant

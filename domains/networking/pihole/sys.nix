@@ -1,4 +1,4 @@
-# domains/server/containers/pihole/sys.nix
+# domains/networking/pihole/sys.nix
 { lib, config, pkgs, ... }:
 let
   # Import infrastructure container helper

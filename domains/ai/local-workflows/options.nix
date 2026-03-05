@@ -1,4 +1,4 @@
-# domains/server/ai/local-workflows/options.nix
+# domains/ai/local-workflows/options.nix
 #
 # Options for local AI workflows and automation
 # Charter v6.0 compliant

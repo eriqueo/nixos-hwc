@@ -1,4 +1,4 @@
-# domains/server/native/webdav/options.nix
+# domains/gaming/webdav/options.nix
 #
 # WebDAV server using dufs for file synchronization
 # Primary use case: RetroArch save state sync between devices

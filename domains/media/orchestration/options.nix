@@ -1,4 +1,4 @@
-# domains/server/orchestration/options.nix
+# domains/media/orchestration/options.nix
 # Feature toggle for orchestration helpers (media orchestrator, etc.)
 
 { lib, ... }:

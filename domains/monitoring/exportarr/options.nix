@@ -1,4 +1,4 @@
-# domains/server/monitoring/exportarr/options.nix
+# domains/monitoring/exportarr/options.nix
 #
 # Exportarr - Prometheus exporter for *arr applications (Sonarr/Radarr/Lidarr/Prowlarr)
 #

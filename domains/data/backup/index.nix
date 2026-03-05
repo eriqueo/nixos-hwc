@@ -1,4 +1,4 @@
-# domains/server/backup/index.nix
+# domains/data/backup/index.nix
 #
 # Backup subdomain aggregator
 # Imports options and backup implementation

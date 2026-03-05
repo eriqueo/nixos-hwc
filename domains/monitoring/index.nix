@@ -1,4 +1,4 @@
-# domains/server/monitoring/index.nix
+# domains/monitoring/index.nix
 #
 # Monitoring Domain Aggregator
 # Charter v7.0 compliant

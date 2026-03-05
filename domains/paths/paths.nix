@@ -69,6 +69,8 @@ in
   # OPTIONS - All paths with machine-appropriate defaults
   #============================================================================
 
+  options.hwc.server.enable = lib.mkEnableOption "server workloads (controls path defaults)";
+
   options.hwc.paths = {
 
     # -------------------------------------------------------------------------

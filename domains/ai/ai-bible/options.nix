@@ -1,4 +1,4 @@
-# domains/server/ai/ai-bible/options.nix
+# domains/ai/ai-bible/options.nix
 #
 # Consolidated options for AI Bible subdomain
 # Charter-compliant: ALL ai-bible options defined here

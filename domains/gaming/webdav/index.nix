@@ -1,4 +1,4 @@
-# domains/server/native/webdav/index.nix
+# domains/gaming/webdav/index.nix
 #
 # WebDAV server implementation using dufs
 # Lightweight Rust-based WebDAV server for RetroArch save sync

@@ -1,4 +1,4 @@
-# domains/server/frigate/exporter/index.nix
+# domains/media/frigate/exporter/index.nix
 #
 # Frigate Prometheus Exporter - Converts Frigate stats API to Prometheus metrics
 #

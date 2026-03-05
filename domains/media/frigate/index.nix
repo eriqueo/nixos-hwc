@@ -1,4 +1,4 @@
-# domains/server/frigate/index.nix
+# domains/media/frigate/index.nix
 #
 # Frigate NVR - Config-First Pattern
 # Charter v7.0 Section 19 compliant

@@ -1,4 +1,4 @@
-# domains/server/native/youtube/options.nix
+# domains/media/youtube/options.nix
 #
 # YouTube content acquisition APIs - transcripts and video downloads
 #

@@ -1,4 +1,4 @@
-# domains/server/databases/index.nix
+# domains/data/databases/index.nix
 #
 # Database services - PostgreSQL, Redis, InfluxDB
 #

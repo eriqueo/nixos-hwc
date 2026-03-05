@@ -1,4 +1,4 @@
-# domains/server/native/youtube/index.nix
+# domains/media/youtube/index.nix
 #
 # YouTube content acquisition domain aggregator
 # Consolidates transcript and video download services

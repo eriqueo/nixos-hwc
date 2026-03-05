@@ -1,4 +1,5 @@
-# Shared directory setup for container services (declarative tmpfiles)
+# domains/media/directories.nix
+# Shared directory setup for media container services (declarative tmpfiles)
 { lib, config, ... }:
 let
   paths = config.hwc.paths;
@@ -7,8 +8,11 @@ let
   downloadsRoot = paths.hot.downloads;
   mediaRoot = paths.media.root;
 
-  containerEnabled = name:
-    lib.attrByPath [ "hwc" "server" "containers" name "enable" ] false config;
+  mediaEnabled = name:
+    lib.attrByPath [ "hwc" "media" name "enable" ] false config;
+
+  networkingEnabled = name:
+    lib.attrByPath [ "hwc" "networking" name "enable" ] false config;
 
   mkDir = path: "d ${path} 0755 1000 100 -";
   mkRootDir = path: "d ${path} 0755 root root -";
@@ -17,7 +21,7 @@ let
   appConfig = name: "${(appRoot name)}/config";
 
   mkConfigDirs = names:
-    lib.concatMap (name: lib.optionals (containerEnabled name) [ (mkDir (appConfig name)) ]) names;
+    lib.concatMap (name: lib.optionals (mediaEnabled name) [ (mkDir (appConfig name)) ]) names;
 in
 {
   config = {
@@ -57,7 +61,6 @@ in
         "audiobookshelf"
         "beets"
         "books"
-        "caddy"
         "calibre"
         "mousehole"
         "jellyfin"
@@ -74,23 +77,23 @@ in
       ]))
 
       # Containers with non-standard config layouts
-      (lib.optionals (appsRoot != null && containerEnabled "gluetun") [
+      (lib.optionals (appsRoot != null && networkingEnabled "gluetun") [
         (mkDir (appRoot "gluetun"))
       ])
-      (lib.optionals (appsRoot != null && containerEnabled "soularr") [
+      (lib.optionals (appsRoot != null && mediaEnabled "soularr") [
         (mkDir "${(appRoot "soularr")}/data")
       ])
-      (lib.optionals (appsRoot != null && containerEnabled "tdarr") [
+      (lib.optionals (appsRoot != null && mediaEnabled "tdarr") [
         (mkDir "${(appRoot "tdarr")}/server")
         (mkDir "${(appRoot "tdarr")}/configs")
         (mkDir "${(appRoot "tdarr")}/logs")
       ])
-      (lib.optionals (appsRoot != null && containerEnabled "recyclarr") [
+      (lib.optionals (appsRoot != null && mediaEnabled "recyclarr") [
         (mkDir "${(appRoot "recyclarr")}/cache")
       ])
 
       # System-level config dirs
-      (lib.optionals (containerEnabled "slskd") [
+      (lib.optionals (mediaEnabled "slskd") [
         (mkRootDir "/etc/slskd")
         (mkRootDir "/var/lib/slskd")
       ])

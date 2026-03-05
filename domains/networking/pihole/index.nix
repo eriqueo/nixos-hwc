@@ -1,4 +1,4 @@
-# domains/server/containers/pihole/index.nix
+# domains/networking/pihole/index.nix
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.networking.pihole;

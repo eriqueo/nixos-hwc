@@ -1,4 +1,4 @@
-# domains/server/native/youtube/parts/yt-transcripts-api/default.nix
+# domains/media/youtube/parts/yt-transcripts-api/default.nix
 #
 # YOUTUBE TRANSCRIPTS API - Transcript extraction REST API with worker
 # Provides async job-based transcript extraction from YouTube videos/playlists/channels

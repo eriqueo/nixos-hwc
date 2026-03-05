@@ -1,4 +1,4 @@
-# domains/server/containers/mousehole/sys.nix
+# domains/media/mousehole/sys.nix
 { lib, config, pkgs, ... }:
 let
   # Import PURE helper library

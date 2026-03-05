@@ -1,4 +1,4 @@
-# domains/server/media/options.nix
+# domains/media/media-native/options.nix
 #
 # Feature toggle for server media defaults (storage scaffolding, etc.)
 

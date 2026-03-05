@@ -1,4 +1,4 @@
-# domains/server/backup/options.nix
+# domains/data/backup/options.nix
 #
 # Consolidated options for server backup subdomain
 # Charter-compliant: ALL backup options defined here

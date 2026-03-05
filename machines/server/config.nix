@@ -11,8 +11,6 @@
     # Core profile — system/paths/secrets (NO session.nix — headless server)
     ../../profiles/core.nix
 
-    # Server domain (options + caddy container + shared dirs)
-    ../../domains/server/index.nix
     ../../domains/ai/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix

@@ -1,4 +1,4 @@
-# domains/server/containers/pihole/options.nix
+# domains/networking/pihole/options.nix
 { lib, config, ... }:
 let
   inherit (lib) mkOption mkEnableOption types;

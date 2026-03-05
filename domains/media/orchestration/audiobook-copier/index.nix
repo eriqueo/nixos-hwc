@@ -1,4 +1,4 @@
-# domains/server/native/orchestration/audiobook-copier/index.nix
+# domains/media/orchestration/audiobook-copier/index.nix
 #
 # Audiobook Copier Service
 # Copies audiobooks from qBittorrent downloads to Audiobookshelf library,
