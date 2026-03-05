@@ -30,7 +30,8 @@ in
 
     # Secrets domain (absorbed from profiles/security.nix)
     ../domains/secrets/index.nix
-  ] ++ (gatherSys ../domains/home/apps);
+  ] ++ (gatherSys ../domains/home/apps)
+    ++ (gatherSys ../domains/home/mail);
 
   #==========================================================================
   # BASE NIXOS SETTINGS
@@ -145,9 +146,6 @@ in
     tailscale.enable = lib.mkDefault true;
     firewall.level = "strict";
   };
-
-  # Proton Mail Bridge — default off
-  hwc.home.mail.protonmailBridge.enable = lib.mkDefault false;
 
   # Users — universal
   hwc.system.users = {

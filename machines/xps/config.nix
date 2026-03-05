@@ -132,7 +132,6 @@
 
   # AI domain — laptop profile for conservative thermal limits
   hwc.ai = {
-    enable = true;
     profiles.selected = "laptop";
     tools.enable = false;
     ollama.enable = false;
