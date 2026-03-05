@@ -27,7 +27,7 @@
   };
 
   # Audio over HDMI is critical; Bluetooth kept for the Firestick remote.
-  hwc.system.services.hardware = {
+  hwc.system.hardware = {
     enable = true;
     audio.enable = true;
     bluetooth.enable = true;

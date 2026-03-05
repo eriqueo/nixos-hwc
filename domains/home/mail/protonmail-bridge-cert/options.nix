@@ -3,7 +3,7 @@
 
 { lib, ... }:
 {
-  options.hwc.system.services.protonmail-bridge-cert = {
+  options.hwc.home.mail.protonmailBridgeCert = {
     enable = lib.mkEnableOption "export Proton Bridge IMAP STARTTLS certificate" // {
       default = true;
     };

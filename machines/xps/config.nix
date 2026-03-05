@@ -203,7 +203,7 @@
     PasswordAuthentication = lib.mkForce true;  # Temporary — remove after SSH key update
   };
 
-  hwc.system.services.session.sudo.extraRules = [
+  hwc.system.core.session.sudo.extraRules = [
     {
       users = [ "eric" ];
       commands = [

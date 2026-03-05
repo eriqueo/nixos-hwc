@@ -3,7 +3,7 @@
 { config, lib, ... }:
 
 let
-  cfg = config.hwc.system.services.polkit;
+  cfg = config.hwc.system.core.polkit;
 in {
   #==========================================================================
   # OPTIONS

@@ -32,7 +32,7 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf config.hwc.system.services.protonmail-bridge-cert.enable {
+  config = lib.mkIf config.hwc.home.mail.protonmailBridgeCert.enable {
     systemd.services.protonmail-bridge-cert = {
       description = "Export Proton Bridge IMAP STARTTLS certificate";
       wantedBy = [ "multi-user.target" ];

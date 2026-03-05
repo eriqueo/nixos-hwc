@@ -5,15 +5,15 @@
 # and robust portal ordering for sandboxed apps.
 #
 # Usage:
-#   hwc.system.services.hardware.enable = true;
-#   hwc.system.services.hardware.audio.enable = true;
-#   hwc.system.services.hardware.keyboard.enable = true;
-#   hwc.system.services.hardware.monitoring.enable = true;
+#   hwc.system.hardware.enable = true;
+#   hwc.system.hardware.audio.enable = true;
+#   hwc.system.hardware.keyboard.enable = true;
+#   hwc.system.hardware.monitoring.enable = true;
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.hardware;
+  cfg = config.hwc.system.hardware;
 in
 {
   #==========================================================================

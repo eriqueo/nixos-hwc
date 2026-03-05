@@ -72,13 +72,13 @@
 
   # --- System Services Configuration ---
   # Enable the core shell environment with development tools.
-  hwc.system.services.shell = {
+  hwc.system.core.shell = {
     enable = true;
     development.enable = true;
   };
 
   # Enable hardware services for keyboard remapping and audio.
-  hwc.system.services.hardware = {
+  hwc.system.hardware = {
     enable = true;
     keyboard.enable = true;
     audio.enable = true;
@@ -144,13 +144,13 @@
   };
 
   # Enable the declarative VPN service using the official CLI.
-  hwc.system.services.vpn.protonvpn.enable = true;
+  hwc.networking.vpn.protonvpn.enable = true;
 
   # Proton Mail Bridge managed by Home Manager user service (NOT system service)
-  # hwc.system.services.protonmail-bridge.enable = false;  # Disabled in profile
+  # hwc.home.mail.protonmailBridge.enable = false;  # Disabled in profile
 
   # Enable session management (greetd autologin, sudo, lingering).
-  hwc.system.services.session = {
+  hwc.system.core.session = {
     enable = true;
     loginManager.enable = true;
     loginManager.autoLoginUser = "eric";

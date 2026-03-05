@@ -5,7 +5,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.vpn;
+  cfg = config.hwc.networking.vpn;
 
   usernameFile = config.hwc.security.materials.vpnUsernameFile;
   passwordFile = config.hwc.security.materials.vpnPasswordFile;

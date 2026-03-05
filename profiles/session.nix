@@ -159,10 +159,10 @@
   #==========================================================================
 
   # Hardware services — audio, keyboard, bluetooth for interactive use
-  hwc.system.services.hardware.enable = true;
+  hwc.system.hardware.enable = true;
 
   # Session — display manager, sudo, lingering
-  hwc.system.services.session = {
+  hwc.system.core.session = {
     enable = true;
     loginManager.autoLoginUser = lib.mkDefault "eric";
     sudo.enable = true;

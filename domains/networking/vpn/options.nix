@@ -2,7 +2,7 @@
 { lib, config, ... }:
 
 {
-  options.hwc.system.services.vpn = {
+  options.hwc.networking.vpn = {
     enable = lib.mkEnableOption "Enable VPN services";
 
     protonvpn = {
