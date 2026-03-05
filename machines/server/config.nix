@@ -687,17 +687,22 @@
     PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
   };
 
-  # Passwordless sudo for ai-chat tool commands and grebuild workflow
-  hwc.system.core.session.sudo.extraRules = [
-    {
-      users = [ "eric" ];
-      commands = [
-        { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl"; options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/journalctl"; options = [ "NOPASSWD" ]; }
-      ];
-    }
-  ];
+  # Session config for headless server (no login manager, just sudo)
+  hwc.system.core.session = {
+    enable = true;
+    sudo.enable = true;
+    sudo.wheelNeedsPassword = false;  # Passwordless sudo for wheel group
+    sudo.extraRules = [
+      {
+        users = [ "eric" ];
+        commands = [
+          { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; }
+          { command = "/run/current-system/sw/bin/systemctl"; options = [ "NOPASSWD" ]; }
+          { command = "/run/current-system/sw/bin/journalctl"; options = [ "NOPASSWD" ]; }
+        ];
+      }
+    ];
+  };
   services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
   # X11 services disabled for headless server
   # services.xserver.enable = true;
