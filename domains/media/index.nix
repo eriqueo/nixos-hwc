@@ -10,10 +10,8 @@
 {
   imports = [
     # ── Streaming ──────────────────────────────────────────────
-    ./jellyfin-container/index.nix
-    ./jellyfin-native/index.nix
-    ./navidrome-container/index.nix
-    ./navidrome-native/index.nix
+    ./jellyfin-native/index.nix       # native NixOS service (services.jellyfin)
+    ./navidrome-container/index.nix   # podman container
     ./audiobookshelf/index.nix
     ./jellyseerr/index.nix
 
@@ -31,8 +29,7 @@
     ./organizr/index.nix
     ./mousehole/index.nix
     ./pinchflat/index.nix
-    ./beets-container/index.nix
-    ./beets-native/index.nix
+    ./beets-container/index.nix       # podman container (hwc.media.beets)
     ./recyclarr/index.nix
     ./slskd/index.nix
     ./soularr/index.nix
@@ -40,8 +37,7 @@
     ./books/index.nix
 
     # ── Photos & Video ─────────────────────────────────────────
-    ./immich-container/index.nix
-    ./immich-native/index.nix
+    ./immich-container/index.nix      # podman container
     ./frigate/index.nix
     ./youtube/index.nix
 
