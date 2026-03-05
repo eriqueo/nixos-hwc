@@ -1,12 +1,12 @@
 # domains/system/services/borg/options.nix
 # Borg Backup - Deduplicating backup with encryption
 #
-# Namespace: hwc.system.services.borg.*
+# Namespace: hwc.data.borg.*
 
 { lib, config, ... }:
 
 {
-  options.hwc.system.services.borg = {
+  options.hwc.data.borg = {
     enable = lib.mkEnableOption "Borg deduplicating backup service";
 
     #==========================================================================

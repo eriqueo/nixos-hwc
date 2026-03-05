@@ -83,7 +83,7 @@ in
   hwc.system.services.shell.enable = true;
 
   # Backup — defaults off, machines enable per-need
-  hwc.system.services.backup = {
+  hwc.data.backup = {
     enable = lib.mkDefault false;
 
     local = {

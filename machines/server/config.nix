@@ -246,7 +246,7 @@
   # ntfy notification system CLI client for server alerts
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md
-  hwc.system.services.ntfy = {
+  hwc.automation.ntfy = {
     enable = false;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted ntfy via Tailscale port mode
     defaultTopic = "hwc-server-events";  # General server events
@@ -301,7 +301,7 @@
   # Backup configuration for server
   # Backs up IRREPLACEABLE data to ZFS mirror every 3 days
   # NixOS config excluded - it's a git repo (github.com)
-  hwc.system.services.backup = {
+  hwc.data.backup = {
     enable = true;
 
     # Local backup to ZFS mirror (sdd/sde)
@@ -383,7 +383,7 @@
 
   # Borg Backup - Primary deduplicating backup (daily)
   # Rsync above is fallback (Mon/Thu/Sun)
-  hwc.system.services.borg = {
+  hwc.data.borg = {
     enable = true;
 
     repo.path = "/mnt/backup/borg-hwc-server";

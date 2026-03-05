@@ -4,7 +4,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.backup;
+  cfg = config.hwc.data.backup;
 
   # Backup status script
   backupStatusScript = pkgs.writeScriptBin "backup-status" ''

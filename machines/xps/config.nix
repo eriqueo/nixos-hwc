@@ -96,7 +96,7 @@
 
   services.thermald.enable = true;
 
-  hwc.system.services.ntfy = {
+  hwc.automation.ntfy = {
     enable = false;
     serverUrl = "https://hwc-xps.ocelot-wahoo.ts.net:2586";
     defaultTopic = "hwc-xps-events";
@@ -106,7 +106,7 @@
     auth.enable = false;
   };
 
-  # hwc.system.services.backup — configure when /mnt/backup is mounted
+  # hwc.data.backup — configure when /mnt/backup is mounted
 
   # GPU — Intel integrated only; uncomment if NVIDIA MX150 is detected
   # hwc.system.hardware.gpu = {
