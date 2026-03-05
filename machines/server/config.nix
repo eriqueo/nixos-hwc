@@ -693,7 +693,7 @@
   };
 
   # Passwordless sudo for ai-chat tool commands and grebuild workflow
-  hwc.system.services.session.sudo.extraRules = [
+  hwc.system.core.session.sudo.extraRules = [
     {
       users = [ "eric" ];
       commands = [

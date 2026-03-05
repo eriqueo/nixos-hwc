@@ -80,7 +80,7 @@ in
   #==========================================================================
 
   # Shell — core CLI environment (git, neovim, tmux, etc.)
-  hwc.system.services.shell.enable = true;
+  hwc.system.core.shell.enable = true;
 
   # Backup — defaults off, machines enable per-need
   hwc.data.backup = {
@@ -147,7 +147,7 @@ in
   };
 
   # Proton Mail Bridge — default off
-  hwc.system.services.protonmail-bridge.enable = lib.mkDefault false;
+  hwc.home.mail.protonmailBridge.enable = lib.mkDefault false;
 
   # Users — universal
   hwc.system.users = {

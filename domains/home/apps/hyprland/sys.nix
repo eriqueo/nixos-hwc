@@ -56,8 +56,8 @@ in
       # DEPENDENCY FORCING (System domain)
       #========================================================================
       # Hyprland requires these system services
-      hwc.system.services.hardware.audio.enable = lib.mkDefault true;
-      hwc.system.services.hardware.bluetooth.enable = lib.mkDefault true;
+      hwc.system.hardware.audio.enable = lib.mkDefault true;
+      hwc.system.hardware.bluetooth.enable = lib.mkDefault true;
 
       #========================================================================
       # SYSTEM PACKAGES

@@ -11,7 +11,7 @@
   hwc.system.networking.samba.enable = lib.mkForce false;
 
   # Keep audio, trim monitoring/key remapping to stay lightweight.
-  hwc.system.services.hardware = {
+  hwc.system.hardware = {
     monitoring.enable = lib.mkForce false;
     keyboard.enable = lib.mkForce false;
   };

@@ -18,7 +18,7 @@
   # ];
 
   # Auto-login for console-like UX
-  hwc.system.services.session = {
+  hwc.system.core.session = {
     enable = true;
     loginManager = {
       enable = lib.mkDefault true;
@@ -28,7 +28,7 @@
   };
 
   # Audio support (critical for gaming)
-  hwc.system.services.hardware = {
+  hwc.system.hardware = {
     enable = true;
     audio.enable = true;
     bluetooth.enable = true;  # For wireless controllers

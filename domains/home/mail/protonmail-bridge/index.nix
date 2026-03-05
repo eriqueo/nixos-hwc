@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.hwc.system.services.protonmail-bridge;
+  cfg = config.hwc.home.mail.protonmailBridge;
   bridgePkg = pkgs.protonmail-bridge;
 
   # Get username from system configuration

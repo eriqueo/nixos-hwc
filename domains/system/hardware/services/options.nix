@@ -3,7 +3,7 @@
 let
   t = lib.types;
 in {
-  options.hwc.system.services.hardware = {
+  options.hwc.system.hardware = {
     # Master toggle
     enable = lib.mkEnableOption "Enable all hardware-related services (audio, input, monitoring)";
 

@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.session;
+  cfg = config.hwc.system.core.session;
 in
 {
   #==========================================================================

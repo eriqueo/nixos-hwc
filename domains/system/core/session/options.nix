@@ -1,7 +1,7 @@
 { lib, ... }:
 
 {
-  options.hwc.system.services.session = {
+  options.hwc.system.core.session = {
     # Master toggle
     enable = lib.mkEnableOption "Enable user session management (sudo, login manager, lingering)";
 

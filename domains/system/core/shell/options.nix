@@ -2,7 +2,7 @@
 { lib, config, ... }:
 
 {
-  options.hwc.system.services.shell = {
+  options.hwc.system.core.shell = {
     # The master switch for the entire shell environment.
     enable = lib.mkEnableOption "Enable the core shell environment and CLI tools";
 

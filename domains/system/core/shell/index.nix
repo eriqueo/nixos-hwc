@@ -4,13 +4,13 @@
 # Installs essential CLI utilities, shells, editors, and developer toolchains.
 #
 # USAGE:
-#   hwc.system.services.shell.enable = true;
-#   hwc.system.services.shell.development.enable = true; # For a full dev setup
+#   hwc.system.core.shell.enable = true;
+#   hwc.system.core.shell.development.enable = true; # For a full dev setup
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.system.services.shell;
+  cfg = config.hwc.system.core.shell;
 in
 {
   #==========================================================================
