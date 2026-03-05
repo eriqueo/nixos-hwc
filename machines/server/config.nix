@@ -481,8 +481,6 @@
   # Profile auto-detection: server (GPU: nvidia, RAM: 32GB >= 16GB threshold)
   # Result: Relaxed limits (4 cores, 8GB, 80°C warning, 90°C critical)
   hwc.ai = {
-    enable = true;
-
     # Explicit server profile selection
     profiles.selected = "server";
 
@@ -576,14 +574,12 @@
   # DISABLED: mcp-proxy not available in nixpkgs-stable 24.05
   hwc.ai.mcp.enable = lib.mkForce false;
 
-  # Server-backup DISABLED - NixOS config is in git, databases handled by backup-local preBackupScript
-  # Container volumes (music) too large and replaceable - not worth backing up
-  hwc.data.backup.enable = false;
+  # Note: Backup is configured above (hwc.data.backup block at line ~304)
+  # NixOS config excluded - it's in git. Databases handled by preBackupScript.
 
   # TEMPORARY: Disable navidrome due to pkg-config build failure in NixOS 25.11
   # Error: github.com/navidrome/navidrome/adapters/taglib: invalid flag in pkg-config --cflags: --define-prefix
   hwc.media.navidrome.enable = lib.mkForce false;
-  hwc.media.navidrome.enable = true;
   # Enable AI router and agent on server
   hwc.ai.router = {
     enable = true;
@@ -885,8 +881,7 @@
     enable = lib.mkDefault true;
   };
 
-  # Immich photo management
-  hwc.media.immich.enable = lib.mkForce false;  # Native: disabled
+  # Immich photo management (container-based)
   hwc.media.immich = {
     enable = lib.mkDefault true;
     settings = {

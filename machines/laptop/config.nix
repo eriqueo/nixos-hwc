@@ -303,8 +303,6 @@
   # Profile auto-detection: laptop (GPU: nvidia, RAM: 32GB < 16GB threshold)
   # Result: Conservative limits (2 cores, 4GB, 70°C warning, 80°C critical)
   hwc.ai = {
-    enable = true;
-
     # Profile selection (auto-detects laptop based on RAM/GPU)
     profiles.selected = "auto";
 

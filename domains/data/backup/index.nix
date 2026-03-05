@@ -20,7 +20,7 @@ in
     ./parts/backup-utils.nix
     ./parts/backup-scheduler.nix
     ./parts/database-hooks.nix
-    ./parts/user-backup.nix
+    # ./parts/user-backup.nix  # DISABLED: References undefined hwc.data.backup.user.* options
     ./parts/server-backup-scripts.nix
   ];
   #==========================================================================

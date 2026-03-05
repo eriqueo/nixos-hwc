@@ -1,14 +1,10 @@
-# domains/ai/default.nix
+# domains/ai/index.nix
 { config, lib, ... }:
-let
-  cfg = config.hwc.ai;
-in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
   imports = [
-    ./options.nix
     ./profiles          # Hardware profile detection and defaults
     ./tools             # AI CLI tools (charter-search, ai-doc, ai-commit, etc.)
     ./ollama            # Local LLM service
@@ -19,17 +15,11 @@ in
     ./cloud             # Cloud AI API integration
     ./router            # Local/cloud routing
     ./agent             # HTTP tool agent
-    ./ai-bible          # AI-powered documentation system
+    ./ai-bible/index.nix  # AI-powered documentation system
   ];
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
-    assertions = [{
-      assertion = true;
-      message = "AI domain loaded";
-    }];
-  };
-
+  config = {};
 }
