@@ -41,7 +41,7 @@ let
     "backup-local"
     "backup-cloud"
     "jellyfin"
-    "n8n"
+    "podman-n8n"
     "caddy"
     "postgresql"
     "frigate"
