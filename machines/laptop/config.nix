@@ -110,40 +110,9 @@
     # };
   };
 
-  # Backup configuration for laptop
-  # Supports plugging in external drives for local backups
-  hwc.data.backup = {
-    enable = true;
-
-    # Local backup when external drive is connected
-    local = {
-      enable = true;
-      mountPoint = config.hwc.paths.backup;  # Laptop backup SSD
-      keepDaily = 5;    # Keep 5 daily backups
-      keepWeekly = 2;   # Keep 2 weekly backups
-      keepMonthly = 3;  # Keep 3 monthly backups
-      minSpaceGB = 20;  # Require 20GB free space
-    };
-
-    # Cloud backup as fallback (optional)
-    cloud.enable = false;  # Set to true to enable cloud backup
-    protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
-
-    # Notifications configuration
-    notifications = {
-      enable = true;
-      ntfy = {
-        enable = true;
-        onSuccess = false;
-        topic = "hwc-critical";  # Backup failures are critical (P5)
-        onFailure = true;
-      };
-    };
-
-    # Disable automatic scheduling to avoid backups during rebuild; run manually when desired
-    schedule.enable = false;
-
-  };
+  # Rsync backup DISABLED - consolidated to Borg
+  # TODO: Enable Borg on laptop when backup drive is mounted
+  hwc.data.backup.enable = false;
 
   # Enable the declarative VPN service using the official CLI.
   hwc.networking.vpn.protonvpn.enable = true;

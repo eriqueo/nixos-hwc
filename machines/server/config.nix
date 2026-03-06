@@ -298,91 +298,11 @@
     cli.enable = true;
   };
 
-  # Backup configuration for server
-  # Backs up IRREPLACEABLE data to ZFS mirror every 3 days
-  # NixOS config excluded - it's a git repo (github.com)
-  hwc.data.backup = {
-    enable = true;
-
-    # Local backup to ZFS mirror (sdd/sde)
-    local = {
-      enable = true;
-      mountPoint = "/mnt/backup";
-      keepDaily = 10;   # ~1 month at 3-day intervals
-      keepWeekly = 4;   # 1 month of weekly snapshots
-      keepMonthly = 6;  # 6 months of monthly snapshots
-      minSpaceGB = 100; # Require 100GB free before backup
-
-      # IRREPLACEABLE data only - config is in git
-      sources = lib.mkForce [
-        "/mnt/media/surveillance/frigate"  # Security camera recordings
-        "/mnt/media/photos"                # Immich photos (CRITICAL)
-        "/var/lib/hwc"                     # Service state directories
-      ];
-
-      excludePatterns = [
-        ".cache"
-        "*.tmp"
-        "*.temp"
-        "node_modules"
-        "__pycache__"
-      ];
-    };
-
-    # Database dumps before backup (PostgreSQL + CouchDB)
-    # Uses /run/current-system/sw/bin paths for tools (always available)
-    preBackupScript = ''
-      DUMP_DIR="/mnt/backup/hwc-server/database-dumps"
-      mkdir -p "$DUMP_DIR"
-      DATE=$(date +%Y-%m-%d)
-      JQ=/run/current-system/sw/bin/jq
-      CURL=/run/current-system/sw/bin/curl
-
-      echo "Dumping PostgreSQL databases..."
-      if systemctl is-active --quiet postgresql; then
-        /run/wrappers/bin/su - postgres -s /bin/sh -c "/run/current-system/sw/bin/pg_dumpall" > "$DUMP_DIR/postgresql-$DATE.sql" 2>/dev/null || echo "PostgreSQL dump failed"
-      fi
-
-      echo "Dumping CouchDB databases..."
-      if systemctl is-active --quiet couchdb; then
-        COUCH_USER=$(cat /run/agenix/couchdb-admin-username 2>/dev/null || echo "admin")
-        COUCH_PASS_RAW=$(cat /run/agenix/couchdb-admin-password 2>/dev/null || echo "")
-        # URL-encode special characters in password
-        COUCH_PASS=$(printf '%s' "$COUCH_PASS_RAW" | $JQ -sRr @uri)
-        if [ -n "$COUCH_PASS" ]; then
-          for db in $($CURL -sf "http://$COUCH_USER:$COUCH_PASS@127.0.0.1:5984/_all_dbs" | $JQ -r '.[]' 2>/dev/null | grep -v "^_"); do
-            $CURL -sf "http://$COUCH_USER:$COUCH_PASS@127.0.0.1:5984/$db/_all_docs?include_docs=true" > "$DUMP_DIR/couchdb-$db-$DATE.json" 2>/dev/null || echo "CouchDB $db dump failed"
-          done
-        fi
-      fi
-
-      # Cleanup old dumps (keep 30 days)
-      find "$DUMP_DIR" -name "*.sql" -mtime +30 -delete 2>/dev/null || true
-      find "$DUMP_DIR" -name "*.json" -mtime +30 -delete 2>/dev/null || true
-      echo "Database dumps complete"
-    '';
-
-    # Cloud backup disabled
-    cloud.enable = false;
-    protonDrive.enable = false;
-
-    # Every 3 days at 3 AM (Mon, Thu, Sun)
-    schedule = {
-      enable = true;
-      frequency = lib.mkForce "Mon,Thu,Sun";
-      timeOfDay = lib.mkForce "03:00";
-      onlyOnAC = lib.mkForce false;
-    };
-
-    # Notifications via alerts domain (Slack)
-    notifications = {
-      enable = false;
-      ntfy.enable = false;
-    };
-  };
+  # Rsync backup DISABLED - using Borg exclusively
+  # See hwc.data.borg below for primary backup
+  hwc.data.backup.enable = false;
 
   # Borg Backup - Primary deduplicating backup (daily)
-  # Rsync above is fallback (Mon/Thu/Sun)
   hwc.data.borg = {
     enable = true;
 

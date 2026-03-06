@@ -40,8 +40,54 @@ in
   #==========================================================================
   config = lib.mkIf enabled {
 
-    # Borg package
-    environment.systemPackages = [ pkgs.borgbackup ];
+    # Borg package + helper scripts
+    environment.systemPackages = [
+      pkgs.borgbackup
+
+      # borg-hwc: wrapper with passphrase pre-loaded
+      (pkgs.writeShellScriptBin "borg-hwc" ''
+        export BORG_PASSCOMMAND="cat /run/agenix/${cfg.encryption.passphraseSecret}"
+        export BORG_REPO="${cfg.repo.path}"
+        exec ${pkgs.borgbackup}/bin/borg "$@"
+      '')
+
+      # borg-list: show recent backups
+      (pkgs.writeShellScriptBin "borg-list" ''
+        export BORG_PASSCOMMAND="cat /run/agenix/${cfg.encryption.passphraseSecret}"
+        echo "=== Borg Archives ==="
+        ${pkgs.borgbackup}/bin/borg list "${cfg.repo.path}"
+        echo ""
+        echo "=== Repository Info ==="
+        ${pkgs.borgbackup}/bin/borg info "${cfg.repo.path}"
+      '')
+
+      # borg-restore: restore files from archive
+      (pkgs.writeShellScriptBin "borg-restore" ''
+        export BORG_PASSCOMMAND="cat /run/agenix/${cfg.encryption.passphraseSecret}"
+        if [ $# -lt 2 ]; then
+          echo "Usage: borg-restore <archive-name> <target-dir> [path]"
+          echo ""
+          echo "Examples:"
+          echo "  borg-restore hwc-server-hwc-backup-2026-03-02 /tmp/restore"
+          echo "  borg-restore hwc-server-hwc-backup-2026-03-02 /tmp/restore var/lib/hwc/n8n"
+          echo ""
+          echo "Available archives:"
+          ${pkgs.borgbackup}/bin/borg list --short "${cfg.repo.path}"
+          exit 1
+        fi
+        ARCHIVE="$1"; TARGET="$2"; SUBPATH="''${3:-.}"
+        mkdir -p "$TARGET" && cd "$TARGET"
+        ${pkgs.borgbackup}/bin/borg extract "${cfg.repo.path}::$ARCHIVE" "$SUBPATH"
+        echo "Restored to $TARGET"
+      '')
+
+      # borg-backup-now: trigger manual backup
+      (pkgs.writeShellScriptBin "borg-backup-now" ''
+        echo "Starting Borg backup..."
+        sudo systemctl start borgbackup-job-${jobName}.service
+        echo "Check status: journalctl -fu borgbackup-job-${jobName}.service"
+      '')
+    ];
 
     # Borg backup job using NixOS module
     services.borgbackup.jobs.${jobName} = {
@@ -101,11 +147,17 @@ in
       };
     };
 
-    # Failure notification via alerts domain (if available)
+    # Failure notification + better timeout handling
     systemd.services."borgbackup-job-${jobName}" = {
       onFailure = lib.mkIf (cfg.notifications.onFailure && (config.hwc.alerts.enable or false)) [
         "hwc-service-failure-notifier@borgbackup-job-${jobName}.service"
       ];
+      # Prevent stuck borg processes from blocking future backups
+      serviceConfig = {
+        TimeoutStopSec = "5min";      # Give borg time to finish gracefully
+        KillMode = "mixed";            # SIGTERM to main, SIGKILL to remaining after timeout
+        KillSignal = "SIGINT";         # Borg handles SIGINT gracefully (checkpoint)
+      };
     };
 
     # Repository integrity check timer
