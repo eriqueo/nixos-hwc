@@ -1,6 +1,28 @@
 # Application Container Helper
 # For standard application containers (media apps, *arr services)
 # See mkInfraContainer.nix for infrastructure containers (gluetun, pihole)
+#
+# =============================================================================
+# CONTAINER MODULE STRUCTURE
+# =============================================================================
+#
+# Standard directory layout for container modules:
+#
+#   domains/media/<app>/
+#   ├── index.nix       # Main module: imports, mkIf wrapper, container definition
+#   ├── options.nix     # Option declarations (hwc.media.<app>.*)
+#   └── parts/          # Optional: max 2 files for complex configs
+#       ├── config.nix  # INSIDE: app config generation (YAML/TOML/JSON, templates)
+#       └── setup.nix   # OUTSIDE: runtime setup (systemd deps, tmpfiles, firewall)
+#
+# Guidelines:
+#   - Container definition stays in index.nix (it's the main thing the module does)
+#   - Use parts/ only when index.nix gets too long (>50 lines of config)
+#   - config.nix = what the app needs to know about itself
+#   - setup.nix = what NixOS needs to run the app (pre-start, deps, networking)
+#   - Multiple home.file or environment.etc entries can live in one parts file
+#
+# =============================================================================
 { lib, pkgs }:
 
 rec {
