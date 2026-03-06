@@ -12,6 +12,12 @@ in
   options.hwc.automation.n8n = {
     enable = lib.mkEnableOption "n8n workflow automation platform";
 
+    image = lib.mkOption {
+      type = lib.types.str;
+      default = "docker.io/n8nio/n8n:latest";
+      description = "n8n container image";
+    };
+
     port = lib.mkOption {
       type = lib.types.port;
       default = 5678;
