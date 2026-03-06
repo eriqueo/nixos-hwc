@@ -1,18 +1,12 @@
 # domains/home/apps/hyprland/index.nix
-#
-# HYPRLAND — Window manager + user session.
-
 { config, lib, pkgs, osConfig ? {}, ... }:
-
 let
-  enabled = config.hwc.home.apps.hyprland.enable or false;
-
-  # Feature Detection: Check if we're on a NixOS host with HWC system config
+  cfg = config.hwc.home.apps.hyprland;
   isNixOSHost = osConfig ? hwc;
 
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; };
   behavior   = import ./parts/behavior.nix   { inherit config lib pkgs; };
-  session    = import ./parts/session.nix    { inherit config lib pkgs; };
+  session    = import ./parts/session.nix    { inherit config lib pkgs; osConfig = osConfig; };
 
   hw = if builtins.pathExists ./parts/hardware.nix
        then import ./parts/hardware.nix { inherit lib pkgs; }
@@ -29,9 +23,14 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.hyprland = {
+    enable = lib.mkEnableOption "Hyprland window manager";
+  };
 
-  config = lib.mkIf enabled {
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = lib.mkIf cfg.enable {
     #==========================================================================
     # DEPENDENCY FORCING (Home domain only)
     #==========================================================================
@@ -88,7 +87,7 @@ in
       # Feature Detection: Only enforce on NixOS hosts where system config is available
       # On non-NixOS hosts, user is responsible for system-lane dependencies
       {
-        assertion = !enabled || !isNixOSHost || (osConfig.hwc.system.apps.hyprland.enable or false);
+        assertion = !cfg.enable || !isNixOSHost || (osConfig.hwc.system.apps.hyprland.enable or false);
         message = ''
           hwc.home.apps.hyprland is enabled but hwc.system.apps.hyprland is not.
           System dependencies (hyprland-startup script, helper scripts) are required.
@@ -106,11 +105,11 @@ in
         message = "hyprland requires swaync notification daemon (critical dependency - forced via mkForce)";
       }
       {
-        assertion = !enabled || config.hwc.home.apps.kitty.enable;
+        assertion = !cfg.enable || config.hwc.home.apps.kitty.enable;
         message = "hyprland requires kitty as session-critical terminal (SUPER+RETURN, multiple keybinds)";
       }
       {
-        assertion = !enabled || config.hwc.home.apps.yazi.enable;
+        assertion = !cfg.enable || config.hwc.home.apps.yazi.enable;
         message = "hyprland requires yazi as file manager (SUPER+1, SUPER+T keybinds)";
       }
     ];

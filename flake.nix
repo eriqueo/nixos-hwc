@@ -99,11 +99,44 @@
         ];
       };
 
+    # Server-specific overlay for CUDA-enabled onnxruntime (Immich ML GPU acceleration)
+    # IMPORTANT: nixpkgs has a bug where CUDA + DISABLE_CONTRIB_OPS conflict
+    # (see: https://github.com/NixOS/nixpkgs/issues/310860)
+    # We need to override the package to remove the conflicting flag
+    serverOverlay = final: prev: {
+      # Build onnxruntime with CUDA support for GPU-accelerated ML inference
+      # Override to fix the CUDA + DISABLE_CONTRIB_OPS conflict
+      onnxruntime = (prev.onnxruntime.override { cudaSupport = true; }).overrideAttrs (old: {
+        cmakeFlags = builtins.filter (f: f != "-Donnxruntime_DISABLE_CONTRIB_OPS=ON")
+          (old.cmakeFlags or []);
+      });
+    };
+
+    # Pkgs helper with optional overlays
+    mkPkgsWithOverlays = system: nixpkgsInput: overlays:
+      import nixpkgsInput {
+        inherit system;
+        config = {
+          allowUnfree = true;
+          nvidia.acceptLicense = true;
+          # Enable CUDA support globally for server
+          cudaSupport = true;
+          permittedInsecurePackages = [
+            "qtwebengine-5.15.19"
+            "n8n-1.91.3"
+          ];
+        };
+        inherit overlays;
+      };
+
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs;
 
     # pkgs-stable (25.11 - claude-code now available natively)
     pkgs-stable = mkPkgs system nixpkgs-stable;
+
+    # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
+    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay ];
     
     lib = nixpkgs.lib;
 
@@ -145,9 +178,10 @@
 
     nixosConfigurations = {
       # CHARTER v9.0: Server uses stable nixpkgs (packages AND NixOS modules)
+      # Uses CUDA-enabled overlay for Immich ML GPU acceleration
       hwc-server = nixpkgs-stable.lib.nixosSystem {
         inherit system;
-        pkgs = pkgs-stable;  # Use nixpkgs-stable for predictable updates
+        pkgs = pkgs-stable-cuda;  # Use nixpkgs-stable with CUDA overlay for GPU ML
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "stable";  # Stable API (nixos-25.11)

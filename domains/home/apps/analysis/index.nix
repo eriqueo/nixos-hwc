@@ -1,16 +1,27 @@
+# domains/home/apps/analysis/index.nix
 { config, lib, pkgs, osConfig ? {}, ... }:
-
 let
   inherit (lib) mkIf mkMerge;
-
   cfg = config.hwc.home.apps.analysis;
+  isNixOS = osConfig ? hwc;
+in
+{
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  options.hwc.home.apps.analysis = {
+    enable = lib.mkEnableOption "Polars-based data analysis (JupyterLab)";
 
-  isNixOS = osConfig ? hwc;  # Boolean: true if osConfig.hwc exists
-in {
-  # OPTIONS (mandatory)
-  imports = [ ./options.nix ];
+    extraPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [];
+      description = "Additional Python packages to include.";
+    };
+  };
 
-  # IMPLEMENTATION + VALIDATION (single config block)
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = mkIf cfg.enable {
     home.packages = with pkgs; let
       pythonEnv = python3.withPackages (ps: with ps; [

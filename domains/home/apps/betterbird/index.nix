@@ -1,6 +1,8 @@
-{ lib, pkgs, config, osConfig ? {}, ...}:
-
+# domains/home/apps/betterbird/index.nix
+{ lib, pkgs, config, ... }:
 let
+  cfg = config.hwc.home.apps.betterbird;
+
   behavior   = import ./parts/behavior.nix   { inherit lib pkgs config; };
   appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
   session    = import ./parts/session.nix    { inherit lib pkgs config; };
@@ -9,13 +11,15 @@ let
 
   homeDir     = config.home.homeDirectory;
   profileBase = "${homeDir}/.betterbird";
-  cfg = config.hwc.home.apps.betterbird;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.betterbird = {
+    enable = lib.mkEnableOption "Betterbird email client";
+  };
+
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
@@ -50,7 +54,3 @@ in
     })
   ]);
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

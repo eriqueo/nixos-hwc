@@ -1,5 +1,5 @@
+# domains/home/apps/aider/index.nix
 { config, lib, pkgs, osConfig ? {}, ... }:
-
 let
   cfg = config.hwc.home.apps.aider;
 
@@ -66,7 +66,39 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.aider = {
+    enable = lib.mkEnableOption "aider AI pair-programming CLI";
+
+    package = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = "Aider package to use. If null, auto-detect from nixpkgs.";
+    };
+
+    cloudModel = lib.mkOption {
+      type = lib.types.str;
+      default = "openai/gpt-4o-mini";
+      description = "Default cloud model for aider.";
+    };
+
+    localModel = lib.mkOption {
+      type = lib.types.str;
+      default = "ollama/llama3.2:3b";
+      description = "Default local model for aider via Ollama.";
+    };
+
+    ollamaApiBase = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:11434";
+      description = "Ollama API base URL used by aider for local models.";
+    };
+
+    extraAliases = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      description = "Additional aider model aliases in name -> model format.";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

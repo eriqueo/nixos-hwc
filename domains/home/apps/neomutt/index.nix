@@ -1,22 +1,18 @@
-{ lib, pkgs, config, osConfig ? {}, ...}:
-
+# domains/home/apps/neomutt/index.nix
+{ lib, pkgs, config, ... }:
 let
-  # App gate
-  appEnabled = config.hwc.home.apps.neomutt.enable or false;
+  cfg = config.hwc.home.apps.neomutt;
 
-  # Pull accounts from the Mail domain
   mailAccs = config.hwc.home.mail.accounts or {};
   vals     = lib.attrValues mailAccs;
   haveAccs = vals != [];
 
-  # Safe primary selection: prefer explicit primary, then first; else null
   primary =
     let chosen = let p = lib.filter (a: a.primary or false) vals;
                  in if p != [] then lib.head p else (if vals != [] then lib.head vals else null);
     in chosen;
 
-  # Only configure NeoMutt when the app is enabled AND there’s at least one account
-  on = appEnabled && haveAccs;
+  on = cfg.enable && haveAccs;
 
   theme      = import ./parts/theme.nix      { inherit config lib; };
   appearance = import ./parts/appearance.nix { inherit lib pkgs config theme; };
@@ -25,16 +21,18 @@ let
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.neomutt = {
+    enable = lib.mkEnableOption "NeoMutt email client";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkMerge [
     # Warn (once) if the app is enabled but there are no accounts to bind to
-    (lib.mkIf (appEnabled && !haveAccs) {
+    (lib.mkIf (cfg.enable && !haveAccs) {
       warnings = [
         "hwc.home.apps.neomutt.enable = true but no hwc.home.mail.accounts are defined; disabling NeoMutt to avoid a bad config."
       ];
@@ -57,7 +55,3 @@ in
     })
   ];
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

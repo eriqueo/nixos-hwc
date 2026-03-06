@@ -1,24 +1,20 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/thunderbird/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.thunderbird;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.thunderbird = {
+    enable = lib.mkEnableOption "Thunderbird email client";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      thunderbird
-    ];
+    home.packages = [ pkgs.thunderbird ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

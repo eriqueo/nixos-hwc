@@ -1,5 +1,5 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/qbittorrent/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.qbittorrent;
 in
@@ -7,18 +7,14 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.qbittorrent = {
+    enable = lib.mkEnableOption "qBittorrent torrent client";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      qbittorrent
-    ];
+    home.packages = [ pkgs.qbittorrent ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }
