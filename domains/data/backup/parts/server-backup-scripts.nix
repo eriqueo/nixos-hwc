@@ -18,19 +18,28 @@ let
     # Create backup directory
     mkdir -p "$BACKUP_DIR"
 
-    # Backup container volumes
+    # Backup container volumes (excluding media directories that exist elsewhere)
     for container in $(${pkgs.podman}/bin/podman ps --format '{{.Names}}'); do
       echo "Backing up $container..."
 
       # Export container config
       ${pkgs.podman}/bin/podman inspect "$container" > "$BACKUP_DIR/$container-config-$DATE.json"
 
-      # Backup container volumes
+      # Backup container volumes (skip media/hot paths - they're backed up separately or are the backup dest)
       VOLUMES=$(${pkgs.podman}/bin/podman inspect "$container" | ${pkgs.jq}/bin/jq -r '.[].Mounts[].Source' | grep -v '^$' || true)
 
       if [ -n "$VOLUMES" ]; then
         echo "$VOLUMES" | while read volume; do
           volume_name=$(basename "$volume")
+
+          # Skip paths that shouldn't be backed up
+          case "$volume" in
+            /mnt/media/*|/mnt/hot/*|/var/lib/containers*|/dev/*|/sys/*|/proc/*|/run/*)
+              echo "  Skipping $volume_name (media/system path)"
+              continue
+              ;;
+          esac
+
           if [ -e "$volume" ]; then
             echo "  Backing up volume: $volume_name"
             ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/$container-$volume_name-$DATE.tar.gz" -C "$(dirname "$volume")" "$volume_name" 2>/dev/null || echo "    Warning: Failed to backup $volume_name"
