@@ -21,6 +21,7 @@ in
       ];
       environment = {};  # Runs at root, Caddy strips /pinch prefix
       dependsOn = [];  # No dependencies - standalone service
+      pull = "newer";  # Pull newer images on rebuild (keeps yt-dlp updated)
     })
 
     # Create required directories
