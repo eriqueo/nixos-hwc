@@ -44,6 +44,7 @@ rec {
     , memory ? "2g"
     , cpus ? "1.0"
     , memorySwap ? "4g"
+    , pull ? "missing"          # "always" | "missing" | "never" | "newer"
     }:
     let
       # Network options
@@ -88,7 +89,7 @@ rec {
       ];
 
       containerDef = {
-        inherit image dependsOn;
+        inherit image dependsOn pull;
         autoStart = true;
         environment = baseEnv // environment;
         environmentFiles = environmentFiles;
