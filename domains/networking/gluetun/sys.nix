@@ -1,7 +1,7 @@
 { lib, config, pkgs, ... }:
 let
   # Import PURE helper library - no circular dependencies
-  helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.networking.gluetun;
 in
 {

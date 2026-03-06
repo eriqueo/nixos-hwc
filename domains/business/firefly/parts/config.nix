@@ -6,7 +6,7 @@
 
 let
   # Import PURE helper library
-  helpers = import ../../../../lib/mkContainer.nix { inherit lib pkgs; };
+  helpers = import ../../../lib/mkContainer.nix { inherit lib pkgs; };
   inherit (helpers) mkContainer;
 
   cfg = config.hwc.business.firefly;

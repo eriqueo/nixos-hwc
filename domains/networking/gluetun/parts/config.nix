@@ -2,7 +2,7 @@
 { lib, config, pkgs, ... }:
 let
   # Import infrastructure container helper
-  infraHelpers = import ../../../../lib/mkInfraContainer.nix { inherit lib pkgs; };
+  infraHelpers = import ../../../lib/mkInfraContainer.nix { inherit lib pkgs; };
   inherit (infraHelpers) mkInfraContainer;
 
   cfg = config.hwc.networking.gluetun;

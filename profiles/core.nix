@@ -87,6 +87,7 @@ in
   hwc.system.core.shell.enable = true;
 
   # Hardware monitoring tools (smartctl, sensors, etc.) — all machines
+  hwc.system.hardware.enable = true;
   hwc.system.hardware.monitoring.enable = true;
 
   # Backup — defaults off, machines enable per-need
