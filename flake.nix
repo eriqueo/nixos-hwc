@@ -95,7 +95,9 @@
             "n8n-1.91.3"  # CVE-2025-68613 - workflow automation tool
           ];
         };
-        overlays = [];
+        overlays = [
+          (import ./overlays/n8n-latest.nix)
+        ];
       };
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
