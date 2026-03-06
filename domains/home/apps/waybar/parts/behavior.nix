@@ -36,13 +36,13 @@ let
     warp-on-scroll = false;
     format = "{icon}";
     format-icons = {
-      "9" = "1"; "10" = "2"; "11" = "3"; "12" = "4";
-      "13" = "5"; "14" = "6"; "15" = "7"; "16" = "8";
+      "11" = "1"; "12" = "2"; "13" = "3"; "14" = "4";
+      "15" = "5"; "16" = "6"; "17" = "7"; "18" = "8";
       "default" = "•";
     };
     persistent-workspaces = {
-      "9" = []; "10" = []; "11" = []; "12" = [];
-      "13" = []; "14" = []; "15" = []; "16" = [];
+      "11" = []; "12" = []; "13" = []; "14" = [];
+      "15" = []; "16" = []; "17" = []; "18" = [];
     };
     on-click = "activate";
     on-scroll-up = "hyprctl dispatch workspace e+1";
@@ -74,7 +74,7 @@ let
       on-click-right = "mpc next";
     };
 
-    clock = { format = "{:%H:%M:%S}"; format-alt = "{:%Y-%m-%d %H:%M:%S}"; };
+    clock = { format = "{:%M-%D %H:%M:%p}"; format-alt = "{:%m-%d %H:%M:%p}"; };
 
     "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
     "custom/ollama" = { format = "{}"; exec = "waybar-ollama-status"; return-type = "json"; interval = 5; on-click = "waybar-ollama-toggle"; };
