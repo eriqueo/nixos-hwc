@@ -72,6 +72,16 @@ in
       };
     };
 
+    funnel = {
+      enable = lib.mkEnableOption "Expose full n8n publicly via Tailscale Funnel (for Manus AI, etc.)";
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 12443;
+        description = "Public HTTPS port for full n8n access via Tailscale Funnel";
+      };
+    };
+
     owner = {
       email = lib.mkOption {
         type = lib.types.str;

@@ -170,6 +170,23 @@ in
       };
     };
 
+    # Tailscale Funnel - expose FULL n8n publicly (for Manus AI, external integrations)
+    # Accessible at: https://hwc.ocelot-wahoo.ts.net:12443/
+    systemd.services.tailscale-funnel-n8n-full = lib.mkIf cfg.funnel.enable {
+      description = "Tailscale Funnel for full n8n access (Manus AI, etc.)";
+      after = [ "network.target" "tailscaled.service" "n8n.service" ];
+      wants = [ "tailscaled.service" "n8n.service" ];
+      wantedBy = [ "multi-user.target" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";  # Wait for tailscaled
+        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --bg --https=${toString cfg.funnel.port} http://127.0.0.1:${toString cfg.port}";
+        ExecStop = "${pkgs.tailscale}/bin/tailscale funnel --https=${toString cfg.funnel.port} off";
+      };
+    };
+
     #========================================================================
     # VALIDATION
     #========================================================================
