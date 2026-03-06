@@ -83,8 +83,8 @@ in
 
       port = lib.mkOption {
         type = lib.types.port;
-        default = 12443;
-        description = "Public HTTPS port for full n8n access via Tailscale Funnel";
+        default = 8443;
+        description = "Public HTTPS port for full n8n access via Tailscale Funnel. Must be 443, 8443, or 10000 (Funnel limitation).";
       };
     };
 
