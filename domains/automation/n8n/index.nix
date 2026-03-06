@@ -19,7 +19,6 @@ let
     N8N_PORT = toString cfg.port;
     N8N_PROTOCOL = "https";
     N8N_HOST = "hwc.ocelot-wahoo.ts.net";
-    WEBHOOK_URL = "https://hwc.ocelot-wahoo.ts.net/";  # Force webhook URLs to use standard HTTPS port
     N8N_USER_MANAGEMENT_DISABLED = "true";
     N8N_USER_FOLDER = cfg.dataDir;
     GENERIC_TIMEZONE = cfg.timezone;
@@ -27,6 +26,11 @@ let
     N8N_VERSION_NOTIFICATIONS_ENABLED = "false";
     N8N_DIAGNOSTICS_ENABLED = "false";
     N8N_HIRING_BANNER_ENABLED = "false";
+    N8N_EDITOR_BASE_URL = "https://hwc.ocelot-wahoo.ts.net:2443/";
+    WEBHOOK_URL = "https://hwc.ocelot-wahoo.ts.net:2443/";  # Add the port!
+    # Optional but helpful:
+    N8N_ENDPOINT_WEBHOOK = "webhook";  # Default, but confirm
+    N8N_ENDPOINT_REST = "rest";        # For /rest paths
   } // (lib.optionalAttrs (config.hwc.secrets.api.slackSigningSecretFile != null) {
     SLACK_SIGNING_SECRET = "$(<${config.hwc.secrets.api.slackSigningSecretFile})";
   }) // (lib.optionalAttrs (config.hwc.secrets.api.sonarrApiKeyFile != null) {
