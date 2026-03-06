@@ -1,3 +1,4 @@
+# domains/ai/agent/index.nix
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.ai.agent;
@@ -23,7 +24,21 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.ai.agent = {
+    enable = lib.mkEnableOption "AI Agent - HTTP tool agent";
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 6020;
+    };
+    allowedCommands = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "podman ps" "podman logs" "systemctl status" "journalctl -n 200" "ls" "cat" ];
+    };
+    auditLog = lib.mkOption {
+      type = lib.types.path;
+      default = "/var/log/hwc-ai/agent-audit.log";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

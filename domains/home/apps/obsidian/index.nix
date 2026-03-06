@@ -1,21 +1,20 @@
-# modules/home/apps/obsidian/index.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
-
+# domains/home/apps/obsidian/index.nix
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.hwc.home.apps.obsidian;
+in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.obsidian = {
+    enable = lib.mkEnableOption "Obsidian note-taking app";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf (config.hwc.home.apps.obsidian.enable or false) {
-    home.packages = with pkgs; [
-      obsidian
-    ];
+  config = lib.mkIf cfg.enable {
+    home.packages = [ pkgs.obsidian ];
   };
 }
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

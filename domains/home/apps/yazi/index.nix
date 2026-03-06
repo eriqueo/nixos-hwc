@@ -1,6 +1,5 @@
 # domains/home/apps/yazi/index.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
-
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.yazi;
 
@@ -8,13 +7,14 @@ let
   keymapConfig = import ./parts/keymap.nix;
   pluginsConfig = import ./parts/plugins.nix;
   themeConfig = import ./parts/theme.nix { inherit config; };
-
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.yazi = {
+    enable = lib.mkEnableOption "Yazi terminal file manager";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
@@ -94,7 +94,3 @@ in
       // themeConfig;
   };
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

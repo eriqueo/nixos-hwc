@@ -1,6 +1,7 @@
-{ lib, pkgs, config, osConfig ? {}, ...}:
+# domains/home/apps/aerc/index.nix
+{ lib, pkgs, config, ... }:
 let
-  enabled  = config.hwc.home.apps.aerc.enable or false;
+  cfg = config.hwc.home.apps.aerc;
 
   cfgPart   = import ./parts/config.nix   { inherit lib pkgs config; };
   bindsPart = import ./parts/behavior.nix { inherit lib pkgs config; };
@@ -9,14 +10,16 @@ let
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.aerc = {
+    enable = lib.mkEnableOption "aerc terminal email client";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf cfg.enable {
     home.packages = (cfgPart.packages or []) ++ (sessPart.packages or []);
     home.file     = (cfgPart.files "") // (bindsPart.files "") // (sievePart.files "") // {
       ".notmuch-config".source =
@@ -35,7 +38,7 @@ in
     #==========================================================================
     assertions = [
       {
-        assertion = !enabled || (config.hwc.home.mail.accounts != {} && config.hwc.home.mail.accounts != null);
+        assertion = !cfg.enable || (config.hwc.home.mail.accounts != {} && config.hwc.home.mail.accounts != null);
         message = "aerc requires at least one mail account configured via hwc.home.mail.accounts";
       }
     ];

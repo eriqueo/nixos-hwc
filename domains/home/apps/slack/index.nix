@@ -1,24 +1,20 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/slack/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.slack;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.slack = {
+    enable = lib.mkEnableOption "Slack desktop client";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      slack
-    ];
+    home.packages = [ pkgs.slack ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

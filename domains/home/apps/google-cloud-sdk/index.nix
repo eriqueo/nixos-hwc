@@ -1,24 +1,20 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/google-cloud-sdk/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.google-cloud-sdk;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.google-cloud-sdk = {
+    enable = lib.mkEnableOption "Google Cloud SDK";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      google-cloud-sdk
-    ];
+    home.packages = [ pkgs.google-cloud-sdk ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

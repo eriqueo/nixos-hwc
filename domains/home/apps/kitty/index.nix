@@ -1,8 +1,7 @@
-# modules/home/apps/kitty/index.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
-
+# domains/home/apps/kitty/index.nix
+{ config, lib, pkgs, ... }:
 let
-  enabled = config.hwc.home.apps.kitty.enable or false;
+  cfg = config.hwc.home.apps.kitty;
   T = config.hwc.home.theme or {};
   C = T.colors or T;
 
@@ -26,12 +25,14 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.kitty = {
+    enable = lib.mkEnableOption "Kitty terminal emulator";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf cfg.enable {
     programs.kitty = {
       enable = true;
       package = pkgs.kitty;

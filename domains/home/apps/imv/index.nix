@@ -1,21 +1,20 @@
 # domains/home/apps/imv/index.nix
 { config, lib, pkgs, ... }:
-
 let
   cfg = config.hwc.home.apps.imv;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.imv = {
+    enable = lib.mkEnableOption "imv image viewer";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      imv
-    ];
+    home.packages = [ pkgs.imv ];
   };
 }

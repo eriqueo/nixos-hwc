@@ -1,24 +1,20 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/opencode/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.opencode;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.opencode = {
+    enable = lib.mkEnableOption "OpenCode";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      opencode
-    ];
+    home.packages = [ pkgs.opencode ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

@@ -1,54 +1,34 @@
+# domains/home/apps/freecad/index.nix
 { config, lib, pkgs, osConfig ? {}, ... }:
-
 let
-  enabled = config.hwc.home.apps.freecad.enable or false;
   cfg = config.hwc.home.apps.freecad;
 
-  # Feature Detection: Check if we're on a NixOS host with HWC system config
   isNixOSHost = osConfig ? hwc;
   osCfg = if isNixOSHost then osConfig else {};
-
-  # Access system GPU config via osConfig (available in Home Manager)
   gpuCfg = osCfg.hwc.system.hardware.gpu or { type = "none"; enable = false; };
 
-  # Patch FreeCAD to avoid forcing unsupported display modes on hosts (e.g., BuildingPart)
   freecadPkg = pkgs.freecad.overrideAttrs (old: {
     patches = (old.patches or []) ++ [ ./patches/arch-window-displaymode-guard.patch ];
   });
 
-  # Create a GPU-enabled wrapper for NVIDIA PRIME systems
-  # FreeCAD uses OpenGL for GPU-accelerated 3D rendering
   freecadGpuWrapper = pkgs.writeShellScriptBin "freecad-gpu" ''
     #!/usr/bin/env bash
-    # Launch FreeCAD with NVIDIA GPU offload enabled for OpenGL acceleration
     export __NV_PRIME_RENDER_OFFLOAD=1
     export __GLX_VENDOR_LIBRARY_NAME=nvidia
     export __VK_LAYER_NV_optimus=NVIDIA_only
-
-    # OpenGL performance optimizations
     export __GL_SHADER_DISK_CACHE=1
     export __GL_THREADED_OPTIMIZATIONS=1
-
-    # Force XWayland (X11 mode) - NVIDIA EGL on Wayland is unstable with Qt6
     export QT_QPA_PLATFORM=xcb
-
-    # Disable Qt's native Wayland rendering (use XWayland instead)
     export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-
     exec ${freecadPkg}/bin/freecad "$@"
   '';
 
-  # Regular FreeCAD wrapper with OpenGL optimizations (non-NVIDIA or integrated GPU)
   freecadOptimizedWrapper = pkgs.writeShellScriptBin "freecad-optimized" ''
     #!/usr/bin/env bash
-    # Launch FreeCAD with OpenGL optimizations for integrated/AMD GPUs
     export __GL_SHADER_DISK_CACHE=1
     export __GL_THREADED_OPTIMIZATIONS=1
-
-    # Force XWayland (X11 mode) - Qt6 FreeCAD is more stable with XWayland
     export QT_QPA_PLATFORM=xcb
     export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-
     exec ${freecadPkg}/bin/freecad "$@"
   '';
 in
@@ -56,12 +36,20 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.freecad = {
+    enable = lib.mkEnableOption "FreeCAD parametric 3D CAD modeler";
+
+    gpuAcceleration = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable GPU-accelerated OpenGL rendering.";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf cfg.enable {
     # Install FreeCAD package (binary-cached)
     home.packages = [
       freecadPkg

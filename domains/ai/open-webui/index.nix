@@ -48,9 +48,98 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [
-    ./options.nix
-  ];
+  options.hwc.ai.open-webui = {
+    enable = lib.mkEnableOption "Open WebUI - Web interface for Ollama";
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 3001;
+      description = "Host port for Open WebUI (avoids conflict with Grafana on 3000)";
+    };
+
+    ollamaEndpoint = lib.mkOption {
+      type = lib.types.str;
+      default = "http://ollama:11434";
+      description = "Ollama API endpoint";
+    };
+
+    dataDir = lib.mkOption {
+      type = lib.types.path;
+      default = "/var/lib/open-webui";
+      description = "Data directory for Open WebUI (database, uploads, etc.)";
+    };
+
+    enableAuth = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable user authentication (recommended for multi-user)";
+    };
+
+    defaultModel = lib.mkOption {
+      type = lib.types.str;
+      default = "phi3.5:3.8b";
+      description = "Default model for new conversations";
+    };
+
+    enableRAG = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable RAG (Retrieval Augmented Generation) features";
+    };
+
+    ragChunkSize = lib.mkOption {
+      type = lib.types.int;
+      default = 1500;
+      description = "Chunk size for RAG document processing";
+    };
+
+    ragOverlap = lib.mkOption {
+      type = lib.types.int;
+      default = 100;
+      description = "Overlap size for RAG chunks";
+    };
+
+    imageTag = lib.mkOption {
+      type = lib.types.str;
+      default = "latest";
+      description = "Docker image tag for Open WebUI";
+    };
+
+    extraEnv = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      description = "Additional environment variables for Open WebUI container";
+      example = {
+        WEBUI_NAME = "HWC AI Assistant";
+      };
+    };
+
+    healthCheck = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Enable health check for Open WebUI container";
+      };
+
+      interval = lib.mkOption {
+        type = lib.types.str;
+        default = "30s";
+        description = "Health check interval";
+      };
+
+      timeout = lib.mkOption {
+        type = lib.types.str;
+        default = "10s";
+        description = "Health check timeout";
+      };
+
+      retries = lib.mkOption {
+        type = lib.types.int;
+        default = 3;
+        description = "Health check retries before marking unhealthy";
+      };
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
