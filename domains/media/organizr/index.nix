@@ -6,7 +6,7 @@
   imports = [
     ./options.nix
     ./parts/config.nix
-    ./parts/lib.nix
+    ./parts/setup.nix
   ];
   #==========================================================================
   # IMPLEMENTATION

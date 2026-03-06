@@ -10,9 +10,7 @@ in
     ./options.nix
     ./sys.nix
     ./parts/config.nix
-    ./parts/scripts.nix
-    ./parts/pkgs.nix
-    ./parts/lib.nix
+    ./parts/setup.nix
   ];
 
   #==========================================================================
