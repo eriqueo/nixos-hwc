@@ -92,11 +92,10 @@
           # Allow insecure qtwebengine for jellyfin-media-player
           permittedInsecurePackages = [
             "qtwebengine-5.15.19"
-            "n8n-1.91.3"  # CVE-2025-68613 - workflow automation tool
           ];
         };
         overlays = [
-          (import ./overlays/n8n-latest.nix)
+          # Add overlays here as needed
         ];
       };
 
