@@ -65,7 +65,8 @@
         "text": "post-title",
         "url": "permalink",
         "reactions": "score",
-        "date": "created-timestamp"
+        "date": "created-timestamp",
+        "post_id": "id"
       },
       "scrapers": {}
     },

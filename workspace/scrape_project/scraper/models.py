@@ -39,6 +39,7 @@ class Post(BaseModel):
     reactions: str = Field(default="")
     comments: list[Comment] = Field(default_factory=list)
     url: str = Field(default="")
+    post_id: str = Field(default="", description="Unique post identifier for second-pass scraping")
     scraped_at: datetime = Field(default_factory=datetime.now)
 
     @property
