@@ -10,6 +10,7 @@ let
   pythonEnv = pkgs.python3.withPackages (ps: with ps; [
     pandas
     playwright
+    pydantic
   ]);
 
   # Wrapper script that sets up Playwright browsers and runs the scraper

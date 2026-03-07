@@ -1,194 +1,259 @@
-'''
-Configurable, Multi-Platform Social Media Scraper Engine
+#!/usr/bin/env python3
+"""
+Configurable Multi-Platform Social Media Scraper
 
-This script uses Playwright to scrape posts and comments from various social media sites
-based on a `sites.json` configuration file. It handles login, scrolling, data extraction,
-and saves the output to a standardized CSV format.
-
-Author: Manus AI
-Version: 1.0
+A Playwright-based scraper with support for multiple sites,
+rate limiting, deduplication, and multiple output formats.
 
 Usage:
-  - For login (one-time setup per site):
-    python scraper.py --url "https://www.facebook.com" --login
+  # Login (one-time setup per site):
+  scraper --url "https://www.facebook.com" --login
 
-  - To run a scrape:
-    python scraper.py --url "https://www.facebook.com/groups/your_group_id"
+  # Scrape a page:
+  scraper --url "https://www.facebook.com/groups/your_group_id"
 
-  - For more options:
-    python scraper.py --help
-'''
+  # With options:
+  scraper --url "..." --scrolls 20 --format jsonl --output data.jsonl
 
-import json
-import argparse
-import time
-import pandas as pd
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+For more options: scraper --help
+"""
+
 from pathlib import Path
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-# --- Configuration ---
+from scraper import (
+    setup_logging,
+    get_logger,
+    load_config,
+    get_site_config,
+    get_auth_file_path,
+    extract_all_posts,
+    ExtractionMetrics,
+    PostDeduplicator,
+    get_storage_backend,
+    AdaptiveRateLimiter,
+    RateLimitConfig,
+    ConfigurationError,
+)
+from scraper.cli import parse_args
+
+
+# Default config file location (next to this script)
 SCRIPT_DIR = Path(__file__).parent.resolve()
-CONFIG_FILE = SCRIPT_DIR / "sites.json"
-DEFAULT_SCROLLS = 10
-SCROLL_DELAY = 3  # seconds
-TIMEOUT = 15000  # milliseconds
+DEFAULT_CONFIG = SCRIPT_DIR / "sites.json"
 
 
-def load_config():
-    """Loads the sites.json configuration file."""
-    if not CONFIG_FILE.exists():
-        print(f"Error: Configuration file '{CONFIG_FILE}' not found.")
-        print("Please create it next to the scraper.py script.")
-        exit(1)
-    with open(CONFIG_FILE, "r") as f:
-        return json.load(f)
+def run_login_flow(page, site_name: str, auth_file: Path) -> None:
+    """
+    Handle manual login flow.
+
+    Opens browser for user to login manually, then saves auth state.
+    """
+    logger = get_logger()
+
+    logger.info("=" * 50)
+    logger.info("MANUAL LOGIN REQUIRED")
+    logger.info("=" * 50)
+    logger.info(f"Please log in to {site_name} in the browser window.")
+    logger.info("Once logged in, press Ctrl+C to save your session.")
+    logger.info("=" * 50)
+
+    try:
+        # Wait up to 1 hour for user to login
+        page.wait_for_timeout(3600 * 1000)
+    except KeyboardInterrupt:
+        logger.info("\nSaving authentication state...")
+        page.context.storage_state(path=str(auth_file))
+        logger.info(f"Auth saved to: {auth_file}")
 
 
-def get_site_config(url, config):
-    """Determines which site configuration to use based on the URL."""
-    for site in config["sites"]:
-        if site["url_pattern"] in url:
-            print(f"Found matching configuration: '{site['name']}'")
-            return site
-    return None
+def run_scrape(
+    page,
+    site_config,
+    scrolls: int,
+    scroll_delay: float,
+    output_path: Path,
+    output_format: str,
+) -> None:
+    """
+    Run the main scraping loop.
 
+    Args:
+        page: Playwright page instance
+        site_config: Site configuration
+        scrolls: Number of scroll iterations
+        scroll_delay: Delay between scrolls
+        output_path: Output file path
+        output_format: Output format (csv, json, jsonl)
+    """
+    logger = get_logger()
+    metrics = ExtractionMetrics()
+    deduplicator = PostDeduplicator()
 
-def extract_data(page, site_config):
-    """Extracts data from the page based on the site's selectors."""
-    posts_data = []
-    post_elements = page.query_selector_all(site_config["post_container_selector"])
-    print(f"Found {len(post_elements)} post containers on the page.")
+    # Set up rate limiter
+    rate_limit_rpm = site_config.scraper_config.rate_limit_rpm
+    limiter = AdaptiveRateLimiter(
+        RateLimitConfig(
+            min_delay=scroll_delay,
+            requests_per_minute=rate_limit_rpm,
+        )
+    )
 
-    for post_el in post_elements:
-        post = {"Source": site_config["name"], "Group": page.title()}
-        scrapers = site_config["scrapers"]
+    logger.info(f"Starting scrape: {scrolls} scrolls, {scroll_delay}s delay")
 
-        # Scrape main post content
-        for key, scraper_config in scrapers.items():
-            if "comment_" in key or "_container_" in key: continue
+    # Open storage for streaming writes
+    storage = get_storage_backend(output_format, output_path)
+
+    with storage:
+        for i in range(scrolls):
+            logger.info(f"Scroll {i + 1}/{scrolls}")
+
+            # Wait according to rate limiter
+            if i > 0:  # Don't wait before first extraction
+                limiter.wait()
+
             try:
-                element = post_el.query_selector(scraper_config["selector"])
-                if element:
-                    if scraper_config.get("type") == "text":
-                        post[key.capitalize()] = element.inner_text().strip()
-                    elif scraper_config.get("type") == "href":
-                        post[key.capitalize()] = element.get_attribute('href')
+                # Extract posts from current page state
+                posts = extract_all_posts(page, site_config, metrics)
+                limiter.record_success()
+
+                # Deduplicate and write new posts
+                new_count = 0
+                for post in posts:
+                    if deduplicator.add_or_update(post):
+                        storage.append(post)
+                        new_count += 1
+
+                logger.info(
+                    f"Found {new_count} new posts "
+                    f"(total unique: {len(deduplicator)})"
+                )
+
+                # Scroll down for more content
+                page.mouse.wheel(0, 15000)
+
+            except PlaywrightTimeoutError:
+                logger.warning("Timeout during extraction, continuing...")
+                limiter.record_error()
             except Exception as e:
-                # print(f"  - Could not find {key}: {e}")
-                post[key.capitalize()] = ""
+                logger.error(f"Extraction error: {e}")
+                limiter.record_error()
 
-        # Scrape comments
-        comments = []
-        if "comments_container_selector" in scrapers:
-            comment_elements = post_el.query_selector_all(scrapers["comments_container_selector"])
-            for comment_el in comment_elements:
-                comment = {}
-                try:
-                    author_el = comment_el.query_selector(scrapers["comment_author"]["selector"])
-                    text_el = comment_el.query_selector(scrapers["comment_text"]["selector"])
-                    if author_el and text_el:
-                        comment["author"] = author_el.inner_text().strip()
-                        comment["text"] = text_el.inner_text().strip()
-                        comments.append(comment)
-                except Exception:
-                    continue # Skip malformed comment
-        
-        post["Comments"] = json.dumps(comments)
-        post["Comments Count"] = len(comments)
-
-        # Add to list if post has some text content
-        if post.get("Text"):
-            posts_data.append(post)
-            
-    return posts_data
+    # Log final metrics
+    total_posts = len(deduplicator)
+    if total_posts > 0:
+        logger.info(f"Scrape complete: {total_posts} posts saved to {output_path}")
+        logger.debug(f"Extraction metrics: {metrics.summary()}")
+    else:
+        logger.warning("No posts were scraped.")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Configurable Social Media Scraper")
-    parser.add_argument("--url", required=True, help="The URL of the page to scrape.")
-    parser.add_argument("--login", action="store_true", help="Perform a manual login to save the auth state.")
-    parser.add_argument("--scrolls", type=int, default=DEFAULT_SCROLLS, help="Number of times to scroll down the page.")
-    parser.add_argument("--output", help="Name of the output CSV file.")
-    args = parser.parse_args()
+def main() -> int:
+    """Main entry point."""
+    args = parse_args()
 
-    config = load_config()
+    # Set up logging
+    setup_logging(
+        level=args.log_level,
+        log_file=args.log_file,
+        json_format=args.json_logs,
+    )
+    logger = get_logger()
+
+    # Load configuration
+    config_path = args.config or DEFAULT_CONFIG
+    try:
+        config = load_config(config_path)
+    except ConfigurationError as e:
+        logger.error(str(e))
+        return 1
+
+    # Find site config for URL
     site_config = get_site_config(args.url, config)
-
     if not site_config:
-        print(f"Error: No configuration found for URL: {args.url}")
-        return
+        logger.error(f"No configuration found for URL: {args.url}")
+        logger.error(f"Configured sites: {[s.name for s in config.sites]}")
+        return 1
 
-    auth_file = Path(f"{site_config['name'].lower().replace(' ', '_')}_auth.json")
+    # Determine auth file location
+    auth_file = get_auth_file_path(site_config.name)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False) # Headless=False is important for login
-        context_args = {"storage_state": auth_file} if auth_file.exists() and not args.login else {}
-        context = browser.new_context(**context_args)
-        page = context.new_page()
-        page.set_default_timeout(TIMEOUT)
+    # Merge config values (CLI > site config > global config)
+    scroll_delay = (
+        args.scroll_delay
+        or site_config.scraper_config.scroll_delay
+        or config.global_config.default_scroll_delay
+    )
+    timeout = (
+        args.timeout
+        or site_config.scraper_config.timeout
+        or config.global_config.default_timeout
+    )
+    headless = args.headless if args.headless is not None else config.global_config.headless
 
-        print(f"Navigating to: {args.url}")
-        try:
-            page.goto(args.url, wait_until="domcontentloaded")
-        except PlaywrightTimeoutError:
-            print("Timeout navigating to page. It might be slow to load. Continuing...")
+    # Determine output path
+    if args.output:
+        output_path = args.output
+    else:
+        safe_name = site_config.name.lower().replace(" ", "_")
+        output_path = Path(f"{safe_name}_data.{args.format}")
 
-        if args.login:
-            print("--- MANUAL LOGIN REQUIRED ---")
-            print(f"Please log in to {site_config['name']} in the browser window.")
-            print("Once you are fully logged in, close this script with Ctrl+C.")
-            print("Your session will be saved for future runs.")
+    logger.info(f"Scraping: {args.url}")
+    logger.info(f"Site: {site_config.name}")
+    logger.debug(f"Auth file: {auth_file}")
+    logger.debug(f"Headless: {headless}, Timeout: {timeout}ms")
+
+    # Launch browser
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=headless)
+
+            # Set up context with auth if available
+            context_args = {}
+            if auth_file.exists() and not args.login:
+                logger.info("Using saved authentication")
+                context_args["storage_state"] = str(auth_file)
+            elif site_config.login_required and not args.login:
+                logger.warning(
+                    f"Site requires login but no auth found. "
+                    f"Run with --login first."
+                )
+
+            context = browser.new_context(**context_args)
+            page = context.new_page()
+            page.set_default_timeout(timeout)
+
+            # Navigate to URL
+            logger.info(f"Navigating to: {args.url}")
             try:
-                # Wait indefinitely for the user to do their thing
-                page.wait_for_timeout(3600 * 1000) 
-            except KeyboardInterrupt:
-                print("\nLogin process interrupted by user. Saving authentication state...")
-                context.storage_state(path=auth_file)
-                print(f"Authentication state saved to {auth_file}")
+                page.goto(args.url, wait_until="domcontentloaded")
+            except PlaywrightTimeoutError:
+                logger.warning("Page load timeout, attempting to continue...")
+
+            # Run appropriate flow
+            if args.login:
+                run_login_flow(page, site_config.name, auth_file)
+            else:
+                run_scrape(
+                    page=page,
+                    site_config=site_config,
+                    scrolls=args.scrolls,
+                    scroll_delay=scroll_delay,
+                    output_path=output_path,
+                    output_format=args.format,
+                )
+
             browser.close()
-            return
 
-        # --- Main Scraping Logic ---
-        print("Starting scrape...")
-        all_posts = []
-        processed_post_texts = set()
+    except KeyboardInterrupt:
+        logger.info("\nScrape interrupted by user")
+        return 130
+    except Exception as e:
+        logger.exception(f"Unexpected error: {e}")
+        return 1
 
-        for i in range(args.scrolls):
-            print(f"\n--- Scroll {i + 1}/{args.scrolls} ---")
-            current_posts = extract_data(page, site_config)
-            new_posts_found = 0
-            for post in current_posts:
-                # Simple deduplication based on post text
-                post_key = post.get("Text", "")[:200]
-                if post_key and post_key not in processed_post_texts:
-                    all_posts.append(post)
-                    processed_post_texts.add(post_key)
-                    new_posts_found += 1
-            
-            print(f"Found {new_posts_found} new posts this scroll. Total unique posts: {len(all_posts)}")
-
-            # Scroll down
-            page.mouse.wheel(0, 15000)
-            print(f"Waiting {SCROLL_DELAY} seconds for content to load...")
-            time.sleep(SCROLL_DELAY)
-
-        print("\nScraping complete.")
-        browser.close()
-
-        # --- Save to CSV ---
-        if not all_posts:
-            print("No data was scraped. Exiting.")
-            return
-
-        df = pd.DataFrame(all_posts)
-        # Reorder columns for clarity
-        cols = ['Source', 'Group', 'Author', 'Date', 'Text', 'Reactions', 'Comments Count', 'Comments']
-        df = df.reindex(columns=[c for c in cols if c in df.columns] + [c for c in df.columns if c not in cols])
-
-        output_filename = args.output or f"{site_config['name'].lower().replace(' ', '_')}_data.csv"
-        df.to_csv(output_filename, index=False)
-        print(f"Successfully saved {len(df)} posts to {output_filename}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
