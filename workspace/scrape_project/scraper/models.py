@@ -91,6 +91,12 @@ class SiteConfig(BaseModel):
     attribute_map: dict[str, str] = Field(default_factory=dict)
     scraper_config: SiteScraperConfig = Field(default_factory=SiteScraperConfig)
     user_agent: str | None = None
+    # Auto-login configuration
+    login_url: str | None = None
+    login_selectors: dict[str, str] = Field(default_factory=dict)
+    # Secret names for credentials (read from /run/agenix/)
+    credential_email_secret: str | None = None
+    credential_password_secret: str | None = None
 
     @field_validator("scrapers", mode="before")
     @classmethod

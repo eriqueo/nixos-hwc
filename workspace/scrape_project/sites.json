@@ -10,6 +10,14 @@
       "name": "Facebook Group",
       "url_pattern": "https://www.facebook.com/groups/",
       "login_required": true,
+      "login_url": "https://www.facebook.com/login",
+      "credential_email_secret": "scraper-facebook-email",
+      "credential_password_secret": "scraper-facebook-password",
+      "login_selectors": {
+        "email_field": "input#email",
+        "password_field": "input#pass",
+        "submit_button": "button[name='login']"
+      },
       "post_container_selector": "div[role=\"article\"][data-pagelet^=\"GroupFeed\"]",
       "scraper_config": {
         "scroll_delay": 5.0,
@@ -74,6 +82,14 @@
       "name": "Nextdoor",
       "url_pattern": "https://nextdoor.com/",
       "login_required": true,
+      "login_url": "https://nextdoor.com/login/",
+      "credential_email_secret": "scraper-nextdoor-email",
+      "credential_password_secret": "scraper-nextdoor-password",
+      "login_selectors": {
+        "email_field": "input#id_email",
+        "password_field": "input#id_password",
+        "submit_button": "button[type='submit']"
+      },
       "post_container_selector": "article[data-testid=\"post-content\"]",
       "scraper_config": {
         "scroll_delay": 4.0,

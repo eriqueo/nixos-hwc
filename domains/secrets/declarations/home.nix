@@ -41,5 +41,31 @@
       group = "secrets";
     };
 
+    # Scraper credentials for social media login
+    scraper-facebook-email = {
+      file = ../parts/home/scraper/facebook-email.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    scraper-facebook-password = {
+      file = ../parts/home/scraper/facebook-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    scraper-nextdoor-email = {
+      file = ../parts/home/scraper/nextdoor-email.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    scraper-nextdoor-password = {
+      file = ../parts/home/scraper/nextdoor-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
   };
 }
