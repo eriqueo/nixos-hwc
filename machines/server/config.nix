@@ -150,14 +150,15 @@
   # Production system settings
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
-    # Official CUDA binary cache (huge win for torch/onnxruntime/etc.)
+    # Official NixOS CUDA binary cache (moved from cachix Nov 2025)
+    # https://wiki.nixos.org/wiki/CUDA
     substituters = [
       "https://cache.nixos.org"
-      "https://cuda-maintainers.cachix.org"
+      "https://cache.nixos-cuda.org"
     ];
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
+      "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
     ];
   };
   # allowUnfree set in flake.nix
