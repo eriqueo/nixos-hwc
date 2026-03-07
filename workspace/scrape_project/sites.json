@@ -55,45 +55,19 @@
       "name": "Reddit",
       "url_pattern": "https://www.reddit.com/r/",
       "login_required": false,
-      "post_container_selector": "div[data-testid=\"post-container\"]",
+      "post_container_selector": "shreddit-post",
       "scraper_config": {
         "scroll_delay": 2.0,
         "rate_limit_rpm": 30
       },
-      "scrapers": {
-        "author": {
-          "selector": "a[data-testid=\"post_author_link\"]",
-          "type": "text"
-        },
-        "date": {
-          "selector": "span[data-testid=\"post_timestamp\"]",
-          "type": "text"
-        },
-        "text": {
-          "selector": "h1, [data-adclicklocation=\"title\"]",
-          "type": "text"
-        },
-        "reactions": {
-          "selector": "[data-testid=\"post-title\"] + div > div > button[data-testid=\"vote-button\"] + div",
-          "type": "text"
-        },
-        "url": {
-          "selector": "a[data-click-id=\"body\"]",
-          "type": "href"
-        },
-        "comments_container_selector": {
-          "selector": "div[data-testid=\"comment\"]",
-          "type": "text"
-        },
-        "comment_author": {
-          "selector": "a[data-testid=\"comment_author_link\"]",
-          "type": "text"
-        },
-        "comment_text": {
-          "selector": "[data-testid=\"comment\"] > div:last-child",
-          "type": "text"
-        }
-      }
+      "attribute_map": {
+        "author": "author",
+        "text": "post-title",
+        "url": "permalink",
+        "reactions": "score",
+        "date": "created-timestamp"
+      },
+      "scrapers": {}
     },
     {
       "name": "Nextdoor",
