@@ -33,6 +33,7 @@
 
       TimeoutStartSec = "1h";
       Nice = 10;
+      CPUQuota = "50%";
       IOSchedulingClass = "best-effort";
       IOSchedulingPriority = 6;
     };
@@ -42,7 +43,7 @@
     Unit.Description = "Periodic mbsync";
     Timer = {
       OnBootSec = "2m";
-      OnUnitActiveSec = "3m";
+      OnUnitActiveSec = "10m";
       AccuracySec = "30s";
       Persistent = true;
       Unit = "mbsync.service";
