@@ -1,6 +1,6 @@
 # Shared *arr application configuration enforcement
 # Ensures config.xml has correct authentication and URL settings
-# Also ensures default admin user exists in database for Basic auth
+# Uses External auth (no login required) - safe when behind Tailscale
 { lib, pkgs }:
 
 {
@@ -28,7 +28,7 @@
   <SslPort>9898</SslPort>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>True</LaunchBrowser>
-  <AuthenticationMethod>Basic</AuthenticationMethod>
+  <AuthenticationMethod>External</AuthenticationMethod>
   <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
   <Branch>main</Branch>
   <LogLevel>info</LogLevel>
@@ -45,21 +45,21 @@ INITEOF
       if command -v xmlstarlet &> /dev/null; then
         # Use xmlstarlet for proper XML manipulation
         xmlstarlet ed -L \
-          -u "/Config/AuthenticationMethod" -v "Basic" \
+          -u "/Config/AuthenticationMethod" -v "External" \
           -u "/Config/AuthenticationRequired" -v "DisabledForLocalAddresses" \
           -u "/Config/UrlBase" -v "${urlBase}" \
           "$CONFIG_FILE" 2>/dev/null || true
       else
         # Fallback: Use sed for simple replacements
         ${pkgs.gnused}/bin/sed -i \
-          -e 's|<AuthenticationMethod>[^<]*</AuthenticationMethod>|<AuthenticationMethod>Basic</AuthenticationMethod>|' \
+          -e 's|<AuthenticationMethod>[^<]*</AuthenticationMethod>|<AuthenticationMethod>External</AuthenticationMethod>|' \
           -e 's|<AuthenticationRequired>[^<]*</AuthenticationRequired>|<AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>|' \
           -e 's|<UrlBase>[^<]*</UrlBase>|<UrlBase>${urlBase}</UrlBase>|' \
           "$CONFIG_FILE"
       fi
 
-      # Ensure admin user exists in database for Basic auth
-      # Uses shared password hash so all arr apps have same credentials
+      # Ensure admin user exists in database (for fallback to Basic auth)
+      # Not needed for External auth but kept for compatibility
       if [ -f "$DB_FILE" ]; then
         USER_COUNT=$(${sqlite} "$DB_FILE" "SELECT COUNT(*) FROM Users WHERE Username='admin';" 2>/dev/null || echo "0")
         if [ "$USER_COUNT" = "0" ]; then
@@ -69,6 +69,6 @@ INITEOF
         fi
       fi
 
-      echo "${name} config enforced: AuthenticationMethod=Basic, AuthenticationRequired=DisabledForLocalAddresses, UrlBase=${urlBase}"
+      echo "${name} config enforced: AuthenticationMethod=External, AuthenticationRequired=DisabledForLocalAddresses, UrlBase=${urlBase}"
     '';
 }
