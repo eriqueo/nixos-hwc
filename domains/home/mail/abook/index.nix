@@ -1,12 +1,15 @@
-#==========================================================================
-# OPTIONS
-#==========================================================================
 { config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.mail;
-  on  = (cfg.enable or true) && (cfg.abook.enable or true);in
+  on  = (cfg.enable or true) && (cfg.abook.enable or true);
+in
 {
-  imports = [ ./options.nix ];
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  options.hwc.home.mail.abook = {
+    enable = lib.mkEnableOption "address book functionality";
+  };
 
   #==========================================================================
   # IMPLEMENTATION

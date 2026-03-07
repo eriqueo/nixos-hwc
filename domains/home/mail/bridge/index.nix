@@ -12,9 +12,35 @@ let
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.mail.bridge = {
+    enable = lib.mkEnableOption "Proton Mail Bridge";
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.protonmail-bridge;
+    };
+    logLevel = lib.mkOption { type = lib.types.str; default = "warn"; };
+    extraArgs = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
+    environment = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
+    setupScript = {
+      enable = lib.mkEnableOption "helper script" // { default = true; };
+    };
+    ensureConfigDir = lib.mkOption { type = lib.types.bool; default = true; };
+    restartSec = lib.mkOption { type = lib.types.int; default = 5; };
+    keychain = {
+      helper = lib.mkOption {
+        type = lib.types.str;
+        default = "pass";
+        description = "Keychain helper to use. 'pass' is more reliable than gnome-keyring for headless operation.";
+      };
+      disableTest = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Disable keychain testing to prevent hangs during startup.";
+      };
+    };
+  };
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================

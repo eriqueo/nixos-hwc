@@ -99,34 +99,29 @@
         ];
       };
 
-    # Server-specific overlay for CUDA-enabled onnxruntime (Immich ML GPU acceleration)
-    # IMPORTANT: nixpkgs has a bug where CUDA + DISABLE_CONTRIB_OPS conflict
-    # (see: https://github.com/NixOS/nixpkgs/issues/310860)
-    # We need to override the package to remove the conflicting flag
+    # Server-specific overlay - CUDA DISABLED pending investigation of 8+ hour builds
+    # TODO: Re-enable CUDA once build time issue is resolved
+    # The previous overlay forced cudaSupport=true on onnxruntime which pulled in
+    # the entire CUDA stack (torch, cuDNN, etc.) causing massive rebuilds
     serverOverlay = final: prev: {
-      # Build onnxruntime with CUDA support for GPU-accelerated ML inference
-      # Override to fix the CUDA + DISABLE_CONTRIB_OPS conflict
-      onnxruntime = (prev.onnxruntime.override { cudaSupport = true; }).overrideAttrs (old: {
-        cmakeFlags = builtins.filter (f: f != "-Donnxruntime_DISABLE_CONTRIB_OPS=ON")
-          (old.cmakeFlags or []);
-      });
+      # NO CUDA overrides - use CPU-only onnxruntime for now
     };
 
-    # Pkgs helper with optional overlays
+    # Pkgs helper with optional overlays (server uses this)
+    # CUDA DISABLED - was causing 8+ hour builds, needs investigation
     mkPkgsWithOverlays = system: nixpkgsInput: overlays:
       import nixpkgsInput {
         inherit system;
+        inherit overlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
-          # Enable CUDA support globally for server
-          cudaSupport = true;
+          cudaSupport = false;  # DISABLED - investigate build time issues
           permittedInsecurePackages = [
             "qtwebengine-5.15.19"
             "n8n-1.91.3"
           ];
         };
-        inherit overlays;
       };
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)

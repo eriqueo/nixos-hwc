@@ -19,9 +19,26 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [
-    ./options.nix
-  ];
+  options.hwc.media.jellyfin = {
+    enable = lib.mkEnableOption "Jellyfin media server (native service)";
+    openFirewall = lib.mkOption { type = lib.types.bool; default = false; description = "Whether to open firewall ports automatically"; };
+    reverseProxy = {
+      enable = lib.mkEnableOption "Enable reverse proxy route for Jellyfin";
+      path = lib.mkOption { type = lib.types.str; default = "/media"; description = "Reverse proxy path"; };
+      upstream = lib.mkOption { type = lib.types.str; default = "localhost:8096"; description = "Upstream server for reverse proxy"; };
+    };
+    gpu = {
+      enable = lib.mkEnableOption "GPU acceleration for video transcoding";
+    };
+    users = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule {
+        options.maxActiveSessions = lib.mkOption { type = lib.types.int; default = 0; description = "Maximum active sessions (0 = unlimited)"; };
+      });
+      default = {};
+      description = "User policy overrides applied via API after startup";
+    };
+    apiKey = lib.mkOption { type = lib.types.str; default = ""; description = "Jellyfin API key for policy management"; };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

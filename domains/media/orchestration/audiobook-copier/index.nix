@@ -20,8 +20,17 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.media.orchestration.audiobookCopier = {
+    enable = lib.mkEnableOption "Audiobook copier service";
+    sourceDir = lib.mkOption { type = lib.types.path; default = "/mnt/hot/downloads/books"; description = "Source directory for downloaded audiobooks"; };
+    destDir = lib.mkOption { type = lib.types.path; default = "/mnt/media/books/audiobooks"; description = "Destination directory for Audiobookshelf library"; };
+    stateDir = lib.mkOption { type = lib.types.path; default = "/var/lib/hwc/audiobook-copier"; description = "State directory for tracking processed audiobooks"; };
+    triggerLibraryScan = lib.mkOption { type = lib.types.bool; default = true; description = "Trigger Audiobookshelf library scan after copying"; };
+    audiobookshelfUrl = lib.mkOption { type = lib.types.str; default = "http://localhost:13378"; description = "Audiobookshelf API URL"; };
+    audioExtensions = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "mp3" "m4a" "m4b" "flac" "opus" "ogg" "wav" "aac" ]; description = "Audio file extensions to detect audiobooks"; };
+  };
+
   imports = [
-    ./options.nix
     ./parts/config.nix
   ];
 

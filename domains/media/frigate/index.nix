@@ -16,10 +16,52 @@ let
 in
 {
   imports = [
-    ./options.nix
     ./parts/config.nix
     ./exporter/index.nix
   ];
+
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  options.hwc.media.frigate = {
+    enable = lib.mkEnableOption "Frigate NVR (config-first pattern)";
+
+    image = lib.mkOption {
+      type = lib.types.str;
+      default = "ghcr.io/blakeblackshear/frigate:0.16.2-tensorrt";
+      description = ''
+        Container image for Frigate NVR.
+        Uses -tensorrt variant which includes CUDA support for ONNX detector.
+      '';
+    };
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 5001;
+      description = "Web UI port (internal, exposed via Caddy on 5443)";
+    };
+
+    gpu = {
+      enable = lib.mkEnableOption "GPU acceleration for object detection";
+      device = lib.mkOption { type = lib.types.int; default = 0; description = "GPU device number (NVIDIA)"; };
+    };
+
+    storage = {
+      configPath = lib.mkOption { type = lib.types.str; default = "/var/lib/frigate/config"; description = "Configuration directory path"; };
+      mediaPath = lib.mkOption { type = lib.types.str; default = "${config.hwc.paths.media.root}/surveillance/frigate/media"; description = "Media storage path (recordings)"; };
+      bufferPath = lib.mkOption { type = lib.types.str; default = "${config.hwc.paths.hot.surveillance}/frigate/buffer"; description = "Buffer storage path (hot storage)"; };
+    };
+
+    resources = {
+      memory = lib.mkOption { type = lib.types.str; default = "4g"; description = "Container memory limit"; };
+      cpus = lib.mkOption { type = lib.types.str; default = "1.5"; description = "Container CPU limit"; };
+      shmSize = lib.mkOption { type = lib.types.str; default = "1g"; description = "Shared memory size"; };
+    };
+
+    firewall.tailscaleOnly = lib.mkOption { type = lib.types.bool; default = true; description = "Restrict access to Tailscale interface only"; };
+
+    _configTemplate = lib.mkOption { type = lib.types.package; internal = true; description = "Generated YAML config template"; };
+  };
 
   config = lib.mkIf cfg.enable {
 

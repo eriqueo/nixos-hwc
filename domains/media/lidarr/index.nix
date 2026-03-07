@@ -6,8 +6,18 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.media.lidarr = {
+    enable = lib.mkEnableOption "lidarr container";
+    image = lib.mkOption {
+      type = lib.types.str;
+      default = "lscr.io/linuxserver/lidarr:2.13.3";
+      description = "Container image (pinned version - develop branch has NullRef bug in Distance.Clean())";
+    };
+    network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; };
+    gpu.enable = lib.mkOption { type = lib.types.bool; default = true; };
+  };
+
   imports = [
-    ./options.nix
     ./sys.nix
     ./parts/config.nix
   ];

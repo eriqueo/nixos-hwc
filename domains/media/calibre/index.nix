@@ -7,8 +7,19 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.media.calibre = {
+    enable = lib.mkEnableOption "Calibre ebook management container";
+    image = lib.mkOption { type = lib.types.str; default = "lscr.io/linuxserver/calibre:latest"; description = "Container image for Calibre"; };
+    network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; description = "Network mode"; };
+    gpu.enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable GPU support for Calibre"; };
+    ports = {
+      desktop = lib.mkOption { type = lib.types.int; default = 8083; description = "Port for Calibre desktop interface (KasmVNC)"; };
+      webserver = lib.mkOption { type = lib.types.int; default = 8181; description = "Port for Calibre content server"; };
+    };
+    library = lib.mkOption { type = lib.types.path; default = "/mnt/media/books/ebooks"; description = "Path to ebooks library"; };
+  };
+
   imports = [
-    ./options.nix
     ./sys.nix
     ./parts/config.nix
   ];
