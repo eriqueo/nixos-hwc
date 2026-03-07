@@ -85,8 +85,11 @@ class SiteConfig(BaseModel):
     url_pattern: str
     login_required: bool = False
     post_container_selector: str = Field(min_length=1)
-    scrapers: dict[str, ScraperDefinition | str]
+    scrapers: dict[str, ScraperDefinition | str] = Field(default_factory=dict)
+    # Attribute-based extraction (e.g., Reddit's shreddit-post)
+    attribute_map: dict[str, str] = Field(default_factory=dict)
     scraper_config: SiteScraperConfig = Field(default_factory=SiteScraperConfig)
+    user_agent: str | None = None
 
     @field_validator("scrapers", mode="before")
     @classmethod

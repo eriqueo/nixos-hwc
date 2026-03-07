@@ -165,6 +165,42 @@ def extract_comments(
     return comments
 
 
+def extract_attributes(
+    element: ElementHandle,
+    attribute_map: dict[str, str],
+    metrics: ExtractionMetrics,
+) -> dict[str, str]:
+    """
+    Extract data from element attributes.
+
+    Args:
+        element: Element with data attributes
+        attribute_map: Mapping of field names to attribute names
+        metrics: Metrics tracker
+
+    Returns:
+        Dict of extracted field values
+    """
+    logger = get_logger()
+    data = {}
+
+    for field_name, attr_name in attribute_map.items():
+        try:
+            value = element.get_attribute(attr_name)
+            if value:
+                data[field_name] = value.strip()
+                metrics.record_success(field_name)
+            else:
+                data[field_name] = ""
+                metrics.record_failure(field_name, "empty")
+        except Exception as e:
+            logger.debug(f"Failed to get attribute {attr_name}: {e}")
+            data[field_name] = ""
+            metrics.record_failure(field_name, "error")
+
+    return data
+
+
 def extract_post(
     post_element: ElementHandle,
     site_config: SiteConfig,
@@ -184,7 +220,6 @@ def extract_post(
         Extracted Post or None if invalid
     """
     logger = get_logger()
-    scrapers = site_config.scrapers
 
     # Extract main fields
     data = {
@@ -192,15 +227,23 @@ def extract_post(
         "group": page_title,
     }
 
+    # Method 1: Attribute-based extraction (e.g., Reddit's shreddit-post)
+    if site_config.attribute_map:
+        attr_data = extract_attributes(post_element, site_config.attribute_map, metrics)
+        data.update(attr_data)
+
+    # Method 2: Selector-based extraction (traditional DOM scraping)
+    scrapers = site_config.scrapers
     for key, scraper_config in scrapers.items():
         # Skip comment-related keys
         if "comment" in key.lower() or "container" in key.lower():
             continue
 
         value = extract_field(post_element, key, scraper_config, metrics)
-        # Map to Post field names (capitalize first letter)
         field_name = key.lower()
-        data[field_name] = value
+        # Only set if not already set by attribute extraction
+        if field_name not in data or not data[field_name]:
+            data[field_name] = value
 
     # Extract comments
     comments = extract_comments(post_element, site_config, metrics)

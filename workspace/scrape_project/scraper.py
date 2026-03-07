@@ -208,7 +208,7 @@ def main() -> int:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=headless)
 
-            # Set up context with auth if available
+            # Set up context with auth and user agent
             context_args = {}
             if auth_file.exists() and not args.login:
                 logger.info("Using saved authentication")
@@ -218,6 +218,14 @@ def main() -> int:
                     f"Site requires login but no auth found. "
                     f"Run with --login first."
                 )
+
+            # Set user agent (required for sites like Reddit)
+            user_agent = (
+                site_config.user_agent
+                or config.global_config.user_agent
+                or "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            context_args["user_agent"] = user_agent
 
             context = browser.new_context(**context_args)
             page = context.new_page()
