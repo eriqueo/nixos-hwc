@@ -21,6 +21,7 @@ from .deduplicator import PostDeduplicator
 from .storage import get_storage_backend, STORAGE_BACKENDS
 from .rate_limiter import AdaptiveRateLimiter, RateLimitConfig
 from .logging_config import setup_logging, get_logger
+from .auth import perform_auto_login, ensure_authenticated, read_secret
 
 __all__ = [
     # Models

@@ -36,6 +36,7 @@ from scraper import (
     ConfigurationError,
 )
 from scraper.cli import parse_args
+from scraper.auth import ensure_authenticated, perform_auto_login
 
 
 # Default config file location (next to this script)
@@ -210,14 +211,20 @@ def main() -> int:
 
             # Set up context with auth and user agent
             context_args = {}
+            use_auto_login = False
             if auth_file.exists() and not args.login:
                 logger.info("Using saved authentication")
                 context_args["storage_state"] = str(auth_file)
             elif site_config.login_required and not args.login:
-                logger.warning(
-                    f"Site requires login but no auth found. "
-                    f"Run with --login first."
-                )
+                # Check if we have credentials for auto-login
+                if site_config.credential_email_secret:
+                    logger.info("Will attempt auto-login with stored credentials")
+                    use_auto_login = True
+                else:
+                    logger.warning(
+                        f"Site requires login but no auth found. "
+                        f"Run with --login first."
+                    )
 
             # Set user agent (required for sites like Reddit)
             user_agent = (
@@ -230,6 +237,18 @@ def main() -> int:
             context = browser.new_context(**context_args)
             page = context.new_page()
             page.set_default_timeout(timeout)
+
+            # Perform auto-login if needed
+            if use_auto_login:
+                success = perform_auto_login(page, site_config)
+                if success:
+                    # Save auth for future use
+                    logger.info(f"Saving authentication to {auth_file}")
+                    context.storage_state(path=str(auth_file))
+                else:
+                    logger.error("Auto-login failed. Run with --login for manual login.")
+                    browser.close()
+                    return 1
 
             # Navigate to URL
             logger.info(f"Navigating to: {args.url}")
