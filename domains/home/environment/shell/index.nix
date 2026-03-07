@@ -33,9 +33,115 @@ in
   #============================================================================
   # OPTIONS
   #============================================================================
-  imports = [
-    ./options.nix
-  ];
+  options.hwc.home.shell = {
+    enable = lib.mkEnableOption "Complete shell + CLI environment";
+
+    modernUnix = lib.mkEnableOption "modern Unix replacements (eza, bat, etc.)";
+
+    packages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = with pkgs; [
+        ripgrep fd fzf bat jq curl wget unzip tree micro btop fastfetch
+        rsync rclone speedtest-cli nmap traceroute dig zip p7zip yq pandoc
+        xclip diffutils less which lsof pstree git vim nano claude-code uv
+      ];
+      description = "Base CLI/tool packages.";
+    };
+
+    sessionVariables = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {
+        LIBVIRT_DEFAULT_URI = "qemu:///system";
+        EDITOR = "micro";
+        VISUAL = "micro";
+      };
+      description = "Environment variables for the user session.";
+    };
+
+    aliases = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {
+        "ll" = "eza -l"; "la" = "eza -lh"; "lt" = "eza --tree --level=2";
+        "cd" = "z"; "cdi" = "zi"; "cz" = "z"; "czz" = "zi";
+        ".." = "cd .."; "..." = "cd ../.."; "...." = "cd ../../..";
+        "df" = "df -h"; "du" = "du -h"; "free" = "free -h";
+        "htop" = "btop"; "grep" = "rg"; "open" = "xdg-open";
+        "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";
+        "nixflake" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/flake.nix\"";
+        "nixlaphome" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/machines/laptop/home.nix\"";
+        "nixlapcon" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/machines/laptop/config.nix\"";
+        "nixserverhome" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/machines/server/home.nix\"";
+        "nixservercon" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/machines/server/config.nix\"";
+        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d";
+        "nixgen" = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
+        "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
+        "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
+        "server" = "ssh eric@100.114.232.124"; "xps" = "ssh eric@100.126.80.42";
+        "vpnon" = "sudo wg-quick up protonvpn"; "vpnoff" = "sudo wg-quick down protonvpn";
+        "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
+        "cdn" = "cd ~/.nixos";
+        "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
+        "media" = "cd /mnt/media"; "movies" = "cd /mnt/media/movies"; "music" = "cd /mnt/media/music";
+        "nixos" = "cd ~/300_tech"; "screenshots" = "cd ~/500_media/510_pictures/screenshots";
+        "tech" = "cd ~/300_tech"; "tv" = "cd /mnt/media/tv"; "vaults" = "cd ~/900_vaults";
+        "business-db" = "psql postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business";
+        "business-dev" = "cd /opt/business && source /etc/business/setup-dev-env.sh";
+        "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
+        "receipt-process" = "cd /opt/business/receipts && python3 ../api/services/ocr_processor.py";
+        "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
+        "ls" = "eza"; "vpn" = "vpnstatus"; "which-command" = "whence"; "run-help" = "man";
+        "claude-usage" = "claude-monitor --plan pro"; "usage" = "claude-monitor --plan pro";
+        "errors" = "journal-errors"; "errors-hour" = "journal-errors '1 hour ago'";
+        "errors-today" = "journal-errors 'today'"; "errors-tdarr" = "journal-errors '10 minutes ago' podman-tdarr";
+        "services" = "list-services"; "ss" = "list-services";
+        "rebuild" = "grebuild"; "lint" = "charter-lint";
+        "caddy" = "caddy-health"; "health" = "caddy-health";
+        "photo-dedup" = "nix-shell -p rmlint czkawka jq bc --run '$HWC_NIXOS_DIR/workspace/utilities/photo-dedup/photo-dedup.sh'";
+      };
+      description = "Shell aliases for zsh";
+    };
+
+    git = {
+      enable = lib.mkOption { type = lib.types.bool; default = true; description = "Enable Git configuration"; };
+      userName = lib.mkOption { type = lib.types.str; default = "Eric"; description = "Git user name"; };
+      userEmail = lib.mkOption { type = lib.types.str; default = "eric@hwc.moe"; description = "Git user email"; };
+    };
+
+    zsh = {
+      enable = lib.mkOption { type = lib.types.bool; default = true; description = "Enable Zsh via Home-Manager"; };
+      starship = lib.mkEnableOption "Starship prompt";
+      autosuggestions = lib.mkEnableOption "zsh-autosuggestions";
+      syntaxHighlighting = lib.mkEnableOption "zsh-syntax-highlighting";
+    };
+
+    tmux = {
+      enable = lib.mkEnableOption "tmux via Home-Manager";
+      extraConfig = lib.mkOption { type = lib.types.lines; default = ""; description = "Additional tmux configuration"; };
+    };
+
+    ssh = {
+      enable = lib.mkOption { type = lib.types.bool; default = true; description = "Enable SSH client configuration"; };
+      matchBlocks = lib.mkOption {
+        type = lib.types.attrsOf (lib.types.submodule {
+          options = {
+            hostname = lib.mkOption { type = lib.types.str; description = "Hostname or IP address"; };
+            user = lib.mkOption { type = lib.types.str; default = "eric"; description = "Username for SSH connection"; };
+            forwardAgent = lib.mkOption { type = lib.types.bool; default = true; description = "Enable SSH agent forwarding"; };
+          };
+        });
+        default = {
+          server = { hostname = "100.114.232.124"; user = "eric"; forwardAgent = true; };
+        };
+        description = "SSH host configurations";
+      };
+    };
+
+    mcp = {
+      enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable MCP configuration file generation for Claude Desktop"; };
+      includeConfigDir = lib.mkOption { type = lib.types.bool; default = false; description = "Include user config directory in filesystem MCP server (laptop only)"; };
+      includeServerTools = lib.mkOption { type = lib.types.bool; default = false; description = "Include server-specific MCP tools (postgres, prometheus, puppeteer)"; };
+    };
+  };
 
   #============================================================================
   # IMPLEMENTATION - Complete shell and CLI environment

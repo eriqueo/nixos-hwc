@@ -6,8 +6,18 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.media.slskd = {
+    enable = lib.mkEnableOption "slskd container";
+    image = lib.mkOption { type = lib.types.str; default = "slskd/slskd:0.21.4"; description = "Container image (pinned for stability)"; };
+    network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; };
+    gpu.enable = lib.mkOption { type = lib.types.bool; default = true; };
+    directories = {
+      downloads = lib.mkOption { type = lib.types.str; default = "/downloads/music"; description = "Completed downloads directory"; };
+      incomplete = lib.mkOption { type = lib.types.str; default = "/downloads/incomplete"; description = "Incomplete downloads directory"; };
+    };
+  };
+
   imports = [
-    ./options.nix
     ./sys.nix
     ./parts/config.nix
   ];

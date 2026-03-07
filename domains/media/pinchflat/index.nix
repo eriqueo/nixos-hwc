@@ -6,8 +6,14 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.media.pinchflat = {
+    enable = lib.mkEnableOption "pinchflat container (YouTube subscription manager)";
+    image = lib.mkOption { type = lib.types.str; default = "ghcr.io/kieraneglin/pinchflat:latest"; description = "Container image for Pinchflat"; };
+    network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; description = "Network mode"; };
+    port = lib.mkOption { type = lib.types.port; default = 8945; description = "Port for Pinchflat web UI"; };
+  };
+
   imports = [
-    ./options.nix
     ./sys.nix
   ];
 

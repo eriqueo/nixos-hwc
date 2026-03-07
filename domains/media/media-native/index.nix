@@ -9,7 +9,9 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.media.media = {
+    enable = lib.mkEnableOption "media services defaults (storage scaffolding)";
+  };
 
   #==========================================================================
   # IMPLEMENTATION

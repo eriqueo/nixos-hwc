@@ -3,7 +3,6 @@ let
   cfg = config.hwc.media.jellyseerr;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/jellyseerr/config";
-  settings = import ./settings.nix { inherit config pkgs; };
 
   # Jellyseerr permission flags (bitmask)
   # REQUEST = 2, AUTO_APPROVE = 4, REQUEST_MOVIE = 8, AUTO_APPROVE_MOVIE = 16,
@@ -12,11 +11,9 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    # Create settings.json in the container's config directory
+    # Create config directory only - settings.json is generated at runtime by setup.nix preStart
     systemd.tmpfiles.rules = [
       "d ${configPath} 0755 1000 100 -"
-      # Use C+ to copy file content (overwrite to keep in sync)
-      "C+ ${configPath}/settings.json 0644 1000 100 - ${settings.settingsFile}"
     ];
 
     systemd.services."podman-jellyseerr".after = [ "network-online.target" "init-media-network.service" ];

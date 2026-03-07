@@ -6,8 +6,14 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.media.soularr = {
+    enable = lib.mkEnableOption "soularr container";
+    image = lib.mkOption { type = lib.types.str; default = "docker.io/mrusse08/soularr:latest"; description = "Container image"; };
+    network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; };
+    gpu.enable = lib.mkOption { type = lib.types.bool; default = true; };
+  };
+
   imports = [
-    ./options.nix
     ./sys.nix
     ./parts/config.nix
   ];

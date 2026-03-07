@@ -14,17 +14,21 @@ let
                             then osCfg.age.secrets.gmail-business-password.path
                             else "/dev/null";  # Fallback path on non-NixOS (user must override)
 in
-#==========================================================================
-# OPTIONS
-#==========================================================================
-# Sets values only (no options). Lives under the domain so it's uniform with others.
 {
-  imports = [ ./options.nix ];
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  options.hwc.home.mail.accountsResolved = lib.mkOption {
+    type = lib.types.attrs;
+    default = {};
+    readOnly = true;
+    description = "Derived per-account maildir + provider-specific special-folder roles for downstream modules.";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  hwc.home.mail.accounts = {
+  config.hwc.home.mail.accounts = {
     proton = {
         name = "proton";
         type = "proton-bridge";

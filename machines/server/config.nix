@@ -148,7 +148,18 @@
   time.timeZone = "America/Denver";
 
   # Production system settings
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    # Official CUDA binary cache (huge win for torch/onnxruntime/etc.)
+    substituters = [
+      "https://cache.nixos.org"
+      "https://cuda-maintainers.cachix.org"
+    ];
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
+    ];
+  };
   # allowUnfree set in flake.nix
 
   # --- Networking Configuration (Server: DO wait for network) ---
@@ -389,10 +400,12 @@
   hardware.nvidia = {
     package = config.boot.kernelPackages.nvidiaPackages.stable;  # 580.95.05
     open = lib.mkForce false;  # Pascal doesn't support open-source modules
-    # Note: gsp option doesn't exist in NixOS 24.05 (added in later versions for newer GPUs)
+    modesetting.enable = true;
+    powerManagement.enable = true;
   };
 
-  # NVIDIA license acceptance handled in flake.nix
+  # CUDA config (cudaSupport + binary cache) set in flake.nix
+  # GPU acceleration for Immich handled by hwc.media.immich.gpu.enable
 
   # GPU acceleration for Immich handled by hwc.media.immich.gpu.enable in server profile
 

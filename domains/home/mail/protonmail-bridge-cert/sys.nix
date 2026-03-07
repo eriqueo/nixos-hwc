@@ -27,7 +27,11 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.mail.protonmailBridgeCert = {
+    enable = lib.mkEnableOption "export Proton Bridge IMAP STARTTLS certificate" // {
+      default = true;
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

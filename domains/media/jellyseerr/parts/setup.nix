@@ -19,7 +19,9 @@ let
 
   ensureSettings = pkgs.writeShellScript "jellyseerr-ensure-settings" ''
     install -d -m 0755 -o 1000 -g 100 "${configPath}"
-    install -m 0644 -o 1000 -g 100 "${settings.settingsFile}" "${configPath}/settings.json"
+    ${settings.generateSettingsScript} "${configPath}/settings.json"
+    chown 1000:100 "${configPath}/settings.json"
+    chmod 0644 "${configPath}/settings.json"
   '';
 in
 {

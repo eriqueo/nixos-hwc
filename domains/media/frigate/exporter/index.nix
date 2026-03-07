@@ -18,7 +18,11 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.media.frigate.exporter = {
+    enable = lib.mkEnableOption "Frigate Prometheus exporter";
+    port = lib.mkOption { type = lib.types.port; default = 9192; description = "Frigate exporter metrics port"; };
+    frigateUrl = lib.mkOption { type = lib.types.str; default = "http://localhost:5001"; description = "Frigate API URL"; };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

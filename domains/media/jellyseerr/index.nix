@@ -6,8 +6,14 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.media.jellyseerr = {
+    enable = lib.mkEnableOption "jellyseerr container";
+    image = lib.mkOption { type = lib.types.str; default = "docker.io/fallenbagel/jellyseerr:latest"; description = "Container image"; };
+    network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; };
+    gpu.enable = lib.mkOption { type = lib.types.bool; default = false; };
+  };
+
   imports = [
-    ./options.nix
     ./sys.nix
     ./parts/config.nix
     ./parts/setup.nix
