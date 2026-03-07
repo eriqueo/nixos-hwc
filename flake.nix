@@ -99,16 +99,15 @@
         ];
       };
 
-    # Server-specific overlay - CUDA DISABLED pending investigation of 8+ hour builds
-    # TODO: Re-enable CUDA once build time issue is resolved
-    # The previous overlay forced cudaSupport=true on onnxruntime which pulled in
-    # the entire CUDA stack (torch, cuDNN, etc.) causing massive rebuilds
+    # Server-specific overlay for CUDA support
+    # Uses cache.nixos-cuda.org for pre-built binaries (avoid 8+ hour local builds)
     serverOverlay = final: prev: {
-      # NO CUDA overrides - use CPU-only onnxruntime for now
+      # Let nixpkgs.config.cudaSupport handle CUDA globally
+      # No per-package overrides needed with binary cache
     };
 
     # Pkgs helper with optional overlays (server uses this)
-    # CUDA DISABLED - was causing 8+ hour builds, needs investigation
+    # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
     mkPkgsWithOverlays = system: nixpkgsInput: overlays:
       import nixpkgsInput {
         inherit system;
@@ -116,7 +115,7 @@
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
-          cudaSupport = false;  # DISABLED - investigate build time issues
+          cudaSupport = true;  # Binary cache should provide pre-built CUDA packages
           permittedInsecurePackages = [
             "qtwebengine-5.15.19"
             "n8n-1.91.3"
