@@ -45,7 +45,7 @@ let
       "radarr": [{
         "id": 0,
         "name": "Radarr",
-        "hostname": "10.89.0.1",
+        "hostname": "radarr",
         "port": 7878,
         "apiKey": "$RADARR_KEY",
         "useSsl": false,
@@ -60,7 +60,7 @@ let
       "sonarr": [{
         "id": 0,
         "name": "Sonarr",
-        "hostname": "10.89.0.1",
+        "hostname": "sonarr",
         "port": 8989,
         "apiKey": "$SONARR_KEY",
         "useSsl": false,
