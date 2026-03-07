@@ -20,7 +20,7 @@ in
         "${configPath}:/app/config:rw"
       ];
       environment = { };
-      extraOptions = [ ];
+      extraOptions = [ "--init" ];
       dependsOn = [ "sonarr" "radarr" ];
       user = "1000:100";
     })
