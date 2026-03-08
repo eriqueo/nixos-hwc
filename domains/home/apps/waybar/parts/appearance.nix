@@ -4,48 +4,61 @@ let
   palette = config.hwc.home.theme.colors;
 in
 ''
-/* Generated from ${palette.name} palette */
+/* Generated from ${palette.name} palette - Modern rounded glass rice (Gruvbox Material Dark) */
 window#waybar {
-  background-color: #${palette.bg};
+  background-color: rgba(40, 40, 40, 0.85);  /* bg = #282828 @ ~85% opacity for glass */
   color: #${palette.fg};
+  border-radius: 18px;
+  margin: 8px 14px 0 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);  /* subtle depth shadow */
 }
 
 #workspaces button {
-  padding: 0 5px;
+  padding: 2px 8px;
   background-color: transparent;
   color: #${palette.fg};
-  border-bottom: 2px solid transparent;
+  border-radius: 9999px; /* pill shape */
+  margin: 0 2px;
+  min-width: 20px;
+  transition: all 0.25s ease;
 }
 
 #workspaces button.active {
   color: #${palette.accent};
+  background-color: rgba(125, 174, 163, 0.25);  /* accent = #7daea3 @ 25% */
   border-bottom: 2px solid #${palette.accent};
 }
 
 #workspaces button.urgent {
   color: #${palette.crit};
-  border-bottom: 2px solid #${palette.crit};
+}
+
+#workspaces button:hover {
+  background-color: rgba(235, 219, 178, 0.1);  /* fg0 = #ebdbb2 subtle hover */
 }
 
 #mode {
   background-color: #${palette.accent};
   color: #${palette.bg};
-  border-radius: 5px;
-  padding: 0 10px;
+  border-radius: 8px;
+  padding: 2px 12px;
   margin: 0 5px;
 }
 
-#window { padding: 0 10px; }
+#window { padding: 0 14px; font-weight: 500; }
 
+/* All modules get soft rounding + subtle bg tints */
 #cpu, #memory, #temperature, #network, #pulseaudio,
 #battery, #clock, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
-#custom-notification, #custom-power, #custom-fan, #custom-load,
-#custom-power-profile, #custom-disk-space, #backlight, #bluetooth {
-  padding: 0 10px;
-  margin: 0 5px;
+#custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
+#custom-weather, #hyprland-language {
+  padding: 4px 12px;
+  margin: 0 4px;
+  border-radius: 12px;
   color: #${palette.fg};
 }
 
+/* Your original module background tints (adjusted for Gruvbox feel) */
 #cpu { background-color: #${palette.surface1}; }
 #memory { background-color: #${palette.surface2}; }
 #temperature { background-color: #${palette.muted}; }
@@ -66,8 +79,9 @@ window#waybar {
 #tray { background-color: #${palette.surface2}; }
 #custom-notification { background-color: #${palette.muted}; }
 #custom-power { background-color: #${palette.surface1}; }
+#custom-weather { background-color: #${palette.surface2}; }
 
-/* Specific styles for custom modules based on their class */
+/* Your original class colors (unchanged) */
 .intel { color: #${palette.ansi.blue}; }
 .nvidia { color: #${palette.ansi.green}; }
 .performance { color: #${palette.ansi.red}; }
@@ -90,4 +104,5 @@ window#waybar {
 .unknown { color: #${palette.muted}; }
 .running { color: #${palette.good}; }
 .stopped { color: #${palette.muted}; }
+.weather { color: #${palette.info}; }
 ''

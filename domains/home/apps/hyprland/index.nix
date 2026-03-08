@@ -16,7 +16,7 @@ let
 
   basePkgs = with pkgs; [
     wofi hyprshot grim hypridle hyprpaper hyprlock cliphist wl-clipboard
-    brightnessctl networkmanager wirelesstools hyprsome wlogout
+    brightnessctl networkmanager wirelesstools hyprsome wlogout fend
   ];
 in
 {

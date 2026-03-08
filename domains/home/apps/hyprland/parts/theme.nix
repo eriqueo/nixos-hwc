@@ -29,10 +29,12 @@ in
     rounding = 12;
     blur = {
       enabled = true;
-      size = 6;
-      passes = 3;
+      size = 4;
+      passes = 2;
       new_optimizations = true;
-      ignore_opacity = true;
+      ignore_opacity = false;
+      vibrancy = 0.2;        # Slight color boost (0.0-0.5)
+      vibrancy_darkness = 0.1;
     };
     shadow = {
       enabled = true;
@@ -43,6 +45,12 @@ in
     dim_inactive = false;
   };
 
+  layerrule = [
+    #"blur on, match:namespace waybar"
+    #"blur_popups on, match:namespace waybar"
+    #"ignore_alpha 0.1, match:namespace waybar"  # 0.1–0.3 common; prevents sharp edges on rounded corners
+  ];
+  
   animations = {
     enabled = true;
     bezier = [
@@ -71,7 +79,7 @@ in
     disable_splash_rendering = true;
     mouse_move_enables_dpms = true;
     key_press_enables_dpms = true;
-    vrr = 1;
+    vrr = 0;
     enable_swallow = true;
     swallow_regex = "^(kitty)$";
     animate_manual_resizes = true;
