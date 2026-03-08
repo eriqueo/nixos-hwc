@@ -32,6 +32,7 @@ in
     "${mod} SHIFT,H,exec,hyprland-system-health-checker"
     "${mod},comma,exec,hyprland-keybinds-viewer"
     "${mod},A,exec,proton-authenticator-toggle"
+    "${mod},C,exec, kitty -e fend"
 
     ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
 
@@ -96,7 +97,7 @@ in
 
     "${mod},S,pseudo"
     "${mod},P,pin"
-    "${mod},C,centerwindow"
+    
     "${mod},R,submap,resize"
     "${mod},F,fullscreen"
     "${mod},Q,killactive"

@@ -1,20 +1,18 @@
-# Waybar Part: Behavior
-# Defines the module layout and configuration for each bar instance.
 { lib, pkgs, osConfig ? {}, ... }:
 
 let
-  # Define shared module lists and configurations
   commonModules = {
     modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
-      "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd" "pulseaudio"
-      "custom/network" "bluetooth" "custom/disk-space"
-      "temperature" "custom/battery" "custom/proton-auth" "tray" "custom/notification" "custom/power"
+      "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd"
+      "group/connectivity"
+      "custom/disk-space" "temperature"
+      "custom/battery" "custom/proton-auth" "custom/weather"
+      "tray" "custom/notification" "custom/power"
     ];
   };
 
-  # Workspace widgets are monitor-specific to keep 1-8 per monitor even though Hyprland uses 11-18 for the second.
   workspaceInternal = {
     disable-scroll = true;
     all-outputs = false;
@@ -29,7 +27,6 @@ let
     on-scroll-down = "hyprctl dispatch workspace e-1";
   };
 
-  # External monitor shows 1-8 but targets Hyprland workspaces 9-16 (hyprsome offset).
   workspaceExternal = {
     disable-scroll = true;
     all-outputs = false;
@@ -49,7 +46,6 @@ let
     on-scroll-down = "hyprctl dispatch workspace e-1";
   };
 
-  # Define shared widget configurations (non-workspace widgets)
   commonWidgetsBase = {
     "hyprland/submap" = { format = "✨ {}"; max-length = 8; tooltip = false; };
     "hyprland/window" = {
@@ -74,7 +70,11 @@ let
       on-click-right = "mpc next";
     };
 
-    clock = { format = "{:%M-%D %H:%M:%p}"; format-alt = "{:%m-%d %H:%M:%p}"; };
+    clock = {
+      format = "{:%b %d %I:%M %p}";           # Mar 06 02:35 PM
+      format-alt = "{:%Y-%m-%d %A %I:%M %p}";
+      tooltip-format = "<tt><small>{calendar}</small></tt>";
+    };
 
     "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
     "custom/ollama" = { format = "{}"; exec = "waybar-ollama-status"; return-type = "json"; interval = 5; on-click = "waybar-ollama-toggle"; };
@@ -83,8 +83,6 @@ let
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
     bluetooth = { format = "{icon}"; format-icons = { enabled = "󰂯"; disabled = "󰂲"; }; format-connected = "󰂱 {num_connections}"; on-click = "blueman-manager"; };
     temperature = {
-      # Use coretemp device for accurate CPU package temperature
-      # hwmon-path-abs points to device hwmon directory (not hwmon/hwmonN subdirectory)
       hwmon-path-abs = "/sys/devices/platform/coretemp.0/hwmon";
       input-filename = "temp1_input";
       critical-threshold = 80;
@@ -97,11 +95,24 @@ let
     "custom/proton-auth" = { format = "󰦝"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
+
+    # === NEW: Weather for Bozeman ===
+    "custom/weather" = {
+      format = "{}";
+      exec = "waybar-weather";
+      return-type = "json";
+      interval = 1800;
+      on-click = "kitty --single-instance --hold -e bash -c 'curl -s wttr.in/Bozeman?u && echo -e \"\\n\\n────────────────────────────\\nPress any key to close...\" && read -n 1 -s -r'";
+    };
+    
+    # === NEW: Connectivity group (pill) — clicks still work individually ===
+    "group/connectivity" = {
+      orientation = "horizontal";
+      modules = [ "pulseaudio" "bluetooth" "custom/network" ];
+    };
   };
 
-  # External monitor base configuration
   externalConfig = {
-    # Placeholder output resolved at runtime by waybar-launch; if none found the bar is dropped.
     output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
@@ -115,17 +126,14 @@ let
 
 in
 [
-  # External monitor(s) - merge base config with modules and widgets
   (externalConfig // commonModules // externalWidgets)
 
-  # Laptop monitor (eDP-*) - explicitly define with same modules but different sizing
   ({
-    # Placeholder output resolved at runtime by waybar-launch; always present (falls back to first monitor).
     output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 80;  # Larger for laptop screen
+    height = 80;
     spacing = 6;
-    tray = { spacing = 12; icon-size = 20; };  # Override for laptop
+    tray = { spacing = 12; icon-size = 20; };
   } // commonModules // internalWidgets)
 ]

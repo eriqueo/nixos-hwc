@@ -51,7 +51,14 @@ in
 
     waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC"
   '';
-
+  
+  "weather" = sh "waybar-weather" ''
+    LOCATION="Bozeman"
+    MAIN=$(curl -s "wttr.in/$LOCATION?u&format=%c+%t" | sed 's/  */ /g' || echo "❓ N/A")
+    TOOLTIP=$(curl -s "wttr.in/$LOCATION?u&A" || echo "Weather data unavailable")
+    printf '{"text":"%s","class":"weather","tooltip":"Bozeman, MT\\n%s\\n\\nClick for full forecast"}\n' "$MAIN" "$TOOLTIP"
+  '';
+  
   "workspace-switcher" = sh "waybar-workspace-switcher" ''
     if [[ ''$# -eq 0 ]]; then
       exit 1
