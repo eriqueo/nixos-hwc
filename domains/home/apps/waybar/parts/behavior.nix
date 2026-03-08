@@ -18,6 +18,7 @@ let
     all-outputs = false;
     warp-on-scroll = false;
     format = "{name}";
+    "swap-icon-label" = false;
     persistent-workspaces = {
       "1" = []; "2" = []; "3" = []; "4" = [];
       "5" = []; "6" = []; "7" = []; "8" = [];
@@ -32,6 +33,7 @@ let
     all-outputs = false;
     warp-on-scroll = false;
     format = "{icon}";
+    "swap-icon-label" = false;
     format-icons = {
       "11" = "1"; "12" = "2"; "13" = "3"; "14" = "4";
       "15" = "5"; "16" = "6"; "17" = "7"; "18" = "8";

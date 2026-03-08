@@ -164,9 +164,19 @@ in
     xdg.portal = lib.mkIf cfg.audio.enable {
       enable = true;
 
-      # Prefer Hyprland backend, then GTK (file picker, etc.)
+      # Portal interface routing for Hyprland sessions
       config = {
-        common.default = [ "hyprland" "gtk" ];
+        common = {
+          default = [ "hyprland" "gtk" ];
+        };
+        # Hyprland-specific portal routing
+        hyprland = {
+          default = [ "hyprland" "gtk" ];
+          # GTK portal provides Settings (color scheme detection)
+          "org.freedesktop.impl.portal.Settings" = [ "gtk" ];
+          # GTK portal provides file picker
+          "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+        };
       };
 
       extraPortals = with pkgs; [
