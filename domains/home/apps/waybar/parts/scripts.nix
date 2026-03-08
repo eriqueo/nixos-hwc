@@ -17,7 +17,14 @@ in
       exit 1
     fi
 
-    MONITORS=$(hyprctl monitors -j 2>/dev/null || true)
+    # Get monitor info from Hyprland - exit gracefully if Hyprland not running
+    MONITORS=$(hyprctl monitors -j 2>/dev/null || echo "[]")
+
+    # Validate JSON before parsing - hyprctl returns error text if not connected
+    if ! echo "''$MONITORS" | jq empty 2>/dev/null; then
+      echo "waybar-launch: hyprctl returned invalid JSON (Hyprland not ready?); exiting" >&2
+      exit 0
+    fi
 
     INTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name' | head -1)
     if [[ -z "''$INTERNAL" ]]; then
@@ -54,9 +61,13 @@ in
   
   "weather" = sh "waybar-weather" ''
     LOCATION="Bozeman"
-    MAIN=$(curl -s "wttr.in/$LOCATION?u&format=%c+%t" | sed 's/  */ /g' || echo "❓ N/A")
-    TOOLTIP=$(curl -s "wttr.in/$LOCATION?u&A" || echo "Weather data unavailable")
-    printf '{"text":"%s","class":"weather","tooltip":"Bozeman, MT\\n%s\\n\\nClick for full forecast"}\n' "$MAIN" "$TOOLTIP"
+    MAIN=$(curl -s "wttr.in/$LOCATION?u&format=%c+%t" 2>/dev/null | sed 's/  */ /g' || echo "❓ N/A")
+    # Get simple one-line weather for tooltip (no ANSI, no fancy formatting)
+    TOOLTIP=$(curl -s "wttr.in/$LOCATION?u&format=%l:+%c+%t+%w" 2>/dev/null || echo "Weather unavailable")
+    # Escape quotes and backslashes for JSON
+    MAIN_ESC=$(echo "$MAIN" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    TOOLTIP_ESC=$(echo "$TOOLTIP" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    printf '{"text":"%s","class":"weather","tooltip":"%s"}\n' "$MAIN_ESC" "$TOOLTIP_ESC"
   '';
   
   "workspace-switcher" = sh "waybar-workspace-switcher" ''

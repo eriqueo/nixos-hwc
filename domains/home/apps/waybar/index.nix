@@ -48,15 +48,18 @@ in
     xdg.configFile."waybar/style.css".text = appearance;
 
     # Run waybar via systemd so it survives rebuilds and restarts cleanly.
+    # Wait for XDG portals to avoid race condition on startup.
     systemd.user.services.waybar = {
       Unit = {
         Description = lib.mkForce "Waybar status bar";
-        After = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" "xdg-desktop-portal.service" "xdg-desktop-portal-hyprland.service" ];
+        Wants = [ "xdg-desktop-portal.service" ];
         PartOf = [ "graphical-session.target" ];
       };
       Service = {
         ExecStart = lib.mkForce "${launchPkg}/bin/waybar-launch";
         Restart = "on-failure";
+        RestartSec = 2;
       };
       Install = { WantedBy = [ "graphical-session.target" ]; };
     };

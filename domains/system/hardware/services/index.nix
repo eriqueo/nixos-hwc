@@ -177,23 +177,35 @@ in
 
     # --- Bombproof ordering for user portal units (no scripts, just metadata)
     #
-    # Start generic portal as part of the session and after DBus.
-    systemd.user.services.xdg-desktop-portal = lib.mkIf cfg.audio.enable {
+    # Backend portals (hyprland, gtk) start first, then generic portal discovers them.
+    # This prevents the "Timeout was reached" errors on startup.
+
+    # Hyprland portal: starts early, only when Wayland socket exists.
+    systemd.user.services.xdg-desktop-portal-hyprland = lib.mkIf cfg.audio.enable {
+      unitConfig = {
+        PartOf              = [ "graphical-session.target" ];
+        After               = [ "graphical-session.target" "dbus.service" ];
+        Requires            = [ "dbus.service" ];
+        ConditionPathExists = "%t/wayland-1";
+      };
+    };
+
+    # GTK portal: provides Settings interface (for theme detection) and file picker.
+    systemd.user.services.xdg-desktop-portal-gtk = lib.mkIf cfg.audio.enable {
       unitConfig = {
         PartOf  = [ "graphical-session.target" ];
         After   = [ "graphical-session.target" "dbus.service" ];
         Requires= [ "dbus.service" ];
       };
+      wantedBy = [ "graphical-session.target" ];
     };
 
-    # Hyprland portal: after generic portal and only when the Wayland socket exists.
-    # %t expands to XDG_RUNTIME_DIR at runtime; Hyprland creates wayland-1 on your setup.
-    systemd.user.services.xdg-desktop-portal-hyprland = lib.mkIf cfg.audio.enable {
+    # Generic portal: starts AFTER backend portals are ready.
+    systemd.user.services.xdg-desktop-portal = lib.mkIf cfg.audio.enable {
       unitConfig = {
-        PartOf              = [ "graphical-session.target" ];
-        After               = [ "graphical-session.target" "xdg-desktop-portal.service" ];
-        Requires            = [ "xdg-desktop-portal.service" ];
-        ConditionPathExists = "%t/wayland-1";
+        PartOf  = [ "graphical-session.target" ];
+        After   = [ "graphical-session.target" "dbus.service" "xdg-desktop-portal-hyprland.service" "xdg-desktop-portal-gtk.service" ];
+        Requires= [ "dbus.service" ];
       };
     };
 
