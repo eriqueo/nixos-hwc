@@ -12,6 +12,9 @@ let
   # Camera RTSP URL template (secrets substituted at runtime)
   rtspUrl = camIpVar: "rtsp://\${RTSP_USER}:\${RTSP_PASS_ENCODED}@\${${camIpVar}}:554/ch01/0";
 
+  # Reolink RTSP URL template (different credentials and path)
+  reolinkUrl = stream: "rtsp://\${REOLINK_USER}:\${REOLINK_PASS_ENCODED}@\${REOLINK_IP}:554/${stream}";
+
   # Shared ffmpeg configuration
   ffmpegDefaults = {
     global_args = [ "-hide_banner" "-loglevel" "warning" ];
@@ -168,12 +171,27 @@ let
           };
         };
       };
+
+      reolink = {
+        enabled = true;
+        audio.enabled = false;
+        ffmpeg = ffmpegDefaults // {
+          inputs = [
+            { path = "rtsp://127.0.0.1:8554/reolink_sub"; roles = [ "detect" ]; }
+            { path = "rtsp://127.0.0.1:8554/reolink"; roles = [ "record" ]; }
+          ];
+        };
+        detect = { width = 640; height = 360; fps = 5; };
+        motion.mask = [ "0,0,640,40" ];
+      };
     };
 
     go2rtc.streams = {
       cobra_cam_1 = [ (rtspUrl "CAM1_IP") ];
       cobra_cam_2 = [ (rtspUrl "CAM2_IP") ];
       cobra_cam_3 = [ (rtspUrl "CAM3_IP") ];
+      reolink = [ (reolinkUrl "h264Preview_01_main") ];
+      reolink_sub = [ (reolinkUrl "h264Preview_01_sub") ];
     };
 
     ui.timezone = "America/Denver";

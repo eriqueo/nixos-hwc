@@ -65,6 +65,20 @@
       group = "root";
     };
 
+    frigate-reolink-username = {
+      file = ../parts/infrastructure/frigate-reolink-username.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    frigate-reolink-password = {
+      file = ../parts/infrastructure/frigate-reolink-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     # VPN credentials
     vpn-username = {
       file = ../parts/infrastructure/vpn-username.age;
