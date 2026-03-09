@@ -16,6 +16,7 @@
     ./router            # Local/cloud routing
     ./agent             # HTTP tool agent
     ./ai-bible/index.nix  # AI-powered documentation system
+    ./nanoclaw          # NanoClaw AI agent orchestrator
   ];
 
   #==========================================================================

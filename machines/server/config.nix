@@ -522,6 +522,14 @@
     enable = true;
     port = 6020;
   };
+
+  # NanoClaw AI agent orchestrator
+  # Connects to Slack via Socket Mode, spawns agents in containers
+  hwc.ai.nanoclaw = {
+    enable = true;
+    slack.enable = true;  # Inject Slack tokens from agenix
+  };
+
   # CouchDB for Obsidian LiveSync
   hwc.data.couchdb = {
     enable = true;
