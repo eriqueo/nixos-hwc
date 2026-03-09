@@ -173,7 +173,7 @@ LABELMAP_EOF
           chown eric:users ${cfg.storage.configPath}/labelmap/coco-80.txt
         fi
 
-        # Read secrets
+        # Read secrets - Cobra cameras
         RTSP_USER=$(cat /run/agenix/frigate-rtsp-username)
         RTSP_PASS=$(cat /run/agenix/frigate-rtsp-password)
         RTSP_PASS_ENCODED=$(echo "$RTSP_PASS" | ${pkgs.python3}/bin/python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))")
@@ -183,8 +183,14 @@ LABELMAP_EOF
         CAM2_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_2')
         CAM3_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.cobra_cam_3')
 
+        # Read secrets - Reolink camera
+        REOLINK_USER=$(cat /run/agenix/frigate-reolink-username)
+        REOLINK_PASS=$(cat /run/agenix/frigate-reolink-password)
+        REOLINK_PASS_ENCODED=$(echo "$REOLINK_PASS" | ${pkgs.python3}/bin/python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip()))")
+        REOLINK_IP=$(echo "$CAMERA_IPS" | ${pkgs.jq}/bin/jq -r '.reolink')
+
         # Substitute secrets into nix-generated config template
-        export RTSP_USER RTSP_PASS_ENCODED CAM1_IP CAM2_IP CAM3_IP
+        export RTSP_USER RTSP_PASS_ENCODED CAM1_IP CAM2_IP CAM3_IP REOLINK_USER REOLINK_PASS_ENCODED REOLINK_IP
         ${pkgs.envsubst}/bin/envsubst < ${cfg._configTemplate} > ${cfg.storage.configPath}/config.yaml
 
         chown eric:users ${cfg.storage.configPath}/config.yaml
@@ -216,6 +222,7 @@ LABELMAP_EOF
       ];
 
       extraOptions = [
+        "--network=host"
         "--security-opt=label=disable"
         "--privileged"
         "--tmpfs=/tmp/cache:size=1g"
