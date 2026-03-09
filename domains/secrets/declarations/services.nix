@@ -117,6 +117,28 @@
       group = "secrets";
     };
 
+    # NanoClaw AI agent orchestrator
+    nanoclaw-anthropic-key = {
+      file = ../parts/services/nanoclaw-anthropic-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    # NanoClaw Slack tokens
+    nanoclaw-slack-app-token = {
+      file = ../parts/services/nanoclaw-slack-app-token.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    nanoclaw-slack-bot-token = {
+      file = ../parts/services/nanoclaw-slack-bot-token.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     # Navidrome music server credentials
     navidrome-admin-password = {
       file = ../parts/services/navidrome-admin-password.age;
