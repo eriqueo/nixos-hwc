@@ -34,8 +34,6 @@ in
     "hyprland-startup"
     "hyprpaper"
     # Proton apps - start on workspace 8 (windowrules handle placement)
-    # proton-authenticator needs X11 backend + dmabuf fix for rendering
-    "env WEBKIT_DISABLE_DMABUF_RENDERER=1 GDK_BACKEND=x11 proton-authenticator"
     "proton-pass"
     "kitty --start-as=minimized"
   ];
