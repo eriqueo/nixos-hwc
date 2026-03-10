@@ -98,6 +98,32 @@ get_domain_diff() {
 #==============================================================================
 # AI CHANGELOG GENERATION
 #==============================================================================
+
+# Few-shot examples for changelog transformation
+# Format: commit message | diff summary | good changelog entry
+read -r -d '' FEW_SHOT_EXAMPLES << 'EOF'
+Example 1:
+Commit: "feat(frigate): add reolink_cam_2 with RTSP stream configuration"
+Diff shows: +reolink_cam_2 = { ffmpeg.inputs = [{ path = "rtsp://...@192.168.0.205" }] }
+README says: "4 cameras (3 Cobra PoE + 1 Reolink)"
+Good changelog: "Add second Reolink camera, expanding to 5 total"
+Why: Transforms technical config into user-facing impact
+
+Example 2:
+Commit: "fix(jellyfin): correct CUDA path for hardware transcoding"
+Diff shows: -cudaPath = "/usr/lib"; +cudaPath = "/run/opengl-driver"
+README says: "Hardware-accelerated transcoding via NVIDIA GPU"
+Good changelog: "Fix GPU transcoding by correcting CUDA library path"
+Why: Explains the fix's effect, not just what changed
+
+Example 3:
+Commit: "refactor(secrets): migrate permissions to group-based access"
+Diff shows: -mode = "0400"; +mode = "0440"; +group = "secrets"
+README says: "Manages encrypted secrets for system services"
+Good changelog: "Enable shared secret access across multiple services"
+Why: Describes the capability gained, not the implementation
+EOF
+
 generate_changelog_entry() {
     local domain="$1"
     local commit_msg="$2"
@@ -113,35 +139,63 @@ generate_changelog_entry() {
     # Skip if no meaningful diff
     [[ -z "$diff" ]] && return 1
 
-    local prompt="System: Generate a single changelog line describing what functionally changed.
-Rules: Past tense, max 12 words, no date/bullet prefix, use README terminology.
+    local prompt="You are a changelog writer. Transform git commits into human-readable changelog entries.
 
-README Context:
+CRITICAL RULES:
+1. NEVER copy or paraphrase the commit message - that's for developers, not users
+2. Describe the IMPACT or CAPABILITY, not the implementation
+3. Maximum 12 words, past tense
+4. No prefixes (no 'feat:', 'fix:', bullets, or dates)
+5. Use terminology from the README context
+
+$FEW_SHOT_EXAMPLES
+
+---
+
+Now generate a changelog entry for this change:
+
+<README_CONTEXT>
 $context
+</README_CONTEXT>
 
-Commit Message: $commit_msg
+<COMMIT_MESSAGE_DO_NOT_COPY>
+$commit_msg
+</COMMIT_MESSAGE_DO_NOT_COPY>
 
-Diff:
+<DIFF>
 $diff
+</DIFF>
 
-Previous Entries (format guide):
+<EXISTING_STYLE>
 $examples
+</EXISTING_STYLE>
 
-Generate changelog line:"
+Write ONE changelog line describing the user-facing change:"
 
-    # Call Ollama with timeout
+    # Call Ollama with timeout - use custom model if available, fallback to base
+    local model_to_use="$MODEL"
+    if curl -s "$OLLAMA_ENDPOINT/api/tags" 2>/dev/null | jq -e '.models[] | select(.name == "changelog-writer")' &>/dev/null; then
+        model_to_use="changelog-writer"
+    fi
+
     local response
     response=$(timeout "$TIMEOUT" curl -s -X POST "$OLLAMA_ENDPOINT/api/generate" \
         -H "Content-Type: application/json" \
-        -d "$(jq -n --arg m "$MODEL" --arg p "$prompt" \
-            '{model: $m, prompt: $p, stream: false, options: {temperature: 0.2, num_predict: 50}}')" 2>/dev/null | \
+        -d "$(jq -n --arg m "$model_to_use" --arg p "$prompt" \
+            '{model: $m, prompt: $p, stream: false, options: {temperature: 0.3, num_predict: 50}}')" 2>/dev/null | \
         jq -r '.response // empty' | tr -d '\n' | xargs) || return 1
 
     # Validate response
     [[ -z "$response" || "$response" == "null" ]] && return 1
 
-    # Clean up response - remove leading/trailing quotes, bullet points, dates
-    response=$(echo "$response" | sed -E 's/^[-*•]+\s*//; s/^[0-9]{4}-[0-9]{2}-[0-9]{2}:\s*//; s/^"//; s/"$//')
+    # Clean up response - remove leading/trailing quotes, bullet points, dates, common prefixes
+    response=$(echo "$response" | sed -E '
+        s/^[-*•]+\s*//
+        s/^[0-9]{4}-[0-9]{2}-[0-9]{2}:\s*//
+        s/^"//
+        s/"$//
+        s/^(feat|fix|refactor|docs|chore|style|test)(\([^)]*\))?:\s*//i
+    ')
 
     echo "$response"
 }

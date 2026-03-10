@@ -40,14 +40,23 @@ Post-rebuild documentation generator (runs asynchronously via systemd).
 ## Structure
 ```
 tools/
-├── index.nix           # Module definition, systemd service
-├── default.nix         # Import wrapper
+├── index.nix                   # Module definition, systemd service
+├── default.nix                 # Import wrapper
 ├── parts/
-│   ├── readme-butler.sh    # Law 12 changelog automation
-│   ├── ollama-wrapper.sh   # Thermal-aware AI wrapper
-│   ├── charter-search.sh   # Charter context extraction
-│   └── grebuild-docs.sh    # Post-rebuild docs generator
+│   ├── readme-butler.sh        # Law 12 changelog automation
+│   ├── changelog-writer.modelfile  # Custom Ollama model for changelogs
+│   ├── setup-changelog-model.sh    # One-time model setup script
+│   ├── ollama-wrapper.sh       # Thermal-aware AI wrapper
+│   ├── charter-search.sh       # Charter context extraction
+│   └── grebuild-docs.sh        # Post-rebuild docs generator
 └── README.md
+```
+
+## Setup
+
+To create the custom changelog-writer model (one-time):
+```bash
+./domains/ai/tools/parts/setup-changelog-model.sh
 ```
 
 ## Changelog
