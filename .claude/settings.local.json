@@ -136,7 +136,8 @@
       "Bash(sudo BORG_PASSCOMMAND=\"cat /run/agenix/borg-passphrase\" borg list:*)",
       "Bash(wc:*)",
       "Bash(git rm:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(ffprobe:*)"
     ],
     "deny": [],
     "ask": [],
