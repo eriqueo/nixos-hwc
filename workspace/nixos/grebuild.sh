@@ -399,6 +399,40 @@ git_commit() {
     fi
 }
 
+# README Butler - Law 12 compliance automation
+# Updates domain README changelogs with AI-generated descriptions
+readme_butler() {
+    if [[ "$SKIP_COMMIT" == true ]]; then
+        log_step "📝 Skipping README butler (no commit)"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        log_step "📝 Would run README butler"
+        return 0
+    fi
+
+    log_step "📝 README Butler - Updating changelogs..."
+
+    # Source the butler script
+    local BUTLER_SCRIPT="${NIXOS_DIR:-/home/eric/.nixos}/domains/ai/tools/parts/readme-butler.sh"
+
+    if [[ ! -f "$BUTLER_SCRIPT" ]]; then
+        log_warn "README butler script not found: $BUTLER_SCRIPT"
+        return 0
+    fi
+
+    # Run butler (it handles its own error checking)
+    if "$BUTLER_SCRIPT"; then
+        # Re-capture commit hash since butler may have amended
+        COMMIT_HASH=$(git rev-parse HEAD)
+        SHORT_HASH="${COMMIT_HASH:0:8}"
+        log_info "README changelogs updated (commit: $SHORT_HASH)"
+    else
+        log_warn "README butler encountered issues (non-fatal)"
+    fi
+}
+
 # Test NixOS configuration
 test_configuration() {
     if [[ "$SKIP_TEST" == true ]]; then
@@ -571,6 +605,9 @@ main() {
         log_error "Git commit failed"
         exit 1
     }
+
+    # Run README butler after commit, before rebuild (Law 12 compliance)
+    readme_butler  # Non-fatal, continues on failure
 
     test_configuration || {
         log_error "Configuration test failed - not proceeding"
