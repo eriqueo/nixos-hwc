@@ -7,6 +7,9 @@
 # - /home/eric/.nixos: NixOS configuration management
 # - /mnt/media: Media file organization
 # - /var/log: System log inspection (read-only)
+#
+# Groups can be configured declaratively with containerConfig for
+# additional mounts specific to each agent group.
 
 { lib, config, pkgs, ... }:
 
@@ -63,6 +66,28 @@ let
     allowedSenders = [];
     blockedSenders = [];
   });
+
+  # Generate group configuration files for declaratively defined groups
+  # Each group gets a JSON config with containerConfig.additionalMounts
+  groupConfigs = lib.mapAttrs (name: groupCfg: pkgs.writeText "group-${name}.json" (builtins.toJSON {
+    name = name;
+    slackChannel = groupCfg.slackChannel;
+    description = groupCfg.description;
+    containerConfig = {
+      additionalMounts = map (mount: {
+        hostPath = mount.hostPath;
+        containerPath = mount.containerPath;
+        readonly = mount.readonly;
+      }) groupCfg.additionalMounts;
+    };
+  })) cfg.groups;
+
+  # Script to deploy group configurations
+  groupConfigScript = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: configFile: ''
+    mkdir -p ${cfg.dataDir}/groups/${name}
+    cp ${configFile} ${cfg.dataDir}/groups/${name}/config.json
+    chmod 644 ${cfg.dataDir}/groups/${name}/config.json
+  '') groupConfigs);
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -77,11 +102,14 @@ in
       # Volume mounts
       # - Full project dir for source, groups/, data/, DB
       # - Podman socket mapped to Docker socket path for agent spawning
-      # - Config directory for allowlists (mounted to where config.ts expects)
+      # - Config directory mounted to multiple paths for compatibility:
+      #   - /root/.config/nanoclaw (HOME-based lookup)
+      #   - /home/eric/.config/nanoclaw (hardcoded path in config.ts)
       volumes = [
         "${cfg.dataDir}:/app"
         "/run/podman/podman.sock:/var/run/docker.sock:ro"
         "${cfg.dataDir}/config:/root/.config/nanoclaw:ro"
+        "${cfg.dataDir}/config:/home/eric/.config/nanoclaw:ro"
       ];
 
       # Environment from agenix-generated file
@@ -126,6 +154,9 @@ in
         cp ${mountAllowlist} ${cfg.dataDir}/config/mount-allowlist.json
         cp ${senderAllowlist} ${cfg.dataDir}/config/sender-allowlist.json
         chmod 644 ${cfg.dataDir}/config/*.json
+
+        # Deploy declarative group configurations
+        ${groupConfigScript}
       '';
       preStartDeps = [ "agenix.service" ];
 

@@ -20,6 +20,7 @@ domains/ai/
 ├── cloud/              # Cloud AI API integration (Anthropic, OpenAI)
 ├── local-workflows/    # AI automation workflows
 ├── mcp/                # Model Context Protocol servers
+├── nanoclaw/           # AI agent orchestrator (Slack, container spawning)
 ├── ollama/             # Local LLM service
 ├── open-webui/         # Web UI for Ollama
 ├── profiles/           # Hardware profile detection and defaults
@@ -66,5 +67,6 @@ Auto-detects and configures based on available hardware:
 
 ## Changelog
 
+- 2026-03-10: Added nanoclaw/ to structure; added declarative group configuration with mount support
 - 2026-03-04: Moved ai-bible from domains/server/native/ai/ into domain; removed dead native/ai/ sub-modules
 - 2026-02-26: Created README per Law 12

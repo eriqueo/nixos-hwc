@@ -528,6 +528,20 @@
   hwc.ai.nanoclaw = {
     enable = true;
     slack.enable = true;  # Inject Slack tokens from agenix
+
+    # Declarative group configurations with container mount access
+    groups = {
+      # Server administration agent - manages NixOS config and media
+      server-admin = {
+        slackChannel = "C09V251ABV1";
+        description = "Server administration agent for NixOS management and media organization";
+        additionalMounts = [
+          { hostPath = "/home/eric/.nixos"; containerPath = "nixos"; readonly = false; }
+          { hostPath = "/mnt/media"; containerPath = "media"; readonly = false; }
+          { hostPath = "/var/log"; containerPath = "logs"; readonly = true; }
+        ];
+      };
+    };
   };
 
   # CouchDB for Obsidian LiveSync
