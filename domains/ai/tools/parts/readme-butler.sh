@@ -218,8 +218,22 @@ main() {
     fi
 
     log_step "📦 Amending commit with ${#MODIFIED_READMES[@]} README update(s)..."
-    git add "${MODIFIED_READMES[@]}"
-    git commit --amend --no-edit
+
+    # Determine if we need to run git as the repo owner
+    local repo_owner
+    repo_owner=$(stat -c '%U' "$NIXOS_DIR/.git")
+    local current_user
+    current_user=$(whoami)
+
+    if [[ "$current_user" != "$repo_owner" ]]; then
+        # Running as different user (likely root via sudo), use sudo -u
+        sudo -u "$repo_owner" git add "${MODIFIED_READMES[@]}"
+        sudo -u "$repo_owner" git commit --amend --no-edit
+    else
+        git add "${MODIFIED_READMES[@]}"
+        git commit --amend --no-edit
+    fi
+
     log_info "Commit amended successfully ($domains_processed domain(s) updated)"
 }
 
