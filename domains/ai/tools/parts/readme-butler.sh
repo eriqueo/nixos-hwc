@@ -101,7 +101,8 @@ get_domain_diff() {
 
 # Few-shot examples for changelog transformation
 # Format: commit message | diff summary | good changelog entry
-read -r -d '' FEW_SHOT_EXAMPLES << 'EOF'
+# Note: read returns 1 at EOF, so we suppress with || true
+read -r -d '' FEW_SHOT_EXAMPLES << 'EOF' || true
 Example 1:
 Commit: "feat(frigate): add reolink_cam_2 with RTSP stream configuration"
 Diff shows: +reolink_cam_2 = { ffmpeg.inputs = [{ path = "rtsp://...@192.168.0.205" }] }
