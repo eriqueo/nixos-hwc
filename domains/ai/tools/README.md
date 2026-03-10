@@ -51,6 +51,5 @@ tools/
 ```
 
 ## Changelog
-- 2026-03-09: feat(ai/tools): add readme-butler.sh for automated Law 12 changelog updates
 - 2026-03-09: Add readme-butler.sh for automated Law 12 changelog updates
 - 2026-02-28: Added README for Charter Law 12 compliance
