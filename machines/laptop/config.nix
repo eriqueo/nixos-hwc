@@ -97,6 +97,11 @@
     monitoring.enable = true;
     fanControl.enable = true;
     touchpadFix.enable = true;  # Reload i2c_hid_acpi at boot for Sensel touchpad scroll
+    peripherals = {
+      enable = true;
+      avahi = true;  # Network printer discovery
+      drivers = [ pkgs.brlaser ];  # Brother HL-L2390DW only - skip Canon/HP drivers
+    };
   };
 
   # ntfy notification system for laptop alerts

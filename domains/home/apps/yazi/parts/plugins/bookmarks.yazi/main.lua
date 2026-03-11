@@ -8,10 +8,11 @@ local bookmarks = {
   t = "~/300_tech",
   m = "~/500_media",
   v = "~/900_vaults",
+  d = "~/Downloads",
 }
 
 local function setup()
-  -- Setup is called from init.lua
+  -- No setup needed
 end
 
 local function entry(_, job)
@@ -19,7 +20,7 @@ local function entry(_, job)
   if not key then
     ya.notify {
       title = "Bookmarks",
-      content = "Available: (home) (config) (nixos) (inbox) (work) (personal) t(tech) m(media) v(vaults)",
+      content = "h=home c=config n=nixos i=inbox w=work p=personal t=tech m=media v=vaults d=downloads",
       level = "info",
       timeout = 5
     }
@@ -30,16 +31,15 @@ local function entry(_, job)
   if not path then
     ya.notify {
       title = "Bookmarks",
-      content = "Unknown: " .. key,
+      content = "Unknown bookmark: " .. key,
       level = "warn",
       timeout = 2
     }
     return
   end
 
-  -- Expand ~ and cd --
-  local expanded = ya.expand(path)  
-  ya.manager_emit("cd", { expanded })
+  -- Use ya.emit (new API) instead of ya.manager_emit
+  ya.emit("cd", { ya.expand(path) })
 end
 
 return {

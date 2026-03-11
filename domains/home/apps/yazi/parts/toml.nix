@@ -8,7 +8,7 @@
       show_hidden = false
       show_symlink = true
       show_symlink_icon = true
-      linemode = "size"
+      linemode = "btime"
       scrolloff = 5
 
       [preview]
@@ -38,9 +38,16 @@
         { mime = "audio/*", use = [ "open" ] },
         { mime = "image/*", use = [ "open" ] },
         { mime = "application/pdf", use = [ "open" ] },
+        # Office documents - OnlyOffice
         { mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", use = [ "office" ] },
+        { mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use = [ "office" ] },
+        { mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation", use = [ "office" ] },
         { mime = "application/msword", use = [ "office" ] },
-        { mime = "application/vnd.oasis.opendocument.text", use = [ "office" ] }
+        { mime = "application/vnd.ms-excel", use = [ "office" ] },
+        { mime = "application/vnd.ms-powerpoint", use = [ "office" ] },
+        { mime = "application/vnd.oasis.opendocument.text", use = [ "office" ] },
+        { mime = "application/vnd.oasis.opendocument.spreadsheet", use = [ "office" ] },
+        { mime = "application/vnd.oasis.opendocument.presentation", use = [ "office" ] }
       ]
 
       [plugin]
