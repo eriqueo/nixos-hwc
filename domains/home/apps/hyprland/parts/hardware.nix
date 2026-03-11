@@ -62,6 +62,7 @@ in
   #============================================================================
   input = {
     kb_layout = "us";
+    kb_options = "caps:escape_shifted_capslock";  # CapsLock=Esc, Shift+CapsLock=CapsLock
     follow_mouse = 1;
     touchpad = {
       natural_scroll = true;

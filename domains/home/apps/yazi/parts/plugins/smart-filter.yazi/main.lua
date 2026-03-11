@@ -1,5 +1,5 @@
-local function entry(self, args)
-  ya.manager_emit("filter", { smart = true })
+local function entry()
+  ya.emit("filter", { "--smart" })
 end
 
 return { entry = entry }
