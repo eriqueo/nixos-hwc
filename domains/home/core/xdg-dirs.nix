@@ -36,5 +36,6 @@ in {
    #     ${home}/300_tech/300_inbox ${home}/300_tech/310_documents ${home}/300_tech/320_projects ${home}/300_tech/330_reference ${home}/300_tech/340_assets ${home}/300_tech/390_archive \
    #     ${home}/400_mail ${home}/500_media/510_pictures ${home}/500_media/520_music ${home}/500_media/530_videos
     # '';
-  # };
-};
+   };
+  }
+
