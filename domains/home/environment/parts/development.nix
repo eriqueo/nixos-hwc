@@ -81,57 +81,14 @@ in
     # --- Enhanced Git configuration ---
     # Git configuration moved to shell.nix for consistency
 
-    # --- Neovim configuration ---
-    programs.neovim = lib.mkIf cfg.editors.neovim {
-      enable = true;
-      defaultEditor = true;
-      viAlias = true;
-      vimAlias = true;
-
-      # New Home Manager neovim configuration format
-      extraConfig = ''
-        " Basic settings
-        set number
-        set relativenumber
-        set tabstop=2
-        set shiftwidth=2
-        set expandtab
-        set smartindent
-        set wrap
-        set noswapfile
-        set nobackup
-        set undodir=~/.vim/undodir
-        set undofile
-        set incsearch
-        set termguicolors
-        set scrolloff=8
-        set colorcolumn=80
-
-        " Key mappings
-        let mapleader = " "
-        nnoremap <leader>pv :Ex<CR>
-        nnoremap <leader>w :w<CR>
-        nnoremap <leader>q :q<CR>
-
-        " Move lines
-        vnoremap J :m '>+1<CR>gv=gv
-        vnoremap K :m '<-2<CR>gv=gv
-      '';
-
-      plugins = with pkgs.vimPlugins; [
-        vim-nix
-        vim-commentary
-        vim-surround
-        fzf-vim
-        telescope-nvim
-        nvim-treesitter
-        lualine-nvim
-      ];
-    };
+    # --- Neovim ---
+    # Neovim is now managed by hwc.home.apps.nvim domain
+    # This bridges the old editors.neovim option to the new domain
+    hwc.home.apps.nvim.enable = lib.mkIf cfg.editors.neovim true;
 
     # --- Development environment variables ---
     home.sessionVariables = {
-      # Default editors
+      # Default editors (nvim if enabled via the nvim domain)
       EDITOR = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       VISUAL = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       # Development directories
