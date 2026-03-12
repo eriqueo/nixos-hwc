@@ -10,10 +10,9 @@ Foundational system configuration: identity, filesystem structure, boot, and cro
 ## Structure
 ```
 core/
-├── identity/        # User identity options (puid, pgid, user, group)
+├── identity/        # User identity options (puid, pgid, user, group) - inlined
 ├── filesystem.nix   # Filesystem structure via tmpfiles
 ├── index.nix        # Core aggregator
-├── options.nix      # Core options
 ├── packages.nix     # Base system packages
 ├── thermal.nix      # Thermal/power management
 └── validation.nix   # Cross-cutting assertions
@@ -21,3 +20,4 @@ core/
 
 ## Changelog
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-03-12: Inlined options.nix into index.nix for identity, polkit, session, shell; removed separate options.nix files

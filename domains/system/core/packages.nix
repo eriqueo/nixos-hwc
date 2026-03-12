@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.system.core.packages;
 in
@@ -10,8 +10,11 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     environment.systemPackages =
+      # Agenix CLI from flake input (not in nixpkgs)
+      [ inputs.agenix.packages.${pkgs.system}.default ]
+
       # Base bundle
-      (lib.optionals cfg.base.enable (with pkgs; [
+      ++ (lib.optionals cfg.base.enable (with pkgs; [
         # Core shells and editors
         zsh git micro neovim vim tmux
 

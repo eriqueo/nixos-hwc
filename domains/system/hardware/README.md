@@ -11,11 +11,12 @@ Hardware acceleration and driver configuration for GPU, display, and compute wor
 ```
 hardware/
 ├── gpu/
-│   ├── index.nix      # GPU driver implementation
-│   └── options.nix    # GPU options (type, accel, nvidia/intel settings)
+│   └── index.nix      # GPU driver implementation (options inlined)
 ├── index.nix          # Auto-discovery aggregator
-└── options.nix        # Hardware root options
+└── services/
+    └── index.nix      # Hardware services implementation (options inlined)
 ```
 
 ## Changelog
 - 2026-02-28: Created from infrastructure domain migration (Charter v10.5)
+- 2026-03-12: Inlined options.nix into index.nix for gpu and services; removed separate options.nix files

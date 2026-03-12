@@ -15,12 +15,86 @@ let
     else config.hwc.secrets.api.couchdbAdminPasswordFile;
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
-  imports = [
-    ./options.nix
-  ];
+  options.hwc.data.couchdb = {
+    enable = lib.mkEnableOption "CouchDB database server for Obsidian LiveSync";
+
+    settings = {
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 5984;
+        description = "Port for CouchDB server";
+      };
+
+      bindAddress = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = "Bind address for CouchDB server (localhost only for security)";
+      };
+
+      dataDir = lib.mkOption {
+        type = lib.types.str;
+        default = "/var/lib/couchdb";
+        description = "CouchDB data directory";
+      };
+
+      maxDocumentSize = lib.mkOption {
+        type = lib.types.int;
+        default = 50000000;
+        description = "Maximum document size in bytes (50MB default for Obsidian attachments)";
+      };
+
+      maxHttpRequestSize = lib.mkOption {
+        type = lib.types.int;
+        default = 4294967296;
+        description = "Maximum HTTP request size in bytes (4GB default)";
+      };
+
+      corsOrigins = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [
+          "app://obsidian.md"
+          "capacitor://localhost"
+          "http://localhost"
+        ];
+        description = "CORS allowed origins for Obsidian LiveSync";
+      };
+    };
+
+    secrets = {
+      adminUsername = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to admin username secret (defaults to hwc.secrets.api.couchdbAdminUsernameFile)";
+      };
+
+      adminPassword = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to admin password secret (defaults to hwc.secrets.api.couchdbAdminPasswordFile)";
+      };
+    };
+
+    monitoring = {
+      enableHealthCheck = lib.mkEnableOption "Enable CouchDB health monitoring service" // { default = true; };
+
+      healthCheckTimeout = lib.mkOption {
+        type = lib.types.int;
+        default = 60;
+        description = "Health check timeout in seconds";
+      };
+    };
+
+    reverseProxy = {
+      enable = lib.mkEnableOption "Enable reverse proxy route for CouchDB";
+
+      path = lib.mkOption {
+        type = lib.types.str;
+        default = "/couchdb";
+        description = "Reverse proxy path";
+      };
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

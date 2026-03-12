@@ -21,7 +21,43 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.monitoring.prometheus = {
+    enable = lib.mkEnableOption "Prometheus monitoring and metrics collection";
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 9090;
+      description = "Prometheus HTTP server port";
+    };
+
+    dataDir = lib.mkOption {
+      type = lib.types.path;
+      default = "${paths.state}/prometheus";
+      description = "Data directory for Prometheus time-series database";
+    };
+
+    retention = lib.mkOption {
+      type = lib.types.str;
+      default = "30d";
+      description = "Data retention period (e.g., '30d', '90d')";
+    };
+
+    scrapeConfigs = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      default = [];
+      description = "Additional scrape configurations (extended by other modules)";
+    };
+
+    blackbox = lib.mkOption {
+           description = "Blackbox exporter configuration";
+           default = {};
+           type = lib.types.submodule {
+             options = {
+               enable = lib.mkEnableOption "Blackbox exporter for health checks";
+             };
+           };
+         };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
@@ -51,12 +87,12 @@ in
         port = cfg.port;
         stateDir = "hwc/prometheus";
         retentionTime = cfg.retention;
-  
+
         globalConfig = {
           scrape_interval = "15s";
           evaluation_interval = "15s";
         };
-  
+
         scrapeConfigs = [
           {
             job_name = "node";
@@ -76,9 +112,9 @@ in
                   { source_labels = [ "__param_target" ]; target_label = "instance"; }
                   { target_label = "__address__"; replacement = "localhost:9115"; }
                 ];
-              }               
+              }
         ++ cfg.scrapeConfigs; # Include scrape configs added by other modules
-  
+
         # Alert rules organized by severity (P5/P4/P3)
         ruleFiles = [
           (pkgs.writeText "prometheus-alerts.yml" (builtins.toJSON (import ./parts/alerts.nix { inherit lib; })))
@@ -89,7 +125,7 @@ in
       enable = true;
       port = 9100;
     };
-    
+
     # Run prometheus, node-exporter, and blackbox-exporter as eric user for simplified permissions
     systemd.services.prometheus = {
       serviceConfig = {

@@ -9,10 +9,10 @@ Storage tier management for hot, media, and backup volumes.
 
 ## Structure
 ```
-storage/
-├── index.nix    # Storage implementation (mounts, udev, tmpfiles)
-└── options.nix  # Storage tier options (hot/media/backup)
+mounts/
+└── index.nix    # Storage implementation (mounts, udev, tmpfiles) with options inlined
 ```
 
 ## Changelog
 - 2026-02-28: Merged storage tiers from infrastructure domain (Charter v10.5)
+- 2026-03-12: Inlined options.nix into index.nix; removed separate options.nix

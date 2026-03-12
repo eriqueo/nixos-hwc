@@ -44,12 +44,79 @@ let
   '';
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
-  imports = [
-    ./options.nix
-  ];
+  options.hwc.gaming.webdav = {
+    enable = lib.mkEnableOption "WebDAV server using dufs for file synchronization";
+
+    settings = {
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8282;
+        description = "Internal port for dufs WebDAV server";
+      };
+
+      bindAddress = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = "Address to bind the WebDAV server (localhost for reverse proxy)";
+      };
+    };
+
+    # Authentication
+    auth = {
+      usernameFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing WebDAV username (from agenix)";
+      };
+
+      passwordFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing WebDAV password (from agenix)";
+      };
+    };
+
+    # RetroArch-specific preset
+    retroarch = {
+      enable = lib.mkEnableOption "Expose RetroArch save directories via WebDAV";
+
+      syncSaves = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Expose .srm save RAM files for sync";
+      };
+
+      syncStates = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Expose save state files for sync";
+      };
+
+      dataDir = lib.mkOption {
+        type = lib.types.path;
+        default = "/var/lib/hwc/retroarch";
+        description = "RetroArch data directory containing saves and states";
+      };
+    };
+
+    # Caddy reverse proxy integration
+    reverseProxy = {
+      enable = lib.mkEnableOption "Enable Caddy reverse proxy route for WebDAV";
+
+      path = lib.mkOption {
+        type = lib.types.str;
+        default = "/retroarch-sync";
+        description = "URL path for WebDAV access via reverse proxy";
+      };
+    };
+
+    openFirewall = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Open firewall port for direct WebDAV access (not needed with reverse proxy)";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

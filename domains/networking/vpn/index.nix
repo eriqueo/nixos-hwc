@@ -14,7 +14,14 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.networking.vpn = {
+    enable = lib.mkEnableOption "Enable VPN services";
+
+    protonvpn = {
+      # This single toggle will activate the entire service.
+      enable = lib.mkEnableOption "Enable ProtonVPN via the official CLI tool";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

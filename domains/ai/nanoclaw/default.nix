@@ -24,7 +24,7 @@ in
 
     image = lib.mkOption {
       type = lib.types.str;
-      default = "docker.io/library/node:20-slim";
+      default = "docker.io/library/node:20-bookworm";
       description = "Base image for NanoClaw container";
     };
 
