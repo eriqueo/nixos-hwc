@@ -8,6 +8,33 @@ telescope.setup({
     selection_caret = " ",
     path_display = { "truncate" },
 
+    -- Ignore noisy directories
+    file_ignore_patterns = {
+      "%.git/",
+      "node_modules/",
+      "%.vscode/",
+      "__pycache__/",
+      "%.cache/",
+      "%.local/share/",
+      "%.npm/",
+      "%.cargo/",
+      "target/",
+      "dist/",
+      "build/",
+      "%.o$",
+      "%.a$",
+      "%.out$",
+      "%.class$",
+      "%.pdf$",
+      "%.mkv$",
+      "%.mp4$",
+      "%.zip$",
+      "%.tar$",
+      "%.gz$",
+      "%.claude/",
+      "%.nix%-profile/",
+    },
+
     mappings = {
       i = {
         ["<C-n>"] = actions.cycle_history_next,

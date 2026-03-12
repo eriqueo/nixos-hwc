@@ -17,7 +17,40 @@ let
   basePkgs = with pkgs; [
     wofi hyprshot grim hypridle hyprpaper swaylock cliphist wl-clipboard
     brightnessctl networkmanager wirelesstools hyprsome wlogout fend
+    socat  # For monitor hotplug listener
   ];
+
+  # Monitor hotplug listener script
+  monitorListenerPkg = pkgs.writeShellScriptBin "hyprland-monitor-listener" ''
+    #!/usr/bin/env bash
+    # Listen to Hyprland IPC socket for monitor events and restart waybar
+
+    SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+
+    # Wait for socket to exist
+    for i in {1..30}; do
+      [[ -S "$SOCKET" ]] && break
+      sleep 1
+    done
+
+    if [[ ! -S "$SOCKET" ]]; then
+      echo "hyprland-monitor-listener: socket not found after 30s, exiting" >&2
+      exit 1
+    fi
+
+    echo "hyprland-monitor-listener: listening on $SOCKET"
+
+    ${pkgs.socat}/bin/socat -U - "UNIX-CONNECT:$SOCKET" | while read -r line; do
+      case "$line" in
+        monitoradded*|monitorremoved*)
+          echo "hyprland-monitor-listener: $line - restarting waybar"
+          # Small delay to let monitor fully initialize
+          sleep 1
+          ${pkgs.systemd}/bin/systemctl --user restart waybar
+          ;;
+      esac
+    done
+  '';
 in
 {
   #==========================================================================
@@ -42,11 +75,26 @@ in
     #==========================================================================
     # IMPLEMENTATION
     #==========================================================================
-    home.packages = basePkgs ++ (session.packages or []);
+    home.packages = basePkgs ++ (session.packages or []) ++ [ monitorListenerPkg ];
 
     home.sessionVariables = { XDG_CURRENT_DESKTOP = "Hyprland"; };
 
     home.file.".local/state/hypr/.keep".text = "";
+
+    # Monitor hotplug listener - restarts waybar when monitors are added/removed
+    systemd.user.services.hyprland-monitor-listener = {
+      Unit = {
+        Description = "Hyprland monitor hotplug listener";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${monitorListenerPkg}/bin/hyprland-monitor-listener";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      Install = { WantedBy = [ "graphical-session.target" ]; };
+    };
 
     wayland.windowManager.hyprland = {
       enable  = true;

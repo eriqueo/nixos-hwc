@@ -28,26 +28,27 @@ in
 
 ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
 
-# move FOCUS in workspace
+# move FOCUS in workspace (h=left, j=down, k=up, l=right)
     "${mod},h,movefocus,l"
-    "${mod},semicolon,movefocus,r"
+    "${mod},l,movefocus,r"
     "${mod},k,movefocus,u"
     "${mod},j,movefocus,d"
     "${mod},left,movefocus,l"
     "${mod},right,movefocus,r"
     "${mod},up,movefocus,u"
     "${mod},down,movefocus,d"
-# move WINDOW in workspace
-    "${mod} ALT,h,movewindow,l"
-    "${mod} ALT,left,movewindow,l"
-    "${mod} ALT,semicolon,movewindow,r"
-    "${mod} ALT,right,movewindow,r"
-    "${mod} ALT,up,movewindow,u"
-    "${mod} ALT,k,movewindow,u"
-    "${mod} ALT,j,movewindow,d"
-    "${mod} ALT,down,movewindow,d"
-    "${mod} ALT,H,layoutmsg,orientationleft"
-    "${mod} ALT,V,layoutmsg,orientationtop"
+# move WINDOW - smart move (within workspace, crosses monitors at edges)
+    "${mod} ALT,h,exec,hyprland-smart-move l"
+    "${mod} ALT,l,exec,hyprland-smart-move r"
+    "${mod} ALT,k,exec,hyprland-smart-move u"
+    "${mod} ALT,j,exec,hyprland-smart-move d"
+    "${mod} ALT,left,exec,hyprland-smart-move l"
+    "${mod} ALT,right,exec,hyprland-smart-move r"
+    "${mod} ALT,up,exec,hyprland-smart-move u"
+    "${mod} ALT,down,exec,hyprland-smart-move d"
+# layout orientation
+    "${mod} CTRL,h,layoutmsg,orientationleft"
+    "${mod} CTRL,v,layoutmsg,orientationtop"
 # SEND window TO workspace 
     "${mod} CTRL,1,exec,hyprsome move 1"
     "${mod} CTRL,2,exec,hyprsome move 2"
@@ -72,7 +73,9 @@ in
     "${mod} CTRL ALT,right,workspace,e+1"
     "${mod} CTRL ALT,left,workspace,e-1"
     "${mod} CTRL ALT,k,workspace,e+1"
+    "${mod} CTRL ALT,l,workspace,e+1"
     "${mod} CTRL ALT,j,workspace,e-1"
+    "${mod} CTRL ALT,h,workspace,e-1"
 
     ",XF86AudioRaiseVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
     ",XF86AudioLowerVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"

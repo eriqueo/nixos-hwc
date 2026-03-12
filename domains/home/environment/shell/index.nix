@@ -265,7 +265,18 @@ in
       shellAliases = cfg.aliases;
       initContent = ''
         # Helper functions for enhanced shell experience
-        
+
+        # NixOS rebuild shortcuts (dynamic hostname)
+        snix() {
+          sudo nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+        }
+        tnix() {
+          sudo nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+        }
+        bnix() {
+          sudo nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+        }
+
         # Fuzzy finding function
         ff() {
           fd -t f . ~ | fzf --query="$*" --preview 'head -20 {}'
