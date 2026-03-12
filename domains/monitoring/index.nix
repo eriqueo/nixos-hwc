@@ -10,8 +10,13 @@
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.monitoring = {
+    enable = lib.mkEnableOption "monitoring stack (Prometheus, Grafana, exporters)" // {
+      default = true;
+    };
+  };
+
   imports = [
-    ./options.nix
     ./prometheus/index.nix
     ./grafana/index.nix
     ./alertmanager/index.nix

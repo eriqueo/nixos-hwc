@@ -9,6 +9,7 @@
 let
   cfg = config.hwc.system.mounts;
   paths = config.hwc.paths;
+  t = lib.types;
 
   dir   = builtins.readDir ./.;
   files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix" && n != "options.nix") dir;
@@ -105,7 +106,90 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ] ++ filePaths ++ subIndex;
+  options.hwc.system.mounts = {
+    enable = lib.mkEnableOption "system mount management" // { default = true; };
+
+    hot = {
+      enable = lib.mkEnableOption "Hot storage tier";
+
+      path = lib.mkOption {
+        type = t.path;
+        default = config.hwc.paths.hot.root;
+        description = "Hot storage mount point";
+      };
+
+      device = lib.mkOption {
+        type = t.str;
+        default = "/dev/disk/by-uuid/YOUR-UUID-HERE";
+        description = "Device UUID";
+      };
+
+      fsType = lib.mkOption {
+        type = t.str;
+        default = "ext4";
+        description = "Filesystem type";
+      };
+    };
+
+    media = {
+      enable = lib.mkEnableOption "Media storage";
+
+      path = lib.mkOption {
+        type = t.path;
+        default = config.hwc.paths.media.root;
+        description = "Media storage mount point";
+      };
+
+      directories = lib.mkOption {
+        type = t.listOf t.str;
+        default = [
+          "movies" "tv" "music" "books" "photos"
+          "downloads" "incomplete" "blackhole"
+        ];
+        description = "Media subdirectories to create";
+      };
+    };
+
+    backup = {
+      enable = lib.mkEnableOption "Backup storage infrastructure";
+
+      path = lib.mkOption {
+        type = t.nullOr t.path;
+        default = config.hwc.paths.backup;
+        description = "Backup storage mount point (null if not applicable to machine)";
+      };
+
+      externalDrive = {
+        autoMount = lib.mkEnableOption "automatic external drive mounting for backups";
+
+        label = lib.mkOption {
+          type = t.str;
+          default = "BACKUP";
+          description = "Expected filesystem label for backup drives";
+        };
+
+        fsTypes = lib.mkOption {
+          type = t.listOf t.str;
+          default = [ "ext4" "ntfs" "exfat" "vfat" ];
+          description = "Supported filesystem types for external drives";
+        };
+
+        mountOptions = lib.mkOption {
+          type = t.listOf t.str;
+          default = [ "defaults" "noatime" "user" "exec" ];
+          description = "Mount options for external drives";
+        };
+
+        notificationUser = lib.mkOption {
+          type = t.nullOr t.str;
+          default = config.hwc.system.users.user.name or null;
+          description = "User to notify when drives are mounted/unmounted";
+        };
+      };
+    };
+  };
+
+  imports = filePaths ++ subIndex;
 
   #==========================================================================
   # IMPLEMENTATION

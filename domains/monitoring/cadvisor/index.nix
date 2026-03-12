@@ -16,7 +16,15 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.monitoring.cadvisor = {
+    enable = lib.mkEnableOption "cAdvisor container metrics exporter";
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 9120;
+      description = "cAdvisor metrics port";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

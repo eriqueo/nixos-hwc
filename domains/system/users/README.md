@@ -11,9 +11,9 @@ User account declarations and group memberships.
 ```
 users/
 ├── eric.nix      # Primary user account
-├── index.nix     # Users aggregator
-└── options.nix   # Users options
+└── index.nix     # Users aggregator (options inlined)
 ```
 
 ## Changelog
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-03-12: Inlined options.nix into index.nix; removed separate options.nix

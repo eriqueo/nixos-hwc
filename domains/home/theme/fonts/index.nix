@@ -9,16 +9,16 @@ in {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [
-    ./options.nix
-  ];
+  options.hwc.home.theme.fonts = {
+    enable = lib.mkEnableOption "Enable HWC font management for user environment";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
     fonts.fontconfig.enable = true;
-    
+
     home.packages = with pkgs; [
       nerd-fonts.caskaydia-cove
     ];

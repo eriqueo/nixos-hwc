@@ -10,9 +10,9 @@ Network stack configuration: NetworkManager, SSH, Tailscale, Samba, firewall, DN
 ## Structure
 ```
 networking/
-├── index.nix    # Networking implementation
-└── options.nix  # Networking options (ssh, tailscale, samba, firewall)
+└── index.nix    # Networking implementation (options inlined)
 ```
 
 ## Changelog
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-03-12: Inlined options.nix into index.nix; removed separate options.nix

@@ -4,8 +4,16 @@
 # Each domain file contains only age.secrets declarations, no logic
 { config, lib, ... }:
 {
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  options.hwc.secrets.declarations = {
+    enable = lib.mkEnableOption "secret declarations aggregation" // {
+      default = true;
+    };
+  };
+
   imports = [
-    ./options.nix
     ./caddy.nix
     ../parts/caddy.nix
     ./home.nix

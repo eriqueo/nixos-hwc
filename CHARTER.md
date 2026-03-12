@@ -1,10 +1,10 @@
-# HWC Architecture Charter v11.0
+# HWC Architecture Charter v11.1
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
 **Goal**: Deterministic, maintainable, scalable, reproducible NixOS configuration via strict domain separation, explicit APIs, and user-centric organization.
 **Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs (per Law 12).
-**Current Date**: March 7, 2026
+**Current Date**: March 12, 2026
 
 ## 0. Preserve-First Doctrine
 
@@ -274,7 +274,7 @@ Every domain and subdomain **must** have a `README.md` that serves as the canoni
 - YYYY-MM-DD: [Brief description of change]
 ```
 
-**Update trigger**: When a commit modifies files within a domain/subdomain, the README's Structure and Changelog sections **must** be updated. This is enforced via pre-commit hook or `/commit` skill.
+**Update trigger**: When a commit modifies files within a domain/subdomain, the README's Structure and Changelog sections **must** be updated. This is enforced via pre-commit hook, `/commit` skill, or the `readme-butler` tool (`domains/ai/tools/parts/readme-butler.sh`).
 
 **Changelog format**: Single line per logical change. Reference commit hash optional. Pruning permitted after 6 months.
 
@@ -328,9 +328,9 @@ Domain READMEs contain implementation details, patterns, and known limitations.
   Unique: Uses mkContainer helper (Law 5)
 
 - **domains/ai/** — AI/ML Services
-  Boundary: Ollama, Open WebUI, MCP servers, workflows
+  Boundary: Ollama, Open WebUI, AnythingLLM, MCP servers, cloud API integration (Anthropic/OpenAI), local/cloud routing, NanoClaw agent orchestrator, AI CLI tools
   Never contains: Home Manager configs
-  Unique: Local-first router with cloud fallback
+  Unique: Local-first router with cloud fallback; `domains/ai/nanoclaw/` hosts the NanoClaw AI agent; `domains/ai/tools/` hosts AI CLI tools including `readme-butler` (automated Law 12 changelog updater)
 
 - **domains/networking/** — Network Services
   Boundary: Reverse proxy (Caddy), VPN, Gluetun, Pi-hole, Tailscale routes
@@ -452,6 +452,10 @@ Exceptions require:
 - Version bump on normative change
 
 **Version History** (excerpt):
+- **v11.1 (2026-03-12)**: Incremental updates reflecting post-v11.0 structural changes:
+  - **domains/ai/**: Updated boundary description to include NanoClaw agent orchestrator (`domains/ai/nanoclaw/`) and AI CLI tools (`domains/ai/tools/`), including the `readme-butler` tool for automated Law 12 changelog updates
+  - **Law 12**: Added `readme-butler` as a third enforcement mechanism alongside pre-commit hook and `/commit` skill
+  - Completed `options.nix` → `index.nix` inline migration across all domains (eliminated 37 separate `options.nix` files)
 - **v11.0 (2026-03-07)**: Major architecture update reflecting week of refactoring:
   - **Law 6**: Rewrote to require options inline in `index.nix` with `# OPTIONS` section header (eliminated separate `options.nix` pattern)
   - **Law 9**: Updated to reflect directory modules declare options in `index.nix`, not `options.nix`
