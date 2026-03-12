@@ -26,35 +26,52 @@ in
       exit 0
     fi
 
-    INTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name' | head -1)
-    if [[ -z "''$INTERNAL" ]]; then
-      INTERNAL=$(echo "''$MONITORS" | jq -r '.[0].name' 2>/dev/null || "")
-    fi
-
-    if [[ -z "''$INTERNAL" ]]; then
+    MONITOR_COUNT=$(echo "''$MONITORS" | jq 'length')
+    if [[ "''$MONITOR_COUNT" -eq 0 ]]; then
       echo "waybar-launch: no monitors detected; exiting" >&2
       exit 0
     fi
 
-    EXTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")==false) | .name' | head -1)
+    # Get all monitor names, classifying each as internal or external
+    # Internal: eDP-*, LVDS-* patterns (laptop screens)
+    # External: everything else
+    INTERNAL_MONITORS=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name')
+    EXTERNAL_MONITORS=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)") | not) | .name')
 
+    # Read template configs from the static config file
+    # Index 0 = external template, Index 1 = internal template
+    EXTERNAL_TEMPLATE=$(jq '.[0]' "''$CONFIG_SRC")
+    INTERNAL_TEMPLATE=$(jq '.[1]' "''$CONFIG_SRC")
+
+    # Build dynamic config array
     TMP_CONFIG=$(mktemp)
     trap 'rm -f "''$TMP_CONFIG"' EXIT
-    jq --arg internal "''$INTERNAL" --arg external "''$EXTERNAL" '
-      map(
-        if .output == "__INTERNAL_OUTPUT__" then
-          .output = $internal
-        elif .output == "__EXTERNAL_OUTPUT__" then
-          if ($external | length) > 0 then
-            .output = $external
-          else
-            empty
-          end
-        else
-          .
-        end
-      )
-    ' "''$CONFIG_SRC" > "''$TMP_CONFIG"
+
+    echo "[" > "''$TMP_CONFIG"
+    FIRST=true
+
+    # Generate config for each internal monitor
+    for MON in ''$INTERNAL_MONITORS; do
+      if [[ "''$FIRST" != "true" ]]; then echo "," >> "''$TMP_CONFIG"; fi
+      FIRST=false
+      echo "''$INTERNAL_TEMPLATE" | jq --arg mon "''$MON" '.output = $mon' >> "''$TMP_CONFIG"
+    done
+
+    # Generate config for each external monitor
+    for MON in ''$EXTERNAL_MONITORS; do
+      if [[ "''$FIRST" != "true" ]]; then echo "," >> "''$TMP_CONFIG"; fi
+      FIRST=false
+      echo "''$EXTERNAL_TEMPLATE" | jq --arg mon "''$MON" '.output = $mon' >> "''$TMP_CONFIG"
+    done
+
+    echo "]" >> "''$TMP_CONFIG"
+
+    # Validate generated config
+    if ! jq empty "''$TMP_CONFIG" 2>/dev/null; then
+      echo "waybar-launch: generated invalid JSON config" >&2
+      cat "''$TMP_CONFIG" >&2
+      exit 1
+    fi
 
     waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC"
   '';
@@ -412,6 +429,44 @@ in
       notify-send "Ollama" "Starting Ollama service..." -t 2000 -i dialog-information
       sudo systemctl start podman-ollama.service
       notify-send "Ollama" "Ollama started" -t 2000 -i dialog-information
+    fi
+  '';
+
+  "lid-status" = sh "waybar-lid-status" ''
+    # Check if lid-sleep override exists (sleep enabled) or not (sleep disabled)
+    OVERRIDE_FILE="/etc/systemd/logind.conf.d/50-lid-sleep.conf"
+
+    if [[ -f "$OVERRIDE_FILE" ]]; then
+      # Override exists = sleep on lid close is ENABLED
+      ICON="󰒲"
+      CLASS="sleep-enabled"
+      TOOLTIP="Lid Close: Sleep\\nClick to disable"
+    else
+      # No override = base config (ignore) = sleep DISABLED
+      ICON="󰒳"
+      CLASS="sleep-disabled"
+      TOOLTIP="Lid Close: Ignore\\nClick to enable sleep"
+    fi
+
+    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$ICON" "$CLASS" "$TOOLTIP"
+  '';
+
+  "lid-toggle" = sh "waybar-lid-toggle" ''
+    # Toggle lid sleep behavior via logind drop-in config
+    OVERRIDE_DIR="/etc/systemd/logind.conf.d"
+    OVERRIDE_FILE="$OVERRIDE_DIR/50-lid-sleep.conf"
+
+    if [[ -f "$OVERRIDE_FILE" ]]; then
+      # Currently sleeping on lid close - disable it
+      sudo rm -f "$OVERRIDE_FILE"
+      sudo systemctl kill -s HUP systemd-logind
+      notify-send "Lid Sleep" "Disabled - lid close now ignored" -i computer -t 3000
+    else
+      # Currently ignoring lid close - enable sleep
+      sudo mkdir -p "$OVERRIDE_DIR"
+      echo -e "[Login]\nHandleLidSwitch=suspend\nHandleLidSwitchExternalPower=suspend" | sudo tee "$OVERRIDE_FILE" > /dev/null
+      sudo systemctl kill -s HUP systemd-logind
+      notify-send "Lid Sleep" "Enabled - closing lid will suspend" -i system-suspend -t 3000
     fi
   '';
 }

@@ -51,7 +51,7 @@ window#waybar {
 #cpu, #memory, #temperature, #network, #pulseaudio,
 #battery, #clock, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
-#custom-weather, #hyprland-language {
+#custom-weather, #custom-lid-sleep, #hyprland-language {
   padding: 4px 12px;
   margin: 0 4px;
   border-radius: 12px;
@@ -80,6 +80,7 @@ window#waybar {
 #custom-notification { background-color: #${palette.muted}; }
 #custom-power { background-color: #${palette.surface1}; }
 #custom-weather { background-color: #${palette.surface2}; }
+#custom-lid-sleep { background-color: #${palette.surface1}; }
 
 /* Your original class colors (unchanged) */
 .intel { color: #${palette.ansi.blue}; }
@@ -105,4 +106,6 @@ window#waybar {
 .running { color: #${palette.good}; }
 .stopped { color: #${palette.muted}; }
 .weather { color: #${palette.info}; }
+.sleep-enabled { color: #${palette.good}; }
+.sleep-disabled { color: #${palette.warn}; }
 ''

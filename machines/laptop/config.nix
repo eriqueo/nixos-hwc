@@ -150,6 +150,11 @@
           { command = "/run/current-system/sw/bin/systemctl stop podman-ollama.service"; options = [ "NOPASSWD" ]; }
           # Performance mode: allow CPU governor changes
           { command = "/run/current-system/sw/bin/tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"; options = [ "NOPASSWD" ]; }
+          # Lid sleep toggle: manage logind drop-in config
+          { command = "/run/current-system/sw/bin/rm -f /etc/systemd/logind.conf.d/50-lid-sleep.conf"; options = [ "NOPASSWD" ]; }
+          { command = "/run/current-system/sw/bin/mkdir -p /etc/systemd/logind.conf.d"; options = [ "NOPASSWD" ]; }
+          { command = "/run/current-system/sw/bin/tee /etc/systemd/logind.conf.d/50-lid-sleep.conf"; options = [ "NOPASSWD" ]; }
+          { command = "/run/current-system/sw/bin/systemctl kill -s HUP systemd-logind"; options = [ "NOPASSWD" ]; }
         ];
       }
     ];

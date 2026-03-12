@@ -19,6 +19,40 @@ with pkgs;
 
 [
   #============================================================================
+  # SMART WINDOW MOVE - Move within workspace, cross monitors at edges
+  #============================================================================
+  (writeShellScriptBin "hyprland-smart-move" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    DIRECTION="''${1:-r}"  # l, r, u, d
+
+    # Get window position before move
+    BEFORE=$(${hyprland}/bin/hyprctl activewindow -j)
+    POS_BEFORE=$(echo "$BEFORE" | ${jq}/bin/jq -r '"\(.at[0]),\(.at[1])"')
+
+    # Try to move within workspace
+    ${hyprland}/bin/hyprctl dispatch movewindow "$DIRECTION"
+
+    # Small delay for Hyprland to process
+    sleep 0.05
+
+    # Get window position after move
+    AFTER=$(${hyprland}/bin/hyprctl activewindow -j)
+    POS_AFTER=$(echo "$AFTER" | ${jq}/bin/jq -r '"\(.at[0]),\(.at[1])"')
+
+    # If position unchanged, window was at edge - move to adjacent monitor
+    if [[ "$POS_BEFORE" == "$POS_AFTER" ]]; then
+      case "$DIRECTION" in
+        l) ${hyprland}/bin/hyprctl dispatch movewindow mon:-1 ;;
+        r) ${hyprland}/bin/hyprctl dispatch movewindow mon:+1 ;;
+        u) ${hyprland}/bin/hyprctl dispatch movewindow mon:-1 ;;
+        d) ${hyprland}/bin/hyprctl dispatch movewindow mon:+1 ;;
+      esac
+    fi
+  '')
+
+  #============================================================================
   # WORKSPACE OVERVIEW - Enhanced workspace selector with window previews
   #============================================================================
   (writeShellScriptBin "hyprland-workspace-overview" ''

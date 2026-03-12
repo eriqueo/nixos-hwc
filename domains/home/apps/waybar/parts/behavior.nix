@@ -8,7 +8,7 @@ let
       "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd"
       "group/connectivity"
       "custom/disk-space" "temperature"
-      "custom/battery" "custom/proton-auth" "custom/weather"
+      "custom/battery" "custom/lid-sleep" "custom/proton-auth" "custom/weather"
       "tray" "custom/notification" "custom/power"
     ];
   };
@@ -97,6 +97,7 @@ let
     "custom/proton-auth" = { format = "󰦝"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
+    "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-lid-toggle"; };
 
     # === NEW: Weather for Bozeman ===
     "custom/weather" = {
