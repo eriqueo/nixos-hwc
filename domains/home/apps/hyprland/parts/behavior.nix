@@ -6,25 +6,17 @@ in
 {
   # Top-level keys only — Hyprland expects these directly.
   bind = [
+    ## Launching commands
     "${mod},RETURN,exec,kitty"
     "${mod},SPACE,exec,wofi --show drun"
-    "${mod},L,exec,hyprlock"
     "${mod} SHIFT,R,exec,hyprctl reload"
     "${mod} SHIFT,Q,exit"
     "${mod},B,exec,gpu-launch librewolf"
-    "${mod},2,exec,gpu-launch librewofl"
-    "${mod},J,exec,gpu-launch chromium --new-window https://jobtread.com"
-    "${mod},3,exec,gpu-launch chromium --new-window https://jobtread.com"
-    "${mod},4,exec,kitty -e aerc"
-    "${mod},5,exec,gpu-launch obsidian"
-    "${mod},6,exec,kitty -e nvim"
     "${mod},M,exec,kitty -e btop"
-    "${mod},8,exec,kitty -e btop"
-    "${mod},1,exec,kitty -e yazi"
     "${mod},O,exec,gpu-launch obsidian"
     "${mod},E,exec,kitty -e aerc"
     "${mod},N,exec,kitty -e nvim"
-    "${mod},T,exec,kitty -e yazi"
+    "${mod},Y,exec,kitty -e yazi"
     "${mod},G,exec,gpu-toggle"
     "${mod} SHIFT,M,exec,hyprland-monitor-toggle"
     "${mod},TAB,exec,hyprland-workspace-overview"
@@ -34,20 +26,29 @@ in
     "${mod},A,exec,proton-authenticator-toggle"
     "${mod},C,exec, kitty -e fend"
 
-    ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
+",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
 
+# move FOCUS in workspace
+    "${mod},h,movefocus,l"
+    "${mod},semicolon,movefocus,r"
+    "${mod},k,movefocus,u"
+    "${mod},j,movefocus,d"
     "${mod},left,movefocus,l"
     "${mod},right,movefocus,r"
     "${mod},up,movefocus,u"
     "${mod},down,movefocus,d"
-
+# move WINDOW in workspace
+    "${mod} ALT,h,movewindow,l"
     "${mod} ALT,left,movewindow,l"
+    "${mod} ALT,semicolon,movewindow,r"
     "${mod} ALT,right,movewindow,r"
     "${mod} ALT,up,movewindow,u"
+    "${mod} ALT,k,movewindow,u"
+    "${mod} ALT,j,movewindow,d"
     "${mod} ALT,down,movewindow,d"
     "${mod} ALT,H,layoutmsg,orientationleft"
     "${mod} ALT,V,layoutmsg,orientationtop"
-
+# SEND window TO workspace 
     "${mod} CTRL,1,exec,hyprsome move 1"
     "${mod} CTRL,2,exec,hyprsome move 2"
     "${mod} CTRL,3,exec,hyprsome move 3"
@@ -57,15 +58,7 @@ in
     "${mod} CTRL,7,exec,hyprsome move 7"
     "${mod} CTRL,8,exec,hyprsome move 8"
 
-    "${mod} CTRL,T,exec,hyprsome move 1"
-    "${mod} CTRL,C,exec,hyprsome move 2"
-    "${mod} CTRL,J,exec,hyprsome move 3"
-    "${mod} CTRL,E,exec,hyprsome move 4"
-    "${mod} CTRL,O,exec,hyprsome move 5"
-    "${mod} CTRL,N,exec,hyprsome move 6"
-    "${mod} CTRL,K,exec,hyprsome move 7"
-    "${mod} CTRL,M,exec,hyprsome move 8"
-
+# SWITCH focus to WORKSPACE
     "${mod} CTRL ALT,1,exec,hyprsome workspace 1"
     "${mod} CTRL ALT,2,exec,hyprsome workspace 2"
     "${mod} CTRL ALT,3,exec,hyprsome workspace 3"
@@ -75,17 +68,11 @@ in
     "${mod} CTRL ALT,7,exec,hyprsome workspace 7"
     "${mod} CTRL ALT,8,exec,hyprsome workspace 8"
 
-    "${mod} CTRL ALT,T,exec,hyprsome workspace 1"
-    "${mod} CTRL ALT,C,exec,hyprsome workspace 2"
-    "${mod} CTRL ALT,J,exec,hyprsome workspace 3"
-    "${mod} CTRL ALT,E,exec,hyprsome workspace 4"
-    "${mod} CTRL ALT,O,exec,hyprsome workspace 5"
-    "${mod} CTRL ALT,N,exec,hyprsome workspace 6"
-    "${mod} CTRL ALT,K,exec,hyprsome workspace 7"
-    "${mod} CTRL ALT,M,exec,hyprsome workspace 8"
 
     "${mod} CTRL ALT,right,workspace,e+1"
     "${mod} CTRL ALT,left,workspace,e-1"
+    "${mod} CTRL ALT,k,workspace,e+1"
+    "${mod} CTRL ALT,j,workspace,e-1"
 
     ",XF86AudioRaiseVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
     ",XF86AudioLowerVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
