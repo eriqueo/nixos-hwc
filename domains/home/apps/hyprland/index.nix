@@ -15,7 +15,7 @@ let
   wallpaperPath = ../../theme/nord-mountains.jpg;
 
   basePkgs = with pkgs; [
-    wofi hyprshot grim hypridle hyprpaper hyprlock cliphist wl-clipboard
+    wofi hyprshot grim hypridle hyprpaper swaylock cliphist wl-clipboard
     brightnessctl networkmanager wirelesstools hyprsome wlogout fend
   ];
 in
