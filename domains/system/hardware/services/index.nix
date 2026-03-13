@@ -281,6 +281,7 @@ in
         pkgs.solaar                  # Logitech device management
         pkgs.piper                   # GUI for ratbagd (gaming mouse config)
         pkgs.rivalcfg                # SteelSeries specific CLI config
+        pkgs.fwupd                   # Firmware update daemon
       ])
       ++ (lib.optionals cfg.audio.enable [
         pkgs.pavucontrol
