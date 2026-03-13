@@ -8,31 +8,27 @@ telescope.setup({
     selection_caret = " ",
     path_display = { "truncate" },
 
-    -- Ignore noisy directories
+    -- Telescope-specific ignores (for code searching, not file management)
     file_ignore_patterns = {
-      "%.git/",
-      "node_modules/",
-      "%.vscode/",
-      "__pycache__/",
-      "%.cache/",
-      "%.local/share/",
-      "%.npm/",
-      "%.cargo/",
-      "target/",
-      "dist/",
-      "build/",
-      "%.o$",
-      "%.a$",
-      "%.out$",
-      "%.class$",
-      "%.pdf$",
-      "%.mkv$",
-      "%.mp4$",
-      "%.zip$",
-      "%.tar$",
-      "%.gz$",
-      "%.claude/",
-      "%.nix%-profile/",
+      -- Directories
+      "^%.local/",
+      "^%.cache/",
+      "^%.config/Code/",
+      "^%.vscode/",
+      "^%.vscode%-server/",
+      "^%.npm/",
+      "^%.cargo/",
+      "^%.vim/",
+      "^%.claude/",
+      -- Media files (don't need to find these in code search)
+      "%.mkv$", "%.mp4$", "%.avi$", "%.mov$", "%.webm$",
+      "%.mp3$", "%.flac$", "%.wav$", "%.m4a$", "%.ogg$",
+      "%.jpg$", "%.jpeg$", "%.png$", "%.gif$", "%.webp$", "%.bmp$",
+      "%.pdf$", "%.epub$",
+      -- Archives
+      "%.zip$", "%.tar$", "%.gz$", "%.7z$", "%.rar$", "%.iso$",
+      -- Binaries
+      "%.exe$", "%.dll$", "%.so$", "%.dylib$", "%.o$", "%.a$",
     },
 
     mappings = {
@@ -90,8 +86,13 @@ telescope.setup({
 
   pickers = {
     find_files = {
-      hidden = true,
+      -- Use fd, which respects .gitignore automatically
+      find_command = { "fd", "--type", "f", "--hidden", "--exclude", ".git" },
       theme = "dropdown",
+    },
+    live_grep = {
+      -- Use rg, which also respects .gitignore
+      additional_args = { "--hidden", "--glob", "!.git/*" },
     },
   },
 

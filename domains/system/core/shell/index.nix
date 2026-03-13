@@ -55,7 +55,7 @@ in
         htop
         btop
         tree
-        neofetch
+        fastfetch
         ncdu
         zoxide
         gh       # GitHub CLI
