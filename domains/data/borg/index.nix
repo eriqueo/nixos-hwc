@@ -335,6 +335,8 @@ in
     # Repository integrity check timer
     systemd.services.borg-check = lib.mkIf cfg.monitoring.enable {
       description = "Borg repository integrity check";
+      # Don't restart on nixos-rebuild - this runs for hours and blocks switch-to-configuration
+      restartIfChanged = false;
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${pkgs.borgbackup}/bin/borg check ${cfg.repo.path}";
