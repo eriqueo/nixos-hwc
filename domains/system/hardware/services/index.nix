@@ -289,7 +289,9 @@ in
         pkgs.system-config-printer   # GUI printer configuration
       ]);
 
-    services.solaar.enable = lib.mkIf cfg.mouse.enable true;
+    # Logitech device support (udev rules for Solaar)
+    hardware.logitech.wireless.enable = lib.mkIf cfg.mouse.enable true;
+    hardware.logitech.wireless.enableGraphical = lib.mkIf cfg.mouse.enable true;
 
     #==========================================================================
     # PERIPHERALS (PRINTING)
