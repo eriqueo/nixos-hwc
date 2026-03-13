@@ -29,6 +29,17 @@
 
       [open]
       prepend_rules = [
+        # Office by extension (more reliable than MIME detection)
+        { name = "*.docx", use = ["office"] },
+        { name = "*.doc", use = ["office"] },
+        { name = "*.xlsx", use = ["office"] },
+        { name = "*.xls", use = ["office"] },
+        { name = "*.pptx", use = ["office"] },
+        { name = "*.ppt", use = ["office"] },
+        { name = "*.odt", use = ["office"] },
+        { name = "*.ods", use = ["office"] },
+        { name = "*.odp", use = ["office"] },
+        # Archives
         { mime = "application/{zip,gzip,x-7z-compressed,x-xz,x-bzip*,x-rar,x-tar}", use = ["extract"] }
       ]
       rules = [

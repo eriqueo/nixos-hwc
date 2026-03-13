@@ -35,9 +35,7 @@ in
       vimAlias = true;
 
       # Load the lua configuration
-      # Using extraLuaConfig for compatibility with stable nixpkgs
-      # (initLua is the new name in unstable, but we need both to work)
-      extraLuaConfig = ''
+      initLua = ''
         require("core")
       '';
     };

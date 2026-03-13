@@ -377,6 +377,18 @@ in
       '';
     };
 
+    # Global fd ignore - ONLY universal junk, not media files
+    # Media ignores belong in Telescope config, not here
+    xdg.configFile."fd/ignore".text = ''
+      .git/
+      node_modules/
+      __pycache__/
+      .cache/
+      .vscode-server/
+      .nix-profile/
+      .nix-defexpr/
+    '';
+
     # Starship prompt
     programs.starship.enable = cfg.zsh.starship;
 

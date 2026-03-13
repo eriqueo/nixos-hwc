@@ -29,6 +29,7 @@ in
 
     programs.yazi = {
       enable = true;
+      shellWrapperName = "y";  # New default in 26.05
 
       plugins = pluginsSources;
 

@@ -25,7 +25,7 @@ in
         bat eza fzf ripgrep fd zoxide which less diffutils
 
         # System utilities
-        htop btop tree ncdu neofetch usbutils pciutils dmidecode
+        htop btop tree ncdu fastfetch usbutils pciutils dmidecode
 
         # Networking basics
         wget curl
