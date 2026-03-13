@@ -117,39 +117,8 @@ in {
    # index_size = token (hex c.fg3) "default" false;
    # index_subject = token (hex c.fg1) "default" false;
 
-    # ===== NOTMUCH TAG-BASED COLORS =====
-    # These are rendered into the [messages] INI section of the aerc styleset.
-    # Keys must be "Tag:X" (without [messages]. prefix) — the section is added by config.nix.
-    # Rendering order is alphabetical; last matching tag wins per row.
-
-    # --- Finance / money group → green family ---
-    "Tag:finance"     = token (hex c.success)       "default" false; # a9b665 green
-    "Tag:bank"        = token (hex c.successBright) "default" false; # b8bb26 bright green
-    "Tag:insurance"   = token (hex c.successDim)    "default" false; # 89b482 dim green
-
-    # --- Work / business group → gruvbox warm yellow (d8a657) ---
-    "Tag:work"        = token (hex c.warning)       "default" false; # d8a657
-    "Tag:hwcmt"       = token (hex c.warning)       "default" false; # same: HWC-MT label
-    "Tag:coaching"    = token (hex c.warningBright) "default" false; # fabd2f bright yellow
-    "Tag:hwc"         = token (hex c.warning)       "default" false; # work identity rollup
-
-    # --- Personal group → purple/magenta (d3869b) ---
-    "Tag:gmail-personal" = token (hex c.accentAlt)  "default" false; # d3869b
-    "Tag:personal"       = token (hex c.accentAlt)  "default" false; # personal identity rollup
-    "Tag:proton-native"  = token (hex c.accentAlt)  "default" false;
-
-    # --- Tech / info group → teal (7daea3) ---
-    "Tag:tech"        = token (hex c.accent)        "default" false;
-    "Tag:aerc-notes"  = token (hex c.accent)        "default" false;
-
-    # --- Hide → very muted ---
-    "Tag:hide"        = token (hex c.fg3)           "default" false; # 665c54
-
-    # --- Status tags (alphabetically last = highest priority override) ---
-    "Tag:unread"      = token (hex c.warningBright) "default" true;  # fabd2f bold
-    "Tag:starred"     = token (hex c.errorBright)   "default" true;  # fb4934 bold
-    "Tag:action"      = token (hex c.marked)        (hex c.bg2) true; # magenta bg
   };
+
 
   # [viewer] section styles - used by built-in colorize filter
   viewerTokens = {
@@ -170,5 +139,20 @@ in {
     quote_3 = token (hex c.accent) "default" false;
     quote_4 = token (hex c.warning) "default" false;
     quote_x = token (hex c.error) "default" false;
+  };
+
+  # [user] section styles - referenced by .StyleMap in column-tags template
+  userTokens = {
+    finance   = token (hex c.success)       "default" false;
+    bank      = token (hex c.successBright) "default" false;
+    insurance = token (hex c.successDim)    "default" false;
+    work      = token (hex c.warning)       "default" false;
+    coaching  = token (hex c.warningBright) "default" false;
+    hwcmt     = token (hex c.warning)       "default" false;
+    personal  = token (hex c.accentAlt)     "default" false;
+    tech      = token (hex c.accent)        "default" false;
+    hide      = token (hex c.fg3)           "default" false;
+    action    = token (hex c.marked)        (hex c.bg2) true;
+    starred   = token (hex c.errorBright)   "default" true;
   };
 }

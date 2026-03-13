@@ -279,6 +279,8 @@ in
       ])
       ++ (lib.optionals cfg.mouse.enable [
         pkgs.solaar                  # Logitech device management
+        pkgs.piper                   # GUI for ratbagd (gaming mouse config)
+        pkgs.rivalcfg                # SteelSeries specific CLI config
       ])
       ++ (lib.optionals cfg.audio.enable [
         pkgs.pavucontrol
@@ -292,6 +294,10 @@ in
     # Logitech device support (udev rules for Solaar)
     hardware.logitech.wireless.enable = lib.mkIf cfg.mouse.enable true;
     hardware.logitech.wireless.enableGraphical = lib.mkIf cfg.mouse.enable true;
+
+    # Gaming mouse support (SteelSeries, etc.)
+    services.ratbagd.enable = lib.mkIf cfg.mouse.enable true;
+    services.udev.packages = lib.optionals cfg.mouse.enable [ pkgs.rivalcfg ];
 
     #==========================================================================
     # PERIPHERALS (PRINTING)
