@@ -66,6 +66,10 @@ in
         primary = true;
       };
 
+    /* Gmail accounts - IMAP sync disabled; both now forward to Proton Mail.
+       Credentials kept here for reference / re-enabling if needed.
+       msmtp send-only accounts (proton-personal / gmail-personal) still active.
+
     gmail-personal = {
         name = "gmail-personal";
         type = "gmail";
@@ -77,7 +81,6 @@ in
           agenix = gmailPersonalSecretPath;
         };
         maildirName = "gmail-personal";
-        # Sync inbox plus all Gmail label folders
         sync.wildcards = [ "INBOX" "[Gmail]/*" ];
         send.msmtpAccount = "gmail-personal";
       };
@@ -93,10 +96,10 @@ in
           agenix = gmailBusinessSecretPath;
         };
         maildirName = "gmail-business";
-        # Sync inbox plus all Gmail label folders
         sync.wildcards = [ "INBOX" "[Gmail]/*" ];
         send.msmtpAccount = "gmail-business";
       };
+    */
   };
 
   #==========================================================================

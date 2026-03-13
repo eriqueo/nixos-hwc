@@ -71,7 +71,8 @@ in
       drag_lock = false;
       disable_while_typing = true;
     };
-    sensitivity = 0.0;  # -1.0 to 1.0, 0 = no modification
+    sensitivity = -0.5;  # -1.0 to 1.0, 0 = no modification. Lowered for better control.
+    accel_profile = "flat"; # Disables acceleration for more predictable movement.
   };
 
   # Tools moved to parts/system.nix for system-wide access

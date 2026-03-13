@@ -10,83 +10,79 @@ let
         pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
     in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
-  # Query maps per account (minimal, no per-account prefixes)
+  # Unified query map - all mail, all labels accessible by name
   queriesUnified = ''
-    inbox = tag:inbox AND NOT tag:trash
-    unread = tag:unread AND NOT tag:trash
-    sent = tag:sent
-    drafts = tag:draft
-    trash = tag:trash
-    starred = tag:starred AND NOT tag:trash
+    inbox     = tag:inbox AND NOT tag:trash
+    unread    = tag:unread AND NOT tag:trash
+    sent      = tag:sent
+    drafts    = tag:draft
+    trash     = tag:trash
+    starred   = tag:starred AND NOT tag:trash
     important = tag:important AND NOT tag:trash
+    action    = tag:action AND NOT tag:trash
+    finance   = tag:finance AND NOT tag:trash
+    work      = tag:work AND NOT tag:trash
+    coaching  = tag:coaching AND NOT tag:trash
+    tech      = tag:tech AND NOT tag:trash
+    bank      = tag:bank AND NOT tag:trash
+    insurance = tag:insurance AND NOT tag:trash
+    personal  = tag:gmail-personal AND NOT tag:trash
+    hwcmt     = tag:hwcmt AND NOT tag:trash
+    hide      = tag:hide
   '';
 
-  queriesWork = ''
-    inbox = tag:hwc AND tag:inbox AND NOT tag:trash
-    unread = tag:hwc AND tag:unread AND NOT tag:trash
-    sent = tag:hwc AND tag:sent
-    drafts = tag:hwc AND tag:draft
-    trash = tag:hwc AND tag:trash
-    starred = tag:hwc AND tag:starred AND NOT tag:trash
-    important = tag:hwc AND tag:important AND NOT tag:trash
+  # Label-scoped query map generator
+  # Each label account tab scopes inbox/unread/etc. to that label
+  mkLabelQueries = label: ''
+    inbox   = tag:${label} AND NOT tag:trash
+    unread  = tag:${label} AND tag:unread AND NOT tag:trash
+    sent    = tag:${label} AND tag:sent
+    drafts  = tag:${label} AND tag:draft
+    trash   = tag:${label} AND tag:trash
+    starred = tag:${label} AND tag:starred AND NOT tag:trash
+    all     = tag:${label}
   '';
 
-  queriesPersonal = ''
-    inbox = tag:personal AND tag:inbox AND NOT tag:trash
-    unread = tag:personal AND tag:unread AND NOT tag:trash
-    sent = tag:personal AND tag:sent
-    drafts = tag:personal AND tag:draft
-    trash = tag:personal AND tag:trash
-    starred = tag:personal AND tag:starred AND NOT tag:trash
-    important = tag:personal AND tag:important AND NOT tag:trash
-  '';
+  # Label account tab generator
+  mkLabelAccount = { name, from, outgoing }:
+    let qmPath = "${config.home.homeDirectory}/.config/aerc/notmuch-queries-${name}";
+    in ''
+      [${name}]
+      source              = notmuch://${maildirBase}
+      maildir-store       = ${maildirBase}
+      folders-exclude     = ~^\\..*,~^proton$,~^gmail-business$,~^gmail-personal$
+      multi-file-strategy = act-one-delete-rest
+      query-map           = ${qmPath}
+      from                = ${from}
+      outgoing            = exec:msmtp -a ${outgoing}
+      default             = inbox
+    '';
 
-  # Unified notmuch account (first) - shows all mail across all accounts
+  # Unified account: all mail across all labels/identities
   unifiedAccount = ''
     [unified]
     source              = notmuch://${maildirBase}
     maildir-store       = ${maildirBase}
-    # Hide per-account Maildirs (dot-prefixed) and noisy server folders
-    folders-exclude     = ~^\\.,[Gmail]/All Mail,spam,trash
+    folders-exclude     = ~^\\..*,~^proton$,~^gmail-business$,~^gmail-personal$
     multi-file-strategy = act-one-delete-rest
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries-unified
-    from                = Eric O'Keefe <eric@iheartwoodcraft.com>
-    outgoing            = exec:msmtp -a iheartwoodcraft
-    default             = inbox
-  '';
-
-  workAccount = ''
-    [work]
-    source              = notmuch://${maildirBase}
-    maildir-store       = ${maildirBase}
-    folders-exclude     = ~^\\.,[Gmail]/All Mail,spam,trash
-    exclude-tags        = personal
-    multi-file-strategy = act-one-delete-rest
-    query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries-work
-    from                = Eric O'Keefe <eric@iheartwoodcraft.com>
+    from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = exec:msmtp -a proton-hwc
     default             = inbox
   '';
 
-  personalAccount = ''
-    [personal]
-    source              = notmuch://${maildirBase}
-    maildir-store       = ${maildirBase}
-    folders-exclude     = ~^\\.,[Gmail]/All Mail,spam,trash
-    exclude-tags        = hwc
-    multi-file-strategy = act-one-delete-rest
-    query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries-personal
-    from                = Eric O'Keefe <eriqueokeefe@gmail.com>
-    outgoing            = exec:msmtp -a gmail-personal
-    default             = inbox
-  '';
+  # Label-based account tabs (replace old work/personal identity tabs)
+  workLabelAccount    = mkLabelAccount { name = "work";     from = "Eric <eric@iheartwoodcraft.com>";  outgoing = "proton-hwc"; };
+  financeAccount      = mkLabelAccount { name = "finance";  from = "Eric <eric@iheartwoodcraft.com>";  outgoing = "proton-hwc"; };
+  coachingAccount     = mkLabelAccount { name = "coaching"; from = "Eric <eric@iheartwoodcraft.com>";  outgoing = "proton-hwc"; };
+  personalLabelAcct   = mkLabelAccount { name = "personal"; from = "Eric <eriqueo@proton.me>";         outgoing = "proton-personal"; };
 
-  # Tag-based unified inbox: Only the unified notmuch account with virtual folders
-  # Plus per-account tabs for work/personal
   accountsConf = lib.concatStringsSep "\n" [
     unifiedAccount
-    workAccount
-    personalAccount
+    workLabelAccount
+    financeAccount
+    coachingAccount
+    personalLabelAcct
   ];
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
 
@@ -96,34 +92,37 @@ let
     renderStyle = name: style:
       "${name}.fg = ${style.fg}\n${name}.bg = ${style.bg}\n${name}.bold = ${if style.bold then "true" else "false"}";
 
-    # Separate tag-based styles from regular styles for proper ordering
-    tagStyles = lib.filterAttrs (name: _: lib.hasPrefix "[messages].Tag:" name) tokens;
-    regularStyles = lib.filterAttrs (name: _: !(lib.hasPrefix "[messages].Tag:" name)) tokens;
+    # Tag styles go in a [messages] INI section (required by aerc for notmuch tag coloring)
+    # Regular styles stay in the default (unnamed) section
+    tagStyles     = lib.filterAttrs (name: _:   lib.hasPrefix "Tag:" name) tokens;
+    regularStyles = lib.filterAttrs (name: _: !(lib.hasPrefix "Tag:" name)) tokens;
 
-    # Render in order: regular styles first, then tag styles (for highest precedence)
     regularStyleLines = lib.mapAttrsToList renderStyle regularStyles;
-    tagStyleLines = lib.mapAttrsToList renderStyle tagStyles;
-    mainSection = lib.concatStringsSep "\n" (regularStyleLines ++ tagStyleLines);
+    tagStyleLines     = lib.mapAttrsToList renderStyle tagStyles;
+    mainSection       = lib.concatStringsSep "\n" regularStyleLines;
+    messagesSection   = "[messages]\n" + lib.concatStringsSep "\n" tagStyleLines;
 
     viewerStyleLines = lib.mapAttrsToList renderStyle viewerTokens;
-    viewerSection = "[viewer]\n" + (lib.concatStringsSep "\n" viewerStyleLines);
-  in mainSection + "\n\n" + viewerSection;
+    viewerSection    = "[viewer]\n" + lib.concatStringsSep "\n" viewerStyleLines;
+  in mainSection + "\n\n" + messagesSection + "\n\n" + viewerSection;
 
   aercConf = ''
     [general]
     enable-osc8 = true
 
     [ui]
-    index-columns=date<20,name<17,flags>4,subject<*
+    index-columns=date<20,name<17,flags>4,tags<16,subject<*
+    column-headers=true
     threading-enabled=true
     confirm-quit=false
     styleset-name=hwc-theme
     dirlist-tree=true
     dirlist-collapse=1
     dirlist-exclude = ^\..*
-    column-date = {{.DateAutoFormat .Date.Local}}
-    column-name = {{index (.From | names) 0}}
-    column-flags = {{.Flags | join ""}}
+    column-date    = {{.DateAutoFormat .Date.Local}}
+    column-name    = {{index (.From | names) 0}}
+    column-flags   = {{.Flags | join ""}}
+    column-tags    = {{with .Labels}}{{range .}}{{if and (ne . "inbox") (ne . "unread") (ne . "new") (ne . "sent") (ne . "draft") (ne . "trash") (ne . "spam") (ne . "archive") (ne . "flagged") (ne . "replied") (ne . "passed") (ne . "attachment") (ne . "signed") (ne . "hwc") (ne . "personal") (ne . "proton-hwc") (ne . "proton-personal") (ne . "gmail-business") (ne . "gmail-personal")}}{{.}},{{end}}{{end}}{{end}}
     column-subject = {{.ThreadPrefix}}{{.Subject}}
     mouse-enabled = true
 
@@ -203,9 +202,11 @@ in
   files = profileBase:{
     ".config/aerc/aerc.conf".text = aercConf;
     ".config/aerc/stylesets/hwc-theme".text = stylesetConf;
-    ".config/aerc/notmuch-queries-unified".text = queriesUnified;
-    ".config/aerc/notmuch-queries-work".text = queriesWork;
-    ".config/aerc/notmuch-queries-personal".text = queriesPersonal;
+    ".config/aerc/notmuch-queries-unified".text  = queriesUnified;
+    ".config/aerc/notmuch-queries-work".text     = mkLabelQueries "work";
+    ".config/aerc/notmuch-queries-finance".text  = mkLabelQueries "finance";
+    ".config/aerc/notmuch-queries-coaching".text = mkLabelQueries "coaching";
+    ".config/aerc/notmuch-queries-personal".text = mkLabelQueries "gmail-personal";
   };
   packages = with pkgs; [
     aerc msmtp isync notmuch urlscan abook ripgrep dante chafa poppler-utils
