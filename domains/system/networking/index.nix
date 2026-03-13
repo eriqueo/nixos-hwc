@@ -178,11 +178,22 @@ in
     };
 
     # =========================
+    # IP Forwarding (required for container networking / WireGuard in containers)
+    # =========================
+    boot.kernel.sysctl = {
+      "net.ipv4.ip_forward" = 1;
+      "net.ipv4.conf.all.forwarding" = 1;
+    };
+
+    # =========================
     # Firewall
     # =========================
     networking.firewall = {
       enable    = cfg.firewall.level != "off";
       allowPing = cfg.firewall.level == "basic";
+      # Required for WireGuard behind NAT (e.g., Podman containers)
+      # Prevents kernel from dropping legitimate reply packets
+      checkReversePath = "loose";
       allowedTCPPorts =
         cfg.firewall.extraTcpPorts
         ++ (lib.optionals (cfg.firewall.level == "server") [ 80 443 ])
