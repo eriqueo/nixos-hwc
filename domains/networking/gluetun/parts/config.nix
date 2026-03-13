@@ -45,6 +45,8 @@ in
         TZ = config.time.timeZone or "America/Denver";
         DOT = "off";  # Disable DNS over TLS - was causing timeouts
         DNS_ADDRESS = "1.1.1.1";  # Use Cloudflare DNS
+        # Disable control server auth so port-sync service can query forwarded port
+        HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE = ''{"auth":"none"}'';
       };
 
       # Pre-start script to generate env file from agenix secrets
@@ -104,14 +106,14 @@ EOF
           echo "Starting Gluetun port forwarding sync service..."
 
           # Wait for Gluetun to be ready
-          while ! curl -sf "$GLUETUN_API/v1/openvpn/portforwarded" >/dev/null 2>&1; do
+          while ! curl -sf "$GLUETUN_API/v1/portforward" >/dev/null 2>&1; do
             echo "Waiting for Gluetun API..."
             sleep 10
           done
 
           while true; do
             # Get current forwarded port from Gluetun
-            FORWARDED_PORT=$(curl -sf "$GLUETUN_API/v1/openvpn/portforwarded" | jq -r '.port // empty')
+            FORWARDED_PORT=$(curl -sf "$GLUETUN_API/v1/portforward" | jq -r '.port // empty')
 
             if [ -z "$FORWARDED_PORT" ] || [ "$FORWARDED_PORT" = "0" ]; then
               echo "No forwarded port available yet, waiting..."
