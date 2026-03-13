@@ -140,7 +140,8 @@
       "Bash(ffprobe:*)",
       "Bash(sudo conntrack:*)",
       "Bash(sudo iptables:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(zcat:*)"
     ],
     "deny": [],
     "ask": [],

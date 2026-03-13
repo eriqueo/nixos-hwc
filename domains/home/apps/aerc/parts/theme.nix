@@ -38,37 +38,14 @@ in {
     "*.selected" = token (hex c.fg0) (hex c.bg3) true;
 
     # ===== MESSAGE LIST (Official + Custom) =====
-    msglist_default = token (hex c.fg1) "default" false;
+    # msglist_default uses "default" fg so [user] tag colors can show through
+    msglist_default = token "default" "default" false;
     msglist_unread = token (hex c.warning) "default" true;
-    msglist_read = token (hex c.fg2) "default" false;
-    msglist_flagged = token (hex c.errorBright) "default" true;
+    msglist_read = token (hex c.fg3) "default" false;
+    msglist_flagged = token "default" "default" false;
     msglist_deleted = token (hex c.fg3) "default" false;
-    msglist_marked = token (hex c.bg1) (hex c.marked) true;
+    msglist_marked = token "default" "default" false;
     msglist_result = token (hex c.accent) "default" true;
-
-    # ===== SOURCE ACCOUNT COLORS (Colored text, not background) =====
-    # Match against To/Cc/From headers to color by account in unified view.
-    # Using subtle colors for text to preserve selection highlighting
-    # Work primary (iheartwoodcraft.com) - green
-    "msglist_*.To,~iheartwoodcraft.com"   = token (hex c.success) "default" false;
-    "msglist_*.Cc,~iheartwoodcraft.com"   = token (hex c.success) "default" false;
-    "msglist_*.From,~iheartwoodcraft.com" = token (hex c.success) "default" false;
-
-    # Gmail business (heartwoodcraftmt@gmail.com) - teal/aqua
-    "msglist_*.To,~heartwoodcraftmt@gmail.com"   = token (hex c.accent) "default" false;
-    "msglist_*.Cc,~heartwoodcraftmt@gmail.com"   = token (hex c.accent) "default" false;
-    "msglist_*.From,~heartwoodcraftmt@gmail.com" = token (hex c.accent) "default" false;
-
-    # Gmail personal (eriqueokeefe@gmail.com) - purple
-    "msglist_*.To,~eriqueokeefe@gmail.com"   = token (hex c.accentAlt) "default" false;
-    "msglist_*.Cc,~eriqueokeefe@gmail.com"   = token (hex c.accentAlt) "default" false;
-    "msglist_*.From,~eriqueokeefe@gmail.com" = token (hex c.accentAlt) "default" false;
-
-    # Proton personal (eriqueo@proton.me) - orange/yellow
-    "msglist_*.To,~eriqueo@proton.me"   = token (hex c.warning) "default" false;
-    "msglist_*.Cc,~eriqueo@proton.me"   = token (hex c.warning) "default" false;
-    "msglist_*.From,~eriqueo@proton.me" = token (hex c.warning) "default" false;
-
 
     # Official: Additional message states
     msglist_answered = token (hex c.success) "default" false;
@@ -98,6 +75,12 @@ in {
     completion_description = token (hex c.fg3) (hex c.bg2) false;
     completion_gutter = token (hex c.bg3) (hex c.bg2) false;
     completion_pill = token (hex c.fg0) (hex c.bg3) false;
+
+    # ===== MESSAGE VIEWER HEADER FIELDS (Official) =====
+    realname = token (hex c.fg0) "default" true;
+    email    = token (hex c.accent) "default" false;
+    subject  = token (hex c.fg0) "default" true;
+    date     = token (hex c.fg3) "default" false;
 
     # ===== MESSAGE VIEWER/COMPOSER (Official) =====
     part_switcher = token (hex c.bg2) (hex c.bg1) false;
@@ -130,8 +113,9 @@ in {
     diff_meta = token (hex c.info) "default" true;
     diff_chunk = token (hex c.accent) "default" false;
     diff_chunk_func = token (hex c.accentAlt) "default" false;
-    diff_add = token (hex c.successBright) "default" false;
-    diff_del = token (hex c.errorBright) "default" false;
+    diff_add        = token (hex c.successBright) "default" false;
+    diff_del        = token (hex c.errorBright) "default" false;
+    diff_whitespace = token "default" (hex c.error) false;
 
     # Quote levels for nested replies
     quote_1 = token (hex c.success) "default" false;
@@ -152,7 +136,7 @@ in {
     personal  = token (hex c.accentAlt)     "default" false;
     tech      = token (hex c.accent)        "default" false;
     hide      = token (hex c.fg3)           "default" false;
-    action    = token (hex c.marked)        (hex c.bg2) true;
-    starred   = token (hex c.errorBright)   "default" true;
+    action    = token (hex c.fg1)           "default" false;
+    starred   = token (hex c.fg1)           "default" false;
   };
 }
