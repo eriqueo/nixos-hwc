@@ -160,6 +160,7 @@
 
   # Hardware services — audio, keyboard, bluetooth for interactive use
   hwc.system.hardware.enable = true;
+  hwc.system.hardware.mouse.enable = true;
 
   # Session — display manager, sudo, lingering
   hwc.system.core.session = {

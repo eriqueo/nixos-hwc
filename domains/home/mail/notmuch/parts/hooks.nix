@@ -47,30 +47,52 @@ let
     # Personal Proton addresses: eriqueo@proton.me, g_erique@proton.me
     ${nm} tag +proton-personal -- 'path:proton/** AND NOT tag:proton-hwc'
 
-    # Gmail account tags
-    ${nm} tag +gmail-business -- 'path:gmail-business/**'
-    ${nm} tag +gmail-personal -- 'path:gmail-personal/**'
+    # Gmail account tags (disabled - Gmail now forwards to Proton; paths no longer synced)
+    # ${nm} tag +gmail-business -- 'path:gmail-business/**'
+    # ${nm} tag +gmail-personal -- 'path:gmail-personal/**'
 
-    # Domain rollup tags (work vs personal)
-    ${nm} tag +hwc -- 'tag:proton-hwc OR path:gmail-business/**'
-    ${nm} tag +personal -- 'tag:proton-personal OR path:gmail-personal/**'
+    # Domain rollup tags (work vs personal) - Gmail paths removed, Proton-only now
+    ${nm} tag +hwc -- 'tag:proton-hwc'
+    ${nm} tag +personal -- 'tag:proton-personal'
 
-    # Folder state tags - use explicit path: queries (folder: globs don't work in notmuch)
-    ${nm} tag +inbox -- \
-      'path:proton/inbox/** OR path:gmail-business/inbox/** OR path:gmail-personal/inbox/**'
-    ${nm} tag +sent -inbox -unread -- \
-      'path:proton/Sent/** OR path:gmail-business/[Gmail]/Sent\ Mail/** OR path:gmail-personal/[Gmail]/Sent\ Mail/**'
-    ${nm} tag +draft -inbox -unread -- \
-      'path:proton/Drafts/** OR path:gmail-business/[Gmail]/Drafts/** OR path:gmail-personal/[Gmail]/Drafts/**'
-    ${nm} tag +trash -inbox -unread -- \
-      'path:proton/Trash/** OR path:gmail-business/[Gmail]/Trash/** OR path:gmail-personal/[Gmail]/Trash/**'
-    ${nm} tag +spam -inbox -unread -- \
-      'path:proton/Spam/** OR path:gmail-business/[Gmail]/Spam/** OR path:gmail-personal/[Gmail]/Spam/**'
-    # Archive: Proton only. Gmail [Gmail]/All Mail is a superset of all messages
-    # (including inbox) so tagging it +archive would clobber inbox messages.
+    # Folder state tags - Proton only (Gmail sync disabled)
+    ${nm} tag +inbox -- 'path:proton/inbox/**'
+    ${nm} tag +sent -inbox -unread -- 'path:proton/Sent/**'
+    ${nm} tag +draft -inbox -unread -- 'path:proton/Drafts/**'
+    ${nm} tag +trash -inbox -unread -- 'path:proton/Trash/**'
+    ${nm} tag +spam -inbox -unread -- 'path:proton/Spam/**'
     ${nm} tag +archive -inbox -- 'path:proton/Archive/**'
+    # Disabled Gmail folder state tags:
+    # ${nm} tag +inbox -- 'path:gmail-business/inbox/** OR path:gmail-personal/inbox/**'
+    # ${nm} tag +sent  -- 'path:gmail-business/[Gmail]/Sent\ Mail/** OR path:gmail-personal/[Gmail]/Sent\ Mail/**'
+    # ${nm} tag +draft -- 'path:gmail-business/[Gmail]/Drafts/** OR path:gmail-personal/[Gmail]/Drafts/**'
+    # ${nm} tag +trash -- 'path:gmail-business/[Gmail]/Trash/** OR path:gmail-personal/[Gmail]/Trash/**'
+    # ${nm} tag +spam  -- 'path:gmail-business/[Gmail]/Spam/** OR path:gmail-personal/[Gmail]/Spam/**'
   '';
-  tail = rulesPatched + "\n" + accountTags + extra;
+
+  # Proton Labels → notmuch tags
+  # Bridge exposes labels as IMAP folders under "Labels/"; mbsync syncs them to
+  # proton/Labels/<name>/. notmuch deduplicates by Message-ID so a message in
+  # both proton/inbox/ and proton/Labels/finance/ becomes one indexed entry with
+  # both +inbox and +finance tags — labels are additive, not exclusive.
+  protonLabelTags = ''
+    # --- Proton label → notmuch tag mappings ---
+    # eriqueokeefe = Proton label for forwarded Gmail personal (eriqueokeefe@gmail.com)
+    # hwcmt        = Proton label for forwarded Gmail business (heartwoodcraftmt@gmail.com)
+    ${nm} tag +finance      -- 'path:proton/Labels/finance/**'
+    ${nm} tag +work         -- 'path:proton/Labels/work/**'
+    ${nm} tag +coaching     -- 'path:proton/Labels/coaching/**'
+    ${nm} tag +tech         -- 'path:proton/Labels/tech/**'
+    ${nm} tag +bank         -- 'path:proton/Labels/bank/**'
+    ${nm} tag +insurance    -- 'path:proton/Labels/insurance/**'
+    ${nm} tag +hide -inbox  -- 'path:proton/Labels/hide/**'
+    ${nm} tag +hwcmt        -- 'path:proton/Labels/hwcmt/**'
+    ${nm} tag +gmail-personal -- 'path:proton/Labels/eriqueokeefe/**'
+    ${nm} tag +proton-native  -- 'path:proton/Labels/proton/**'
+    ${nm} tag +aerc-notes     -- 'path:proton/Labels/aerc/**'
+  '';
+
+  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra;
 in
 {
   text = head + "\n" + body + "\n" + tail;

@@ -29,6 +29,7 @@ in
     audio.enable    = lib.mkEnableOption "Enable PipeWire audio system and portals";
     bluetooth.enable = lib.mkEnableOption "Enable Bluetooth support";
     monitoring.enable = lib.mkEnableOption "Enable hardware monitoring tools (sensors, smartctl, etc.)";
+    mouse.enable = lib.mkEnableOption "Enable mouse-specific tools (Solaar for Logitech, etc.)";
 
     touchpadFix = {
       enable = lib.mkEnableOption "Reload i2c_hid_acpi at boot (fixes Sensel touchpad scrolling)";
@@ -276,6 +277,9 @@ in
         pkgs.smartmontools
         pkgs.nvme-cli
       ])
+      ++ (lib.optionals cfg.mouse.enable [
+        pkgs.solaar                  # Logitech device management
+      ])
       ++ (lib.optionals cfg.audio.enable [
         pkgs.pavucontrol
         pkgs.seahorse
@@ -284,6 +288,8 @@ in
         pkgs.cups                    # CUPS command line tools
         pkgs.system-config-printer   # GUI printer configuration
       ]);
+
+    services.solaar.enable = lib.mkIf cfg.mouse.enable true;
 
     #==========================================================================
     # PERIPHERALS (PRINTING)

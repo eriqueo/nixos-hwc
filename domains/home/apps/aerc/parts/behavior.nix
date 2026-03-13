@@ -137,6 +137,13 @@ in
       ,i = :cf inbox<Enter>
       ,u = :cf unread<Enter>
       ,s = :cf starred<Enter>
+      # Label quick-jump (works from any account tab)
+      ,w = :cf work<Enter>
+      ,f = :cf finance<Enter>
+      ,c = :cf coaching<Enter>
+      ,p = :cf personal<Enter>
+      ,t = :cf tech<Enter>
+      ,b = :cf bank<Enter>
 
       [messages]
       j = :next<Enter>
@@ -162,6 +169,19 @@ in
       S = :modify-labels -starred<Enter>
       i = :modify-labels +important<Enter>
       I = :modify-labels -important<Enter>
+
+      # --- Apply Proton labels (additive; stays in inbox) ---
+      # <Space>l = Label menu
+      <Space>lw = :modify-labels +work<Enter>
+      <Space>lf = :modify-labels +finance<Enter>
+      <Space>lc = :modify-labels +coaching<Enter>
+      <Space>lt = :modify-labels +tech<Enter>
+      <Space>lb = :modify-labels +bank<Enter>
+      <Space>li = :modify-labels +insurance<Enter>
+      <Space>lp = :modify-labels +gmail-personal<Enter>
+      <Space>lh = :modify-labels +hide -inbox<Enter>
+      # Remove any label interactively (type -labelname)
+      <Space>lr = :modify-labels<space>
       c = :compose<Enter>
       C = :reply -aq<Enter>
       ? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
@@ -246,6 +266,14 @@ in
       O = :open<Enter>
       S = :save<space>
       U = :pipe -mb urlscan -r<Enter>
+      <Space>lw = :modify-labels +work<Enter>
+      <Space>lf = :modify-labels +finance<Enter>
+      <Space>lc = :modify-labels +coaching<Enter>
+      <Space>lt = :modify-labels +tech<Enter>
+      <Space>lb = :modify-labels +bank<Enter>
+      <Space>li = :modify-labels +insurance<Enter>
+      <Space>lp = :modify-labels +gmail-personal<Enter>
+      <Space>lh = :modify-labels +hide -inbox<Enter>
 
       [view::passthrough]
       $noinherit = true
