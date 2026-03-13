@@ -117,6 +117,25 @@ in {
    # index_size = token (hex c.fg3) "default" false;
    # index_subject = token (hex c.fg1) "default" false;
 
+    # ===== TAGS COLUMN COLORS (msglist_*.tags.Tag:X) =====
+    # Colors the individual label text inside the tags column.
+    # Uses msglist_* format so they land in the main styleset section (not [messages]).
+    "msglist_*.tags"                      = token (hex c.fg1)          "default" false; # fallback
+    "msglist_*.tags.Tag:work"             = token (hex c.warning)      "default" false;
+    "msglist_*.tags.Tag:hwc"              = token (hex c.warning)      "default" false;
+    "msglist_*.tags.Tag:hwcmt"            = token (hex c.warning)      "default" false;
+    "msglist_*.tags.Tag:coaching"         = token (hex c.warningBright) "default" false;
+    "msglist_*.tags.Tag:finance"          = token (hex c.success)      "default" false;
+    "msglist_*.tags.Tag:bank"             = token (hex c.successBright) "default" false;
+    "msglist_*.tags.Tag:insurance"        = token (hex c.successDim)   "default" false;
+    "msglist_*.tags.Tag:personal"         = token (hex c.accentAlt)    "default" false;
+    "msglist_*.tags.Tag:gmail-personal"   = token (hex c.accentAlt)    "default" false;
+    "msglist_*.tags.Tag:tech"             = token (hex c.accent)       "default" false;
+    "msglist_*.tags.Tag:aerc-notes"       = token (hex c.accent)       "default" false;
+    "msglist_*.tags.Tag:hide"             = token (hex c.fg3)          "default" false;
+    "msglist_*.tags.Tag:flagged"          = token (hex c.errorBright)  "default" false;
+    "msglist_*.tags.Tag:unread"           = token (hex c.warningBright) "default" false;
+
     # ===== NOTMUCH TAG-BASED COLORS =====
     # These are rendered into the [messages] INI section of the aerc styleset.
     # Keys must be "Tag:X" (without [messages]. prefix) — the section is added by config.nix.
