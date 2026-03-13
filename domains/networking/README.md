@@ -39,6 +39,7 @@ networking/
 
 ## Changelog
 - 2026-03-13: Enable shared port-sync service access across multiple Gluetun containers
+- 2026-03-13: Enable shared port-sync service access across multiple Gluetun containers
 
 - 2026-03-04: Namespace migration hwc.server.{reverseProxy,shared,containers.gluetun,containers.pihole} → hwc.networking.*
 - 2026-03-04: Created networking domain; moved reverseProxy, routes, podman-network, gluetun, pihole from domains/server/ (Phase 3 of DDD migration)
