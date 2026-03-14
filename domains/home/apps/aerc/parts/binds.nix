@@ -259,9 +259,9 @@ in
       b = :scroll -20<Enter>
       gg = :scroll -9999<Enter>
       G = :scroll 9999<Enter>
-      # Navigate between messages
-      ] = :next<Enter>
-      [ = :prev<Enter>
+      # Navigate between messages ([ is reserved by INI parser, use { and })
+      } = :next<Enter>
+      { = :prev<Enter>
       # Reply / forward
       r = :reply<Enter>
       R = :reply -a<Enter>
