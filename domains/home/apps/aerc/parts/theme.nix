@@ -1,142 +1,194 @@
-# aerc theme.nix - Adapter from palette to aerc styleset tokens
-# Generates comprehensive aerc styleset with hex colors
+# aerc theme.nix – Generates a valid aerc styleset file from your palette
 { config, lib, osConfig ? {}, ... }:
 
 let
-  # Consume global theme colors from config.hwc.home.theme.colors
-  # This automatically updates when hwc.home.theme.palette changes
   c = config.hwc.home.theme.colors or {};
 
-  # Helper to format hex colors for aerc (with # prefix)
   hex = color: "#${color}";
 
-  # Aerc styleset token generator
-  # Creates fg/bg/bold tuple for each UI element
-  token = fg: bg: bold: { inherit fg bg bold; };
+  # Helper to generate a full <object>.<attr> = value line
+  styleLine = obj: attr: val:
+    if val == null then "" else "${obj}.${attr} = ${val}";
+
+  # Helper for boolean attrs (true/false/toggle)
+  boolLine = obj: attr: val:
+    if val == null then "" else styleLine obj attr (if val then "true" else "false");
 
 in {
-  # Main section styles (no [section] prefix)
-  tokens = {
-    # ===== CORE UI ELEMENTS (Official) =====
-    default = token (hex c.fg1) "default" false;
-    error = token (hex c.error) "default" false;
-    warning = token (hex c.warning) "default" false;
-    success = token (hex c.success) "default" false;
-    title = token (hex c.fg0) (hex c.bg2) true;
-    header = token (hex c.accent) "default" true;
+  # This attribute will be used in config.nix to write the styleset file
+  stylesetContent = ''
+    # hwc-theme – Gruvbox-inspired dark theme for aerc
+    # Generated from palette – valid per aerc-stylesets(7)
 
-    # ===== TAB STYLING (Official) =====
-    tab = token (hex c.fg2) (hex c.bg2) false;
+    # Reset most defaults so we have full control
+    *.default = true
+    *.normal  = true
 
-    # ===== BORDERS & UI CHROME (Official) =====
-    border = token (hex c.border) "default" false;
-    stack = token (hex c.fg2) (hex c.bg1) false;  # UI stack element
-    spinner = token (hex c.accent) "default" false;
+    # ──────────────────────────────────────────────────────────────
+    # Core UI elements (main section)
+    # ──────────────────────────────────────────────────────────────
 
+    default.fg          = ${hex c.fg1}
+    error.fg            = ${hex c.error}
+    error.bold          = true
+    warning.fg          = ${hex c.warning}
+    warning.bold        = true
+    success.fg          = ${hex c.success}
+    success.bold        = true
 
-     # A more general but powerful approach using the wildcard from the man page:
-    "*.selected" = token (hex c.fg0) (hex c.bg3) true;
+    title.fg            = ${hex c.fg0}
+    title.bg            = ${hex c.bg2}
+    title.bold          = true
 
-    # ===== MESSAGE LIST (Official + Custom) =====
-    # msglist_default uses "default" fg so [user] tag colors can show through
-    msglist_default = token "default" "default" false;
-    msglist_unread = token (hex c.warning) "default" true;
-    msglist_read = token (hex c.fg3) "default" false;
-    msglist_flagged = token "default" "default" false;
-    msglist_deleted = token (hex c.fg3) "default" false;
-    msglist_marked = token "default" "default" false;
-    msglist_result = token (hex c.accent) "default" true;
+    header.fg           = ${hex c.accent}
+    header.bold         = true
 
-    # Official: Additional message states
-    msglist_answered = token (hex c.success) "default" false;
-    msglist_forwarded = token (hex c.info) "default" false;
+    tab.fg              = ${hex c.fg2}
+    tab.bg              = ${hex c.bg2}
 
-    # Official: Thread-related styles
-    msglist_thread_folded = token (hex c.accent) "default" false;
-    msglist_thread_context = token (hex c.fg3) "default" false;
-    msglist_thread_orphan = token (hex c.errorDim) "default" false;
+    border.fg           = ${hex c.border}
 
-    # Official: UI chrome for message list
-    msglist_gutter = token (hex c.bg3) (hex c.bg2) false;
-    msglist_pill = token (hex c.fg0) (hex c.bg3) false;
+    stack.fg            = ${hex c.fg2}
+    stack.bg            = ${hex c.bg1}
 
-    # ===== DIRECTORY LIST (Official) =====
-    dirlist_default = token (hex c.fg2) "default" false;
-    dirlist_unread = token (hex c.success) "default" true;
-    dirlist_recent = token (hex c.accent) "default" false;
+    spinner.fg          = ${hex c.accent}
+    spinner.bold        = true
 
-    # ===== STATUS LINE =====
-    statusline_default = token (hex c.fg1) (hex c.bg0) false;
-    statusline_error = token (hex c.errorBright) (hex c.bg0) true;
-    statusline_success = token (hex c.success) (hex c.bg0) false;
+    # Selection highlight (wildcard)
+    *.selected.fg       = ${hex c.fg0}
+    *.selected.bg       = ${hex c.bg3}
+    *.selected.bold     = true
 
-    # ===== COMPLETION POPOVER (Official) =====
-    completion_default = token (hex c.fg1) (hex c.bg2) false;
-    completion_description = token (hex c.fg3) (hex c.bg2) false;
-    completion_gutter = token (hex c.bg3) (hex c.bg2) false;
-    completion_pill = token (hex c.fg0) (hex c.bg3) false;
+    # ──────────────────────────────────────────────────────────────
+    # Message list
+    # ──────────────────────────────────────────────────────────────
 
-    # ===== MESSAGE VIEWER HEADER FIELDS (Official) =====
-    realname = token (hex c.fg0) "default" true;
-    email    = token (hex c.accent) "default" false;
-    subject  = token (hex c.fg0) "default" true;
-    date     = token (hex c.fg3) "default" false;
+    msglist_default.fg          = default
+    msglist_unread.fg           = ${hex c.warning}
+    msglist_unread.bold         = true
+    msglist_read.fg             = ${hex c.fg3}
+    msglist_flagged.fg          = ${hex c.errorBright}
+    msglist_flagged.bold        = true
+    msglist_deleted.fg          = ${hex c.fg3}
+    msglist_marked.fg           = ${hex c.marked}
+    msglist_marked.bg           = ${hex c.bg2}
+    msglist_marked.bold         = true
+    msglist_result.fg           = ${hex c.accent}
+    msglist_result.bold         = true
 
-    # ===== MESSAGE VIEWER/COMPOSER (Official) =====
-    part_switcher = token (hex c.bg2) (hex c.bg1) false;
-    part_filename = token (hex c.fg0) "default" false;
-    part_mimetype = token (hex c.fg3) "default" false;
+    msglist_answered.fg         = ${hex c.success}
+    msglist_forwarded.fg        = ${hex c.info}
 
-    selector_default = token (hex c.fg1) "default" false;
-    selector_focused = token (hex c.bg1) (hex c.selection) false;
-    selector_chooser = token (hex c.accent) "default" true;
+    msglist_thread_folded.fg    = ${hex c.accent}
+    msglist_thread_context.fg   = ${hex c.fg3}
+    msglist_thread_orphan.fg    = ${hex c.errorDim}
 
-    # ===== PER-COLUMN COLORS (Custom enhancement for message list) =====
-    # Note: These are NOT in official spec but may work
-   # index_number = token (hex c.fg3) "default" false;
-   # index_flags = token (hex c.warning) "default" false;
-   # index_date = token (hex c.info) "default" false;
-   # index_author = token (hex c.success) "default" false;
-   # index_size = token (hex c.fg3) "default" false;
-   # index_subject = token (hex c.fg1) "default" false;
+    msglist_gutter.bg           = ${hex c.bg3}
+    msglist_gutter.fg           = ${hex c.bg2}
+    msglist_pill.fg             = ${hex c.fg0}
+    msglist_pill.bg             = ${hex c.bg3}
 
-  };
+    # Dynamic From/To/Cc coloring by domain
+    msglist_*.From,~iheartwoodcraft.com.fg   = ${hex c.success}
+    msglist_*.To,~iheartwoodcraft.com.fg     = ${hex c.success}
+    msglist_*.Cc,~iheartwoodcraft.com.fg     = ${hex c.success}
 
+    msglist_*.From,~heartwoodcraftmt@gmail.com.fg = ${hex c.accent}
+    msglist_*.To,~heartwoodcraftmt@gmail.com.fg   = ${hex c.accent}
+    msglist_*.Cc,~heartwoodcraftmt@gmail.com.fg   = ${hex c.accent}
 
-  # [viewer] section styles - used by built-in colorize filter
-  viewerTokens = {
-    url = token (hex c.link) "default" false;
-    header = token (hex c.accent) "default" true;
-    signature = token (hex c.fg3) "default" false;
+    msglist_*.From,~eriqueokeefe@gmail.com.fg = ${hex c.accentAlt}
+    msglist_*.To,~eriqueokeefe@gmail.com.fg   = ${hex c.accentAlt}
+    msglist_*.Cc,~eriqueokeefe@gmail.com.fg   = ${hex c.accentAlt}
 
-    # Diff/patch colors
-    diff_meta = token (hex c.info) "default" true;
-    diff_chunk = token (hex c.accent) "default" false;
-    diff_chunk_func = token (hex c.accentAlt) "default" false;
-    diff_add        = token (hex c.successBright) "default" false;
-    diff_del        = token (hex c.errorBright) "default" false;
-    diff_whitespace = token "default" (hex c.error) false;
+    msglist_*.From,~eriqueo@proton.me.fg = ${hex c.warning}
+    msglist_*.To,~eriqueo@proton.me.fg   = ${hex c.warning}
+    msglist_*.Cc,~eriqueo@proton.me.fg   = ${hex c.warning}
 
-    # Quote levels for nested replies
-    quote_1 = token (hex c.success) "default" false;
-    quote_2 = token (hex c.info) "default" false;
-    quote_3 = token (hex c.accent) "default" false;
-    quote_4 = token (hex c.warning) "default" false;
-    quote_x = token (hex c.error) "default" false;
-  };
+    # ──────────────────────────────────────────────────────────────
+    # Directory list
+    # ──────────────────────────────────────────────────────────────
 
-  # [user] section styles - referenced by .StyleMap in column-tags template
-  userTokens = {
-    finance   = token (hex c.success)       "default" false;
-    bank      = token (hex c.successBright) "default" false;
-    insurance = token (hex c.successDim)    "default" false;
-    work      = token (hex c.warning)       "default" false;
-    coaching  = token (hex c.warningBright) "default" false;
-    hwcmt     = token (hex c.warning)       "default" false;
-    personal  = token (hex c.accentAlt)     "default" false;
-    tech      = token (hex c.accent)        "default" false;
-    hide      = token (hex c.fg3)           "default" false;
-    action    = token (hex c.fg1)           "default" false;
-    starred   = token (hex c.fg1)           "default" false;
-  };
+    dirlist_default.fg  = ${hex c.fg2}
+    dirlist_unread.fg   = ${hex c.success}
+    dirlist_unread.bold = true
+    dirlist_recent.fg   = ${hex c.accent}
+
+    # ──────────────────────────────────────────────────────────────
+    # Statusline & completion
+    # ──────────────────────────────────────────────────────────────
+
+    statusline_default.fg  = ${hex c.fg1}
+    statusline_default.bg  = ${hex c.bg0}
+    statusline_default.dim = true
+
+    statusline_error.fg    = ${hex c.errorBright}
+    statusline_error.bold  = true
+
+    statusline_success.fg  = ${hex c.success}
+
+    completion_default.fg       = ${hex c.fg1}
+    completion_default.bg       = ${hex c.bg2}
+    completion_description.fg   = ${hex c.fg3}
+    completion_description.dim  = true
+    completion_gutter.bg        = ${hex c.bg3}
+    completion_pill.fg          = ${hex c.fg0}
+    completion_pill.bg          = ${hex c.bg3}
+
+    # ──────────────────────────────────────────────────────────────
+    # [viewer] – used by built-in colorize filter
+    # ──────────────────────────────────────────────────────────────
+
+    [viewer]
+
+    url.fg        = ${hex c.link}
+    url.underline = true
+
+    header.fg     = ${hex c.accent}
+    header.bold   = true
+
+    signature.fg  = ${hex c.fg3}
+    signature.dim = true
+
+    diff_meta.fg       = ${hex c.info}
+    diff_meta.bold     = true
+
+    diff_chunk.fg      = ${hex c.accent}
+    diff_chunk_func.fg = ${hex c.accentAlt}
+    diff_chunk_func.dim = true
+
+    diff_add.fg        = ${hex c.successBright}
+    diff_del.fg        = ${hex c.errorBright}
+    diff_whitespace.bg = ${hex c.error}
+
+    quote_1.fg = ${hex c.success}
+    quote_2.fg = ${hex c.info}
+    quote_3.fg = ${hex c.accent}
+    quote_3.dim = true
+    quote_4.fg = ${hex c.warning}
+    quote_4.dim = true
+    quote_x.fg  = ${hex c.error}
+    quote_x.dim = true
+
+    # ──────────────────────────────────────────────────────────────
+    # [user] – for .StyleMap in column-tags template
+    # ──────────────────────────────────────────────────────────────
+
+    [user]
+
+    finance.fg     = ${hex c.success}
+    bank.fg        = ${hex c.successBright}
+    insurance.fg   = ${hex c.successDim}
+    work.fg        = ${hex c.warning}
+    coaching.fg    = ${hex c.warningBright}
+    hwcmt.fg       = ${hex c.warning}
+    personal.fg    = ${hex c.accentAlt}
+    tech.fg        = ${hex c.accent}
+    hide.fg        = ${hex c.fg3}
+    action.fg      = ${hex c.marked}
+    action.bg      = ${hex c.bg2}
+    action.bold    = true
+    starred.fg     = ${hex c.errorBright}
+    starred.bold   = true
+  '';
 }

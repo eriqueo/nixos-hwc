@@ -250,22 +250,39 @@ in
       # ---------------------------------------------
       [view]
       q = :close<Enter>
-      j = :next<Enter>
-      k = :prev<Enter>
+      # Body scrolling (vim-style)
+      j = :scroll 1<Enter>
+      k = :scroll -1<Enter>
+      <C-d> = :scroll 10<Enter>
+      <C-u> = :scroll -10<Enter>
+      <Space> = :scroll 20<Enter>
+      b = :scroll -20<Enter>
+      gg = :scroll -9999<Enter>
+      G = :scroll 9999<Enter>
+      # Navigate between messages
+      ] = :next<Enter>
+      [ = :prev<Enter>
+      # Reply / forward
+      r = :reply<Enter>
+      R = :reply -a<Enter>
+      f = :forward<Enter>
+      # Tag ops
       a = :modify-labels +archive -inbox<Enter>:close<Enter>
       d = :modify-labels +trash -inbox<Enter>:close<Enter>
+      s = :modify-labels +starred<Enter>
+      i = :modify-labels +important<Enter>
+      # Compose new
       c = :compose<Enter>
-      C = :reply -aq<Enter>
-      ? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
-      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${keybindHelp} | ${pkgs.glow}/bin/glow -p'<Enter>
+      # Misc
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
-      s = :modify-labels +starred<Enter>
-      i = :modify-labels +important<Enter>
       O = :open<Enter>
       S = :save<space>
       U = :pipe -mb urlscan -r<Enter>
+      ? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
+      <Space>? = :term ${pkgs.bash}/bin/bash -lc '${keybindHelp} | ${pkgs.glow}/bin/glow -p'<Enter>
+      # Label ops
       <Space>lw = :modify-labels +work<Enter>
       <Space>lf = :modify-labels +finance<Enter>
       <Space>lc = :modify-labels +coaching<Enter>
@@ -278,16 +295,24 @@ in
       [view::passthrough]
       $noinherit = true
       <Esc> = :toggle-key-passthrough<Enter>
+
       # ---------------------------------------------
-      # Other Contexts (Compose, Terminal)
+      # [compose] - Compose window
+      # Body editing opens nvim (set in aerc.conf editor=)
+      # Header fields navigated with Tab / C-k / C-j
       # ---------------------------------------------
       [compose]
       $noinherit = true
       $ex = <C-x>
       <C-h> = :prev-tab<Enter>
       <C-l> = :next-tab<Enter>
+      <Tab> = :next-field<Enter>
+      <S-Tab> = :prev-field<Enter>
       <C-k> = :prev-field<Enter>
       <C-j> = :next-field<Enter>
+      <C-s> = :send<Enter>
+      <C-a> = :attach<space>
+      <C-x><C-x> = :abort<Enter>
       
       [terminal]
       $noinherit = true
