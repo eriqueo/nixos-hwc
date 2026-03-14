@@ -1,4 +1,4 @@
-{ lib, pkgs, haveProton, afewPkg, maildirRoot, osConfig ? {}}:
+{ lib, pkgs, haveProton, afewPkg, osConfig ? {}}:
 
 let
   # Pre-sync script: physically moves Maildir files based on notmuch tags
@@ -7,44 +7,11 @@ let
   preSyncScript = pkgs.writeShellScript "mail-presync" ''
     set -euo pipefail
     export NOTMUCH_CONFIG="$HOME/.notmuch-config"
-    export PATH=${lib.makeBinPath [ pkgs.notmuch pkgs.coreutils pkgs.findutils ]}
 
-    # ── 1. System folder moves (archive / trash / spam) ──────────────────────
-    # afew MailMover reads [MailMover] from ~/.config/afew/config and
-    # physically moves files before mbsync pushes them to Proton.
-    ${afewPkg}/bin/afew --move-mails || true
-
-    # ── 2. Label copy-back (aerc tag → Proton label) ─────────────────────────
-    # For each label folder that exists in Proton (proton/Labels/<label>/),
-    # hard-link any notmuch-tagged messages into that folder so mbsync can
-    # push the label assignment to Proton. Falls back to cp if hard-link fails.
-    LABELS_DIR="${maildirRoot}/proton/Labels"
-    [ -d "$LABELS_DIR" ] || exit 0
-
-    for label_dir in "$LABELS_DIR"/*/; do
-      [ -d "$label_dir" ] || continue
-      label=$(basename "$label_dir")
-      # Skip Bridge's underscore-prefixed internal mirror folders
-      case "$label" in _*) continue ;; esac
-
-      mkdir -p "$label_dir/cur" "$label_dir/new" "$label_dir/tmp"
-
-      ${pkgs.notmuch}/bin/notmuch search --output=files "tag:$label" 2>/dev/null \
-        | while IFS= read -r src; do
-          [ -f "$src" ] || continue
-          fname=$(basename "$src")
-          base_id="''${fname%%:2,*}"
-
-          # Skip if a file with this base ID already exists in the label dir
-          existing=$(find "$label_dir/cur" "$label_dir/new" \
-            -name "''${base_id}:*" -o -name "''${base_id}" 2>/dev/null | head -1)
-          [ -n "$existing" ] && continue
-
-          ln "$src" "$label_dir/cur/$fname" 2>/dev/null \
-            || cp "$src" "$label_dir/cur/$fname" 2>/dev/null \
-            || true
-        done
-    done
+    # Physically move Maildir files based on notmuch tags (archive/trash/spam)
+    # so mbsync can push the moves back to Proton.
+    # -m = move-mails, -a = all messages (max_age=30 in config limits scope)
+    ${afewPkg}/bin/afew -m -a || true
   '';
 in
 {

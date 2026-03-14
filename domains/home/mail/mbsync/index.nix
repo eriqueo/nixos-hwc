@@ -11,7 +11,7 @@ let
     let base = (config.hwc.home.mail.notmuch or {}).maildirRoot or "";
     in if base != "" then base else "${config.hwc.paths.user.mail or "/home/eric/400_mail"}/Maildir";
   svc      = import ./parts/service.nix {
-    inherit lib pkgs afewPkg maildirRoot;
+    inherit lib pkgs afewPkg;
     haveProton = render.haveProton;
   };
 in
