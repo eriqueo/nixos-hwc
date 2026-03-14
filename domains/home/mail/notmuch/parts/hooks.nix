@@ -70,26 +70,36 @@ let
     # ${nm} tag +spam  -- 'path:gmail-business/[Gmail]/Spam/** OR path:gmail-personal/[Gmail]/Spam/**'
   '';
 
-  # Proton Labels → notmuch tags
+  # Proton Labels → notmuch tags (dynamic discovery)
   # Bridge exposes labels as IMAP folders under "Labels/"; mbsync syncs them to
   # proton/Labels/<name>/. notmuch deduplicates by Message-ID so a message in
   # both proton/inbox/ and proton/Labels/finance/ becomes one indexed entry with
   # both +inbox and +finance tags — labels are additive, not exclusive.
+  #
+  # Dynamic approach: scan proton/Labels/ at runtime so new Proton labels are
+  # auto-discovered without needing a NixOS rebuild.
   protonLabelTags = ''
-    # --- Proton label → notmuch tag mappings ---
-    # eriqueokeefe = Proton label for forwarded Gmail personal (eriqueokeefe@gmail.com)
-    # hwcmt        = Proton label for forwarded Gmail business (heartwoodcraftmt@gmail.com)
-    ${nm} tag +finance      -- 'path:proton/Labels/finance/**'
-    ${nm} tag +work         -- 'path:proton/Labels/work/**'
-    ${nm} tag +coaching     -- 'path:proton/Labels/coaching/**'
-    ${nm} tag +tech         -- 'path:proton/Labels/tech/**'
-    ${nm} tag +bank         -- 'path:proton/Labels/bank/**'
-    ${nm} tag +insurance    -- 'path:proton/Labels/insurance/**'
-    ${nm} tag +hide -inbox  -- 'path:proton/Labels/hide/**'
-    ${nm} tag +hwcmt        -- 'path:proton/Labels/hwcmt/**'
-    ${nm} tag +gmail-personal -- 'path:proton/Labels/eriqueokeefe/**'
-    ${nm} tag +proton-native  -- 'path:proton/Labels/proton/**'
-    ${nm} tag +aerc-notes     -- 'path:proton/Labels/aerc/**'
+    # Dynamic Proton label → notmuch tag mapping
+    # Scans proton/Labels/<name>/ directories; skips Bridge's _underscore mirrors
+    _LABELS_DIR="$HOME/400_mail/Maildir/proton/Labels"
+    if [ -d "$_LABELS_DIR" ]; then
+      for _ldir in "$_LABELS_DIR"/*/; do
+        [ -d "$_ldir" ] || continue
+        _lname=$(basename "$_ldir")
+        # Skip Bridge's underscore-prefixed internal mirror folders
+        case "$_lname" in _*) continue ;; esac
+        # Special case: eriqueokeefe folder → gmail-personal tag
+        if [ "$_lname" = "eriqueokeefe" ]; then
+          ${nm} tag +gmail-personal -- "path:proton/Labels/eriqueokeefe/**"
+        else
+          ${nm} tag "+$_lname" -- "path:proton/Labels/$_lname/**"
+        fi
+        # hide label also removes inbox
+        if [ "$_lname" = "hide" ]; then
+          ${nm} tag -inbox -- "path:proton/Labels/hide/**"
+        fi
+      done
+    fi
   '';
 
   tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra;
