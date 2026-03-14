@@ -74,16 +74,7 @@ let
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
 
   # ── Clean styleset generation (already correct) ───────────────────────────
-  stylesetConf = let
-    tokens       = themePart.tokens;
-    viewerTokens = themePart.viewerTokens;
-    userTokens   = themePart.userTokens;
-    renderStyle  = name: style: "${name}.fg = ${style.fg}\n${name}.bg = ${style.bg}\n${name}.bold = ${if style.bold then "true" else "false"}";
-
-    mainSection   = lib.concatStringsSep "\n" (lib.mapAttrsToList renderStyle tokens);
-    viewerSection = "[viewer]\n" + lib.concatStringsSep "\n" (lib.mapAttrsToList renderStyle viewerTokens);
-    userSection   = "[user]\n"   + lib.concatStringsSep "\n" (lib.mapAttrsToList renderStyle userTokens);
-  in lib.concatStringsSep "\n\n" [ mainSection viewerSection userSection ];
+  stylesetConf = themePart.stylesetContent;
 
   # ── Modern aerc.conf (0.21+ best practices) ───────────────────────────────
   aercConf = ''
