@@ -259,7 +259,7 @@ main() {
         if entry=$(generate_changelog_entry "$domain" "$commit_msg"); then
             if append_changelog "$domain/README.md" "$entry"; then
                 log_info "  Added: $entry"
-                ((domains_processed++))
+                ((++domains_processed))
             fi
         else
             log_warn "  Skipped (no meaningful diff or AI failed)"
