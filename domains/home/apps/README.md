@@ -26,3 +26,4 @@ apps/
 
 ## Changelog
 - 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-03-14: Added calcurse and calcure TUI calendar apps with Nord theme
