@@ -23,6 +23,14 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.calcurse ];
 
+    xdg.desktopEntries.calcurse = {
+      name = "calcurse";
+      comment = "Calendar and scheduling application";
+      exec = "kitty --title calcurse calcurse";
+      terminal = false;
+      categories = [ "Office" "Calendar" ];
+    };
+
     # calcurse uses XDG config dir since v3.0
     xdg.configFile."calcurse/conf".text = ''
       appearance.calendarview=monthly
