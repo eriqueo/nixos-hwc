@@ -136,6 +136,7 @@ in
       # Quick virtual folder switching (all accounts share same query names)
       ,i = :cf inbox<Enter>
       ,u = :cf unread<Enter>
+      ,a = :cf Archive<Enter>
       ,s = :cf starred<Enter>
       # Label quick-jump (works from any account tab)
       ,w = :cf work<Enter>

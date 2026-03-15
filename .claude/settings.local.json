@@ -141,7 +141,9 @@
       "Bash(sudo conntrack:*)",
       "Bash(sudo iptables:*)",
       "Bash(pkill:*)",
-      "Bash(zcat:*)"
+      "Bash(zcat:*)",
+      "Read(//home/eric/400_mail/Maildir/proton/**)",
+      "Read(//home/eric/400_mail/Maildir/proton/Labels/**)"
     ],
     "deny": [],
     "ask": [],
