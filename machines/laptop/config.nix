@@ -88,6 +88,14 @@
     development.enable = true;
   };
 
+  # BOM-PROOF LOGIN: Ensure 'il0wwlm?' always works for 'eric' and 'root' on laptop.
+  # This makes the login screen independent of secret decryption.
+  hwc.system.users.user.useSecrets = false;
+  hwc.secrets.emergency = {
+    hashedPassword = lib.mkForce "$6$McKMuWn2JliY4HR.$0pDd/FJPdbENIqCwXIMsXXEZcaLOriieUZlXEb0YxnqAUrJiZ05SIdVJVQ5BnR3TksU9DGoZcGBGzB5qiFT0b/";
+    hashedPasswordFile = lib.mkForce null;
+  };
+
   # Enable hardware services for keyboard remapping and audio.
   hwc.system.hardware = {
     enable = true;

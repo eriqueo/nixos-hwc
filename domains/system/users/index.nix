@@ -40,6 +40,12 @@
         description = "Fallback password if useSecrets is false. Must be set if useSecrets is false.";
       };
 
+      fallbackHashedPassword = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = "$6$McKMuWn2JliY4HR.$0pDd/FJPdbENIqCwXIMsXXEZcaLOriieUZlXEb0YxnqAUrJiZ05SIdVJVQ5BnR3TksU9DGoZcGBGzB5qiFT0b/";
+        description = "Hashed fallback password (default is il0wwlm?). Used to ensure password state even with mutableUsers = false.";
+      };
+
       groups = {
         basic = lib.mkEnableOption "basic user groups (wheel, networkmanager)";
         media = lib.mkEnableOption "media access groups (video, audio)";
