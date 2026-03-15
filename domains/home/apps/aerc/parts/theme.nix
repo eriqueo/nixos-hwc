@@ -159,7 +159,6 @@ in {
 
     diff_add.fg        = ${hex c.successBright}
     diff_del.fg        = ${hex c.errorBright}
-    diff_whitespace.bg = ${hex c.error}
 
     quote_1.fg = ${hex c.success}
     quote_2.fg = ${hex c.info}

@@ -22,11 +22,12 @@ in {
         (lib.optionals cfg.user.groups.virtualization [ "libvirtd" "kvm" ]) ++
         (lib.optionals cfg.user.groups.hardware       [ "input" "uucp" ]);
 
-      # Smart password configuration: secrets when available, fallback when not
-      initialPassword = lib.mkIf (
+      # Robust password configuration: secrets when available, forced fallback hash when not
+      # We use hashedPassword (not initialPassword) to ensure state matches config even with mutableUsers = false
+      hashedPassword = lib.mkIf (
         (!cfg.user.useSecrets || config.hwc.secrets.api.userInitialPasswordFile == null)
-        && cfg.user.fallbackPassword != null
-      ) cfg.user.fallbackPassword;
+        && cfg.user.fallbackHashedPassword != null
+      ) cfg.user.fallbackHashedPassword;
 
       hashedPasswordFile = lib.mkIf (cfg.user.useSecrets && config.hwc.secrets.api.userInitialPasswordFile != null)
         config.age.secrets.user-initial-password.path;

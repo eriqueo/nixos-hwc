@@ -39,7 +39,7 @@ in
         maildirName = "proton";
         # Sync ALL Proton folders except "All Mail" (virtual) and lowercase
         # duplicates exposed by Bridge (Sent/sent, Archive/archive, etc.)
-        sync.wildcards = [ "*" "!All Mail" "!archive" "!drafts" "!sent" "!starred" ];
+        sync.wildcards = [ "*" "!All Mail" "!archive" "!drafts" "!sent" "!starred" "!Labels/_*" ];
         send.msmtpAccount = "proton-hwc";  # Default to work identity
         # Additional sending identities for other addresses on this account
         extraMsmtp = ''

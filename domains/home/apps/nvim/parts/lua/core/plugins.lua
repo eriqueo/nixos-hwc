@@ -226,4 +226,10 @@ require("lazy").setup({
   rocks = {
     enabled = false,
   },
+  checker = {
+    enabled = false,
+  },
+  change_detection = {
+    enabled = false,
+  },
 })

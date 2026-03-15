@@ -21,7 +21,7 @@ let
       startTLS = getOr a "startTLS" (common.startTLS a);
       authLine = if a.type == "proton-bridge" then "auth plain" else "auth on";
       tlsLines = if startTLS then "tls on\ntls_starttls on" else "tls off\ntls_starttls off";
-      certLine = if a.type == "proton-bridge" then "tls_trust_file /etc/ssl/local/proton-bridge.pem" else "";
+      certLine = if a.type == "proton-bridge" then "tls_certcheck off" else "";
       label = a.send.msmtpAccount;
     in ''
       account ${label}
