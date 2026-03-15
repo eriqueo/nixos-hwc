@@ -27,3 +27,4 @@ apps/
 ## Changelog
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-14: Added calcurse and calcure TUI calendar apps with Nord theme
+- 2026-03-15: Added tmux terminal multiplexer with vi keys, C-a prefix, Gruvbox status bar

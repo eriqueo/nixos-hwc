@@ -110,6 +110,9 @@
           blender.enable = lib.mkDefault true;
           freecad.enable = lib.mkDefault false;
 
+          # Terminal Multiplexer
+          tmux.enable = lib.mkDefault true;
+
           # Development & Automation
           n8n.enable = lib.mkDefault false;
           gemini-cli.enable = lib.mkDefault true;
