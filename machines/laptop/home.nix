@@ -11,6 +11,8 @@
 
     # Apps enabled on this machine specifically
     hwc.home.apps = {
+      calcurse.enable = true;
+      calcure.enable = true;
       imv.enable = true;
       qbittorrent.enable = true;
       aider.enable = true;
