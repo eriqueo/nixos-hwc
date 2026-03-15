@@ -31,6 +31,14 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.calcure ];
 
+    xdg.desktopEntries.calcure = {
+      name = "calcure";
+      comment = "Modern TUI calendar and task manager";
+      exec = "kitty --title calcure calcure";
+      terminal = false;
+      categories = [ "Office" "Calendar" ];
+    };
+
     xdg.configFile."calcure/config.ini".text = ''
       [general]
       show_keybindings = yes
