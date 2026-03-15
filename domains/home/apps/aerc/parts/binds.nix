@@ -25,7 +25,6 @@ let
         name = tags.tagStyle t;
         goKey = t.spaceKey or (builtins.substring 0 1 t.tag);
       in if (t.noGoTo or false) then ""
-         else if name == "personal" && t.tag == "personal" then ""
          else "      <Space>g${goKey} = :cf ${name}<Enter>"
     ) tags.allTags)
   );
@@ -76,6 +75,7 @@ in
       a = :modify-labels +archive -inbox<Enter>
       d = :modify-labels +trash -inbox<Enter>
       s = :modify-labels +starred<Enter>
+      S = :modify-labels +spam -inbox<Enter>
 ${exclusiveBinds}
       c = :compose<Enter>
       C = :reply -aq<Enter>
@@ -87,6 +87,8 @@ ${exclusiveBinds}
       <Space>ga = :cf Archive<Enter>
       <Space>gs = :cf sent<Enter>
       <Space>gd = :cf trash<Enter>
+      <Space>gS = :cf spam<Enter>
+      <Space>gH = :cf hide_my_email<Enter>
 ${goToBinds}
 
       # --- Uppercase Verb for Flexible Path ---
@@ -103,7 +105,9 @@ ${goToBinds}
       <Space>mu = :modify-labels +unread<Enter>
       <Space>ma = :modify-labels +archive -inbox<Enter>
       <Space>m* = :modify-labels +starred<Enter>
+      <Space>mh = :modify-labels +hwcmt<Enter>
       <Space>md = :modify-labels +trash -inbox<Enter>
+      <Space>mS = :modify-labels +spam -inbox<Enter>
       <Space>ml = :modify-labels<space>
 ${additiveBinds}
 

@@ -11,12 +11,14 @@ let
     { tag = "bank";           color = "#8BE9FD"; spaceKey = "b"; }
     { tag = "insurance";      color = "#50FA7B"; extra = "insurance.dim = true"; spaceKey = "i"; noGoTo = true; }
     { tag = "tech";           color = "#BD93F9"; key = "t"; }
-    { tag = "gmail-personal"; color = "#FF79C6"; display = "personal"; spaceKey = "p"; }
     { tag = "personal";       color = "#FF79C6"; key = "p"; }
+    { tag = "family";         color = "#98C379"; spaceKey = "y"; }
   ];
 
   flagTags = [
-    { tag = "starred"; color = "#FF5555"; extra = "starred.bold = true"; key = "s"; spaceKey = "*"; }
+    { tag = "starred";      color = "#FF5555"; extra = "starred.bold = true"; key = "s"; spaceKey = "*"; }
+    { tag = "hwcmt";        color = "#FFB86C"; extra = "hwcmt.dim = true"; spaceKey = "h"; }
+    { tag = "eriqueokeefe"; color = "#FF79C6"; spaceKey = "e"; }
   ];
 
   allTags = flagTags ++ categoryTags;

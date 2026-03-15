@@ -11,13 +11,15 @@ let
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
   queries = ''
-    inbox     = tag:inbox AND NOT tag:trash
-    unread    = tag:unread AND NOT tag:trash
-    sent      = tag:sent
-    drafts    = tag:draft
-    Archive   = tag:archive AND NOT tag:trash
-    trash     = tag:trash
-    important = tag:important AND NOT tag:trash
+    inbox         = tag:inbox AND NOT tag:trash
+    unread        = tag:unread AND NOT tag:trash
+    sent          = tag:sent
+    drafts        = tag:draft
+    Archive       = tag:archive AND NOT tag:trash
+    trash         = tag:trash
+    spam          = tag:spam
+    important     = tag:important AND NOT tag:trash
+    hide_my_email = path:proton/Folders/hide_my_email/**
 ${tagQueries}
   '';
 
@@ -48,8 +50,7 @@ ${tagQueries}
     lib.filter (s: s != "") (map (t:
       let name = tagStyle t;
           query = t.query or "tag:${t.tag} AND NOT tag:trash";
-      in if name == "personal" && t.tag == "personal" then ""  # skip alias (gmail-personal covers it)
-         else "    ${name}${lib.fixedWidthString (10 - builtins.stringLength name) " " ""} = ${query}"
+      in "    ${name}${lib.fixedWidthString (10 - builtins.stringLength name) " " ""} = ${query}"
     ) tagDefs)
   );
 
@@ -91,7 +92,7 @@ in
       enable-osc8 = true
 
       [ui]
-      index-columns = tags<16,date<12,sender<17,flags>4,subject<*
+      index-columns = tags<12,date<10,from<16,to<14,flags>4,subject<*
       threading-enabled = true
       confirm-quit = false
       styleset-name = dracula
@@ -102,10 +103,11 @@ in
       fuzzy-complete = true
       tab-title-account = {{.Account}}{{if .Unread}} ({{.Unread}}){{end}}
 
-      # Live column templates (required for the index-columns line above)
-      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude "notifications") (exclude "notification") (exclude "action") (exclude `^aerc`) ${tagStyleMapCases} (default "default") | join " " }}
+      # Live column templates
+      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude "notifications") (exclude "notification") (exclude "action") (exclude `^aerc`) (exclude "hide_my_email") ${tagStyleMapCases} (default "default") | join " " }}
       column-date    = {{.Style (.DateAutoFormat .Date.Local) ${tagSwitch}}}
-      column-sender  = {{.Style (index (.From | names) 0) ${tagSwitch}}}
+      column-from    = {{.Style (index (.From | names) 0) ${tagSwitch}}}
+      column-to      = {{.Style (index (.To | names) 0) ${tagSwitch}}}
       column-flags   = {{.Flags | join ""}}
       column-subject = {{.ThreadPrefix}}{{if .ThreadFolded}}{{printf "{%d}" .ThreadCount}}{{end}}{{.Style .Subject ${tagSwitch}}}
       column-separator = " | "
