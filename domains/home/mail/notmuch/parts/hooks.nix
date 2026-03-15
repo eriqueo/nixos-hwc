@@ -88,12 +88,7 @@ let
         _lname=$(basename "$_ldir")
         # Skip Bridge's underscore-prefixed internal mirror folders
         case "$_lname" in _*) continue ;; esac
-        # Special case: eriqueokeefe folder → gmail-personal tag
-        if [ "$_lname" = "eriqueokeefe" ]; then
-          ${nm} tag +gmail-personal -- "path:proton/Labels/eriqueokeefe/**"
-        else
-          ${nm} tag "+$_lname" -- "path:proton/Labels/$_lname/**"
-        fi
+        ${nm} tag "+$_lname" -- "path:proton/Labels/$_lname/**"
         # hide label also removes inbox
         if [ "$_lname" = "hide" ]; then
           ${nm} tag -inbox -- "path:proton/Labels/hide/**"
