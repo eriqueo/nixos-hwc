@@ -98,6 +98,18 @@ in
       };
     };
 
+    # The Sensel (SNSL002D) touchpad's i2c_hid_acpi driver fires a spurious
+    # lid-closed event on every init, causing libinput to suspend the touchpad
+    # and silently drop scroll events (pointer still works via the Mouse interface).
+    # Marking the lid switch as unreliable stops libinput from using it to gate
+    # touchpad input.
+    environment.etc."libinput/local-overrides.quirks".text = ''
+      [Sensel Touchpad Lid Switch Fix]
+      MatchUdevType=switch
+      MatchName=Lid Switch
+      AttrLidSwitchReliability=unreliable
+    '';
+
     #==========================================================================
     # TOUCHPAD FIX (Sensel i2c touchpad - reload module for scroll support)
     #==========================================================================
@@ -299,6 +311,7 @@ in
     # Gaming mouse support (SteelSeries, etc.)
     services.ratbagd.enable = lib.mkIf cfg.mouse.enable true;
     services.udev.packages = lib.optionals cfg.mouse.enable [ pkgs.rivalcfg ];
+    services.fwupd.enable = lib.mkIf cfg.mouse.enable true;
 
     #==========================================================================
     # PERIPHERALS (PRINTING)

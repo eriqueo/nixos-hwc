@@ -15,6 +15,7 @@ let
     unread    = tag:unread AND NOT tag:trash
     sent      = tag:sent
     drafts    = tag:draft
+    Archive   = tag:archive AND NOT tag:trash
     trash     = tag:trash
     starred   = tag:starred AND NOT tag:trash
     important = tag:important AND NOT tag:trash
@@ -46,7 +47,7 @@ let
       [${name}]
       source              = notmuch://${maildirBase}
       maildir-store       = ${maildirBase}
-      folders-exclude     = ~^\\..*,~^proton$,~^gmail-business$,~^gmail-personal$
+      folders-exclude     = ~^\\..*,~^proton$,~^proton-hwc$,~^proton-personal$,~^gmail-business$,~^gmail-personal$,~^acc:,~^hwc_email$,~^proton-native$
       multi-file-strategy = act-one-delete-rest
       query-map           = ${qmPath}
       from                = ${from}
@@ -58,7 +59,7 @@ let
     [unified]
     source              = notmuch://${maildirBase}
     maildir-store       = ${maildirBase}
-    folders-exclude     = ~^\\..*,~^proton$,~^gmail-business$,~^gmail-personal$
+    folders-exclude     = ~^\\..*,~^proton$,~^proton-hwc$,~^proton-personal$,~^gmail-business$,~^gmail-personal$,~^acc:,~^hwc_email$,~^proton-native$
     multi-file-strategy = act-one-delete-rest
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries-unified
     from                = Eric <eric@iheartwoodcraft.com>
@@ -89,7 +90,7 @@ let
     styleset-name = hwc-theme
     dirlist-tree = true
     dirlist-collapse = 1
-    dirlist-exclude = ^\..*
+    dirlist-exclude = ^\..*|^proton$|^proton-hwc$|^proton-personal$|^gmail-business$|^gmail-personal$|^acc:|^hwc_email$|^proton-native$
     mouse-enabled = true
     fuzzy-complete = true
     tab-title-account = {{.Account}}{{if .Unread}} ({{.Unread}}){{end}}
