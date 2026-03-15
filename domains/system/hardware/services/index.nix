@@ -98,16 +98,12 @@ in
       };
     };
 
-    # The Sensel (SNSL002D) touchpad's i2c_hid_acpi driver fires a spurious
-    # lid-closed event on every init, causing libinput to suspend the touchpad
-    # and silently drop scroll events (pointer still works via the Mouse interface).
-    # Marking the lid switch as unreliable stops libinput from using it to gate
-    # touchpad input.
-    environment.etc."libinput/local-overrides.quirks".text = ''
-      [Sensel Touchpad Lid Switch Fix]
-      MatchUdevType=switch
-      MatchName=Lid Switch
-      AttrLidSwitchReliability=unreliable
+    # The Sensel (SNSL002D) touchpad's i2c_hid_acpi driver fires spurious
+    # lid-closed events, causing libinput to suspend the touchpad and drop
+    # scroll events. Hiding the lid switch from libinput fixes this — actual
+    # lid-close sleep is handled by logind via ACPI, independent of libinput.
+    services.udev.extraRules = ''
+      KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Lid Switch", ENV{LIBINPUT_IGNORE_DEVICE}="1"
     '';
 
     #==========================================================================
