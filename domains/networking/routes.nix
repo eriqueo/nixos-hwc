@@ -298,6 +298,8 @@ in
       mode = "port";
       port = 2443;
       upstream = "http://127.0.0.1:5678";
+      # Strip port from Origin header - n8n validates origin against hostname only
+      headers = { Origin = "https://hwc.ocelot-wahoo.ts.net"; };
     }
 
     # Firefly III - personal finance manager (port mode - Laravel subpath-hostile)

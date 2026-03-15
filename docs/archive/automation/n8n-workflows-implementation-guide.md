@@ -68,7 +68,6 @@ You need to create and encrypt the Slack webhook URL:
 sudo age-keygen -y /etc/age/keys.txt
 
 # 3. Encrypt the webhook URL
-echo "https://hooks.slack.com/services/YOUR/WEBHOOK/URL" | \
   age -r <pubkey> > /home/eric/.nixos/domains/secrets/parts/server/slack-webhook-url.age
 
 # 4. Rebuild NixOS to activate the secret

@@ -138,9 +138,10 @@ in
     networking.firewall.interfaces."tailscale0".allowedTCPPorts =
       lib.optional (config.networking.interfaces ? "tailscale0") cfg.port;
 
-    # Tailscale Funnel service - expose /webhook publicly on port 10000
+    # Tailscale Funnel service - expose n8n publicly on port 10000
+    # Full access enabled for external automation tools (Manus AI, etc.)
     systemd.services.tailscale-funnel-n8n = {
-      description = "Tailscale Funnel for n8n webhook (public Slack integration)";
+      description = "Tailscale Funnel for n8n (public access on port 10000)";
       after = [ "network.target" "tailscaled.service" "podman-n8n.service" ];
       wants = [ "tailscaled.service" "podman-n8n.service" ];
       wantedBy = [ "multi-user.target" ];
@@ -149,7 +150,7 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";
-        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --bg --https=10000 --set-path=/webhook http://127.0.0.1:${toString cfg.port}";
+        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --bg --https=10000 http://127.0.0.1:${toString cfg.port}";
         ExecStop = "${pkgs.tailscale}/bin/tailscale funnel --https=10000 off";
       };
     };
