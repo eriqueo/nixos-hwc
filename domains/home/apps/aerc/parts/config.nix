@@ -11,15 +11,15 @@ let
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 
   queries = ''
-    inbox         = tag:inbox AND NOT tag:trash
-    unread        = tag:unread AND NOT tag:trash
-    sent          = tag:sent
-    drafts        = tag:draft
-    Archive       = tag:archive AND NOT tag:trash
-    trash         = tag:trash
-    spam          = tag:spam
-    important     = tag:important AND NOT tag:trash
-    hide_my_email = path:proton/Folders/hide_my_email/**
+    inbox_i        = tag:inbox AND NOT tag:trash
+    unread_u       = tag:unread AND NOT tag:trash
+    sent_s         = tag:sent
+    drafts         = tag:draft
+    Archive_a      = tag:archive AND NOT tag:trash
+    trash_d        = tag:trash
+    spam_z         = tag:spam
+    important      = tag:important AND NOT tag:trash
+    hide_my_email  = path:proton/Folders/hide_my_email/**
 ${tagQueries}
   '';
 
@@ -32,7 +32,9 @@ ${tagQueries}
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp
-    default             = inbox
+    default             = inbox_i
+    enable-folders-sort = true
+    folders-sort        = inbox_i,unread_u,action_!,pending_?,important,drafts,sent_s,Archive_a,trash_d,spam_z
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
@@ -45,12 +47,23 @@ ${tagQueries}
   # Derive the style name for a tag (uses display if set, else tag)
   tagStyle = tags.tagStyle;
 
-  # Derive notmuch query-map entries from tagDefs (tags that aren't pure aliases)
+  # Category tag names for inbox-scoped queries
+  categoryNames = builtins.listToAttrs (map (t: { name = t.tag; value = true; }) tags.categoryTags);
+  isCategoryTag = t: categoryNames ? ${t.tag};
+
+  # Derive notmuch query-map entries from tagDefs
+  # Category tags are inbox-scoped (only show active items); flag tags show all
   tagQueries = lib.concatStringsSep "\n" (
     lib.filter (s: s != "") (map (t:
       let name = tagStyle t;
-          query = t.query or "tag:${t.tag} AND NOT tag:trash";
-      in "    ${name}${lib.fixedWidthString (10 - builtins.stringLength name) " " ""} = ${query}"
+          baseQuery = t.query or "tag:${t.tag} AND NOT tag:trash";
+          # Category tags and workflow flags are inbox-scoped (active items only)
+          inboxScoped = isCategoryTag t || t.tag == "action" || t.tag == "pending";
+          query = if inboxScoped then "(${baseQuery}) AND tag:inbox"
+                  else baseQuery;
+          n = 18 - builtins.stringLength name;
+          pad = if n > 0 then lib.fixedWidthString n " " "" else "";
+      in "    ${name}${pad} = ${query}"
     ) tagDefs)
   );
 
@@ -104,7 +117,7 @@ in
       tab-title-account = {{.Account}}{{if .Unread}} ({{.Unread}}){{end}}
 
       # Live column templates
-      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude "notifications") (exclude "notification") (exclude "action") (exclude `^aerc`) (exclude "hide_my_email") ${tagStyleMapCases} (default "default") | join " " }}
+      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude "notifications") (exclude "notification") (exclude "action") (exclude `^aerc`) (exclude "hide_my_email") (exclude "website") ${tagStyleMapCases} (default "default") | join " " }}
       column-date    = {{.Style (.DateAutoFormat .Date.Local) ${tagSwitch}}}
       column-from    = {{.Style (index (.From | names) 0) ${tagSwitch}}}
       column-to      = {{.Style (index (.To | names) 0) ${tagSwitch}}}
@@ -115,12 +128,13 @@ in
       [viewer]
 
       pager = ${pkgs.less}/bin/less -R
-      alternatives = text/plain,text/html
+      alternatives = text/html,text/plain
       [compose]
       editor = ${pkgs.neovim}/bin/nvim
       lf-editor = true
       empty-subject-warning = true
       address-book-cmd = notmuch address --format=text --output=recipients "%s"
+      file-picker-cmd = ${pkgs.yazi}/bin/yazi --chooser-file %s
       [filters]
       text/html = ${pkgs.aerc}/libexec/aerc/filters/html
       text/plain = ${pkgs.aerc}/libexec/aerc/filters/wrap -w $(${pkgs.ncurses}/bin/tput cols) | ${pkgs.aerc}/libexec/aerc/filters/colorize
@@ -131,6 +145,12 @@ in
       application/pdf = ${pkgs.poppler-utils}/bin/pdftotext -layout - -
       application/json = ${pkgs.jq}/bin/jq -C . 2>/dev/null || cat -
       subject,~^\[PATCH = ${pkgs.aerc}/libexec/aerc/filters/hldiff
+
+      [openers]
+      text/html = ${pkgs.xdg-utils}/bin/xdg-open
+      text/* = ${pkgs.kitty}/bin/kitty ${pkgs.neovim}/bin/nvim
+      application/pdf = ${pkgs.zathura}/bin/zathura
+      image/* = ${pkgs.xdg-utils}/bin/xdg-open
 
       [multipart-converters]
       text/html = ${pkgs.pandoc}/bin/pandoc -f markdown -t html --standalone

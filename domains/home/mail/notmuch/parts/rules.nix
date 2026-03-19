@@ -9,6 +9,7 @@ let
   notificationQ = orJoin (map mkFrom (R.notificationSenders or []));
   financeQ      = orJoin (map mkFrom (R.financeSenders      or []));
   actionQ       = orJoin (map mkSubj (R.actionSubjects      or []));
+  trashQ        = orJoin (map mkFrom (R.trashSenders        or []));
 
   # Emit a real newline using a multi-line string
   line = tag: ops: q:
@@ -16,10 +17,13 @@ let
 notmuch tag ${tag} ${ops} -- '${q}'
 '';
 
+  # Scope rules to tag:new so they only process freshly-indexed messages
+  scopeNew = q: if q == "" then "" else "tag:new AND (${q})";
   rulesText = ''
-${line "+newsletter"  "-inbox" newsletterQ}
-${line "+notification" "-inbox" notificationQ}
-${line "+finance"     "-inbox" financeQ}
-${line "+action"      ""       actionQ}
+${line "+newsletter"  "-inbox" (scopeNew newsletterQ)}
+${line "+notification" "-inbox" (scopeNew notificationQ)}
+${line "+finance"     "-inbox" (scopeNew financeQ)}
+${line "+action"      ""       (scopeNew actionQ)}
+${line "+trash"       "-inbox -unread" (scopeNew trashQ)}
 '';
 in { text = rulesText; }

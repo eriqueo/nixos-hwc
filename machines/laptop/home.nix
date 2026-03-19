@@ -19,6 +19,17 @@
       scraper.enable = true;
     };
 
+    # Calendar: Google Calendar sync via khal + vdirsyncer
+    hwc.home.mail.calendar = {
+      enable = true;
+      accounts = {
+        hwcmt = {
+          email = "heartwoodcraftmt@gmail.com";
+          color = "dark green";
+        };
+      };
+    };
+
     # Shell: MCP configured for laptop context
     hwc.home.shell = {
       enable = true;

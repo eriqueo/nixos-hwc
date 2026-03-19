@@ -1,20 +1,26 @@
 { lib, pkgs, haveProton, afewPkg, osConfig ? {}}:
-
-let
-  # Pre-sync script: physically moves Maildir files based on notmuch tags
-  # so mbsync can push the moves back to Proton.
-  # Runs: afew --move-mails (archive/trash/spam) + label copy-back
-  preSyncScript = pkgs.writeShellScript "mail-presync" ''
-    set -euo pipefail
-    export NOTMUCH_CONFIG="$HOME/.notmuch-config"
-
-    # Physically move Maildir files based on notmuch tags (archive/trash/spam)
-    # so mbsync can push the moves back to Proton.
-    # -m = move-mails, -a = all messages (max_age=30 in config limits scope)
-    ${afewPkg}/bin/afew -m -a || true
-  '';
-in
 {
+  home.file.".local/bin/sync-mail" = {
+    text = ''
+#!/usr/bin/env bash
+set -euo pipefail
+export NOTMUCH_CONFIG="$HOME/.notmuch-config"
+
+echo "$(date): Starting mail sync..."
+
+# Move tagged messages to correct IMAP folders BEFORE mbsync
+${afewPkg}/bin/afew -m -a || true
+
+# Sync all accounts
+${pkgs.isync}/bin/mbsync -a
+
+# Index new mail (triggers post-new hook for tagging)
+${pkgs.notmuch}/bin/notmuch new
+
+echo "$(date): Mail sync completed"
+    '';
+    executable = true;
+  };
   systemd.user.services.mbsync = {
     Unit = {
       Description = "mbsync all";
@@ -29,16 +35,11 @@ in
 
       ExecStartPre = [
         "${pkgs.coreutils}/bin/mkdir -p %h/.cache"
-        # Run pre-sync moves so mbsync pushes them to Proton
-        "${preSyncScript}"
       ];
 
+      # sync-mail handles: afew move-mails → mbsync → notmuch new
       ExecStart =
         "${pkgs.util-linux}/bin/flock -n %h/.cache/mbsync.lock -c '%h/.local/bin/sync-mail'";
-
-      # Ensure hooks can find notmuch; never fail the unit on hook errors
-      ExecStartPost =
-        "${pkgs.bash}/bin/bash -lc '${pkgs.notmuch}/bin/notmuch new || true'";
 
       Environment = [
         # include notmuch in PATH for any child processes (hooks)
