@@ -140,6 +140,23 @@ in
       enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable MCP configuration file generation for Claude Desktop"; };
       includeConfigDir = lib.mkOption { type = lib.types.bool; default = false; description = "Include user config directory in filesystem MCP server (laptop only)"; };
       includeServerTools = lib.mkOption { type = lib.types.bool; default = false; description = "Include server-specific MCP tools (postgres, prometheus, puppeteer)"; };
+      n8n = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Include n8n MCP server via supergateway bridge";
+        };
+        url = lib.mkOption {
+          type = lib.types.str;
+          default = "https://hwc.ocelot-wahoo.ts.net:2443/mcp-server/http";
+          description = "n8n MCP server HTTP endpoint URL";
+        };
+        accessToken = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "n8n MCP Bearer access token (use agenix secret; do not hardcode in git)";
+        };
+      };
     };
   };
 
@@ -453,6 +470,18 @@ in
           memory = {
             command = "npx";
             args = [ "-y" "@modelcontextprotocol/server-memory" ];
+          };
+        } // lib.optionalAttrs (cfg.mcp.n8n.enable && cfg.mcp.n8n.accessToken != "") {
+          n8n-mcp = {
+            command = "npx";
+            args = [
+              "-y"
+              "supergateway"
+              "--streamableHttp"
+              cfg.mcp.n8n.url
+              "--header"
+              "authorization:Bearer ${cfg.mcp.n8n.accessToken}"
+            ];
           };
         } // lib.optionalAttrs cfg.mcp.includeServerTools {
           postgres = {
