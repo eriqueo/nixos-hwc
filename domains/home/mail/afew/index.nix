@@ -65,7 +65,7 @@ folders = proton/inbox proton/Archive proton/Trash proton/Spam
 rename = True
 max_age = 30
 
-proton/inbox = 'tag:archive':proton/Archive 'tag:trash':proton/Trash 'tag:spam':proton/Spam
+proton/inbox = 'tag:archive':proton/Archive 'tag:trash':proton/Trash 'tag:spam':proton/Spam 'NOT tag:inbox':proton/Archive
 proton/Archive = 'tag:trash':proton/Trash
 proton/Trash = 'tag:inbox':proton/inbox
 proton/Spam = 'tag:inbox':proton/inbox

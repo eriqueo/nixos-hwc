@@ -35,7 +35,7 @@ in
       vimAlias = true;
 
       # Load the lua configuration
-      initLua = ''
+      extraLuaConfig = ''
         require("core")
       '';
     };
@@ -55,6 +55,9 @@ in
       "nvim/lua/plugins/treesitter.lua".source = "${luaDir}/plugins/treesitter.lua";
       "nvim/lua/plugins/lsp.lua".source = "${luaDir}/plugins/lsp.lua";
       "nvim/lua/plugins/cmp.lua".source = "${luaDir}/plugins/cmp.lua";
+
+      # Lua language server config to recognize vim global
+      "nvim/.luarc.json".source = ./parts/.luarc.json;
     };
 
     #==========================================================================

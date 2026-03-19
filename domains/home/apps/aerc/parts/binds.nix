@@ -2,21 +2,15 @@
 let
   tags = import ./tags.nix { inherit lib; };
 
-  # Single-key exclusive category bindings (w, f, t, p — removes other categories)
-  exclusiveBinds = lib.concatStringsSep "\n" (
-    lib.filter (s: s != "") (map (t:
-      if t ? key then "      ${t.key} = :modify-labels ${tags.exclusiveCmd t}<Enter>"
-      else ""
-    ) tags.categoryTags)
-  );
-
-  # Space-leader additive bindings (just add tag, don't remove others)
-  additiveBinds = lib.concatStringsSep "\n" (map (t:
-    let
-      spaceKey = t.spaceKey or (builtins.substring 0 1 t.tag);
-      name = tags.tagStyle t;
-    in "      <Space>m${spaceKey} = :modify-labels +${t.tag} -inbox<Enter>"
+  # Exclusive category bindings under <Space>m leader (adds tag, removes all other categories)
+  categoryBinds = lib.concatStringsSep "\n" (map (t:
+    "      <Space>m${t.spaceKey} = :modify-labels ${tags.exclusiveCmd t}<Enter>"
   ) tags.categoryTags);
+
+  # Additive flag bindings under <Space>m leader (coexist with categories)
+  flagBinds = lib.concatStringsSep "\n" (map (t:
+    "      <Space>m${t.spaceKey} = :modify-labels +${t.tag}<Enter>"
+  ) tags.flagTags);
 
   # Space-leader go-to-folder bindings
   goToBinds = lib.concatStringsSep "\n" (
@@ -45,12 +39,12 @@ in
       <C-k> = :prev-folder<Enter>
       <C-p> = :next-account<Enter>
       <C-n> = :prev-account<Enter>
-      <C-r> = :exec sync-mail<Enter>
+      <C-r> = :exec ${config.home.homeDirectory}/.local/bin/sync-mail<Enter>
 
       # Show your actual binds.conf instead of built-in defaults
-      ? = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
+      ; = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
 
-      # Switch styleset on the fly (available: dracula, nord, catppuccin, solarized-dark, blue, pink, monochrome, default, hwc-theme)
+      # Switch styleset on the fly
       <Space>ts = :reload -s<space>
 
 
@@ -70,46 +64,54 @@ in
       D = :delete<Enter>
       u = :unread<Enter>
 
-
-      # Category labels (exclusive — replaces other categories)
+      # Static system tags (single-key for speed)
       a = :modify-labels +archive -inbox<Enter>
       d = :modify-labels +trash -inbox<Enter>
-      s = :modify-labels +starred<Enter>
-      S = :modify-labels +spam -inbox<Enter>
-${exclusiveBinds}
+
       c = :compose<Enter>
       C = :reply -aq<Enter>
 
-
-      # Navigation menu (static folders + derived tag folders)
-      <Space>gi = :cf inbox<Enter>
-      <Space>gu = :cf unread<Enter>
-      <Space>ga = :cf Archive<Enter>
-      <Space>gs = :cf sent<Enter>
-      <Space>gd = :cf trash<Enter>
-      <Space>gS = :cf spam<Enter>
-      <Space>gH = :cf hide_my_email<Enter>
+      # Navigation (static folders + derived tag folders)
+      <Space>gi = :cf inbox_i<Enter>
+      <Space>gu = :cf unread_u<Enter>
+      <Space>ga = :cf Archive_a<Enter>
+      <Space>gs = :cf sent_s<Enter>
+      <Space>gd = :cf trash_d<Enter>
+      <Space>gz = :cf spam_z<Enter>
+      <Space>g_ = :cf hide_my_email<Enter>
 ${goToBinds}
 
-      # --- Uppercase Verb for Flexible Path ---
+      # Flexible path
       X = :mv<space>
       Y = :cp<space>
 
-      # Filter and Sort 
+      # Filter and Sort
       <Space>ff = :filter<space>
       <Space>fs = :search<space>
       <Space>sd = :sort -r date<Enter>
       <Space>tt = :toggle-threads<Enter>
 
-      # Label menu with space m leader (static + derived additive bindings)
+      # Auto-trash sender management
+      <Space>ft = :pipe -b -m ${config.home.homeDirectory}/.local/bin/aerc-trash-sender<Enter>:modify-labels +trash -inbox -unread<Enter>
+      <Space>; = :term ${config.home.homeDirectory}/.local/bin/aerc-show-trash-senders<Enter>
+
+      # === ALL MARKING UNDER <Space>m LEADER ===
       <Space>mu = :modify-labels +unread<Enter>
       <Space>ma = :modify-labels +archive -inbox<Enter>
-      <Space>m* = :modify-labels +starred<Enter>
-      <Space>mh = :modify-labels +hwcmt<Enter>
       <Space>md = :modify-labels +trash -inbox<Enter>
-      <Space>mS = :modify-labels +spam -inbox<Enter>
+      <Space>mz = :modify-labels +spam -inbox<Enter>
       <Space>ml = :modify-labels<space>
-${additiveBinds}
+
+      # Toggle flags off
+      <Space>mx = :modify-labels -action<Enter>
+      <Space>m. = :modify-labels -pending<Enter>
+      <Space>mr = :modify-labels -important<Enter>
+
+      # Additive flag marking (coexists with categories)
+${flagBinds}
+
+      # Exclusive category marking (adds tag + removes all other categories)
+${categoryBinds}
 
 
       [view]
@@ -118,17 +120,20 @@ ${additiveBinds}
       J = :next<Enter>
       K = :prev<Enter>
       r = :reply<Enter>
-      R = :reply -a<Enter>
+      R = :reply -aq<Enter>
       f = :forward<Enter>
       a = :modify-labels +archive -inbox<Enter>:close<Enter>
       d = :modify-labels +trash -inbox<Enter>:close<Enter>
-      s = :modify-labels +starred<Enter>
       H = :toggle-headers<Enter>
       u = :open-link<Enter>
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
       S = :save<space>
-      U = :pipe -mb urlscan -r<Enter>
+      U = :pipe -m urlscan<Enter>
+      l = :next-part<Enter>
+      h = :prev-part<Enter>
+      o = :open<Enter>
+      I = :pipe -p khal import<Enter>
 
       [view::passthrough]
       $noinherit = true
@@ -152,7 +157,8 @@ ${additiveBinds}
       n = :abort<Enter>
       e = :edit<Enter>
       p = :postpone<Enter>
-      a = :attach<space>
+      a = :attach<Enter>
+      A = :attach<space>
       H = :multipart text/html<Enter>
 
       [terminal]
@@ -160,8 +166,40 @@ ${additiveBinds}
       $ex = <C-x>
     '';
 
+    ".local/bin/aerc-trash-sender" = {
+      text = ''
+        #!/usr/bin/env bash
+        set -euo pipefail
+        sender=$(sed -n 's/^From:.*<\([^>]*\)>.*/\1/p;s/^From: *\([^<]*\)$/\1/p' | head -n1)
+        if [ -n "$sender" ]; then
+          mkdir -p ~/.config/notmuch
+          echo "$sender" >> ~/.config/notmuch/trash-senders
+          echo "Sender added to auto-trash list: $sender"
+        else
+          echo "Could not extract sender address" >&2
+          exit 1
+        fi
+      '';
+      executable = true;
+    };
+
+    ".local/bin/aerc-show-trash-senders" = {
+      text = ''
+        #!/usr/bin/env bash
+        echo "=== AUTO-TRASH SENDERS ==="
+        if [ -f ~/.config/notmuch/trash-senders ]; then
+          sort ~/.config/notmuch/trash-senders | column
+        else
+          echo "(none)"
+        fi
+        echo
+        read -rp "Press Enter to close..."
+      '';
+      executable = true;
+    };
+
     ".config/ov/config.yaml".text = ''
-        
+
         # This is the official less-compatible config for ov
         # j/k now scroll, no "jump target" prompt ever
 
@@ -244,7 +282,6 @@ ${additiveBinds}
             - "N"
           help:
             - "h"
-        '';   # ← end of the block
+        '';   # <- end of the block
     };
 }
-

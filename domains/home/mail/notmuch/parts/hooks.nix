@@ -36,6 +36,12 @@ let
     ${nm} tag -action -newsletter -notification -- 'tag:sent OR tag:trash OR tag:spam OR tag:draft'
   '';
 
+  # Strip the transient "new" tag after all processing is done
+  removeNew = ''
+    # Remove transient new tag — must be last
+    ${nm} tag -new -- 'tag:new'
+  '';
+
   extra =
     if (builtins.isString extraHook && extraHook != "") then "\n" + extraHook else "";
 
@@ -43,31 +49,21 @@ let
     # Proton: tag by destination address (all addresses share one IMAP connection)
     # HWC addresses: eric@iheartwoodcraft.com, office@, admin@, g_hwcmt@proton.me
     ${nm} tag +proton-hwc -- \
-      'path:proton/** AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com OR to:g_hwcmt@proton.me OR from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com OR from:g_hwcmt@proton.me)'
+      'tag:new AND path:proton/** AND (to:eric@iheartwoodcraft.com OR to:office@iheartwoodcraft.com OR to:admin@iheartwoodcraft.com OR to:g_hwcmt@proton.me OR from:eric@iheartwoodcraft.com OR from:office@iheartwoodcraft.com OR from:admin@iheartwoodcraft.com OR from:g_hwcmt@proton.me)'
     # Personal Proton addresses: eriqueo@proton.me, g_erique@proton.me
-    ${nm} tag +proton-personal -- 'path:proton/** AND NOT tag:proton-hwc'
+    ${nm} tag +proton-personal -- 'tag:new AND path:proton/** AND NOT tag:proton-hwc'
 
-    # Gmail account tags (disabled - Gmail now forwards to Proton; paths no longer synced)
-    # ${nm} tag +gmail-business -- 'path:gmail-business/**'
-    # ${nm} tag +gmail-personal -- 'path:gmail-personal/**'
+    # Domain rollup tags (work vs personal) - Proton-only
+    ${nm} tag +hwc -- 'tag:new AND tag:proton-hwc'
+    ${nm} tag +personal -- 'tag:new AND tag:proton-personal'
 
-    # Domain rollup tags (work vs personal) - Gmail paths removed, Proton-only now
-    ${nm} tag +hwc -- 'tag:proton-hwc'
-    ${nm} tag +personal -- 'tag:proton-personal'
-
-    # Folder state tags - Proton only (Gmail sync disabled)
-    ${nm} tag +inbox -- 'path:proton/inbox/**'
-    ${nm} tag +sent -inbox -unread -- 'path:proton/Sent/**'
-    ${nm} tag +draft -inbox -unread -- 'path:proton/Drafts/**'
-    ${nm} tag +trash -inbox -unread -- 'path:proton/Trash/**'
-    ${nm} tag +spam -inbox -unread -- 'path:proton/Spam/**'
-    ${nm} tag +archive -inbox -- 'path:proton/Archive/**'
-    # Disabled Gmail folder state tags:
-    # ${nm} tag +inbox -- 'path:gmail-business/inbox/** OR path:gmail-personal/inbox/**'
-    # ${nm} tag +sent  -- 'path:gmail-business/[Gmail]/Sent\ Mail/** OR path:gmail-personal/[Gmail]/Sent\ Mail/**'
-    # ${nm} tag +draft -- 'path:gmail-business/[Gmail]/Drafts/** OR path:gmail-personal/[Gmail]/Drafts/**'
-    # ${nm} tag +trash -- 'path:gmail-business/[Gmail]/Trash/** OR path:gmail-personal/[Gmail]/Trash/**'
-    # ${nm} tag +spam  -- 'path:gmail-business/[Gmail]/Spam/** OR path:gmail-personal/[Gmail]/Spam/**'
+    # Folder state tags — scoped to tag:new so manual tag changes are preserved
+    ${nm} tag +inbox -- 'tag:new AND path:proton/inbox/**'
+    ${nm} tag +sent -inbox -unread -- 'tag:new AND path:proton/Sent/**'
+    ${nm} tag +draft -inbox -unread -- 'tag:new AND path:proton/Drafts/**'
+    ${nm} tag +trash -inbox -unread -- 'tag:new AND path:proton/Trash/**'
+    ${nm} tag +spam -inbox -unread -- 'tag:new AND path:proton/Spam/**'
+    ${nm} tag +archive -inbox -- 'tag:new AND path:proton/Archive/**'
   '';
 
   # Proton Labels → notmuch tags (dynamic discovery)
@@ -88,16 +84,16 @@ let
         _lname=$(basename "$_ldir")
         # Skip Bridge's underscore-prefixed internal mirror folders
         case "$_lname" in _*) continue ;; esac
-        ${nm} tag "+$_lname" -- "path:proton/Labels/$_lname/**"
+        ${nm} tag "+$_lname" -- "tag:new AND path:proton/Labels/$_lname/**"
         # hide label also removes inbox
         if [ "$_lname" = "hide" ]; then
-          ${nm} tag -inbox -- "path:proton/Labels/hide/**"
+          ${nm} tag -inbox -- "tag:new AND path:proton/Labels/hide/**"
         fi
       done
     fi
   '';
 
-  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra;
+  tail = rulesPatched + "\n" + accountTags + protonLabelTags + extra + "\n" + removeNew;
 in
 {
   text = head + "\n" + body + "\n" + tail;
