@@ -671,6 +671,7 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+- 2026-03-18: Integrate MQTT support for event publishing, enabling n8n workflows.
 
 - **2026-03-09**: Fixed green tint with substream detection, CUDA hwaccel, go2rtc video=copy
 - **2026-03-09**: Added Reolink camera (4th camera)

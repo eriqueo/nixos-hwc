@@ -298,6 +298,8 @@ in
       mode = "port";
       port = 2443;
       upstream = "http://127.0.0.1:5678";
+      # Strip port from Origin header - n8n validates origin against hostname only
+      headers = { Origin = "https://hwc.ocelot-wahoo.ts.net"; };
     }
 
     # Firefly III - personal finance manager (port mode - Laravel subpath-hostile)
@@ -337,6 +339,14 @@ in
       upstream = "http://127.0.0.1:5678";
       needsUrlBase = true;  # Preserve /webhook prefix - n8n expects it for routing
       headers = { "X-Forwarded-Prefix" = "/webhook"; };
+    }
+
+    # CloudBeaver - web-based database manager (port mode - subpath-hostile)
+    {
+      name = "cloudbeaver";
+      mode = "port";
+      port = 12443;
+      upstream = "http://127.0.0.1:8978";
     }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy

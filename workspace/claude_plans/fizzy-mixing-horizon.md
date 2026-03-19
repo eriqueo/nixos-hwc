@@ -274,7 +274,6 @@ in
 
 **Create Slack webhook secret**:
 ```bash
-echo "https://hooks.slack.com/services/YOUR/WEBHOOK/URL" | \
   age -r $(sudo age-keygen -y /etc/age/keys.txt) > \
   domains/secrets/parts/server/slack-webhook-url.age
 ```
