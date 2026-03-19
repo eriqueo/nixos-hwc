@@ -386,16 +386,14 @@ git_commit() {
         return 1
     fi
 
-    # Capture commit info
+    # Capture commit info (not readonly - readme_butler may amend and update)
     if [[ "$DRY_RUN" == false ]]; then
         COMMIT_HASH=$(git rev-parse HEAD)
         SHORT_HASH="${COMMIT_HASH:0:8}"
-        readonly COMMIT_HASH SHORT_HASH
         log_info "Committed: $SHORT_HASH"
     else
         COMMIT_HASH="dry-run"
         SHORT_HASH="dry-run"
-        readonly COMMIT_HASH SHORT_HASH
     fi
 }
 

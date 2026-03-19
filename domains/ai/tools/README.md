@@ -60,6 +60,7 @@ To create the custom changelog-writer model (one-time):
 ```
 
 ## Changelog
+- 2026-03-18: Add README butler script to automate AI-driven changelog generation in grebuild workflow.
 - 2026-03-14: Fix AI tooling by using pre-increment to avoid set -e exit on first domain.
 - 2026-03-09: Add custom AI model for generating human-readable changelogs
 - 2026-03-09: Add readme-butler.sh for automated Law 12 changelog updates
