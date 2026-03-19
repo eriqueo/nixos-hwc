@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Grebuild - Git commit + NixOS rebuild workflow with notifications
+# Grebuild - Git commit + NixOS rebuild workflow
 # Enhanced workflow: commit → test → rebuild → push → AI docs
 #
 # Usage: grebuild.sh "commit message" [OPTIONS]
 #
-# Dependencies: git, nixos-rebuild, sudo, curl, systemctl (standard on NixOS)
+# Dependencies: git, nixos-rebuild, sudo, systemctl (standard on NixOS)
 # Location: workspace/nixos/grebuild.sh
 # Invoked by: Shell wrapper in domains/home/environment/shell/parts/grebuild.nix
 
@@ -15,7 +15,7 @@ set -euo pipefail
 #==============================================================================
 # Standard tools - should always exist on NixOS, but verify for robustness
 
-REQUIRED_COMMANDS=(git nixos-rebuild sudo curl systemctl)
+REQUIRED_COMMANDS=(git nixos-rebuild sudo systemctl)
 
 for cmd in "${REQUIRED_COMMANDS[@]}"; do
   if ! command -v "$cmd" &>/dev/null; then
@@ -52,7 +52,6 @@ case "$DETECTED_HOSTNAME" in
 esac
 
 # Configuration (can be overridden by environment variables)
-readonly DEFAULT_NOTIFY_URL="https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts"
 readonly DEFAULT_AI_DOCS_SERVICE="post-rebuild-ai-docs"
 
 # Script state
@@ -130,8 +129,6 @@ ${BOLD}OPTIONS:${NC}
     -p, --skip-push         Skip git push prompt and push step entirely
     -y, --yes               Skip all prompts, auto-answer yes (including push)
     --no-sudo               Don't use sudo for git/rebuild commands
-    --notify-url URL        Notification endpoint URL
-                            (default: ${DEFAULT_NOTIFY_URL})
     -h, --help              Show this help message
 
 ${BOLD}EXAMPLES:${NC}
@@ -152,7 +149,6 @@ ${BOLD}EXAMPLES:${NC}
 
 ${BOLD}ENVIRONMENT VARIABLES:${NC}
     FLAKE_TARGET            Override default flake target
-    NOTIFY_URL              Override notification URL
     AI_DOCS_SERVICE         Override AI docs systemd service name
 
 ${BOLD}WORKFLOW STEPS:${NC}
@@ -162,14 +158,12 @@ ${BOLD}WORKFLOW STEPS:${NC}
     4. Apply NixOS rebuild
     5. Prompt to push to remote (can skip interactively or with --skip-push)
     6. Trigger AI documentation generation
-    7. Send notifications
 
 ${BOLD}PREREQUISITES:${NC}
     - Git repository with changes to commit
     - NixOS flake configuration
     - Git configured for push access
     - sudo access (unless --no-sudo specified)
-    - curl for notifications (optional)
 
 EOF
 }
@@ -194,7 +188,6 @@ parse_args() {
     shift
 
     FLAKE_TARGET="${FLAKE_TARGET:-$DEFAULT_FLAKE_TARGET}"
-    NOTIFY_URL="${NOTIFY_URL:-$DEFAULT_NOTIFY_URL}"
     AI_DOCS_SERVICE="${AI_DOCS_SERVICE:-$DEFAULT_AI_DOCS_SERVICE}"
 
     while [[ $# -gt 0 ]]; do
@@ -226,10 +219,6 @@ parse_args() {
                 ;;
             -t|--target)
                 FLAKE_TARGET="$2"
-                shift 2
-                ;;
-            --notify-url)
-                NOTIFY_URL="$2"
                 shift 2
                 ;;
             *)
@@ -336,32 +325,6 @@ execute() {
     fi
 }
 
-# Send notification
-send_notification() {
-    local title="$1"
-    local message="$2"
-    local priority="${3:-default}"
-    local curl_opts=(--silent --show-error --fail --connect-timeout 3 --max-time 10)
-
-    if [[ "$DRY_RUN" == true ]]; then
-        log_info "Would send notification: $title"
-        return 0
-    fi
-
-    if ! command -v curl >/dev/null 2>&1; then
-        log_warn "curl not found, skipping notification"
-        return 0
-    fi
-
-    if ! curl "${curl_opts[@]}" \
-        -H "Title: $title" \
-        -H "Priority: $priority" \
-        -d "$message" \
-        "$NOTIFY_URL" >/dev/null 2>&1; then
-        log_warn "Failed to send notification (non-fatal)"
-    fi
-}
-
 # Git commit workflow
 git_commit() {
     if [[ "$SKIP_COMMIT" == true ]]; then
@@ -442,12 +405,6 @@ test_configuration() {
 
     if ! execute sudo nixos-rebuild test --flake ".#${FLAKE_TARGET}"; then
         log_error "Configuration test failed"
-
-        send_notification \
-            "❌ NixOS Test Failed" \
-            "Configuration test failed for: $COMMIT_MESSAGE ($SHORT_HASH). Changes not applied." \
-            "high"
-
         return 1
     fi
 
@@ -460,12 +417,6 @@ apply_rebuild() {
 
     if ! execute sudo nixos-rebuild switch --flake ".#${FLAKE_TARGET}"; then
         log_error "Rebuild failed"
-
-        send_notification \
-            "❌ NixOS Rebuild Failed" \
-            "NixOS rebuild failed for commit: $COMMIT_MESSAGE ($SHORT_HASH). Check system logs." \
-            "urgent"
-
         return 1
     fi
 
@@ -507,12 +458,6 @@ push_to_remote() {
         log_warn "Git push failed - changes are local only"
         PUSH_STATUS="⚠️ Push failed - local changes only"
         readonly PUSH_STATUS
-
-        send_notification \
-            "⚠️ Git Push Failed" \
-            "NixOS rebuild succeeded but git push failed. Changes are local only. Commit: $SHORT_HASH" \
-            "default"
-
         return 0  # Non-fatal
     fi
 }
@@ -540,22 +485,6 @@ trigger_ai_docs() {
     fi
 }
 
-# Send completion notification
-send_completion_notification() {
-    log_step "📱 Sending completion notification..."
-
-    local message
-    message="Successfully rebuilt and deployed: $COMMIT_MESSAGE ($SHORT_HASH)
-
-$PUSH_STATUS
-AI documentation processing started"
-
-    send_notification \
-        "✅ NixOS Rebuild Complete" \
-        "$message" \
-        "default"
-}
-
 # Show completion summary
 show_summary() {
     log_header "🎉 Grebuild Complete!"
@@ -577,7 +506,6 @@ ${BOLD}Summary:${NC}
 
 ${BOLD}Next Steps:${NC}
   • AI documentation is processing in the background
-  • You'll receive a notification when docs are updated
   • Check system logs if you encounter any issues
 
 EOF
@@ -620,8 +548,6 @@ main() {
     push_to_remote  # Non-fatal
 
     trigger_ai_docs  # Non-fatal
-
-    send_completion_notification  # Non-fatal
 
     # Show summary
     show_summary
