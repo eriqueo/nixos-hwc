@@ -255,6 +255,16 @@
     openFirewall = true;
   };
 
+  # MQTT broker for event-driven automation (Frigate -> n8n)
+  hwc.automation.mqtt = {
+    enable = true;
+    webhookBridge = {
+      enable = true;
+      topic = "frigate/events";
+      webhookUrl = "http://127.0.0.1:5678/webhook/frigate-events";
+    };
+  };
+
   # ntfy notification system CLI client for server alerts
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md
@@ -644,6 +654,9 @@
         ];
       }
     ];
+    # Enable lingering so rootless podman containers run when not logged in
+    linger.enable = true;
+    linger.users = [ "eric" ];
   };
   services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
   # X11 services disabled for headless server
@@ -887,6 +900,9 @@
     enable = lib.mkDefault true;
     version = "15";
   };
+
+  # CloudBeaver - web-based database manager (access via port 12443)
+  hwc.data.cloudbeaver.enable = lib.mkDefault true;
 
   # Storage automation
   hwc.data.storage = {

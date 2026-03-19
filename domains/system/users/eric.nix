@@ -15,6 +15,9 @@ in {
       shell = cfg.user.shell;
       description = cfg.user.description;
 
+      # Enable rootless Podman with user namespace support
+      autoSubUidGidRange = true;
+
       extraGroups =
         (lib.optionals cfg.user.groups.basic          [ "wheel" "networkmanager" "bluetooth" "secrets" ]) ++
         (lib.optionals cfg.user.groups.media          [ "video" "audio" "render" ]) ++

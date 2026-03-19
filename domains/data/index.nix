@@ -14,5 +14,6 @@
     ./borg/index.nix         # hwc.data.borg — BorgBackup engine
     ./storage/index.nix
     ./couchdb/index.nix
+    ./cloudbeaver/index.nix  # hwc.data.cloudbeaver — web database manager
   ];
 }
