@@ -38,6 +38,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-03-18: Add CloudBeaver web-based database manager routing configuration with port mode and subpath-hostile handling.
 - 2026-03-15: Add n8n flow routing configuration with Origin header stripping for security enhancement
 - 2026-03-13: Enable shared port-sync service access across multiple Gluetun containers
 - 2026-03-13: Enable shared port-sync service access across multiple Gluetun containers

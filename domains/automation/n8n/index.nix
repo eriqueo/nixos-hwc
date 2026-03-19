@@ -47,7 +47,7 @@ in
 
     timezone = lib.mkOption {
       type = lib.types.str;
-      default = "America/New_York";
+      default = "America/Denver";
       description = "Timezone for workflow scheduling";
     };
 

@@ -24,6 +24,7 @@ automation/
 ```
 
 ## Changelog
+- 2026-03-18: Add MQTT integration for n8n, allowing detection events to be forwarded via webhook
 - 2026-03-15: Add Tailscale Funnel service to expose n8n on port 10000, providing full access for external automation tools.
 
 - 2026-03-15: Changed port 10000 funnel to full n8n access (was webhook-only)
