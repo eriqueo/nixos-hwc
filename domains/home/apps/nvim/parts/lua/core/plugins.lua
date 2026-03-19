@@ -123,16 +123,83 @@ require("lazy").setup({
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
-      require("plugins.treesitter")
+      -- Neovim 0.10+ built-in treesitter config
+      vim.treesitter.language.register("bash", "zsh")
+
+      -- Enable treesitter highlighting
+      vim.api.nvim_create_autocmd("FileType", {
+        callback = function()
+          pcall(vim.treesitter.start)
+        end,
+      })
+
+      -- Install parsers via TSInstall command if needed
+      vim.api.nvim_create_user_command("TSInstallAll", function()
+        local parsers = { "lua", "vim", "vimdoc", "query", "nix", "python",
+          "javascript", "typescript", "html", "css", "json",
+          "markdown", "markdown_inline", "bash", "c", "rust", "go" }
+        for _, lang in ipairs(parsers) do
+          vim.cmd("TSInstall " .. lang)
+        end
+      end, {})
     end,
   },
 
   -- LSP Configuration
   {
     "neovim/nvim-lspconfig",
-    dependencies = {},
     config = function()
-      require("plugins.lsp")
+      local capabilities = vim.lsp.protocol.make_client_capabilities()
+      local cmp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
+      if cmp_ok then
+        capabilities = cmp_nvim_lsp.default_capabilities(capabilities)
+      end
+
+      -- Keymaps on attach
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
+        callback = function(ev)
+          local opts = { buffer = ev.buf }
+          vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+          vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
+          vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
+          vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, opts)
+          vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+          vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float, opts)
+          vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
+          vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
+          vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
+          vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references, opts)
+          vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
+          vim.keymap.set("n", "<leader>vf", vim.lsp.buf.format, opts)
+        end,
+      })
+
+      -- Diagnostics
+      vim.diagnostic.config({ virtual_text = true, signs = true, underline = true })
+
+      -- Server configs
+      local servers = {
+        lua_ls = { settings = { Lua = { diagnostics = { globals = { "vim" } } } } },
+        nil_ls = {}, pyright = {}, ts_ls = {}, gopls = {},
+        rust_analyzer = { settings = { ["rust-analyzer"] = { cargo = { allFeatures = true } } } },
+        clangd = { cmd = { "clangd", "--offset-encoding=utf-16" } },
+      }
+
+      -- Use vim.lsp.config (0.11+) or fallback
+      if vim.lsp.config then
+        for name, cfg in pairs(servers) do
+          cfg.capabilities = capabilities
+          vim.lsp.config(name, cfg)
+        end
+        vim.lsp.enable(vim.tbl_keys(servers))
+      else
+        local lspconfig = require("lspconfig")
+        for name, cfg in pairs(servers) do
+          cfg.capabilities = capabilities
+          if lspconfig[name] then lspconfig[name].setup(cfg) end
+        end
+      end
     end,
   },
 
