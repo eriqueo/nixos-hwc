@@ -1,37 +1,48 @@
 -- domains/home/apps/nvim/parts/lua/plugins/lsp.lua
-local lspconfig = require("lspconfig")
-local capabilities = require("cmp_nvim_lsp").default_capabilities()
+-- Using native vim.lsp (Neovim 0.11+)
 
-local on_attach = function(client, bufnr)
-  local opts = { buffer = bufnr, remap = false }
-
-  -- Navigation
-  vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
-  vim.keymap.set("n", "gD", function() vim.lsp.buf.declaration() end, opts)
-  vim.keymap.set("n", "gi", function() vim.lsp.buf.implementation() end, opts)
-  vim.keymap.set("n", "gt", function() vim.lsp.buf.type_definition() end, opts)
-
-  -- Documentation
-  vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
-  vim.keymap.set("i", "<C-h>", function() vim.lsp.buf.signature_help() end, opts)
-
-  -- Workspace
-  vim.keymap.set("n", "<leader>vws", function() vim.lsp.buf.workspace_symbol() end, opts)
-
-  -- Diagnostics
-  vim.keymap.set("n", "<leader>vd", function() vim.diagnostic.open_float() end, opts)
-  vim.keymap.set("n", "[d", function() vim.diagnostic.goto_prev() end, opts)
-  vim.keymap.set("n", "]d", function() vim.diagnostic.goto_next() end, opts)
-
-  -- Code actions
-  vim.keymap.set("n", "<leader>vca", function() vim.lsp.buf.code_action() end, opts)
-  vim.keymap.set("n", "<leader>vrr", function() vim.lsp.buf.references() end, opts)
-  vim.keymap.set("n", "<leader>vrn", function() vim.lsp.buf.rename() end, opts)
-
-  -- Formatting
-  vim.keymap.set("n", "<leader>vf", function() vim.lsp.buf.format() end, opts)
+-- Get cmp capabilities if available
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+local cmp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
+if cmp_ok then
+  capabilities = cmp_nvim_lsp.default_capabilities(capabilities)
 end
 
+-- Keymaps applied when LSP attaches
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("UserLspConfig", { clear = true }),
+  callback = function(ev)
+    local opts = { buffer = ev.buf, remap = false }
+
+    -- Navigation
+    vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+    vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
+    vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
+    vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, opts)
+
+    -- Documentation
+    vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+    vim.keymap.set("i", "<C-h>", vim.lsp.buf.signature_help, opts)
+
+    -- Workspace
+    vim.keymap.set("n", "<leader>vws", vim.lsp.buf.workspace_symbol, opts)
+
+    -- Diagnostics
+    vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float, opts)
+    vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
+    vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
+
+    -- Code actions
+    vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
+    vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references, opts)
+    vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
+
+    -- Formatting
+    vim.keymap.set("n", "<leader>vf", vim.lsp.buf.format, opts)
+  end,
+})
+
+-- Diagnostic configuration
 vim.diagnostic.config({
   virtual_text = true,
   signs = true,
@@ -46,18 +57,7 @@ for type, icon in pairs(signs) do
   vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
 end
 
-local function setup_lsp(server_name, config)
-  local ok, _ = pcall(lspconfig[server_name].setup, config)
-  if not ok then
-    vim.notify("LSP " .. server_name .. " not available", vim.log.levels.WARN)
-  end
-end
-
-local base_config = {
-  capabilities = capabilities,
-  on_attach = on_attach,
-}
-
+-- Server configurations
 local servers = {
   lua_ls = {
     settings = {
@@ -75,22 +75,33 @@ local servers = {
   rust_analyzer = {
     settings = {
       ["rust-analyzer"] = {
-        cargo = {
-          allFeatures = true,
-        },
+        cargo = { allFeatures = true },
       },
     },
   },
   gopls = {},
   clangd = {
-    cmd = {
-      "clangd",
-      "--offset-encoding=utf-16",
-    },
+    cmd = { "clangd", "--offset-encoding=utf-16" },
   },
 }
 
-for server, config in pairs(servers) do
-  local server_config = vim.tbl_deep_extend("force", base_config, config)
-  setup_lsp(server, server_config)
+-- Use vim.lsp.config if available (Neovim 0.11+), fallback to lspconfig
+if vim.lsp.config then
+  -- Modern API
+  for name, config in pairs(servers) do
+    config.capabilities = capabilities
+    vim.lsp.config(name, config)
+  end
+  vim.lsp.enable(vim.tbl_keys(servers))
+else
+  -- Fallback for older Neovim
+  local lspconfig_ok, lspconfig = pcall(require, "lspconfig")
+  if lspconfig_ok then
+    for name, config in pairs(servers) do
+      config.capabilities = capabilities
+      if lspconfig[name] then
+        lspconfig[name].setup(config)
+      end
+    end
+  end
 end
