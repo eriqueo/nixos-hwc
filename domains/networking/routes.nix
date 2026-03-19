@@ -340,6 +340,14 @@ in
       needsUrlBase = true;  # Preserve /webhook prefix - n8n expects it for routing
       headers = { "X-Forwarded-Prefix" = "/webhook"; };
     }
+
+    # CloudBeaver - web-based database manager (port mode - subpath-hostile)
+    {
+      name = "cloudbeaver";
+      mode = "port";
+      port = 12443;
+      upstream = "http://127.0.0.1:8978";
+    }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy
     # Enabled when hwc.ai.mcp.reverseProxy.enable = true

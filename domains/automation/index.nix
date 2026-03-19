@@ -8,6 +8,7 @@
 
 {
   imports = [
+    ./mqtt/index.nix
     ./n8n/index.nix
     ./ntfy/index.nix    # MOVED from domains/system/services/ntfy
   ];

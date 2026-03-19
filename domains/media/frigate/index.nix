@@ -208,6 +208,12 @@ LABELMAP_EOF
       "d ${cfg.storage.bufferPath} 0755 eric users -"
     ];
 
+    # Ensure Frigate starts after mosquitto (for MQTT events)
+    systemd.services.podman-frigate = {
+      after = [ "mosquitto.service" ];
+      wants = [ "mosquitto.service" ];
+    };
+
     # Frigate container
     virtualisation.oci-containers.containers.frigate = {
       image = cfg.image;

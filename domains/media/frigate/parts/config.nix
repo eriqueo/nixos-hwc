@@ -43,7 +43,16 @@ let
   frigateConfig = {
     version = "0.16.0";
 
-    mqtt.enabled = false;
+    # MQTT for event publishing to n8n workflows
+    # Frigate uses --network=host so 127.0.0.1 reaches host mosquitto
+    mqtt = {
+      enabled = true;
+      host = "127.0.0.1";
+      port = 1883;
+      topic_prefix = "frigate";
+      client_id = "frigate-nvr";
+      stats_interval = 60;
+    };
 
     telemetry.stats = {
       amd_gpu_stats = false;
@@ -79,22 +88,26 @@ let
 
     snapshots = {
       enabled = true;
+      bounding_box = true;
+      crop = false;
+      quality = 70;
       retain = {
         default = 10;
         objects = {
           person = 30;
-          car = 14;
-          truck = 14;
+          car = 7;   # Reduced retention for vehicles
+          truck = 7;
         };
       };
     };
 
     objects = {
-      track = [ "person" "dog" "cat" "car" "truck" ];
+      track = [ "person" "dog" "cat" ];
       filters = {
-        person = { min_score = 0.65; threshold = 0.7; min_area = 3000; };
-        dog    = { min_score = 0.6;  threshold = 0.7; min_area = 2000; };
-        cat    = { min_score = 0.6;  threshold = 0.7; min_area = 2000; };
+        # Raised thresholds to reduce false positives
+        person = { min_score = 0.75; threshold = 0.80; min_area = 5000; };
+        dog    = { min_score = 0.70; threshold = 0.75; min_area = 3000; };
+        cat    = { min_score = 0.70; threshold = 0.75; min_area = 3000; };
       };
     };
 
@@ -102,6 +115,7 @@ let
       # Cobra cameras use go2rtc restreams:
       # - Detect: substream (1280x720) via go2rtc - matches detect resolution exactly
       # - Record: main stream (4K) via go2rtc
+      # cobra_cam_1: Indoor workshop/garage - minimal masking needed
       cobra_cam_1 = {
         enabled = true;
         audio.enabled = false;
@@ -113,17 +127,12 @@ let
         };
         detect = { width = 1280; height = 720; fps = 5; };
         motion.mask = [
-          "0,0,1280,100"      # Top strip (timestamp, etc)
-          "0,620,200,720"     # Bottom-left corner
-          "1080,620,1280,720" # Bottom-right corner
+          "0,0,1280,50"       # Top strip (timestamp)
+          "350,0,750,200"     # Bright light area (top center)
         ];
-        zones.yard_gate = {
-          coordinates = "200,620,1000,620,1000,400,200,400";  # Adjusted for 720p
-          objects = [ "person" "dog" "cat" ];
-          filters.person = { min_area = 5000; threshold = 0.75; };
-        };
       };
 
+      # cobra_cam_2: Side yard - mask street/warehouse area at top
       cobra_cam_2 = {
         enabled = true;
         audio.enabled = false;
@@ -133,15 +142,15 @@ let
             { path = "rtsp://127.0.0.1:8554/cobra_cam_2"; roles = [ "record" ]; }
           ];
         };
-        detect = { width = 1280; height = 720; fps = 5; };  # Match substream exactly
-        motion.mask = [ "0,0,1280,120" ];  # Scaled from 640x360
-        zones.porch_area = {
-          coordinates = "100,680,1180,680,1180,400,100,400";  # Scaled for 1280x720
-          objects = [ "person" "dog" "cat" ];
-          filters.person = { min_area = 5000; threshold = 0.75; };  # Adjusted for higher res
-        };
+        detect = { width = 1280; height = 720; fps = 5; };
+        motion.mask = [
+          "0,0,1280,50"       # Timestamp strip
+          "0,0,1280,280"      # Street and warehouse area (top third)
+          "1150,600,1280,720" # Green bin corner (bottom right)
+        ];
       };
 
+      # cobra_cam_3: Front porch - mask street beyond fence to avoid car/pedestrian detections
       cobra_cam_3 = {
         enabled = true;
         audio.enabled = false;
@@ -151,32 +160,24 @@ let
             { path = "rtsp://127.0.0.1:8554/cobra_cam_3"; roles = [ "record" ]; }
           ];
         };
-        detect = { width = 1280; height = 720; fps = 5; };  # Match substream exactly
-        objects = {
-          track = [ "person" "car" "truck" "dog" "cat" ];
-          filters = {
-            car   = { min_score = 0.7; threshold = 0.75; min_area = 20000; };  # Scaled for 1280x720
-            truck = { min_score = 0.7; threshold = 0.75; min_area = 24000; };
-          };
-        };
-        motion.mask = [ "0,0,1280,120" ];  # Scaled from 640x480
-        zones = {
-          driveway_truck = {
-            coordinates = "100,675,800,675,800,525,100,525";  # Scaled for 1280x720
-            objects = [ "person" "car" "truck" ];
-            filters = {
-              car   = { min_area = 20000; };
-              truck = { min_area = 24000; };
-            };
-          };
-          sidewalk_front = {
-            coordinates = "100,450,1180,450,1180,540,100,540";  # Scaled for 1280x720
-            objects = [ "person" "dog" "cat" ];
-          };
+        detect = { width = 1280; height = 720; fps = 5; };
+        motion.mask = [
+          "0,0,1280,50"       # Timestamp strip
+          # Street and sidewalk beyond the fence (polygon covering top area)
+          "0,0,0,320,400,280,900,280,1280,320,1280,0"
+          # Left side neighbor area
+          "0,0,0,450,180,380,180,0"
+          # Right side street/cars
+          "1100,0,1100,400,1280,400,1280,0"
+        ];
+        # Focus detection on yard area inside fence
+        zones.front_yard = {
+          coordinates = "180,380,1100,380,1100,700,180,700";
+          objects = [ "person" "dog" "cat" ];
         };
       };
 
-      # Reolink already uses go2rtc correctly - substream for detect, main for record
+      # Reolink (front door) - tracks vehicles, mask neighbor's driveway
       reolink = {
         enabled = true;
         audio.enabled = false;
@@ -186,8 +187,27 @@ let
             { path = "rtsp://127.0.0.1:8554/reolink"; roles = [ "record" ]; }
           ];
         };
-        detect = { width = 640; height = 360; fps = 5; };  # Matches reolink_sub exactly
-        motion.mask = [ "0,0,640,40" ];
+        detect = { width = 640; height = 360; fps = 3; };
+        motion.mask = [
+          "0,0,640,30"        # Timestamp strip
+          "0,0,0,200,100,180,100,0"  # Neighbor's area (left side with blue car)
+          "580,0,580,120,640,120,640,0"  # Far right edge
+        ];
+        objects = {
+          track = [ "person" "dog" "cat" "car" "truck" ];
+          filters = {
+            person = { min_score = 0.70; threshold = 0.75; min_area = 1200; };
+            dog    = { min_score = 0.65; threshold = 0.70; min_area = 750; };
+            cat    = { min_score = 0.65; threshold = 0.70; min_area = 750; };
+            car    = { min_score = 0.80; threshold = 0.85; min_area = 3000; };
+            truck  = { min_score = 0.80; threshold = 0.85; min_area = 3500; };
+          };
+        };
+        # Zone for driveway area (where your truck is parked)
+        zones.driveway = {
+          coordinates = "200,80,580,80,580,300,200,300";
+          objects = [ "person" "car" "truck" ];
+        };
       };
     };
 
@@ -208,6 +228,19 @@ let
 
     ui.timezone = "America/Denver";
     detect.enabled = true;
+
+    # Stationary object handling - reduces noise from parked cars
+    detect.stationary = {
+      interval = 50;  # Check stationary objects every 50 frames (10 seconds at 5fps)
+      threshold = 50;  # Frames without movement to be considered stationary
+      max_frames = {
+        default = 3000;  # Stop tracking stationary objects after ~10 minutes
+        objects = {
+          car = 300;    # Stop tracking stationary cars after ~1 minute
+          truck = 300;  # Stop tracking stationary trucks after ~1 minute
+        };
+      };
+    };
   };
 
   # Generate the YAML config template file
