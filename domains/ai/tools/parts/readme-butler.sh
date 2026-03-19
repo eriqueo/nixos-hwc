@@ -58,8 +58,10 @@ check_ollama() {
 get_changed_domains() {
     # Get unique directories with changes, filter to those with README.md
     # Only processes leaf domains (nearest parent with README.md)
+    # Excludes README.md files themselves to prevent picking up butler's own changes
     git diff HEAD~1 --name-only 2>/dev/null | \
         rg '^domains/' | \
+        rg -v 'README\.md$' | \
         while read -r file; do
             local dir
             dir=$(dirname "$file")
@@ -92,7 +94,8 @@ get_changelog_examples() {
 
 get_domain_diff() {
     local domain="$1"
-    git diff HEAD~1 --unified=2 -- "$domain" 2>/dev/null | head -n 100
+    # Exclude README.md from diff to avoid seeing butler's own changes
+    git diff HEAD~1 --unified=2 -- "$domain" ':(exclude)*.md' 2>/dev/null | head -n 100
 }
 
 #==============================================================================
