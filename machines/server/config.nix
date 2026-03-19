@@ -840,6 +840,15 @@
     enable = lib.mkDefault true;
   };
 
+  # Heartwood Estimate Assembler — React PWA
+  # Access: https://hwc.ocelot-wahoo.ts.net:13443
+  # Build:  cd ~/workspace/projects/react/heartwood-assembler && npm install && npm run build
+  hwc.business.estimator = {
+    enable  = true;
+    distDir = "/home/eric/workspace/projects/react/heartwood-assembler/dist";
+    port    = 13443;
+  };
+
   # Immich photo management (container-based)
   hwc.media.immich = {
     enable = lib.mkDefault true;

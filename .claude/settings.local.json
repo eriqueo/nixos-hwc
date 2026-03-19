@@ -159,6 +159,10 @@
     "fetch",
     "memory",
     "_filesystem_DISABLED",
-    "_brave-search_DISABLED"
+    "_brave-search_DISABLED",
+    "postgres",
+    "prometheus",
+    "puppeteer",
+    "n8n"
   ]
 }

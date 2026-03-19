@@ -114,50 +114,14 @@ lookup_secret() {
   fi
   echo ""
 
-  # Usage locations
-  echo "🔍 Usage Locations:"
-  if command -v rg &>/dev/null; then
-    local usage_count
-    usage_count=$(rg -l "config\.age\.secrets\.${secret_name}" "${NIXOS_DIR}" 2>/dev/null | wc -l)
-    if [[ "$usage_count" -gt 0 ]]; then
-      rg -l "config\.age\.secrets\.${secret_name}" "${NIXOS_DIR}" 2>/dev/null | while read -r file; do
-        local rel_path="${file#${NIXOS_DIR}/}"
-        echo "  - $rel_path"
-      done
-    else
-      echo "  - No usage found in config"
-    fi
+  # Decrypted value - show by default since this is what people usually want
+  echo "🔐 Value:"
+  if sudo age -d -i "${AGE_KEY_FILE}" "$secret_file" 2>/dev/null; then
+    echo ""
   else
-    echo "  - (ripgrep not available, skipping usage search)"
+    log_error "Failed to decrypt secret"
+    return 1
   fi
-  echo ""
-
-  # Declaration snippet
-  echo "📝 Declaration:"
-  local decl_file="${SECRETS_DECL}/${category}.nix"
-  if [[ -f "$decl_file" ]]; then
-    # Extract the declaration block for this secret
-    awk "/^  ${secret_name} = \{/,/^  \};/" "$decl_file" 2>/dev/null || echo "  - Declaration not found in $decl_file"
-  else
-    echo "  - Declaration file not found: $decl_file"
-  fi
-  echo ""
-
-  # Decrypted value (with confirmation)
-  echo "🔐 Decrypted Value:"
-  read -rp "Show decrypted value? [y/N] " show_value
-  if [[ "$show_value" =~ ^[Yy]$ ]]; then
-    if sudo age -d -i "${AGE_KEY_FILE}" "$secret_file" 2>/dev/null; then
-      echo ""
-      log_info "Value decrypted successfully"
-    else
-      log_error "Failed to decrypt secret"
-      return 1
-    fi
-  else
-    echo "  - (value hidden)"
-  fi
-  echo ""
 }
 
 #==============================================================================
@@ -170,7 +134,7 @@ add_secret() {
   echo ""
   echo "Select category:"
   PS3="Category: "
-  local categories=("infrastructure" "home" "system" "server")
+  local categories=("services" "infrastructure" "home" "system" "caddy")
   local category=""
 
   select cat in "${categories[@]}"; do
@@ -297,23 +261,23 @@ add_declaration() {
   # Backup original
   cp "${decl_file}" "${decl_file}.bak"
 
-  # Create declaration snippet
-  local snippet="  ${name} = {
-    file = ../parts/${category}/${name}.age;
-    mode = \"0440\";
-    owner = \"root\";
-    group = \"secrets\";
-  };"
+  # Create declaration snippet (4-space indentation to match existing files)
+  local snippet="    ${name} = {
+      file = ../parts/${category}/${name}.age;
+      mode = \"0440\";
+      owner = \"root\";
+      group = \"secrets\";
+    };"
 
   # Use awk to insert in alphabetical order within age.secrets block
   awk -v snippet="$snippet" -v name="$name" '
   BEGIN { inserted = 0; in_secrets = 0 }
 
-  # Track when we enter age.secrets block
-  /^  age\.secrets = \{/ { in_secrets = 1; print; next }
+  # Track when we enter age.secrets block (flexible whitespace)
+  /^[[:space:]]*age\.secrets = \{/ { in_secrets = 1; print; next }
 
   # Track when we exit age.secrets block
-  /^  \};/ && in_secrets {
+  /^[[:space:]]*\};/ && in_secrets {
     if (!inserted) {
       print snippet
       inserted = 1
@@ -324,9 +288,11 @@ add_declaration() {
   }
 
   # Within age.secrets block, find alphabetical position
-  in_secrets && /^  [a-z0-9-]+ = \{/ {
-    # Extract current secret name
-    match($0, /^  ([a-z0-9-]+) = \{/, arr)
+  in_secrets && /^[[:space:]]+[a-z0-9-]+ = \{/ {
+    # Extract current secret name (copy line, strip whitespace from copy)
+    line = $0
+    gsub(/^[[:space:]]+/, "", line)
+    match(line, /^([a-z0-9-]+) = \{/, arr)
     current_name = arr[1]
 
     # Insert before if name comes before current_name alphabetically
@@ -467,7 +433,7 @@ validate_secrets() {
 
   # Check 3: Secret counts by category
   log_step "3. Encrypted Secrets Inventory"
-  for category in infrastructure home system server; do
+  for category in services infrastructure home system caddy; do
     local count
     count=$(find "${SECRETS_PARTS}/${category}" -name "*.age" 2>/dev/null | wc -l)
     echo "  📊 ${category}: ${count} secrets"
@@ -497,20 +463,18 @@ validate_secrets() {
 
   local missing_declarations=0
   while IFS= read -r age_file; do
-    local secret_name
-    secret_name=$(basename "${age_file%.age}")
-    local category
-    category=$(basename "$(dirname "$age_file")")
+    local filename
+    filename=$(basename "$age_file")
+    # Extract top-level category (first dir under parts/, handles subdirs like home/scraper/)
+    local rel_path="${age_file#${SECRETS_PARTS}/}"
+    local category="${rel_path%%/*}"
     local decl_file="${SECRETS_DECL}/${category}.nix"
 
-    if [[ -f "$decl_file" ]]; then
-      if ! grep -q "^  ${secret_name} = {" "$decl_file"; then
-        log_warn "Missing declaration for: ${secret_name} (${category})"
-        ((missing_declarations++))
-      fi
-    else
-      log_error "Declaration file missing: ${decl_file}"
-      ((errors++))
+    # Search for the filename anywhere in secrets domain nix files
+    # (handles declarations/*.nix and parts/*.nix with dynamic selection)
+    if ! grep -rq "${filename}" "${NIXOS_DIR}/domains/secrets/" --include="*.nix" 2>/dev/null; then
+      log_warn "Missing declaration for: ${filename} (${category})"
+      ((missing_declarations++))
     fi
   done <<< "$age_files"
 

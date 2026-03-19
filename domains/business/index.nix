@@ -188,6 +188,7 @@ in
   imports = [
     ./paperless/index.nix
     ./firefly/index.nix
+    ./estimator/index.nix
   ];
 
   #==========================================================================
