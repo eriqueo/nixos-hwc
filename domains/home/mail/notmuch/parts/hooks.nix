@@ -84,10 +84,12 @@ let
         _lname=$(basename "$_ldir")
         # Skip Bridge's underscore-prefixed internal mirror folders
         case "$_lname" in _*) continue ;; esac
-        ${nm} tag "+$_lname" -- "tag:new AND path:proton/Labels/$_lname/**"
-        # hide label also removes inbox
+        # Idempotent: no tag:new scope so Proton-web label changes on existing
+        # messages are picked up without waiting for a new message arrival.
+        ${nm} tag "+$_lname" -- "path:proton/Labels/$_lname/** AND NOT tag:$_lname"
+        # hide label also removes inbox (scoped to avoid redundant write)
         if [ "$_lname" = "hide" ]; then
-          ${nm} tag -inbox -- "tag:new AND path:proton/Labels/hide/**"
+          ${nm} tag -inbox -- "path:proton/Labels/hide/** AND tag:inbox"
         fi
       done
     fi

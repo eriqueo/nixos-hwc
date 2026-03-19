@@ -42,12 +42,12 @@ in
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };
     savedSearches = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
     installDashboard = lib.mkOption { type = lib.types.bool; default = false; };
-    installSampler = lib.mkOption { type = lib.types.bool; default = false; };
     rules = {
       newsletterSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "newsletter@" "news@" "updates@" "digest@" "list@" "mailer@" ]; };
       notificationSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "no-reply@" "noreply@" "notifications@" "notices@" "github.com" ]; };
       financeSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "amazon.com" "paypal.com" "stripe.com" "squareup.com" "intuit.com" "quickbooks" "chase.com" "bankofamerica.com" ]; };
       actionSubjects = lib.mkOption { type = lib.types.listOf lib.types.str; default = [ "invoice" "quote" "proposal" "estimate" "RFP" "action required" "approve" "signature" "past due" ]; };
+      trashSenders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; description = "Senders whose mail is auto-trashed on arrival."; };
     };
   };
 
@@ -74,7 +74,3 @@ in
     })
   ]);
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
