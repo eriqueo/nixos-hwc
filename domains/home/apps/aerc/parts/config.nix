@@ -19,7 +19,7 @@ let
     trash_d        = tag:trash
     spam_z         = tag:spam
     important      = tag:important AND NOT tag:trash
-    hide_my_email  = path:proton/Folders/hide_my_email/**
+    hide_my_email  = tag:hide
 ${tagQueries}
   '';
 
@@ -28,7 +28,7 @@ ${tagQueries}
     source              = notmuch://${maildirBase}
     maildir-store       = ${maildirBase}
     folders-exclude     = ~^\\..*,~^proton(/.*)?$,~^proton-hwc$,~^proton-personal$,~^gmail-business$,~^gmail-personal$,~^acc:,~^hwc_email$,~^proton-native$
-    multi-file-strategy = act-one-delete-rest
+    multi-file-strategy = act-dir
     query-map           = ${config.home.homeDirectory}/.config/aerc/notmuch-queries
     from                = Eric <eric@iheartwoodcraft.com>
     outgoing            = ${pkgs.msmtp}/bin/msmtp

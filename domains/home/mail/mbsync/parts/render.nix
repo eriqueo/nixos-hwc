@@ -20,15 +20,6 @@ let
   haveProton = lib.any (a: a.type == "proton-bridge") vals;
 
   # ---- Helpers
-  escapeSquareBrackets = s: builtins.replaceStrings ["["  "]"] ["\\[" "\\]"] s;
-
-  expandGoogleAliases = s:
-    if lib.hasInfix "[Gmail]/" s then
-      [ s (lib.replaceStrings ["[Gmail]"] ["[Google Mail]"] s) ]
-    else if lib.hasInfix "[Google Mail]/" s then
-      [ s (lib.replaceStrings ["[Google Mail]"] ["[Gmail]"] s) ]
-    else [ s ];
-
   confQuote = s:
     let esc = builtins.replaceStrings [ "\"" ] [ "\\\"" ] s;
     in "\"" + esc + "\"";
@@ -121,11 +112,6 @@ let
       extra = getOr a "extraMbsync" "";
       channels = channelsFor a;
       channelsStr = lib.concatStringsSep "\n" channels;
-      # Proton Bridge uses local IMAP; skip cert pinning when TLSType=None
-      certFile = if a.type == "proton-bridge"
-                 then ""
-                 else "";
-      tlsFingerprint = "";
     in ''
       IMAPAccount ${a.name}
       Host ${imapH}
@@ -133,8 +119,6 @@ let
       User ${common.loginOf a}
       PassCmd "${cmd}"
       TLSType ${tlsT}
-      ${certFile}
-      ${tlsFingerprint}
 
       IMAPStore ${a.name}-remote
       Account ${a.name}
