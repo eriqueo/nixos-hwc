@@ -3,13 +3,19 @@ import { Box, Label, Divider } from './Section.jsx';
 import { Toggle } from './Toggle.jsx';
 import { NumInput } from './NumInput.jsx';
 import { Select } from './Select.jsx';
+import { JobSelector } from './JobSelector.jsx';
 import { deriveGeometry } from '../engine/assembler.js';
 
-export function ScopeTab({ s, set, onAssemble }) {
+export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
   const { fl, perim, wallTile } = deriveGeometry(s);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 10 : 14 }}>
+
+      {/* Job Selection - spans full width */}
+      <div style={{ gridColumn: '1/-1' }}>
+        <JobSelector s={s} set={set} />
+      </div>
 
       {/* Room Measurements */}
       <Box>

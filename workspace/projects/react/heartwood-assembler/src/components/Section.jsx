@@ -36,13 +36,13 @@ export function Divider() {
 }
 
 /** Single stat display (label + value) */
-export function Stat({ label, value, color }) {
+export function Stat({ label, value, color, compact = false }) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ color: C.txD, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div style={{ color: C.txD, fontSize: compact ? 8 : 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
         {label}
       </div>
-      <div style={{ color: color ?? C.txB, fontSize: 16, fontWeight: 700, fontFamily: mono }}>
+      <div style={{ color: color ?? C.txB, fontSize: compact ? 13 : 16, fontWeight: 700, fontFamily: mono }}>
         {value}
       </div>
     </div>

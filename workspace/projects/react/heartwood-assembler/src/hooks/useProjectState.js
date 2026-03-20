@@ -3,8 +3,16 @@ import { useState, useCallback, useEffect } from 'react';
 const STORAGE_KEY = 'hwc-estimate-state';
 
 export const DEFAULT_STATE = {
-  // Context
-  customer: '', address: '', job_name: '',
+  // Job selection (for JT integration)
+  mode: 'existing',           // 'existing' | 'new_job'
+  customerId: '',
+  customerName: '',
+  jobId: '',
+  jobNumber: '',
+  jobName: '',
+  address: '',
+  projectType: 'bathroom',    // bathroom, deck, kitchen, general
+
   // Measurements
   room_length: 8, room_width: 7, wall_height: 8, tile_height: 6,
   // Core toggles

@@ -188,7 +188,7 @@ in
   imports = [
     ./paperless/index.nix
     ./firefly/index.nix
-    ./estimator/index.nix
+    # estimator moved to domains/webapps/estimator/ (hwc.webapps.estimator)
   ];
 
   #==========================================================================

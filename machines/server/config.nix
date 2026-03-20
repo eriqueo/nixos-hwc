@@ -19,6 +19,7 @@
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/alerts/index.nix    # Direct domain import (no profile wrapper)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
+    ../../domains/webapps/index.nix   # Static web app hosting (hwc-publish, port 14000–14099)
   ];
 
   assertions = [
@@ -840,12 +841,22 @@
     enable = lib.mkDefault true;
   };
 
+  #============================================================================
+  # WEB APPS DOMAIN
+  #============================================================================
+  # hwc-publish: deploy static apps instantly, no rebuild needed.
+  # Reserved range: 14000–14099 (on tailscale0)
+  # Usage: hwc-publish <name> <dist/> [--port N]
+  hwc.webapps.enable = true;
+
   # Heartwood Estimate Assembler — React PWA
+  # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
+  # the estimator is a first-class named app, not an ad-hoc published slot).
   # Access: https://hwc.ocelot-wahoo.ts.net:13443
-  # Build:  cd ~/workspace/projects/react/heartwood-assembler && npm install && npm run build
-  hwc.business.estimator = {
+  # Build:  cd ~/.nixos/workspace/projects/react/heartwood-assembler && npm install && npm run build
+  hwc.webapps.estimator = {
     enable  = true;
-    distDir = "/home/eric/workspace/projects/react/heartwood-assembler/dist";
+    distDir = "/home/eric/.nixos/workspace/projects/react/heartwood-assembler/dist";
     port    = 13443;
   };
 

@@ -6,7 +6,7 @@ import { deriveGeometry } from '../engine/assembler.js';
 import tradeRates from '../data/tradeRates.json';
 import { tradeRate } from '../engine/pricing.js';
 
-export function DetailsTab({ s, set }) {
+export function DetailsTab({ s, set, isMobile = false }) {
   const { fl, wallTile } = deriveGeometry(s);
   const [newItem, setNewItem] = useState({
     name: '', group: 'Additional Items', qty: 1,
@@ -24,15 +24,17 @@ export function DetailsTab({ s, set }) {
   };
 
   const inp = (overrides) => ({
-    padding: '6px 8px', borderRadius: 3,
+    padding: isMobile ? '10px 10px' : '6px 8px',
+    borderRadius: isMobile ? 4 : 3,
     border: `1px solid ${C.brd}`,
     backgroundColor: C.card2, color: C.txB,
-    fontSize: 12, fontFamily: mono, outline: 'none',
+    fontSize: isMobile ? 14 : 12, fontFamily: mono, outline: 'none',
+    minHeight: isMobile ? 44 : 'auto',
     ...overrides,
   });
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 10 : 14 }}>
 
       {/* Allowances */}
       <Box>
@@ -69,16 +71,20 @@ export function DetailsTab({ s, set }) {
               <option value="Other">Other</option>
             </select>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
             <input type="number" placeholder="Qty" value={newItem.qty}
               onChange={e => setNewItem(p => ({ ...p, qty: parseFloat(e.target.value) || 0 }))}
-              style={inp({ width: 60, textAlign: 'right' })} />
+              style={inp({ width: isMobile ? '30%' : 60, textAlign: 'right', flex: isMobile ? '1' : 'none' })} />
             <input type="number" placeholder="Unit Cost" value={newItem.cost || ''}
               onChange={e => setNewItem(p => ({ ...p, cost: parseFloat(e.target.value) || 0 }))}
-              style={inp({ width: 80, textAlign: 'right' })} />
+              style={inp({ width: isMobile ? '50%' : 80, textAlign: 'right', flex: isMobile ? '2' : 'none' })} />
             <button onClick={addCustomItem} style={{
-              padding: '6px 14px', borderRadius: 3, border: 'none', cursor: 'pointer',
-              backgroundColor: C.acc, color: C.bg, fontSize: 11, fontWeight: 700, fontFamily: mono,
+              padding: isMobile ? '12px 18px' : '6px 14px',
+              borderRadius: isMobile ? 4 : 3, border: 'none', cursor: 'pointer',
+              backgroundColor: C.acc, color: C.bg,
+              fontSize: isMobile ? 13 : 11, fontWeight: 700, fontFamily: mono,
+              flex: isMobile ? '1' : 'none',
+              minHeight: isMobile ? 44 : 'auto',
             }}>+ Add</button>
           </div>
         </div>
@@ -99,7 +105,7 @@ export function DetailsTab({ s, set }) {
       {/* Trade Rate Reference */}
       <Box style={{ gridColumn: '1/-1' }}>
         <Label>Trade Labor Rates (reference — edit in catalog DB)</Label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: 8 }}>
           {Object.keys(tradeRates).map(trade => {
             const r = tradeRate(trade);
             return (

@@ -7,6 +7,13 @@
   # Server domain secrets - application credentials
   age.secrets = {
     # ARR stack API keys
+    jobtread-grant-key = {
+      file = ../parts/services/jobtread-grant-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     radarr-api-key = {
       file = ../parts/services/radarr-api-key.age;
       mode = "0440";

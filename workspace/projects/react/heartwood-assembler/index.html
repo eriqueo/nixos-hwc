@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#c9956b" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -13,10 +13,37 @@
     <title>Heartwood Estimator</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { background: #0c0e11; overflow-x: hidden; }
+      body {
+        background: #0c0e11;
+        overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      html { scroll-behavior: smooth; }
       input[type=number]::-webkit-inner-spin-button,
       input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
       input[type=number] { -moz-appearance: textfield; }
+
+      /* Mobile app-like behavior */
+      @media (max-width: 640px) {
+        body {
+          padding-bottom: env(safe-area-inset-bottom, 0);
+          overscroll-behavior: none;
+        }
+        /* Larger touch targets on mobile */
+        button, select, input {
+          min-height: 44px;
+        }
+        /* Prevent text selection on tap */
+        button {
+          -webkit-user-select: none;
+          user-select: none;
+        }
+      }
+
+      /* Smooth transitions */
+      button { transition: all 0.15s ease; }
+      button:active { transform: scale(0.97); }
     </style>
   </head>
   <body>

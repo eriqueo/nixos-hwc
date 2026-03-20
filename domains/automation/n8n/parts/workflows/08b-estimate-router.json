@@ -1,0 +1,333 @@
+{
+  "name": "Estimate Router - JobTread + Postgres + Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "estimate-push",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Estimate Push",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "estimate-push"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate x-api-key header\nconst apiKey = $input.item.json.headers['x-api-key'];\nconst expectedKey = $env.ESTIMATOR_API_KEY;\n\nif (!apiKey || apiKey !== expectedKey) {\n  throw new Error('UNAUTHORIZED');\n}\n\nconst body = $input.item.json.body;\n\n// Validate required fields\nif (!body.action || body.action !== 'push_estimate') {\n  throw new Error('Invalid action');\n}\n\nif (!body.jtPayload || !Array.isArray(body.jtPayload) || body.jtPayload.length === 0) {\n  throw new Error('jtPayload is required and must be a non-empty array');\n}\n\n// Determine job mode\nconst isNewJob = body.mode === 'new_job';\n\nif (isNewJob) {\n  if (!body.newJob || !body.newJob.customerId) {\n    throw new Error('newJob.customerId is required for new jobs');\n  }\n} else {\n  if (!body.jobId) {\n    throw new Error('jobId is required for existing jobs');\n  }\n}\n\nreturn {\n  json: {\n    // Job identification\n    mode: body.mode || 'existing',\n    jobId: body.jobId || null,\n    jobNumber: body.jobNumber || null,\n    jobName: body.jobName || null,\n    customerId: body.customerId || body.newJob?.customerId || null,\n    customerName: body.customerName || body.newJob?.customerName || null,\n    projectType: body.projectType || 'general',\n    \n    // For new job creation\n    newJob: body.newJob || null,\n    \n    // Payload data\n    projectState: body.projectState || {},\n    jtPayload: body.jtPayload,\n    totals: body.totals || {},\n    \n    // Metadata\n    timestamp: body.timestamp || new Date().toISOString(),\n    requestId: `est-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`\n  }\n};"
+      },
+      "id": "validate-request",
+      "name": "Validate Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "new-job-check",
+              "leftValue": "={{ $json.mode }}",
+              "rightValue": "new_job",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-new-job",
+      "name": "Is New Job?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.jobtread.com/api/graphql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"mutation CreateJob($input: CreateJobInput!) { createJob(input: $input) { id number name } }\",\n  \"variables\": {\n    \"input\": {\n      \"accountId\": \"{{ $json.newJob.customerId }}\",\n      \"name\": \"{{ $json.newJob.jobName }}\",\n      \"locationId\": \"{{ $json.newJob.locationId || '' }}\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "id": "create-jt-job",
+      "name": "Create JT Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jobtread-api",
+          "name": "JobTread API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract created job details from GraphQL response\nconst response = $input.item.json;\nconst prevData = $('Validate Request').item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT job creation failed: ${response.errors[0].message}`);\n}\n\nconst createdJob = response.data?.createJob;\n\nif (!createdJob || !createdJob.id) {\n  throw new Error('JT job creation returned no job ID');\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jobId: createdJob.id,\n    jobNumber: createdJob.number,\n    jobName: createdJob.name,\n    jobCreated: true\n  }\n};"
+      },
+      "id": "parse-created-job",
+      "name": "Parse Created Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pass through existing job data\nreturn {\n  json: {\n    ...$json,\n    jobCreated: false\n  }\n};"
+      },
+      "id": "use-existing-job",
+      "name": "Use Existing Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge job data from either branch\nreturn { json: $json };"
+      },
+      "id": "merge-job-data",
+      "name": "Merge Job Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.jobtread.com/api/graphql",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"mutation AddBudgetLineItems($jobId: ID!, $items: [BudgetLineItemInput!]!) { addBudgetLineItems(jobId: $jobId, items: $items) { id name } }\",\n  \"variables\": {\n    \"jobId\": \"{{ $json.jobId }}\",\n    \"items\": {{ JSON.stringify($json.jtPayload) }}\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "push-to-jt",
+      "name": "Push to JobTread",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "jobtread-api",
+          "name": "JobTread API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse JT push result and determine success\nconst response = $input.item.json;\nconst prevData = $('Merge Job Data').item.json;\n\nlet jtPushSuccess = false;\nlet jtPushError = null;\nlet jtPushResult = null;\n\nif (response.errors && response.errors.length > 0) {\n  jtPushError = response.errors.map(e => e.message).join('; ');\n} else if (response.data?.addBudgetLineItems) {\n  jtPushSuccess = true;\n  jtPushResult = response.data.addBudgetLineItems;\n} else if (response.error) {\n  // HTTP-level error\n  jtPushError = response.error.message || 'HTTP request failed';\n} else {\n  jtPushError = 'Unknown JT response format';\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jtPushSuccess,\n    jtPushError,\n    jtPushResult,\n    itemsPushed: jtPushSuccess ? prevData.jtPayload.length : 0\n  }\n};"
+      },
+      "id": "parse-jt-result",
+      "name": "Parse JT Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.POSTGRES_REST_URL || 'http://127.0.0.1:3001' }}/estimates",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"job_number\": {{ JSON.stringify($json.jobNumber) }},\n  \"job_id\": {{ JSON.stringify($json.jobId) }},\n  \"job_name\": {{ JSON.stringify($json.jobName) }},\n  \"customer_name\": {{ JSON.stringify($json.customerName) }},\n  \"customer_id\": {{ JSON.stringify($json.customerId) }},\n  \"project_type\": {{ JSON.stringify($json.projectType) }},\n  \"total_cost\": {{ $json.totals.cost || 0 }},\n  \"total_price\": {{ $json.totals.price || 0 }},\n  \"margin_percent\": {{ $json.totals.margin || 0 }},\n  \"labor_hours\": {{ $json.totals.laborHrs || 0 }},\n  \"item_count\": {{ $json.totals.items || 0 }},\n  \"project_state\": {{ JSON.stringify($json.projectState) }},\n  \"jt_payload\": {{ JSON.stringify($json.jtPayload) }},\n  \"pushed_to_jt\": {{ $json.jtPushSuccess }},\n  \"jt_push_error\": {{ JSON.stringify($json.jtPushError) }},\n  \"jt_push_result\": {{ JSON.stringify($json.jtPushResult) }}\n}",
+        "options": {}
+      },
+      "id": "archive-to-postgres",
+      "name": "Archive to Postgres",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "jt-success-check",
+              "leftValue": "={{ $json.jtPushSuccess }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-jt-success",
+      "name": "JT Push Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2000, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"Estimate Pushed to JobTread\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Job:*\\n<https://app.jobtread.com/jobs/{{ $json.jobId }}|{{ $json.jobName }} (#{{ $json.jobNumber }})>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Customer:*\\n{{ $json.customerName }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Type:*\\n{{ $json.projectType }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Items:*\\n{{ $json.itemsPushed }} line items\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Labor:*\\n{{ Math.round($json.totals.laborHrs || 0) }} hours\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Total:*\\n${{ Math.round($json.totals.price || 0).toLocaleString() }} ({{ ($json.totals.margin || 0).toFixed(1) }}% margin)\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Pushed via Heartwood Estimator | {{ $json.timestamp }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "notify-slack-success",
+      "name": "Notify Slack (Success)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2220, 340]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"Estimate Archived (JT Push Failed)\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Job:*\\n{{ $json.jobName }} (#{{ $json.jobNumber }})\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Customer:*\\n{{ $json.customerName }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Error:*\\n```{{ $json.jtPushError }}```\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Estimate saved to database. Retry JT push manually. | {{ $json.timestamp }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "notify-slack-failure",
+      "name": "Notify Slack (Failure)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2220, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"jtPushSuccess\": {{ $json.jtPushSuccess }},\n  \"jtPushError\": {{ JSON.stringify($json.jtPushError) }},\n  \"jobId\": {{ JSON.stringify($json.jobId) }},\n  \"jobNumber\": {{ JSON.stringify($json.jobNumber) }},\n  \"jobCreated\": {{ $json.jobCreated || false }},\n  \"itemsPushed\": {{ $json.itemsPushed || 0 }},\n  \"archived\": true,\n  \"requestId\": {{ JSON.stringify($json.requestId) }}\n}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"Unauthorized\",\n  \"message\": \"Invalid or missing x-api-key header\"\n}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "respond-unauthorized",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"Bad Request\",\n  \"message\": {{ JSON.stringify($json.errorMessage || 'Validation failed') }}\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-bad-request",
+      "name": "Respond Bad Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 620]
+    }
+  ],
+  "connections": {
+    "Webhook: Estimate Push": {
+      "main": [[{ "node": "Validate Request", "type": "main", "index": 0 }]]
+    },
+    "Validate Request": {
+      "main": [[{ "node": "Is New Job?", "type": "main", "index": 0 }]]
+    },
+    "Is New Job?": {
+      "main": [
+        [{ "node": "Create JT Job", "type": "main", "index": 0 }],
+        [{ "node": "Use Existing Job", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create JT Job": {
+      "main": [[{ "node": "Parse Created Job", "type": "main", "index": 0 }]]
+    },
+    "Parse Created Job": {
+      "main": [[{ "node": "Merge Job Data", "type": "main", "index": 0 }]]
+    },
+    "Use Existing Job": {
+      "main": [[{ "node": "Merge Job Data", "type": "main", "index": 0 }]]
+    },
+    "Merge Job Data": {
+      "main": [[{ "node": "Push to JobTread", "type": "main", "index": 0 }]]
+    },
+    "Push to JobTread": {
+      "main": [[{ "node": "Parse JT Result", "type": "main", "index": 0 }]]
+    },
+    "Parse JT Result": {
+      "main": [[
+        { "node": "Archive to Postgres", "type": "main", "index": 0 },
+        { "node": "JT Push Success?", "type": "main", "index": 0 }
+      ]]
+    },
+    "JT Push Success?": {
+      "main": [
+        [{ "node": "Notify Slack (Success)", "type": "main", "index": 0 }],
+        [{ "node": "Notify Slack (Failure)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Archive to Postgres": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    },
+    "Notify Slack (Success)": {
+      "main": []
+    },
+    "Notify Slack (Failure)": {
+      "main": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "business",
+      "id": "business-tag"
+    },
+    {
+      "name": "estimator",
+      "id": "estimator-tag"
+    },
+    {
+      "name": "jobtread",
+      "id": "jobtread-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-19T00:00:00.000Z",
+  "versionId": "1"
+}

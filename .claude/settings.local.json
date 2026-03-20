@@ -143,7 +143,10 @@
       "Bash(pkill:*)",
       "Bash(zcat:*)",
       "Read(//home/eric/400_mail/Maildir/proton/**)",
-      "Read(//home/eric/400_mail/Maildir/proton/Labels/**)"
+      "Read(//home/eric/400_mail/Maildir/proton/Labels/**)",
+      "Bash(openssl rand:*)",
+      "Bash(/run/current-system/sw/bin/npm run build)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": [],

@@ -215,6 +215,143 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/transcript-format \
 
 ---
 
+### 08a-jt-data-provider.json
+**Purpose:** Provide JobTread customer and job data for the Heartwood Estimator app dropdowns
+
+**Triggers:**
+- Webhook `GET /webhook/jt-customers` (Fetch all customers)
+- Webhook `GET /webhook/jt-jobs?customerId={id}` (Fetch jobs for customer)
+
+**Features:**
+- API key authentication via `x-api-key` header
+- GraphQL queries to JobTread API
+- Filters jobs by Phase custom field (1-3 = estimating stages)
+- Returns formatted dropdown data with IDs, names, addresses
+
+**Request Headers:**
+```
+x-api-key: {ESTIMATOR_API_KEY}
+```
+
+**Response (Customers):**
+```json
+{
+  "customers": [
+    { "id": "uuid", "name": "John Smith", "address": "123 Main St, City, ST 12345" }
+  ],
+  "count": 42
+}
+```
+
+**Response (Jobs):**
+```json
+{
+  "jobs": [
+    { "id": "uuid", "number": "281", "name": "Smith Bathroom", "displayName": "#281 - Smith Bathroom" }
+  ],
+  "count": 5
+}
+```
+
+**Credentials Required:**
+- `ESTIMATOR_API_KEY`: Shared secret for webhook authentication
+- JobTread API credential (Bearer token)
+
+---
+
+### 08b-estimate-router.json
+**Purpose:** Route estimates from Heartwood Estimator to JobTread, Postgres archive, and Slack notifications
+
+**Trigger:** Webhook `POST /webhook/estimate-push`
+
+**Request Headers:**
+```
+Content-Type: application/json
+x-api-key: {ESTIMATOR_API_KEY}
+```
+
+**Request Schema:**
+```json
+{
+  "action": "push_estimate",
+  "mode": "existing",
+  "projectType": "bathroom",
+  "jobId": "uuid",
+  "jobNumber": "281",
+  "jobName": "Smith Bathroom",
+  "customerId": "uuid",
+  "customerName": "John Smith",
+  "newJob": null,
+  "projectState": { },
+  "jtPayload": [ ],
+  "totals": {
+    "cost": 15000,
+    "price": 22500,
+    "items": 47,
+    "laborHrs": 120,
+    "margin": 33.3
+  },
+  "timestamp": "2026-03-19T..."
+}
+```
+
+**Features:**
+- API key authentication
+- Creates new JobTread job if `mode: "new_job"`
+- Pushes budget line items to JobTread via GraphQL
+- Archives estimate to Postgres (always, even on JT failure)
+- Notifies Slack with job link and totals
+- Returns detailed result with success/failure status
+
+**Response:**
+```json
+{
+  "success": true,
+  "jtPushSuccess": true,
+  "jtPushError": null,
+  "jobId": "uuid",
+  "jobNumber": "281",
+  "jobCreated": false,
+  "itemsPushed": 47,
+  "archived": true,
+  "requestId": "est-1710859200000-abc123"
+}
+```
+
+**Postgres Schema:** See `/home/eric/.nixos/domains/automation/n8n/parts/migrations/001-estimates-table.sql`
+
+**Slack Message Format:**
+- Success: Job link, customer, type, items, labor, total with margin
+- Failure: Warning with error details, note that estimate is archived
+
+**Credentials Required:**
+- `ESTIMATOR_API_KEY`: Shared secret for webhook authentication
+- `SLACK_WEBHOOK_URL`: Slack incoming webhook for #hwc-estimates
+- `POSTGRES_REST_URL`: PostgREST endpoint for estimates table
+- JobTread API credential (Bearer token)
+
+**Test Command:**
+```bash
+curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: {secret}" \
+  -d '{
+    "action": "push_estimate",
+    "mode": "existing",
+    "jobId": "22XXX...",
+    "jobNumber": "281",
+    "jobName": "Test Job",
+    "customerId": "22YYY...",
+    "customerName": "Test Customer",
+    "projectType": "bathroom",
+    "projectState": {},
+    "jtPayload": [],
+    "totals": { "cost": 1000, "price": 1500, "items": 10, "laborHrs": 8, "margin": 33.3 }
+  }'
+```
+
+---
+
 ## Import Instructions
 
 1. Access n8n: `https://hwc.ocelot-wahoo.ts.net:2443`
@@ -231,6 +368,9 @@ Configure these in n8n UI (Settings → Credentials):
 - `JELLYFIN_API_KEY`: From Jellyfin dashboard or `/run/secrets/jellyfin-api-key`
 - `IMMICH_API_KEY`: From Immich settings
 - `SLACK_WEBHOOK_URL`: From `/run/secrets/slack-webhook-url`
+- `ESTIMATOR_API_KEY`: Shared secret for estimator webhook authentication
+- `POSTGRES_REST_URL`: PostgREST endpoint (e.g., `http://127.0.0.1:3001`)
+- JobTread API Bearer token (configured as HTTP Header Auth credential)
 
 Credentials are accessed via environment variables in workflows:
 - `{{ $env.JELLYFIN_API_KEY }}`
@@ -260,5 +400,5 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
-**Last Updated:** 2025-12-10
+**Last Updated:** 2026-03-19
 **Author:** Eric (with Claude assistance)
