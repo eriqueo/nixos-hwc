@@ -1,1 +1,8 @@
-{"installed":{"client_id":"REDACTED_CLIENT_ID","project_id":"powerful-lore-421916","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"REDACTED_CLIENT_SECRET","redirect_uris":["http://localhost"]}}
+{
+  "NOTE": "Credentials managed by agenix. See domains/secrets/declarations/home.nix",
+  "secrets": {
+    "client_id": "/run/agenix/google-oauth-client-id",
+    "client_secret": "/run/agenix/google-oauth-client-secret",
+    "full_json": "/run/agenix/gmail-oauth-client"
+  }
+}
