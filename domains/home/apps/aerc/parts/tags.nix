@@ -42,7 +42,15 @@ let
     let others = lib.filter (n: n != t.tag) categoryNames;
         removes = lib.concatMapStringsSep "" (n: " -${n}") others;
     in "+${t.tag}${removes}";
+  # One-shot clear: removes ALL custom categories + flags + Proton junk (flagged/starred/important)
+  # So <Space>m- cleans the tags column AND the ! in flags column in one press
+  clearCustomCmd =
+    let
+      extras = [ "important" "flagged" "starred" ];
+      allToClear = lib.unique (categoryNames ++ (map (t: t.tag) flagTags) ++ extras);
+      removes = lib.concatMapStringsSep " " (n: "-${n}") allToClear;
+    in removes;
 
 in {
-  inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd;
+  inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd clearCustomCmd;
 }

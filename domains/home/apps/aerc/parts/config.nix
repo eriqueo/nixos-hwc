@@ -72,6 +72,10 @@ ${tagQueries}
     cases = map (t: ''(case `\b${t.tag}\b` "${tagStyle t}")'') tagDefs;
   in ''(switch (.Labels | join " ") ${lib.concatStringsSep " " cases} (default "default"))'';
 
+  rowStyle = let
+      cases = map (t: ''(case `\b${t.tag}\b` "${tagStyle t}")'') tags.categoryTags;
+  in ''(switch (.Labels | join " ") ${lib.concatStringsSep " " cases} (default "default"))'';
+
   # Derive the .StyleMap cases for column-tags
   tagStyleMapCases = lib.concatStringsSep " " (
     map (t: ''(case "${t.tag}" "${tagStyle t}")'') tagDefs
@@ -117,12 +121,12 @@ in
       tab-title-account = {{.Account}}{{if .Unread}} ({{.Unread}}){{end}}
 
       # Live column templates
-      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude "notifications") (exclude "notification") (exclude "action") (exclude `^aerc`) (exclude "hide_my_email") (exclude "website") ${tagStyleMapCases} (default "default") | join " " }}
-      column-date    = {{.Style (.DateAutoFormat .Date.Local) ${tagSwitch}}}
-      column-from    = {{.Style (index (.From | names) 0) ${tagSwitch}}}
-      column-to      = {{.Style (index (.To | names) 0) ${tagSwitch}}}
-      column-flags   = {{.Flags | join ""}}
-      column-subject = {{.ThreadPrefix}}{{if .ThreadFolded}}{{printf "{%d}" .ThreadCount}}{{end}}{{.Style .Subject ${tagSwitch}}}
+      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude "notifications") (exclude "notification") (exclude "aerc-notes") (exclude "action") (exclude "hide_my_email") (exclude "website") (exclude "starred") (exclude "important") ${tagStyleMapCases} (default "default") | join " " }}
+      column-date    = {{.Style (.DateAutoFormat .Date.Local) ${rowStyle}}}
+      column-from    = {{.Style (index (.From | names) 0) ${rowStyle}}}
+      column-to      = {{.Style (index (.To | names) 0) ${rowStyle}}}
+      column-flags   = {{.Flags | join "" }}
+      column-subject = {{.ThreadPrefix}}{{if .ThreadFolded}}{{printf "{%d}" .ThreadCount}}{{end}}{{.Style .Subject ${rowStyle}}}
       column-separator = " | "
 
       [viewer]

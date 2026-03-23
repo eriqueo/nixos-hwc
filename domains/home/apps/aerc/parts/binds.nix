@@ -42,7 +42,7 @@ in
       <C-r> = :exec ${config.home.homeDirectory}/.local/bin/sync-mail<Enter>
 
       # Show your actual binds.conf instead of built-in defaults
-      ; = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
+      <semicolon> = :term ${pkgs.bash}/bin/bash -lc '${pkgs.less}/bin/less -R "$HOME/.config/aerc/binds.conf"'<Enter>
 
       # Switch styleset on the fly
       <Space>ts = :reload -s<space>
@@ -102,10 +102,14 @@ ${goToBinds}
       <Space>mz = :modify-labels +spam -inbox<Enter>
       <Space>ml = :modify-labels<space>
 
-      # Toggle flags off
+      # Toggle flags off (keys avoid collision with flag add-binds below)
       <Space>mx = :modify-labels -action<Enter>
       <Space>m. = :modify-labels -pending<Enter>
       <Space>mr = :modify-labels -important<Enter>
+      <Space>mF = :modify-labels -flagged<Enter>
+
+      # ONE BIND TO CLEAR THEM ALL
+      <Space>m- = :modify-labels ${tags.clearCustomCmd}<Enter> 
 
       # Additive flag marking (coexists with categories)
 ${flagBinds}

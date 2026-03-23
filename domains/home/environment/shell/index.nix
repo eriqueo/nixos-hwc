@@ -54,6 +54,7 @@ in
         LIBVIRT_DEFAULT_URI = "qemu:///system";
         EDITOR = "micro";
         VISUAL = "micro";
+        _ZO_DOCTOR = "0";
       };
       description = "Environment variables for the user session.";
     };

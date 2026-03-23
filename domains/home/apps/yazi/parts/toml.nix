@@ -20,8 +20,8 @@
 
       [opener]
       edit = [
-        { run = 'micro "$@"', block = true, for = "text" },
-        { run = 'micro "$@"', block = true, for = "unix" }
+        { run = 'nvim "$@"', block = true, for = "text" },
+        { run = 'nvim "$@"', block = true, for = "unix" }
       ]
       open = [ { run = 'xdg-open "$@"', desc = "Open" } ]
       office = [ { run = 'onlyoffice-desktopeditors "$@"', desc = "OnlyOffice" } ]

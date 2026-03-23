@@ -433,40 +433,30 @@ in
   '';
 
   "lid-status" = sh "waybar-lid-status" ''
-    # Check if lid-sleep override exists (sleep enabled) or not (sleep disabled)
-    OVERRIDE_FILE="/etc/systemd/logind.conf.d/50-lid-sleep.conf"
-
-    if [[ -f "$OVERRIDE_FILE" ]]; then
-      # Override exists = sleep on lid close is ENABLED
-      ICON="󰒲"
-      CLASS="sleep-enabled"
-      TOOLTIP="Lid Close: Sleep\\nClick to disable"
-    else
-      # No override = base config (ignore) = sleep DISABLED
+    # Inhibitor active = lid close blocked (sleep disabled)
+    # Inhibitor stopped = lid close triggers suspend (sleep enabled)
+    if systemctl --user is-active --quiet lid-sleep-inhibitor; then
       ICON="󰒳"
       CLASS="sleep-disabled"
       TOOLTIP="Lid Close: Ignore\\nClick to enable sleep"
+    else
+      ICON="󰒲"
+      CLASS="sleep-enabled"
+      TOOLTIP="Lid Close: Sleep\\nClick to disable"
     fi
 
     printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$ICON" "$CLASS" "$TOOLTIP"
   '';
 
   "lid-toggle" = sh "waybar-lid-toggle" ''
-    # Toggle lid sleep behavior via logind drop-in config
-    OVERRIDE_DIR="/etc/systemd/logind.conf.d"
-    OVERRIDE_FILE="$OVERRIDE_DIR/50-lid-sleep.conf"
-
-    if [[ -f "$OVERRIDE_FILE" ]]; then
-      # Currently sleeping on lid close - disable it
-      sudo rm -f "$OVERRIDE_FILE"
-      sudo systemctl kill -s HUP systemd-logind
-      notify-send "Lid Sleep" "Disabled - lid close now ignored" -i computer -t 3000
-    else
-      # Currently ignoring lid close - enable sleep
-      sudo mkdir -p "$OVERRIDE_DIR"
-      echo -e "[Login]\nHandleLidSwitch=suspend\nHandleLidSwitchExternalPower=suspend" | sudo tee "$OVERRIDE_FILE" > /dev/null
-      sudo systemctl kill -s HUP systemd-logind
+    # Toggle lid sleep by starting/stopping the inhibitor service
+    # No sudo, no logind HUP, no touchpad disruption
+    if systemctl --user is-active --quiet lid-sleep-inhibitor; then
+      systemctl --user stop lid-sleep-inhibitor
       notify-send "Lid Sleep" "Enabled - closing lid will suspend" -i system-suspend -t 3000
+    else
+      systemctl --user start lid-sleep-inhibitor
+      notify-send "Lid Sleep" "Disabled - lid close now ignored" -i computer -t 3000
     fi
   '';
 }

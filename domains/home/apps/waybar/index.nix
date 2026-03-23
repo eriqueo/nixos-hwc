@@ -47,6 +47,23 @@ in
 
     xdg.configFile."waybar/style.css".text = appearance;
 
+    # Inhibitor service: blocks lid-switch suspend at runtime.
+    # Active = lid close ignored (default on login). Stopped = lid close suspends.
+    # Toggled by waybar-lid-toggle script — no sudo, no logind HUP, no touchpad disruption.
+    systemd.user.services.lid-sleep-inhibitor = {
+      Unit = {
+        Description = "Inhibit lid-close suspend";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=handle-lid-switch --who=waybar-lid-toggle --why='User disabled lid sleep' --mode=block ${pkgs.coreutils}/bin/sleep infinity";
+        Restart = "on-failure";
+        RestartSec = 2;
+      };
+      Install = { WantedBy = [ "graphical-session.target" ]; };
+    };
+
     # Run waybar via systemd so it survives rebuilds and restarts cleanly.
     # Wait for XDG portals to avoid race condition on startup.
     systemd.user.services.waybar = {

@@ -314,6 +314,7 @@ in
         pkgs.pavucontrol
         pkgs.seahorse
       ])
+      ++ (lib.optionals cfg.peripherals.enable cfg.peripherals.drivers)
       ++ (lib.optionals cfg.peripherals.guiTools [
         pkgs.cups                    # CUPS command line tools
         pkgs.system-config-printer   # GUI printer configuration

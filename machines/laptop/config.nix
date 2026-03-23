@@ -62,9 +62,9 @@
     # All settings are now consolidated under the 'settings' attribute set.
     settings = {
       Login = {
-        # Ignore lid close to prevent suspend during remote access
-        HandleLidSwitch = "ignore";
-        HandleLidSwitchExternalPower = "ignore";
+        # Base: suspend on lid close (inhibitor service blocks at runtime)
+        HandleLidSwitch = "suspend";
+        HandleLidSwitchExternalPower = "suspend";
         # Suspend on power button (hibernation disabled with zram)
         HandlePowerKey = "suspend";
         # Disable idle suspend (laptop left running for extended period)
@@ -108,7 +108,7 @@
     peripherals = {
       enable = true;
       avahi = true;  # Network printer discovery
-      drivers = [ pkgs.brlaser ];  # Brother HL-L2390DW only - skip Canon/HP drivers
+      drivers = [ pkgs.brlaser pkgs.hplip ];  # HP and Brother drivers
     };
   };
 
@@ -158,11 +158,6 @@
           { command = "/run/current-system/sw/bin/systemctl stop podman-ollama.service"; options = [ "NOPASSWD" ]; }
           # Performance mode: allow CPU governor changes
           { command = "/run/current-system/sw/bin/tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"; options = [ "NOPASSWD" ]; }
-          # Lid sleep toggle: manage logind drop-in config
-          { command = "/run/current-system/sw/bin/rm -f /etc/systemd/logind.conf.d/50-lid-sleep.conf"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/mkdir -p /etc/systemd/logind.conf.d"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/tee /etc/systemd/logind.conf.d/50-lid-sleep.conf"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/systemctl kill -s HUP systemd-logind"; options = [ "NOPASSWD" ]; }
         ];
       }
     ];
