@@ -1,6 +1,6 @@
 { lib, pkgs, config, ... }:
 let
-    common    = import ../../../mail/parts/common.nix { inherit lib; };
+    common    = import ../../accounts/helpers.nix { inherit lib; };
     accounts  = config.hwc.home.mail.accounts or {};
     accVals   = lib.attrValues accounts;
     themePart = import ./theme.nix { inherit lib config; };

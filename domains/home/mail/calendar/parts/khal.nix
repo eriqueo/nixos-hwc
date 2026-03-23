@@ -10,8 +10,6 @@ let
   '';
 
   calendars = lib.concatStringsSep "\n" (lib.mapAttrsToList mkCalendar cfg.accounts);
-
-  defaultCal = lib.head (lib.attrNames cfg.accounts);
 in
 {
   config = ''
@@ -26,7 +24,7 @@ in
     longdatetimeformat = %Y-%m-%d %H:%M %A
 
     [default]
-    default_calendar = "heartwoodcraftmt@gmail.com"
+    default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F
     highlight_event_days = true
 
     [view]

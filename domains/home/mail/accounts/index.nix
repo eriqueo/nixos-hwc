@@ -81,6 +81,7 @@ in
           agenix = gmailPersonalSecretPath;
         };
         maildirName = "gmail-personal";
+        sync.enable = false;  # Forwarding to Proton; send-only via msmtp
         sync.wildcards = [ "INBOX" "[Gmail]/*" ];
         send.msmtpAccount = "gmail-personal";
       };
@@ -96,6 +97,7 @@ in
           agenix = gmailBusinessSecretPath;
         };
         maildirName = "gmail-business";
+        sync.enable = false;  # Forwarding to Proton; send-only via msmtp
         sync.wildcards = [ "INBOX" "[Gmail]/*" ];
         send.msmtpAccount = "gmail-business";
       };

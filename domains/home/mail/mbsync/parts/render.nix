@@ -2,7 +2,7 @@
 let
   cfg        = config.hwc.home.mail;
   accs       = cfg.accounts or {};
-  common     = import ../../parts/common.nix { inherit lib; };
+  common     = import ../../accounts/helpers.nix { inherit lib; };
   # Use notmuch maildirRoot or fallback to default
   maildirRoot =
     let nmRoot = cfg.notmuch.maildirRoot or "";
@@ -16,6 +16,8 @@ let
     (lib.filter (n: lib.elem n allNames) desiredOrder)
     ++ (lib.filter (n: ! lib.elem n desiredOrder) allNames);
   vals = map (n: accs.${n}) orderedNames;
+  # Only accounts with sync.enable == true get mbsync config
+  syncVals = lib.filter (a: a.sync.enable) vals;
 
   haveProton = lib.any (a: a.type == "proton-bridge") vals;
 
@@ -132,7 +134,7 @@ let
       ${extra}
     '';
 
-  mbsyncrc = lib.concatStringsSep "\n\n" (map mbsyncBlock vals);
+  mbsyncrc = lib.concatStringsSep "\n\n" (map mbsyncBlock syncVals);
 in
 {
   inherit mbsyncrc haveProton;

@@ -1,6 +1,6 @@
 { lib, config, osConfig ? {}}:
 let
-  common = import ../../parts/common.nix { inherit lib; };
+  common = import ../../accounts/helpers.nix { inherit lib; };
   accs = lib.attrValues (config.hwc.home.mail.accounts or {});
   orJoin = xs: lib.concatStringsSep " OR " xs;
 

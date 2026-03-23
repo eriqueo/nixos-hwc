@@ -79,5 +79,11 @@
       group = "secrets";
     };
 
+  apple-app-pw = {
+    file = ../parts/home/apple-app-pw.age;
+    mode = "0440";
+    owner = "root";
+    group = "secrets";
+  };
   };
 }

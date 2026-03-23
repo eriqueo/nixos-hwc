@@ -3,9 +3,7 @@
 { lib, pkgs, cfg }:
 
 let
-  py = pkgs.python3.withPackages (ps: with ps; [ dateparser ics ]);
-
-  defaultCal = lib.head (lib.attrNames cfg.accounts);
+  py = pkgs.python3.withPackages (ps: with ps; [ dateparser ]);
 
   emailToKhalScript = pkgs.writeShellScriptBin "email-to-khal" ''
     exec ${py}/bin/python3 ${./email-to-khal.py} "$@"

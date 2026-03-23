@@ -6,23 +6,18 @@ let
   isNixOSHost = osConfig ? hwc;
   osCfg = if isNixOSHost then osConfig else {};
 
-  hasClientId = (osCfg ? age) && (osCfg.age.secrets ? google-oauth-client-id);
-  hasClientSecret = (osCfg ? age) && (osCfg.age.secrets ? google-oauth-client-secret);
-
-  clientIdPath = if hasClientId
-    then osCfg.age.secrets.google-oauth-client-id.path
-    else "/dev/null";
-  clientSecretPath = if hasClientSecret
-    then osCfg.age.secrets.google-oauth-client-secret.path
+  hasApplePw = (osCfg ? age) && (osCfg.age.secrets ? apple-app-pw);
+  applePwPath = if hasApplePw
+    then osCfg.age.secrets.apple-app-pw.path
     else "/dev/null";
 
   vdirsyncer = import ./parts/vdirsyncer.nix {
-    inherit lib pkgs cfg clientIdPath clientSecretPath;
+    inherit lib pkgs cfg applePwPath;
   };
   khal = import ./parts/khal.nix { inherit lib pkgs cfg; };
   service = import ./parts/service.nix { inherit lib pkgs; };
-  parser = import ./parts/parser.nix {inherit lib pkgs cfg;};
-  
+  parser = import ./parts/parser.nix { inherit lib pkgs cfg; };
+
 in
 {
   # OPTIONS
@@ -34,7 +29,7 @@ in
         options = {
           email = lib.mkOption {
             type = lib.types.str;
-            description = "Google account email address";
+            description = "Apple ID email address";
           };
           color = lib.mkOption {
             type = lib.types.str;
@@ -44,7 +39,7 @@ in
         };
       });
       default = {};
-      description = "Google Calendar accounts to sync";
+      description = "Apple Calendar accounts to sync via CalDAV";
     };
   };
 

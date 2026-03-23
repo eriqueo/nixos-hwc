@@ -137,7 +137,7 @@ ${categoryBinds}
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
-      i = :pipe email-to-khal<Enter>
+      i = :pipe -m email-to-khal<Enter>
 
       [view::passthrough]
       $noinherit = true
@@ -217,6 +217,7 @@ ${categoryBinds}
           ColumnDelimiter: ","
           MarkStyleWidth: 1
           HScrollWidth: "10%"
+          DisableMouse: true
 
           Prompt:
             Normal: {}

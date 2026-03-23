@@ -57,6 +57,7 @@ in
           startTLS = lib.mkOption { type = t.nullOr t.bool; default = null; };
           extraMsmtp = lib.mkOption { type = t.lines; default = ""; };
 
+          sync.enable = lib.mkOption { type = t.bool; default = true; description = "Whether to sync this account via mbsync"; };
           sync.patterns = lib.mkOption { type = t.listOf t.str; default = [ "INBOX" "Sent" "Drafts" "Trash" ]; };
           sync.wildcards = lib.mkOption { type = t.listOf t.str; default = []; description = "Additional wildcard patterns for mbsync (e.g., Folders/*)"; };
           mailboxMapping = lib.mkOption {

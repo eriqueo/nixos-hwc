@@ -19,12 +19,12 @@
       scraper.enable = true;
     };
 
-    # Calendar: Google Calendar sync via khal + vdirsyncer
+    # Calendar: Apple iCloud sync via khal + vdirsyncer (CalDAV)
     hwc.home.mail.calendar = {
       enable = true;
       accounts = {
-        hwcmt = {
-          email = "heartwoodcraftmt@gmail.com";
+        icloud = {
+          email = "eric@iheartwoodcraft.com";
           color = "dark green";
         };
       };

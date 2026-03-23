@@ -1,4 +1,4 @@
-{ lib, pkgs, cfg, clientIdPath, clientSecretPath }:
+{ lib, pkgs, cfg, applePwPath }:
 let
   dataDir = "~/.local/share/vdirsyncer";
 
@@ -7,13 +7,13 @@ let
     a = "${name}_remote"
     b = "${name}_local"
     collections = ["from a", "from b"]
-    metadata = ["color"]
+    metadata = ["color", "displayname"]
 
     [storage ${name}_remote]
-    type = "google_calendar"
-    token_file = "${dataDir}/tokens/${name}"
-    client_id.fetch = ["command", "cat", "${clientIdPath}"]
-    client_secret.fetch = ["command", "cat", "${clientSecretPath}"]
+    type = "caldav"
+    url = "https://caldav.icloud.com/"
+    username = "${acc.email}"
+    password.fetch = ["command", "cat", "${applePwPath}"]
 
     [storage ${name}_local]
     type = "filesystem"

@@ -11,8 +11,9 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 ```
 mail/
 ├── index.nix                  # Mail module auto-loader + account options
-├── parts/common.nix           # Shared helpers (loginOf, rolesFor, passCmd, etc.)
-├── accounts/index.nix         # Account definitions (proton; gmail commented out)
+├── accounts/
+│   ├── index.nix              # Account definitions (proton, gmail-personal, gmail-business)
+│   └── helpers.nix            # Shared helpers (loginOf, rolesFor, passCmd, etc.)
 ├── abook/index.nix            # Address book config
 ├── aerc/
 │   ├── index.nix              # aerc module (enable toggle, packages, activation)

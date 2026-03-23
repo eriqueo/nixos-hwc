@@ -3,7 +3,7 @@ let
   cfg  = config.hwc.home.mail;
   accs = cfg.accounts or {};
   vals = lib.attrValues accs;
-  common = import ../../parts/common.nix { inherit lib; };
+  common = import ../../accounts/helpers.nix { inherit lib; };
 
   getOr = a: n: def:
     if common.hasField a n then
