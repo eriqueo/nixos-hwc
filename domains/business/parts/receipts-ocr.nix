@@ -33,7 +33,7 @@ let
   serviceDir = "${businessCfg.dataDir}/receipts-ocr";
 
   # Source code directory (expected location)
-  sourceDir = "${paths.nixos or "/home/eric/.nixos"}/workspace/projects/receipts-pipeline";
+  sourceDir = "${paths.nixos or "/home/eric/.nixos"}/workspace/hwc/receipt_pipeline";
 
   # Receipt OCR service script with validation
   receiptOcrService = pkgs.writeScriptBin "receipt-ocr-service" ''

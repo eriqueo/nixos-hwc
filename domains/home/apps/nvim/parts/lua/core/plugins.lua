@@ -181,7 +181,8 @@ require("lazy").setup({
       -- Server configs
       local servers = {
         lua_ls = { settings = { Lua = { diagnostics = { globals = { "vim" } } } } },
-        nil_ls = {}, pyright = {}, ts_ls = {}, gopls = {},
+        nil_ls = { settings = { ["nil"] = { nix = { flake = { autoArchive = true } } } } },
+        pyright = {}, ts_ls = {}, gopls = {},
         rust_analyzer = { settings = { ["rust-analyzer"] = { cargo = { allFeatures = true } } } },
         clangd = { cmd = { "clangd", "--offset-encoding=utf-16" } },
       }

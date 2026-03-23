@@ -2,8 +2,8 @@
 { config, lib, pkgs, osConfig ? {}, ... }:
 
 let
-  # Assets dir: from modules/home/environment/scripts -> up 4 -> workspace/projects/productivity/transcript-formatter
-  assetDir = ../../../../workspace/projects/productivity/transcript-formatter;
+  # Assets dir: from domains/home/environment/scripts -> up 4 -> workspace/youtube-services/transcript-formatter
+  assetDir = ../../../../workspace/youtube-services/transcript-formatter;
 
   # Python w/ tkinter + deps (python3Full is gone)
   py = pkgs.python3.withPackages (ps: with ps; [ requests watchdog tkinter ]);

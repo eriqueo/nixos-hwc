@@ -141,7 +141,7 @@
       import os
 
       # Add the graph directory to Python path
-      graph_dir = "${self}/workspace/utilities/graph"
+      graph_dir = "${self}/workspace/nixos/graph"
       sys.path.insert(0, graph_dir)
 
       # Change to repo root for scanning

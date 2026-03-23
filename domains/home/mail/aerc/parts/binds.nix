@@ -137,7 +137,7 @@ ${categoryBinds}
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
-      I = :pipe -p khal import<Enter>
+      i = :pipe email-to-khal<Enter>
 
       [view::passthrough]
       $noinherit = true

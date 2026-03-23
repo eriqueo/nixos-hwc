@@ -21,6 +21,8 @@ let
   };
   khal = import ./parts/khal.nix { inherit lib pkgs cfg; };
   service = import ./parts/service.nix { inherit lib pkgs; };
+  parser = import ./parts/parser.nix {inherit lib pkgs cfg;};
+  
 in
 {
   # OPTIONS
@@ -49,10 +51,12 @@ in
   # IMPLEMENTATION
   config = lib.mkIf cfg.enable (lib.mkMerge [
     {
-      home.packages = [ pkgs.vdirsyncer pkgs.khal ];
+      home.packages = [ pkgs.vdirsyncer pkgs.khal parser.emailToKhalScript ];
 
-      xdg.configFile."vdirsyncer/config".text = vdirsyncer.config;
-      xdg.configFile."khal/config".text = khal.config;
+      xdg.configFile = {
+          "vdirsyncer/config".text = vdirsyncer.config;
+          "khal/config".text = khal.config;
+      } // parser.aercConfig;
 
       # Ensure storage directories exist
       home.activation.calendarDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -65,6 +69,7 @@ in
 
     # systemd timer for periodic sync
     service
+    parser.homeFiles
 
     # VALIDATION
     {

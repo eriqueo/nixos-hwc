@@ -26,7 +26,7 @@ let
   yt-core = pkgs.python3Packages.buildPythonPackage {
     pname = "yt-core";
     version = "0.1.0";
-    src = lib.cleanSource "${paths.nixos}/workspace/projects/youtube-services/packages/yt_core";
+    src = lib.cleanSource "${paths.nixos}/workspace/youtube-services/packages/yt_core";
     format = "pyproject";
 
     propagatedBuildInputs = with pkgs.python3Packages; [
@@ -52,7 +52,7 @@ let
   yt-transcripts-api = pkgs.python3Packages.buildPythonPackage {
     pname = "yt-transcripts-api";
     version = "0.1.0";
-    src = lib.cleanSource "${paths.nixos}/workspace/projects/youtube-services/packages/yt_transcripts_api";
+    src = lib.cleanSource "${paths.nixos}/workspace/youtube-services/packages/yt_transcripts_api";
     format = "pyproject";
 
     propagatedBuildInputs = with pkgs.python3Packages; [
@@ -140,7 +140,7 @@ let
     export DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/db-url")"
 
     # Run Alembic migrations
-    cd ${paths.nixos}/workspace/projects/youtube-services/packages/yt_transcripts_api/migrations
+    cd ${paths.nixos}/workspace/youtube-services/packages/yt_transcripts_api/migrations
     ${pythonEnv}/bin/alembic upgrade head
 
     echo "[yt-transcripts-api-setup] Migrations complete"

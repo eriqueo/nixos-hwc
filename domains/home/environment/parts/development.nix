@@ -92,7 +92,7 @@ in
       EDITOR = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       VISUAL = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       # Development directories
-      PROJECTS = "$HOME/.nixos/workspace/projects";
+      PROJECTS = "$HOME/.nixos/workspace/hwc";
       SCRIPTS = "$HOME/.nixos/workspace";
       WORKSPACE = "$HOME/.nixos/workspace";
 

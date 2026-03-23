@@ -26,7 +26,7 @@ in
     longdatetimeformat = %Y-%m-%d %H:%M %A
 
     [default]
-    default_calendar = ${defaultCal}
+    default_calendar = "heartwoodcraftmt@gmail.com"
     highlight_event_days = true
 
     [view]
