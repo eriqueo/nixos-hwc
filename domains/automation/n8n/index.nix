@@ -85,6 +85,27 @@ in
       };
     };
 
+    # Secret file paths (via agenix)
+    secrets = {
+      estimatorApiKeyFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing ESTIMATOR_API_KEY (via agenix)";
+      };
+
+      jobtreadGrantKeyFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing JOBTREAD_GRANT_KEY (via agenix)";
+      };
+
+      slackWebhookUrlFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing SLACK_WEBHOOK_URL (via agenix)";
+      };
+    };
+
     funnel = {
       enable = lib.mkEnableOption "Expose full n8n publicly via Tailscale Funnel (for Manus AI, etc.)";
 

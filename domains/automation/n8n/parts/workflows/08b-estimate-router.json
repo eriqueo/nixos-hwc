@@ -57,29 +57,21 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://app.jobtread.com/api/graphql",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://api.jobtread.com/pave",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"query\": \"mutation CreateJob($input: CreateJobInput!) { createJob(input: $input) { id number name } }\",\n  \"variables\": {\n    \"input\": {\n      \"accountId\": \"{{ $json.newJob.customerId }}\",\n      \"name\": \"{{ $json.newJob.jobName }}\",\n      \"locationId\": \"{{ $json.newJob.locationId || '' }}\"\n    }\n  }\n}",
+        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"createJob\": {\n      \"$\": {\n        \"accountId\": \"{{ $json.newJob.customerId }}\",\n        \"name\": \"{{ $json.newJob.jobName }}\"\n      },\n      \"id\": {},\n      \"number\": {},\n      \"name\": {}\n    }\n  }\n}",
         "options": {}
       },
       "id": "create-jt-job",
       "name": "Create JT Job",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [900, 200],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "jobtread-api",
-          "name": "JobTread API"
-        }
-      }
+      "position": [900, 200]
     },
     {
       "parameters": {
-        "jsCode": "// Extract created job details from GraphQL response\nconst response = $input.item.json;\nconst prevData = $('Validate Request').item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT job creation failed: ${response.errors[0].message}`);\n}\n\nconst createdJob = response.data?.createJob;\n\nif (!createdJob || !createdJob.id) {\n  throw new Error('JT job creation returned no job ID');\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jobId: createdJob.id,\n    jobNumber: createdJob.number,\n    jobName: createdJob.name,\n    jobCreated: true\n  }\n};"
+        "jsCode": "// Extract created job details from Pave response\nconst response = $input.item.json;\nconst prevData = $('Validate Request').item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT job creation failed: ${response.errors[0].message}`);\n}\n\nconst createdJob = response.createJob;\n\nif (!createdJob || !createdJob.id) {\n  throw new Error('JT job creation returned no job ID');\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jobId: createdJob.id,\n    jobNumber: createdJob.number,\n    jobName: createdJob.name,\n    jobCreated: true\n  }\n};"
       },
       "id": "parse-created-job",
       "name": "Parse Created Job",
@@ -110,12 +102,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://app.jobtread.com/api/graphql",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://api.jobtread.com/pave",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"query\": \"mutation AddBudgetLineItems($jobId: ID!, $items: [BudgetLineItemInput!]!) { addBudgetLineItems(jobId: $jobId, items: $items) { id name } }\",\n  \"variables\": {\n    \"jobId\": \"{{ $json.jobId }}\",\n    \"items\": {{ JSON.stringify($json.jtPayload) }}\n  }\n}",
+        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"addBudgetLineItems\": {\n      \"$\": {\n        \"jobId\": \"{{ $json.jobId }}\",\n        \"items\": {{ JSON.stringify($json.jtPayload) }}\n      },\n      \"id\": {},\n      \"name\": {}\n    }\n  }\n}",
         "options": {
           "timeout": 30000
         }
@@ -125,17 +115,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [1560, 300],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "jobtread-api",
-          "name": "JobTread API"
-        }
-      },
       "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "// Parse JT push result and determine success\nconst response = $input.item.json;\nconst prevData = $('Merge Job Data').item.json;\n\nlet jtPushSuccess = false;\nlet jtPushError = null;\nlet jtPushResult = null;\n\nif (response.errors && response.errors.length > 0) {\n  jtPushError = response.errors.map(e => e.message).join('; ');\n} else if (response.data?.addBudgetLineItems) {\n  jtPushSuccess = true;\n  jtPushResult = response.data.addBudgetLineItems;\n} else if (response.error) {\n  // HTTP-level error\n  jtPushError = response.error.message || 'HTTP request failed';\n} else {\n  jtPushError = 'Unknown JT response format';\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jtPushSuccess,\n    jtPushError,\n    jtPushResult,\n    itemsPushed: jtPushSuccess ? prevData.jtPayload.length : 0\n  }\n};"
+        "jsCode": "// Parse JT push result and determine success\nconst response = $input.item.json;\nconst prevData = $('Merge Job Data').item.json;\n\nlet jtPushSuccess = false;\nlet jtPushError = null;\nlet jtPushResult = null;\n\nif (response.errors && response.errors.length > 0) {\n  jtPushError = response.errors.map(e => e.message).join('; ');\n} else if (response.addBudgetLineItems) {\n  jtPushSuccess = true;\n  jtPushResult = response.addBudgetLineItems;\n} else if (response.error) {\n  // HTTP-level error\n  jtPushError = response.error.message || 'HTTP request failed';\n} else {\n  jtPushError = 'Unknown JT response format';\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jtPushSuccess,\n    jtPushError,\n    jtPushResult,\n    itemsPushed: jtPushSuccess ? prevData.jtPayload.length : 0\n  }\n};"
       },
       "id": "parse-jt-result",
       "name": "Parse JT Result",
@@ -314,20 +298,11 @@
   },
   "staticData": null,
   "tags": [
-    {
-      "name": "business",
-      "id": "business-tag"
-    },
-    {
-      "name": "estimator",
-      "id": "estimator-tag"
-    },
-    {
-      "name": "jobtread",
-      "id": "jobtread-tag"
-    }
+    { "name": "business", "id": "business-tag" },
+    { "name": "estimator", "id": "estimator-tag" },
+    { "name": "jobtread", "id": "jobtread-tag" }
   ],
   "triggerCount": 1,
-  "updatedAt": "2026-03-19T00:00:00.000Z",
-  "versionId": "1"
+  "updatedAt": "2026-03-20T00:00:00.000Z",
+  "versionId": "2"
 }

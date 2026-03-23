@@ -146,7 +146,8 @@
       "Read(//home/eric/400_mail/Maildir/proton/Labels/**)",
       "Bash(openssl rand:*)",
       "Bash(/run/current-system/sw/bin/npm run build)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git branch:*)"
     ],
     "deny": [],
     "ask": [],

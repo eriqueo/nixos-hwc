@@ -52,12 +52,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://app.jobtread.com/api/graphql",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://api.jobtread.com/pave",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\n  \"query\": \"query GetCustomers { accounts(filter: { type: { eq: \\\"customer\\\" } }, first: 200) { edges { node { id name primaryLocationId locations { id address { street1 city state zip } } } } } }\"\n}",
+        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"accounts\": {\n      \"$\": { \"filter\": { \"type\": { \"eq\": \"customer\" } }, \"first\": 200 },\n      \"nodes\": {\n        \"id\": {},\n        \"name\": {},\n        \"primaryLocationId\": {},\n        \"locations\": {\n          \"nodes\": {\n            \"id\": {},\n            \"address\": { \"street1\": {}, \"city\": {}, \"state\": {}, \"zip\": {} }\n          }\n        }\n      }\n    }\n  }\n}",
         "options": {
           "timeout": 15000
         }
@@ -66,23 +64,15 @@
       "name": "Fetch JT Customers",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [680, 200],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "jobtread-api",
-          "name": "JobTread API"
-        }
-      }
+      "position": [680, 200]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://app.jobtread.com/api/graphql",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "https://api.jobtread.com/pave",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"query\": \"query GetJobs($accountId: ID!) { jobs(filter: { accountId: { eq: $accountId } }, first: 100) { edges { node { id number name status customFields { customFieldId value } } } } }\",\n  \"variables\": {\n    \"accountId\": \"{{ $json.customerId }}\"\n  }\n}",
+        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"jobs\": {\n      \"$\": { \"filter\": { \"accountId\": { \"eq\": \"{{ $json.customerId }}\" } }, \"first\": 100 },\n      \"nodes\": {\n        \"id\": {},\n        \"number\": {},\n        \"name\": {},\n        \"status\": {},\n        \"customFields\": { \"nodes\": { \"customFieldId\": {}, \"value\": {} } }\n      }\n    }\n  }\n}",
         "options": {
           "timeout": 15000
         }
@@ -91,17 +81,11 @@
       "name": "Fetch JT Jobs",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [680, 500],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "jobtread-api",
-          "name": "JobTread API"
-        }
-      }
+      "position": [680, 500]
     },
     {
       "parameters": {
-        "jsCode": "// Transform JT customers response for dropdown\nconst response = $input.item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT API error: ${response.errors[0].message}`);\n}\n\nconst edges = response.data?.accounts?.edges || [];\n\nconst customers = edges.map(edge => {\n  const node = edge.node;\n  const primaryLocation = node.locations?.find(l => l.id === node.primaryLocationId) || node.locations?.[0];\n  const address = primaryLocation?.address;\n  \n  return {\n    id: node.id,\n    name: node.name,\n    primaryLocationId: node.primaryLocationId,\n    address: address ? `${address.street1}, ${address.city}, ${address.state} ${address.zip}` : null,\n    locations: node.locations?.map(l => ({\n      id: l.id,\n      address: l.address ? `${l.address.street1}, ${l.address.city}, ${l.address.state} ${l.address.zip}` : null\n    })) || []\n  };\n}).sort((a, b) => a.name.localeCompare(b.name));\n\nreturn { json: { customers, count: customers.length } };"
+        "jsCode": "// Transform JT customers response for dropdown\nconst response = $input.item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT API error: ${response.errors[0].message}`);\n}\n\nconst nodes = response.accounts?.nodes || [];\n\nconst customers = nodes.map(node => {\n  const primaryLocation = node.locations?.nodes?.find(l => l.id === node.primaryLocationId) || node.locations?.nodes?.[0];\n  const address = primaryLocation?.address;\n  \n  return {\n    id: node.id,\n    name: node.name,\n    primaryLocationId: node.primaryLocationId,\n    address: address ? `${address.street1}, ${address.city}, ${address.state} ${address.zip}` : null,\n    locations: node.locations?.nodes?.map(l => ({\n      id: l.id,\n      address: l.address ? `${l.address.street1}, ${l.address.city}, ${l.address.state} ${l.address.zip}` : null\n    })) || []\n  };\n}).sort((a, b) => a.name.localeCompare(b.name));\n\nreturn { json: { customers, count: customers.length } };"
       },
       "id": "transform-customers",
       "name": "Transform Customers",
@@ -111,7 +95,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Transform JT jobs response and filter by Phase\nconst response = $input.item.json;\nconst customerId = $('Validate Auth (Jobs)').item.json.customerId;\n\n// Phase custom field ID - phases 1-3 are estimating stages\nconst PHASE_FIELD_ID = '22P4fguBu3Ub';\nconst ESTIMATING_PHASES = ['1', '2', '3'];\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT API error: ${response.errors[0].message}`);\n}\n\nconst edges = response.data?.jobs?.edges || [];\n\nconst jobs = edges\n  .map(edge => {\n    const node = edge.node;\n    const phaseField = node.customFields?.find(cf => cf.customFieldId === PHASE_FIELD_ID);\n    const phase = phaseField?.value || null;\n    \n    return {\n      id: node.id,\n      number: node.number,\n      name: node.name,\n      status: node.status,\n      phase: phase,\n      displayName: `#${node.number} - ${node.name}`\n    };\n  })\n  // Filter to only estimating phases (1-3) or jobs without phase set\n  .filter(job => !job.phase || ESTIMATING_PHASES.includes(job.phase))\n  // Sort by job number descending (newest first)\n  .sort((a, b) => parseInt(b.number) - parseInt(a.number));\n\nreturn { json: { jobs, count: jobs.length, customerId } };"
+        "jsCode": "// Transform JT jobs response and filter by Phase\nconst response = $input.item.json;\nconst customerId = $('Validate Auth (Jobs)').item.json.customerId;\n\n// Phase custom field ID - phases 1-3 are estimating stages\nconst PHASE_FIELD_ID = '22P4fguBu3Ub';\nconst ESTIMATING_PHASES = ['1', '2', '3'];\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT API error: ${response.errors[0].message}`);\n}\n\nconst nodes = response.jobs?.nodes || [];\n\nconst jobs = nodes\n  .map(node => {\n    const phaseField = node.customFields?.nodes?.find(cf => cf.customFieldId === PHASE_FIELD_ID);\n    const phase = phaseField?.value || null;\n    \n    return {\n      id: node.id,\n      number: node.number,\n      name: node.name,\n      status: node.status,\n      phase: phase,\n      displayName: `#${node.number} - ${node.name}`\n    };\n  })\n  // Filter to only estimating phases (1-3) or jobs without phase set\n  .filter(job => !job.phase || ESTIMATING_PHASES.includes(job.phase))\n  // Sort by job number descending (newest first)\n  .sort((a, b) => parseInt(b.number) - parseInt(a.number));\n\nreturn { json: { jobs, count: jobs.length, customerId } };"
       },
       "id": "transform-jobs",
       "name": "Transform Jobs",
@@ -122,7 +106,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}"
+        "responseBody": "={{ $json }}"
       },
       "id": "respond-customers",
       "name": "Respond Customers",
@@ -133,7 +117,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}"
+        "responseBody": "={{ $json }}"
       },
       "id": "respond-jobs",
       "name": "Respond Jobs",
@@ -201,20 +185,11 @@
   },
   "staticData": null,
   "tags": [
-    {
-      "name": "business",
-      "id": "business-tag"
-    },
-    {
-      "name": "estimator",
-      "id": "estimator-tag"
-    },
-    {
-      "name": "jobtread",
-      "id": "jobtread-tag"
-    }
+    { "name": "business", "id": "business-tag" },
+    { "name": "estimator", "id": "estimator-tag" },
+    { "name": "jobtread", "id": "jobtread-tag" }
   ],
   "triggerCount": 2,
-  "updatedAt": "2026-03-19T00:00:00.000Z",
-  "versionId": "1"
+  "updatedAt": "2026-03-20T00:00:00.000Z",
+  "versionId": "2"
 }

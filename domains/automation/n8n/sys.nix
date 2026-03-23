@@ -8,6 +8,34 @@ let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.automation.n8n;
   paths = config.hwc.paths;
+
+  # Path to generated secrets env file
+  secretsEnvFile = "/run/n8n/secrets.env";
+
+  # Script to generate environment file from agenix secrets
+  generateSecretsEnv = pkgs.writeShellScript "n8n-generate-secrets-env" ''
+    mkdir -p /run/n8n
+    rm -f ${secretsEnvFile}
+    touch ${secretsEnvFile}
+    chmod 600 ${secretsEnvFile}
+
+    ${lib.optionalString (cfg.secrets.estimatorApiKeyFile != null) ''
+      echo "ESTIMATOR_API_KEY=$(cat ${cfg.secrets.estimatorApiKeyFile})" >> ${secretsEnvFile}
+    ''}
+
+    ${lib.optionalString (cfg.secrets.jobtreadGrantKeyFile != null) ''
+      echo "JOBTREAD_GRANT_KEY=$(cat ${cfg.secrets.jobtreadGrantKeyFile})" >> ${secretsEnvFile}
+    ''}
+
+    ${lib.optionalString (cfg.secrets.slackWebhookUrlFile != null) ''
+      echo "SLACK_WEBHOOK_URL=$(cat ${cfg.secrets.slackWebhookUrlFile})" >> ${secretsEnvFile}
+    ''}
+  '';
+
+  # Check if any secrets are configured
+  hasSecrets = cfg.secrets.estimatorApiKeyFile != null
+            || cfg.secrets.jobtreadGrantKeyFile != null
+            || cfg.secrets.slackWebhookUrlFile != null;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -37,11 +65,14 @@ in
         N8N_ENDPOINT_REST = "rest";
         DB_TYPE = "sqlite";
         DB_SQLITE_DATABASE = "/home/node/.n8n/database.sqlite";
-        # SLACK_WEBHOOK_URL loaded via n8n credentials system
         # Allow file access to /data for scraper CSV imports (semicolon-separated)
         N8N_RESTRICT_FILE_ACCESS_TO = "/home/node/.n8n-files;/data";
+        # Allow access to environment variables in code nodes (required for $env.JOBTREAD_GRANT_KEY etc.)
+        N8N_BLOCK_ENV_ACCESS_IN_NODE = "false";
       } // cfg.extraEnv;
-      environmentFiles = lib.optional (cfg.encryption.keyFile != null) cfg.encryption.keyFile;
+      environmentFiles =
+        (lib.optional (cfg.encryption.keyFile != null) cfg.encryption.keyFile)
+        ++ (lib.optional hasSecrets secretsEnvFile);
       memory = "2g";
       cpus = "2.0";
     })
@@ -50,7 +81,15 @@ in
     {
       systemd.tmpfiles.rules = [
         "d ${cfg.dataDir} 0755 1000 1000 -"
+        "d /run/n8n 0755 root root -"
       ];
     }
+
+    # Generate secrets env file before container starts
+    (lib.mkIf hasSecrets {
+      systemd.services.podman-n8n = {
+        serviceConfig.ExecStartPre = [ "${generateSecretsEnv}" ];
+      };
+    })
   ]);
 }

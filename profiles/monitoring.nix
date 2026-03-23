@@ -61,10 +61,11 @@
     owner.passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
     # Funnel disabled - using Caddy on port 2443 instead (avoids conflict with slskd on 8443)
     funnel.enable = false;
-    # Estimator integration credentials
-    extraEnv = {
-      ESTIMATOR_API_KEY = "T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=";
-      # TODO: Move ESTIMATOR_API_KEY to agenix secret
+    # Estimator/JobTread integration secrets (loaded from agenix)
+    secrets = {
+      estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
+      jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
+      slackWebhookUrlFile = config.age.secrets.slack-webhook-url.path;
     };
   };
 }
