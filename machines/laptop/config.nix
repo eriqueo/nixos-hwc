@@ -177,6 +177,24 @@
     firewall.level = "strict";
     tailscale.enable = true;
     tailscale.extraUpFlags = [ "--accept-dns" ];
+    nfs.client.enable = true;
+  };
+
+  # NFS mount: shared folder from server over Tailscale
+  # Note: Literal path to avoid infinite recursion (fileSystems → paths → users → rpcbind → fileSystems)
+  # Matches hwc.paths.user.shared default
+  fileSystems."/home/eric/600_shared" = {
+    device = "hwc-server:/home/eric/600_shared";
+    fsType = "nfs";
+    options = [
+      "nfsvers=4.2"
+      "soft"                          # Return errors instead of hanging if server unreachable
+      "timeo=150"                     # 15-second timeout
+      "x-systemd.automount"          # Mount on first access, not at boot
+      "x-systemd.idle-timeout=600"   # Unmount after 10 min idle
+      "noauto"                        # Don't mount at boot (automount handles it)
+      "_netdev"                       # Network-dependent mount
+    ];
   };
 
   #============================================================================

@@ -177,6 +177,12 @@
     tailscale.enable = true;
     tailscale.funnel.enable = false;  # Disabled - using n8n-specific funnel on port 10000
     tailscale.extraUpFlags = [ "--advertise-tags=tag:server" "--accept-routes" ];
+    nfs.server = {
+      enable = true;
+      exports = ''
+        ${config.hwc.paths.user.shared} 100.64.0.0/10(rw,sync,no_subtree_check)
+      '';
+    };
     firewall.level = lib.mkForce "server";
     firewall.extraTcpPorts = [
       # Media services
@@ -665,6 +671,13 @@
 
   # Server-specific packages
   hwc.system.core.packages.server.enable = true;
+
+  #============================================================================
+  # SHARED DIRECTORY (NFS export for laptop access over Tailscale)
+  #============================================================================
+  systemd.tmpfiles.rules = [
+    "d ${config.hwc.paths.user.shared} 0755 eric users -"
+  ];
 
   #============================================================================
   # STORAGE PATHS

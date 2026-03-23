@@ -54,6 +54,19 @@ in
       };
     };
 
+    # ---- NFS ----
+    nfs = {
+      server = {
+        enable = lib.mkEnableOption "Enable NFS v4 server for file sharing over Tailscale.";
+        exports = lib.mkOption {
+          type = types.lines;
+          default = "";
+          description = "NFS export lines (/etc/exports format).";
+        };
+      };
+      client.enable = lib.mkEnableOption "Enable NFS client for mounting remote shares.";
+    };
+
     # ---- Samba ----
     samba = {
       enable = lib.mkEnableOption "Enable Samba file sharing.";
@@ -164,6 +177,14 @@ in
     };
 
     # =========================
+    # NFS Server
+    # =========================
+    services.nfs.server = lib.mkIf cfg.nfs.server.enable {
+      enable = true;
+      exports = cfg.nfs.server.exports;
+    };
+
+    # =========================
     # Samba
     # =========================
     # NixOS 24.11+ uses settings API
@@ -198,6 +219,7 @@ in
         cfg.firewall.extraTcpPorts
         ++ (lib.optionals (cfg.firewall.level == "server") [ 80 443 ])
         ++ (lib.optionals cfg.ssh.enable [ cfg.ssh.port ])
+        ++ (lib.optionals cfg.nfs.server.enable [ 2049 ])
         ++ (lib.optionals cfg.samba.enable [ 139 445 ]);
       allowedUDPPorts =
         cfg.firewall.extraUdpPorts
@@ -232,6 +254,7 @@ in
       networkmanagerapplet
     ]
     ++ (lib.optionals cfg.tailscale.enable [ tailscale ])
+    ++ (lib.optionals (cfg.nfs.server.enable || cfg.nfs.client.enable) [ nfs-utils ])
     ++ (lib.optionals cfg.samba.enable     [ samba ]);
 
     # =========================
