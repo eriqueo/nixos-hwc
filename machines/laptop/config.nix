@@ -184,7 +184,7 @@
   # Note: Literal path to avoid infinite recursion (fileSystems → paths → users → rpcbind → fileSystems)
   # Matches hwc.paths.user.shared default
   fileSystems."/home/eric/600_shared" = {
-    device = "hwc-server:/home/eric/600_shared";
+    device = "100.114.232.124:/home/eric/600_shared";
     fsType = "nfs";
     options = [
       "nfsvers=4.2"
