@@ -1,0 +1,18 @@
+[project]
+name = "yt-videos-api"
+version = "0.1.0"
+description = "YouTube video download and archiving API"
+requires-python = ">=3.11"
+dependencies = [
+    "yt-core",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "yt-dlp>=2024.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

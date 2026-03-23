@@ -1,0 +1,466 @@
+{
+  "name": "Receipt Intake Pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "receipt-upload"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": ["receipts"]
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "gmail-trigger",
+      "name": "Gmail - Receipt Emails",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "path": "/hot/receipts/watched",
+        "event": "file:created"
+      },
+      "id": "file-watcher",
+      "name": "File Watcher - Receipts Folder",
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [250, 700]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $binary.data.mimeType }}",
+              "operation": "contains",
+              "value2": "image"
+            }
+          ],
+          "boolean": [
+            {
+              "value1": "={{ $binary.data.mimeType === 'application/pdf' }}",
+              "value2": true
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "id": "validate-file-type",
+      "name": "Validate File Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $binary.data.fileSize }}",
+              "operation": "smaller",
+              "value2": 10485760
+            }
+          ]
+        }
+      },
+      "id": "validate-file-size",
+      "name": "Validate File Size (<10MB)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [700, 500]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8001/api/ocr/receipt",
+        "method": "POST",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
+        "options": {
+          "timeout": 60000,
+          "retry": {
+            "enabled": true,
+            "maxRetries": 3,
+            "retryInterval": 2000,
+            "retryBackoff": true
+          }
+        }
+      },
+      "id": "call-ocr-api",
+      "name": "Call OCR API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "processing"
+            }
+          ]
+        }
+      },
+      "id": "check-status",
+      "name": "Check Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1100, 500]
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "wait-for-processing",
+      "name": "Wait for Processing",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8001/api/receipts/={{ $json.receipt_id }}",
+        "method": "GET"
+      },
+      "id": "get-receipt-status",
+      "name": "Get Receipt Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1500, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "completed"
+            }
+          ]
+        }
+      },
+      "id": "check-completed",
+      "name": "Check If Completed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1700, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.needs_review }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "needs-review-check",
+      "name": "Needs Review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1900, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8080/topic/receipts-review",
+        "method": "POST",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "title",
+              "value": "Receipt Needs Review"
+            },
+            {
+              "name": "message",
+              "value": "Receipt {{ $json.receipt_id }} needs manual review (confidence: {{ $json.ocr_confidence }})"
+            },
+            {
+              "name": "priority",
+              "value": "4"
+            },
+            {
+              "name": "tags",
+              "value": "warning,receipt"
+            }
+          ]
+        }
+      },
+      "id": "notify-review-needed",
+      "name": "Notify - Review Needed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2100, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8080/topic/receipts",
+        "method": "POST",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "title",
+              "value": "Receipt Processed"
+            },
+            {
+              "name": "message",
+              "value": "{{ $json.vendor_normalized }}: ${{ $json.total_amount }}"
+            },
+            {
+              "name": "tags",
+              "value": "white_check_mark,receipt"
+            }
+          ]
+        }
+      },
+      "id": "notify-success",
+      "name": "Notify - Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2100, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8080/topic/receipts-errors",
+        "method": "POST",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "title",
+              "value": "Receipt Processing Failed"
+            },
+            {
+              "name": "message",
+              "value": "Failed to process receipt: {{ $json.error }}"
+            },
+            {
+              "name": "priority",
+              "value": "5"
+            },
+            {
+              "name": "tags",
+              "value": "x,receipt,error"
+            }
+          ]
+        }
+      },
+      "id": "notify-failure",
+      "name": "Notify - Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1100, 700]
+    },
+    {
+      "parameters": {},
+      "id": "no-op-invalid-file",
+      "name": "Invalid File Type",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [700, 700]
+    },
+    {
+      "parameters": {},
+      "id": "no-op-too-large",
+      "name": "File Too Large",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 700]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "validate-file-type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gmail-trigger": {
+      "main": [
+        [
+          {
+            "node": "validate-file-type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "file-watcher": {
+      "main": [
+        [
+          {
+            "node": "validate-file-type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validate-file-type": {
+      "main": [
+        [
+          {
+            "node": "validate-file-size",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "no-op-invalid-file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validate-file-size": {
+      "main": [
+        [
+          {
+            "node": "call-ocr-api",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "no-op-too-large",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "call-ocr-api": {
+      "main": [
+        [
+          {
+            "node": "check-status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "notify-failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-status": {
+      "main": [
+        [
+          {
+            "node": "wait-for-processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait-for-processing": {
+      "main": [
+        [
+          {
+            "node": "get-receipt-status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-receipt-status": {
+      "main": [
+        [
+          {
+            "node": "check-completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-completed": {
+      "main": [
+        [
+          {
+            "node": "needs-review-check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "wait-for-processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "needs-review-check": {
+      "main": [
+        [
+          {
+            "node": "notify-review-needed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "notify-success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": null,
+    "timezone": "America/Los_Angeles",
+    "executionTimeout": 300,
+    "maxExecutions": 1000,
+    "retryOnFail": true,
+    "retryCount": 3,
+    "retryDelay": 2000
+  },
+  "staticData": null,
+  "tags": ["receipts", "ocr", "automation"],
+  "triggerCount": 3,
+  "updatedAt": "2025-01-19T00:00:00.000Z",
+  "versionId": "1.0.0"
+}

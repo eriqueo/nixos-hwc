@@ -15,9 +15,10 @@ ${afewPkg}/bin/afew -m -a || true
 
 # --- Label copy-back: sync notmuch label tags → Labels/ Maildir ---
 # For each known Labels/ folder, ensure Maildir file presence matches tag state.
-# Hard-links add the label on Proton (via mbsync APPEND); deletions remove it
-# (via mbsync Expunge Both). Only iterates folders that already exist in Proton.
+# Copies (not hard-links) add the label on Proton (via mbsync APPEND); deletions
+# remove it (via mbsync Expunge Both). Only iterates folders already in Proton.
 if [ -d "$LABELS_DIR" ]; then
+  _seq=0
   for _ldir in "$LABELS_DIR"/*/; do
     [ -d "$_ldir" ] || continue
     _lname=$(basename "$_ldir")
@@ -27,18 +28,22 @@ if [ -d "$LABELS_DIR" ]; then
     # ADD: messages with tag:$_lname that have no file in Labels/$_lname/
     while IFS= read -r _src; do
       [ -f "$_src" ] || continue
-      case "$_src" in */Labels/*) continue ;; esac  # don't link from another Label copy
-      _fname=$(basename "$_src")
-      if [ ! -e "$_ldir/cur/$_fname" ] && [ ! -e "$_ldir/new/$_fname" ]; then
-        ln "$_src" "$_ldir/new/$_fname" 2>/dev/null || true
-      fi
+      case "$_src" in */Labels/*) continue ;; esac  # don't copy from another Label
+      _srcbase=$(basename "$_src")
+      # Extract Maildir flags (the :2,XYZ suffix) from original filename
+      _flags=""
+      case "$_srcbase" in *:2,*) _flags=":2,''${_srcbase##*:2,}" ;; esac
+      # Generate a unique Maildir-compliant filename
+      _seq=$((_seq + 1))
+      _newname="$(date +%s).M''${_seq}P$$.$HOSTNAME''${_flags}"
+      cp "$_src" "$_ldir/new/$_newname" 2>/dev/null || true
     done < <("$NM" search --output=files \
         "tag:$_lname AND NOT path:proton/Labels/$_lname/**" 2>/dev/null || true)
 
     # REMOVE: files in Labels/$_lname/ whose message no longer has tag:$_lname
     while IFS= read -r _mid; do
       "$NM" search --output=files "$_mid" 2>/dev/null \
-        | grep "Labels/$_lname" \
+        | ${pkgs.ripgrep}/bin/rg "Labels/$_lname" \
         | xargs -r rm -f
     done < <("$NM" search --output=messages \
         "path:proton/Labels/$_lname/** AND NOT tag:$_lname" 2>/dev/null || true)

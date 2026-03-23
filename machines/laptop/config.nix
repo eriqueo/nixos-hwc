@@ -141,7 +141,7 @@
   hwc.networking.vpn.protonvpn.enable = true;
 
   # Proton Mail Bridge managed by Home Manager user service (NOT system service)
-  # hwc.home.mail.protonmailBridge.enable = false;  # Disabled in profile
+  # hwc.home.mail.bridge.system.enable = false;  # Disabled in profile
 
   # Enable session management (greetd autologin, sudo, lingering).
   hwc.system.core.session = {

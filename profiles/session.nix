@@ -52,6 +52,7 @@
         mail = {
           enable = lib.mkDefault true;
           bridge.enable = true;
+          aerc.enable = lib.mkDefault true;
 
           notmuch = {
             maildirRoot = lib.mkDefault "/home/eric/400_mail/Maildir";
@@ -88,7 +89,6 @@
           librewolf.enable = lib.mkDefault true;
 
           # Mail Clients
-          aerc.enable = lib.mkDefault true;
           neomutt.enable = lib.mkDefault false;
           betterbird.enable = lib.mkDefault false;
           proton-mail.enable = lib.mkDefault true;
