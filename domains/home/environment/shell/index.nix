@@ -408,7 +408,13 @@ in
     '';
 
     # Starship prompt
-    programs.starship.enable = cfg.zsh.starship;
+    programs.starship = lib.mkIf cfg.zsh.starship {
+      enable = true;
+      settings = {
+        scan_timeout = 100;
+        command_timeout = 1000;
+      };
+    };
 
     # Direnv for development environments
     programs.direnv = {
