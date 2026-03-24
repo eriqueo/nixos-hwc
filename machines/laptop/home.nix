@@ -16,6 +16,7 @@
       imv.enable = true;
       qbittorrent.enable = true;
       aider.enable = true;
+      claude-code.enable = true;
       scraper.enable = true;
     };
 
