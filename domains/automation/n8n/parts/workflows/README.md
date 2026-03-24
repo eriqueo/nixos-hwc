@@ -259,7 +259,7 @@ x-api-key: {ESTIMATOR_API_KEY}
 
 ---
 
-### 08b-estimate-router.json
+### 08b-estimate-router.json (work_estimate_router)
 **Purpose:** Route estimates from Heartwood Estimator to JobTread, Postgres archive, and Slack notifications
 
 **Trigger:** Webhook `POST /webhook/estimate-push`
@@ -352,6 +352,143 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
 
 ---
 
+### 10-calculator-lead.json (work_calculator_lead)
+**Purpose:** Process bathroom remodel calculator submissions, create full JobTread customer/job records, archive to Postgres, and notify via Slack
+
+**Workflow ID:** `SoLwmxgkMILrOYbP`
+
+**Trigger:** Webhook `POST /webhook/calculator-lead`
+
+**Request Schema:**
+```json
+{
+  "contact": {
+    "name": "John Smith",
+    "email": "john@example.com",
+    "phone": "406-555-1234"
+  },
+  "projectState": {
+    "project_type": "bathroom",
+    "bathroom_size": "medium",
+    "shower_tub": "shower_only",
+    "tile_level": "standard",
+    "fixtures": "mid_range",
+    "features": ["heated_floors", "niche"],
+    "timeline": "3-6 months"
+  },
+  "estimate": {
+    "low": 18000,
+    "high": 28000
+  }
+}
+```
+
+**Features:**
+- **Validation:** Requires name and phone; returns 400 error if missing
+- **JobTread Integration (PAVE API):**
+  - Creates customer Account with type `customer`
+  - Sets Account custom fields (Lead Source: Website, Project Type: Bathroom Remodel)
+  - Creates Contact linked to Account
+  - Sets Contact custom fields (Email, Phone) via field IDs
+  - Creates Location (defaults to Bozeman, MT)
+  - Creates Job linked to Location
+  - Sets Job custom fields (Job Type: Bathroom, Phase: 1. Contacted)
+- **Postgres Archive:** Inserts lead data to `hwc.calculator_leads` table
+- **Slack Notification:** Posts to #leads with estimate range, project details
+- **Response:** Returns success with JT account/job IDs
+
+**Response Schema:**
+```json
+{
+  "success": true,
+  "jt_account_id": "22PULhFgPZxa",
+  "jt_job_id": "22PULhFmkQY2"
+}
+```
+
+**PAVE API Pattern (Critical):**
+- `createAccount`, `createContact`, `createJob` do NOT accept `customFields` or `customFieldValues`
+- Must use two-step pattern: create entity → immediately update with `customFieldValues`
+- Custom field values use field IDs (e.g., `22Nm3uGRBrPX` for Email), not field names
+- See `/home/eric/600_shared/api/jobtread_api_reference.md` for full field ID reference
+
+**Credentials Required:**
+- `JOBTREAD_GRANT_KEY`: JobTread API grant key (via n8n environment)
+- `HWC Postgres`: PostgreSQL credential with access to `hwc` schema
+- `Slack account 2`: OAuth2 Slack credential
+
+**Test Command:**
+```bash
+curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/calculator-lead \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact": {"name": "Test Lead", "email": "test@example.com", "phone": "406-555-1234"},
+    "projectState": {"project_type": "bathroom", "bathroom_size": "medium"},
+    "estimate": {"low": 15000, "high": 25000}
+  }'
+```
+
+---
+
+### 09-lead-response.json (work_lead_response)
+**Purpose:** Automated lead response workflow with push notifications via self-hosted ntfy
+
+**Trigger:** Webhook `POST /webhook/new-lead`
+
+**Request Schema:**
+```json
+{
+  "name": "John Smith",
+  "phone": "4065551234",
+  "email": "john@example.com",
+  "service_type": "bathroom remodel",
+  "source": "website"
+}
+```
+
+**Features:**
+- Phone validation and E.164 normalization
+- Business hours detection (7am-7pm Mon-Sat, Mountain Time)
+- Immediate notification during business hours
+- Scheduled notification at 8am next business day for after-hours leads
+- 2-hour follow-up reminder if no response
+- Push notifications via **self-hosted ntfy** (`https://hwc.ocelot-wahoo.ts.net/notify/hwc-leads`)
+- Slack notifications to #leads channel
+- Postgres logging for all leads and errors
+
+**Notification Flow:**
+1. New lead received → Validate phone → Save to Postgres
+2. During business hours: Immediate ntfy push + Slack
+3. After hours: Wait until 8am → ntfy push + Slack
+4. 2 hours later: Check for response → Follow-up ntfy if no response
+
+**ntfy Topics:**
+- `hwc-leads` - All lead notifications (private, Tailscale only)
+
+**ntfy Node Configuration:**
+```
+- Method: POST
+- URL: https://hwc.ocelot-wahoo.ts.net/notify/hwc-leads
+- Body Type: raw (NOT "string")
+- Headers: Content-Type: text/plain, Title, Priority, Tags
+```
+
+**Test Command:**
+```bash
+curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/new-lead \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Lead",
+    "phone": "4065551234",
+    "service_type": "kitchen remodel",
+    "source": "website"
+  }'
+```
+
+**Phone Subscription:** Subscribe to `hwc-leads` on `https://hwc.ocelot-wahoo.ts.net/notify` in ntfy app
+
+---
+
 ## Import Instructions
 
 1. Access n8n: `https://hwc.ocelot-wahoo.ts.net:2443`
@@ -400,5 +537,5 @@ See the main implementation guide for curl test commands for each workflow.
 
 ---
 
-**Last Updated:** 2026-03-19
+**Last Updated:** 2026-03-24
 **Author:** Eric (with Claude assistance)

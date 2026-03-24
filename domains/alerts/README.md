@@ -110,6 +110,7 @@ Expects n8n webhooks at:
 
 ## Changelog
 
+- 2026-03-24: Enabled ntfy server (port 2586), integrated with work_lead_response n8n workflow for private lead notifications
 - 2026-02-27: Added ntfy server (migrated from server/native/networking/)
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2026-02-22: Initial domain implementation

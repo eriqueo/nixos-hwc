@@ -276,14 +276,14 @@
   # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
   # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.automation.ntfy = {
-    enable = false;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted ntfy via Tailscale port mode
-    defaultTopic = "hwc-server-events";  # General server events
-    defaultTags = [ "hwc" "server" "production" ];
+    enable = true;
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted via Caddy
+    defaultTopic = "hwc-alerts";  # Private topic on self-hosted server
+    defaultTags = [ "hwc" "server" ];
     defaultPriority = 4;  # Higher priority for server alerts
     hostTag = true;       # Adds "host-hwc-server" tag automatically
 
-    # Authentication disabled for self-hosted (can enable if needed)
+    # No auth needed for public ntfy.sh topics
     auth.enable = false;
     # To enable auth, add secrets and configure:
     # auth = {
@@ -562,9 +562,9 @@
   };
 
   # ntfy notification server (alerts domain)
-  # Disabled - no longer in use; alerts route via n8n -> Slack
+  # Self-hosted for privacy - lead data stays on our infrastructure
   hwc.alerts.server = {
-    enable = false;
+    enable = true;
     port = 2586;
     dataDir = "/var/lib/hwc/ntfy";
   };

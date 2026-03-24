@@ -1,14 +1,23 @@
 # ntfy Notification System
 
-**Domain**: `hwc.system.services.ntfy`
-**Location**: `domains/system/services/ntfy/`
+**Domain**: `hwc.automation.ntfy`
+**Location**: `domains/automation/ntfy/`
 **Purpose**: Centralized notification system for cross-machine and cross-service alerts using [ntfy](https://ntfy.sh)
 
 ---
 
 ## Overview
 
-This module provides a reusable ntfy notification system that can be used across all machines (laptop, server) and by any service (backups, monitoring, systemd units, etc.). It installs a CLI tool `hwc-ntfy-send` that sends notifications via curl to an ntfy server.
+This module provides a reusable ntfy notification system that can be used across all machines (laptop, server) and by any service (backups, monitoring, systemd units, n8n workflows, etc.). It installs a CLI tool `hwc-ntfy-send` that sends notifications via curl to an ntfy server.
+
+### Self-Hosted Server (Recommended)
+
+As of 2026-03-24, we run a **self-hosted ntfy server** for privacy:
+- **URL**: `https://hwc.ocelot-wahoo.ts.net/notify`
+- **Access**: Tailscale only (private)
+- **Port**: 2586 (via Caddy reverse proxy at `/notify`)
+
+This keeps sensitive data (lead info, alerts) on our infrastructure rather than public ntfy.sh.
 
 ### Key Features
 
@@ -64,20 +73,27 @@ The module is automatically imported via `domains/system/services/index.nix`. Si
 }
 ```
 
-### Basic Configuration (Server)
+### Basic Configuration (Server) - Self-Hosted
 
 ```nix
 # machines/server/config.nix
 {
-  hwc.system.services.ntfy = {
+  # ntfy CLI client - points to self-hosted server
+  hwc.automation.ntfy = {
     enable = true;
-    serverUrl = "https://ntfy.sh";
-    defaultTopic = "hwc-server-events";
-    defaultTags = [ "hwc" "server" "production" ];
-    defaultPriority = 4;  # Higher priority for server alerts
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted via Caddy
+    defaultTopic = "hwc-alerts";
+    defaultTags = [ "hwc" "server" ];
+    defaultPriority = 4;
     hostTag = true;
+    auth.enable = false;  # No auth needed - Tailscale provides access control
+  };
 
-    auth.enable = false;
+  # ntfy server container
+  hwc.alerts.server = {
+    enable = true;
+    port = 2586;
+    dataDir = "/var/lib/hwc/ntfy";
   };
 }
 ```
@@ -282,6 +298,37 @@ systemd.services.disk-space-check = {
 };
 ```
 
+### n8n Workflow Integration
+
+n8n workflows can send notifications directly to the self-hosted ntfy server using HTTP Request nodes.
+
+**Example: work_lead_response workflow**
+
+Sends push notifications for new business leads:
+
+```
+HTTP Request Node Configuration:
+- Method: POST
+- URL: https://hwc.ocelot-wahoo.ts.net/notify/hwc-leads
+- Headers:
+  - Content-Type: text/plain
+  - Title: New Lead: {{ $json.name }}
+  - Priority: 5
+  - Tags: phone,lead,incoming_envelope
+- Body Type: Raw
+- Body: Phone: {{ $json.phone }}\nService: {{ $json.service_type }}\nSource: {{ $json.source }}
+```
+
+**Key settings for n8n HTTP Request nodes:**
+- `specifyBody: "raw"` (NOT "string" - that's invalid)
+- `Content-Type: text/plain` header required
+- Body uses expression prefix `=` for templating
+
+**Topics in use:**
+- `hwc-leads` - Business lead notifications (work_lead_response)
+- `hwc-alerts` - System alerts
+- `hwc-media` - Media pipeline notifications
+
 ---
 
 ## Configuration Options
@@ -437,6 +484,14 @@ Potential improvements for future iterations:
 
 ---
 
-**Version**: 1.0
-**Last Updated**: 2025-11-21
+## Changelog
+
+- 2026-03-24: Enabled self-hosted ntfy server, integrated with work_lead_response n8n workflow
+- 2026-02-27: Migrated to domains/automation/ntfy/
+- 2025-11-21: Initial implementation
+
+---
+
+**Version**: 1.1
+**Last Updated**: 2026-03-24
 **Maintainer**: Eric (with AI assistance)
