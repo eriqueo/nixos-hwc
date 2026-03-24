@@ -2,24 +2,8 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.kitty;
-  T = config.hwc.home.theme or {};
-  C = T.colors or T;
-
-  toKitty = colorStr:
-    let s = if colorStr == null then "888888" else lib.removePrefix "#" colorStr;
-    in "#${s}";
-
-  caretColor =
-    if T ? cursorColor then T.cursorColor
-    else if C ? cursorColor then C.cursorColor
-    else if C ? caret then C.caret
-    else if C ? cursor && builtins.typeOf C.cursor == "string" then C.cursor
-    else if C ? accent then C.accent
-    else "7daea3";
-
-  selectionFg = if C ? selectionFg then C.selectionFg else (if C ? bg then C.bg else "2e3440");
-  selectionBg = if C ? selectionBg then C.selectionBg else (if C ? accent then C.accent else "7daea3");
-  urlColor    = if C ? link then C.link else (if C ? accent2 then C.accent2 else (if C ? accent then C.accent else "7daea3"));
+  colors = (config.hwc.home.theme or {}).colors or {};
+  appearance = import ./parts/appearance.nix { inherit lib colors; };
 in
 {
   #==========================================================================
@@ -63,36 +47,7 @@ in
         detect_urls = "yes";
         open_url_with = "default";
         clipboard_control = "write-primary write-clipboard no-append";
-
-        # Theme from palette
-        foreground = toKitty (C.fg or "ECEFF4");
-        background = toKitty (C.bg or "2e3440");
-        selection_foreground = toKitty selectionFg;
-        selection_background = toKitty selectionBg;
-        cursor = toKitty caretColor;
-        cursor_text_color = toKitty (C.bg or "2e3440");
-        url_color = toKitty urlColor;
-
-        # ANSI 0–7
-        color0  = toKitty (C.ansi.black   or "45403d");
-        color1  = toKitty (C.crit         or C.ansi.red     or "BF616A");
-        color2  = toKitty (C.good         or C.ansi.green   or "A3BE8C");
-        color3  = toKitty (C.warn         or C.ansi.yellow  or "EBCB8B");
-        color4  = toKitty (C.accent       or C.ansi.blue    or "7daea3");
-        color5  = toKitty (C.ansi.magenta or C.accentAlt    or "d3869b");
-        color6  = toKitty (C.accentAlt    or C.ansi.cyan    or "89b482");
-        color7  = toKitty (C.fg           or C.ansi.white   or "ECEFF4");
-
-        # ANSI 8–15
-        color8  = toKitty (C.ansi.brightBlack   or C.muted or "4C566A");
-        color9  = toKitty (C.ansi.brightRed     or C.crit  or "ea6962");
-        color10 = toKitty (C.ansi.brightGreen   or C.good  or "a9b665");
-        color11 = toKitty (C.ansi.brightYellow  or C.warn  or "d8a657");
-        color12 = toKitty (C.ansi.brightBlue    or C.accent or "7daea3");
-        color13 = toKitty (C.ansi.brightMagenta or C.ansi.magenta or C.accentAlt or "d3869b");
-        color14 = toKitty (C.ansi.brightCyan    or C.accentAlt    or "89b482");
-        color15 = toKitty (C.ansi.brightWhite   or C.fg           or "d4be98");
-      };
+      } // appearance;
 
       keybindings = {
         "ctrl+shift+c" = "copy_to_clipboard";

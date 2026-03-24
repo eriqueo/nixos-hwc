@@ -85,30 +85,42 @@
   progress    = "cf995f"; # Progress bar fill   (orange)
   progressBg  = "2c3338"; # Progress bar background
 
+  # --- File Type Colors (for file managers — yazi, thunar, etc.) ---
+  fileImage    = "cf995f"; # Orange: images      (HWC accent)
+  fileMedia    = "fcbb74"; # Amber: audio/video
+  fileArchive  = "9d0006"; # Maroon: archives/compressed
+  fileDocument = "d5c4a1"; # Cream: documents/PDFs
+  fileCode     = "0085ba"; # Blue: source code
+  fileExec     = "a9b665"; # Green: executables  (gruvbox green — no HWC equivalent)
+  fileOrphan   = "661a1a"; # Deep red: broken links
+  fileDir      = "ebdbb2"; # Bright cream: directories
+
   # --- Surfaces ---
   surface     = "f0f0f1"; # Light surface — reversed sections, print white areas
   border-light = "c3c4c7"; # Borders on light surfaces
 
   # --- ANSI 16 (terminal adapters — Kitty, WezTerm, etc.) ---
-  # Gruvbox base where no HWC-specific equivalent exists.
+  # Canonical gruvbox dark — verbatim from the official palette.
+  # HWC brand accents live in UI tokens above. ANSI slots are for terminal
+  # output readability, not brand expression.
   ansi = {
-    black   = "23282d";  # bg1 — slightly blue gruvbox
-    red     = "9d0006";  # HWC maroon
-    green   = "a9b665";  # gruvbox green (no HWC equivalent)
-    yellow  = "cf995f";  # HWC copper-orange
-    blue    = "0085ba";  # HWC accent-blue
-    magenta = "661a1a";  # deep maroon
-    cyan    = "50626f";  # HWC fg3 blue-grey
-    white   = "d5c4a1";  # HWC text-body cream
+    black   = "282828";  # gruvbox dark bg
+    red     = "cc241d";  # gruvbox dark red
+    green   = "98971a";  # gruvbox dark green
+    yellow  = "d79921";  # gruvbox dark yellow
+    blue    = "458588";  # gruvbox dark blue
+    magenta = "b16286";  # gruvbox dark purple
+    cyan    = "689d6a";  # gruvbox dark aqua
+    white   = "a89984";  # gruvbox dark gray
 
-    brightBlack   = "32373c";  # bg3
-    brightRed     = "cc241d";  # brighter red
+    brightBlack   = "928374";  # gruvbox gray
+    brightRed     = "fb4934";  # gruvbox bright red
     brightGreen   = "b8bb26";  # gruvbox bright green
-    brightYellow  = "fcbb74";  # light amber
-    brightBlue    = "30ceff";  # HWC accent-cyan (from site palette)
-    brightMagenta = "9d0006";  # maroon — same as red tier
-    brightCyan    = "0085ba";  # HWC blue
-    brightWhite   = "ebdbb2";  # HWC text-primary — brightest cream
+    brightYellow  = "fabd2f";  # gruvbox bright yellow
+    brightBlue    = "83a598";  # gruvbox bright blue
+    brightMagenta = "d3869b";  # gruvbox bright purple
+    brightCyan    = "8ec07c";  # gruvbox bright aqua
+    brightWhite   = "ebdbb2";  # gruvbox fg1
   };
 
   # --- Hyprland helpers ---
