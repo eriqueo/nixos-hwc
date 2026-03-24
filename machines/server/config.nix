@@ -866,10 +866,10 @@
   # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
   # the estimator is a first-class named app, not an ad-hoc published slot).
   # Access: https://hwc.ocelot-wahoo.ts.net:13443
-  # Build:  cd ~/.nixos/workspace/projects/react/heartwood-assembler && npm install && npm run build
-  hwc.webapps.estimator = {
+  # Build:  cd ~/.nixos/workspace/business/estimator-pwa && npm install && npm run build
+  hwc.business.estimator = {
     enable  = true;
-    distDir = "/home/eric/.nixos/workspace/projects/react/heartwood-assembler/dist";
+    distDir = "/home/eric/.nixos/workspace/business/estimator-pwa/dist";
     port    = 13443;
   };
 
@@ -932,6 +932,13 @@
   hwc.data.databases.postgresql = {
     enable = lib.mkDefault true;
     version = "15";
+    backup.perDatabase = {
+      enable = true;
+      databases = [ "hwc" ];
+      # outputDir = "/home/eric/backups/postgres";  # default
+      # retentionDays = 30;  # default
+      # schedule = "*-*-* 02:30:00";  # default (2:30 AM)
+    };
   };
 
   # CloudBeaver - web-based database manager (access via port 12443)
