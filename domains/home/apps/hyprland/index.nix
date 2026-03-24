@@ -15,7 +15,7 @@ let
   wallpaperPath = ../../theme/nord-mountains.jpg;
 
   basePkgs = with pkgs; [
-    wofi hyprshot grim hypridle hyprpaper swaylock cliphist wl-clipboard
+    wofi hyprshot grim hypridle swaybg swaylock cliphist wl-clipboard
     brightnessctl networkmanager wirelesstools hyprsome wlogout fend
     socat  # For monitor hotplug listener
   ];
@@ -120,12 +120,8 @@ in
       ];
     };
 
-    home.file.".config/hypr/hyprpaper.conf".text = ''
-      preload = ${wallpaperPath}
-      wallpaper = eDP-1,${wallpaperPath}
-      wallpaper = DP-1,${wallpaperPath}
-      splash = false
-    '';
+    # Wallpaper — swaybg is simpler and avoids hyprpaper IPC version mismatches
+    # swaybg is launched in session.nix exec-once
 
     #==========================================================================
     # VALIDATION

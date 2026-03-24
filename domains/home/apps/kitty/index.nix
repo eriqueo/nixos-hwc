@@ -26,7 +26,8 @@ in
         font_size = 16;
         enable_audio_bell = false;
         window_padding_width = 4;
-        background_opacity = "0.95";
+        allow_remote_control = true;
+        background_opacity = "0.75";
         scrollback_lines = 10000;
 
         cursor_shape = "block";

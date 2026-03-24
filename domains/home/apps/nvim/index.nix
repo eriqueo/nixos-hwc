@@ -12,6 +12,8 @@
 
 let
   cfg = config.hwc.home.apps.nvim;
+  colors = (config.hwc.home.theme or {}).colors or {};
+  appearance = import ./parts/appearance.nix { inherit lib colors; };
 
   # Lua configuration directory structure
   luaDir = ./parts/lua;
@@ -48,7 +50,7 @@ in
       "nvim/lua/core/keymaps.lua".source = "${luaDir}/core/keymaps.lua";
       "nvim/lua/core/options.lua".source = "${luaDir}/core/options.lua";
       "nvim/lua/core/plugins.lua".source = "${luaDir}/core/plugins.lua";
-      "nvim/lua/core/colorscheme.lua".source = "${luaDir}/core/colorscheme.lua";
+      "nvim/lua/core/colorscheme.lua".text = appearance.colorscheme;
 
       # Plugin configurations
       "nvim/lua/plugins/telescope.lua".source = "${luaDir}/plugins/telescope.lua";
