@@ -10,10 +10,13 @@ Model Context Protocol servers for AI tool integration.
 ## Structure
 ```
 mcp/
-├── default.nix    # Package/overlay
-├── index.nix      # MCP implementation
-└── options.nix    # MCP options
+├── default.nix    # Import wrapper
+├── index.nix      # MCP infrastructure (mkMcpService, proxy, filesystem server)
+└── heartwood/     # Heartwood MCP Server — unified business system interface
+    ├── index.nix  # NixOS module (systemd service, options, validation)
+    └── README.md  # Heartwood-specific docs
 ```
 
 ## Changelog
+- 2026-03-25: Added heartwood/ subdomain — Heartwood MCP Server (Phase 1: 63 JT tools)
 - 2026-02-28: Added README for Charter Law 12 compliance
