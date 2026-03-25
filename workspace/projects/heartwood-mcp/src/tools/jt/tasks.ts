@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { TASK_FIELDS, TEMPLATE_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function taskTools(pave: PaveClient): ToolDef[] {
   return [
@@ -35,14 +36,11 @@ export function taskTools(pave: PaveClient): ToolDef[] {
         const data: Record<string, unknown> = {
           name: params.name,
           targetType: params.targetType,
+          ...pickDefined(params, [
+            "targetId", "description", "assignees", "startDate",
+            "endDate", "isToDo", "isGroup", "progress",
+          ]),
         };
-        const optionalFields = [
-          "targetId", "description", "assignees", "startDate",
-          "endDate", "isToDo", "isGroup", "progress",
-        ];
-        for (const field of optionalFields) {
-          if (params[field] !== undefined) data[field] = params[field];
-        }
         return pave.create("task", data, TASK_FIELDS);
       },
     },
@@ -64,11 +62,10 @@ export function taskTools(pave: PaveClient): ToolDef[] {
         required: ["taskId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const data: Record<string, unknown> = {};
-        for (const field of ["progress", "name", "description", "startDate", "endDate"]) {
-          if (params[field] !== undefined) data[field] = params[field];
-        }
-        return pave.update("task", params.taskId as string, data, TASK_FIELDS);
+        const id = requireString(params, "taskId");
+        if ("error" in id) return id.error;
+        const data = pickDefined(params, ["progress", "name", "description", "startDate", "endDate"]);
+        return pave.update("task", id.value, data, TASK_FIELDS);
       },
     },
 
@@ -82,18 +79,20 @@ export function taskTools(pave: PaveClient): ToolDef[] {
           jobId: { type: "string", description: "Filter by job ID (optional)" },
           status: { type: "string", description: "Filter by status (optional)" },
           assigneeUserId: { type: "string", description: "Filter by assignee user ID (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
-        if (params.jobId) conditions.push({ field: "jobId", operator: "eq", value: params.jobId });
-        if (params.status) conditions.push({ field: "status", operator: "eq", value: params.status });
-        if (params.assigneeUserId) conditions.push({ field: "assigneeUserId", operator: "eq", value: params.assigneeUserId });
         return pave.query({
           entity: "task",
           fields: TASK_FIELDS,
-          filter: conditions.length > 0 ? { operator: "and", conditions } : undefined,
+          filter: buildFilter(params, [
+            { param: "jobId", field: "jobId" },
+            { param: "status", field: "status" },
+            { param: "assigneeUserId", field: "assigneeUserId" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -110,7 +109,9 @@ export function taskTools(pave: PaveClient): ToolDef[] {
         required: ["taskId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("task", params.taskId as string, [
+        const id = requireString(params, "taskId");
+        if ("error" in id) return id.error;
+        return pave.read("task", id.value, [
           ...TASK_FIELDS,
           { field: "dependencies", fields: [{ field: "id" }, { field: "name" }] },
         ]);
@@ -163,7 +164,9 @@ export function taskTools(pave: PaveClient): ToolDef[] {
         required: ["taskTemplateId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("taskTemplate", params.taskTemplateId as string, [
+        const id = requireString(params, "taskTemplateId");
+        if ("error" in id) return id.error;
+        return pave.read("taskTemplate", id.value, [
           ...TEMPLATE_FIELDS,
           { field: "tasks", fields: TASK_FIELDS },
         ]);

@@ -4,6 +4,7 @@
 
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function jobFolderTools(pave: PaveClient): ToolDef[] {
   return [
@@ -15,6 +16,7 @@ export function jobFolderTools(pave: PaveClient): ToolDef[] {
         type: "object" as const,
         properties: {
           jobId: { type: "string", description: "Job ID" },
+          ...PAGINATION_PROPS,
         },
         required: ["jobId"],
       },
@@ -23,6 +25,7 @@ export function jobFolderTools(pave: PaveClient): ToolDef[] {
           entity: "jobFolder",
           fields: [{ field: "name" }],
           filter: { conditions: [{ field: "jobId", operator: "eq", value: params.jobId }] },
+          ...getPagination(params),
         });
       },
     },

@@ -2,13 +2,13 @@
  * JT Accounts & Contacts tools — 6 tools
  */
 
-import { z } from "zod";
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import {
   ACCOUNT_FIELDS,
   CONTACT_FIELDS,
 } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, buildSearchFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function accountTools(pave: PaveClient): ToolDef[] {
   return [
@@ -63,10 +63,10 @@ export function accountTools(pave: PaveClient): ToolDef[] {
         required: ["id"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const data: Record<string, unknown> = {};
-        if (params.name) data.name = params.name;
-        if (params.customFieldValues) data.customFieldValues = params.customFieldValues;
-        return pave.update("account", params.id as string, data, ACCOUNT_FIELDS);
+        const id = requireString(params, "id");
+        if ("error" in id) return id.error;
+        const data = pickDefined(params, ["name", "customFieldValues"]);
+        return pave.update("account", id.value, data, ACCOUNT_FIELDS);
       },
     },
 
@@ -83,20 +83,18 @@ export function accountTools(pave: PaveClient): ToolDef[] {
             enum: ["customer", "vendor"],
             description: "Filter by account type (optional)",
           },
+          ...PAGINATION_PROPS,
         },
         required: ["searchTerm"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [
-          { field: "name", operator: "like", value: `%${params.searchTerm}%` },
-        ];
-        if (params.type) {
-          conditions.push({ field: "type", operator: "eq", value: params.type });
-        }
         return pave.query({
           entity: "account",
           fields: ACCOUNT_FIELDS,
-          filter: { operator: "and", conditions },
+          filter: buildSearchFilter(params, "searchTerm", "name", [
+            { param: "type", field: "type" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -125,10 +123,8 @@ export function accountTools(pave: PaveClient): ToolDef[] {
         const data: Record<string, unknown> = {
           accountId: params.accountId,
           name: params.name,
+          ...pickDefined(params, ["email", "phone", "customFields"]),
         };
-        if (params.email) data.email = params.email;
-        if (params.phone) data.phone = params.phone;
-        if (params.customFields) data.customFields = params.customFields;
         return pave.create("contact", data, CONTACT_FIELDS);
       },
     },
@@ -141,17 +137,18 @@ export function accountTools(pave: PaveClient): ToolDef[] {
         type: "object" as const,
         properties: {
           accountId: { type: "string", description: "Filter by account ID (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const filter = params.accountId
-          ? { conditions: [{ field: "accountId", operator: "eq" as const, value: params.accountId }] }
-          : undefined;
         return pave.query({
           entity: "contact",
           fields: CONTACT_FIELDS,
-          filter,
+          filter: buildFilter(params, [
+            { param: "accountId", field: "accountId" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -168,7 +165,9 @@ export function accountTools(pave: PaveClient): ToolDef[] {
         required: ["contactId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("contact", params.contactId as string, CONTACT_FIELDS);
+        const id = requireString(params, "contactId");
+        if ("error" in id) return id.error;
+        return pave.read("contact", id.value, CONTACT_FIELDS);
       },
     },
   ];

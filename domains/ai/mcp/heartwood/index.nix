@@ -32,8 +32,10 @@ let
     SSE_PORT=${toString cfg.sse.port}
     LOG_LEVEL=${cfg.logLevel}
     ENVEOF
+    # Strip leading whitespace from env file (heredoc indentation artifact)
+    sed -i 's/^[[:space:]]*//' /run/heartwood-mcp/env
     chmod 0400 /run/heartwood-mcp/env
-    chown ${cfg.user} /run/heartwood-mcp/env
+    chown ${cfg.user}:users /run/heartwood-mcp/env
   '';
 
 in
@@ -118,13 +120,6 @@ in
   config = mkIf cfg.enable {
 
     #--------------------------------------------------------------------------
-    # PACKAGES
-    #--------------------------------------------------------------------------
-    environment.systemPackages = with pkgs; [
-      nodejs_22
-    ];
-
-    #--------------------------------------------------------------------------
     # TMPFILES (Runtime directories)
     #--------------------------------------------------------------------------
     systemd.tmpfiles.rules = [
@@ -169,8 +164,9 @@ in
           # Security hardening
           NoNewPrivileges = true;
           PrivateTmp = true;
-          ProtectSystem = "true";
+          ProtectSystem = "strict";
           ProtectHome = false; # Needs access to srcDir
+          ReadWritePaths = [ "/run/heartwood-mcp" ];
           ProtectKernelTunables = true;
           ProtectKernelModules = true;
           ProtectControlGroups = true;

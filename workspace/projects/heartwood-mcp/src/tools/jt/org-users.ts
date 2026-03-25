@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { USER_FIELDS, ORG_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildSearchFilter, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function orgUserTools(pave: PaveClient): ToolDef[] {
   return [
@@ -16,17 +17,16 @@ export function orgUserTools(pave: PaveClient): ToolDef[] {
         type: "object" as const,
         properties: {
           searchTerm: { type: "string", description: "Search by name (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const filter = params.searchTerm
-          ? { conditions: [{ field: "name", operator: "like" as const, value: `%${params.searchTerm}%` }] }
-          : undefined;
         return pave.query({
           entity: "user",
           fields: USER_FIELDS,
-          filter,
+          filter: buildSearchFilter(params, "searchTerm", "name"),
+          ...getPagination(params),
         });
       },
     },
@@ -37,11 +37,13 @@ export function orgUserTools(pave: PaveClient): ToolDef[] {
       description: "List all accessible organizations.",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          ...PAGINATION_PROPS,
+        },
         required: [],
       },
-      handler: async (): Promise<ToolResult> => {
-        return pave.query({ entity: "organization", fields: ORG_FIELDS });
+      handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
+        return pave.query({ entity: "organization", fields: ORG_FIELDS, ...getPagination(params) });
       },
     },
 

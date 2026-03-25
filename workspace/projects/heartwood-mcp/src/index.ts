@@ -120,27 +120,29 @@ async function main(): Promise<void> {
     log.info("Heartwood MCP Server running on stdio");
   } else {
     // SSE transport for remote access (Claude chat, n8n)
+    // Behind Caddy reverse proxy in production
     log.info("SSE transport configured", {
       host: config.sse.host,
       port: config.sse.port,
     });
-    // SSE transport requires an HTTP server — using the SDK's built-in support
-    // For production, this would be behind Caddy reverse proxy
     const { createServer } = await import("http");
+
+    // Track the active SSE transport so POST /messages can route to it
+    let activeTransport: SSEServerTransport | null = null;
+
     const httpServer = createServer(async (req, res) => {
       if (req.method === "GET" && req.url === "/sse") {
         const transport = new SSEServerTransport("/messages", res);
+        activeTransport = transport;
         await server.connect(transport);
       } else if (req.method === "POST" && req.url === "/messages") {
-        // Handle incoming messages for SSE transport
-        let body = "";
-        req.on("data", (chunk: Buffer) => {
-          body += chunk.toString();
-        });
-        req.on("end", () => {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ received: true }));
-        });
+        if (!activeTransport) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "No active SSE connection" }));
+          return;
+        }
+        // Route the message through the SSE transport for bidirectional communication
+        await activeTransport.handlePostMessage(req, res);
       } else {
         res.writeHead(404);
         res.end("Not found");

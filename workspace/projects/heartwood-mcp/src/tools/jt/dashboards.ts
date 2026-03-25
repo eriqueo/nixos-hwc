@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { DASHBOARD_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildSearchFilter, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function dashboardTools(pave: PaveClient): ToolDef[] {
   return [
@@ -41,7 +42,9 @@ export function dashboardTools(pave: PaveClient): ToolDef[] {
         required: ["id", "tiles"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.update("dashboard", params.id as string, {
+        const id = requireString(params, "id");
+        if ("error" in id) return id.error;
+        return pave.update("dashboard", id.value, {
           tiles: params.tiles,
         }, DASHBOARD_FIELDS);
       },
@@ -55,17 +58,16 @@ export function dashboardTools(pave: PaveClient): ToolDef[] {
         type: "object" as const,
         properties: {
           name: { type: "string", description: "Filter by name (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const filter = params.name
-          ? { conditions: [{ field: "name", operator: "like" as const, value: `%${params.name}%` }] }
-          : undefined;
         return pave.query({
           entity: "dashboard",
           fields: DASHBOARD_FIELDS,
-          filter,
+          filter: buildSearchFilter(params, "name", "name"),
+          ...getPagination(params),
         });
       },
     },

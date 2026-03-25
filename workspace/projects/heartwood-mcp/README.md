@@ -70,6 +70,12 @@ hwc.ai.mcp.enable = true;
 hwc.ai.mcp.heartwood.enable = true;
 ```
 
+## Date/Time Convention
+
+- **Date-only fields** (YYYY-MM-DD): Interpreted in the org's timezone (America/Denver)
+- **Datetime fields**: Must include timezone offset in ISO 8601 format (e.g., `2026-03-25T08:00:00-06:00`)
+- **Time entries**: Both `startedAt` and `endedAt` require full ISO 8601 with timezone
+
 ## Implementation Status
 
 - [x] Phase 1: JT MCP Server (63 tools via PAVE API)

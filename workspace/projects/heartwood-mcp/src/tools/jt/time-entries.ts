@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { TIME_ENTRY_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function timeEntryTools(pave: PaveClient): ToolDef[] {
   return [
@@ -33,10 +34,8 @@ export function timeEntryTools(pave: PaveClient): ToolDef[] {
           userId: params.userId,
           startedAt: params.startedAt,
           endedAt: params.endedAt,
+          ...pickDefined(params, ["notes", "costItemId", "type", "isApproved"]),
         };
-        for (const field of ["notes", "costItemId", "type", "isApproved"]) {
-          if (params[field] !== undefined) data[field] = params[field];
-        }
         return pave.create("timeEntry", data, TIME_ENTRY_FIELDS);
       },
     },
@@ -53,20 +52,22 @@ export function timeEntryTools(pave: PaveClient): ToolDef[] {
           startDate: { type: "string", description: "Filter entries after this date (optional)" },
           endDate: { type: "string", description: "Filter entries before this date (optional)" },
           isApproved: { type: "boolean", description: "Filter by approval status (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
-        if (params.jobId) conditions.push({ field: "jobId", operator: "eq", value: params.jobId });
-        if (params.userId) conditions.push({ field: "userId", operator: "eq", value: params.userId });
-        if (params.startDate) conditions.push({ field: "startedAt", operator: "gte", value: params.startDate });
-        if (params.endDate) conditions.push({ field: "endedAt", operator: "lte", value: params.endDate });
-        if (params.isApproved !== undefined) conditions.push({ field: "isApproved", operator: "eq", value: params.isApproved });
         return pave.query({
           entity: "timeEntry",
           fields: TIME_ENTRY_FIELDS,
-          filter: conditions.length > 0 ? { operator: "and", conditions } : undefined,
+          filter: buildFilter(params, [
+            { param: "jobId", field: "jobId" },
+            { param: "userId", field: "userId" },
+            { param: "startDate", field: "startedAt", operator: "gte" },
+            { param: "endDate", field: "endedAt", operator: "lte" },
+            { param: "isApproved", field: "isApproved" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -83,7 +84,9 @@ export function timeEntryTools(pave: PaveClient): ToolDef[] {
         required: ["timeEntryId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("timeEntry", params.timeEntryId as string, TIME_ENTRY_FIELDS);
+        const id = requireString(params, "timeEntryId");
+        if ("error" in id) return id.error;
+        return pave.read("timeEntry", id.value, TIME_ENTRY_FIELDS);
       },
     },
 
@@ -106,10 +109,8 @@ export function timeEntryTools(pave: PaveClient): ToolDef[] {
         const data: Record<string, unknown> = {
           startDate: params.startDate,
           endDate: params.endDate,
+          ...pickDefined(params, ["groupBy", "jobId", "userId"]),
         };
-        if (params.groupBy) data.groupBy = params.groupBy;
-        if (params.jobId) data.jobId = params.jobId;
-        if (params.userId) data.userId = params.userId;
         return pave.execute({
           action: "query",
           entity: "timeSummary",

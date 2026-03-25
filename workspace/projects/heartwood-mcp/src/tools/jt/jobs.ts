@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { JOB_FIELDS, JOB_DETAIL_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function jobTools(pave: PaveClient): ToolDef[] {
   return [
@@ -32,10 +33,8 @@ export function jobTools(pave: PaveClient): ToolDef[] {
         const data: Record<string, unknown> = {
           locationId: params.locationId,
           name: params.name,
+          ...pickDefined(params, ["description", "number", "customFields"]),
         };
-        if (params.description) data.description = params.description;
-        if (params.number) data.number = params.number;
-        if (params.customFields) data.customFields = params.customFields;
         return pave.create("job", data, JOB_FIELDS);
       },
     },
@@ -58,21 +57,23 @@ export function jobTools(pave: PaveClient): ToolDef[] {
             enum: ["open", "closed", "all"],
             description: "Filter by status (default: all)",
           },
+          ...PAGINATION_PROPS,
         },
         required: ["searchTerm"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const searchField = (params.searchBy as string) || "name";
+        const searchField = params.searchBy !== undefined ? (params.searchBy as string) : "name";
         const conditions: Array<{ field: string; operator: string; value: unknown }> = [
           { field: searchField, operator: "like", value: `%${params.searchTerm}%` },
         ];
-        if (params.status && params.status !== "all") {
+        if (params.status !== undefined && params.status !== "all") {
           conditions.push({ field: "status", operator: "eq", value: params.status });
         }
         return pave.query({
           entity: "job",
           fields: JOB_FIELDS,
           filter: { operator: "and", conditions },
+          ...getPagination(params),
         });
       },
     },
@@ -90,7 +91,9 @@ export function jobTools(pave: PaveClient): ToolDef[] {
         required: ["jobId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("job", params.jobId as string, JOB_DETAIL_FIELDS);
+        const id = requireString(params, "jobId");
+        if ("error" in id) return id.error;
+        return pave.read("job", id.value, JOB_DETAIL_FIELDS);
       },
     },
 
@@ -100,15 +103,18 @@ export function jobTools(pave: PaveClient): ToolDef[] {
       description: "Get all active jobs (jobs with approved customer orders).",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          ...PAGINATION_PROPS,
+        },
         required: [],
       },
-      handler: async (): Promise<ToolResult> => {
+      handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
           entity: "job",
           fields: JOB_FIELDS,
           filter: { conditions: [{ field: "status", operator: "eq", value: "open" }] },
           sort: [{ field: "updatedAt", direction: "desc" }],
+          ...getPagination(params),
         });
       },
     },
@@ -137,7 +143,9 @@ export function jobTools(pave: PaveClient): ToolDef[] {
         required: ["jobId", "parameters"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.update("job", params.jobId as string, {
+        const id = requireString(params, "jobId");
+        if ("error" in id) return id.error;
+        return pave.update("job", id.value, {
           parameters: params.parameters,
         });
       },

@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { DAILY_LOG_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function dailyLogTools(pave: PaveClient): ToolDef[] {
   return [
@@ -31,8 +32,8 @@ export function dailyLogTools(pave: PaveClient): ToolDef[] {
           jobId: params.jobId,
           date: params.date,
           notes: params.notes,
+          ...pickDefined(params, ["customFields"]),
         };
-        if (params.customFields) data.customFields = params.customFields;
         return pave.create("dailyLog", data, DAILY_LOG_FIELDS);
       },
     },
@@ -48,19 +49,21 @@ export function dailyLogTools(pave: PaveClient): ToolDef[] {
           userId: { type: "string", description: "Filter by user ID (optional)" },
           startDate: { type: "string", description: "Filter after this date (optional)" },
           endDate: { type: "string", description: "Filter before this date (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
-        if (params.jobId) conditions.push({ field: "jobId", operator: "eq", value: params.jobId });
-        if (params.userId) conditions.push({ field: "userId", operator: "eq", value: params.userId });
-        if (params.startDate) conditions.push({ field: "date", operator: "gte", value: params.startDate });
-        if (params.endDate) conditions.push({ field: "date", operator: "lte", value: params.endDate });
         return pave.query({
           entity: "dailyLog",
           fields: DAILY_LOG_FIELDS,
-          filter: conditions.length > 0 ? { operator: "and", conditions } : undefined,
+          filter: buildFilter(params, [
+            { param: "jobId", field: "jobId" },
+            { param: "userId", field: "userId" },
+            { param: "startDate", field: "date", operator: "gte" },
+            { param: "endDate", field: "date", operator: "lte" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -77,7 +80,9 @@ export function dailyLogTools(pave: PaveClient): ToolDef[] {
         required: ["logId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("dailyLog", params.logId as string, DAILY_LOG_FIELDS);
+        const id = requireString(params, "logId");
+        if ("error" in id) return id.error;
+        return pave.read("dailyLog", id.value, DAILY_LOG_FIELDS);
       },
     },
 
@@ -100,10 +105,8 @@ export function dailyLogTools(pave: PaveClient): ToolDef[] {
         const data: Record<string, unknown> = {
           startDate: params.startDate,
           endDate: params.endDate,
+          ...pickDefined(params, ["groupBy", "jobId", "userId"]),
         };
-        if (params.groupBy) data.groupBy = params.groupBy;
-        if (params.jobId) data.jobId = params.jobId;
-        if (params.userId) data.userId = params.userId;
         return pave.execute({
           action: "query",
           entity: "dailyLogSummary",

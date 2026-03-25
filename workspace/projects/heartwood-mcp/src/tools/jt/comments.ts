@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { COMMENT_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function commentTools(pave: PaveClient): ToolDef[] {
   return [
@@ -33,10 +34,8 @@ export function commentTools(pave: PaveClient): ToolDef[] {
           name: params.name,
           targetId: params.targetId,
           targetType: params.targetType,
+          ...pickDefined(params, ["isPinned", "parentCommentId", "isVisibleToCustomer", "isVisibleToVendor", "isVisibleToEmployee"]),
         };
-        for (const field of ["isPinned", "parentCommentId", "isVisibleToCustomer", "isVisibleToVendor", "isVisibleToEmployee"]) {
-          if (params[field] !== undefined) data[field] = params[field];
-        }
         return pave.create("comment", data, COMMENT_FIELDS);
       },
     },
@@ -50,17 +49,19 @@ export function commentTools(pave: PaveClient): ToolDef[] {
         properties: {
           targetId: { type: "string", description: "Filter by target ID (optional)" },
           targetType: { type: "string", description: "Filter by target type (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
-        if (params.targetId) conditions.push({ field: "targetId", operator: "eq", value: params.targetId });
-        if (params.targetType) conditions.push({ field: "targetType", operator: "eq", value: params.targetType });
         return pave.query({
           entity: "comment",
           fields: COMMENT_FIELDS,
-          filter: conditions.length > 0 ? { operator: "and", conditions } : undefined,
+          filter: buildFilter(params, [
+            { param: "targetId", field: "targetId" },
+            { param: "targetType", field: "targetType" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -77,7 +78,9 @@ export function commentTools(pave: PaveClient): ToolDef[] {
         required: ["commentId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("comment", params.commentId as string, [
+        const id = requireString(params, "commentId");
+        if ("error" in id) return id.error;
+        return pave.read("comment", id.value, [
           ...COMMENT_FIELDS,
           { field: "children", fields: COMMENT_FIELDS },
         ]);

@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { LOCATION_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function locationTools(pave: PaveClient): ToolDef[] {
   return [
@@ -31,11 +32,8 @@ export function locationTools(pave: PaveClient): ToolDef[] {
           accountId: params.accountId,
           address: params.address,
           name: params.name,
+          ...pickDefined(params, ["city", "state", "zip", "contactId"]),
         };
-        if (params.city) data.city = params.city;
-        if (params.state) data.state = params.state;
-        if (params.zip) data.zip = params.zip;
-        if (params.contactId) data.contactId = params.contactId;
         return pave.create("location", data, LOCATION_FIELDS);
       },
     },
@@ -48,17 +46,18 @@ export function locationTools(pave: PaveClient): ToolDef[] {
         type: "object" as const,
         properties: {
           accountId: { type: "string", description: "Filter by account ID (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const filter = params.accountId
-          ? { conditions: [{ field: "accountId", operator: "eq" as const, value: params.accountId }] }
-          : undefined;
         return pave.query({
           entity: "location",
           fields: LOCATION_FIELDS,
-          filter,
+          filter: buildFilter(params, [
+            { param: "accountId", field: "accountId" },
+          ]),
+          ...getPagination(params),
         });
       },
     },

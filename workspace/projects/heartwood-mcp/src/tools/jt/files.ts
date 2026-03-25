@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { FILE_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function fileTools(pave: PaveClient): ToolDef[] {
   return [
@@ -33,10 +34,8 @@ export function fileTools(pave: PaveClient): ToolDef[] {
           targetId: params.targetId,
           targetType: params.targetType,
           url: params.url,
+          ...pickDefined(params, ["name", "folder", "fileTagIds"]),
         };
-        if (params.name) data.name = params.name;
-        if (params.folder) data.folder = params.folder;
-        if (params.fileTagIds) data.fileTagIds = params.fileTagIds;
         return pave.create("file", data, FILE_FIELDS);
       },
     },
@@ -60,11 +59,10 @@ export function fileTools(pave: PaveClient): ToolDef[] {
         required: ["fileId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const data: Record<string, unknown> = {};
-        for (const field of ["name", "folder", "fileTagIds", "description"]) {
-          if (params[field] !== undefined) data[field] = params[field];
-        }
-        return pave.update("file", params.fileId as string, data, FILE_FIELDS);
+        const id = requireString(params, "fileId");
+        if ("error" in id) return id.error;
+        const data = pickDefined(params, ["name", "folder", "fileTagIds", "description"]);
+        return pave.update("file", id.value, data, FILE_FIELDS);
       },
     },
 
@@ -92,10 +90,8 @@ export function fileTools(pave: PaveClient): ToolDef[] {
           sourceFileId: params.sourceFileId,
           targetId: params.targetId,
           targetType: params.targetType,
+          ...pickDefined(params, ["name", "folder", "fileTagIds"]),
         };
-        if (params.name) data.name = params.name;
-        if (params.folder) data.folder = params.folder;
-        if (params.fileTagIds) data.fileTagIds = params.fileTagIds;
         return pave.create("fileCopy", data, FILE_FIELDS);
       },
     },
@@ -112,7 +108,9 @@ export function fileTools(pave: PaveClient): ToolDef[] {
         required: ["fileId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.read("file", params.fileId as string, [
+        const id = requireString(params, "fileId");
+        if ("error" in id) return id.error;
+        return pave.read("file", id.value, [
           ...FILE_FIELDS,
           { field: "content" },
         ]);
@@ -158,18 +156,20 @@ export function fileTools(pave: PaveClient): ToolDef[] {
           jobId: { type: "string", description: "Filter by job ID (optional)" },
           documentId: { type: "string", description: "Filter by document ID (optional)" },
           folder: { type: "string", description: "Filter by folder name (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
-        if (params.jobId) conditions.push({ field: "jobId", operator: "eq", value: params.jobId });
-        if (params.documentId) conditions.push({ field: "documentId", operator: "eq", value: params.documentId });
-        if (params.folder) conditions.push({ field: "folder", operator: "eq", value: params.folder });
         return pave.query({
           entity: "file",
           fields: FILE_FIELDS,
-          filter: conditions.length > 0 ? { operator: "and", conditions } : undefined,
+          filter: buildFilter(params, [
+            { param: "jobId", field: "jobId" },
+            { param: "documentId", field: "documentId" },
+            { param: "folder", field: "folder" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -180,13 +180,16 @@ export function fileTools(pave: PaveClient): ToolDef[] {
       description: "Get all organization-level file tags.",
       inputSchema: {
         type: "object" as const,
-        properties: {},
+        properties: {
+          ...PAGINATION_PROPS,
+        },
         required: [],
       },
-      handler: async (): Promise<ToolResult> => {
+      handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
           entity: "fileTag",
           fields: [{ field: "id" }, { field: "name" }],
+          ...getPagination(params),
         });
       },
     },

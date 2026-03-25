@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { DOCUMENT_FIELDS, DOCUMENT_LINE_ITEM_FIELDS, TEMPLATE_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function documentTools(pave: PaveClient): ToolDef[] {
   return [
@@ -62,15 +63,12 @@ export function documentTools(pave: PaveClient): ToolDef[] {
         const data: Record<string, unknown> = {
           jobId: params.jobId,
           type: params.type,
+          ...pickDefined(params, [
+            "accountId", "documentTemplateId", "costCodeIds", "costGroupNames",
+            "costItemIds", "costItemOverrides", "date", "name", "subject",
+            "description", "footer", "externalId", "taxRate",
+          ]),
         };
-        const optionalFields = [
-          "accountId", "documentTemplateId", "costCodeIds", "costGroupNames",
-          "costItemIds", "costItemOverrides", "date", "name", "subject",
-          "description", "footer", "externalId", "taxRate",
-        ];
-        for (const field of optionalFields) {
-          if (params[field] !== undefined) data[field] = params[field];
-        }
         return pave.create("document", data, DOCUMENT_FIELDS);
       },
     },
@@ -102,12 +100,10 @@ export function documentTools(pave: PaveClient): ToolDef[] {
         required: ["documentId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const data: Record<string, unknown> = {};
-        if (params.status) data.status = params.status;
-        if (params.description) data.description = params.description;
-        if (params.costItemUpdates) data.costItemUpdates = params.costItemUpdates;
-        if (params.pushToQbo !== undefined) data.pushToQbo = params.pushToQbo;
-        return pave.update("document", params.documentId as string, data, DOCUMENT_FIELDS);
+        const id = requireString(params, "documentId");
+        if ("error" in id) return id.error;
+        const data = pickDefined(params, ["status", "description", "costItemUpdates", "pushToQbo"]);
+        return pave.update("document", id.value, data, DOCUMENT_FIELDS);
       },
     },
 
@@ -124,17 +120,19 @@ export function documentTools(pave: PaveClient): ToolDef[] {
             enum: ["customerOrder", "customerInvoice", "vendorOrder", "vendorBill", "bidRequest"],
             description: "Filter by document type (optional)",
           },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
-        if (params.jobId) conditions.push({ field: "jobId", operator: "eq", value: params.jobId });
-        if (params.type) conditions.push({ field: "type", operator: "eq", value: params.type });
         return pave.query({
           entity: "document",
           fields: DOCUMENT_FIELDS,
-          filter: conditions.length > 0 ? { operator: "and", conditions } : undefined,
+          filter: buildFilter(params, [
+            { param: "jobId", field: "jobId" },
+            { param: "type", field: "type" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
@@ -147,6 +145,7 @@ export function documentTools(pave: PaveClient): ToolDef[] {
         type: "object" as const,
         properties: {
           documentId: { type: "string", description: "Document ID" },
+          ...PAGINATION_PROPS,
         },
         required: ["documentId"],
       },
@@ -155,6 +154,7 @@ export function documentTools(pave: PaveClient): ToolDef[] {
           entity: "documentLineItem",
           fields: DOCUMENT_LINE_ITEM_FIELDS,
           filter: { conditions: [{ field: "documentId", operator: "eq", value: params.documentId }] },
+          ...getPagination(params),
         });
       },
     },
@@ -171,6 +171,7 @@ export function documentTools(pave: PaveClient): ToolDef[] {
             enum: ["customerOrder", "customerInvoice", "vendorOrder", "vendorBill", "bidRequest"],
             description: "Document type to get templates for",
           },
+          ...PAGINATION_PROPS,
         },
         required: ["type"],
       },
@@ -179,6 +180,7 @@ export function documentTools(pave: PaveClient): ToolDef[] {
           entity: "documentTemplate",
           fields: TEMPLATE_FIELDS,
           filter: { conditions: [{ field: "type", operator: "eq", value: params.type }] },
+          ...getPagination(params),
         });
       },
     },

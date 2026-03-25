@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import { PAYMENT_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
+import { buildFilter, pickDefined, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
 export function paymentTools(pave: PaveClient): ToolDef[] {
   return [
@@ -29,9 +30,8 @@ export function paymentTools(pave: PaveClient): ToolDef[] {
           amount: params.amount,
           date: params.date,
           documentId: params.documentId,
+          ...pickDefined(params, ["description", "paymentType"]),
         };
-        if (params.description) data.description = params.description;
-        if (params.paymentType) data.paymentType = params.paymentType;
         return pave.create("payment", data, PAYMENT_FIELDS);
       },
     },
@@ -46,18 +46,20 @@ export function paymentTools(pave: PaveClient): ToolDef[] {
           jobId: { type: "string", description: "Filter by job ID (optional)" },
           documentId: { type: "string", description: "Filter by document ID (optional)" },
           accountId: { type: "string", description: "Filter by account ID (optional)" },
+          ...PAGINATION_PROPS,
         },
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [];
-        if (params.jobId) conditions.push({ field: "jobId", operator: "eq", value: params.jobId });
-        if (params.documentId) conditions.push({ field: "documentId", operator: "eq", value: params.documentId });
-        if (params.accountId) conditions.push({ field: "accountId", operator: "eq", value: params.accountId });
         return pave.query({
           entity: "payment",
           fields: PAYMENT_FIELDS,
-          filter: conditions.length > 0 ? { operator: "and", conditions } : undefined,
+          filter: buildFilter(params, [
+            { param: "jobId", field: "jobId" },
+            { param: "documentId", field: "documentId" },
+            { param: "accountId", field: "accountId" },
+          ]),
+          ...getPagination(params),
         });
       },
     },
