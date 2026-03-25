@@ -69,6 +69,30 @@ let
         }
         ${assetHandlers.${assetStrategy}}
       '';
+      # Static file server block (for mode = "static")
+      staticBlock = ''
+        # Static file server on dedicated TLS port
+        ${rootHost}:${toString r.port} {
+          tls {
+            get_certificate tailscale
+            protocols tls1.2 tls1.3
+            alpn h2 http/1.1
+          }
+          encode zstd gzip
+
+          # CORS headers for cross-origin embedding
+          header Access-Control-Allow-Origin "*"
+          header Access-Control-Allow-Methods "GET, OPTIONS"
+          header Access-Control-Allow-Headers "Content-Type"
+
+          # Cache static assets
+          header Cache-Control "public, max-age=31536000, immutable"
+
+          root * ${r.root}
+          try_files {path} /index.html
+          file_server
+        }
+      '';
     in
       if r.mode == "subpath" then
         # If the app has a URL base, we must preserve the path; otherwise we may strip.
@@ -85,6 +109,7 @@ let
           ${proxyBlock}
         }
       ''
+      else if r.mode == "static" then staticBlock
       else "";
 
 in
@@ -137,6 +162,8 @@ in
         }
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "port") routes))}
+
+        ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "static") routes))}
       '';
     };
 
@@ -153,6 +180,6 @@ in
 
     networking.firewall.allowedTCPPorts =
       [ 80 443 ]
-      ++ (lib.map (r: r.port) (lib.filter (r: r.mode == "port") routes));
+      ++ (lib.map (r: r.port) (lib.filter (r: r.mode == "port" || r.mode == "static") routes));
   };
 }

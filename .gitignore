@@ -22,6 +22,9 @@ secrets/keys/*
 .lint-reports/
 .script-inventory/
 
+# Node
+node_modules/
+
 # Python
 __pycache__/
 *.pyc
