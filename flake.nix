@@ -111,12 +111,15 @@
       # No per-package overrides needed with binary cache
     };
 
+    # Claude Code overlay - backport from unstable to stable
+    claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; };
+
     # Pkgs helper with optional overlays (server uses this)
     # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
-    mkPkgsWithOverlays = system: nixpkgsInput: overlays:
+    mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        inherit overlays;
+        overlays = [ claudeCodeOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;

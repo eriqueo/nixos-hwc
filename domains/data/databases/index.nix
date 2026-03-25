@@ -43,12 +43,54 @@ in
       };
 
       backup = {
-        enable = lib.mkEnableOption "Automatic backups";
+        enable = lib.mkEnableOption "Automatic pg_dumpall backups (all databases)";
 
         schedule = lib.mkOption {
           type = lib.types.str;
           default = "daily";
-          description = "Backup schedule";
+          description = "Backup schedule for pg_dumpall";
+        };
+
+        # Per-database backups with compression and retention
+        perDatabase = {
+          enable = lib.mkEnableOption "Per-database compressed backups";
+
+          databases = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [];
+            example = [ "hwc" "n8n" ];
+            description = "Specific databases to backup individually";
+          };
+
+          outputDir = lib.mkOption {
+            type = lib.types.path;
+            default = "/home/eric/backups/postgres";
+            description = "Directory for per-database backups";
+          };
+
+          compress = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Compress backups with gzip";
+          };
+
+          retentionDays = lib.mkOption {
+            type = lib.types.int;
+            default = 30;
+            description = "Delete backups older than this many days";
+          };
+
+          schedule = lib.mkOption {
+            type = lib.types.str;
+            default = "*-*-* 02:30:00";
+            description = "Systemd calendar expression for backup schedule";
+          };
+
+          user = lib.mkOption {
+            type = lib.types.str;
+            default = "eric";
+            description = "User to run backups as (must have DB access)";
+          };
         };
       };
     };
@@ -133,6 +175,60 @@ in
         timerConfig = {
           OnCalendar = cfg.postgresql.backup.schedule;
           Persistent = true;
+        };
+      };
+
+      # Per-database backup service
+      systemd.services.postgresql-db-backup = lib.mkIf cfg.postgresql.backup.perDatabase.enable {
+        description = "Backup specific PostgreSQL databases";
+        after = [ "postgresql.service" ];
+        requires = [ "postgresql.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = cfg.postgresql.backup.perDatabase.user;
+          Group = "users";
+        };
+        path = [ pkgs.postgresql pkgs.gzip pkgs.coreutils pkgs.findutils ];
+        script = let
+          backupCfg = cfg.postgresql.backup.perDatabase;
+          ext = if backupCfg.compress then ".sql.gz" else ".sql";
+        in ''
+          set -euo pipefail
+          BACKUP_DIR="${backupCfg.outputDir}"
+          mkdir -p "$BACKUP_DIR"
+
+          ${lib.concatMapStringsSep "\n" (db: ''
+            echo "Backing up database: ${db}"
+            BACKUP_FILE="$BACKUP_DIR/${db}_$(date +%Y-%m-%d)${ext}"
+            ${if backupCfg.compress then ''
+              pg_dump ${db} | gzip > "$BACKUP_FILE"
+            '' else ''
+              pg_dump ${db} > "$BACKUP_FILE"
+            ''}
+            if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+              SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+              echo "  Success: $BACKUP_FILE ($SIZE)"
+            else
+              echo "  ERROR: Backup failed for ${db}"
+              exit 1
+            fi
+          '') backupCfg.databases}
+
+          # Cleanup old backups
+          echo "Cleaning up backups older than ${toString backupCfg.retentionDays} days..."
+          ${lib.concatMapStringsSep "\n" (db: ''
+            find "$BACKUP_DIR" -name "${db}_*${ext}" -mtime +${toString backupCfg.retentionDays} -delete
+          '') backupCfg.databases}
+          echo "Cleanup complete."
+        '';
+      };
+
+      systemd.timers.postgresql-db-backup = lib.mkIf cfg.postgresql.backup.perDatabase.enable {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = cfg.postgresql.backup.perDatabase.schedule;
+          Persistent = true;
+          RandomizedDelaySec = "15m";
         };
       };
     })

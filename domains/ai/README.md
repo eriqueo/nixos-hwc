@@ -66,5 +66,6 @@ Auto-detects and configures based on available hardware:
 
 ## Changelog
 
+- 2026-03-25: Added Heartwood MCP Server to mcp/ subdomain (Phase 1: 63 JT tools via PAVE API)
 - 2026-03-04: Moved ai-bible from domains/server/native/ai/ into domain; removed dead native/ai/ sub-modules
 - 2026-02-26: Created README per Law 12

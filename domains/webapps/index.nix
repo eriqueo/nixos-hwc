@@ -204,11 +204,6 @@ let
   };
 
 in {
-
-  imports = [
-    ./estimator/index.nix
-  ];
-
   # ── OPTIONS ───────────────────────────────────────────────────────────────
   options.hwc.webapps = {
     enable = lib.mkEnableOption "Web app hosting system (hwc-publish + port range)";

@@ -14,7 +14,7 @@ let
   paths = config.hwc.paths;
 
   # Source directory
-  sourceDir = "${paths.nixos or "/home/eric/.nixos"}/workspace/hwc/remodel_web_app";
+  sourceDir = "${paths.nixos or "/home/eric/.nixos"}/workspace/business/remodel-api";
 
   # Python environment for business API
   pythonEnv = pkgs.python3.withPackages (ps: with ps; [

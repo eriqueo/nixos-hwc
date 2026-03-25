@@ -348,6 +348,15 @@ in
       port = 12443;
       upstream = "http://127.0.0.1:8978";
     }
+
+    # Bathroom Calculator - static React app for iheartwoodcraft.com embedding
+    # CORS enabled for cross-origin embedding on WordPress
+    {
+      name = "calculator";
+      mode = "static";
+      port = 14443;
+      root = "/home/eric/.nixos/workspace/business/bathroom-calculator/dist";
+    }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy
     # Enabled when hwc.ai.mcp.reverseProxy.enable = true
