@@ -47,6 +47,12 @@ in
         default = "Hyprland";
         description = "Default session command (e.g. 'Hyprland', 'gnome', 'plasma').";
       };
+
+      rescueTTY = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Always keep a getty on tty2 so Ctrl+Alt+F2 gives a text login (lockout prevention).";
+      };
     };
 
     # --- Linger Sub-Module ---
@@ -84,47 +90,69 @@ in
     services.greetd = lib.mkIf cfg.loginManager.enable {
       enable = true;
 
-      # Wrap Hyprland in a small starter script that:
-      #  - guarantees a session D-Bus
-      #  - exports safe Wayland/NVIDIA env vars for hybrid laptops
-      #  - execs Hyprland by absolute path
-      #
-      # Notes:
-      #  - The NVIDIA exports are safe on Intel (ignored if NVIDIA isn't active)
-      #  - Remove WLR_NO_HARDWARE_CURSORS if you never see cursor glitches
-      #
       settings =
         let
           hyprStart = pkgs.writeShellScript "start-hyprland-session" ''
             export XDG_SESSION_TYPE=wayland
             export XDG_CURRENT_DESKTOP=Hyprland
             export WLR_RENDERER=vulkan
-            # Helps on some NVIDIA systems; harmless elsewhere
             export WLR_NO_HARDWARE_CURSORS=1
 
             # NVIDIA PRIME offload hints (ignored if not applicable)
             export __NV_PRIME_RENDER_OFFLOAD=1
             export __VK_LAYER_NV_optimus=NVIDIA_only
             export __GLX_VENDOR_LIBRARY_NAME=nvidia
-
-            # Optional VA-API on NVIDIA; harmless if driver not present
             export LIBVA_DRIVER_NAME=nvidia
-
-            # Keep logs useful
             export HYPRLAND_LOG_WLR=1
 
-            # Use start-hyprland wrapper (watchdog + proper env setup)
             exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/start-hyprland
+          '';
+
+          # Crash-resilient auto-login: restarts Hyprland after crash,
+          # but falls back to tuigreet if it crashes 3 times in 60 seconds.
+          hyprAutoRestart = pkgs.writeShellScript "hyprland-auto-restart" ''
+            CRASH_LOG="/tmp/hyprland-crash-times"
+
+            # Clean stale entries (older than 60 seconds)
+            now=$(${pkgs.coreutils}/bin/date +%s)
+            if [ -f "$CRASH_LOG" ]; then
+              ${pkgs.coreutils}/bin/touch "$CRASH_LOG.tmp"
+              while IFS= read -r ts; do
+                if [ $((now - ts)) -lt 60 ]; then
+                  echo "$ts" >> "$CRASH_LOG.tmp"
+                fi
+              done < "$CRASH_LOG"
+              ${pkgs.coreutils}/bin/mv "$CRASH_LOG.tmp" "$CRASH_LOG"
+            fi
+
+            # Count recent crashes
+            recent=0
+            if [ -f "$CRASH_LOG" ]; then
+              recent=$(${pkgs.coreutils}/bin/wc -l < "$CRASH_LOG")
+            fi
+
+            if [ "$recent" -ge 3 ]; then
+              # Too many crashes — fall back to tuigreet so user isn't stuck in a loop
+              echo "Hyprland crashed 3+ times in 60s, falling back to tuigreet" >&2
+              ${pkgs.coreutils}/bin/rm -f "$CRASH_LOG"
+              exec ${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-user-session --asterisks --cmd ${hyprStart}
+            fi
+
+            # Record this attempt and launch Hyprland
+            echo "$now" >> "$CRASH_LOG"
+            exec ${hyprStart}
           '';
         in
         {
-          default_session = {
+          # When autoLoginUser is set: default_session auto-restarts Hyprland
+          # (with crash-loop protection that falls back to tuigreet).
+          # When autoLoginUser is null: default_session is tuigreet as before.
+          default_session = if (cfg.loginManager.autoLoginUser != null) then {
+            user = cfg.loginManager.autoLoginUser;
+            command = "${hyprAutoRestart}";
+          } else {
             user = "greeter";
-            command =
-              let
-                args = "--time --remember --remember-user-session --asterisks";
-              in
-              "${pkgs.tuigreet}/bin/tuigreet ${args} --cmd ${hyprStart}";
+            command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-user-session --asterisks --cmd ${hyprStart}";
           };
         }
         // lib.optionalAttrs (cfg.loginManager.autoLoginUser != null) {
@@ -138,6 +166,17 @@ in
     # Keep these to avoid display-manager conflicts (NixOS 24.11+ uses services.displayManager)
     services.displayManager.gdm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
     services.displayManager.sddm.enable = lib.mkIf cfg.loginManager.enable (lib.mkForce false);
+
+    #=========================================================================
+    # RESCUE TTY — Always-available text console (lockout prevention)
+    #=========================================================================
+    # Ensures Ctrl+Alt+F2 always gives a working login prompt,
+    # even if greetd/tuigreet/Hyprland are all broken.
+    systemd.services."getty@tty2" = lib.mkIf (cfg.loginManager.enable && cfg.loginManager.rescueTTY) {
+      enable = true;
+      wantedBy = [ "getty.target" ];
+      serviceConfig.Restart = "always";
+    };
 
     #=========================================================================
     # USER LINGERING
