@@ -20,6 +20,8 @@ domains/business/
 ├── paperless/          # Paperless-NGX document management
 │   ├── index.nix       # Options definitions
 │   ├── sys.nix         # System packages (tesseract, poppler)
+│   ├── scripts/
+│   │   └── setup-paperless.sh  # API setup: tags, doc types, correspondents, fields
 │   └── parts/
 │       ├── config.nix      # Container configuration
 │       └── directories.nix # Storage directory structure
@@ -138,6 +140,7 @@ If source not deployed, service returns stub response with deployment instructio
 
 ## Changelog
 
+- 2026-03-25: Added Paperless setup script for Heartwood Craft (tags, doc types, correspondents, custom fields)
 - 2026-03-24: Fixed workspace path in api.nix (hwc/remodel_web_app → business/remodel-api), updated README structure and deployment paths
 - 2026-03-23: Consolidated business domain - moved estimator from webapps, workspace reorganized to workspace/business/
 - 2026-03-04: Namespace migration hwc.server.containers.{paperless,firefly} → hwc.business.*
