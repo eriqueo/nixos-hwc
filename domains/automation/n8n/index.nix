@@ -104,6 +104,12 @@ in
         default = null;
         description = "Path to file containing SLACK_WEBHOOK_URL (via agenix)";
       };
+
+      anthropicApiKeyFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing ANTHROPIC_API_KEY for Claude workflows (via agenix)";
+      };
     };
 
     funnel = {

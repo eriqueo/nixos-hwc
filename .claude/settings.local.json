@@ -147,7 +147,14 @@
       "Bash(openssl rand:*)",
       "Bash(/run/current-system/sw/bin/npm run build)",
       "Bash(npm run build:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "mcp__n8n__n8n_get_workflow",
+      "mcp__n8n__n8n_list_workflows",
+      "mcp__n8n__n8n_executions",
+      "mcp__n8n__n8n_update_partial_workflow",
+      "mcp__github__get_pull_request",
+      "WebFetch(domain:noted.lol)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": [],

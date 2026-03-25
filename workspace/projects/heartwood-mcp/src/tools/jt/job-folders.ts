@@ -22,9 +22,9 @@ export function jobFolderTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "jobFolder",
-          fields: [{ field: "name" }],
-          filter: { conditions: [{ field: "jobId", operator: "eq", value: params.jobId }] },
+          entityPlural: "jobFolders",
+          returnFields: { name: {} },
+          where: { and: [[["jobId", "=", params.jobId]]] },
           ...getPagination(params),
         });
       },

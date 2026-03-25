@@ -230,11 +230,10 @@ in
     # SERVICES
     # =======================================================================
     systemd.services = lib.mkMerge [
-      # Receipts OCR services
+      # Receipts OCR services (schema managed centrally in workspace/business/schema.sql)
       (lib.mkIf cfg.receiptsOcr.enable {
         receipts-ocr-setup = receiptsOcrImpl.setupService;
         receipts-ocr = receiptsOcrImpl.mainService;
-        receipts-ocr-db-init = receiptsOcrImpl.dbInitService;
       })
 
       # Business API service

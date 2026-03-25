@@ -1,73 +1,47 @@
 /**
  * PAVE API type definitions.
  *
- * PAVE is JobTread's proprietary query language. It uses HTTP POST with a JSON
- * envelope that specifies the operation (action), entity, fields, filters, etc.
+ * PAVE is JobTread's proprietary query language. ALL requests are POST to
+ * https://api.jobtread.com/pave with auth in the request body (grantKey),
+ * NOT as a Bearer token header.
+ *
+ * Operations are named keys (createAccount, updateAccount, organization, node, etc.)
+ * nested inside a `query` envelope. Fields to return are nested empty objects.
  * Responses always return HTTP 200 — errors are embedded in the response body.
  */
 
-/** Top-level PAVE request envelope */
-export interface PaveRequest {
-  action: PaveAction;
-  entity: string;
-  data?: Record<string, unknown>;
-  fields?: PaveField[];
-  filter?: PaveFilter;
-  sort?: PaveSort[];
-  limit?: number;
-  offset?: number;
-  organizationId?: string;
-  userId?: string;
+/** PAVE query envelope — all requests use this format */
+export interface PaveQuery {
+  query: {
+    $: PaveAuth;
+    [operationName: string]: unknown;
+  };
+}
+
+export interface PaveAuth {
+  grantKey: string;
   notify?: boolean;
+  viaUserId?: string;
 }
 
-export type PaveAction = "create" | "read" | "update" | "delete" | "query";
-
-/** Field selection — can be nested (for related entities) */
-export interface PaveField {
-  field: string;
-  fields?: PaveField[];
-  alias?: string;
+/** Fields to return — nested empty objects */
+export interface PaveFields {
+  [key: string]: PaveFields | Record<string, never>;
 }
 
-/** Filter conditions */
-export interface PaveFilter {
-  operator?: "and" | "or";
-  conditions?: PaveCondition[];
-}
+/** PAVE where clause for queries */
+export type PaveWhere = {
+  and?: PaveWhereCondition[][];
+  or?: PaveWhereCondition[][];
+};
 
-export interface PaveCondition {
-  field: string;
-  operator:
-    | "eq"
-    | "neq"
-    | "gt"
-    | "gte"
-    | "lt"
-    | "lte"
-    | "like"
-    | "in"
-    | "nin"
-    | "null"
-    | "notNull";
-  value?: unknown;
-}
-
-/** Sort specification */
-export interface PaveSort {
-  field: string;
-  direction: "asc" | "desc";
-}
+/** [field, operator, value] shorthand */
+export type PaveWhereCondition = [string, string, unknown];
 
 /** PAVE API response — always HTTP 200, check for errors */
 export interface PaveResponse {
-  data?: unknown;
+  [key: string]: unknown;
   errors?: PaveError[];
-  meta?: {
-    total?: number;
-    offset?: number;
-    limit?: number;
-  };
 }
 
 export interface PaveError {

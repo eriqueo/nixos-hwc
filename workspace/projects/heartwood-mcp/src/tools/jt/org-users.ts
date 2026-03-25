@@ -23,9 +23,9 @@ export function orgUserTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "user",
-          fields: USER_FIELDS,
-          filter: buildSearchFilter(params, "searchTerm", "name"),
+          entityPlural: "users",
+          returnFields: USER_FIELDS,
+          where: buildSearchFilter(params, "searchTerm", "name"),
           ...getPagination(params),
         });
       },
@@ -43,7 +43,11 @@ export function orgUserTools(pave: PaveClient): ToolDef[] {
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.query({ entity: "organization", fields: ORG_FIELDS, ...getPagination(params) });
+        return pave.query({
+          entityPlural: "organizations",
+          returnFields: ORG_FIELDS,
+          ...getPagination(params),
+        });
       },
     },
 
@@ -59,10 +63,11 @@ export function orgUserTools(pave: PaveClient): ToolDef[] {
         required: ["organizationId"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.execute({
-          action: "update",
-          entity: "session",
-          data: { organizationId: params.organizationId },
+        // switchOrganization is a special operation
+        return pave.raw({
+          switchOrganization: {
+            $: { organizationId: params.organizationId },
+          },
         });
       },
     },

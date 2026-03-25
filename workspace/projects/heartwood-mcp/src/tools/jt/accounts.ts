@@ -5,6 +5,7 @@
 import type { PaveClient, ToolResult } from "../../pave/index.js";
 import {
   ACCOUNT_FIELDS,
+  ACCOUNT_BASIC_FIELDS,
   CONTACT_FIELDS,
 } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
@@ -30,10 +31,10 @@ export function accountTools(pave: PaveClient): ToolDef[] {
         required: ["name", "type"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.create("account", {
+        return pave.create("createAccount", {
           name: params.name,
           type: params.type,
-        }, ACCOUNT_FIELDS);
+        }, ACCOUNT_BASIC_FIELDS);
       },
     },
 
@@ -66,7 +67,7 @@ export function accountTools(pave: PaveClient): ToolDef[] {
         const id = requireString(params, "id");
         if ("error" in id) return id.error;
         const data = pickDefined(params, ["name", "customFieldValues"]);
-        return pave.update("account", id.value, data, ACCOUNT_FIELDS);
+        return pave.update("updateAccount", { id: id.value, ...data }, ACCOUNT_BASIC_FIELDS);
       },
     },
 
@@ -89,9 +90,9 @@ export function accountTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "account",
-          fields: ACCOUNT_FIELDS,
-          filter: buildSearchFilter(params, "searchTerm", "name", [
+          entityPlural: "accounts",
+          returnFields: ACCOUNT_FIELDS,
+          where: buildSearchFilter(params, "searchTerm", "name", [
             { param: "type", field: "type" },
           ]),
           ...getPagination(params),
@@ -125,7 +126,7 @@ export function accountTools(pave: PaveClient): ToolDef[] {
           name: params.name,
           ...pickDefined(params, ["email", "phone", "customFields"]),
         };
-        return pave.create("contact", data, CONTACT_FIELDS);
+        return pave.create("createContact", data, CONTACT_FIELDS);
       },
     },
 
@@ -143,9 +144,9 @@ export function accountTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "contact",
-          fields: CONTACT_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "contacts",
+          returnFields: CONTACT_FIELDS,
+          where: buildFilter(params, [
             { param: "accountId", field: "accountId" },
           ]),
           ...getPagination(params),

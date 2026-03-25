@@ -32,7 +32,7 @@ export function paymentTools(pave: PaveClient): ToolDef[] {
           documentId: params.documentId,
           ...pickDefined(params, ["description", "paymentType"]),
         };
-        return pave.create("payment", data, PAYMENT_FIELDS);
+        return pave.create("createPayment", data, PAYMENT_FIELDS);
       },
     },
 
@@ -52,9 +52,9 @@ export function paymentTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "payment",
-          fields: PAYMENT_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "payments",
+          returnFields: PAYMENT_FIELDS,
+          where: buildFilter(params, [
             { param: "jobId", field: "jobId" },
             { param: "documentId", field: "documentId" },
             { param: "accountId", field: "accountId" },

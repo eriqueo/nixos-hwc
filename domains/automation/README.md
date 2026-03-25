@@ -24,6 +24,7 @@ automation/
 ```
 
 ## Changelog
+- 2026-03-24: Added work_calculator_lead workflow (ID: SoLwmxgkMILrOYbP) - full JobTread integration for bathroom calculator leads with Account/Contact/Location/Job creation, Postgres archival, and Slack notifications
 - 2026-03-18: Add MQTT integration for n8n, allowing detection events to be forwarded via webhook
 - 2026-03-15: Add Tailscale Funnel service to expose n8n on port 10000, providing full access for external automation tools.
 

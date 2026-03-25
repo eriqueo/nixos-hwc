@@ -28,8 +28,12 @@ domains/business/
 │   ├── sys.nix         # PostgreSQL grants
 │   └── parts/
 │       └── config.nix  # Container configuration
+├── receipts-pipeline/     # Receipt OCR service (Python + FastAPI)
+│   ├── src/               # Python source
+│   ├── n8n-workflows/     # n8n intake workflow JSON
+│   └── monitoring/        # Health check script
 └── parts/
-    ├── receipts-ocr.nix  # OCR service implementation
+    ├── receipts-ocr.nix  # OCR NixOS service definition
     └── api.nix           # Remodel API (FastAPI)
 ```
 
@@ -37,13 +41,13 @@ domains/business/
 
 ```
 workspace/business/
-├── estimator-pwa/      # React app (Vite build)
-│   ├── dist/           # Built output served by Caddy
-│   ├── scripts/        # export_catalog.sh
-│   └── src/data/       # catalog_export.json
-├── remodel-api/        # FastAPI backend
-├── catalog.db          # SQLite cost data (source of truth)
-└── schema.sql          # Postgres schema reference
+├── estimator-pwa/         # React app (Vite build)
+│   ├── dist/              # Built output served by Caddy
+│   ├── scripts/           # export_catalog.sh
+│   └── src/data/          # catalog_export.json
+├── remodel-api/           # FastAPI backend
+├── catalog.db             # SQLite cost data (source of truth)
+└── schema.sql             # ALL business Postgres tables (shared)
 ```
 
 ## Configuration
@@ -102,20 +106,12 @@ hwc.business.api = {
 
 ### Receipts OCR
 
-Source code expected at:
-```
-~/.nixos/workspace/hwc/receipt_pipeline/
-├── src/
-│   ├── receipt_ocr_service.py
-│   └── config.py
-└── database/
-    └── schema.sql
-```
+Source code at `~/.nixos/domains/business/receipts-pipeline/src/`.
+Schema is part of the shared `workspace/business/schema.sql` (sections 8-12).
 
 Deploy steps:
 ```bash
 sudo systemctl restart receipts-ocr-setup
-sudo systemctl restart receipts-ocr-db-init
 sudo systemctl restart receipts-ocr
 curl http://localhost:8001/health
 ```
@@ -125,19 +121,12 @@ If source not deployed, service returns stub response with deployment instructio
 ## Systemd Units
 
 - `receipts-ocr-setup.service` - Deploys code from workspace
-- `receipts-ocr.service` - Main FastAPI service
-- `receipts-ocr-db-init.service` - Database initialization
-
-## Log Files
-
-| File | Purpose |
-|------|---------|
-| `/var/log/hwc/receipts-ocr.log` | Service runtime |
-| `/var/log/hwc/receipts-ocr-setup.log` | Deployment |
-| `/var/log/hwc/receipts-ocr-db.log` | Database init |
+- `receipts-ocr.service` - Main FastAPI service (port 8001)
 
 ## Changelog
 
+- 2026-03-25: Consolidated receipts OCR pipeline into business domain — source at domains/business/receipts-pipeline/, schema merged into shared schema.sql, job_id→project_id, removed standalone db-init service
+- 2026-03-24: Calculator lead webhook fully operational - creates JT Account/Contact/Location/Job with custom fields, archives to Postgres, notifies Slack. See domains/automation/n8n/parts/workflows/README.md for workflow docs.
 - 2026-03-24: Fixed workspace path in api.nix (hwc/remodel_web_app → business/remodel-api), updated README structure and deployment paths
 - 2026-03-23: Consolidated business domain - moved estimator from webapps, workspace reorganized to workspace/business/
 - 2026-03-04: Namespace migration hwc.server.containers.{paperless,firefly} → hwc.business.*

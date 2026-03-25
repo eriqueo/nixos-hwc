@@ -164,6 +164,27 @@ in
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "port") routes))}
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "static") routes))}
+
+        # Public MCP gateway — Tailscale Funnel on :10000 terminates TLS,
+        # forwards to this HTTP-only listener. Only MCP, OAuth, and webhook
+        # paths are allowed; everything else gets 403.
+        :10080 {
+          @mcp_allowed {
+            path /mcp/* /rest/mcp/* /rest/oauth2-credential/* /webhook/* /webhook-test/*
+          }
+
+          handle @mcp_allowed {
+            reverse_proxy 127.0.0.1:5678 {
+              header_up X-Forwarded-Proto https
+              header_up X-Forwarded-Host ${rootHost}:10000
+              flush_interval -1
+            }
+          }
+
+          handle {
+            respond 403
+          }
+        }
       '';
     };
 

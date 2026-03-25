@@ -30,12 +30,17 @@ let
     ${lib.optionalString (cfg.secrets.slackWebhookUrlFile != null) ''
       echo "SLACK_WEBHOOK_URL=$(cat ${cfg.secrets.slackWebhookUrlFile})" >> ${secretsEnvFile}
     ''}
+
+    ${lib.optionalString (cfg.secrets.anthropicApiKeyFile != null) ''
+      echo "ANTHROPIC_API_KEY=$(cat ${cfg.secrets.anthropicApiKeyFile})" >> ${secretsEnvFile}
+    ''}
   '';
 
   # Check if any secrets are configured
   hasSecrets = cfg.secrets.estimatorApiKeyFile != null
             || cfg.secrets.jobtreadGrantKeyFile != null
-            || cfg.secrets.slackWebhookUrlFile != null;
+            || cfg.secrets.slackWebhookUrlFile != null
+            || cfg.secrets.anthropicApiKeyFile != null;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -60,7 +65,8 @@ in
         N8N_DIAGNOSTICS_ENABLED = "false";
         N8N_HIRING_BANNER_ENABLED = "false";
         N8N_EDITOR_BASE_URL = "https://hwc.ocelot-wahoo.ts.net:2443/";
-        WEBHOOK_URL = "https://hwc.ocelot-wahoo.ts.net:2443/";
+        WEBHOOK_URL = "https://hwc.ocelot-wahoo.ts.net:10000/";
+        N8N_PROXY_HOPS = "1";
         N8N_ENDPOINT_WEBHOOK = "webhook";
         N8N_ENDPOINT_REST = "rest";
         DB_TYPE = "sqlite";

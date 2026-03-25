@@ -9,6 +9,7 @@ import {
   COST_TYPE_FIELDS,
   UNIT_FIELDS,
   TEMPLATE_FIELDS,
+  COST_GROUP_TEMPLATE_DETAIL_FIELDS,
 } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
 import { buildSearchFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
@@ -65,7 +66,8 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
             };
           }
         }
-        return pave.create("budgetLineItem", {
+        // addBudgetLineItems → addedBudgetLineItems (handled by create())
+        return pave.create("addBudgetLineItems", {
           jobId: params.jobId,
           lineItems: params.lineItems,
         }, BUDGET_ITEM_FIELDS);
@@ -85,9 +87,9 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "budgetLineItem",
-          fields: BUDGET_ITEM_FIELDS,
-          filter: { conditions: [{ field: "jobId", operator: "eq", value: params.jobId }] },
+          entityPlural: "budgetLineItems",
+          returnFields: BUDGET_ITEM_FIELDS,
+          where: { and: [[["jobId", "=", params.jobId]]] },
         });
       },
     },
@@ -108,9 +110,9 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "costItem",
-          fields: BUDGET_ITEM_FIELDS,
-          filter: buildSearchFilter(params, "searchName", "name", [
+          entityPlural: "costItems",
+          returnFields: BUDGET_ITEM_FIELDS,
+          where: buildSearchFilter(params, "searchName", "name", [
             { param: "costCodeId", field: "costCodeId" },
             { param: "costTypeId", field: "costTypeId" },
           ]),
@@ -142,7 +144,7 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
           costTypeId: params.costTypeId,
           ...pickDefined(params, ["unitId", "unitCost", "unitPrice"]),
         };
-        return pave.create("costItem", data, BUDGET_ITEM_FIELDS);
+        return pave.create("createCostItem", data, BUDGET_ITEM_FIELDS);
       },
     },
 
@@ -158,7 +160,11 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.query({ entity: "costCode", fields: COST_CODE_FIELDS, ...getPagination(params) });
+        return pave.query({
+          entityPlural: "costCodes",
+          returnFields: COST_CODE_FIELDS,
+          ...getPagination(params),
+        });
       },
     },
 
@@ -174,7 +180,11 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.query({ entity: "costType", fields: COST_TYPE_FIELDS, ...getPagination(params) });
+        return pave.query({
+          entityPlural: "costTypes",
+          returnFields: COST_TYPE_FIELDS,
+          ...getPagination(params),
+        });
       },
     },
 
@@ -190,7 +200,11 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.query({ entity: "unit", fields: UNIT_FIELDS, ...getPagination(params) });
+        return pave.query({
+          entityPlural: "units",
+          returnFields: UNIT_FIELDS,
+          ...getPagination(params),
+        });
       },
     },
 
@@ -206,7 +220,11 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
         required: [],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.query({ entity: "costGroupTemplate", fields: TEMPLATE_FIELDS, ...getPagination(params) });
+        return pave.query({
+          entityPlural: "costGroupTemplates",
+          returnFields: TEMPLATE_FIELDS,
+          ...getPagination(params),
+        });
       },
     },
 
@@ -224,10 +242,7 @@ export function budgetTools(pave: PaveClient): ToolDef[] {
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         const id = requireString(params, "costGroupId");
         if ("error" in id) return id.error;
-        return pave.read("costGroupTemplate", id.value, [
-          ...TEMPLATE_FIELDS,
-          { field: "items", fields: BUDGET_ITEM_FIELDS },
-        ]);
+        return pave.read("costGroupTemplate", id.value, COST_GROUP_TEMPLATE_DETAIL_FIELDS);
       },
     },
   ];

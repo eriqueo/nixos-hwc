@@ -61,11 +61,21 @@
     owner.passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
     # Funnel disabled - using Caddy on port 2443 instead (avoids conflict with slskd on 8443)
     funnel.enable = false;
-    # Estimator/JobTread integration secrets (loaded from agenix)
+    # Workflow secrets (loaded from agenix)
     secrets = {
       estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
       jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
       slackWebhookUrlFile = config.age.secrets.slack-webhook-url.path;
+      anthropicApiKeyFile = config.age.secrets.nanoclaw-anthropic-key.path;
+    };
+    # Non-secret workflow configuration
+    extraEnv = {
+      # work_lead_response: Twilio sender number
+      TWILIO_PHONE_NUMBER = "+14064378700";
+      # work_estimate_router: PostgREST endpoint (has fallback)
+      POSTGRES_REST_URL = "http://localhost:3000";
+      # work_content_calendar: Google Drive folder for calendar content
+      DRIVE_CALENDAR_FOLDER_ID = "1xkrYYSbZzX16Gjo7VbGazgLMkS12u06I";
     };
   };
 }

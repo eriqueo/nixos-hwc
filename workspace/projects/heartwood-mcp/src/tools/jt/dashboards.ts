@@ -22,7 +22,7 @@ export function dashboardTools(pave: PaveClient): ToolDef[] {
         required: ["name", "tiles"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.create("dashboard", {
+        return pave.create("createDashboard", {
           name: params.name,
           tiles: params.tiles,
         }, DASHBOARD_FIELDS);
@@ -44,7 +44,8 @@ export function dashboardTools(pave: PaveClient): ToolDef[] {
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         const id = requireString(params, "id");
         if ("error" in id) return id.error;
-        return pave.update("dashboard", id.value, {
+        return pave.update("updateDashboard", {
+          id: id.value,
           tiles: params.tiles,
         }, DASHBOARD_FIELDS);
       },
@@ -64,9 +65,9 @@ export function dashboardTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "dashboard",
-          fields: DASHBOARD_FIELDS,
-          filter: buildSearchFilter(params, "name", "name"),
+          entityPlural: "dashboards",
+          returnFields: DASHBOARD_FIELDS,
+          where: buildSearchFilter(params, "name", "name"),
           ...getPagination(params),
         });
       },

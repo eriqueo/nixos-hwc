@@ -7,7 +7,11 @@
  * Phase 4: Query & intelligence tools (Postgres views)
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { loadConfig } from "./config.js";
@@ -34,84 +38,63 @@ async function main(): Promise<void> {
 
   log.info("Tool registry loaded", { toolCount: registry.count() });
 
-  // ── Create MCP server ───────────────────────────────────────────────
-  const server = new McpServer({
-    name: "heartwood-mcp",
-    version: "0.1.0",
-  });
+  // ── Create MCP server (low-level for raw JSON schema support) ───────
+  const server = new Server(
+    { name: "heartwood-mcp", version: "0.1.0" },
+    { capabilities: { tools: {} } }
+  );
 
-  // Register all tools with the MCP server
-  for (const tool of registry.getAll()) {
-    // Use the raw tool registration approach for dynamic tools
-    server.tool(
-      tool.name,
-      tool.description,
-      tool.inputSchema.properties,
-      async (params: Record<string, unknown>) => {
-        const startMs = Date.now();
-        try {
-          const result = await tool.handler(params);
-          const durationMs = Date.now() - startMs;
+  // Build tool list for ListTools handler
+  const allTools = registry.getAll();
 
-          log.debug("Tool call completed", {
-            tool: tool.name,
-            success: result.success,
-            durationMs,
-          });
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: allTools.map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    })),
+  }));
 
-          if (result.success) {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: JSON.stringify(result.data, null, 2),
-                },
-              ],
-            };
-          } else {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: JSON.stringify(
-                    {
-                      error: result.error,
-                      code: result.code,
-                      details: result.details,
-                    },
-                    null,
-                    2
-                  ),
-                },
-              ],
-              isError: true,
-            };
-          }
-        } catch (error) {
-          const durationMs = Date.now() - startMs;
-          const message =
-            error instanceof Error ? error.message : String(error);
-          log.error("Tool call threw exception", {
-            tool: tool.name,
-            error: message,
-            durationMs,
-          });
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: JSON.stringify({
-                  error: message,
-                  code: "INTERNAL_ERROR",
-                }),
-              },
-            ],
-            isError: true,
-          };
-        }
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const toolName = request.params.name;
+    const toolArgs = (request.params.arguments ?? {}) as Record<string, unknown>;
+    const tool = allTools.find((t) => t.name === toolName);
+
+    if (!tool) {
+      return {
+        content: [{ type: "text" as const, text: `Unknown tool: ${toolName}` }],
+        isError: true,
+      };
+    }
+
+    const startMs = Date.now();
+    try {
+      const result = await tool.handler(toolArgs);
+      const durationMs = Date.now() - startMs;
+      log.debug("Tool call completed", { tool: toolName, success: result.success, durationMs });
+
+      if (result.success) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result.data, null, 2) }],
+        };
+      } else {
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({ error: result.error, code: result.code, details: result.details }, null, 2),
+          }],
+          isError: true,
+        };
       }
-    );
-  }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log.error("Tool call threw exception", { tool: toolName, error: message, durationMs: Date.now() - startMs });
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify({ error: message, code: "INTERNAL_ERROR" }) }],
+        isError: true,
+      };
+    }
+  });
 
   // ── Start transport ─────────────────────────────────────────────────
   if (config.transport === "stdio") {
@@ -135,7 +118,7 @@ async function main(): Promise<void> {
         const transport = new SSEServerTransport("/messages", res);
         activeTransport = transport;
         await server.connect(transport);
-      } else if (req.method === "POST" && req.url === "/messages") {
+      } else if (req.method === "POST" && req.url?.startsWith("/messages")) {
         if (!activeTransport) {
           res.writeHead(503, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "No active SSE connection" }));

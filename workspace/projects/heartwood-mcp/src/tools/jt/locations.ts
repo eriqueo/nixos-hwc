@@ -34,7 +34,7 @@ export function locationTools(pave: PaveClient): ToolDef[] {
           name: params.name,
           ...pickDefined(params, ["city", "state", "zip", "contactId"]),
         };
-        return pave.create("location", data, LOCATION_FIELDS);
+        return pave.create("createLocation", data, LOCATION_FIELDS);
       },
     },
 
@@ -52,9 +52,9 @@ export function locationTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "location",
-          fields: LOCATION_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "locations",
+          returnFields: LOCATION_FIELDS,
+          where: buildFilter(params, [
             { param: "accountId", field: "accountId" },
           ]),
           ...getPagination(params),

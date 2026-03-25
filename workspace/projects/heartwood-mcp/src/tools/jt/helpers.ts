@@ -2,30 +2,24 @@
  * Shared helpers for JT tool handlers.
  */
 
-import type { PaveFilter, ToolResult } from "../../pave/types.js";
-
-/** A filter condition to add */
-interface FilterEntry {
-  field: string;
-  operator: string;
-  value: unknown;
-}
+import type { PaveWhere, PaveWhereCondition, ToolResult } from "../../pave/types.js";
 
 /**
- * Build a PAVE filter from optional params.
+ * Build a PAVE where clause from optional params.
  * Only includes conditions for params that are not undefined.
+ * Returns PaveWhere with `and` array, or undefined if no conditions.
  */
 export function buildFilter(
   params: Record<string, unknown>,
   mappings: Array<{ param: string; field: string; operator?: string }>
-): PaveFilter | undefined {
-  const conditions: FilterEntry[] = [];
+): PaveWhere | undefined {
+  const conditions: PaveWhereCondition[] = [];
   for (const { param, field, operator } of mappings) {
     if (params[param] !== undefined) {
-      conditions.push({ field, operator: operator ?? "eq", value: params[param] });
+      conditions.push([field, operator ?? "=", params[param]]);
     }
   }
-  return conditions.length > 0 ? { operator: "and", conditions } : undefined;
+  return conditions.length > 0 ? { and: [conditions] } : undefined;
 }
 
 /**
@@ -36,19 +30,19 @@ export function buildSearchFilter(
   searchParam: string,
   searchField: string,
   extraMappings?: Array<{ param: string; field: string; operator?: string }>
-): PaveFilter | undefined {
-  const conditions: FilterEntry[] = [];
+): PaveWhere | undefined {
+  const conditions: PaveWhereCondition[] = [];
   if (params[searchParam] !== undefined) {
-    conditions.push({ field: searchField, operator: "like", value: `%${params[searchParam]}%` });
+    conditions.push([searchField, "like", `%${params[searchParam]}%`]);
   }
   if (extraMappings) {
     for (const { param, field, operator } of extraMappings) {
       if (params[param] !== undefined) {
-        conditions.push({ field, operator: operator ?? "eq", value: params[param] });
+        conditions.push([field, operator ?? "=", params[param]]);
       }
     }
   }
-  return conditions.length > 0 ? { operator: "and", conditions } : undefined;
+  return conditions.length > 0 ? { and: [conditions] } : undefined;
 }
 
 /**
@@ -100,28 +94,24 @@ export type AllowedEntityType = typeof ALLOWED_ENTITY_TYPES[number];
 
 /**
  * Standard pagination properties to spread into any query tool's inputSchema.
+ * PAVE uses size/after for cursor-based pagination.
  */
 export const PAGINATION_PROPS = {
   limit: {
     type: "number",
     description: "Maximum number of results to return (optional, default varies by entity)",
   },
-  offset: {
-    type: "number",
-    description: "Number of results to skip for pagination (optional, default 0)",
-  },
 } as const;
 
 /**
  * Extract pagination params from tool params.
+ * Maps 'limit' to PAVE's 'size' parameter.
  */
 export function getPagination(params: Record<string, unknown>): {
-  limit?: number;
-  offset?: number;
+  size?: number;
 } {
-  const result: { limit?: number; offset?: number } = {};
-  if (typeof params.limit === "number") result.limit = params.limit;
-  if (typeof params.offset === "number") result.offset = params.offset;
+  const result: { size?: number } = {};
+  if (typeof params.limit === "number") result.size = params.limit;
   return result;
 }
 
