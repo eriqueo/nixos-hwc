@@ -1,6 +1,7 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.gaming.retroarch;
+  paths = config.hwc.paths;
 
   # RetroArch with selected cores
   retroarchWithCores = pkgs.retroarch.withCores (cores:
@@ -29,13 +30,13 @@ in
 
     romsDir = lib.mkOption {
       type = lib.types.path;
-      default = "/mnt/media/retroarch/roms";
+      default = toString paths.media.retroarch.roms;
       description = "Directory containing ROM files";
     };
 
     systemDir = lib.mkOption {
       type = lib.types.path;
-      default = "/mnt/media/retroarch/system";
+      default = toString paths.media.retroarch.system;
       description = "Directory containing BIOS and system files";
     };
 

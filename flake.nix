@@ -66,8 +66,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    claude-for-linux = {
-      url = "github:heytcass/claude-for-linux";
+    claude-desktop = {
+      url = "github:k3d3/claude-desktop-linux-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # Reference repo during migration (non-flake)

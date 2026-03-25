@@ -2,10 +2,11 @@
 #
 # Claude Desktop GUI (Electron) — community Linux port
 # Provides cowork, dispatch, and full desktop experience.
-# Source: github:heytcass/claude-for-linux
+# Source: github:k3d3/claude-desktop-linux-flake
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.home.apps.claude-desktop;
+  system = pkgs.stdenv.hostPlatform.system;
 in
 {
   #==========================================================================
@@ -18,12 +19,9 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  imports = [ inputs.claude-for-linux.homeManagerModules.default ];
-
   config = lib.mkIf cfg.enable {
-    programs.claude-desktop = {
-      enable = true;
-      fhs = true;
-    };
+    home.packages = [
+      inputs.claude-desktop.packages.${system}.claude-desktop-with-fhs
+    ];
   };
 }

@@ -4,8 +4,8 @@
 # Uses mkInfraContainer helper for socket mount and pre-start script.
 #
 # Agent capabilities configured via mount-allowlist.json:
-# - /home/eric/.nixos: NixOS configuration management
-# - /mnt/media: Media file organization
+# - paths.nixos: NixOS configuration management
+# - paths.media.root: Media file organization
 # - /var/log: System log inspection (read-only)
 
 { lib, config, pkgs, ... }:
@@ -16,6 +16,7 @@ let
   inherit (infraHelpers) mkInfraContainer;
 
   cfg = config.hwc.ai.nanoclaw;
+  paths = config.hwc.paths;
 
   # Mount allowlist configuration for agent containers
   # These are HOST paths that NanoClaw agents can mount
@@ -23,17 +24,17 @@ let
   mountAllowlist = pkgs.writeText "mount-allowlist.json" (builtins.toJSON {
     allowedRoots = [
       {
-        path = "/home/eric/.nixos";
+        path = toString paths.nixos;
         allowReadWrite = true;
         description = "NixOS configuration repository for system management";
       }
       {
-        path = "/mnt/media";
+        path = toString paths.media.root;
         allowReadWrite = true;
         description = "Media library for file organization";
       }
       {
-        path = "/home/eric/.claude";
+        path = toString paths.user.claude;
         allowReadWrite = true;
         description = "Claude Code settings and session history";
       }
@@ -65,7 +66,7 @@ let
   # Note: /var/log excluded because it conflicts with apt-get in NanoClaw container
   applyGroupConfig = pkgs.writeShellScriptBin "apply-group-config" ''
     DB_PATH="$1"
-    CONTAINER_CONFIG='{"additionalMounts":[{"hostPath":"/home/eric/.nixos","containerPath":"nixos","readonly":false},{"hostPath":"/mnt/media","containerPath":"media","readonly":false},{"hostPath":"/home/eric/.claude","containerPath":"claude","readonly":false}]}'
+    CONTAINER_CONFIG='{"additionalMounts":[{"hostPath":"${paths.nixos}","containerPath":"nixos","readonly":false},{"hostPath":"${toString paths.media.root}","containerPath":"media","readonly":false},{"hostPath":"${toString paths.user.claude}","containerPath":"claude","readonly":false}]}'
 
     # Update groups that have no container_config (NULL or empty string)
     ${pkgs.sqlite}/bin/sqlite3 "$DB_PATH" "UPDATE registered_groups SET container_config = '$CONTAINER_CONFIG' WHERE container_config IS NULL OR LENGTH(container_config) = 0;"
@@ -95,9 +96,9 @@ in
         "/run/podman/podman.sock:/var/run/docker.sock:ro"
         "${cfg.dataDir}/config:/root/.config/nanoclaw:ro"
         # Mount host paths for validation (NanoClaw checks these exist before spawning agents)
-        "/home/eric/.nixos:/home/eric/.nixos:ro"
-        "/mnt/media:/mnt/media:ro"
-        "/home/eric/.claude:/home/eric/.claude:ro"
+        "${paths.nixos}:${paths.nixos}:ro"
+        "${toString paths.media.root}:${toString paths.media.root}:ro"
+        "${toString paths.user.claude}:${toString paths.user.claude}:ro"
         # /var/log mounted to alternate path to avoid blocking apt-get inside container
         "/var/log:/hostfs/logs:ro"
       ];
@@ -152,11 +153,11 @@ in
 
         # Also deploy to host location for spawned agent containers
         # (agents look for ~/.config/nanoclaw/ which resolves to host path)
-        mkdir -p /home/eric/.config/nanoclaw
-        cp ${mountAllowlist} /home/eric/.config/nanoclaw/mount-allowlist.json
-        cp ${senderAllowlist} /home/eric/.config/nanoclaw/sender-allowlist.json
-        chown -R eric:users /home/eric/.config/nanoclaw
-        chmod 644 /home/eric/.config/nanoclaw/*.json
+        mkdir -p ${toString paths.user.config}/nanoclaw
+        cp ${mountAllowlist} ${toString paths.user.config}/nanoclaw/mount-allowlist.json
+        cp ${senderAllowlist} ${toString paths.user.config}/nanoclaw/sender-allowlist.json
+        chown -R eric:users ${toString paths.user.config}/nanoclaw
+        chmod 644 ${toString paths.user.config}/nanoclaw/*.json
 
         # Fix directory permissions - agent containers run as node (uid=1000)
         mkdir -p ${cfg.dataDir}/data/ipc
@@ -195,7 +196,7 @@ in
         "d ${cfg.dataDir}/data/ipc 0755 1000 1000 - -"
         "d ${cfg.dataDir}/logs 0755 root root - -"
         "d ${cfg.dataDir}/groups 0755 root root - -"
-        "d /home/eric/.config/nanoclaw 0755 eric users - -"
+        "d ${toString paths.user.config}/nanoclaw 0755 eric users - -"
       ];
     }
   ]);

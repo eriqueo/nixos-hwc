@@ -26,6 +26,7 @@
 
 let
   cfg  = config.hwc.webapps;
+  paths = config.hwc.paths;
   root = config.hwc.networking.shared.rootHost or "localhost";
 
   # hwc-publish: deploy/manage static web apps on the reserved port range
@@ -214,7 +215,7 @@ in {
 
     baseDir = lib.mkOption {
       type        = lib.types.path;
-      default     = "/opt/webapps";
+      default     = toString paths.apps.webapps;
       description = "Base directory for deployed web apps. Each app gets a subdirectory.";
     };
 
