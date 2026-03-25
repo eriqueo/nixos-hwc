@@ -22,27 +22,51 @@ in
       package = pkgs.kitty;
 
       settings = {
+        # Font
         font_family = "CaskaydiaCove Nerd Font";
         font_size = 16;
-        enable_audio_bell = false;
-        window_padding_width = 4;
-        allow_remote_control = true;
-        background_opacity = "0.75";
-        scrollback_lines = 10000;
+        disable_ligatures = "cursor";
 
-        cursor_shape = "block";
-        cursor_blink_interval = 0;
-
+        # Window
+        window_padding_width = 1;
+        window_margin_width = 0;
+        hide_window_decorations = true;
+        confirm_os_window_close = -1;
         remember_window_size = true;
         initial_window_width = 120;
         initial_window_height = 30;
 
+        # Transparency
+        allow_remote_control = "socket-only";
+        background_opacity = "0.80";
+        background_blur = 1;
+        dim_opacity = "0.75";
+        inactive_text_alpha = "0.8";
+
+        # Rendering
+        sync_to_monitor = true;
+        repaint_delay = 10;
+        input_delay = 3;
+
+        # Scrollback
+        scrollback_lines = 10000;
+        scrollback_pager = "less --chop-long-lines --RAW-CONTROL-CHARS +INPUT_LINE_NUMBER";
+        scrollback_fill_enlarged_window = true;
+
+        # Cursor
+        cursor_shape = "block";
+        cursor_blink_interval = 0;
+
+        # Tabs
         tab_bar_edge = "bottom";
         tab_bar_style = "powerline";
         tab_powerline_style = "slanted";
+        tab_title_template = "{fmt.fg.red}{bell_symbol}{activity_symbol}{fmt.fg.tab}{title}";
 
+        # Mouse & clipboard
         mouse_hide_wait = 3.0;
         copy_on_select = true;
+        enable_audio_bell = false;
 
         # Link ergonomics
         detect_urls = "yes";

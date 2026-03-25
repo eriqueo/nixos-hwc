@@ -66,6 +66,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    claude-for-linux = {
+      url = "github:heytcass/claude-for-linux";
+    };
+
     # Reference repo during migration (non-flake)
     legacy-config = {
       url = "github:eriqueo/nixos-hwc";

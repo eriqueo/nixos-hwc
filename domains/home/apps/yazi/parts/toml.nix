@@ -20,30 +20,29 @@
 
       [opener]
       edit = [
-        { run = 'nvim "$@"', block = true, for = "text" },
-        { run = 'nvim "$@"', block = true, for = "unix" }
+        { run = 'nvim %s', block = true, for = "unix" }
       ]
-      open = [ { run = 'xdg-open "$@"', desc = "Open" } ]
-      office = [ { run = 'onlyoffice-desktopeditors "$@"', desc = "OnlyOffice" } ]
-      extract = [ { run = '7z x -y "$@"', desc = "Extract here (7z)", for = "unix" } ]
+      open = [ { run = 'xdg-open %s', orphan = true, desc = "Open" } ]
+      office = [ { run = 'setsid onlyoffice-desktopeditors %s &>/dev/null &', orphan = true, desc = "OnlyOffice" } ]
+      extract = [ { run = '7z x -y %s', desc = "Extract here (7z)", for = "unix" } ]
 
       [open]
       prepend_rules = [
         # Office by extension (more reliable than MIME detection)
-        { name = "*.docx", use = ["office"] },
-        { name = "*.doc", use = ["office"] },
-        { name = "*.xlsx", use = ["office"] },
-        { name = "*.xls", use = ["office"] },
-        { name = "*.pptx", use = ["office"] },
-        { name = "*.ppt", use = ["office"] },
-        { name = "*.odt", use = ["office"] },
-        { name = "*.ods", use = ["office"] },
-        { name = "*.odp", use = ["office"] },
+        { url = "*.docx", use = ["office"] },
+        { url = "*.doc", use = ["office"] },
+        { url = "*.xlsx", use = ["office"] },
+        { url = "*.xls", use = ["office"] },
+        { url = "*.pptx", use = ["office"] },
+        { url = "*.ppt", use = ["office"] },
+        { url = "*.odt", use = ["office"] },
+        { url = "*.ods", use = ["office"] },
+        { url = "*.odp", use = ["office"] },
         # Archives
         { mime = "application/{zip,gzip,x-7z-compressed,x-xz,x-bzip*,x-rar,x-tar}", use = ["extract"] }
       ]
       rules = [
-        { name = "*/", use = [ "open" ] },
+        { url = "*/", use = [ "open" ] },
         { mime = "text/*", use = [ "edit" ] },
         { mime = "video/*", use = [ "open" ] },
         { mime = "audio/*", use = [ "open" ] },
@@ -63,8 +62,8 @@
 
       [plugin]
       previewers = [
-        { name = "*/", run = "folder", sync = true },
-        { name = "*.md", run = "glow" },
+        { url = "*/", run = "folder", sync = true },
+        { url = "*.md", run = "glow" },
         { mime = "text/*", run = "code" },
         { mime = "*/xml", run = "code" },
         { mime = "*/javascript", run = "code" },

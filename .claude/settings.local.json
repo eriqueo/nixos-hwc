@@ -147,7 +147,10 @@
       "Bash(openssl rand:*)",
       "Bash(/run/current-system/sw/bin/npm run build)",
       "Bash(npm run build:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "WebFetch(domain:bugs.launchpad.net)",
+      "Bash(/tmp/check_duplicates.sh:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": [],
