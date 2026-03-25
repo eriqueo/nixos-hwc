@@ -357,6 +357,15 @@ in
       port = 14443;
       root = "/home/eric/.nixos/workspace/business/bathroom-calculator/dist";
     }
+    # Heartwood MCP Server — SSE transport for Claude chat / n8n
+    # Proxies to self-hosted JT MCP on localhost:6100
+    {
+      name = "heartwood-mcp";
+      mode = "port";
+      port = 16100;
+      upstream = "http://127.0.0.1:6100";
+    }
+
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy
     # Enabled when hwc.ai.mcp.reverseProxy.enable = true

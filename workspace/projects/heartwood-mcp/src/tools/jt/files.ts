@@ -36,7 +36,7 @@ export function fileTools(pave: PaveClient): ToolDef[] {
           url: params.url,
           ...pickDefined(params, ["name", "folder", "fileTagIds"]),
         };
-        return pave.create("file", data, FILE_FIELDS);
+        return pave.create("createFile", data, FILE_FIELDS);
       },
     },
 
@@ -62,7 +62,7 @@ export function fileTools(pave: PaveClient): ToolDef[] {
         const id = requireString(params, "fileId");
         if ("error" in id) return id.error;
         const data = pickDefined(params, ["name", "folder", "fileTagIds", "description"]);
-        return pave.update("file", id.value, data, FILE_FIELDS);
+        return pave.update("updateFile", { id: id.value, ...data }, FILE_FIELDS);
       },
     },
 
@@ -92,7 +92,7 @@ export function fileTools(pave: PaveClient): ToolDef[] {
           targetType: params.targetType,
           ...pickDefined(params, ["name", "folder", "fileTagIds"]),
         };
-        return pave.create("fileCopy", data, FILE_FIELDS);
+        return pave.create("copyFile", data, FILE_FIELDS);
       },
     },
 
@@ -110,10 +110,10 @@ export function fileTools(pave: PaveClient): ToolDef[] {
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         const id = requireString(params, "fileId");
         if ("error" in id) return id.error;
-        return pave.read("file", id.value, [
+        return pave.read("file", id.value, {
           ...FILE_FIELDS,
-          { field: "content" },
-        ]);
+          content: {},
+        });
       },
     },
 
@@ -137,7 +137,7 @@ export function fileTools(pave: PaveClient): ToolDef[] {
         required: ["fileId", "jobId", "targetId", "targetType"],
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
-        return pave.create("fileAttachment", {
+        return pave.create("createFileAttachment", {
           fileId: params.fileId,
           jobId: params.jobId,
           targetId: params.targetId,
@@ -162,9 +162,9 @@ export function fileTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "file",
-          fields: FILE_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "files",
+          returnFields: FILE_FIELDS,
+          where: buildFilter(params, [
             { param: "jobId", field: "jobId" },
             { param: "documentId", field: "documentId" },
             { param: "folder", field: "folder" },
@@ -187,8 +187,8 @@ export function fileTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "fileTag",
-          fields: [{ field: "id" }, { field: "name" }],
+          entityPlural: "fileTags",
+          returnFields: { id: {}, name: {} },
           ...getPagination(params),
         });
       },

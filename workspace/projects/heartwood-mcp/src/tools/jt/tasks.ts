@@ -3,7 +3,7 @@
  */
 
 import type { PaveClient, ToolResult } from "../../pave/index.js";
-import { TASK_FIELDS, TEMPLATE_FIELDS } from "../../pave/index.js";
+import { TASK_FIELDS, TASK_DETAIL_FIELDS, TEMPLATE_FIELDS, TASK_TEMPLATE_DETAIL_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
 import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
@@ -41,7 +41,7 @@ export function taskTools(pave: PaveClient): ToolDef[] {
             "endDate", "isToDo", "isGroup", "progress",
           ]),
         };
-        return pave.create("task", data, TASK_FIELDS);
+        return pave.create("createTask", data, TASK_FIELDS);
       },
     },
 
@@ -65,7 +65,7 @@ export function taskTools(pave: PaveClient): ToolDef[] {
         const id = requireString(params, "taskId");
         if ("error" in id) return id.error;
         const data = pickDefined(params, ["progress", "name", "description", "startDate", "endDate"]);
-        return pave.update("task", id.value, data, TASK_FIELDS);
+        return pave.update("updateTask", { id: id.value, ...data }, TASK_FIELDS);
       },
     },
 
@@ -85,9 +85,9 @@ export function taskTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "task",
-          fields: TASK_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "tasks",
+          returnFields: TASK_FIELDS,
+          where: buildFilter(params, [
             { param: "jobId", field: "jobId" },
             { param: "status", field: "status" },
             { param: "assigneeUserId", field: "assigneeUserId" },
@@ -111,10 +111,7 @@ export function taskTools(pave: PaveClient): ToolDef[] {
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         const id = requireString(params, "taskId");
         if ("error" in id) return id.error;
-        return pave.read("task", id.value, [
-          ...TASK_FIELDS,
-          { field: "dependencies", fields: [{ field: "id" }, { field: "name" }] },
-        ]);
+        return pave.read("task", id.value, TASK_DETAIL_FIELDS);
       },
     },
 
@@ -129,8 +126,8 @@ export function taskTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (): Promise<ToolResult> => {
         return pave.query({
-          entity: "scheduleTemplate",
-          fields: TEMPLATE_FIELDS,
+          entityPlural: "scheduleTemplates",
+          returnFields: TEMPLATE_FIELDS,
         });
       },
     },
@@ -146,8 +143,8 @@ export function taskTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (): Promise<ToolResult> => {
         return pave.query({
-          entity: "todoTemplate",
-          fields: TEMPLATE_FIELDS,
+          entityPlural: "todoTemplates",
+          returnFields: TEMPLATE_FIELDS,
         });
       },
     },
@@ -166,10 +163,7 @@ export function taskTools(pave: PaveClient): ToolDef[] {
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         const id = requireString(params, "taskTemplateId");
         if ("error" in id) return id.error;
-        return pave.read("taskTemplate", id.value, [
-          ...TEMPLATE_FIELDS,
-          { field: "tasks", fields: TASK_FIELDS },
-        ]);
+        return pave.read("taskTemplate", id.value, TASK_TEMPLATE_DETAIL_FIELDS);
       },
     },
   ];

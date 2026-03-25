@@ -34,7 +34,7 @@ export function dailyLogTools(pave: PaveClient): ToolDef[] {
           notes: params.notes,
           ...pickDefined(params, ["customFields"]),
         };
-        return pave.create("dailyLog", data, DAILY_LOG_FIELDS);
+        return pave.create("createDailyLog", data, DAILY_LOG_FIELDS);
       },
     },
 
@@ -55,13 +55,13 @@ export function dailyLogTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "dailyLog",
-          fields: DAILY_LOG_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "dailyLogs",
+          returnFields: DAILY_LOG_FIELDS,
+          where: buildFilter(params, [
             { param: "jobId", field: "jobId" },
             { param: "userId", field: "userId" },
-            { param: "startDate", field: "date", operator: "gte" },
-            { param: "endDate", field: "date", operator: "lte" },
+            { param: "startDate", field: "date", operator: ">=" },
+            { param: "endDate", field: "date", operator: "<=" },
           ]),
           ...getPagination(params),
         });
@@ -107,10 +107,11 @@ export function dailyLogTools(pave: PaveClient): ToolDef[] {
           endDate: params.endDate,
           ...pickDefined(params, ["groupBy", "jobId", "userId"]),
         };
-        return pave.execute({
-          action: "query",
-          entity: "dailyLogSummary",
-          data,
+        // dailyLogSummary is a special query operation
+        return pave.raw({
+          dailyLogSummary: {
+            $: data,
+          },
         });
       },
     },

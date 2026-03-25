@@ -26,9 +26,9 @@ export function customFieldTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "customField",
-          fields: CUSTOM_FIELD_FIELDS,
-          filter: { conditions: [{ field: "targetType", operator: "eq", value: params.targetType }] },
+          entityPlural: "customFields",
+          returnFields: CUSTOM_FIELD_FIELDS,
+          where: { and: [[["targetType", "=", params.targetType]]] },
           ...getPagination(params),
         });
       },
@@ -50,8 +50,8 @@ export function customFieldTools(pave: PaveClient): ToolDef[] {
           customFieldValue: { type: "string", description: "Value to search for" },
           operator: {
             type: "string",
-            enum: ["eq", "like", "neq"],
-            description: "Comparison operator (default: eq)",
+            enum: ["=", "like", "!="],
+            description: "Comparison operator (default: =)",
           },
           ...PAGINATION_PROPS,
         },
@@ -71,17 +71,30 @@ export function customFieldTools(pave: PaveClient): ToolDef[] {
         if ("error" in customFieldName) return customFieldName.error;
         const customFieldValue = requireString(params, "customFieldValue");
         if ("error" in customFieldValue) return customFieldValue.error;
-        const op = typeof params.operator === "string" ? params.operator : "eq";
+        const op = typeof params.operator === "string" ? params.operator : "=";
         const value = op === "like" ? `%${customFieldValue.value}%` : customFieldValue.value;
+
+        // Pluralize the entity type for the query
+        const pluralMap: Record<string, string> = {
+          account: "accounts",
+          contact: "contacts",
+          job: "jobs",
+          document: "documents",
+          task: "tasks",
+          timeEntry: "timeEntries",
+          dailyLog: "dailyLogs",
+          costItem: "costItems",
+          file: "files",
+          comment: "comments",
+        };
+        const entityPlural = pluralMap[entityType.value] ?? `${entityType.value}s`;
+
         return pave.query({
-          entity: entityType.value,
-          filter: {
-            conditions: [{
-              field: `customField.${customFieldName.value}`,
-              operator: op,
-              value,
-            }],
-          },
+          entityPlural,
+          returnFields: { id: {}, name: {} },
+          where: { and: [[
+            [`customField.${customFieldName.value}`, op, value],
+          ]] },
           ...getPagination(params),
         });
       },

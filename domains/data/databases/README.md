@@ -104,6 +104,7 @@ jt_pushed, jt_daily_log_id, created_at
 
 ## Changelog
 
+- 2026-03-24: Granted n8n postgres user access to hwc schema (USAGE + ALL on tables/sequences) for calculator_lead workflow
 - 2026-03-23: Created hwc schema with calculator_leads and daily_logs tables for n8n workflows
 - 2026-03-23: Added `backup.perDatabase` for compressed per-database backups with retention
 - 2026-02-27: Migrated from server/native/networking/ per Law 2 namespace compliance

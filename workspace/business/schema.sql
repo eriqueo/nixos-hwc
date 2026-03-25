@@ -360,4 +360,330 @@ WHERE lead_channel IS NOT NULL
 GROUP BY lead_channel
 ORDER BY revenue DESC NULLS LAST;
 
+-- ============================================================================
+-- SECTION 8: VENDORS
+-- Normalized vendor directory. Used by receipts OCR and purchasable by
+-- estimator line items. Name variants allow fuzzy OCR matching.
+-- ============================================================================
+
+CREATE TABLE vendors (
+    id              SERIAL PRIMARY KEY,
+    name_normalized TEXT UNIQUE NOT NULL,
+    name_variants   TEXT[] DEFAULT '{}',
+    category        TEXT,                     -- e.g., 'hardware_store', 'lumber_yard'
+    tax_id          TEXT,
+    account_number  TEXT,
+    contact_name    TEXT,
+    contact_email   TEXT,
+    contact_phone   TEXT,
+    address         TEXT,
+    payment_terms   TEXT,
+    preferred       BOOLEAN DEFAULT FALSE,
+    notes           TEXT,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_vendors_name ON vendors(name_normalized);
+CREATE INDEX idx_vendors_category ON vendors(category);
+
+
+-- ============================================================================
+-- SECTION 9: EXPENSE CATEGORIES
+-- Maps to JT cost codes for receipt categorization.
+-- ============================================================================
+
+CREATE TABLE expense_categories (
+    id                  SERIAL PRIMARY KEY,
+    name                TEXT UNIQUE NOT NULL,
+    parent_category_id  INTEGER REFERENCES expense_categories(id),
+    jt_cost_code_id     TEXT REFERENCES jt_cost_codes(id),   -- link to JT taxonomy
+    tax_deductible      BOOLEAN DEFAULT TRUE,
+    billable_to_client  BOOLEAN DEFAULT TRUE,
+    description         TEXT,
+    created_at          TIMESTAMPTZ DEFAULT now()
+);
+
+-- Seed default categories (linked to JT cost codes where applicable)
+INSERT INTO expense_categories (name, jt_cost_code_id, tax_deductible, billable_to_client) VALUES
+    ('Materials',        '22Nm3uGRAMmr', TRUE, TRUE),   -- not a cost code but close mapping
+    ('Labor',            NULL,            TRUE, TRUE),
+    ('Tools',            NULL,            TRUE, FALSE),
+    ('Office Supplies',  NULL,            TRUE, FALSE),
+    ('Fuel',             NULL,            TRUE, FALSE),
+    ('Permits & Fees',   NULL,            TRUE, TRUE),
+    ('Subcontractors',   NULL,            TRUE, TRUE)
+ON CONFLICT (name) DO NOTHING;
+
+-- Subcategories under Materials
+INSERT INTO expense_categories (name, parent_category_id, tax_deductible, billable_to_client)
+SELECT sub.name, ec.id, TRUE, TRUE
+FROM (VALUES ('Lumber'), ('Hardware'), ('Paint & Finishing'), ('Electrical'), ('Plumbing')) AS sub(name)
+CROSS JOIN expense_categories ec WHERE ec.name = 'Materials'
+ON CONFLICT (name) DO NOTHING;
+
+
+-- ============================================================================
+-- SECTION 10: RECEIPTS OCR PIPELINE
+-- Receipt images → OCR → LLM normalization → structured data.
+-- Receipts link to projects (which carry JT job IDs) and vendors.
+-- ============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE receipts (
+    id                      SERIAL PRIMARY KEY,
+    uuid                    UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+
+    -- File information
+    image_path              TEXT NOT NULL,
+    image_filename          TEXT NOT NULL,
+    file_size_bytes         INTEGER,
+    file_hash               TEXT,             -- SHA-256 for duplicate detection
+    mime_type               TEXT,
+
+    -- Timestamps
+    upload_timestamp        TIMESTAMPTZ DEFAULT now(),
+    process_start_timestamp TIMESTAMPTZ,
+    process_end_timestamp   TIMESTAMPTZ,
+
+    -- Processing status
+    status                  TEXT CHECK (status IN (
+                                'pending', 'processing', 'completed',
+                                'failed', 'review_needed', 'archived'
+                            )) DEFAULT 'pending',
+
+    -- OCR extracted data
+    receipt_date            DATE,
+    receipt_time            TIME,
+    vendor_raw              TEXT,
+    vendor_normalized       TEXT,
+    vendor_id               INTEGER REFERENCES vendors(id),
+
+    -- Financial data
+    subtotal                NUMERIC(10,2),
+    tax_amount              NUMERIC(10,2),
+    tip_amount              NUMERIC(10,2),
+    discount_amount         NUMERIC(10,2),
+    total_amount            NUMERIC(10,2),    -- nullable: OCR may fail to extract
+    currency                TEXT DEFAULT 'USD',
+
+    -- Business context — links to projects (which carry JT job IDs)
+    project_id              UUID REFERENCES projects(id),
+    category_id             INTEGER REFERENCES expense_categories(id),
+    payment_method          TEXT CHECK (payment_method IN (
+                                'cash', 'credit_card', 'debit_card',
+                                'check', 'wire_transfer', 'other'
+                            )),
+    payment_reference       TEXT,
+
+    -- Review and validation
+    ocr_confidence          NUMERIC(3,2) CHECK (ocr_confidence BETWEEN 0 AND 1),
+    needs_review            BOOLEAN DEFAULT FALSE,
+    review_reason           TEXT,
+    reviewed_by             TEXT,
+    reviewed_at             TIMESTAMPTZ,
+
+    -- Raw data preservation
+    ocr_raw_text            TEXT,
+    ocr_raw_json            JSONB,
+    llm_metadata            JSONB,
+
+    -- Audit fields
+    notes                   TEXT,
+    tags                    TEXT[],
+    created_by              TEXT DEFAULT 'system',
+    updated_by              TEXT,
+    created_at              TIMESTAMPTZ DEFAULT now(),
+    updated_at              TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_receipts_status ON receipts(status);
+CREATE INDEX idx_receipts_date ON receipts(receipt_date);
+CREATE INDEX idx_receipts_project ON receipts(project_id);
+CREATE INDEX idx_receipts_vendor ON receipts(vendor_id);
+CREATE INDEX idx_receipts_review ON receipts(needs_review) WHERE needs_review = TRUE;
+CREATE INDEX idx_receipts_uuid ON receipts(uuid);
+CREATE INDEX idx_receipts_hash ON receipts(file_hash);
+
+-- Line items extracted from a receipt
+CREATE TABLE receipt_items (
+    id              SERIAL PRIMARY KEY,
+    receipt_id      INTEGER REFERENCES receipts(id) ON DELETE CASCADE NOT NULL,
+    line_number     INTEGER,
+    description     TEXT NOT NULL,
+    quantity        NUMERIC(10,3) DEFAULT 1,
+    unit_price      NUMERIC(10,2),
+    total_price     NUMERIC(10,2) NOT NULL,
+    category_id     INTEGER REFERENCES expense_categories(id),
+    sku             TEXT,
+    upc             TEXT,
+    tax_rate        NUMERIC(5,4),
+    taxable         BOOLEAN DEFAULT TRUE,
+    -- Optional: link item to a specific project (for splitting across projects)
+    project_id      UUID REFERENCES projects(id),
+    billable        BOOLEAN DEFAULT TRUE,
+    -- Optional: link to cost catalog for matching
+    catalog_item_id INTEGER REFERENCES catalog_items(id),
+    notes           TEXT,
+    created_at      TIMESTAMPTZ DEFAULT now(),
+    updated_at      TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(receipt_id, line_number)
+);
+
+CREATE INDEX idx_receipt_items_receipt ON receipt_items(receipt_id);
+CREATE INDEX idx_receipt_items_project ON receipt_items(project_id);
+
+-- Audit log for each processing step
+CREATE TABLE receipt_processing_log (
+    id              SERIAL PRIMARY KEY,
+    receipt_id      INTEGER REFERENCES receipts(id) ON DELETE CASCADE,
+    timestamp       TIMESTAMPTZ DEFAULT now(),
+    step            TEXT NOT NULL CHECK (step IN (
+                        'upload', 'validation', 'preprocessing', 'ocr',
+                        'llm_normalization', 'extraction', 'database_insert',
+                        'review', 'failure', 'retry'
+                    )),
+    status          TEXT NOT NULL CHECK (status IN (
+                        'started', 'success', 'failed', 'skipped'
+                    )),
+    duration_ms     INTEGER,
+    error_message   TEXT,
+    error_stack     TEXT,
+    metadata        JSONB,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_proc_log_receipt ON receipt_processing_log(receipt_id);
+CREATE INDEX idx_proc_log_ts ON receipt_processing_log(timestamp);
+
+-- Manual review queue
+CREATE TABLE receipt_review_queue (
+    id              SERIAL PRIMARY KEY,
+    receipt_id      INTEGER REFERENCES receipts(id) ON DELETE CASCADE UNIQUE NOT NULL,
+    priority        INTEGER DEFAULT 0,
+    reason          TEXT NOT NULL,
+    assigned_to     TEXT,
+    status          TEXT CHECK (status IN ('pending', 'in_progress', 'completed'))
+                    DEFAULT 'pending',
+    flagged_at      TIMESTAMPTZ DEFAULT now(),
+    started_at      TIMESTAMPTZ,
+    completed_at    TIMESTAMPTZ,
+    resolution_notes TEXT,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_review_status ON receipt_review_queue(status);
+CREATE INDEX idx_review_priority ON receipt_review_queue(priority DESC);
+
+
+-- ============================================================================
+-- SECTION 11: RECEIPT VIEWS
+-- ============================================================================
+
+-- Receipts enriched with project/vendor/category data
+CREATE VIEW v_receipts_enriched AS
+SELECT
+    r.id,
+    r.uuid,
+    r.receipt_date,
+    r.total_amount,
+    r.status,
+    r.needs_review,
+    r.ocr_confidence,
+    v.name_normalized   AS vendor_name,
+    v.category          AS vendor_category,
+    p.name              AS project_name,
+    p.jt_job_id,
+    p.jt_job_number,
+    ec.name             AS category_name,
+    r.image_path,
+    r.upload_timestamp,
+    r.notes,
+    r.tags
+FROM receipts r
+LEFT JOIN vendors v ON r.vendor_id = v.id
+LEFT JOIN projects p ON r.project_id = p.id
+LEFT JOIN expense_categories ec ON r.category_id = ec.id;
+
+-- Project expense summary (replaces old v_job_cost_summary)
+CREATE VIEW v_project_expense_summary AS
+SELECT
+    p.id,
+    p.name              AS project_name,
+    p.jt_job_id,
+    p.jt_job_number,
+    p.total_price       AS estimated_price,
+    COALESCE(SUM(r.total_amount), 0) AS actual_spend,
+    p.total_price - COALESCE(SUM(r.total_amount), 0) AS remaining_budget,
+    COUNT(r.id)         AS receipt_count,
+    MAX(r.receipt_date) AS last_expense_date
+FROM projects p
+LEFT JOIN receipts r ON p.id = r.project_id AND r.status = 'completed'
+GROUP BY p.id, p.name, p.jt_job_id, p.jt_job_number, p.total_price;
+
+-- Receipts pending review
+CREATE VIEW v_receipts_pending_review AS
+SELECT
+    rq.id           AS queue_id,
+    rq.priority,
+    rq.reason,
+    rq.assigned_to,
+    rq.flagged_at,
+    r.id            AS receipt_id,
+    r.uuid,
+    r.receipt_date,
+    r.vendor_raw,
+    r.total_amount,
+    r.ocr_confidence,
+    r.image_path
+FROM receipt_review_queue rq
+JOIN receipts r ON rq.receipt_id = r.id
+WHERE rq.status = 'pending'
+ORDER BY rq.priority DESC, rq.flagged_at ASC;
+
+-- Processing statistics
+CREATE VIEW v_processing_stats AS
+SELECT
+    DATE(timestamp)     AS process_date,
+    step,
+    status,
+    COUNT(*)            AS count,
+    AVG(duration_ms)    AS avg_duration_ms,
+    MAX(duration_ms)    AS max_duration_ms
+FROM receipt_processing_log
+GROUP BY DATE(timestamp), step, status
+ORDER BY process_date DESC, step;
+
+
+-- ============================================================================
+-- SECTION 12: TRIGGERS (auto-update timestamps)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_receipts_ts BEFORE UPDATE ON receipts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_vendors_ts BEFORE UPDATE ON vendors
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_receipt_items_ts BEFORE UPDATE ON receipt_items
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- ============================================================================
+-- GRANTS
+-- ============================================================================
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO business_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO business_user;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO business_user;
+
 COMMIT;

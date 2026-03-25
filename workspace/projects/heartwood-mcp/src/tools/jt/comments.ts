@@ -3,7 +3,7 @@
  */
 
 import type { PaveClient, ToolResult } from "../../pave/index.js";
-import { COMMENT_FIELDS } from "../../pave/index.js";
+import { COMMENT_FIELDS, COMMENT_DETAIL_FIELDS } from "../../pave/index.js";
 import type { ToolDef } from "../registry.js";
 import { buildFilter, pickDefined, requireString, PAGINATION_PROPS, getPagination } from "./helpers.js";
 
@@ -36,7 +36,7 @@ export function commentTools(pave: PaveClient): ToolDef[] {
           targetType: params.targetType,
           ...pickDefined(params, ["isPinned", "parentCommentId", "isVisibleToCustomer", "isVisibleToVendor", "isVisibleToEmployee"]),
         };
-        return pave.create("comment", data, COMMENT_FIELDS);
+        return pave.create("createComment", data, COMMENT_FIELDS);
       },
     },
 
@@ -55,9 +55,9 @@ export function commentTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "comment",
-          fields: COMMENT_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "comments",
+          returnFields: COMMENT_FIELDS,
+          where: buildFilter(params, [
             { param: "targetId", field: "targetId" },
             { param: "targetType", field: "targetType" },
           ]),
@@ -80,10 +80,7 @@ export function commentTools(pave: PaveClient): ToolDef[] {
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         const id = requireString(params, "commentId");
         if ("error" in id) return id.error;
-        return pave.read("comment", id.value, [
-          ...COMMENT_FIELDS,
-          { field: "children", fields: COMMENT_FIELDS },
-        ]);
+        return pave.read("comment", id.value, COMMENT_DETAIL_FIELDS);
       },
     },
   ];

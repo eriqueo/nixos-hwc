@@ -1,12 +1,11 @@
 export { PaveClient } from "./client.js";
 export type {
-  PaveRequest,
+  PaveQuery,
+  PaveAuth,
+  PaveFields,
+  PaveWhere,
+  PaveWhereCondition,
   PaveResponse,
-  PaveAction,
-  PaveField,
-  PaveFilter,
-  PaveCondition,
-  PaveSort,
   PaveError,
   ToolResult,
 } from "./types.js";

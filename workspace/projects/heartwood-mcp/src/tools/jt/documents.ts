@@ -69,7 +69,7 @@ export function documentTools(pave: PaveClient): ToolDef[] {
             "description", "footer", "externalId", "taxRate",
           ]),
         };
-        return pave.create("document", data, DOCUMENT_FIELDS);
+        return pave.create("createDocument", data, DOCUMENT_FIELDS);
       },
     },
 
@@ -103,7 +103,7 @@ export function documentTools(pave: PaveClient): ToolDef[] {
         const id = requireString(params, "documentId");
         if ("error" in id) return id.error;
         const data = pickDefined(params, ["status", "description", "costItemUpdates", "pushToQbo"]);
-        return pave.update("document", id.value, data, DOCUMENT_FIELDS);
+        return pave.update("updateDocument", { id: id.value, ...data }, DOCUMENT_FIELDS);
       },
     },
 
@@ -126,9 +126,9 @@ export function documentTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "document",
-          fields: DOCUMENT_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "documents",
+          returnFields: DOCUMENT_FIELDS,
+          where: buildFilter(params, [
             { param: "jobId", field: "jobId" },
             { param: "type", field: "type" },
           ]),
@@ -151,9 +151,9 @@ export function documentTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "documentLineItem",
-          fields: DOCUMENT_LINE_ITEM_FIELDS,
-          filter: { conditions: [{ field: "documentId", operator: "eq", value: params.documentId }] },
+          entityPlural: "documentLineItems",
+          returnFields: DOCUMENT_LINE_ITEM_FIELDS,
+          where: { and: [[["documentId", "=", params.documentId]]] },
           ...getPagination(params),
         });
       },
@@ -177,9 +177,9 @@ export function documentTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "documentTemplate",
-          fields: TEMPLATE_FIELDS,
-          filter: { conditions: [{ field: "type", operator: "eq", value: params.type }] },
+          entityPlural: "documentTemplates",
+          returnFields: TEMPLATE_FIELDS,
+          where: { and: [[["type", "=", params.type]]] },
           ...getPagination(params),
         });
       },

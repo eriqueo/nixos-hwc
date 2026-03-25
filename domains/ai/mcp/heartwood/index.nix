@@ -188,10 +188,6 @@ in
     #--------------------------------------------------------------------------
     assertions = [
       {
-        assertion = mcpCfg.enable;
-        message = "hwc.ai.mcp.heartwood requires hwc.ai.mcp.enable = true";
-      }
-      {
         assertion = config.age.secrets ? jobtread-grant-key;
         message = ''
           hwc.ai.mcp.heartwood requires the jobtread-grant-key agenix secret.

@@ -36,7 +36,7 @@ export function timeEntryTools(pave: PaveClient): ToolDef[] {
           endedAt: params.endedAt,
           ...pickDefined(params, ["notes", "costItemId", "type", "isApproved"]),
         };
-        return pave.create("timeEntry", data, TIME_ENTRY_FIELDS);
+        return pave.create("createTimeEntry", data, TIME_ENTRY_FIELDS);
       },
     },
 
@@ -58,13 +58,13 @@ export function timeEntryTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         return pave.query({
-          entity: "timeEntry",
-          fields: TIME_ENTRY_FIELDS,
-          filter: buildFilter(params, [
+          entityPlural: "timeEntries",
+          returnFields: TIME_ENTRY_FIELDS,
+          where: buildFilter(params, [
             { param: "jobId", field: "jobId" },
             { param: "userId", field: "userId" },
-            { param: "startDate", field: "startedAt", operator: "gte" },
-            { param: "endDate", field: "endedAt", operator: "lte" },
+            { param: "startDate", field: "startedAt", operator: ">=" },
+            { param: "endDate", field: "endedAt", operator: "<=" },
             { param: "isApproved", field: "isApproved" },
           ]),
           ...getPagination(params),
@@ -111,10 +111,11 @@ export function timeEntryTools(pave: PaveClient): ToolDef[] {
           endDate: params.endDate,
           ...pickDefined(params, ["groupBy", "jobId", "userId"]),
         };
-        return pave.execute({
-          action: "query",
-          entity: "timeSummary",
-          data,
+        // timeSummary is a special query operation
+        return pave.raw({
+          timeSummary: {
+            $: data,
+          },
         });
       },
     },

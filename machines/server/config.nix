@@ -277,8 +277,8 @@
   # See: docs/infrastructure/ntfy-notification-classes.md
   hwc.automation.ntfy = {
     enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted via Caddy
-    defaultTopic = "hwc-alerts";  # Private topic on self-hosted server
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted via Tailscale HTTPS
+    defaultTopic = "alerts";  # Private topic on self-hosted server
     defaultTags = [ "hwc" "server" ];
     defaultPriority = 4;  # Higher priority for server alerts
     hostTag = true;       # Adds "host-hwc-server" tag automatically
@@ -520,10 +520,10 @@
     # - enableRAG: true
   };
 
-  # MCP (Model Context Protocol) server for LLM access
-  # Provides filesystem access to ~/.nixos for AI assistants
-  # DISABLED: mcp-proxy not available in nixpkgs-stable 24.05
+  # MCP (Model Context Protocol) server infrastructure
+  # Parent MCP disabled (mcp-proxy not in nixpkgs-stable), but heartwood is self-contained
   hwc.ai.mcp.enable = lib.mkForce false;
+  hwc.ai.mcp.heartwood.enable = true;
 
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
   # NixOS config excluded - it's in git. Databases handled by preBackupScript.

@@ -1,0 +1,117 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "jt-customers",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-customers",
+      "name": "Webhook: Get Customers",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-16, -112],
+      "webhookId": "jt-customers"
+    },
+    {
+      "parameters": {
+        "jsCode": "const grantKey = $env.JOBTREAD_GRANT_KEY;\n\nif (!grantKey) {\n  throw new Error('Missing JOBTREAD_GRANT_KEY');\n}\n\nconst query = {\n  '$': {\n    grantKey,\n  },\n  accounts: {\n    '$': {\n      filter: {\n        type: { eq: 'customer' },\n      },\n      first: 200,\n    },\n    nodes: {\n      id: {},\n      name: {},\n      primaryLocationId: {},\n      locations: {\n        nodes: {\n          id: {},\n          address: {\n            street1: {},\n            city: {},\n            state: {},\n            zip: {},\n          },\n        },\n      },\n    },\n  },\n};\n\nreturn [{ json: { query } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [192, -48],
+      "id": "57ce7a0c-ea8c-4e84-b5ab-c3d7ad64430f",
+      "name": "Build JT Query"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.jobtread.com/pave",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.query }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [416, -48],
+      "id": "0cc8b262-ba2e-40a9-8c0b-0a164c7fb8b5",
+      "name": "POST to JT API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nif (response.errors?.length) {\n  throw new Error(`JT API error: ${response.errors[0].message}`);\n}\n\nconst nodes = response.accounts?.nodes ?? [];\n\nconst customers = nodes.map(node => {\n  const locations = node.locations?.nodes ?? [];\n  const primaryLocation =\n    locations.find(l => l.id === node.primaryLocationId) ?? locations[0] ?? null;\n\n  const address = primaryLocation?.address;\n\n  return {\n    id: node.id,\n    name: node.name,\n    primaryLocationId: node.primaryLocationId,\n    address: address\n      ? `${address.street1 ?? ''}, ${address.city ?? ''}, ${address.state ?? ''} ${address.zip ?? ''}`.replace(/^,\\s*|,\\s*,/g, '')\n      : null,\n    locations: locations.map(l => ({\n      id: l.id,\n      address: l.address\n        ? `${l.address.street1 ?? ''}, ${l.address.city ?? ''}, ${l.address.state ?? ''} ${l.address.zip ?? ''}`.trim()\n        : null\n    }))\n  };\n}).sort((a, b) => a.name.localeCompare(b.name));\n\nreturn [{ json: { customers, count: customers.length } }];\n"
+      },
+      "id": "62a20d9f-8b37-4537-b10d-fea18826bb8b",
+      "name": "Transform Customers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, -48]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-customers",
+      "name": "Respond Customers",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [864, -48]
+    }
+  ],
+  "connections": {
+    "Webhook: Get Customers": {
+      "main": [
+        [
+          {
+            "node": "Build JT Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build JT Query": {
+      "main": [
+        [
+          {
+            "node": "POST to JT API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to JT API": {
+      "main": [
+        [
+          {
+            "node": "Transform Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Customers": {
+      "main": [
+        [
+          {
+            "node": "Respond Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ee9fdf8119918d7b973ca89acb6161f158c02319c8e88a37a71d177acacd8190"
+  }
+}
