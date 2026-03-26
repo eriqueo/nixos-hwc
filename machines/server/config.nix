@@ -849,6 +849,12 @@
     };
   };
 
+  # Vaultwarden password manager — https://hwc.ocelot-wahoo.ts.net:15443
+  hwc.secrets.vaultwarden.enable = lib.mkDefault true;
+
+  # Authentik SSO/Identity Provider — https://hwc.ocelot-wahoo.ts.net:15543
+  hwc.system.core.authentik.enable = lib.mkDefault true;
+
   # Firefly III personal finance
   hwc.business.firefly = {
     enable = lib.mkDefault true;
