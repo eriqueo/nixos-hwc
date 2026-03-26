@@ -17,6 +17,10 @@ mcp/
     └── README.md  # Heartwood-specific docs
 ```
 
+## Notes
+- Heartwood MCP source code is deployed to `/opt/business/heartwood-mcp` at runtime (not in workspace)
+- The old `workspace/projects/heartwood-mcp/` was removed during the 2026-03-26 workspace restructure
+
 ## Changelog
 - 2026-03-26: heartwood-mcp decoupled from parent hwc.ai.mcp.enable — now standalone; enabled directly in server config
 - 2026-03-25: Added heartwood/ subdomain — Heartwood MCP Server (Phase 1: 63 JT tools)

@@ -16,11 +16,29 @@ webhook handling, and Slack notification integration.
 automation/
 ├── index.nix    # Domain aggregator
 ├── README.md    # This file
+├── mqtt/        # MQTT broker for event-driven automation
+│   └── index.nix
+├── ntfy/        # ntfy notification server
+│   └── index.nix
 └── n8n/         # n8n workflow automation
     ├── index.nix # Options + Tailscale funnel services
     ├── sys.nix   # Container definition via mkContainer
     └── parts/
-        └── workflows/  # JSON workflow definitions
+        ├── migrations/  # SQL migrations for workflow data
+        └── workflows/   # JSON workflow definitions + docs
+```
+
+### Workspace Support (`workspace/automation/`)
+
+```
+workspace/automation/
+├── hooks/                    # Event-driven scripts
+│   ├── audiobook-copier.py   # Audiobook download handler
+│   ├── media-orchestrator.py # Media pipeline orchestrator
+│   ├── qbt-finished.sh       # qBittorrent completion hook
+│   ├── sab-finished.py       # SABnzbd completion hook
+│   └── slskd-verify.sh       # SLSKD verification
+└── n8n-mcp-wrapper.sh        # MCP wrapper for n8n
 ```
 
 ## Changelog
