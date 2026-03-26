@@ -31,10 +31,6 @@ in
     monitoring.enable = lib.mkEnableOption "Enable hardware monitoring tools (sensors, smartctl, etc.)";
     mouse.enable = lib.mkEnableOption "Enable mouse-specific tools (Solaar for Logitech, etc.)";
 
-    touchpadFix = {
-      enable = lib.mkEnableOption "Reload i2c_hid_acpi at boot (fixes Sensel touchpad scrolling)";
-    };
-
     fanControl = {
       enable = lib.mkEnableOption "Enable ThinkPad fan control via thinkfan";
 
@@ -98,50 +94,18 @@ in
       };
     };
 
-    # The Sensel (SNSL002D) touchpad's i2c_hid_acpi driver fires a spurious
-    # lid-closed event on every init, causing libinput to suspend the touchpad
-    # and silently drop scroll events (pointer still works via the Mouse interface).
-    # Marking the lid switch as unreliable stops libinput from using it to gate
-    # touchpad input. Lid-close sleep still works via logind/ACPI.
-    environment.etc."libinput/local-overrides.quirks".text = ''
-      [Sensel Touchpad Lid Switch Fix]
-      MatchUdevType=switch
-      MatchName=Lid Switch
-      AttrLidSwitchReliability=unreliable
+    # Sensel SNSL002D touchpad fix: the i2c_hid_acpi driver fires a spurious
+    # "lid closed" event on every init (boot, resume). libinput sees this and
+    # suspends the touchpad, killing scroll events.
+    #
+    # Two-layer fix (kernel + udev):
+    # 1. Kernel: button.lid_init_state=open (in boot.kernelParams) — tells ACPI
+    #    button driver to report initial lid state as "open", ignoring firmware lies.
+    # 2. Udev: hide the lid switch from libinput entirely. Logind still reads lid
+    #    state directly via evdev, so suspend-on-lid-close still works.
+    services.udev.extraRules = lib.mkBefore ''
+      KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Lid Switch", ENV{LIBINPUT_IGNORE_DEVICE}="1"
     '';
-
-    #==========================================================================
-    # TOUCHPAD FIX (Sensel i2c touchpad - reload module for scroll support)
-    #==========================================================================
-    systemd.services.touchpad-fix = lib.mkIf cfg.touchpadFix.enable {
-      description = "Reload i2c_hid_acpi to fix Sensel touchpad scrolling";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "systemd-modules-load.service" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-      };
-      script = ''
-        ${pkgs.kmod}/bin/modprobe -r i2c_hid_acpi
-        ${pkgs.coreutils}/bin/sleep 1
-        ${pkgs.kmod}/bin/modprobe i2c_hid_acpi
-      '';
-    };
-
-    # Re-run the touchpad fix after suspend/resume
-    systemd.services.touchpad-fix-resume = lib.mkIf cfg.touchpadFix.enable {
-      description = "Reload i2c_hid_acpi after resume to restore Sensel touchpad scrolling";
-      wantedBy = [ "suspend.target" "hibernate.target" ];
-      after = [ "suspend.target" "hibernate.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-      };
-      script = ''
-        ${pkgs.kmod}/bin/modprobe -r i2c_hid_acpi
-        ${pkgs.coreutils}/bin/sleep 1
-        ${pkgs.kmod}/bin/modprobe i2c_hid_acpi
-      '';
-    };
 
     #==========================================================================
     # FAN CONTROL (ThinkPad)

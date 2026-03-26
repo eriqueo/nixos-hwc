@@ -152,7 +152,9 @@ in
 
         filesystems = lib.mkOption {
           type = lib.types.listOf lib.types.str;
-          default = [ "/" "/home" "/mnt/media" "/mnt/hot" ];
+          default = [ "/" "/home" ]
+            ++ lib.optional (paths.media.root or null != null) (toString paths.media.root)
+            ++ lib.optional (paths.hot.root or null != null) (toString paths.hot.root);
           description = "Filesystems to monitor for disk space";
         };
 

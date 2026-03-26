@@ -14,6 +14,7 @@
 
 let
   cfg = config.hwc.data.borg;
+  paths = config.hwc.paths;
   enabled = cfg.enable;
 
   # Job name for systemd service
@@ -40,7 +41,7 @@ in
     repo = {
       path = lib.mkOption {
         type = lib.types.str;
-        default = "/mnt/backup/borg";
+        default = "${toString paths.backup}/borg";
         description = "Path to local Borg repository";
       };
 

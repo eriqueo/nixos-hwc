@@ -4,6 +4,7 @@
 let
   inherit (lib) mkOption mkEnableOption types;
   cfg = config.hwc.media.audiobookshelf;
+  paths = config.hwc.paths;
 in
 {
   #==========================================================================
@@ -37,19 +38,19 @@ in
 
     library = mkOption {
       type = types.path;
-      default = "/mnt/media/books/audiobooks";
+      default = toString paths.media.audiobooks;
       description = "Path to audiobooks library";
     };
 
     podcasts = mkOption {
       type = types.path;
-      default = "/mnt/media/podcasts";
+      default = toString paths.media.podcasts;
       description = "Path to podcasts library";
     };
 
     metadata = mkOption {
       type = types.path;
-      default = "/mnt/media/books/.audiobookshelf-metadata";
+      default = "${paths.media.books}/.audiobookshelf-metadata";
       description = "Path to store metadata (cover images, descriptions, etc.)";
     };
   };

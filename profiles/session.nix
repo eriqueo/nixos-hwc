@@ -29,7 +29,7 @@
 
       hwc.home = {
         # Theme & Fonts
-        theme.palette = lib.mkDefault "gruv";
+        theme.palette = lib.mkDefault "hwc";
         theme.fonts.enable = lib.mkDefault true;
 
         # Shell Environment

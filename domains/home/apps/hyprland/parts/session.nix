@@ -32,7 +32,7 @@ in
     "xfconfd"
     "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
     "hyprland-startup"
-    "hyprpaper"
+    "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill"
     # Proton apps - start on workspace 8 (windowrules handle placement)
     "proton-pass"
     "kitty --start-as=minimized"

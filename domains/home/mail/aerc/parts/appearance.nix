@@ -1,24 +1,16 @@
-# aerc theme.nix – Generates a valid aerc styleset file from your palette
-{ config, lib, osConfig ? {}, ... }:
+# domains/home/mail/aerc/parts/appearance.nix
+# Pure function: palette colors → aerc styleset content.
+# No options, no side-effects.
+{ lib, colors }:
 
 let
-  c = config.hwc.home.theme.colors or {};
-
+  c = colors;
   hex = color: "#${color}";
-
-  # Helper to generate a full <object>.<attr> = value line
-  styleLine = obj: attr: val:
-    if val == null then "" else "${obj}.${attr} = ${val}";
-
-  # Helper for boolean attrs (true/false/toggle)
-  boolLine = obj: attr: val:
-    if val == null then "" else styleLine obj attr (if val then "true" else "false");
-
-in {
-  # This attribute will be used in config.nix to write the styleset file
+in
+{
   stylesetContent = ''
-    # hwc-theme – Gruvbox-inspired dark theme for aerc
-    # Generated from palette – valid per aerc-stylesets(7)
+    # hwc-theme – Generated from ${c.name or "unknown"} palette
+    # Valid per aerc-stylesets(7)
 
     # Reset most defaults so we have full control
     *.default = true

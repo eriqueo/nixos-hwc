@@ -86,10 +86,10 @@ in
         "nixos" = "cd ~/300_tech"; "screenshots" = "cd ~/500_media/510_pictures/screenshots";
         "tech" = "cd ~/300_tech"; "tv" = "cd /mnt/media/tv"; "vaults" = "cd ~/900_vaults";
         "business-db" = "psql postgresql://business_user:secure_password_change_me@localhost:5432/heartwood_business";
-        "business-dev" = "cd /opt/business && source /etc/business/setup-dev-env.sh";
+        "business-dev" = "cd $HWC_BUSINESS_ROOT && source /etc/business/setup-dev-env.sh";
         "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
-        "receipt-process" = "cd /opt/business/receipts && python3 ../api/services/ocr_processor.py";
-        "work-stats" = "python3 /opt/adhd-tools/scripts/productivity-analysis.py";
+        "receipt-process" = "cd $HWC_BUSINESS_ROOT/receipts && python3 ../api/services/ocr_processor.py";
+        "work-stats" = "python3 $HWC_ADHD_ROOT/scripts/productivity-analysis.py";
         "ls" = "eza"; "vpn" = "vpnstatus"; "which-command" = "whence"; "run-help" = "man";
         "claude-usage" = "claude-monitor --plan pro"; "usage" = "claude-monitor --plan pro";
         "errors" = "journal-errors"; "errors-hour" = "journal-errors '1 hour ago'";
@@ -408,7 +408,13 @@ in
     '';
 
     # Starship prompt
-    programs.starship.enable = cfg.zsh.starship;
+    programs.starship = lib.mkIf cfg.zsh.starship {
+      enable = true;
+      settings = {
+        scan_timeout = 100;
+        command_timeout = 1000;
+      };
+    };
 
     # Direnv for development environments
     programs.direnv = {

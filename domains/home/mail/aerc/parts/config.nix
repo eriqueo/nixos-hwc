@@ -3,7 +3,8 @@ let
     common    = import ../../accounts/helpers.nix { inherit lib; };
     accounts  = config.hwc.home.mail.accounts or {};
     accVals   = lib.attrValues accounts;
-    themePart = import ./theme.nix { inherit lib config; };
+    colors    = (config.hwc.home.theme or {}).colors or {};
+    appearance = import ./appearance.nix { inherit lib colors; };
 
     maildirBase =
         let nmRoot = config.hwc.home.mail.notmuch.maildirRoot or "";
@@ -38,7 +39,7 @@ ${tagQueries}
   '';
 
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
-  stylesetConf = themePart.stylesetContent;
+  stylesetConf = appearance.stylesetContent;
 
   # Import shared tag definitions
   tags = import ./tags.nix { inherit lib; };
@@ -100,7 +101,9 @@ ${lib.concatStringsSep "\n" lines}
   stylesetFiles = lib.listToAttrs (map (name: {
     name = ".config/aerc/stylesets/${name}";
     value.text = builtins.readFile "${pkgs.aerc}/share/aerc/stylesets/${name}" + tagUserSection;
-  }) bundledStylesets);
+  }) bundledStylesets) // {
+    ".config/aerc/stylesets/hwc".text = stylesetConf;
+  };
 in
 {
   files = profileBase: {
@@ -112,7 +115,7 @@ in
       index-columns = tags<12,date<10,from<16,to<14,flags>4,subject<*
       threading-enabled = true
       confirm-quit = false
-      styleset-name = dracula
+      styleset-name = hwc
       dirlist-tree = true
       dirlist-collapse = 1
       dirlist-exclude = ^\..*|^proton(/.*)?$|^gmail-business|^gmail-personal|^acc:|^hwc_email$
