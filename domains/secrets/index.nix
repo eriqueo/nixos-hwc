@@ -320,6 +320,7 @@
     ./secrets-api.nix        # Stable read-only path facade for consumers
     ./emergency.nix          # Emergency root access for recovery
     ./hardening.nix          # Security hardening configuration
+    ./vaultwarden/index.nix  # Vaultwarden password manager
   ];
 
   # Core agenix configuration

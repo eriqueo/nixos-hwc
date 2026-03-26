@@ -366,6 +366,14 @@ in
       upstream = "http://127.0.0.1:6100";
     }
 
+  ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
+    # Vaultwarden - self-hosted password manager (port mode)
+    {
+      name = "vaultwarden";
+      mode = "port";
+      port = config.hwc.secrets.vaultwarden.reverseProxy.port;
+      upstream = "http://127.0.0.1:${toString config.hwc.secrets.vaultwarden.port}";
+    }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy
     # Enabled when hwc.ai.mcp.reverseProxy.enable = true

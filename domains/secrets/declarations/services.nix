@@ -283,5 +283,28 @@
       owner = "eric";
       group = "secrets";
     };
+
+    # Vaultwarden admin token
+    vaultwarden-admin-token = {
+      file = ../parts/services/vaultwarden-admin-token.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    # Authentik SSO/Identity Provider
+    authentik-secret-key = {
+      file = ../parts/services/authentik-secret-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    authentik-db-password = {
+      file = ../parts/services/authentik-db-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }
