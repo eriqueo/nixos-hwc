@@ -854,6 +854,9 @@
     enable = lib.mkDefault true;
   };
 
+  # Paperless-NGX document management
+  hwc.business.paperless.enable = lib.mkDefault true;
+
   #============================================================================
   # WEB APPS DOMAIN
   #============================================================================
@@ -940,6 +943,9 @@
       # schedule = "*-*-* 02:30:00";  # default (2:30 AM)
     };
   };
+
+  # Redis (used by Paperless-NGX for async task queue)
+  hwc.data.databases.redis.enable = lib.mkDefault true;
 
   # CloudBeaver - web-based database manager (access via port 12443)
   hwc.data.cloudbeaver.enable = lib.mkDefault true;
