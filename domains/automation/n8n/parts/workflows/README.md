@@ -359,6 +359,16 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
 
 **Trigger:** Webhook `POST /webhook/calculator-lead`
 
+**Architecture:** Calls the Heartwood MCP server's `/call` REST endpoint (http://localhost:6100/call)
+instead of raw PAVE GraphQL — all JT translation is encapsulated in the MCP layer.
+
+**Pipeline:**
+```
+Webhook → Extract Lead (validate) → JT: Create Account → JT: Update Account (custom fields)
+        → JT: Create Contact → JT: Create Location → JT: Create Job
+        → Prepare DB Record → Postgres: Archive Lead → Slack: Notify Eric → Respond 200
+```
+
 **Request Schema:**
 ```json
 {
@@ -385,7 +395,7 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
 
 **Features:**
 - **Validation:** Requires name and phone; returns 400 error if missing
-- **JobTread Integration (PAVE API):**
+- **JobTread Integration (via Heartwood MCP /call):**
   - Creates customer Account with type `customer`
   - Sets Account custom fields (Lead Source: Website, Project Type: Bathroom Remodel)
   - Creates Contact linked to Account
@@ -393,9 +403,14 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
   - Creates Location (defaults to Bozeman, MT)
   - Creates Job linked to Location
   - Sets Job custom fields (Job Type: Bathroom, Phase: 1. Contacted)
-- **Postgres Archive:** Inserts lead data to `hwc.calculator_leads` table
+- **Postgres Archive:** Inserts lead data to `hwc.calculator_leads` table (see migration `002-calculator-leads.sql`)
 - **Slack Notification:** Posts to #leads with estimate range, project details
 - **Response:** Returns success with JT account/job IDs
+
+**JT Custom Fields set on Account:**
+- `22PUGvBnXeYs` (Lead Source) = `website_calculator`
+- `22Nnj9KwwePZ` (Status)      = `lead_new`
+- `22Nnj9KMKEPC` (Project Type)= `Bathroom`
 
 **Response Schema:**
 ```json
@@ -438,6 +453,7 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/calculator-lead \
 **Request Schema:**
 ```json
 {
+<<<<<<< HEAD
   "name": "John Smith",
   "phone": "4065551234",
   "email": "john@example.com",
