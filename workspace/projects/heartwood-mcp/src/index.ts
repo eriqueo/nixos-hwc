@@ -143,6 +143,42 @@ async function main(): Promise<void> {
         }
         // Route the message through the SSE transport for bidirectional communication
         await activeTransport.handlePostMessage(req, res);
+      } else if (req.method === "POST" && req.url === "/call") {
+        // Direct REST endpoint for n8n and other HTTP clients.
+        // No SSE session required — call any registered tool by name.
+        // Body: { "tool": "jt_create_account", "params": { ... } }
+        let body = "";
+        req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+        req.on("end", async () => {
+          try {
+            const parsed = JSON.parse(body) as { tool?: string; params?: Record<string, unknown> };
+            const toolName = parsed.tool;
+            if (!toolName || typeof toolName !== "string") {
+              res.writeHead(400, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ error: 'Request body must include "tool" (string)' }));
+              return;
+            }
+            const tool = registry.get(toolName);
+            if (!tool) {
+              res.writeHead(404, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ error: `Unknown tool: ${toolName}`, availableTools: registry.names() }));
+              return;
+            }
+            const params = parsed.params ?? {};
+            log.info("REST /call", { tool: toolName });
+            const result = await tool.handler(params);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(result));
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            log.error("REST /call error", { error: message });
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: message }));
+          }
+        });
+      } else if (req.method === "GET" && req.url === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok", tools: registry.count() }));
       } else {
         res.writeHead(404);
         res.end("Not found");

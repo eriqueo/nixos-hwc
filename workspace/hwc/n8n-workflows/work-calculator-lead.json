@@ -1,0 +1,209 @@
+{
+  "name": "work_calculator_lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "calculator-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 300],
+      "webhookId": "calculator-lead"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate required fields and normalise the webhook payload.\n// Supports both flat and nested body (n8n wraps POST body under $json).\nconst body = $input.first().json;\nconst contact = body.contact || {};\nconst projectState = body.projectState || {};\nconst estimate = body.estimate || {};\n\nif (!contact.name || contact.name.trim() === '') {\n  throw new Error('Validation failed: contact.name is required');\n}\nif (!contact.phone || contact.phone.trim() === '') {\n  throw new Error('Validation failed: contact.phone is required');\n}\n\nconst features = projectState.features || [];\n\nreturn [{\n  json: {\n    name:          contact.name.trim(),\n    email:         (contact.email || '').trim(),\n    phone:         contact.phone.trim(),\n    notes:         (contact.notes || '').trim(),\n    project_type:  projectState.project_type  || '',\n    bathroom_size: projectState.bathroom_size || '',\n    shower_tub:    projectState.shower_tub    || '',\n    tile_level:    projectState.tile_level    || '',\n    fixtures:      projectState.fixtures      || '',\n    features:      Array.isArray(features) ? features.join(',') : String(features),\n    timeline:      projectState.timeline      || '',\n    estimate_low:  Number(estimate.low)       || 0,\n    estimate_high: Number(estimate.high)      || 0,\n    source:        body.source                || 'website_calculator'\n  }\n}];"
+      },
+      "id": "node-extract",
+      "name": "Extract Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_create_account', params: { name: $json.name, type: 'customer' } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "node-create-account",
+      "name": "JT: Create Account",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_update_account', params: { id: $json.data.id, customFieldValues: [ { customFieldId: '22PUGvBnXeYs', value: 'website_calculator' }, { customFieldId: '22Nnj9KwwePZ', value: 'lead_new' }, { customFieldId: '22Nnj9KMKEPC', value: 'Bathroom' } ] } }) }}",
+        "options": {}
+      },
+      "id": "node-update-account",
+      "name": "JT: Update Account",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_create_contact', params: { accountId: $('JT: Create Account').item.json.data.id, name: $('Extract Lead').item.json.name, email: $('Extract Lead').item.json.email, phone: $('Extract Lead').item.json.phone } }) }}",
+        "options": {}
+      },
+      "id": "node-create-contact",
+      "name": "JT: Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_create_location', params: { accountId: $('JT: Create Account').item.json.data.id, name: 'Bozeman, MT', address: 'Bozeman, MT 59715', city: 'Bozeman', state: 'MT', zip: '59715' } }) }}",
+        "options": {}
+      },
+      "id": "node-create-location",
+      "name": "JT: Create Location",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_create_job', params: { locationId: $json.data.id, name: $('Extract Lead').item.json.name + ' - Bathroom Remodel', customFields: { 'Job Type': 'Bathroom', 'Phase': '1. Contacted' } } }) }}",
+        "options": {}
+      },
+      "id": "node-create-job",
+      "name": "JT: Create Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all extracted data + JT IDs into a flat record for Postgres INSERT.\nconst lead       = $('Extract Lead').item.json;\nconst accountRes = $('JT: Create Account').item.json;\nconst jobRes     = $('JT: Create Job').item.json;\n\nreturn [{\n  json: {\n    name:          lead.name,\n    email:         lead.email,\n    phone:         lead.phone,\n    notes:         lead.notes,\n    project_type:  lead.project_type,\n    bathroom_size: lead.bathroom_size,\n    shower_tub:    lead.shower_tub,\n    tile_level:    lead.tile_level,\n    fixtures:      lead.fixtures,\n    features:      lead.features,\n    timeline:      lead.timeline,\n    estimate_low:  lead.estimate_low,\n    estimate_high: lead.estimate_high,\n    source:        lead.source,\n    jt_account_id: (accountRes.data || {}).id || '',\n    jt_job_id:     (jobRes.data     || {}).id || '',\n    status:        'new'\n  }\n}];"
+      },
+      "id": "node-prepare-db",
+      "name": "Prepare DB Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1960, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "hwc",
+        "table": "calculator_leads",
+        "columns": "name,email,phone,notes,project_type,bathroom_size,shower_tub,tile_level,fixtures,features,timeline,estimate_low,estimate_high,source,jt_account_id,jt_job_id,status",
+        "additionalFields": {}
+      },
+      "id": "node-postgres",
+      "name": "Postgres: Archive Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [2240, 300],
+      "credentials": {
+        "postgres": {
+          "id": "hwc-postgres",
+          "name": "hwc_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ blocks: [ { type: 'header', text: { type: 'plain_text', text: '\\ud83d\\udccb New Calculator Lead' } }, { type: 'section', fields: [ { type: 'mrkdwn', text: '*Name:* ' + $('Extract Lead').item.json.name }, { type: 'mrkdwn', text: '*Phone:* ' + $('Extract Lead').item.json.phone } ] }, { type: 'section', fields: [ { type: 'mrkdwn', text: '*Email:* ' + ($('Extract Lead').item.json.email || '—') }, { type: 'mrkdwn', text: '*Timeline:* ' + ($('Extract Lead').item.json.timeline || '—') } ] }, { type: 'section', fields: [ { type: 'mrkdwn', text: '*Project:* ' + $('Extract Lead').item.json.project_type + ' | ' + $('Extract Lead').item.json.bathroom_size + ' | ' + $('Extract Lead').item.json.tile_level }, { type: 'mrkdwn', text: '*Estimate:* $' + $('Extract Lead').item.json.estimate_low.toLocaleString() + ' – $' + $('Extract Lead').item.json.estimate_high.toLocaleString() } ] }, { type: 'section', text: { type: 'mrkdwn', text: '*Features:* ' + ($('Extract Lead').item.json.features || '—') } }, { type: 'section', text: { type: 'mrkdwn', text: '*JT:* Account `' + $('Prepare DB Record').item.json.jt_account_id + '` → Job `' + $('Prepare DB Record').item.json.jt_job_id + '`' } }, { type: 'context', elements: [ { type: 'mrkdwn', text: $('Extract Lead').item.json.notes ? '*Notes:* ' + $('Extract Lead').item.json.notes : '_No notes_' } ] } ] }) }}",
+        "options": {}
+      },
+      "id": "node-slack",
+      "name": "Slack: Notify Eric",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2520, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, jt_account_id: $('Prepare DB Record').item.json.jt_account_id, jt_job_id: $('Prepare DB Record').item.json.jt_job_id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2800, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Extract Lead",        "type": "main", "index": 0 }]]
+    },
+    "Extract Lead": {
+      "main": [[{ "node": "JT: Create Account",  "type": "main", "index": 0 }]]
+    },
+    "JT: Create Account": {
+      "main": [[{ "node": "JT: Update Account",  "type": "main", "index": 0 }]]
+    },
+    "JT: Update Account": {
+      "main": [[{ "node": "JT: Create Contact",  "type": "main", "index": 0 }]]
+    },
+    "JT: Create Contact": {
+      "main": [[{ "node": "JT: Create Location", "type": "main", "index": 0 }]]
+    },
+    "JT: Create Location": {
+      "main": [[{ "node": "JT: Create Job",      "type": "main", "index": 0 }]]
+    },
+    "JT: Create Job": {
+      "main": [[{ "node": "Prepare DB Record",   "type": "main", "index": 0 }]]
+    },
+    "Prepare DB Record": {
+      "main": [[{ "node": "Postgres: Archive Lead", "type": "main", "index": 0 }]]
+    },
+    "Postgres: Archive Lead": {
+      "main": [[{ "node": "Slack: Notify Eric",  "type": "main", "index": 0 }]]
+    },
+    "Slack: Notify Eric": {
+      "main": [[{ "node": "Respond to Webhook",  "type": "main", "index": 0 }]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "tags": ["business", "jobtread", "calculator"]
+}

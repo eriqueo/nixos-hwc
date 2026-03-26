@@ -352,6 +352,71 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
 
 ---
 
+### work-calculator-lead.json  *(in `workspace/hwc/n8n-workflows/`)*
+**Purpose:** Turn a bathroom calculator submission into a live JobTread lead in one shot
+
+**Trigger:** Webhook `POST /webhook/calculator-lead`
+
+**Architecture:** Calls the Heartwood MCP server's `/call` REST endpoint (http://localhost:6100/call)
+instead of raw PAVE GraphQL — all JT translation is encapsulated in the MCP layer.
+
+**Pipeline:**
+```
+Webhook → Extract Lead (validate) → JT: Create Account → JT: Update Account (custom fields)
+        → JT: Create Contact → JT: Create Location → JT: Create Job
+        → Prepare DB Record → Postgres: Archive Lead → Slack: Notify Eric → Respond 200
+```
+
+**JT Custom Fields set on Account:**
+- `22PUGvBnXeYs` (Lead Source) = `website_calculator`
+- `22Nnj9KwwePZ` (Status)      = `lead_new`
+- `22Nnj9KMKEPC` (Project Type)= `Bathroom`
+
+**Request Schema:**
+```json
+{
+  "contact":      { "name": "Jane Doe", "email": "...", "phone": "406-555-1234", "notes": "..." },
+  "projectState": { "project_type": "full_gut", "bathroom_size": "medium",
+                    "shower_tub": "shower_only", "tile_level": "mid",
+                    "fixtures": "upgraded", "features": ["heated_floor","niches"],
+                    "timeline": "1_3_months" },
+  "estimate":     { "low": 22000, "high": 32000 },
+  "source":       "website_calculator"
+}
+```
+
+**Response:** `{ "success": true, "jt_account_id": "...", "jt_job_id": "..." }`
+
+**Postgres:** Inserts into `hwc.calculator_leads` (see migration `002-calculator-leads.sql`)
+
+**Credentials required after import:**
+- `hwc_postgres` Postgres credential: host=localhost, port=5432, database=hwc, user=eric
+  (or run migration then configure in n8n UI → Settings → Credentials)
+- `SLACK_WEBHOOK_URL` env var (already set via agenix → `/run/n8n/secrets.env`)
+
+**Test command:**
+```bash
+curl -s -X POST http://localhost:5678/webhook/calculator-lead \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact":      { "name": "TEST Lead - Delete Me", "email": "test@example.com", "phone": "406-555-0000" },
+    "projectState": { "project_type": "full_gut", "bathroom_size": "medium",
+                      "shower_tub": "shower_only", "tile_level": "mid",
+                      "fixtures": "upgraded", "features": ["heated_floor","niches"],
+                      "timeline": "1_3_months" },
+    "estimate":     { "low": 22000, "high": 32000 },
+    "source":       "website_calculator"
+  }'
+```
+
+**Prerequisites:**
+1. Run migration: `sudo -u postgres psql -d hwc -f domains/automation/n8n/parts/migrations/002-calculator-leads.sql`
+2. Rebuild heartwood-mcp to pick up `/call` endpoint: `cd workspace/projects/heartwood-mcp && npm run build && sudo systemctl restart heartwood-mcp`
+3. Create `hwc_postgres` credential in n8n UI
+4. Import workflow and activate
+
+---
+
 ## Import Instructions
 
 1. Access n8n: `https://hwc.ocelot-wahoo.ts.net:2443`

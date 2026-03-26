@@ -61,6 +61,58 @@ src/
         └── org-users.ts      # Organization & Users (3 tools)
 ```
 
+## HTTP Endpoints (SSE mode)
+
+When running in SSE mode (`TRANSPORT=sse`), three HTTP endpoints are available:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `GET /sse` | GET | Establish MCP SSE session (for Claude chat) |
+| `POST /messages` | POST | Send JSON-RPC messages to active SSE session |
+| `POST /call` | POST | **Direct REST tool call — no SSE session needed** |
+| `GET /health` | GET | Health check: `{"status":"ok","tools":63}` |
+
+### `/call` — Direct REST Tool Calls
+
+The `/call` endpoint lets any HTTP client (n8n, curl, scripts) invoke tools
+without the SSE session handshake:
+
+```bash
+# Create a JT account
+curl -s -X POST http://localhost:6100/call \
+  -H "Content-Type: application/json" \
+  -d '{"tool":"jt_create_account","params":{"name":"Jane Doe","type":"customer"}}' \
+  | python3 -m json.tool
+
+# Update account custom fields
+curl -s -X POST http://localhost:6100/call \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool":"jt_update_account",
+    "params":{
+      "id":"ACCOUNT_ID",
+      "customFieldValues":[
+        {"customFieldId":"22PUGvBnXeYs","value":"website_calculator"},
+        {"customFieldId":"22Nnj9KwwePZ","value":"lead_new"}
+      ]
+    }
+  }'
+
+# List all available tools
+curl -s http://localhost:6100/call \
+  -X POST -d '{"tool":"nonexistent"}' | python3 -c "import sys,json; d=json.load(sys.stdin); print('\n'.join(d.get('availableTools',[])))"
+```
+
+**Request body:** `{ "tool": "<tool-name>", "params": { ... } }`
+
+**Response:** Same `ToolResult` JSON the MCP server returns to Claude:
+- Success: `{ "success": true, "data": { ... } }`
+- Error: `{ "success": false, "error": "...", "code": "..." }`
+
+> **n8n integration**: Use HTTP Request nodes with POST to `http://localhost:6100/call`.
+> Since n8n runs in host-network mode (`networkMode = "host"`), `localhost:6100`
+> is directly reachable from inside the n8n container.
+
 ## NixOS Deployment
 
 The NixOS module lives at `domains/ai/mcp/heartwood/index.nix`. Enable with:
