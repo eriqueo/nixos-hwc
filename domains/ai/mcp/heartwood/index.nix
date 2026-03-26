@@ -16,7 +16,6 @@
 
 let
   cfg = config.hwc.ai.mcp.heartwood;
-  mcpCfg = config.hwc.ai.mcp;
   paths = config.hwc.paths;
   inherit (lib) mkIf mkMerge;
 
@@ -187,10 +186,10 @@ in
     # VALIDATION
     #--------------------------------------------------------------------------
     assertions = [
-      {
-        assertion = mcpCfg.enable;
-        message = "hwc.ai.mcp.heartwood requires hwc.ai.mcp.enable = true";
-      }
+      # Note: hwc.ai.mcp.heartwood is intentionally standalone — it does NOT
+      # require hwc.ai.mcp.enable. The parent MCP module depends on mcp-proxy
+      # which is not available in nixpkgs-stable 24.05. Heartwood-mcp is a
+      # self-contained Node.js SSE server and has no dependency on mcp-proxy.
       {
         assertion = config.age.secrets ? jobtread-grant-key;
         message = ''

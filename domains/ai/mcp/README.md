@@ -18,5 +18,6 @@ mcp/
 ```
 
 ## Changelog
+- 2026-03-26: heartwood-mcp decoupled from parent hwc.ai.mcp.enable — now standalone; enabled directly in server config
 - 2026-03-25: Added heartwood/ subdomain — Heartwood MCP Server (Phase 1: 63 JT tools)
 - 2026-02-28: Added README for Charter Law 12 compliance
