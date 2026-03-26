@@ -34,6 +34,17 @@ thunar, thunderbird, wasistlos, waybar, wayvnc, yazi
 ```
 Update this list whenever `domains/home/apps/` gains a new module so the count stays accurate.
 
+### Workspace Support (`workspace/home/`)
+
+```
+workspace/home/
+├── scraper/              # Social media scraper (referenced by apps/scraper/index.nix)
+├── website_seo_scraper/  # SEO analysis tool
+├── mail/                 # Mailbot
+│   └── mailbot/
+└── photo-dedup/          # Duplicate photo finder (referenced by shell alias)
+```
+
 ## Usage
 - Import `domains/home/index.nix` from the Home Manager profile and toggle modules via `hwc.home.*` options.
 - Keep system-lane imports (`sys.nix` files) in system profiles only; the home lane must stay evaluatable on non-NixOS hosts (`osConfig` guarded).

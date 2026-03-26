@@ -54,7 +54,22 @@ media/
 └── media-native/            # Native media service aggregator
 ```
 
+### Workspace Support (`workspace/media/`)
+
+```
+workspace/media/
+├── youtube-services/      # YT packages + transcript formatter (referenced by youtube/parts/*.nix)
+│   ├── packages/          # yt_core, yt_transcripts_api, yt_videos_api
+│   └── transcript-formatter/
+├── scripts/               # beets helpers, media organizer, migration scripts
+├── hooks/                 # Media-specific event hooks
+├── config-examples/       # Reference configurations
+├── cleanup-raw-files/     # Raw file cleanup tool
+└── n8n-workflows/         # Media-related n8n workflow JSON configs
+```
+
 ## Changelog
 
+- 2026-03-26: workspace/youtube-services/ moved to workspace/media/youtube-services/ (domain alignment); audiobook-copier path updated to workspace/automation/hooks/
 - 2026-03-04: Namespace migration hwc.server.{containers,native}.* → hwc.media.*
 - 2026-03-04: Created media domain; moved all media containers and native services from domains/server/ (Phase 7 of DDD migration)

@@ -12,16 +12,29 @@ YouTube content acquisition APIs for transcript extraction and video downloads. 
 ## Structure
 
 ```
-domains/server/native/youtube/
+domains/media/youtube/
 ├── README.md           # This file
 ├── index.nix           # Domain aggregator
-├── options.nix         # hwc.server.native.youtube.* options
+├── options.nix         # hwc.media.youtube.* options
 └── parts/
     ├── legacy-api.nix  # Original transcript API (FastAPI, direct output)
     ├── yt-transcripts-api/
     │   └── default.nix # New job-based transcript API with worker
     └── yt-videos-api/
         └── default.nix # Video download API with atomic finalization
+```
+
+### Workspace Support (`workspace/media/youtube-services/`)
+
+```
+workspace/media/youtube-services/
+├── packages/
+│   ├── yt_core/             # Shared library (SQLAlchemy, Pydantic models)
+│   ├── yt_transcripts_api/  # Transcript extraction API + worker
+│   └── yt_videos_api/       # Video download API + worker
+├── transcript-formatter/    # Obsidian transcript formatter (Ollama/Qwen)
+├── DEPLOYMENT.md
+└── pyproject.toml
 ```
 
 ## Configuration
@@ -86,5 +99,6 @@ hwc.server.native.youtube.videos = {
 
 ## Changelog
 
-- 2026-02-27: Consolidated from networking domain; namespace changed from hwc.services.* to hwc.server.native.youtube.*
+- 2026-03-26: Workspace source moved from workspace/youtube-services/ to workspace/media/youtube-services/ (domain alignment); all nix refs updated
+- 2026-03-04: Namespace migration hwc.server.native.youtube.* → hwc.media.youtube.*
 - 2026-02-27: Initial domain creation with legacy API, transcripts API, and videos API

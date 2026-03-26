@@ -35,17 +35,20 @@ domains/business/
     └── api.nix           # Remodel API (FastAPI)
 ```
 
-### Workspace Layout
+### Workspace Layout (`workspace/business/`)
 
 ```
 workspace/business/
-├── estimator-pwa/      # React app (Vite build)
-│   ├── dist/           # Built output served by Caddy
-│   ├── scripts/        # export_catalog.sh
-│   └── src/data/       # catalog_export.json
-├── remodel-api/        # FastAPI backend
-├── catalog.db          # SQLite cost data (source of truth)
-└── schema.sql          # Postgres schema reference
+├── estimator-pwa/         # React app (Vite build)
+│   ├── dist/              # Built output served by Caddy
+│   ├── scripts/           # export_catalog.sh
+│   └── src/data/          # catalog_export.json
+├── estimate-automation/   # Estimation pipeline (data, docs, tests)
+├── remodel-api/           # FastAPI backend
+├── bathroom-calculator/   # Calculator PWA (Vite build)
+├── migrate_catalog.py     # SQLite → Postgres migration script
+├── catalog.db             # SQLite cost data (source of truth)
+└── schema.sql             # Postgres schema reference
 ```
 
 ## Configuration
@@ -140,6 +143,7 @@ If source not deployed, service returns stub response with deployment instructio
 
 ## Changelog
 
+- 2026-03-26: Added migrate_catalog.py (SQLite → Postgres migration), estimate-automation moved to workspace/business/
 - 2026-03-25: Added Paperless setup script for Heartwood Craft (tags, doc types, correspondents, custom fields)
 - 2026-03-24: Fixed workspace path in api.nix (hwc/remodel_web_app → business/remodel-api), updated README structure and deployment paths
 - 2026-03-23: Consolidated business domain - moved estimator from webapps, workspace reorganized to workspace/business/
