@@ -14,8 +14,9 @@ workspace/business/
 │   ├── routers/
 │   ├── engines/
 │   └── Dockerfile
-├── catalog.db          # SQLite cost catalog (source of truth)
-├── schema.sql          # Postgres schema reference
+├── catalog.db          # SQLite cost catalog (source of truth, read-only)
+├── schema.sql          # Postgres schema (hwc database, public schema)
+├── migrate_catalog.py  # Idempotent SQLite → Postgres migration script
 └── README.md
 ```
 
@@ -51,6 +52,26 @@ catalog.db → export_catalog.sh → src/data/catalog_export.json → npm run bu
 ```
 
 Run export manually after updating catalog, then rebuild PWA.
+
+## Postgres Catalog
+
+The SQLite catalog is mirrored into the `hwc` Postgres database for use by
+the MCP server, n8n workflows, and future apps. The SQLite file remains the
+source of truth — Postgres is a copy.
+
+**Tables populated**: `catalog_items` (62 rows), `trade_rates` (9 rows)
+
+**Migration**:
+```bash
+python3 workspace/business/migrate_catalog.py
+```
+
+The script is idempotent (`ON CONFLICT DO UPDATE`). Safe to re-run after
+catalog.db changes.
+
+## Changelog
+
+- 2026-03-26: Added migrate_catalog.py; seeded hwc Postgres from catalog.db (62 items, 9 trades)
 
 ## Related
 
