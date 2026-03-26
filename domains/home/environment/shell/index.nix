@@ -97,7 +97,7 @@ in
         "services" = "list-services"; "ss" = "list-services";
         "rebuild" = "grebuild"; "lint" = "charter-lint";
         "caddy" = "caddy-health"; "health" = "caddy-health";
-        "photo-dedup" = "nix-shell -p rmlint czkawka jq bc --run '$HWC_NIXOS_DIR/workspace/utilities/photo-dedup/photo-dedup.sh'";
+        "photo-dedup" = "nix-shell -p rmlint czkawka jq bc --run '$HWC_NIXOS_DIR/workspace/home/photo-dedup/photo-dedup.sh'";
       };
       description = "Shell aliases for zsh";
     };
@@ -311,12 +311,12 @@ in
 
         # add-app shell function
         add-app() {
-          ${config.home.homeDirectory}/.nixos/workspace/nixos/add-home-app.sh "$@"
+          ${config.home.homeDirectory}/.nixos/workspace/nixos-dev/add-home-app.sh "$@"
         }
 
         # Interactive graph function for hwc-graph tool
         graph() {
-          local graph_script="${config.home.homeDirectory}/.nixos/workspace/nixos/graph/hwc_graph.py"
+          local graph_script="${config.home.homeDirectory}/.nixos/workspace/nixos-dev/graph/hwc_graph.py"
 
           # If arguments provided, pass directly to script
           if [ $# -gt 0 ]; then

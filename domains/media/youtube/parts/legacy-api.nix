@@ -34,7 +34,7 @@ let
   pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
   # Source directory for transcript scripts
-  scriptDir = "${paths.nixos}/workspace/youtube-services/transcript-formatter";
+  scriptDir = "${paths.nixos}/workspace/media/youtube-services/transcript-formatter";
   apiScript = "${scriptDir}/yt-transcript-api.py";
 
   # Wrapper script to run the API with correct PYTHONPATH
