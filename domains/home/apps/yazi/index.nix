@@ -6,7 +6,8 @@ let
 
   tomlConfig   = import ./parts/toml.nix;
   keymapConfig = import ./parts/keymap.nix;
-  themeConfig  = import ./parts/theme.nix { inherit config; };
+  colors       = (config.hwc.home.theme or {}).colors or {};
+  appearance   = import ./parts/appearance.nix { inherit lib colors; };
 
   # Inline the former plugins.nix content here
   pluginsSources = {
@@ -45,8 +46,8 @@ in
     xdg.configFile = {
       "yazi/yazi.toml".text       = tomlConfig."yazi/yazi.toml".text;
       "yazi/keymap.toml".text     = keymapConfig."yazi/keymap.toml".text;
-      "yazi/theme.toml".text      = themeConfig."yazi/theme.toml".text;
-      "yazi/Kanagawa.tmTheme".text = themeConfig."yazi/Kanagawa.tmTheme".text;
+      "yazi/theme.toml".text       = appearance.theme;
+      "yazi/Kanagawa.tmTheme".text  = appearance.syntaxTheme;
     };
   };
 }

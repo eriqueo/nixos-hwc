@@ -39,7 +39,7 @@ in
     #==========================================================================
     dataDir = lib.mkOption {
       type = lib.types.path;
-      default = paths.business.root or "/opt/business";
+      default = toString paths.business.root;
       description = "Root directory for business data";
     };
 
@@ -95,7 +95,7 @@ in
 
       storageRoot = lib.mkOption {
         type = lib.types.str;
-        default = "${paths.hot.root or "/mnt/hot"}/receipts";
+        default = toString paths.hot.receipts;
         description = "Root directory for receipt storage";
       };
 
@@ -139,7 +139,7 @@ in
 
         workingDirectory = lib.mkOption {
           type = lib.types.str;
-          default = "/opt/business/api";
+          default = toString paths.business.api;
           description = "Working directory for the API service";
         };
 

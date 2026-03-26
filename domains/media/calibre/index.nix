@@ -2,6 +2,7 @@
 
 let
   cfg = config.hwc.media.calibre;
+  paths = config.hwc.paths;
 in
 {
   #==========================================================================
@@ -16,7 +17,7 @@ in
       desktop = lib.mkOption { type = lib.types.int; default = 8083; description = "Port for Calibre desktop interface (KasmVNC)"; };
       webserver = lib.mkOption { type = lib.types.int; default = 8181; description = "Port for Calibre content server"; };
     };
-    library = lib.mkOption { type = lib.types.path; default = "/mnt/media/books/ebooks"; description = "Path to ebooks library"; };
+    library = lib.mkOption { type = lib.types.path; default = "${paths.media.books}/ebooks"; description = "Path to ebooks library"; };
   };
 
   imports = [
