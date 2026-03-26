@@ -6,4 +6,4 @@ export MCP_MODE="stdio"
 export LOG_LEVEL="error"
 export NO_COLOR=1
 export DISABLE_CONSOLE_OUTPUT="true"
-exec npx -y n8n-mcp "$@" 2>/dev/null
+exec /run/current-system/sw/bin/node /home/eric/.npm-global/lib/node_modules/n8n-mcp/dist/mcp/index.js "$@" 2>/dev/null
