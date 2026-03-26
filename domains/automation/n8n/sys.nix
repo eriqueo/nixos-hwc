@@ -64,7 +64,7 @@ in
         N8N_VERSION_NOTIFICATIONS_ENABLED = "false";
         N8N_DIAGNOSTICS_ENABLED = "false";
         N8N_HIRING_BANNER_ENABLED = "false";
-        N8N_EDITOR_BASE_URL = "https://hwc.ocelot-wahoo.ts.net:2443/";
+        N8N_EDITOR_BASE_URL = "https://hwc.ocelot-wahoo.ts.net:10000/";
         WEBHOOK_URL = "https://hwc.ocelot-wahoo.ts.net:10000/";
         N8N_PROXY_HOPS = "1";
         N8N_ENDPOINT_WEBHOOK = "webhook";

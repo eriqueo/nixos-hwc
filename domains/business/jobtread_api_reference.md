@@ -1,8 +1,8 @@
 # JobTread API Reference
 ## Heartwood Craft — n8n Workflow Integration Guide
 
-**57 operations via the PAVE API · `POST https://api.jobtread.com/pave`**  
-Bozeman, MT · Single-member LLC · Last updated: March 2026
+**63 MCP tools + 57 n8n operations via the PAVE API · `POST https://api.jobtread.com/pave`**
+Bozeman, MT · Single-member LLC · Last updated: 2026-03-25
 
 ---
 
@@ -15,6 +15,7 @@ Bozeman, MT · Single-member LLC · Last updated: March 2026
 5. [Critical Gotchas & Known Issues](#section-5--critical-gotchas--known-issues)
 6. [n8n Node Patterns & Expressions](#section-6--n8n-node-patterns--expressions)
 7. [JobTread Native Workflows](#section-7--jobtread-native-workflows)
+8. [Heartwood MCP Server Integration](#section-8--heartwood-mcp-server-integration)
 
 ---
 
@@ -1340,6 +1341,205 @@ JT Workflows (launched Sep 2025) are trigger-based automations built directly in
 3. **Can filters reference custom field values?** Specifically: can you filter on Source to apply different templates to different lead types?
 4. **How does branching logic work in practice?** Ask for a live demo.
 5. **Are there rate limits on workflow executions?** Important for a high-volume automation setup.
+
+---
+
+# Section 8 — Heartwood MCP Server Integration
+
+The self-hosted Heartwood MCP Server (`workspace/projects/heartwood-mcp/`) replaces the $50/month datax JT MCP connector. It exposes 63 JT tools via MCP protocol over SSE transport.
+
+**Deployed:** 2026-03-25 · **Status:** Operational (createAccount verified)
+
+---
+
+## Architecture
+
+| Component | Location | Notes |
+|---|---|---|
+| TypeScript source | `workspace/projects/heartwood-mcp/src/` | Build with `npm run build` |
+| Built server | `/opt/business/heartwood-mcp/dist/` | Deployed manually after build |
+| NixOS module | `domains/ai/mcp/heartwood/index.nix` | `hwc.ai.mcp.heartwood.enable = true` |
+| systemd service | `heartwood-mcp.service` | SSE on `127.0.0.1:6100` |
+| Caddy proxy | Port 16100 | `https://hwc.ocelot-wahoo.ts.net:16100/sse` |
+| Secrets | agenix `jobtread-grant-key` | Injected via `heartwood-mcp-env.service` |
+| API reference | `domains/business/jobtread_api_reference.md` | This file |
+
+---
+
+## PAVE Envelope Format (Critical)
+
+PAVE is NOT a REST API. ALL requests are `POST https://api.jobtread.com/pave` with auth **in the body** (not as a Bearer header). The request envelope wraps everything in a `query` key:
+
+```json
+{
+  "query": {
+    "$": {
+      "grantKey": "{{ from agenix secret }}",
+      "notify": false,
+      "viaUserId": "22Nm3uFeRB7s"
+    },
+    "OPERATION_NAME": {
+      "$": { /* parameters */ },
+      "returnedField1": {},
+      "returnedField2": { "nestedField": {} }
+    }
+  }
+}
+```
+
+**Key rules:**
+- Auth is `grantKey` inside `query.$`, NOT an `Authorization: Bearer` header
+- Operations are named keys (`createAccount`, `updateAccount`, `organization`)
+- Fields to return are nested empty objects (`{ id: {}, name: {} }`)
+- Parameters go inside the operation's `$` key
+- Responses are nested under the operation name
+
+---
+
+## Operation Patterns
+
+### Create: `createAccount`, `createJob`, `createContact`, etc.
+
+```json
+{
+  "query": {
+    "$": { "grantKey": "...", "notify": false },
+    "createAccount": {
+      "$": { "name": "Test", "type": "customer", "organizationId": "22Nm3uFevXMb" },
+      "createdAccount": { "id": {}, "name": {}, "type": {} }
+    }
+  }
+}
+```
+
+Response: `{ "createAccount": { "createdAccount": { "id": "22PUPiRetepp", ... } } }`
+
+**Return field gotcha:** `createdAccount` does NOT support all fields that a query does. Fields like `updatedAt`, `createdAt`, and nested relations will cause HTTP 400. Use only basic fields (`id`, `name`, `type`) for create return values.
+
+### Update: `updateAccount`, `updateDocument`, etc.
+
+```json
+{
+  "query": {
+    "$": { "grantKey": "...", "notify": false },
+    "updateAccount": {
+      "$": { "id": "22PUPiRetepp", "customFieldValues": { "22PUGvBnXeYs": "Website" } },
+      "account": { "id": {}, "name": {} }
+    }
+  }
+}
+```
+
+### Read (single by ID): uses `node` query
+
+```json
+{
+  "query": {
+    "$": { "grantKey": "..." },
+    "node": {
+      "$": { "id": "22PUPiRetepp" },
+      "... on Account": { "id": {}, "name": {}, "type": {}, "customFieldValues": { "id": {}, "value": {}, "customField": { "id": {}, "name": {} } } }
+    }
+  }
+}
+```
+
+### Query (list/search): uses `organization` key
+
+```json
+{
+  "query": {
+    "$": { "grantKey": "..." },
+    "organization": {
+      "$": {},
+      "accounts": {
+        "$": { "size": 10, "where": { "and": [[["name", "like", "%Dempsey%"]]] } },
+        "nodes": { "id": {}, "name": {}, "type": {} }
+      }
+    }
+  }
+}
+```
+
+---
+
+## MCP Server Implementation Notes
+
+### PaveClient (`src/pave/client.ts`)
+
+Methods map to PAVE patterns:
+
+| Method | PAVE Pattern | Example |
+|---|---|---|
+| `pave.create(opName, params, fields)` | `{ createAccount: { $: params, createdAccount: fields } }` | `pave.create("createAccount", { name, type }, ACCOUNT_BASIC_FIELDS)` |
+| `pave.update(opName, params, fields)` | `{ updateAccount: { $: params, account: fields } }` | `pave.update("updateAccount", { id, ...data }, ACCOUNT_BASIC_FIELDS)` |
+| `pave.read(entityType, id, fields)` | `{ node: { $: { id }, "... on Type": fields } }` | `pave.read("account", id, ACCOUNT_FIELDS)` |
+| `pave.query(opts)` | `{ organization: { $: {}, entities: { $: where, nodes: fields } } }` | `pave.query({ entityPlural: "accounts", returnFields, where })` |
+| `pave.raw(ops)` | Direct envelope passthrough | For special operations |
+
+### MCP SDK Integration (`src/index.ts`)
+
+Uses the low-level `Server` class (not `McpServer`) because `McpServer.tool()` requires Zod schemas and treats plain JSON schemas as "annotations", causing tool arguments to not be passed to handlers. With `Server` + `setRequestHandler(CallToolRequestSchema, ...)`, we get direct access to `request.params.arguments`.
+
+### Where Clause Format
+
+PAVE `where` uses nested arrays, not the object/condition format common in ORMs:
+
+```json
+{ "and": [[["fieldName", "operator", value]]] }
+```
+
+Operators: `=`, `!=`, `>`, `>=`, `<`, `<=`, `like`, `in`, `not in`, `is null`, `is not null`
+
+The helpers in `src/tools/jt/helpers.ts` build these:
+- `buildFilter(params, mappings)` — builds `where` from optional params with `=` default
+- `buildSearchFilter(params, searchParam, searchField)` — wraps search term with `%` for `like`
+
+---
+
+## Deployment Workflow
+
+After code changes in `workspace/projects/heartwood-mcp/`:
+
+```bash
+cd workspace/projects/heartwood-mcp
+npm run build                              # Compile TypeScript
+sudo cp -r dist/* /opt/business/heartwood-mcp/dist/   # Deploy
+sudo systemctl restart heartwood-mcp       # Restart service
+journalctl -u heartwood-mcp -f             # Watch logs
+```
+
+---
+
+## Verified Operations Log
+
+| Date | Tool | Status | Notes |
+|---|---|---|---|
+| 2026-03-25 | `jt_create_account` | PASS | Created `22PUPiRetepp` via SSE transport |
+
+---
+
+## Known Issues & Lessons Learned
+
+### 1. Return fields differ between create and query contexts
+
+`createdAccount` only supports basic fields (`id`, `name`, `type`). Requesting `updatedAt`, `createdAt`, or nested relations causes HTTP 400. Use `ACCOUNT_BASIC_FIELDS` for create/update, full `ACCOUNT_FIELDS` for query/read.
+
+### 2. McpServer.tool() doesn't work with JSON schemas
+
+The MCP SDK's `McpServer` class expects Zod schemas for tool registration. Passing plain JSON schema objects as the 3rd arg to `server.tool(name, desc, schema, cb)` causes the SDK to interpret them as "annotations" rather than parameter schemas. The callback then receives only the `extra` context object (sessionId, headers) instead of tool arguments. **Fix:** Use low-level `Server` class with `setRequestHandler(CallToolRequestSchema, ...)`.
+
+### 3. PAVE auth is in the body, not a header
+
+Unlike most APIs, PAVE does NOT use `Authorization: Bearer <token>`. The `grantKey` goes inside the request body under `query.$`. Sending a Bearer header results in the key being ignored and auth failing silently.
+
+### 4. Missing `default.nix` for NixOS directory imports
+
+NixOS `import ./heartwood` expects `default.nix`, not `index.nix`. The PR shipped only `index.nix`, requiring a `default.nix` shim (`import ./index.nix`).
+
+### 5. TypeScript operator type mismatch
+
+`PaveCondition.operator` uses a string literal union, but helper functions typed operators as plain `string`. Fix: use `PaveWhereCondition` tuple type `[string, string, unknown]` which avoids the issue.
 
 ---
 
