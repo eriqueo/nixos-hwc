@@ -520,10 +520,19 @@
     # - enableRAG: true
   };
 
-  # MCP (Model Context Protocol) server for LLM access
-  # Provides filesystem access to ~/.nixos for AI assistants
-  # DISABLED: mcp-proxy not available in nixpkgs-stable 24.05
+  # MCP (Model Context Protocol) parent module — DISABLED (mcp-proxy not in nixpkgs-stable 24.05)
+  # The parent module (filesystem + proxy servers) requires mcp-proxy which is unavailable.
   hwc.ai.mcp.enable = lib.mkForce false;
+
+  # Heartwood MCP Server — standalone JT tool server (63 tools via PAVE API)
+  # Does NOT require hwc.ai.mcp.enable — standalone Node.js SSE service on port 6100.
+  # Used by: n8n workflows (POST /call), Claude chat (SSE transport)
+  hwc.ai.mcp.heartwood = {
+    enable = true;
+    transport = "sse";
+    sse.host = "127.0.0.1";
+    sse.port = 6100;
+  };
 
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
   # NixOS config excluded - it's in git. Databases handled by preBackupScript.

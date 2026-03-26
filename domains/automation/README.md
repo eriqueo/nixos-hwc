@@ -24,6 +24,7 @@ automation/
 ```
 
 ## Changelog
+- 2026-03-26: Add work_calculator_lead n8n workflow (Heartwood MCP /call → JT + Postgres + Slack); migration 002-calculator-leads.sql
 - 2026-03-18: Add MQTT integration for n8n, allowing detection events to be forwarded via webhook
 - 2026-03-15: Add Tailscale Funnel service to expose n8n on port 10000, providing full access for external automation tools.
 
