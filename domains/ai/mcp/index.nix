@@ -112,7 +112,7 @@ in
   # IMPORTS
   #==========================================================================
   imports = [
-    ./heartwood/index.nix   # Heartwood MCP Server — unified business system interface
+    # Heartwood MCP moved to domains/business/mcp/ (hwc.business.mcp.*)
   ];
 
   #==========================================================================

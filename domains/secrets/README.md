@@ -24,7 +24,9 @@ domains/secrets/
 │   └── system/          # User passwords, SSH keys, backups
 ├── secrets-api.nix      # Stable path facade → `hwc.secrets.api.*`
 ├── emergency.nix        # Recovery account/password wiring
-└── hardening.nix        # Firewall/SSH/fail2ban/audit toggles under `hwc.secrets.hardening.*`
+├── hardening.nix        # Firewall/SSH/fail2ban/audit toggles under `hwc.secrets.hardening.*`
+└── vaultwarden/         # Self-hosted Bitwarden password manager (hwc.secrets.vaultwarden.*)
+    └── index.nix
 ```
 
 ## How It Fits Together
@@ -43,3 +45,6 @@ domains/secrets/
 - System lane modules read from `hwc.secrets.api.*` and must avoid declaring secrets themselves.
 - Permission model: secrets are owned by `root:secrets` with mode `0440` as defined in declaration files.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
+
+## Changelog
+- 2026-03-26: Added Vaultwarden self-hosted password manager module
