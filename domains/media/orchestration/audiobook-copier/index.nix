@@ -51,7 +51,7 @@ in
         mkdir -p ${config.hwc.paths.hot.downloads}/scripts
 
         # Deploy audiobook copier script from workspace
-        cp ${workspaceDir}/hooks/audiobook-copier.py ${config.hwc.paths.hot.downloads}/scripts/
+        cp ${workspaceDir}/automation/hooks/audiobook-copier.py ${config.hwc.paths.hot.downloads}/scripts/
         chmod +x ${config.hwc.paths.hot.downloads}/scripts/audiobook-copier.py
 
         chown -R 1000:1000 ${cfg.stateDir}
