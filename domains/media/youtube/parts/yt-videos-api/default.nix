@@ -28,7 +28,7 @@ let
   yt-core = pkgs.python3Packages.buildPythonPackage {
     pname = "yt-core";
     version = "0.1.0";
-    src = lib.cleanSource "${paths.nixos}/workspace/youtube-services/packages/yt_core";
+    src = lib.cleanSource "${paths.nixos}/workspace/media/youtube-services/packages/yt_core";
     format = "pyproject";
 
     propagatedBuildInputs = with pkgs.python3Packages; [
@@ -53,7 +53,7 @@ let
   yt-videos-api = pkgs.python3Packages.buildPythonPackage {
     pname = "yt-videos-api";
     version = "0.1.0";
-    src = lib.cleanSource "${paths.nixos}/workspace/youtube-services/packages/yt_videos_api";
+    src = lib.cleanSource "${paths.nixos}/workspace/media/youtube-services/packages/yt_videos_api";
     format = "pyproject";
 
     propagatedBuildInputs = with pkgs.python3Packages; [
@@ -150,7 +150,7 @@ let
     export DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/db-url")"
 
     # Run Alembic migrations
-    cd ${paths.nixos}/workspace/youtube-services/packages/yt_videos_api/migrations
+    cd ${paths.nixos}/workspace/media/youtube-services/packages/yt_videos_api/migrations
     ${pythonEnv}/bin/alembic upgrade head
 
     echo "[yt-videos-api-setup] Migrations complete"

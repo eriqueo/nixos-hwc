@@ -3,7 +3,7 @@
 
 let
   # Assets dir: from domains/home/environment/scripts -> up 4 -> workspace/youtube-services/transcript-formatter
-  assetDir = ../../../../workspace/youtube-services/transcript-formatter;
+  assetDir = ../../../../workspace/media/youtube-services/transcript-formatter;
 
   # Python w/ tkinter + deps (python3Full is gone)
   py = pkgs.python3.withPackages (ps: with ps; [ requests watchdog tkinter ]);
