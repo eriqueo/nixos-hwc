@@ -1,13 +1,21 @@
 /**
  * PAVE API type definitions.
  *
- * PAVE is JobTread's proprietary query language. It uses HTTP POST with a JSON
- * envelope that specifies the operation (action), entity, fields, filters, etc.
- * Responses always return HTTP 200 — errors are embedded in the response body.
+ * PAVE is JobTread's graph-style query language. Requests are POST to
+ * https://api.jobtread.com/pave with a JSON body structured as either a
+ * `query` or `mutation` graph, with `$` params for auth and arguments.
+ *
+ * Query format:
+ *   { query: { $: { grantKey }, organization: { $: {}, accounts: { $: { size, where }, nodes: { id: {}, ... } } } } }
+ *
+ * Mutation format:
+ *   { mutation: { $: { grantKey }, createAccount: { $: { name, type }, id: {}, name: {} } } }
+ *
+ * Responses: { data: { query|mutation: { ... } } } with optional errors: [{ message }]
  */
 
-/** Top-level PAVE request envelope */
-export interface PaveRequest {
+/** Internal representation of a PAVE operation — used by PaveClient.execute() */
+export interface PaveOperation {
   action: PaveAction;
   entity: string;
   data?: Record<string, unknown>;
@@ -16,9 +24,6 @@ export interface PaveRequest {
   sort?: PaveSort[];
   limit?: number;
   offset?: number;
-  organizationId?: string;
-  userId?: string;
-  notify?: boolean;
 }
 
 export type PaveAction = "create" | "read" | "update" | "delete" | "query";
@@ -30,7 +35,7 @@ export interface PaveField {
   alias?: string;
 }
 
-/** Filter conditions */
+/** Internal filter representation — converted to PAVE where format when building payload */
 export interface PaveFilter {
   operator?: "and" | "or";
   conditions?: PaveCondition[];
@@ -59,15 +64,10 @@ export interface PaveSort {
   direction: "asc" | "desc";
 }
 
-/** PAVE API response — always HTTP 200, check for errors */
+/** PAVE API HTTP response — check errors first */
 export interface PaveResponse {
   data?: unknown;
   errors?: PaveError[];
-  meta?: {
-    total?: number;
-    offset?: number;
-    limit?: number;
-  };
 }
 
 export interface PaveError {
@@ -84,3 +84,6 @@ export interface ToolResult<T = unknown> {
   code?: string;
   details?: Record<string, unknown>;
 }
+
+// Keep PaveRequest as an alias for PaveOperation for backwards compatibility
+export type PaveRequest = PaveOperation;

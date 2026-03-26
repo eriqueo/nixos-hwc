@@ -63,7 +63,7 @@ export function jobTools(pave: PaveClient): ToolDef[] {
       },
       handler: async (params: Record<string, unknown>): Promise<ToolResult> => {
         const searchField = params.searchBy !== undefined ? (params.searchBy as string) : "name";
-        const conditions: Array<{ field: string; operator: string; value: unknown }> = [
+        const conditions: Array<{ field: string; operator: "eq" | "like"; value: unknown }> = [
           { field: searchField, operator: "like", value: `%${params.searchTerm}%` },
         ];
         if (params.status !== undefined && params.status !== "all") {

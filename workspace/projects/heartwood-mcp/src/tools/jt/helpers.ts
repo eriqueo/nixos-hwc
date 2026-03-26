@@ -2,12 +2,12 @@
  * Shared helpers for JT tool handlers.
  */
 
-import type { PaveFilter, ToolResult } from "../../pave/types.js";
+import type { PaveCondition, PaveFilter, ToolResult } from "../../pave/types.js";
 
 /** A filter condition to add */
 interface FilterEntry {
   field: string;
-  operator: string;
+  operator: PaveCondition["operator"];
   value: unknown;
 }
 
@@ -17,7 +17,7 @@ interface FilterEntry {
  */
 export function buildFilter(
   params: Record<string, unknown>,
-  mappings: Array<{ param: string; field: string; operator?: string }>
+  mappings: Array<{ param: string; field: string; operator?: PaveCondition["operator"] }>
 ): PaveFilter | undefined {
   const conditions: FilterEntry[] = [];
   for (const { param, field, operator } of mappings) {
@@ -35,7 +35,7 @@ export function buildSearchFilter(
   params: Record<string, unknown>,
   searchParam: string,
   searchField: string,
-  extraMappings?: Array<{ param: string; field: string; operator?: string }>
+  extraMappings?: Array<{ param: string; field: string; operator?: PaveCondition["operator"] }>
 ): PaveFilter | undefined {
   const conditions: FilterEntry[] = [];
   if (params[searchParam] !== undefined) {

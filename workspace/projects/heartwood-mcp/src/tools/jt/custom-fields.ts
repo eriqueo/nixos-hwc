@@ -71,7 +71,7 @@ export function customFieldTools(pave: PaveClient): ToolDef[] {
         if ("error" in customFieldName) return customFieldName.error;
         const customFieldValue = requireString(params, "customFieldValue");
         if ("error" in customFieldValue) return customFieldValue.error;
-        const op = typeof params.operator === "string" ? params.operator : "eq";
+        const op = (typeof params.operator === "string" ? params.operator : "eq") as "eq" | "like";
         const value = op === "like" ? `%${customFieldValue.value}%` : customFieldValue.value;
         return pave.query({
           entity: entityType.value,

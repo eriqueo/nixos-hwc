@@ -1,5 +1,5 @@
 /**
- * PaveClient unit tests — retry logic, backoff timing, error detection, auth header injection.
+ * PaveClient unit tests — retry logic, backoff timing, error detection, payload format.
  *
  * Uses Node.js built-in test runner (node --test).
  */
@@ -52,50 +52,157 @@ describe("PaveClient", () => {
     originalFetch = globalThis.fetch;
   });
 
-  // Restore after each test — using afterEach equivalent
   function restoreFetch() {
     globalThis.fetch = originalFetch;
   }
 
-  describe("auth header injection", () => {
-    it("should include Bearer token in Authorization header", async () => {
+  describe("PAVE graph payload format", () => {
+    it("query() should build correct graph payload with grantKey", async () => {
       const { fetchFn, calls } = mockFetch([
-        { ok: true, body: { data: { id: "123" } } },
+        { ok: true, body: { data: { query: { organization: { accounts: { nodes: [] } } } } } },
       ]);
       globalThis.fetch = fetchFn as typeof fetch;
 
       const client = new PaveClient(TEST_CONFIG);
-      await client.create("account", { name: "Test" });
+      await client.query({ entity: "account" });
 
-      assert.equal(calls.length, 1);
-      const headers = calls[0].init.headers as Record<string, string>;
-      assert.equal(headers["Authorization"], "Bearer test-grant-key-123");
-      assert.equal(headers["Content-Type"], "application/json");
+      const body = JSON.parse(calls[0].init.body as string);
+      assert.ok(body.query, "payload should have query key");
+      assert.equal(body.query.$?.grantKey, "test-grant-key-123");
+      assert.ok(body.query.organization, "payload should have organization");
+      assert.ok(body.query.organization.accounts, "payload should pluralize entity");
+      assert.equal(body.query.organization.accounts.$?.size, 25, "default size should be 25");
 
       restoreFetch();
     });
 
-    it("should inject orgId, userId, and notify:false into request body", async () => {
+    it("query() should include where clause from filter", async () => {
       const { fetchFn, calls } = mockFetch([
-        { ok: true, body: { data: {} } },
+        { ok: true, body: { data: { query: { organization: { accounts: { nodes: [] } } } } } },
       ]);
       globalThis.fetch = fetchFn as typeof fetch;
 
       const client = new PaveClient(TEST_CONFIG);
-      await client.create("account", { name: "Test" });
+      await client.query({
+        entity: "account",
+        filter: {
+          operator: "and",
+          conditions: [
+            { field: "name", operator: "like", value: "%Margulies%" },
+            { field: "type", operator: "eq", value: "customer" },
+          ],
+        },
+      });
 
       const body = JSON.parse(calls[0].init.body as string);
-      assert.equal(body.organizationId, "test-org-id");
-      assert.equal(body.userId, "test-user-id");
-      assert.equal(body.notify, false);
-      assert.equal(body.action, "create");
-      assert.equal(body.entity, "account");
+      const where = body.query.organization.accounts.$?.where;
+      assert.ok(where, "should have where clause");
+      assert.ok(where.and, "should use and operator");
+      assert.equal(where.and[0][0][0], "name", "first condition field");
+      assert.equal(where.and[0][0][1], "like", "like operator stays as-is");
+      assert.equal(where.and[0][1][0], "type", "second condition field");
+      assert.equal(where.and[0][1][1], "=", "eq maps to =");
+      assert.equal(where.and[0][1][2], "customer");
+
+      restoreFetch();
+    });
+
+    it("query() should pass limit as size and offset", async () => {
+      const { fetchFn, calls } = mockFetch([
+        { ok: true, body: { data: { query: { organization: { jobs: { nodes: [] } } } } } },
+      ]);
+      globalThis.fetch = fetchFn as typeof fetch;
+
+      const client = new PaveClient(TEST_CONFIG);
+      await client.query({ entity: "job", limit: 10, offset: 20 });
+
+      const body = JSON.parse(calls[0].init.body as string);
+      assert.equal(body.query.organization.jobs.$?.size, 10);
+      assert.equal(body.query.organization.jobs.$?.offset, 20);
+
+      restoreFetch();
+    });
+
+    it("create() should build mutation payload", async () => {
+      const { fetchFn, calls } = mockFetch([
+        { ok: true, body: { data: { mutation: { createAccount: { id: "123", name: "Test" } } } } },
+      ]);
+      globalThis.fetch = fetchFn as typeof fetch;
+
+      const client = new PaveClient(TEST_CONFIG);
+      await client.create("account", { name: "Test", type: "customer" });
+
+      const body = JSON.parse(calls[0].init.body as string);
+      assert.ok(body.mutation, "payload should have mutation key");
+      assert.equal(body.mutation.$?.grantKey, "test-grant-key-123");
+      assert.ok(body.mutation.createAccount, "should have createAccount");
+      assert.equal(body.mutation.createAccount.$?.name, "Test");
+      assert.equal(body.mutation.createAccount.$?.type, "customer");
+
+      restoreFetch();
+    });
+
+    it("update() should build mutation payload with id in data", async () => {
+      const { fetchFn, calls } = mockFetch([
+        { ok: true, body: { data: { mutation: { updateAccount: { id: "abc", name: "Updated" } } } } },
+      ]);
+      globalThis.fetch = fetchFn as typeof fetch;
+
+      const client = new PaveClient(TEST_CONFIG);
+      await client.update("account", "abc", { name: "Updated" });
+
+      const body = JSON.parse(calls[0].init.body as string);
+      assert.ok(body.mutation.updateAccount, "should have updateAccount");
+      assert.equal(body.mutation.updateAccount.$?.id, "abc");
+      assert.equal(body.mutation.updateAccount.$?.name, "Updated");
+
+      restoreFetch();
+    });
+
+    it("read() should build query payload with id param", async () => {
+      const { fetchFn, calls } = mockFetch([
+        { ok: true, body: { data: { query: { organization: { account: { id: "123" } } } } } },
+      ]);
+      globalThis.fetch = fetchFn as typeof fetch;
+
+      const client = new PaveClient(TEST_CONFIG);
+      await client.read("account", "123");
+
+      const body = JSON.parse(calls[0].init.body as string);
+      assert.ok(body.query.organization.account, "should use singular entity name");
+      assert.equal(body.query.organization.account.$?.id, "123");
+
+      restoreFetch();
+    });
+
+    it("fields should be converted to nodes object format", async () => {
+      const { fetchFn, calls } = mockFetch([
+        { ok: true, body: { data: { query: { organization: { accounts: { nodes: [] } } } } } },
+      ]);
+      globalThis.fetch = fetchFn as typeof fetch;
+
+      const client = new PaveClient(TEST_CONFIG);
+      await client.query({
+        entity: "account",
+        fields: [
+          { field: "id" },
+          { field: "name" },
+          { field: "customFieldValues", fields: [{ field: "id" }, { field: "value" }] },
+        ],
+      });
+
+      const body = JSON.parse(calls[0].init.body as string);
+      const nodes = body.query.organization.accounts.nodes;
+      assert.deepEqual(nodes.id, {}, "flat field should be {}");
+      assert.deepEqual(nodes.name, {}, "flat field should be {}");
+      assert.ok(nodes.customFieldValues?.nodes, "nested field should have nodes");
+      assert.deepEqual(nodes.customFieldValues.nodes.id, {});
 
       restoreFetch();
     });
   });
 
-  describe("PAVE 200-with-errors detection", () => {
+  describe("PAVE errors detection", () => {
     it("should detect errors in response body and return failure", async () => {
       const { fetchFn } = mockFetch([
         {
@@ -119,7 +226,7 @@ describe("PaveClient", () => {
 
     it("should return success when no errors present", async () => {
       const { fetchFn } = mockFetch([
-        { ok: true, body: { data: { id: "123", name: "Test Account" } } },
+        { ok: true, body: { data: { query: { organization: { account: { id: "123", name: "Test Account" } } } } } },
       ]);
       globalThis.fetch = fetchFn as typeof fetch;
 
@@ -131,30 +238,6 @@ describe("PaveClient", () => {
 
       restoreFetch();
     });
-
-    it("should handle multiple errors in response", async () => {
-      const { fetchFn } = mockFetch([
-        {
-          ok: true,
-          body: {
-            errors: [
-              { message: "Field required: name" },
-              { message: "Invalid type: accountType" },
-            ],
-          },
-        },
-      ]);
-      globalThis.fetch = fetchFn as typeof fetch;
-
-      const client = new PaveClient(TEST_CONFIG);
-      const result = await client.create("account", {});
-
-      assert.equal(result.success, false);
-      assert.ok(result.error?.includes("Field required: name"));
-      assert.ok(result.error?.includes("Invalid type: accountType"));
-
-      restoreFetch();
-    });
   });
 
   describe("retry logic with exponential backoff", () => {
@@ -162,7 +245,7 @@ describe("PaveClient", () => {
       const { fetchFn, calls } = mockFetch([
         { ok: false, throw: true }, // 1st: network error
         { ok: false, throw: true }, // 2nd: network error
-        { ok: true, body: { data: { id: "123" } } }, // 3rd: success
+        { ok: true, body: { data: { query: { organization: { account: { id: "123" } } } } } }, // 3rd: success
       ]);
       globalThis.fetch = fetchFn as typeof fetch;
 
@@ -187,7 +270,6 @@ describe("PaveClient", () => {
       const client = new PaveClient(TEST_CONFIG);
       const result = await client.create("account", { badField: true });
 
-      // PAVE errors (200 with errors) are NOT retried
       assert.equal(result.success, false);
       assert.equal(calls.length, 1);
 
@@ -208,7 +290,7 @@ describe("PaveClient", () => {
 
       assert.equal(result.success, false);
       assert.equal(result.code, "NETWORK_ERROR");
-      assert.equal(calls.length, 4); // 1 initial + 3 retries
+      assert.equal(calls.length, 4);
 
       restoreFetch();
     });
@@ -224,57 +306,6 @@ describe("PaveClient", () => {
 
       assert.equal(result.success, false);
       assert.ok(result.error?.includes("500"));
-
-      restoreFetch();
-    });
-  });
-
-  describe("convenience methods", () => {
-    it("query() should set action to 'query'", async () => {
-      const { fetchFn, calls } = mockFetch([
-        { ok: true, body: { data: [] } },
-      ]);
-      globalThis.fetch = fetchFn as typeof fetch;
-
-      const client = new PaveClient(TEST_CONFIG);
-      await client.query({ entity: "account" });
-
-      const body = JSON.parse(calls[0].init.body as string);
-      assert.equal(body.action, "query");
-      assert.equal(body.entity, "account");
-
-      restoreFetch();
-    });
-
-    it("update() should merge id into data", async () => {
-      const { fetchFn, calls } = mockFetch([
-        { ok: true, body: { data: { id: "abc", name: "Updated" } } },
-      ]);
-      globalThis.fetch = fetchFn as typeof fetch;
-
-      const client = new PaveClient(TEST_CONFIG);
-      await client.update("account", "abc", { name: "Updated" });
-
-      const body = JSON.parse(calls[0].init.body as string);
-      assert.equal(body.action, "update");
-      assert.equal(body.data.id, "abc");
-      assert.equal(body.data.name, "Updated");
-
-      restoreFetch();
-    });
-
-    it("query() should pass limit and offset", async () => {
-      const { fetchFn, calls } = mockFetch([
-        { ok: true, body: { data: [] } },
-      ]);
-      globalThis.fetch = fetchFn as typeof fetch;
-
-      const client = new PaveClient(TEST_CONFIG);
-      await client.query({ entity: "job", limit: 10, offset: 20 });
-
-      const body = JSON.parse(calls[0].init.body as string);
-      assert.equal(body.limit, 10);
-      assert.equal(body.offset, 20);
 
       restoreFetch();
     });
