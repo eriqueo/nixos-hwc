@@ -1,0 +1,189 @@
+# Pave Gotchas & Known Issues
+
+Every lesson learned the hard way. Read this when debugging a 400 error or unexpected behavior.
+
+---
+
+## 1. Auth Is in the Body, Not a Header
+
+**CRITICAL.** Pave does NOT use `Authorization: Bearer <token>`. The `grantKey` goes inside `query.$`:
+
+```json
+{ "query": { "$": { "grantKey": "YOUR_KEY" }, ... } }
+```
+
+Sending a Bearer header results in the key being ignored and auth failing **silently**.
+
+---
+
+## 2. Update Mutations Return Empty — No Return Fields
+
+**Discovered 2026-03-26.** All update mutations (`updateAccount`, `updateJob`, `updateCostItem`, etc.) return `{}`. Do NOT include a return-field block:
+
+```json
+// WRONG — causes 400:
+"updateAccount": {
+  "$": { "id": "...", "name": "New" },
+  "account": { "id": {}, "name": {} }   // ← This breaks it
+}
+
+// CORRECT:
+"updateAccount": {
+  "$": { "id": "...", "name": "New" }
+}
+```
+
+If you need the updated data, re-query separately.
+
+---
+
+## 3. Create Return Fields Are Limited
+
+`createdXxx` return blocks only support basic fields (`id`, `name`, `type`). Requesting `createdAt`, `updatedAt`, or nested relations causes HTTP 400.
+
+Use basic fields for create returns, then query separately for full data.
+
+---
+
+## 4. Organization Queries Require `$: { id }`
+
+An empty `"$": {}` on `organization` returns HTTP 400 with `A non-null value is required at "organization"."$"."id"`.
+
+```json
+// WRONG:
+"organization": { "$": {}, "accounts": { ... } }
+
+// CORRECT:
+"organization": { "$": { "id": "22Nm3uFevXMb" }, "accounts": { ... } }
+```
+
+---
+
+## 5. Where Clause Format — Operator-Object, NOT Tuples
+
+The #1 source of query errors.
+
+```json
+// CORRECT:
+"where": { "like": [{ "field": ["name"] }, { "value": "%Dempsey%" }] }
+
+// WRONG — tuple format causes 400:
+"where": { "and": [[["name", "like", "%Dempsey%"]]] }
+```
+
+Field paths are always arrays: `["name"]`, `["cfv:FIELD_ID", "values"]`.
+
+---
+
+## 6. Numeric Fields Must Be Numbers
+
+Pave silently accepts string numbers but calculations go wrong.
+
+```json
+// WRONG:
+"quantity": "16", "unitCost": "47.25"
+
+// CORRECT:
+"quantity": 16, "unitCost": 47.25
+```
+
+---
+
+## 7. Job ID vs Job Number
+
+Almost every operation requires the JT **UUID** (e.g. `22PU9Q8DpCmq`), not the human-readable **number** (e.g. `#281`). Use `searchJobs` to look up UUID by number.
+
+---
+
+## 8. createAccount Custom Fields May Fail
+
+In practice, `createAccount` may not accept `customFieldValues` for all field types (specifically option fields with required validation). Use a two-step pattern:
+
+1. `createAccount` — basic fields only
+2. `updateAccount` — set custom fields using field **IDs**
+
+---
+
+## 9. Custom Field Key Format Differs by Operation
+
+| Operation | Key Format | Example |
+|---|---|---|
+| `updateAccount` | Field **IDs** | `{ "22PUGvBnXeYs": "Website" }` |
+| `createJob` | Field **names** | `{ "Job Type": "Bathroom" }` |
+| `createDailyLog` | Field **names** | `{ "Weather": "Sunny" }` |
+| `createContact` | Field **names** | `{ "Email": "..." }` |
+
+This inconsistency is by design in Pave.
+
+---
+
+## 10. groupName Nesting Uses ` > ` (Space-Arrow-Space)
+
+Budget group nesting in `addBudgetLineItems` / `createCostGroup` requires exact separator:
+
+```json
+// CORRECT:
+"groupName": "Tilework > Shower Tile Labor"
+
+// WRONG:
+"groupName": "Tilework>Labor"
+"groupName": "Tilework / Labor"
+```
+
+---
+
+## 11. Time Entry Timestamps Must Be ISO 8601 With Timezone
+
+Bozeman is `America/Denver` — UTC-7 (MDT summer) or UTC-6 (MST winter).
+
+```json
+"startedAt": "2026-03-20T07:00:00-07:00"
+```
+
+---
+
+## 12. HTTP 200 Even on Errors
+
+Pave returns HTTP 200 even when the operation fails. Always check `response.errors`:
+
+```json
+{
+  "errors": [{ "message": "A non-null value is required at ..." }]
+}
+```
+
+---
+
+## 13. Grant Key Expiration
+
+Keys expire after **3 months of inactivity**. Set a calendar reminder. Keys shown only once at creation — copy immediately. Store in env variables, never hardcode.
+
+---
+
+## 14. No Bulk Delete for Budget Items
+
+There is no easy bulk-delete for budget cost items/groups in Pave. Pushing a budget twice creates duplicates. Always check before pushing.
+
+---
+
+## 15. `__schema` Introspection Does Not Work
+
+Pave is NOT standard GraphQL. Use `schema: {}` at query root instead of `__schema`. The field `__schema` returns "does not exist" error.
+
+---
+
+## 16. McpServer.tool() vs Server Class (MCP SDK)
+
+The MCP SDK's `McpServer.tool()` expects Zod schemas. Passing plain JSON schema objects causes the SDK to treat them as "annotations", and tool arguments don't reach the handler. Use the low-level `Server` class with `setRequestHandler(CallToolRequestSchema, ...)` for direct argument access.
+
+---
+
+## 17. NixOS Module Naming
+
+NixOS `import ./heartwood` expects `default.nix`, not `index.nix`. If you only ship `index.nix`, add a shim: `default.nix` → `import ./index.nix`.
+
+---
+
+## 18. notify Flag in Automations
+
+Set `"notify": false` in `query.$` for every automated call. Otherwise JT sends email/push notifications on every API action.

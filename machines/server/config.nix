@@ -523,7 +523,7 @@
   # MCP (Model Context Protocol) server infrastructure
   # Parent MCP disabled (mcp-proxy not in nixpkgs-stable), but heartwood is self-contained
   hwc.ai.mcp.enable = lib.mkForce false;
-  hwc.ai.mcp.heartwood.enable = true;
+  hwc.business.mcp.enable = true;
 
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
   # NixOS config excluded - it's in git. Databases handled by preBackupScript.
