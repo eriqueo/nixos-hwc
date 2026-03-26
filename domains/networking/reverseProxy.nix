@@ -170,7 +170,7 @@ in
         # paths are allowed; everything else gets 403.
         :10080 {
           @mcp_allowed {
-            path /mcp/* /rest/mcp/* /rest/oauth2-credential/* /webhook/* /webhook-test/*
+            path /mcp /mcp/* /mcp-server /mcp-server/* /mcp-oauth /mcp-oauth/* /.well-known/* /rest/oauth2-credential/* /webhook/* /webhook-test/*
           }
 
           handle @mcp_allowed {

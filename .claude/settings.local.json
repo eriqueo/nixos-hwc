@@ -154,7 +154,11 @@
       "mcp__n8n__n8n_update_partial_workflow",
       "mcp__github__get_pull_request",
       "WebFetch(domain:noted.lol)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "mcp__fetch__fetch",
+      "mcp__n8n__n8n_delete_workflow",
+      "Bash(ls:*)",
+      "Read(//home/eric/.claude/**)"
     ],
     "deny": [],
     "ask": [],
@@ -174,6 +178,7 @@
     "postgres",
     "prometheus",
     "puppeteer",
-    "n8n"
+    "n8n",
+    "heartwood"
   ]
 }

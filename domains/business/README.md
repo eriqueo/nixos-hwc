@@ -32,6 +32,9 @@ domains/business/
 │   ├── src/               # Python source
 │   ├── n8n-workflows/     # n8n intake workflow JSON
 │   └── monitoring/        # Health check script
+├── heartwood_mcp_server.md     # System 7: Heartwood MCP Server spec
+├── n8n_workflow_registry.md    # n8n workflow registry — all automation workflows
+├── paperless_integration_spec.md # Paperless-ngx integration + receipt pipeline spec
 └── parts/
     ├── receipts-ocr.nix  # OCR NixOS service definition
     └── api.nix           # Remodel API (FastAPI)
@@ -125,6 +128,9 @@ If source not deployed, service returns stub response with deployment instructio
 
 ## Changelog
 
+- 2026-03-25: Added n8n workflow registry — all automation workflows with specs, MCP migration path
+- 2026-03-25: Added Paperless-ngx integration spec — document management, receipt pipeline, Claude job matching, Firefly sync plan
+- 2026-03-25: Added Heartwood MCP Server spec (System 7) — unified MCP interface to JT, Paperless, Firefly, and n8n compound operations
 - 2026-03-25: Consolidated receipts OCR pipeline into business domain — source at domains/business/receipts-pipeline/, schema merged into shared schema.sql, job_id→project_id, removed standalone db-init service
 - 2026-03-24: Calculator lead webhook fully operational - creates JT Account/Contact/Location/Job with custom fields, archives to Postgres, notifies Slack. See domains/automation/n8n/parts/workflows/README.md for workflow docs.
 - 2026-03-24: Fixed workspace path in api.nix (hwc/remodel_web_app → business/remodel-api), updated README structure and deployment paths
