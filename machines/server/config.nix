@@ -569,6 +569,13 @@
     dataDir = "/var/lib/hwc/ntfy";
   };
 
+  # Alertmanager → ntfy bridge (forwards Prometheus alerts to phone via ntfy)
+  hwc.alerts.ntfyBridge = {
+    enable = true;
+    port = 9095;
+    ntfyUrl = "http://localhost:2586/hwc-alerts";
+  };
+
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
   # Access: https://hwc.ocelot-wahoo.ts.net:5443 (via Caddy)
   # Charter v7.0 Section 19 compliant - TensorRT CUDA support
@@ -593,6 +600,9 @@
 
     # Firewall settings
     firewall.tailscaleOnly = true;
+
+    # Prometheus metrics exporter (polls /api/stats, serves /metrics on port 9192)
+    exporter.enable = true;
   };
 
   # Automated surveillance cleanup (enforce Frigate retention policy)
