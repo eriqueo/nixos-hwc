@@ -13,9 +13,9 @@
 |----------|-------|
 | Image | `ghcr.io/gethomepage/homepage:latest` |
 | Internal port | `3080` → container `3000` |
-| Caddy TLS port | `13443` |
+| Caddy TLS port | `17443` |
 | Data directory | `/var/lib/homepage` |
-| URL | `https://hwc.ocelot-wahoo.ts.net:13443` |
+| URL | `https://hwc.ocelot-wahoo.ts.net:17443` |
 
 ### Volumes
 
@@ -77,7 +77,7 @@ Both services use `mode = "port"` with dedicated TLS listeners:
 
 | Service | TLS Port | Upstream |
 |---------|----------|----------|
-| Homepage | 13443 | `http://127.0.0.1:3080` |
+| Homepage | 17443 | `http://127.0.0.1:3080` |
 | Uptime Kuma | 13543 | `http://127.0.0.1:3002` |
 
 Routes are registered via `hwc.networking.shared.routes` (automatically picked up by the Caddy reverse proxy module).
@@ -103,7 +103,7 @@ curl -s -o /dev/null -w '%{http_code}' http://localhost:3080
 curl -s -o /dev/null -w '%{http_code}' http://localhost:3002
 
 # Via Caddy TLS?
-curl -sk -o /dev/null -w '%{http_code}' https://hwc.ocelot-wahoo.ts.net:13443
+curl -sk -o /dev/null -w '%{http_code}' https://hwc.ocelot-wahoo.ts.net:17443
 curl -sk -o /dev/null -w '%{http_code}' https://hwc.ocelot-wahoo.ts.net:13543
 ```
 

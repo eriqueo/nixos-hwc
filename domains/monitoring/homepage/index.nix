@@ -10,7 +10,7 @@
 #
 # PORTS:
 #   - Internal: 3080 (container HTTP)
-#   - External: 13443 (Caddy TLS termination)
+#   - External: 17443 (Caddy TLS termination)
 
 { config, lib, pkgs, ... }:
 
@@ -39,7 +39,7 @@ in
 
     caddyPort = lib.mkOption {
       type = lib.types.port;
-      default = 13443;
+      default = 17443;
       description = "Caddy TLS port for Homepage";
     };
 
