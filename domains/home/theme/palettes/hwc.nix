@@ -11,12 +11,12 @@
   # --- Background Hierarchy ---
   # HWC runs slightly blue-shifted from pure gruvbox — warmer than Nord, cooler than gruvbox.
   bg0      = "1d2021";  # Deepest: modals, masks, deepest overlays  (same as gruv bg0)
-  bg1      = "23282d";  # Main: primary background                   (HWC specific — blue-shifted gruvbox)
+  bg1      = "282828";  # Main: primary background                   (pure gruvbox — neutral, no blue shift)
   bg2      = "2c3338";  # Elevated: sidebars, inactive tabs          (midpoint between bg1 and bg3)
   bg3      = "32373c";  # Highest: active elements, buttons, borders
 
   # Legacy aliases (compatible with gruv.nix consumers)
-  bg       = "23282d";  # → bg1
+  bg       = "282828";  # → bg1
   bgAlt    = "2c3338";  # → bg2
   bgDark   = "1d2021";  # → bg0
   surface0 = "282d32";  # intermediate shade
