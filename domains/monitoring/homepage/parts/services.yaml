@@ -16,10 +16,6 @@
             - field: status
               label: Status
               format: text
-            - field: disk_space_gb
-              label: Disk
-              format: float
-              suffix: " GB"
     - n8n:
         icon: n8n
         href: https://hwc.ocelot-wahoo.ts.net:2443
@@ -37,7 +33,7 @@
     - Caddy:
         icon: caddy
         description: Reverse proxy
-        ping: host.containers.internal:443
+        ping: host.containers.internal:80
     - Authentik:
         icon: authentik
         href: https://hwc.ocelot-wahoo.ts.net:15543
