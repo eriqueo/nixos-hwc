@@ -5,11 +5,16 @@ let
     modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
     modules-center = [ "hyprland/window" "clock" ];
     modules-right = [
-      "custom/gpu" "custom/ollama" "idle_inhibitor" "mpd"
-      "group/connectivity"
-      "custom/disk-space" "temperature"
-      "custom/battery" "custom/lid-sleep" "custom/proton-auth" "custom/weather"
-      "tray" "custom/notification" "custom/power"
+      # Toggles
+      "custom/gpu" "custom/ollama" "idle_inhibitor" "custom/lid-sleep"
+      # Connectivity
+      "pulseaudio" "bluetooth" "custom/network"
+      # System health
+      "temperature" "custom/disk-space" "custom/battery"
+      # Info
+      "mpd" "custom/weather"
+      # Actions
+      "custom/proton-auth" "tray" "custom/notification" "custom/power"
     ];
   };
 
@@ -49,17 +54,17 @@ let
   };
 
   commonWidgetsBase = {
-    "hyprland/submap" = { format = "✨ {}"; max-length = 8; tooltip = false; };
+    "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
-      max-length = 50;
+      max-length = 40;
       separate-outputs = true;
       rewrite = {
-        "(.*) — Mozilla Firefox" = "🌍 $1";
-        "(.*) - Google Chrome" = "🌍 $1";
-        "(.*) - Chromium" = "🌍 $1";
-        "(.*) - Visual Studio Code" = "💻 $1";
-        "(.*) - nvim" = "📝 $1";
+        "(.*) — Mozilla Firefox" = "$1";
+        "(.*) - Google Chrome" = "$1";
+        "(.*) - Chromium" = "$1";
+        "(.*) - Visual Studio Code" = "$1";
+        "(.*) - nvim" = "$1";
       };
     };
 
@@ -80,23 +85,23 @@ let
 
     "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
     "custom/ollama" = { format = "{}"; exec = "waybar-ollama-status"; return-type = "json"; interval = 5; on-click = "waybar-ollama-toggle"; };
-    idle_inhibitor = { format = "{icon}"; format-icons = { activated = "󰛨"; deactivated = "󰛧"; }; };
-    pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
+    idle_inhibitor = { format = "{icon}"; format-icons = { activated = "Awake"; deactivated = "Idle"; }; };
+    pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟 Muted"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
-    bluetooth = { format = "{icon}"; format-icons = { enabled = "󰂯"; disabled = "󰂲"; }; format-connected = "󰂱 {num_connections}"; on-click = "blueman-manager"; };
+    bluetooth = { format = "BT {status}"; format-connected = "BT {num_connections}"; format-disabled = "BT off"; on-click = "blueman-manager"; };
     temperature = {
       hwmon-path-abs = "/sys/devices/platform/coretemp.0/hwmon";
       input-filename = "temp1_input";
       critical-threshold = 80;
-      format = "󰔏 {temperatureC}°C";
-      format-critical = "󰔏 {temperatureC}°C";
+      format = "{temperatureC}°C";
+      format-critical = "{temperatureC}°C!";
     };
     "custom/power-profile" = { format = "{}"; exec = "waybar-power-profile"; return-type = "json"; interval = 10; on-click = "waybar-power-profile-toggle"; };
     "custom/disk-space" = { format = "{}"; exec = "waybar-disk-space"; return-type = "json"; interval = 30; on-click = "baobab"; };
     "custom/battery" = { format = "{}"; exec = "waybar-battery-health"; return-type = "json"; interval = 5; on-click = "waybar-power-settings"; };
-    "custom/proton-auth" = { format = "󰦝"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
+    "custom/proton-auth" = { format = "Auth"; tooltip = "Proton Authenticator (SUPER+A)"; on-click = "proton-authenticator-toggle"; };
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
-    "custom/power" = { format = "󰐥"; tooltip = "Shutdown"; on-click = "wlogout"; };
+    "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
     "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-lid-toggle"; };
 
     # === NEW: Weather for Bozeman ===
@@ -119,8 +124,8 @@ let
     output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 68;
-    spacing = 4;
+    height = 28;
+    spacing = 2;
     tray = { spacing = 10; icon-size = 18; };
   };
 
@@ -135,8 +140,8 @@ in
     output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 88;
-    spacing = 6;
+    height = 32;
+    spacing = 2;
     tray = { spacing = 12; icon-size = 20; };
   } // commonModules // internalWidgets)
 ]

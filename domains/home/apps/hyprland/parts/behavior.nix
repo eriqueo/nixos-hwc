@@ -14,7 +14,7 @@ in
     "${mod},B,exec,gpu-launch librewolf"
     "${mod},M,exec,kitty -e btop"
     "${mod},O,exec,gpu-launch obsidian"
-    "${mod},E,exec,kitty -e aerc"
+    "${mod},E,exec,ssh -t hwc tmuc attach -t mail"
     "${mod},N,exec,kitty -e nvim"
     "${mod},Y,exec,kitty -e yazi"
     "${mod},G,exec,gpu-toggle"

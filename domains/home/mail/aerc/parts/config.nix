@@ -92,7 +92,7 @@ ${tagQueries}
 
     [user]
 ${lib.concatStringsSep "\n" lines}
-    default.fg = #6272A4
+    default.fg = #4c566a
     default.dim = true
   '';
 

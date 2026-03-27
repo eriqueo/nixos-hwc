@@ -7,26 +7,26 @@
 let
   # Category tags are mutually exclusive — assigning one removes the others.
   categoryTags = [
-    { tag = "office";     color = "#82AAFF"; display = "office_o";    spaceKey = "o"; }
-    { tag = "admin";      color = "#C792EA"; display = "admin_n";     spaceKey = "n"; }
-    { tag = "work";       color = "#FFB86C"; display = "work_w";      spaceKey = "w"; }
-    { tag = "coaching";   color = "#F1FA8C"; display = "coaching_c";  spaceKey = "c"; }
-    { tag = "finance";    color = "#50FA7B"; display = "finance_f";   spaceKey = "f"; }
-    { tag = "bank";       color = "#8BE9FD"; display = "bank_b";      spaceKey = "b"; }
-    { tag = "insurance";  color = "#50FA7B"; display = "insurance_$"; extra = "insurance.dim = true"; spaceKey = "$"; }
-    { tag = "tech";       color = "#BD93F9"; display = "tech_t";      spaceKey = "t"; }
-    { tag = "personal";   color = "#FF79C6"; display = "personal_p";  spaceKey = "p"; }
-    { tag = "family";     color = "#98C379"; display = "family_y";    spaceKey = "y"; }
-    { tag = "hwcmt";      color = "#FFB86C"; display = "hwcmt_h";     extra = "hwcmt.dim = true"; spaceKey = "h"; query = "(to:heartwoodcraftmt@gmail.com OR from:heartwoodcraftmt@gmail.com) AND NOT tag:trash"; }
-    { tag = "eriqueokeefe"; color = "#FF79C6"; display = "eriqueokeefe_e"; spaceKey = "e"; query = "(to:eriqueokeefe@gmail.com OR from:eriqueokeefe@gmail.com) AND NOT tag:trash"; }
-    { tag = "aerc";       color = "#6272A4"; display = "aerc_`";      spaceKey = "`"; }
-    { tag = "website";    color = "#6272A4"; display = "website_@";   spaceKey = "@"; }
+    { tag = "office";     color = "#81a1c1"; display = "office_o";    spaceKey = "o"; }
+    { tag = "admin";      color = "#b48ead"; display = "admin_n";     spaceKey = "n"; }
+    { tag = "work";       color = "#d08770"; display = "work_w";      spaceKey = "w"; }
+    { tag = "coaching";   color = "#ebcb8b"; display = "coaching_c";  spaceKey = "c"; }
+    { tag = "finance";    color = "#a3be8c"; display = "finance_f";   spaceKey = "f"; }
+    { tag = "bank";       color = "#88c0d0"; display = "bank_b";      spaceKey = "b"; }
+    { tag = "insurance";  color = "#a3be8c"; display = "insurance_$"; extra = "insurance_$.dim = true"; spaceKey = "$"; }
+    { tag = "tech";       color = "#8fbcbb"; display = "tech_t";      spaceKey = "t"; }
+    { tag = "personal";   color = "#d3869b"; display = "personal_p";  spaceKey = "p"; }
+    { tag = "family";     color = "#8ec07c"; display = "family_y";    spaceKey = "y"; }
+    { tag = "hwcmt";      color = "#d08770"; display = "hwcmt_h";     extra = "hwcmt_h.dim = true"; spaceKey = "h"; query = "(to:heartwoodcraftmt@gmail.com OR from:heartwoodcraftmt@gmail.com) AND NOT tag:trash"; }
+    { tag = "eriqueokeefe"; color = "#d3869b"; display = "eriqueokeefe_e"; spaceKey = "e"; query = "(to:eriqueokeefe@gmail.com OR from:eriqueokeefe@gmail.com) AND NOT tag:trash"; }
+    { tag = "aerc";       color = "#4c566a"; display = "aerc_`";      spaceKey = "`"; }
+    { tag = "website";    color = "#4c566a"; display = "website_@";   spaceKey = "@"; }
   ];
 
   # Flag tags coexist with categories (not exclusive).
   flagTags = [
-    { tag = "action";       color = "#E06C75"; display = "action_!";       spaceKey = "!"; }
-    { tag = "pending";      color = "#E5C07B"; display = "pending_?";      spaceKey = "?"; }
+    { tag = "action";       color = "#bf616a"; display = "action_!";       spaceKey = "!"; }
+    { tag = "pending";      color = "#ebcb8b"; display = "pending_?";      spaceKey = "?"; }
   ];
 
   allTags = flagTags ++ categoryTags;

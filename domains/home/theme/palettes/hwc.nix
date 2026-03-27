@@ -37,36 +37,36 @@
 
   # --- Primary Accents ---
   # Orange is the Heartwood signature. Red is the pop accent — one element per layout max.
-  accent     = "cf995f"; # Copper-orange: primary accent — rules, separators, highlights
-  accentAlt  = "9d0006"; # Dark maroon: pop accent — QR borders, single callout elements
+  accent     = "d08770"; # Copper-orange: primary accent — rules, separators, highlights
+  accentAlt  = "bf616a"; # Muted red: pop accent — readable on dark bg (Nord11)
   accent2    = "0085ba"; # Blue: digital-only — links and interactive states (web only, not print)
 
   # --- Semantic Status Colors ---
-  # Mapped to HWC-appropriate tones. Orange family for warnings, maroon for errors.
-  success       = "a9b665"; # Green: success states          (carried from gruvbox — no HWC equivalent)
-  successBright = "b8bb26"; # Bright green: emphasis
-  successDim    = "89b482"; # Teal green: subtle
+  # Mapped to HWC-appropriate tones. Gruvbox/Nord hybrid — muted, readable on dark bg.
+  success       = "a3be8c"; # Sage green: success states     (Nord14 — muted, no neon)
+  successBright = "b4c89a"; # Brighter sage: emphasis
+  successDim    = "8aab78"; # Dimmed sage: subtle
 
   warning       = "cf995f"; # Copper-orange: warnings        (HWC accent-orange doubles as warning)
   warningBright = "fcbb74"; # Light amber: urgent
 
-  error         = "9d0006"; # Dark maroon: errors            (HWC accent-red)
-  errorBright   = "cc241d"; # Bright red: critical
-  errorDim      = "661a1a"; # Deep red: broken/invalid
+  error         = "bf616a"; # Muted red: errors              (Nord11 — readable on dark bg)
+  errorBright   = "d08080"; # Soft coral: critical
+  errorDim      = "915252"; # Dark muted red: broken/invalid
 
-  info          = "0085ba"; # Blue: info/help                (HWC accent-blue)
+  info          = "5e81ac"; # Blue: info/help                (HWC accent-blue)
 
   # Legacy aliases
-  good  = "a9b665";  # → success
+  good  = "a3be8c";  # → success
   warn  = "cf995f";  # → warning
-  crit  = "9d0006";  # → error
+  crit  = "bf616a";  # → error
 
   # --- UI Element Colors ---
   # Selection & Marking
-  selection   = "cf995f"; # Orange selection
-  selectionFg = "1d2021"; # Text on selection (dark bg for contrast)
-  selectionBg = "cf995f"; # Selection background
-  marked      = "9d0006"; # Marked items (maroon)
+  selection   = "434c5e"; # Nord blue-grey selection (visible on dark bg)
+  selectionFg = "ebdbb2"; # Bright cream text on selection
+  selectionBg = "434c5e"; # Nord blue-grey selection
+  marked      = "bf616a"; # Marked items (nord red)
   markedAlt   = "0085ba"; # Alt marked color (blue)
 
   # Interactive Elements
@@ -88,11 +88,11 @@
   # --- File Type Colors (for file managers — yazi, thunar, etc.) ---
   fileImage    = "cf995f"; # Orange: images      (HWC accent)
   fileMedia    = "fcbb74"; # Amber: audio/video
-  fileArchive  = "9d0006"; # Maroon: archives/compressed
+  fileArchive  = "bf616a"; # Muted red: archives/compressed
   fileDocument = "d5c4a1"; # Cream: documents/PDFs
   fileCode     = "0085ba"; # Blue: source code
-  fileExec     = "a9b665"; # Green: executables  (gruvbox green — no HWC equivalent)
-  fileOrphan   = "661a1a"; # Deep red: broken links
+  fileExec     = "a3be8c"; # Sage: executables   (Nord14)
+  fileOrphan   = "915252"; # Dark red: broken links
   fileDir      = "ebdbb2"; # Bright cream: directories
 
   # --- Surfaces ---
@@ -132,9 +132,9 @@
   };
 
   hypr = {
-    orange = "cf995f";  # Primary accent for borders/active window
-    red    = "9d0006";  # Pop accent for urgent/marked
-    muted  = "32373c";  # bg3 for inactive
+    orange = "d08770";  # Primary accent for borders/active window
+    red    = "bf616a";  # Pop accent for urgent/marked (Nord11)
+    muted  = "81a1c1";  # bg3 for inactive
   };
 
   # --- Pointer theme config ---

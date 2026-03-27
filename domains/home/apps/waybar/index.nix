@@ -75,8 +75,9 @@ in
       };
       Service = {
         ExecStart = lib.mkForce "${launchPkg}/bin/waybar-launch";
-        Restart = "on-failure";
-        RestartSec = 2;
+        ExecReload = "${pkgs.coreutils}/bin/kill -SIGUSR2 $MAINPID";
+        Restart = lib.mkForce "always";
+        RestartSec = 3;
       };
       Install = { WantedBy = [ "graphical-session.target" ]; };
     };
