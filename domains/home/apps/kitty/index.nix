@@ -38,7 +38,7 @@ in
 
         # Transparency
         allow_remote_control = "socket-only";
-        background_opacity = "0.80";
+        background_opacity = "1.0";
         background_blur = 1;
         dim_opacity = "0.75";
         inactive_text_alpha = "0.8";

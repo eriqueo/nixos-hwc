@@ -24,7 +24,7 @@ in
 {
   # Chrome
   foreground = toKitty (C.fg or "d5c4a1");
-  background = toKitty (C.bg or "23282d");
+  background = toKitty (C.bg1 or "23282d");
   selection_foreground = toKitty selectionFg;
   selection_background = toKitty selectionBg;
   cursor = toKitty caretColor;
