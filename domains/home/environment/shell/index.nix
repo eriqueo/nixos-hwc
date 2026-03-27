@@ -183,6 +183,9 @@ in
 
     # Environment variables
     home.sessionVariables = cfg.sessionVariables // {
+      # Ensure truecolor support in SSH sessions (tcell/aerc check this)
+      COLORTERM = "truecolor";
+
       # Override HWC_NIXOS_DIR to use dynamic home directory
       HWC_NIXOS_DIR = "${config.home.homeDirectory}/.nixos";
 

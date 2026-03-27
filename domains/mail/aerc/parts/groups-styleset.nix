@@ -12,7 +12,7 @@ let
   c = colors;
   h = color: "#${color}";
 
-  bg   = h (c.bg1 or "23282d");
+  bg   = h (c.bg1 or "282828");
   bg2  = h (c.bg2 or "2c3338");
   fg   = h (c.fg1 or "d5c4a1");
   fg0  = h (c.fg0 or "ebdbb2");

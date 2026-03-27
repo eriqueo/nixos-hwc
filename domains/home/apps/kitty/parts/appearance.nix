@@ -17,18 +17,18 @@ let
     else if C ? accent then C.accent
     else "d5c4a1";
 
-  selectionFg = C.selectionFg or C.bg or "23282d";
+  selectionFg = C.selectionFg or C.bg or "282828";
   selectionBg = C.selectionBg or C.accent or "cf995f";
   urlColor    = C.link or C.accent2 or C.accent or "0085ba";
 in
 {
   # Chrome
   foreground = toKitty (C.fg or "d5c4a1");
-  background = toKitty (C.bg1 or "23282d");
+  background = toKitty (C.bg1 or "282828");
   selection_foreground = toKitty selectionFg;
   selection_background = toKitty selectionBg;
   cursor = toKitty caretColor;
-  cursor_text_color = toKitty (C.bg or "23282d");
+  cursor_text_color = toKitty (C.bg or "282828");
   url_color = toKitty urlColor;
 
   # ANSI 0–7 (from palette ansi block)
