@@ -3,6 +3,7 @@
 
 let
   c = config.hwc.home.theme.colors or {};
+  tags = import ./tags.nix { inherit lib; colors = c; };
 
   hex = color: "#${color}";
 
@@ -175,30 +176,9 @@ in {
 
     [user]
 
-    # Category tags — keys must match display names from tagStyleMapCases
-    office_o.fg       = #81a1c1
-    admin_n.fg        = #b48ead
-    work_w.fg         = ${hex c.accent}
-    coaching_c.fg     = #ebcb8b
-    finance_f.fg      = #81a1c1
-    bank_b.fg         = #88c0d0
-    insurance_$.fg    = #81a1c1
-    insurance_$.dim   = true
-    tech_t.fg         = #88c0d0
-    personal_p.fg     = #d3869b
-    family_y.fg       = #d3869b
-    hwcmt_h.fg        = ${hex c.accent}
-    hwcmt_h.dim       = true
-    eriqueokeefe_e.fg = #d3869b
-    aerc_${'`'}.fg    = ${hex c.fg3}
-    website_@.fg      = ${hex c.fg3}
+    # Generated from tag group colors (see tags.nix)
+${tags.tagStyleLines}
     hide.fg           = ${hex c.fg3}
-
-    # Flag tags
-    action_!.fg       = ${hex c.error}
-    action_!.bg       = ${hex c.bg2}
-    action_!.bold     = true
-    pending_?.fg      = #ebcb8b
     starred.fg        = ${hex c.errorBright}
     starred.bold      = true
 

@@ -41,8 +41,8 @@ ${tagQueries}
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
   stylesetConf = appearance.stylesetContent;
 
-  # Import shared tag definitions
-  tags = import ./tags.nix { inherit lib; };
+  # Import shared tag definitions (pass palette colors for group-based coloring)
+  tags = import ./tags.nix { inherit lib; inherit colors; };
   tagDefs = tags.allTags;
 
   # Derive the style name for a tag (uses display if set, else tag)
@@ -82,18 +82,16 @@ ${tagQueries}
     map (t: ''(case "${t.tag}" "${tagStyle t}")'') tagDefs
   );
 
-  # Derive [user] styleset section
-  tagUserSection = let
-    lines = map (t:
-      let name = tagStyle t;
-      in "    ${name}.fg = ${t.color}" + lib.optionalString (t ? extra) "\n    ${t.extra}"
-    ) tagDefs;
-  in ''
+  # Derive [user] styleset section from tag group colors
+  tagUserSection = ''
 
-    [user]
-${lib.concatStringsSep "\n" lines}
-    default.fg = #4c566a
-    default.dim = true
+[user]
+${tags.tagStyleLines}
+hide.fg = #${colors.fg3 or "50626f"}
+starred.fg = #${colors.errorBright or "d08080"}
+starred.bold = true
+default.fg = #${colors.fg3 or "50626f"}
+default.dim = true
   '';
 
   # All bundled stylesets, each extended with the tag [user] section

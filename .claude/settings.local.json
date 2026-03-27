@@ -158,7 +158,8 @@
       "mcp__fetch__fetch",
       "mcp__n8n__n8n_delete_workflow",
       "Bash(ls:*)",
-      "Read(//home/eric/.claude/**)"
+      "Read(//home/eric/.claude/**)",
+      "Bash(col:*)"
     ],
     "deny": [],
     "ask": [],
