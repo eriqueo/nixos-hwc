@@ -1,179 +1,121 @@
 # domains/mail/aerc/parts/appearance.nix
 # Pure function: palette colors → aerc styleset content.
-# No options, no side-effects.
-{ lib, colors }:
+#
+# KEY RULE from aerc-stylesets(7):
+#   "[user] style colors (fg/bg) will only be effective if the context
+#    style does not define any."
+# So msglist_* styles must NOT set .fg, or they'll block [user] tag colors.
+# Use only bold/dim for message state differentiation.
+{ lib, colors, tags }:
 
 let
   c = colors;
-  hex = color: "#${color}";
-  tags = import ./tags.nix { inherit lib; inherit colors; };
+  h = color: "#${color}";
+
+  bg   = h (c.bg1 or "23282d");
+  bg2  = h (c.bg2 or "2c3338");
+  fg   = h (c.fg1 or "d5c4a1");
+  fg0  = h (c.fg0 or "ebdbb2");
+  dim  = h (c.fg3 or "50626f");
+  sel  = h (c.accent or "d08770");
 in
 {
   stylesetContent = ''
-    # hwc-theme – Generated from ${c.name or "unknown"} palette
-    # Valid per aerc-stylesets(7)
+*.default = true
+*.normal  = true
 
-    # Reset most defaults so we have full control
-    *.default = true
-    *.normal  = true
+# Force gruvbox dark bg everywhere — aerc defaults to palette 12 (blue) otherwise
+*.bg                = ${bg}
+border.bg           = ${bg}
+title.bg            = ${bg2}
+stack.bg            = ${bg}
 
-    # ──────────────────────────────────────────────────────────────
-    # Core UI elements (main section)
-    # ──────────────────────────────────────────────────────────────
+error.fg            = ${h (c.error or "bf616a")}
+error.bold          = true
+warning.fg          = ${h (c.warning or "cf995f")}
+warning.bold        = true
+success.fg          = ${h (c.success or "a3be8c")}
+success.bold        = true
 
-    default.fg          = ${hex c.fg1}
-    error.fg            = ${hex c.error}
-    error.bold          = true
-    warning.fg          = ${hex c.warning}
-    warning.bold        = true
-    success.fg          = ${hex c.success}
-    success.bold        = true
+title.fg            = ${fg0}
+title.bg            = ${h (c.bg3 or "32373c")}
+title.bold          = true
 
-    title.fg            = ${hex c.fg0}
-    title.bg            = ${hex c.bg2}
-    title.bold          = true
+header.fg           = ${sel}
+header.bold         = true
 
-    header.fg           = ${hex c.accent}
-    header.bold         = true
+tab.fg              = ${h (c.fg2 or "a7aaad")}
+tab.bg              = ${h (c.bg3 or "32373c")}
 
-    tab.fg              = ${hex c.fg2}
-    tab.bg              = ${hex c.bg2}
+border.fg           = ${h (c.bg3 or "32373c")}
 
-    border.fg           = ${hex c.border}
+spinner.fg          = ${sel}
 
-    stack.fg            = ${hex c.fg2}
-    stack.bg            = ${hex c.bg1}
+*.selected.fg       = ${h (c.bg0 or "1d2021")}
+*.selected.bg       = ${h (c.fg2 or "a7aaad")}
+*.selected.bold     = true
 
-    spinner.fg          = ${hex c.accent}
-    spinner.bold        = true
+# msglist_* — NO .fg on any of these so [user] tag colors come through
+msglist_unread.bold         = true
+msglist_read.dim            = true
+msglist_deleted.dim         = true
+msglist_marked.bold         = true
+msglist_marked.italic       = true
+msglist_result.bold         = true
+msglist_thread_folded.bold  = true
+msglist_thread_context.dim  = true
 
-    # Selection highlight (wildcard)
-    *.selected.fg       = ${hex c.fg0}
-    *.selected.bg       = ${hex c.bg3}
-    *.selected.bold     = true
+# dirlist_* — NO .fg so [user] tag colors come through (same rule as msglist)
+dirlist_unread.bold = true
+dirlist_recent.bold = true
 
-    # ──────────────────────────────────────────────────────────────
-    # Message list
-    # ──────────────────────────────────────────────────────────────
+statusline_default.fg  = ${fg}
+statusline_default.bg  = ${h (c.bg0 or "1d2021")}
+statusline_error.fg    = ${h (c.errorBright or "d08080")}
+statusline_error.bold  = true
+statusline_success.fg  = ${h (c.success or "a3be8c")}
 
-    msglist_default.fg          = default
-    msglist_unread.fg           = ${hex c.warning}
-    msglist_unread.bold         = true
-    msglist_read.fg             = ${hex c.fg3}
-    msglist_flagged.fg          = ${hex c.errorBright}
-    msglist_flagged.bold        = true
-    msglist_deleted.fg          = ${hex c.fg3}
-    msglist_marked.fg           = ${hex c.marked}
-    msglist_marked.bg           = ${hex c.bg2}
-    msglist_marked.bold         = true
-    msglist_result.fg           = ${hex c.accent}
-    msglist_result.bold         = true
+completion_default.fg  = ${fg}
+completion_default.bg  = ${bg2}
+completion_pill.fg     = ${fg0}
+completion_pill.bg     = ${h (c.bg3 or "32373c")}
 
-    msglist_answered.fg         = ${hex c.success}
-    msglist_forwarded.fg        = ${hex c.info}
+selector_default.bg    = ${bg}
+selector_focused.bg    = ${h (c.bg3 or "32373c")}
+selector_focused.fg    = ${fg0}
 
-    msglist_thread_folded.fg    = ${hex c.accent}
-    msglist_thread_context.fg   = ${hex c.fg3}
-    msglist_thread_orphan.fg    = ${hex c.errorDim}
+[viewer]
+url.fg        = ${h (c.link or "0085ba")}
+url.underline = true
+header.fg     = ${sel}
+header.bold   = true
+signature.fg  = ${dim}
+signature.dim = true
+diff_add.fg   = ${h (c.successBright or "b4c89a")}
+diff_del.fg   = ${h (c.errorBright or "d08080")}
+quote_1.fg    = ${h (c.success or "a3be8c")}
+quote_2.fg    = ${h (c.info or "5e81ac")}
+quote_3.fg    = ${sel}
+quote_x.fg    = ${dim}
 
-    msglist_gutter.bg           = ${hex c.bg3}
-    msglist_gutter.fg           = ${hex c.bg2}
-    msglist_pill.fg             = ${hex c.fg0}
-    msglist_pill.bg             = ${hex c.bg3}
-
-    # Dynamic From/To/Cc coloring by domain
-    msglist_*.From,~iheartwoodcraft.com.fg   = ${hex c.success}
-    msglist_*.To,~iheartwoodcraft.com.fg     = ${hex c.success}
-    msglist_*.Cc,~iheartwoodcraft.com.fg     = ${hex c.success}
-
-    msglist_*.From,~heartwoodcraftmt@gmail.com.fg = ${hex c.accent}
-    msglist_*.To,~heartwoodcraftmt@gmail.com.fg   = ${hex c.accent}
-    msglist_*.Cc,~heartwoodcraftmt@gmail.com.fg   = ${hex c.accent}
-
-    msglist_*.From,~eriqueokeefe@gmail.com.fg = ${hex c.accentAlt}
-    msglist_*.To,~eriqueokeefe@gmail.com.fg   = ${hex c.accentAlt}
-    msglist_*.Cc,~eriqueokeefe@gmail.com.fg   = ${hex c.accentAlt}
-
-    msglist_*.From,~eriqueo@proton.me.fg = ${hex c.warning}
-    msglist_*.To,~eriqueo@proton.me.fg   = ${hex c.warning}
-    msglist_*.Cc,~eriqueo@proton.me.fg   = ${hex c.warning}
-
-    # ──────────────────────────────────────────────────────────────
-    # Directory list
-    # ──────────────────────────────────────────────────────────────
-
-    dirlist_default.fg  = ${hex c.fg2}
-    dirlist_unread.fg   = ${hex c.success}
-    dirlist_unread.bold = true
-    dirlist_recent.fg   = ${hex c.accent}
-
-    # ──────────────────────────────────────────────────────────────
-    # Statusline & completion
-    # ──────────────────────────────────────────────────────────────
-
-    statusline_default.fg  = ${hex c.fg1}
-    statusline_default.bg  = ${hex c.bg0}
-    statusline_default.dim = true
-
-    statusline_error.fg    = ${hex c.errorBright}
-    statusline_error.bold  = true
-
-    statusline_success.fg  = ${hex c.success}
-
-    completion_default.fg       = ${hex c.fg1}
-    completion_default.bg       = ${hex c.bg2}
-    completion_description.fg   = ${hex c.fg3}
-    completion_description.dim  = true
-    completion_gutter.bg        = ${hex c.bg3}
-    completion_pill.fg          = ${hex c.fg0}
-    completion_pill.bg          = ${hex c.bg3}
-
-    # ──────────────────────────────────────────────────────────────
-    # [viewer] – used by built-in colorize filter
-    # ──────────────────────────────────────────────────────────────
-
-    [viewer]
-
-    url.fg        = ${hex c.link}
-    url.underline = true
-
-    header.fg     = ${hex c.accent}
-    header.bold   = true
-
-    signature.fg  = ${hex c.fg3}
-    signature.dim = true
-
-    diff_meta.fg       = ${hex c.info}
-    diff_meta.bold     = true
-
-    diff_chunk.fg      = ${hex c.accent}
-    diff_chunk_func.fg = ${hex c.accentAlt}
-    diff_chunk_func.dim = true
-
-    diff_add.fg        = ${hex c.successBright}
-    diff_del.fg        = ${hex c.errorBright}
-
-    quote_1.fg = ${hex c.success}
-    quote_2.fg = ${hex c.info}
-    quote_3.fg = ${hex c.accent}
-    quote_3.dim = true
-    quote_4.fg = ${hex c.warning}
-    quote_4.dim = true
-    quote_x.fg  = ${hex c.error}
-    quote_x.dim = true
-
-    # ──────────────────────────────────────────────────────────────
-    # [user] – for .StyleMap in column-tags template
-    # ──────────────────────────────────────────────────────────────
-
-    [user]
-
-    # Generated from tag group colors (see tags.nix)
+[user]
 ${tags.tagStyleLines}
-    hide.fg        = ${hex c.fg3}
-    starred.fg     = ${hex c.errorBright}
-    starred.bold   = true
-    default.fg     = ${hex c.fg3}
-    default.dim    = true
+hide.fg           = ${dim}
+starred.fg        = ${h (c.errorBright or "d08080")}
+starred.bold      = true
+inbox_i.fg        = ${fg0}
+inbox_i.bold      = true
+unread_u.fg       = ${fg0}
+unread_u.bold     = true
+important.fg      = ${sel}
+important.bold    = true
+sent_s.fg         = ${dim}
+drafts.fg         = ${dim}
+Archive_a.fg      = ${dim}
+trash_d.fg        = ${dim}
+spam_z.fg         = ${dim}
+hide_my_email.fg  = ${dim}
+default.fg        = ${dim}
+default.dim       = true
   '';
 }
