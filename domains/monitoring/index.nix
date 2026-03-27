@@ -22,6 +22,8 @@
     ./alertmanager/index.nix
     ./cadvisor/index.nix
     ./exportarr/index.nix
+    ./homepage/index.nix
+    ./uptime-kuma/index.nix
   ];
   #==========================================================================
   # IMPLEMENTATION & VALIDATION
