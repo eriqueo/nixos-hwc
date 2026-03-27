@@ -37,8 +37,8 @@
       webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
     };
     # aerc runs on server — SSH into persistent tmux session
-    home.shellAliases.aerc = lib.mkForce "ssh -t hwc tmux attach -t mail";
-    home.shellAliases.mail = lib.mkForce "ssh -t hwc tmux attach -t mail";
+    home.shellAliases.aerc = lib.mkForce "kitty -e ssh -t hwc tmux attach -t mail";
+    home.shellAliases.mail = lib.mkForce "kitty -e ssh -t hwc tmux attach -t mail";
 
     # Shell: MCP configured for laptop context
     hwc.home.shell = {

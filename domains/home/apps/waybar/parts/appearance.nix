@@ -95,28 +95,23 @@ window#waybar {
   border-color: #${palette.ansi.blue};
   background-color: rgba(69, 133, 136, 0.28);
 }
-#custom-gpu { margin-left: 3px; }
-#custom-lid-sleep { margin-right: 3px; }
 
 /* Connectivity — green (Audio, Bluetooth, Network) */
 #pulseaudio, #bluetooth, #custom-network {
   border-color: #${palette.ansi.cyan};
   background-color: rgba(104, 157, 106, 0.28);
 }
-#custom-network { margin-right: 3px; }
 
 /* System health — copper (Temp, Disk, Battery) */
 #temperature, #custom-disk-space, #custom-battery {
   border-color: #${palette.accent};
   background-color: rgba(207, 153, 95, 0.28);
 }
-#custom-battery { margin-right: 3px; }
 
 /* Media — neutral (MPD) */
 #mpd {
   border-color: #${palette.fg2};
   background-color: rgba(167, 170, 173, 0.26);
-  margin-right: 3px;
 }
 
 /* Actions — subtle (Proton, Tray, Notify, Power) */
@@ -124,7 +119,6 @@ window#waybar {
   border-color: #${palette.muted};
   background-color: rgba(80, 98, 111, 0.26);
 }
-#custom-proton-auth { margin-left: 3px; }
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
