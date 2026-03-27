@@ -17,6 +17,7 @@ domains/alerts/
 ├── options.nix         # hwc.alerts.* options
 └── parts/
     ├── cli.nix         # hwc-alert CLI tool
+    ├── ntfy-bridge.nix # Alertmanager → ntfy bridge service
     ├── server.nix      # ntfy notification server container
     └── slack-webhook.nix # Webhook scripts with retry logic
 ```
@@ -110,6 +111,7 @@ Expects n8n webhooks at:
 
 ## Changelog
 
+- 2026-03-27: Added alertmanager-ntfy-bridge (parts/ntfy-bridge.nix) — receives Alertmanager webhooks and forwards to ntfy for phone notifications
 - 2026-03-24: Enabled ntfy server (port 2586), integrated with work_lead_response n8n workflow for private lead notifications
 - 2026-02-27: Added ntfy server (migrated from server/native/networking/)
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)

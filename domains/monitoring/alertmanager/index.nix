@@ -25,7 +25,15 @@ let
       group_wait = cfg.groupWait;
       group_interval = cfg.groupInterval;
       repeat_interval = cfg.repeatInterval;
-      receiver = "default";  # Fallback receiver
+      receiver = "default";
+    } // lib.optionalAttrs (cfg.webhookReceivers != []) {
+      # Fan out to ALL receivers via child routes with continue=true.
+      # Each child matches all alerts and passes them along to the next.
+      routes = map (receiver: {
+        receiver = receiver.name;
+        match_re = { alertname = ".*"; };
+        continue = true;
+      }) cfg.webhookReceivers;
     };
 
     receivers = [
