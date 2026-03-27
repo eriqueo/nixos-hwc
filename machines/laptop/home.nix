@@ -22,7 +22,7 @@
     };
 
     # Calendar: Apple iCloud sync via khal + vdirsyncer (CalDAV)
-    hwc.home.mail.calendar = {
+    hwc.mail.calendar = {
       enable = true;
       accounts = {
         icloud = {
@@ -31,7 +31,7 @@
         };
       };
     };
-    hwc.home.mail.health = {
+    hwc.mail.health = {
       enable = true;
       ntfy.topic = "hwc-mail";
       webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";

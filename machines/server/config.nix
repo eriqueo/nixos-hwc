@@ -875,10 +875,10 @@
   # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
   # the estimator is a first-class named app, not an ad-hoc published slot).
   # Access: https://hwc.ocelot-wahoo.ts.net:13443
-  # Build:  cd ~/.nixos/workspace/business/estimator-pwa && npm install && npm run build
+  # Build:  cd ~/.nixos/domains/business/estimator/app && npm install && npm run build
   hwc.business.estimator = {
     enable  = true;
-    distDir = "/home/eric/.nixos/workspace/business/estimator-pwa/dist";
+    distDir = "/home/eric/.nixos/domains/business/estimator/app/dist";
     port    = 13443;
   };
 
@@ -978,8 +978,39 @@
     useUserPackages = true;
 
     users.eric = {
-      imports = [ ../../domains/home/index.nix ];
+      imports = [
+        ../../domains/home/index.nix
+        ../../domains/mail/index.nix
+      ];
       home.stateVersion = "24.05";
+
+      # Mail — Phase 2: enable infrastructure, bridge not yet running
+      hwc.mail = {
+        enable = true;
+        bridge.enable = false;  # Needs GPG + pass + initial login first
+
+        health = {
+          enable = true;
+          ntfy.topic = "hwc-mail";
+          webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+        };
+
+        notmuch = {
+          maildirRoot = "/home/eric/400_mail/Maildir";
+          userName = "Eric O'Keefe";
+          primaryEmail = "eric@iheartwoodcraft.com";
+          otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
+          newTags = [ "unread" "inbox" ];
+          excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
+          savedSearches = {
+            inbox = "tag:inbox and not tag:archived";
+            unread = "tag:unread";
+            work = "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
+            personal = "from:*@proton.me or from:*eriqueokeefe@gmail.com";
+            urgent = "tag:urgent or tag:important";
+          };
+        };
+      };
 
       hwc.home = {
         # CLI tools only
@@ -997,8 +1028,7 @@
 
         development.enable = true;
 
-        # No GUI, no mail, no theme
-        mail.enable = false;
+        # No GUI, no theme
         theme.fonts.enable = false;
 
         # CLI-only apps

@@ -19,7 +19,10 @@
     backupFileExtension = lib.mkDefault "hm-bak";
 
     users.eric = {
-      imports = [ ../domains/home/index.nix ];
+      imports = [
+        ../domains/home/index.nix
+        ../domains/mail/index.nix
+      ];
       home.stateVersion = "24.05";
 
       #======================================================================
@@ -47,29 +50,6 @@
 
         # Development Environment
         development.enable = lib.mkDefault true;
-
-        # Mail & Communication
-        mail = {
-          enable = lib.mkDefault true;
-          bridge.enable = true;
-          aerc.enable = lib.mkDefault true;
-
-          notmuch = {
-            maildirRoot = lib.mkDefault "/home/eric/400_mail/Maildir";
-            userName = "Eric O'Keefe";
-            primaryEmail = "eric@iheartwoodcraft.com";
-            otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
-            newTags = [ "unread" "inbox" ];
-            excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
-            savedSearches = {
-              inbox = "tag:inbox and not tag:archived";
-              unread = "tag:unread";
-              work = "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
-              personal = "from:*@proton.me or from:*eriqueokeefe@gmail.com";
-              urgent = "tag:urgent or tag:important";
-            };
-          };
-        };
 
         # Desktop Applications
         apps = {
@@ -152,6 +132,29 @@
           google-cloud-sdk.enable = lib.mkDefault true;
           slack.enable = lib.mkDefault true;
           slack-cli.enable = lib.mkDefault true;
+        };
+      };
+
+      # Mail & Communication (hwc.mail.* — top-level domain)
+      hwc.mail = {
+        enable = lib.mkDefault true;
+        bridge.enable = true;
+        aerc.enable = lib.mkDefault true;
+
+        notmuch = {
+          maildirRoot = lib.mkDefault "/home/eric/400_mail/Maildir";
+          userName = "Eric O'Keefe";
+          primaryEmail = "eric@iheartwoodcraft.com";
+          otherEmails = [ "eriqueo@proton.me" "heartwoodcraftmt@gmail.com" "eriqueokeefe@gmail.com" ];
+          newTags = [ "unread" "inbox" ];
+          excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
+          savedSearches = {
+            inbox = "tag:inbox and not tag:archived";
+            unread = "tag:unread";
+            work = "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
+            personal = "from:*@proton.me or from:*eriqueokeefe@gmail.com";
+            urgent = "tag:urgent or tag:important";
+          };
         };
       };
     };

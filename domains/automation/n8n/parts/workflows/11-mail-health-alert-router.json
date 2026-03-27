@@ -1,4 +1,5 @@
 {
+  "id": "mail-health-alert-router",
   "name": "Mail Health Alert Router",
   "nodes": [
     {

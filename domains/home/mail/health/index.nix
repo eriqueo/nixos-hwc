@@ -123,7 +123,10 @@ let
     check_gpg() {
       # Stale lock files — THE root cause of the Mar 25 incident.
       # Bridge reads pass → pass calls gpg → gpg hangs on dead lock → everything dies.
-      for lockfile in "$GNUPG_DIR"/*.lock "$GNUPG_DIR"/private-keys-v1.d/*.lock 2>/dev/null; do
+      local -a lockfiles=()
+      while IFS= read -r -d "" f; do lockfiles+=("$f"); done \
+        < <(${pkgs.findutils}/bin/find "$GNUPG_DIR" -maxdepth 2 -name '*.lock' -print0 2>/dev/null)
+      for lockfile in "''${lockfiles[@]}"; do
         [[ -f "$lockfile" ]] || continue
         local lock_pid=""
         lock_pid=$(${pkgs.gnugrep}/bin/grep -oP '^\d+' "$lockfile" 2>/dev/null || true)

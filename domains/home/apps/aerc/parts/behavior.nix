@@ -1,6 +1,6 @@
 { lib, pkgs, config, osConfig ? {}, ...}:
 let
-  accVals = lib.attrValues (config.hwc.home.mail.accounts or {});
+  accVals = lib.attrValues (config.hwc.mail.accounts or {});
   imap0 = lib.lists.imap0;
 
   # leader-based quick folder nav per account (optional, simple example)

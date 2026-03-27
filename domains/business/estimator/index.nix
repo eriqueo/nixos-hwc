@@ -6,7 +6,7 @@
 # Serves the pre-built Vite dist/ via Caddy on a dedicated Tailscale port.
 # Build steps (run on the server after updating files):
 #
-#   cd ~/.nixos/workspace/business/estimator-pwa
+#   cd ~/.nixos/domains/business/estimator/app
 #   npm install
 #   npm run build          # → dist/
 #   sudo systemctl reload caddy
@@ -25,7 +25,7 @@ in {
     distDir = lib.mkOption {
       type        = lib.types.path;
       description = "Path to the Vite build output (dist/) directory on the server.";
-      example     = "/home/eric/.nixos/workspace/business/estimator-pwa/dist";
+      example     = "/home/eric/.nixos/domains/business/estimator/app/dist";
     };
 
     port = lib.mkOption {

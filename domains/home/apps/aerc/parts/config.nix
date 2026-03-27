@@ -1,12 +1,12 @@
 { lib, pkgs, config, ... }:
 let
     common    = import ../../../mail/parts/common.nix { inherit lib; };
-    accounts  = config.hwc.home.mail.accounts or {};
+    accounts  = config.hwc.mail.accounts or {};
     accVals   = lib.attrValues accounts;
     themePart = import ./theme.nix { inherit lib config; };
 
     maildirBase =
-        let nmRoot = config.hwc.home.mail.notmuch.maildirRoot or "";
+        let nmRoot = config.hwc.mail.notmuch.maildirRoot or "";
             pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
         in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
 

@@ -34,7 +34,7 @@ in
     # Data domain (required for backup defaults below)
     ../domains/data/index.nix
   ] ++ (gatherSys ../domains/home/apps)
-    ++ (gatherSys ../domains/home/mail);
+    ++ (gatherSys ../domains/mail);
 
   #==========================================================================
   # BASE NIXOS SETTINGS
