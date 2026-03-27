@@ -8,29 +8,37 @@ in
 window#waybar {
   background-color: rgba(40, 40, 40, 0.85);  /* bg = #282828 @ ~85% opacity for glass */
   color: #${palette.fg};
+  font-size: 16px;
   border-radius: 18px;
   margin: 8px 14px 0 14px;
+  padding: 6px 8px 8px 8px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);  /* subtle depth shadow */
 }
 
 #workspaces button {
-  padding: 2px 8px;
+  padding: 6px 12px;
   background-color: transparent;
-  color: #${palette.fg};
-  border-radius: 9999px; /* pill shape */
-  margin: 0 2px;
+  color: #${palette.accent};
+  border-radius: 16px;
+  margin: 4px 2px;
   min-width: 20px;
   transition: all 0.25s ease;
 }
 
+#workspaces button.empty {
+  color: #${palette.fg};
+  opacity: 0.4;
+}
+
 #workspaces button.active {
-  color: #${palette.accent};
-  background-color: rgba(125, 174, 163, 0.25);  /* accent = #7daea3 @ 25% */
-  border-bottom: 2px solid #${palette.accent};
+  color: #${palette.bg};
+  background-color: rgba(207, 153, 95, 0.6);
+  opacity: 1;
 }
 
 #workspaces button.urgent {
   color: #${palette.crit};
+  opacity: 1;
 }
 
 #workspaces button:hover {
@@ -52,9 +60,9 @@ window#waybar {
 #battery, #clock, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
 #custom-weather, #custom-lid-sleep, #hyprland-language {
-  padding: 4px 12px;
+  padding: 4px 14px;
   margin: 0 4px;
-  border-radius: 12px;
+  border-radius: 16px;
   color: #${palette.fg};
 }
 
