@@ -6,6 +6,7 @@
 let
   c = colors;
   hex = color: "#${color}";
+  tags = import ./tags.nix { inherit lib; inherit colors; };
 in
 {
   stylesetContent = ''
@@ -167,19 +168,12 @@ in
 
     [user]
 
-    finance.fg     = ${hex c.success}
-    bank.fg        = ${hex c.successBright}
-    insurance.fg   = ${hex c.successDim}
-    work.fg        = ${hex c.warning}
-    coaching.fg    = ${hex c.warningBright}
-    hwcmt.fg       = ${hex c.warning}
-    personal.fg    = ${hex c.accentAlt}
-    tech.fg        = ${hex c.accent}
+    # Generated from tag group colors (see tags.nix)
+${tags.tagStyleLines}
     hide.fg        = ${hex c.fg3}
-    action.fg      = ${hex c.marked}
-    action.bg      = ${hex c.bg2}
-    action.bold    = true
     starred.fg     = ${hex c.errorBright}
     starred.bold   = true
+    default.fg     = ${hex c.fg3}
+    default.dim    = true
   '';
 }

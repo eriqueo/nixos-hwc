@@ -6,6 +6,7 @@
 let
   c = colors;
   hex = color: "#${color}";
+  tags = import ./tags.nix { inherit lib; inherit colors; };
 in
 {
   stylesetContent = ''
@@ -133,33 +134,33 @@ in
 
     [viewer]
 
-    url.fg        = ${hex c.link}
-    url.underline = true
-
-    header.fg     = ${hex c.accent}
-    header.bold   = true
-
-    signature.fg  = ${hex c.fg3}
-    signature.dim = true
-
-    diff_meta.fg       = ${hex c.info}
-    diff_meta.bold     = true
-
-    diff_chunk.fg      = ${hex c.accent}
-    diff_chunk_func.fg = ${hex c.accentAlt}
-    diff_chunk_func.dim = true
-
-    diff_add.fg        = ${hex c.successBright}
-    diff_del.fg        = ${hex c.errorBright}
-
-    quote_1.fg = ${hex c.success}
-    quote_2.fg = ${hex c.info}
-    quote_3.fg = ${hex c.accent}
-    quote_3.dim = true
-    quote_4.fg = ${hex c.warning}
-    quote_4.dim = true
-    quote_x.fg  = ${hex c.error}
-    quote_x.dim = true
+        url.fg        = ${hex c.link}
+        url.underline = true
+    
+        header.fg     = ${hex c.accent}
+        header.bold   = true
+    
+        signature.fg  = ${hex c.fg3}
+        signature.dim = true
+    
+        diff_meta.fg       = ${hex c.info}
+        diff_meta.bold     = true
+    
+        diff_chunk.fg      = ${hex c.accent}
+        diff_chunk_func.fg = ${hex c.accentAlt}
+        diff_chunk_func.dim = true
+    
+        diff_add.fg        = ${hex c.successBright}
+        diff_del.fg        = ${hex c.errorBright}
+    
+        quote_1.fg = ${hex c.success}
+        quote_2.fg = ${hex c.info}
+        quote_3.fg = ${hex c.accent}
+        quote_3.dim = true
+        quote_4.fg = ${hex c.warning}
+        quote_4.dim = true
+        quote_x.fg  = ${hex c.error}
+        quote_x.dim = true
 
     # ──────────────────────────────────────────────────────────────
     # [user] – for .StyleMap in column-tags template
@@ -167,35 +168,14 @@ in
 
     [user]
 
-    # Category tags — keys must match display names from tagStyleMapCases
-    office_o.fg       = #81a1c1
-    admin_n.fg        = #b48ead
-    work_w.fg         = ${hex c.accent}
-    coaching_c.fg     = #ebcb8b
-    finance_f.fg      = #81a1c1
-    bank_b.fg         = #88c0d0
-    insurance_$.fg    = #81a1c1
-    insurance_$.dim   = true
-    tech_t.fg         = #88c0d0
-    personal_p.fg     = #d3869b
-    family_y.fg       = #d3869b
-    hwcmt_h.fg        = ${hex c.accent}
-    hwcmt_h.dim       = true
-    eriqueokeefe_e.fg = #d3869b
-    aerc_${'`'}.fg    = ${hex c.fg3}
-    website_@.fg      = ${hex c.fg3}
-    hide.fg           = ${hex c.fg3}
-
-    # Flag tags
-    action_!.fg       = ${hex c.error}
-    action_!.bg       = ${hex c.bg2}
-    action_!.bold     = true
-    pending_?.fg      = #ebcb8b
-    starred.fg        = ${hex c.errorBright}
-    starred.bold      = true
-
-    # Default fallback for unlabeled tags
-    default.fg        = ${hex c.fg3}
-    default.dim       = true
+        # Generated from tag group colors (see tags.nix)
+        ${tags.tagStyleLines}
+        hide.fg           = ${hex c.fg3}
+        starred.fg        = ${hex c.errorBright}
+        starred.bold      = true
+    
+        # Default fallback for unlabeled tags
+        default.fg        = ${hex c.fg3}
+        default.dim       = true
   '';
 }
