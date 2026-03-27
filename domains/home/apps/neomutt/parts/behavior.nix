@@ -2,7 +2,7 @@
 { lib, pkgs, config, osConfig ? {}, ... }:
 let
   # Pull shared mail accounts (may be empty during refactors)
-  mailAccs  = config.hwc.home.mail.accounts or {};
+  mailAccs  = config.hwc.mail.accounts or {};
   accVals   = lib.attrValues mailAccs;
   haveAccs  = accVals != [];
 

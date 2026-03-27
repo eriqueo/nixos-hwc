@@ -355,7 +355,7 @@ in
       name = "calculator";
       mode = "static";
       port = 14443;
-      root = "/home/eric/.nixos/workspace/business/bathroom-calculator/dist";
+      root = "/home/eric/.nixos/domains/business/website/calculator/app/dist";
     }
     # Heartwood MCP Server — SSE transport for Claude chat / n8n
     # Proxies to self-hosted JT MCP on localhost:6100

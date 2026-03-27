@@ -3,7 +3,7 @@
 let
   cfg = config.hwc.home.apps.neomutt;
 
-  mailAccs = config.hwc.home.mail.accounts or {};
+  mailAccs = config.hwc.mail.accounts or {};
   vals     = lib.attrValues mailAccs;
   haveAccs = vals != [];
 
@@ -34,7 +34,7 @@ in
     # Warn (once) if the app is enabled but there are no accounts to bind to
     (lib.mkIf (cfg.enable && !haveAccs) {
       warnings = [
-        "hwc.home.apps.neomutt.enable = true but no hwc.home.mail.accounts are defined; disabling NeoMutt to avoid a bad config."
+        "hwc.home.apps.neomutt.enable = true but no hwc.mail.accounts are defined; disabling NeoMutt to avoid a bad config."
       ];
     })
 

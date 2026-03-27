@@ -31,8 +31,8 @@ in
 
     assertions = [
       {
-        assertion = !cfg.enable || (config.hwc.home.mail.accounts or {}) != {};
-        message = "aerc requires hwc.home.mail.accounts";
+        assertion = !cfg.enable || (config.hwc.mail.accounts or {}) != {};
+        message = "aerc requires hwc.mail.accounts";
       }
     ];
   };

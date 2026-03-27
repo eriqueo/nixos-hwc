@@ -8,6 +8,7 @@
     users.eric = {
       imports = [
         ../../domains/home/index.nix
+        ../../domains/mail/index.nix
       ];
 
       home.stateVersion = "24.05";
@@ -52,10 +53,10 @@
 
       # Override profile defaults - disable unwanted apps
       # Note: Hyprland forces waybar and swaync, we'll allow that dependency
-      hwc.home = {
-        # Disable mail (all apps)
-        mail.enable = false;
+      # Disable mail on gaming machine
+      hwc.mail.enable = false;
 
+      hwc.home = {
         # Disable development tools
         development.enable = false;
       };

@@ -8,14 +8,16 @@
     users.eric = {
       imports = [
         ../../domains/home/index.nix
+        ../../domains/mail/index.nix
       ];
 
       home.stateVersion = "24.05";
 
+      hwc.mail.enable = false;
+
       hwc.home = {
         shell.enable = true;
         development.enable = false;
-        mail.enable = false;
 
         apps = {
           hyprland.enable = true;
