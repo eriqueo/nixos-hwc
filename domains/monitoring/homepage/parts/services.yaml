@@ -1,0 +1,166 @@
+- Business:
+    - JobTread MCP:
+        icon: mdi-api
+        href: https://hwc.ocelot-wahoo.ts.net:16100
+        description: Heartwood MCP Server
+        widget:
+          type: customapi
+          url: http://localhost:6100/health
+          refreshInterval: 30000
+          mappings:
+            - field: status
+              label: Status
+              format: text
+    - Estimator API:
+        icon: mdi-calculator
+        href: http://localhost:8099/docs
+        description: Remodel pricing API
+        widget:
+          type: customapi
+          url: http://localhost:8099/health
+          refreshInterval: 30000
+          mappings:
+            - field: status
+              label: Status
+              format: text
+            - field: disk_space_gb
+              label: Disk
+              format: float
+              suffix: " GB"
+    - n8n:
+        icon: n8n
+        href: https://hwc.ocelot-wahoo.ts.net:2443
+        description: Workflow automation
+        server: localhost
+        container: n8n
+    - Paperless:
+        icon: paperless-ngx
+        href: https://hwc.ocelot-wahoo.ts.net/docs
+        description: Document management
+        server: localhost
+        container: paperless
+
+- Infrastructure:
+    - Caddy:
+        icon: caddy
+        description: Reverse proxy
+        widget:
+          type: customapi
+          url: http://localhost:2019/config/
+          refreshInterval: 60000
+          mappings:
+            - field: apps
+              label: Apps
+              format: text
+    - Authentik:
+        icon: authentik
+        href: https://hwc.ocelot-wahoo.ts.net:15543
+        description: SSO / Identity
+        server: localhost
+        container: authentik-server
+    - Grafana:
+        icon: grafana
+        href: https://hwc.ocelot-wahoo.ts.net:4443
+        description: Metrics dashboards
+    - Prometheus:
+        icon: prometheus
+        href: http://localhost:9090
+        description: Metrics collection
+    - Vaultwarden:
+        icon: vaultwarden
+        href: https://hwc.ocelot-wahoo.ts.net:15443
+        description: Password manager
+        server: localhost
+        container: vaultwarden
+    - Firefly III:
+        icon: firefly-iii
+        href: https://hwc.ocelot-wahoo.ts.net:10443
+        description: Finance
+        server: localhost
+        container: firefly
+    - CloudBeaver:
+        icon: mdi-database
+        href: https://hwc.ocelot-wahoo.ts.net:12443
+        description: DB management
+        server: localhost
+        container: cloudbeaver
+
+- Media:
+    - Jellyfin:
+        icon: jellyfin
+        href: https://hwc.ocelot-wahoo.ts.net:6443
+        description: Media server
+    - Jellyseerr:
+        icon: jellyseerr
+        href: https://hwc.ocelot-wahoo.ts.net:5543
+        description: Media requests
+        server: localhost
+        container: jellyseerr
+    - Sonarr:
+        icon: sonarr
+        href: https://hwc.ocelot-wahoo.ts.net/sonarr
+        description: TV shows
+        server: localhost
+        container: sonarr
+    - Radarr:
+        icon: radarr
+        href: https://hwc.ocelot-wahoo.ts.net/radarr
+        description: Movies
+        server: localhost
+        container: radarr
+    - Lidarr:
+        icon: lidarr
+        href: https://hwc.ocelot-wahoo.ts.net/lidarr
+        description: Music
+        server: localhost
+        container: lidarr
+    - Prowlarr:
+        icon: prowlarr
+        href: https://hwc.ocelot-wahoo.ts.net/prowlarr
+        description: Indexers
+        server: localhost
+        container: prowlarr
+    - Navidrome:
+        icon: navidrome
+        href: https://hwc.ocelot-wahoo.ts.net/music
+        description: Music streaming
+        server: localhost
+        container: navidrome
+    - Readarr:
+        icon: readarr
+        href: https://hwc.ocelot-wahoo.ts.net/readarr
+        description: Books
+        server: localhost
+        container: readarr
+    - Audiobookshelf:
+        icon: audiobookshelf
+        href: https://hwc.ocelot-wahoo.ts.net/audiobookshelf
+        description: Audiobooks
+        server: localhost
+        container: audiobookshelf
+    - Pinchflat:
+        icon: mdi-youtube
+        href: https://hwc.ocelot-wahoo.ts.net:8943
+        description: YouTube archiver
+        server: localhost
+        container: pinchflat
+
+- Home:
+    - Frigate:
+        icon: frigate
+        href: https://hwc.ocelot-wahoo.ts.net:5443
+        description: NVR / cameras
+        server: localhost
+        container: frigate
+    - Immich:
+        icon: immich
+        href: https://hwc.ocelot-wahoo.ts.net:7443
+        description: Photos
+        server: localhost
+        container: immich-server
+    - Open WebUI:
+        icon: mdi-robot
+        href: https://hwc.ocelot-wahoo.ts.net:3443
+        description: Local LLM
+        server: localhost
+        container: open-webui

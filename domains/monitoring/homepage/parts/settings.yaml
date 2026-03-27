@@ -1,0 +1,17 @@
+title: HWC Server
+theme: dark
+color: zinc
+headerStyle: clean
+layout:
+  Business:
+    style: row
+    columns: 4
+  Infrastructure:
+    style: row
+    columns: 4
+  Media:
+    style: row
+    columns: 4
+  Home:
+    style: row
+    columns: 3

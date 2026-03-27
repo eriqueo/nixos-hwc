@@ -39,6 +39,12 @@
     adminPasswordFile = config.age.secrets.grafana-admin-password.path;
   };
 
+  # Homepage - Service dashboard
+  hwc.monitoring.homepage.enable = lib.mkDefault true;
+
+  # Uptime Kuma - Uptime monitoring with ntfy notifications
+  hwc.monitoring.uptime-kuma.enable = lib.mkDefault true;
+
   # Alertmanager - Alert routing to n8n webhooks
   hwc.monitoring.alertmanager = {
     enable = lib.mkDefault true;
