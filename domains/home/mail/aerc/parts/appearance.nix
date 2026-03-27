@@ -46,9 +46,9 @@ in
     spinner.fg          = ${hex c.accent}
     spinner.bold        = true
 
-    # Selection highlight (wildcard)
+    # Selection highlight (wildcard) — must be clearly visible
     *.selected.fg       = ${hex c.fg0}
-    *.selected.bg       = ${hex c.bg3}
+    *.selected.bg       = ${hex c.selectionBg}
     *.selected.bold     = true
 
     # ──────────────────────────────────────────────────────────────
@@ -167,19 +167,35 @@ in
 
     [user]
 
-    finance.fg     = ${hex c.success}
-    bank.fg        = ${hex c.successBright}
-    insurance.fg   = ${hex c.successDim}
-    work.fg        = ${hex c.warning}
-    coaching.fg    = ${hex c.warningBright}
-    hwcmt.fg       = ${hex c.warning}
-    personal.fg    = ${hex c.accentAlt}
-    tech.fg        = ${hex c.accent}
-    hide.fg        = ${hex c.fg3}
-    action.fg      = ${hex c.marked}
-    action.bg      = ${hex c.bg2}
-    action.bold    = true
-    starred.fg     = ${hex c.errorBright}
-    starred.bold   = true
+    # Category tags — gruvbox/nord muted palette
+    office.fg       = #81a1c1
+    admin.fg        = #b48ead
+    work.fg         = ${hex c.accent}
+    coaching.fg     = #ebcb8b
+    finance.fg      = ${hex c.success}
+    bank.fg         = #88c0d0
+    insurance.fg    = ${hex c.success}
+    insurance.dim   = true
+    tech.fg         = #8fbcbb
+    personal.fg     = #d3869b
+    family.fg       = #8ec07c
+    hwcmt.fg        = ${hex c.accent}
+    hwcmt.dim       = true
+    eriqueokeefe.fg = #d3869b
+    aerc.fg         = ${hex c.fg3}
+    website.fg      = ${hex c.fg3}
+    hide.fg         = ${hex c.fg3}
+
+    # Flag tags
+    action.fg       = ${hex c.error}
+    action.bg       = ${hex c.bg2}
+    action.bold     = true
+    pending.fg      = #ebcb8b
+    starred.fg      = ${hex c.errorBright}
+    starred.bold    = true
+
+    # Default fallback for unlabeled tags
+    default.fg      = ${hex c.fg3}
+    default.dim     = true
   '';
 }

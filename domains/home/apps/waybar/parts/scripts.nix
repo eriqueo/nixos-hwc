@@ -17,19 +17,30 @@ in
       exit 1
     fi
 
-    # Get monitor info from Hyprland - exit gracefully if Hyprland not running
-    MONITORS=$(hyprctl monitors -j 2>/dev/null || echo "[]")
+    # Wait for Hyprland IPC to be ready (up to 30 seconds)
+    for attempt in $(seq 1 30); do
+      MONITORS=$(hyprctl monitors -j 2>/dev/null || echo "[]")
+      if echo "''$MONITORS" | jq empty 2>/dev/null; then
+        MONITOR_COUNT=$(echo "''$MONITORS" | jq 'length')
+        if [[ "''$MONITOR_COUNT" -gt 0 ]]; then
+          break
+        fi
+      fi
+      echo "waybar-launch: waiting for Hyprland (attempt ''$attempt/30)..." >&2
+      sleep 1
+    done
 
-    # Validate JSON before parsing - hyprctl returns error text if not connected
+    # Final check after wait loop
+    MONITORS=$(hyprctl monitors -j 2>/dev/null || echo "[]")
     if ! echo "''$MONITORS" | jq empty 2>/dev/null; then
-      echo "waybar-launch: hyprctl returned invalid JSON (Hyprland not ready?); exiting" >&2
-      exit 0
+      echo "waybar-launch: Hyprland not ready after 30s" >&2
+      exit 1
     fi
 
     MONITOR_COUNT=$(echo "''$MONITORS" | jq 'length')
     if [[ "''$MONITOR_COUNT" -eq 0 ]]; then
-      echo "waybar-launch: no monitors detected; exiting" >&2
-      exit 0
+      echo "waybar-launch: no monitors detected after 30s" >&2
+      exit 1
     fi
 
     # Get all monitor names, classifying each as internal or external
@@ -183,22 +194,22 @@ in
       TIME_STR="N/A"
     fi
     
-    ICON="󰁺"; CLASS="critical"
+    CLASS="critical"
     if [[ ''$CAPACITY -gt 90 ]]; then
-      ICON="󰁹"; CLASS="full"
+      CLASS="full"
     elif [[ ''$CAPACITY -gt 75 ]]; then
-      ICON="󰂂"; CLASS="high"
+      CLASS="high"
     elif [[ ''$CAPACITY -gt 50 ]]; then
-      ICON="󰁿"; CLASS="medium"
+      CLASS="medium"
     elif [[ ''$CAPACITY -gt 25 ]]; then
-      ICON="󰁼"; CLASS="low"
+      CLASS="low"
     fi
     if [[ "''$STATUS" == "Charging" ]]; then
-      ICON="󰂄"; CLASS="charging"
+      CLASS="charging"
     fi
 
-    printf '{"text":"%s %s%%","class":"%s","tooltip":"Battery: %s%%\\nStatus: %s\\nHealth: %s\\nCycles: %s\\nTime: %s"}\n' \
-           "''$ICON" "''$CAPACITY" "''$CLASS" "''$CAPACITY" "''$STATUS" "''$HEALTH" "''$CYCLE_COUNT" "''$TIME_STR"
+    printf '{"text":"[%s%%]","class":"%s","tooltip":"Battery: %s%%\\nStatus: %s\\nHealth: %s\\nCycles: %s\\nTime: %s"}\n' \
+           "''$CAPACITY" "''$CLASS" "''$CAPACITY" "''$STATUS" "''$HEALTH" "''$CYCLE_COUNT" "''$TIME_STR"
   '';
 
 
@@ -403,20 +414,11 @@ in
   '';
 
   "ollama-status" = sh "waybar-ollama-status" ''
-    # Check if podman-ollama service is running
     if systemctl is-active --quiet podman-ollama.service; then
-      STATUS="running"
-      ICON="🦙"
-      CLASS="running"
-      TOOLTIP="Ollama: Running\\nClick to stop"
+      printf '{"text":"AI","class":"running","tooltip":"Ollama: Running\\nClick to stop"}\n'
     else
-      STATUS="stopped"
-      ICON="🦙"
-      CLASS="stopped"
-      TOOLTIP="Ollama: Stopped\\nClick to start"
+      printf '{"text":"AI","class":"stopped","tooltip":"Ollama: Stopped\\nClick to start"}\n'
     fi
-
-    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
   '';
 
   "ollama-toggle" = sh "waybar-ollama-toggle" ''
@@ -433,19 +435,11 @@ in
   '';
 
   "lid-status" = sh "waybar-lid-status" ''
-    # Inhibitor active = lid close blocked (sleep disabled)
-    # Inhibitor stopped = lid close triggers suspend (sleep enabled)
     if systemctl --user is-active --quiet lid-sleep-inhibitor; then
-      ICON="󰒳"
-      CLASS="sleep-disabled"
-      TOOLTIP="Lid Close: Ignore\\nClick to enable sleep"
+      printf '{"text":"Lid","class":"sleep-disabled","tooltip":"Lid Close: Ignore\\nClick to enable sleep"}\n'
     else
-      ICON="󰒲"
-      CLASS="sleep-enabled"
-      TOOLTIP="Lid Close: Sleep\\nClick to disable"
+      printf '{"text":"Lid","class":"sleep-enabled","tooltip":"Lid Close: Sleep\\nClick to disable"}\n'
     fi
-
-    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$ICON" "$CLASS" "$TOOLTIP"
   '';
 
   "lid-toggle" = sh "waybar-lid-toggle" ''

@@ -469,26 +469,26 @@ in
 
           case "$CURRENT_MODE" in
             "intel")
-              ICON="󰢮"
+              ICON="iGPU"
               CLASS="intel"
               TOOLTIP="Intel Mode: $INTEL_GPU"
               ;;
             "nvidia")
-              ICON="󰾲"
+              ICON="dGPU"
               CLASS="nvidia"
               ${lib.optionalString (cfg.type == "nvidia") ''
                 TOOLTIP="NVIDIA Mode: $NVIDIA_GPU\nPower: $NVIDIA_POWER W | Temp: $NVIDIA_TEMP°C"
               ''}
               ;;
             "performance")
-              ICON="⚡"
+              ICON="GPU+"
               CLASS="performance"
               ${lib.optionalString (cfg.type == "nvidia") ''
                 TOOLTIP="Performance Mode: Auto-GPU Selection\nNVIDIA: $NVIDIA_POWER W | $NVIDIA_TEMP°C"
               ''}
               ;;
             *)
-              ICON="󰢮"
+              ICON="iGPU"
               CLASS="intel"
               TOOLTIP="Intel Mode (Default): $INTEL_GPU"
               ;;

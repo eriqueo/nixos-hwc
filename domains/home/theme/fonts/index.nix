@@ -21,6 +21,7 @@ in {
 
     home.packages = with pkgs; [
       nerd-fonts.caskaydia-cove
+      nerd-fonts.hack
     ];
   };
 
