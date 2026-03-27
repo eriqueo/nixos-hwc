@@ -31,7 +31,11 @@
         };
       };
     };
-
+    hwc.home.mail.health = {
+      enable = true;
+      ntfy.topic = "hwc-mail";
+      webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+    };
     # Shell: MCP configured for laptop context
     hwc.home.shell = {
       enable = true;
