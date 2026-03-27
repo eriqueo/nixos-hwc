@@ -11,12 +11,12 @@ let
     { tag = "admin";      color = "#b48ead"; display = "admin_n";     spaceKey = "n"; }
     { tag = "work";       color = "#d08770"; display = "work_w";      spaceKey = "w"; }
     { tag = "coaching";   color = "#ebcb8b"; display = "coaching_c";  spaceKey = "c"; }
-    { tag = "finance";    color = "#a3be8c"; display = "finance_f";   spaceKey = "f"; }
+    { tag = "finance";    color = "#81a1c1"; display = "finance_f";   spaceKey = "f"; }
     { tag = "bank";       color = "#88c0d0"; display = "bank_b";      spaceKey = "b"; }
-    { tag = "insurance";  color = "#a3be8c"; display = "insurance_$"; extra = "insurance_$.dim = true"; spaceKey = "$"; }
-    { tag = "tech";       color = "#8fbcbb"; display = "tech_t";      spaceKey = "t"; }
+    { tag = "insurance";  color = "#81a1c1"; display = "insurance_$"; extra = "insurance_$.dim = true"; spaceKey = "$"; }
+    { tag = "tech";       color = "#88c0d0"; display = "tech_t";      spaceKey = "t"; }
     { tag = "personal";   color = "#d3869b"; display = "personal_p";  spaceKey = "p"; }
-    { tag = "family";     color = "#8ec07c"; display = "family_y";    spaceKey = "y"; }
+    { tag = "family";     color = "#d3869b"; display = "family_y";    spaceKey = "y"; }
     { tag = "hwcmt";      color = "#d08770"; display = "hwcmt_h";     extra = "hwcmt_h.dim = true"; spaceKey = "h"; query = "(to:heartwoodcraftmt@gmail.com OR from:heartwoodcraftmt@gmail.com) AND NOT tag:trash"; }
     { tag = "eriqueokeefe"; color = "#d3869b"; display = "eriqueokeefe_e"; spaceKey = "e"; query = "(to:eriqueokeefe@gmail.com OR from:eriqueokeefe@gmail.com) AND NOT tag:trash"; }
     { tag = "aerc";       color = "#4c566a"; display = "aerc_`";      spaceKey = "`"; }

@@ -68,7 +68,7 @@ in
     msglist_result.fg           = ${hex c.accent}
     msglist_result.bold         = true
 
-    msglist_answered.fg         = ${hex c.success}
+    msglist_answered.fg         = ${hex c.info}
     msglist_forwarded.fg        = ${hex c.info}
 
     msglist_thread_folded.fg    = ${hex c.accent}
@@ -81,9 +81,9 @@ in
     msglist_pill.bg             = ${hex c.bg3}
 
     # Dynamic From/To/Cc coloring by domain
-    msglist_*.From,~iheartwoodcraft.com.fg   = ${hex c.success}
-    msglist_*.To,~iheartwoodcraft.com.fg     = ${hex c.success}
-    msglist_*.Cc,~iheartwoodcraft.com.fg     = ${hex c.success}
+    msglist_*.From,~iheartwoodcraft.com.fg   = ${hex c.accent}
+    msglist_*.To,~iheartwoodcraft.com.fg     = ${hex c.accent}
+    msglist_*.Cc,~iheartwoodcraft.com.fg     = ${hex c.accent}
 
     msglist_*.From,~heartwoodcraftmt@gmail.com.fg = ${hex c.accent}
     msglist_*.To,~heartwoodcraftmt@gmail.com.fg   = ${hex c.accent}
@@ -102,7 +102,7 @@ in
     # ──────────────────────────────────────────────────────────────
 
     dirlist_default.fg  = ${hex c.fg2}
-    dirlist_unread.fg   = ${hex c.success}
+    dirlist_unread.fg   = ${hex c.fg0}
     dirlist_unread.bold = true
     dirlist_recent.fg   = ${hex c.accent}
 
@@ -117,7 +117,7 @@ in
     statusline_error.fg    = ${hex c.errorBright}
     statusline_error.bold  = true
 
-    statusline_success.fg  = ${hex c.success}
+    statusline_success.fg  = ${hex c.info}
 
     completion_default.fg       = ${hex c.fg1}
     completion_default.bg       = ${hex c.bg2}
@@ -167,35 +167,35 @@ in
 
     [user]
 
-    # Category tags — gruvbox/nord muted palette
-    office.fg       = #81a1c1
-    admin.fg        = #b48ead
-    work.fg         = ${hex c.accent}
-    coaching.fg     = #ebcb8b
-    finance.fg      = ${hex c.success}
-    bank.fg         = #88c0d0
-    insurance.fg    = ${hex c.success}
-    insurance.dim   = true
-    tech.fg         = #8fbcbb
-    personal.fg     = #d3869b
-    family.fg       = #8ec07c
-    hwcmt.fg        = ${hex c.accent}
-    hwcmt.dim       = true
-    eriqueokeefe.fg = #d3869b
-    aerc.fg         = ${hex c.fg3}
-    website.fg      = ${hex c.fg3}
-    hide.fg         = ${hex c.fg3}
+    # Category tags — keys must match display names from tagStyleMapCases
+    office_o.fg       = #81a1c1
+    admin_n.fg        = #b48ead
+    work_w.fg         = ${hex c.accent}
+    coaching_c.fg     = #ebcb8b
+    finance_f.fg      = #81a1c1
+    bank_b.fg         = #88c0d0
+    insurance_$.fg    = #81a1c1
+    insurance_$.dim   = true
+    tech_t.fg         = #88c0d0
+    personal_p.fg     = #d3869b
+    family_y.fg       = #d3869b
+    hwcmt_h.fg        = ${hex c.accent}
+    hwcmt_h.dim       = true
+    eriqueokeefe_e.fg = #d3869b
+    aerc_${'`'}.fg    = ${hex c.fg3}
+    website_@.fg      = ${hex c.fg3}
+    hide.fg           = ${hex c.fg3}
 
     # Flag tags
-    action.fg       = ${hex c.error}
-    action.bg       = ${hex c.bg2}
-    action.bold     = true
-    pending.fg      = #ebcb8b
-    starred.fg      = ${hex c.errorBright}
-    starred.bold    = true
+    action_!.fg       = ${hex c.error}
+    action_!.bg       = ${hex c.bg2}
+    action_!.bold     = true
+    pending_?.fg      = #ebcb8b
+    starred.fg        = ${hex c.errorBright}
+    starred.bold      = true
 
     # Default fallback for unlabeled tags
-    default.fg      = ${hex c.fg3}
-    default.dim     = true
+    default.fg        = ${hex c.fg3}
+    default.dim       = true
   '';
 }

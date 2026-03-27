@@ -3,7 +3,7 @@
 let
   commonModules = {
     modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
-    modules-center = [ "hyprland/window" "clock" ];
+    modules-center = [ "clock" "custom/weather" ];
     modules-right = [
       # Toggles
       "custom/gpu" "custom/ollama" "idle_inhibitor" "custom/lid-sleep"
@@ -12,7 +12,7 @@ let
       # System health
       "temperature" "custom/disk-space" "custom/battery"
       # Info
-      "mpd" "custom/weather"
+      "mpd"
       # Actions
       "custom/proton-auth" "tray" "custom/notification" "custom/power"
     ];
@@ -124,8 +124,8 @@ let
     output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 28;
-    spacing = 2;
+    height = 36;
+    spacing = 0;
     tray = { spacing = 10; icon-size = 18; };
   };
 
@@ -140,8 +140,8 @@ in
     output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 32;
-    spacing = 2;
+    height = 40;
+    spacing = 0;
     tray = { spacing = 12; icon-size = 20; };
   } // commonModules // internalWidgets)
 ]
