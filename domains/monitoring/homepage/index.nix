@@ -83,6 +83,7 @@ in
       extraOptions = [
         "--memory=512m"
         "--cpus=0.5"
+        "--security-opt=label=disable"   # Required for Podman socket access
       ];
     };
 
