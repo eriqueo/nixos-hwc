@@ -54,9 +54,9 @@ in {
     spinner.fg          = ${hex c.accent}
     spinner.bold        = true
 
-    # Selection highlight (wildcard) — must be clearly visible
-    *.selected.fg       = ${hex c.fg0}
-    *.selected.bg       = ${hex c.selectionBg}
+    # Selection highlight (wildcard) — inverted accent bar
+    *.selected.fg       = ${hex c.bg0}
+    *.selected.bg       = ${hex c.accent}
     *.selected.bold     = true
 
     # ──────────────────────────────────────────────────────────────
