@@ -10,22 +10,22 @@ window#waybar {
   color: #${palette.fg};
   font-family: "Hack Nerd Font";
   font-weight: bold;
-  font-size: 14px;
+  font-size: 18px;
   border-radius: 0px;
-  margin: 4px 8px 0 8px;
-  padding: 0px 4px;
+  margin: 0px 0px;
+  padding: 12px 0px;
 }
 
 /* === WORKSPACES === */
 #workspaces button {
-  padding: 0px 6px;
+  padding: 12px 8px;
   min-height: 0;
-  background-color: #${palette.info};
+  background-color: rgba(0, 133, 186, 0.25);
   color: #${palette.fg};
-  border-radius: 4px;
-  margin: 2px 2px;
+  border-radius: 0px;
+  margin: 0px 0px;
   min-width: 0px;
-  font-size: 13px;
+  font-size: 18px;
   transition: all 0.2s ease;
 }
 
@@ -35,8 +35,8 @@ window#waybar {
 }
 
 #workspaces button.active {
-  color: #${palette.bg};
-  background-color: #${palette.muted};
+  color: #${palette.fg};
+  background-color: rgba(0, 133, 186, 0.4);
   opacity: 1;
 }
 
@@ -46,78 +46,85 @@ window#waybar {
 }
 
 #workspaces button:hover {
-  background-color: #${palette.bg0};
+  background-color: rgba(213, 196, 161, 0.25);
 }
 
 /* === MODE === */
 #mode {
   background-color: #${palette.muted};
   color: #${palette.bg};
-  border-radius: 4px;
+  border-radius: 0px;
   padding: 0px 8px;
-  margin: 2px 4px;
+  margin: 8px 4px;
 }
 
-/* === WINDOW TITLE === */
-#window {
-  padding: 0px 10px;
-  font-weight: 500;
+/* === CLOCK & WEATHER — inverted center block === */
+#clock, #custom-weather {
+  padding: 12px 10px;
   min-height: 0;
-  background-color: transparent;
-  color: #${palette.good};
-  border: 1px solid #${palette.muted};
-  border-radius: 4px;
-  margin: 2px 3px;
+  background-color: #${palette.muted};
+  color: #${palette.fg0};
+  border: none;
+  border-radius: 0px;
+  margin: 0px 0px;
+  font-size: 18px;
+  font-weight: 700;
   transition: all 0.2s ease;
 }
 
 /* === BASE MODULE STYLE === */
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
-#custom-battery, #clock, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
+#custom-battery, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
-#custom-weather, #custom-lid-sleep, #custom-proton-auth, #hyprland-language {
-  padding: 0px 6px;
+#custom-lid-sleep, #custom-proton-auth, #hyprland-language {
+  padding: 12px 6px;
   min-height: 0;
-  margin: 2px 2px;
+  margin: 0px 0px;
   background-color: transparent;
-  border: 1px solid #${palette.muted};
-  border-radius: 4px;
+  border: 2px solid #${palette.muted};
+  border-radius: 0px;
   color: #${palette.fg};
-  font-size: 13px;
+  font-size: 18px;
   transition: all 0.2s ease;
 }
 
-/* === COLOR GROUPS === */
+/* === COLOR GROUPS — no gap within, 3px gap between groups === */
 
-/* Toggles — blue-grey tint (GPU, Ollama, Idle inhibitor, Lid sleep) */
+/* Toggles — blue-grey (GPU, Ollama, Idle inhibitor, Lid sleep) */
 #custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
   border-color: #${palette.ansi.blue};
-  background-color: rgba(69, 133, 136, 0.15);
+  background-color: rgba(69, 133, 136, 0.28);
 }
+#custom-gpu { margin-left: 3px; }
+#custom-lid-sleep { margin-right: 3px; }
 
-/* Connectivity — green tint (Audio, Bluetooth, Network) */
+/* Connectivity — green (Audio, Bluetooth, Network) */
 #pulseaudio, #bluetooth, #custom-network {
   border-color: #${palette.ansi.cyan};
-  background-color: rgba(104, 157, 106, 0.15);
+  background-color: rgba(104, 157, 106, 0.28);
 }
+#custom-network { margin-right: 3px; }
 
-/* System health — copper tint (Temp, Disk, Battery) */
+/* System health — copper (Temp, Disk, Battery) */
 #temperature, #custom-disk-space, #custom-battery {
   border-color: #${palette.accent};
-  background-color: rgba(207, 153, 95, 0.15);
+  background-color: rgba(207, 153, 95, 0.28);
 }
+#custom-battery { margin-right: 3px; }
 
-/* Info — neutral (Clock, Weather, MPD) */
-#clock, #custom-weather, #mpd {
+/* Media — neutral (MPD) */
+#mpd {
   border-color: #${palette.fg2};
-  background-color: rgba(167, 170, 173, 0.1);
+  background-color: rgba(167, 170, 173, 0.26);
+  margin-right: 3px;
 }
 
 /* Actions — subtle (Proton, Tray, Notify, Power) */
 #custom-proton-auth, #tray, #custom-notification, #custom-power {
   border-color: #${palette.muted};
-  background-color: transparent;
+  background-color: rgba(80, 98, 111, 0.26);
 }
+#custom-proton-auth { margin-left: 3px; }
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
@@ -158,6 +165,6 @@ window#waybar {
 .powersave { color: #${palette.good}; }
 .unknown { color: #${palette.muted}; }
 .running { color: #${palette.good}; }
-.weather { color: #${palette.info}; }
+.weather { color: #${palette.bg0}; }
 .sleep-enabled { color: #${palette.good}; }
 ''

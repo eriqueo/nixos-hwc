@@ -64,6 +64,12 @@ in
       Install = { WantedBy = [ "graphical-session.target" ]; };
     };
 
+    # Restart waybar after Home Manager activation (rebuild switch).
+    # HM reloads the daemon but doesn't restart changed services by default.
+    home.activation.restartWaybar = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+      ${pkgs.systemd}/bin/systemctl --user restart waybar.service 2>/dev/null || true
+    '';
+
     # Run waybar via systemd so it survives rebuilds and restarts cleanly.
     # Wait for XDG portals to avoid race condition on startup.
     systemd.user.services.waybar = {
