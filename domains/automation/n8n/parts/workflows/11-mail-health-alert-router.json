@@ -1,0 +1,63 @@
+{
+  "name": "Mail Health Alert Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mail-health",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Mail Health",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "mail-health"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and validate incoming health check alert\nconst body = $input.item.json.body || $input.item.json;\n\nconst severity = body.severity || 'warning';\nconst host = body.host || 'unknown';\nconst timestamp = body.timestamp || new Date().toISOString();\nconst details = body.details || 'No details provided';\n\n// Format time for display\nconst time = new Date(timestamp).toLocaleString('en-US', {\n  timeZone: 'America/Denver',\n  hour: 'numeric',\n  minute: '2-digit',\n  hour12: true,\n  month: 'short',\n  day: 'numeric'\n});\n\n// Determine emoji and color\nlet emoji, color, label;\nif (severity === 'critical') {\n  emoji = '🔴';\n  color = '#DC2626';\n  label = 'CRITICAL';\n} else {\n  emoji = '🟡';\n  color = '#F59E0B';\n  label = 'WARNING';\n}\n\nreturn {\n  json: {\n    severity,\n    host,\n    timestamp,\n    time,\n    details,\n    emoji,\n    color,\n    label\n  }\n};"
+      },
+      "id": "parse-alert",
+      "name": "Parse Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.emoji }} Mail Health: {{ $json.label }}\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"```{{ $json.details }}```\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"{{ $json.host }} · {{ $json.time }} · mail-health-check\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "send-slack",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Mail Health": {
+      "main": [[{ "node": "Parse Alert", "type": "main", "index": 0 }]]
+    },
+    "Parse Alert": {
+      "main": [[{ "node": "Send to Slack", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "monitoring", "id": "monitoring-tag" },
+    { "name": "mail", "id": "mail-tag" }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-26T00:00:00.000Z",
+  "versionId": "1"
+}
