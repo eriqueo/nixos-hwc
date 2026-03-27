@@ -75,9 +75,11 @@ hwc.data.borg = {
 
 ## Systemd Units
 
-- `borgbackup-job-hwc-backup.service` / timer — scheduled Borg backup
-- `borg-check.service` / `borg-check.timer` — weekly repository integrity check
+- `borgbackup-job-hwc-backup.service` / timer — scheduled Borg backup (TimeoutStartSec=4h)
+- `borg-check.service` / `borg-check.timer` — weekly repository integrity check (TimeoutStartSec=6h)
+- `borg-health-check.service` / timer — daily backup health check with ntfy notifications
 
 ## Changelog
 
 - 2026-03-25: Created README per Law 12
+- 2026-03-27: Added TimeoutStartSec to backup (4h) and check (6h) services; added daily health check with ntfy notifications (timer, service failed, stale backup, stuck process, ZFS pool, SMART checks)

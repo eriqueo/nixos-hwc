@@ -108,6 +108,23 @@
   # ZFS configuration
   boot.zfs.extraPools = [ "backup-pool" ];  # Auto-import backup pool on boot
 
+  # Ensure backup-pool uses failmode=continue so ZFS returns EIO on transient
+  # errors instead of blocking all I/O. Without this, SUSPENDED state causes
+  # borg processes to enter D state permanently (root cause of 2-week backup
+  # outage, 2026-03). The property persists in pool metadata, but this service
+  # enforces it on every boot as a safety net.
+  systemd.services.zfs-failmode-backup-pool = {
+    description = "Set ZFS failmode=continue on backup-pool";
+    after = [ "zfs-import-backup-pool.service" ];
+    requires = [ "zfs-import-backup-pool.service" ];
+    wantedBy = [ "zfs.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "/run/current-system/sw/bin/zpool set failmode=continue backup-pool";
+    };
+  };
+
   services.zfs = {
     autoScrub = {
       enable = true;
@@ -399,7 +416,10 @@
       echo "Database dumps complete"
     '';
 
-    monitoring.enable = true;
+    monitoring = {
+      enable = true;
+      healthCheck.enable = true;  # Daily ntfy health check at 6 AM Mountain
+    };
     notifications.onFailure = true;
   };
 

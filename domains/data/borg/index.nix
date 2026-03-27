@@ -188,6 +188,40 @@ in
         default = "weekly";
         description = "How often to run borg check";
       };
+
+      healthCheck = {
+        enable = lib.mkEnableOption "Daily backup health check with ntfy notifications";
+
+        schedule = lib.mkOption {
+          type = lib.types.str;
+          default = "06:00";
+          description = "Time of day to run health check (HH:MM, Mountain Time)";
+        };
+
+        ntfyTopic = lib.mkOption {
+          type = lib.types.str;
+          default = "alerts";
+          description = "ntfy topic for backup health notifications";
+        };
+
+        maxBackupAgeHours = lib.mkOption {
+          type = lib.types.int;
+          default = 26;
+          description = "Alert if last backup is older than this many hours";
+        };
+
+        maxRunTimeHours = lib.mkOption {
+          type = lib.types.int;
+          default = 4;
+          description = "Alert if any borg process has been running longer than this";
+        };
+
+        zfsPool = lib.mkOption {
+          type = lib.types.str;
+          default = "backup-pool";
+          description = "ZFS pool to check for health status";
+        };
+      };
     };
 
     #==========================================================================
@@ -327,7 +361,8 @@ in
       ];
       # Prevent stuck borg processes from blocking future backups
       serviceConfig = {
-        TimeoutStopSec = "5min";      # Give borg time to finish gracefully
+        TimeoutStartSec = "4h";        # Kill backup if stuck longer than 4 hours
+        TimeoutStopSec = "5min";       # Give borg time to finish gracefully
         KillMode = "mixed";            # SIGTERM to main, SIGKILL to remaining after timeout
         KillSignal = "SIGINT";         # Borg handles SIGINT gracefully (checkpoint)
       };
@@ -342,6 +377,7 @@ in
         Type = "oneshot";
         ExecStart = "${pkgs.borgbackup}/bin/borg check ${cfg.repo.path}";
         Environment = "BORG_PASSCOMMAND=cat /run/agenix/${cfg.encryption.passphraseSecret}";
+        TimeoutStartSec = "6h";  # Kill if stuck longer than 6 hours
       };
     };
 
@@ -350,6 +386,122 @@ in
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = cfg.monitoring.checkFrequency;
+        Persistent = true;
+      };
+    };
+
+    # ===================================================================
+    # BACKUP HEALTH CHECK (daily ntfy notification)
+    # ===================================================================
+    systemd.services.borg-health-check = lib.mkIf cfg.monitoring.healthCheck.enable {
+      description = "Borg backup health check with ntfy notification";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      path = [
+        pkgs.systemd
+        pkgs.coreutils
+        pkgs.gawk
+        pkgs.procps
+        pkgs.ripgrep
+        pkgs.zfs
+        pkgs.smartmontools
+        pkgs.curl
+        pkgs.nettools
+      ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = let
+          hc = cfg.monitoring.healthCheck;
+          healthScript = pkgs.writeShellScript "borg-health-check" ''
+            set -uo pipefail
+
+            NTFY_TOPIC="${hc.ntfyTopic}"
+            MAX_AGE_HOURS=${toString hc.maxBackupAgeHours}
+            MAX_RUN_HOURS=${toString hc.maxRunTimeHours}
+            MAX_RUN_SECS=$((MAX_RUN_HOURS * 3600))
+            ZFS_POOL="${hc.zfsPool}"
+            PROBLEMS=()
+
+            # 1. Timer active?
+            if ! systemctl is-active --quiet borgbackup-job-${jobName}.timer; then
+              PROBLEMS+=("Backup timer is not active")
+            fi
+
+            # 2. Service failed?
+            if systemctl is-failed --quiet borgbackup-job-${jobName}.service; then
+              PROBLEMS+=("Backup service is in failed state")
+            fi
+
+            # 3. Last completion age
+            AGE_HOURS="unknown"
+            LAST_EXIT=$(systemctl show borgbackup-job-${jobName}.service --property=ExecMainExitTimestamp --value)
+            if [ -n "$LAST_EXIT" ] && [ "$LAST_EXIT" != "" ]; then
+              LAST_EPOCH=$(date -d "$LAST_EXIT" +%s 2>/dev/null || echo "0")
+              if [ "$LAST_EPOCH" -gt 0 ]; then
+                NOW_EPOCH=$(date +%s)
+                AGE_HOURS=$(( (NOW_EPOCH - LAST_EPOCH) / 3600 ))
+                if [ "$AGE_HOURS" -gt "$MAX_AGE_HOURS" ]; then
+                  PROBLEMS+=("Last backup was ''${AGE_HOURS}h ago (threshold: ''${MAX_AGE_HOURS}h)")
+                fi
+              else
+                PROBLEMS+=("Cannot parse last backup completion time")
+              fi
+            else
+              PROBLEMS+=("Cannot determine last backup completion time")
+            fi
+
+            # 4. Stuck borg process (>MAX_RUN_HOURS)
+            STUCK=$(ps -eo pid,etimes,comm 2>/dev/null | rg borg | awk -v max="$MAX_RUN_SECS" '$2 > max {printf "%s (running %dh) ", $1, $2/3600}')
+            if [ -n "$STUCK" ]; then
+              PROBLEMS+=("Stuck borg process: $STUCK")
+            fi
+
+            # 5. ZFS pool health
+            POOL_HEALTH=$(zpool get -H -o value health "$ZFS_POOL" 2>/dev/null || echo "UNKNOWN")
+            if [ "$POOL_HEALTH" != "ONLINE" ]; then
+              PROBLEMS+=("$ZFS_POOL is $POOL_HEALTH (expected ONLINE)")
+            fi
+
+            # 6. SMART warnings on backup drives
+            for dev in $(zpool status "$ZFS_POOL" 2>/dev/null | rg -o '/dev/[^ ]+' | sort -u); do
+              # Resolve disk/by-id symlinks to actual device for smartctl
+              REAL_DEV=$(readlink -f "$dev" 2>/dev/null || echo "$dev")
+              REALLOC=$(smartctl -A "$REAL_DEV" 2>/dev/null | rg "Reallocated_Sector" | awk '{print $NF}')
+              PENDING=$(smartctl -A "$REAL_DEV" 2>/dev/null | rg "Current_Pending" | awk '{print $NF}')
+              if [ "''${REALLOC:-0}" -gt 0 ] 2>/dev/null || [ "''${PENDING:-0}" -gt 0 ] 2>/dev/null; then
+                PROBLEMS+=("Drive $REAL_DEV: ''${REALLOC:-0} reallocated, ''${PENDING:-0} pending sectors")
+              fi
+            done
+
+            # Send notification via hwc-ntfy-send
+            if [ ''${#PROBLEMS[@]} -gt 0 ]; then
+              MSG=$(printf '• %s\n' "''${PROBLEMS[@]}")
+              hwc-ntfy-send \
+                --tag "rotating_light,backup" \
+                --priority 5 \
+                "$NTFY_TOPIC" \
+                "Backup ALERT" \
+                "Backup health check failed:
+$MSG"
+              exit 1
+            else
+              hwc-ntfy-send \
+                --tag "white_check_mark,backup" \
+                --priority 2 \
+                "$NTFY_TOPIC" \
+                "Backup OK" \
+                "Backup healthy — last completed ''${AGE_HOURS}h ago, pool $POOL_HEALTH"
+            fi
+          '';
+        in "${healthScript}";
+      };
+    };
+
+    systemd.timers.borg-health-check = lib.mkIf cfg.monitoring.healthCheck.enable {
+      description = "Daily backup health check";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*-*-* ${cfg.monitoring.healthCheck.schedule}:00 America/Denver";
         Persistent = true;
       };
     };
