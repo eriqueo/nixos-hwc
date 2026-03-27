@@ -6,7 +6,7 @@ in
 ''
 /* Generated from ${palette.name} palette - Modern rounded glass rice (Gruvbox Material Dark) */
 window#waybar {
-  background-color: rgba(40, 40, 40, 0.85);  /* bg = #282828 @ ~85% opacity for glass */
+  background-color: rgba(40, 40, 40, 0.80);  /* bg = #282828 @ 80% opacity for glass */
   color: #${palette.fg};
   font-size: 16px;
   border-radius: 18px;
@@ -16,9 +16,10 @@ window#waybar {
 }
 
 #workspaces button {
-  padding: 6px 12px;
+  padding: 4px 10px;
   background-color: transparent;
-  color: #${palette.accent};
+  color: #${palette.fg};
+  border: 1px solid #${palette.accent};
   border-radius: 16px;
   margin: 4px 2px;
   min-width: 20px;
@@ -27,7 +28,7 @@ window#waybar {
 
 #workspaces button.empty {
   color: #${palette.fg};
-  opacity: 0.4;
+  opacity: 0.5;
 }
 
 #workspaces button.active {
@@ -62,33 +63,12 @@ window#waybar {
 #custom-weather, #custom-lid-sleep, #hyprland-language {
   padding: 4px 14px;
   margin: 0 4px;
+  background-color: transparent;
+  border: 1px solid #${palette.accent};
   border-radius: 16px;
   color: #${palette.fg};
 }
 
-/* Your original module background tints (adjusted for Gruvbox feel) */
-#cpu { background-color: #${palette.surface1}; }
-#memory { background-color: #${palette.surface2}; }
-#temperature { background-color: #${palette.muted}; }
-#custom-fan { background-color: #${palette.surface1}; }
-#custom-load { background-color: #${palette.surface2}; }
-#custom-power-profile { background-color: #${palette.muted}; }
-#custom-disk-space { background-color: #${palette.surface1}; }
-#network { background-color: #${palette.surface2}; }
-#bluetooth { background-color: #${palette.muted}; }
-#pulseaudio { background-color: #${palette.surface1}; }
-#battery { background-color: #${palette.surface2}; }
-#backlight { background-color: #${palette.muted}; }
-#clock { background-color: #${palette.surface1}; color: #${palette.fg}; }
-#custom-gpu { background-color: #${palette.surface2}; }
-#custom-ollama { background-color: #${palette.muted}; }
-#idle_inhibitor { background-color: #${palette.muted}; }
-#mpd { background-color: #${palette.surface1}; }
-#tray { background-color: #${palette.surface2}; }
-#custom-notification { background-color: #${palette.muted}; }
-#custom-power { background-color: #${palette.surface1}; }
-#custom-weather { background-color: #${palette.surface2}; }
-#custom-lid-sleep { background-color: #${palette.surface1}; }
 
 /* Your original class colors (unchanged) */
 .intel { color: #${palette.ansi.blue}; }
