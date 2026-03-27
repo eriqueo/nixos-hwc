@@ -9,7 +9,7 @@
 #   - ntfy (for push notifications, configured manually post-deploy)
 #
 # PORTS:
-#   - Internal: 3002 (container HTTP)
+#   - Internal: 3010 (container HTTP)
 #   - External: 13543 (Caddy TLS termination)
 
 { config, lib, pkgs, ... }:
@@ -26,7 +26,7 @@ in
 
     port = lib.mkOption {
       type = lib.types.port;
-      default = 3002;
+      default = 3010;
       description = "Host port for Uptime Kuma web UI";
     };
 
