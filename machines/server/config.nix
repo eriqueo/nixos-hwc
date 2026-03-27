@@ -987,7 +987,8 @@
       # Mail — Phase 2: enable infrastructure, bridge not yet running
       hwc.mail = {
         enable = true;
-        bridge.enable = false;  # Needs GPG + pass + initial login first
+        bridge.enable = true;
+        aerc.enable = true;
 
         health = {
           enable = true;
@@ -1038,6 +1039,22 @@
           aider.enable = true;
           gemini-cli.enable = true;
         };
+      };
+
+      # Persistent tmux session for aerc (Phase 3: SSH access from laptop)
+      systemd.user.services.aerc-tmux = {
+        Unit = {
+          Description = "Persistent aerc mail session in tmux";
+          After = [ "protonmail-bridge.service" ];
+        };
+        Service = {
+          Type = "forking";
+          ExecStart = "${lib.getExe pkgs.tmux} new-session -d -s mail aerc";
+          ExecStop = "${lib.getExe pkgs.tmux} kill-session -t mail";
+          Restart = "on-failure";
+          RestartSec = 10;
+        };
+        Install.WantedBy = [ "default.target" ];
       };
 
       # Disable desktop services
