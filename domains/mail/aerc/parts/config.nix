@@ -4,7 +4,8 @@ let
     accounts  = config.hwc.mail.accounts or {};
     accVals   = lib.attrValues accounts;
     colors    = (config.hwc.home.theme or {}).colors or {};
-    appearance = import ./appearance.nix { inherit lib colors; };
+    tags      = import ./tags.nix { inherit lib; inherit colors; };
+    appearance = import ./appearance.nix { inherit lib colors tags; };
 
     maildirBase =
         let nmRoot = config.hwc.mail.notmuch.maildirRoot or "";
@@ -41,8 +42,6 @@ ${tagQueries}
   accountsFile = pkgs.writeText "aerc-accounts.conf" accountsConf;
   stylesetConf = appearance.stylesetContent;
 
-  # Import shared tag definitions (pass palette colors for group-based coloring)
-  tags = import ./tags.nix { inherit lib; inherit colors; };
   tagDefs = tags.allTags;
 
   # Derive the style name for a tag (uses display if set, else tag)
@@ -100,7 +99,7 @@ default.dim = true
     name = ".config/aerc/stylesets/${name}";
     value.text = builtins.readFile "${pkgs.aerc}/share/aerc/stylesets/${name}" + tagUserSection;
   }) bundledStylesets) // {
-    ".config/aerc/stylesets/hwc".text = import ./groups-styleset.nix { inherit lib; colors = colors; tags = tags; };
+    ".config/aerc/stylesets/hwc".text = stylesetConf;
   };
 in
 {
@@ -114,6 +113,7 @@ in
       threading-enabled = true
       confirm-quit = false
       styleset-name = hwc
+      dirlist-left = {{.Style .Folder .Folder}}
       dirlist-tree = true
       dirlist-collapse = 1
       dirlist-exclude = ^\..*|^proton(/.*)?$|^gmail-business|^gmail-personal|^acc:|^hwc_email$
