@@ -3,21 +3,14 @@
         icon: mdi-api
         href: https://hwc.ocelot-wahoo.ts.net:16100
         description: Heartwood MCP Server
-        widget:
-          type: customapi
-          url: http://localhost:6100/health
-          refreshInterval: 30000
-          mappings:
-            - field: status
-              label: Status
-              format: text
+        ping: host.containers.internal:16100
     - Estimator API:
         icon: mdi-calculator
         href: http://localhost:8099/docs
         description: Remodel pricing API
         widget:
           type: customapi
-          url: http://localhost:8099/health
+          url: http://host.containers.internal:8099/health
           refreshInterval: 30000
           mappings:
             - field: status
@@ -44,14 +37,7 @@
     - Caddy:
         icon: caddy
         description: Reverse proxy
-        widget:
-          type: customapi
-          url: http://localhost:2019/config/
-          refreshInterval: 60000
-          mappings:
-            - field: apps
-              label: Apps
-              format: text
+        ping: host.containers.internal:443
     - Authentik:
         icon: authentik
         href: https://hwc.ocelot-wahoo.ts.net:15543
