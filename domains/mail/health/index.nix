@@ -226,7 +226,7 @@ let
       local recent_failures
       recent_failures=$(${pkgs.systemd}/bin/journalctl --user -u mbsync.service \
         --since "30 min ago" --no-pager -q 2>/dev/null \
-        | ${pkgs.gnugrep}/bin/grep -ci "error\|fail\|coredump\|assert" 2>/dev/null || echo 0)
+        | ${pkgs.gnugrep}/bin/grep -ci "error\|fail\|coredump\|assert" 2>/dev/null) || recent_failures=0
       if (( recent_failures > 3 )); then
         fail "mbsync has failed ''${recent_failures} times in the last 30 minutes"
       fi
@@ -257,54 +257,56 @@ let
     check_freshness
 
     # ─── Report results ─────────────────────────────────────────
-
-    # Auto-remediations: log + send as informational warning
-    if (( ''${#REMEDIATIONS[@]} > 0 )); then
-      local remed_msg
-      remed_msg=$(printf '• %s\n' "''${REMEDIATIONS[@]}")
-      echo "AUTO-REMEDIATED:"
-      echo "$remed_msg"
-      alert "warning" "Mail: Auto-remediated" "$remed_msg"
-    fi
-
-    # Failures: escalate based on how long we've been failing
-    if (( ''${#FAILURES[@]} > 0 )); then
-      local fail_msg
-      fail_msg=$(printf '• %s\n' "''${FAILURES[@]}")
-      echo "FAILURES:"
-      echo "$fail_msg"
-
-      local down_file="$STATE_DIR/first-failure"
-      if [[ ! -f "$down_file" ]]; then
-        # First failure — record timestamp, send warning
-        now_epoch > "$down_file"
-        alert "warning" "Mail: Degraded" "$fail_msg"
-      else
-        # Ongoing failure — escalate to critical after 30 min
-        local first_fail elapsed_min
-        first_fail=$(<"$down_file")
-        elapsed_min=$(( ($(now_epoch) - first_fail) / 60 ))
-        if (( elapsed_min >= 30 )); then
-          alert "critical" "Mail DOWN ''${elapsed_min}m" "$fail_msg"
-        else
-          alert "warning" "Mail: Degraded (''${elapsed_min}m)" "$fail_msg"
-        fi
+    report_results() {
+      # Auto-remediations: log + send as informational warning
+      if (( ''${#REMEDIATIONS[@]} > 0 )); then
+        local remed_msg
+        remed_msg=$(printf '• %s\n' "''${REMEDIATIONS[@]}")
+        echo "AUTO-REMEDIATED:"
+        echo "$remed_msg"
+        alert "warning" "Mail: Auto-remediated" "$remed_msg"
       fi
-      exit 1
-    fi
 
-    # Warnings only (no failures)
-    if (( ''${#WARNINGS[@]} > 0 )); then
-      local warn_msg
-      warn_msg=$(printf '• %s\n' "''${WARNINGS[@]}")
-      echo "WARNINGS:"
-      echo "$warn_msg"
-      alert "warning" "Mail: Warning" "$warn_msg"
-    fi
+      # Failures: escalate based on how long we've been failing
+      if (( ''${#FAILURES[@]} > 0 )); then
+        local fail_msg
+        fail_msg=$(printf '• %s\n' "''${FAILURES[@]}")
+        echo "FAILURES:"
+        echo "$fail_msg"
 
-    # All clear — reset failure escalation tracking
-    rm -f "$STATE_DIR/first-failure"
-    echo "OK — $(${pkgs.coreutils}/bin/date -Iseconds)"
+        local down_file="$STATE_DIR/first-failure"
+        if [[ ! -f "$down_file" ]]; then
+          # First failure — record timestamp, send warning
+          now_epoch > "$down_file"
+          alert "warning" "Mail: Degraded" "$fail_msg"
+        else
+          # Ongoing failure — escalate to critical after 30 min
+          local first_fail elapsed_min
+          first_fail=$(<"$down_file")
+          elapsed_min=$(( ($(now_epoch) - first_fail) / 60 ))
+          if (( elapsed_min >= 30 )); then
+            alert "critical" "Mail DOWN ''${elapsed_min}m" "$fail_msg"
+          else
+            alert "warning" "Mail: Degraded (''${elapsed_min}m)" "$fail_msg"
+          fi
+        fi
+        exit 1
+      fi
+
+      # Warnings only (no failures)
+      if (( ''${#WARNINGS[@]} > 0 )); then
+        local warn_msg
+        warn_msg=$(printf '• %s\n' "''${WARNINGS[@]}")
+        echo "WARNINGS:"
+        echo "$warn_msg"
+        alert "warning" "Mail: Warning" "$warn_msg"
+      fi
+
+      # All clear — reset failure escalation tracking
+      rm -f "$STATE_DIR/first-failure"
+      echo "OK — $(${pkgs.coreutils}/bin/date -Iseconds)"
+    }
+    report_results
     now_epoch > "$STATE_DIR/last-healthy"
   '';
 
