@@ -49,6 +49,7 @@ monitoring/
 
 ## Changelog
 
+- 2026-03-27: Fixed alertmanager routing — default receiver was empty (alerts silently dropped). Now uses child routes with `continue: true` to fan out to all configured webhook receivers. Added ntfy-bridge as second receiver alongside n8n-webhook.
 - 2026-03-04: Namespace migration hwc.server.native.monitoring.* → hwc.monitoring.*
 - 2026-03-04: Moved from domains/server/native/monitoring/ (Phase 4 of DDD migration)
 - 2026-03-27: Added Homepage (gethomepage) service dashboard and Uptime Kuma uptime monitor

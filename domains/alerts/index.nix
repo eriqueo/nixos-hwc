@@ -275,7 +275,8 @@ in
   };
 
   imports = [
-    ./parts/server.nix  # ntfy notification server
+    ./parts/server.nix       # ntfy notification server
+    ./parts/ntfy-bridge.nix  # Alertmanager → ntfy bridge
   ];
 
   #==========================================================================

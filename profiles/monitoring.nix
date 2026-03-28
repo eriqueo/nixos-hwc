@@ -55,6 +55,11 @@
         url = "https://hwc.ocelot-wahoo.ts.net:2443/webhook/alertmanager";
         sendResolved = true;
       }
+      {
+        name = "ntfy-bridge";
+        url = "http://localhost:9095";
+        sendResolved = true;
+      }
     ];
   };
 
