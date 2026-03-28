@@ -340,7 +340,6 @@
     # Same sources as rsync, plus database dumps
     sources = [
       "/mnt/media/photos"                # Immich photos (CRITICAL)
-      "/mnt/media/surveillance/frigate"  # Security camera recordings
       "/var/lib/hwc"                     # Service state directories
       "/var/lib/backups"                 # Database dumps
     ];
