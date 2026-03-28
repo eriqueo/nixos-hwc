@@ -52,6 +52,8 @@ The same transparent, structured process I use for every project:
 
 6. **Walkthrough.** We go through everything. Punch list items resolved within 48 hours.
 
+See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
+
 ## What It Costs
 
 Real numbers from Bozeman-area basement projects:

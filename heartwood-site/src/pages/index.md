@@ -43,7 +43,7 @@ schema_type: "LocalBusiness"
         <p>I specialize in bathroom remodels — from full gut renovations to targeted refreshes. Every project starts with a 3D rendering so you see your new space before I pick up a hammer.</p>
         <a href="/bathroom/remodeling/" class="btn btn-outline">Learn more &rarr;</a>
       </div>
-      <img src="/img/portfolio/interiors/20200412_135322.jpg" alt="Interior remodel by Heartwood Craft" loading="lazy">
+      <img src="/img/portfolio/interiors/20200412_135322.webp" alt="Interior remodel by Heartwood Craft" loading="lazy">
     </div>
   </div>
 </section>
@@ -57,7 +57,7 @@ schema_type: "LocalBusiness"
         <p>I handle everything — egress windows, moisture control, electrical, framing, and finishing — so you get a space that's warm, dry, and built to code.</p>
         <a href="/basement/remodeling/" class="btn btn-outline">Learn more &rarr;</a>
       </div>
-      <img src="/img/portfolio/interiors/20200402_184040.jpg" alt="Interior finishing work by Heartwood Craft" loading="lazy">
+      <img src="/img/portfolio/interiors/20200402_184040.webp" alt="Interior finishing work by Heartwood Craft" loading="lazy">
     </div>
   </div>
 </section>
@@ -71,7 +71,7 @@ schema_type: "LocalBusiness"
         <p>From simple platforms to multi-level outdoor living spaces — built for the weather and built to last.</p>
         <a href="/remodeling/" class="btn btn-outline">Explore services &rarr;</a>
       </div>
-      <img src="/img/portfolio/exteriors/decks/20180822_155203.jpg" alt="Custom deck built by Heartwood Craft" loading="lazy">
+      <img src="/img/portfolio/exteriors/decks/20180822_155203.webp" alt="Custom deck built by Heartwood Craft" loading="lazy">
     </div>
   </div>
 </section>
