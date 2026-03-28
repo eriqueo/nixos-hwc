@@ -6,6 +6,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.tmux;
+  c = config.hwc.home.theme.colors;
 in
 {
   #==========================================================================
@@ -71,28 +72,28 @@ in
         # Don't rename windows automatically
         set -g allow-rename off
 
-        # ── Status bar (Gruvbox/Nord neutral palette) ──────────────────────────
+        # ── Status bar (from HWC palette) ───────────────────────────────────
         set -g status on
         set -g status-interval 5
         set -g status-position bottom
-        set -g status-style "bg=#282828,fg=#ebdbb2"
+        set -g status-style "bg=#${c.bg},fg=#${c.fg0}"
 
         set -g status-left-length 40
-        set -g status-left "#[bg=#458588,fg=#282828,bold] #S #[bg=#282828,fg=#458588]"
+        set -g status-left "#[bg=#${c.ansi.blue},fg=#${c.bg},bold] #S #[bg=#${c.bg},fg=#${c.ansi.blue}]"
 
         set -g status-right-length 60
-        set -g status-right "#[fg=#a89984] %H:%M  %d %b #[fg=#458588,bold]#H "
+        set -g status-right "#[fg=#${c.ansi.white}] %H:%M  %d %b #[fg=#${c.ansi.blue},bold]#H "
 
-        set -g window-status-format         "#[fg=#a89984] #I:#W "
-        set -g window-status-current-format "#[bg=#458588,fg=#282828,bold] #I:#W #[bg=#282828,fg=#458588]"
+        set -g window-status-format         "#[fg=#${c.ansi.white}] #I:#W "
+        set -g window-status-current-format "#[bg=#${c.ansi.blue},fg=#${c.bg},bold] #I:#W #[bg=#${c.bg},fg=#${c.ansi.blue}]"
         set -g window-status-separator      ""
 
         # Pane borders
-        set -g pane-border-style        "fg=#3c3836"
-        set -g pane-active-border-style "fg=#458588"
+        set -g pane-border-style        "fg=#${c.border}"
+        set -g pane-active-border-style "fg=#${c.ansi.blue}"
 
         # Message / command line
-        set -g message-style "bg=#458588,fg=#282828"
+        set -g message-style "bg=#${c.ansi.blue},fg=#${c.bg}"
       '';
     };
   };

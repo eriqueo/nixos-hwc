@@ -1,5 +1,6 @@
 { lib, pkgs, config, ... }:
 let
+  c = config.hwc.home.theme.colors;
   tags = import ./tags.nix { inherit lib; };
 
   # Exclusive category bindings under <Space>m leader (adds tag, removes all other categories)
@@ -224,7 +225,7 @@ ${categoryBinds}
 
           Style:
             Alternate:
-              Background: "gray"
+              Background: "#${c.bg2}"
             Header:
               Bold: true
             SearchHighlight:
@@ -232,12 +233,12 @@ ${categoryBinds}
             ColumnHighlight:
               Reverse: true
             MarkLine:
-              Background: "darkgoldenrod"
+              Background: "#${c.warning}"
             SectionLine:
-              Background: "slateblue"
+              Background: "#${c.info}"
             Ruler:
-              Background: "#333333"
-              Foreground: "#CCCCCC"
+              Background: "#${c.bg3}"
+              Foreground: "#${c.fg2}"
               Bold: true
             JumpTargetLine:
               Underline: true
