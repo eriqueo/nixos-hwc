@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ meta_description | default(site.description) }}">
+  <link rel="canonical" href="{{ site.url }}{{ page.url }}">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ meta_description | default(site.description) }}">
+  <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+  <meta property="og:type" content="{{ og_type | default('website') }}">
+  {% if og_image %}<meta property="og:image" content="{{ site.url }}{{ og_image }}">{% endif %}
+  <meta property="og:site_name" content="{{ site.name }}">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/img/brand/favicon.svg">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Structured Data -->
+  {% if schema_type == "LocalBusiness" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "{{ site.name }}",
+    "description": "{{ site.description }}",
+    "telephone": "{{ site.phone }}",
+    "email": "{{ site.email }}",
+    "url": "{{ site.url }}",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Bozeman",
+      "addressRegion": "MT",
+      "addressCountry": "US"
+    },
+    "areaServed": ["Bozeman, MT", "Belgrade, MT", "Gallatin Gateway, MT"],
+    "priceRange": "$$"
+  }
+  </script>
+  {% elif schema_type == "Service" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "{{ title }}",
+    "description": "{{ meta_description | default(site.description) }}",
+    "provider": {
+      "@type": "LocalBusiness",
+      "name": "{{ site.name }}",
+      "telephone": "{{ site.phone }}",
+      "url": "{{ site.url }}"
+    },
+    "areaServed": ["Bozeman, MT", "Belgrade, MT", "Gallatin Gateway, MT"]
+  }
+  </script>
+  {% elif schema_type == "BlogPosting" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "{{ title }}",
+    "description": "{{ meta_description | default(site.description) }}",
+    "author": {
+      "@type": "Person",
+      "name": "Eric"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "{{ site.name }}"
+    },
+    "datePublished": "{{ date | dateISO }}",
+    "url": "{{ site.url }}{{ page.url }}"{% if featured_image %},
+    "image": "{{ site.url }}{{ featured_image }}"{% endif %}
+  }
+  </script>
+  {% else %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "{{ title }}",
+    "description": "{{ meta_description | default(site.description) }}",
+    "url": "{{ site.url }}{{ page.url }}"
+  }
+  </script>
+  {% endif %}
+</head>
+<body>
+
+{% include "partials/header.njk" %}
+
+<main>
+  {{ content | safe }}
+</main>
+
+{% include "partials/footer.njk" %}
+
+<!-- GA4: paste tracking tag here -->
+
+<script src="/js/main.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "main": [
+    { "label": "Home", "url": "/" },
+    {
+      "label": "Services",
+      "children": [
+        { "label": "Bathroom Remodeling", "url": "/bathroom/remodeling/" },
+        { "label": "Basement Remodeling", "url": "/basement/remodeling/" },
+        { "label": "General Remodeling", "url": "/remodeling/" }
+      ]
+    },
+    {
+      "label": "Areas We Serve",
+      "children": [
+        { "label": "Bozeman", "url": "/bozeman/" },
+        { "label": "Belgrade", "url": "/belgrade/" },
+        { "label": "Gallatin Gateway", "url": "/gallatin-gateway/" }
+      ]
+    },
+    { "label": "Our Work", "url": "/our-work/" },
+    { "label": "About", "url": "/about/" },
+    { "label": "Blog", "url": "/blog/" }
+  ]
+}
