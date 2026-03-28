@@ -56,6 +56,8 @@ Here's exactly what happens when you call:
 
 7. **Final walkthrough.** When it's done, we walk through everything together. Any punch list items get resolved within 48 hours.
 
+See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
+
 ## What It Costs
 
 I believe in being upfront about pricing. Here are real ranges based on actual Heartwood Craft projects in Bozeman:

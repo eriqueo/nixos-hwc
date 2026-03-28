@@ -8,8 +8,8 @@ layout: layouts/base.njk
       <h1>{{ h1 | default(title) }}</h1>
       {% if hero_subtitle %}<p class="hero-subtitle">{{ hero_subtitle }}</p>{% endif %}
       <div class="hero-cta">
-        <a href="{{ site.phoneLink }}" class="btn btn-primary">Call {{ site.phone }}</a>
-        <a href="#contact-form" class="btn btn-outline-light">Get a Free Estimate</a>
+        <a href="/contact/" class="btn btn-primary">Get Started</a>
+        <a href="/our-work/" class="btn btn-outline-light">See Our Work</a>
       </div>
     </div>
   </div>
@@ -24,11 +24,20 @@ layout: layouts/base.njk
   </div>
 </div>
 
-{% include "partials/section-testimonials.njk" %}
+<section class="section">
+  <div class="container container-narrow text-center">
+    <h2>Bathroom Remodeling, Basement Finishing & Custom Carpentry in Bozeman</h2>
+    <p>I'm Eric, and I run Heartwood Craft — a one-person remodeling company built on the idea that you should see exactly what you're getting before construction starts, know exactly what it costs, and hear from me every single day until the job is done.</p>
+  </div>
+</section>
+
+{{ content | safe }}
+
+<p class="text-center" style="margin-top: -2rem; margin-bottom: 3rem;"><a href="/how-it-works/">See exactly how a project works, from first call to final walkthrough &rarr;</a></p>
 
 {% include "partials/section-services-grid.njk" %}
 
-{{ content | safe }}
+{% include "partials/section-testimonials.njk" %}
 
 {% include "partials/section-cta.njk" %}
 

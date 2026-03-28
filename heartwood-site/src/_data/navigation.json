@@ -9,6 +9,7 @@
         { "label": "General Remodeling", "url": "/remodeling/" }
       ]
     },
+    { "label": "How It Works", "url": "/how-it-works/" },
     {
       "label": "Areas We Serve",
       "children": [
@@ -18,7 +19,6 @@
       ]
     },
     { "label": "Our Work", "url": "/our-work/" },
-    { "label": "About", "url": "/about/" },
-    { "label": "Blog", "url": "/blog/" }
+    { "label": "About", "url": "/about/" }
   ]
 }

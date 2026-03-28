@@ -1,8 +1,7 @@
 <header class="site-header" id="site-header">
   <div class="container header-inner">
-    <a class="logo" href="/" aria-label="{{ site.name }} — Home">
-      <img src="/img/brand/logo.svg" alt="{{ site.name }}" width="180" height="40" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-      <span class="logo-text" style="display:none">HEARTWOOD CRAFT</span>
+    <a class="logo" href="/">
+      <img src="/img/brand/logo-header.webp" alt="Heartwood Craft" class="logo-img">
     </a>
 
     <nav class="nav-desktop" aria-label="Main navigation">
@@ -32,12 +31,8 @@
     </nav>
 
     <div class="header-actions">
-      <a class="btn btn-phone" href="{{ site.phoneLink }}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 12.4a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1.84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
-        </svg>
-        <span>{{ site.phone }}</span>
-      </a>
+      <a class="header-phone" href="{{ site.phoneLink }}">{{ site.phone }}</a>
+      <a class="btn btn-get-started" href="/contact/">Get Started</a>
 
       <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-mobile">
         <span class="hamburger-bar"></span>
@@ -72,6 +67,7 @@
       {% endfor %}
       <li class="nav-mobile-item nav-mobile-cta">
         <a href="{{ site.phoneLink }}" class="btn btn-primary btn-full">Call {{ site.phone }}</a>
+        <a href="/contact/" class="btn btn-outline btn-full" style="margin-top: 0.5rem;">Get Started</a>
       </li>
     </ul>
   </nav>

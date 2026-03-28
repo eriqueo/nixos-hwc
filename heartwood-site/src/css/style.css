@@ -113,20 +113,26 @@ p { line-height: 1.7; margin-bottom: 1rem; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1.5rem;
   padding: 1rem 0;
   transition: padding 0.3s;
 }
 .site-header.scrolled .header-inner { padding: 0.5rem 0; }
 
-.logo { display: flex; align-items: center; }
-.logo img { height: 40px; width: auto; }
-.logo-text {
-  color: var(--white);
-  font-family: var(--font-heading);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  letter-spacing: 0.05em;
+.logo {
+  display: flex;
+  align-items: center;
   text-decoration: none;
+  flex-shrink: 0;
+}
+.logo:hover { text-decoration: none; }
+.logo-img {
+  height: 55px;
+  width: auto;
+  display: block;
+}
+@media (max-width: 768px) {
+  .logo-img { height: 44px; }
 }
 
 /* Desktop nav */
@@ -197,25 +203,52 @@ p { line-height: 1.7; margin-bottom: 1rem; }
 .nav-dropdown-parent:hover .dropdown-arrow { transform: rotate(180deg); }
 
 /* Header actions */
-.header-actions { display: flex; align-items: center; gap: var(--space-sm); }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
+}
 
-.btn-phone {
+.header-phone {
+  color: var(--gray-400);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.header-phone:hover { color: var(--copper); text-decoration: none; }
+@media (max-width: 1024px) {
+  .header-phone { display: none; }
+}
+
+.btn-get-started {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  background: var(--copper);
-  color: var(--white);
-  padding: 0.5rem 1.25rem;
-  border-radius: 50px;
+  padding: 0.6rem 1.5rem;
+  background: transparent;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: var(--border-radius);
+  font-family: var(--font-body);
   font-weight: 600;
-  font-size: var(--text-sm);
+  font-size: 0.9rem;
   text-decoration: none;
-  transition: background 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
-.btn-phone:hover { background: var(--copper-dark); text-decoration: none; }
-.btn-phone span { display: none; }
-@media (min-width: 768px) { .btn-phone span { display: inline; } }
+.btn-get-started:hover {
+  background: #fff;
+  color: var(--charcoal);
+  text-decoration: none;
+}
+@media (max-width: 767px) {
+  .btn-get-started { display: none; }
+}
 
 /* Hamburger */
 .nav-toggle {

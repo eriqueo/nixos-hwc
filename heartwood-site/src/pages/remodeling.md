@@ -65,7 +65,7 @@ Regardless of scope, every project follows the same structured approach:
 - **Milestone payments** tied to progress (30/20/40/10)
 - **Formal change orders** for any scope changes — priced and approved before I proceed
 
-No surprises. No crossed fingers. Just clear communication from start to finish.
+No surprises. No crossed fingers. Just clear communication from start to finish. See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
 
 ## Ready to Talk About Your Project?
 
