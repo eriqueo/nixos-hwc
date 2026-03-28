@@ -1,0 +1,618 @@
+{
+  "domain": "iheartwoodcraft.com",
+  "total_pages": 67,
+  "url_structure": [
+    {
+      "url": "/",
+      "type": "other",
+      "title": "Exceptional Bozeman Home Remodeling | Heartwood Craft: Quality. Integrity.Beauty",
+      "meta_description": "Transform your Bozeman home with Heartwood Craft, licensed experts in general home remodeling, bathrooms, basements, decks, and complete renovations.",
+      "canonical": "https://iheartwoodcraft.com/",
+      "h1": "Heartwood Craft: Bozeman\u2019s Trusted Home Remodeling Experts"
+    },
+    {
+      "url": "/areas-we-cover/",
+      "type": "other",
+      "title": "Areas We Cover - Heartwood Craft",
+      "meta_description": "You shouldn&#039;t have to search endlessly to find a contractor you can actually trust when your home needs updating. Heartwood Craft helps homeowners throughout",
+      "canonical": "https://iheartwoodcraft.com/areas-we-cover/",
+      "h1": "Areas We Serve: Greater Bozeman Home Remodeling"
+    },
+    {
+      "url": "/services/",
+      "type": "other",
+      "title": "General Remodeling Services Bozeman | Heartwood Craft | Licensed",
+      "meta_description": "Transform your Bozeman home with Heartwood Craft&#039;s trusted remodeling services. Bathrooms, basements, decks, and complete renovations. Licensed &amp; insured.",
+      "canonical": "https://iheartwoodcraft.com/services/",
+      "h1": "Heartwood Craft: Trusted Remodeling Services for Greater Bozeman Homes"
+    },
+    {
+      "url": "/basement/remodeling/",
+      "type": "service",
+      "title": "Basement Remodel Bozeman | Heartwood Craft | Licensed &amp; Insured",
+      "meta_description": "Transform your basement with Heartwood Craft. Expert basement remodel Bozeman services, licensed &amp; insured, 3D modeling, and complete satisfaction guaranteed.",
+      "canonical": "https://iheartwoodcraft.com/basement/remodeling/",
+      "h1": "Heartwood Craft \u2013 Bozeman Basement Remodels That Transform Your Home"
+    },
+    {
+      "url": "/basement/",
+      "type": "service",
+      "title": "Basement Remodel Bozeman | Heartwood Craft | Trusted Experts",
+      "meta_description": "Transform your basement with Heartwood Craft. Expert basement remodels in Greater Bozeman, MT, combining quality, custom woodwork, and guaranteed satisfaction.",
+      "canonical": "https://iheartwoodcraft.com/basement/",
+      "h1": "Quality-Driven Basement Remodeling in Bozeman to Redefine Your Space"
+    },
+    {
+      "url": "/remodeling/",
+      "type": "service",
+      "title": "General Remodeling Services Bozeman | Heartwood Craft | Licensed",
+      "meta_description": "Transform your home with expert General Remodeling Services in Greater Bozeman, MT. Licensed, insured, and committed to quality and satisfaction.",
+      "canonical": "https://iheartwoodcraft.com/remodeling/",
+      "h1": "Quality Remodeling Bozeman Homeowners Trust"
+    },
+    {
+      "url": "/about/",
+      "type": "other",
+      "title": "About Us | Heartwood Craft in Bozeman, MT",
+      "meta_description": "I provide trusted general remodeling in Bozeman, MT. Licensed, insured, and experienced, I deliver superior craftsmanship and personalized service to every home.",
+      "canonical": "https://iheartwoodcraft.com/about/",
+      "h1": "Our Story: How Heartwood Craft Began"
+    },
+    {
+      "url": "/our-work/",
+      "type": "other",
+      "title": "Our Work - Heartwood Craft",
+      "meta_description": "Your home is more than four walls and a roof, it&#039;s where life happens. Where memories get made. Where you should feel comfortable, inspired, and genuinely",
+      "canonical": "https://iheartwoodcraft.com/our-work/",
+      "h1": "Our Story: How Heartwood Craft Began"
+    },
+    {
+      "url": "/gallatin-gateway/",
+      "type": "location",
+      "title": "General Remodeling Services Gallatin Gateway, MT | Heartwood Craft",
+      "meta_description": "Expert general remodeling Gallatin Gateway MT. Heartwood Craft delivers bathroom, basement, and home renovations with licensed professionals.",
+      "canonical": "https://iheartwoodcraft.com/gallatin-gateway/",
+      "h1": "General Remodeling Services Gallatin Gateway, MT: Transform Your Home with Heartwood Craft"
+    },
+    {
+      "url": "/belgrade/",
+      "type": "location",
+      "title": "General Remodeling Services Belgrade, MT | Heartwood Craft",
+      "meta_description": "Reliable general remodeling services in Belgrade, MT. Heartwood Craft delivers bathroom remodels, basement finishing, and home renovations with complete satisfaction.",
+      "canonical": "https://iheartwoodcraft.com/belgrade/",
+      "h1": "Heartwood Craft: Trusted General Home Remodeling Services in Belgrade, MT"
+    },
+    {
+      "url": "/bozeman/",
+      "type": "location",
+      "title": "General Remodeling Services Bozeman, MT | Heartwood Craft",
+      "meta_description": "Trusted Bozeman remodeling experts providing bathroom remodels, basement finishing, decks, and full-home renovations with transparent pricing.",
+      "canonical": "https://iheartwoodcraft.com/bozeman/",
+      "h1": "Heartwood Craft: Trusted General Remodel Bozeman Services and General Remodeling Experts for Quality-Driven Transformations"
+    },
+    {
+      "url": "/bathroom/renovation/",
+      "type": "service",
+      "title": "Bathroom Renovation Bozeman | Heartwood Craft | Licensed Experts",
+      "meta_description": "Expert bathroom renovation Bozeman homeowners trust. Heartwood Craft delivers custom, licensed, and insured remodeling with clear communication.",
+      "canonical": "https://iheartwoodcraft.com/bathroom/renovation/",
+      "h1": "Trusted Bathroom Renovation Bozeman Services: Transform Your Space with Confidence"
+    },
+    {
+      "url": "/bathroom/remodeling/",
+      "type": "service",
+      "title": "Bathroom Remodel Bozeman | Heartwood Craft | Licensed Experts",
+      "meta_description": "Transform your bathroom with Heartwood Craft. Expert bathroom remodel Bozeman services, licensed, insured, and guaranteed for complete satisfaction.",
+      "canonical": "https://iheartwoodcraft.com/bathroom/remodeling/",
+      "h1": "Trusted Bathroom Remodel Bozeman Services: Elevate Your Home with Style and Function"
+    },
+    {
+      "url": "/bathroom/",
+      "type": "service",
+      "title": "Bathroom Remodel Bozeman | Heartwood Craft | Trusted Experts",
+      "meta_description": "Transform your home with expert bathroom remodel bozeman services. Heartwood Craft delivers custom designs, 3D modeling, and guaranteed satisfaction.",
+      "canonical": "https://iheartwoodcraft.com/bathroom/",
+      "h1": "Trusted Bathroom Remodel Bozeman Services: Transform Your Bathroom with Heartwood Craft"
+    },
+    {
+      "url": "/basement/renovation/",
+      "type": "service",
+      "title": "Basement Renovation Bozeman | Heartwood Craft | Licensed &amp; Insured",
+      "meta_description": "Transform your basement with expert basement renovation Bozeman services. Licensed, insured, and trusted for 5+ years in Greater Bozeman, MT.",
+      "canonical": "https://iheartwoodcraft.com/basement/renovation/",
+      "h1": "Trusted Basement Renovation Bozeman Services: Transform Your Space, Elevate Your Home"
+    },
+    {
+      "url": "/reviews/",
+      "type": "other",
+      "title": "Reviews - Heartwood Craft",
+      "meta_description": "Homeowners across the valley continue to trust Heartwood Craft for quality home and bathroom remodeling workmanship, honest pricing, and transparent",
+      "canonical": "https://iheartwoodcraft.com/reviews/",
+      "h1": "Testimonials"
+    },
+    {
+      "url": "/privacy-policy/",
+      "type": "other",
+      "title": "Privacy Policy - Heartwood Craft",
+      "meta_description": "Privacy Policy \u2013 Heartwood CraftEffective Date: October 20, 2025",
+      "canonical": "https://iheartwoodcraft.com/privacy-policy/",
+      "h1": "Privacy Policy"
+    },
+    {
+      "url": "/terms-of-service/",
+      "type": "other",
+      "title": "Terms of Service - Heartwood Craft",
+      "meta_description": "Terms of Service \u2013 Heartwood CraftEffective Date: October 20, 2025",
+      "canonical": "https://iheartwoodcraft.com/terms-of-service/",
+      "h1": "Terms of Service"
+    },
+    {
+      "url": "/cookie-policy/",
+      "type": "other",
+      "title": "Cookie Policy - Heartwood Craft",
+      "meta_description": "Cookie Policy \u2013 Heartwood CraftEffective Date: October 20, 2025",
+      "canonical": "https://iheartwoodcraft.com/cookie-policy/",
+      "h1": "Cookie Policy"
+    },
+    {
+      "url": "/anti-discrimination/",
+      "type": "other",
+      "title": "Anti-Discrimination - Heartwood Craft",
+      "meta_description": "Anti-Discrimination Policy \u2013 Heartwood CraftEffective Date: October 20, 2025",
+      "canonical": "https://iheartwoodcraft.com/anti-discrimination/",
+      "h1": "Anti-Discrimination"
+    },
+    {
+      "url": "/disclaimer/",
+      "type": "other",
+      "title": "Disclaimer - Heartwood Craft",
+      "meta_description": "Effective Date: October 20, 2025",
+      "canonical": "https://iheartwoodcraft.com/disclaimer/",
+      "h1": "Disclaimer"
+    },
+    {
+      "url": "/blog/",
+      "type": "other",
+      "title": "Blog - Heartwood Craft",
+      "meta_description": "",
+      "canonical": "https://iheartwoodcraft.com/blog/",
+      "h1": "Blog"
+    },
+    {
+      "url": "/what-is-the-best-time-to-renovate-in-bozeman-mt/",
+      "type": "blog",
+      "title": "What Is the Best Time to Renovate in Bozeman, MT? | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Discover the best time to renovate your Bozeman home. Heartwood Craft shares what adds value, what devalues a property, and the correct order of renovation for smart, well-timed results, including tips for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-best-time-to-renovate-in-bozeman-mt/",
+      "h1": "What Is the Best Time to Renovate in Bozeman, MT?"
+    },
+    {
+      "url": "/when-should-you-not-finish-a-basement-in-bozeman-mt/",
+      "type": "blog",
+      "title": "When You Should Avoid Finishing a Basement in Bozeman, MT | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Discover when a basement remodel in Bozeman may not be the right move, including health concerns, moisture risks, common mistakes, and honest guidance from Heartwood Craft for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/when-should-you-not-finish-a-basement-in-bozeman-mt/",
+      "h1": "When Should You Not Finish a Basement in Bozeman, MT?"
+    },
+    {
+      "url": "/is-a-12x20-deck-big-enough-for-a-bozeman-home/",
+      "type": "blog",
+      "title": "Is a 12x20 Deck the Right Size for Your Bozeman Home? Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Wondering if a 12x20 deck is big enough for your Bozeman home? Heartwood Craft breaks down costs, ideal deck sizes, and what 240 square feet can realistically accommodate, plus insights for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/is-a-12x20-deck-big-enough-for-a-bozeman-home/",
+      "h1": "Is a 12&#215;20 Deck Big Enough for a Bozeman Home?"
+    },
+    {
+      "url": "/is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Is Remodeling Cheaper Than Building New in Bozeman, MT? | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Wondering if remodeling is cheaper than building new in Bozeman? Heartwood Craft breaks down costs, ROI, and which renovations deliver the most value for your home, including insights for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/",
+      "h1": "Is Remodeling Cheaper Than Building a New Home in Bozeman, MT?"
+    },
+    {
+      "url": "/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/",
+      "type": "blog",
+      "title": "How Much Does It Cost to Finish a Basement in Bozeman, MT? | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Get clear, realistic contractor costs for a basement remodel in Bozeman, including price per square foot, timelines, and what drives the final number. Expert guidance from Heartwood Craft for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/",
+      "h1": "How Much Does a Contractor Charge to Finish a Basement in Bozeman, MT?"
+    },
+    {
+      "url": "/what-flooring-is-urine-proof-best-options-for-bozeman-homes/",
+      "type": "blog",
+      "title": "Urine-Proof Flooring Options for Bozeman Homes | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Discover the best urine-proof flooring for pets and kids in Bozeman. Learn which materials resist stains and odors, plus expert tips from Heartwood Craft to protect your floors long-term, including ideas for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/what-flooring-is-urine-proof-best-options-for-bozeman-homes/",
+      "h1": "What Flooring Is Urine Proof? Best Options for Bozeman Homes"
+    },
+    {
+      "url": "/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/",
+      "type": "blog",
+      "title": "What to Ask a Contractor Before a Remodel in Bozeman, MT | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "A practical Bozeman homeowner&#039;s guide to what to ask a contractor before remodeling, covering permits, costs, code compliance, timelines, and common renovation mistakes. Expert guidance from Heartwood Craft for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/",
+      "h1": "What to Ask a Contractor Before a Remodel in Bozeman, MT"
+    },
+    {
+      "url": "/what-happens-during-remodeling-in-bozeman-mt/",
+      "type": "blog",
+      "title": "What Happens During Remodeling in Bozeman, MT? | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Discover exactly what happens during remodeling in Bozeman, MT. Learn the stages, realistic timelines, and the full process, with expert guidance from Heartwood Craft for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/what-happens-during-remodeling-in-bozeman-mt/",
+      "h1": "What Happens During Remodeling in Bozeman, MT?"
+    },
+    {
+      "url": "/what-are-the-4-types-of-decks-for-bozeman-homes/",
+      "type": "blog",
+      "title": "What Are the 4 Types of Decks for Bozeman Homes? - Heartwood Craft",
+      "meta_description": "Building a deck transforms your backyard into a functional outdoor space, a place to entertain, unwind, and make the most of Montana&#039;s remarkable seasons. But",
+      "canonical": "https://iheartwoodcraft.com/what-are-the-4-types-of-decks-for-bozeman-homes/",
+      "h1": "What Are the 4 Types of Decks for Bozeman Homes?"
+    },
+    {
+      "url": "/what-are-the-latest-remodeling-trends/",
+      "type": "blog",
+      "title": "2026 Remodeling Trends for Bozeman Homes | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Discover the latest 2026 remodeling trends for Bozeman homeowners. Learn which updates add the most value, which styles are fading, and how Heartwood Craft helps you renovate smart, including ideas for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/what-are-the-latest-remodeling-trends/",
+      "h1": "What are the latest remodeling trends?"
+    },
+    {
+      "url": "/common-bathroom-remodel-mistakes-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Avoid These Bathroom Remodel Mistakes in Bozeman | Bathroom Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Learn the most common bathroom remodel mistakes Bozeman homeowners make, and how Heartwood Craft helps you avoid them. Budget tips, design pitfalls, and local expert advice included for your bathroom remodel bozeman project.",
+      "canonical": "https://iheartwoodcraft.com/common-bathroom-remodel-mistakes-in-bozeman-mt/",
+      "h1": "Common Bathroom Remodel Mistakes in Bozeman, MT."
+    },
+    {
+      "url": "/are-bathroom-renovations-tax-deductible/",
+      "type": "blog",
+      "title": "Are Bathroom Renovations Tax Deductible? | Heartwood Craft Bozeman Homeowners Guide",
+      "meta_description": "Discover which bathroom remodel Bozeman expenses may be tax deductible. Learn about home improvement tax breaks, the $2,500 rule, and which upgrades qualify with Heartwood Craft.",
+      "canonical": "https://iheartwoodcraft.com/are-bathroom-renovations-tax-deductible/",
+      "h1": "Are Bathroom Renovations Tax Deductible?"
+    },
+    {
+      "url": "/what-is-the-30-rule-in-remodeling/",
+      "type": "blog",
+      "title": "Understanding the 30% Rule in Home Remodeling | Bathroom Remodel Bozeman Tips",
+      "meta_description": "Learn how the 30% rule helps Bozeman homeowners budget smartly for renovations. Avoid costly mistakes, hidden expenses, and maximize property value with your bathroom remodel in Bozeman.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-30-rule-in-remodeling/",
+      "h1": "What Is the 30% Rule in Remodeling?"
+    },
+    {
+      "url": "/what-are-common-basement-finishing-problems/",
+      "type": "blog",
+      "title": "Common Basement Finishing Problems | Basement Remodel Bozeman Tips | Heartwood Craft",
+      "meta_description": "Discover the most common basement finishing problems for your basement remodel Bozeman project, including mistakes, hidden costs, and budgeting tips from Heartwood Craft experts.",
+      "canonical": "https://iheartwoodcraft.com/what-are-common-basement-finishing-problems/",
+      "h1": "What are common basement finishing problems?"
+    },
+    {
+      "url": "/is-a-deck-collapse-covered-by-homeowners-insurance/",
+      "type": "blog",
+      "title": "Is a Deck Collapse Covered by Homeowners Insurance? - Heartwood Craft",
+      "meta_description": "A backyard deck is a favorite gathering spot, but what happens if it collapses? For Bozeman homeowners, the worry isn&#039;t just the repair cost, it&#039;s whether",
+      "canonical": "https://iheartwoodcraft.com/is-a-deck-collapse-covered-by-homeowners-insurance/",
+      "h1": "Is a Deck Collapse Covered by Homeowners Insurance?"
+    },
+    {
+      "url": "/does-home-depot-renovate-basements/",
+      "type": "blog",
+      "title": "Does Home Depot Renovate Basements? | Basement Remodel Bozeman Guide | Heartwood Craft",
+      "meta_description": "Wondering if Home Depot handles basement remodel Bozeman projects? Learn about basement finishing services, average costs, and budget-friendly options from Heartwood Craft experts.",
+      "canonical": "https://iheartwoodcraft.com/does-home-depot-renovate-basements/",
+      "h1": "Does Home Depot Renovate Basements?"
+    },
+    {
+      "url": "/what-color-flooring-makes-a-bathroom-look-bigger/",
+      "type": "blog",
+      "title": "What Color Flooring Makes a Bathroom Look Bigger? - Heartwood CraftBathroom Flooring Colors to Make Your Space Feel Bigger | Heartwood Craft Bozeman",
+      "meta_description": "Discover the best bathroom flooring colors for your bathroom remodel Bozeman project. Learn how light, neutral shades and clever contrasts from Heartwood Craft can make small bathrooms feel larger and brighter.",
+      "canonical": "https://iheartwoodcraft.com/what-color-flooring-makes-a-bathroom-look-bigger/",
+      "h1": "What Color Flooring Makes a Bathroom Look Bigger?"
+    },
+    {
+      "url": "/what-accounts-for-90-of-deck-collapses/",
+      "type": "blog",
+      "title": "What Causes 90% of Deck Collapses? | Decks Bozeman Safety Tips | Heartwood Craft",
+      "meta_description": "Learn what causes most deck collapses with decks Bozeman projects. Discover top mistakes, the 3/4/5 rule, and how Heartwood Craft protects your deck with proper construction.",
+      "canonical": "https://iheartwoodcraft.com/what-accounts-for-90-of-deck-collapses/",
+      "h1": "What Accounts for 90% of Deck Collapses?"
+    },
+    {
+      "url": "/what-is-the-smartest-way-to-pay-for-home-improvements-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Smart Ways to Pay for Home Improvements in Bozeman, MT | Bathroom Remodel Financing",
+      "meta_description": "Discover practical strategies Bozeman homeowners use to pay for renovations. Learn about loans, the 30% rule, and financing smartly for your bathroom remodel in Bozeman.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-smartest-way-to-pay-for-home-improvements-in-bozeman-mt/",
+      "h1": "What Is the Smartest Way to Pay for Home Improvements in Bozeman, MT?"
+    },
+    {
+      "url": "/what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/",
+      "type": "blog",
+      "title": "How Big Can a Deck Be Without a Permit in Bozeman? | Heartwood Craft",
+      "meta_description": "Learn the maximum deck size you can build without a permit in Bozeman, MT. Heartwood Craft explains local rules, the 3/4/5 layout method, costs, and risks of unpermitted construction.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/",
+      "h1": "What Is the Biggest Deck You Can Build Without a Permit in Bozeman, MT?"
+    },
+    {
+      "url": "/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Best Deck Foundation Options for Bozeman Homes | Heartwood Craft",
+      "meta_description": "Learn the best foundation for a deck in Bozeman, MT. Heartwood Craft explains frost depth, materials, code rules, and ground-level deck risks, expertise that carries through bathroom remodel Bozeman projects and beyond.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/",
+      "h1": "What Is the Best Foundation for a Deck in Bozeman, MT?"
+    },
+    {
+      "url": "/common-bathroom-renovation-mistakes-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Common Bathroom Renovation Mistakes in Bozeman, MT | Heartwood Craft",
+      "meta_description": "Avoid costly errors in your Bozeman bathroom remodel. Learn about the 30% rule, expensive pitfalls, and expert tips from Heartwood Craft&#039;s experienced team.",
+      "canonical": "https://iheartwoodcraft.com/common-bathroom-renovation-mistakes-in-bozeman-mt/",
+      "h1": "Common Bathroom Renovation Mistakes in Bozeman, MT"
+    },
+    {
+      "url": "/how-do-people-afford-to-finish-a-basement-in-bozeman-mt/",
+      "type": "blog",
+      "title": "How Do People Afford to Finish a Basement in Bozeman, MT? | Heartwood Craft",
+      "meta_description": "Discover practical ways Bozeman homeowners finance basement remodels. Learn cost-saving strategies, budgeting tips, and affordable finishing options from Heartwood Craft.",
+      "canonical": "https://iheartwoodcraft.com/how-do-people-afford-to-finish-a-basement-in-bozeman-mt/",
+      "h1": "How Do People Afford to Finish a Basement in Bozeman, MT?"
+    },
+    {
+      "url": "/is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Is It Cheaper to Build or Buy a Deck in Bozeman, MT? Cost Breakdown (2025)",
+      "meta_description": "Wondering if it&#039;s cheaper to build or buy a deck in Bozeman, MT? Learn real costs, local code rules, and what makes the most financial sense for Montana homes.",
+      "canonical": "https://iheartwoodcraft.com/is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/",
+      "h1": "Is It Cheaper to Build or Buy a Deck in Bozeman, MT?"
+    },
+    {
+      "url": "/what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Reasonable Budget for a Bathroom Remodel in Bozeman MT",
+      "meta_description": "Learn what a reasonable bathroom remodel budget looks like in Bozeman MT. Get clear cost ranges, the most expensive parts of a remodel, and what you can expect to invest for 5K, mid range, or a 10x10 bathroom.",
+      "canonical": "https://iheartwoodcraft.com/what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/",
+      "h1": "What Is a Reasonable Budget for a Bathroom Remodel in Bozeman MT?"
+    },
+    {
+      "url": "/what-is-the-difference-between-renovation-and-remodeling/",
+      "type": "blog",
+      "title": "Difference Between Renovation and Remodeling in Bozeman MT",
+      "meta_description": "Learn the difference between renovation and remodeling, how each applies to homes in Bozeman MT, and what projects fit your budget, including the 30 percent rule and common remodel types.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-difference-between-renovation-and-remodeling/",
+      "h1": "What Is the Difference Between Renovation and Remodeling?"
+    },
+    {
+      "url": "/what-should-you-not-skimp-on-when-building-a-house/",
+      "type": "blog",
+      "title": "What Should You Not Skimp On When Building a House in Bozeman MT?",
+      "meta_description": "Learn the most important parts of building a home you should never cut corners on in Bozeman, including insulation, structure, systems, and long-term essentials that affect safety and value.",
+      "canonical": "https://iheartwoodcraft.com/what-should-you-not-skimp-on-when-building-a-house/",
+      "h1": "What Should You Not Skimp On When Building a House?"
+    },
+    {
+      "url": "/is-it-worth-renovating-a-basement/",
+      "type": "blog",
+      "title": "Is It Worth Renovating a Basement in Bozeman MT?",
+      "meta_description": "Learn if basement renovations are worth it in Bozeman. Understand value, common issues, pros and cons, and what adds the most long-term return in Montana&#039;s climate.",
+      "canonical": "https://iheartwoodcraft.com/is-it-worth-renovating-a-basement/",
+      "h1": "Is It Worth Renovating a Basement?"
+    },
+    {
+      "url": "/does-home-depot-do-bathroom-remodels/",
+      "type": "blog",
+      "title": "Does Home Depot Do Bathroom Remodels in Bozeman MT?",
+      "meta_description": "Learn whether Home Depot does bathroom remodels in Bozeman MT, what services they offer, how they compare to Lowe&#039;s, and when a local remodeler is the better choice.",
+      "canonical": "https://iheartwoodcraft.com/does-home-depot-do-bathroom-remodels/",
+      "h1": "Does Home Depot Do Bathroom Remodels?"
+    },
+    {
+      "url": "/what-does-a-full-remodel-include/",
+      "type": "blog",
+      "title": "What Does a Full Remodel Include in Bozeman MT?",
+      "meta_description": "Learn what a full home remodel includes, from structural changes to finishes. Understand major cost factors, budget ranges, and what counts as a major remodel in Bozeman MT.",
+      "canonical": "https://iheartwoodcraft.com/what-does-a-full-remodel-include/",
+      "h1": "What Does a Full Remodel Include?"
+    },
+    {
+      "url": "/how-expensive-is-it-to-redo-a-basement/",
+      "type": "blog",
+      "title": "How Much Does It Cost to Redo a Basement in Bozeman MT?",
+      "meta_description": "Learn how expensive it is to redo a basement in Bozeman, including cost ranges, what drives the price, and local factors like insulation, moisture control, and Montana building codes.",
+      "canonical": "https://iheartwoodcraft.com/how-expensive-is-it-to-redo-a-basement/",
+      "h1": "How Expensive Is It to Redo a Basement?"
+    },
+    {
+      "url": "/what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Best Time to Renovate a Bathroom in Bozeman MT",
+      "meta_description": "Learn the best time to renovate a bathroom in Bozeman MT. Understand timelines, contractor availability, project duration, and practical rules of thumb for a smooth remodel.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/",
+      "h1": "What Is the Best Time to Renovate a Bathroom in Bozeman MT?"
+    },
+    {
+      "url": "/what-salary-typically-affords-a-300000-house/",
+      "type": "blog",
+      "title": "What Salary Do You Need To Afford a 300K House in Bozeman MT?",
+      "meta_description": "Learn what salary typically affords a 300K house in Bozeman MT, plus income guidelines, mortgage factors, and realistic affordability tips for local buyers.",
+      "canonical": "https://iheartwoodcraft.com/what-salary-typically-affords-a-300000-house/",
+      "h1": "What Salary Typically Affords a $300,000 House?"
+    },
+    {
+      "url": "/what-are-the-trends-for-home-remodel-in-2025/",
+      "type": "blog",
+      "title": "2025 Home Remodeling Trends in Bozeman MT",
+      "meta_description": "See the top home renovation trends for 2025 in Bozeman. Learn which styles, materials, and upgrades matter most, including local insights shaped by Montana&#039;s climate and codes.",
+      "canonical": "https://iheartwoodcraft.com/what-are-the-trends-for-home-remodel-in-2025/",
+      "h1": "What are the trends for home remodel in 2025?"
+    },
+    {
+      "url": "/what-do-i-wish-i-knew-before-finishing-the-basement/",
+      "type": "blog",
+      "title": "What to Know Before Finishing a Basement in Bozeman MT",
+      "meta_description": "Learn what homeowners wish they knew before finishing a basement in Bozeman. Understand moisture risks, insulation challenges, local code requirements, and when not to finish a basement.",
+      "canonical": "https://iheartwoodcraft.com/what-do-i-wish-i-knew-before-finishing-the-basement/",
+      "h1": "What Do I Wish I Knew Before Finishing the Basement?"
+    },
+    {
+      "url": "/what-adds-the-most-value-to-a-bathroom/",
+      "type": "blog",
+      "title": "What Adds the Most Value to a Bathroom Remodel in Bozeman MT?",
+      "meta_description": "Learn what adds the most value to a bathroom in Bozeman MT, including top upgrades, buyer preferences, best colors, and the ROI strongest improvements for local homes.",
+      "canonical": "https://iheartwoodcraft.com/what-adds-the-most-value-to-a-bathroom/",
+      "h1": "What Adds the Most Value to a Bathroom?"
+    },
+    {
+      "url": "/at-what-point-is-a-house-not-worth-fixing/",
+      "type": "blog",
+      "title": "When Is a House Not Worth Fixing in Bozeman MT?",
+      "meta_description": "Learn when a house is not worth fixing in Bozeman. Understand major red flags, money pit warning signs, and what decreases property value the most in Montana homes.",
+      "canonical": "https://iheartwoodcraft.com/at-what-point-is-a-house-not-worth-fixing/",
+      "h1": "At What Point Is a House Not Worth Fixing?"
+    },
+    {
+      "url": "/what-comes-first-when-remodeling-a-house/",
+      "type": "blog",
+      "title": "What Comes First When Remodeling a House in Bozeman MT",
+      "meta_description": "Learn the correct order of a home remodel in Bozeman. See what comes first, which rooms to start with, and how to plan walls and floors. Practical, local guidance for Montana homeowners.",
+      "canonical": "https://iheartwoodcraft.com/what-comes-first-when-remodeling-a-house/",
+      "h1": "What Comes First When Remodeling a House?"
+    },
+    {
+      "url": "/should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Should You Hire a Contractor to Finish Your Basement in Bozeman MT?",
+      "meta_description": "Wondering if you should hire a contractor to finish your basement in Bozeman? Learn the pros, cons, costs, and code requirements so you can make a confident decision.",
+      "canonical": "https://iheartwoodcraft.com/should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/",
+      "h1": "Should I Hire a Contractor to Finish My Basement in Bozeman MT?"
+    },
+    {
+      "url": "/what-flooring-is-best-for-a-bathroom-in-bozeman-mt/",
+      "type": "blog",
+      "title": "Best Flooring for Bathrooms in Bozeman MT",
+      "meta_description": "Learn the best flooring for bathrooms in Bozeman MT. Get practical guidance on durability, moisture resistance, vinyl vs laminate, and the top materials for small bathroom spaces.",
+      "canonical": "https://iheartwoodcraft.com/what-flooring-is-best-for-a-bathroom-in-bozeman-mt/",
+      "h1": "What Flooring Is Best for a Bathroom in Bozeman MT?"
+    },
+    {
+      "url": "/what-are-hidden-renovation-costs/",
+      "type": "blog",
+      "title": "What Are Hidden Renovation Costs in Bozeman MT?",
+      "meta_description": "Learn the most common hidden renovation costs in Bozeman and how to avoid surprise expenses during home remodeling. Understand local code issues, moisture problems, and unforeseen construction challenges.",
+      "canonical": "https://iheartwoodcraft.com/what-are-hidden-renovation-costs/",
+      "h1": "What Are Hidden Renovation Costs?"
+    },
+    {
+      "url": "/does-a-finished-basement-increase-home-insurance/",
+      "type": "blog",
+      "title": "Does a Finished Basement Increase Home Insurance in Bozeman MT?",
+      "meta_description": "Finishing your basement in Bozeman can change your home insurance and taxes. Learn how a finished basement affects premiums, coverage, square footage, and the 80 percent rule before you remodel.",
+      "canonical": "https://iheartwoodcraft.com/does-a-finished-basement-increase-home-insurance/",
+      "h1": "Does a Finished Basement Increase Home Insurance?"
+    },
+    {
+      "url": "/what-is-the-most-popular-home-renovation/",
+      "type": "blog",
+      "title": "What Is the Most Popular Home Renovation in Bozeman MT?",
+      "meta_description": "Learn the most popular home renovations in Bozeman MT, what adds the most value, and which projects homeowners should start with. Practical, locally informed remodeling guidance.",
+      "canonical": "https://iheartwoodcraft.com/what-is-the-most-popular-home-renovation/",
+      "h1": "What Is the Most Popular Home Renovation?"
+    },
+    {
+      "url": "/how-long-does-a-full-home-remodel-take/",
+      "type": "blog",
+      "title": "How Long Does a Full Home Remodel Take in Bozeman MT?",
+      "meta_description": "Learn how long a full home remodel takes in Bozeman, including timelines for 2000 sq ft homes, fast-track schedules, and reasons renovations take longer in Montana.",
+      "canonical": "https://iheartwoodcraft.com/how-long-does-a-full-home-remodel-take/",
+      "h1": "How Long Does a Full Home Remodel Take?"
+    },
+    {
+      "url": "/top-remodeling-tips-for-bozeman-homeowners-from-bathrooms-to-basements/",
+      "type": "blog",
+      "title": "Top Remodeling Tips for Bozeman Homeowners: From Bathrooms to Basements - Heartwood Craft",
+      "meta_description": "Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis",
+      "canonical": "https://iheartwoodcraft.com/top-remodeling-tips-for-bozeman-homeowners-from-bathrooms-to-basements/",
+      "h1": "Top Remodeling Tips for Bozeman Homeowners: From Bathrooms to Basements"
+    }
+  ],
+  "service_pages": [
+    "/basement/remodeling/",
+    "/basement/",
+    "/remodeling/",
+    "/bathroom/renovation/",
+    "/bathroom/remodeling/",
+    "/bathroom/",
+    "/basement/renovation/"
+  ],
+  "location_pages": [
+    "/gallatin-gateway/",
+    "/belgrade/",
+    "/bozeman/"
+  ],
+  "service_location_combos": [],
+  "blog_pages": [
+    "/what-is-the-best-time-to-renovate-in-bozeman-mt/",
+    "/when-should-you-not-finish-a-basement-in-bozeman-mt/",
+    "/is-a-12x20-deck-big-enough-for-a-bozeman-home/",
+    "/is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/",
+    "/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/",
+    "/what-flooring-is-urine-proof-best-options-for-bozeman-homes/",
+    "/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/",
+    "/what-happens-during-remodeling-in-bozeman-mt/",
+    "/what-are-the-4-types-of-decks-for-bozeman-homes/",
+    "/what-are-the-latest-remodeling-trends/",
+    "/common-bathroom-remodel-mistakes-in-bozeman-mt/",
+    "/are-bathroom-renovations-tax-deductible/",
+    "/what-is-the-30-rule-in-remodeling/",
+    "/what-are-common-basement-finishing-problems/",
+    "/is-a-deck-collapse-covered-by-homeowners-insurance/",
+    "/does-home-depot-renovate-basements/",
+    "/what-color-flooring-makes-a-bathroom-look-bigger/",
+    "/what-accounts-for-90-of-deck-collapses/",
+    "/what-is-the-smartest-way-to-pay-for-home-improvements-in-bozeman-mt/",
+    "/what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/",
+    "/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/",
+    "/common-bathroom-renovation-mistakes-in-bozeman-mt/",
+    "/how-do-people-afford-to-finish-a-basement-in-bozeman-mt/",
+    "/is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/",
+    "/what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/",
+    "/what-is-the-difference-between-renovation-and-remodeling/",
+    "/what-should-you-not-skimp-on-when-building-a-house/",
+    "/is-it-worth-renovating-a-basement/",
+    "/does-home-depot-do-bathroom-remodels/",
+    "/what-does-a-full-remodel-include/",
+    "/how-expensive-is-it-to-redo-a-basement/",
+    "/what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/",
+    "/what-salary-typically-affords-a-300000-house/",
+    "/what-are-the-trends-for-home-remodel-in-2025/",
+    "/what-do-i-wish-i-knew-before-finishing-the-basement/",
+    "/what-adds-the-most-value-to-a-bathroom/",
+    "/at-what-point-is-a-house-not-worth-fixing/",
+    "/what-comes-first-when-remodeling-a-house/",
+    "/should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/",
+    "/what-flooring-is-best-for-a-bathroom-in-bozeman-mt/",
+    "/what-are-hidden-renovation-costs/",
+    "/does-a-finished-basement-increase-home-insurance/",
+    "/what-is-the-most-popular-home-renovation/",
+    "/how-long-does-a-full-home-remodel-take/",
+    "/top-remodeling-tips-for-bozeman-homeowners-from-bathrooms-to-basements/"
+  ],
+  "other_pages": [
+    "/",
+    "/areas-we-cover/",
+    "/services/",
+    "/about/",
+    "/our-work/",
+    "/reviews/",
+    "/privacy-policy/",
+    "/terms-of-service/",
+    "/cookie-policy/",
+    "/anti-discrimination/",
+    "/disclaimer/",
+    "/blog/"
+  ]
+}
