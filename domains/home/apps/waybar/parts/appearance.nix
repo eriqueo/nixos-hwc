@@ -6,7 +6,7 @@ in
 ''
 /* HWC Waybar — compact text-based, color-grouped by function */
 window#waybar {
-  background-color: alpha(#${palette.bg}, 0.60);
+  background-color: #${palette.bg};
   color: #${palette.fg};
   font-family: "Hack Nerd Font";
   font-weight: bold;
@@ -20,7 +20,7 @@ window#waybar {
 #workspaces button {
   padding: 12px 8px;
   min-height: 0;
-  background-color: rgba(0, 133, 186, 0.25);
+  background-color: alpha(#${palette.accent2}, 0.25);
   color: #${palette.fg};
   border-radius: 0px;
   margin: 0px 0px;
@@ -36,7 +36,7 @@ window#waybar {
 
 #workspaces button.active {
   color: #${palette.fg};
-  background-color: rgba(0, 133, 186, 0.4);
+  background-color: alpha(#${palette.accent2}, 0.4);
   opacity: 1;
 }
 
@@ -46,7 +46,7 @@ window#waybar {
 }
 
 #workspaces button:hover {
-  background-color: rgba(213, 196, 161, 0.25);
+  background-color: alpha(#${palette.fg}, 0.25);
 }
 
 /* === MODE === */
@@ -93,31 +93,31 @@ window#waybar {
 /* Toggles — blue-grey (GPU, Ollama, Idle inhibitor, Lid sleep) */
 #custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
   border-color: #${palette.ansi.blue};
-  background-color: rgba(69, 133, 136, 0.28);
+  background-color: alpha(#${palette.ansi.blue}, 0.28);
 }
 
 /* Connectivity — green (Audio, Bluetooth, Network) */
 #pulseaudio, #bluetooth, #custom-network {
   border-color: #${palette.ansi.cyan};
-  background-color: rgba(104, 157, 106, 0.28);
+  background-color: alpha(#${palette.ansi.cyan}, 0.28);
 }
 
 /* System health — copper (Temp, Disk, Battery) */
 #temperature, #custom-disk-space, #custom-battery {
   border-color: #${palette.accent};
-  background-color: rgba(207, 153, 95, 0.28);
+  background-color: alpha(#${palette.warning}, 0.28);
 }
 
 /* Media — neutral (MPD) */
 #mpd {
   border-color: #${palette.fg2};
-  background-color: rgba(167, 170, 173, 0.26);
+  background-color: alpha(#${palette.fg2}, 0.26);
 }
 
 /* Actions — subtle (Proton, Tray, Notify, Power) */
 #custom-proton-auth, #tray, #custom-notification, #custom-power {
   border-color: #${palette.muted};
-  background-color: rgba(80, 98, 111, 0.26);
+  background-color: alpha(#${palette.muted}, 0.26);
 }
 
 /* === HOVER — universal === */
@@ -127,7 +127,7 @@ window#waybar {
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
 #hyprland-language:hover {
-  background-color: rgba(213, 196, 161, 0.25);
+  background-color: alpha(#${palette.fg}, 0.25);
 }
 
 /* === STATE CLASSES === */
