@@ -6,7 +6,7 @@ in
 ''
 /* HWC Waybar — compact text-based, color-grouped by function */
 window#waybar {
-  background-color: #${palette.bg};
+  background-color: alpha(#${palette.bg}, 0.80);
   color: #${palette.fg};
   font-family: "Hack Nerd Font";
   font-weight: bold;

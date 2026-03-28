@@ -1,7 +1,7 @@
 { lib, pkgs, config, osConfig ? {}, ...}:
 
 let
-  data = import ./data.nix { };
+  data = import ./data.nix { colors = config.hwc.home.theme.colors; };
 
   tagsPrefs = pkgs.writeText "bb-tags.js" (lib.concatStringsSep "\n" (map
     (t: ''
