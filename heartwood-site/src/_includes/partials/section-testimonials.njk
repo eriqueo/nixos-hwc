@@ -1,0 +1,24 @@
+<section class="section section-testimonials animate-in">
+  <div class="container">
+    <h2>What Our Clients Say</h2>
+    <div class="testimonial-grid">
+      {% for review in testimonials %}
+        {% if not filter_service or review.service == filter_service %}
+        <div class="card testimonial-card animate-in">
+          <div class="testimonial-rating" aria-label="{{ review.rating }} out of 5 stars">
+            {% for i in range(0, review.rating) %}&#9733;{% endfor %}
+          </div>
+          <blockquote class="testimonial-text">{{ review.text }}</blockquote>
+          <div class="testimonial-author">
+            <strong>{{ review.name }}</strong>
+            <span>{{ review.location }}</span>
+          </div>
+          <div class="testimonial-source">
+            via {{ review.source }}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</section>

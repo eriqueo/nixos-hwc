@@ -1,0 +1,30 @@
+---
+layout: layouts/base.njk
+---
+
+<section class="hero{% if not hero_image %} hero-no-image{% endif %}" {% if hero_image %}style="background-image: url('{{ hero_image }}')"{% endif %}>
+  <div class="hero-overlay">
+    <div class="container">
+      <h1>{{ h1 | default(title) }}</h1>
+      {% if hero_subtitle %}<p class="hero-subtitle">{{ hero_subtitle }}</p>{% endif %}
+      <div class="hero-cta">
+        <a href="{{ site.phoneLink }}" class="btn btn-primary">Call {{ site.phone }}</a>
+        <a href="#contact-form" class="btn btn-outline-light">Get a Free Estimate</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<article class="location-content section">
+  <div class="container container-narrow">
+    {{ content | safe }}
+  </div>
+</article>
+
+{% include "partials/section-services-grid.njk" %}
+
+{% include "partials/section-testimonials.njk" %}
+
+{% include "partials/section-cta.njk" %}
+
+{% include "partials/form-contact.njk" %}

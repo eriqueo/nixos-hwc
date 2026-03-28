@@ -1,0 +1,67 @@
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="footer-logo" aria-label="{{ site.name }} — Home">
+        <span class="footer-logo-text">HEARTWOOD CRAFT</span>
+      </a>
+      <p class="footer-tagline">{{ site.tagline }}</p>
+      <div class="footer-contact">
+        <a href="{{ site.phoneLink }}" class="footer-contact-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 12.4a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1.84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+          </svg>
+          {{ site.phone }}
+        </a>
+        <a href="mailto:{{ site.email }}" class="footer-contact-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+          </svg>
+          {{ site.email }}
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-services">
+      <h4>Services</h4>
+      <ul>
+        <li><a href="/bathroom/remodeling/">Bathroom Remodeling</a></li>
+        <li><a href="/basement/remodeling/">Basement Remodeling</a></li>
+        <li><a href="/remodeling/">General Remodeling</a></li>
+        <li><a href="/services/">All Services</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-areas">
+      <h4>Areas We Serve</h4>
+      <ul>
+        <li><a href="/bozeman/">Bozeman</a></li>
+        <li><a href="/belgrade/">Belgrade</a></li>
+        <li><a href="/gallatin-gateway/">Gallatin Gateway</a></li>
+        <li><a href="/areas-we-cover/">All Areas</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-company">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="/about/">About</a></li>
+        <li><a href="/our-work/">Our Work</a></li>
+        <li><a href="/reviews/">Reviews</a></li>
+        <li><a href="/blog/">Blog</a></li>
+        <li><a href="/contact/">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="container footer-bottom-inner">
+      <p>&copy; {% year %} Heartwood Craft. {{ site.address }}.</p>
+      <nav class="footer-legal" aria-label="Legal">
+        <a href="/privacy-policy/">Privacy</a>
+        <a href="/terms-of-service/">Terms</a>
+        <a href="/cookie-policy/">Cookie Policy</a>
+        <a href="/disclaimer/">Disclaimer</a>
+      </nav>
+    </div>
+  </div>
+</footer>

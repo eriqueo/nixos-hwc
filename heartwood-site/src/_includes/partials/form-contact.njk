@@ -1,0 +1,61 @@
+<section class="section section-form" id="contact-form">
+  <div class="container container-narrow">
+    <h2>Get Your Free Estimate</h2>
+    <p class="section-subtitle">Tell us about your project and we'll call within one hour to schedule your free site visit.</p>
+
+    <form class="form" data-webhook="{{ site.webhookContact }}" novalidate>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="form-name">Name</label>
+          <input type="text" id="form-name" name="name" placeholder="Your name" required autocomplete="name">
+          <span class="form-error-msg" hidden>Please enter your name</span>
+        </div>
+        <div class="form-field">
+          <label for="form-email">Email</label>
+          <input type="email" id="form-email" name="email" placeholder="Email address" required autocomplete="email">
+          <span class="form-error-msg" hidden>Please enter a valid email</span>
+        </div>
+        <div class="form-field">
+          <label for="form-phone">Phone</label>
+          <input type="tel" id="form-phone" name="phone" placeholder="Phone number" required autocomplete="tel">
+          <span class="form-error-msg" hidden>Please enter your phone number</span>
+        </div>
+        <div class="form-field">
+          <label for="form-service">What can we help with?</label>
+          <select id="form-service" name="service" required>
+            <option value="">Select a service...</option>
+            <option value="bathroom">Bathroom Remodel</option>
+            <option value="basement">Basement Remodel</option>
+            <option value="remodeling">General Remodeling</option>
+            <option value="deck">Deck</option>
+            <option value="other">Something Else</option>
+          </select>
+          <span class="form-error-msg" hidden>Please select a service</span>
+        </div>
+        <div class="form-field form-field-full">
+          <label for="form-message">Tell us about your project <span class="optional">(optional)</span></label>
+          <textarea id="form-message" name="message" placeholder="What are you hoping to do? Any details help us prepare." rows="4"></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">
+        <span class="btn-text">Schedule My Free Estimate</span>
+        <span class="btn-loading" hidden>Sending...</span>
+      </button>
+      <p class="form-note">No commitment. No pressure. Just a conversation about what's possible.</p>
+    </form>
+
+    <div class="form-success" hidden>
+      <div class="success-icon" aria-hidden="true">&#10003;</div>
+      <h3>You're all set!</h3>
+      <p>Eric will call you within the hour to schedule your free site visit. If you have Pinterest boards or design ideas, have them handy — they help.</p>
+    </div>
+
+    <div class="form-error-state" hidden>
+      <p>Something went wrong submitting the form. Please call us directly at <a href="{{ site.phoneLink }}">{{ site.phone }}</a> — we'd love to hear about your project.</p>
+    </div>
+
+    <noscript>
+      <p>To request an estimate, call <a href="{{ site.phoneLink }}">{{ site.phone }}</a> or email <a href="mailto:{{ site.email }}">{{ site.email }}</a>.</p>
+    </noscript>
+  </div>
+</section>
