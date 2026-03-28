@@ -1,0 +1,35 @@
+---
+layout: layouts/base.njk
+---
+
+<section class="hero" {% if hero_image %}style="background-image: url('{{ hero_image }}')"{% endif %}>
+  <div class="hero-overlay">
+    <div class="container">
+      <h1>{{ h1 | default(title) }}</h1>
+      {% if hero_subtitle %}<p class="hero-subtitle">{{ hero_subtitle }}</p>{% endif %}
+      <div class="hero-cta">
+        <a href="{{ site.phoneLink }}" class="btn btn-primary">Call {{ site.phone }}</a>
+        <a href="#contact-form" class="btn btn-outline-light">Get a Free Estimate</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="trust-bar">
+  <div class="container trust-bar-inner">
+    <span>Licensed & Insured</span>
+    <span>5+ Years in Bozeman</span>
+    <span>3D Design Previews</span>
+    <span>Transparent Pricing</span>
+  </div>
+</div>
+
+{% include "partials/section-testimonials.njk" %}
+
+{% include "partials/section-services-grid.njk" %}
+
+{{ content | safe }}
+
+{% include "partials/section-cta.njk" %}
+
+{% include "partials/form-contact.njk" %}
