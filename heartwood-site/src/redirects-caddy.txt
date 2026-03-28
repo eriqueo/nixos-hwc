@@ -1,0 +1,5 @@
+# If self-hosting via Caddy, add these to your Caddyfile:
+# redir /bathroom/ /bathroom/remodeling/ 301
+# redir /bathroom/renovation/ /bathroom/remodeling/ 301
+# redir /basement/ /basement/remodeling/ 301
+# redir /basement/renovation/ /basement/remodeling/ 301

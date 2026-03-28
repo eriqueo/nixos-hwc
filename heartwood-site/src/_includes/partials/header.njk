@@ -1,0 +1,78 @@
+<header class="site-header" id="site-header">
+  <div class="container header-inner">
+    <a class="logo" href="/" aria-label="{{ site.name }} — Home">
+      <img src="/img/brand/logo.svg" alt="{{ site.name }}" width="180" height="40" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="logo-text" style="display:none">HEARTWOOD CRAFT</span>
+    </a>
+
+    <nav class="nav-desktop" aria-label="Main navigation">
+      <ul class="nav-list">
+        {% for item in navigation.main %}
+        {% if item.children %}
+        <li class="nav-item nav-dropdown-parent">
+          <button class="nav-link nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
+            {{ item.label }}
+            <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+              <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <ul class="nav-dropdown">
+            {% for child in item.children %}
+            <li><a href="{{ child.url }}" class="nav-dropdown-link">{{ child.label }}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
+        {% else %}
+        <li class="nav-item">
+          <a href="{{ item.url }}" class="nav-link">{{ item.label }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+      <a class="btn btn-phone" href="{{ site.phoneLink }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 12.4a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1.84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+        </svg>
+        <span>{{ site.phone }}</span>
+      </a>
+
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-mobile">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+    </div>
+  </div>
+
+  <nav class="nav-mobile" id="nav-mobile" aria-label="Mobile navigation" hidden>
+    <ul class="nav-mobile-list">
+      {% for item in navigation.main %}
+      {% if item.children %}
+      <li class="nav-mobile-item nav-mobile-dropdown-parent">
+        <button class="nav-mobile-link nav-mobile-dropdown-toggle" aria-expanded="false">
+          {{ item.label }}
+          <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+            <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <ul class="nav-mobile-dropdown" hidden>
+          {% for child in item.children %}
+          <li><a href="{{ child.url }}" class="nav-mobile-dropdown-link">{{ child.label }}</a></li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% else %}
+      <li class="nav-mobile-item">
+        <a href="{{ item.url }}" class="nav-mobile-link">{{ item.label }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+      <li class="nav-mobile-item nav-mobile-cta">
+        <a href="{{ site.phoneLink }}" class="btn btn-primary btn-full">Call {{ site.phone }}</a>
+      </li>
+    </ul>
+  </nav>
+</header>

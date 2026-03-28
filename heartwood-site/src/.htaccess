@@ -1,0 +1,5 @@
+RewriteEngine On
+RewriteRule ^bathroom/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^bathroom/renovation/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^basement/?$ /basement/remodeling/ [R=301,L]
+RewriteRule ^basement/renovation/?$ /basement/remodeling/ [R=301,L]
