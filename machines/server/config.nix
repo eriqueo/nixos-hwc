@@ -572,7 +572,7 @@
   hwc.alerts.ntfyBridge = {
     enable = true;
     port = 9095;
-    ntfyUrl = "http://localhost:2586/hwc-alerts";
+    ntfyUrl = "http://localhost:2586/alerts";
   };
 
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
