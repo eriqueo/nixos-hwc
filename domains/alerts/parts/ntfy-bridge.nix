@@ -117,16 +117,15 @@ let
             lines.append(f"Status: {status}")
             message = "\n".join(lines)
 
-            headers = {
-                "Title": title[:256],
-                "Priority": priority,
-                "Tags": tags,
-            }
-
             req = urllib.request.Request(
                 NTFY_URL,
                 data=message.encode("utf-8"),
-                headers=headers,
+            )
+            req.add_header("Priority", priority)
+            req.add_header("Tags", tags)
+            req.add_unredirected_header(
+                "Title",
+                title[:256].encode("utf-8"),
             )
 
             try:
@@ -159,7 +158,7 @@ in
 
     ntfyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://localhost:${toString alertsCfg.server.port}/hwc-alerts";
+      default = "http://localhost:${toString alertsCfg.server.port}/alerts";
       description = "ntfy server URL including topic (e.g., http://localhost:8080/hwc-alerts)";
     };
   };
