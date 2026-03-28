@@ -671,6 +671,7 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+- 2026-03-27: Removed broken port 9191:9090 mapping and frigate-nvr scrape config (ignored with --network=host, caused false ServiceDown alerts). Enabled frigate-exporter for proper Prometheus metrics.
 - 2026-03-18: Integrate MQTT support for event publishing, enabling n8n workflows.
 
 - **2026-03-09**: Fixed green tint with substream detection, CUDA hwaccel, go2rtc video=copy

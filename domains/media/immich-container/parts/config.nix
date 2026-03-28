@@ -159,9 +159,12 @@ in
         "--network-alias=immich-server"
       ];
 
-      ports = lib.optionals (cfg.network.mode != "host") [
+      ports = lib.optionals (cfg.network.mode != "host") ([
         "127.0.0.1:${toString cfg.settings.port}:3001"
-      ];
+      ] ++ lib.optionals cfg.observability.metrics.enable [
+        "127.0.0.1:${toString cfg.observability.metrics.apiPort}:${toString cfg.observability.metrics.apiPort}"
+        "127.0.0.1:${toString cfg.observability.metrics.microservicesPort}:${toString cfg.observability.metrics.microservicesPort}"
+      ]);
 
       environment = {
         IMMICH_PORT = toString cfg.settings.port;

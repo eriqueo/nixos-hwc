@@ -224,7 +224,8 @@ LABELMAP_EOF
         "8554:8554"
         "8555:8555/tcp"
         "8555:8555/udp"
-        "9191:9090"
+        # NOTE: 9191:9090 removed — ignored with --network=host and caused
+        # false ServiceDown alerts. Use frigate-exporter module for metrics.
       ];
 
       extraOptions = [
@@ -272,16 +273,8 @@ LABELMAP_EOF
       };
     };
 
-    # Prometheus integration
-    hwc.monitoring.prometheus.scrapeConfigs = [
-      {
-        job_name = "frigate-nvr";
-        static_configs = [{ targets = [ "localhost:9191" ]; }];
-        scrape_interval = "30s";
-        scrape_timeout = "10s";
-        metrics_path = "/metrics";
-      }
-    ];
+    # Prometheus integration: handled by frigate-exporter module (exporter/index.nix)
+    # The frigate container itself does not expose Prometheus metrics natively.
 
     assertions = [
       {
