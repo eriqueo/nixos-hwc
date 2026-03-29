@@ -127,6 +127,7 @@ window#waybar {
 
 /* === POWERLINE SEPARATORS === */
 /* fg = left group bg, bg = right group bg */
+#custom-ws-entry, #custom-sep-ws,
 #custom-sep-pre,
 #custom-sep-1, #custom-sep-2, #custom-sep-3 {
   padding: 0;
@@ -136,34 +137,14 @@ window#waybar {
   min-width: 0;
 }
 
+/* Workspace section entry/exit — powerline into and out of the teal workspace block */
+#custom-ws-entry { color: #32302f; background-color: #576f69; }  /* bar  → workspace */
+#custom-sep-ws   { color: #576f69; background-color: #32302f; }  /* workspace → bar  */
+
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
 #custom-sep-2   { color: #5d7258; background-color: #856b43; }  /* conn → health */
 #custom-sep-3   { color: #856b43; background-color: #504945; }  /* health → actions */
-
-/* === WORKSPACE ENTRY/EXIT TRIANGLES (CSS border trick) === */
-/* border-left + border-bottom on a zero-content element creates a right-pointing triangle */
-/* margin-top: -12px cancels window#waybar top padding so triangles fill full bar height */
-#custom-ws-left,
-#custom-ws-right {
-  padding: 0;
-  margin-top: -12px;
-  margin-bottom: 0;
-  min-width: 0;
-  min-height: 0;
-  background-color: transparent;
-}
-
-#custom-ws-left {
-  border-left: 16px solid transparent;   /* transparent left → diagonal */
-  border-bottom: 52px solid #576f69;     /* teal bottom → fills triangle */
-}
-
-#custom-ws-right {
-  border-left: 16px solid #576f69;       /* teal left → fills triangle */
-  border-bottom: 52px solid transparent; /* transparent bottom → diagonal */
-  margin-right: -16px;                   /* tuck under next module */
-}
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,

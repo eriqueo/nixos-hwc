@@ -2,7 +2,7 @@
 
 let
   commonModules = {
-    modules-left = [ "custom/ws-left" "hyprland/workspaces" "custom/ws-right" "hyprland/submap" ];
+    modules-left = [ "custom/ws-entry" "hyprland/workspaces" "custom/sep-ws" "hyprland/submap" ];
     modules-center = [ "clock" "custom/weather" ];
     modules-right = [
       "custom/sep-pre"
@@ -111,9 +111,9 @@ let
       on-click = "kitty --single-instance --hold -e bash -c 'curl -s wttr.in/Bozeman?u && echo -e \"\\n\\n────────────────────────────\\nPress any key to close...\" && read -n 1 -s -r'";
     };
     
-    # Workspace section entry/exit triangles (CSS border trick — no glyph needed)
-    "custom/ws-left"  = { format = ""; tooltip = false; };   # entry triangle
-    "custom/ws-right" = { format = ""; tooltip = false; };   # exit triangle
+    # Workspace section entry/exit glyphs
+    "custom/ws-entry" = { format = ""; tooltip = false; };  # bar → workspace
+    "custom/sep-ws"   = { format = ""; tooltip = false; };  # workspace → bar
 
     # Powerline separators — right-pointing arrows between right-side module groups
     # fg = left group bg, bg = right group bg (creates the arrow effect)
