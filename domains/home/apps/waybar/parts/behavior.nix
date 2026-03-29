@@ -2,18 +2,18 @@
 
 let
   commonModules = {
-    modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
+    modules-left = [ "hyprland/workspaces" "hyprland/submap" "custom/sep-ws" ];
     modules-center = [ "clock" "custom/weather" ];
     modules-right = [
-      # Toggles
+      "custom/sep-pre"
       "custom/gpu" "custom/ollama" "idle_inhibitor" "custom/lid-sleep"
-      # Connectivity
+      "custom/sep-1"
       "pulseaudio" "bluetooth" "custom/network"
-      # System health
+      "custom/sep-2"
       "temperature" "custom/disk-space" "custom/battery"
-      # Info
+      "custom/sep-3"
       "mpd"
-      # Actions
+      "custom/sep-4"
       "custom/proton-auth" "tray" "custom/notification" "custom/power"
     ];
   };
@@ -113,11 +113,14 @@ let
       on-click = "kitty --single-instance --hold -e bash -c 'curl -s wttr.in/Bozeman?u && echo -e \"\\n\\n────────────────────────────\\nPress any key to close...\" && read -n 1 -s -r'";
     };
     
-    # === NEW: Connectivity group (pill) — clicks still work individually ===
-    "group/connectivity" = {
-      orientation = "horizontal";
-      modules = [ "pulseaudio" "bluetooth" "custom/network" ];
-    };
+    # Powerline separators — right-pointing arrows between module groups
+    # fg = left group bg, bg = right group bg (creates the arrow effect)
+    "custom/sep-ws"  = { format = ""; tooltip = false; };  # workspace → bar
+    "custom/sep-pre" = { format = ""; tooltip = false; };  # bar → toggle
+    "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
+    "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
+    "custom/sep-3"   = { format = ""; tooltip = false; };  # health → media
+    "custom/sep-4"   = { format = ""; tooltip = false; };  # media → actions
   };
 
   externalConfig = {
