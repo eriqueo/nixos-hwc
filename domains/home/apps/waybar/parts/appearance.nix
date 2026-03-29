@@ -99,36 +99,52 @@ window#waybar {
   transition: all 0.2s ease;
 }
 
-/* === COLOR GROUPS — 50% tint, no border === */
+/* === COLOR GROUPS — opaque computed (50% blend over #32302f, required for powerline) === */
 
-/* Toggles — blue/teal (GPU, Ollama, Idle, Lid) */
+/* Toggles — teal #576f69 */
 #custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
-  background-color: rgba(125, 174, 163, 0.50);
+  background-color: #576f69;
 }
 
-/* Connectivity — aqua/green (Audio, Bluetooth, Network) */
+/* Connectivity — sage green #5d7258 */
 #pulseaudio, #bluetooth, #custom-network {
-  background-color: rgba(137, 180, 130, 0.50);
+  background-color: #5d7258;
 }
 
-#custom-network {
-  padding-right: 10px;
-}
+#custom-network { padding-right: 10px; }
 
-/* System health — yellow (Temp, Disk, Battery) */
+/* System health — amber #856b43 */
 #temperature, #custom-disk-space, #custom-battery {
-  background-color: rgba(216, 166, 87, 0.50);
+  background-color: #856b43;
 }
 
-/* Media — grey (MPD) */
+/* Media — warm grey #625951 */
 #mpd {
-  background-color: rgba(146, 131, 116, 0.50);
+  background-color: #625951;
 }
 
-/* Actions — subtle surface (Proton, Tray, Notify, Power) */
+/* Actions — bg3 #504945 */
 #custom-proton-auth, #tray, #custom-notification, #custom-power {
-  background-color: #504945;   /* bg3 */
+  background-color: #504945;
 }
+
+/* === POWERLINE SEPARATORS === */
+/* fg = left group bg, bg = right group bg */
+#custom-sep-ws, #custom-sep-pre,
+#custom-sep-1, #custom-sep-2, #custom-sep-3, #custom-sep-4 {
+  padding: 0;
+  margin: 0;
+  font-size: 22px;
+  border: none;
+  min-width: 0;
+}
+
+#custom-sep-ws  { color: #3c3836; background-color: #32302f; }  /* workspace → bar */
+#custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
+#custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
+#custom-sep-2   { color: #5d7258; background-color: #856b43; }  /* conn → health */
+#custom-sep-3   { color: #856b43; background-color: #625951; }  /* health → media */
+#custom-sep-4   { color: #625951; background-color: #504945; }  /* media → actions */
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,

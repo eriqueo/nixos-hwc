@@ -410,12 +410,65 @@ in
       .nix-defexpr/
     '';
 
-    # Starship prompt
+    # Starship prompt — powerline style, Gruvbox Material Dark colors
+    # Segment colors match waybar module groups for visual cohesion:
+    #   dir   = amber  #856b43  (waybar health group)
+    #   git   = teal   #576f69  (waybar toggle group)
+    #   cloud = green  #5d7258  (waybar connectivity group)
     programs.starship = lib.mkIf cfg.zsh.starship {
       enable = true;
       settings = {
         scan_timeout = 100;
         command_timeout = 1000;
+        add_newline = false;
+
+        # Top-level format: powerline arrows injected between segments
+        format = lib.concatStrings [
+          "[](fg:#32302f bg:#856b43)"
+          "$directory"
+          "$git_branch"
+          "$git_status"
+          "$python$nodejs$rust$golang"
+          "[](fg:#576f69 bg:#32302f) "
+          "$character"
+        ];
+
+        directory = {
+          format = "[ $path ](bg:#856b43 fg:#d4be98)";
+          truncation_length = 3;
+          truncation_symbol = ".../";
+          style = "bg:#856b43 fg:#d4be98";
+        };
+
+        git_branch = {
+          format = "[](fg:#856b43 bg:#576f69)[ $symbol$branch ](bg:#576f69 fg:#d4be98)";
+          symbol = " ";
+          style = "bg:#576f69 fg:#d4be98";
+        };
+
+        git_status = {
+          format = "[$all_status$ahead_behind ](bg:#576f69 fg:#d8a657)";
+          style = "bg:#576f69 fg:#d8a657";
+          conflicted = "!";
+          ahead = "⇡\${count}";
+          behind = "⇣\${count}";
+          diverged = "⇕";
+          untracked = "?";
+          modified = "~";
+          staged = "+";
+          deleted = "✘";
+        };
+
+        # Language segments — sit inside git segment bg, only show when active
+        python = { format = "[ $symbol$version](bg:#576f69 fg:#a9b665)"; style = "bg:#576f69"; symbol = " "; };
+        nodejs  = { format = "[ $symbol$version](bg:#576f69 fg:#a9b665)"; style = "bg:#576f69"; symbol = " "; };
+        rust    = { format = "[ $symbol$version](bg:#576f69 fg:#e78a4e)"; style = "bg:#576f69"; symbol = " "; };
+        golang  = { format = "[ $symbol$version](bg:#576f69 fg:#7daea3)"; style = "bg:#576f69"; symbol = " "; };
+
+        character = {
+          success_symbol = "[❯](bold fg:#a9b665)";
+          error_symbol   = "[❯](bold fg:#ea6962)";
+        };
       };
     };
 
