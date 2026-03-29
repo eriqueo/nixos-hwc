@@ -3,3 +3,38 @@ RewriteRule ^bathroom/?$ /bathroom/remodeling/ [R=301,L]
 RewriteRule ^bathroom/renovation/?$ /bathroom/remodeling/ [R=301,L]
 RewriteRule ^basement/?$ /basement/remodeling/ [R=301,L]
 RewriteRule ^basement/renovation/?$ /basement/remodeling/ [R=301,L]
+
+# Blog redirects — killed posts (bathroom-related)
+RewriteRule ^common-bathroom-remodel-mistakes-in-bozeman-mt/?$ /common-bathroom-renovation-mistakes-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/?$ /what-is-the-best-time-to-renovate-in-bozeman-mt/ [R=301,L]
+RewriteRule ^are-bathroom-renovations-tax-deductible/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^what-color-flooring-makes-a-bathroom-look-bigger/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^what-flooring-is-best-for-a-bathroom-in-bozeman-mt/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^what-flooring-is-urine-proof-best-options-for-bozeman-homes/?$ /bathroom/remodeling/ [R=301,L]
+RewriteRule ^what-is-the-most-popular-home-renovation/?$ /bathroom/remodeling/ [R=301,L]
+
+# Blog redirects — killed posts (basement-related)
+RewriteRule ^does-home-depot-renovate-basements/?$ /basement/remodeling/ [R=301,L]
+RewriteRule ^is-it-worth-renovating-a-basement/?$ /when-should-you-not-finish-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^how-expensive-is-it-to-redo-a-basement/?$ /how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^how-do-people-afford-to-finish-a-basement-in-bozeman-mt/?$ /how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/?$ /how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-do-i-wish-i-knew-before-finishing-the-basement/?$ /when-should-you-not-finish-a-basement-in-bozeman-mt/ [R=301,L]
+RewriteRule ^does-a-finished-basement-increase-home-insurance/?$ /basement/remodeling/ [R=301,L]
+RewriteRule ^what-are-common-basement-finishing-problems/?$ /how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/ [R=301,L]
+
+# Blog redirects — killed posts (deck-related)
+RewriteRule ^is-a-deck-collapse-covered-by-homeowners-insurance/?$ /what-accounts-for-90-of-deck-collapses/ [R=301,L]
+RewriteRule ^is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/?$ /what-are-the-4-types-of-decks-for-bozeman-homes/ [R=301,L]
+
+# Blog redirects — killed posts (general/off-topic)
+RewriteRule ^top-remodeling-tips-for-bozeman-homeowners-from-bathrooms-to-basements/?$ /blog/ [R=301,L]
+RewriteRule ^what-salary-typically-affords-a-300000-house/?$ /blog/ [R=301,L]
+RewriteRule ^what-should-you-not-skimp-on-when-building-a-house/?$ /remodeling/ [R=301,L]
+RewriteRule ^at-what-point-is-a-house-not-worth-fixing/?$ /remodeling/ [R=301,L]
+RewriteRule ^what-is-the-30-rule-in-remodeling/?$ /what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-is-the-smartest-way-to-pay-for-home-improvements-in-bozeman-mt/?$ /remodeling/ [R=301,L]
+RewriteRule ^what-is-the-difference-between-renovation-and-remodeling/?$ /remodeling/ [R=301,L]
+RewriteRule ^what-does-a-full-remodel-include/?$ /what-happens-during-remodeling-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-comes-first-when-remodeling-a-house/?$ /what-happens-during-remodeling-in-bozeman-mt/ [R=301,L]
+RewriteRule ^what-are-the-trends-for-home-remodel-in-2025/?$ /what-are-the-latest-remodeling-trends/ [R=301,L]
