@@ -24,34 +24,21 @@ window#waybar {
   padding: 12px 0px;
 }
 
-/* === WORKSPACES — powerline arrow shapes via clip-path === */
-/* Each button is clipped to an arrow shape.
-   margin-left: -10px overlaps the previous button so the previous button's
-   bg color shows through this button's left notch — creating the arrow effect. */
-
 #workspaces {
   margin: 0;
   padding: 0;
 }
 
 #workspaces button {
-  /* Arrow shape: notched left, pointed right */
-  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
-  margin: 0 0 0 -10px;
-  padding: 12px 18px 12px 22px;
+  padding: 12px 16px;
   min-height: 0;
-  min-width: 36px;
+  min-width: 32px;
   background-color: #576f69;
   color: #32302f;
   border-radius: 0;
   font-size: 18px;
   transition: none;
-}
-
-#workspaces button:first-child {
-  /* No left notch on first button */
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
-  margin-left: 0;
+  border: none;
 }
 
 #workspaces button.empty {
