@@ -88,7 +88,7 @@ let
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "Awake"; deactivated = "Idle"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟 Muted"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
-    bluetooth = { format = "BT {status}"; format-connected = "BT {num_connections}"; format-disabled = "BT off"; on-click = "blueman-manager"; };
+    bluetooth = { format = "󰂯"; format-connected = "󰂱 {num_connections}"; format-disabled = "󰂲"; tooltip-format-connected = "{device_enumerate}"; on-click = "blueman-manager"; };
     temperature = {
       hwmon-path-abs = "/sys/devices/platform/coretemp.0/hwmon";
       input-filename = "temp1_input";
