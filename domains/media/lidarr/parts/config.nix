@@ -10,6 +10,11 @@ let
     inherit configPath;
     urlBase = "/lidarr";
   };
+  webhookScript = arrConfig.mkArrWebhookScript {
+    name = "lidarr";
+    inherit configPath;
+    source = "lidarr";
+  };
 in
 {
   config = lib.mkIf cfg.enable {
@@ -18,9 +23,10 @@ in
     systemd.services."podman-lidarr".wants = [ "network-online.target" "agenix.service" ];
     systemd.services."podman-lidarr".requires = [ "mnt-hot.mount" ];
 
-    # Enforce correct config.xml settings before container starts
+    # Enforce correct config.xml settings and webhook before container starts
     systemd.services."podman-lidarr".serviceConfig.ExecStartPre = [
-      "+${enforceScript}"  # + prefix runs as root
+      "+${enforceScript}"   # + prefix runs as root
+      "+${webhookScript}"
     ];
   };
 }
