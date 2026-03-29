@@ -64,6 +64,7 @@ in
 
       volumes = [
         "${cfg.dataDir}:/app/data"
+        "/run/podman/podman.sock:/var/run/docker.sock:ro"
       ];
 
       environment = {

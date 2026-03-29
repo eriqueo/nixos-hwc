@@ -10,6 +10,10 @@ LABELS_DIR="$HOME/400_mail/Maildir/proton/Labels"
 
 echo "$(date): Starting mail sync..."
 
+# Reconcile notmuch DB with disk before afew, so afew doesn't try to
+# move files that were already moved/deleted by a prior sync or manual action.
+"$NM" new --quiet
+
 # Move tagged messages to correct IMAP folders BEFORE mbsync
 ${afewPkg}/bin/afew -m -a || true
 
@@ -100,7 +104,7 @@ echo "$(date): Mail sync completed"
     Unit.Description = "Periodic mbsync";
     Timer = {
       OnBootSec = "2m";
-      OnUnitActiveSec = "10m";
+      OnCalendar = "*:0/10";       # every 10 minutes, clock-based
       AccuracySec = "30s";
       Persistent = true;
       Unit = "mbsync.service";
