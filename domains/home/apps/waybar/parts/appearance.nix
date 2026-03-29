@@ -92,43 +92,38 @@ window#waybar {
   min-height: 0;
   margin: 0px 0px;
   background-color: #3c3836;   /* bg1 baseline */
-  border: 2px solid #504945;   /* bg3 default border */
+  border: none;
   border-radius: 0px;
   color: #d4be98;               /* fg0 */
   font-size: 18px;
   transition: all 0.2s ease;
 }
 
-/* === COLOR GROUPS — official Gruvbox Material accents === */
+/* === COLOR GROUPS — 30% tint, no border === */
 
 /* Toggles — blue/teal (GPU, Ollama, Idle, Lid) */
 #custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
-  border-color: #7daea3;
-  background-color: rgba(125, 174, 163, 0.12);
+  background-color: rgba(125, 174, 163, 0.30);
 }
 
 /* Connectivity — aqua/green (Audio, Bluetooth, Network) */
 #pulseaudio, #bluetooth, #custom-network {
-  border-color: #89b482;
-  background-color: rgba(137, 180, 130, 0.12);
+  background-color: rgba(137, 180, 130, 0.30);
 }
 
 /* System health — yellow (Temp, Disk, Battery) */
 #temperature, #custom-disk-space, #custom-battery {
-  border-color: #d8a657;
-  background-color: rgba(216, 166, 87, 0.12);
+  background-color: rgba(216, 166, 87, 0.30);
 }
 
 /* Media — grey (MPD) */
 #mpd {
-  border-color: #928374;
-  background-color: rgba(146, 131, 116, 0.12);
+  background-color: rgba(146, 131, 116, 0.30);
 }
 
-/* Actions — subtle bg (Proton, Tray, Notify, Power) */
+/* Actions — subtle surface (Proton, Tray, Notify, Power) */
 #custom-proton-auth, #tray, #custom-notification, #custom-power {
-  border-color: #504945;        /* bg3 */
-  background-color: #3c3836;   /* bg1 */
+  background-color: #504945;   /* bg3 */
 }
 
 /* === HOVER — universal === */
