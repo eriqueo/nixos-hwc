@@ -56,7 +56,7 @@
         sendResolved = true;
       }
       {
-        name = "ntfy-bridge";
+        name = "gotify-bridge";
         url = "http://localhost:9095";
         sendResolved = true;
       }

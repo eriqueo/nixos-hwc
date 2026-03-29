@@ -170,30 +170,30 @@ in
         description = "Show notification on backup failure";
       };
 
-      # ntfy integration for cross-machine notifications
-      ntfy = {
+      # gotify integration for cross-machine notifications
+      gotify = {
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Enable ntfy notifications (requires hwc.automation.ntfy.enable)";
+          description = "Enable gotify notifications (requires hwc.automation.gotify.enable)";
         };
 
-        topic = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
+        tokenFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
           default = null;
-          description = "ntfy topic for backup notifications (null = use ntfy module's default)";
+          description = "Path to gotify app token file for backup notifications";
         };
 
         onSuccess = lib.mkOption {
           type = lib.types.bool;
           default = false;
-          description = "Send ntfy notification on successful backup";
+          description = "Send gotify notification on successful backup";
         };
 
         onFailure = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Send ntfy notification on backup failure";
+          description = "Send gotify notification on backup failure";
         };
       };
     };

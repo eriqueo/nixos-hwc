@@ -272,25 +272,15 @@
     };
   };
 
-  # ntfy notification system CLI client for server alerts
-  # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
-  # See: docs/infrastructure/ntfy-notification-classes.md
-  hwc.automation.ntfy = {
+  # Gotify notification system CLI client for server alerts
+  # Per-app tokens: each service gets its own gotify application token
+  # NOTE: defaultTokenFile wired after first deploy (Phase 6 of gotify migration)
+  hwc.automation.gotify = {
     enable = true;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted via Tailscale HTTPS
-    defaultTopic = "alerts";  # Private topic on self-hosted server
-    defaultTags = [ "hwc" "server" ];
-    defaultPriority = 4;  # Higher priority for server alerts
-    hostTag = true;       # Adds "host-hwc-server" tag automatically
-
-    # No auth needed for public ntfy.sh topics
-    auth.enable = false;
-    # To enable auth, add secrets and configure:
-    # auth = {
-    #   enable = true;
-    #   method = "token";
-    #   tokenFile = "/run/secrets/ntfy-token";
-    # };
+    defaultTokenFile = config.hwc.secrets.api.gotifyTokenAlertsFile;
+    defaultPriority = 7;  # Higher priority for server alerts
+    hostTag = true;       # Prepends "[host: hwc-server]" to messages
   };
 
   # Centralized alerts via n8n -> Slack (replaces ntfy monitoring)
@@ -560,19 +550,22 @@
     };
   };
 
-  # ntfy notification server (alerts domain)
+  # Gotify notification server (alerts domain)
   # Self-hosted for privacy - lead data stays on our infrastructure
   hwc.alerts.server = {
     enable = true;
     port = 2586;
-    dataDir = "/var/lib/hwc/ntfy";
+    dataDir = "/var/lib/hwc/gotify";
+    # adminPasswordFile set via agenix (contains GOTIFY_DEFAULTUSER_PASS=...)
+    # tokens configured after first deploy via gotify UI
   };
 
-  # Alertmanager → ntfy bridge (forwards Prometheus alerts to phone via ntfy)
-  hwc.alerts.ntfyBridge = {
+  # Alertmanager → gotify bridge (forwards Prometheus alerts to phone via gotify)
+  hwc.alerts.gotifyBridge = {
     enable = true;
     port = 9095;
-    ntfyUrl = "http://localhost:2586/alerts";
+    gotifyUrl = "http://localhost:2586";
+    # tokenFile defaults to server.tokens.alertsFile
   };
 
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
@@ -1000,7 +993,7 @@
 
         health = {
           enable = true;
-          ntfy.topic = "hwc-mail";
+          gotify.tokenFile = if config.hwc.secrets.api.gotifyTokenMailFile != null then config.hwc.secrets.api.gotifyTokenMailFile else "";
           webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
         };
 

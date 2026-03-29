@@ -230,27 +230,65 @@ in
     };
 
     #==========================================================================
-    # NTFY SERVER (notification infrastructure)
+    # GOTIFY SERVER (notification infrastructure)
     #==========================================================================
     server = {
-      enable = lib.mkEnableOption "ntfy notification server (container)";
+      enable = lib.mkEnableOption "gotify notification server (container)";
 
       port = lib.mkOption {
         type = lib.types.port;
-        default = 8080;
-        description = "ntfy web port";
+        default = 2586;
+        description = "Gotify web port";
       };
 
       dataDir = lib.mkOption {
         type = lib.types.path;
-        default = "${paths.state or "/var/lib"}/ntfy";
-        description = "Data directory for ntfy server";
+        default = "${paths.state or "/var/lib"}/gotify";
+        description = "Data directory for gotify server";
       };
 
       image = lib.mkOption {
         type = lib.types.str;
-        default = "binwiederhier/ntfy:latest";
-        description = "ntfy container image";
+        default = "gotify/server:latest";
+        description = "Gotify container image";
+      };
+
+      adminPasswordFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Environment file containing GOTIFY_DEFAULTUSER_PASS=<password>";
+      };
+
+      tokens = {
+        alertsFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Path to file containing gotify app token for alerts";
+        };
+
+        backupFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Path to file containing gotify app token for backup notifications";
+        };
+
+        mailFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Path to file containing gotify app token for mail health alerts";
+        };
+
+        monitoringFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Path to file containing gotify app token for monitoring";
+        };
+
+        leadsFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Path to file containing gotify app token for lead notifications";
+        };
       };
     };
 
@@ -275,8 +313,8 @@ in
   };
 
   imports = [
-    ./parts/server.nix       # ntfy notification server
-    ./parts/ntfy-bridge.nix  # Alertmanager → ntfy bridge
+    ./parts/server.nix        # gotify notification server
+    ./parts/gotify-bridge.nix # Alertmanager → gotify bridge
   ];
 
   #==========================================================================

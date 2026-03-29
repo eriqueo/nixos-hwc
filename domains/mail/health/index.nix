@@ -5,13 +5,13 @@
 #   GPG → pass → Bridge → mbsync → mail freshness
 #
 # Alert routing:
-#   - Critical (mail down 30+ min): hwc-ntfy-send → phone push
+#   - Critical (mail down 30+ min): hwc-gotify-send → phone push
 #   - Warning (single failure): n8n webhook → Slack
 #   - Auto-remediation: stale GPG locks cleaned automatically
 #
 # Boundaries:
 #   - Owns: health check script, systemd timer, alert routing, state tracking
-#   - Depends on: mail domain (accounts, bridge, mbsync, notmuch paths), hwc-ntfy-send
+#   - Depends on: mail domain (accounts, bridge, mbsync, notmuch paths), hwc-gotify-send
 #   - Does NOT touch: mail data, configs, or services (read-only + GPG lock cleanup)
 { config, lib, pkgs, ... }:
 let
@@ -32,7 +32,7 @@ let
     MAILDIR="${maildirRoot}"
     GNUPG_DIR="''${GNUPGHOME:-$HOME/.gnupg}"
     STATE_DIR="${stateDir}"
-    NTFY_TOPIC="${cfg.ntfy.topic}"
+    GOTIFY_TOKEN_FILE="${cfg.gotify.tokenFile}"
     WEBHOOK_URL="${cfg.webhook.url}"
     SYNC_MAX_AGE_MIN="${toString cfg.syncMaxAgeMin}"
     FRESHNESS_HOURS="${toString cfg.freshnessHours}"
@@ -76,11 +76,11 @@ let
 
     # ─── Alert senders ───────────────────────────────────────────
 
-    # Critical: phone push via hwc-ntfy-send (already in PATH on server)
-    send_ntfy() {
-      local title="$1" body="$2" priority="''${3:-5}"
-      hwc-ntfy-send --priority "$priority" --tag mail,health \
-        "$NTFY_TOPIC" "$title" "$body" 2>/dev/null || true
+    # Critical: phone push via hwc-gotify-send (already in PATH on server)
+    send_gotify() {
+      local title="$1" body="$2" priority="''${3:-10}"
+      hwc-gotify-send --token-file "$GOTIFY_TOKEN_FILE" --priority "$priority" \
+        "$title" "$body" 2>/dev/null || true
     }
 
     # Warning: n8n webhook → Slack channel
@@ -110,7 +110,7 @@ let
       fi
 
       if [[ "$level" == "critical" ]]; then
-        send_ntfy "$title" "$body" 5
+        send_gotify "$title" "$body" 10
         send_webhook "critical" "$body"
       else
         # Warnings go to Slack only (don't wake you up)
@@ -318,11 +318,11 @@ in
   options.hwc.mail.health = {
     enable = lib.mkEnableOption "mail infrastructure health monitoring";
 
-    ntfy = {
-      topic = lib.mkOption {
+    gotify = {
+      tokenFile = lib.mkOption {
         type = lib.types.str;
-        default = "hwc-mail";
-        description = "ntfy topic for critical alerts (uses hwc-ntfy-send which reads system ntfy config)";
+        default = "";
+        description = "Path to gotify app token file for critical mail alerts (uses hwc-gotify-send)";
       };
     };
 

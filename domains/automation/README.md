@@ -2,12 +2,13 @@
 
 ## Purpose
 
-Workflow automation services. Currently contains n8n for alert routing,
-webhook handling, and Slack notification integration.
+Workflow automation services. Contains n8n for alert routing,
+webhook handling, and Slack notification integration. Gotify CLI tool
+for cross-machine push notifications.
 
 ## Boundaries
 
-- Owns: n8n workflow automation
+- Owns: n8n workflow automation, gotify CLI (`hwc-gotify-send`), MQTT broker
 - Does NOT own: alert definitions (that's `domains/alerts/`), monitoring (that's `domains/monitoring/`)
 
 ## Structure
@@ -18,7 +19,7 @@ automation/
 ├── README.md    # This file
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
-├── ntfy/        # ntfy notification server
+├── gotify/      # Gotify notification CLI (hwc-gotify-send)
 │   └── index.nix
 └── n8n/         # n8n workflow automation
     ├── index.nix # Options + Tailscale funnel services
@@ -42,6 +43,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-03-29: Migrated from ntfy to gotify — replaced ntfy/ directory with gotify/, new CLI tool hwc-gotify-send with JSON API + per-app tokens
 - 2026-03-26: Add work_calculator_lead n8n workflow (Heartwood MCP /call → JT + Postgres + Slack); migration 002-calculator-leads.sql
 - 2026-03-24: Added work_calculator_lead workflow (ID: SoLwmxgkMILrOYbP) - full JobTread integration for bathroom calculator leads
 - 2026-03-18: Add MQTT integration for n8n, allowing detection events to be forwarded via webhook
