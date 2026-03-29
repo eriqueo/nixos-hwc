@@ -250,7 +250,7 @@ in
       };
 
       volumes = [
-        "${config.hwc.paths.media.root}/pictures:/mnt/media/pictures:ro"
+        "${config.hwc.paths.photos}/external:/mnt/media/photos/external:ro"
       ] ++ (if cfg.gpu.enable then [
         "${immichCacheRoot}:/cache:rw"
         "${immichCacheRoot}/tensorrt:/cache/tensorrt:rw"
