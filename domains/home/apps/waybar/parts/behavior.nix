@@ -115,12 +115,12 @@ let
     
     # Powerline separators — right-pointing arrows between module groups
     # fg = left group bg, bg = right group bg (creates the arrow effect)
-    "custom/sep-ws"  = { format = ""; tooltip = false; };  # workspace → bar
-    "custom/sep-pre" = { format = ""; tooltip = false; };  # bar → toggle
-    "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
-    "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
-    "custom/sep-3"   = { format = ""; tooltip = false; };  # health → media
-    "custom/sep-4"   = { format = ""; tooltip = false; };  # media → actions
+    "custom/sep-ws"  = { format = ""; tooltip = false; };  # workspace → bar
+    "custom/sep-pre" = { format = ""; tooltip = false; };  # bar → toggle
+    "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
+    "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
+    "custom/sep-3"   = { format = ""; tooltip = false; };  # health → media
+    "custom/sep-4"   = { format = ""; tooltip = false; };  # media → actions
   };
 
   externalConfig = {
