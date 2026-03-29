@@ -208,7 +208,7 @@ in
       name = "gotify";
       mode = "port";
       port = 2586;
-      upstream = "http://127.0.0.1:2586";
+      upstream = "http://127.0.0.1:2587";
     }
 
     # Tdarr - port mode (WebSocket intensive, subpath issues)
