@@ -12,8 +12,6 @@ let
       "custom/sep-2"
       "temperature" "custom/disk-space" "custom/battery"
       "custom/sep-3"
-      "mpd"
-      "custom/sep-4"
       "custom/proton-auth" "tray" "custom/notification" "custom/power"
     ];
   };
@@ -22,7 +20,7 @@ let
     disable-scroll = true;
     all-outputs = false;
     warp-on-scroll = false;
-    format = "{name}";
+    format = "{name} ";
     "swap-icon-label" = false;
     persistent-workspaces = {
       "1" = []; "2" = []; "3" = []; "4" = [];
@@ -120,7 +118,6 @@ let
     "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
     "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
     "custom/sep-3"   = { format = ""; tooltip = false; };  # health → media
-    "custom/sep-4"   = { format = ""; tooltip = false; };  # media → actions
   };
 
   externalConfig = {
