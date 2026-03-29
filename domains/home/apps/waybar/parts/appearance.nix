@@ -126,19 +126,20 @@ window#waybar {
 }
 
 /* === POWERLINE SEPARATORS === */
-/* fg = left section color, bg = right section color */
+/* Convention: color = left-section-bg, background-color = right-section-bg */
+/* The filled triangle points right; FG=left-color sits against BG=right-color */
 #custom-ws-enter, #custom-ws-exit,
 #custom-sep-pre,
 #custom-sep-1, #custom-sep-2, #custom-sep-3 {
   padding: 0;
   margin: 0;
-  font-size: 22px;
+  font-size: 48px;
   border: none;
   min-width: 0;
 }
 
-/* Workspace entry/exit: teal glyph on dark bg frames the workspace block */
-#custom-ws-enter { color: #576f69; background-color: #32302f; }  /* dark → teal */
+/* Workspace entry: dark bar → teal block; exit: teal block → dark bar */
+#custom-ws-enter { color: #32302f; background-color: #576f69; }  /* dark → teal */
 #custom-ws-exit  { color: #576f69; background-color: #32302f; }  /* teal → dark */
 
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
