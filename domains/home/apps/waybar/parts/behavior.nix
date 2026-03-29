@@ -20,7 +20,7 @@ let
     disable-scroll = true;
     all-outputs = false;
     warp-on-scroll = false;
-    format = "{name} ";
+    format = "{name}";
     "swap-icon-label" = false;
     persistent-workspaces = {
       "1" = []; "2" = []; "3" = []; "4" = [];

@@ -24,39 +24,53 @@ window#waybar {
   padding: 12px 0px;
 }
 
-/* === WORKSPACES === */
+/* === WORKSPACES — powerline arrow shapes via clip-path === */
+/* Each button is clipped to an arrow shape.
+   margin-left: -10px overlaps the previous button so the previous button's
+   bg color shows through this button's left notch — creating the arrow effect. */
+
+#workspaces {
+  margin: 0;
+  padding: 0;
+}
+
 #workspaces button {
-  padding: 12px 16px;
+  /* Arrow shape: notched left, pointed right */
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  margin: 0 0 0 -10px;
+  padding: 12px 18px 12px 22px;
   min-height: 0;
-  background-color: #576f69;   /* teal — matches toggle group */
-  color: #32302f;               /* dark text on teal */
-  border-radius: 0px;
-  margin: 0px 0px;
-  min-width: 32px;
+  min-width: 36px;
+  background-color: #576f69;
+  color: #32302f;
+  border-radius: 0;
   font-size: 18px;
-  transition: all 0.2s ease;
+  transition: none;
+}
+
+#workspaces button:first-child {
+  /* No left notch on first button */
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+  margin-left: 0;
 }
 
 #workspaces button.empty {
-  background-color: #32302f;   /* bar bg — recede */
-  color: #7c6f64;               /* grey0 */
-  opacity: 0.8;
+  background-color: #3c3836;
+  color: #7c6f64;
 }
 
 #workspaces button.active {
+  background-color: #7daea3;
   color: #32302f;
-  background-color: #7daea3;   /* Gruvbox Material blue — stands out */
-  border-bottom: none;
-  opacity: 1;
 }
 
 #workspaces button.urgent {
-  color: #ea6962;
-  opacity: 1;
+  background-color: #ea6962;
+  color: #32302f;
 }
 
 #workspaces button:hover {
-  background-color: #6b8a84;   /* slightly lighter teal */
+  background-color: #6b8a84;
 }
 
 /* === MODE === */
