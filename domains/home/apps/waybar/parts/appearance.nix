@@ -99,26 +99,30 @@ window#waybar {
   transition: all 0.2s ease;
 }
 
-/* === COLOR GROUPS — 30% tint, no border === */
+/* === COLOR GROUPS — 50% tint, no border === */
 
 /* Toggles — blue/teal (GPU, Ollama, Idle, Lid) */
 #custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
-  background-color: rgba(125, 174, 163, 0.30);
+  background-color: rgba(125, 174, 163, 0.50);
 }
 
 /* Connectivity — aqua/green (Audio, Bluetooth, Network) */
 #pulseaudio, #bluetooth, #custom-network {
-  background-color: rgba(137, 180, 130, 0.30);
+  background-color: rgba(137, 180, 130, 0.50);
+}
+
+#custom-network {
+  padding-right: 10px;
 }
 
 /* System health — yellow (Temp, Disk, Battery) */
 #temperature, #custom-disk-space, #custom-battery {
-  background-color: rgba(216, 166, 87, 0.30);
+  background-color: rgba(216, 166, 87, 0.50);
 }
 
 /* Media — grey (MPD) */
 #mpd {
-  background-color: rgba(146, 131, 116, 0.30);
+  background-color: rgba(146, 131, 116, 0.50);
 }
 
 /* Actions — subtle surface (Proton, Tray, Notify, Power) */
