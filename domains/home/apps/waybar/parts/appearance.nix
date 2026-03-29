@@ -125,7 +125,9 @@ window#waybar {
   background-color: #504945;
 }
 
-/* === POWERLINE SEPARATORS (right-side glyphs) === */
+/* === POWERLINE SEPARATORS === */
+/* fg = left section color, bg = right section color */
+#custom-ws-enter, #custom-ws-exit,
 #custom-sep-pre,
 #custom-sep-1, #custom-sep-2, #custom-sep-3 {
   padding: 0;
@@ -135,31 +137,14 @@ window#waybar {
   min-width: 0;
 }
 
+/* Workspace entry/exit: teal glyph on dark bg frames the workspace block */
+#custom-ws-enter { color: #576f69; background-color: #32302f; }  /* dark → teal */
+#custom-ws-exit  { color: #576f69; background-color: #32302f; }  /* teal → dark */
+
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
 #custom-sep-2   { color: #5d7258; background-color: #856b43; }  /* conn → health */
 #custom-sep-3   { color: #856b43; background-color: #504945; }  /* health → actions */
-
-/* === WORKSPACE DIAGONAL SEPARATORS (CSS border trick on group containers) === */
-/* Group containers always render even when empty — unlike custom modules */
-#ws-left, #ws-right {
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-  min-height: 0;
-  background-color: transparent;
-}
-
-#ws-left {
-  border-left: 15px solid transparent;
-  border-bottom: 52px solid #576f69;
-}
-
-#ws-right {
-  border-left: 15px solid #576f69;
-  border-bottom: 52px solid transparent;
-  margin-right: -15px;
-}
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
