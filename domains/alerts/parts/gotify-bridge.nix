@@ -163,8 +163,8 @@ in
 
     gotifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://localhost:${toString alertsCfg.server.port}";
-      description = "Gotify server URL (e.g., http://localhost:2586)";
+      default = "http://localhost:${toString alertsCfg.server.internalPort}";
+      description = "Gotify server URL (e.g., http://localhost:2587)";
     };
 
     tokenFile = lib.mkOption {

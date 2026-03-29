@@ -22,7 +22,7 @@ in
     # Container configuration
     virtualisation.oci-containers.containers.gotify = {
       image = cfg.image;
-      ports = [ "${toString cfg.port}:80" ];
+      ports = [ "127.0.0.1:${toString cfg.internalPort}:80" ];
       volumes = [
         "${cfg.dataDir}:/app/data"
       ];
@@ -48,12 +48,12 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStart = "${pkgs.tailscale}/bin/tailscale serve --bg --https ${toString cfg.port} http://127.0.0.1:${toString cfg.port}";
+        ExecStart = "${pkgs.tailscale}/bin/tailscale serve --bg --https ${toString cfg.port} http://127.0.0.1:${toString cfg.internalPort}";
         ExecStop = "${pkgs.tailscale}/bin/tailscale serve --https=${toString cfg.port} off";
       };
     };
 
-    # Open firewall
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
+    # No firewall rule needed — external access is via Tailscale HTTPS serve,
+    # and internal services connect to 127.0.0.1:internalPort directly.
   };
 }

@@ -238,7 +238,13 @@ in
       port = lib.mkOption {
         type = lib.types.port;
         default = 2586;
-        description = "Gotify web port";
+        description = "External HTTPS port (Tailscale serve). Clients connect here.";
+      };
+
+      internalPort = lib.mkOption {
+        type = lib.types.port;
+        default = 2587;
+        description = "Internal container port on localhost. Tailscale proxies from port to internalPort.";
       };
 
       dataDir = lib.mkOption {

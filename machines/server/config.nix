@@ -564,7 +564,7 @@
   hwc.alerts.gotifyBridge = {
     enable = true;
     port = 9095;
-    gotifyUrl = "http://localhost:2586";
+    gotifyUrl = "http://localhost:2587";
     # tokenFile defaults to server.tokens.alertsFile
   };
 
