@@ -111,9 +111,6 @@ let
       on-click = "kitty --single-instance --hold -e bash -c 'curl -s wttr.in/Bozeman?u && echo -e \"\\n\\n────────────────────────────\\nPress any key to close...\" && read -n 1 -s -r'";
     };
     
-    # Workspace section diagonal separators (group modules — always render)
-    "group/ws-left"  = { orientation = "horizontal"; modules = []; };
-    "group/ws-right" = { orientation = "horizontal"; modules = []; };
 
     # Powerline separators — right-pointing arrows between right-side module groups
     # fg = left group bg, bg = right group bg (creates the arrow effect)
