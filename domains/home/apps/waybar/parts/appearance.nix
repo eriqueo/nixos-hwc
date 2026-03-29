@@ -4,10 +4,18 @@ let
   palette = config.hwc.home.theme.colors;
 in
 ''
-/* HWC Waybar — compact text-based, color-grouped by function */
+/* HWC Waybar — Gruvbox Material Dark (official hex values) */
+
+/* Gruvbox Material Dark palette reference:
+   bg0=#32302f  bg1=#3c3836  bg3=#504945  bg5=#665c54
+   fg0=#d4be98  fg1=#ddc7a1  grey0=#7c6f64  grey1=#928374
+   blue=#7daea3  aqua=#89b482  green=#a9b665
+   yellow=#d8a657  orange=#e78a4e  red=#ea6962  purple=#d3869b
+*/
+
 window#waybar {
-  background-color: alpha(#${palette.bg}, 0.80);
-  color: #${palette.fg};
+  background-color: rgba(50, 48, 47, 0.88);  /* bg0 @ 88% */
+  color: #d4be98;                             /* fg0 */
   font-family: "Hack Nerd Font";
   font-weight: bold;
   font-size: 18px;
@@ -20,8 +28,8 @@ window#waybar {
 #workspaces button {
   padding: 12px 8px;
   min-height: 0;
-  background-color: alpha(#${palette.accent2}, 0.25);
-  color: #${palette.fg};
+  background-color: #3c3836;   /* bg1 — occupied */
+  color: #d4be98;               /* fg0 */
   border-radius: 0px;
   margin: 0px 0px;
   min-width: 0px;
@@ -30,41 +38,44 @@ window#waybar {
 }
 
 #workspaces button.empty {
-  color: #${palette.fg};
-  opacity: 0.5;
+  background-color: #32302f;   /* bg0 — recede */
+  color: #7c6f64;               /* grey0 */
+  opacity: 0.8;
 }
 
 #workspaces button.active {
-  color: #${palette.fg};
-  background-color: alpha(#${palette.accent2}, 0.4);
+  color: #ddc7a1;               /* fg1 — brighter */
+  background-color: #504945;   /* bg3 — elevated */
+  border-bottom: 2px solid #7daea3;  /* blue accent */
   opacity: 1;
 }
 
 #workspaces button.urgent {
-  color: #${palette.crit};
+  color: #ea6962;               /* red */
   opacity: 1;
 }
 
 #workspaces button:hover {
-  background-color: alpha(#${palette.fg}, 0.25);
+  background-color: #504945;   /* bg3 */
 }
 
 /* === MODE === */
 #mode {
-  background-color: #${palette.muted};
-  color: #${palette.bg};
+  background-color: #665c54;   /* bg5 */
+  color: #d4be98;
   border-radius: 0px;
   padding: 0px 8px;
   margin: 8px 4px;
 }
 
-/* === CLOCK & WEATHER — inverted center block === */
+/* === CLOCK & WEATHER — cohesive with active workspace === */
 #clock, #custom-weather {
   padding: 12px 10px;
   min-height: 0;
-  background-color: #${palette.muted};
-  color: #${palette.fg0};
+  background-color: #504945;   /* bg3 — same as active workspace */
+  color: #ddc7a1;               /* fg1 */
   border: none;
+  border-bottom: 2px solid #7daea3;  /* blue — same as active workspace */
   border-radius: 0px;
   margin: 0px 0px;
   font-size: 18px;
@@ -80,44 +91,44 @@ window#waybar {
   padding: 12px 6px;
   min-height: 0;
   margin: 0px 0px;
-  background-color: transparent;
-  border: 2px solid #${palette.muted};
+  background-color: #3c3836;   /* bg1 baseline */
+  border: 2px solid #504945;   /* bg3 default border */
   border-radius: 0px;
-  color: #${palette.fg};
+  color: #d4be98;               /* fg0 */
   font-size: 18px;
   transition: all 0.2s ease;
 }
 
-/* === COLOR GROUPS — no gap within, 3px gap between groups === */
+/* === COLOR GROUPS — official Gruvbox Material accents === */
 
-/* Toggles — blue-grey (GPU, Ollama, Idle inhibitor, Lid sleep) */
+/* Toggles — blue/teal (GPU, Ollama, Idle, Lid) */
 #custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
-  border-color: #${palette.ansi.blue};
-  background-color: alpha(#${palette.ansi.blue}, 0.28);
+  border-color: #7daea3;
+  background-color: rgba(125, 174, 163, 0.12);
 }
 
-/* Connectivity — green (Audio, Bluetooth, Network) */
+/* Connectivity — aqua/green (Audio, Bluetooth, Network) */
 #pulseaudio, #bluetooth, #custom-network {
-  border-color: #${palette.ansi.cyan};
-  background-color: alpha(#${palette.ansi.cyan}, 0.28);
+  border-color: #89b482;
+  background-color: rgba(137, 180, 130, 0.12);
 }
 
-/* System health — copper (Temp, Disk, Battery) */
+/* System health — yellow (Temp, Disk, Battery) */
 #temperature, #custom-disk-space, #custom-battery {
-  border-color: #${palette.accent};
-  background-color: alpha(#${palette.warning}, 0.28);
+  border-color: #d8a657;
+  background-color: rgba(216, 166, 87, 0.12);
 }
 
-/* Media — neutral (MPD) */
+/* Media — grey (MPD) */
 #mpd {
-  border-color: #${palette.fg2};
-  background-color: alpha(#${palette.fg2}, 0.26);
+  border-color: #928374;
+  background-color: rgba(146, 131, 116, 0.12);
 }
 
-/* Actions — subtle (Proton, Tray, Notify, Power) */
+/* Actions — subtle bg (Proton, Tray, Notify, Power) */
 #custom-proton-auth, #tray, #custom-notification, #custom-power {
-  border-color: #${palette.muted};
-  background-color: alpha(#${palette.muted}, 0.26);
+  border-color: #504945;        /* bg3 */
+  background-color: #3c3836;   /* bg1 */
 }
 
 /* === HOVER — universal === */
@@ -127,38 +138,37 @@ window#waybar {
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
 #hyprland-language:hover {
-  background-color: alpha(#${palette.fg}, 0.25);
+  background-color: #504945;   /* bg3 */
 }
 
-/* === STATE CLASSES === */
+/* === STATE CLASSES (semantic — keep palette refs) === */
 
-/* Disabled/stopped — line-through + dimmed */
 .stopped, .sleep-disabled {
   text-decoration: line-through;
   opacity: 0.6;
 }
 
-.intel { color: #${palette.ansi.blue}; }
-.nvidia { color: #${palette.ansi.green}; }
-.performance { color: #${palette.ansi.red}; }
-.disconnected { color: #${palette.crit}; text-decoration: line-through; opacity: 0.6; }
-.excellent { color: #${palette.good}; }
-.good { color: #${palette.info}; }
-.fair { color: #${palette.warn}; }
-.poor { color: #${palette.crit}; }
-.charging { color: #${palette.good}; }
-.full { color: #${palette.good}; }
-.high { color: #${palette.info}; }
-.medium { color: #${palette.warn}; }
-.low { color: #${palette.crit}; }
-.critical { color: #${palette.crit}; }
-.normal { color: #${palette.fg}; }
-.idle { color: #${palette.ansi.cyan}; }
-.warning { color: #${palette.warn}; }
-.balanced { color: #${palette.info}; }
-.powersave { color: #${palette.good}; }
-.unknown { color: #${palette.muted}; }
-.running { color: #${palette.good}; }
-.weather { color: #${palette.bg0}; }
-.sleep-enabled { color: #${palette.good}; }
+.intel        { color: #7daea3; }   /* blue */
+.nvidia       { color: #a9b665; }   /* green */
+.performance  { color: #ea6962; }   /* red */
+.disconnected { color: #ea6962; text-decoration: line-through; opacity: 0.6; }
+.excellent    { color: #a9b665; }
+.good         { color: #89b482; }
+.fair         { color: #d8a657; }
+.poor         { color: #e78a4e; }
+.charging     { color: #a9b665; }
+.full         { color: #a9b665; }
+.high         { color: #7daea3; }
+.medium       { color: #d8a657; }
+.low          { color: #e78a4e; }
+.critical     { color: #ea6962; }
+.normal       { color: #d4be98; }
+.idle         { color: #89b482; }
+.warning      { color: #d8a657; }
+.balanced     { color: #7daea3; }
+.powersave    { color: #a9b665; }
+.unknown      { color: #7c6f64; }
+.running      { color: #a9b665; }
+.weather      { color: #d4be98; }
+.sleep-enabled { color: #a9b665; }
 ''
