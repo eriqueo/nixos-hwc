@@ -143,24 +143,26 @@ window#waybar {
 
 /* === WORKSPACE ENTRY/EXIT TRIANGLES (CSS border trick) === */
 /* border-left + border-bottom on a zero-content element creates a right-pointing triangle */
+/* margin-top: -12px cancels window#waybar top padding so triangles fill full bar height */
 #custom-ws-left,
 #custom-ws-right {
   padding: 0;
-  margin: 0;
+  margin-top: -12px;
+  margin-bottom: 0;
   min-width: 0;
   min-height: 0;
   background-color: transparent;
 }
 
 #custom-ws-left {
-  border-left: 14px solid transparent;   /* transparent left → diagonal */
-  border-bottom: 44px solid #576f69;     /* teal bottom → fills triangle */
+  border-left: 16px solid transparent;   /* transparent left → diagonal */
+  border-bottom: 52px solid #576f69;     /* teal bottom → fills triangle */
 }
 
 #custom-ws-right {
-  border-left: 14px solid #576f69;       /* teal left → fills triangle */
-  border-bottom: 44px solid transparent; /* transparent bottom → diagonal */
-  margin-right: -14px;                   /* tuck under next module */
+  border-left: 16px solid #576f69;       /* teal left → fills triangle */
+  border-bottom: 52px solid transparent; /* transparent bottom → diagonal */
+  margin-right: -16px;                   /* tuck under next module */
 }
 
 /* === HOVER — universal === */
