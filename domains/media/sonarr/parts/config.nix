@@ -10,6 +10,11 @@ let
     inherit configPath;
     urlBase = "/sonarr";
   };
+  webhookScript = arrConfig.mkArrWebhookScript {
+    name = "sonarr";
+    inherit configPath;
+    source = "sonarr";
+  };
 in
 {
   config = lib.mkIf cfg.enable {
@@ -18,9 +23,10 @@ in
     systemd.services."podman-sonarr".wants = [ "network-online.target" "agenix.service" ];
     systemd.services."podman-sonarr".requires = [ "mnt-hot.mount" ];
 
-    # Enforce correct config.xml settings before container starts
+    # Enforce correct config.xml settings and webhook before container starts
     systemd.services."podman-sonarr".serviceConfig.ExecStartPre = [
-      "+${enforceScript}"  # + prefix runs as root
+      "+${enforceScript}"   # + prefix runs as root
+      "+${webhookScript}"
     ];
   };
 }

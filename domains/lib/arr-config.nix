@@ -71,4 +71,40 @@ INITEOF
 
       echo "${name} config enforced: AuthenticationMethod=External, AuthenticationRequired=DisabledForLocalAddresses, UrlBase=${urlBase}"
     '';
+
+  # Enforce n8n media-pipeline webhook in arr database
+  # Usage: mkArrWebhookScript { name = "radarr"; configPath = "/path/to/config"; source = "radarr"; }
+  mkArrWebhookScript = { name, configPath, source, webhookUrl ? "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline" }:
+    let
+      sqlite = "${pkgs.sqlite}/bin/sqlite3";
+      fullUrl = "${webhookUrl}?source=${source}";
+    in
+    pkgs.writeShellScript "enforce-${name}-webhook" ''
+      DB_FILE="${configPath}/${name}.db"
+
+      if [ ! -f "$DB_FILE" ]; then
+        echo "${name}: database not found at $DB_FILE, skipping webhook setup"
+        exit 0
+      fi
+
+      # Check if Notifications table exists
+      TABLE_EXISTS=$(${sqlite} "$DB_FILE" "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='Notifications';" 2>/dev/null || echo "0")
+      if [ "$TABLE_EXISTS" = "0" ]; then
+        echo "${name}: Notifications table not found, skipping (first run?)"
+        exit 0
+      fi
+
+      # Check if our webhook already exists
+      EXISTING=$(${sqlite} "$DB_FILE" "SELECT Id FROM Notifications WHERE Name='n8n Media Pipeline' LIMIT 1;" 2>/dev/null || echo "")
+
+      if [ -n "$EXISTING" ]; then
+        # Update URL in case it changed
+        ${sqlite} "$DB_FILE" "UPDATE Notifications SET Settings=json_set(Settings, '$.url', '${fullUrl}') WHERE Id=$EXISTING;" 2>/dev/null || true
+        echo "${name}: webhook already exists (id=$EXISTING), URL updated"
+      else
+        # Insert new webhook notification
+        ${sqlite} "$DB_FILE" "INSERT INTO Notifications (Name, OnGrab, OnDownload, OnUpgrade, OnRename, OnHealthIssue, IncludeHealthWarnings, OnApplicationUpdate, Implementation, ConfigContract, Settings, Tags) VALUES ('n8n Media Pipeline', 0, 1, 1, 0, 0, 0, 0, 'Webhook', 'WebhookSettings', '{\"url\": \"${fullUrl}\", \"method\": 1}', '[]');" 2>/dev/null || true
+        echo "${name}: webhook notification created -> ${fullUrl}"
+      fi
+    '';
 }

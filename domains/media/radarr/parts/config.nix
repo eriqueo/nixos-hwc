@@ -10,6 +10,11 @@ let
     inherit configPath;
     urlBase = "/radarr";
   };
+  webhookScript = arrConfig.mkArrWebhookScript {
+    name = "radarr";
+    inherit configPath;
+    source = "radarr";
+  };
 in
 {
   config = lib.mkIf cfg.enable {
@@ -18,9 +23,10 @@ in
     systemd.services."podman-radarr".wants = [ "network-online.target" "agenix.service" ];
     systemd.services."podman-radarr".requires = [ "mnt-hot.mount" ];
 
-    # Enforce correct config.xml settings before container starts
+    # Enforce correct config.xml settings and webhook before container starts
     systemd.services."podman-radarr".serviceConfig.ExecStartPre = [
-      "+${enforceScript}"  # + prefix runs as root
+      "+${enforceScript}"   # + prefix runs as root
+      "+${webhookScript}"
     ];
   };
 }
