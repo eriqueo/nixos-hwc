@@ -2,7 +2,7 @@
 
 let
   commonModules = {
-    modules-left = [ "hyprland/workspaces" "hyprland/submap" "custom/sep-ws" ];
+    modules-left = [ "custom/ws-left" "hyprland/workspaces" "custom/ws-right" "hyprland/submap" ];
     modules-center = [ "clock" "custom/weather" ];
     modules-right = [
       "custom/sep-pre"
@@ -111,13 +111,16 @@ let
       on-click = "kitty --single-instance --hold -e bash -c 'curl -s wttr.in/Bozeman?u && echo -e \"\\n\\n────────────────────────────\\nPress any key to close...\" && read -n 1 -s -r'";
     };
     
-    # Powerline separators — right-pointing arrows between module groups
+    # Workspace section entry/exit triangles (CSS border trick — no glyph needed)
+    "custom/ws-left"  = { format = ""; tooltip = false; };   # entry triangle
+    "custom/ws-right" = { format = ""; tooltip = false; };   # exit triangle
+
+    # Powerline separators — right-pointing arrows between right-side module groups
     # fg = left group bg, bg = right group bg (creates the arrow effect)
-    "custom/sep-ws"  = { format = ""; tooltip = false; };  # workspace → bar
     "custom/sep-pre" = { format = ""; tooltip = false; };  # bar → toggle
     "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
     "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
-    "custom/sep-3"   = { format = ""; tooltip = false; };  # health → media
+    "custom/sep-3"   = { format = ""; tooltip = false; };  # health → actions
   };
 
   externalConfig = {
