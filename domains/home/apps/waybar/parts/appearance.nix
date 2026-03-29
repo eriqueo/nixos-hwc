@@ -26,37 +26,37 @@ window#waybar {
 
 /* === WORKSPACES === */
 #workspaces button {
-  padding: 12px 8px;
+  padding: 12px 16px;
   min-height: 0;
-  background-color: #3c3836;   /* bg1 — occupied */
-  color: #d4be98;               /* fg0 */
+  background-color: #576f69;   /* teal — matches toggle group */
+  color: #32302f;               /* dark text on teal */
   border-radius: 0px;
   margin: 0px 0px;
-  min-width: 0px;
+  min-width: 32px;
   font-size: 18px;
   transition: all 0.2s ease;
 }
 
 #workspaces button.empty {
-  background-color: #32302f;   /* bg0 — recede */
+  background-color: #32302f;   /* bar bg — recede */
   color: #7c6f64;               /* grey0 */
   opacity: 0.8;
 }
 
 #workspaces button.active {
-  color: #ddc7a1;               /* fg1 — brighter */
-  background-color: #504945;   /* bg3 — elevated */
-  border-bottom: 2px solid #7daea3;  /* blue accent */
+  color: #32302f;
+  background-color: #7daea3;   /* Gruvbox Material blue — stands out */
+  border-bottom: none;
   opacity: 1;
 }
 
 #workspaces button.urgent {
-  color: #ea6962;               /* red */
+  color: #ea6962;
   opacity: 1;
 }
 
 #workspaces button:hover {
-  background-color: #504945;   /* bg3 */
+  background-color: #6b8a84;   /* slightly lighter teal */
 }
 
 /* === MODE === */
@@ -118,11 +118,6 @@ window#waybar {
   background-color: #856b43;
 }
 
-/* Media — warm grey #625951 */
-#mpd {
-  background-color: #625951;
-}
-
 /* Actions — bg3 #504945 */
 #custom-proton-auth, #tray, #custom-notification, #custom-power {
   background-color: #504945;
@@ -131,7 +126,7 @@ window#waybar {
 /* === POWERLINE SEPARATORS === */
 /* fg = left group bg, bg = right group bg */
 #custom-sep-ws, #custom-sep-pre,
-#custom-sep-1, #custom-sep-2, #custom-sep-3, #custom-sep-4 {
+#custom-sep-1, #custom-sep-2, #custom-sep-3 {
   padding: 0;
   margin: 0;
   font-size: 22px;
@@ -139,12 +134,11 @@ window#waybar {
   min-width: 0;
 }
 
-#custom-sep-ws  { color: #3c3836; background-color: #32302f; }  /* workspace → bar */
+#custom-sep-ws  { color: #576f69; background-color: #32302f; }  /* workspace → bar */
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
 #custom-sep-2   { color: #5d7258; background-color: #856b43; }  /* conn → health */
-#custom-sep-3   { color: #856b43; background-color: #625951; }  /* health → media */
-#custom-sep-4   { color: #625951; background-color: #504945; }  /* media → actions */
+#custom-sep-3   { color: #856b43; background-color: #504945; }  /* health → actions */
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
