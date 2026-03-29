@@ -31,7 +31,13 @@ in
     prowlarrApiKeyFile = pathOrNull "prowlarr-api-key";
     couchdbAdminUsernameFile = pathOrNull "couchdb-admin-username";
     couchdbAdminPasswordFile = pathOrNull "couchdb-admin-password";
-    ntfyUserFile = pathOrNull "ntfy-user";
+    gotifyAdminPasswordFile = pathOrNull "gotify-admin-password";
+    gotifyTokenAlertsFile = pathOrNull "gotify-token-alerts";
+    gotifyTokenBackupFile = pathOrNull "gotify-token-backup";
+    gotifyTokenMailFile = pathOrNull "gotify-token-mail";
+    gotifyTokenMonitoringFile = pathOrNull "gotify-token-monitoring";
+    gotifyTokenLeadsFile = pathOrNull "gotify-token-leads";
+    gotifyTokenLaptopFile = pathOrNull "gotify-token-laptop";
     navidromeAdminPasswordFile = pathOrNull "navidrome-admin-password";
     slackWebhookUrlFile = pathOrNull "slack-webhook-url";
     jellyfinApiKeyFile = pathOrNull "jellyfin-api-key";

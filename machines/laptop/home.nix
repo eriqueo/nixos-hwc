@@ -33,7 +33,7 @@
     };
     hwc.mail.health = {
       enable = true;
-      ntfy.topic = "hwc-mail";
+      gotify.tokenFile = "";
       webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
     };
     # aerc runs on server — SSH into persistent tmux session

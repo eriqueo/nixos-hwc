@@ -203,13 +203,12 @@ in
       };
     }
 
-    # ntfy notification server - preserve path (ntfy handles subpath natively)
+    # Gotify notification server - port mode (subpath not well supported)
     {
-      name = "ntfy";
-      mode = "subpath";
-      path = "/notify";
+      name = "gotify";
+      mode = "port";
+      port = 2586;
       upstream = "http://127.0.0.1:2586";
-      needsUrlBase = false;  # ntfy works with subpath without URL base
     }
 
     # Tdarr - port mode (WebSocket intensive, subpath issues)

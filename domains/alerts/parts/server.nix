@@ -1,6 +1,6 @@
 # domains/alerts/parts/server.nix
 #
-# ntfy notification server container
+# Gotify notification server container
 #
 # NAMESPACE: hwc.alerts.server.*
 #
@@ -8,49 +8,41 @@
 #   - hwc.paths (for dataDir)
 #
 # USED BY:
-#   - Alert routing system (webhook receiver)
-#   - Mobile push notifications
+#   - Alert routing system (Alertmanager bridge)
+#   - Mobile push notifications (iGotify)
 #   - Cross-machine alerting
 
 { config, lib, pkgs, ... }:
 
 let
   cfg = config.hwc.alerts.server;
-
-  # ntfy server config — enables iOS push via ntfy.sh upstream relay
-  ntfyServerConfig = pkgs.writeText "server.yml" ''
-    base-url: https://hwc.ocelot-wahoo.ts.net:2586
-    upstream-base-url: https://ntfy.sh
-    log-level: debug
-  '';
 in
 {
   config = lib.mkIf cfg.enable {
     # Container configuration
-    virtualisation.oci-containers.containers.ntfy = {
+    virtualisation.oci-containers.containers.gotify = {
       image = cfg.image;
-      cmd = [ "serve" ];  # CRITICAL: Tell ntfy to run the server
       ports = [ "${toString cfg.port}:80" ];
       volumes = [
-        "${cfg.dataDir}:/var/cache/ntfy"
-        "${ntfyServerConfig}:/etc/ntfy/server.yml:ro"
+        "${cfg.dataDir}:/app/data"
       ];
       environment = {
         TZ = "America/Denver";
+        GOTIFY_DEFAULTUSER_NAME = "admin";
       };
+      environmentFiles = lib.optional (cfg.adminPasswordFile != null) cfg.adminPasswordFile;
     };
 
     # Ensure directories exist
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0750 root root -"
-      "d ${cfg.dataDir}/etc 0750 root root -"
     ];
 
-    # Expose ntfy via Tailscale HTTPS (persists across reboots)
-    # iOS ntfy app connects to https://hwc.ocelot-wahoo.ts.net:2586
-    systemd.services.tailscale-serve-ntfy = {
-      description = "Tailscale HTTPS serve for ntfy";
-      after = [ "tailscaled.service" "podman-ntfy.service" ];
+    # Expose gotify via Tailscale HTTPS (persists across reboots)
+    # iGotify app connects to https://hwc.ocelot-wahoo.ts.net:2586
+    systemd.services.tailscale-serve-gotify = {
+      description = "Tailscale HTTPS serve for gotify";
+      after = [ "tailscaled.service" "podman-gotify.service" ];
       wants = [ "tailscaled.service" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {

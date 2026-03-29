@@ -112,25 +112,14 @@
     };
   };
 
-  # ntfy notification system for laptop alerts
-  # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
-  # See: docs/infrastructure/ntfy-notification-classes.md
-  hwc.automation.ntfy = {
+  # Gotify notification system for laptop alerts
+  # Per-app tokens: each service gets its own gotify application token
+  hwc.automation.gotify = {
     enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale at /notify subpath
-    defaultTopic = "hwc-laptop-events";  # General laptop events
-    defaultTags = [ "hwc" "laptop" ];
-    defaultPriority = 3;  # Normal priority for laptop
-    hostTag = true;       # Adds "host-hwc-laptop" tag automatically
-
-    # Authentication disabled for self-hosted (can enable if needed)
-    auth.enable = false;
-    # To enable auth, add secrets and configure:
-    # auth = {
-    #   enable = true;
-    #   method = "token";
-    #   tokenFile = "/run/secrets/ntfy-token";
-    # };
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted gotify via Tailscale HTTPS
+    defaultTokenFile = config.hwc.secrets.api.gotifyTokenLaptopFile;
+    defaultPriority = 5;  # Normal priority for laptop
+    hostTag = true;       # Prepends "[host: hwc-laptop]" to messages
   };
 
   # Rsync backup DISABLED - consolidated to Borg

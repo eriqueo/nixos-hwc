@@ -84,10 +84,46 @@
         description = "Path to decrypted Slack incoming webhook URL file";
       };
 
-      ntfyUserFile = lib.mkOption {
+      gotifyAdminPasswordFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         readOnly = true;
-        description = "Path to decrypted NTFY user credentials file";
+        description = "Path to decrypted gotify admin password env file";
+      };
+
+      gotifyTokenAlertsFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted gotify alerts app token file";
+      };
+
+      gotifyTokenBackupFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted gotify backup app token file";
+      };
+
+      gotifyTokenMailFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted gotify mail app token file";
+      };
+
+      gotifyTokenMonitoringFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted gotify monitoring app token file";
+      };
+
+      gotifyTokenLeadsFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted gotify leads app token file";
+      };
+
+      gotifyTokenLaptopFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        readOnly = true;
+        description = "Path to decrypted gotify laptop app token file";
       };
       jellyfinApiKeyFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;

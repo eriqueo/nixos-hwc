@@ -96,14 +96,11 @@
 
   services.thermald.enable = true;
 
-  hwc.automation.ntfy = {
+  hwc.automation.gotify = {
     enable = false;
-    serverUrl = "https://hwc-xps.ocelot-wahoo.ts.net:2586";
-    defaultTopic = "hwc-xps-events";
-    defaultTags = [ "hwc" "xps" "production" ];
-    defaultPriority = 4;
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";
+    defaultPriority = 7;
     hostTag = true;
-    auth.enable = false;
   };
 
   # hwc.data.backup — configure when /mnt/backup is mounted
@@ -194,7 +191,7 @@
   hwc.alerts.server = {
     enable = true;
     port = 2586;
-    dataDir = "/var/lib/hwc/ntfy";
+    dataDir = "/var/lib/hwc/gotify";
   };
 
   # exportarr disabled — no *arr services on this machine

@@ -83,19 +83,16 @@ if [ "$FAILED_COUNT" -gt 0 ]; then
 $FAILED_SERVICES"
 fi
 
-# Determine priority and topic
+# Determine priority
 if [ "$SERVICES_DOWN" -gt 0 ] || [ "$FAILED_COUNT" -gt 0 ]; then
-  PRIORITY=4
-  TOPIC="hwc-alerts"
+  PRIORITY=7
 else
-  PRIORITY=2
-  TOPIC="hwc-monitoring"
+  PRIORITY=3
 fi
 
 # Send notification
-hwc-ntfy-send --priority "$PRIORITY" --tag monitoring,daily \
-  "$TOPIC" \
-  "📊 [$HOSTNAME] Daily Summary" \
+hwc-gotify-send --priority "$PRIORITY" \
+  "[$HOSTNAME] Daily Summary" \
   "$MESSAGE"
 
 exit 0

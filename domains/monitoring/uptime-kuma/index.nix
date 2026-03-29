@@ -1,12 +1,12 @@
 # domains/monitoring/uptime-kuma/index.nix
 #
-# Uptime Kuma - Self-hosted uptime monitoring with ntfy notifications
+# Uptime Kuma - Self-hosted uptime monitoring with gotify notifications
 #
 # NAMESPACE: hwc.monitoring.uptime-kuma.*
 #
 # DEPENDENCIES:
 #   - hwc.networking.shared.routes (for Caddy reverse proxy)
-#   - ntfy (for push notifications, configured manually post-deploy)
+#   - gotify (for push notifications, configured manually post-deploy)
 #
 # PORTS:
 #   - Internal: 3010 (container HTTP)
@@ -58,10 +58,6 @@ in
       image = cfg.image;
       autoStart = true;
 
-      ports = [
-        "127.0.0.1:${toString cfg.port}:3001"
-      ];
-
       volumes = [
         "${cfg.dataDir}:/app/data"
         "/run/podman/podman.sock:/var/run/docker.sock:ro"
@@ -69,9 +65,11 @@ in
 
       environment = {
         TZ = "America/Denver";
+        UPTIME_KUMA_PORT = toString cfg.port;
       };
 
       extraOptions = [
+        "--network=host"
         "--memory=512m"
         "--cpus=0.5"
       ];

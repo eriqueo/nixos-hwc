@@ -280,17 +280,15 @@ EOF
         ${pkgs.libnotify}/bin/notify-send "Backup Complete" "Local backup completed successfully ($BACKUP_SIZE)" --urgency=normal
       ''}
 
-      # Send success notification (ntfy)
-      ${lib.optionalString (config.hwc.automation.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onSuccess) ''
-        NTFY_TOPIC="${if cfg.notifications.ntfy.topic != null then cfg.notifications.ntfy.topic else "-"}"
-        hwc-ntfy-send --tag backup,success --priority 3 \
-          "$NTFY_TOPIC" \
+      # Send success notification (gotify)
+      ${lib.optionalString (config.hwc.automation.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onSuccess) ''
+        hwc-gotify-send ${lib.optionalString (cfg.notifications.gotify.tokenFile != null) "--token-file ${cfg.notifications.gotify.tokenFile}"} --priority 3 \
           "[$HOSTNAME] Backup Success" \
           "Local backup completed successfully.
 Type: $BACKUP_TYPE
 Size: $BACKUP_SIZE
 Total backups: $TOTAL_BACKUPS
-Log: $LOG_FILE" || log "Warning: Failed to send ntfy notification"
+Log: $LOG_FILE" || log "Warning: Failed to send gotify notification"
       ''}
 
       # Send success notification (Slack via alerts domain)
@@ -309,11 +307,9 @@ Log: $LOG_FILE" || log "Warning: Failed to send ntfy notification"
         ${pkgs.libnotify}/bin/notify-send "Backup Failed" "Local backup encountered errors. Check logs: $LOG_FILE" --urgency=critical
       ''}
 
-      # Send failure notification (ntfy)
-      ${lib.optionalString (config.hwc.automation.ntfy.enable or false && cfg.notifications.ntfy.enable && cfg.notifications.ntfy.onFailure) ''
-        NTFY_TOPIC="${if cfg.notifications.ntfy.topic != null then cfg.notifications.ntfy.topic else "-"}"
-        hwc-ntfy-send --tag backup,failure,urgent --priority 5 \
-          "$NTFY_TOPIC" \
+      # Send failure notification (gotify)
+      ${lib.optionalString (config.hwc.automation.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onFailure) ''
+        hwc-gotify-send ${lib.optionalString (cfg.notifications.gotify.tokenFile != null) "--token-file ${cfg.notifications.gotify.tokenFile}"} --priority 10 \
           "[$HOSTNAME] Backup FAILED" \
           "Local backup encountered errors!
 Type: $BACKUP_TYPE
@@ -321,7 +317,7 @@ Hostname: $HOSTNAME
 Destination: $BACKUP_DEST
 Log: $LOG_FILE
 
-Check the logs for details." || log_error "Warning: Failed to send ntfy notification"
+Check the logs for details." || log_error "Warning: Failed to send gotify notification"
       ''}
 
       # Send failure notification (Slack via alerts domain)
