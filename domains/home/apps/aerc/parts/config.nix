@@ -105,6 +105,8 @@ in
   files = profileBase: {
     ".config/aerc/aerc.conf".text = ''
       [general]
+      log-file = ~/.cache/aerc/aerc.log
+      log-level = info
       enable-osc8 = true
 
       [ui]
