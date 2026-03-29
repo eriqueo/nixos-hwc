@@ -921,7 +921,7 @@
     };
     gpu.enable = true;
     machineLearning.enable = true;
-    observability.metrics.enable = true;
+    observability.metrics.enable = false;
     network.mode = "host";
   };
 

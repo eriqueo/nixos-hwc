@@ -202,7 +202,7 @@ in
         "${cfg.storage.locations.encodedVideo}:/usr/src/app/upload/encoded-video:rw"
         "${cfg.storage.locations.profile}:/usr/src/app/upload/profile:rw"
       ] ++ [
-        "${config.hwc.paths.media.root}/pictures:/mnt/media/pictures:ro"
+        "${config.hwc.paths.photos}/external:/mnt/media/photos/external:ro"
         "${config.hwc.paths.photos}/archive:/mnt/media/photos/archive:ro"
       ];
 
