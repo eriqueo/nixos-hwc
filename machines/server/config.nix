@@ -600,8 +600,7 @@
     # Firewall settings
     firewall.tailscaleOnly = true;
 
-    # Prometheus metrics exporter (polls /api/stats, serves /metrics on port 9192)
-    exporter.enable = true;
+    exporter.enable = false;
   };
 
   # Automated surveillance cleanup (enforce Frigate retention policy)
