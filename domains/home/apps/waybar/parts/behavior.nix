@@ -115,7 +115,7 @@ let
     # Powerline separators — right-pointing arrows between right-side module groups
     # fg = left group bg, bg = right group bg (creates the arrow effect)
     "custom/ws-enter" = { format = ""; tooltip = false; };  # entry: dark → teal workspace
-    "custom/ws-exit"  = { format = ""; tooltip = false; };  # exit:  teal workspace → dark
+    "custom/ws-exit"  = { format = ""; tooltip = false; };  # exit:  teal workspace → dark
     "custom/sep-pre"  = { format = ""; tooltip = false; };  # bar → toggle
     "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
     "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
