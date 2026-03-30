@@ -18,10 +18,10 @@ window#waybar {
   color: #d4be98;                             /* fg0 */
   font-family: "Hack Nerd Font";
   font-weight: bold;
-  font-size: 14px;
+  font-size: 16px;
   border-radius: 0px;
   margin: 0px 0px;
-  padding: 4px 0px;
+  padding: 5px 0px;
 }
 
 #workspaces {
@@ -31,25 +31,28 @@ window#waybar {
 }
 
 #workspaces button {
-  padding: 6px 14px;
+  padding: 8px 12px;
   min-height: 0;
-  min-width: 28px;
+  min-width: 26px;
   background-color: #576f69;
   color: #32302f;
   border-radius: 0;
-  font-size: 14px;
+  font-size: 16px;
   transition: none;
   border: none;
 }
 
+/* Empty: same teal bg, dimmed via opacity so section stays uniform for powerline */
 #workspaces button.empty {
-  background-color: #3c3836;
-  color: #7c6f64;
+  background-color: #576f69;
+  color: #32302f;
+  opacity: 0.4;
 }
 
 #workspaces button.active {
   background-color: #7daea3;
   color: #32302f;
+  opacity: 1;
 }
 
 #workspaces button.urgent {
@@ -72,7 +75,7 @@ window#waybar {
 
 /* === CLOCK & WEATHER — cohesive with active workspace === */
 #clock, #custom-weather {
-  padding: 6px 10px;
+  padding: 8px 10px;
   min-height: 0;
   background-color: #504945;   /* bg3 — same as active workspace */
   color: #ddc7a1;               /* fg1 */
@@ -80,7 +83,7 @@ window#waybar {
   border-bottom: 2px solid #7daea3;  /* blue — same as active workspace */
   border-radius: 0px;
   margin: 0px 0px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   transition: all 0.2s ease;
 }
@@ -90,14 +93,14 @@ window#waybar {
 #custom-battery, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
 #custom-lid-sleep, #custom-proton-auth, #hyprland-language {
-  padding: 6px 6px;
+  padding: 8px 6px;
   min-height: 0;
   margin: 0px 0px;
   background-color: #3c3836;   /* bg1 baseline */
   border: none;
   border-radius: 0px;
   color: #d4be98;               /* fg0 */
-  font-size: 14px;
+  font-size: 16px;
   transition: all 0.2s ease;
 }
 
@@ -137,9 +140,10 @@ window#waybar {
   min-width: 0;
 }
 
-/* Workspace entry/exit: teal glyph on transparent bg blends with semi-transparent bar */
-#custom-ws-enter { color: #576f69; background-color: transparent; }  /* bar → workspace */
-#custom-ws-exit  { color: #576f69; background-color: transparent; }  /* workspace → bar */
+/* Workspace entry/exit: dark arrow on teal bg — merges with bar bg at outer edge,
+   merges with teal workspace section at inner edge, creating pointed section boundaries */
+#custom-ws-enter { color: #32302f; background-color: #576f69; }  /* ▶ dark on teal — pointed left edge */
+#custom-ws-exit  { color: #32302f; background-color: #576f69; }  /* ◀ dark on teal — pointed right edge */
 
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
