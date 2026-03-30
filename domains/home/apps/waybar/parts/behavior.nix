@@ -126,7 +126,7 @@ let
     output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 36;
+    height = 28;
     spacing = 0;
     tray = { spacing = 10; icon-size = 18; };
   };
@@ -142,7 +142,7 @@ in
     output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 40;
+    height = 32;
     spacing = 0;
     tray = { spacing = 12; icon-size = 20; };
   } // commonModules // internalWidgets)
