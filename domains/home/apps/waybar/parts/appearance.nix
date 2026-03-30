@@ -18,10 +18,10 @@ window#waybar {
   color: #d4be98;                             /* fg0 */
   font-family: "Hack Nerd Font";
   font-weight: bold;
-  font-size: 18px;
+  font-size: 14px;
   border-radius: 0px;
   margin: 0px 0px;
-  padding: 12px 0px;
+  padding: 4px 0px;
 }
 
 #workspaces {
@@ -31,13 +31,13 @@ window#waybar {
 }
 
 #workspaces button {
-  padding: 12px 16px;
+  padding: 6px 14px;
   min-height: 0;
-  min-width: 32px;
+  min-width: 28px;
   background-color: #576f69;
   color: #32302f;
   border-radius: 0;
-  font-size: 18px;
+  font-size: 14px;
   transition: none;
   border: none;
 }
@@ -72,7 +72,7 @@ window#waybar {
 
 /* === CLOCK & WEATHER — cohesive with active workspace === */
 #clock, #custom-weather {
-  padding: 12px 10px;
+  padding: 6px 10px;
   min-height: 0;
   background-color: #504945;   /* bg3 — same as active workspace */
   color: #ddc7a1;               /* fg1 */
@@ -80,7 +80,7 @@ window#waybar {
   border-bottom: 2px solid #7daea3;  /* blue — same as active workspace */
   border-radius: 0px;
   margin: 0px 0px;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   transition: all 0.2s ease;
 }
@@ -90,14 +90,14 @@ window#waybar {
 #custom-battery, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
 #custom-lid-sleep, #custom-proton-auth, #hyprland-language {
-  padding: 12px 6px;
+  padding: 6px 6px;
   min-height: 0;
   margin: 0px 0px;
   background-color: #3c3836;   /* bg1 baseline */
   border: none;
   border-radius: 0px;
   color: #d4be98;               /* fg0 */
-  font-size: 18px;
+  font-size: 14px;
   transition: all 0.2s ease;
 }
 
@@ -127,20 +127,19 @@ window#waybar {
 
 /* === POWERLINE SEPARATORS === */
 /* Convention: color = left-section-bg, background-color = right-section-bg */
-/* The filled triangle points right; FG=left-color sits against BG=right-color */
 #custom-ws-enter, #custom-ws-exit,
 #custom-sep-pre,
 #custom-sep-1, #custom-sep-2, #custom-sep-3 {
   padding: 0;
   margin: 0;
-  font-size: 48px;
+  font-size: 18px;
   border: none;
   min-width: 0;
 }
 
-/* Workspace entry: dark bar → teal block; exit: teal block → dark bar */
-#custom-ws-enter { color: #32302f; background-color: #576f69; }  /* dark → teal */
-#custom-ws-exit  { color: #576f69; background-color: #32302f; }  /* teal → dark */
+/* Workspace entry/exit: teal glyph on transparent bg blends with semi-transparent bar */
+#custom-ws-enter { color: #576f69; background-color: transparent; }  /* bar → workspace */
+#custom-ws-exit  { color: #576f69; background-color: transparent; }  /* workspace → bar */
 
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
