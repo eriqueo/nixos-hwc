@@ -115,7 +115,7 @@ let
     # Powerline separators — right-pointing arrows between right-side module groups
     # fg = left group bg, bg = right group bg (creates the arrow effect)
     "custom/ws-enter" = { format = ""; tooltip = false; };  # entry: dark → teal workspace
-    "custom/ws-exit"  = { format = ""; tooltip = false; };  # exit:  teal workspace → dark
+    "custom/ws-exit"  = { format = ""; tooltip = false; };  # exit:  teal workspace → dark
     "custom/sep-pre"  = { format = ""; tooltip = false; };  # bar → toggle
     "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
     "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
@@ -126,7 +126,7 @@ let
     output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 28;
+    height = 32;
     spacing = 0;
     tray = { spacing = 10; icon-size = 18; };
   };
@@ -142,7 +142,7 @@ in
     output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 32;
+    height = 36;
     spacing = 0;
     tray = { spacing = 12; icon-size = 20; };
   } // commonModules // internalWidgets)
