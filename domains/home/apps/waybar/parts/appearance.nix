@@ -140,10 +140,11 @@ window#waybar {
   min-width: 0;
 }
 
-/* Workspace entry/exit: dark arrow on teal bg — merges with bar bg at outer edge,
-   merges with teal workspace section at inner edge, creating pointed section boundaries */
-#custom-ws-enter { color: #32302f; background-color: #576f69; }  /* ▶ dark on teal — pointed left edge */
-#custom-ws-exit  { color: #32302f; background-color: #576f69; }  /* ◀ dark on teal — pointed right edge */
+/* Standard powerline convention: fg = left-section color, bg = right-section color
+   Entry: bar-bg(dark) → workspace(teal) — dark ▶ on teal, dark tip blends with bar bg
+   Exit:  workspace(teal) → bar-bg(dark) — teal ▶ on dark, teal body blends with workspace */
+#custom-ws-enter { color: #32302f; background-color: #576f69; }  /* ▶ dark-on-teal */
+#custom-ws-exit  { color: #576f69; background-color: #32302f; }  /* ▶ teal-on-dark */
 
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
