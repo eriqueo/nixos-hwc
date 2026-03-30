@@ -140,9 +140,8 @@ window#waybar {
   min-width: 0;
 }
 
-/* Use exact bar rgba so arrow backgrounds are indistinguishable from the bar */
-#custom-ws-enter { color: rgba(50,48,47,0.88); background-color: #576f69; }  /* ▶ bar-color-on-teal */
-#custom-ws-exit  { color: #576f69; background-color: rgba(50,48,47,0.88); }  /* ▶ teal-on-bar-color */
+/* ws-enter: powerline entry arrow — bar bg color on teal workspace section */
+#custom-ws-enter { color: rgba(50,48,47,0.88); background-color: #576f69; }  /* ▶ bar→teal */
 
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
