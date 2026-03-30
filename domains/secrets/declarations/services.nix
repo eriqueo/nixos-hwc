@@ -109,14 +109,13 @@
     };
 
     # Gotify notification service credentials
-    # NOTE: Add these after first gotify deploy (create apps in UI, then encrypt tokens)
     # gotify-admin-password = { file = ../parts/services/gotify-admin-password.age; mode = "0440"; owner = "root"; group = "secrets"; };
-    # gotify-token-alerts = { file = ../parts/services/gotify-token-alerts.age; mode = "0440"; owner = "root"; group = "secrets"; };
-    # gotify-token-backup = { file = ../parts/services/gotify-token-backup.age; mode = "0440"; owner = "root"; group = "secrets"; };
-    # gotify-token-mail = { file = ../parts/services/gotify-token-mail.age; mode = "0440"; owner = "root"; group = "secrets"; };
-    # gotify-token-monitoring = { file = ../parts/services/gotify-token-monitoring.age; mode = "0440"; owner = "root"; group = "secrets"; };
-    # gotify-token-leads = { file = ../parts/services/gotify-token-leads.age; mode = "0440"; owner = "root"; group = "secrets"; };
-    # gotify-token-laptop = { file = ../parts/services/gotify-token-laptop.age; mode = "0440"; owner = "root"; group = "secrets"; };
+    gotify-token-alerts = { file = ../parts/services/gotify-token-alerts.age; mode = "0440"; owner = "root"; group = "secrets"; };
+    gotify-token-backup = { file = ../parts/services/gotify-token-backup.age; mode = "0440"; owner = "root"; group = "secrets"; };
+    gotify-token-mail = { file = ../parts/services/gotify-token-mail.age; mode = "0440"; owner = "root"; group = "secrets"; };
+    gotify-token-monitoring = { file = ../parts/services/gotify-token-monitoring.age; mode = "0440"; owner = "root"; group = "secrets"; };
+    gotify-token-leads = { file = ../parts/services/gotify-token-leads.age; mode = "0440"; owner = "root"; group = "secrets"; };
+    gotify-token-laptop = { file = ../parts/services/gotify-token-laptop.age; mode = "0440"; owner = "root"; group = "secrets"; };
 
     slack-webhook-url = {
       file = ../parts/services/slack-webhook-url.age;
@@ -304,6 +303,14 @@
 
     authentik-db-password = {
       file = ../parts/services/authentik-db-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    # Immich photo management API key
+    immich-api-key = {
+      file = ../parts/services/immich-api-key.age;
       mode = "0440";
       owner = "root";
       group = "secrets";
