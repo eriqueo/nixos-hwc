@@ -210,7 +210,7 @@ let
 
       # How old is the sync state? This is the most reliable indicator
       # of "when did mail last actually sync successfully."
-      local sync_state="$MAILDIR/proton/.mbsyncstate"
+      local sync_state="$MAILDIR/proton/inbox/.mbsyncstate"
       if [[ -f "$sync_state" ]]; then
         local state_mtime age_min
         state_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$sync_state" 2>/dev/null || echo 0)
@@ -225,10 +225,10 @@ let
       # Check journal for repeated failures (sign of a systemic issue)
       local recent_failures
       recent_failures=$(${pkgs.systemd}/bin/journalctl --user -u mbsync.service \
-        --since "30 min ago" --no-pager -q 2>/dev/null \
+        --since "30 min ago" --no-pager --output=cat 2>/dev/null \
         | ${pkgs.gnugrep}/bin/grep -ci "error\|fail\|coredump\|assert" 2>/dev/null) || recent_failures=0
       if (( recent_failures > 3 )); then
-        fail "mbsync has failed ''${recent_failures} times in the last 30 minutes"
+        fail "mbsync has ''${recent_failures} error lines in the last 30 minutes"
       fi
     }
 
@@ -239,7 +239,7 @@ let
 
       local newest
       newest=$(${pkgs.findutils}/bin/find "$inbox_dir" -type f -printf '%T@\n' 2>/dev/null \
-        | ${pkgs.coreutils}/bin/sort -rn | head -1 || echo 0)
+        | ${pkgs.coreutils}/bin/sort -rn 2>/dev/null | head -1 || echo 0)
 
       if [[ -n "$newest" ]] && [[ "$newest" != "0" ]]; then
         local age_hours=$(( ($(now_epoch) - ''${newest%%.*}) / 3600 ))

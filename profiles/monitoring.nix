@@ -42,7 +42,7 @@
   # Homepage - Service dashboard
   hwc.monitoring.homepage.enable = lib.mkDefault true;
 
-  # Uptime Kuma - Uptime monitoring with ntfy notifications
+  # Uptime Kuma - Uptime monitoring
   hwc.monitoring.uptime-kuma.enable = lib.mkDefault true;
 
   # Alertmanager - Alert routing to n8n webhooks
