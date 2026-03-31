@@ -163,7 +163,9 @@
       "Bash(jdupes:*)",
       "Read(//tmp/**)",
       "Bash(age:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "WebFetch(domain:itsfoss.com)",
+      "Bash(sudo mount:*)"
     ],
     "deny": [],
     "ask": [],
