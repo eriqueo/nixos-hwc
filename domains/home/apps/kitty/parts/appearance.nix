@@ -19,7 +19,7 @@ let
 
   selectionFg = C.selectionFg or C.bg or "282828";
   selectionBg = C.selectionBg or C.accent or "cf995f";
-  urlColor    = C.link or C.accent2 or C.accent or "0085ba";
+  urlColor    = C.link or C.accent2 or C.accent or "5e81ac";
 in
 {
   # Chrome

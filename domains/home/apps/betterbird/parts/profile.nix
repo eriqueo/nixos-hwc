@@ -1,6 +1,8 @@
 { config, lib, pkgs, osConfig ? {}, ...}:
 
 let
+  c = config.hwc.home.theme.colors;
+
   # IMAP-only configuration (separate from aerc)
   gmailWork = "heartwoodcraftmt@gmail.com";
   gmailPersonal = "eriqueokeefe@gmail.com";
@@ -97,30 +99,29 @@ let
 
   # userChrome.css - UI theme (Nord-inspired, matching your aerc theme)
   userChromeCss = pkgs.writeText "userChrome.css" ''
-    /* === NORD COLOR SCHEME === */
+    /* === HWC PALETTE === */
     :root {
-      --nord0: #2e3440;
-      --nord1: #3b4252;
-      --nord2: #434c5e;
-      --nord3: #4c566a;
-      --nord4: #d8dee9;
-      --nord5: #e5e9f0;
-      --nord6: #eceff4;
-      --nord7: #8fbcbb;
-      --nord8: #88c0d0;
-      --nord9: #81a1c1;
-      --nord10: #5e81ac;
-      --nord11: #bf616a;
-      --nord12: #d08770;
-      --nord13: #ebcb8b;
-      --nord14: #a3be8c;
-      --nord15: #b48ead;
-      
+      --bg0: #${c.bg0};
+      --bg1: #${c.bg1};
+      --bg2: #${c.bg2};
+      --bg3: #${c.bg3};
+      --fg0: #${c.fg0};
+      --fg1: #${c.fg1};
+      --fg2: #${c.fg2};
+      --fg3: #${c.fg3};
+      --accent: #${c.accent};
+      --accent2: #${c.accent2};
+      --info: #${c.info};
+      --error: #${c.error};
+      --success: #${c.success};
+      --warning: #${c.warning};
+      --accentAlt: #${c.accentAlt};
+
       /* Account colors */
-      --gmail-work: var(--nord8);    /* Aqua */
-      --gmail-personal: var(--nord11); /* Red */
-      --proton-work: var(--nord10);   /* Blue */
-      --proton-personal: var(--nord15); /* Purple */
+      --gmail-work: var(--accent2);    /* Blue */
+      --gmail-personal: var(--error);  /* Red */
+      --proton-work: var(--info);      /* Blue */
+      --proton-personal: var(--accentAlt); /* Red-muted */
     }
 
     /* === GLOBAL BACKGROUND === */
@@ -128,27 +129,27 @@ let
     #folderTree,
     #threadTree,
     #messagepane {
-      background-color: var(--nord0) !important;
-      color: var(--nord4) !important;
+      background-color: var(--bg0) !important;
+      color: var(--fg1) !important;
     }
 
     /* === FOLDER TREE === */
     #folderTree treechildren::-moz-tree-row(selected) {
-      background-color: var(--nord3) !important;
+      background-color: var(--bg3) !important;
     }
     
     #folderTree treechildren::-moz-tree-cell-text(selected) {
-      color: var(--nord6) !important;
+      color: var(--fg0) !important;
     }
 
     /* === MESSAGE LIST === */
     #threadTree treechildren::-moz-tree-row {
-      background-color: var(--nord1) !important;
-      border-bottom: 1px solid var(--nord0) !important;
+      background-color: var(--bg1) !important;
+      border-bottom: 1px solid var(--bg0) !important;
     }
 
     #threadTree treechildren::-moz-tree-row(selected) {
-      background-color: var(--nord3) !important;
+      background-color: var(--bg3) !important;
     }
 
     #threadTree treechildren::-moz-tree-row(unread) {
@@ -175,37 +176,37 @@ let
     /* === TOOLBAR === */
     #mail-toolbar-menubar2,
     #tabs-toolbar {
-      background-color: var(--nord1) !important;
-      border-bottom: 1px solid var(--nord3) !important;
+      background-color: var(--bg1) !important;
+      border-bottom: 1px solid var(--bg3) !important;
     }
 
     /* === BUTTONS === */
     toolbarbutton {
-      background-color: var(--nord2) !important;
-      color: var(--nord4) !important;
-      border: 1px solid var(--nord3) !important;
+      background-color: var(--bg2) !important;
+      color: var(--fg1) !important;
+      border: 1px solid var(--bg3) !important;
     }
 
     toolbarbutton:hover {
-      background-color: var(--nord3) !important;
+      background-color: var(--bg3) !important;
     }
 
     /* === COMPOSITION WINDOW === */
     #MsgHeadersToolbar {
-      background-color: var(--nord1) !important;
+      background-color: var(--bg1) !important;
     }
 
     /* === SCROLLBARS === */
     scrollbar {
-      background-color: var(--nord0) !important;
+      background-color: var(--bg0) !important;
     }
 
     scrollbar thumb {
-      background-color: var(--nord3) !important;
+      background-color: var(--bg3) !important;
     }
 
     scrollbar thumb:hover {
-      background-color: var(--nord10) !important;
+      background-color: var(--info) !important;
     }
   '';
 
@@ -292,19 +293,19 @@ let
   tagsPrefs = ''
     // === TAGS FOR ACCOUNT IDENTIFICATION ===
     user_pref("mailnews.tags.gmail-work.tag", "gmail-work");
-    user_pref("mailnews.tags.gmail-work.color", "#88c0d0");
+    user_pref("mailnews.tags.gmail-work.color", "#${c.accent2}");
     user_pref("mailnews.tags.gmail-work.ordinal", "1");
-    
+
     user_pref("mailnews.tags.gmail-personal.tag", "gmail-personal");
-    user_pref("mailnews.tags.gmail-personal.color", "#bf616a");
+    user_pref("mailnews.tags.gmail-personal.color", "#${c.error}");
     user_pref("mailnews.tags.gmail-personal.ordinal", "2");
-    
+
     user_pref("mailnews.tags.proton-work.tag", "proton-work");
-    user_pref("mailnews.tags.proton-work.color", "#5e81ac");
+    user_pref("mailnews.tags.proton-work.color", "#${c.info}");
     user_pref("mailnews.tags.proton-work.ordinal", "3");
-    
+
     user_pref("mailnews.tags.proton-personal.tag", "proton-personal");
-    user_pref("mailnews.tags.proton-personal.color", "#b48ead");
+    user_pref("mailnews.tags.proton-personal.color", "#${c.accentAlt}");
     user_pref("mailnews.tags.proton-personal.ordinal", "4");
   '';
 

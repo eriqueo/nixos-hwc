@@ -2,18 +2,16 @@
 
 let
   commonModules = {
-    modules-left = [ "hyprland/workspaces" "hyprland/submap" ];
+    modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" ];
     modules-center = [ "clock" "custom/weather" ];
     modules-right = [
-      # Toggles
+      "custom/sep-pre"
       "custom/gpu" "custom/ollama" "idle_inhibitor" "custom/lid-sleep"
-      # Connectivity
+      "custom/sep-1"
       "pulseaudio" "bluetooth" "custom/network"
-      # System health
+      "custom/sep-2"
       "temperature" "custom/disk-space" "custom/battery"
-      # Info
-      "mpd"
-      # Actions
+      "custom/sep-3"
       "custom/proton-auth" "tray" "custom/notification" "custom/power"
     ];
   };
@@ -88,7 +86,7 @@ let
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "Awake"; deactivated = "Idle"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟 Muted"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };
-    bluetooth = { format = "BT {status}"; format-connected = "BT {num_connections}"; format-disabled = "BT off"; on-click = "blueman-manager"; };
+    bluetooth = { format = "󰂯"; format-connected = "󰂱 {num_connections}"; format-disabled = "󰂲"; tooltip-format-connected = "{device_enumerate}"; on-click = "blueman-manager"; };
     temperature = {
       hwmon-path-abs = "/sys/devices/platform/coretemp.0/hwmon";
       input-filename = "temp1_input";
@@ -113,18 +111,21 @@ let
       on-click = "kitty --single-instance --hold -e bash -c 'curl -s wttr.in/Bozeman?u && echo -e \"\\n\\n────────────────────────────\\nPress any key to close...\" && read -n 1 -s -r'";
     };
     
-    # === NEW: Connectivity group (pill) — clicks still work individually ===
-    "group/connectivity" = {
-      orientation = "horizontal";
-      modules = [ "pulseaudio" "bluetooth" "custom/network" ];
-    };
+
+    # Powerline separators — right-pointing arrows between right-side module groups
+    # fg = left group bg, bg = right group bg (creates the arrow effect)
+    "custom/ws-enter" = { format = ""; tooltip = false; };  # entry: dark → teal workspace
+    "custom/sep-pre"  = { format = ""; tooltip = false; };  # bar → toggle
+    "custom/sep-1"   = { format = ""; tooltip = false; };  # toggle → conn
+    "custom/sep-2"   = { format = ""; tooltip = false; };  # conn → health
+    "custom/sep-3"   = { format = ""; tooltip = false; };  # health → actions
   };
 
   externalConfig = {
     output = "__EXTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 36;
+    height = 32;
     spacing = 0;
     tray = { spacing = 10; icon-size = 18; };
   };
@@ -140,7 +141,7 @@ in
     output = "__INTERNAL_OUTPUT__";
     layer = "top";
     position = "top";
-    height = 40;
+    height = 36;
     spacing = 0;
     tray = { spacing = 12; icon-size = 20; };
   } // commonModules // internalWidgets)

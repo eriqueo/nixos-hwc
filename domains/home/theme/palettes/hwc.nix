@@ -39,7 +39,7 @@
   # Orange is the Heartwood signature. Red is the pop accent — one element per layout max.
   accent     = "d08770"; # Copper-orange: primary accent — rules, separators, highlights
   accentAlt  = "bf616a"; # Muted red: pop accent — readable on dark bg (Nord11)
-  accent2    = "0085ba"; # Blue: digital-only — links and interactive states (web only, not print)
+  accent2    = "5e81ac"; # Blue: matches info — unified blue across all apps
 
   # --- Semantic Status Colors ---
   # Mapped to HWC-appropriate tones. Gruvbox/Nord hybrid — muted, readable on dark bg.
@@ -67,12 +67,12 @@
   selectionFg = "ebdbb2"; # Bright cream text on selection
   selectionBg = "434c5e"; # Nord blue-grey selection
   marked      = "bf616a"; # Marked items (nord red)
-  markedAlt   = "0085ba"; # Alt marked color (blue)
+  markedAlt   = "5e81ac"; # Alt marked color (unified blue)
 
   # Interactive Elements
   cursorColor = "d5c4a1"; # Text cursor — body cream
   caret       = "d5c4a1"; # Caret/insertion point
-  link        = "0085ba"; # Hyperlinks — blue (digital only)
+  link        = "5e81ac"; # Hyperlinks — unified blue (info)
   linkHover   = "cf995f"; # Hovered links — orange
 
   # Borders & Separators
@@ -90,7 +90,7 @@
   fileMedia    = "fcbb74"; # Amber: audio/video
   fileArchive  = "bf616a"; # Muted red: archives/compressed
   fileDocument = "d5c4a1"; # Cream: documents/PDFs
-  fileCode     = "0085ba"; # Blue: source code
+  fileCode     = "5e81ac"; # Blue: source code (unified blue)
   fileExec     = "a3be8c"; # Sage: executables   (Nord14)
   fileOrphan   = "915252"; # Dark red: broken links
   fileDir      = "ebdbb2"; # Bright cream: directories
@@ -104,23 +104,23 @@
   # HWC brand accents live in UI tokens above. ANSI slots are for terminal
   # output readability, not brand expression.
   ansi = {
-    black   = "282828";  # gruvbox dark bg
-    red     = "cc241d";  # gruvbox dark red
-    green   = "98971a";  # gruvbox dark green
-    yellow  = "d79921";  # gruvbox dark yellow
-    blue    = "458588";  # gruvbox dark blue
-    magenta = "b16286";  # gruvbox dark purple
-    cyan    = "689d6a";  # gruvbox dark aqua
-    white   = "a89984";  # gruvbox dark gray
+    black   = "282828";  # bg family
+    red     = "bf616a";  # error family
+    green   = "a3be8c";  # success family
+    yellow  = "cf995f";  # warning family
+    blue    = "5e81ac";  # info family
+    magenta = "b16286";  # purple
+    cyan    = "8aab78";  # success-dim family
+    white   = "a89984";  # fg muted
 
-    brightBlack   = "928374";  # gruvbox gray
-    brightRed     = "fb4934";  # gruvbox bright red
-    brightGreen   = "b8bb26";  # gruvbox bright green
-    brightYellow  = "fabd2f";  # gruvbox bright yellow
-    brightBlue    = "83a598";  # gruvbox bright blue
-    brightMagenta = "d3869b";  # gruvbox bright purple
-    brightCyan    = "8ec07c";  # gruvbox bright aqua
-    brightWhite   = "ebdbb2";  # gruvbox fg1
+    brightBlack   = "928374";  # fg3
+    brightRed     = "d08080";  # errorBright family
+    brightGreen   = "b4c89a";  # successBright family
+    brightYellow  = "fcbb74";  # warningBright family
+    brightBlue    = "81a1c1";  # info-bright family
+    brightMagenta = "d3869b";  # purple bright
+    brightCyan    = "a3be8c";  # success family
+    brightWhite   = "ebdbb2";  # fg0
   };
 
   # --- Hyprland helpers ---

@@ -83,7 +83,7 @@ selector_focused.bg    = ${h (c.bg3 or "32373c")}
 selector_focused.fg    = ${fg0}
 
 [viewer]
-url.fg        = ${h (c.link or "0085ba")}
+url.fg        = ${h (c.link or "5e81ac")}
 url.underline = true
 header.fg     = ${sel}
 header.bold   = true
