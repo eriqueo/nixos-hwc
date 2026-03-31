@@ -1,12 +1,17 @@
 ---
+title: Bathroom Remodeling Bozeman | Heartwood Craft
+meta_description: >-
+  Licensed bathroom remodeling, basement finishing, and custom decks in Bozeman,
+  MT. 3D design previews, transparent pricing, daily updates. Call 406-551-5061.
+h1: Your Vision Is Our Craft
+hero_image: /img/hero/bathroom-remodel-bozeman.webp
+hero_subtitle: >-
+  Bathroom remodeling, basement finishing, and custom decks in Bozeman. 3D
+  design previews, transparent estimates, and a contractor who actually calls
+  you back.
+permalink: /
 layout: layouts/page-home.njk
-title: "Bathroom Remodeling Bozeman | Heartwood Craft"
-meta_description: "Licensed bathroom remodeling, basement finishing, and custom decks in Bozeman, MT. 3D design previews, transparent pricing, daily updates. Call 406-551-5061."
-h1: "See Your Remodel Before We Build It"
-hero_image: "/img/hero/bathroom-remodel-bozeman.webp"
-hero_subtitle: "Bathroom remodeling, basement finishing, and custom decks in Bozeman. 3D design previews, transparent estimates, and a contractor who actually calls you back."
-permalink: "/"
-schema_type: "LocalBusiness"
+schema_type: LocalBusiness
 ---
 
 <section class="section section-alt">

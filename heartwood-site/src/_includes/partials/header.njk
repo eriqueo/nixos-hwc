@@ -31,8 +31,8 @@
     </nav>
 
     <div class="header-actions">
-      <a class="header-phone" href="{{ site.phoneLink }}">{{ site.phone }}</a>
-      <a class="btn btn-get-started" href="/contact/">Get Started</a>
+      {% if header.showPhone %}<a class="header-phone" href="{{ site.phoneLink }}">{{ site.phone }}</a>{% endif %}
+      <a class="btn btn-get-started" href="{{ header.ctaUrl }}">{{ header.ctaText }}</a>
 
       <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-mobile">
         <span class="hamburger-bar"></span>

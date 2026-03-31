@@ -127,12 +127,13 @@ p { line-height: 1.7; margin-bottom: 1rem; }
 }
 .logo:hover { text-decoration: none; }
 .logo-img {
-  height: 55px;
+  height: 70px;
   width: auto;
   display: block;
+  mix-blend-mode: multiply;
 }
 @media (max-width: 768px) {
-  .logo-img { height: 44px; }
+  .logo-img { height: 54px; }
 }
 
 /* Desktop nav */
@@ -227,9 +228,9 @@ p { line-height: 1.7; margin-bottom: 1rem; }
   display: inline-flex;
   align-items: center;
   padding: 0.6rem 1.5rem;
-  background: transparent;
-  color: #fff;
-  border: 2px solid #fff;
+  background: var(--copper);
+  color: var(--charcoal);
+  border: 2px solid var(--copper);
   border-radius: var(--border-radius);
   font-family: var(--font-body);
   font-weight: 600;
@@ -242,7 +243,8 @@ p { line-height: 1.7; margin-bottom: 1rem; }
   white-space: nowrap;
 }
 .btn-get-started:hover {
-  background: #fff;
+  background: var(--copper-dark);
+  border-color: var(--copper-dark);
   color: var(--charcoal);
   text-decoration: none;
 }

@@ -19,6 +19,7 @@
       ]
     },
     { "label": "Our Work", "url": "/our-work/" },
+    { "label": "Blog", "url": "/blog/" },
     { "label": "About", "url": "/about/" }
   ]
 }

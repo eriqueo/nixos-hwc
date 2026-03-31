@@ -278,7 +278,7 @@
   hwc.automation.gotify = {
     enable = true;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted via Tailscale HTTPS
-    defaultTokenFile = config.hwc.secrets.api.gotifyTokenAlertsFile;
+    defaultTokenFile = config.hwc.secrets.api."gotify-token-alerts" or null;
     defaultPriority = 7;  # Higher priority for server alerts
     hostTag = true;       # Prepends "[host: hwc-server]" to messages
   };
@@ -559,18 +559,37 @@
 
   # Gotify notification server (alerts domain)
   # Self-hosted for privacy - lead data stays on our infrastructure
+  #
+  # Token auto-discovery: any agenix secret named "gotify-{universe}-{domain}"
+  # (e.g. gotify-hwc-ops, gotify-home-admin) is automatically mapped to the
+  # "universe:domain" key in hwc.alerts.server.tokens. No edits needed here
+  # when adding new Gotify apps — just create the agenix secret.
   hwc.alerts.server = {
     enable = true;
     port = 2586;
     dataDir = "/var/lib/hwc/gotify";
-    adminPasswordFile = config.hwc.secrets.api.gotifyAdminPasswordFile;
-    tokens = {
-      alertsFile = config.hwc.secrets.api.gotifyTokenAlertsFile;
-      backupFile = config.hwc.secrets.api.gotifyTokenBackupFile;
-      mailFile = config.hwc.secrets.api.gotifyTokenMailFile;
-      monitoringFile = config.hwc.secrets.api.gotifyTokenMonitoringFile;
-      leadsFile = config.hwc.secrets.api.gotifyTokenLeadsFile;
-    };
+    adminPasswordFile = config.hwc.secrets.api."gotify-admin-password" or null;
+    tokens =
+      let
+        # Match secrets named "gotify-{universe}-{domain}"
+        # Excludes "gotify-admin-password" and legacy "gotify-token-*" format
+        isGotifyToken = name:
+          lib.hasPrefix "gotify-" name
+          && name != "gotify-admin-password"
+          && !(lib.hasPrefix "gotify-token-" name);
+
+        # "gotify-hwc-ops"    → "hwc:ops"
+        # "gotify-home-admin" → "home:admin"
+        toAppKey = name:
+          let
+            suffix = lib.removePrefix "gotify-" name;
+            parts  = lib.splitString "-" suffix;
+          in
+          "${lib.head parts}:${lib.concatStringsSep "-" (lib.tail parts)}";
+      in
+      lib.mapAttrs' (name: secret:
+        lib.nameValuePair (toAppKey name) secret.path
+      ) (lib.filterAttrs (name: _: isGotifyToken name) config.age.secrets);
   };
 
   # iGotify Notification Assistant (bridges Gotify → APNs for iOS push notifications)
@@ -581,7 +600,7 @@
     enable = true;
     port = 9095;
     gotifyUrl = "http://localhost:2587";
-    # tokenFile defaults to server.tokens.alertsFile
+    # tokenFile defaults to server.tokens.homeAdminFile (home:admin app)
   };
 
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
@@ -858,8 +877,8 @@
   hwc.gaming.webdav = {
     enable = lib.mkDefault true;
     auth = {
-      usernameFile = config.hwc.secrets.api.webdavUsernameFile;
-      passwordFile = config.hwc.secrets.api.webdavPasswordFile;
+      usernameFile = config.hwc.secrets.api."webdav-username" or null;
+      passwordFile = config.hwc.secrets.api."webdav-password" or null;
     };
     retroarch = {
       enable = true;
@@ -1013,9 +1032,17 @@
         bridge.enable = true;
         aerc.enable = true;
 
+        calendar = {
+          enable = true;
+          accounts.icloud = {
+            email = "eric@iheartwoodcraft.com";
+            color = "dark green";
+          };
+        };
+
         health = {
           enable = true;
-          gotify.tokenFile = if config.hwc.secrets.api.gotifyTokenMailFile != null then config.hwc.secrets.api.gotifyTokenMailFile else "";
+          gotify.tokenFile = config.hwc.secrets.api."gotify-token-mail" or "";
           webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
         };
 

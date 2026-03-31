@@ -1,0 +1,138 @@
+{
+  "name": "sys:router:notify",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {}
+    },
+    {
+      "id": "validate-build",
+      "name": "Validate + Build Dispatch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "jsCode": "// TAXONOMY v1.0 — Controlled Vocabularies\nconst UNIVERSES    = ['hwc', 'home', 'sys'];\nconst DOMAINS      = ['ops', 'financial', 'dev', 'admin', 'security', 'media', 'social'];\nconst CATEGORIES   = ['lead', 'client-comms', 'job-update', 'payment', 'receipt', 'workflow', 'infrastructure', 'content', 'detection', 'backup', 'digest', 'reminder'];\nconst SEVERITIES   = ['critical', 'warning', 'info', 'debug'];\nconst ACTION_HINTS = ['restart-service', 'retry-workflow', 'escalate', 'classify', 'sync', 'draft-response', 'none'];\n\nconst p = $input.first().json;\n\n// ── Validate required fields ──────────────────────────────────────────────────\nconst required = ['universe', 'domain', 'source', 'category', 'severity', 'summary', 'timestamp'];\nfor (const field of required) {\n  if (!p[field]) throw new Error(`sys:router:notify — missing required field: ${field}`);\n}\n\n// ── Validate controlled vocabularies ─────────────────────────────────────────\nif (!UNIVERSES.includes(p.universe))   throw new Error(`Invalid universe: \"${p.universe}\". Valid: ${UNIVERSES.join(', ')}`);\nif (!DOMAINS.includes(p.domain))       throw new Error(`Invalid domain: \"${p.domain}\". Valid: ${DOMAINS.join(', ')}`);\nif (!CATEGORIES.includes(p.category)) throw new Error(`Invalid category: \"${p.category}\". Valid: ${CATEGORIES.join(', ')}`);\nif (!SEVERITIES.includes(p.severity)) throw new Error(`Invalid severity: \"${p.severity}\". Valid: ${SEVERITIES.join(', ')}`);\n\nconst actionHint = p.action_hint || 'none';\nif (!ACTION_HINTS.includes(actionHint)) throw new Error(`Invalid action_hint: \"${actionHint}\". Valid: ${ACTION_HINTS.join(', ')}`);\n\n// ── Severity → Gotify priority ────────────────────────────────────────────────\nconst priorityMap = { critical: 8, warning: 5, info: 3, debug: 1 };\n\n// ── Gotify token env var per universe:domain ─────────────────────────────────\n// Tokens set in n8n Settings → Environment Variables:\n//   GOTIFY_TOKEN_HWC_OPS, GOTIFY_TOKEN_HWC_FINANCIAL, GOTIFY_TOKEN_HWC_DEV,\n//   GOTIFY_TOKEN_HWC_ADMIN, GOTIFY_TOKEN_HOME_SECURITY, GOTIFY_TOKEN_HOME_MEDIA,\n//   GOTIFY_TOKEN_HOME_SOCIAL, GOTIFY_TOKEN_HOME_ADMIN\nconst tokenEnvMap = {\n  'hwc:ops':       'GOTIFY_TOKEN_HWC_OPS',\n  'hwc:financial': 'GOTIFY_TOKEN_HWC_FINANCIAL',\n  'hwc:dev':       'GOTIFY_TOKEN_HWC_DEV',\n  'hwc:admin':     'GOTIFY_TOKEN_HWC_ADMIN',\n  'home:security': 'GOTIFY_TOKEN_HOME_SECURITY',\n  'home:media':    'GOTIFY_TOKEN_HOME_MEDIA',\n  'home:social':   'GOTIFY_TOKEN_HOME_SOCIAL',\n  'home:admin':    'GOTIFY_TOKEN_HOME_ADMIN',\n};\n\nconst appKey      = `${p.universe}:${p.domain}`;\nconst tokenEnv    = tokenEnvMap[appKey];\nconst gotifyToken = tokenEnv ? ($env[tokenEnv] || '') : '';\n\n// ── Slack message ─────────────────────────────────────────────────────────────\nconst emoji = { critical: '🔴', warning: '🟡', info: '🟢', debug: '⚪' };\n\nconst meta = p.metadata && Object.keys(p.metadata).length > 0\n  ? '\\n```\\n' + JSON.stringify(p.metadata, null, 2) + '\\n```'\n  : '';\n\nconst slackText = [\n  `${emoji[p.severity] || '⚪'} *${p.summary}*`,\n  `\\`${appKey}:${p.source}:${p.category}\\` | ${p.severity}${ actionHint !== 'none' ? ` | hint: ${actionHint}` : '' }`,\n  `_${p.timestamp}_${meta}`\n].join('\\n');\n\nreturn [{\n  json: {\n    // Validated payload\n    universe:    p.universe,\n    domain:      p.domain,\n    source:      p.source,\n    category:    p.category,\n    severity:    p.severity,\n    summary:     p.summary,\n    action_hint: actionHint,\n    timestamp:   p.timestamp,\n    metadata:    p.metadata || {},\n    // Routing\n    slack_channel:   `${p.universe}-${p.domain}`,\n    gotify_app:      appKey,\n    gotify_token:    gotifyToken,\n    gotify_priority: priorityMap[p.severity] || 3,\n    gotify_title:    `${p.source}: ${p.category}`,\n    slack_text:      slackText,\n  }\n}];"
+      }
+    },
+    {
+      "id": "post-gotify",
+      "name": "Post to Gotify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:2587/message?token={{ $json.gotify_token }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"{{ $json.gotify_title }}\",\n  \"message\": \"{{ $json.summary }}\",\n  \"priority\": {{ $json.gotify_priority }}\n}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "post-slack",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [780, 300],
+      "continueOnFail": true,
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.slack_channel }}",
+          "mode": "id"
+        },
+        "text": "={{ $json.slack_text }}",
+        "otherOptions": {}
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "WdIG3sOZkvyMHnPA",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "id": "insert-postgres",
+      "name": "Insert Event to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [780, 440],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO hwc.notification_events (\n  universe, domain, source, category, severity, summary,\n  action_hint, metadata, event_timestamp\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::timestamptz\n) RETURNING id, created_at;",
+        "options": {
+          "queryReplacement": "={{ [$json.universe, $json.domain, $json.source, $json.category, $json.severity, $json.summary, $json.action_hint, JSON.stringify($json.metadata), $json.timestamp] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "iXtijdayy9OMPQvY",
+          "name": "HWC Postgres"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate + Build Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate + Build Dispatch": {
+      "main": [
+        [
+          {
+            "node": "Post to Gotify",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insert Event to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "sys",
+      "id": "sys-tag"
+    },
+    {
+      "name": "router",
+      "id": "router-tag"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2026-03-31T00:00:00.000Z",
+  "versionId": "1"
+}

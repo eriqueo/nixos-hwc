@@ -200,6 +200,6 @@ in
 
   hwc.secrets.emergency = {
     enable = true;
-    hashedPasswordFile = config.hwc.secrets.api.emergencyPasswordFile;
+    hashedPasswordFile = config.hwc.secrets.api."emergency-password" or null;
   };
 }

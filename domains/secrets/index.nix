@@ -16,241 +16,20 @@
     };
 
     #==========================================================================
-    # API: Stable paths to decrypted secrets
+    # API: Dynamic map of all declared agenix secrets → decrypted paths
+    # Access: config.hwc.secrets.api."secret-name"
+    # Populated automatically by secrets-api.nix from config.age.secrets.
+    # No registration needed when adding new secrets.
     #==========================================================================
-    api = {
-      # System domain secret paths
-      userInitialPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted user initial password file";
-      };
-
-      emergencyPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted emergency password file";
-      };
-
-      userSshPublicKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted user SSH public key file";
-      };
-
-      # Server domain secret paths
-      radarrApiKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Radarr API key file";
-      };
-
-      sonarrApiKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Sonarr API key file";
-      };
-      navidromeAdminPasswordFile = lib.mkOption {
-        type = lib.types.str;
-        description = "Path to the file containing the Navidrome admin password.";
-      };
-      lidarrApiKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Lidarr API key file";
-      };
-
-      prowlarrApiKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Prowlarr API key file";
-      };
-
-      couchdbAdminUsernameFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted CouchDB admin username file";
-      };
-
-      couchdbAdminPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted CouchDB admin password file";
-      };
-      # Slack webhook
-      slackWebhookUrlFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Slack incoming webhook URL file";
-      };
-
-      gotifyAdminPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted gotify admin password env file";
-      };
-
-      gotifyTokenAlertsFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted gotify alerts app token file";
-      };
-
-      gotifyTokenBackupFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted gotify backup app token file";
-      };
-
-      gotifyTokenMailFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted gotify mail app token file";
-      };
-
-      gotifyTokenMonitoringFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted gotify monitoring app token file";
-      };
-
-      gotifyTokenLeadsFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted gotify leads app token file";
-      };
-
-      gotifyTokenLaptopFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted gotify laptop app token file";
-      };
-      jellyfinApiKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted jelly API key file";
-       };
-
-
-      geminiApiKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Gemini API key file";
-      };
-
-      # Home domain secret paths (email)
-      protonBridgePasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted ProtonMail Bridge password file";
-      };
-
-      gmailPersonalPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Gmail personal password file";
-      };
-
-      gmailBusinessPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Gmail business password file";
-      };
-
-      # Infrastructure domain secret paths
-      databaseNameFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted database name file";
-      };
-
-      databasePasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted database password file";
-      };
-
-      databaseUserFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted database user file";
-      };
-
-      surveillanceRtspUsernameFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted surveillance RTSP username file";
-      };
-
-      surveillanceRtspPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted surveillance RTSP password file";
-      };
-
-      frigateRtspPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Frigate RTSP password file";
-      };
-
-      vpnUsernameFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted VPN username file";
-      };
-
-      vpnPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted VPN password file";
-      };
-      gmailOauthClientFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Gmail OAuth client JSON file";
-      };
-
-      # WebDAV server credentials
-      webdavUsernameFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted WebDAV username file";
-      };
-
-      webdavPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted WebDAV password file";
-      };
-
-      # Paperless-NGX secrets
-      paperlessSecretKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Paperless secret key file";
-      };
-
-      paperlessAdminPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Paperless admin password file";
-      };
-
-      # n8n workflow automation secrets
-      n8nOwnerPasswordHashFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted n8n owner bcrypt password hash file";
-      };
-
-      # Slack integration secrets
-      slackSigningSecretFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        readOnly = true;
-        description = "Path to decrypted Slack signing secret file";
-      };
-
+    api = lib.mkOption {
+      type        = lib.types.attrsOf lib.types.path;
+      default     = {};
+      description = ''
+        Map of agenix secret name → decrypted runtime path.
+        Automatically populated from all declared age.secrets.
+        Usage: config.hwc.secrets.api."my-secret-name"
+        Use `config.hwc.secrets.api ? "my-secret-name"` to check existence.
+      '';
     };
 
     #==========================================================================
@@ -353,17 +132,20 @@
 
   imports = [
     ./declarations/index.nix # Age secret declarations organized by domain
-    ./secrets-api.nix        # Stable read-only path facade for consumers
     ./emergency.nix          # Emergency root access for recovery
     ./hardening.nix          # Security hardening configuration
     ./vaultwarden/index.nix  # Vaultwarden password manager
   ];
 
-  # Core agenix configuration
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf config.hwc.secrets.enable {
+    # Auto-populate secrets.api from all declared agenix secrets.
+    # No registration needed — add a declaration and it appears here.
+    hwc.secrets.api =
+      builtins.mapAttrs (_: secret: secret.path) config.age.secrets;
+
     # Ensure age identity paths are configured
     age.identityPaths = lib.mkDefault [ "/etc/age/keys.txt" ];
 
@@ -377,7 +159,30 @@
       HWC_SECRETS_DIR = "/run/agenix";
     };
 
-    assertions = [];
+    warnings =
+      if (config.age.identityPaths or []) == [] then [
+        ''
+          ##################################################################
+          # AGENIX WARNING: No identity paths configured                  #
+          # Secrets will not decrypt without age.identityPaths.           #
+          # Ensure /etc/age/keys.txt exists or configure identity paths.  #
+          ##################################################################
+        ''
+      ] else [];
+
+    assertions = [
+      {
+        assertion =
+          config.hwc.secrets.api ? "user-initial-password"
+          || config.users.users.eric.initialHashedPassword or "" != "";
+        message = ''
+          CRITICAL: No user authentication configured. Either:
+          - Ensure user-initial-password.age secret exists and is decryptable, OR
+          - Set users.users.eric.initialHashedPassword directly
+          This prevents system lockout.
+        '';
+      }
+    ];
   };
 
 }

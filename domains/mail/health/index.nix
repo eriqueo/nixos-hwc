@@ -222,13 +222,14 @@ let
         warn "No .mbsyncstate found — mbsync may have never completed"
       fi
 
-      # Check journal for repeated failures (sign of a systemic issue)
+      # Check how many times mbsync actually failed (exited non-zero) in the last 30 min.
+      # Count systemd "Failed with result" lines — exactly one per failed invocation.
       local recent_failures
       recent_failures=$(${pkgs.systemd}/bin/journalctl --user -u mbsync.service \
-        --since "30 min ago" --no-pager --output=cat 2>/dev/null \
-        | ${pkgs.gnugrep}/bin/grep -ci "error\|fail\|coredump\|assert" 2>/dev/null) || recent_failures=0
-      if (( recent_failures > 3 )); then
-        fail "mbsync has ''${recent_failures} error lines in the last 30 minutes"
+        --since "30 min ago" --no-pager 2>/dev/null \
+        | ${pkgs.gnugrep}/bin/grep -c "Failed with result" 2>/dev/null) || recent_failures=0
+      if (( recent_failures > 2 )); then
+        fail "mbsync has failed ''${recent_failures} times in the last 30 minutes"
       fi
     }
 

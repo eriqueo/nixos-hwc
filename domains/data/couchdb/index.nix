@@ -7,12 +7,12 @@ let
   adminUsernamePath =
     if cfg.secrets.adminUsername != null
     then cfg.secrets.adminUsername
-    else config.hwc.secrets.api.couchdbAdminUsernameFile;
+    else config.hwc.secrets.api."couchdb-admin-username" or null;
 
   adminPasswordPath =
     if cfg.secrets.adminPassword != null
     then cfg.secrets.adminPassword
-    else config.hwc.secrets.api.couchdbAdminPasswordFile;
+    else config.hwc.secrets.api."couchdb-admin-password" or null;
 in
 {
   # OPTIONS
@@ -65,13 +65,13 @@ in
       adminUsername = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
-        description = "Path to admin username secret (defaults to hwc.secrets.api.couchdbAdminUsernameFile)";
+        description = "Path to admin username secret (defaults to hwc.secrets.api.\"couchdb-admin-username\")";
       };
 
       adminPassword = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
-        description = "Path to admin password secret (defaults to hwc.secrets.api.couchdbAdminPasswordFile)";
+        description = "Path to admin password secret (defaults to hwc.secrets.api.\"couchdb-admin-password\")";
       };
     };
 

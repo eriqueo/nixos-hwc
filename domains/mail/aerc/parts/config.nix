@@ -151,10 +151,9 @@ in
       subject,~^\[PATCH = ${pkgs.aerc}/libexec/aerc/filters/hldiff
 
       [openers]
-      text/html = ${pkgs.xdg-utils}/bin/xdg-open
-      text/* = ${pkgs.kitty}/bin/kitty ${pkgs.neovim}/bin/nvim
-      application/pdf = ${pkgs.zathura}/bin/zathura
-      image/* = ${pkgs.xdg-utils}/bin/xdg-open
+      text/html = ${config.home.homeDirectory}/.local/bin/hwc-open
+      text/* = ${pkgs.neovim}/bin/nvim
+      image/* = ${config.home.homeDirectory}/.local/bin/hwc-open
 
       [multipart-converters]
       text/html = ${pkgs.pandoc}/bin/pandoc -f markdown -t html --standalone
