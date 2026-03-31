@@ -6,6 +6,59 @@
 
 { config, lib, pkgs, modulesPath, ... }:
 
+let
+  # Generic USB drive auto-mount with user-accessible permissions.
+  # Handles NTFS, exFAT, and FAT32. Skips drives already declared in
+  # /etc/fstab (e.g., the Seagate via fileSystems) so there's no conflict.
+  usbAutoMount = pkgs.writeShellScript "usb-automount" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+    DEVICE="/dev/$1"
+
+    UUID=$(${pkgs.util-linux}/bin/blkid -o value -s UUID "$DEVICE" 2>/dev/null || true)
+    [[ -n "$UUID" ]] && grep -qi "$UUID" /etc/fstab && exit 0
+
+    FSTYPE=$(${pkgs.util-linux}/bin/blkid -o value -s TYPE "$DEVICE" 2>/dev/null || true)
+    [[ -z "$FSTYPE" ]] && exit 0
+
+    LABEL=$(${pkgs.util-linux}/bin/blkid -o value -s LABEL "$DEVICE" 2>/dev/null \
+      | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '_')
+    [[ -z "$LABEL" ]] && LABEL="usb-$(basename "$DEVICE")"
+
+    MOUNT="/mnt/$LABEL"
+    mkdir -p "$MOUNT"
+    ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT" && exit 0
+
+    case "$FSTYPE" in
+      ntfs|ntfs3)
+        ${pkgs.util-linux}/bin/mount -t ntfs3 \
+          -o uid=1000,gid=100,dmask=0000,fmask=0000,force,iocharset=utf8 \
+          "$DEVICE" "$MOUNT"
+        # NTFS Windows ACLs can map dirs to root — fix so Yazi can delete
+        ${pkgs.findutils}/bin/find "$MOUNT" -maxdepth 1 -not -user eric \
+          -exec ${pkgs.coreutils}/bin/chown -R eric:users {} + 2>/dev/null || true
+        ;;
+      exfat)
+        ${pkgs.util-linux}/bin/mount -t exfat \
+          -o uid=1000,gid=100,dmask=0000,fmask=0000 \
+          "$DEVICE" "$MOUNT"
+        ;;
+      vfat|fat32|fat)
+        ${pkgs.util-linux}/bin/mount -t vfat \
+          -o uid=1000,gid=100,dmask=0000,fmask=0000,codepage=437,iocharset=utf8 \
+          "$DEVICE" "$MOUNT"
+        ;;
+    esac
+  '';
+
+  usbAutoUnmount = pkgs.writeShellScript "usb-autounmount" ''
+    #!/usr/bin/env bash
+    DEVICE="/dev/$1"
+    TARGET=$(${pkgs.util-linux}/bin/findmnt -n -o TARGET "$DEVICE" 2>/dev/null || true)
+    [[ -n "$TARGET" ]] && ${pkgs.util-linux}/bin/umount "$TARGET" 2>/dev/null || true
+  '';
+in
+
 {
   ##############################################################################
   ##  MACHINE: HWC-LAPTOP
@@ -453,9 +506,22 @@
     "fs.inotify.max_user_watches" = 524288;
   };
 
-  # Device rules: kyber scheduler on NVMe
+  # Device rules: kyber scheduler on NVMe + generic USB drive auto-mount
   services.udev.extraRules = lib.mkAfter ''
     ACTION=="add|change", KERNEL=="nvme*n*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="kyber"
+
+    # Auto-mount external USB drives (NTFS/exFAT/FAT32) at /mnt/<label>
+    # Drives in /etc/fstab (e.g., Seagate) are skipped — systemd handles those.
+    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="ntfs", \
+      RUN+="${usbAutoMount} %k"
+    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="ntfs3", \
+      RUN+="${usbAutoMount} %k"
+    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="exfat", \
+      RUN+="${usbAutoMount} %k"
+    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="vfat", \
+      RUN+="${usbAutoMount} %k"
+    ACTION=="remove", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", \
+      RUN+="${usbAutoUnmount} %k"
   '';
 
   # Intel NPU support (permissions, firmware, Level Zero loader)
