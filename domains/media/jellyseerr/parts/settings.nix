@@ -9,9 +9,9 @@ let
 
   # Generate settings JSON at runtime using a script
   generateSettingsScript = pkgs.writeShellScript "jellyseerr-generate-settings" ''
-    JELLYFIN_KEY=$(cat ${config.hwc.secrets.api.jellyfinApiKeyFile} | tr -d '[:space:]')
-    RADARR_KEY=$(cat ${config.hwc.secrets.api.radarrApiKeyFile} | tr -d '[:space:]')
-    SONARR_KEY=$(cat ${config.hwc.secrets.api.sonarrApiKeyFile} | tr -d '[:space:]')
+    JELLYFIN_KEY=$(cat ${config.hwc.secrets.api."jellyfin-api-key"} | tr -d '[:space:]')
+    RADARR_KEY=$(cat ${config.hwc.secrets.api."radarr-api-key"} | tr -d '[:space:]')
+    SONARR_KEY=$(cat ${config.hwc.secrets.api."sonarr-api-key"} | tr -d '[:space:]')
 
     cat > "$1" << EOF
     {

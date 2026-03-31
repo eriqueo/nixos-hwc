@@ -267,36 +267,20 @@ in
         description = "Environment file containing GOTIFY_DEFAULTUSER_PASS=<password>";
       };
 
-      tokens = {
-        alertsFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to file containing gotify app token for alerts";
-        };
-
-        backupFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to file containing gotify app token for backup notifications";
-        };
-
-        mailFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to file containing gotify app token for mail health alerts";
-        };
-
-        monitoringFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to file containing gotify app token for monitoring";
-        };
-
-        leadsFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to file containing gotify app token for lead notifications";
-        };
+      # TAXONOMY v1.0 — map of "universe:domain" → token file path
+      # Auto-populated in server/config.nix by scanning config.age.secrets for
+      # secrets named "gotify-{universe}-{domain}" (e.g. gotify-hwc-ops).
+      # Adding a new Gotify app only requires creating the agenix secret — no
+      # further edits to this file or secrets-api.nix.
+      tokens = lib.mkOption {
+        type    = lib.types.attrsOf (lib.types.nullOr lib.types.path);
+        default = {};
+        example = { "hwc:ops" = "/run/agenix/gotify-hwc-ops"; "home:admin" = "/run/agenix/gotify-home-admin"; };
+        description = ''
+          Map of Gotify app key to decrypted token file path.
+          Key format: "{universe}:{domain}"  (e.g. "hwc:ops", "home:admin")
+          Populated automatically from agenix secrets named gotify-{universe}-{domain}.
+        '';
       };
     };
 

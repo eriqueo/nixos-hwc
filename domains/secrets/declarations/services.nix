@@ -21,6 +21,13 @@
       group = "secrets";
     };
 
+    gotify-hwc-ops = {
+      file = ../parts/services/gotify-hwc-ops.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     jobtread-grant-key = {
       file = ../parts/services/jobtread-grant-key.age;
       mode = "0440";

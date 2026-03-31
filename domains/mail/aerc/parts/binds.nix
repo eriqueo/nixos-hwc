@@ -133,7 +133,7 @@ ${categoryBinds}
       / = :toggle-key-passthrough<Enter>/
       O = :open<Enter>
       S = :save<space>
-      U = :pipe -m urlscan<Enter>
+      U = :pipe -m ${pkgs.urlscan}/bin/urlscan -c ${config.home.homeDirectory}/.local/bin/hwc-open<Enter>
       l = :next-part<Enter>
       h = :prev-part<Enter>
       o = :open<Enter>
@@ -169,6 +169,30 @@ ${categoryBinds}
       $noinherit = true
       $ex = <C-x>
     '';
+
+    ".local/bin/hwc-open" = {
+      text = ''
+        #!/usr/bin/env bash
+        # hwc-open: context-aware URL/file opener.
+        # On Wayland/X11: delegates to xdg-open.
+        # On headless/SSH: OSC52 clipboard write (passes straight through plain SSH
+        # to the outer kitty terminal) + prints the URL so kitty hint mode can pick it up.
+        url="''${1:-}"
+        [ -z "$url" ] && exit 1
+        if [ -n "$WAYLAND_DISPLAY" ] || [ -n "$DISPLAY" ]; then
+            exec ${pkgs.xdg-utils}/bin/xdg-open "$url"
+        fi
+        # OSC52: base64-encode the URL and write clipboard escape to the terminal
+        printf '\033]52;c;%s\a' \
+          "$(printf '%s' "$url" | ${pkgs.coreutils}/bin/base64 | ${pkgs.coreutils}/bin/tr -d '\n')"
+        # Belt-and-suspenders: also stash in tmux buffer if inside tmux
+        if [ -n "$TMUX" ]; then
+            ${pkgs.tmux}/bin/tmux set-buffer -- "$url"
+        fi
+        printf '\n\033[0;32m→ %s\033[0m\n' "$url"
+      '';
+      executable = true;
+    };
 
     ".local/bin/aerc-trash-sender" = {
       text = ''

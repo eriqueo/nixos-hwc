@@ -28,15 +28,15 @@ in {
       # Robust password configuration: secrets when available, forced fallback hash when not
       # We use hashedPassword (not initialPassword) to ensure state matches config even with mutableUsers = false
       hashedPassword = lib.mkIf (
-        (!cfg.user.useSecrets || config.hwc.secrets.api.userInitialPasswordFile == null)
+        (!cfg.user.useSecrets || !(config.hwc.secrets.api ? "user-initial-password"))
         && cfg.user.fallbackHashedPassword != null
       ) cfg.user.fallbackHashedPassword;
 
-      hashedPasswordFile = lib.mkIf (cfg.user.useSecrets && config.hwc.secrets.api.userInitialPasswordFile != null)
+      hashedPasswordFile = lib.mkIf (cfg.user.useSecrets && config.hwc.secrets.api ? "user-initial-password")
         config.age.secrets.user-initial-password.path;
 
       openssh.authorizedKeys.keys = lib.mkIf cfg.user.ssh.enable (
-        if cfg.user.ssh.useSecrets && config.hwc.secrets.api.userSshPublicKeyFile != null then
+        if cfg.user.ssh.useSecrets && config.hwc.secrets.api ? "user-ssh-public-key" then
           [ (builtins.readFile config.age.secrets.user-ssh-public-key.path) ]
         else
           cfg.user.ssh.fallbackKey
@@ -67,7 +67,7 @@ in {
     ];
 
     # Warnings for fallback scenarios
-    warnings = lib.optionals (cfg.user.useSecrets && config.hwc.secrets.api.userInitialPasswordFile == null) [
+    warnings = lib.optionals (cfg.user.useSecrets && !(config.hwc.secrets.api ? "user-initial-password")) [
       ''
         ##################################################################
         # AGENIX FALLBACK ACTIVE: user-initial-password not available   #
@@ -75,7 +75,7 @@ in {
         # This is expected when agenix/secrets are broken.              #
         ##################################################################
       ''
-    ] ++ lib.optionals (cfg.user.ssh.useSecrets && config.hwc.secrets.api.userSshPublicKeyFile == null) [
+    ] ++ lib.optionals (cfg.user.ssh.useSecrets && !(config.hwc.secrets.api ? "user-ssh-public-key")) [
       ''
         ##################################################################
         # AGENIX FALLBACK ACTIVE: user-ssh-public-key not available     #

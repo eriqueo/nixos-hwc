@@ -245,7 +245,8 @@ add_secret() {
   log_step "Secret Added Successfully!"
   echo ""
   echo "Next steps:"
-  echo "  1. Use the secret in your config: config.age.secrets.${secret_name}.path"
+  echo "  1. Reference in any module: config.hwc.secrets.api.\"${secret_name}\""
+  echo "     Check existence:         config.hwc.secrets.api ? \"${secret_name}\""
   echo "  2. Rebuild NixOS: sudo nixos-rebuild switch --flake .#\$(hostname)"
   echo ""
 }

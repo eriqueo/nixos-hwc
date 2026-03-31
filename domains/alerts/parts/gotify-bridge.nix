@@ -169,8 +169,8 @@ in
 
     tokenFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
-      default = alertsCfg.server.tokens.alertsFile;
-      description = "Path to file containing gotify app token for alerts";
+      default = alertsCfg.server.tokens."home:admin" or null;
+      description = "Path to file containing gotify app token (home:admin for Alertmanager infra alerts)";
     };
   };
 
