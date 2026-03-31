@@ -186,6 +186,38 @@
     ];
   };
 
+  # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver
+  # UUID-based so it works regardless of device enumeration order (/dev/sdb vs /dev/sdc etc.)
+  # x-systemd.automount: mounts on first access, not at boot (USB may not be present)
+  # seagate-fixperms.service: chowns root-owned dirs after each mount so Yazi can delete
+  fileSystems."/mnt/seagate" = {
+    device = "/dev/disk/by-uuid/A802BE5102BE23EA";
+    fsType = "ntfs3";
+    options = [
+      "uid=1000" "gid=100" "dmask=0000" "fmask=0000"
+      "force" "iocharset=utf8"
+      "noauto" "nofail" "x-systemd.automount"
+    ];
+  };
+
+  systemd.tmpfiles.rules = [ "d /mnt/seagate 0755 root root -" ];
+
+  systemd.services.seagate-fixperms = {
+    description = "Fix Seagate NTFS directory ownership for user access";
+    after = [ "mnt-seagate.mount" ];
+    wantedBy = [ "mnt-seagate.mount" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      # Only chown top-level dirs owned by root — sufficient for deletion (write on parent = delete child)
+      # This persists to NTFS ACLs, so each run is faster as files gain eric ownership
+      ExecStart = pkgs.writeShellScript "seagate-fixperms" ''
+        ${pkgs.findutils}/bin/find /mnt/seagate -maxdepth 1 -not -user eric \
+          -exec ${pkgs.coreutils}/bin/chown -R eric:users {} + 2>/dev/null || true
+      '';
+    };
+  };
+
   #============================================================================
   # === [domains/system/hardware] Orchestration ================================
   #============================================================================
@@ -347,11 +379,9 @@
   };
 
   # Fix Ollama systemd service type (container sd-notify unreliable)
-  systemd.services = lib.mkIf config.hwc.ai.ollama.enable {
-    podman-ollama.serviceConfig = {
-      Type = lib.mkForce "forking";
-      NotifyAccess = lib.mkForce "none";
-    };
+  systemd.services.podman-ollama.serviceConfig = lib.mkIf config.hwc.ai.ollama.enable {
+    Type = lib.mkForce "forking";
+    NotifyAccess = lib.mkForce "none";
   };
 
   # Static hosts for local services (remains unchanged).
