@@ -28,6 +28,28 @@ in
         description = "Seconds between port sync checks";
       };
     };
+
+    healthCheck = {
+      enable = mkEnableOption "VPN + port forwarding health monitor with Gotify alerts";
+
+      checkInterval = mkOption {
+        type = types.int;
+        default = 300;
+        description = "Seconds between health checks";
+      };
+
+      failuresBeforeRestart = mkOption {
+        type = types.int;
+        default = 3;
+        description = "Consecutive failures before auto-restarting gluetun";
+      };
+
+      failuresBeforeAlert = mkOption {
+        type = types.int;
+        default = 2;
+        description = "Consecutive failures before sending a Gotify alert";
+      };
+    };
   };
 
   imports = [

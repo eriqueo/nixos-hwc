@@ -325,8 +325,21 @@ in
       onFailure = lib.mkIf (cfg.notifications.onFailure && (config.hwc.alerts.enable or false)) [
         "hwc-service-failure-notifier@borgbackup-job-${jobName}.service"
       ];
+      # Don't kill running backups on nixos-rebuild switch
+      restartIfChanged = false;
+      # Wait up to 1h for lock instead of failing immediately
+      environment.BORG_LOCK_WAIT = "3600";
+      # Don't run backup while borg-check is running
+      conflicts = [ "borg-check.service" ];
+      after = [ "borg-check.service" ];
+      # Break stale locks before starting (from previous crashes/kills)
+      preStart = ''
+        ${pkgs.borgbackup}/bin/borg break-lock ${cfg.repo.path} 2>/dev/null || true
+      '';
       # Prevent stuck borg processes from blocking future backups
       serviceConfig = {
+        Type = "oneshot";              # Backup runs to completion, not a long-lived daemon
+        TimeoutStartSec = "6h";       # Allow up to 6h for large backups
         TimeoutStopSec = "5min";      # Give borg time to finish gracefully
         KillMode = "mixed";            # SIGTERM to main, SIGKILL to remaining after timeout
         KillSignal = "SIGINT";         # Borg handles SIGINT gracefully (checkpoint)
@@ -338,10 +351,11 @@ in
       description = "Borg repository integrity check";
       # Don't restart on nixos-rebuild - this runs for hours and blocks switch-to-configuration
       restartIfChanged = false;
+      # Use environment attr so NixOS quotes it properly for systemd
+      environment.BORG_PASSCOMMAND = "cat /run/agenix/${cfg.encryption.passphraseSecret}";
       serviceConfig = {
         Type = "oneshot";
         ExecStart = "${pkgs.borgbackup}/bin/borg check ${cfg.repo.path}";
-        Environment = "BORG_PASSCOMMAND=cat /run/agenix/${cfg.encryption.passphraseSecret}";
       };
     };
 
@@ -349,7 +363,8 @@ in
       description = "Weekly Borg repository check";
       wantedBy = [ "timers.target" ];
       timerConfig = {
-        OnCalendar = cfg.monitoring.checkFrequency;
+        # Run Sunday noon — well away from the 02:00-03:00 backup window
+        OnCalendar = "Sun *-*-* 12:00:00";
         Persistent = true;
       };
     };

@@ -556,9 +556,18 @@
     enable = true;
     port = 2586;
     dataDir = "/var/lib/hwc/gotify";
-    # adminPasswordFile set via agenix (contains GOTIFY_DEFAULTUSER_PASS=...)
-    # tokens configured after first deploy via gotify UI
+    adminPasswordFile = config.hwc.secrets.api.gotifyAdminPasswordFile;
+    tokens = {
+      alertsFile = config.hwc.secrets.api.gotifyTokenAlertsFile;
+      backupFile = config.hwc.secrets.api.gotifyTokenBackupFile;
+      mailFile = config.hwc.secrets.api.gotifyTokenMailFile;
+      monitoringFile = config.hwc.secrets.api.gotifyTokenMonitoringFile;
+      leadsFile = config.hwc.secrets.api.gotifyTokenLeadsFile;
+    };
   };
+
+  # iGotify Notification Assistant (bridges Gotify → APNs for iOS push notifications)
+  hwc.alerts.igotifyAssistant.enable = true;
 
   # Alertmanager → gotify bridge (forwards Prometheus alerts to phone via gotify)
   hwc.alerts.gotifyBridge = {
@@ -763,6 +772,12 @@
       enable = lib.mkDefault true;
       syncToQbittorrent = lib.mkDefault true;
       checkInterval = 60;
+    };
+    healthCheck = {
+      enable = lib.mkDefault true;
+      checkInterval = 300;        # every 5 minutes
+      failuresBeforeAlert = 2;    # alert after 10 min down
+      failuresBeforeRestart = 3;  # auto-restart after 15 min down
     };
   };
   hwc.media.qbittorrent.enable = lib.mkDefault true;

@@ -161,7 +161,8 @@
       "Read(//home/eric/.claude/**)",
       "Bash(col:*)",
       "Bash(jdupes:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(age:*)"
     ],
     "deny": [],
     "ask": [],

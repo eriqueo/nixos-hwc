@@ -27,6 +27,8 @@ in
         "podman-gluetun.service"
       ];
       requires = [ "podman-gluetun.service" ];
+      bindsTo = [ "podman-gluetun.service" ];
+      partOf = [ "podman-gluetun.service" ];
     };
   };
 }

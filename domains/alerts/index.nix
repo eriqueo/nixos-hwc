@@ -49,6 +49,8 @@ let
     "receipts-ocr"
     "podman-immich"
     "podman-navidrome"
+    "podman-gluetun"
+    "podman-mousehole"
     "podman-qbittorrent"
     "podman-sonarr"
     "podman-radarr"
@@ -319,8 +321,9 @@ in
   };
 
   imports = [
-    ./parts/server.nix        # gotify notification server
-    ./parts/gotify-bridge.nix # Alertmanager → gotify bridge
+    ./parts/server.nix              # gotify notification server
+    ./parts/gotify-bridge.nix       # Alertmanager → gotify bridge
+    ./parts/igotify-assistant.nix   # iOS push notification relay
   ];
 
   #==========================================================================

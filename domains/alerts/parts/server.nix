@@ -16,6 +16,13 @@
 
 let
   cfg = config.hwc.alerts.server;
+
+  # Generate an env file from the raw password secret
+  adminPasswordEnvFile = pkgs.writeShellScript "gotify-admin-env" ''
+    PASS=$(cat ${cfg.adminPasswordFile})
+    echo "GOTIFY_DEFAULTUSER_PASS=$PASS" > /run/gotify-admin-env
+    chmod 0400 /run/gotify-admin-env
+  '';
 in
 {
   config = lib.mkIf cfg.enable {
@@ -30,7 +37,12 @@ in
         TZ = "America/Denver";
         GOTIFY_DEFAULTUSER_NAME = "admin";
       };
-      environmentFiles = lib.optional (cfg.adminPasswordFile != null) cfg.adminPasswordFile;
+      environmentFiles = lib.optional (cfg.adminPasswordFile != null) "/run/gotify-admin-env";
+    };
+
+    # Generate env file from raw password before container starts
+    systemd.services.podman-gotify = lib.mkIf (cfg.adminPasswordFile != null) {
+      serviceConfig.ExecStartPre = [ "+${adminPasswordEnvFile}" ];
     };
 
     # Ensure directories exist

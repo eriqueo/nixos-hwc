@@ -81,8 +81,16 @@ let
     record = {
       enabled = true;
       retain = {
-        days = 7;
+        days = 3;
         mode = "motion";
+      };
+      alerts.retain = {
+        days = 14;
+        mode = "motion";
+      };
+      detections.retain = {
+        days = 14;
+        mode = "active_objects";
       };
     };
 
@@ -115,7 +123,8 @@ let
       # Cobra cameras use go2rtc restreams:
       # - Detect: substream (1280x720) via go2rtc - matches detect resolution exactly
       # - Record: main stream (4K) via go2rtc
-      # cobra_cam_1: Indoor workshop/garage - minimal masking needed
+      # cobra_cam_1: Indoor workshop/garage — events only (person/dog/cat detected)
+      # No continuous motion recording; saves ~8 GB/day
       cobra_cam_1 = {
         enabled = true;
         audio.enabled = false;
@@ -125,6 +134,7 @@ let
             { path = "rtsp://127.0.0.1:8554/cobra_cam_1"; roles = [ "record" ]; }
           ];
         };
+        record.retain.days = 0;  # No motion recording — events only
         detect = { width = 1280; height = 720; fps = 5; };
         motion.mask = [
           "0,0,1280,50"       # Top strip (timestamp)
@@ -184,7 +194,7 @@ let
         ffmpeg = ffmpegDefaults // {
           inputs = [
             { path = "rtsp://127.0.0.1:8554/reolink_sub"; roles = [ "detect" ]; }
-            { path = "rtsp://127.0.0.1:8554/reolink"; roles = [ "record" ]; }
+            { path = "rtsp://127.0.0.1:8554/reolink_record"; roles = [ "record" ]; }
           ];
         };
         detect = { width = 640; height = 360; fps = 3; };
@@ -221,9 +231,11 @@ let
       cobra_cam_1_sub = [ "${rtspUrlSub "CAM1_IP"}#video=copy" ];
       cobra_cam_2_sub = [ "${rtspUrlSub "CAM2_IP"}#video=copy" ];
       cobra_cam_3_sub = [ "${rtspUrlSub "CAM3_IP"}#video=copy" ];
-      # Reolink - main (4K HEVC) for recording, sub (640x360 H264) for detection
+      # Reolink - main (4K HEVC), sub (640x360 H264) for detection,
+      # record stream (1080p transcode from main via go2rtc — saves ~75% storage)
       reolink = [ "${reolinkUrl "h264Preview_01_main"}#video=copy" ];
       reolink_sub = [ "${reolinkUrl "h264Preview_01_sub"}#video=copy" ];
+      reolink_record = [ "ffmpeg:reolink#video=h264#hardware#width=1920#height=1080" ];
     };
 
     ui.timezone = "America/Denver";

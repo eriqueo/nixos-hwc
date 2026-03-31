@@ -165,6 +165,8 @@ in
           then [ "podman-gluetun.service" ]
           else [ "hwc-media-network.service" ];
         requires = [ "mnt-hot.mount" ];
+        bindsTo = lib.optionals (cfg.network.mode == "vpn") [ "podman-gluetun.service" ];
+        partOf = lib.optionals (cfg.network.mode == "vpn") [ "podman-gluetun.service" ];
       };
     }
 
