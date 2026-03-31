@@ -19,7 +19,9 @@ local function entry(_)
     return
   end
 
-  local output, err = Command("chmod")
+  local cmd = Command("chmod")
+  if h.cha.is_dir then cmd = cmd:arg("-R") end
+  local output, err = cmd
     :arg(value)
     :arg(tostring(h.url))
     :stdout(Command.PIPED)
