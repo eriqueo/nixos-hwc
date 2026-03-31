@@ -33,6 +33,7 @@
     };
     hwc.mail.health = {
       enable = false;
+
     };
     # aerc runs on server — open a kitty window direct SSH into aerc (no tmux wrapper;
     # plain SSH lets OSC8 hyperlinks and OSC52 clipboard pass straight through to kitty)
