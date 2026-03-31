@@ -321,5 +321,21 @@
       owner = "root";
       group = "secrets";
     };
+
+    # Hostinger SFTP deployment credentials
+    hostinger-sftp = {
+      file = ../parts/services/hostinger-sftp.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    # CMS API key
+    cms-api-key = {
+      file = ../parts/services/cms-api-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }

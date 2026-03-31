@@ -365,6 +365,14 @@ in
       upstream = "http://127.0.0.1:6100";
     }
 
+    # Heartwood CMS — content management dashboard for heartwoodcraft.me
+    {
+      name = "heartwood-cms";
+      mode = "port";
+      port = 18095;
+      upstream = "http://127.0.0.1:8095";
+    }
+
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
     # Vaultwarden - self-hosted password manager (port mode)
     {
