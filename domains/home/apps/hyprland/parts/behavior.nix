@@ -14,7 +14,7 @@ in
     "${mod},B,exec,gpu-launch librewolf"
     "${mod},M,exec,kitty -e btop"
     "${mod},O,exec,gpu-launch obsidian"
-    "${mod},E,exec,kitty -e ssh -t hwc 'tmux new-session -As mail'"
+    "${mod},E,exec,kitty -e ssh -t hwc aerc"
     "${mod},N,exec,kitty -e nvim"
     "${mod},Y,exec,kitty -e yazi"
     "${mod},G,exec,gpu-toggle"

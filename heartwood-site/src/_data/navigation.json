@@ -1,25 +1,41 @@
 {
   "main": [
-    { "label": "Home", "url": "/" },
     {
-      "label": "Services",
+      "label": "Home",
+      "url": "/"
+    },
+    {
+      "label": "Our Services",
       "children": [
-        { "label": "Bathroom Remodeling", "url": "/bathroom/remodeling/" },
-        { "label": "Basement Remodeling", "url": "/basement/remodeling/" },
-        { "label": "General Remodeling", "url": "/remodeling/" }
+        {
+          "label": "Bathroom Remodeling",
+          "url": "/bathroom/remodeling/"
+        },
+        {
+          "label": "Basement Remodeling",
+          "url": "/basement/remodeling/"
+        },
+        {
+          "label": "General Remodeling",
+          "url": "/remodeling/"
+        }
       ]
     },
-    { "label": "How It Works", "url": "/how-it-works/" },
     {
-      "label": "Areas We Serve",
-      "children": [
-        { "label": "Bozeman", "url": "/bozeman/" },
-        { "label": "Belgrade", "url": "/belgrade/" },
-        { "label": "Gallatin Gateway", "url": "/gallatin-gateway/" }
-      ]
+      "label": "Our Process",
+      "url": "/how-it-works/"
     },
-    { "label": "Our Work", "url": "/our-work/" },
-    { "label": "Blog", "url": "/blog/" },
-    { "label": "About", "url": "/about/" }
+    {
+      "label": "Our Work",
+      "url": "/our-work/"
+    },
+    {
+      "label": "Our Words",
+      "url": "/blog/"
+    },
+    {
+      "label": "",
+      "url": "/"
+    }
   ]
 }
