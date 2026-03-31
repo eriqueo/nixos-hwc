@@ -7,27 +7,39 @@
 { config, lib, pkgs, modulesPath, ... }:
 
 let
+  user = config.hwc.system.users.user.name;
+
   # Generic USB drive auto-mount with user-accessible permissions.
   # Handles NTFS, exFAT, and FAT32. Skips drives already declared in
   # /etc/fstab (e.g., the Seagate via fileSystems) so there's no conflict.
   usbAutoMount = pkgs.writeShellScript "usb-automount" ''
     #!/usr/bin/env bash
     set -euo pipefail
+    [[ -z "''${1:-}" ]] && exit 1
     DEVICE="/dev/$1"
 
+    # Skip drives managed declaratively (UUID present in /etc/fstab)
     UUID=$(${pkgs.util-linux}/bin/blkid -o value -s UUID "$DEVICE" 2>/dev/null || true)
-    [[ -n "$UUID" ]] && grep -qi "$UUID" /etc/fstab && exit 0
+    [[ -n "$UUID" ]] && grep -qiF "$UUID" /etc/fstab && exit 0
 
     FSTYPE=$(${pkgs.util-linux}/bin/blkid -o value -s TYPE "$DEVICE" 2>/dev/null || true)
     [[ -z "$FSTYPE" ]] && exit 0
 
     LABEL=$(${pkgs.util-linux}/bin/blkid -o value -s LABEL "$DEVICE" 2>/dev/null \
-      | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '_')
+      | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-' '_')
+    # Strip leading dots/underscores — a label of ".." would otherwise resolve
+    # to /mnt/.. = / and mount -t ntfs3 $DEVICE / as root. Not great.
+    LABEL="''${LABEL##*([._])}"
     [[ -z "$LABEL" ]] && LABEL="usb-$(basename "$DEVICE")"
+
+    # Check the device itself, not the mount point — avoids false "already mounted"
+    # if two drives happen to share a label.
+    ${pkgs.util-linux}/bin/findmnt -n "$DEVICE" >/dev/null 2>&1 && exit 0
 
     MOUNT="/mnt/$LABEL"
     mkdir -p "$MOUNT"
-    ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT" && exit 0
+    # Clean up the empty dir if mount fails so we don't leave stray /mnt/* entries.
+    trap '${pkgs.util-linux}/bin/mountpoint -q "$MOUNT" || rmdir "$MOUNT" 2>/dev/null || true' EXIT
 
     case "$FSTYPE" in
       ntfs|ntfs3)
@@ -35,8 +47,8 @@ let
           -o uid=1000,gid=100,dmask=0000,fmask=0000,force,iocharset=utf8 \
           "$DEVICE" "$MOUNT"
         # NTFS Windows ACLs can map dirs to root — fix so Yazi can delete
-        ${pkgs.findutils}/bin/find "$MOUNT" -maxdepth 1 -not -user eric \
-          -exec ${pkgs.coreutils}/bin/chown -R eric:users {} + 2>/dev/null || true
+        ${pkgs.findutils}/bin/find "$MOUNT" -maxdepth 1 -not -user ${user} \
+          -exec ${pkgs.coreutils}/bin/chown -R ${user}:users {} + 2>/dev/null || true
         ;;
       exfat)
         ${pkgs.util-linux}/bin/mount -t exfat \
