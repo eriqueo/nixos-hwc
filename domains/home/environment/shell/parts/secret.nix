@@ -14,9 +14,10 @@ pkgs.writeShellApplication {
     coreutils
     gnused
     nix
+    git
     # sudo is in system PATH
   ];
   text = ''
-    exec bash "${workspace}/utilities/secret-manager.sh" "$@"
+    exec bash "${workspace}/system/secret-manager.sh" "$@"
   '';
 }

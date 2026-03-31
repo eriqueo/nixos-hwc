@@ -3,10 +3,10 @@
 One-shot setup script for Uptime Kuma monitors on hwc-server.
 
 Usage:
-    nix-shell -p 'python3.withPackages (ps: [ ps.uptime-kuma-api ])' --run \
+    nix-shell -p 'python3.withPackages (ps: [ ps.uptime-kuma-api ps.requests ps.websocket-client ])' --run \
         'python3 setup-uptime-kuma.py --password YOUR_PASSWORD'
 
-Connects to local Uptime Kuma instance, creates ntfy notification,
+Connects to local Uptime Kuma instance, creates gotify notification,
 tags, all monitors, and a status page.
 """
 
@@ -16,9 +16,8 @@ import time
 
 from uptime_kuma_api import UptimeKumaApi, MonitorType
 
-# Since Uptime Kuma runs in bridge-networked container,
-# use host.containers.internal to reach host services.
-H = "host.containers.internal"
+# Uptime Kuma runs with --network=host, so 127.0.0.1 reaches host services directly.
+H = "127.0.0.1"
 
 
 def parse_args():
@@ -61,7 +60,7 @@ def get_monitors():
             {"name": "Firefly-Pico", "type": MonitorType.HTTP, "url": f"http://{H}:8086/", "interval": 120},
             {"name": "CloudBeaver", "type": MonitorType.HTTP, "url": f"http://{H}:8978/", "interval": 300},
             {"name": "Transcript API", "type": MonitorType.HTTP, "url": f"http://{H}:8099/health", "interval": 120},
-            {"name": "Heartwood MCP", "type": MonitorType.HTTP, "url": f"http://{H}:6100/", "interval": 300},
+            {"name": "Heartwood MCP", "type": MonitorType.PORT, "hostname": H, "port": 6100, "interval": 300},
             {"name": "Estimator", "type": MonitorType.HTTP, "url": "https://hwc.ocelot-wahoo.ts.net:13443", "interval": 300},
         ],
         "media": [
@@ -97,7 +96,7 @@ def get_monitors():
              "docker_host": None, "interval": 120},
             {"name": "CouchDB", "type": MonitorType.HTTP, "url": f"http://{H}:5984/", "interval": 120,
              "accepted_statuscodes": ["200-299", "400-499"]},
-            {"name": "ntfy", "type": MonitorType.HTTP, "url": f"http://{H}:2586/v1/health", "interval": 60, "critical": True},
+            {"name": "Gotify", "type": MonitorType.HTTP, "url": f"http://{H}:2587/version", "interval": 60, "critical": True},
         ],
         "ai": [
             {"name": "Ollama", "type": MonitorType.HTTP, "url": f"http://{H}:11434/", "interval": 120},
@@ -145,7 +144,7 @@ def setup_notification(api):
         type="ntfy",
         isDefault=True,
         applyExisting=True,
-        ntfyserverurl=f"http://{H}:2586",
+        ntfyserverurl="http://127.0.0.1:2586",
         ntfytopic="monitoring",
         ntfyPriority=3,  # default priority
     )

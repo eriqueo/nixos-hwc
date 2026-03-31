@@ -14,6 +14,13 @@
       group = "secrets";
     };
 
+    gotify-admin-password = {
+      file = ../parts/services/gotify-admin-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     jobtread-grant-key = {
       file = ../parts/services/jobtread-grant-key.age;
       mode = "0440";
@@ -109,7 +116,6 @@
     };
 
     # Gotify notification service credentials
-    # gotify-admin-password = { file = ../parts/services/gotify-admin-password.age; mode = "0440"; owner = "root"; group = "secrets"; };
     gotify-token-alerts = { file = ../parts/services/gotify-token-alerts.age; mode = "0440"; owner = "root"; group = "secrets"; };
     gotify-token-backup = { file = ../parts/services/gotify-token-backup.age; mode = "0440"; owner = "root"; group = "secrets"; };
     gotify-token-mail = { file = ../parts/services/gotify-token-mail.age; mode = "0440"; owner = "root"; group = "secrets"; };

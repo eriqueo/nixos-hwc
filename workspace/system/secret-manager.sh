@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Secret Manager - Unified agenix secret management tool
-# Location: workspace/utilities/secret-manager.sh
+# Location: workspace/system/secret-manager.sh
 # Invoked by: Shell wrapper in domains/home/environment/shell/parts/secret.nix
 #
 # Features:
@@ -224,8 +224,13 @@ add_secret() {
     return 1
   fi
 
-  # Step 6: Validate with nix flake check
+  # Step 6: Stage new files for flake visibility, then validate
   echo ""
+  local decl_file="${SECRETS_DECL}/${category}.nix"
+  log_step "Staging files for flake check..."
+  (cd "${NIXOS_DIR}" && git add "$secret_file" "$decl_file")
+  log_info "Staged $secret_file and $decl_file"
+
   log_step "Validating with nix flake check..."
 
   if (cd "${NIXOS_DIR}" && nix flake check 2>&1 | tail -20); then
@@ -270,15 +275,18 @@ add_declaration() {
     };"
 
   # Use awk to insert in alphabetical order within age.secrets block
+  # Key: age.secrets opens at 2-space indent, entries at 4-space indent,
+  # so only match the 2-space `};` as the block closer (not 4-space entry closers)
   awk -v snippet="$snippet" -v name="$name" '
   BEGIN { inserted = 0; in_secrets = 0 }
 
-  # Track when we enter age.secrets block (flexible whitespace)
-  /^[[:space:]]*age\.secrets = \{/ { in_secrets = 1; print; next }
+  # Enter age.secrets block (2-space indent)
+  /^  age\.secrets = \{/ { in_secrets = 1; print; next }
 
-  # Track when we exit age.secrets block
-  /^[[:space:]]*\};/ && in_secrets {
+  # Exit age.secrets block — only the 2-space indent closing brace
+  /^  \};$/ && in_secrets {
     if (!inserted) {
+      print ""
       print snippet
       inserted = 1
     }
@@ -287,15 +295,12 @@ add_declaration() {
     next
   }
 
-  # Within age.secrets block, find alphabetical position
-  in_secrets && /^[[:space:]]+[a-z0-9-]+ = \{/ {
-    # Extract current secret name (copy line, strip whitespace from copy)
-    line = $0
-    gsub(/^[[:space:]]+/, "", line)
-    match(line, /^([a-z0-9-]+) = \{/, arr)
-    current_name = arr[1]
+  # Within age.secrets, detect top-level entries (4-space indent)
+  in_secrets && /^    [a-z][a-z0-9-]* = / {
+    current_name = $0
+    sub(/^[[:space:]]+/, "", current_name)
+    sub(/ = .*/, "", current_name)
 
-    # Insert before if name comes before current_name alphabetically
     if (!inserted && name < current_name) {
       print snippet
       print ""
@@ -303,7 +308,6 @@ add_declaration() {
     }
   }
 
-  # Print all lines
   { print }
 
   END {
