@@ -280,6 +280,9 @@ in
       # Compression
       compression = cfg.compression;
 
+      # Don't fail on borg warnings (exit 1) like "file changed during backup"
+      failOnWarnings = false;
+
       # Schedule
       startAt = []; # We use our own timer for more control
 
@@ -340,6 +343,8 @@ in
       serviceConfig = {
         Type = "oneshot";              # Backup runs to completion, not a long-lived daemon
         TimeoutStartSec = "6h";       # Allow up to 6h for large backups
+        CPUSchedulingPolicy = lib.mkForce "other";  # Best-effort (default) instead of idle
+        IOSchedulingClass = lib.mkForce "best-effort";  # Fair I/O instead of idle scraps
         TimeoutStopSec = "5min";      # Give borg time to finish gracefully
         KillMode = "mixed";            # SIGTERM to main, SIGKILL to remaining after timeout
         KillSignal = "SIGINT";         # Borg handles SIGINT gracefully (checkpoint)

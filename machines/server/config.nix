@@ -341,6 +341,12 @@
       "node_modules"
       "__pycache__"
       "*.log"
+      # Immich regenerable data — rebuilt automatically from originals
+      "/mnt/media/photos/thumbs"
+      "/mnt/media/photos/encoded-video"
+      # Live PostgreSQL data files — already backed up via pg_dumpall in preHook
+      # Backing up raw PG files causes "file changed" warnings that fail the job
+      "/var/lib/hwc/postgresql"
     ];
 
     # Daily at 2 AM (before rsync fallback at 3 AM on its days)
