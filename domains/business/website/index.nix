@@ -8,7 +8,7 @@
 # DEPENDENCIES:
 #   - hwc.paths (storage paths)
 #   - agenix secrets: cms-api-key, hostinger-sftp
-#   - heartwood-site repo at /home/eric/.nixos/domains/business/website/heartwood-site/
+#   - site_files repo at /home/eric/.nixos/domains/business/website/site_files/
 
 { config, lib, pkgs, ... }:
 
@@ -37,8 +37,8 @@ in
 
     siteDir = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/.nixos/domains/business/website/heartwood-site";
-      description = "Path to the heartwood-site 11ty repo (content source)";
+      default = "/home/eric/.nixos/domains/business/website/site_files";
+      description = "Path to the 11ty site repo (content source)";
     };
 
     user = lib.mkOption {

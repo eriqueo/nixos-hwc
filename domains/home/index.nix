@@ -4,7 +4,7 @@ let
   dir = builtins.readDir ./.;
 
   # add "mail" here
-  wantedDirs = [ "core" "environment" "theme" "apps" ];
+  wantedDirs = [ "core" "theme" "apps" ];
 
   subIndex =
     lib.pipe wantedDirs [

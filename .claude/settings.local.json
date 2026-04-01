@@ -1,17 +1,4 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/enforce-tools.sh"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(mkdir:*)",
@@ -161,7 +148,8 @@
       "mcp__n8n__n8n_delete_workflow",
       "WebFetch(domain:itsfoss.com)",
       "Bash(sudo mount:*)",
-      "mcp__github__get_pull_request"
+      "mcp__github__get_pull_request",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": [],
@@ -181,5 +169,18 @@
     "puppeteer",
     "n8n",
     "heartwood"
-  ]
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/enforce-tools.sh"
+          }
+        ]
+      }
+    ]
+  }
 }

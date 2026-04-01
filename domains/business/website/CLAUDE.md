@@ -8,7 +8,7 @@ Content management system for **heartwoodcraft.me** (Heartwood Craft remodeling 
 | Component | Path | Purpose |
 |-----------|------|---------|
 | CMS App | `/opt/business/heartwood-cms/` | Express 5 API + frontend dashboard |
-| Site Repo | `/home/eric/.nixos/domains/business/website/heartwood-site/` | 11ty source (markdown, templates, images) |
+| Site Repo | `/home/eric/.nixos/domains/business/website/site_files/` | 11ty source (markdown, templates, images) |
 | NixOS Config | `domains/business/website/index.nix` | Systemd service, namespace `hwc.business.website` |
 | Caddy Route | `domains/networking/routes.nix` | Reverse proxy entry, name `heartwood-cms`, port 18095 |
 
@@ -32,7 +32,7 @@ See `/opt/business/heartwood-cms/CLAUDE.md` for full CMS dev context.
 - `POST /api/deploy` — build + SFTP upload
 - `GET /api/deploy/status` — last deploy record
 
-## Site Repo (`heartwood-site/`)
+## Site Repo (`site_files/`)
 
 ### 11ty Structure
 ```
