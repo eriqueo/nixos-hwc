@@ -162,7 +162,8 @@
       "Bash(col:*)",
       "Bash(jdupes:*)",
       "Read(//tmp/**)",
-      "Bash(age:*)"
+      "Bash(age:*)",
+      "Bash(npx:*)"
     ],
     "deny": [],
     "ask": [],

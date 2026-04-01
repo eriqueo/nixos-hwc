@@ -5,7 +5,7 @@
       "url": "/"
     },
     {
-      "label": "Our Services",
+      "label": "Our Work",
       "children": [
         {
           "label": "Bathroom Remodeling",
@@ -26,16 +26,8 @@
       "url": "/how-it-works/"
     },
     {
-      "label": "Our Work",
-      "url": "/our-work/"
-    },
-    {
-      "label": "Our Words",
+      "label": "The Plane Truth",
       "url": "/blog/"
-    },
-    {
-      "label": "",
-      "url": "/"
     }
   ]
 }
