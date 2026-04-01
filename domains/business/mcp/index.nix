@@ -18,6 +18,34 @@ let
   paths = config.hwc.paths;
   inherit (lib) mkIf mkMerge;
 
+  # Health check script — verifies the SSE port is reachable, restarts + notifies if not
+  healthCheckScript = pkgs.writeShellScript "heartwood-mcp-health" ''
+    PORT=${toString cfg.sse.port}
+    export PATH="/run/current-system/sw/bin:$PATH"
+
+    # Check if the service is supposed to be running
+    if ! ${pkgs.systemd}/bin/systemctl is-active --quiet heartwood-mcp; then
+      exit 0  # Service intentionally stopped, nothing to do
+    fi
+
+    # Try connecting to the SSE port (expect 404 on /, which means the server is up)
+    HTTP_CODE=$(${pkgs.curl}/bin/curl -s -o /dev/null -w '%{http_code}' -m 5 "http://127.0.0.1:$PORT/" 2>/dev/null || echo "000")
+    if [ "$HTTP_CODE" != "000" ]; then
+      exit 0  # Got an HTTP response — server is alive
+    fi
+
+    # Port not responding — service is hung
+    LOGS=$(${pkgs.systemd}/bin/journalctl -u heartwood-mcp -n 10 --no-pager 2>&1 || echo "no logs")
+
+    # Send Gotify notification before restart
+    hwc-gotify-send --priority 9 \
+      "Heartwood MCP Hung" \
+      "Port $PORT not responding (HTTP $HTTP_CODE). Restarting. Recent logs: $LOGS" || true
+
+    # Restart the service
+    ${pkgs.systemd}/bin/systemctl restart heartwood-mcp
+  '';
+
   # Build the environment file content from secrets
   envFileScript = pkgs.writeShellScript "heartwood-mcp-env" ''
     cat > /run/heartwood-mcp/env <<ENVEOF
@@ -179,6 +207,31 @@ in
           CPUQuota = "50%";
         }
       ];
+    };
+
+    #--------------------------------------------------------------------------
+    # HEALTH CHECK (catches hung process that OnFailure can't detect)
+    #--------------------------------------------------------------------------
+    systemd.services.heartwood-mcp-health = {
+      description = "Heartwood MCP health check — detect hung process";
+      after = [ "heartwood-mcp.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${healthCheckScript}";
+        User = "root";  # Needs systemctl restart permission
+      };
+    };
+
+    systemd.timers.heartwood-mcp-health = {
+      description = "Heartwood MCP health check timer";
+      wantedBy = [ "timers.target" ];
+
+      timerConfig = {
+        OnCalendar = "*:0/5";  # Every 5 minutes
+        Persistent = false;
+        RandomizedDelaySec = "30s";
+      };
     };
 
     #--------------------------------------------------------------------------

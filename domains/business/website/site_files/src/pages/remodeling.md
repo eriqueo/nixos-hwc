@@ -31,6 +31,8 @@ Whether it's a simple platform off the back door or a multi-level space with bui
 
 **Deck pricing** depends on size, material, and complexity. A basic 12x16 cedar deck typically runs **$8,000-$15,000**. Composite decking with railings and stairs: **$15,000-$30,000+**.
 
+**Want a quick ballpark?** Try the [deck cost calculator](/deck-calculator/) — 7 questions, real numbers from local projects.
+
 ## Whole-Home Renovations
 
 When the project spans multiple rooms or involves structural changes, having one contractor manage the entire scope keeps things organized and on budget. I coordinate all the trades — plumbing, electrical, drywall, painting — and manage the timeline so work flows in the right order.
