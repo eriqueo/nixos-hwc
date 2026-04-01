@@ -185,6 +185,7 @@
     };
     firewall.level = lib.mkForce "server";
     firewall.extraTcpPorts = [
+      22000  # Syncthing sync
       # Media services
       5000   # Frigate
       8080   # qBittorrent (via Gluetun)
@@ -220,6 +221,8 @@
       7359               # Jellyfin discovery (also UDP)
     ];
     firewall.extraUdpPorts = [
+      22000  # Syncthing sync (QUIC)
+      21027  # Syncthing local discovery
       7359   # Jellyfin discovery
       50300  # SLSKD
       8555   # Frigate
@@ -260,6 +263,19 @@
   services.samba-wsdd = {
     enable = true;
     openFirewall = true;
+  };
+
+  # Syncthing — bidirectional home folder sync with hwc-laptop
+  # Phase 1: service running, pair devices via GUI (SSH tunnel: ssh -L 8384:localhost:8384 server)
+  # Phase 2: add device IDs + folder declarations for fully declarative config.
+  services.syncthing = {
+    enable = true;
+    user = "eric";
+    dataDir = "/home/eric";
+    openDefaultPorts = true;
+    settings.options.globalAnnounceEnabled = false;  # Tailscale only
+    overrideDevices = false;
+    overrideFolders = false;
   };
 
   # MQTT broker for event-driven automation (Frigate -> n8n)

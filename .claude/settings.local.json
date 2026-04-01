@@ -168,7 +168,9 @@
     "prometheus",
     "puppeteer",
     "n8n",
-    "heartwood"
+    "heartwood",
+    "_filesystem_DISABLED",
+    "_brave-search_DISABLED"
   ],
   "hooks": {
     "PreToolUse": [
