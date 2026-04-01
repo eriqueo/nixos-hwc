@@ -230,6 +230,20 @@ in
     nfs.client.enable = true;
   };
 
+  # Syncthing — bidirectional home folder sync with hwc-server
+  # Phase 1: service running, pair devices via GUI at http://localhost:8384
+  # Phase 2: add device IDs + folder declarations for fully declarative config.
+  # overrideDevices/Folders = false so GUI-paired state survives rebuilds during bootstrap.
+  services.syncthing = {
+    enable = true;
+    user = "eric";
+    dataDir = "/home/eric";
+    openDefaultPorts = true;
+    settings.options.globalAnnounceEnabled = false;  # LAN/Tailscale only
+    overrideDevices = false;
+    overrideFolders = false;
+  };
+
   # NFS mount: shared folder from server over Tailscale
   # Note: Literal path to avoid infinite recursion (fileSystems → paths → users → rpcbind → fileSystems)
   # Matches hwc.paths.user.shared default
