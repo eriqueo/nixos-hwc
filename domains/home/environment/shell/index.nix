@@ -81,6 +81,7 @@ in
         "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
         "screenshots" = "cd ~/500_media/510_pictures/screenshots";
         "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
+        "aerc" = "kitty -e ssh -t hwc aerc";
         "ls" = "eza"; "vpn" = "vpnstatus"; "which-command" = "whence"; "run-help" = "man";
         "errors" = "journal-errors"; "errors-hour" = "journal-errors '1 hour ago'";
         "errors-today" = "journal-errors 'today'"; "errors-tdarr" = "journal-errors '10 minutes ago' podman-tdarr";
@@ -417,7 +418,6 @@ in
           "$directory"
           "$git_branch"
           "$git_status"
-          "$python$nodejs$rust$golang"
           "[](fg:#576f69 bg:#32302f) "
           "$character"
         ];
@@ -448,11 +448,11 @@ in
           deleted = "✘";
         };
 
-        # Language segments — sit inside git segment bg, only show when active
-        python = { format = "[ $symbol$version](bg:#576f69 fg:#a9b665)"; style = "bg:#576f69"; symbol = " "; };
-        nodejs  = { format = "[ $symbol$version](bg:#576f69 fg:#a9b665)"; style = "bg:#576f69"; symbol = " "; };
-        rust    = { format = "[ $symbol$version](bg:#576f69 fg:#e78a4e)"; style = "bg:#576f69"; symbol = " "; };
-        golang  = { format = "[ $symbol$version](bg:#576f69 fg:#7daea3)"; style = "bg:#576f69"; symbol = " "; };
+        # Language segments disabled — directory scanning caused prompt timeouts
+        python  = { disabled = true; };
+        nodejs  = { disabled = true; };
+        rust    = { disabled = true; };
+        golang  = { disabled = true; };
 
         character = {
           success_symbol = "[❯](bold fg:#a9b665)";

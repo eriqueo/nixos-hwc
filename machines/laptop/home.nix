@@ -35,11 +35,6 @@
       enable = false;
 
     };
-    # aerc runs on server — open a kitty window direct SSH into aerc (no tmux wrapper;
-    # plain SSH lets OSC8 hyperlinks and OSC52 clipboard pass straight through to kitty)
-    home.shellAliases.aerc = lib.mkForce "kitty -e ssh -t hwc aerc";
-    home.shellAliases.mail = lib.mkForce "kitty -e ssh -t hwc aerc";
-
     # Shell: MCP configured for laptop context
     hwc.home.shell = {
       enable = true;

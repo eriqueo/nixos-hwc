@@ -2,7 +2,7 @@
 #
 # Secrets domain aggregator - single source of truth for all secrets
 # Imports all secret declarations, API facade, emergency access, and hardening
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 {
   #==========================================================================
   # OPTIONS
@@ -131,10 +131,11 @@
   };
 
   imports = [
-    ./declarations/index.nix # Age secret declarations organized by domain
-    ./emergency.nix          # Emergency root access for recovery
-    ./hardening.nix          # Security hardening configuration
-    ./vaultwarden/index.nix  # Vaultwarden password manager
+    ./declarations/index.nix   # Age secret declarations organized by domain
+    ./agenix-fix-argmax.nix    # Workaround: agenix inline script > 128KB limit
+    ./emergency.nix            # Emergency root access for recovery
+    ./hardening.nix            # Security hardening configuration
+    ./vaultwarden/index.nix    # Vaultwarden password manager
   ];
 
   #==========================================================================
