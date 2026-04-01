@@ -239,9 +239,21 @@ in
     user = "eric";
     dataDir = "/home/eric";
     openDefaultPorts = true;
-    settings.options.globalAnnounceEnabled = false;  # LAN/Tailscale only
-    overrideDevices = false;
-    overrideFolders = false;
+    overrideDevices = true;
+    overrideFolders = true;
+    settings = {
+      options.globalAnnounceEnabled = false;  # Tailscale only, no cloud relay
+      devices."hwc-server" = {
+        id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
+        addresses = [ "tcp://100.114.232.124:22000" ];  # Server Tailscale IP
+      };
+      folders = {
+        "000_inbox"   = { path = "/home/eric/000_inbox";   devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+        "100_hwc"     = { path = "/home/eric/100_hwc";     devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+        "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+        "300_tech"    = { path = "/home/eric/300_tech";    devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+      };
+    };
   };
 
   # NFS mount: shared folder from server over Tailscale

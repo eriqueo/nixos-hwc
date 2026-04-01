@@ -273,9 +273,18 @@
     user = "eric";
     dataDir = "/home/eric";
     openDefaultPorts = true;
-    settings.options.globalAnnounceEnabled = false;  # Tailscale only
-    overrideDevices = false;
-    overrideFolders = false;
+    overrideDevices = true;
+    overrideFolders = true;
+    settings = {
+      options.globalAnnounceEnabled = false;  # Tailscale only, no cloud relay
+      devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
+      folders = {
+        "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+        "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+        "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+        "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
+      };
+    };
   };
 
   # MQTT broker for event-driven automation (Frigate -> n8n)
