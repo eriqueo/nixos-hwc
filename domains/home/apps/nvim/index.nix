@@ -35,7 +35,9 @@ in
       defaultEditor = true;
       viAlias = true;
       vimAlias = true;
-
+      extraPackages = with pkgs; [
+        wl-clipboard
+      ];
       # Load the lua configuration
       extraLuaConfig = ''
         require("core")
