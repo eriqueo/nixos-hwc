@@ -18,7 +18,7 @@ I'm currently building out before-and-after galleries for recent Heartwood Craft
 
 Heavy timber construction, post-and-beam framing, and structural carpentry. This is the work I cut my teeth on — years of building in Big Sky and the Yellowstone Club, where precision and craftsmanship aren't optional.
 
-<div class="portfolio-grid">
+<div class="portfolio-grid" data-portfolio-section="timber-framing">
   <div class="card project-card">
     <div class="project-images">
       <figure>
@@ -53,7 +53,7 @@ Heavy timber construction, post-and-beam framing, and structural carpentry. This
 
 Cedar and composite decks built for Montana's freeze-thaw cycles. Proper footings, galvanized hardware, and flashing details that protect your home for decades.
 
-<div class="portfolio-grid">
+<div class="portfolio-grid" data-portfolio-section="decks">
   <div class="card project-card">
     <div class="project-images">
       <figure>
@@ -88,7 +88,7 @@ Cedar and composite decks built for Montana's freeze-thaw cycles. Proper footing
 
 Front porches, covered entries, siding, and exterior trim — the work that defines how a home looks from the street and holds up against Montana weather.
 
-<div class="portfolio-grid">
+<div class="portfolio-grid" data-portfolio-section="porches">
   <div class="card project-card">
     <div class="project-images">
       <figure>
@@ -110,7 +110,7 @@ Front porches, covered entries, siding, and exterior trim — the work that defi
 
 Trim, cabinetry, built-ins, and finish carpentry. The interior details that make a room feel complete — not just renovated, but crafted.
 
-<div class="portfolio-grid">
+<div class="portfolio-grid" data-portfolio-section="interiors">
   <div class="card project-card">
     <div class="project-images">
       <figure>
@@ -145,7 +145,7 @@ Trim, cabinetry, built-ins, and finish carpentry. The interior details that make
 
 One-of-a-kind projects — the kind of work where the design and the craftsmanship are inseparable.
 
-<div class="portfolio-grid">
+<div class="portfolio-grid" data-portfolio-section="custom-builds">
   <div class="card project-card">
     <div class="project-images">
       <figure>

@@ -21,6 +21,55 @@
       group = "secrets";
     };
 
+    gotify-home-admin = {
+      file = ../parts/services/gotify-home-admin.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    gotify-home-media = {
+      file = ../parts/services/gotify-home-media.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    gotify-home-security = {
+      file = ../parts/services/gotify-home-security.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    gotify-home-social = {
+      file = ../parts/services/gotify-home-social.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    gotify-hwc-admin = {
+      file = ../parts/services/gotify-hwc-admin.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    gotify-hwc-dev = {
+      file = ../parts/services/gotify-hwc-dev.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    gotify-hwc-financial = {
+      file = ../parts/services/gotify-hwc-financial.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     gotify-hwc-ops = {
       file = ../parts/services/gotify-hwc-ops.age;
       mode = "0440";

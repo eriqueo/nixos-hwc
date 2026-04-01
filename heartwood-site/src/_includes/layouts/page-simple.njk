@@ -7,6 +7,9 @@ layout: layouts/base.njk
   <div class="hero-overlay">
     <div class="container">
       <h1>{{ h1 | default(title) }}</h1>
+      {% if hero_subtitle %}
+      <p class="hero-subtitle">{{ hero_subtitle }}</p>
+      {% endif %}
     </div>
   </div>
 </section>

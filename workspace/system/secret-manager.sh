@@ -231,9 +231,9 @@ add_secret() {
   (cd "${NIXOS_DIR}" && git add "$secret_file" "$decl_file")
   log_info "Staged $secret_file and $decl_file"
 
-  log_step "Validating with nix flake check..."
+  log_step "Validating with nix flake check (this takes a moment)..."
 
-  if (cd "${NIXOS_DIR}" && nix flake check 2>&1 | tail -20); then
+  if (cd "${NIXOS_DIR}" && nix flake check); then
     log_info "Nix flake check passed"
   else
     log_error "Nix flake check failed - please review errors above"

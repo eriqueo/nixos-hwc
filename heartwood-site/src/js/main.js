@@ -194,6 +194,18 @@ document.addEventListener('DOMContentLoaded', () => {
         timestamp: new Date().toISOString()
       };
 
+      // Attribution from sessionStorage
+      try {
+        var attr = JSON.parse(sessionStorage.getItem('hwc_attribution') || '{}');
+        payload.utm_source = attr.utm_source || null;
+        payload.utm_medium = attr.utm_medium || null;
+        payload.utm_campaign = attr.utm_campaign || null;
+        payload.gclid = attr.gclid || null;
+        payload.referrer = attr.referrer || null;
+        payload.landing_page = attr.landing_page || null;
+        payload.pages_viewed = parseInt(sessionStorage.getItem('hwc_pages_viewed') || '0', 10);
+      } catch(e) {}
+
       try {
         const res = await fetch(webhookUrl, {
           method: 'POST',
@@ -204,6 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.ok) {
           form.hidden = true;
           if (successEl) successEl.hidden = false;
+          if (typeof gtag === 'function') {
+            gtag('event', 'form_submit', {
+              form_location: window.location.pathname,
+              service_selected: payload.service || ''
+            });
+          }
         } else {
           throw new Error('Non-2xx response');
         }
@@ -212,6 +230,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnText) btnText.hidden = false;
         if (btnLoading) btnLoading.hidden = true;
         if (errorEl) errorEl.hidden = false;
+        if (typeof gtag === 'function') {
+          gtag('event', 'form_error', { form_location: window.location.pathname });
+        }
       }
     });
   });
