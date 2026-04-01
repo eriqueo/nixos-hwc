@@ -49,6 +49,7 @@ require("lazy").setup({
 
   -- Essential dependencies
   { "nvim-lua/plenary.nvim" },
+  { "echasnovski/mini.icons", version = false },
 
   -- File explorer (like NvimTree but simpler)
   {
