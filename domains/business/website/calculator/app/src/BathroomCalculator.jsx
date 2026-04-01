@@ -106,10 +106,12 @@ const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: 8, borde
 export default function BathroomCalculator() {
   const [step, setStep] = useState(0);
   const [state, setState] = useState({});
-  const [contact, setContact] = useState({ name: "", email: "", phone: "" });
+  const [contact, setContact] = useState({ name: "", email: "", phone: "", preferred_date: "", preferred_time: "" });
   const [phase, setPhase] = useState("quiz");
   const [showWhy, setShowWhy] = useState(false);
   const [fading, setFading] = useState(false);
+  const [reportUrl, setReportUrl] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const cur = STEPS[step];
   const [lo, hi] = step >= STEPS.length ? calculateRange(state) : [0, 0];
@@ -119,7 +121,7 @@ export default function BathroomCalculator() {
   const goBack = () => { if (step > 0) fade(() => setStep(s => s - 1)); };
   const pick = (id, v) => { setState(p => ({ ...p, [id]: v })); setTimeout(goNext, 180); };
   const toggle = v => setState(p => { const f = p.features || []; return { ...p, features: f.includes(v) ? f.filter(x => x !== v) : [...f, v] }; });
-  const reset = () => fade(() => { setStep(0); setState({}); setContact({ name: "", email: "", phone: "" }); setPhase("quiz"); });
+  const reset = () => fade(() => { setStep(0); setState({}); setContact({ name: "", email: "", phone: "", preferred_date: "", preferred_time: "" }); setPhase("quiz"); setReportUrl(null); });
 
   const submitBasic = async () => {
     if (!contact.name || !contact.phone) return;
@@ -130,8 +132,14 @@ export default function BathroomCalculator() {
 
   const submitFull = async () => {
     if (!contact.email) return;
-    try { await fetch(WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "calculator_lead_full", contact, projectState: state, estimate: { low: lo, high: hi }, timestamp: new Date().toISOString(), source: "website_calculator", ...getAttribution() }) }); } catch {}
+    setSubmitting(true);
+    try {
+      const res = await fetch(WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "calculator_lead_full", contact, projectState: state, estimate: { low: lo, high: hi }, timestamp: new Date().toISOString(), source: "website_calculator", calculator: "bathroom", source_page: window.location.pathname, ...getAttribution() }) });
+      const data = await res.json();
+      setReportUrl(data.reportUrl || null);
+    } catch { setReportUrl(null); }
     fire("calculator_lead_full", { estimate_low: lo, estimate_high: hi });
+    setSubmitting(false);
     fade(() => setPhase("submitted"));
   };
 
@@ -260,13 +268,25 @@ export default function BathroomCalculator() {
             <button onClick={() => window.print && window.print()} style={{ background: "none", border: "none", color: T.textDark, fontSize: 12, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>Save or print this summary</button>
           </div>
 
-          {/* Email upsell */}
+          {/* Email upsell + preferred call time */}
           <div style={{ background: T.copperGlow, border: `1px solid ${T.copperBorder}`, borderRadius: 12, padding: 20, marginTop: 20, textAlign: "center" }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.white, margin: "0 0 4px" }}>Want an exact quote?</h3>
-            <p style={{ fontSize: 13, color: T.textDim, margin: "0 0 14px", lineHeight: 1.5 }}>Add your email and I'll send a detailed breakdown after your free site visit.</p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input type="email" placeholder="Email address" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} style={{ ...inputStyle, flex: 1 }} onFocus={e => e.target.style.borderColor = T.copper} onBlur={e => e.target.style.borderColor = T.border} />
-              <button onClick={submitFull} disabled={!contact.email} style={{ padding: "12px 20px", borderRadius: 8, border: "none", background: contact.email ? T.copper : T.border, color: contact.email ? T.charcoal : T.textDark, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: contact.email ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}>Send \u2192</button>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.white, margin: "0 0 4px" }}>Want a project summary?</h3>
+            <p style={{ fontSize: 13, color: T.textDim, margin: "0 0 14px", lineHeight: 1.5 }}>Add your email and I'll send a detailed breakdown with your project summary link.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input type="email" placeholder="Email address" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} style={inputStyle} onFocus={e => e.target.style.borderColor = T.copper} onBlur={e => e.target.style.borderColor = T.border} />
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.textDim, marginBottom: 6 }}>Prefer a specific time for a call? (optional)</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input type="date" value={contact.preferred_date || ""} onChange={e => setContact(c => ({ ...c, preferred_date: e.target.value }))} min={new Date().toISOString().split('T')[0]} style={{ ...inputStyle, flex: 1 }} />
+                  <select value={contact.preferred_time || ""} onChange={e => setContact(c => ({ ...c, preferred_time: e.target.value }))} style={{ ...inputStyle, flex: 1 }}>
+                    <option value="">Time...</option>
+                    <option value="morning">Morning (9\u201312)</option>
+                    <option value="afternoon">Afternoon (12\u20135)</option>
+                    <option value="evening">Evening (5\u20137)</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={submitFull} disabled={!contact.email || submitting} style={{ width: "100%", padding: "13px 0", borderRadius: 8, border: "none", background: contact.email && !submitting ? T.copper : T.border, color: contact.email && !submitting ? T.charcoal : T.textDark, fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: contact.email && !submitting ? "pointer" : "not-allowed" }}>{submitting ? "Sending..." : "Send me the project summary"}</button>
             </div>
           </div>
           <div style={{ textAlign: "center", marginTop: 14 }}><p style={{ fontSize: 13, color: T.textDark }}>Or call \u2014 <a href="tel:4065515061" style={{ color: T.copper, fontWeight: 600, textDecoration: "none" }}>406-551-5061</a></p></div>
@@ -281,6 +301,12 @@ export default function BathroomCalculator() {
             <div style={{ fontSize: 11, fontWeight: 600, color: T.copper, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>What happens next</div>
             <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.8 }}>1. Eric calls to schedule the visit<br />2. Free 45-minute site assessment<br />3. Detailed estimate within 48 hours<br />4. Got Pinterest boards? Share before the visit</div>
           </div>
+          {reportUrl && (
+            <a href={reportUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 10, marginTop: 20, background: T.copper, color: T.charcoal, fontSize: 14, fontWeight: 700, textDecoration: "none", transition: "opacity 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.9"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+              View your project summary \u2192
+            </a>
+          )}
         </div>}
 
       </div>

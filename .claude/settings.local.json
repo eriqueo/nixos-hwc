@@ -149,7 +149,8 @@
       "WebFetch(domain:itsfoss.com)",
       "Bash(sudo mount:*)",
       "mcp__github__get_pull_request",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(hwc-gotify-send:*)"
     ],
     "deny": [],
     "ask": [],

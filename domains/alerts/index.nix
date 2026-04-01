@@ -55,6 +55,7 @@ let
     "podman-sonarr"
     "podman-radarr"
     "podman-prowlarr"
+    "heartwood-mcp"
   ];
 
   # Get final list of services to monitor
