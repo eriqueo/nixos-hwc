@@ -8,7 +8,7 @@
 #   - estimator      — Estimate Assembler PWA (Vite/React)
 #   - firefly        — Firefly III + Pico (personal finance, containerized)
 #   - paperless      — Paperless-ngx (document management, containerized)
-#   - heartwood-cms  — CMS Dashboard for heartwoodcraft.me (Node.js)
+#   - website         — heartwoodcraft.me (CMS + 11ty site content)
 
 { config, lib, ... }:
 {
@@ -17,6 +17,6 @@
     ./estimator/index.nix
     ./firefly/index.nix
     ./paperless/index.nix
-    ./heartwood-cms/index.nix
+    ./website/index.nix
   ];
 }

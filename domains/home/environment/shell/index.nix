@@ -67,7 +67,7 @@ in
         ".." = "cd .."; "..." = "cd ../.."; "...." = "cd ../../..";
         "df" = "df -h"; "du" = "du -h"; "free" = "free -h";
         "aliases" = "cd ~/.nixos && nvim domains/home/environment/shell/index.nix";
-        "web-build" = "cd /home/eric/.nixos/heartwood-site && npx @11ty/eleventy";
+        "web-build" = "cd /home/eric/.nixos/domains/business/website/heartwood-site && npx @11ty/eleventy";
         "htop" = "btop"; "grep" = "rg"; "open" = "xdg-open";
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
         "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";

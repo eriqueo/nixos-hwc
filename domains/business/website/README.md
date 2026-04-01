@@ -11,7 +11,7 @@ Content management dashboard for heartwoodcraft.me. Node.js REST API that reads/
 
 ## Structure
 ```
-domains/business/heartwood-cms/
+domains/business/website/heartwood-cms/
 ├── index.nix       # NixOS module with systemd service
 └── README.md       # This file
 ```
