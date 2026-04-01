@@ -63,6 +63,9 @@ map({ "n", "x" }, "<leader>p", '"+p', { desc = "Paste: from system clipboard" })
 map("n", "<leader>yp", "<cmd>let @+=expand('%:p')<cr>", { desc = "Yank: file path" })
 map("n", "<leader>yn", "<cmd>let @+=expand('%:t')<cr>", { desc = "Yank: filename" })
 map("n", "<leader>yd", "<cmd>let @+=expand('%:h')<cr>", { desc = "Yank: directory" })
+-- YANK ALL
+map("n", "<leader>ya", ":%y+<CR>", { desc = "Yank: entire buffer to system clipboard" })
+map("n", "<leader>ya", "ggVG\"+y", { desc = "Yank: entire buffer to system clipboard" })  -- alternative
 
 -- DELETE / CLEANUP
 map({ "n", "v" }, "<leader>dd", [["_d]], { desc = "Delete: to black hole" })
