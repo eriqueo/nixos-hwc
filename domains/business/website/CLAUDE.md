@@ -8,8 +8,8 @@ Content management system for **heartwoodcraft.me** (Heartwood Craft remodeling 
 | Component | Path | Purpose |
 |-----------|------|---------|
 | CMS App | `/opt/business/heartwood-cms/` | Express 5 API + frontend dashboard |
-| Site Repo | `/home/eric/.nixos/heartwood-site/` | 11ty source (markdown, templates, images) |
-| NixOS Config | `domains/business/heartwood-cms/index.nix` | Systemd service, namespace `hwc.business.heartwood_cms` |
+| Site Repo | `/home/eric/.nixos/domains/business/website/heartwood-site/` | 11ty source (markdown, templates, images) |
+| NixOS Config | `domains/business/website/index.nix` | Systemd service, namespace `hwc.business.website` |
 | Caddy Route | `domains/networking/routes.nix` | Reverse proxy entry, name `heartwood-cms`, port 18095 |
 
 ## CMS App (`/opt/business/heartwood-cms/`)
@@ -59,7 +59,7 @@ src/
 ## NixOS Service
 
 ### Namespace
-`hwc.business.heartwood_cms` with options: `enable`, `port`, `srcDir`, `siteDir`, `user`
+`hwc.business.website` with options: `enable`, `port`, `srcDir`, `siteDir`, `user`
 
 ### Secrets (agenix)
 - `/run/agenix/cms-api-key` — API authentication key

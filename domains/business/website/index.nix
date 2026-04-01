@@ -1,26 +1,26 @@
-# domains/business/heartwood-cms/index.nix
+# domains/business/website/index.nix
 #
 # Heartwood CMS Dashboard — content management for heartwoodcraft.me
 # Node.js REST API + vanilla JS frontend, manages 11ty site content
 #
-# NAMESPACE: hwc.business.heartwood_cms.*
+# NAMESPACE: hwc.business.website.*
 #
 # DEPENDENCIES:
 #   - hwc.paths (storage paths)
 #   - agenix secrets: cms-api-key, hostinger-sftp
-#   - heartwood-site repo at /home/eric/.nixos/heartwood-site/
+#   - heartwood-site repo at /home/eric/.nixos/domains/business/website/heartwood-site/
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.business.heartwood_cms;
+  cfg = config.hwc.business.website;
   paths = config.hwc.paths;
 in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  options.hwc.business.heartwood_cms = {
+  options.hwc.business.website = {
     enable = lib.mkEnableOption "Heartwood CMS Dashboard (content management for heartwoodcraft.me)";
 
     port = lib.mkOption {
@@ -37,7 +37,7 @@ in
 
     siteDir = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/.nixos/heartwood-site";
+      default = "/home/eric/.nixos/domains/business/website/heartwood-site";
       description = "Path to the heartwood-site 11ty repo (content source)";
     };
 
@@ -106,14 +106,14 @@ in
       {
         assertion = config.age.secrets ? cms-api-key;
         message = ''
-          hwc.business.heartwood_cms requires the cms-api-key agenix secret.
+          hwc.business.website requires the cms-api-key agenix secret.
           Ensure it is declared in domains/secrets/declarations/services.nix.
         '';
       }
       {
         assertion = config.age.secrets ? hostinger-sftp;
         message = ''
-          hwc.business.heartwood_cms requires the hostinger-sftp agenix secret.
+          hwc.business.website requires the hostinger-sftp agenix secret.
           Ensure it is declared in domains/secrets/declarations/services.nix.
         '';
       }
