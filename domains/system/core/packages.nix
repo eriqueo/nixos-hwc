@@ -1,9 +1,16 @@
+# domains/system/core/packages.nix
+#
+# System packages (base, server, security bundles) + filesystem bootstrap
+#
+# NAMESPACE: hwc.system.core.packages.*
+# USAGE: hwc.system.core.packages.enable = true; (default)
+
 { config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.system.core.packages;
 in
 {
-  # Options defined in index.nix
+  # Options defined in core/index.nix
 
   #==========================================================================
   # IMPLEMENTATION
@@ -22,7 +29,7 @@ in
         pass gnupg sops age ssh-to-age
 
         # CLI improvements
-        bat eza fzf ripgrep fd zoxide which less diffutils
+        bat eza fzf ripgrep fd zoxide which less diffutils jq yq
 
         # System utilities
         htop btop tree ncdu fastfetch usbutils pciutils dmidecode
@@ -47,12 +54,12 @@ in
 
       # Server bundle
       ++ (lib.optionals cfg.server.enable (with pkgs; [
-        xorg.xauth evince feh fping ethtool  # file-roller not available in 24.05
+        xorg.xauth evince feh fping ethtool
         picard claude-code flac
         htop iotop lsof nettools iproute2 tcpdump nmap
         age docker-compose podman-compose rsync rclone unzip p7zip
         postgresql redis ffmpeg imagemagick mediainfo
-        python3  # aider-chat and gemini-cli not available in 24.05
+        python3
         borgbackup restic
       ]))
 
@@ -67,9 +74,11 @@ in
         ++ (lib.optionals cfg.security.protonDrive.enable (with pkgs; [ rclone ]))
       ));
 
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    assertions = [];
+    # Filesystem bootstrap — HWC state directories
+    systemd.tmpfiles.rules = [
+      "d /var/lib/hwc 0755 eric users -"
+      "d /var/cache/hwc 0755 eric users -"
+      "d /var/log/hwc 0755 eric users -"
+    ];
   };
 }

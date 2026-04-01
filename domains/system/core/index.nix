@@ -1,57 +1,9 @@
-# modules/system/core/index.nix — aggregates core system functionality
+# domains/system/core/index.nix — aggregates core system functionality
 { lib, ... }:
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  #============================================================================
-  # THERMAL OPTIONS
-  #============================================================================
-  options.hwc.system.core.thermal = {
-    enable = lib.mkEnableOption "thermal management configuration";
-
-    powerManagement = {
-      enable = lib.mkEnableOption "power profile management";
-
-      service = lib.mkOption {
-        type = lib.types.enum [ "power-profiles-daemon" "tlp" ];
-        default = "power-profiles-daemon";
-        description = "Power management service to use";
-      };
-    };
-
-    disableIncompatibleServices = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Disable thermal services that are incompatible with this hardware platform";
-    };
-
-    blacklistedModules = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "spd5118" ];
-      description = "Kernel modules to blacklist for hardware compatibility";
-    };
-  };
-
-  #============================================================================
-  # FILESYSTEM OPTIONS (alias: hwc.filesystem)
-  #============================================================================
-  options.hwc.system.core.filesystem = {
-    enable = lib.mkEnableOption "filesystem scaffolding (tmpfiles) driven by hwc.paths" // { default = true; };
-
-    structure.dirs = lib.mkOption {
-      type = lib.types.listOf (lib.types.submodule ({ lib, ... }: {
-        options = {
-          path  = lib.mkOption { type = lib.types.str; };
-          mode  = lib.mkOption { type = lib.types.str; default = "0755"; };
-          user  = lib.mkOption { type = lib.types.str; default = "root"; };
-          group = lib.mkOption { type = lib.types.str; default = "root"; };
-        };
-      }));
-      default = [];
-      description = "Extra directories to create via tmpfiles.d (alias available at hwc.filesystem.structure.dirs).";
-    };
-  };
 
   #============================================================================
   # PACKAGES OPTIONS
@@ -78,25 +30,14 @@
     };
   };
 
-  #============================================================================
-  # VALIDATION OPTIONS
-  #============================================================================
-  options.hwc.system.core.validation = {
-    enable = lib.mkEnableOption "permission model validation service" // { default = true; };
-  };
+  # Backward compat: hwc.system.core.shell.enable maps to packages
+  options.hwc.system.core.shell.enable = lib.mkEnableOption "core shell (alias for packages.base)" // { default = true; };
 
   imports = [
-    ./identity/index.nix  # System identity (puid/pgid/user/group) - Law 4
     ./packages.nix
-    # paths.nix moved to domains/paths/paths.nix (Primitive Module)
     ../../paths/paths.nix
-    ./filesystem.nix
-    ./thermal.nix
-    ./validation.nix
-    ./polkit/index.nix    # MOVED from domains/system/services/polkit
-    ./session/index.nix   # MOVED from domains/system/services/session
-    ./shell/index.nix     # MOVED from domains/system/services/shell
-    ./authentik/index.nix # Authentik SSO/Identity Provider
+    ./login.nix
+    ./authentik/index.nix
   ];
 
   #==========================================================================

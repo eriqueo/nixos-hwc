@@ -148,11 +148,7 @@ in
   #============================================================================
 
   # --- System Services Configuration ---
-  # Enable the core shell environment with development tools.
-  hwc.system.core.shell = {
-    enable = true;
-    development.enable = true;
-  };
+  hwc.system.core.shell.enable = true;
 
   # BOM-PROOF LOGIN: Ensure 'il0wwlm?' always works for 'eric' and 'root' on laptop.
   # This makes the login screen independent of secret decryption.
@@ -308,30 +304,8 @@ in
   };
 
   #============================================================================
-  # === [domains/system/virtualization] Orchestration ==========================
+  # VIRTUALIZATION
   #============================================================================
-  # Minimal virtualization for WinApps/VMs. We avoid pulling full infra profile.
-  hwc.system.virtualization = {
-    enable = true;
-    spiceSupport = false;  # no SPICE USB redirection on laptop
-  };
-
-  # WinApps configuration for Excel access
-  hwc.system.virtualization.winapps = {
-    enable = true;
-    rdpSettings = {
-      vmName = "RDPWindows";
-      ip = "192.168.122.10";  # Update this after VM creation
-      user = "eric";  # Update with Windows username
-    };
-    multiMonitor = true;
-    debug = false;
-  };
-
-  # Fabric AI integration - REMOVED
-  # The Fabric app configuration has been removed from the system.
-  # See commit: refactor: cleanup unused AI tools and improve server configuration
-
   # Libvirt/QEMU: make OVMF visible and avoid extra groups by using wheel sockets.
   virtualisation.libvirtd = {
     # Use wheel for socket perms so you don't need extra groups.
