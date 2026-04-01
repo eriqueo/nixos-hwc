@@ -78,6 +78,18 @@
       jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
       slackWebhookUrlFile = config.age.secrets.slack-webhook-url.path;
       anthropicApiKeyFile = config.age.secrets.nanoclaw-anthropic-key.path;
+      # Taxonomy-aligned Gotify tokens → env vars GOTIFY_TOKEN_{HWC_OPS, HWC_FINANCIAL, ...}
+      gotifyTokenFiles = let api = config.hwc.secrets.api; in
+        lib.filterAttrs (_: v: v != null) {
+          "hwc-ops"       = api."gotify-hwc-ops" or null;
+          "hwc-financial"  = api."gotify-hwc-financial" or null;
+          "hwc-dev"        = api."gotify-hwc-dev" or null;
+          "hwc-admin"      = api."gotify-hwc-admin" or null;
+          "home-security"  = api."gotify-home-security" or null;
+          "home-media"     = api."gotify-home-media" or null;
+          "home-social"    = api."gotify-home-social" or null;
+          "home-admin"     = api."gotify-home-admin" or null;
+        };
     };
     # Non-secret workflow configuration
     extraEnv = {

@@ -34,13 +34,19 @@ let
     ${lib.optionalString (cfg.secrets.anthropicApiKeyFile != null) ''
       echo "ANTHROPIC_API_KEY=$(cat ${cfg.secrets.anthropicApiKeyFile})" >> ${secretsEnvFile}
     ''}
+
+    ${lib.concatStringsSep "\n" (lib.mapAttrsToList (key: path:
+      let envName = "GOTIFY_TOKEN_" + lib.toUpper (builtins.replaceStrings ["-"] ["_"] key);
+      in ''echo "${envName}=$(cat ${path})" >> ${secretsEnvFile}''
+    ) cfg.secrets.gotifyTokenFiles)}
   '';
 
   # Check if any secrets are configured
   hasSecrets = cfg.secrets.estimatorApiKeyFile != null
             || cfg.secrets.jobtreadGrantKeyFile != null
             || cfg.secrets.slackWebhookUrlFile != null
-            || cfg.secrets.anthropicApiKeyFile != null;
+            || cfg.secrets.anthropicApiKeyFile != null
+            || cfg.secrets.gotifyTokenFiles != {};
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [

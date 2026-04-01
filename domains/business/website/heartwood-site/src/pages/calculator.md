@@ -9,9 +9,13 @@ show_form: false
 
 Answer 7 quick questions and get a ballpark estimate for your Bozeman bathroom remodel. Takes about 2 minutes. No email required to see the number — if you want an exact quote, you can share your info at the end.
 
+<link rel="stylesheet" href="/css/calculator.css">
+
 <div id="calculator-root">
   <p><em>Calculator loading... If it doesn't appear, call us at <a href="tel:4065515061">406-551-5061</a> for a quick estimate.</em></p>
 </div>
+
+<script src="/js/calculator.bundle.js" defer></script>
 
 ### How This Calculator Works
 
