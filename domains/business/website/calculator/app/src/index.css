@@ -1,13 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-#hwc-calculator-root {
-  min-height: 100vh;
+/* Calculator reset — both components use inline styles */
+#calculator-root,
+#deck-calculator-root {
+  min-height: 50vh;
 }

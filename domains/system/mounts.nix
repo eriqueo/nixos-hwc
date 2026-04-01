@@ -1,4 +1,4 @@
-# domains/system/mounts/index.nix — filesystem mount and storage tier management
+# domains/system/mounts.nix — filesystem mount and storage tier management
 #
 # Provides hot/media/backup storage tier management with filesystem mounts,
 # directory structure creation, and external drive auto-mounting.
@@ -10,17 +10,6 @@ let
   cfg = config.hwc.system.mounts;
   paths = config.hwc.paths;
   t = lib.types;
-
-  dir   = builtins.readDir ./.;
-  files = lib.filterAttrs (n: t: t == "regular" && lib.hasSuffix ".nix" n && n != "index.nix" && n != "options.nix") dir;
-  subds = lib.filterAttrs (_: t: t == "directory") dir;
-
-  filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;
-  subIndex  =
-    lib.pipe (lib.attrNames subds) [
-      (ns: lib.filter (n: builtins.pathExists (./. + "/${n}/index.nix")) ns)
-      (ns: lib.map (n: ./. + "/${n}/index.nix") ns)
-    ];
 
   mountScript = pkgs.writeScriptBin "mount-backup-drive" ''
     #!/usr/bin/env bash
@@ -188,8 +177,6 @@ in
       };
     };
   };
-
-  imports = filePaths ++ subIndex;
 
   #==========================================================================
   # IMPLEMENTATION
