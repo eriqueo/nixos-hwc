@@ -40,6 +40,11 @@ in
       extraLuaConfig = ''
         require("core")
       '';
+
+      extraPackages = with pkgs; [
+        stylua
+        luajitPackages.jsregexp
+      ];
     };
 
     # Deploy lua configuration declaratively via xdg.configFile

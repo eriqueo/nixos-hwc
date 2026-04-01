@@ -56,8 +56,8 @@ map("n", "<leader>t3", "3gt", { desc = "Tab: 3" })
 map("n", "<leader>t4", "4gt", { desc = "Tab: 4" })
 
 -- YANK / CUT / PASTE (lowercase after leader)
-map({ "n", "x" }, "<leader>y", '"+y', { desc = "Yank: to system clipboard" })
-map("n", "<leader>yy", '"+yy', { desc = "Yank: line to clipboard" })
+map({ "n", "x" }, "<leader>Y", '"+y', { desc = "Yank: to system clipboard" })
+map("n", "<leader>Yy", '"+yy', { desc = "Yank: line to clipboard" })
 map({ "n", "x" }, "<leader>x", '"+d', { desc = "Cut: to system clipboard" })
 map({ "n", "x" }, "<leader>p", '"+p', { desc = "Paste: from system clipboard" })
 map("n", "<leader>yp", "<cmd>let @+=expand('%:p')<cr>", { desc = "Yank: file path" })
@@ -100,7 +100,7 @@ map("n", "o", "o<esc>", { desc = "Open: new line below" })
 map("n", "O", "O<esc>", { desc = "Open: new line above" })
 
 -- REPLACE WORD UNDER CURSOR
-map("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], { desc = "Replace: word under cursor" })
+map("n", "<leader>S", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], { desc = "Replace: word under cursor" })
 
 -- SELECT ALL
 map("n", "<leader>a", "ggVG", { silent = true, desc = "Select all" })
