@@ -182,13 +182,13 @@
       # CHARTER v9.0: Server uses stable nixpkgs (packages AND NixOS modules)
       # Uses CUDA-enabled overlay for Immich ML GPU acceleration
       hwc-server = nixpkgs-stable.lib.nixosSystem {
-        inherit system;
         pkgs = pkgs-stable-cuda;  # Use nixpkgs-stable with CUDA overlay for GPU ML
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "stable";  # Stable API (nixos-25.11)
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix-stable.nixosModules.default  # Use stable agenix for stable nixpkgs
           home-manager-stable.nixosModules.home-manager  # Use stable HM for stable nixpkgs
           ./machines/server/config.nix
@@ -205,13 +205,13 @@
         ];
       };
       hwc-xps = nixpkgs-stable.lib.nixosSystem {
-        inherit system;
         pkgs = pkgs-stable;
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "stable";
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix-stable.nixosModules.default
           home-manager-stable.nixosModules.home-manager
           ./machines/xps/config.nix
@@ -226,12 +226,13 @@
         ];
       };
       hwc-laptop = lib.nixosSystem {
-        inherit system pkgs;
+        inherit pkgs;
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix.nixosModules.default
           inputs.nixvirt.nixosModules.default
           home-manager.nixosModules.home-manager
@@ -246,12 +247,13 @@
         ];
       };
       hwc-gaming = lib.nixosSystem {
-        inherit system pkgs;
+        inherit pkgs;
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/gaming/config.nix
@@ -266,13 +268,13 @@
         ];
       };
       hwc-firestick = lib.nixosSystem {
-        system = "aarch64-linux";
         pkgs = mkPkgs "aarch64-linux" nixpkgs;
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
         };
         modules = [
+          { nixpkgs.hostPlatform = "aarch64-linux"; }
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/firestick/config.nix

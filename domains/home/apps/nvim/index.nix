@@ -37,7 +37,7 @@ in
       vimAlias = true;
 
       # Load the lua configuration
-      extraLuaConfig = ''
+      initLua = ''
         require("core")
       '';
     };
