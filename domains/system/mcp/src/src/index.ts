@@ -2,11 +2,13 @@
  * HWC Infrastructure MCP Server — entry point.
  *
  * Exposes NixOS system configuration and runtime state as MCP tools.
- * Supports dual transport: stdio (Claude Code) + SSE (Claude.ai mobile).
- *
- * Phase 1: services status, git status, health check
+ * Supports three transports:
+ *   - stdio (Claude Code, local)
+ *   - Streamable HTTP (Claude.ai, remote — MCP spec 2025-06-18)
+ *   - Legacy SSE (fallback for older clients)
  */
 
+import { randomUUID } from "node:crypto";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -16,39 +18,27 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 import { loadConfig } from "./config.js";
 import { log, setLogLevel } from "./log.js";
+import type { ResourceDef } from "./types.js";
 import { ToolRegistry } from "./tools/registry.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 
-async function main() {
-  const config = loadConfig();
-  setLogLevel(config.logLevel);
+// ── Server factory ──────────────────────────────────────────────────────
+// Streamable HTTP needs a fresh Server+Transport pair per session.
 
-  log.info("Starting HWC Infrastructure MCP Server", {
-    transport: config.transport,
-    logLevel: config.logLevel,
-    hostname: config.hostname,
-  });
-
-  // ── Build tool registry ─────────────────────────────────────────────
-  const registry = new ToolRegistry();
-  registry.register(allTools(config));
-  log.info("Tool registry loaded", { toolCount: registry.count() });
-
-  // ── Load resources ──────────────────────────────────────────────────
-  const resources = allResources(config.nixosConfigPath);
-  log.info("Resources loaded", { resourceCount: resources.length });
-
-  // ── Create MCP server (low-level for raw JSON schema support) ───────
+function createMCPServer(
+  registry: ToolRegistry,
+  resources: ResourceDef[],
+): Server {
   const server = new Server(
     { name: "hwc-infra-mcp", version: "0.1.0" },
-    { capabilities: { tools: {}, resources: {} } }
+    { capabilities: { tools: {}, resources: {} } },
   );
 
-  // ── Tool handlers ───────────────────────────────────────────────────
   const tools = registry.getAll();
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -78,12 +68,7 @@ async function main() {
       log.debug("Tool call completed", { tool: toolName, status: result.status, durationMs });
 
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         isError: result.status === "error",
       };
     } catch (error) {
@@ -95,17 +80,13 @@ async function main() {
       });
       return {
         content: [
-          {
-            type: "text",
-            text: JSON.stringify({ status: "error", message, error: "INTERNAL_ERROR" }),
-          },
+          { type: "text", text: JSON.stringify({ status: "error", message, error: "INTERNAL_ERROR" }) },
         ],
         isError: true,
       };
     }
   });
 
-  // ── Resource handlers ───────────────────────────────────────────────
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: resources.map((r) => ({
       uri: r.uri,
@@ -126,36 +107,64 @@ async function main() {
     const content = await resource.load();
     return {
       contents: [
-        {
-          uri: resource.uri,
-          mimeType: resource.mimeType,
-          text: content,
-        },
+        { uri: resource.uri, mimeType: resource.mimeType, text: content },
       ],
     };
   });
 
-  // ── Start transport ─────────────────────────────────────────────────
-  if (config.transport === "stdio" || config.transport === "both") {
-    if (config.transport === "stdio") {
-      const transport = new StdioServerTransport();
-      await server.connect(transport);
-      log.info("HWC Infra MCP Server running on stdio");
-    }
+  return server;
+}
+
+// ── Main ────────────────────────────────────────────────────────────────
+
+async function main() {
+  const config = loadConfig();
+  setLogLevel(config.logLevel);
+
+  log.info("Starting HWC Infrastructure MCP Server", {
+    transport: config.transport,
+    logLevel: config.logLevel,
+    hostname: config.hostname,
+  });
+
+  const registry = new ToolRegistry();
+  registry.register(allTools(config));
+  log.info("Tool registry loaded", { toolCount: registry.count() });
+
+  const resources = allResources(config.nixosConfigPath);
+  log.info("Resources loaded", { resourceCount: resources.length });
+
+  // ── stdio transport ─────────────────────────────────────────────────
+  if (config.transport === "stdio") {
+    const server = createMCPServer(registry, resources);
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    log.info("HWC Infra MCP Server running on stdio");
+    return;
   }
 
+  // ── HTTP transport (SSE + Streamable HTTP) ──────────────────────────
   if (config.transport === "sse" || config.transport === "both") {
     const { createServer } = await import("node:http");
     const port = config.port;
     const host = config.host;
 
-    let activeTransport: SSEServerTransport | null = null;
+    // Session tracking for Streamable HTTP (one Server+Transport per session)
+    const sessions = new Map<string, {
+      server: Server;
+      transport: StreamableHTTPServerTransport;
+    }>();
+
+    // Legacy SSE (single active connection)
+    let legacySseTransport: SSEServerTransport | null = null;
+    let legacySseServer: Server | null = null;
 
     const httpServer = createServer(async (req, res) => {
-      // CORS headers for browser-based MCP clients
+      // CORS — required for browser-based MCP clients (Claude.ai)
       res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, HEAD, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Mcp-Session-Id, Last-Event-ID");
+      res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
       if (req.method === "OPTIONS") {
         res.writeHead(204);
@@ -163,39 +172,176 @@ async function main() {
         return;
       }
 
-      if (req.method === "GET" && req.url === "/sse") {
+      const url = req.url || "/";
+
+      // ── Health check ────────────────────────────────────────────────
+      if (url === "/health" && req.method === "GET") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          status: "ok",
+          server: "hwc-infra-mcp",
+          version: "0.1.0",
+          tools: registry.count(),
+          resources: resources.length,
+          uptime: process.uptime(),
+          activeSessions: sessions.size,
+        }));
+        return;
+      }
+
+      // ── Streamable HTTP (MCP spec 2025-06-18) ───────────────────────
+      // Handles POST (JSON-RPC), GET (SSE stream), DELETE (session close)
+      if (url === "/mcp" || url === "/") {
+        const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+        // Route to existing session
+        if (sessionId && sessions.has(sessionId)) {
+          const session = sessions.get(sessionId)!;
+          await session.transport.handleRequest(req, res);
+          return;
+        }
+
+        // New session — must be a POST with initialize
+        if (req.method === "POST") {
+          const body = await readBody(req);
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Invalid JSON" }));
+            return;
+          }
+
+          // Check if this is an initialization request
+          const isInit = isInitializeRequest(parsed);
+          if (!isInit && !sessionId) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Bad Request: No valid session ID and not an initialize request" },
+              id: null,
+            }));
+            return;
+          }
+
+          // Create new session — sessionId is assigned inside handleRequest
+          // when the transport processes the initialize message, so we use
+          // onsessioninitialized to register it in our session map.
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            enableJsonResponse: true,
+            onsessioninitialized: (sessionId) => {
+              sessions.set(sessionId, { server, transport });
+              log.info("Streamable HTTP session created", { sessionId });
+
+              transport.onclose = () => {
+                sessions.delete(sessionId);
+                log.info("Streamable HTTP session closed", { sessionId });
+              };
+            },
+          });
+          const server = createMCPServer(registry, resources);
+          await server.connect(transport);
+
+          // Handle the request with pre-parsed body
+          await transport.handleRequest(req, res, parsed);
+          return;
+        }
+
+        // GET without session (SSE stream) — need session first
+        if (req.method === "GET" && !sessionId) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Session ID required for GET SSE stream" }));
+          return;
+        }
+
+        // Unknown session
+        if (sessionId) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Session not found" }));
+          return;
+        }
+
+        res.writeHead(405, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Method not allowed" }));
+        return;
+      }
+
+      // ── Legacy SSE (for older clients) ──────────────────────────────
+      if (url === "/sse" && req.method === "GET") {
+        // Clean up previous connection
+        if (legacySseTransport) {
+          try { await legacySseTransport.close(); } catch { /* ignore */ }
+        }
+        if (legacySseServer) {
+          try { await legacySseServer.close(); } catch { /* ignore */ }
+        }
+
         const transport = new SSEServerTransport("/messages", res);
-        activeTransport = transport;
+        const server = createMCPServer(registry, resources);
+        legacySseTransport = transport;
+        legacySseServer = server;
         await server.connect(transport);
-      } else if (req.method === "POST" && req.url?.startsWith("/messages")) {
-        if (!activeTransport) {
+        log.info("Legacy SSE connection established");
+        return;
+      }
+
+      if (url?.startsWith("/messages") && req.method === "POST") {
+        if (!legacySseTransport) {
           res.writeHead(503, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "No active SSE connection" }));
           return;
         }
-        await activeTransport.handlePostMessage(req, res);
-      } else if (req.method === "GET" && req.url === "/health") {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            status: "ok",
-            server: "hwc-infra-mcp",
-            version: "0.1.0",
-            tools: registry.count(),
-            resources: resources.length,
-            uptime: process.uptime(),
-          })
-        );
-      } else {
-        res.writeHead(404, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Not found", endpoints: ["/sse", "/messages", "/health"] }));
+        await legacySseTransport.handlePostMessage(req, res);
+        return;
       }
+
+      // ── OAuth discovery stubs ──────────────────────────────────────
+      // Claude.ai probes these during connection. Return proper 404 so
+      // the client knows auth is not required (no WWW-Authenticate header).
+      if (url?.startsWith("/.well-known/")) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+
+      // ── 404 ─────────────────────────────────────────────────────────
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        error: "Not found",
+        endpoints: ["/mcp", "/sse", "/messages", "/health"],
+      }));
     });
 
     httpServer.listen(port, host, () => {
-      log.info(`HWC Infra MCP SSE server listening on ${host}:${port}`);
+      log.info(`HWC Infra MCP server listening on ${host}:${port}`, {
+        streamableHttp: "/mcp",
+        legacySse: "/sse",
+        health: "/health",
+      });
     });
   }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+function readBody(req: import("node:http").IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString()));
+    req.on("error", reject);
+  });
+}
+
+function isInitializeRequest(parsed: unknown): boolean {
+  if (Array.isArray(parsed)) {
+    return parsed.some(
+      (msg) => typeof msg === "object" && msg !== null && (msg as Record<string, unknown>).method === "initialize",
+    );
+  }
+  return typeof parsed === "object" && parsed !== null && (parsed as Record<string, unknown>).method === "initialize";
 }
 
 main().catch((error) => {

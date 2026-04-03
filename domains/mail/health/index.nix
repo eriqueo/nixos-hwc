@@ -208,18 +208,19 @@ let
         warn "mbsync.timer is not enabled"
       fi
 
-      # How old is the sync state? This is the most reliable indicator
-      # of "when did mail last actually sync successfully."
-      local sync_state="$MAILDIR/proton/inbox/.mbsyncstate"
-      if [[ -f "$sync_state" ]]; then
-        local state_mtime age_min
-        state_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$sync_state" 2>/dev/null || echo 0)
-        age_min=$(( ($(now_epoch) - state_mtime) / 60 ))
+      # Check the marker file touched by sync-mail after each successful run.
+      # This is more reliable than .mbsyncstate which only updates when
+      # there are actual state changes (new/deleted messages).
+      local marker="''${XDG_CACHE_HOME:-$HOME/.cache}/mbsync-last-success"
+      if [[ -f "$marker" ]]; then
+        local marker_mtime age_min
+        marker_mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$marker" 2>/dev/null || echo 0)
+        age_min=$(( ($(now_epoch) - marker_mtime) / 60 ))
         if (( age_min > SYNC_MAX_AGE_MIN )); then
-          fail "Last mbsync state update was ''${age_min}m ago (threshold: ''${SYNC_MAX_AGE_MIN}m)"
+          fail "Last successful mbsync was ''${age_min}m ago (threshold: ''${SYNC_MAX_AGE_MIN}m)"
         fi
       else
-        warn "No .mbsyncstate found — mbsync may have never completed"
+        warn "No mbsync success marker found — mbsync may have never completed"
       fi
 
       # Check how many times mbsync actually failed (exited non-zero) in the last 30 min.

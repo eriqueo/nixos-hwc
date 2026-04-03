@@ -2,6 +2,7 @@
  * hwc_media_* tools — arr stack status, download queues, library stats.
  */
 
+import { readFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 
 const ARR_SERVICES = [
@@ -12,13 +13,42 @@ const ARR_SERVICES = [
   { name: "prowlarr", port: 9696 },
 ] as const;
 
+/** Read an agenix secret file, returning null if not readable. */
+async function readSecret(name: string): Promise<string | null> {
+  try {
+    const content = await readFile(`/run/agenix/${name}`, "utf-8");
+    return content.trim();
+  } catch {
+    return null;
+  }
+}
+
+/** Read SABnzbd API key from its config file. */
+async function getSabnzbdApiKey(): Promise<string | null> {
+  const configPaths = [
+    "/mnt/hot/appdata/sabnzbd/config/sabnzbd.ini",
+    "/mnt/hot/appdata/sabnzbd/sabnzbd.ini",
+  ];
+
+  for (const path of configPaths) {
+    try {
+      const content = await readFile(path, "utf-8");
+      const match = content.match(/^api_key\s*=\s*(.+)$/m);
+      if (match?.[1]?.trim()) return match[1].trim();
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 export function mediaTools(): ToolDef[] {
   return [
     {
       name: "hwc_media_arr_status",
       description:
         "Get status of the *arr stack — Sonarr, Radarr, Lidarr, Readarr, Prowlarr. " +
-        "Checks system status and health endpoints.",
+        "Checks system status and health endpoints using API keys from agenix.",
       inputSchema: {
         type: "object",
         properties: {
@@ -36,21 +66,35 @@ export function mediaTools(): ToolDef[] {
             ? ARR_SERVICES
             : ARR_SERVICES.filter((s) => s.name === filter);
 
+          // Pre-load API keys for services that have them
+          const apiKeys: Record<string, string | null> = {};
+          await Promise.all(
+            services.map(async (svc) => {
+              apiKeys[svc.name] = await readSecret(`${svc.name}-api-key`);
+            })
+          );
+
           const results = await Promise.all(
             services.map(async (svc) => {
               try {
-                // Check if the service is responding at all
+                const apiKey = apiKeys[svc.name];
+                const headers: Record<string, string> = { Accept: "application/json" };
+                if (apiKey) headers["X-Api-Key"] = apiKey;
+
+                // Get system status
                 const statusResp = await fetch(
                   `http://localhost:${svc.port}/api/v3/system/status`,
-                  {
-                    headers: { Accept: "application/json" },
-                    signal: AbortSignal.timeout(5000),
-                  }
+                  { headers, signal: AbortSignal.timeout(5000) }
                 );
 
                 if (statusResp.status === 401) {
-                  // API key required — service is running but we can't query it
-                  return { name: svc.name, port: svc.port, running: true, apiKeyRequired: true };
+                  return {
+                    name: svc.name,
+                    port: svc.port,
+                    running: true,
+                    apiKeyRequired: true,
+                    apiKeyAvailable: !!apiKey,
+                  };
                 }
 
                 if (!statusResp.ok) {
@@ -59,19 +103,31 @@ export function mediaTools(): ToolDef[] {
 
                 const status = await statusResp.json() as Record<string, unknown>;
 
-                // Try health check
-                let health: unknown[] = [];
+                // Get health warnings
+                let healthWarnings: unknown[] = [];
                 try {
                   const healthResp = await fetch(
                     `http://localhost:${svc.port}/api/v3/health`,
-                    {
-                      headers: { Accept: "application/json" },
-                      signal: AbortSignal.timeout(3000),
-                    }
+                    { headers, signal: AbortSignal.timeout(3000) }
                   );
-                  if (healthResp.ok) health = await healthResp.json() as unknown[];
+                  if (healthResp.ok) healthWarnings = await healthResp.json() as unknown[];
                 } catch {
-                  // health endpoint may also need API key
+                  // health endpoint may fail
+                }
+
+                // Get queue depth
+                let queueCount: number | undefined;
+                try {
+                  const queueResp = await fetch(
+                    `http://localhost:${svc.port}/api/v3/queue`,
+                    { headers, signal: AbortSignal.timeout(3000) }
+                  );
+                  if (queueResp.ok) {
+                    const queue = await queueResp.json() as Record<string, unknown>;
+                    queueCount = (queue.totalRecords as number) ?? undefined;
+                  }
+                } catch {
+                  // queue endpoint may fail
                 }
 
                 return {
@@ -79,7 +135,14 @@ export function mediaTools(): ToolDef[] {
                   port: svc.port,
                   running: true,
                   version: status.version,
-                  healthWarnings: Array.isArray(health) ? health.length : 0,
+                  healthWarnings: Array.isArray(healthWarnings)
+                    ? healthWarnings.map((w: unknown) => {
+                        const warn = w as Record<string, unknown>;
+                        return { type: warn.type, message: warn.message };
+                      })
+                    : [],
+                  healthWarningCount: Array.isArray(healthWarnings) ? healthWarnings.length : 0,
+                  queueCount,
                 };
               } catch {
                 return { name: svc.name, port: svc.port, running: false };
@@ -88,9 +151,14 @@ export function mediaTools(): ToolDef[] {
           );
 
           const running = results.filter((r) => r.running);
+          const withWarnings = results.filter(
+            (r) => "healthWarningCount" in r && (r.healthWarningCount as number) > 0
+          );
+
           return {
-            status: "ok",
-            message: `${running.length}/${results.length} arr services responding`,
+            status: withWarnings.length > 0 ? "partial" : "ok",
+            message: `${running.length}/${results.length} arr services responding` +
+              (withWarnings.length > 0 ? `, ${withWarnings.length} with health warnings` : ""),
             data: { services: results },
           };
         } catch (err) {
@@ -124,20 +192,28 @@ export function mediaTools(): ToolDef[] {
 
           if (client === "all" || client === "sabnzbd") {
             try {
-              const resp = await fetch(
-                "http://localhost:8081/sabnzbd/api?mode=queue&output=json",
-                { signal: AbortSignal.timeout(5000) }
-              );
+              // Read SABnzbd API key from config
+              const apiKey = await getSabnzbdApiKey();
+              const url = apiKey
+                ? `http://localhost:8081/sabnzbd/api?mode=queue&output=json&apikey=${apiKey}`
+                : "http://localhost:8081/sabnzbd/api?mode=queue&output=json";
+
+              const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
               if (resp.ok) {
                 const queue = await resp.json() as Record<string, unknown>;
                 const q = queue.queue as Record<string, unknown> | undefined;
                 data.sabnzbd = {
                   speed: q?.speed,
                   remaining: q?.timeleft,
+                  sizeLeft: q?.sizeleft,
                   items: Array.isArray(q?.slots) ? (q.slots as unknown[]).length : 0,
+                  paused: q?.paused,
                 };
               } else {
-                data.sabnzbd = { error: `HTTP ${resp.status} (API key may be required)` };
+                data.sabnzbd = {
+                  error: `HTTP ${resp.status}`,
+                  hint: apiKey ? "API key was provided but request failed" : "No API key found in sabnzbd.ini",
+                };
               }
             } catch {
               data.sabnzbd = { error: "Not reachable" };
@@ -156,6 +232,8 @@ export function mediaTools(): ToolDef[] {
                 data.qbittorrent = {
                   totalTorrents: torrents.length,
                   active: active.length,
+                  downloading: torrents.filter((t) => t.state === "downloading").length,
+                  seeding: torrents.filter((t) => t.state === "uploading" || t.state === "stalledUP").length,
                 };
               } else {
                 data.qbittorrent = { error: `HTTP ${resp.status} (auth may be required)` };

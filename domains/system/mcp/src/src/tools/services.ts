@@ -163,20 +163,28 @@ export function servicesTools(runtimeTtl: number): ToolDef[] {
             `podman-${service}.service`,
           ];
 
+          // Try each candidate and pick the one with the most log lines
+          let bestUnit = candidates[0];
+          let bestLines: string[] = [];
+
           for (const unit of candidates) {
-            const logLines = await getJournalLines(unit, lines, since, priority, grep);
-            if (logLines.length > 0 || logLines.length === 0) {
-              return {
-                status: "ok",
-                message: `${logLines.length} lines from ${unit}`,
-                data: { service: unit, lineCount: logLines.length, lines: logLines },
-              };
+            try {
+              const logLines = await getJournalLines(unit, lines, since, priority, grep);
+              if (logLines.length > bestLines.length) {
+                bestUnit = unit;
+                bestLines = logLines;
+              }
+              // If we got results, no need to try more candidates
+              if (bestLines.length > 0) break;
+            } catch {
+              continue;
             }
           }
 
           return {
-            status: "error",
-            message: `No logs found for ${service}`,
+            status: "ok",
+            message: `${bestLines.length} lines from ${bestUnit}`,
+            data: { service: bestUnit, lineCount: bestLines.length, lines: bestLines },
           };
         } catch (err) {
           return {

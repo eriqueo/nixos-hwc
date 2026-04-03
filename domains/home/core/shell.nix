@@ -71,7 +71,7 @@ in
         "errors-hour" = "${ws}/monitoring/journal-errors.sh '1 hour ago'";
         "errors-today" = "${ws}/monitoring/journal-errors.sh 'today'";
         "errors-tdarr" = "${ws}/monitoring/journal-errors.sh '10 minutes ago' podman-tdarr";
-        "services" = "${ws}/nixos-dev/list-services.sh"; "ss" = "${ws}/nixos-dev/list-services.sh";
+        "services" = "${ws}/nixos-dev/list-services.sh";
         "rebuild" = "${ws}/nixos-dev/grebuild.sh"; "lint" = "${ws}/nixos-dev/charter-lint.sh";
         "caddy" = "${ws}/monitoring/caddy-health-check.sh"; "health" = "${ws}/monitoring/caddy-health-check.sh";
         "secret" = "${ws}/system/secret-manager.sh";
