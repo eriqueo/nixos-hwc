@@ -8,6 +8,7 @@
     ./networking.nix           # SSH, Tailscale, Samba, firewall
     ./mounts.nix               # storage tiers, USB auto-mount
     ./users.nix                # accounts, identity, SSH
+    ./mcp/index.nix            # Infrastructure MCP server
   ];
 
   config = {};
