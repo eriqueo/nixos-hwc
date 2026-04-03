@@ -301,6 +301,9 @@ in
         yearly = cfg.retention.yearly;
       };
 
+      # Reduce compact I/O — only rewrite segments with >25% freed space (default 10%)
+      extraCompactArgs = [ "--threshold" "25" ];
+
       # Environment for hooks
       environment = {
         BORG_RSH = "ssh -o StrictHostKeyChecking=accept-new";
@@ -342,7 +345,7 @@ in
       # Prevent stuck borg processes from blocking future backups
       serviceConfig = {
         Type = "oneshot";              # Backup runs to completion, not a long-lived daemon
-        TimeoutStartSec = "6h";       # Allow up to 6h for large backups
+        TimeoutStartSec = "12h";      # Allow up to 12h (compact can be slow on large repos)
         CPUSchedulingPolicy = lib.mkForce "other";  # Best-effort (default) instead of idle
         IOSchedulingClass = lib.mkForce "best-effort";  # Fair I/O instead of idle scraps
         TimeoutStopSec = "5min";      # Give borg time to finish gracefully
