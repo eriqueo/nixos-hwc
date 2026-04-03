@@ -158,11 +158,11 @@ in
       extraUpFlags = cfg.tailscale.extraUpFlags;
     };
 
-    # Tailscale Funnel - expose ports publicly via local HTTP listener
-    # Caddy on :18080 handles /webhook/* only (plain HTTP)
+    # Tailscale Funnel - expose MCP servers publicly via Caddy gateway
+    # Caddy on :18080 routes: default → hwc-infra MCP, /n8n/* → n8n-mcp bridge
     # Funnel terminates TLS and proxies to this local HTTP origin
     systemd.services.tailscale-funnel = lib.mkIf (cfg.tailscale.enable && cfg.tailscale.funnel.enable) {
-      description = "Tailscale Funnel - expose webhooks publicly";
+      description = "Tailscale Funnel - MCP gateway (port 443)";
       after = [ "tailscaled.service" "network-online.target" "caddy.service" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];

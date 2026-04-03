@@ -1,240 +1,419 @@
 # domains/system/mcp — HWC Infrastructure MCP Server
 
-TypeScript MCP server that exposes the nixos-hwc system's declarative configuration and live runtime state as tools for Claude Code (stdio) and Claude.ai mobile (SSE over Tailscale).
+TypeScript MCP server exposing the nixos-hwc system's declarative NixOS configuration and live runtime state as 25 tools and 5 resources. Connects to Claude Code (stdio), Claude.ai (Streamable HTTP via Tailscale Funnel), and any MCP-compatible client.
 
 ## What It Does
 
-Two layers of system visibility, accessible from any MCP client:
+**Declarative layer** — Evaluated NixOS config: option values, domain structure, port allocations, host profiles, secret inventory (names only, never values), flake metadata.
 
-**Declarative layer** — The evaluated NixOS configuration: option values, domain structure, port allocations, host profiles, secret inventory (names only, never values), and flake metadata.
+**Runtime layer** — Live state: systemd services, podman containers (root socket), disk usage, GPU, Tailscale peers, Prometheus metrics, Caddy routes, Borg backups, mail health, media stack queues.
 
-**Runtime layer** — Live system state: systemd service status, podman container stats, disk usage, GPU utilization, Tailscale peers, Prometheus metrics, Caddy routes, Borg backup status, mail health, and media stack queues.
+## Connection Guide
 
-## Quick Start
+### Claude Code (stdio)
 
-### Local (stdio — Claude Code)
-
-```bash
-cd domains/system/mcp/src
-npm install && npm run build
-echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | \
-  HWC_MCP_TRANSPORT=stdio HWC_NIXOS_CONFIG_PATH=/home/eric/.nixos \
-  node dist/index.js 2>/dev/null | jq '.result.tools | length'
-# → 25
-```
-
-Add to Claude Code MCP config (`~/.claude.json` or `.mcp.json`):
+Already configured in `.mcp.json`:
 
 ```json
-{
-  "mcpServers": {
-    "hwc-infra": {
-      "command": "node",
-      "args": ["/home/eric/.nixos/domains/system/mcp/src/dist/index.js"],
-      "env": {
-        "HWC_MCP_TRANSPORT": "stdio",
-        "HWC_NIXOS_CONFIG_PATH": "/home/eric/.nixos",
-        "HWC_HOSTNAME": "hwc-laptop"
-      }
-    }
+"hwc-infra": {
+  "command": "node",
+  "args": ["/home/eric/.nixos/domains/system/mcp/src/dist/index.js"],
+  "env": {
+    "HWC_MCP_TRANSPORT": "stdio",
+    "HWC_NIXOS_CONFIG_PATH": "/home/eric/.nixos",
+    "HWC_HOSTNAME": "hwc-server"
   }
 }
 ```
 
-### Server (SSE — Claude.ai mobile via Tailscale)
+Verify: `/mcp` in Claude Code should show `hwc-infra` with 25 tools.
 
-Enable in the server's NixOS config:
+### Claude.ai (Streamable HTTP over Tailscale Funnel)
+
+**Connector URL**: `https://hwc.ocelot-wahoo.ts.net:6243/mcp`
+
+The server runs on hwc-server as a systemd service. Tailscale Funnel on port 6243 exposes it to the public internet, allowing Claude.ai (which connects from Anthropic's infrastructure, not the user's device) to reach it.
+
+**Network path**: Claude.ai → Tailscale Funnel (:6243) → Node.js HTTP (:6200) → MCP Server
+
+Enable in `machines/server/config.nix`:
 
 ```nix
-hwc.system.mcp = {
-  enable = true;
-  # port = 6200;        # default
-  # transport = "both"; # default — stdio + SSE
-};
+hwc.system.mcp.enable = true;
 ```
 
-Then `nixos-rebuild switch`. The SSE endpoint becomes available at `http://127.0.0.1:6200/sse`, proxied by Caddy at `https://hwc.ocelot-wahoo.ts.net:6243/sse`.
+Then `nixos-rebuild switch`.
 
-Health check: `curl http://localhost:6200/health`
+### Manual Testing
+
+```bash
+# Health check
+curl https://hwc.ocelot-wahoo.ts.net:6243/health
+
+# Full Streamable HTTP handshake
+curl -s -o /tmp/body -D /tmp/headers -X POST https://hwc.ocelot-wahoo.ts.net:6243/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
+
+# Extract session ID, then send tools/list
+SESSION=$(awk -F': ' '/^mcp-session-id:/{print $2}' /tmp/headers | tr -d '\r\n')
+curl -s -X POST https://hwc.ocelot-wahoo.ts.net:6243/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Mcp-Session-Id: $SESSION" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":2}' | jq '.result.tools | length'
+# → 25
+```
+
+## Transport Architecture
+
+The server supports three transports, selected by `HWC_MCP_TRANSPORT` env var (or `hwc.system.mcp.transport` NixOS option):
+
+### stdio (Claude Code)
+
+Standard JSON-RPC over stdin/stdout. One `Server` instance for the lifetime of the process. Logs go to stderr.
+
+### Streamable HTTP (Claude.ai — MCP spec 2025-06-18)
+
+The primary remote transport. Served on `POST /mcp` and `GET /mcp`.
+
+**Protocol flow**:
+1. Client sends `POST /mcp` with `initialize` JSON-RPC message
+2. Server creates a new `Server` + `StreamableHTTPServerTransport` pair (one per session)
+3. Server responds with `Content-Type: application/json` containing the initialize result + `Mcp-Session-Id` header
+4. Client sends `notifications/initialized` with the session ID
+5. Client sends subsequent requests (`tools/list`, `tools/call`, etc.) with the session ID
+6. Client can `DELETE /mcp` to close the session
+
+**Critical implementation details** (learned the hard way):
+
+- **One Server+Transport per session**: `StreamableHTTPServerTransport` is NOT reusable across sessions. Each `initialize` creates a fresh pair.
+- **`enableJsonResponse: true`**: Without this, the SDK returns `Content-Type: text/event-stream` (SSE format) for ALL responses including `initialize`. Claude.ai expects `application/json` for non-streaming responses. This option makes the transport return JSON for request/response and SSE only for streaming.
+- **`onsessioninitialized` callback**: The transport's `sessionId` is `undefined` until `handleRequest` processes the `initialize` message internally. You CANNOT read `transport.sessionId` after `server.connect()` — it's not set yet. Use the `onsessioninitialized` callback to register the session in your map.
+- **Pre-parsed body**: Since we read the request body to check for `initialize` before the transport sees it, we pass it as `parsedBody` to `handleRequest(req, res, parsed)` so the transport doesn't try to read the already-consumed stream.
+- **CORS headers**: Claude.ai connects from a browser context. Must include `Access-Control-Allow-Origin: *`, `Access-Control-Expose-Headers: Mcp-Session-Id`, and handle `OPTIONS` preflight.
+- **`.well-known/*` stubs**: Claude.ai probes `/.well-known/oauth-protected-resource` during connection. Return a clean `404` (empty body) so the client knows auth is not required. Returning our custom JSON 404 could confuse the OAuth discovery logic.
+
+### Legacy SSE (fallback)
+
+`GET /sse` opens an SSE event stream, `POST /messages` sends requests. Single active connection at a time. Kept for compatibility with older MCP clients.
+
+## Network & Exposure
+
+### Port Map
+
+| Port | Listener | Purpose |
+|------|----------|---------|
+| 6200 | Node.js HTTP server | Internal — all transports land here |
+| 6243 | Tailscale Funnel | Public HTTPS — Claude.ai connects here |
+| 6243 | Caddy (also) | Tailnet HTTPS — internal Tailscale access |
+
+### Tailscale Funnel Setup
+
+Funnel on port 6243 is configured imperatively (not in NixOS config):
+
+```bash
+sudo tailscale funnel --https=6243 --bg 6200
+```
+
+This makes `https://hwc.ocelot-wahoo.ts.net:6243/*` publicly accessible, proxying to `http://127.0.0.1:6200`.
+
+**Why port 6243 and not 443**: The Funnel on `:443` has a bug where it returns empty response bodies when proxying to the Node server. Port 6243 works correctly because Tailscale Funnel handles TLS termination and forwards plain HTTP to the Node server without buffering issues.
+
+### Caddy Route
+
+`parts/caddy.nix` creates a Caddy reverse proxy route on `:6243` for Tailnet-internal access (separate from Funnel's public access). It's conditional on SSE transport being enabled and sets `flush_interval = -1` for streaming support.
+
+## Podman Root Socket Access
+
+All 39+ containers on hwc-server run under **root podman**, not rootless. The MCP server runs as user `eric`. To see containers:
+
+1. **`SupplementaryGroups = ["podman"]`** in systemd service config gives the process access to the root podman socket
+2. **`/run/podman` in `ReadOnlyPaths`** allows the sandboxed service to reach the socket
+3. **All podman commands use `--url unix:///run/podman/podman.sock`** (the `podmanArgs()` helper in `executors/podman.ts` prepends this to every command)
+
+The `podman` group (GID 996) owns `/run/podman/podman.sock` with mode `660`. User `eric` is in the `podman` group.
+
+**Without this**: `podman ps` returns 0 containers (rootless scope), `hwc_monitoring_health_check` reports "0 containers running" (false positive green), and all container tools are useless.
+
+## Security Model
+
+- **Process isolation**: `User = mkForce "eric"`, `ProtectSystem=strict`, `ProtectHome=read-only`, `NoNewPrivileges`, kernel protections, namespace restrictions
+- **Resource limits**: `MemoryMax=512M`, `CPUQuota=50%`
+- **Command execution**: All shell commands go through `safeExec()` using `execFile` (no shell). Arguments are validated against an unsafe pattern (`/[;&|`$(){}]/`) as defense-in-depth, though `execFile` itself prevents shell injection.
+- **Secrets**: Tools expose names and metadata only — never decrypt or return secret values
+- **Mutations**: Disabled by default. Gated behind `mutations.enable` + per-action allowlist
+- **Network**: Node server binds to `127.0.0.1` only. External access requires Tailscale Funnel (authenticated by Tailscale) or Caddy (Tailnet-only)
+- **Read-only paths**: `/home/eric/.nixos` (repo), `/nix/store`, `/run/systemd`, `/run/podman`
+- **Write paths**: `/tmp` only
 
 ## Tools (25)
 
-### Services
+### Configuration (6 tools)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_services_status` | Status overview of all services, or detail for one. Includes systemd state, uptime, memory, recent logs. Accepts optional `service` name and `type` filter (container/native). |
-| `hwc_services_logs` | Journal logs for a service with `since`, `priority`, `grep`, and `lines` parameters. Tries multiple unit name patterns (bare name, podman- prefix, .service suffix). |
-| `hwc_services_container_stats` | Real-time podman container resource usage — CPU%, memory, net/block IO, PIDs. Optional `container` filter. |
-| `hwc_services_compare_declared_vs_running` | Diffs enabled systemd units against what's actually running. Finds services that are enabled but down, or running but not declared. |
+| `hwc_config_get_option` | Evaluate any NixOS option via `nix eval` (cached, ~5s first call). Only sees committed changes. |
+| `hwc_config_list_domains` | Walk `domains/` directory — returns each domain's subdomains, files, and index.nix presence. |
+| `hwc_config_get_port_map` | Parse `routes.nix` for complete port allocation. Optional `filter` param. |
+| `hwc_config_get_host_profile` | Parse a machine's config.nix for profiles, domain imports, channel, stateVersion. |
+| `hwc_config_search_options` | Grep `domains/` for `mkOption`/`mkEnableOption` matching a query. Returns file, line, name, snippet. |
+| `hwc_config_flake_metadata` | All flake inputs with name, URL, revision, last-modified date. |
 
-### Build & Git
-
-| Tool | Description |
-|------|-------------|
-| `hwc_build_git_status` | Branch, uncommitted changes (with status codes), unpushed count, and recent commits. `log_count` parameter controls history depth. |
-
-### Monitoring
+### Services (4 tools)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_monitoring_health_check` | Runs checks across `services`, `storage`, and `containers` (or `all`). Returns traffic-light status (green/yellow/red) per component with an overall rollup. |
-| `hwc_monitoring_journal_errors` | Error-level journal entries since a given time, grouped by systemd unit with counts and recent messages. Parameters: `since`, `limit`. |
-| `hwc_monitoring_prometheus_query` | Execute PromQL queries — `instant` or `range` type. Range queries take `start`, `end`, `step`. Hits the local Prometheus at :9090. |
-| `hwc_monitoring_gpu_status` | NVIDIA GPU status via nvidia-smi: name, temperature, GPU/memory utilization, power draw, and which processes are using the GPU. |
+| `hwc_services_status` | Overview of all services, or detail for one. Includes systemd state, uptime, memory, recent logs. |
+| `hwc_services_logs` | Journal logs with `since`, `priority`, `grep`, `lines` params. Tries multiple unit name patterns. |
+| `hwc_services_container_stats` | Real-time podman container CPU%, memory, net/block IO, PIDs. Tries podman stats, falls back to systemd cgroup data. |
+| `hwc_services_compare_declared_vs_running` | Diff enabled systemd units against running. Finds down or undeclared services. |
 
-### Configuration (Declarative)
-
-| Tool | Description |
-|------|-------------|
-| `hwc_config_get_option` | Evaluate any NixOS option path via `nix eval` (cached, ~5-15s first call). Only sees committed changes. Example: `hwc.media.jellyfin.enable`. |
-| `hwc_config_list_domains` | Walk `domains/` directory — returns each domain's subdomains, .nix files, and whether it has an index.nix. Fast filesystem scan. |
-| `hwc_config_get_port_map` | Parse `routes.nix` for the complete port allocation — name, mode (port/subpath/static), external port, path, upstream. Optional `filter` parameter. |
-| `hwc_config_get_host_profile` | Parse a machine's config.nix to extract profiles, domain imports, channel (stable/unstable), stateVersion. Required: `host`. |
-| `hwc_config_search_options` | Grep all `domains/` .nix files for `mkOption`/`mkEnableOption` matching a keyword. Returns file, line, name, and snippet. |
-| `hwc_config_flake_metadata` | Run `nix flake metadata --json` and return all inputs with name, URL, revision (short), and last-modified date. |
-
-### Secrets
+### Monitoring (4 tools)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_secrets_inventory` | Parse `domains/secrets/declarations/` for all agenix secrets — name, category, .age file existence, mode, owner, group. **Never returns values.** Optional `category` filter. |
-| `hwc_secrets_usage_map` | Grep the entire codebase for `age.secrets.*` references. Returns which domains/files reference which secrets. Optional `service` filter. |
+| `hwc_monitoring_health_check` | Traffic-light (green/yellow/red) checks across services, storage, containers. |
+| `hwc_monitoring_journal_errors` | Error-level journal entries grouped by unit with counts and messages. |
+| `hwc_monitoring_prometheus_query` | PromQL instant or range queries against local Prometheus (:9090). |
+| `hwc_monitoring_gpu_status` | NVIDIA GPU via nvidia-smi: temp, utilization, power, processes. |
 
-### Storage
-
-| Tool | Description |
-|------|-------------|
-| `hwc_storage_disk_usage` | `df -h` across storage tiers: root (/), hot (/mnt/hot), media (/mnt/media), backup (/mnt/backup). Parameter: `tier` (or `all`). |
-| `hwc_storage_backup_status` | Borg backup systemd timer and service status — last run, next scheduled, exit status. |
-
-### Network
+### Secrets (2 tools)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_network_tailscale_status` | Tailscale status — self hostname/IP, all peers with hostname, IP, OS, online state. |
-| `hwc_network_caddy_routes` | Query Caddy's admin API at :2019 for the live route configuration with servers, matchers, and upstream targets. |
-| `hwc_network_vpn_status` | Gluetun VPN status — public IP and OpenVPN connection state via the Gluetun HTTP API at :8000. |
+| `hwc_secrets_inventory` | Parse `domains/secrets/declarations/` for all agenix secrets. **Never returns values.** |
+| `hwc_secrets_usage_map` | Grep codebase for `age.secrets.*` references — which domains use which secrets. |
 
-### Mail
-
-| Tool | Description |
-|------|-------------|
-| `hwc_mail_health` | Proton Bridge systemd status, mbsync timer/last run, notmuch message count, recent mail errors from journal. |
-
-### Media
+### Storage (2 tools)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_media_arr_status` | Hit each *arr service's API (/api/v3/system/status, /api/v3/health). Reports version, running state, health warnings. Parameter: `service` or `all`. |
-| `hwc_media_download_queue` | SABnzbd queue (speed, remaining, items) and qBittorrent torrent list (total, active). Parameter: `client` or `all`. |
+| `hwc_storage_disk_usage` | `df -h` across tiers: root, hot, media, backup. |
+| `hwc_storage_backup_status` | Borg backup timer/service status — last run, next scheduled, exit status, recent archive info from journal. |
+
+### Network (3 tools)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_network_tailscale_status` | Self hostname/IP, all peers with hostname, IP, OS, online state. Funnel ingress nodes collapsed into summary. |
+| `hwc_network_caddy_routes` | Live route config from Caddy admin API (:2019). Falls back to parsing routes.nix if admin API returns 403. Supports `check_health` for upstream probing. |
+| `hwc_network_vpn_status` | Gluetun VPN public IP and connection state. |
+
+### Mail (1 tool)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_mail_health` | Proton Bridge status, mbsync last sync (via file marker), notmuch count + unread, maildir presence. |
+
+### Media (2 tools)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_media_arr_status` | Hit *arr APIs with agenix API keys for version, health warnings, and queue depth. |
+| `hwc_media_download_queue` | SABnzbd queue (reads API key from sabnzbd.ini) and qBittorrent torrent list with state breakdown. |
+
+### Build (1 tool)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_build_git_status` | Branch, uncommitted changes, unpushed count, recent commits. |
 
 ## Resources (5)
 
-Static or slowly-changing data available as MCP resources (read on demand, not tool calls):
-
 | URI | Content |
 |-----|---------|
-| `hwc://charter` | Full text of CHARTER.md |
-| `hwc://domain-tree` | JSON tree of all domains, their subdirectories and .nix files |
-| `hwc://port-map` | JSON array of all Caddy routes parsed from routes.nix |
-| `hwc://secret-inventory` | JSON map of secret names grouped by category (system, home, services, infrastructure) |
-| `hwc://host-matrix` | JSON map of all 5 hosts with their profiles and domain imports |
+| `hwc://charter` | Full CHARTER.md text |
+| `hwc://domain-tree` | JSON tree of all domains and their files |
+| `hwc://port-map` | JSON array of all Caddy routes from routes.nix |
+| `hwc://secret-inventory` | Secrets grouped by category (system, home, services, infrastructure) |
+| `hwc://host-matrix` | All 5 hosts with profiles and domain imports |
 
-## Architecture
-
-### File Layout
+## File Layout
 
 ```
 domains/system/mcp/
   index.nix                        # NixOS module (hwc.system.mcp.* options, systemd service)
-  parts/caddy.nix                  # Caddy route: port 6243 → 6200
+  parts/caddy.nix                  # Caddy route: port 6243 → 6200 (conditional on SSE)
   README.md
   src/
-    package.json                   # @hwc/infra-mcp, ES modules, Node ≥22
+    package.json                   # @hwc/infra-mcp, @modelcontextprotocol/sdk ^1.29.0, Node ≥22
     tsconfig.json                  # ES2022, NodeNext, strict
     .gitignore                     # node_modules/ dist/
     src/
-      index.ts                     # Entry — registers tools/resources, starts stdio and/or SSE
+      index.ts                     # Entry — server factory, transport routing, session management
       config.ts                    # Loads ServerConfig from HWC_MCP_* env vars
       cache.ts                     # Generic TTL cache (getOrCompute pattern)
       log.ts                       # Structured JSON logger → stderr
-      types.ts                     # ToolDef, ToolResult, ExecResult, ServerConfig, etc.
+      types.ts                     # ToolDef, ToolResult, ExecResult, ResourceDef, ServerConfig
       executors/
         shell.ts                   # execFile wrapper — rejects shell metacharacters
         systemd.ts                 # systemctl show/list-units, journalctl
         nix.ts                     # nix eval + nix flake metadata (cached)
-        podman.ts                  # podman ps/stats/logs/inspect (JSON format)
+        podman.ts                  # podman via root socket (--url unix:///run/podman/podman.sock)
         prometheus.ts              # Prometheus HTTP API (instant + range queries via fetch)
         tailscale.ts               # tailscale status --json
       tools/
         index.ts                   # Aggregates all tool modules into one array
         registry.ts                # ToolRegistry class (name→handler Map)
-        services.ts                # 4 tools: status, logs, container_stats, compare
-        build.ts                   # 1 tool: git_status
-        monitoring.ts              # 4 tools: health_check, journal_errors, prometheus, gpu
-        config.ts                  # 6 tools: get_option, list_domains, port_map, host_profile, search, flake
-        secrets.ts                 # 2 tools: inventory, usage_map
-        storage.ts                 # 2 tools: disk_usage, backup_status
-        network.ts                 # 3 tools: tailscale, caddy_routes, vpn
-        mail.ts                    # 1 tool: health
-        media.ts                   # 2 tools: arr_status, download_queue
+        config.ts                  # 6 tools — option eval, domains, ports, hosts, search, flake
+        services.ts                # 4 tools — status, logs, container stats, compare
+        monitoring.ts              # 4 tools — health check, journal errors, prometheus, gpu
+        secrets.ts                 # 2 tools — inventory, usage map
+        storage.ts                 # 2 tools — disk usage, backup status
+        network.ts                 # 3 tools — tailscale, caddy routes, vpn
+        mail.ts                    # 1 tool — mail health
+        media.ts                   # 2 tools — arr status, download queue
+        build.ts                   # 1 tool — git status
       resources/
-        index.ts                   # 5 resources: charter, domain-tree, port-map, secrets, host-matrix
+        index.ts                   # 5 resources — charter, domain-tree, port-map, secrets, hosts
 ```
 
-### Transport
+## NixOS Module Options
 
-The server supports **stdio** (for Claude Code over SSH or local) and **SSE** (for Claude.ai mobile over Tailscale). When `transport = "both"` (default), SSE runs on the configured port while the process can also be invoked via stdio separately.
+```
+hwc.system.mcp.enable                      # bool, default false
+hwc.system.mcp.port                        # port, default 6200
+hwc.system.mcp.host                        # string, default "127.0.0.1"
+hwc.system.mcp.transport                   # "stdio" | "sse" | "both", default "both"
+hwc.system.mcp.logLevel                    # "debug" | "info" | "warn" | "error", default "info"
+hwc.system.mcp.cacheTtl.runtime            # int seconds, default 60
+hwc.system.mcp.cacheTtl.declarative        # int seconds, default 300
+hwc.system.mcp.mutations.enable            # bool, default false
+hwc.system.mcp.mutations.allowedActions    # list of enum, default ["restart-service" "restart-container" "run-health-check"]
+```
 
-- **stdio**: Pipe JSON-RPC messages to stdin, read from stdout. Stderr carries structured logs.
-- **SSE**: `GET /sse` opens an event stream. `POST /messages` sends requests. `GET /health` returns server status.
-
-### Security
-
-- Runs as user `eric` with `ProtectSystem=strict`, `ProtectHome=read-only`.
-- All command execution uses `execFile` (no shell) with metacharacter rejection.
-- Secret tools expose names and metadata only — never decrypt or return values.
-- Mutations (restart, backup trigger) are disabled by default and gated behind `mutations.enable` + per-action allowlist + `confirm: true` parameter.
-- SSE binds to 127.0.0.1; external access goes through Caddy TLS termination on Tailscale.
-
-### Caching
+## Caching
 
 Expensive operations are cached with configurable TTL:
 - **Runtime queries** (systemctl, podman, tailscale): 60s default
 - **Declarative queries** (nix eval, flake metadata): 300s default
 
-The `TtlCache` class provides `getOrCompute(key, ttl, fn)` for transparent cache-or-fetch.
+The `TtlCache` class provides `getOrCompute(key, ttl, fn)` for transparent cache-or-fetch. Cache is in-memory and persists across tool calls within the same server process.
 
-## NixOS Module Options
+## HTTP Endpoints
 
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/mcp` | Streamable HTTP JSON-RPC (initialize, tools/list, tools/call, etc.) |
+| GET | `/mcp` | Streamable HTTP SSE stream (server-initiated notifications, requires session) |
+| DELETE | `/mcp` | Close a Streamable HTTP session |
+| GET | `/sse` | Legacy SSE transport (opens event stream) |
+| POST | `/messages` | Legacy SSE message endpoint |
+| GET | `/health` | JSON health check (status, tool count, uptime, active sessions) |
+| GET | `/.well-known/*` | Clean 404 stubs for OAuth discovery probes |
+
+## Systemd Service
+
+Unit: `hwc-infra-mcp.service`
+
+```bash
+# Check status
+systemctl status hwc-infra-mcp
+
+# View logs
+journalctl -u hwc-infra-mcp -f
+
+# Restart after code changes
+npm run build  # in src/
+sudo systemctl restart hwc-infra-mcp
 ```
-hwc.system.mcp.enable               # bool, default false
-hwc.system.mcp.port                  # port, default 6200
-hwc.system.mcp.host                  # string, default "127.0.0.1"
-hwc.system.mcp.transport             # "stdio" | "sse" | "both", default "both"
-hwc.system.mcp.logLevel              # "debug" | "info" | "warn" | "error", default "info"
-hwc.system.mcp.cacheTtl.runtime      # int seconds, default 60
-hwc.system.mcp.cacheTtl.declarative  # int seconds, default 300
-hwc.system.mcp.mutations.enable      # bool, default false
-hwc.system.mcp.mutations.allowedActions  # list of enum, default ["restart-service" "restart-container" "run-health-check"]
-```
 
-## Ports
+The service includes: nix, git, systemd, podman, tailscale, curl, jq, borgbackup, coreutils, gawk, gnugrep, procps, util-linux in PATH.
 
-| Port | Purpose |
-|------|---------|
-| 6200 | SSE server (internal, localhost only) |
-| 6243 | Caddy TLS termination (Tailscale HTTPS) |
+## Troubleshooting
+
+### "0 containers" in health check or container_stats
+The podman executor needs root socket access. Check:
+- `stat /run/podman/podman.sock` — should be `root:podman 660`
+- `id eric` — should include `podman` group
+- `index.nix` has `SupplementaryGroups = ["podman"]` and `/run/podman` in `ReadOnlyPaths`
+
+### nix eval returns error
+`nix eval` operates on the git store, not the working tree. Uncommitted changes are invisible. Commit first, or use filesystem-based tools (`list_domains`, `search_options`, `get_port_map`) which read the working tree directly.
+
+### Claude.ai "Couldn't reach the MCP server"
+1. Check Funnel is running: `sudo tailscale serve status` — should show `:6243 (Funnel on)`
+2. Check health from outside: `curl https://hwc.ocelot-wahoo.ts.net:6243/health`
+3. Check service is running: `systemctl status hwc-infra-mcp`
+4. Check logs for errors: `journalctl -u hwc-infra-mcp --since "5 min ago"`
+5. Re-enable Funnel if needed: `sudo tailscale funnel --https=6243 --bg 6200`
+
+### Session errors ("Server not initialized", "Session not found")
+The `onsessioninitialized` callback in `index.ts` registers sessions. If sessions aren't persisting, check that the callback is wired correctly and that `enableJsonResponse: true` is set.
+
+### search_options crashes
+The `query` parameter is required. Missing it used to cause a TypeError — now it returns a clean error message. Always pass `{"query": "your search term"}`.
+
+## Known Limitations
+
+- **9 tools from spec not implemented** (all Phase 4-6): mutation tools (restart, dry-build, flake-check), diff_hosts, alert_status, library_stats, firewall_rules, sync_status
+- **Caddy admin API returns 403**: `caddy_routes` falls back to parsing routes.nix (declarative, not live). Admin API access may need `admin { origins localhost }` in Caddy config.
+- **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`. Adding nvidia to the service PATH in index.nix would be more robust.
+- **nix eval requires committed changes**: `get_option` and `flake_metadata` use `nix eval` against the git store. Uncommitted changes are invisible.
+- **Funnel is imperative**: `sudo tailscale funnel --https=6243 --bg 6200` must be re-run after Tailscale restarts. Not managed by NixOS config.
+- **cAdvisor per-container metrics**: Prometheus cAdvisor exporter only reports root cgroup metrics, not per-container. Container stats come from podman/systemd, not Prometheus.
 
 ## Dependencies
 
-- Node.js 22 (provided by NixOS module `path`)
-- `@modelcontextprotocol/sdk` ^1.12.1
-- System tools in PATH: nix, git, systemd, podman, tailscale, curl, jq, borgbackup, nvidia-smi
+- Node.js 22 (provided by NixOS module)
+- `@modelcontextprotocol/sdk` ^1.29.0 (includes StreamableHTTPServerTransport)
+- `@hono/node-server` (transitive dep of SDK, used by Streamable HTTP transport)
 
 ## Changelog
 
-- **2026-04-02**: Phase 3 — runtime layer complete. 25 tools, 6 executors, 5 resources. Podman, Prometheus, Tailscale, GPU, mail, media integration.
-- **2026-04-02**: Phase 2 — declarative layer. Config tools (nix eval, domain tree, port map, host profiles, option search), secrets tools (inventory, usage map), 5 MCP resources.
-- **2026-04-02**: Phase 1 — foundation. TypeScript project scaffolded. 4 initial tools (services status, git status, health check, journal errors). Stdio + SSE dual transport. NixOS module with systemd service.
+- **2026-04-03**: Tool audit fixes (12 improvements from Claude.ai audit):
+  - **P0**: `container_stats` systemd cgroup fallback when podman stats returns empty; `flake_metadata`/`get_option` use explicit `path:` flake references (fixes CWD-dependent failures)
+  - **P1**: `caddy_routes` falls back to routes.nix parsing on 403; `gpu_status` tries `/run/current-system/sw/bin/nvidia-smi` fallback; `health_check` containers uses systemd service list when podman ps fails
+  - **P2**: `arr_status` reads agenix API keys + returns health warnings/queue depth; `download_queue` reads SABnzbd API key from config; `backup_status` fixes timer name to `borgbackup-job-hwc-backup` + parses journal for archive info; `search_options` improved name extraction regex
+  - **P3**: `mail_health` uses file-based markers instead of `systemctl --user` (which doesn't work from system service); `tailscale_status` collapses funnel-ingress-node entries; `services_logs` fixes always-true condition that prevented unit name fallthrough
+  - Fixed `HWC_HOSTNAME` in `.mcp.json` from `hwc-laptop` to `hwc-server`
+- **2026-04-03**: Streamable HTTP transport — added MCP spec 2025-06-18 support (`StreamableHTTPServerTransport` with `enableJsonResponse`, session management via `onsessioninitialized`, `.well-known` stubs). Tailscale Funnel on :6243. Claude.ai can now connect.
+- **2026-04-02**: Root podman fix — all podman commands route through root socket (`--url unix:///run/podman/podman.sock`), `SupplementaryGroups=["podman"]`, `/run/podman` in ReadOnlyPaths. Container tools now see all 42 root containers.
+- **2026-04-02**: Parameter validation — `search_options` no longer crashes on missing `query` param.
+- **2026-04-02**: Registered `hwc-infra` in `.mcp.json` for Claude Code stdio access.
+- **2026-04-02**: Phase 3 — runtime layer complete. 25 tools, 6 executors, 5 resources.
+- **2026-04-02**: Phase 2 — declarative layer. Config tools, secrets tools, 5 MCP resources.
+- **2026-04-02**: Phase 1 — foundation. TypeScript scaffolded, 4 initial tools, stdio + SSE, NixOS module.
+
+## Structure
+
+```
+domains/system/mcp/
+├── index.nix
+├── parts/
+│   └── caddy.nix
+├── README.md
+└── src/
+    ├── package.json
+    ├── tsconfig.json
+    ├── .gitignore
+    └── src/
+        ├── index.ts
+        ├── config.ts
+        ├── cache.ts
+        ├── log.ts
+        ├── types.ts
+        ├── executors/
+        │   ├── shell.ts
+        │   ├── systemd.ts
+        │   ├── nix.ts
+        │   ├── podman.ts
+        │   ├── prometheus.ts
+        │   └── tailscale.ts
+        ├── tools/
+        │   ├── index.ts
+        │   ├── registry.ts
+        │   ├── config.ts
+        │   ├── services.ts
+        │   ├── monitoring.ts
+        │   ├── secrets.ts
+        │   ├── storage.ts
+        │   ├── network.ts
+        │   ├── mail.ts
+        │   ├── media.ts
+        │   └── build.ts
+        └── resources/
+            └── index.ts
+```

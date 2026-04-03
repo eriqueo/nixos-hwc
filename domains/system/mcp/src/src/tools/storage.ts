@@ -91,18 +91,32 @@ export function storageTools(runtimeTtl: number): ToolDef[] {
       name: "hwc_storage_backup_status",
       description:
         "Get Borg backup status — last run, next scheduled, recent archives. " +
-        "Checks borgbackup-job-hwc systemd timer.",
+        "Checks borgbackup-job-hwc-backup systemd timer and journal for archive info.",
       inputSchema: {
         type: "object",
         properties: {},
       },
       handler: async (): Promise<ToolResult> => {
         try {
-          const [timerResult, serviceResult] = await Promise.all([
-            safeExec("systemctl", ["list-timers", "borgbackup-job-hwc.timer", "--no-pager"], { timeout: 5000 }),
-            safeExec("systemctl", ["show", "borgbackup-job-hwc.service",
+          const serviceName = "borgbackup-job-hwc-backup";
+
+          const [timerResult, serviceResult, journalResult] = await Promise.all([
+            safeExec("systemctl", [
+              "list-timers", `${serviceName}.timer`, "--no-pager",
+            ], { timeout: 5000 }),
+            safeExec("systemctl", [
+              "show", `${serviceName}.service`,
               "--property=ActiveState,SubState,ExecMainStatus,ExecMainStartTimestamp,ExecMainExitTimestamp",
-              "--no-pager"], { timeout: 5000 }),
+              "--no-pager",
+            ], { timeout: 5000 }),
+            // Get recent borg journal output for archive summary
+            safeExec("journalctl", [
+              "-u", `${serviceName}.service`,
+              "--no-pager",
+              "-n", "30",
+              "--since", "7 days ago",
+              "-o", "cat",
+            ], { timeout: 10000 }),
           ]);
 
           const props: Record<string, string> = {};
@@ -122,6 +136,27 @@ export function storageTools(runtimeTtl: number): ToolDef[] {
             }
           }
 
+          // Extract archive summary from journal (borg logs archive stats)
+          let lastArchive: Record<string, unknown> | undefined;
+          const journalLines = journalResult.stdout.split("\n").filter(Boolean);
+          for (const line of journalLines.reverse()) {
+            // Look for borg archive creation summary lines
+            const archiveMatch = line.match(/Archive name: (.+)/);
+            if (archiveMatch) {
+              lastArchive = { name: archiveMatch[1] };
+              break;
+            }
+          }
+
+          // Extract stats from journal
+          const stats: Record<string, string> = {};
+          for (const line of journalLines) {
+            const sizeMatch = line.match(/(Original size|Compressed size|Deduplicated size|This archive):\s*(.+)/);
+            if (sizeMatch) stats[sizeMatch[1]] = sizeMatch[2].trim();
+            const durationMatch = line.match(/Duration:\s*(.+)/);
+            if (durationMatch) stats["Duration"] = durationMatch[1].trim();
+          }
+
           return {
             status: "ok",
             message: `Backup service: ${props.ActiveState || "unknown"}`,
@@ -131,6 +166,8 @@ export function storageTools(runtimeTtl: number): ToolDef[] {
               lastFinished: props.ExecMainExitTimestamp,
               exitStatus: props.ExecMainStatus,
               nextScheduled: nextRun,
+              lastArchive,
+              archiveStats: Object.keys(stats).length > 0 ? stats : undefined,
             },
           };
         } catch (err) {

@@ -91,6 +91,8 @@
           "home-admin"     = api."gotify-home-admin" or null;
         };
     };
+    # MCP bridge — expose n8n workflows as MCP tools via HTTP for Claude.ai
+    mcpBridge.enable = true;
     # Non-secret workflow configuration
     extraEnv = {
       # work_lead_response: Twilio sender number

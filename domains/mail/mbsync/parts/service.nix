@@ -50,13 +50,25 @@ if [ -d "$LABELS_DIR" ]; then
   done
 fi
 
-# Sync all accounts
-${pkgs.isync}/bin/mbsync -a
+# Sync all accounts (tolerate partial failures so notmuch new always runs)
+_sync_rc=0
+${pkgs.isync}/bin/mbsync -a || _sync_rc=$?
+if [ "$_sync_rc" -ne 0 ]; then
+  echo "Warning: mbsync exited with code $_sync_rc (continuing to index)"
+fi
 
 # Index new mail (triggers post-new hook for tagging)
 "$NM" new
 
-echo "$(date): Mail sync completed"
+# Mark successful sync for health monitoring (even when no new mail)
+${pkgs.coreutils}/bin/touch "''${XDG_CACHE_HOME:-$HOME/.cache}/mbsync-last-success"
+
+if [ "$_sync_rc" -ne 0 ]; then
+  echo "$(date): Mail sync completed with warnings (mbsync rc=$_sync_rc)"
+  exit "$_sync_rc"
+else
+  echo "$(date): Mail sync completed"
+fi
     '';
     executable = true;
   };

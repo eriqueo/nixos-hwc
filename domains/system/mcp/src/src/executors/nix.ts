@@ -24,7 +24,9 @@ export async function nixEval(
   const cacheKey = `nix-eval:${host}:${attrPath}`;
 
   return cache.getOrCompute(cacheKey, ttlSeconds, async () => {
-    const fullAttr = `.#nixosConfigurations.${host}.config.${attrPath}`;
+    // Use explicit path: reference so nix eval works regardless of CWD
+    const flakeRef = `path:${flakePath}`;
+    const fullAttr = `${flakeRef}#nixosConfigurations.${host}.config.${attrPath}`;
     log.debug("nix eval", { flakePath, fullAttr });
 
     const result = await safeExec("nix", [
@@ -32,6 +34,7 @@ export async function nixEval(
       fullAttr,
       "--json",
       "--no-write-lock-file",
+      "--no-update-lock-file",
     ], { timeout: 30000, maxBuffer: 5 * 1024 * 1024 });
 
     if (result.exitCode !== 0) {
@@ -46,17 +49,21 @@ export async function nixEval(
  * Get flake metadata (inputs, revisions, lock file age).
  */
 export async function flakeMetadata(
-  _flakePath: string,
+  flakePath: string,
   ttlSeconds: number = 300
 ): Promise<Record<string, unknown>> {
   const cacheKey = "flake-metadata";
 
   return cache.getOrCompute(cacheKey, ttlSeconds, async () => {
+    // Use explicit path: reference so command works regardless of CWD
+    const flakeRef = `path:${flakePath}`;
     const result = await safeExec("nix", [
       "flake",
       "metadata",
+      flakeRef,
       "--json",
       "--no-write-lock-file",
+      "--no-update-lock-file",
     ], { timeout: 30000 });
 
     if (result.exitCode !== 0) {

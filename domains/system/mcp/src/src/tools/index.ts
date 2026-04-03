@@ -21,7 +21,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...configTools(config.nixosConfigPath, config.cacheTtl.declarative),
     ...secretsTools(config.nixosConfigPath),
     ...storageTools(config.cacheTtl.runtime),
-    ...networkTools(config.cacheTtl.runtime),
+    ...networkTools(config.cacheTtl.runtime, config.nixosConfigPath),
     ...mailTools(),
     ...mediaTools(),
   ];

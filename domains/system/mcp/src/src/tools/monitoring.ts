@@ -246,12 +246,22 @@ export function monitoringTools(
       },
       handler: async (): Promise<ToolResult> => {
         try {
+          // Try nvidia-smi from PATH, then NixOS system profile fallback
+          let nvidiaSmi = "nvidia-smi";
+          const testRun = await safeExec("nvidia-smi", ["--version"], { timeout: 3000 });
+          if (testRun.exitCode !== 0) {
+            // Not in service PATH; try NixOS system profile
+            const fallback = "/run/current-system/sw/bin/nvidia-smi";
+            const fallbackTest = await safeExec(fallback, ["--version"], { timeout: 3000 });
+            if (fallbackTest.exitCode === 0) nvidiaSmi = fallback;
+          }
+
           const [gpuResult, procResult] = await Promise.all([
-            safeExec("nvidia-smi", [
+            safeExec(nvidiaSmi, [
               "--query-gpu=name,temperature.gpu,utilization.gpu,utilization.memory,memory.used,memory.total,power.draw",
               "--format=csv,noheader,nounits",
             ], { timeout: 5000 }),
-            safeExec("nvidia-smi", [
+            safeExec(nvidiaSmi, [
               "--query-compute-apps=pid,name,used_memory",
               "--format=csv,noheader,nounits",
             ], { timeout: 5000 }),
@@ -260,7 +270,7 @@ export function monitoringTools(
           if (gpuResult.exitCode !== 0) {
             return {
               status: "error",
-              message: "nvidia-smi not available (no NVIDIA GPU or driver not loaded)",
+              message: "nvidia-smi not available (not in PATH or /run/current-system/sw/bin/)",
               error: gpuResult.stderr,
             };
           }
@@ -380,19 +390,40 @@ async function checkStorage(): Promise<HealthComponent> {
   }
 }
 
-/** Check podman containers (via root socket through executor) */
+/** Check podman containers — tries podman ps, falls back to systemd service list */
 async function checkContainers(): Promise<HealthComponent> {
   try {
     const containers = await listContainers();
-    const running: string[] = [];
-    const stopped: string[] = [];
+    let running: string[] = [];
+    let stopped: string[] = [];
 
-    for (const c of containers) {
-      const name = c.Names?.[0] || "unknown";
-      if (c.State === "running") {
-        running.push(name);
-      } else {
-        stopped.push(name);
+    if (containers.length > 0) {
+      for (const c of containers) {
+        const name = c.Names?.[0] || "unknown";
+        if (c.State === "running") {
+          running.push(name);
+        } else {
+          stopped.push(name);
+        }
+      }
+    } else {
+      // Fallback: count podman-* systemd services (podman ps may not see rootful containers)
+      const services = await listServices();
+      const containerServices = services.filter((s) => s.type === "container");
+      running = containerServices
+        .filter((s) => s.activeState === "active")
+        .map((s) => s.name.replace("podman-", "").replace(".service", ""));
+      stopped = containerServices
+        .filter((s) => s.activeState !== "active")
+        .map((s) => s.name.replace("podman-", "").replace(".service", ""));
+
+      if (running.length === 0 && stopped.length === 0) {
+        return {
+          name: "containers",
+          status: "green",
+          message: "No container services detected",
+          details: { running: [], stopped: [], source: "systemd-fallback" },
+        };
       }
     }
 

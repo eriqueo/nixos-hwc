@@ -437,15 +437,32 @@ async function searchOptionDeclarations(
             (line.toLowerCase().includes(query) ||
              lines.slice(Math.max(0, i - 2), i + 5).join("\n").toLowerCase().includes(query))
           ) {
-            // Extract the option name from context
-            const contextBefore = lines.slice(Math.max(0, i - 3), i).join("\n");
-            const nameMatch = contextBefore.match(/(\w+)\s*=\s*(?:lib\.)?mk/);
+            // Extract option name by walking back through the nesting
+            const contextBefore = lines.slice(Math.max(0, i - 10), i + 1).join("\n");
+
+            // Try to match full path like "gpu.enable = lib.mkOption" or inline "enable = mkEnableOption"
+            const fullPathMatch = contextBefore.match(/([\w.]+)\s*=\s*(?:lib\.)?mk(?:Option|EnableOption)/);
+            // Also try extracting from nesting: look for attribute paths in context
+            let optionName = fullPathMatch?.[1] || "unknown";
+
+            // If we only got a leaf name like "enable", try to build path from nesting context
+            if (optionName === "enable" || optionName === "unknown") {
+              const widerContext = lines.slice(Math.max(0, i - 20), i + 1);
+              const pathParts: string[] = [];
+              for (const ctx of widerContext) {
+                const attrMatch = ctx.match(/^\s*([\w]+)\s*=\s*\{/);
+                if (attrMatch) pathParts.push(attrMatch[1]);
+              }
+              if (fullPathMatch?.[1]) pathParts.push(fullPathMatch[1]);
+              if (pathParts.length > 1) optionName = pathParts.join(".");
+            }
+
             const snippet = lines.slice(i, Math.min(lines.length, i + 3)).join("\n").trim();
 
             results.push({
               file: relative(base, fullPath),
               line: i + 1,
-              name: nameMatch?.[1] || "unknown",
+              name: optionName,
               type: line.includes("mkEnableOption") ? "enable" : "option",
               snippet: snippet.slice(0, 200),
             });

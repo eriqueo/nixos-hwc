@@ -150,12 +150,19 @@
       "Bash(sudo mount:*)",
       "mcp__github__get_pull_request",
       "Bash(grep:*)",
-      "Bash(hwc-gotify-send:*)"
+      "Bash(hwc-gotify-send:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(HWC_MCP_TRANSPORT=stdio HWC_NIXOS_CONFIG_PATH=/home/eric/.nixos HWC_HOSTNAME=hwc-laptop node:*)",
+      "Bash(jq:*)",
+      "Bash(echo EXISTS:*)",
+      "Bash(sudo tailscale:*)"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "acceptEdits"
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "filesystem",
     "git",
@@ -171,7 +178,8 @@
     "n8n",
     "heartwood",
     "_filesystem_DISABLED",
-    "_brave-search_DISABLED"
+    "_brave-search_DISABLED",
+    "hwc-infra"
   ],
   "hooks": {
     "PreToolUse": [
