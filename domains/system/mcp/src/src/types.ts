@@ -2,12 +2,27 @@
  * Shared TypeScript types for the HWC Infrastructure MCP Server.
  */
 
+/** Categorised error types for structured MCP error responses. */
+export type McpErrorType =
+  | "NOT_FOUND"        // service, file, resource, binary
+  | "PERMISSION_DENIED"// sandbox / filesystem permission
+  | "VALIDATION_ERROR" // bad input parameters
+  | "TIMEOUT"          // operation exceeded time limit
+  | "COMMAND_FAILED"   // shell command returned non-zero
+  | "NETWORK_ERROR"    // HTTP fetch / API unreachable
+  | "UNAVAILABLE"      // service or endpoint not running
+  | "INTERNAL_ERROR";  // unexpected exception
+
 /** Standard result wrapper for all tool responses */
 export interface ToolResult<T = unknown> {
   status: "ok" | "error" | "partial";
   message: string;
   data?: T;
   error?: string;
+  /** Structured error fields — present when status is "error" */
+  error_type?: McpErrorType;
+  suggestion?: string;
+  context?: Record<string, unknown>;
 }
 
 /** Tool definition matching the heartwood-mcp pattern */

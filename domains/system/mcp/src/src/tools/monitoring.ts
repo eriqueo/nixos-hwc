@@ -8,6 +8,7 @@ import { listServices } from "../executors/systemd.js";
 import { listContainers } from "../executors/podman.js";
 import { instantQuery, rangeQuery } from "../executors/prometheus.js";
 import { TtlCache } from "../cache.js";
+import { mcpError, catchError } from "../errors.js";
 
 const cache = new TtlCache();
 
@@ -26,9 +27,9 @@ export function monitoringTools(
     {
       name: "hwc_monitoring_health_check",
       description:
-        "Run a comprehensive health check across system components. " +
-        "Checks service status, disk space, and container health. " +
-        "Returns a traffic-light summary (green/yellow/red).",
+        "Run a comprehensive health check across services, storage, and containers. " +
+        "Returns traffic-light summary (green/yellow/red) per component. " +
+        "Use as a first-pass system overview.",
       inputSchema: {
         type: "object",
         properties: {
@@ -80,11 +81,7 @@ export function monitoringTools(
             data: { overall, components },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Health check failed",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Health check failed", err);
         }
       },
     },
@@ -92,8 +89,9 @@ export function monitoringTools(
     {
       name: "hwc_monitoring_journal_errors",
       description:
-        "Get recent error-level journal entries across all services. " +
-        "Useful for quickly finding what's broken.",
+        "Get recent error-level journal entries grouped by unit. " +
+        "Returns error counts and most recent messages per service. " +
+        "Use to quickly find what's broken.",
       inputSchema: {
         type: "object",
         properties: {
@@ -156,11 +154,7 @@ export function monitoringTools(
             },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to query journal errors",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to query journal errors", err, "Is journalctl accessible?");
         }
       },
     },
@@ -169,8 +163,8 @@ export function monitoringTools(
     {
       name: "hwc_monitoring_prometheus_query",
       description:
-        "Execute a PromQL query against the local Prometheus instance. " +
-        "Examples: 'up', 'node_filesystem_avail_bytes', 'rate(node_cpu_seconds_total[5m])'",
+        "Execute a PromQL query against local Prometheus. Supports instant and range queries. " +
+        "Examples: 'up', 'rate(node_cpu_seconds_total[5m])'. Requires Prometheus on localhost:9090.",
       inputSchema: {
         type: "object",
         properties: {
@@ -209,7 +203,11 @@ export function monitoringTools(
             const end = args.end as string;
             const step = (args.step as string) || "60s";
             if (!start || !end) {
-              return { status: "error", message: "Range query requires 'start' and 'end' parameters" };
+              return mcpError({
+                type: "VALIDATION_ERROR",
+                message: "Range query requires 'start' and 'end' parameters",
+                suggestion: "Provide start and end as ISO8601 timestamps or relative values like '-1h'",
+              });
             }
             const result = await rangeQuery(query, start, end, step);
             return {
@@ -226,11 +224,7 @@ export function monitoringTools(
             data: result.data,
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Prometheus query failed (is Prometheus running?)",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("UNAVAILABLE", "Prometheus query failed (is Prometheus running?)", err, "Check that Prometheus is running on localhost:9090");
         }
       },
     },
@@ -239,7 +233,8 @@ export function monitoringTools(
     {
       name: "hwc_monitoring_gpu_status",
       description:
-        "Get NVIDIA GPU utilization, memory, temperature, power draw, and processes.",
+        "Get NVIDIA GPU utilization, memory, temperature, power draw, and running processes. " +
+        "Requires nvidia-smi. Only available on hosts with NVIDIA GPUs.",
       inputSchema: {
         type: "object",
         properties: {},
@@ -268,11 +263,12 @@ export function monitoringTools(
           ]);
 
           if (gpuResult.exitCode !== 0) {
-            return {
-              status: "error",
-              message: "nvidia-smi not available (not in PATH or /run/current-system/sw/bin/)",
+            return mcpError({
+              type: "NOT_FOUND",
+              message: "nvidia-smi not available",
               error: gpuResult.stderr,
-            };
+              suggestion: "nvidia-smi not in service PATH or /run/current-system/sw/bin/. This host may not have an NVIDIA GPU.",
+            });
           }
 
           const gpuLine = gpuResult.stdout.trim().split(",").map((s) => s.trim());
@@ -300,11 +296,7 @@ export function monitoringTools(
             data: { gpu, processes },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to query GPU status",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to query GPU status", err);
         }
       },
     },

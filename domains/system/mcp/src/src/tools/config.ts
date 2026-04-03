@@ -5,10 +5,11 @@
  * Only hwc_config_get_option uses nix eval (slow, requires committed changes).
  */
 
-import { readdir, readFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { join, relative, resolve, normalize } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { nixEval, flakeMetadata } from "../executors/nix.js";
+import { mcpError, catchError } from "../errors.js";
 
 const HOSTS = ["hwc-server", "hwc-laptop", "hwc-xps", "hwc-gaming", "hwc-firestick"] as const;
 
@@ -18,9 +19,8 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
     {
       name: "hwc_config_get_option",
       description:
-        "Get the evaluated value of any option from the NixOS configuration. " +
-        "Uses nix eval (slow ~5-15s, cached). Only sees committed changes. " +
-        "Examples: 'hwc.media.jellyfin.enable', 'networking.hostName'",
+        "Evaluate any NixOS option value using nix eval. Slow (5-15s, cached). Only sees committed changes. " +
+        "Examples: 'hwc.media.jellyfin.enable', 'services.caddy.enable'. Specify host to target a specific machine.",
       inputSchema: {
         type: "object",
         properties: {
@@ -49,11 +49,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             data: { host, path: optionPath, value },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "nix eval failed (is the option path correct? are changes committed?)",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("COMMAND_FAILED", "nix eval failed (is the option path correct? are changes committed?)", err, "Option paths must use dots (hwc.media.jellyfin.enable). Only committed changes are visible to nix eval.");
         }
       },
     },
@@ -113,11 +109,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             data: { domains },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to list domains",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to list domains", err);
         }
       },
     },
@@ -160,11 +152,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             data: { routes: filtered, total: routes.length },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to parse port map",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to parse port map", err, "Check that domains/networking/routes.nix exists");
         }
       },
     },
@@ -196,11 +184,12 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
           try {
             content = await readFile(configPath, "utf-8");
           } catch {
-            return {
-              status: "error",
+            return mcpError({
+              type: "NOT_FOUND",
               message: `Machine config not found: ${configPath}`,
-              error: `No config.nix found for ${host}`,
-            };
+              suggestion: `Valid hosts: ${HOSTS.join(", ")}`,
+              context: { host, path: configPath },
+            });
           }
 
           // Parse imports
@@ -232,11 +221,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to get host profile",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to get host profile", err);
         }
       },
     },
@@ -260,7 +245,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
       handler: async (args): Promise<ToolResult> => {
         try {
           if (!args.query || typeof args.query !== "string") {
-            return { status: "error", message: "query parameter is required" };
+            return mcpError({ type: "VALIDATION_ERROR", message: "query parameter is required", suggestion: "Provide a search term like 'gpu', 'port', 'backup', or 'enable'" });
           }
           const query = (args.query as string).toLowerCase();
           const domainsDir = join(nixosConfigPath, "domains");
@@ -272,11 +257,126 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             data: { results },
           };
         } catch (err) {
+          return catchError("INTERNAL_ERROR", "Failed to search options", err);
+        }
+      },
+    },
+
+    // ── hwc_config_read_file ─────────────────────────────────────────────
+    {
+      name: "hwc_config_read_file",
+      description:
+        "Read a file from the nixos-hwc repo by relative path. Supports offset/limit for large files. " +
+        "Returns numbered lines. Scoped to repo — cannot read outside. Use hwc_config_list_dir to find paths.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description:
+              "File path relative to repo root, e.g. 'domains/system/mcp/index.nix' " +
+              "or 'machines/server/config.nix'",
+          },
+          offset: {
+            type: "number",
+            description: "Start reading from this line number (1-based, default 1)",
+          },
+          limit: {
+            type: "number",
+            description: "Max lines to return (default 200, max 500)",
+          },
+        },
+        required: ["path"],
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const rawPath = args.path as string;
+          const offset = Math.max(1, (args.offset as number) || 1);
+          const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
+
+          // Security: resolve to absolute and verify it's within the repo
+          const absPath = resolve(nixosConfigPath, rawPath);
+          const normalRepo = normalize(nixosConfigPath);
+          if (!absPath.startsWith(normalRepo + "/") && absPath !== normalRepo) {
+            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes repo root: ${rawPath}`, suggestion: "Paths must be relative to the nixos-hwc repo root" });
+          }
+
+          // Check it exists and is a file
+          let fileStat;
+          try {
+            fileStat = await stat(absPath);
+          } catch {
+            return mcpError({ type: "NOT_FOUND", message: `File not found: ${rawPath}`, suggestion: "Use hwc_config_list_dir to browse available files" });
+          }
+          if (!fileStat.isFile()) {
+            return mcpError({ type: "VALIDATION_ERROR", message: `Not a file: ${rawPath}`, suggestion: "Use hwc_config_list_dir for directories" });
+          }
+
+          const content = await readFile(absPath, "utf-8");
+          const allLines = content.split("\n");
+          const totalLines = allLines.length;
+          const startIdx = offset - 1;
+          const slice = allLines.slice(startIdx, startIdx + limit);
+
+          // Number the lines like cat -n
+          const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} │ ${line}`).join("\n");
+
           return {
-            status: "error",
-            message: "Failed to search options",
-            error: err instanceof Error ? err.message : String(err),
+            status: "ok",
+            message: `${rawPath} (lines ${offset}–${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
+            data: {
+              path: rawPath,
+              totalLines,
+              offset,
+              limit,
+              content: numbered,
+            },
           };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Failed to read file", err);
+        }
+      },
+    },
+
+    // ── hwc_config_list_dir ───────────────────────────────────────────────
+    {
+      name: "hwc_config_list_dir",
+      description:
+        "List directory contents in the nixos-hwc repo. Shows files with sizes and subdirectories. " +
+        "Set recursive=true for up to 3 levels deep. Scoped to repo root.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Directory path relative to repo root (default: repo root)",
+          },
+          recursive: {
+            type: "boolean",
+            description: "List recursively (default false, max 3 levels deep)",
+          },
+        },
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const rawPath = (args.path as string) || ".";
+          const recursive = (args.recursive as boolean) ?? false;
+
+          const absPath = resolve(nixosConfigPath, rawPath);
+          const normalRepo = normalize(nixosConfigPath);
+          if (!absPath.startsWith(normalRepo + "/") && absPath !== normalRepo) {
+            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes repo root: ${rawPath}`, suggestion: "Paths must be relative to the nixos-hwc repo root" });
+          }
+
+          const entries = await listDirEntries(absPath, normalRepo, recursive ? 3 : 0);
+
+          return {
+            status: "ok",
+            message: `${entries.length} entries in ${rawPath}`,
+            data: { path: rawPath, entries },
+          };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Failed to list directory", err);
         }
       },
     },
@@ -318,11 +418,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             data: { inputs },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to get flake metadata",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("COMMAND_FAILED", "Failed to get flake metadata", err, "Is nix available and the flake.lock valid?");
         }
       },
     },
@@ -470,6 +566,50 @@ async function searchOptionDeclarations(
         }
       } catch {
         // Skip unreadable files
+      }
+    }
+  }
+
+  return results;
+}
+
+interface DirEntry {
+  name: string;
+  type: "file" | "directory";
+  size?: number;
+  children?: DirEntry[];
+}
+
+async function listDirEntries(
+  dir: string,
+  repoRoot: string,
+  maxDepth: number,
+  depth: number = 0,
+): Promise<DirEntry[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const results: DirEntry[] = [];
+
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    // Skip hidden dirs, node_modules, dist, .git
+    if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "dist") continue;
+
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const item: DirEntry = { name: entry.name, type: "directory" };
+      if (depth < maxDepth) {
+        try {
+          item.children = await listDirEntries(fullPath, repoRoot, maxDepth, depth + 1);
+        } catch {
+          /* unreadable */
+        }
+      }
+      results.push(item);
+    } else if (entry.isFile()) {
+      try {
+        const s = await stat(fullPath);
+        results.push({ name: entry.name, type: "file", size: s.size });
+      } catch {
+        results.push({ name: entry.name, type: "file" });
       }
     }
   }

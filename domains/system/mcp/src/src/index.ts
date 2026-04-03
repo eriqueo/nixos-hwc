@@ -80,7 +80,13 @@ function createMCPServer(
       });
       return {
         content: [
-          { type: "text", text: JSON.stringify({ status: "error", message, error: "INTERNAL_ERROR" }) },
+          { type: "text", text: JSON.stringify({
+            status: "error",
+            message,
+            error_type: "INTERNAL_ERROR",
+            suggestion: "This is an unhandled exception. Check server logs for details.",
+            error: message,
+          }) },
         ],
         isError: true,
       };
@@ -173,6 +179,49 @@ async function main() {
       }
 
       const url = req.url || "/";
+
+      // ── n8n .well-known stubs ────────────────────────────────────
+      // Claude.ai probes these during connection. Return clean 404.
+      if (url.startsWith("/n8n/.well-known/")) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+
+      // ── n8n MCP bridge proxy ──────────────────────────────────────
+      // Forward /n8n/* to the n8n-mcp bridge on port 6201
+      if (url.startsWith("/n8n/") || url === "/n8n") {
+        const n8nPort = parseInt(process.env.HWC_N8N_MCP_PORT || "6201", 10);
+        const n8nAuthToken = process.env.HWC_N8N_MCP_AUTH_TOKEN || "hwc-n8n-mcp-internal-bridge-token-do-not-expose-externally";
+        const strippedPath = url.slice(4) || "/";  // Remove "/n8n" prefix
+        const { request: httpRequest } = await import("node:http");
+
+        const proxyReq = httpRequest({
+          hostname: "127.0.0.1",
+          port: n8nPort,
+          path: strippedPath,
+          method: req.method,
+          headers: {
+            ...req.headers,
+            host: `127.0.0.1:${n8nPort}`,
+            authorization: `Bearer ${n8nAuthToken}`,
+          },
+        }, (proxyRes) => {
+          res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+          proxyRes.pipe(res);
+        });
+
+        proxyReq.on("error", (err) => {
+          log.error("n8n MCP proxy error", { error: err.message, path: strippedPath });
+          if (!res.headersSent) {
+            res.writeHead(502, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "n8n MCP bridge unavailable" }));
+          }
+        });
+
+        req.pipe(proxyReq);
+        return;
+      }
 
       // ── Health check ────────────────────────────────────────────────
       if (url === "/health" && req.method === "GET") {

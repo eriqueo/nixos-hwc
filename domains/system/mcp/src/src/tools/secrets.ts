@@ -6,6 +6,7 @@
 import { readdir, readFile, access } from "node:fs/promises";
 import { join, relative } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
+import { catchError } from "../errors.js";
 
 interface SecretDeclaration {
   name: string;
@@ -22,8 +23,8 @@ export function secretsTools(nixosConfigPath: string): ToolDef[] {
     {
       name: "hwc_secrets_inventory",
       description:
-        "List all secrets managed by agenix — name, category, whether the .age file exists. " +
-        "NEVER returns secret values. Parses domains/secrets/declarations/.",
+        "List all agenix-managed secrets — name, category, .age file existence, permissions. " +
+        "NEVER returns secret values. Filter by category (system, home, services, infrastructure).",
       inputSchema: {
         type: "object",
         properties: {
@@ -68,11 +69,7 @@ export function secretsTools(nixosConfigPath: string): ToolDef[] {
             data: { secrets, byCategory, total: secrets.length },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to read secret inventory",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to read secret inventory", err, "Check that domains/secrets/declarations/ exists");
         }
       },
     },
@@ -81,8 +78,8 @@ export function secretsTools(nixosConfigPath: string): ToolDef[] {
     {
       name: "hwc_secrets_usage_map",
       description:
-        "Show which services reference which secrets. Greps for age.secrets references " +
-        "across the codebase. Useful for understanding secret rotation impact.",
+        "Map which services reference which secrets. Greps for age.secrets references across the codebase. " +
+        "Use to understand secret rotation impact or find unused secrets.",
       inputSchema: {
         type: "object",
         properties: {
@@ -136,11 +133,7 @@ export function secretsTools(nixosConfigPath: string): ToolDef[] {
             },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to build secret usage map",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to build secret usage map", err);
         }
       },
     },
