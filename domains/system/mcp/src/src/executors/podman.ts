@@ -1,9 +1,15 @@
 /**
  * Podman executor — container inspection, stats, and log queries.
+ *
+ * Uses the root podman socket (unix:///run/podman/podman.sock) so the MCP
+ * server (running as eric with SupplementaryGroups=podman) can see all
+ * root-managed containers without running as root.
  */
 
 import { safeExec } from "./shell.js";
 import type { ContainerStats } from "../types.js";
+
+const ROOT_SOCKET = "unix:///run/podman/podman.sock";
 
 interface ContainerInfo {
   Names: string[];
@@ -15,11 +21,16 @@ interface ContainerInfo {
   Ports: Array<{ host_port: number; container_port: number; protocol: string }>;
 }
 
+/** Prepend --url flag to target the root podman socket. */
+function podmanArgs(args: string[]): string[] {
+  return ["--url", ROOT_SOCKET, ...args];
+}
+
 /**
  * List all containers (running and stopped).
  */
 export async function listContainers(): Promise<ContainerInfo[]> {
-  const result = await safeExec("podman", ["ps", "-a", "--format", "json"], {
+  const result = await safeExec("podman", podmanArgs(["ps", "-a", "--format", "json"]), {
     timeout: 10000,
   });
   if (result.exitCode !== 0) return [];
@@ -39,7 +50,7 @@ export async function getContainerStats(
   const args = ["stats", "--no-stream", "--format", "json"];
   if (container) args.push(container);
 
-  const result = await safeExec("podman", args, { timeout: 15000 });
+  const result = await safeExec("podman", podmanArgs(args), { timeout: 15000 });
   if (result.exitCode !== 0) return [];
 
   try {
@@ -72,7 +83,7 @@ export async function getContainerLogs(
   if (since) args.push("--since", since);
   args.push(container);
 
-  const result = await safeExec("podman", args, { timeout: 10000 });
+  const result = await safeExec("podman", podmanArgs(args), { timeout: 10000 });
   // podman logs writes to both stdout and stderr
   const output = result.stdout + result.stderr;
   return output.split("\n").filter(Boolean);
@@ -84,7 +95,7 @@ export async function getContainerLogs(
 export async function inspectContainer(
   container: string
 ): Promise<Record<string, unknown> | null> {
-  const result = await safeExec("podman", ["inspect", container, "--format", "json"], {
+  const result = await safeExec("podman", podmanArgs(["inspect", container, "--format", "json"]), {
     timeout: 10000,
   });
   if (result.exitCode !== 0) return null;

@@ -259,6 +259,9 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          if (!args.query || typeof args.query !== "string") {
+            return { status: "error", message: "query parameter is required" };
+          }
           const query = (args.query as string).toLowerCase();
           const domainsDir = join(nixosConfigPath, "domains");
           const results = await searchOptionDeclarations(domainsDir, query);

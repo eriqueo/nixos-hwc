@@ -141,10 +141,12 @@ in
           ProtectSystem = "strict";
           ProtectHome = "read-only";
           ReadWritePaths = [ "/tmp" ];
+          SupplementaryGroups = [ "podman" ];
           ReadOnlyPaths = [
             paths.nixos
             "/nix/store"
             "/run/systemd"
+            "/run/podman"
           ];
           ProtectKernelTunables = true;
           ProtectKernelModules = true;
