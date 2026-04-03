@@ -5,6 +5,7 @@
 import type { ToolDef, ToolResult } from "../types.js";
 import { safeExec } from "../executors/shell.js";
 import { listServices } from "../executors/systemd.js";
+import { listContainers } from "../executors/podman.js";
 import { instantQuery, rangeQuery } from "../executors/prometheus.js";
 import { TtlCache } from "../cache.js";
 
@@ -379,21 +380,10 @@ async function checkStorage(): Promise<HealthComponent> {
   }
 }
 
-/** Check podman containers */
+/** Check podman containers (via root socket through executor) */
 async function checkContainers(): Promise<HealthComponent> {
   try {
-    const result = await safeExec("podman", [
-      "ps",
-      "-a",
-      "--format",
-      "json",
-    ], { timeout: 10000 });
-
-    const containers = JSON.parse(result.stdout || "[]") as Array<{
-      Names?: string[];
-      State?: string;
-      Status?: string;
-    }>;
+    const containers = await listContainers();
     const running: string[] = [];
     const stopped: string[] = [];
 
