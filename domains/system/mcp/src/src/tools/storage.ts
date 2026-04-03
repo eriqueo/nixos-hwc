@@ -5,6 +5,7 @@
 import type { ToolDef, ToolResult } from "../types.js";
 import { safeExec } from "../executors/shell.js";
 import { TtlCache } from "../cache.js";
+import { catchError } from "../errors.js";
 
 const cache = new TtlCache();
 
@@ -13,8 +14,9 @@ export function storageTools(runtimeTtl: number): ToolDef[] {
     {
       name: "hwc_storage_disk_usage",
       description:
-        "Get disk usage across storage tiers: root (/), hot (/mnt/hot), " +
-        "media (/mnt/media), backup (/mnt/backup). Shows size, used, available, percent.",
+        "Get disk usage across storage tiers: root (/), hot (/mnt/hot), media (/mnt/media), " +
+        "backup (/mnt/backup). Returns size, used, available, and percent for each mount. " +
+        "Flags error if any mount exceeds 95%.",
       inputSchema: {
         type: "object",
         properties: {
@@ -78,11 +80,7 @@ export function storageTools(runtimeTtl: number): ToolDef[] {
             data: { mounts: results },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to check disk usage",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to check disk usage", err);
         }
       },
     },
@@ -90,8 +88,8 @@ export function storageTools(runtimeTtl: number): ToolDef[] {
     {
       name: "hwc_storage_backup_status",
       description:
-        "Get Borg backup status — last run, next scheduled, recent archives. " +
-        "Checks borgbackup-job-hwc-backup systemd timer and journal for archive info.",
+        "Get Borg backup status — last run time, next scheduled, exit status, archive stats. " +
+        "Reads from borgbackup-job-hwc-backup systemd timer and journal.",
       inputSchema: {
         type: "object",
         properties: {},
@@ -171,11 +169,7 @@ export function storageTools(runtimeTtl: number): ToolDef[] {
             },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to check backup status",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to check backup status", err, "Is borgbackup-job-hwc-backup configured?");
         }
       },
     },

@@ -7,6 +7,7 @@ import { join } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { getStatus as getTailscaleStatus } from "../executors/tailscale.js";
 import { TtlCache } from "../cache.js";
+import { mcpError, catchError } from "../errors.js";
 
 const cache = new TtlCache();
 
@@ -15,7 +16,8 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
     {
       name: "hwc_network_tailscale_status",
       description:
-        "Get Tailscale network status — self info, connected peers, IPs, online/offline state.",
+        "Get Tailscale network status — self info, connected peers, IPs, online/offline state. " +
+        "Collapses funnel-ingress-nodes into a summary. Read-only.",
       inputSchema: {
         type: "object",
         properties: {},
@@ -56,11 +58,7 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
             data: { ...status, peers: collapsedPeers },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to get Tailscale status",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("UNAVAILABLE", "Failed to get Tailscale status", err, "Is tailscaled running?");
         }
       },
     },
@@ -68,8 +66,8 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
     {
       name: "hwc_network_caddy_routes",
       description:
-        "Get the live Caddy reverse proxy configuration via admin API. " +
-        "Shows all routes, upstreams, and optionally checks health.",
+        "Get Caddy reverse proxy configuration. Tries live admin API first, falls back to " +
+        "parsing routes.nix. Optionally probes upstream health (slower). Read-only.",
       inputSchema: {
         type: "object",
         properties: {
@@ -165,17 +163,13 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
             }
           }
 
-          return {
-            status: "error",
+          return mcpError({
+            type: "UNAVAILABLE",
             message: "Caddy admin API returned 403 and routes.nix fallback unavailable",
-            error: "Caddy admin API may need 'admin { origins localhost }' or equivalent config",
-          };
+            suggestion: "Caddy admin API may need 'admin { origins localhost }'. Check Caddy is running.",
+          });
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to query Caddy config",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to query Caddy config", err);
         }
       },
     },
@@ -183,7 +177,8 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
     {
       name: "hwc_network_vpn_status",
       description:
-        "Get Gluetun VPN status — connected server, public IP, port forwarding.",
+        "Get Gluetun VPN status — connected server, public IP, port forwarding. " +
+        "Requires Gluetun container running on port 8000.",
       inputSchema: {
         type: "object",
         properties: {},
@@ -208,11 +203,7 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
             },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to get VPN status (Gluetun may not be running)",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("UNAVAILABLE", "Failed to get VPN status (Gluetun may not be running)", err, "Check that the Gluetun container is running on port 8000");
         }
       },
     },

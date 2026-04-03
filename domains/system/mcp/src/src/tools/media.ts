@@ -4,6 +4,7 @@
 
 import { readFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
+import { catchError } from "../errors.js";
 
 const ARR_SERVICES = [
   { name: "sonarr", port: 8989 },
@@ -47,8 +48,8 @@ export function mediaTools(): ToolDef[] {
     {
       name: "hwc_media_arr_status",
       description:
-        "Get status of the *arr stack — Sonarr, Radarr, Lidarr, Readarr, Prowlarr. " +
-        "Checks system status and health endpoints using API keys from agenix.",
+        "Get status of the *arr stack (Sonarr, Radarr, Lidarr, Readarr, Prowlarr). " +
+        "Checks system status, health warnings, and queue depth using API keys from agenix. Filter to a specific service or check all.",
       inputSchema: {
         type: "object",
         properties: {
@@ -162,11 +163,7 @@ export function mediaTools(): ToolDef[] {
             data: { services: results },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to check arr status",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to check arr status", err, "Are the arr containers running?");
         }
       },
     },
@@ -174,7 +171,7 @@ export function mediaTools(): ToolDef[] {
     {
       name: "hwc_media_download_queue",
       description:
-        "Get the current download queue across SABnzbd and qBittorrent.",
+        "Get current download queue from SABnzbd and/or qBittorrent. Shows speed, remaining time, active items, and pause state.",
       inputSchema: {
         type: "object",
         properties: {
@@ -249,11 +246,7 @@ export function mediaTools(): ToolDef[] {
             data,
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to check download queue",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to check download queue", err);
         }
       },
     },

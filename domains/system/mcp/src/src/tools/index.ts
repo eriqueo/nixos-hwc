@@ -15,7 +15,7 @@ import { mediaTools } from "./media.js";
 
 export function allTools(config: ServerConfig): ToolDef[] {
   return [
-    ...servicesTools(config.cacheTtl.runtime),
+    ...servicesTools(config.cacheTtl.runtime, config.nixosConfigPath),
     ...buildTools(config.nixosConfigPath, config.cacheTtl.runtime),
     ...monitoringTools(config.workspace, config.cacheTtl.runtime),
     ...configTools(config.nixosConfigPath, config.cacheTtl.declarative),

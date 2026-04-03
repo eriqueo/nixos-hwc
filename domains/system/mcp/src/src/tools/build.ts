@@ -3,6 +3,7 @@
  */
 
 import type { ToolDef, ToolResult } from "../types.js";
+import { catchError } from "../errors.js";
 import { safeExec } from "../executors/shell.js";
 import { TtlCache } from "../cache.js";
 
@@ -13,8 +14,8 @@ export function buildTools(nixosConfigPath: string, runtimeTtl: number): ToolDef
     {
       name: "hwc_build_git_status",
       description:
-        "Get the git status of the nixos-hwc repo — branch, uncommitted changes, " +
-        "unpushed commits, recent commit history.",
+        "Get git status of the nixos-hwc repo — current branch, uncommitted changes, unpushed commits, " +
+        "and recent commit history. Use before builds to check for uncommitted work.",
       inputSchema: {
         type: "object",
         properties: {
@@ -75,11 +76,7 @@ export function buildTools(nixosConfigPath: string, runtimeTtl: number): ToolDef
             },
           };
         } catch (err) {
-          return {
-            status: "error",
-            message: "Failed to query git status",
-            error: err instanceof Error ? err.message : String(err),
-          };
+          return catchError("INTERNAL_ERROR", "Failed to query git status", err, "Is the nixos-hwc repo accessible?");
         }
       },
     },
