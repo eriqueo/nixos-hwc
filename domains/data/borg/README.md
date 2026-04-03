@@ -80,4 +80,5 @@ hwc.data.borg = {
 
 ## Changelog
 
+- 2026-04-03: Fix backup timeout — increase to 12h (compact on 240GB repo), raise compact threshold to 25%, exclude regenerable Prometheus/Jellyfin data
 - 2026-03-25: Created README per Law 12

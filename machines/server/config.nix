@@ -372,6 +372,11 @@
       # Live PostgreSQL data files — already backed up via pg_dumpall in preHook
       # Backing up raw PG files causes "file changed" warnings that fail the job
       "/var/lib/hwc/postgresql"
+      # Prometheus TSDB — regenerable from scrape targets, churns heavily
+      "/var/lib/hwc/prometheus"
+      # Jellyfin metadata/logs — regenerated from library scan
+      "/var/lib/hwc/jellyfin/metadata"
+      "/var/lib/hwc/jellyfin/log"
     ];
 
     # Daily at 2 AM (before rsync fallback at 3 AM on its days)
@@ -543,8 +548,8 @@
   # MCP (Model Context Protocol) server infrastructure
   # Parent MCP disabled (mcp-proxy not in nixpkgs-stable), but heartwood is self-contained
   hwc.ai.mcp.enable = lib.mkForce false;
-  hwc.business.mcp.enable = true;
   hwc.system.mcp.enable = true;
+  hwc.system.mcp.jt.enable = true;
   hwc.business.website.enable = true;
 
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
