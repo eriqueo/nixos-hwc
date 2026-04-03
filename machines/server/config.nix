@@ -544,6 +544,7 @@
   # Parent MCP disabled (mcp-proxy not in nixpkgs-stable), but heartwood is self-contained
   hwc.ai.mcp.enable = lib.mkForce false;
   hwc.business.mcp.enable = true;
+  hwc.system.mcp.enable = true;
   hwc.business.website.enable = true;
 
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
