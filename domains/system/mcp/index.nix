@@ -124,6 +124,9 @@ in
         HWC_MCP_ALLOWED_ACTIONS = lib.concatStringsSep "," cfg.mutations.allowedActions;
         HWC_MCP_WORKSPACE = "${paths.nixos}/workspace";
         HWC_HOSTNAME = config.networking.hostName;
+        # n8n MCP bridge proxy config (used by /n8n/* route in index.ts)
+        HWC_N8N_MCP_PORT = toString ((lib.attrByPath ["hwc" "automation" "n8n" "mcpBridge" "port"] 6201 config));
+        HWC_N8N_MCP_AUTH_TOKEN = "hwc-n8n-mcp-internal-bridge-token-do-not-expose-externally";
       };
 
       serviceConfig = mkMerge [
@@ -140,13 +143,26 @@ in
           PrivateTmp = true;
           ProtectSystem = "strict";
           ProtectHome = "read-only";
-          ReadWritePaths = [ "/tmp" ];
+          ReadWritePaths = [
+            "/tmp"
+            # Mail tools need write access: notmuch tag (Xapian DB), sync-mail (mbsync marker + lock)
+            "/home/eric/400_mail/Maildir"
+            "/home/eric/.cache"
+            # GPG needs write for lock files and random_seed during pass decrypt
+            "/home/eric/.gnupg"
+            # msmtp logs here
+            "/home/eric/.config/msmtp"
+          ];
           SupplementaryGroups = [ "podman" ];
           ReadOnlyPaths = [
             paths.nixos
             "/nix/store"
             "/run/systemd"
             "/run/podman"
+            # GPG agent socket for pass decrypt (msmtp passwordeval)
+            "/run/user/1000/gnupg"
+            # agenix secrets for gmail passwordeval
+            "/run/agenix"
           ];
           ProtectKernelTunables = true;
           ProtectKernelModules = true;
@@ -176,6 +192,10 @@ in
         gnugrep
         procps
         util-linux
+        # msmtp passwordeval chain: sh -c 'pass show ...' → gpg → gpg-agent
+        bash
+        pass
+        gnupg
       ];
     };
 
