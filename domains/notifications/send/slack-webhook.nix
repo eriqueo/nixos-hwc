@@ -1,24 +1,20 @@
-# domains/alerts/parts/slack-webhook.nix
+# domains/notifications/send/slack-webhook.nix
 #
-# Robust webhook scripts for Slack alerts via n8n
+# Robust webhook scripts for alerts via n8n
 # Features: retry logic, local logging fallback, health checks
 
 { pkgs, lib, config }:
 
 let
-  cfg = config.hwc.alerts;
+  webhookCfg = config.hwc.notifications.webhook;
+  severityCfg = config.hwc.monitoring.alerts.severity;
+  diskSpaceCfg = config.hwc.monitoring.alerts.sources.diskSpace;
 
   # Build webhook URL for a given endpoint
-  mkWebhookUrl = endpoint: "${cfg.webhook.baseUrl}/${cfg.webhook.endpoints.${endpoint}}";
-
-  # Map severity name to tag
-  severityTag = severity:
-    if severity == "critical" then cfg.severity.critical
-    else if severity == "warning" then cfg.severity.warning
-    else cfg.severity.info;
+  mkWebhookUrl = endpoint: "${webhookCfg.baseUrl}/${webhookCfg.endpoints.${endpoint}}";
 
   # Log directory
-  logDir = "/var/log/hwc/alerts";
+  logDir = "/var/log/hwc/notifications";
 
   # Generic webhook sender script with retry and fallback logging
   webhookSender = pkgs.writeScriptBin "hwc-webhook-send" ''
@@ -86,13 +82,13 @@ let
     # Map severity to tag
     case "$SEVERITY" in
       critical)
-        SEVERITY_TAG="${cfg.severity.critical}"
+        SEVERITY_TAG="${severityCfg.critical}"
         ;;
       warning)
-        SEVERITY_TAG="${cfg.severity.warning}"
+        SEVERITY_TAG="${severityCfg.warning}"
         ;;
       *)
-        SEVERITY_TAG="${cfg.severity.info}"
+        SEVERITY_TAG="${severityCfg.info}"
         ;;
     esac
 
@@ -184,7 +180,7 @@ let
     }
 
     # Check if n8n webhook base URL is reachable
-    BASE_URL="${cfg.webhook.baseUrl}"
+    BASE_URL="${webhookCfg.baseUrl}"
 
     log "Checking webhook endpoint health: $BASE_URL"
 
@@ -328,9 +324,9 @@ let
       echo "[$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')] $1" | ${pkgs.coreutils}/bin/tee -a "$LOG_FILE"
     }
 
-    CRITICAL_THRESHOLD="${toString cfg.sources.diskSpace.criticalThreshold}"
-    WARNING_THRESHOLD="${toString cfg.sources.diskSpace.warningThreshold}"
-    FILESYSTEMS="${lib.concatStringsSep " " cfg.sources.diskSpace.filesystems}"
+    CRITICAL_THRESHOLD="${toString diskSpaceCfg.criticalThreshold}"
+    WARNING_THRESHOLD="${toString diskSpaceCfg.warningThreshold}"
+    FILESYSTEMS="${lib.concatStringsSep " " diskSpaceCfg.filesystems}"
 
     log "Starting disk space check (warn: $WARNING_THRESHOLD%, crit: $CRITICAL_THRESHOLD%)"
 

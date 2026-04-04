@@ -1,17 +1,17 @@
-# domains/alerts/parts/gotify-bridge.nix
+# domains/notifications/gotify/bridge.nix
 #
 # Alertmanager → gotify bridge service
 #
 # Receives Alertmanager webhook POSTs and forwards each alert
 # as a formatted notification to the local gotify server.
 #
-# NAMESPACE: hwc.alerts.gotifyBridge.*
+# NAMESPACE: hwc.notifications.gotify.bridge.*
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.alerts.gotifyBridge;
-  alertsCfg = config.hwc.alerts;
+  cfg = config.hwc.notifications.gotify.bridge;
+  gotifyCfg = config.hwc.notifications.gotify;
 
   bridgeScript = pkgs.writers.writePython3 "alertmanager-gotify-bridge" {
     flakeIgnore = [ "E501" "W503" ];
@@ -26,7 +26,7 @@ let
     GOTIFY_URL = sys.argv[1]
     LISTEN_PORT = int(sys.argv[2])
     TOKEN_FILE = sys.argv[3] if len(sys.argv) > 3 else None
-    LOG_DIR = "/var/log/hwc/alerts"
+    LOG_DIR = "/var/log/hwc/notifications"
 
     # ntfy priority (1-5) -> gotify priority (0-10)
     SEVERITY_PRIORITY = {
@@ -152,7 +152,7 @@ let
 
 in
 {
-  options.hwc.alerts.gotifyBridge = {
+  options.hwc.notifications.gotify.bridge = {
     enable = lib.mkEnableOption "Alertmanager to gotify bridge service";
 
     port = lib.mkOption {
@@ -163,13 +163,13 @@ in
 
     gotifyUrl = lib.mkOption {
       type = lib.types.str;
-      default = "http://localhost:${toString alertsCfg.server.internalPort}";
+      default = "http://localhost:${toString gotifyCfg.internalPort}";
       description = "Gotify server URL (e.g., http://localhost:2587)";
     };
 
     tokenFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
-      default = alertsCfg.server.tokens."home:admin" or null;
+      default = gotifyCfg.tokens."home:admin" or null;
       description = "Path to file containing gotify app token (home:admin for Alertmanager infra alerts)";
     };
   };
@@ -193,14 +193,14 @@ in
         PrivateTmp = true;
         NoNewPrivileges = true;
         ProtectSystem = "strict";
-        ReadWritePaths = [ "/var/log/hwc/alerts" ];
+        ReadWritePaths = [ "/var/log/hwc/notifications" ];
       };
     };
 
     assertions = [
       {
-        assertion = !cfg.enable || alertsCfg.server.enable;
-        message = "alertmanager-gotify-bridge requires the gotify server (hwc.alerts.server.enable = true)";
+        assertion = !cfg.enable || gotifyCfg.enable;
+        message = "alertmanager-gotify-bridge requires the gotify server (hwc.notifications.gotify.enable = true)";
       }
     ];
   };

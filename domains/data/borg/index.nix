@@ -328,7 +328,7 @@ in
 
     # Failure notification + better timeout handling
     systemd.services."borgbackup-job-${jobName}" = {
-      onFailure = lib.mkIf (cfg.notifications.onFailure && (config.hwc.alerts.enable or false)) [
+      onFailure = lib.mkIf (cfg.notifications.onFailure && (config.hwc.monitoring.alerts.enable or false)) [
         "hwc-service-failure-notifier@borgbackup-job-${jobName}.service"
       ];
       # Don't kill running backups on nixos-rebuild switch

@@ -1,4 +1,4 @@
-# domains/alerts/parts/cli.nix
+# domains/notifications/send/cli.nix
 #
 # hwc-alert CLI tool for sending alerts from command line
 # Provides user-friendly interface to the alert system with logging
@@ -6,9 +6,10 @@
 { pkgs, lib, config }:
 
 let
-  cfg = config.hwc.alerts;
+  cliCfg = config.hwc.notifications.send.cli;
+  severityCfg = config.hwc.monitoring.alerts.severity;
   webhookScripts = import ./slack-webhook.nix { inherit pkgs lib config; };
-  logDir = "/var/log/hwc/alerts";
+  logDir = "/var/log/hwc/notifications";
 
 in
 pkgs.writeScriptBin "hwc-alert" ''
@@ -24,8 +25,8 @@ pkgs.writeScriptBin "hwc-alert" ''
   # Options:
   #   -t, --title <title>      Alert title (required)
   #   -m, --message <message>  Alert message (required)
-  #   -s, --severity <level>   Severity: info, warning, critical (default: ${cfg.cli.defaultSeverity})
-  #   -e, --endpoint <name>    Endpoint: system, backup, smartd, services (default: ${cfg.cli.defaultEndpoint})
+  #   -s, --severity <level>   Severity: info, warning, critical (default: ${cliCfg.defaultSeverity})
+  #   -e, --endpoint <name>    Endpoint: system, backup, smartd, services (default: ${cliCfg.defaultEndpoint})
   #   -f, --field <key=value>  Add custom field (can be repeated)
   #   --test                   Test mode: check webhook health without sending
   #   --dry-run                Show what would be sent without sending
@@ -56,8 +57,8 @@ Usage:
 Options:
   -t, --title <title>      Alert title (required)
   -m, --message <message>  Alert message (required)
-  -s, --severity <level>   Severity: info, warning, critical (default: ${cfg.cli.defaultSeverity})
-  -e, --endpoint <name>    Endpoint: system, backup, smartd, services (default: ${cfg.cli.defaultEndpoint})
+  -s, --severity <level>   Severity: info, warning, critical (default: ${cliCfg.defaultSeverity})
+  -e, --endpoint <name>    Endpoint: system, backup, smartd, services (default: ${cliCfg.defaultEndpoint})
   -f, --field <key=value>  Add custom field (can be repeated)
   --test                   Test mode: check webhook health without sending
   --dry-run                Show what would be sent without sending
@@ -65,9 +66,9 @@ Options:
   -h, --help               Show this help
 
 Severity Levels:
-  info      - Informational (${cfg.severity.info})
-  warning   - Attention needed (${cfg.severity.warning})
-  critical  - Immediate action required (${cfg.severity.critical})
+  info      - Informational (${severityCfg.info})
+  warning   - Attention needed (${severityCfg.warning})
+  critical  - Immediate action required (${severityCfg.critical})
 
 Endpoints:
   system    - General system alerts
@@ -119,8 +120,8 @@ EOF
   # Default values
   TITLE=""
   MESSAGE=""
-  SEVERITY="${cfg.cli.defaultSeverity}"
-  ENDPOINT="${cfg.cli.defaultEndpoint}"
+  SEVERITY="${cliCfg.defaultSeverity}"
+  ENDPOINT="${cliCfg.defaultEndpoint}"
   EXTRA_FIELDS="{}"
   TEST_MODE=false
   DRY_RUN=false

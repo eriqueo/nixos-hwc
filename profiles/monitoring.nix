@@ -91,8 +91,8 @@
           "home-admin"     = api."gotify-home-admin" or null;
         };
     };
-    # MCP bridge — expose n8n workflows as MCP tools via HTTP for Claude.ai
-    mcpBridge.enable = true;
+    # MCP bridge — disabled: n8n-mcp is now a stdio backend of the unified gateway (hwc-sys-mcp)
+    mcpBridge.enable = false;
     # Non-secret workflow configuration
     extraEnv = {
       # work_lead_response: Twilio sender number
@@ -103,4 +103,7 @@
       DRIVE_CALENDAR_FOLDER_ID = "1xkrYYSbZzX16Gjo7VbGazgLMkS12u06I";
     };
   };
+
+  # Morning Briefing — daily Claude Code CLI agent (6am MT)
+  hwc.business.morningBriefing.enable = true;
 }

@@ -17,7 +17,7 @@
     ../../domains/media/index.nix
     ../../profiles/monitoring.nix
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
-    ../../domains/alerts/index.nix    # Direct domain import (no profile wrapper)
+    ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
     ../../domains/webapps/index.nix   # Static web app hosting (hwc-publish, port 14000–14099)
   ];
@@ -299,8 +299,7 @@
 
   # Gotify notification system CLI client for server alerts
   # Per-app tokens: each service gets its own gotify application token
-  # NOTE: defaultTokenFile wired after first deploy (Phase 6 of gotify migration)
-  hwc.automation.gotify = {
+  hwc.notifications.send.gotify = {
     enable = true;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted via Tailscale HTTPS
     defaultTokenFile = config.hwc.secrets.api."gotify-token-alerts" or null;
@@ -308,9 +307,14 @@
     hostTag = true;       # Prepends "[host: hwc-server]" to messages
   };
 
-  # Centralized alerts via n8n -> Slack (replaces ntfy monitoring)
-  # Uses hwc.alerts domain for all system notifications
-  hwc.alerts = {
+  # Notifications delivery infrastructure
+  hwc.notifications = {
+    enable = true;
+    send.cli.enable = true;  # CLI tool for manual alerts
+  };
+
+  # Alert sources — what to monitor (thresholds, triggers)
+  hwc.monitoring.alerts = {
     enable = true;
 
     # Disk space monitoring
@@ -337,9 +341,6 @@
       onSuccess = false;  # Don't spam on success
       onFailure = true;   # Always alert on failure
     };
-
-    # CLI tool for manual alerts
-    cli.enable = true;
   };
 
   # Rsync backup DISABLED - using Borg exclusively
@@ -588,14 +589,14 @@
     };
   };
 
-  # Gotify notification server (alerts domain)
+  # Gotify notification server (notifications domain)
   # Self-hosted for privacy - lead data stays on our infrastructure
   #
   # Token auto-discovery: any agenix secret named "gotify-{universe}-{domain}"
   # (e.g. gotify-hwc-ops, gotify-home-admin) is automatically mapped to the
-  # "universe:domain" key in hwc.alerts.server.tokens. No edits needed here
+  # "universe:domain" key in hwc.notifications.gotify.tokens. No edits needed here
   # when adding new Gotify apps — just create the agenix secret.
-  hwc.alerts.server = {
+  hwc.notifications.gotify = {
     enable = true;
     port = 2586;
     dataDir = "/var/lib/hwc/gotify";
@@ -624,14 +625,14 @@
   };
 
   # iGotify Notification Assistant (bridges Gotify → APNs for iOS push notifications)
-  hwc.alerts.igotifyAssistant.enable = true;
+  hwc.notifications.gotify.igotify.enable = true;
 
   # Alertmanager → gotify bridge (forwards Prometheus alerts to phone via gotify)
-  hwc.alerts.gotifyBridge = {
+  hwc.notifications.gotify.bridge = {
     enable = true;
     port = 9095;
     gotifyUrl = "http://localhost:2587";
-    # tokenFile defaults to server.tokens.homeAdminFile (home:admin app)
+    # tokenFile defaults to gotify.tokens."home:admin"
   };
 
   # Frigate NVR (Config-First Pattern with GPU Acceleration)

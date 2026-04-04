@@ -1,4 +1,4 @@
-# domains/alerts/parts/igotify-assistant.nix
+# domains/notifications/gotify/igotify.nix
 #
 # iGotify Notification Assistant — bridges Gotify to Apple Push Notifications
 #
@@ -6,16 +6,16 @@
 # This container maintains a WebSocket connection to Gotify and relays
 # messages through SecNtfy to Apple APNs for real push notifications.
 #
-# NAMESPACE: hwc.alerts.igotifyAssistant.*
+# NAMESPACE: hwc.notifications.gotify.igotify.*
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.alerts.igotifyAssistant;
-  serverCfg = config.hwc.alerts.server;
+  cfg = config.hwc.notifications.gotify.igotify;
+  gotifyCfg = config.hwc.notifications.gotify;
 in
 {
-  options.hwc.alerts.igotifyAssistant = {
+  options.hwc.notifications.gotify.igotify = {
     enable = lib.mkEnableOption "iGotify Notification Assistant for iOS push notifications";
 
     image = lib.mkOption {
@@ -56,7 +56,7 @@ in
       environment = {
         TZ = "America/Denver";
         ASPNETCORE_URLS = "http://+:${toString cfg.port}";
-        GOTIFY_URLS = "http://127.0.0.1:${toString serverCfg.internalPort}";
+        GOTIFY_URLS = "http://127.0.0.1:${toString gotifyCfg.internalPort}";
         GOTIFY_CLIENT_TOKENS = "CfCyuyfY-eyxCZa";
         SECNTFY_TOKENS = "NTFY-DEVICE-Ek5h24QTerXKBpNX1AdfHpsn1sVcoC1V5XIcklt0ePNDg2nBUr3ahcI";
         ENABLE_CONSOLE_LOG = "true";
@@ -70,8 +70,8 @@ in
 
     assertions = [
       {
-        assertion = !cfg.enable || serverCfg.enable;
-        message = "iGotify Assistant requires the Gotify server (hwc.alerts.server.enable = true)";
+        assertion = !cfg.enable || gotifyCfg.enable;
+        message = "iGotify Assistant requires the Gotify server (hwc.notifications.gotify.enable = true)";
       }
     ];
   };

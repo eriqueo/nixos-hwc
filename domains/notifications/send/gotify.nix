@@ -1,15 +1,15 @@
-# domains/automation/gotify/index.nix
+# domains/notifications/send/gotify.nix
 #
 # Gotify — Centralized notification system for cross-machine and cross-service alerts.
 # Provides a reusable CLI tool (hwc-gotify-send) that can be called from backup scripts,
 # systemd services, or any other component that needs to send notifications.
 #
-# NAMESPACE: hwc.automation.gotify.*
+# NAMESPACE: hwc.notifications.send.gotify.*
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.automation.gotify;
+  cfg = config.hwc.notifications.send.gotify;
 
   # Build the hwc-gotify-send CLI tool
   gotifySendScript = pkgs.writeScriptBin "hwc-gotify-send" ''
@@ -153,7 +153,7 @@ EOF
 in
 {
   # OPTIONS
-  options.hwc.automation.gotify = {
+  options.hwc.notifications.send.gotify = {
     enable = lib.mkEnableOption "Enable gotify notification system";
 
     #==========================================================================
@@ -205,7 +205,7 @@ in
     assertions = [
       {
         assertion = cfg.serverUrl != "";
-        message = "hwc.automation.gotify.serverUrl must be set";
+        message = "hwc.notifications.send.gotify.serverUrl must be set";
       }
     ];
   };

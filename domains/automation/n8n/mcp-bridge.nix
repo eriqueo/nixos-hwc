@@ -51,7 +51,42 @@ let
       ${pkgs.gnused}/bin/sed -i 's/transport = new streamableHttp_js_1\.StreamableHTTPServerTransport({/transport = new streamableHttp_js_1.StreamableHTTPServerTransport({\n                        enableJsonResponse: true,/' "$TARGET"
       echo "Patched enableJsonResponse into $TARGET"
     else
-      echo "Already patched"
+      echo "enableJsonResponse already patched"
+    fi
+
+    # Patch: disable SSE fallback in GET /mcp handler.
+    # Problem: when Claude.ai sends GET /mcp with a stale session ID, the bridge
+    # can't find the session and falls through to creating a legacy SSE session.
+    # Claude.ai gets 200 instead of 404, so it never re-initializes.
+    # Fix: if a session ID was provided but not found, return 404 immediately.
+    MARKER="PATCHED_NO_SSE_FALLBACK"
+    if ! ${pkgs.gnugrep}/bin/grep -q "$MARKER" "$TARGET"; then
+      ${pkgs.gnused}/bin/sed -i '/app\.get.*\/mcp.*async.*req.*res/,/^[[:space:]]*});/{
+        /const accept = req\.headers\.accept;/,/return;/{
+          /const accept = req\.headers\.accept;/c\
+            \/\/ '"$MARKER"': Return 404 for unknown sessions instead of SSE fallback\
+            if (sessionId) {\
+                logger_1.logger.warn("GET /mcp: unknown session, returning 404 (no SSE fallback)", { sessionId });\
+                res.status(404).json({ jsonrpc: "2.0", error: { code: -32001, message: "Session not found" }, id: null });\
+                return;\
+            }\
+            const accept = req.headers.accept;
+        }
+      }' "$TARGET"
+      echo "Patched SSE fallback disabled in GET /mcp"
+    else
+      echo "SSE fallback already patched"
+    fi
+
+    # Patch: remove rate limiter from POST /mcp.
+    # All traffic comes from our Express proxy on 127.0.0.1, so the per-IP
+    # rate limiter blocks legitimate Claude.ai sessions.
+    MARKER2="PATCHED_NO_RATE_LIMIT"
+    if ! ${pkgs.gnugrep}/bin/grep -q "$MARKER2" "$TARGET"; then
+      ${pkgs.gnused}/bin/sed -i "s|app.post('/mcp', authLimiter, jsonParser,|\/\/ $MARKER2: rate limiter removed (all traffic from local proxy)\n        app.post('/mcp', jsonParser,|" "$TARGET"
+      echo "Patched rate limiter removed from POST /mcp"
+    else
+      echo "Rate limiter already patched"
     fi
   '';
 
@@ -118,10 +153,14 @@ in
         PORT = toString bridge.port;
         HOST = bridge.host;
         NODE_ENV = "production";
-        LOG_LEVEL = "warn";
+        LOG_LEVEL = "info";
         TRUST_PROXY = "1";
         N8N_API_URL = "http://localhost:${toString cfg.port}";
         N8N_API_TIMEOUT = "60000";  # 60s — default 30s too short for get_workflow full
+        # Rate limiter: all traffic is from local Express proxy (127.0.0.1), so
+        # the default 20 req/15min blocks legitimate Claude.ai sessions quickly.
+        AUTH_RATE_LIMIT_MAX = "1000";
+        AUTH_RATE_LIMIT_WINDOW = "60000";  # 1000 req/min — effectively disabled
         # Internal-only auth token (hwc-infra Express proxy injects this via Authorization header)
         AUTH_TOKEN = "hwc-n8n-mcp-internal-bridge-token-do-not-expose-externally";
       };

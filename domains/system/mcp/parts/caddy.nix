@@ -1,10 +1,10 @@
 # domains/system/mcp/parts/caddy.nix
 #
-# Caddy TLS route for tailnet access to hwc-infra MCP server.
+# Caddy TLS route for tailnet access to the unified MCP gateway.
 # Port 6243 — tailnet-only TLS route.
 #
-# Note: Public Funnel access goes directly to the Express server on :6200.
-# The n8n MCP bridge is proxied via /n8n/* in the Express app (index.ts).
+# Note: Public Funnel access goes through :18080 → :6200.
+# All tools (hwc-sys, JT, n8n) are served from the single /mcp endpoint.
 
 { config, options, lib, ... }:
 

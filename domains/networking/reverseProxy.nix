@@ -180,34 +180,6 @@ in
             }
           }
 
-          # JT MCP — proxy to hwc-sys Express (which proxies to :6102)
-          @jt_routes {
-            path /jt /jt/*
-          }
-          handle @jt_routes {
-            reverse_proxy 127.0.0.1:6200 {
-              flush_interval -1
-              transport http {
-                read_timeout 0
-                write_timeout 0
-              }
-            }
-          }
-
-          # n8n MCP bridge — proxy to hwc-sys Express (which proxies to :6201)
-          @n8n_routes {
-            path /n8n /n8n/*
-          }
-          handle @n8n_routes {
-            reverse_proxy 127.0.0.1:6200 {
-              flush_interval -1
-              transport http {
-                read_timeout 0
-                write_timeout 0
-              }
-            }
-          }
-
           # All subpath routes (sonarr, radarr, navidrome, etc.)
           ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "subpath") routes))}
         }

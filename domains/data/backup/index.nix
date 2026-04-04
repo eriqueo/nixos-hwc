@@ -175,7 +175,7 @@ in
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Enable gotify notifications (requires hwc.automation.gotify.enable)";
+          description = "Enable gotify notifications (requires hwc.notifications.send.gotify.enable)";
         };
 
         tokenFile = lib.mkOption {
