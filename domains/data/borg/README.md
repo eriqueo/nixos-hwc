@@ -80,5 +80,6 @@ hwc.data.borg = {
 
 ## Changelog
 
+- 2026-04-04: Update failure notification ref from `hwc.alerts.enable` to `hwc.monitoring.alerts.enable` (domain redistribution)
 - 2026-04-03: Fix backup timeout — increase to 12h (compact on 240GB repo), raise compact threshold to 25%, exclude regenerable Prometheus/Jellyfin data
 - 2026-03-25: Created README per Law 12
