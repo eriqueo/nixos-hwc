@@ -1,4 +1,4 @@
-# domains/system/mcp — HWC Infrastructure MCP Server
+# domains/system/mcp — HWC System MCP Server
 
 TypeScript MCP server exposing the nixos-hwc system's declarative NixOS configuration and live runtime state as 38 tools and 5 resources. Connects to Claude Code (stdio), Claude.ai (Streamable HTTP via Tailscale Funnel), and any MCP-compatible client.
 
@@ -15,7 +15,7 @@ TypeScript MCP server exposing the nixos-hwc system's declarative NixOS configur
 Already configured in `.mcp.json`:
 
 ```json
-"hwc-infra": {
+"hwc-sys": {
   "command": "node",
   "args": ["/home/eric/.nixos/domains/system/mcp/src/dist/index.js"],
   "env": {
@@ -26,15 +26,21 @@ Already configured in `.mcp.json`:
 }
 ```
 
-Verify: `/mcp` in Claude Code should show `hwc-infra` with 38 tools.
+Verify: `/mcp` in Claude Code should show `hwc-sys` with 38 tools.
 
 ### Claude.ai (Streamable HTTP over Tailscale Funnel)
 
-**Connector URL**: `https://hwc.ocelot-wahoo.ts.net:6243/mcp`
+**HWC System URL**: `https://hwc.ocelot-wahoo.ts.net/mcp`
+**HWC JobTread URL**: `https://hwc.ocelot-wahoo.ts.net/jt/mcp`
+**HWC n8n URL**: `https://hwc.ocelot-wahoo.ts.net/n8n/mcp`
 
-The server runs on hwc-server as a systemd service. Tailscale Funnel on port 6243 exposes it to the public internet, allowing Claude.ai (which connects from Anthropic's infrastructure, not the user's device) to reach it.
+The server runs on hwc-server as a systemd service. Tailscale Funnel on port 443 exposes it to the public internet, allowing Claude.ai (which connects from Anthropic's infrastructure, not the user's device) to reach it.
 
-**Network path**: Claude.ai → Tailscale Funnel (:6243) → Node.js HTTP (:6200) → MCP Server
+**Network path**: Claude.ai → Tailscale Funnel (:443) → Caddy (:18080) → Express (:6200) → MCP Server
+
+The Express server also proxies JT and n8n MCP requests:
+- Claude.ai → Funnel (:443) → Caddy (:18080) → Express (:6200) → `/jt/*` → heartwood-mcp (:6102)
+- Claude.ai → Funnel (:443) → Caddy (:18080) → Express (:6200) → `/n8n/*` → n8n-mcp bridge (:6201)
 
 Enable in `machines/server/config.nix`:
 
@@ -48,22 +54,32 @@ Then `nixos-rebuild switch`.
 
 ```bash
 # Health check
-curl https://hwc.ocelot-wahoo.ts.net:6243/health
+curl https://hwc.ocelot-wahoo.ts.net/health
 
 # Full Streamable HTTP handshake
-curl -s -o /tmp/body -D /tmp/headers -X POST https://hwc.ocelot-wahoo.ts.net:6243/mcp \
+curl -s -o /tmp/body -D /tmp/headers -X POST https://hwc.ocelot-wahoo.ts.net/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}'
 
 # Extract session ID, then send tools/list
 SESSION=$(awk -F': ' '/^mcp-session-id:/{print $2}' /tmp/headers | tr -d '\r\n')
-curl -s -X POST https://hwc.ocelot-wahoo.ts.net:6243/mcp \
+curl -s -X POST https://hwc.ocelot-wahoo.ts.net/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -H "Mcp-Session-Id: $SESSION" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":2}' | jq '.result.tools | length'
 # → 38
+
+# n8n MCP handshake
+curl -s -X POST https://hwc.ocelot-wahoo.ts.net/n8n/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+
+# Test SSE ping keepalive (should see ": ping" every 25s)
+timeout 30 curl -s -N -H "Accept: text/event-stream" \
+  -H "Mcp-Session-Id: $SESSION" https://hwc.ocelot-wahoo.ts.net/mcp
 ```
 
 ## Transport Architecture
@@ -92,6 +108,8 @@ The primary remote transport. Served on `POST /mcp` and `GET /mcp`.
 - **`enableJsonResponse: true`**: Without this, the SDK returns `Content-Type: text/event-stream` (SSE format) for ALL responses including `initialize`. Claude.ai expects `application/json` for non-streaming responses. This option makes the transport return JSON for request/response and SSE only for streaming.
 - **`onsessioninitialized` callback**: The transport's `sessionId` is `undefined` until `handleRequest` processes the `initialize` message internally. You CANNOT read `transport.sessionId` after `server.connect()` — it's not set yet. Use the `onsessioninitialized` callback to register the session in your map.
 - **Pre-parsed body**: Since we read the request body to check for `initialize` before the transport sees it, we pass it as `parsedBody` to `handleRequest(req, res, parsed)` so the transport doesn't try to read the already-consumed stream.
+- **Accept header fix**: The SDK (`@hono/node-server`) validates `req.rawHeaders` (raw array), not `req.headers` (parsed object). Claude.ai sometimes sends Accept headers missing `application/json` or `text/event-stream`, triggering HTTP 406. The server patches both `req.headers.accept` AND the `rawHeaders` array before the SDK processes the request.
+- **SSE ping keepalive**: GET /mcp SSE streams receive `: ping\n\n` (SSE comment, ignored by clients) every 25 seconds. This prevents proxy timeout on idle connections. Failed writes trigger automatic session cleanup. The interval is cleared when the client disconnects.
 - **CORS headers**: Claude.ai connects from a browser context. Must include `Access-Control-Allow-Origin: *`, `Access-Control-Expose-Headers: Mcp-Session-Id`, and handle `OPTIONS` preflight.
 - **`.well-known/*` stubs**: Claude.ai probes `/.well-known/oauth-protected-resource` during connection. Return a clean `404` (empty body) so the client knows auth is not required. Returning our custom JSON 404 could confuse the OAuth discovery logic.
 
@@ -106,24 +124,43 @@ The primary remote transport. Served on `POST /mcp` and `GET /mcp`.
 | Port | Listener | Purpose |
 |------|----------|---------|
 | 6200 | Node.js HTTP server | Internal — all transports land here |
-| 6243 | Tailscale Funnel | Public HTTPS — Claude.ai connects here |
-| 6243 | Caddy (also) | Tailnet HTTPS — internal Tailscale access |
+| 18080 | Caddy HTTP backend | Receives traffic from tailscale serve, routes to Express |
+| 443 | Tailscale Funnel | Public HTTPS — Claude.ai connects here |
+| 6243 | Caddy | Tailnet HTTPS — internal Tailscale access |
+| 6102 | heartwood-mcp (JT) | Internal — proxied via Express `/jt/*` |
+| 6201 | n8n-mcp bridge | Internal — proxied via Express `/n8n/*` |
 
 ### Tailscale Funnel Setup
 
-Funnel on port 6243 is configured imperatively (not in NixOS config):
+Funnel on port 443 is managed by `tailscale-funnel.service` (declarative systemd unit in `domains/system/networking.nix`). It runs `tailscale funnel --https=443 http://127.0.0.1:18080` in foreground mode.
 
-```bash
-sudo tailscale funnel --https=6243 --bg 6200
-```
+This makes `https://hwc.ocelot-wahoo.ts.net/*` publicly accessible. Tailscaled terminates TLS for both tailnet and Funnel traffic on :443, then proxies to Caddy on :18080. Caddy routes MCP requests (`/mcp`, `/jt/*`, `/n8n/*`, `/health`, `/.well-known/*`) to Express on :6200, and also serves all subpath routes (sonarr, radarr, etc.) for tailnet clients.
 
-This makes `https://hwc.ocelot-wahoo.ts.net:6243/*` publicly accessible, proxying to `http://127.0.0.1:6200`.
+**Why Caddy on :18080 instead of direct to Express**: Caddy handles MCP-specific transport tuning (`read_timeout 0`, `write_timeout 0`, `flush_interval -1`) needed for long-lived SSE streams, and also serves the 18 subpath-only services that tailnet clients access via the Tailscale hostname.
 
-**Why port 6243 and not 443**: The Funnel on `:443` has a bug where it returns empty response bodies when proxying to the Node server. Port 6243 works correctly because Tailscale Funnel handles TLS termination and forwards plain HTTP to the Node server without buffering issues.
+**How Caddy :443 conflict was resolved**: Caddy previously bound `*:443` for Tailnet TLS routes, racing with tailscaled for the Tailscale IP on :443 (~500 bind failures/hour). Fixed by removing the `${rootHost}` block from Caddy config — Caddy now binds only `127.0.0.1:443` (localhost block) and `*:18080` (tailscale serve backend). Tailscaled owns :443 exclusively.
+
+### JT MCP Proxy
+
+The Express server in `index.ts` reverse-proxies `/jt/*` requests to the heartwood-mcp server on port 6102:
+
+- `/jt/.well-known/*` → clean empty 404 (Claude.ai OAuth probes)
+- `/jt/*` → `http://127.0.0.1:6102/*` (strip `/jt` prefix)
+
+The JT service is defined in `parts/jt.nix` (`hwc.system.mcp.jt.*`).
+
+### n8n MCP Proxy
+
+The Express server in `index.ts` reverse-proxies `/n8n/*` requests to the n8n-mcp bridge on port 6201:
+
+- `/n8n/.well-known/*` → clean empty 404 (Claude.ai OAuth probes)
+- `/n8n/*` → `http://127.0.0.1:6201/*` with auth token injection
+
+The bridge service and its configuration are defined in `domains/automation/n8n/mcp-bridge.nix`. See that domain's README for details.
 
 ### Caddy Route
 
-`parts/caddy.nix` creates a Caddy reverse proxy route on `:6243` for Tailnet-internal access (separate from Funnel's public access). It's conditional on SSE transport being enabled and sets `flush_interval = -1` for streaming support.
+`parts/caddy.nix` creates a Caddy reverse proxy route on `:6243` for Tailnet-internal access (separate from Funnel's public access). It's conditional on SSE transport being enabled.
 
 ## Podman Root Socket Access
 
@@ -145,8 +182,8 @@ The `podman` group (GID 996) owns `/run/podman/podman.sock` with mode `660`. Use
 - **Secrets**: Tools expose names and metadata only — never decrypt or return secret values
 - **Mutations**: Disabled by default. Gated behind `mutations.enable` + per-action allowlist
 - **Network**: Node server binds to `127.0.0.1` only. External access requires Tailscale Funnel (authenticated by Tailscale) or Caddy (Tailnet-only)
-- **Read-only paths**: `/home/eric/.nixos` (repo), `/nix/store`, `/run/systemd`, `/run/podman`
-- **Write paths**: `/tmp`, `/home/eric/400_mail/Maildir`, `/home/eric/.cache`
+- **Read-only paths**: `/home/eric/.nixos` (repo), `/nix/store`, `/run/systemd`, `/run/podman`, `/run/user/1000/gnupg` (GPG agent socket), `/run/agenix` (gmail passwords)
+- **Write paths**: `/tmp`, `/home/eric/400_mail/Maildir`, `/home/eric/.cache`, `/home/eric/.gnupg` (GPG lock/random_seed), `/home/eric/.config/msmtp` (logfile)
 
 ## Tools (38)
 
@@ -313,6 +350,10 @@ The `TtlCache` class provides `getOrCompute(key, ttl, fn)` for transparent cache
 | POST | `/mcp` | Streamable HTTP JSON-RPC (initialize, tools/list, tools/call, etc.) |
 | GET | `/mcp` | Streamable HTTP SSE stream (server-initiated notifications, requires session) |
 | DELETE | `/mcp` | Close a Streamable HTTP session |
+| ANY | `/jt/*` | Reverse proxy to heartwood-mcp (JT) on :6102 |
+| GET | `/jt/.well-known/*` | Clean 404 stubs for JT OAuth discovery probes |
+| ANY | `/n8n/*` | Reverse proxy to n8n-mcp bridge on :6201 (auth token injected) |
+| GET | `/n8n/.well-known/*` | Clean 404 stubs for n8n OAuth discovery probes |
 | GET | `/sse` | Legacy SSE transport (opens event stream) |
 | POST | `/messages` | Legacy SSE message endpoint |
 | GET | `/health` | JSON health check (status, tool count, uptime, active sessions) |
@@ -320,21 +361,21 @@ The `TtlCache` class provides `getOrCompute(key, ttl, fn)` for transparent cache
 
 ## Systemd Service
 
-Unit: `hwc-infra-mcp.service`
+Unit: `hwc-sys-mcp.service`
 
 ```bash
 # Check status
-systemctl status hwc-infra-mcp
+systemctl status hwc-sys-mcp
 
 # View logs
-journalctl -u hwc-infra-mcp -f
+journalctl -u hwc-sys-mcp -f
 
 # Restart after code changes
 npm run build  # in src/
-sudo systemctl restart hwc-infra-mcp
+sudo systemctl restart hwc-sys-mcp
 ```
 
-The service includes: nix, git, systemd, podman, tailscale, curl, jq, borgbackup, coreutils, gawk, gnugrep, procps, util-linux in PATH.
+The service includes: nix, git, systemd, podman, tailscale, curl, jq, borgbackup, coreutils, gawk, gnugrep, procps, util-linux, bash, pass, gnupg in PATH.
 
 ## Troubleshooting
 
@@ -348,11 +389,19 @@ The podman executor needs root socket access. Check:
 `nix eval` operates on the git store, not the working tree. Uncommitted changes are invisible. Commit first, or use filesystem-based tools (`list_domains`, `search_options`, `get_port_map`) which read the working tree directly.
 
 ### Claude.ai "Couldn't reach the MCP server"
-1. Check Funnel is running: `sudo tailscale serve status` — should show `:6243 (Funnel on)`
-2. Check health from outside: `curl https://hwc.ocelot-wahoo.ts.net:6243/health`
-3. Check service is running: `systemctl status hwc-infra-mcp`
-4. Check logs for errors: `journalctl -u hwc-infra-mcp --since "5 min ago"`
-5. Re-enable Funnel if needed: `sudo tailscale funnel --https=6243 --bg 6200`
+1. Check Funnel is running: `sudo tailscale serve status` — should show `:443 (Funnel on)` proxying to `http://127.0.0.1:18080`
+2. Check Caddy is up: `systemctl status caddy`
+3. Check health from outside: `curl https://hwc.ocelot-wahoo.ts.net/health`
+4. Check Express is running: `systemctl status hwc-sys-mcp`
+5. Check logs for errors: `journalctl -u hwc-sys-mcp --since "5 min ago"`
+6. If Funnel service is down: `systemctl restart tailscale-funnel`
+
+### Claude.ai can't reach n8n MCP
+1. Check bridge is running: `systemctl status n8n-mcp-bridge`
+2. Test locally: `curl -s -X POST http://127.0.0.1:6201/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'`
+3. Test through proxy: `curl -s -X POST https://hwc.ocelot-wahoo.ts.net/n8n/mcp` (same headers/body)
+4. Check bridge logs: `journalctl -u n8n-mcp-bridge --since "5 min ago"`
+5. Verify n8n itself is running: `systemctl status podman-n8n`
 
 ### Session errors ("Server not initialized", "Session not found")
 The `onsessioninitialized` callback in `index.ts` registers sessions. If sessions aren't persisting, check that the callback is wired correctly and that `enableJsonResponse: true` is set.
@@ -366,7 +415,7 @@ The `query` parameter is required. Missing it used to cause a TypeError — now 
 - **Caddy admin API returns 403**: `caddy_routes` falls back to parsing routes.nix (declarative, not live). Admin API access may need `admin { origins localhost }` in Caddy config.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`. Adding nvidia to the service PATH in index.nix would be more robust.
 - **nix eval requires committed changes**: `get_option` and `flake_metadata` use `nix eval` against the git store. Uncommitted changes are invisible.
-- **Funnel is imperative**: `sudo tailscale funnel --https=6243 --bg 6200` must be re-run after Tailscale restarts. Not managed by NixOS config.
+- **n8n-mcp bridge is pinned**: The bridge runs `n8n-mcp@2.40.5` with a runtime patch for `enableJsonResponse`. Updates require changing the version in `mcp-bridge.nix` and verifying the patch target still exists.
 - **cAdvisor per-container metrics**: Prometheus cAdvisor exporter only reports root cgroup metrics, not per-container. Container stats come from podman/systemd, not Prometheus.
 
 ## Dependencies
@@ -377,6 +426,31 @@ The `query` parameter is required. Missing it used to cause a TypeError — now 
 
 ## Changelog
 
+- **2026-04-03**: Add hwc-jt (Heartwood JobTread) MCP + rename all MCPs:
+  - **hwc-jt-mcp**: New Streamable HTTP transport for heartwood-mcp (63 JT tools). SDK upgraded from 1.12.1 to 1.29.0. NixOS module at `parts/jt.nix` (`hwc.system.mcp.jt.*`). Proxied via Express `/jt/*` → `:6102`.
+  - **Rename**: `hwc-infra-mcp` → `hwc-sys-mcp`, `n8n-mcp-bridge` → `hwc-n8n-mcp`, `heartwood` → `hwc-jt` (`.mcp.json` keys updated).
+  - **Caddy**: Added `/jt/*` route to `:18080` block. Removed standalone heartwood-mcp port 16100 route.
+  - **Cleanup**: `domains/business/mcp/` removed from imports (moved to `parts/jt.nix`). `hwc.business.mcp.enable` → `hwc.system.mcp.jt.enable`.
+  - **Claude.ai URLs**: `/mcp` (system), `/jt/mcp` (JobTread), `/n8n/mcp` (workflows).
+- **2026-04-03**: Fix msmtp passwordeval sandbox — added bash, pass, gnupg to service PATH. Added ReadWritePaths for `~/.gnupg` (GPG lock/random_seed) and `~/.config/msmtp` (logfile). Added ReadOnlyPaths for `/run/user/1000/gnupg` (GPG agent socket) and `/run/agenix` (gmail passwords). Fixes `sh: command not found` when `hwc_mail_send` invokes msmtp's `passwordeval "sh -c 'pass show email/proton/bridge'"`.
+- **2026-04-03**: Caddy/Funnel :443 conflict resolved — eliminated ~500 bind failures/hour:
+  - **Root cause**: Caddy bound `*:443` for Tailnet TLS routes, racing with tailscaled for Tailscale IP:443
+  - **Fix**: Removed Caddy `${rootHost}` block. Caddy now binds `127.0.0.1:443` (localhost) + `*:18080` (tailscale serve backend). Tailscaled owns :443 exclusively. Funnel moved back to :443 (no port suffix in URLs).
+  - **Caddy :18080 backend**: Routes MCP requests to Express :6200 with `flush_interval -1` and `transport http { read_timeout 0; write_timeout 0 }` for long-lived SSE streams. Also serves all 18 subpath routes for tailnet clients.
+  - **Declarative Funnel**: `tailscale-funnel.service` in `networking.nix` runs `tailscale funnel --https=443 http://127.0.0.1:18080` in foreground mode.
+- **2026-04-03**: SSE ping keepalive and Accept header fix:
+  - **SSE ping**: GET /mcp SSE streams receive `: ping\n\n` every 25s to prevent proxy timeout on idle connections. Failed writes auto-cleanup the session.
+  - **Accept header fix**: Patches `req.headers.accept` AND `req.rawHeaders` array before SDK processes request. Fixes HTTP 406 when Claude.ai sends incomplete Accept headers. The SDK uses `@hono/node-server` which reads `rawHeaders`, not `headers`.
+  - **Session cleanup helper**: `cleanupSession(id, reason)` centralizes ping interval clearing, transport/server close, and session map removal.
+- **2026-04-03**: Connection robustness — session management and error handling:
+  - **Session reaping**: Idle sessions auto-reaped after 30 min (previously leaked forever)
+  - **Request logging**: Every HTTP request logged with method, URL, session ID, remote addr, duration, status
+  - **Client disconnect detection**: `res.on("close")` logs premature disconnects for Funnel diagnostics
+  - **Keep-alive tuning**: `keepAliveTimeout=65s`, `headersTimeout=70s`, `requestTimeout=0` (tool calls can be slow)
+  - **Graceful shutdown**: SIGTERM closes all sessions and HTTP server cleanly
+  - **Error boundaries**: Unhandled errors caught per-request instead of crashing
+  - **Health endpoint**: Now shows `sessionIds` and `sessionAges` for debugging
+- **2026-04-03**: n8n MCP proxy — Express reverse-proxies `/n8n/*` to n8n-mcp bridge on :6201 with auth token injection. Clean `.well-known` 404 stubs for Claude.ai OAuth probes.
 - **2026-04-03**: Tool audit — structured errors, descriptions, new tool, HTML stripping:
   - **Structured error responses**: All 38 tools now return `error_type` (NOT_FOUND, PERMISSION_DENIED, VALIDATION_ERROR, TIMEOUT, COMMAND_FAILED, NETWORK_ERROR, UNAVAILABLE, INTERNAL_ERROR), `suggestion` (actionable next step), and `context` (relevant params) on every error path. Added `errors.ts` with `mcpError()` and `catchError()` helpers.
   - **`hwc_services_by_domain`** (new): Maps NixOS domain names to their associated services — scans declarative config for systemd.services and oci-containers definitions, cross-references with live state. Pass a domain (e.g. 'media', 'monitoring') or omit for all.
@@ -410,7 +484,7 @@ The `query` parameter is required. Missing it used to cause a TypeError — now 
 - **2026-04-03**: Streamable HTTP transport — added MCP spec 2025-06-18 support (`StreamableHTTPServerTransport` with `enableJsonResponse`, session management via `onsessioninitialized`, `.well-known` stubs). Tailscale Funnel on :6243. Claude.ai can now connect.
 - **2026-04-02**: Root podman fix — all podman commands route through root socket (`--url unix:///run/podman/podman.sock`), `SupplementaryGroups=["podman"]`, `/run/podman` in ReadOnlyPaths. Container tools now see all 42 root containers.
 - **2026-04-02**: Parameter validation — `search_options` no longer crashes on missing `query` param.
-- **2026-04-02**: Registered `hwc-infra` in `.mcp.json` for Claude Code stdio access.
+- **2026-04-02**: Registered `hwc-sys` in `.mcp.json` for Claude Code stdio access.
 - **2026-04-02**: Phase 3 — runtime layer complete. 25 tools, 6 executors, 5 resources.
 - **2026-04-02**: Phase 2 — declarative layer. Config tools, secrets tools, 5 MCP resources.
 - **2026-04-02**: Phase 1 — foundation. TypeScript scaffolded, 4 initial tools, stdio + SSE, NixOS module.
@@ -421,7 +495,8 @@ The `query` parameter is required. Missing it used to cause a TypeError — now 
 domains/system/mcp/
 ├── index.nix
 ├── parts/
-│   └── caddy.nix
+│   ├── caddy.nix
+│   └── jt.nix
 ├── README.md
 └── src/
     ├── package.json

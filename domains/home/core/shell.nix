@@ -51,7 +51,7 @@ in
         "df" = "df -h"; "du" = "du -h"; "free" = "free -h";
         "aliases" = "cd ~/.nixos && nvim domains/home/core/shell.nix";
         "web-build" = "cd /home/eric/.nixos/domains/business/website/site_files && npx @11ty/eleventy";
-        "htop" = "btop"; "grep" = "rg"; "open" = "xdg-open";
+        "htop" = "btop"; "open" = "xdg-open";
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
         "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";
         "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d";

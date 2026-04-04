@@ -156,7 +156,14 @@
       "Bash(HWC_MCP_TRANSPORT=stdio HWC_NIXOS_CONFIG_PATH=/home/eric/.nixos HWC_HOSTNAME=hwc-laptop node:*)",
       "Bash(jq:*)",
       "Bash(echo EXISTS:*)",
-      "Bash(sudo tailscale:*)"
+      "Bash(sudo tailscale:*)",
+      "Bash(git checkout:*)",
+      "Bash(sudo:*)",
+      "Read(//opt/business/heartwood-mcp/**)",
+      "Bash(node -e \":*)",
+      "Bash(do echo:*)",
+      "mcp__hwc-sys__hwc_services_logs",
+      "mcp__hwc-sys__hwc_services_status"
     ],
     "deny": [],
     "ask": [],

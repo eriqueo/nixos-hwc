@@ -149,15 +149,66 @@ in
     services.caddy = {
       enable = true;
       extraConfig = ''
+        # Loopback-only access to subpath routes.
+        # Explicit bind prevents Caddy's default *:443 wildcard, which would
+        # race with tailscaled for the Tailscale IP on :443.
         localhost {
+          bind 127.0.0.1
           tls internal
           encode zstd gzip
           ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "subpath") routes))}
         }
 
-        ${rootHost} {
-          tls { get_certificate tailscale }
+        # Tailscale serve backend — plain HTTP, no TLS.
+        # tailscaled terminates TLS for both tailnet and Funnel traffic on :443,
+        # then proxies here. Handles MCP routes + all subpath routes so that
+        # tailnet clients keep accessing hwc.ocelot-wahoo.ts.net/sonarr etc.
+        :18080 {
           encode zstd gzip
+
+          # MCP routes — proxy to hwc-infra Express server (priority over subpath routes)
+          @mcp_routes {
+            path /mcp /mcp/* /health /.well-known/*
+          }
+          handle @mcp_routes {
+            reverse_proxy 127.0.0.1:6200 {
+              flush_interval -1
+              transport http {
+                read_timeout 0
+                write_timeout 0
+              }
+            }
+          }
+
+          # JT MCP — proxy to hwc-sys Express (which proxies to :6102)
+          @jt_routes {
+            path /jt /jt/*
+          }
+          handle @jt_routes {
+            reverse_proxy 127.0.0.1:6200 {
+              flush_interval -1
+              transport http {
+                read_timeout 0
+                write_timeout 0
+              }
+            }
+          }
+
+          # n8n MCP bridge — proxy to hwc-sys Express (which proxies to :6201)
+          @n8n_routes {
+            path /n8n /n8n/*
+          }
+          handle @n8n_routes {
+            reverse_proxy 127.0.0.1:6200 {
+              flush_interval -1
+              transport http {
+                read_timeout 0
+                write_timeout 0
+              }
+            }
+          }
+
+          # All subpath routes (sonarr, radarr, navidrome, etc.)
           ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "subpath") routes))}
         }
 

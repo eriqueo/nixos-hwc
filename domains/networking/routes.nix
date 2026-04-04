@@ -356,15 +356,6 @@ in
       port = 14443;
       root = "/home/eric/.nixos/domains/business/website/calculator/app/dist";
     }
-    # Heartwood MCP Server — SSE transport for Claude chat / n8n
-    # Proxies to self-hosted JT MCP on localhost:6100
-    {
-      name = "heartwood-mcp";
-      mode = "port";
-      port = 16100;
-      upstream = "http://127.0.0.1:6100";
-    }
-
     # Heartwood CMS — content management dashboard for heartwoodcraft.me
     {
       name = "heartwood-cms";

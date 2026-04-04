@@ -4,16 +4,16 @@
 # NAMESPACE: hwc.business.*
 #
 # Modules:
-#   - mcp            — Heartwood MCP Server (JobTread PAVE interface)
 #   - estimator      — Estimate Assembler PWA (Vite/React)
 #   - firefly        — Firefly III + Pico (personal finance, containerized)
 #   - paperless      — Paperless-ngx (document management, containerized)
 #   - website         — heartwoodcraft.me (CMS + 11ty site content)
+#
+# NOTE: Heartwood MCP (JT tools) moved to domains/system/mcp/parts/jt.nix (hwc.system.mcp.jt.*)
 
 { config, lib, ... }:
 {
   imports = [
-    ./mcp/index.nix
     ./estimator/index.nix
     ./firefly/index.nix
     ./paperless/index.nix

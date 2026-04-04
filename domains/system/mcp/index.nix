@@ -21,6 +21,7 @@ in
 {
   imports = [
     ./parts/caddy.nix
+    ./parts/jt.nix
   ];
 
   #==========================================================================
@@ -105,8 +106,8 @@ in
     #--------------------------------------------------------------------------
     # SYSTEMD SERVICE
     #--------------------------------------------------------------------------
-    systemd.services.hwc-infra-mcp = {
-      description = "HWC Infrastructure MCP Server";
+    systemd.services.hwc-sys-mcp = {
+      description = "HWC System MCP Server";
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" "tailscaled.service" ];
       wants = [ "network-online.target" ];
@@ -127,6 +128,8 @@ in
         # n8n MCP bridge proxy config (used by /n8n/* route in index.ts)
         HWC_N8N_MCP_PORT = toString ((lib.attrByPath ["hwc" "automation" "n8n" "mcpBridge" "port"] 6201 config));
         HWC_N8N_MCP_AUTH_TOKEN = "hwc-n8n-mcp-internal-bridge-token-do-not-expose-externally";
+        # JT MCP proxy config (used by /jt/* route in index.ts)
+        HWC_JT_MCP_PORT = toString ((lib.attrByPath ["hwc" "system" "mcp" "jt" "port"] 6102 config));
       };
 
       serviceConfig = mkMerge [
