@@ -35,7 +35,7 @@ function createMCPServer(
   resources: ResourceDef[],
 ): Server {
   const server = new Server(
-    { name: "hwc-infra-mcp", version: "0.1.0" },
+    { name: "hwc-sys-mcp", version: "0.1.0" },
     { capabilities: { tools: {}, resources: {} } },
   );
 
@@ -156,29 +156,190 @@ async function main() {
     const host = config.host;
 
     // Session tracking for Streamable HTTP (one Server+Transport per session)
-    const sessions = new Map<string, {
+    const SESSION_TTL_MS = 30 * 60 * 1000; // 30 min — reap idle sessions
+    const SESSION_REAP_INTERVAL_MS = 60 * 1000; // check every 60s
+    const SSE_PING_INTERVAL_MS = 25 * 1000; // ping every 25s to keep proxies alive
+
+    interface ManagedSession {
       server: Server;
       transport: StreamableHTTPServerTransport;
-    }>();
+      lastActivity: number;
+      pingInterval?: ReturnType<typeof setInterval>;
+    }
+    const sessions = new Map<string, ManagedSession>();
+
+    // Clean up a session: stop pings, close transport/server, remove from map
+    function cleanupSession(id: string, reason: string) {
+      const session = sessions.get(id);
+      if (!session) return;
+      if (session.pingInterval) clearInterval(session.pingInterval);
+      try { session.transport.close(); } catch { /* ignore */ }
+      try { session.server.close(); } catch { /* ignore */ }
+      sessions.delete(id);
+      log.info("Session cleaned up", { sessionId: id, reason, activeSessions: sessions.size });
+    }
+
+    // Reap stale sessions periodically
+    const reapInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [id, session] of sessions) {
+        if (now - session.lastActivity > SESSION_TTL_MS) {
+          cleanupSession(id, `idle-${Math.round((now - session.lastActivity) / 1000)}s`);
+        }
+      }
+    }, SESSION_REAP_INTERVAL_MS);
+    reapInterval.unref(); // don't prevent process exit
 
     // Legacy SSE (single active connection)
     let legacySseTransport: SSEServerTransport | null = null;
     let legacySseServer: Server | null = null;
 
     const httpServer = createServer(async (req, res) => {
+      const startMs = Date.now();
+      const url = req.url || "/";
+      const method = req.method || "?";
+      const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+      // Request logging — log every request for debugging flaky connections
+      log.info("HTTP request", {
+        method,
+        url,
+        sessionId: sessionId || "-",
+        remoteAddr: req.socket.remoteAddress,
+        accept: req.headers.accept || "-",
+        contentType: req.headers["content-type"] || "-",
+      });
+
+      // Log response when finished
+      res.on("finish", () => {
+        const durationMs = Date.now() - startMs;
+        if (durationMs > 100 || res.statusCode >= 400) {
+          log.info("HTTP response", {
+            method,
+            url,
+            status: res.statusCode,
+            durationMs,
+            sessionId: sessionId || "-",
+          });
+        }
+      });
+
+      // Log client disconnects — key signal for flaky Funnel connections
+      res.on("close", () => {
+        if (!res.writableFinished) {
+          log.warn("Client disconnected mid-response", {
+            method,
+            url,
+            sessionId: sessionId || "-",
+            statusCode: res.statusCode,
+            headersSent: res.headersSent,
+            durationMs: Date.now() - startMs,
+          });
+        }
+      });
+
       // CORS — required for browser-based MCP clients (Claude.ai)
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, HEAD, DELETE, OPTIONS");
       res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Mcp-Session-Id, Last-Event-ID");
       res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
-      if (req.method === "OPTIONS") {
+      if (method === "OPTIONS") {
         res.writeHead(204);
         res.end();
         return;
       }
 
-      const url = req.url || "/";
+      // Fix Accept header for MCP routes — the SDK requires BOTH application/json
+      // AND text/event-stream (returns 406 otherwise). Claude.ai or the proxy chain
+      // sometimes sends only one. Normalize it before the SDK sees the request.
+      // Must modify rawHeaders (the raw array) because @hono/node-server reads those,
+      // not the parsed req.headers object.
+      if (url === "/mcp" || url === "/") {
+        const accept = req.headers.accept || "";
+        if (!accept.includes("application/json") || !accept.includes("text/event-stream")) {
+          const fixed = "application/json, text/event-stream";
+          req.headers.accept = fixed;
+          // Also patch rawHeaders — @hono/node-server reads this array directly
+          const idx = req.rawHeaders.findIndex(h => h.toLowerCase() === "accept");
+          if (idx >= 0) {
+            req.rawHeaders[idx + 1] = fixed;
+          } else {
+            req.rawHeaders.push("Accept", fixed);
+          }
+        }
+      }
+
+      try {
+        await handleRequest(req, res, url, method, sessionId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        log.error("Unhandled request error", { method, url, error: message });
+        if (!res.headersSent) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Internal server error" }));
+        }
+      }
+    });
+
+    // Keep-alive tuning — prevent Tailscale proxy from timing out idle connections
+    httpServer.keepAliveTimeout = 65_000; // slightly above typical 60s proxy timeout
+    httpServer.headersTimeout = 70_000;
+    httpServer.requestTimeout = 0; // no timeout on requests (MCP tool calls can be slow)
+
+    async function handleRequest(
+      req: import("node:http").IncomingMessage,
+      res: import("node:http").ServerResponse,
+      url: string,
+      method: string,
+      sessionId: string | undefined,
+    ) {
+      // ── JT .well-known stubs ─────────────────────────────────────
+      // Claude.ai probes these during connection. Return clean 404.
+      if (url.startsWith("/jt/.well-known/")) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+
+      // ── JT MCP proxy ──────────────────────────────────────────────
+      // Forward /jt/* to the heartwood-mcp server on port 6102
+      if (url.startsWith("/jt/") || url === "/jt") {
+        const jtPort = parseInt(process.env.HWC_JT_MCP_PORT || "6102", 10);
+        const strippedPath = url.slice(3) || "/";  // Remove "/jt" prefix
+        const { request: httpRequest } = await import("node:http");
+
+        const proxyReq = httpRequest({
+          hostname: "127.0.0.1",
+          port: jtPort,
+          path: strippedPath,
+          method,
+          headers: {
+            ...req.headers,
+            host: `127.0.0.1:${jtPort}`,
+          },
+          timeout: 120_000, // 120s — JT MCP tool calls can be slow
+        }, (proxyRes) => {
+          res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+          proxyRes.pipe(res);
+        });
+
+        proxyReq.on("error", (err) => {
+          log.error("JT MCP proxy error", { error: err.message, path: strippedPath });
+          if (!res.headersSent) {
+            res.writeHead(502, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "JT MCP server unavailable" }));
+          }
+        });
+
+        proxyReq.on("timeout", () => {
+          log.error("JT MCP proxy timeout", { path: strippedPath, timeoutMs: 120_000 });
+          proxyReq.destroy();
+        });
+
+        req.pipe(proxyReq);
+        return;
+      }
 
       // ── n8n .well-known stubs ────────────────────────────────────
       // Claude.ai probes these during connection. Return clean 404.
@@ -200,12 +361,13 @@ async function main() {
           hostname: "127.0.0.1",
           port: n8nPort,
           path: strippedPath,
-          method: req.method,
+          method,
           headers: {
             ...req.headers,
             host: `127.0.0.1:${n8nPort}`,
             authorization: `Bearer ${n8nAuthToken}`,
           },
+          timeout: 120_000, // 120s — n8n API calls (get_workflow full) can be slow
         }, (proxyRes) => {
           res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
           proxyRes.pipe(res);
@@ -219,21 +381,31 @@ async function main() {
           }
         });
 
+        proxyReq.on("timeout", () => {
+          log.error("n8n MCP proxy timeout", { path: strippedPath, timeoutMs: 120_000 });
+          proxyReq.destroy();
+        });
+
         req.pipe(proxyReq);
         return;
       }
 
       // ── Health check ────────────────────────────────────────────────
-      if (url === "/health" && req.method === "GET") {
+      if (url === "/health" && method === "GET") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
           status: "ok",
-          server: "hwc-infra-mcp",
+          server: "hwc-sys-mcp",
           version: "0.1.0",
           tools: registry.count(),
           resources: resources.length,
           uptime: process.uptime(),
           activeSessions: sessions.size,
+          sessionIds: [...sessions.keys()],
+          sessionAges: [...sessions.entries()].map(([id, s]) => ({
+            id: id.slice(0, 8),
+            idleSec: Math.round((Date.now() - s.lastActivity) / 1000),
+          })),
         }));
         return;
       }
@@ -241,17 +413,44 @@ async function main() {
       // ── Streamable HTTP (MCP spec 2025-06-18) ───────────────────────
       // Handles POST (JSON-RPC), GET (SSE stream), DELETE (session close)
       if (url === "/mcp" || url === "/") {
-        const sessionId = req.headers["mcp-session-id"] as string | undefined;
-
         // Route to existing session
         if (sessionId && sessions.has(sessionId)) {
           const session = sessions.get(sessionId)!;
+          session.lastActivity = Date.now();
+
+          // SSE GET stream — start ping keepalive to prevent proxy timeouts.
+          // Writes `: ping\n\n` (SSE comment, ignored by clients) every 25s.
+          // If the write fails, the connection is dead — clean up the session.
+          if (method === "GET") {
+            // Clear any previous ping (client reconnected)
+            if (session.pingInterval) clearInterval(session.pingInterval);
+            session.pingInterval = setInterval(() => {
+              try {
+                const ok = res.write(": ping\n\n");
+                if (ok === false) {
+                  // Backpressure/closed — connection is dead
+                  cleanupSession(sessionId!, "ping-backpressure");
+                }
+              } catch {
+                cleanupSession(sessionId!, "ping-write-error");
+              }
+            }, SSE_PING_INTERVAL_MS);
+
+            // Stop pinging when the SSE stream closes
+            res.on("close", () => {
+              if (session.pingInterval) {
+                clearInterval(session.pingInterval);
+                session.pingInterval = undefined;
+              }
+            });
+          }
+
           await session.transport.handleRequest(req, res);
           return;
         }
 
         // New session — must be a POST with initialize
-        if (req.method === "POST") {
+        if (method === "POST") {
           const body = await readBody(req);
           let parsed: unknown;
           try {
@@ -280,13 +479,15 @@ async function main() {
           const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID(),
             enableJsonResponse: true,
-            onsessioninitialized: (sessionId) => {
-              sessions.set(sessionId, { server, transport });
-              log.info("Streamable HTTP session created", { sessionId });
+            onsessioninitialized: (newSessionId) => {
+              sessions.set(newSessionId, { server, transport, lastActivity: Date.now() });
+              log.info("Streamable HTTP session created", {
+                sessionId: newSessionId,
+                activeSessions: sessions.size,
+              });
 
               transport.onclose = () => {
-                sessions.delete(sessionId);
-                log.info("Streamable HTTP session closed", { sessionId });
+                cleanupSession(newSessionId, "transport-close");
               };
             },
           });
@@ -299,14 +500,15 @@ async function main() {
         }
 
         // GET without session (SSE stream) — need session first
-        if (req.method === "GET" && !sessionId) {
+        if (method === "GET" && !sessionId) {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Session ID required for GET SSE stream" }));
           return;
         }
 
-        // Unknown session
+        // Unknown session — log it, this is a key flakiness indicator
         if (sessionId) {
+          log.warn("Request for unknown session", { sessionId, method });
           res.writeHead(404, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Session not found" }));
           return;
@@ -318,7 +520,7 @@ async function main() {
       }
 
       // ── Legacy SSE (for older clients) ──────────────────────────────
-      if (url === "/sse" && req.method === "GET") {
+      if (url === "/sse" && method === "GET") {
         // Clean up previous connection
         if (legacySseTransport) {
           try { await legacySseTransport.close(); } catch { /* ignore */ }
@@ -336,7 +538,7 @@ async function main() {
         return;
       }
 
-      if (url?.startsWith("/messages") && req.method === "POST") {
+      if (url?.startsWith("/messages") && method === "POST") {
         if (!legacySseTransport) {
           res.writeHead(503, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "No active SSE connection" }));
@@ -359,15 +561,34 @@ async function main() {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({
         error: "Not found",
-        endpoints: ["/mcp", "/sse", "/messages", "/health"],
+        endpoints: ["/mcp", "/jt/mcp", "/n8n/mcp", "/sse", "/messages", "/health"],
       }));
+    }
+
+    // Graceful shutdown — close all sessions, stop reaper
+    function gracefulShutdown(signal: string) {
+      log.info("Shutting down", { signal, activeSessions: sessions.size });
+      clearInterval(reapInterval);
+      for (const id of [...sessions.keys()]) {
+        cleanupSession(id, `shutdown-${signal}`);
+      }
+      httpServer.close();
+    }
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+    httpServer.on("error", (err) => {
+      log.error("HTTP server error", { error: err.message });
     });
 
     httpServer.listen(port, host, () => {
-      log.info(`HWC Infra MCP server listening on ${host}:${port}`, {
+      log.info(`HWC System MCP server listening on ${host}:${port}`, {
         streamableHttp: "/mcp",
+        jtProxy: "/jt/mcp",
+        n8nProxy: "/n8n/mcp",
         legacySse: "/sse",
         health: "/health",
+        sessionTtlMin: SESSION_TTL_MS / 60_000,
       });
     });
   }

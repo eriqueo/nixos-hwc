@@ -2,7 +2,8 @@
 #
 # n8n-mcp HTTP bridge — exposes n8n workflows as MCP tools via HTTP.
 # Uses the n8n-mcp npm package in HTTP mode, patched for JSON responses.
-# Accessible through the Caddy MCP gateway on :18080 → Tailscale Funnel :443.
+# Proxied via hwc-infra-mcp Express server: /n8n/* → :6201.
+# Public access: Tailscale Funnel :443 → Express :6200 → /n8n/* → :6201.
 #
 # NAMESPACE: hwc.automation.n8n.mcpBridge.*
 
@@ -14,17 +15,38 @@ let
 
   # Stable install location for n8n-mcp
   installDir = "/opt/n8n-mcp";
+  n8nMcpVersion = "2.40.5";
   entryPoint = "${installDir}/node_modules/n8n-mcp/dist/mcp/index.js";
 
-  # Patch script: adds enableJsonResponse: true to StreamableHTTPServerTransport
-  # Required for Claude.ai compatibility (needs application/json, not text/event-stream)
-  patchScript = pkgs.writeShellScript "n8n-mcp-patch" ''
+  # Install + patch script: ensures n8n-mcp is installed and patched for JSON responses.
+  # Runs as ExecStartPre — idempotent (skips if already at correct version and patched).
+  installAndPatchScript = pkgs.writeShellScript "n8n-mcp-install-patch" ''
+    set -euo pipefail
+
+    # Ensure install directory exists
+    ${pkgs.coreutils}/bin/mkdir -p "${installDir}"
+
+    # Install n8n-mcp if missing or wrong version
+    INSTALLED=""
+    if [ -f "${installDir}/node_modules/n8n-mcp/package.json" ]; then
+      INSTALLED=$(${pkgs.nodejs_22}/bin/node -e "console.log(require('${installDir}/node_modules/n8n-mcp/package.json').version)" 2>/dev/null || echo "")
+    fi
+
+    if [ "$INSTALLED" != "${n8nMcpVersion}" ]; then
+      echo "Installing n8n-mcp@${n8nMcpVersion} (current: $INSTALLED)"
+      cd "${installDir}"
+      ${pkgs.nodejs_22}/bin/npm install --no-save "n8n-mcp@${n8nMcpVersion}" 2>&1
+    else
+      echo "n8n-mcp@${n8nMcpVersion} already installed"
+    fi
+
+    # Patch: add enableJsonResponse: true to StreamableHTTPServerTransport
+    # Required for Claude.ai compatibility (needs application/json, not text/event-stream)
     TARGET="${installDir}/node_modules/n8n-mcp/dist/http-server-single-session.js"
     if [ ! -f "$TARGET" ]; then
-      echo "n8n-mcp not installed at $TARGET"
+      echo "FATAL: $TARGET not found after install"
       exit 1
     fi
-    # Only patch if not already patched
     if ! ${pkgs.gnugrep}/bin/grep -q 'enableJsonResponse: true' "$TARGET"; then
       ${pkgs.gnused}/bin/sed -i 's/transport = new streamableHttp_js_1\.StreamableHTTPServerTransport({/transport = new streamableHttp_js_1.StreamableHTTPServerTransport({\n                        enableJsonResponse: true,/' "$TARGET"
       echo "Patched enableJsonResponse into $TARGET"
@@ -72,10 +94,10 @@ in
 
   config = lib.mkIf (cfg.enable && bridge.enable) {
     # Env file generator — runs before the bridge service
-    systemd.services.n8n-mcp-bridge-env = {
+    systemd.services.hwc-n8n-mcp-env = {
       description = "Generate n8n MCP bridge environment file";
-      before = [ "n8n-mcp-bridge.service" ];
-      requiredBy = [ "n8n-mcp-bridge.service" ];
+      before = [ "hwc-n8n-mcp.service" ];
+      requiredBy = [ "hwc-n8n-mcp.service" ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -84,12 +106,12 @@ in
     };
 
     # Main bridge service
-    systemd.services.n8n-mcp-bridge = {
-      description = "n8n MCP HTTP Bridge (Claude.ai access)";
+    systemd.services.hwc-n8n-mcp = {
+      description = "HWC n8n MCP HTTP Bridge (Claude.ai access)";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-online.target" "podman-n8n.service" "n8n-mcp-bridge-env.service" ];
+      after = [ "network-online.target" "podman-n8n.service" "hwc-n8n-mcp-env.service" ];
       wants = [ "network-online.target" "podman-n8n.service" ];
-      requires = [ "n8n-mcp-bridge-env.service" ];
+      requires = [ "hwc-n8n-mcp-env.service" ];
 
       environment = {
         MCP_MODE = "http";
@@ -99,13 +121,14 @@ in
         LOG_LEVEL = "warn";
         TRUST_PROXY = "1";
         N8N_API_URL = "http://localhost:${toString cfg.port}";
-        # Internal-only auth token (Caddy injects this, external clients don't need it)
+        N8N_API_TIMEOUT = "60000";  # 60s — default 30s too short for get_workflow full
+        # Internal-only auth token (hwc-infra Express proxy injects this via Authorization header)
         AUTH_TOKEN = "hwc-n8n-mcp-internal-bridge-token-do-not-expose-externally";
       };
 
       serviceConfig = {
         Type = "simple";
-        ExecStartPre = "${patchScript}";
+        ExecStartPre = "+${installAndPatchScript}";  # + = run as root (npm install needs write to /opt)
         ExecStart = "${pkgs.nodejs_22}/bin/node ${entryPoint}";
         WorkingDirectory = installDir;
         Restart = "on-failure";
