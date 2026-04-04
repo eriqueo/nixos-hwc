@@ -87,4 +87,6 @@ hwc.data.backup = {
 
 ## Changelog
 
+- 2026-04-04: Update notification refs: `hwc.alerts.*` to `hwc.monitoring.alerts.*`, `hwc.automation.gotify.*` to `hwc.notifications.send.gotify.*` (domain redistribution)
+
 - 2026-03-25: Created README per Law 12
