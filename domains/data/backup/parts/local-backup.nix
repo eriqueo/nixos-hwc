@@ -281,7 +281,7 @@ EOF
       ''}
 
       # Send success notification (gotify)
-      ${lib.optionalString (config.hwc.automation.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onSuccess) ''
+      ${lib.optionalString (config.hwc.notifications.send.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onSuccess) ''
         hwc-gotify-send ${lib.optionalString (cfg.notifications.gotify.tokenFile != null) "--token-file ${cfg.notifications.gotify.tokenFile}"} --priority 3 \
           "[$HOSTNAME] Backup Success" \
           "Local backup completed successfully.
@@ -292,7 +292,7 @@ Log: $LOG_FILE" || log "Warning: Failed to send gotify notification"
       ''}
 
       # Send success notification (Slack via alerts domain)
-      ${lib.optionalString (config.hwc.alerts.enable or false && config.hwc.alerts.sources.backup.enable or false && config.hwc.alerts.sources.backup.onSuccess or false) ''
+      ${lib.optionalString (config.hwc.monitoring.alerts.enable or false && config.hwc.monitoring.alerts.sources.backup.enable or false && config.hwc.monitoring.alerts.sources.backup.onSuccess or false) ''
         hwc-backup-notify success "local" "Type: $BACKUP_TYPE, Size: $BACKUP_SIZE, Total backups: $TOTAL_BACKUPS" \
           || log "Warning: Failed to send Slack notification"
       ''}
@@ -308,7 +308,7 @@ Log: $LOG_FILE" || log "Warning: Failed to send gotify notification"
       ''}
 
       # Send failure notification (gotify)
-      ${lib.optionalString (config.hwc.automation.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onFailure) ''
+      ${lib.optionalString (config.hwc.notifications.send.gotify.enable or false && cfg.notifications.gotify.enable && cfg.notifications.gotify.onFailure) ''
         hwc-gotify-send ${lib.optionalString (cfg.notifications.gotify.tokenFile != null) "--token-file ${cfg.notifications.gotify.tokenFile}"} --priority 10 \
           "[$HOSTNAME] Backup FAILED" \
           "Local backup encountered errors!
@@ -321,7 +321,7 @@ Check the logs for details." || log_error "Warning: Failed to send gotify notifi
       ''}
 
       # Send failure notification (Slack via alerts domain)
-      ${lib.optionalString (config.hwc.alerts.enable or false && config.hwc.alerts.sources.backup.enable or false && config.hwc.alerts.sources.backup.onFailure or false) ''
+      ${lib.optionalString (config.hwc.monitoring.alerts.enable or false && config.hwc.monitoring.alerts.sources.backup.enable or false && config.hwc.monitoring.alerts.sources.backup.onFailure or false) ''
         hwc-backup-notify failure "local" "Backup encountered errors. Check logs: $LOG_FILE" \
           || log_error "Warning: Failed to send Slack notification"
       ''}

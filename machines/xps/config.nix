@@ -16,7 +16,7 @@
 
     # Domains — xps-specific capabilities
     ../../domains/ai/index.nix
-    ../../domains/alerts/index.nix
+    ../../domains/notifications/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
     ../../profiles/monitoring.nix
@@ -96,7 +96,7 @@
 
   services.thermald.enable = true;
 
-  hwc.automation.gotify = {
+  hwc.notifications.send.gotify = {
     enable = false;
     serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";
     defaultPriority = 7;
@@ -188,7 +188,7 @@
     };
   };
 
-  hwc.alerts.server = {
+  hwc.notifications.gotify = {
     enable = true;
     port = 2586;
     dataDir = "/var/lib/hwc/gotify";

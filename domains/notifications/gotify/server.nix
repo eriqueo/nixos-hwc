@@ -1,8 +1,8 @@
-# domains/alerts/parts/server.nix
+# domains/notifications/gotify/server.nix
 #
 # Gotify notification server container
 #
-# NAMESPACE: hwc.alerts.server.*
+# NAMESPACE: hwc.notifications.gotify.*
 #
 # DEPENDENCIES:
 #   - hwc.paths (for dataDir)
@@ -15,7 +15,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.hwc.alerts.server;
+  cfg = config.hwc.notifications.gotify;
 
   # Generate an env file from the raw password secret
   adminPasswordEnvFile = pkgs.writeShellScript "gotify-admin-env" ''
@@ -25,6 +25,56 @@ let
   '';
 in
 {
+  options.hwc.notifications.gotify = {
+    enable = lib.mkEnableOption "gotify notification server (container)";
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 2586;
+      description = "External HTTPS port (Tailscale serve). Clients connect here.";
+    };
+
+    internalPort = lib.mkOption {
+      type = lib.types.port;
+      default = 2587;
+      description = "Internal container port on localhost. Tailscale proxies from port to internalPort.";
+    };
+
+    dataDir = lib.mkOption {
+      type = lib.types.path;
+      default = "${(config.hwc.paths or {}).state or "/var/lib"}/gotify";
+      description = "Data directory for gotify server";
+    };
+
+    image = lib.mkOption {
+      type = lib.types.str;
+      default = "gotify/server:latest";
+      description = "Gotify container image";
+    };
+
+    adminPasswordFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Environment file containing GOTIFY_DEFAULTUSER_PASS=<password>";
+    };
+
+    # TAXONOMY v1.0 — map of "universe:domain" → token file path
+    # Auto-populated in server/config.nix by scanning config.age.secrets for
+    # secrets named "gotify-{universe}-{domain}" (e.g. gotify-hwc-ops).
+    # Adding a new Gotify app only requires creating the agenix secret — no
+    # further edits to this file or secrets-api.nix.
+    tokens = lib.mkOption {
+      type    = lib.types.attrsOf (lib.types.nullOr lib.types.path);
+      default = {};
+      example = { "hwc:ops" = "/run/agenix/gotify-hwc-ops"; "home:admin" = "/run/agenix/gotify-home-admin"; };
+      description = ''
+        Map of Gotify app key to decrypted token file path.
+        Key format: "{universe}:{domain}"  (e.g. "hwc:ops", "home:admin")
+        Populated automatically from agenix secrets named gotify-{universe}-{domain}.
+      '';
+    };
+  };
+
   config = lib.mkIf cfg.enable {
     # Container configuration
     virtualisation.oci-containers.containers.gotify = {

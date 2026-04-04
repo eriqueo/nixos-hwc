@@ -7,8 +7,8 @@ Other domains register their scrape configs via `hwc.monitoring.prometheus.scrap
 
 ## Boundaries
 
-- Owns: metrics collection, dashboards, alerting, uptime monitoring, service dashboard
-- Does NOT own: alert delivery (that's `domains/alerts/`), workflow automation (that's n8n in `domains/automation/`)
+- Owns: metrics collection, dashboards, alerting, uptime monitoring, service dashboard, alert source detection
+- Does NOT own: alert delivery (that's `domains/notifications/`), workflow automation (that's n8n in `domains/automation/`)
 - External integrations: Immich, Frigate, and *arr containers push their scrape configs here
 
 ## Structure
@@ -43,12 +43,15 @@ monitoring/
 │       ├── widgets.yaml
 │       ├── docker.yaml
 │       └── bookmarks.yaml
-└── uptime-kuma/        # Uptime monitoring with ntfy
+├── uptime-kuma/        # Uptime monitoring
+│   └── index.nix
+└── alerts/             # Alert sources, thresholds, severity mapping
     └── index.nix
 ```
 
 ## Changelog
 
+- 2026-04-04: Added alerts/ subdir — alert sources, thresholds, severity mapping (from domains/alerts redistribution)
 - 2026-03-27: Fixed alertmanager routing — default receiver was empty (alerts silently dropped). Now uses child routes with `continue: true` to fan out to all configured webhook receivers. Added ntfy-bridge as second receiver alongside n8n-webhook.
 - 2026-03-04: Namespace migration hwc.server.native.monitoring.* → hwc.monitoring.*
 - 2026-03-04: Moved from domains/server/native/monitoring/ (Phase 4 of DDD migration)

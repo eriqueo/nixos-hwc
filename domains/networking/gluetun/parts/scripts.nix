@@ -7,7 +7,7 @@
 let
   cfg = config.hwc.networking.gluetun;
   hcCfg = cfg.healthCheck;
-  gotifyCfg = config.hwc.automation.gotify or {};
+  gotifyCfg = config.hwc.notifications.send.gotify or {};
   gotifyEnabled = gotifyCfg.enable or false;
 
   healthCheckScript = pkgs.writeShellScript "gluetun-health-check" ''

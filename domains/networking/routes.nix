@@ -364,6 +364,14 @@ in
       upstream = "http://127.0.0.1:8095";
     }
 
+    # Morning Briefing — daily dashboard for Heartwood Craft ops
+    {
+      name = "briefing";
+      mode = "static";
+      port = 16443;
+      root = "/home/eric/agents/morning-briefing/dashboard";
+    }
+
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
     # Vaultwarden - self-hosted password manager (port mode)
     {

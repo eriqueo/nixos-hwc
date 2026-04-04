@@ -18,5 +18,6 @@
     ./firefly/index.nix
     ./paperless/index.nix
     ./website/index.nix
+    ./morning-briefing/index.nix
   ];
 }

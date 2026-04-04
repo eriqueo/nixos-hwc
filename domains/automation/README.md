@@ -2,14 +2,13 @@
 
 ## Purpose
 
-Workflow automation services. Contains n8n for alert routing,
-webhook handling, and Slack notification integration. Gotify CLI tool
-for cross-machine push notifications.
+Workflow engine and event bus. Contains n8n for workflow orchestration
+and MQTT broker for event-driven automation (Frigate → n8n).
 
 ## Boundaries
 
-- Owns: n8n workflow automation, gotify CLI (`hwc-gotify-send`), MQTT broker
-- Does NOT own: alert definitions (that's `domains/alerts/`), monitoring (that's `domains/monitoring/`)
+- Owns: n8n workflow automation, MQTT broker
+- Does NOT own: notification delivery (`domains/notifications/`), alert definitions (`domains/monitoring/alerts/`)
 
 ## Structure
 
@@ -19,11 +18,10 @@ automation/
 ├── README.md    # This file
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
-├── gotify/      # Gotify notification CLI (hwc-gotify-send)
-│   └── index.nix
 └── n8n/         # n8n workflow automation
-    ├── index.nix # Options + Tailscale funnel services
-    ├── sys.nix   # Container definition via mkContainer
+    ├── index.nix     # Options + Tailscale funnel services
+    ├── sys.nix       # Container definition via mkContainer
+    ├── mcp-bridge.nix # n8n-mcp HTTP bridge
     └── parts/
         ├── migrations/  # SQL migrations for workflow data
         └── workflows/   # JSON workflow definitions + docs
