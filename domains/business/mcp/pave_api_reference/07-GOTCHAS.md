@@ -73,6 +73,8 @@ The #1 source of query errors.
 
 Field paths are always arrays: `["name"]`, `["cfv:FIELD_ID", "values"]`.
 
+> **Warning (2026-04-04):** The `cfv:` syntax does NOT work for job custom fields in organization-level queries. Error: `The field "cfv:22P4fguBu3Ub" does not exist at "job"`. Custom field values ARE returned in query results (`customFieldValues.nodes`), so you can query without the `cfv:` filter and then filter client-side. It's unknown whether `cfv:` works for other entity types (accounts, contacts, etc.).
+
 ---
 
 ## 6. Numeric Fields Must Be Numbers
@@ -187,3 +189,26 @@ NixOS `import ./heartwood` expects `default.nix`, not `index.nix`. If you only s
 ## 18. notify Flag in Automations
 
 Set `"notify": false` in `query.$` for every automated call. Otherwise JT sends email/push notifications on every API action.
+
+---
+
+## 19. Max Page Size Is 100 — Large Fields Can Cause 413
+
+**Discovered 2026-04-04.** PAVE enforces a maximum `size` of 100 per page. Requesting more causes a validation error: `Expected size of 200 to be no more than 100`.
+
+Even at `size: 100`, requesting entities with many nested fields (e.g., jobs with `customFieldValues.nodes`, `location.account`, etc.) can trigger HTTP 413 (Request Entity Too Large). In practice, `size: 50` is a safe ceiling for full-detail job queries.
+
+---
+
+## 20. cfv: Where Clauses Don't Work for Jobs
+
+**Discovered 2026-04-04.** Despite the `["cfv:FIELD_ID", "values"]` field path syntax documented in Gotcha #5, using `cfv:` in `where` clauses for **job** custom fields in organization-level queries fails:
+
+```json
+// FAILS with: "The field \"cfv:22P4fguBu3Ub\" does not exist at \"job\""
+"where": { "in": [{ "field": ["cfv:22P4fguBu3Ub", "values"] }, [{ "value": "5. Budget Approved" }]] }
+```
+
+Custom field values ARE returned in query results (as `customFieldValues.nodes[].customField.id` + `.value`), just not filterable server-side.
+
+**Workaround:** Query without the `cfv:` filter, then filter client-side in JS by inspecting `customFieldValues.nodes`.

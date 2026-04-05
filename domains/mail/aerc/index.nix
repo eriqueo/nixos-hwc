@@ -3,8 +3,9 @@
 let
   cfg = config.hwc.mail.aerc;
 
-  cfgPart   = import ./parts/config.nix   { inherit lib pkgs config; };
-  bindsPart = import ./parts/binds.nix { inherit lib pkgs config; };
+  cfgPart    = import ./parts/config.nix   { inherit lib pkgs config; };
+  bindsPart  = import ./parts/binds.nix  { inherit lib pkgs config; };
+  sievePart  = import ./parts/sieve.nix  { inherit lib pkgs config; };
 in
 {
   options.hwc.mail.aerc.enable = lib.mkEnableOption "aerc terminal email client";
@@ -12,7 +13,7 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = (cfgPart.packages or []);
 
-    home.file = (cfgPart.files "") // (bindsPart.files "") // {
+    home.file = (cfgPart.files "") // (bindsPart.files "") // (sievePart.files "") // {
       ".notmuch-config".source = config.lib.file.mkOutOfStoreSymlink
         "${config.home.homeDirectory}/.config/notmuch/default/config";
     };

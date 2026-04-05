@@ -111,7 +111,9 @@ All Heartwood-specific IDs needed for Pave operations. These are constant for th
 | ID | Name | Type | Options |
 |---|---|---|---|
 | `22P4fgU4XmLY` | Job Type | option | Bathroom, Kitchen, Basement, Deck, Interior General, Exterior General |
-| `22P4fguBu3Ub` | Phase | option | 1. Contacted → 2. Visited → 3. Budgeting → 4. Budget Sent → 5. Budget Approved → 6. Work Start → 7. First Milestone → 8. Second Milestone → 9. Final Milestone |
+| `22P4fguBu3Ub` | Phase | option | 1. Contacted → 2. Visited → 3. Budgeting → 4. Budget Sent → 5. Budget Approved → 6. Work Start → 7. First Milestone → 8. Second Milestone Complete → 9. Final Milestone → 10. Job Complete |
+
+> **Note (2026-04-04):** Phase values in production have "Complete" suffixes on later phases (e.g., "8. Second Milestone Complete" not "8. Second Milestone"). The "10. Job Complete" phase is used for finished jobs that sometimes lack a `closedOn` date. When filtering by phase, parse the numeric prefix with `parseInt()` rather than matching exact strings.
 
 ---
 

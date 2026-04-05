@@ -1,6 +1,7 @@
 { lib, pkgs, config, osConfig ? {}, ...}:
 let
   userFilters = (config.hwc.mail.aerc.sieve.filters or {});
+  autoFilters = import ./sieve-filters.nix;
 
   defaultFilters = {
     "10-split-by-recipient.sieve" = ''
@@ -22,7 +23,7 @@ let
     '';
   };
 
-  filters = defaultFilters // userFilters;
+  filters = defaultFilters // autoFilters // userFilters;
 
   namesSorted = lib.sort (a: b: a < b) (builtins.attrNames filters);
   bundle = lib.concatStringsSep "\n\n"

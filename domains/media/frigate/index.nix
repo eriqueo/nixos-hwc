@@ -37,8 +37,8 @@ in
 
     port = lib.mkOption {
       type = lib.types.port;
-      default = 5001;
-      description = "Web UI port (internal, exposed via Caddy on 5443)";
+      default = 5000;
+      description = "Web UI port (exposed directly via --network=host, proxied by Caddy on 5443)";
     };
 
     gpu = {
