@@ -13,42 +13,11 @@ echo "$(date): Starting mail sync..."
 # Move tagged messages to correct IMAP folders BEFORE mbsync
 ${afewPkg}/bin/afew -m -a || true
 
-# --- Label copy-back: sync notmuch label tags → Labels/ Maildir ---
-# For each known Labels/ folder, ensure Maildir file presence matches tag state.
-# Copies (not hard-links) add the label on Proton (via mbsync APPEND); deletions
-# remove it (via mbsync Expunge Both). Only iterates folders already in Proton.
-if [ -d "$LABELS_DIR" ]; then
-  _seq=0
-  for _ldir in "$LABELS_DIR"/*/; do
-    [ -d "$_ldir" ] || continue
-    _lname=$(basename "$_ldir")
-    case "$_lname" in _*) continue ;; esac  # skip Bridge internal mirrors
-    mkdir -p "$_ldir/new" "$_ldir/cur"
-
-    # ADD: messages with tag:$_lname that have no file in Labels/$_lname/
-    while IFS= read -r _src; do
-      [ -f "$_src" ] || continue
-      case "$_src" in */Labels/*) continue ;; esac  # don't copy from another Label
-      _srcbase=$(basename "$_src")
-      # Extract Maildir flags (the :2,XYZ suffix) from original filename
-      _flags=""
-      case "$_srcbase" in *:2,*) _flags=":2,''${_srcbase##*:2,}" ;; esac
-      # Generate a unique Maildir-compliant filename
-      _seq=$((_seq + 1))
-      _newname="$(date +%s).M''${_seq}P$$.$HOSTNAME''${_flags}"
-      cp "$_src" "$_ldir/new/$_newname" 2>/dev/null || true
-    done < <("$NM" search --output=files \
-        "tag:$_lname AND NOT path:proton/Labels/$_lname/**" 2>/dev/null || true)
-
-    # REMOVE: files in Labels/$_lname/ whose message no longer has tag:$_lname
-    while IFS= read -r _mid; do
-      "$NM" search --output=files "$_mid" 2>/dev/null \
-        | ${pkgs.ripgrep}/bin/rg "Labels/$_lname" \
-        | xargs -r rm -f
-    done < <("$NM" search --output=messages \
-        "path:proton/Labels/$_lname/** AND NOT tag:$_lname" 2>/dev/null || true)
-  done
-fi
+# --- Label copy-back: DISABLED 2026-04-05 ---
+# Proton Bridge rejects IMAP APPEND for messages that already exist under a
+# different label, causing every sync to fail with "far side refuses to store".
+# Notmuch tagging still works locally; labels just won't push back to Proton.
+# TODO: investigate Bridge IMAP COPY or Proton API for proper label sync.
 
 # Sync all accounts (tolerate partial failures so notmuch new always runs)
 _sync_rc=0

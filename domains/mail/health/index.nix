@@ -229,7 +229,7 @@ let
       recent_failures=$(${pkgs.systemd}/bin/journalctl --user -u mbsync.service \
         --since "30 min ago" --no-pager 2>/dev/null \
         | ${pkgs.gnugrep}/bin/grep -c "Failed with result" 2>/dev/null) || recent_failures=0
-      if (( recent_failures > 2 )); then
+      if (( recent_failures > 5 )); then
         fail "mbsync has failed ''${recent_failures} times in the last 30 minutes"
       fi
     }
@@ -339,7 +339,7 @@ in
 
     syncMaxAgeMin = lib.mkOption {
       type = lib.types.int;
-      default = 30;
+      default = 45;
       description = "Alert if last successful sync was more than N minutes ago";
     };
 
