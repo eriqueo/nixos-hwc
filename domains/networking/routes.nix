@@ -53,7 +53,7 @@ in
       name = "frigate";
       mode = "port";
       port = 5443;
-      upstream = "http://127.0.0.1:5001";  # GPU-accelerated with CUDA/TensorRT support
+      upstream = "http://127.0.0.1:5000";  # GPU-accelerated with CUDA/TensorRT support
     }
 
     # Grafana - port mode (monitoring dashboards)
