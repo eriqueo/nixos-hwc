@@ -211,10 +211,11 @@ async function main() {
     function cleanupSession(id: string, reason: string) {
       const session = sessions.get(id);
       if (!session) return;
+      // Delete FIRST to prevent re-entrant calls (transport.close() fires onclose synchronously)
+      sessions.delete(id);
       if (session.pingInterval) clearInterval(session.pingInterval);
       try { session.transport.close(); } catch { /* ignore */ }
       try { session.server.close(); } catch { /* ignore */ }
-      sessions.delete(id);
       log.info("Session cleaned up", { sessionId: id, reason, activeSessions: sessions.size });
     }
 
