@@ -164,7 +164,10 @@
       "Bash(do echo:*)",
       "mcp__hwc-sys__hwc_services_logs",
       "mcp__hwc-sys__hwc_services_status",
-      "mcp__claude_ai_HWC__hwc_services_by_domain"
+      "mcp__claude_ai_HWC__hwc_services_by_domain",
+      "Bash(echo === Older WEBDL rip episodes \\(the problematic ones\\) ===:*)",
+      "mcp__hwc-sys__hwc_media_arr_status",
+      "WebFetch(domain:trash-guides.info)"
     ],
     "deny": [],
     "ask": [],
