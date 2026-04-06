@@ -35,10 +35,13 @@ in
         htop btop tree ncdu fastfetch usbutils pciutils dmidecode
 
         # Networking basics
-        wget curl
+        wget curl aria2
 
         # Archives and file management
         unzip zip p7zip rsync
+
+        # Media
+        ffmpeg
 
         # Language servers and dev toolchain
         lua-language-server nil pyright nodePackages.typescript-language-server
