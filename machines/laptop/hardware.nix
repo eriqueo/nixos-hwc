@@ -48,6 +48,7 @@
   # rebuilds/boot don't hang when the device is absent.
   systemd.tmpfiles.rules = [
     "d /mnt/vmstore 0755 root root -"
+    "d /mnt/backup/downloads 0755 eric users -"
   ];
 
   systemd.mounts = [

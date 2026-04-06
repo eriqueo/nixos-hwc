@@ -226,6 +226,8 @@ in
 
     ssh.enable = true;            # Enable the SSH server.
     firewall.level = "strict";
+    firewall.extraTcpPorts = [ 56037 ];
+    firewall.extraUdpPorts = [ 56037 ];
     tailscale.enable = true;
     tailscale.extraUpFlags = [ "--accept-dns" ];
     nfs.client.enable = true;
@@ -570,6 +572,7 @@ in
   ];
 
   programs.dconf.enable = true;
+  services.flatpak.enable = true;
 
   # Allow password auth for SSH (same as server)
   services.openssh.settings.PasswordAuthentication = lib.mkForce true;
