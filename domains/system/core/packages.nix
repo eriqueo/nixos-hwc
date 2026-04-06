@@ -48,6 +48,9 @@ in
         # GitHub CLI
         gh
 
+        # qBittorrent Web API CLI
+        qbittorrent-cli
+
         # Desktop-capable tools (works over X11 forwarding too)
         kitty
       ]))
