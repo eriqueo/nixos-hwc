@@ -852,6 +852,7 @@
   hwc.media.calibre.enable = lib.mkDefault true;
   hwc.media.audiobookshelf.enable = lib.mkDefault true;
   hwc.media.orchestration.audiobookCopier.enable = lib.mkDefault true;
+  hwc.media.scripts.sweep.enable = lib.mkDefault true;
 
   # Beets music organizer (using native installation)
   hwc.media.beets.enable = false;
