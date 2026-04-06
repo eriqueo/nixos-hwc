@@ -573,6 +573,10 @@ in
 
   programs.dconf.enable = true;
   services.flatpak.enable = true;
+  environment.sessionVariables.XDG_DATA_DIRS = [
+    "/var/lib/flatpak/exports/share"
+    "$HOME/.local/share/flatpak/exports/share"
+  ];
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [
     glib glibc gtk3 pango cairo gdk-pixbuf atk
