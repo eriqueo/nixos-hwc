@@ -1,0 +1,84 @@
+{
+  "generated_at": "2026-04-04T06:02:14-06:00",
+  "sections": {
+    "calendar": {
+      "events": [
+        {
+          "summary": "Dempsey walkthrough — mudroom measurements",
+          "start": "2026-04-04T09:00:00-06:00",
+          "end": "2026-04-04T10:30:00-06:00",
+          "location": "4218 Cottonwood Rd, Bozeman",
+          "allDay": false
+        },
+        {
+          "summary": "Pick up truck from Les Schwab",
+          "start": "2026-04-04T14:00:00-06:00",
+          "end": "2026-04-04T14:30:00-06:00",
+          "location": null,
+          "allDay": false
+        }
+      ]
+    },
+    "jobs": {
+      "active": [
+        {
+          "name": "Mudroom Conversion",
+          "number": "286",
+          "phase": "3. Budgeting",
+          "status": "Estimating",
+          "account": "Rachel Dempsey",
+          "city": "Bozeman",
+          "description": "Convert attached garage bay to mudroom with custom built-ins, heated tile floor, and exterior dutch door",
+          "is_test": false
+        },
+        {
+          "name": "test job delete me",
+          "number": "999",
+          "phase": "1. Contacted",
+          "status": "New Lead",
+          "account": "Test Account",
+          "city": null,
+          "description": null,
+          "is_test": true
+        },
+        {
+          "name": "rrt ytjs;",
+          "number": "998",
+          "phase": "1. Contacted",
+          "status": "New Lead",
+          "account": "Test",
+          "city": null,
+          "description": null,
+          "is_test": true
+        }
+      ]
+    },
+    "leads": {
+      "new_count": 0,
+      "items": []
+    },
+    "overdue": {
+      "count": 0,
+      "total_amount": 0,
+      "items": []
+    },
+    "system": {
+      "overall": "green",
+      "services_active": 55,
+      "services_failed": 0,
+      "containers_running": 42,
+      "containers_stopped": 0,
+      "storage": [
+        { "mount": "/", "percent": 64, "available": "160G" },
+        { "mount": "/mnt/hot", "percent": 13, "available": "759G" },
+        { "mount": "/mnt/media", "percent": 70, "available": "2.2T" }
+      ]
+    },
+    "mail": {
+      "healthy": true,
+      "last_sync": "2026-04-04T05:47:00-06:00",
+      "summary": "All accounts synced, 2 new messages"
+    }
+  },
+  "alerts": []
+}

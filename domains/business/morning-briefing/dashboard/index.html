@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Briefing">
+<meta name="theme-color" content="#0a0a0c">
+<title>Heartwood Briefing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a0c;--surface:#131316;--border:#1e1e24;
+    --text:#c8c8d0;--dim:#6b6b78;
+    --amber:#d4a04a;--amber-dim:#8a6a2f;
+    --green:#4a9e6a;--yellow:#c9a84c;--red:#c94a4a;
+    --mono:'JetBrains Mono',monospace;--sans:'Source Sans 3',sans-serif;
+  }
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);
+    line-height:1.5;min-height:100dvh;-webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:contain}
+  .shell{max-width:640px;margin:0 auto;padding:16px 16px 80px}
+
+  .ptr{text-align:center;font-family:var(--mono);font-size:11px;color:var(--amber-dim);
+    height:0;overflow:hidden;transition:height .2s}
+  .ptr.visible{height:32px;line-height:32px}
+
+  .hdr{padding:12px 0 20px;border-bottom:1px solid var(--border);margin-bottom:20px}
+  .hdr-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--amber-dim)}
+  .hdr-date{font-size:22px;font-weight:700;margin:4px 0 2px}
+  .hdr-updated{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .hdr-updated .fresh{color:var(--green)}
+  .hdr-updated .stale{color:var(--red)}
+
+  .alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+  .alert{font-family:var(--mono);font-size:12px;padding:10px 12px;border-left:3px solid;border-radius:2px}
+  .alert-critical{background:#1a0f0f;border-color:var(--red);color:#e88}
+  .alert-warning{background:#1a170f;border-color:var(--yellow);color:#ddb860}
+
+  .section{margin-bottom:24px}
+  .sec-hdr{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;
+    color:var(--dim);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:12px;
+    display:flex;justify-content:space-between;align-items:baseline}
+  .sec-count{color:var(--amber-dim);font-size:11px}
+
+  .ev{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .ev:last-child{border-bottom:none}
+  .ev-time{font-family:var(--mono);font-size:13px;color:var(--amber);min-width:56px;flex-shrink:0;padding-top:1px}
+  .ev-info{flex:1}
+  .ev-title{font-size:14px;font-weight:600}
+  .ev-loc{font-size:12px;color:var(--dim);margin-top:2px}
+  .ev-allday{font-family:var(--mono);font-size:10px;color:var(--amber-dim);background:#1a170f;padding:1px 6px;border-radius:2px}
+
+  .job{padding:10px 0;border-bottom:1px solid var(--border)}
+  .job:last-child{border-bottom:none}
+  .job-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .job-name{font-size:14px;font-weight:600;flex:1}
+  .job-num{font-family:var(--mono);font-size:11px;color:var(--amber-dim)}
+  .job-meta{font-size:12px;color:var(--dim);margin-top:3px}
+  .job-phase{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:2px;
+    background:var(--surface);border:1px solid var(--border)}
+  .test-note{font-family:var(--mono);font-size:11px;color:var(--dim);padding:8px 0}
+
+  .lead{padding:8px 0;border-bottom:1px solid var(--border)}
+  .lead:last-child{border-bottom:none}
+  .lead-name{font-size:14px;font-weight:600}
+  .lead-meta{font-size:12px;color:var(--dim);margin-top:2px}
+  .lead-age{font-family:var(--mono);font-size:11px}
+  .lead-age.old{color:var(--yellow)}
+  .lead-age.urgent{color:var(--red)}
+
+  .overdue-item{padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline}
+  .overdue-item:last-child{border-bottom:none}
+  .overdue-name{font-size:14px;font-weight:600}
+  .overdue-amt{font-family:var(--mono);font-size:12px;color:var(--red)}
+  .overdue-total{font-family:var(--mono);font-size:13px;color:var(--red);margin-bottom:8px}
+
+  .sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .sys-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
+  .sys-val{font-family:var(--mono);font-size:24px;font-weight:600}
+  .sys-val.ok{color:var(--green)}.sys-val.bad{color:var(--red)}
+  .sys-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+  .storage-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .storage-mount{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:80px}
+  .storage-bar{flex:1;height:8px;background:var(--surface);border-radius:4px;overflow:hidden}
+  .storage-fill{height:100%;border-radius:4px;transition:width .5s}
+  .storage-fill.green{background:var(--green)}.storage-fill.yellow{background:var(--yellow)}.storage-fill.red{background:var(--red)}
+  .storage-pct{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:36px;text-align:right}
+  .storage-avail{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:48px;text-align:right}
+
+  .mail-row{display:flex;align-items:center;gap:10px}
+  .badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:2px;text-transform:uppercase;letter-spacing:1px}
+  .badge-ok{background:#0f1a13;color:var(--green);border:1px solid #1a3020}
+  .badge-err{background:#1a0f0f;color:var(--red);border:1px solid #301a1a}
+  .mail-detail{font-size:12px;color:var(--dim)}
+
+  .empty{font-family:var(--mono);font-size:12px;color:var(--dim);padding:12px 0}
+  .err-box{background:#1a0f0f;border:1px solid #301a1a;border-radius:4px;padding:20px;text-align:center;margin:40px 0}
+  .err-box h2{font-family:var(--mono);font-size:14px;color:var(--red);margin-bottom:8px}
+  .err-box p{font-size:13px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="ptr" id="ptr">pull to refresh</div>
+  <div id="app"></div>
+</div>
+<script>
+const $=(tag,attrs,...ch)=>{
+  const el=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{
+    if(k==='class')el.className=v;
+    else if(k==='html')el.innerHTML=v;
+    else if(k.startsWith('on'))el.addEventListener(k.slice(2),v);
+    else el.setAttribute(k,v);
+  });
+  ch.flat().forEach(c=>{if(c!=null)el.appendChild(typeof c==='string'?document.createTextNode(c):c)});
+  return el;
+};
+const app=document.getElementById('app');
+
+function timeAgo(iso){
+  const m=Math.floor((Date.now()-new Date(iso).getTime())/60000);
+  if(m<1)return{text:'just now',cls:'fresh'};
+  if(m<60)return{text:`${m}m ago`,cls:m<30?'fresh':''};
+  const h=Math.floor(m/60);
+  if(h<24)return{text:`${h}h ago`,cls:h<2?'':'stale'};
+  return{text:`${Math.floor(h/24)}d ago`,cls:'stale'};
+}
+function fmtTime(iso){
+  if(!iso)return null;
+  const d=new Date(iso);let h=d.getHours(),m=d.getMinutes();
+  const ap=h>=12?'p':'a';h=h%12||12;
+  return`${h}:${String(m).padStart(2,'0')}${ap}`;
+}
+function fmtDate(d){
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const mos=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return`${days[d.getDay()]}, ${mos[d.getMonth()]} ${d.getDate()}`;
+}
+function stColor(p){return p>=90?'red':p>=75?'yellow':'green'}
+
+function render(data){
+  app.innerHTML='';
+  if(data.error){
+    app.appendChild($('div',{class:'err-box'},$('h2',null,'Briefing Unavailable'),$('p',null,data.error_message||'Failed to compile briefing')));
+    return;
+  }
+  const s=data.sections,ago=timeAgo(data.generated_at);
+
+  // Header
+  app.appendChild($('div',{class:'hdr'},
+    $('div',{class:'hdr-label'},'Heartwood Briefing'),
+    $('div',{class:'hdr-date'},fmtDate(new Date())),
+    $('div',{class:'hdr-updated',html:`updated <span class="${ago.cls}">${ago.text}</span>`})
+  ));
+
+  // Alerts
+  if(data.alerts&&data.alerts.length){
+    const a=$('div',{class:'alerts'});
+    data.alerts.forEach(al=>a.appendChild($('div',{class:`alert alert-${al.level}`},al.message)));
+    app.appendChild(a);
+  }
+
+  // Calendar
+  if(s.calendar){
+    const evts=s.calendar.events||[],sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Calendar'),$('span',{class:'sec-count'},`${evts.length}`)));
+    if(!evts.length){sec.appendChild($('div',{class:'empty'},'No events today'))}
+    else evts.forEach(ev=>{
+      const time=ev.allDay
+        ?$('div',{class:'ev-time'},$('span',{class:'ev-allday'},'ALL DAY'))
+        :$('div',{class:'ev-time'},fmtTime(ev.start)||'');
+      const info=$('div',{class:'ev-info'},$('div',{class:'ev-title'},ev.summary));
+      if(ev.location)info.appendChild($('div',{class:'ev-loc'},ev.location));
+      sec.appendChild($('div',{class:'ev'},time,info));
+    });
+    app.appendChild(sec);
+  }
+
+  // Jobs
+  if(s.jobs){
+    const all=s.jobs.active||[],real=all.filter(j=>!j.is_test),tc=all.length-real.length;
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Active Jobs'),$('span',{class:'sec-count'},`${real.length}`)));
+    if(!real.length)sec.appendChild($('div',{class:'empty'},'No active jobs'));
+    else real.forEach(j=>{
+      const el=$('div',{class:'job'});
+      el.appendChild($('div',{class:'job-top'},$('span',{class:'job-name'},j.name),$('span',{class:'job-num'},`#${j.number}`)));
+      const meta=[j.account,j.city].filter(Boolean).join(' \u2014 ');
+      el.appendChild($('div',{class:'job-meta'},$('span',{class:'job-phase'},j.phase||j.status||''),meta?` ${meta}`:''));
+      sec.appendChild(el);
+    });
+    if(tc>0)sec.appendChild($('div',{class:'test-note'},`+${tc} test job${tc>1?'s':''} hidden`));
+    app.appendChild(sec);
+  }
+
+  // Leads
+  if(s.leads&&s.leads.items&&s.leads.items.length){
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'New Leads'),$('span',{class:'sec-count'},`${s.leads.new_count}`)));
+    s.leads.items.forEach(l=>{
+      const ac=l.days_old>5?'urgent':l.days_old>2?'old':'';
+      sec.appendChild($('div',{class:'lead'},
+        $('div',{class:'lead-name'},l.name),
+        $('div',{class:'lead-meta'},l.job_type?`${l.job_type} \u2014 `:'',$('span',{class:`lead-age ${ac}`},`${l.days_old}d old`))
+      ));
+    });
+    app.appendChild(sec);
+  }
+
+  // Overdue
+  if(s.overdue&&s.overdue.count>0){
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Overdue Documents'),$('span',{class:'sec-count'},`${s.overdue.count}`)));
+    if(s.overdue.total_amount)sec.appendChild($('div',{class:'overdue-total'},`$${s.overdue.total_amount.toLocaleString()} outstanding`));
+    (s.overdue.items||[]).forEach(i=>sec.appendChild($('div',{class:'overdue-item'},
+      $('span',{class:'overdue-name'},i.name||i.description||'Document'),
+      i.amount?$('span',{class:'overdue-amt'},`$${i.amount.toLocaleString()}`):null
+    )));
+    app.appendChild(sec);
+  }
+
+  // System
+  if(s.system){
+    const sys=s.system,sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'System'),$('span',{class:'sec-count'},sys.overall||'')));
+    const g=$('div',{class:'sys-grid'});
+    g.appendChild($('div',{class:'sys-card'},$('div',{class:`sys-val ${sys.services_failed?'bad':'ok'}`},`${sys.services_active}`),$('div',{class:'sys-label'},'Services')));
+    g.appendChild($('div',{class:'sys-card'},$('div',{class:`sys-val ${sys.containers_stopped?'bad':'ok'}`},`${sys.containers_running}`),$('div',{class:'sys-label'},'Containers')));
+    sec.appendChild(g);
+    if(sys.storage&&sys.storage.length)sys.storage.forEach(st=>{
+      sec.appendChild($('div',{class:'storage-row'},
+        $('span',{class:'storage-mount'},st.mount),
+        $('div',{class:'storage-bar'},$('div',{class:`storage-fill ${stColor(st.percent)}`,style:`width:${st.percent}%`})),
+        $('span',{class:'storage-pct'},`${st.percent}%`),
+        $('span',{class:'storage-avail'},st.available)
+      ));
+    });
+    app.appendChild(sec);
+  }
+
+  // Mail
+  if(s.mail){
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Mail'),$('span')));
+    sec.appendChild($('div',{class:'mail-row'},
+      $('span',{class:`badge ${s.mail.healthy?'badge-ok':'badge-err'}`},s.mail.healthy?'healthy':'unhealthy'),
+      $('span',{class:'mail-detail'},s.mail.summary||'')
+    ));
+    app.appendChild(sec);
+  }
+}
+
+async function load(){
+  try{
+    const r=await fetch(`./briefing.json?t=${Date.now()}`);
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    render(await r.json());
+  }catch(e){render({error:true,error_message:`Could not load briefing: ${e.message}`})}
+}
+
+let startY=0,pulling=false;const ptr=document.getElementById('ptr');
+document.addEventListener('touchstart',e=>{if(window.scrollY===0&&e.touches.length===1){startY=e.touches[0].clientY;pulling=true}},{passive:true});
+document.addEventListener('touchmove',e=>{if(!pulling)return;const dy=e.touches[0].clientY-startY;ptr.classList.toggle('visible',dy>120)},{passive:true});
+document.addEventListener('touchend',()=>{if(ptr.classList.contains('visible')){ptr.textContent='refreshing...';load().then(()=>setTimeout(()=>{ptr.classList.remove('visible');ptr.textContent='pull to refresh'},500))}pulling=false});
+setInterval(load,5*60*1000);
+load();
+</script>
+</body>
+</html>
