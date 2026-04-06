@@ -35,6 +35,15 @@
       enable = false;
 
     };
+    # eXoDOS launcher desktop entry
+    xdg.desktopEntries.exogui = {
+      name = "eXoDOS";
+      comment = "DOS Game Collection Browser";
+      exec = "bash /home/eric/eXoDOS/exogui.command";
+      icon = "/home/eric/eXoDOS/eXo/util/exodos.png";
+      categories = [ "Game" ];
+    };
+
     # Shell: MCP configured for laptop context
     hwc.home.shell = {
       enable = true;

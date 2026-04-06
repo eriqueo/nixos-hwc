@@ -573,6 +573,16 @@ in
 
   programs.dconf.enable = true;
   services.flatpak.enable = true;
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    glib glibc gtk3 pango cairo gdk-pixbuf atk
+    nss nspr dbus expat libdrm mesa
+    alsa-lib cups libpulseaudio
+    libX11 libXcomposite libXcursor libXdamage libXext libXfixes
+    libXi libXrandr libXrender libXtst libxcb libxscrnsaver
+    at-spi2-atk at-spi2-core
+    libgbm libxkbcommon
+  ];
 
   # Allow password auth for SSH (same as server)
   services.openssh.settings.PasswordAuthentication = lib.mkForce true;
