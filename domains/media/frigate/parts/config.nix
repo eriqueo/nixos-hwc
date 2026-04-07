@@ -249,7 +249,9 @@ let
       # record stream (1080p transcode from main via go2rtc — saves ~75% storage)
       reolink = [ "${reolinkUrl "h264Preview_01_main"}#video=copy" ];
       reolink_sub = [ "${reolinkUrl "h264Preview_01_sub"}#video=copy" ];
-      reolink_record = [ "ffmpeg:reolink#video=h264#hardware#width=1920#height=1080" ];
+      # NOTE: #hardware removed — NVENC fails with kernel/driver mismatch, crashes go2rtc in a loop.
+      # Software encode until next reboot aligns kernel + nvidia driver. Re-add #hardware after reboot.
+      reolink_record = [ "ffmpeg:reolink#video=h264#width=1920#height=1080" ];
     };
 
     ui.timezone = "America/Denver";
