@@ -14,7 +14,7 @@
 #   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
 #   - nixosConfigurations.hwc-server -> ./machines/server/config.nix
 #   - nixosConfigurations.hwc-xps -> ./machines/xps/config.nix
-#   - nixosConfigurations.hwc-gaming -> ./machines/gaming/config.nix
+#   - nixosConfigurations.hwc-kids -> ./machines/kids/config.nix
 #   - nixosConfigurations.hwc-firestick -> ./machines/firestick/config.nix
 #
 # IMPORTS REQUIRED IN:
@@ -24,7 +24,7 @@
 #   nixos-rebuild switch --flake .#hwc-laptop
 #   nixos-rebuild switch --flake .#hwc-server
 #   nixos-rebuild switch --flake .#hwc-xps
-#   nixos-rebuild switch --flake .#hwc-gaming
+#   nixos-rebuild switch --flake .#hwc-kids
 
 {
   #============================================================================
@@ -246,17 +246,17 @@
           }
         ];
       };
-      hwc-gaming = lib.nixosSystem {
+      hwc-kids = lib.nixosSystem {
         inherit pkgs;
         specialArgs = {
           inherit inputs;
-          nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
+          nixosApiVersion = "unstable";
         };
         modules = [
           { nixpkgs.hostPlatform = system; }
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
-          ./machines/gaming/config.nix
+          ./machines/kids/config.nix
           {
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
