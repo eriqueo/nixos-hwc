@@ -94,7 +94,6 @@ if [ ! -f "${MAIL_PROMPT}" ]; then
 else
   MAIL_JSON=$(notmuch search \
     --format=json \
-    --output=threads \
     --limit=50 \
     "tag:inbox AND tag:unread AND date:${WINDOW_HOURS}h..today" \
     2>/dev/null || echo "[]")
@@ -123,7 +122,9 @@ else
     }
 
     if [ -n "${TRIAGE_RAW}" ]; then
-      TRIAGE_CLEAN=$(echo "${TRIAGE_RAW}" | sed '/^```/d' | tr -d '\r')
+      # Extract JSON object: strip markdown fences, preamble, and postamble
+      TRIAGE_CLEAN=$(echo "${TRIAGE_RAW}" | tr -d '\r' \
+        | sed -n '/^[[:space:]]*{/,/^[[:space:]]*}[[:space:]]*$/p')
       if echo "${TRIAGE_CLEAN}" | jq empty 2>/dev/null; then
         echo "${TRIAGE_CLEAN}" > "${MAIL_TRIAGE_JSON}"
         U=$(echo "${TRIAGE_CLEAN}" | jq '.stats.urgent_count' 2>/dev/null || echo "?")
@@ -131,7 +132,8 @@ else
         N=$(echo "${TRIAGE_CLEAN}" | jq '.stats.noise_count'  2>/dev/null || echo "?")
         log "mail-triage: OK (${U} urgent, ${R} review, ${N} noise)"
       else
-        log "WARN: Mail triage returned invalid JSON"
+        log "WARN: Mail triage returned invalid JSON — first 200 chars of raw:"
+        log "$(echo "${TRIAGE_RAW}" | head -c 200)"
         write_empty_triage "invalid JSON from claude"
       fi
     fi
@@ -154,8 +156,13 @@ fi
 
 # ── Step 4: Publish to dashboard/ ────────────────────────────────────────────
 if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
-  cp "${OUTPUT_DIR}/briefing.json" "${DASHBOARD_DIR}/briefing.json"
-  log "OK: Published to dashboard/"
+  # Use symlink if not already linked; otherwise cp with --remove-destination
+  if [ -L "${DASHBOARD_DIR}/briefing.json" ]; then
+    log "OK: Dashboard symlink already points to output"
+  else
+    cp --remove-destination "${OUTPUT_DIR}/briefing.json" "${DASHBOARD_DIR}/briefing.json"
+    log "OK: Published to dashboard/"
+  fi
 fi
 
 tail -100 "${LOG_FILE}" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "${LOG_FILE}"
