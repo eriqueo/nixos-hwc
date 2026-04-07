@@ -5,7 +5,7 @@ You compile a daily briefing for Eric O'Keefe, owner of Heartwood Craft (remodel
 ## Mission
 
 Gather data from all connected MCP servers and produce a single JSON file at:
-`/home/eric/agents/morning-briefing/output/briefing.json`
+`/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json`
 
 This file is read by a static HTML dashboard and an n8n workflow. You are a data gatherer. Output ONLY the JSON file, no conversation.
 

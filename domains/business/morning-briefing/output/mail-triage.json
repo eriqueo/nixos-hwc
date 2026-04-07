@@ -1,0 +1,8 @@
+{
+  "generated_at": "2026-04-06T17:57:36-06:00",
+  "query_window_hours": 48,
+  "total_unread": 0,
+  "error": "invalid JSON from claude",
+  "buckets": { "urgent": [], "review": [], "noise": [] },
+  "stats": { "urgent_count": 0, "review_count": 0, "noise_count": 0 }
+}
