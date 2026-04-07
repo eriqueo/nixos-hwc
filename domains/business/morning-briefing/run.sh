@@ -38,9 +38,10 @@ cd "${AGENT_DIR}"
 # ── Step 1: Main briefing ─────────────────────────────────────────────────────
 log "STEP 1: Main briefing (Claude Code CLI)..."
 
+TODAY="$(date +%Y-%m-%d)"
 RESULT=$("${CLAUDE_BIN}" \
   --print \
-  -p "Compile today's morning briefing. Write the JSON output file as specified in CLAUDE.md." \
+  -p "Today is ${TODAY}. Compile today's morning briefing. Write the JSON output file as specified in CLAUDE.md." \
   2>&1) || {
   log "ERROR: Claude Code CLI failed"
   echo "${RESULT}" >> "${LOG_FILE}"
@@ -59,6 +60,11 @@ ERRJSON
 }
 
 if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
+  # Stamp generated_at with the real time — don't trust Claude's timestamp
+  NOW="$(date -Iseconds)"
+  jq --arg ts "${NOW}" '.generated_at = $ts' \
+    "${OUTPUT_DIR}/briefing.json" > "${OUTPUT_DIR}/briefing.json.tmp" \
+  && mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
   ALERT_COUNT=$(jq '.alerts | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
   log "OK: Main briefing compiled (${ALERT_COUNT} alerts)"
 else
