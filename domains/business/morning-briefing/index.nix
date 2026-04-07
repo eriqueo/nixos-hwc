@@ -27,7 +27,7 @@ in
         Group = "users";
         WorkingDirectory = agentDir;
         ExecStart = "${agentDir}/run.sh";
-        TimeoutSec = 180;
+        TimeoutSec = 300;
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;
