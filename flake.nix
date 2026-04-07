@@ -178,6 +178,37 @@
       hwc-graph = hwc-graph-pkg;
     };
 
+    #========================================================================
+    # STANDALONE HOME MANAGER — fast user-level rebuilds (~5-10s)
+    # Usage: home-manager switch --flake ~/.nixos#eric@$(hostname)
+    # Alias: hms
+    #========================================================================
+    homeConfigurations = {
+      "eric@hwc-server" = home-manager-stable.lib.homeManagerConfiguration {
+        pkgs = pkgs-stable;
+        extraSpecialArgs = {
+          inherit inputs;
+          nixosApiVersion = "stable";
+        };
+        modules = [
+          ./machines/server/home.nix
+          { home.username = "eric"; home.homeDirectory = "/home/eric"; }
+        ];
+      };
+      "eric@hwc-laptop" = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+        extraSpecialArgs = {
+          inherit inputs;
+          nixosApiVersion = "unstable";
+        };
+        modules = [
+          ./profiles/home-session.nix
+          ./machines/laptop/home.nix
+          { home.username = "eric"; home.homeDirectory = "/home/eric"; }
+        ];
+      };
+    };
+
     nixosConfigurations = {
       # CHARTER v9.0: Server uses stable nixpkgs (packages AND NixOS modules)
       # Uses CUDA-enabled overlay for Immich ML GPU acceleration

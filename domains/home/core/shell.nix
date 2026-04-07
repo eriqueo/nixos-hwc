@@ -54,7 +54,7 @@ in
         "htop" = "btop"; "open" = "xdg-open";
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
         "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";
-        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d";
+        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d"; "hms" = "home-manager switch --flake ~/.nixos#eric@$(hostname)";
         "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
         "server" = "ssh eric@100.114.232.124"; "xps" = "ssh eric@100.126.80.42";

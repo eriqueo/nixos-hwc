@@ -13,10 +13,15 @@
 #   - Owns: health check script, systemd timer, alert routing, state tracking
 #   - Depends on: mail domain (accounts, bridge, mbsync, notmuch paths), hwc-gotify-send
 #   - Does NOT touch: mail data, configs, or services (read-only + GPG lock cleanup)
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.mail.health;
   mailCfg = config.hwc.mail;
+
+  # Safe agenix secret access
+  gotifyTokenDefault =
+    let hasSecret = (osConfig ? age) && (osConfig.age.secrets ? gotify-token-mail);
+    in if hasSecret then osConfig.age.secrets.gotify-token-mail.path else "";
 
   maildirRoot =
     let nmRoot = (mailCfg.notmuch or {}).maildirRoot or "";
@@ -323,7 +328,7 @@ in
     gotify = {
       tokenFile = lib.mkOption {
         type = lib.types.str;
-        default = "";
+        default = gotifyTokenDefault;
         description = "Path to gotify app token file for critical mail alerts (uses hwc-gotify-send)";
       };
     };
