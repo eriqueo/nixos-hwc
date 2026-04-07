@@ -19,7 +19,7 @@ in
 
     # ← aliases moved here (no more session.nix)
     home.shellAliases = {
-      mail      = "aerc";
+      mail      = "ssh -t hwc-server aerc";
       mailsync  = "mbsync -a";
       mailindex = "notmuch new";
       urls      = "urlscan";
