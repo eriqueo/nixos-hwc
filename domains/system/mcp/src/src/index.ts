@@ -11,7 +11,6 @@
  *   - Streamable HTTP (Claude.ai, remote — MCP spec 2025-06-18)
  */
 
-import { randomUUID } from "node:crypto";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -190,12 +189,21 @@ async function main() {
   }
 
   // ── HTTP transport (Streamable HTTP) ────────────────────────────────
-  // Stateless — fresh Server+Transport per request. No session map.
-  // Eliminates the SDK stack overflow bug from accumulated session state.
+  // Sessionless — one long-lived Server+Transport, no session tracking.
+  // sessionIdGenerator: undefined prevents SDK session map accumulation
+  // that caused the RangeError stack overflow crash.
   if (config.transport === "sse" || config.transport === "both") {
     const { createServer } = await import("node:http");
     const port = config.port;
     const host = config.host;
+
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+      enableJsonResponse: true,
+    });
+    const server = createMCPServer(manager, resources);
+    await server.connect(transport);
+    log.info("Streamable HTTP transport ready (sessionless)");
 
     const httpServer = createServer(async (req, res) => {
       const startMs = Date.now();
@@ -302,46 +310,20 @@ async function main() {
           resources: resources.length,
           backends: backendHealth,
           uptime: process.uptime(),
-          mode: "stateless",
+          mode: "sessionless",
         }));
         return;
       }
 
-      // ── Streamable HTTP (stateless — fresh Server+Transport per request) ──
+      // ── Streamable HTTP (sessionless — shared transport) ──
       if (url === "/mcp" || url === "/") {
-        if (method === "POST") {
-          const body = await readBody(req);
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(body);
-          } catch {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Invalid JSON" }));
-            return;
-          }
-
-          const transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => randomUUID(),
-            enableJsonResponse: true,
-          });
-          const server = createMCPServer(manager, resources);
-          await server.connect(transport);
-
-          await transport.handleRequest(req, res, parsed);
+        if (method === "POST" || method === "GET" || method === "DELETE") {
+          await transport.handleRequest(req, res);
           return;
         }
 
-        // GET — return an immediately-closed SSE stream so clients stop retrying
-        if (method === "GET") {
-          res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
-          res.write(": ok\n\n");
-          res.end();
-          return;
-        }
-
-        // DELETE/other — not supported in stateless mode
         res.writeHead(405, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Use POST for MCP requests" }));
+        res.end(JSON.stringify({ error: "Method not allowed" }));
         return;
       }
 
@@ -363,6 +345,7 @@ async function main() {
     // Graceful shutdown
     function gracefulShutdown(signal: string) {
       log.info("Shutting down", { signal });
+      transport.close().catch(() => {});
       manager.stopAll().then(() => {
         httpServer.close();
       });
@@ -378,30 +361,10 @@ async function main() {
       log.info(`HWC Gateway listening on ${host}:${port}`, {
         streamableHttp: "/mcp",
         health: "/health",
-        mode: "stateless",
+        mode: "sessionless",
       });
     });
   }
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────
-
-function readBody(req: import("node:http").IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
-    req.on("end", () => resolve(Buffer.concat(chunks).toString()));
-    req.on("error", reject);
-  });
-}
-
-function isInitializeRequest(parsed: unknown): boolean {
-  if (Array.isArray(parsed)) {
-    return parsed.some(
-      (msg) => typeof msg === "object" && msg !== null && (msg as Record<string, unknown>).method === "initialize",
-    );
-  }
-  return typeof parsed === "object" && parsed !== null && (parsed as Record<string, unknown>).method === "initialize";
 }
 
 main().catch((error) => {
