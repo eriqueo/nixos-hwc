@@ -12,6 +12,8 @@ import { storageTools } from "./storage.js";
 import { networkTools } from "./network.js";
 import { mailTools } from "./mail.js";
 import { mediaTools } from "./media.js";
+import { calendarTools } from "./calendar.js";
+
 
 export function allTools(config: ServerConfig): ToolDef[] {
   return [
@@ -24,5 +26,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...networkTools(config.cacheTtl.runtime, config.nixosConfigPath),
     ...mailTools(),
     ...mediaTools(),
+    ...calendarTools(),
+    
   ];
 }

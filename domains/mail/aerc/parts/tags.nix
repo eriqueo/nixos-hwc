@@ -14,6 +14,9 @@
 #
 # ALL category marking is exclusive under <Space>m leader.
 # Display names use tag_key format for visual cue in sidebar (e.g. "finance_f").
+#
+# CUSTOM TAGS: User-defined tags live in tags-custom.json (same directory).
+# Add tags there via the aerc-new-tag script (<Space>M in aerc), then run `hms`.
 { lib, colors ? {} }:
 let
   c = colors;
@@ -28,6 +31,12 @@ let
     urgent   = "#${c.error     or "bf616a"}";  # red — demands attention
     waiting  = "#${c.warning   or "cf995f"}";  # amber — needs follow-up
   };
+
+  # Read custom tags from JSON sidecar (user-managed, not in Nix)
+  customFile = ./tags-custom.json;
+  customData = builtins.fromJSON (builtins.readFile customFile);
+  customCategories = map (t: t // { color = group.${t.group} or group.system; }) (customData.categories or []);
+  customFlags = map (t: t // { color = group.${t.group} or group.urgent; }) (customData.flags or []);
 
   # Category tags are mutually exclusive — assigning one removes the others.
   categoryTags = [
@@ -56,13 +65,13 @@ let
     { tag = "tech";         color = group.system;   display = "tech_t";         spaceKey = "t"; }
     { tag = "aerc";         color = group.system;   display = "aerc_`";         spaceKey = "`"; }
     { tag = "website";      color = group.system;   display = "website_@";      spaceKey = "@"; }
-  ];
+  ] ++ customCategories;
 
   # Flag tags coexist with categories (not exclusive).
   flagTags = [
     { tag = "action";  color = group.urgent;  display = "action_!";  spaceKey = "!"; bold = true; }
     { tag = "pending"; color = group.waiting;  display = "pending_?"; spaceKey = "?"; }
-  ];
+  ] ++ customFlags;
 
   allTags = flagTags ++ categoryTags;
 
