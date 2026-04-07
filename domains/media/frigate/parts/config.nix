@@ -149,10 +149,10 @@ let
         review.detections.required_zones = [ "carport" ];
       };
 
-      # cobra_cam_2: Side yard — currently offline
-      # TODO: Add zones when camera is back online — similar setup to cobra_cam_1
+      # cobra_cam_2: Side yard — currently offline (disabled to stop retry storm)
+      # TODO: Re-enable and add zones when camera is back online — similar setup to cobra_cam_1
       cobra_cam_2 = {
-        enabled = true;
+        enabled = false;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
           inputs = [
