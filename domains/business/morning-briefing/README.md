@@ -47,6 +47,19 @@ sudo systemctl start morning-briefing.service
 journalctl -u morning-briefing.service -f
 ```
 
+## MCP Tools Used
+
+The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gateway):
+
+**HWC-JT (heartwood-mcp)** — JobTread data at `/opt/business/heartwood-mcp/`
+- `jt_search_jobs` — list all open jobs (`status: "open"`, searchTerm optional)
+- `jt_get_overdue_documents` — docs past due with outstanding balances
+- Google Calendar MCP — today's events
+
+**HWC-SYS** — server health
+- `hwc_monitoring_health_check` — services, containers, storage
+- `hwc_mail_health` — mail system status
+
 ## Changelog
 
-- **2026-04-07** — Fix stale paths (routes.nix + old systemd unit), fix mail triage JSON parsing (remove `--output=threads`, extract JSON with sed range instead of fence strip), fix `cp` same-file error on dashboard symlink, stamp `generated_at` from shell, pass explicit date in prompt, increase timeout to 300s, reduce thread limit to 30, add debug logging on triage parse failure
+- **2026-04-07** — Upgrade dashboard with mail triage UI (expandable thread cards, action buttons, urgent/review/noise buckets). Add `jt_get_overdue_documents` tool to heartwood-mcp. Make `jt_search_jobs` searchTerm optional (allows listing all open jobs). Fix stale paths (routes.nix + old systemd unit), fix mail triage JSON parsing (remove `--output=threads`, extract JSON with sed range instead of fence strip), fix `cp` same-file error on dashboard symlink, stamp `generated_at` from shell, pass explicit date in prompt, increase timeout to 300s, reduce thread limit to 30, add debug logging on triage parse failure
