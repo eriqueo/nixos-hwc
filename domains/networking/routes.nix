@@ -369,7 +369,7 @@ in
       name = "briefing";
       mode = "static";
       port = 16443;
-      root = "/home/eric/agents/morning-briefing/dashboard";
+      root = "/home/eric/.nixos/domains/business/morning-briefing/dashboard";
     }
 
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
