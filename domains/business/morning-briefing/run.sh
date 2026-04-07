@@ -41,7 +41,7 @@ log "STEP 1: Main briefing (Claude Code CLI)..."
 TODAY="$(date +%Y-%m-%d)"
 RESULT=$("${CLAUDE_BIN}" \
   --print \
-  -p "Today is ${TODAY}. Compile today's morning briefing. Write the JSON output file as specified in CLAUDE.md." \
+  -p "Today is ${TODAY} ($(date '+%A, %B %-d, %Y')). Compile today's morning briefing as specified in CLAUDE.md. IMPORTANT: For the calendar section, call gcal_list_events with timeMin='${TODAY}T00:00:00' and timeMax='${TODAY}T23:59:59' and timeZone='America/Denver' to get only today's events."
   2>&1) || {
   log "ERROR: Claude Code CLI failed"
   echo "${RESULT}" >> "${LOG_FILE}"
