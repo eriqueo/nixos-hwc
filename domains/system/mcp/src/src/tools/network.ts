@@ -71,6 +71,10 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
       inputSchema: {
         type: "object",
         properties: {
+          route: {
+            type: "string",
+            description: "Route name (e.g. 'jellyfin', 'sonarr') for full details. Omit for compact overview of all routes.",
+          },
           check_health: {
             type: "boolean",
             default: false,
@@ -80,6 +84,7 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          const routeFilter = args.route as string | undefined;
           const checkHealth = args.check_health === true;
 
           // Try Caddy admin API first
@@ -116,6 +121,8 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
                 }
               }
 
+              // Admin API returns raw Caddy config — pass through as-is
+              // (routeFilter not applicable to live admin API format)
               return {
                 status: "ok",
                 message: `${routes.length} routes across ${Object.keys(servers || {}).length} servers (live)`,
@@ -153,10 +160,37 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
                 );
               }
 
+              // Single route detail
+              if (routeFilter) {
+                const match = routes.find((r) => r.name === routeFilter);
+                if (!match) {
+                  return mcpError({
+                    type: "NOT_FOUND",
+                    message: `Route not found: ${routeFilter}`,
+                    suggestion: "Call without 'route' param to list all route names",
+                    context: { available: routes.map((r) => r.name) },
+                  });
+                }
+                return {
+                  status: "ok",
+                  message: `Route: ${match.name}`,
+                  data: { source: "routes.nix", route: match },
+                };
+              }
+
+              // Compact overview — drop upstream (internal plumbing)
+              const compact = routes.map((r) => {
+                const entry: Record<string, unknown> = { name: r.name, mode: r.mode };
+                if (r.port) entry.port = r.port;
+                if (r.path) entry.path = r.path;
+                if (r.healthy !== undefined) entry.healthy = r.healthy;
+                return entry;
+              });
+
               return {
                 status: "ok",
-                message: `${routes.length} routes from routes.nix (Caddy admin API returned 403)`,
-                data: { source: "routes.nix", routes, note: "Caddy admin API not accessible" },
+                message: `${routes.length} routes from routes.nix`,
+                data: { source: "routes.nix", routes: compact },
               };
             } catch {
               // routes.nix not readable

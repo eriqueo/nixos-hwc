@@ -9,6 +9,7 @@
 import { log } from "./log.js";
 import type { ToolDef } from "./types.js";
 import { StdioBackend, type BackendStatus } from "./stdio-backend.js";
+import { transformN8nResponse } from "./transforms/n8n.js";
 
 interface AggregatedTool {
   name: string;
@@ -152,7 +153,23 @@ export class BackendManager {
 
     // Backend tool
     if (entry.backend) {
-      return entry.backend.callTool(name, args);
+      const result = await entry.backend.callTool(name, args);
+
+      // Apply n8n response transforms
+      if (name.startsWith("n8n_") || name === "validate_workflow" || name === "validate_node") {
+        try {
+          for (const item of result.content) {
+            if (item.type === "text" && item.text) {
+              const parsed = JSON.parse(item.text);
+              item.text = JSON.stringify(transformN8nResponse(name, parsed), null, 2);
+            }
+          }
+        } catch {
+          // Transform failed — return original response unchanged
+        }
+      }
+
+      return result;
     }
 
     return {

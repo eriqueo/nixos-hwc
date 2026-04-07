@@ -251,10 +251,26 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
           const domainsDir = join(nixosConfigPath, "domains");
           const results = await searchOptionDeclarations(domainsDir, query);
 
+          // Group by file for compact output
+          const byFile = new Map<string, Array<{ line: number; name: string; type: string; default?: string }>>();
+          for (const r of results) {
+            if (!byFile.has(r.file)) byFile.set(r.file, []);
+            // Extract type and default from snippet
+            const typeMatch = r.snippet.match(/type\s*=\s*(?:types\.|lib\.types\.)?([\w.]+)/);
+            const defaultMatch = r.snippet.match(/default\s*=\s*([^;]{1,60})/);
+            byFile.get(r.file)!.push({
+              line: r.line,
+              name: r.name,
+              type: r.type === "enable" ? "bool" : (typeMatch?.[1] || "unknown"),
+              ...(defaultMatch ? { default: defaultMatch[1].trim() } : {}),
+            });
+          }
+          const grouped = Array.from(byFile.entries()).map(([file, options]) => ({ file, options }));
+
           return {
             status: "ok",
-            message: `${results.length} option declarations matching '${query}'`,
-            data: { results },
+            message: `${results.length} options in ${grouped.length} files matching '${query}'`,
+            data: { files: grouped },
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Failed to search options", err);

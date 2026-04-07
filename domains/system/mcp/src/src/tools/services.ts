@@ -95,6 +95,9 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
             (s) => s.activeState !== "active" && s.activeState !== "failed"
           );
 
+          // Unhealthy services get full details; healthy ones are just names
+          const unhealthy = [...failed, ...other];
+
           return {
             status: failed.length > 0 ? "partial" : "ok",
             message: `${active.length} active, ${failed.length} failed, ${other.length} other`,
@@ -105,7 +108,8 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
                 failed: failed.length,
                 other: other.length,
               },
-              services: filtered,
+              unhealthy,
+              healthy: active.map((s) => s.name),
             },
           };
         } catch (err) {
@@ -214,10 +218,23 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
           const container = args.container as string | undefined;
           const stats = await getContainerStats(container);
 
+          // Overview mode (no specific container): slim output — drop fields that are
+          // always empty (memLimit, netIO, blockIO from systemd fallback) or useless
+          // (id=PID, pids=always 1, status=always "running").
+          const data = container
+            ? { stats }
+            : {
+                stats: stats.map((s) => ({
+                  name: s.name,
+                  cpu: s.cpu,
+                  memory: s.memory,
+                })),
+              };
+
           return {
             status: "ok",
             message: `${stats.length} container(s)`,
-            data: { stats },
+            data,
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Failed to get container stats", err, "Is podman running? Check with hwc_services_status type='container'");
@@ -484,7 +501,7 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
           // Scan each domain for service/container definitions
           const result: Array<{
             domain: string;
-            services: Array<{ name: string; type: "native" | "container"; file: string; port?: number }>;
+            services: Array<{ name: string; type: "native" | "container"; file: string; port?: number; live?: boolean }>;
           }> = [];
 
           // Get live services for cross-reference
@@ -514,6 +531,28 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
 
           result.sort((a, b) => a.domain.localeCompare(b.domain));
           const totalServices = result.reduce((sum, d) => sum + d.services.length, 0);
+
+          // Overview mode: compact per-domain summary (live names only)
+          if (!filterDomain) {
+            const compact = result.map((d) => {
+              const live = d.services.filter((s) => s.live);
+              const expectedLive = d.services.filter((s) => s.type === "container" || s.live);
+              const notableOffline = expectedLive.filter((s) => !s.live).map((s) => s.name);
+              return {
+                domain: d.domain,
+                liveCount: live.length,
+                declaredCount: d.services.length,
+                live: live.map((s) => s.name),
+                ...(notableOffline.length > 0 ? { notableOffline } : {}),
+              };
+            });
+            const totalLive = compact.reduce((sum, d) => sum + d.liveCount, 0);
+            return {
+              status: "ok",
+              message: `${totalLive} live services across ${compact.length} domains (${totalServices} declared)`,
+              data: { domains: compact },
+            };
+          }
 
           return {
             status: "ok",
