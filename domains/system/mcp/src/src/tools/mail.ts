@@ -274,7 +274,6 @@ function flattenShow(data: unknown): unknown[] {
       const extracted: Record<string, unknown> = {
         id: m.id,
         match: m.match,
-        filename: m.filename,
         timestamp: m.timestamp,
         date_relative: m.date_relative,
         tags: m.tags,
@@ -391,19 +390,30 @@ export function mailTools(): ToolDef[] {
 
           try {
             const entries = await readdir(MAIL_HEALTH_STATE);
-            const cooldowns = entries.filter((e) => e.startsWith("cooldown-"));
-            if (cooldowns.length > 0) {
-              result.activeCooldowns = await Promise.all(
-                cooldowns.map(async (c) => {
-                  const parts = c.replace("cooldown-", "").split("-");
-                  const tsRaw = await readSafe(join(MAIL_HEALTH_STATE, c));
-                  return {
-                    level: parts[0],
-                    fingerprint: parts.slice(1).join("-"),
-                    sentAt: tsRaw ? new Date(parseInt(tsRaw, 10) * 1000).toISOString() : null,
-                  };
-                }),
-              );
+            const cooldownFiles = entries.filter((e) => e.startsWith("cooldown-"));
+            if (cooldownFiles.length > 0) {
+              // Summarize cooldowns by level instead of dumping every fingerprint
+              const byLevel: Record<string, { count: number; oldest: number; newest: number }> = {};
+              for (const c of cooldownFiles) {
+                const level = c.replace("cooldown-", "").split("-")[0] || "unknown";
+                const tsRaw = await readSafe(join(MAIL_HEALTH_STATE, c));
+                const ts = tsRaw ? parseInt(tsRaw, 10) : 0;
+                if (!byLevel[level]) {
+                  byLevel[level] = { count: 0, oldest: ts || Infinity, newest: 0 };
+                }
+                byLevel[level].count++;
+                if (ts && ts < byLevel[level].oldest) byLevel[level].oldest = ts;
+                if (ts && ts > byLevel[level].newest) byLevel[level].newest = ts;
+              }
+              const cooldowns: Record<string, { count: number; oldestAt: string; newestAt: string }> = {};
+              for (const [level, info] of Object.entries(byLevel)) {
+                cooldowns[level] = {
+                  count: info.count,
+                  oldestAt: info.oldest !== Infinity ? new Date(info.oldest * 1000).toISOString() : "unknown",
+                  newestAt: info.newest > 0 ? new Date(info.newest * 1000).toISOString() : "unknown",
+                };
+              }
+              result.cooldowns = cooldowns;
             }
           } catch {
             /* state dir may not exist yet */
@@ -503,12 +513,22 @@ export function mailTools(): ToolDef[] {
             return mcpError({ type: "COMMAND_FAILED", message: "notmuch search failed", error: res.stderr.slice(0, 500), suggestion: "Check query syntax. Use saved search names (inbox, action, label:finance) or raw notmuch queries.", context: { query, exitCode: res.exitCode } });
           }
 
-          const threads = JSON.parse(res.stdout || "[]");
+          const threads = JSON.parse(res.stdout || "[]") as Array<Record<string, unknown>>;
+          // Slim each thread: replace query array with a single messageId string
+          const slimmed = threads.map((t) => {
+            const { query: qArr, ...rest } = t;
+            const result: Record<string, unknown> = { ...rest };
+            if (Array.isArray(qArr) && typeof qArr[0] === "string") {
+              // Strip "id:" prefix — caller knows to add it back
+              result.messageId = (qArr[0] as string).replace(/^id:/, "");
+            }
+            return result;
+          });
           const resolvedNote = wasResolved ? ` (resolved '${rawQuery}' → '${query}')` : "";
           return {
             status: "ok",
-            message: `${threads.length} threads (offset ${offset}, limit ${limit})${resolvedNote}`,
-            data: threads,
+            message: `${slimmed.length} threads (offset ${offset}, limit ${limit})${resolvedNote}`,
+            data: slimmed,
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Search failed", err, "Is notmuch installed and the Xapian database accessible?");

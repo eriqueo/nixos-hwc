@@ -97,9 +97,26 @@ Standard JSON-RPC over stdin/stdout. One `Server` instance for the lifetime of t
 The `BackendManager` aggregates tools from all sources. When `tools/call` arrives, it routes by tool name:
 - hwc-sys tools → local function call via `ToolRegistry`
 - heartwood-mcp tools → forwarded over stdio to the child process
-- n8n-mcp tools → forwarded over stdio to the child process
+- n8n-mcp tools → forwarded over stdio to the child process, then **response-transformed** before returning
 
 Each stdio backend (`StdioBackend`) has a circuit breaker: 5 failures in 2 minutes triggers backoff. The backend auto-reconnects on the next request after cooldown.
+
+### Response Transforms
+
+The `transforms/n8n.ts` module cleans up bloated n8n-mcp responses before they reach the LLM client. Applied automatically in `BackendManager.callTool()` for any tool starting with `n8n_` or named `validate_workflow`/`validate_node`.
+
+**Global transforms** (all n8n responses):
+- Flatten `__rl` objects (`{__rl: true, value: X, ...}` → `X`)
+- Remove empty objects (`options: {}`, `otherOptions: {}`)
+- Strip `webhookId` from non-webhook nodes (Slack nodes etc. have spurious ones)
+- Flatten tag arrays (`[{id, name, createdAt, updatedAt}]` → `["name1", "name2"]`)
+
+**Tool-specific transforms**:
+- `n8n_get_workflow`, `n8n_update_full_workflow`, `n8n_create_workflow`: remove `activeVersion`, `shared`, version fields, empty `meta`/`staticData`/`pinData`, null `description`, `settings.availableInMCP`/`callerPolicy`
+- `n8n_list_workflows`: remove `createdAt`/`updatedAt` per workflow, `isArchived` if false
+- `n8n_executions`: remove null `retryOf`/`retrySuccessId`
+
+All transforms are wrapped in try/catch — a failed transform returns the original data unchanged.
 
 ## Network & Exposure
 
@@ -397,6 +414,8 @@ domains/system/mcp/
         mail.ts                    # 10 mail tools
         media.ts                   # 2 media tools
         build.ts                   # 1 git status tool
+      transforms/
+        n8n.ts                     # N8N response transformer (flatten __rl, tags, trim bloat)
       resources/
         index.ts                   # 5 MCP resources
 ```
@@ -435,6 +454,11 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-04-07**: Response trimming — reduce token waste in tool outputs:
+  - **N8N response transforms** (`transforms/n8n.ts`): global transforms flatten `__rl` objects, remove empty objects, strip spurious `webhookId`, flatten tag arrays. Tool-specific transforms strip `activeVersion`/`shared`/version fields from workflow detail, `createdAt`/`updatedAt` from list results, null retry fields from executions.
+  - **hwc_mail_read**: removed `filename` field (Maildir paths are internal plumbing).
+  - **hwc_mail_search**: replaced `query: ["id:msgid@host", null]` with `messageId: "msgid@host"` (stripped prefix, dropped null).
+  - **hwc_services_container_stats** (overview): slimmed from 9 fields to 3 (`name`, `cpu`, `memory`). Single-container mode retains all fields.
 - **2026-04-07**: v0.3.0 — Sessionless transport rewrite (fixes Claude.ai connection):
   - **Root cause**: v0.2.0 "stateless" rewrite created fresh Server+Transport per POST. Only `initialize` worked; all subsequent requests got "Server not initialized" (400). Claude.ai couldn't load tools.
   - **Fix**: One long-lived shared Server+Transport with `sessionIdGenerator: undefined` (no session tracking) and `enableJsonResponse: true` (JSON responses for Claude.ai).
@@ -490,6 +514,8 @@ domains/system/mcp/
         │   ├── mail.ts
         │   ├── media.ts
         │   └── build.ts
+        ├── transforms/
+        │   └── n8n.ts
         └── resources/
             └── index.ts
 ```
