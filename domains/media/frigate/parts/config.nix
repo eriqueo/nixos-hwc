@@ -123,8 +123,8 @@ let
       # Cobra cameras use go2rtc restreams:
       # - Detect: substream (1280x720) via go2rtc - matches detect resolution exactly
       # - Record: main stream (4K) via go2rtc
-      # cobra_cam_1: Indoor workshop/garage — events only (person/dog/cat detected)
-      # No continuous motion recording; saves ~8 GB/day
+      # cobra_cam_1: Carport — road at top, driveway/yard below
+      # Events only (no continuous motion recording; saves ~8 GB/day)
       cobra_cam_1 = {
         enabled = true;
         audio.enabled = false;
@@ -137,12 +137,26 @@ let
         record.retain.days = 0;  # No motion recording — events only
         detect = { width = 1280; height = 720; fps = 5; };
         motion.mask = [
-          "0,0,1280,50"       # Top strip (timestamp)
+          "0,0,1280,50"       # Timestamp strip
           "350,0,750,200"     # Bright light area (top center)
+          "0,0,1280,300"      # Road and beyond (top ~40%)
         ];
+        zones.carport = {
+          coordinates = "0,300,1280,300,1280,720,0,720";
+          objects = [ "person" "dog" "cat" ];
+        };
+        objects = {
+          track = [ "person" "dog" "cat" ];
+          filters = {
+            person = { min_score = 0.75; threshold = 0.80; min_area = 5000; required_zones = [ "carport" ]; };
+            dog    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "carport" ]; };
+            cat    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "carport" ]; };
+          };
+        };
       };
 
-      # cobra_cam_2: Side yard - mask street/warehouse area at top
+      # cobra_cam_2: Side yard — currently offline
+      # TODO: Add zones when camera is back online — similar setup to cobra_cam_1
       cobra_cam_2 = {
         enabled = true;
         audio.enabled = false;
@@ -160,7 +174,7 @@ let
         ];
       };
 
-      # cobra_cam_3: Front porch - mask street beyond fence to avoid car/pedestrian detections
+      # cobra_cam_3: Front porch — mask street beyond fence, detect only in yard
       cobra_cam_3 = {
         enabled = true;
         audio.enabled = false;
@@ -179,15 +193,25 @@ let
           "0,0,0,450,180,380,180,0"
           # Right side street/cars
           "1100,0,1100,400,1280,400,1280,0"
+          # Porch deck/railing foreground (bottom strip)
+          "0,620,1280,620,1280,720,0,720"
         ];
         # Focus detection on yard area inside fence
         zones.front_yard = {
           coordinates = "180,380,1100,380,1100,700,180,700";
           objects = [ "person" "dog" "cat" ];
         };
+        objects = {
+          track = [ "person" "dog" "cat" ];
+          filters = {
+            person = { min_score = 0.75; threshold = 0.80; min_area = 5000; required_zones = [ "front_yard" ]; };
+            dog    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "front_yard" ]; };
+            cat    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "front_yard" ]; };
+          };
+        };
       };
 
-      # Reolink (front door) - tracks vehicles, mask neighbor's driveway
+      # Reolink (front yard) — fence defines property boundary, driveway on left
       reolink = {
         enabled = true;
         audio.enabled = false;
@@ -206,17 +230,17 @@ let
         objects = {
           track = [ "person" "dog" "cat" "car" "truck" ];
           filters = {
-            person = { min_score = 0.70; threshold = 0.75; min_area = 1200; };
-            dog    = { min_score = 0.65; threshold = 0.70; min_area = 750; };
-            cat    = { min_score = 0.65; threshold = 0.70; min_area = 750; };
-            car    = { min_score = 0.80; threshold = 0.85; min_area = 3000; };
-            truck  = { min_score = 0.80; threshold = 0.85; min_area = 3500; };
+            person = { min_score = 0.70; threshold = 0.75; min_area = 1200; required_zones = [ "property" ]; };
+            dog    = { min_score = 0.65; threshold = 0.70; min_area = 750;  required_zones = [ "property" ]; };
+            cat    = { min_score = 0.65; threshold = 0.70; min_area = 750;  required_zones = [ "property" ]; };
+            car    = { min_score = 0.80; threshold = 0.85; min_area = 3000; required_zones = [ "property" ]; };
+            truck  = { min_score = 0.80; threshold = 0.85; min_area = 3500; required_zones = [ "property" ]; };
           };
         };
-        # Zone for driveway area (where your truck is parked)
-        zones.driveway = {
-          coordinates = "200,80,580,80,580,300,200,300";
-          objects = [ "person" "car" "truck" ];
+        # Property zone — yard inside the fence + driveway
+        zones.property = {
+          coordinates = "100,160,580,160,580,360,100,360";
+          objects = [ "person" "dog" "cat" "car" "truck" ];
         };
       };
     };
