@@ -35,8 +35,19 @@ TIMEZONE_ICAL = {
 
 # ── helpers ──────────────────────────────────────────────────────────
 
-def tty_input(prompt: str) -> str:
-    """Read a line from /dev/tty (works even when stdin is a pipe)."""
+def has_tty() -> bool:
+    """Check if /dev/tty is available (not available in aerc :pipe without -p)."""
+    try:
+        with open("/dev/tty", "r"):
+            return True
+    except OSError:
+        return False
+
+
+def tty_input(prompt: str, default: str = "") -> str:
+    """Read a line from /dev/tty, or return default if no tty available."""
+    if not has_tty():
+        return default
     with open("/dev/tty", "r") as tty:
         sys.stdout.write(prompt)
         sys.stdout.flush()
@@ -393,7 +404,7 @@ def handle_ics_attachment(ics_parts: list[bytes]):
         print(f"      {dtstart}")
     print()
 
-    answer = tty_input("  Import? [Y/n] ").lower()
+    answer = tty_input("  Import? [Y/n] ", default="y").lower()
     if answer and answer != "y":
         print("  Cancelled.")
         return
@@ -475,17 +486,32 @@ def handle_body_parse(msg):
         print(f"  Title:    {event['title']}")
         print(f"  Duration: {event['duration']}\n")
 
-    print("  Opening editor for review...\n")
-
     # Include HTML URLs in the reference body so user can copy them
     html_urls = extract_html_links(msg)
     if html_urls:
         body += "\n\n── URLs found in email ──\n" + "\n".join(html_urls)
 
-    edited = editor_review(event, email_body=body)
-    if not edited:
-        print("  Cancelled (title was empty).")
-        return
+    if has_tty():
+        print("  Opening editor for review...\n")
+        edited = editor_review(event, email_body=body)
+        if not edited:
+            print("  Cancelled (title was empty).")
+            return
+    else:
+        # No tty (aerc :pipe without -p) — use auto-detected values directly
+        if not dt:
+            print("  No date/time detected and no terminal for editor. Aborting.")
+            sys.exit(1)
+        edited = {
+            "title": event["title"],
+            "date": event["date"],
+            "time": event["time"],
+            "duration": event["duration"],
+            "timezone": event["timezone"],
+            "location": event["location"],
+            "calendar": event["calendar"],
+            "description": event["description"],
+        }
 
     # Parse the edited values back into a datetime
     import dateparser
@@ -534,6 +560,19 @@ def handle_body_parse(msg):
         sys.exit(1)
 
 
+def sync_calendar():
+    """Push new events to iCloud via vdirsyncer."""
+    print("  Syncing to iCloud...")
+    result = subprocess.run(
+        ["vdirsyncer", "sync"],
+        capture_output=True, text=True,
+    )
+    if result.returncode == 0:
+        print("  Synced.")
+    else:
+        print(f"  Sync failed: {result.stderr.strip()}")
+
+
 def main():
     raw = sys.stdin.buffer.read()
     msg = BytesParser().parsebytes(raw)
@@ -543,6 +582,8 @@ def main():
         handle_ics_attachment(ics_parts)
     else:
         handle_body_parse(msg)
+
+    sync_calendar()
 
 
 if __name__ == "__main__":
