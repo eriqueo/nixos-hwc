@@ -145,14 +145,8 @@ let
           coordinates = "0,300,1280,300,1280,720,0,720";
           objects = [ "person" "dog" "cat" ];
         };
-        objects = {
-          track = [ "person" "dog" "cat" ];
-          filters = {
-            person = { min_score = 0.75; threshold = 0.80; min_area = 5000; required_zones = [ "carport" ]; };
-            dog    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "carport" ]; };
-            cat    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "carport" ]; };
-          };
-        };
+        review.alerts.required_zones = [ "carport" ];
+        review.detections.required_zones = [ "carport" ];
       };
 
       # cobra_cam_2: Side yard — currently offline
@@ -201,14 +195,8 @@ let
           coordinates = "180,380,1100,380,1100,700,180,700";
           objects = [ "person" "dog" "cat" ];
         };
-        objects = {
-          track = [ "person" "dog" "cat" ];
-          filters = {
-            person = { min_score = 0.75; threshold = 0.80; min_area = 5000; required_zones = [ "front_yard" ]; };
-            dog    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "front_yard" ]; };
-            cat    = { min_score = 0.70; threshold = 0.75; min_area = 3000; required_zones = [ "front_yard" ]; };
-          };
-        };
+        review.alerts.required_zones = [ "front_yard" ];
+        review.detections.required_zones = [ "front_yard" ];
       };
 
       # Reolink (front yard) — fence defines property boundary, driveway on left
@@ -230,11 +218,11 @@ let
         objects = {
           track = [ "person" "dog" "cat" "car" "truck" ];
           filters = {
-            person = { min_score = 0.70; threshold = 0.75; min_area = 1200; required_zones = [ "property" ]; };
-            dog    = { min_score = 0.65; threshold = 0.70; min_area = 750;  required_zones = [ "property" ]; };
-            cat    = { min_score = 0.65; threshold = 0.70; min_area = 750;  required_zones = [ "property" ]; };
-            car    = { min_score = 0.80; threshold = 0.85; min_area = 3000; required_zones = [ "property" ]; };
-            truck  = { min_score = 0.80; threshold = 0.85; min_area = 3500; required_zones = [ "property" ]; };
+            person = { min_score = 0.70; threshold = 0.75; min_area = 1200; };
+            dog    = { min_score = 0.65; threshold = 0.70; min_area = 750;  };
+            cat    = { min_score = 0.65; threshold = 0.70; min_area = 750;  };
+            car    = { min_score = 0.80; threshold = 0.85; min_area = 3000; };
+            truck  = { min_score = 0.80; threshold = 0.85; min_area = 3500; };
           };
         };
         # Property zone — yard inside the fence + driveway
@@ -242,6 +230,8 @@ let
           coordinates = "100,160,580,160,580,360,100,360";
           objects = [ "person" "dog" "cat" "car" "truck" ];
         };
+        review.alerts.required_zones = [ "property" ];
+        review.detections.required_zones = [ "property" ];
       };
     };
 
