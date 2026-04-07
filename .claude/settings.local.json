@@ -168,7 +168,8 @@
       "Bash(echo === Older WEBDL rip episodes \\(the problematic ones\\) ===:*)",
       "mcp__hwc-sys__hwc_media_arr_status",
       "WebFetch(domain:trash-guides.info)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(vdirsyncer sync:*)"
     ],
     "deny": [],
     "ask": [],

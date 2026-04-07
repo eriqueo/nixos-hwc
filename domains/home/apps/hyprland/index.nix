@@ -131,7 +131,7 @@ in
       # Feature Detection: Only enforce on NixOS hosts where system config is available
       # On non-NixOS hosts, user is responsible for system-lane dependencies
       {
-        assertion = !cfg.enable || !isNixOSHost || (osConfig.hwc.system.apps.hyprland.enable or false);
+        assertion = !cfg.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "hyprland" "enable" ] false osConfig;
         message = ''
           hwc.home.apps.hyprland is enabled but hwc.system.apps.hyprland is not.
           System dependencies (hyprland-startup script, helper scripts) are required.

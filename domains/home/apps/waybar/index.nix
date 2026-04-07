@@ -96,7 +96,7 @@ in
       # Feature Detection: Only enforce on NixOS hosts where system config is available
       # On non-NixOS hosts, user is responsible for system-lane dependencies
       {
-        assertion = !cfg.enable || !isNixOSHost || (osConfig.hwc.system.apps.waybar.enable or false);
+        assertion = !cfg.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "waybar" "enable" ] false osConfig;
         message = ''
           hwc.home.apps.waybar is enabled but hwc.system.apps.waybar is not.
           System-lane validation checks are required for waybar dependencies.

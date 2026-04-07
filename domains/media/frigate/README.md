@@ -2,9 +2,9 @@
 
 **Version**: 0.16.2-tensorrt
 **Domain**: `hwc.media.frigate`
-**Architecture**: Config-First Pattern (Charter v7.0 Section 19 Compliant)
+**Architecture**: Config-First Pattern (Charter v11.1)
 **Status**: ✅ Production
-**Last Updated**: 2026-03-09
+**Last Updated**: 2026-04-07
 
 ---
 
@@ -31,7 +31,7 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 - **Hardware**: NVIDIA GPU with CUDA/NVDEC acceleration
 - **Detection**: ONNX runtime with YOLOv9-s model (~24ms inference)
 - **Cameras**: 4 cameras (3 Cobra PoE + 1 Reolink)
-- **Storage**: Motion-based recording with 7-day retention
+- **Storage**: Motion-based recording with tiered retention (3d motion, 14d alerts/detections)
 - **Streaming**: go2rtc restream for WebRTC and stability
 - **Security**: Agenix-encrypted secrets for RTSP credentials
 
@@ -44,8 +44,8 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 | Motion-Based Recording | ✅ | 60-70% storage savings vs continuous |
 | Substream Detection | ✅ | 720p detect, 4K record (fixes green tint) |
 | go2rtc Restreaming | ✅ | WebRTC live view, stream stability |
-| Detection Zones | ✅ | Per-camera configurable zones |
-| Tiered Retention | ✅ | 7 days recordings, 30 days person snapshots |
+| Detection Zones | ✅ | Per-camera zones with required_zones enforcement |
+| Tiered Retention | ✅ | 3d motion, 14d alerts/detections, 30d person snapshots |
 | Automated Cleanup | ✅ | Frigate native + systemd backup timer |
 
 ---
@@ -210,42 +210,34 @@ curl -s http://localhost:5000/api/stats | jq '.cameras | to_entries[] | {name: .
 record:
   enabled: true
   retain:
-    days: 7           # Keep recordings for 7 days
+    days: 3           # General motion recordings: 3 days
     mode: motion      # Only record when motion detected
+  alerts:
+    retain:
+      days: 14        # Alert clips: 14 days
+      mode: motion
+  detections:
+    retain:
+      days: 14        # Detection clips: 14 days
+      mode: active_objects
 ```
 
-**Storage Estimate** (motion mode):
-- Per camera: ~10-15 GB/week (4K, varies by activity)
-- 4 cameras × 7 days: ~40-60 GB total
-- **Actual usage**: ~43 GB (within estimate)
+Note: cobra_cam_1 has `record.retain.days = 0` (events only, no motion recording).
 
 #### Snapshots (Images)
 
 ```yaml
 snapshots:
   enabled: true
+  bounding_box: true
+  crop: false
+  quality: 70
   retain:
     default: 10       # Default: 10 days
     objects:
       person: 30      # People: 30 days (security priority)
-      car: 14         # Vehicles: 14 days
-      truck: 14
-```
-
-### Storage Recommendations
-
-With 2.7 TB free on /mnt/media, current settings are **conservative**:
-
-| Setting | Current | Recommendation | Rationale |
-|---------|---------|----------------|-----------|
-| Recording days | 7 | 14-30 | Plenty of space, longer history |
-| Person snapshots | 30 | 30-60 | Security incidents need long retention |
-| Vehicle snapshots | 14 | 14-30 | Package/delivery tracking |
-| Default snapshots | 10 | 14 | General event history |
-
-**To extend retention**, edit `domains/media/frigate/parts/config.nix`:
-```nix
-record.retain.days = 14;  # or 30
+      car: 7          # Vehicles: 7 days
+      truck: 7
 ```
 
 ### Automated Cleanup
@@ -277,12 +269,12 @@ journalctl -u frigate-cleanup.service --since "24 hours ago"
 
 ### Camera Overview
 
-| Camera | Type | Detect Stream | Record Stream | FPS | Zone |
-|--------|------|---------------|---------------|-----|------|
-| cobra_cam_1 | Cobra PoE | 1280×720 (sub) | 3840×2160 (main) | 5 | yard_gate |
-| cobra_cam_2 | Cobra PoE | 1280×720 (sub) | 3840×2160 (main) | 5 | porch_area |
-| cobra_cam_3 | Cobra PoE | 1280×720 (sub) | 3840×2160 (main) | 5 | driveway, sidewalk |
-| reolink | Reolink | 640×360 (sub) | 3840×2160 (main) | 5 | (none) |
+| Camera | Location | Detect Stream | Record Stream | FPS | Zone | required_zones |
+|--------|----------|---------------|---------------|-----|------|----------------|
+| cobra_cam_1 | Carport | 1280×720 (sub) | 3840×2160 (main) | 5 | carport | Yes |
+| cobra_cam_2 | Side yard | 1280×720 (sub) | 3840×2160 (main) | 5 | (TODO — offline) | No |
+| cobra_cam_3 | Front porch | 1280×720 (sub) | 3840×2160 (main) | 5 | front_yard | Yes |
+| reolink | Front yard | 640×360 (sub) | 3840×2160 (main) | 3 | property | Yes |
 
 **IP Addresses**: Stored in agenix secrets (`frigate-camera-ips`)
 - Cobra cameras: 192.168.0.201-203
@@ -290,51 +282,41 @@ journalctl -u frigate-cleanup.service --since "24 hours ago"
 
 ### Detection Objects
 
-**Tracked Objects** (global):
+**Global defaults** (overridden per-camera where zones exist):
 ```yaml
 objects:
-  track: [person, dog, cat, car, truck]
+  track: [person, dog, cat]
   filters:
-    person: { min_score: 0.65, threshold: 0.7, min_area: 3000 }
-    dog:    { min_score: 0.6,  threshold: 0.7, min_area: 2000 }
-    cat:    { min_score: 0.6,  threshold: 0.7, min_area: 2000 }
+    person: { min_score: 0.75, threshold: 0.80, min_area: 5000 }
+    dog:    { min_score: 0.70, threshold: 0.75, min_area: 3000 }
+    cat:    { min_score: 0.70, threshold: 0.75, min_area: 3000 }
 ```
 
-### Per-Camera Zones
+### Per-Camera Zones and Noise Reduction
 
-**cobra_cam_1** - Yard/Gate area
-```yaml
-zones:
-  yard_gate:
-    coordinates: "200,620,1000,620,1000,400,200,400"
-    objects: [person, dog, cat]
-    filters:
-      person: { min_area: 5000, threshold: 0.75 }
-```
+All cameras with zones use `required_zones` — Frigate won't create events unless
+the object enters the named zone. This eliminates street traffic, passing pedestrians,
+and neighbor activity from generating events.
 
-**cobra_cam_2** - Porch area
-```yaml
-zones:
-  porch_area:
-    coordinates: "100,680,1180,680,1180,400,100,400"
-    objects: [person, dog, cat]
-```
+**cobra_cam_1 (Carport)** — road at top of frame, driveway/yard below
+- Motion mask: timestamp, bright light, road (top 40%)
+- Zone: `carport` — everything below the road line
+- required_zones on person/dog/cat
 
-**cobra_cam_3** - Driveway & Sidewalk
-```yaml
-zones:
-  driveway_truck:
-    coordinates: "100,675,800,675,800,525,100,525"
-    objects: [person, car, truck]
-    filters:
-      car:   { min_area: 20000 }
-      truck: { min_area: 24000 }
-  sidewalk_front:
-    coordinates: "100,450,1180,450,1180,540,100,540"
-    objects: [person, dog, cat]
-```
+**cobra_cam_2 (Side yard)** — currently offline
+- Motion mask: timestamp, street/warehouse (top third), green bin corner
+- TODO: Add zones when camera is back online (similar to cobra_cam_1)
 
-**reolink** - General monitoring (no specific zones)
+**cobra_cam_3 (Front porch)** — looking through porch railing at fenced yard
+- Motion mask: timestamp, street beyond fence, neighbor areas, porch deck foreground
+- Zone: `front_yard` — yard inside the fence
+- required_zones on person/dog/cat
+
+**reolink (Front yard)** — corner view of fenced yard + driveway
+- Motion mask: timestamp, neighbor's area, far right edge
+- Zone: `property` — yard inside fence + driveway
+- required_zones on person/dog/cat/car/truck
+- Tracks vehicles (car/truck) in addition to person/dog/cat
 
 ---
 
@@ -542,6 +524,23 @@ journalctl -u podman-frigate.service -n 200 --no-pager
 journalctl -u podman-frigate.service | rg "validation|error"
 ```
 
+#### Stale NVIDIA CDI Spec (cannot stat /nix/store/...nvidia...)
+
+**Symptom**: `crun: cannot stat /nix/store/...-nvidia-x11-...: No such file or directory`
+
+**Cause**: The CDI spec in `/run/cdi/nvidia-container-toolkit.json` hardcodes nix
+store paths. If those paths get garbage collected, the container can't start.
+
+**Fix**: Regenerate the CDI spec:
+```bash
+sudo systemctl restart nvidia-container-toolkit-cdi-generator.service
+sudo systemctl restart podman-frigate.service
+```
+
+**Prevention**: `podman-frigate` has `requires = nvidia-container-toolkit-cdi-generator.service`
+so the CDI spec is regenerated on every boot/activation. If this breaks again, check
+that the dependency is still in `index.nix`.
+
 #### Config Not Updating
 
 **Cause**: Config is generated from Nix, not edited directly
@@ -671,9 +670,10 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+- 2026-04-07: Add zones + required_zones on cobra_cam_1 (carport), cobra_cam_3 (front_yard), reolink (property). Eliminates street/neighbor noise at the source. Update camera comments to match actual locations.
+- 2026-04-07: Add CDI generator dependency to podman-frigate — prevents stale nvidia store path crashes after GC.
 - 2026-03-27: Removed broken port 9191:9090 mapping and frigate-nvr scrape config (ignored with --network=host, caused false ServiceDown alerts). Enabled frigate-exporter for proper Prometheus metrics.
 - 2026-03-18: Integrate MQTT support for event publishing, enabling n8n workflows.
-
 - **2026-03-09**: Fixed green tint with substream detection, CUDA hwaccel, go2rtc video=copy
 - **2026-03-09**: Added Reolink camera (4th camera)
 - **2026-03-09**: Updated all Cobra cameras to use 720p substreams for detection
@@ -691,6 +691,6 @@ hwc.media.frigate = {
 
 ---
 
-**Last Updated**: 2026-03-09
+**Last Updated**: 2026-04-07
 **Maintainer**: Eric
 **Status**: Production ✅

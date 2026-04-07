@@ -5,7 +5,7 @@ let
 
   isNixOSHost = osConfig ? hwc;
   osCfg = if isNixOSHost then osConfig else {};
-  gpuCfg = osCfg.hwc.system.hardware.gpu or { type = "none"; enable = false; };
+  gpuCfg = lib.attrByPath [ "hwc" "system" "hardware" "gpu" ] { type = "none"; enable = false; } osCfg;
 
   freecadPkg = pkgs.freecad.overrideAttrs (old: {
     patches = (old.patches or []) ++ [ ./patches/arch-window-displaymode-guard.patch ];

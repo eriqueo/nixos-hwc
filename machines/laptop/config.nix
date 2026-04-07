@@ -89,7 +89,7 @@ in
     # Profiles — core (system/paths/secrets) + session (GUI/audio/HM)
     ../../profiles/core.nix
     ../../profiles/session.nix
-    ./home.nix  # Machine-specific HM overrides
+    # Machine-specific HM overrides imported via home-manager.users.eric below
 
     # Domains — laptop-specific capabilities
     ../../domains/ai/index.nix
@@ -396,7 +396,8 @@ in
   hwc.paths.hot.root = "/home/eric/500_media/hot";     # Override: laptop uses hot for active work
   hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
 
-  # Machine-specific Home Manager overrides live in ./home.nix
+  # Machine-specific Home Manager overrides (HM-format, shared with standalone HM)
+  home-manager.users.eric = { imports = [ ./home.nix ]; };
 
   #============================================================================
   # AI DOMAIN CONFIGURATION (Laptop)
