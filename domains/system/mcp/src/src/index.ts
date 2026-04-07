@@ -150,7 +150,7 @@ async function main() {
     transport: config.transport,
     logLevel: config.logLevel,
     hostname: config.hostname,
-    version: "0.2.0",
+    version: "0.3.0",
   });
 
   // Build local tool registry (hwc-sys tools)
@@ -190,55 +190,21 @@ async function main() {
   }
 
   // ── HTTP transport (Streamable HTTP) ────────────────────────────────
+  // Stateless — fresh Server+Transport per request. No session map.
+  // Eliminates the SDK stack overflow bug from accumulated session state.
   if (config.transport === "sse" || config.transport === "both") {
     const { createServer } = await import("node:http");
     const port = config.port;
     const host = config.host;
 
-    // Session tracking (one Server+Transport per session)
-    const SESSION_TTL_MS = 30 * 60 * 1000; // 30 min
-    const SESSION_REAP_INTERVAL_MS = 60 * 1000;
-    const SSE_PING_INTERVAL_MS = 25 * 1000;
-
-    interface ManagedSession {
-      server: Server;
-      transport: StreamableHTTPServerTransport;
-      lastActivity: number;
-      pingInterval?: ReturnType<typeof setInterval>;
-    }
-    const sessions = new Map<string, ManagedSession>();
-
-    function cleanupSession(id: string, reason: string) {
-      const session = sessions.get(id);
-      if (!session) return;
-      // Delete FIRST to prevent re-entrant calls (transport.close() fires onclose synchronously)
-      sessions.delete(id);
-      if (session.pingInterval) clearInterval(session.pingInterval);
-      try { session.transport.close(); } catch { /* ignore */ }
-      try { session.server.close(); } catch { /* ignore */ }
-      log.info("Session cleaned up", { sessionId: id, reason, activeSessions: sessions.size });
-    }
-
-    const reapInterval = setInterval(() => {
-      const now = Date.now();
-      for (const [id, session] of sessions) {
-        if (now - session.lastActivity > SESSION_TTL_MS) {
-          cleanupSession(id, `idle-${Math.round((now - session.lastActivity) / 1000)}s`);
-        }
-      }
-    }, SESSION_REAP_INTERVAL_MS);
-    reapInterval.unref();
-
     const httpServer = createServer(async (req, res) => {
       const startMs = Date.now();
       const url = req.url || "/";
       const method = req.method || "?";
-      const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
       log.info("HTTP request", {
         method,
         url,
-        sessionId: sessionId || "-",
         remoteAddr: req.socket.remoteAddress,
         accept: req.headers.accept || "-",
         contentType: req.headers["content-type"] || "-",
@@ -252,7 +218,6 @@ async function main() {
             url,
             status: res.statusCode,
             durationMs,
-            sessionId: sessionId || "-",
           });
         }
       });
@@ -262,7 +227,6 @@ async function main() {
           log.warn("Client disconnected mid-response", {
             method,
             url,
-            sessionId: sessionId || "-",
             statusCode: res.statusCode,
             headersSent: res.headersSent,
             durationMs: Date.now() - startMs,
@@ -298,7 +262,7 @@ async function main() {
       }
 
       try {
-        await handleRequest(req, res, url, method, sessionId);
+        await handleRequest(req, res, url, method);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         log.error("Unhandled request error", { method, url, error: message });
@@ -318,7 +282,6 @@ async function main() {
       res: import("node:http").ServerResponse,
       url: string,
       method: string,
-      sessionId: string | undefined,
     ) {
       // ── Health check ────────────────────────────────────────────────
       if (url === "/health" && method === "GET") {
@@ -333,55 +296,19 @@ async function main() {
         res.end(JSON.stringify({
           status: "ok",
           server: "hwc-sys-mcp",
-          version: "0.2.0",
+          version: "0.3.0",
           tools: allToolsList.length,
           toolsBySource,
           resources: resources.length,
           backends: backendHealth,
           uptime: process.uptime(),
-          activeSessions: sessions.size,
-          sessionAges: [...sessions.entries()].map(([id, s]) => ({
-            id: id.slice(0, 8),
-            idleSec: Math.round((Date.now() - s.lastActivity) / 1000),
-          })),
+          mode: "stateless",
         }));
         return;
       }
 
-      // ── Streamable HTTP (MCP spec 2025-06-18) ───────────────────────
+      // ── Streamable HTTP (stateless — fresh Server+Transport per request) ──
       if (url === "/mcp" || url === "/") {
-        // Route to existing session
-        if (sessionId && sessions.has(sessionId)) {
-          const session = sessions.get(sessionId)!;
-          session.lastActivity = Date.now();
-
-          // SSE GET stream — ping keepalive
-          if (method === "GET") {
-            if (session.pingInterval) clearInterval(session.pingInterval);
-            session.pingInterval = setInterval(() => {
-              try {
-                const ok = res.write(": ping\n\n");
-                if (ok === false) {
-                  cleanupSession(sessionId!, "ping-backpressure");
-                }
-              } catch {
-                cleanupSession(sessionId!, "ping-write-error");
-              }
-            }, SSE_PING_INTERVAL_MS);
-
-            res.on("close", () => {
-              if (session.pingInterval) {
-                clearInterval(session.pingInterval);
-                session.pingInterval = undefined;
-              }
-            });
-          }
-
-          await session.transport.handleRequest(req, res);
-          return;
-        }
-
-        // New session — must be POST with initialize
         if (method === "POST") {
           const body = await readBody(req);
           let parsed: unknown;
@@ -393,32 +320,9 @@ async function main() {
             return;
           }
 
-          const isInit = isInitializeRequest(parsed);
-          if (!isInit && !sessionId) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({
-              jsonrpc: "2.0",
-              error: { code: -32000, message: "Bad Request: No valid session ID and not an initialize request" },
-              id: null,
-            }));
-            return;
-          }
-
           const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID(),
             enableJsonResponse: true,
-            onsessioninitialized: (newSessionId) => {
-              sessions.set(newSessionId, { server, transport, lastActivity: Date.now() });
-              log.info("Session created", {
-                sessionId: newSessionId,
-                activeSessions: sessions.size,
-                totalTools: manager.allTools().length,
-              });
-
-              transport.onclose = () => {
-                cleanupSession(newSessionId, "transport-close");
-              };
-            },
           });
           const server = createMCPServer(manager, resources);
           await server.connect(transport);
@@ -427,23 +331,17 @@ async function main() {
           return;
         }
 
-        // GET without session
-        if (method === "GET" && !sessionId) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Session ID required for GET SSE stream" }));
+        // GET — return an immediately-closed SSE stream so clients stop retrying
+        if (method === "GET") {
+          res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
+          res.write(": ok\n\n");
+          res.end();
           return;
         }
 
-        // Unknown session
-        if (sessionId) {
-          log.warn("Request for unknown session", { sessionId, method });
-          res.writeHead(404, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Session not found" }));
-          return;
-        }
-
+        // DELETE/other — not supported in stateless mode
         res.writeHead(405, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Method not allowed" }));
+        res.end(JSON.stringify({ error: "Use POST for MCP requests" }));
         return;
       }
 
@@ -464,11 +362,7 @@ async function main() {
 
     // Graceful shutdown
     function gracefulShutdown(signal: string) {
-      log.info("Shutting down", { signal, activeSessions: sessions.size });
-      clearInterval(reapInterval);
-      for (const id of [...sessions.keys()]) {
-        cleanupSession(id, `shutdown-${signal}`);
-      }
+      log.info("Shutting down", { signal });
       manager.stopAll().then(() => {
         httpServer.close();
       });
@@ -484,7 +378,7 @@ async function main() {
       log.info(`HWC Gateway listening on ${host}:${port}`, {
         streamableHttp: "/mcp",
         health: "/health",
-        sessionTtlMin: SESSION_TTL_MS / 60_000,
+        mode: "stateless",
       });
     });
   }
