@@ -117,6 +117,8 @@ ${flagBinds}
       # Exclusive category marking (adds tag + removes all other categories)
 ${categoryBinds}
 
+      # Add a new tag definition (edits tags-custom.json, runs hms)
+      <Space>M = :term ${config.home.homeDirectory}/.local/bin/aerc-new-tag<Enter>
 
       [view]
       $noinherit = true
@@ -221,6 +223,77 @@ ${categoryBinds}
           echo "(none)"
         fi
         echo
+        read -rp "Press Enter to close..."
+      '';
+      executable = true;
+    };
+
+    ".local/bin/aerc-new-tag" = {
+      text = ''
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        TAGS_FILE="$HOME/.nixos/domains/mail/aerc/parts/tags-custom.json"
+        GROUPS=(business money personal growth system urgent waiting)
+
+        echo "=== Add New Aerc Tag ==="
+        echo
+
+        # Type
+        echo "Type: (c)ategory or (f)lag?"
+        read -rp "> " type_choice
+        case "$type_choice" in
+          c|C) tag_type="categories" ;;
+          f|F) tag_type="flags" ;;
+          *) echo "Invalid. Use c or f."; exit 1 ;;
+        esac
+
+        # Tag name
+        read -rp "Tag name (lowercase, no spaces): " tag_name
+        [[ -z "$tag_name" ]] && echo "Empty tag name." && exit 1
+
+        # Keybind
+        read -rp "Keybind key (single char for <Space>m<key>): " space_key
+        [[ -z "$space_key" ]] && echo "Empty key." && exit 1
+
+        # Group
+        echo "Group: ''${GROUPS[*]}"
+        read -rp "Group: " group_name
+        if ! printf '%s\n' "''${GROUPS[@]}" | grep -qx "$group_name"; then
+          echo "Unknown group: $group_name"
+          exit 1
+        fi
+
+        # Display name
+        display="''${tag_name}_''${space_key}"
+
+        # Build the new entry
+        new_entry=$(${pkgs.jq}/bin/jq -n \
+          --arg tag "$tag_name" \
+          --arg display "$display" \
+          --arg spaceKey "$space_key" \
+          --arg group "$group_name" \
+          '{tag: $tag, display: $display, spaceKey: $spaceKey, group: $group}')
+
+        # Add to JSON file
+        ${pkgs.jq}/bin/jq --argjson entry "$new_entry" \
+          ".''${tag_type} += [\$entry]" \
+          "$TAGS_FILE" > "''${TAGS_FILE}.tmp" \
+          && mv "''${TAGS_FILE}.tmp" "$TAGS_FILE"
+
+        echo
+        echo "Added $tag_name to $tag_type (group: $group_name, key: <Space>m$space_key)"
+        echo
+
+        # Stage the file so nix flake can see it
+        (cd "$HOME/.nixos" && git add "$TAGS_FILE")
+
+        # Rebuild Home Manager
+        echo "Running hms to apply..."
+        home-manager switch --flake "$HOME/.nixos#eric@$(hostname)"
+
+        echo
+        echo "Done! Restart aerc to pick up the new tag."
         read -rp "Press Enter to close..."
       '';
       executable = true;

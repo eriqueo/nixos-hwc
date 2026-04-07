@@ -17,7 +17,7 @@ This file is read by a static HTML dashboard and an n8n workflow. You are a data
 
 ## Data Collection Steps
 
-1. Calendar: Get today's events from primary calendar (America/Denver timezone)
+1. Calendar: Call hwc_calendar_week (HWC MCP tool) to get this week's events from iCloud via khal. Do not use Google Calendar MCP.
 2. Jobs: Get active jobs. Mark as is_test:true if name contains "test", "Test", or is junk data
 3. Leads: Jobs in Phase "1. Contacted" with Status "New Lead"
 4. Overdue Docs: Check for overdue documents
@@ -31,7 +31,7 @@ This file is read by a static HTML dashboard and an n8n workflow. You are a data
   "generated_at": "ISO8601",
   "sections": {
     "calendar": {
-      "events": [{ "summary": "", "start": "", "end": "", "location": null, "allDay": false }]
+      "events": [{ "summary": "", "date": "", "startTime": "", "endTime": "", "location": null, "allDay": false }]
     },
     "jobs": {
       "active": [{ "name": "", "number": "", "phase": "", "status": "", "account": "", "city": "", "description": null, "is_test": false }]
