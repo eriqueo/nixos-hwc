@@ -94,7 +94,7 @@ if [ ! -f "${MAIL_PROMPT}" ]; then
 else
   MAIL_JSON=$(notmuch search \
     --format=json \
-    --limit=50 \
+    --limit=30 \
     "tag:inbox AND tag:unread AND date:${WINDOW_HOURS}h..today" \
     2>/dev/null || echo "[]")
 
