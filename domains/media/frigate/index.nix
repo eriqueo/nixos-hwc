@@ -208,10 +208,12 @@ LABELMAP_EOF
       "d ${cfg.storage.bufferPath} 0755 eric users -"
     ];
 
-    # Ensure Frigate starts after mosquitto (for MQTT events)
+    # Ensure Frigate starts after mosquitto (for MQTT events) and CDI spec generation
     systemd.services.podman-frigate = {
-      after = [ "mosquitto.service" ];
+      after = [ "mosquitto.service" ]
+        ++ lib.optional cfg.gpu.enable "nvidia-container-toolkit-cdi-generator.service";
       wants = [ "mosquitto.service" ];
+      requires = lib.optionals cfg.gpu.enable [ "nvidia-container-toolkit-cdi-generator.service" ];
     };
 
     # Frigate container
