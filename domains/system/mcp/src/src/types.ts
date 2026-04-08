@@ -83,6 +83,7 @@ export interface ServerConfig {
   };
   workspace: string;
   hostname: string;
+  cmsAppPath: string;
 }
 
 /** MCP Resource definition */

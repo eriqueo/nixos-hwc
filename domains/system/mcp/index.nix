@@ -201,6 +201,9 @@ in
         HWC_MCP_WORKSPACE = "${paths.nixos}/workspace";
         HWC_HOSTNAME = config.networking.hostName;
 
+        # CMS app path for hwc_cms_* tools
+        HWC_CMS_APP_PATH = "/opt/business/heartwood-cms";
+
         # stdio backend: heartwood-mcp (JT tools)
         HWC_JT_SRC_DIR = jtCfg.srcDir;
         JT_ORG_ID = jtCfg.jt.orgId;
@@ -244,6 +247,11 @@ in
             # Calendar tools: khal writes .ics files, vdirsyncer syncs to iCloud
             "/home/eric/.local/share/vdirsyncer"
             "/home/eric/.local/share/khal"
+            # Website content editing via hwc_website_* tools
+            "${paths.nixos}/domains/business/website/site_files/src"
+            "${paths.nixos}/domains/business/website/site_files/.trash"
+            # CMS app editing via hwc_cms_* tools
+            "/opt/business/heartwood-cms"
           ];
           SupplementaryGroups = [ "podman" ];
           ReadOnlyPaths = [

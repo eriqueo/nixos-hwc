@@ -21,5 +21,6 @@ export function loadConfig(): ServerConfig {
     },
     workspace: process.env.HWC_MCP_WORKSPACE || "/home/eric/.nixos/workspace",
     hostname: process.env.HWC_HOSTNAME || "unknown",
+    cmsAppPath: process.env.HWC_CMS_APP_PATH || "/opt/business/heartwood-cms",
   };
 }
