@@ -245,6 +245,13 @@ in
           maxmemory-policy = "allkeys-lru";
         };
       };
+
+      # Redis binds to 10.89.0.1 (Podman network gateway) which isn't available
+      # until the container network is created — wait for it
+      systemd.services.redis-main = {
+        after = [ "init-media-network.service" ];
+        wants = [ "init-media-network.service" ];
+      };
     })
 
     # InfluxDB

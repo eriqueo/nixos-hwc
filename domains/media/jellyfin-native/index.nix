@@ -162,24 +162,23 @@ in
 
           if [ -z "$USER_ID" ] || [ "$USER_ID" = "null" ]; then
             echo "User ${username} not found, skipping"
-            return
+          else
+            # Get current policy
+            POLICY=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users/$USER_ID" \
+              -H "X-Emby-Token: ${cfg.apiKey}" | \
+              ${pkgs.jq}/bin/jq '.Policy')
+
+            # Update MaxActiveSessions
+            UPDATED_POLICY=$(echo "$POLICY" | ${pkgs.jq}/bin/jq '.MaxActiveSessions = ${toString userCfg.maxActiveSessions}')
+
+            # Apply policy
+            ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/$USER_ID/Policy" \
+              -H "X-Emby-Token: ${cfg.apiKey}" \
+              -H "Content-Type: application/json" \
+              -d "$UPDATED_POLICY"
+
+            echo "Policy applied for ${username}"
           fi
-
-          # Get current policy
-          POLICY=$(${pkgs.curl}/bin/curl -sf "http://127.0.0.1:8096/Users/$USER_ID" \
-            -H "X-Emby-Token: ${cfg.apiKey}" | \
-            ${pkgs.jq}/bin/jq '.Policy')
-
-          # Update MaxActiveSessions
-          UPDATED_POLICY=$(echo "$POLICY" | ${pkgs.jq}/bin/jq '.MaxActiveSessions = ${toString userCfg.maxActiveSessions}')
-
-          # Apply policy
-          ${pkgs.curl}/bin/curl -sf -X POST "http://127.0.0.1:8096/Users/$USER_ID/Policy" \
-            -H "X-Emby-Token: ${cfg.apiKey}" \
-            -H "Content-Type: application/json" \
-            -d "$UPDATED_POLICY"
-
-          echo "Policy applied for ${username}"
         '';
       in ''
         # Wait for Jellyfin to be ready
