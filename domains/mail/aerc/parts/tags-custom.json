@@ -1,4 +1,11 @@
 {
-  "categories": [],
+  "categories": [
+    {
+      "tag": "receipts",
+      "display": "receipts_R",
+      "spaceKey": "R",
+      "group": "money"
+    }
+  ],
   "flags": []
 }

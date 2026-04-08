@@ -1,11 +1,11 @@
 # domains/system/mcp — HWC MCP Gateway
 
-Unified MCP gateway (v0.3.0) aggregating 129 tools from three sources into a single endpoint. Connects to Claude Code (stdio), Claude.ai (Streamable HTTP via Tailscale Funnel), and any MCP-compatible client.
+Unified MCP gateway (v0.3.1) aggregating 138 tools from three sources into a single endpoint. Connects to Claude Code (stdio), Claude.ai (Streamable HTTP via Tailscale Funnel), and any MCP-compatible client.
 
 | Source | Tools | Transport |
 |--------|-------|-----------|
-| hwc-sys (local, in-process) | 38 | Direct function calls |
-| heartwood-mcp (JobTread) | 70 | stdio child process |
+| hwc-sys (local, in-process) | 46 | Direct function calls |
+| heartwood-mcp (JobTread) | 71 | stdio child process |
 | n8n-mcp (workflow automation) | 21 | stdio child process |
 
 ## Connection Guide
@@ -265,7 +265,7 @@ The Caddy reverse proxy on :18080 has `flush_interval -1` for the MCP routes. Wi
 
 The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` means the restart loads the old compiled code. The startup log version vs health endpoint version mismatch is a telltale sign.
 
-## Tools (38 hwc-sys)
+## Tools (46 hwc-sys)
 
 ### Configuration (8)
 
@@ -322,7 +322,7 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 | `hwc_network_caddy_routes` | Live route config from Caddy admin API. Falls back to routes.nix. |
 | `hwc_network_vpn_status` | Gluetun VPN public IP and connection state. |
 
-### Mail (10)
+### Mail (11)
 
 | Tool | Description |
 |------|-------------|
@@ -333,9 +333,22 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 | `hwc_mail_tag` | Raw (+/-tag), category (exclusive), or flag (additive) modes. |
 | `hwc_mail_actions` | Archive, trash, spam, read/unread, clear-categories. |
 | `hwc_mail_send` | Send via msmtp. Proton accounts, cc/bcc, in-reply-to. |
+| `hwc_mail_reply` | Reply to thread with auto-populated recipients, subject, threading headers. |
 | `hwc_mail_sync` | Trigger full sync cycle (afew → mbsync → notmuch). |
 | `hwc_mail_accounts` | Configured accounts, identities, search names, tag taxonomy. |
 | `hwc_mail_folders` | Maildir folders with notmuch message counts. |
+
+### Calendar (7)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_calendar_today` | Today's iCloud calendar events via khal (America/Denver). |
+| `hwc_calendar_week` | This week's events grouped by date. |
+| `hwc_calendar_list` | Events for a specific date range (YYYY-MM-DD). |
+| `hwc_calendar_sync` | Trigger immediate vdirsyncer sync to/from iCloud. |
+| `hwc_calendar_create` | Create event (timed, all-day, or multi-day). Syncs to iCloud. |
+| `hwc_calendar_delete` | Delete event by search (two-step: dry-run then confirm). |
+| `hwc_calendar_edit` | Modify event fields (delete + recreate pattern). |
 
 ### Media (2)
 
@@ -411,7 +424,8 @@ domains/system/mcp/
         secrets.ts                 # 2 secret tools
         storage.ts                 # 2 storage tools
         network.ts                 # 3 network tools
-        mail.ts                    # 10 mail tools
+        mail.ts                    # 11 mail tools
+        calendar.ts                # 7 calendar tools (khal/vdirsyncer → iCloud)
         media.ts                   # 2 media tools
         build.ts                   # 1 git status tool
       transforms/
@@ -454,6 +468,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-04-07**: v0.3.1 — Calendar write tools + mail reply:
+  - **hwc_calendar_create**: Create iCloud events via khal (timed, all-day, multi-day). Auto-syncs to iCloud.
+  - **hwc_calendar_delete**: Delete events by summary search. Two-step safety (dry-run → confirm).
+  - **hwc_calendar_edit**: Modify event fields (delete + recreate pattern). Two-step safety.
+  - **hwc_mail_reply**: Reply to email threads with auto-populated recipients, subject, In-Reply-To/References headers. Auto-detects send account from original To/Cc.
+  - All write tools trigger vdirsyncer/mail sync after changes.
 - **2026-04-07**: Response trimming — reduce token waste in tool outputs:
   - **N8N response transforms** (`transforms/n8n.ts`): global transforms flatten `__rl` objects, remove empty objects, strip spurious `webhookId`, flatten tag arrays. Tool-specific transforms strip `activeVersion`/`shared`/version fields from workflow detail, `createdAt`/`updatedAt` from list results, null retry fields from executions.
   - **hwc_mail_read**: removed `filename` field (Maildir paths are internal plumbing).
@@ -512,6 +532,7 @@ domains/system/mcp/
         │   ├── storage.ts
         │   ├── network.ts
         │   ├── mail.ts
+        │   ├── calendar.ts
         │   ├── media.ts
         │   └── build.ts
         ├── transforms/

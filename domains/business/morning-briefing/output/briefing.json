@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-07T14:40:57-06:00",
+  "generated_at": "2026-04-08T06:00:14-06:00",
   "sections": {
     "calendar": {
       "events": [
@@ -94,7 +94,7 @@
   },
   "alerts": [],
   "mail_triage": {
-    "generated_at": "2026-04-07T20:40:00-06:00",
+    "generated_at": "2026-04-07T14:30:00-06:00",
     "query_window_hours": 24,
     "total_unread": 2,
     "buckets": {
@@ -112,9 +112,9 @@
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Your child's teacher sent a direct message through ClassDojo — likely requires reading and possibly a reply.",
-          "suggested_action": "reply",
-          "urgency_reason": "Direct message from your child's teacher relayed through ClassDojo; real person communication requiring attention."
+          "summary": "A teacher sent a direct message via ClassDojo — likely needs reading and possibly a reply.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Real person (teacher) communicating through ClassDojo platform about your child."
         }
       ],
       "review": [
@@ -123,7 +123,7 @@
           "subject": "April 2026 Newsletter",
           "from_name": "Bozeman Art Museum",
           "from_address": "bozeman-art-museum",
-          "date_relative": "13 mins. ago",
+          "date_relative": "Today 14:27",
           "tags": [
             "inbox",
             "personal_google",

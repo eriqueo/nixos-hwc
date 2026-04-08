@@ -54,7 +54,7 @@ in
         "htop" = "btop"; "open" = "xdg-open";
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
         "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";
-        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d"; "hms" = "home-manager switch --flake ~/.nixos#eric@$(hostname)";
+        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d"; "hms" = "$(nix build --no-link --print-out-paths ~/.nixos#homeConfigurations.\\\"eric@$(hostname)\\\".activationPackage)/activate";
         "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
         "server" = "ssh eric@100.114.232.124"; "xps" = "ssh eric@100.126.80.42";
@@ -64,7 +64,6 @@ in
         "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
         "screenshots" = "cd ~/500_media/510_pictures/screenshots";
         "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
-        "aerc" = "kitty -e ssh -t hwc aerc";
         "ls" = "eza"; "vpn" = "vpnstatus"; "which-command" = "whence"; "run-help" = "man";
         # Workspace script aliases
         "errors" = "${ws}/monitoring/journal-errors.sh";

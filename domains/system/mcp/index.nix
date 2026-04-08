@@ -241,6 +241,9 @@ in
             "/home/eric/.gnupg"
             # msmtp logs here
             "/home/eric/.config/msmtp"
+            # Calendar tools: khal writes .ics files, vdirsyncer syncs to iCloud
+            "/home/eric/.local/share/vdirsyncer"
+            "/home/eric/.local/share/khal"
           ];
           SupplementaryGroups = [ "podman" ];
           ReadOnlyPaths = [

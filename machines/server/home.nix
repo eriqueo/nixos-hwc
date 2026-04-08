@@ -78,9 +78,6 @@
     };
   };
 
-  # Enable home-manager CLI for standalone `hms` rebuilds
-  programs.home-manager.enable = true;
-
   # Disable desktop services
   targets.genericLinux.enable = false;
   dconf.enable = lib.mkForce false;
