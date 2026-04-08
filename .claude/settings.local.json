@@ -169,7 +169,8 @@
       "mcp__hwc-sys__hwc_media_arr_status",
       "WebFetch(domain:trash-guides.info)",
       "Bash(rm:*)",
-      "Bash(vdirsyncer sync:*)"
+      "Bash(vdirsyncer sync:*)",
+      "Bash(unzip:*)"
     ],
     "deny": [],
     "ask": [],

@@ -158,7 +158,6 @@ in
     # Modern Unix replacements configuration
     programs.eza = lib.mkIf cfg.modernUnix {
       enable = true;
-      git = true;
       icons = "auto";
       extraOptions = [ "--group-directories-first" ];
     };
