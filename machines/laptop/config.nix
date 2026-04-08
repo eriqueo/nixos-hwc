@@ -286,7 +286,7 @@ in
     options = [
       "uid=1000" "gid=100" "dmask=0000" "fmask=0000"
       "force" "iocharset=utf8"
-      "noauto" "nofail" "x-systemd.automount" "x-systemd.mount-timeout=5s"
+      "noauto" "nofail" "x-systemd.automount" "x-systemd.device-timeout=5s"
     ];
   };
 
