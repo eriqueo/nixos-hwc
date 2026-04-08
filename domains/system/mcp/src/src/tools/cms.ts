@@ -1,10 +1,10 @@
 /**
- * hwc_cms_* tools — read/write files in the Heartwood CMS application.
+ * hwc_cms_* tools — read/write files in Heartwood business app directories.
  *
- * Root: /opt/business/heartwood-cms/ (configurable via HWC_CMS_APP_PATH).
- * Provides general-purpose file operations scoped to the CMS directory:
- * list, read, write, delete. Same security model as hwc_config_read_file
- * (resolve + normalize + startsWith). Write uses atomic tmp + rename.
+ * Supports multiple scoped roots (CMS app, calculator, etc.).
+ * Each tool takes a `scope` param to select which root to operate in.
+ * Same security model as hwc_config_read_file (resolve + normalize + startsWith).
+ * Write uses atomic tmp + rename.
  */
 
 import { readdir, readFile, writeFile, rename, mkdir, stat, unlink } from "node:fs/promises";
@@ -12,12 +12,23 @@ import { join, relative, resolve, normalize, dirname } from "node:path";
 import type { ToolDef, ToolResult } from "../types.js";
 import { mcpError, catchError } from "../errors.js";
 
+export interface CmsScope {
+  name: string;
+  path: string;
+  description: string;
+}
+
 /** Resolve a relative path and verify it stays within the root. */
 function safePath(root: string, rawPath: string): string | null {
   const abs = resolve(root, rawPath);
   const normalRoot = normalize(root);
   if (!abs.startsWith(normalRoot + "/") && abs !== normalRoot) return null;
   return abs;
+}
+
+function resolveScope(scopes: CmsScope[], scopeName: string | undefined): CmsScope | null {
+  if (!scopeName) return scopes[0]; // default to first
+  return scopes.find((s) => s.name === scopeName) || null;
 }
 
 interface DirEntry {
@@ -36,7 +47,6 @@ async function listDirEntries(
   const results: DirEntry[] = [];
 
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    // Skip hidden dirs, node_modules, dist, .git
     if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
 
     const fullPath = join(dir, entry.name);
@@ -63,23 +73,30 @@ async function listDirEntries(
   return results;
 }
 
-export function cmsTools(cmsAppPath: string): ToolDef[] {
-  const root = normalize(cmsAppPath);
+export function cmsTools(scopes: CmsScope[]): ToolDef[] {
+  const scopeNames = scopes.map((s) => s.name);
+  const scopeDescriptions = scopes.map((s) => `'${s.name}' — ${s.description}`).join("; ");
 
   return [
     // ── hwc_cms_list_dir ─────────────────────────────────────────────────
     {
       name: "hwc_cms_list_dir",
       description:
-        "List directory contents in the Heartwood CMS app (/opt/business/heartwood-cms/). " +
+        "List directory contents in a Heartwood business app. " +
+        `Scopes: ${scopeDescriptions}. ` +
         "Shows files with sizes and subdirectories. Set recursive=true for up to 3 levels. " +
-        "Scoped — cannot escape the CMS root.",
+        "Scoped — cannot escape the selected root.",
       inputSchema: {
         type: "object",
         properties: {
+          scope: {
+            type: "string",
+            enum: scopeNames,
+            description: `App scope to operate in (default: '${scopeNames[0]}')`,
+          },
           path: {
             type: "string",
-            description: "Directory path relative to CMS root (default: root). E.g. 'lib', 'routes', 'public/js'",
+            description: "Directory path relative to scope root (default: root). E.g. 'lib', 'routes', 'src'",
           },
           recursive: {
             type: "boolean",
@@ -89,12 +106,18 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          const scope = resolveScope(scopes, args.scope as string | undefined);
+          if (!scope) {
+            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
+          }
+
+          const root = normalize(scope.path);
           const rawPath = (args.path as string) || ".";
           const recursive = (args.recursive as boolean) ?? false;
 
           const abs = safePath(root, rawPath);
           if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes CMS root: ${rawPath}` });
+            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
           }
 
           let entries: DirEntry[];
@@ -106,11 +129,11 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
 
           return {
             status: "ok",
-            message: `${entries.length} entries in ${rawPath}`,
-            data: { path: rawPath, entries },
+            message: `[${scope.name}] ${entries.length} entries in ${rawPath}`,
+            data: { scope: scope.name, path: rawPath, entries },
           };
         } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to list CMS directory", err);
+          return catchError("INTERNAL_ERROR", "Failed to list directory", err);
         }
       },
     },
@@ -119,14 +142,21 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
     {
       name: "hwc_cms_read_file",
       description:
-        "Read a file from the Heartwood CMS app by relative path. Supports offset/limit " +
-        "for large files. Returns numbered lines. Scoped — cannot read outside CMS root.",
+        "Read a file from a Heartwood business app by relative path. " +
+        `Scopes: ${scopeDescriptions}. ` +
+        "Supports offset/limit for large files. Returns numbered lines. " +
+        "Scoped — cannot read outside the selected root.",
       inputSchema: {
         type: "object",
         properties: {
+          scope: {
+            type: "string",
+            enum: scopeNames,
+            description: `App scope to operate in (default: '${scopeNames[0]}')`,
+          },
           path: {
             type: "string",
-            description: "File path relative to CMS root, e.g. 'server.js', 'lib/content.js', 'public/js/app.js'",
+            description: "File path relative to scope root, e.g. 'server.js', 'lib/content.js', 'src/main.jsx'",
           },
           offset: {
             type: "number",
@@ -141,13 +171,19 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          const scope = resolveScope(scopes, args.scope as string | undefined);
+          if (!scope) {
+            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
+          }
+
+          const root = normalize(scope.path);
           const rawPath = args.path as string;
           const offset = Math.max(1, (args.offset as number) || 1);
           const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
 
           const abs = safePath(root, rawPath);
           if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes CMS root: ${rawPath}` });
+            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
           }
 
           let fileStat;
@@ -173,8 +209,9 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
 
           return {
             status: "ok",
-            message: `${rawPath} (lines ${offset}-${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
+            message: `[${scope.name}] ${rawPath} (lines ${offset}-${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
             data: {
+              scope: scope.name,
               path: rawPath,
               totalLines,
               offset,
@@ -183,7 +220,7 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
             },
           };
         } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to read CMS file", err);
+          return catchError("INTERNAL_ERROR", "Failed to read file", err);
         }
       },
     },
@@ -192,15 +229,21 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
     {
       name: "hwc_cms_write_file",
       description:
-        "Write or create a file in the Heartwood CMS app. Creates parent directories if needed. " +
-        "Atomic write (tmp + rename). Scoped — cannot write outside CMS root. " +
-        "Use for editing source code: server.js, lib/*.js, routes/*.js, public/js/*.js, public/css/*.css.",
+        "Write or create a file in a Heartwood business app. " +
+        `Scopes: ${scopeDescriptions}. ` +
+        "Creates parent directories if needed. Atomic write (tmp + rename). " +
+        "Scoped — cannot write outside the selected root.",
       inputSchema: {
         type: "object",
         properties: {
+          scope: {
+            type: "string",
+            enum: scopeNames,
+            description: `App scope to operate in (default: '${scopeNames[0]}')`,
+          },
           path: {
             type: "string",
-            description: "File path relative to CMS root, e.g. 'lib/content.js', 'routes/pages.js'",
+            description: "File path relative to scope root, e.g. 'lib/content.js', 'src/main.jsx'",
           },
           content: {
             type: "string",
@@ -211,12 +254,18 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          const scope = resolveScope(scopes, args.scope as string | undefined);
+          if (!scope) {
+            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
+          }
+
+          const root = normalize(scope.path);
           const rawPath = args.path as string;
           const content = args.content as string;
 
           const abs = safePath(root, rawPath);
           if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes CMS root: ${rawPath}` });
+            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
           }
 
           // Block writing to certain sensitive paths
@@ -248,11 +297,11 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
 
           return {
             status: "ok",
-            message: `${action === "created" ? "Created" : "Updated"} ${rawPath}`,
-            data: { path: rawPath, action, bytes: content.length },
+            message: `[${scope.name}] ${action === "created" ? "Created" : "Updated"} ${rawPath}`,
+            data: { scope: scope.name, path: rawPath, action, bytes: content.length },
           };
         } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to write CMS file", err);
+          return catchError("INTERNAL_ERROR", "Failed to write file", err);
         }
       },
     },
@@ -261,25 +310,37 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
     {
       name: "hwc_cms_delete_file",
       description:
-        "Delete a file in the Heartwood CMS app. Permanent deletion (no trash). " +
-        "Scoped — cannot delete outside CMS root. Cannot delete directories.",
+        "Delete a file in a Heartwood business app. Permanent deletion (no trash). " +
+        `Scopes: ${scopeDescriptions}. ` +
+        "Scoped — cannot delete outside the selected root. Cannot delete directories.",
       inputSchema: {
         type: "object",
         properties: {
+          scope: {
+            type: "string",
+            enum: scopeNames,
+            description: `App scope to operate in (default: '${scopeNames[0]}')`,
+          },
           path: {
             type: "string",
-            description: "File path relative to CMS root to delete",
+            description: "File path relative to scope root to delete",
           },
         },
         required: ["path"],
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          const scope = resolveScope(scopes, args.scope as string | undefined);
+          if (!scope) {
+            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
+          }
+
+          const root = normalize(scope.path);
           const rawPath = args.path as string;
 
           const abs = safePath(root, rawPath);
           if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes CMS root: ${rawPath}` });
+            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
           }
 
           const relPath = relative(root, abs);
@@ -306,11 +367,11 @@ export function cmsTools(cmsAppPath: string): ToolDef[] {
 
           return {
             status: "ok",
-            message: `Deleted ${rawPath}`,
-            data: { path: rawPath, action: "deleted" },
+            message: `[${scope.name}] Deleted ${rawPath}`,
+            data: { scope: scope.name, path: rawPath, action: "deleted" },
           };
         } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to delete CMS file", err);
+          return catchError("INTERNAL_ERROR", "Failed to delete file", err);
         }
       },
     },
