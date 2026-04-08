@@ -14,9 +14,6 @@
 
   home.stateVersion = "24.05";
 
-  # Enable home-manager CLI for standalone `hms` rebuilds
-  programs.home-manager.enable = true;
-
   #======================================================================
   # GUI WORKSTATION DEFAULTS
   # All set with mkDefault — machines can override any option.

@@ -63,7 +63,7 @@ let
 
     # ── System (muted gray) ──
     { tag = "tech";         color = group.system;   display = "tech_t";         spaceKey = "t"; }
-    { tag = "aerc";         color = group.system;   display = "aerc_`";         spaceKey = "`"; }
+    { tag = "aerc";         color = group.system;   display = "aerc_~";         spaceKey = "`"; }
     { tag = "website";      color = group.system;   display = "website_@";      spaceKey = "@"; }
   ] ++ customCategories;
 
@@ -99,8 +99,16 @@ let
         removes = lib.concatMapStringsSep "" (n: " -${n}") others;
     in "+${t.tag}${removes}";
 
-  # One-shot clear: removes ALL custom categories + flags + Proton junk (flagged/starred/important)
-  clearCustomCmd =
+  # Clear flags only (action, pending + Proton junk) — preserves category
+  clearFlagsCmd =
+    let
+      extras = [ "important" "flagged" "starred" ];
+      toClear = lib.unique ((map (t: t.tag) flagTags) ++ extras);
+      removes = lib.concatMapStringsSep " " (n: "-${n}") toClear;
+    in removes;
+
+  # Nuclear clear: removes ALL custom categories + flags + Proton junk
+  clearAllCmd =
     let
       extras = [ "important" "flagged" "starred" ];
       allToClear = lib.unique (categoryNames ++ (map (t: t.tag) flagTags) ++ extras);
@@ -108,6 +116,6 @@ let
     in removes;
 
 in {
-  inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd clearCustomCmd;
+  inherit categoryTags flagTags allTags tagStyle categoryNames exclusiveCmd clearFlagsCmd clearAllCmd;
   inherit group tagStyleLines;
 }

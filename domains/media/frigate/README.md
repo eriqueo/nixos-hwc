@@ -351,7 +351,11 @@ go2rtc:
   streams:
     cobra_cam_1:     [rtsp://...@192.168.0.201:554/ch01/0#video=copy]  # 4K main
     cobra_cam_1_sub: [rtsp://...@192.168.0.201:554/ch01/1#video=copy]  # 720p sub
-    # ... same pattern for all cameras
+    reolink:         [rtsp://...@192.168.0.204:554/main#video=copy]    # 4K HEVC
+    reolink_sub:     [rtsp://...@192.168.0.204:554/sub#video=copy]     # 640x360
+    reolink_record:  [rtsp://...@192.168.0.204:554/main#video=copy]    # 4K passthrough
+    # reolink_record was previously a 1080p ffmpeg transcode but this destabilized
+    # go2rtc (i/o timeouts, corrupt segments). Passthrough until driver is aligned.
 ```
 
 ### Why This Architecture?
@@ -541,6 +545,23 @@ sudo systemctl restart podman-frigate.service
 so the CDI spec is regenerated on every boot/activation. If this breaks again, check
 that the dependency is still in `index.nix`.
 
+#### Dashboard Loads Then Crashes / Live Streams Cut Out
+
+**Symptom**: Frigate UI loads briefly then goes blank. All cameras affected.
+
+**Cause**: A failing go2rtc stream (e.g. reolink transcode) can poison the entire
+go2rtc process, killing all camera live streams. Check for repeated `error=EOF` or
+`i/o timeout` warnings in logs.
+
+**Debug**:
+```bash
+journalctl -u podman-frigate.service --since "5 min ago" | rg "WRN|EOF|timeout"
+```
+
+**Fix**: Identify the failing stream and switch it to passthrough (`#video=copy`)
+or disable the camera. The reolink ffmpeg transcode (`#hardware` or software) is
+a known problem when the nvidia driver doesn't match the running kernel.
+
 #### Config Not Updating
 
 **Cause**: Config is generated from Nix, not edited directly
@@ -670,7 +691,9 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
-- 2026-04-07: Add zones + required_zones on cobra_cam_1 (carport), cobra_cam_3 (front_yard), reolink (property). Eliminates street/neighbor noise at the source. Update camera comments to match actual locations.
+- 2026-04-07: Switch reolink_record from ffmpeg transcode to 4K passthrough — transcode (both hardware and software) destabilized go2rtc, killing all live streams. Re-enable after reboot aligns nvidia driver.
+- 2026-04-07: Disable cobra_cam_2 while physically offline — retry storm every 10s was generating constant errors.
+- 2026-04-07: Add review.alerts/detections.required_zones on cobra_cam_1 (carport), cobra_cam_3 (front_yard), reolink (property). Eliminates street/neighbor noise at the source. Update camera comments to match actual locations.
 - 2026-04-07: Add CDI generator dependency to podman-frigate — prevents stale nvidia store path crashes after GC.
 - 2026-03-27: Removed broken port 9191:9090 mapping and frigate-nvr scrape config (ignored with --network=host, caused false ServiceDown alerts). Enabled frigate-exporter for proper Prometheus metrics.
 - 2026-03-18: Integrate MQTT support for event publishing, enabling n8n workflows.

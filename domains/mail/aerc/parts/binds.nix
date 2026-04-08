@@ -108,8 +108,10 @@ ${goToBinds}
       <Space>mr = :modify-labels -important<Enter>
       <Space>mF = :modify-labels -flagged<Enter>
 
-      # ONE BIND TO CLEAR THEM ALL
-      <Space>m- = :modify-labels ${tags.clearCustomCmd}<Enter> 
+      # Clear flags only (keeps category)
+      <Space>m- = :modify-labels ${tags.clearFlagsCmd}<Enter>
+      # Nuclear: clear ALL tags (flags + category)
+      <Space>m0 = :modify-labels ${tags.clearAllCmd}<Enter> 
 
       # Additive flag marking (coexists with categories)
 ${flagBinds}
@@ -234,7 +236,7 @@ ${categoryBinds}
         set -euo pipefail
 
         TAGS_FILE="$HOME/.nixos/domains/mail/aerc/parts/tags-custom.json"
-        GROUPS=(business money personal growth system urgent waiting)
+        TAG_GROUPS=(business money personal growth system urgent waiting)
 
         echo "=== Add New Aerc Tag ==="
         echo
@@ -255,17 +257,24 @@ ${categoryBinds}
         # Keybind
         read -rp "Keybind key (single char for <Space>m<key>): " space_key
         [[ -z "$space_key" ]] && echo "Empty key." && exit 1
+        case "$space_key" in
+          '#'|'`'|'"'|'\') echo "Key '$space_key' breaks aerc INI config. Pick another."; exit 1 ;;
+        esac
 
         # Group
-        echo "Group: ''${GROUPS[*]}"
+        echo "Group: ''${TAG_GROUPS[*]}"
         read -rp "Group: " group_name
-        if ! printf '%s\n' "''${GROUPS[@]}" | grep -qx "$group_name"; then
+        if ! printf '%s\n' "''${TAG_GROUPS[@]}" | grep -qx "$group_name"; then
           echo "Unknown group: $group_name"
           exit 1
         fi
 
-        # Display name
-        display="''${tag_name}_''${space_key}"
+        # Display name — use uppercase key if the raw key would break aerc config
+        safe_display_key="$space_key"
+        case "$safe_display_key" in
+          '#'|'`'|'"'|'\') safe_display_key=$(echo "$space_key" | tr '#`"\\' 'HGQB') ;;
+        esac
+        display="''${tag_name}_''${safe_display_key}"
 
         # Build the new entry
         new_entry=$(${pkgs.jq}/bin/jq -n \
@@ -290,7 +299,8 @@ ${categoryBinds}
 
         # Rebuild Home Manager
         echo "Running hms to apply..."
-        home-manager switch --flake "$HOME/.nixos#eric@$(hostname)"
+        pkg=$(nix build --no-link --print-out-paths "$HOME/.nixos#homeConfigurations.\"eric@$(hostname)\".activationPackage")
+        "$pkg/activate"
 
         echo
         echo "Done! Restart aerc to pick up the new tag."

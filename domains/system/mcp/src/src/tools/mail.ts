@@ -810,6 +810,235 @@ export function mailTools(): ToolDef[] {
       },
     },
 
+    /* ── Reply ───────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_reply",
+      description:
+        "Reply to an existing email thread. Reads the thread to auto-populate recipients, subject, " +
+        "and In-Reply-To header for proper threading. Set replyAll=true to include all original recipients. " +
+        "Auto-detects which send account to use based on which of our addresses was in To/Cc. " +
+        "SIDE EFFECT: sends a real email reply.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          threadId: {
+            type: "string",
+            description: "Thread or message ID (thread:XXXX or id:msgid@host)",
+          },
+          body: { type: "string", description: "Reply body (plain text)" },
+          replyAll: { type: "boolean", description: "Include all original recipients (default false)" },
+          account: { type: "string", description: "Override msmtp account (default: auto-detect)" },
+        },
+        required: ["threadId", "body"],
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const threadId = args.threadId as string;
+          const body = args.body as string;
+          const replyAll = (args.replyAll as boolean) ?? false;
+          const accountOverride = args.account as string | undefined;
+
+          const nm = await notmuchBin();
+
+          // Read the thread/message to get headers
+          const res = await notmuchExec(
+            nm,
+            ["show", "--format=json", "--entire-thread=false", "--body=false", threadId],
+            { timeout: 10000 },
+          );
+          if (res.exitCode !== 0) {
+            return mcpError({
+              type: "COMMAND_FAILED",
+              message: "Failed to read thread",
+              error: res.stderr.slice(0, 500),
+              suggestion: "Verify the thread/message ID format: thread:XXXX or id:msgid@host",
+              context: { threadId },
+            });
+          }
+
+          // Parse the message(s)
+          const messages = flattenShow(JSON.parse(res.stdout || "[]"));
+          if (messages.length === 0) {
+            return mcpError({
+              type: "NOT_FOUND",
+              message: `No messages found for ${threadId}`,
+              suggestion: "Check the thread ID is correct. Use hwc_mail_search to find threads.",
+            });
+          }
+
+          // Get the last message for reply context
+          const lastMsg = messages[messages.length - 1] as Record<string, unknown>;
+          const headers = lastMsg.headers as Record<string, string> | undefined;
+          if (!headers) {
+            return mcpError({
+              type: "INTERNAL_ERROR",
+              message: "Could not parse message headers",
+              suggestion: "Try reading the thread with hwc_mail_read first",
+            });
+          }
+
+          const originalFrom = headers.From || "";
+          const originalTo = headers.To || "";
+          const originalCc = headers.Cc || "";
+          const originalSubject = headers.Subject || "";
+          const originalMessageId = headers["Message-ID"] || (lastMsg.id as string);
+
+          // Build list of our known addresses for auto-detection
+          const ourAddresses: Set<string> = new Set();
+          for (const acct of ACCOUNTS) {
+            ourAddresses.add(acct.email.toLowerCase());
+            for (const id of acct.identities) {
+              ourAddresses.add(id.email.toLowerCase());
+            }
+          }
+
+          // Parse addresses from header string
+          const parseAddresses = (header: string): string[] => {
+            if (!header) return [];
+            return header
+              .split(",")
+              .map((a) => {
+                // Extract email from "Name <email>" format
+                const match = a.match(/<([^>]+)>/) || [null, a.trim()];
+                return match[1]?.trim() || "";
+              })
+              .filter((a) => a.length > 0);
+          };
+
+          const originalFromAddrs = parseAddresses(originalFrom);
+          const originalToAddrs = parseAddresses(originalTo);
+          const originalCcAddrs = parseAddresses(originalCc);
+
+          // Auto-detect which account we should reply from
+          let sendAccount = accountOverride;
+          let fromAddress = "";
+
+          if (!sendAccount) {
+            // Check To and Cc for our addresses
+            const allRecipients = [...originalToAddrs, ...originalCcAddrs];
+            for (const addr of allRecipients) {
+              const lowerAddr = addr.toLowerCase();
+              if (ourAddresses.has(lowerAddr)) {
+                // Find the msmtp account for this address
+                for (const acct of ACCOUNTS) {
+                  if (acct.email.toLowerCase() === lowerAddr) {
+                    sendAccount = acct.msmtpAccount;
+                    fromAddress = acct.email;
+                    break;
+                  }
+                  for (const id of acct.identities) {
+                    if (id.email.toLowerCase() === lowerAddr) {
+                      sendAccount = id.msmtpAccount;
+                      fromAddress = id.email;
+                      break;
+                    }
+                  }
+                }
+                if (sendAccount) break;
+              }
+            }
+          }
+
+          // Default to primary account if not detected
+          if (!sendAccount) {
+            const primary = ACCOUNTS.find((a) => a.primary);
+            sendAccount = primary?.msmtpAccount || "proton-hwc";
+            fromAddress = primary?.email || FROM_MAP[sendAccount] || "";
+          }
+          if (!fromAddress) {
+            fromAddress = FROM_MAP[sendAccount] || "";
+          }
+
+          // Build recipient list
+          let replyTo: string[] = [];
+          let replyCc: string[] = [];
+
+          if (replyAll) {
+            // Reply-All: reply to From + all To/Cc except ourselves
+            replyTo = originalFromAddrs;
+            const allOthers = [...originalToAddrs, ...originalCcAddrs].filter(
+              (a) => !ourAddresses.has(a.toLowerCase()),
+            );
+            replyCc = allOthers;
+          } else {
+            // Reply: just reply to the original From
+            replyTo = originalFromAddrs;
+          }
+
+          if (replyTo.length === 0) {
+            return mcpError({
+              type: "VALIDATION_ERROR",
+              message: "Could not determine reply recipient from original message",
+              suggestion: "Check that the original message has a valid From header",
+              context: { originalFrom },
+            });
+          }
+
+          // Build subject with Re: prefix
+          let subject = originalSubject;
+          if (!subject.toLowerCase().startsWith("re:")) {
+            subject = `Re: ${subject}`;
+          }
+
+          // Build message
+          const hdrs: string[] = [
+            `From: ${fromAddress}`,
+            `To: ${replyTo.join(", ")}`,
+            `Subject: ${subject}`,
+            `Date: ${new Date().toUTCString()}`,
+            "MIME-Version: 1.0",
+            "Content-Type: text/plain; charset=utf-8",
+          ];
+          if (replyCc.length > 0) {
+            hdrs.push(`Cc: ${replyCc.join(", ")}`);
+          }
+          if (originalMessageId) {
+            // Clean up Message-ID if needed (remove angle brackets if present, then add them)
+            const cleanId = originalMessageId.replace(/^<|>$/g, "");
+            hdrs.push(`In-Reply-To: <${cleanId}>`);
+            hdrs.push(`References: <${cleanId}>`);
+          }
+
+          const msg = hdrs.join("\r\n") + "\r\n\r\n" + body;
+
+          // All recipients
+          const allRcpts = [...replyTo];
+          if (replyCc.length > 0) {
+            allRcpts.push(...replyCc);
+          }
+
+          const bin = await msmtpBin();
+          const sendRes = await msmtpSend(bin, sendAccount, allRcpts, msg);
+          if (sendRes.exitCode !== 0) {
+            return mcpError({
+              type: "COMMAND_FAILED",
+              message: "Reply send failed",
+              error: sendRes.stderr.slice(0, 500),
+              suggestion: "Check msmtp config and that Proton Bridge is running",
+              context: { account: sendAccount, to: replyTo.join(", "), exitCode: sendRes.exitCode },
+            });
+          }
+
+          return {
+            status: "ok",
+            message: `Replied to ${replyTo.join(", ")}${replyAll ? " (reply-all)" : ""} via ${sendAccount}`,
+            data: {
+              from: fromAddress,
+              to: replyTo,
+              cc: replyCc.length > 0 ? replyCc : undefined,
+              subject,
+              account: sendAccount,
+              inReplyTo: originalMessageId,
+              replyAll,
+            },
+          };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Reply failed", err,
+            "Is msmtp installed and configured? Is Proton Bridge running?");
+        }
+      },
+    },
+
     /* ── Sync ────────────────────────────────────────────────── */
     {
       name: "hwc_mail_sync",
