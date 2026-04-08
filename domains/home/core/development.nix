@@ -74,7 +74,7 @@ in
       nodejs
       yarn
       typescript
-      nodePackages.typescript-language-server
+      typescript-language-server
 
     ] ++ lib.optionals cfg.languages.rust [
       rustc
