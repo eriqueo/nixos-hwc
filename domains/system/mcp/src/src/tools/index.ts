@@ -30,6 +30,9 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...mediaTools(),
     ...calendarTools(),
     ...websiteTools(config.nixosConfigPath),
-    ...cmsTools(config.cmsAppPath),
+    ...cmsTools([
+      { name: "cms", path: config.cmsAppPath, description: "Heartwood CMS app (Express backend + vanilla JS frontend)" },
+      { name: "calculator", path: `${config.nixosConfigPath}/domains/business/website/calculator/app`, description: "Cost calculator app (Vite + React)" },
+    ]),
   ];
 }

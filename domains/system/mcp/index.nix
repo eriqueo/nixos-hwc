@@ -159,6 +159,7 @@ in
     #--------------------------------------------------------------------------
     systemd.tmpfiles.rules = [
       "d /run/hwc-sys-mcp 0750 eric users -"
+      "d ${paths.nixos}/domains/business/website/site_files/.trash 0750 eric users -"
     ];
 
     #--------------------------------------------------------------------------
@@ -250,8 +251,10 @@ in
             # Website content editing via hwc_website_* tools
             "${paths.nixos}/domains/business/website/site_files/src"
             "${paths.nixos}/domains/business/website/site_files/.trash"
-            # CMS app editing via hwc_cms_* tools
+            # CMS app editing via hwc_cms_* tools (scope: cms)
             "/opt/business/heartwood-cms"
+            # Calculator app editing via hwc_cms_* tools (scope: calculator)
+            "${paths.nixos}/domains/business/website/calculator"
           ];
           SupplementaryGroups = [ "podman" ];
           ReadOnlyPaths = [
