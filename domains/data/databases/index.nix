@@ -160,6 +160,12 @@ in
         '';
       };
 
+      # PostgreSQL listens on 10.89.0.1 (Podman network gateway) — wait for it
+      systemd.services.postgresql = {
+        after = [ "init-media-network.service" ];
+        wants = [ "init-media-network.service" ];
+      };
+
       # Backup service
       systemd.services.postgresql-backup = lib.mkIf cfg.postgresql.backup.enable {
         description = "PostgreSQL backup";
