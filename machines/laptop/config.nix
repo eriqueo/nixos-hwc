@@ -278,7 +278,7 @@ in
 
   # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver
   # UUID-based so it works regardless of device enumeration order (/dev/sdb vs /dev/sdc etc.)
-  # x-systemd.automount: mounts on first access, not at boot (USB may not be present)
+  # noauto: not mounted at boot (USB may not be present). Mount manually: sudo mount /mnt/seagate
   # seagate-fixperms.service: chowns root-owned dirs after each mount so Yazi can delete
   fileSystems."/mnt/seagate" = {
     device = "/dev/disk/by-uuid/A802BE5102BE23EA";
@@ -286,7 +286,7 @@ in
     options = [
       "uid=1000" "gid=100" "dmask=0000" "fmask=0000"
       "force" "iocharset=utf8"
-      "noauto" "nofail" "x-systemd.automount" "x-systemd.device-timeout=5s"
+      "noauto" "nofail"
     ];
   };
 
