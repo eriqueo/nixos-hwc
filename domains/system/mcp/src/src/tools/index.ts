@@ -13,6 +13,8 @@ import { networkTools } from "./network.js";
 import { mailTools } from "./mail.js";
 import { mediaTools } from "./media.js";
 import { calendarTools } from "./calendar.js";
+import { websiteTools } from "./website.js";
+import { cmsTools } from "./cms.js";
 
 
 export function allTools(config: ServerConfig): ToolDef[] {
@@ -27,6 +29,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...mailTools(),
     ...mediaTools(),
     ...calendarTools(),
-    
+    ...websiteTools(config.nixosConfigPath),
+    ...cmsTools(config.cmsAppPath),
   ];
 }
