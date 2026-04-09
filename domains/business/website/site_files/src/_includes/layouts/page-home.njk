@@ -4,41 +4,54 @@ layout: layouts/base.njk
 
 <section class="hero" data-section="hero" {% if hero_image %}style="background-image: url('{{ hero_image }}')"{% endif %}>
   <div class="hero-overlay">
-    <div class="container">
+    <div class="container-wide text-center">
       <h1>{{ h1 | default(title) }}</h1>
       {% if hero_subtitle %}<p class="hero-subtitle">{{ hero_subtitle }}</p>{% endif %}
       <div class="hero-cta">
-        <a href="/contact/" class="btn btn-primary">Get Started</a>
-        <a href="/our-work/" class="btn btn-outline-light">See Our Work</a>
+        <a href="{{ hero_cta_1_url | default('/contact/') }}" class="btn btn-primary">{{ hero_cta_1_text | default('Get Started') }}</a>
+        <a href="{{ hero_cta_2_url | default('/our-work/') }}" class="btn btn-outline-light">{{ hero_cta_2_text | default('See Our Work') }}</a>
       </div>
     </div>
   </div>
 </section>
 
+{% if trust_items %}
 <div class="trust-bar">
-  <div class="container trust-bar-inner">
+  <div class="container-wide trust-bar-inner">
+    {% for item in trust_items %}
+    <span>{{ item }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="trust-bar">
+  <div class="container-wide trust-bar-inner">
     <span>Licensed & Insured</span>
     <span>5+ Years in Bozeman</span>
     <span>3D Design Previews</span>
     <span>Transparent Pricing</span>
   </div>
 </div>
-
-<section class="section">
-  <div class="container container-narrow text-center">
-    <h2>Bathroom Remodeling, Basement Finishing & Custom Carpentry in Bozeman</h2>
-    <p>I'm Eric, and I run Heartwood Craft — a one-person remodeling company built on the idea that you should see exactly what you're getting before construction starts, know exactly what it costs, and hear from me every single day until the job is done.</p>
-  </div>
-</section>
+{% endif %}
 
 {{ content | safe }}
 
-<p class="text-center" style="margin-top: -2rem; margin-bottom: 3rem;"><a href="/how-it-works/">See exactly how a project works, from first call to final walkthrough &rarr;</a></p>
+{% if process_link_text %}
+<p class="text-center section-link-below"><a href="{{ process_link_url | default('/how-it-works/') }}">{{ process_link_text }} &rarr;</a></p>
+{% endif %}
 
+{% if show_services != false %}
 {% include "partials/section-services-grid.njk" %}
+{% endif %}
 
+{% if show_testimonials != false %}
 {% include "partials/section-testimonials.njk" %}
+{% endif %}
 
+{% if show_cta != false %}
 {% include "partials/section-cta.njk" %}
+{% endif %}
 
+{% if show_form != false %}
 {% include "partials/form-contact.njk" %}
+{% endif %}

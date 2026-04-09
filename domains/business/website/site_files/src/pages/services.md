@@ -6,4 +6,4 @@ h1: "Our Services"
 permalink: "/services/"
 ---
 
-Heartwood Craft specializes in bathroom remodeling, basement finishing, custom decks, and residential renovations across the Gallatin Valley. Every project includes itemized estimates, 3D design previews, and daily photo updates during construction.
+Heartwood Craft specializes in bathroom remodeling, basement finishing, custom decks, and residential renovations across the Gallatin Valley. Every project includes itemized estimates, 3D design previews where helpful, and regular progress updates during construction.

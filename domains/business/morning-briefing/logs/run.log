@@ -84,3 +84,13 @@
 2026-04-08T06:00:14-06:00 OK: Main briefing compiled (0 alerts)
 2026-04-08T06:00:14-06:00 STEP 2: Mail triage...
 2026-04-08T06:00:14-06:00 mail-triage: 1 unread threads
+2026-04-09T06:00:17-06:00 START
+2026-04-09T06:00:17-06:00 STEP 1: Main briefing (Claude Code CLI)...
+2026-04-09T06:00:54-06:00 OK: Main briefing compiled (0 alerts)
+2026-04-09T06:00:54-06:00 STEP 2: Mail triage...
+2026-04-09T06:00:54-06:00 mail-triage: 5 unread threads
+2026-04-09T06:01:31-06:00 mail-triage: OK (1 urgent, 1 review, 3 noise)
+2026-04-09T06:01:31-06:00 STEP 3: Merging...
+2026-04-09T06:01:31-06:00 OK: Merge complete
+2026-04-09T06:01:31-06:00 OK: Dashboard symlink already points to output
+2026-04-09T06:01:31-06:00 DONE

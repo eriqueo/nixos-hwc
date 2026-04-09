@@ -27,18 +27,18 @@ That's how I think about remodeling. The finish tile and the shiny fixtures get 
 
 ## How I Work
 
-I built my own estimating system. I build 3D renderings of your space before construction starts. I text you a photo every day during the build. I show you every line item on your estimate. If something changes, I price it as a change order before I proceed.
+I built my own estimating system. I build 3D renderings of your space before construction starts. I keep you updated with photos throughout the build. I show you every line item on your estimate. If something changes, I price it as a change order before I proceed.
 
 This isn't how most contractors work. Most contractors give you a number, maybe show up when they say they will, and you find out what it actually costs at the end. I built Heartwood Craft to be the opposite of that experience.
 
 Here's what working with me looks like:
 
-- **You call, I call back within an hour.** Not a receptionist. Not a sales team. Me.
-- **Free site visit.** I come to your home, measure everything, and give you an honest assessment — including whether the project makes sense for your budget.
-- **Itemized estimate within 48 hours.** Every line item visible. Labor, materials, allowances — you see where every dollar goes.
-- **3D rendering.** You see your space before I pick up a hammer. We adjust until you're happy.
-- **Daily updates during construction.** A photo and a text every day. You always know what's happening.
-- **Milestone payments.** 30% at signing, 20% at rough-in, 40% at substantial completion, 10% at final walkthrough. Your money follows the work.
+- **You call, I call back.** Not a receptionist. Not a sales team. Me.
+- **Site visit.** I come to your home, measure everything, and give you an honest assessment — including whether the project makes sense for your budget.
+- **Itemized estimate.** Every line item visible. Labor, materials, allowances — you see where every dollar goes.
+- **3D rendering** where it helps. You see your space before I pick up a hammer. We adjust until you're happy.
+- **Progress updates during construction.** Photos and communication throughout the build. You always know what's happening.
+- **Milestone payments.** Your money follows the work, not the other way around.
 
 ## The Sole Proprietor Advantage
 

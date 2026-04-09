@@ -2,10 +2,10 @@
 layout: layouts/base.njk
 ---
 
-{% if hero_image %}
+{% if hero_image and not hero_inline %}
 <section class="hero hero-short" style="background-image: url('{{ hero_image }}')">
   <div class="hero-overlay">
-    <div class="container">
+    <div class="container-wide">
       <h1>{{ h1 | default(title) }}</h1>
       {% if hero_subtitle %}
       <p class="hero-subtitle">{{ hero_subtitle }}</p>
@@ -13,15 +13,23 @@ layout: layouts/base.njk
     </div>
   </div>
 </section>
+{% elif hero_image and hero_inline %}
+<section class="page-header page-header-image">
+  <div class="container-wide text-center">
+    <img src="{{ hero_image }}" alt="{{ h1 | default(title) }}" class="page-header-img" loading="eager">
+    {% if hero_subtitle %}<p class="page-header-subtitle">{{ hero_subtitle }}</p>{% endif %}
+  </div>
+</section>
 {% else %}
 <section class="page-header">
   <div class="container">
     <h1>{{ h1 | default(title) }}</h1>
+    {% if hero_subtitle %}<p class="hero-subtitle" style="color: rgba(255,255,255,0.9); margin-top: 0.5rem;">{{ hero_subtitle }}</p>{% endif %}
   </div>
 </section>
 {% endif %}
 
-<div class="container container-narrow page-content section">
+<div class="{{ 'container-wide' if content_wide else 'container container-narrow' }} page-content section">
   {{ content | safe }}
 </div>
 

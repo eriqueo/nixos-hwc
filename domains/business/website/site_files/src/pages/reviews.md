@@ -1,9 +1,13 @@
 ---
+title: Reviews | Heartwood Craft | Bozeman Remodeling
+meta_description: >-
+  Read what Bozeman homeowners say about working with Heartwood Craft.
+  Google-verified reviews from real bathroom and deck remodeling clients.
+h1: What Our Clients Say
+hero_image: ''
+hero_subtitle: ''
+permalink: /reviews/
 layout: layouts/page-simple.njk
-title: "Reviews | Heartwood Craft | Bozeman Remodeling"
-meta_description: "Read what Bozeman homeowners say about working with Heartwood Craft. Google-verified reviews from real bathroom and deck remodeling clients."
-h1: "What Our Clients Say"
-permalink: "/reviews/"
 ---
 
 Homeowners across the Gallatin Valley trust Heartwood Craft with their homes. Here's what they have to say.
@@ -34,6 +38,13 @@ Homeowners across the Gallatin Valley trust Heartwood Craft with their homes. He
 
 ---
 
+### Abraham Lincoln — Bozeman, MT
+
+> "Heartwood Craft emancipated my powder room from moldy grout lines and outdated countertops. His design choices made a more perfect union between the wall color and the floor tile."
+
+*via Google Reviews*
+
+---
 ## See All Reviews on Google
 
 These reviews are pulled directly from our Google Business Profile. To read more or see the latest, visit us on Google:
@@ -50,4 +61,4 @@ A Google review helps other Bozeman homeowners find a contractor they can trust.
 
 ## Ready to Start Your Project?
 
-Call [406-551-5061](tel:4065515061) or [fill out the contact form](/contact/) to schedule a free site visit. I'll call back within an hour.
+Call [406-551-5061](tel:4065515061) or [fill out the contact form](/contact/) to get started.

@@ -36,10 +36,10 @@ Whether your home is on Willson Avenue or out past Valley Center Road:
 
 - Itemized estimates with every line item visible
 - 3D design previews before construction starts
-- Daily photo updates during the build
+- Regular progress updates during the build
 - Milestone payments tied to real progress
 - Formal change orders for any scope changes
 
 ## Ready to Talk?
 
-Call [406-551-5061](tel:4065515061) or fill out the form below. I'll call back within an hour to talk about your Bozeman project.
+Call [406-551-5061](tel:4065515061) or fill out the form below to talk about your Bozeman project.

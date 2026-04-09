@@ -51,7 +51,7 @@ I'm not here to bash Home Depot. For the right project, they offer a legitimate 
 
 Here's what my process looks like on a typical bathroom project, so you have something concrete to compare against:
 
-The project starts with a site visit. I walk through the bathroom, note the age of the home, look for signs of moisture, assess the plumbing and electrical situation, and identify anything that might complicate the project. That visit is free, and it produces a site assessment that informs an accurate estimate — not a template quote adjusted for square footage.
+The project starts with a site visit. I walk through the bathroom, note the age of the home, look for signs of moisture, assess the plumbing and electrical situation, and identify anything that might complicate the project. That visit produces a site assessment that informs an accurate estimate — not a template quote adjusted for square footage.
 
 From there, I run through a design process using 3D rendering software. You can see what your tile selection looks like on the floor and walls together, whether the vanity size feels right for the space, and how the lighting changes the room. Changes at this stage cost nothing. Changes after tile is set cost a lot.
 
@@ -89,4 +89,4 @@ If you have a straightforward project — replace a dated tub with a standard sh
 
 If your project involves any complexity, any older home conditions, any custom design, or any desire for direct communication with the contractor building your bathroom, you're better served by hiring locally.
 
-Want to compare? [See my process →](/how-it-works/) or [get a free estimate →](/contact/)
+Want to compare? [See my process →](/how-it-works/) or [request a consultation →](/contact/)

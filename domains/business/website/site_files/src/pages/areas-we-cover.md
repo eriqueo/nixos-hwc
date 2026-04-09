@@ -6,7 +6,7 @@ h1: "Areas We Serve"
 permalink: "/areas-we-cover/"
 ---
 
-Heartwood Craft is based in Bozeman and serves homeowners across the Gallatin Valley. Whether you're in town or out in the county, you get the same process — itemized estimates, 3D design previews, daily updates, and milestone payments.
+Heartwood Craft is based in Bozeman and serves homeowners across the Gallatin Valley. Whether you're in town or out in the county, you get the same process — itemized estimates, 3D design previews where helpful, regular updates, and milestone payments.
 
 ### [Bozeman](/bozeman/)
 

@@ -63,7 +63,7 @@ Regardless of scope, every project follows the same structured approach:
 
 - **Itemized estimates** with every line item visible
 - **3D renderings** for projects where visualization helps (and it usually does)
-- **Daily photo updates** during construction
+- **Regular progress updates** during construction
 - **Milestone payments** tied to progress (30/20/40/10)
 - **Formal change orders** for any scope changes — priced and approved before I proceed
 
@@ -71,4 +71,4 @@ No surprises. No crossed fingers. Just clear communication from start to finish.
 
 ## Ready to Talk About Your Project?
 
-Whether you know exactly what you want or you're still figuring it out, I'm happy to talk through it. Call [406-551-5061](tel:4065515061) or fill out the form below. I'll call back within an hour.
+Whether you know exactly what you want or you're still figuring it out, I'm happy to talk through it. Call [406-551-5061](tel:4065515061) or fill out the form below.

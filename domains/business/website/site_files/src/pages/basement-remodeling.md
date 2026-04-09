@@ -44,13 +44,13 @@ The same transparent, structured process I use for every project:
 
 2. **Site visit.** I spend 45-60 minutes in your basement measuring, checking ceiling height, looking at existing mechanicals, and identifying any moisture concerns. I take photos and detailed notes.
 
-3. **Estimate.** Within 48 hours, you get an itemized estimate — every line item visible. Labor, materials, allowances, and any subcontractor costs broken out clearly.
+3. **Estimate.** You get an itemized estimate — every line item visible. Labor, materials, allowances, and any subcontractor costs broken out clearly.
 
 4. **3D rendering.** This is where basements get exciting. I build a rendering that shows your unfinished concrete box transformed into the finished space. You see the layout, the finishes, the lighting — and we adjust before I frame a single wall.
 
-5. **Construction.** Daily photo updates via text. Milestone payments tied to real progress: 30% at signing, 20% at rough-in, 40% at substantial completion, 10% at walkthrough. If scope changes, I price it as a change order before proceeding.
+5. **Construction.** Regular progress updates with photos throughout the build. Milestone payments tied to real progress: 30% at signing, 20% at rough-in, 40% at substantial completion, 10% at walkthrough. If scope changes, I price it as a change order before proceeding.
 
-6. **Walkthrough.** We go through everything. Punch list items resolved within 48 hours.
+6. **Walkthrough.** We go through everything. Punch list items get resolved promptly.
 
 See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
 
@@ -84,4 +84,4 @@ You see the bedroom layout, the bathroom placement, where the TV goes, how the w
 
 ## Ready to Use That Space?
 
-Fill out the form below or call [406-551-5061](tel:4065515061). I'll call back within an hour to talk about what your basement could become.
+Fill out the form below or call [406-551-5061](tel:4065515061) to talk about what your basement could become.

@@ -75,4 +75,4 @@ The math works. The question is what scope makes sense for your house, your budg
 
 ---
 
-Want to talk about what's possible in your basement? [Schedule a free site visit →](/contact/)
+Want to talk about what's possible in your basement? [Start a conversation →](/contact/)

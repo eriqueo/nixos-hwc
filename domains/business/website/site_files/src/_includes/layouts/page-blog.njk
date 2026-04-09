@@ -3,20 +3,19 @@ layout: layouts/base.njk
 ---
 
 <article class="blog-post">
-  {% if featured_image %}
-  <div class="blog-hero">
-    <img src="{{ featured_image }}" alt="{{ title }}" loading="eager">
-  </div>
-  {% endif %}
+  <section class="hero{% if not featured_image %} hero-no-image{% endif %} hero-short" {% if featured_image %}style="background-image: url('{{ featured_image }}')"{% endif %}>
+    <div class="hero-overlay">
+      <div class="container-wide">
+        <h1>{{ title }}</h1>
+        <div class="blog-meta" style="color: rgba(255,255,255,0.7); margin-top: 0.5rem;">
+          <time datetime="{{ date | dateISO }}">{{ date | dateReadable }}</time>
+          &middot; {{ content | wordCount | divide(200) | round }} min read
+        </div>
+      </div>
+    </div>
+  </section>
 
   <div class="container container-narrow">
-    <header class="blog-header">
-      <h1>{{ title }}</h1>
-      <div class="blog-meta">
-        <time datetime="{{ date | dateISO }}">{{ date | dateReadable }}</time>
-        &middot; {{ content | wordCount | divide(200) | round }} min read
-      </div>
-    </header>
 
     <div class="blog-body">
       {{ content | safe }}
@@ -24,12 +23,12 @@ layout: layouts/base.njk
 
     <section class="blog-cta">
       <h3>Planning a project in Bozeman?</h3>
-      <p>We'd love to hear about it. Call <a href="{{ site.phoneLink }}">{{ site.phone }}</a> or <a href="#contact-form">request a free estimate</a>.</p>
+      <p>We'd love to hear about it. Call <a href="{{ site.phoneLink }}">{{ site.phone }}</a> or <a href="#contact-form">request a consultation</a>.</p>
     </section>
   </div>
 
   <section class="blog-related section section-alt">
-    <div class="container">
+    <div class="container-wide">
       <h2>More from the Blog</h2>
       <div class="blog-grid">
         {% set related = collections.blog | rejectByUrl(page.url) | head(3) %}

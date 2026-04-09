@@ -19,10 +19,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
 
-  <!-- Google Fonts -->
+  <!-- Google Fonts (from theme.json) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="{{ theme.fonts.googleUrl | safe }}" rel="stylesheet">
 
   <!-- Google Analytics 4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-8CF06TJ7ZK"></script>
@@ -35,6 +35,37 @@
 
   <!-- Styles -->
   <link rel="stylesheet" href="/css/style.css">
+
+  <!-- CMS Layout Overrides (from _data/theme.json) -->
+  <style>
+    :root {
+      --font-body: {{ theme.fonts.body | safe }};
+      --font-heading: {{ theme.fonts.heading | safe }};
+      --max-width: {{ theme.containers.standard | safe }};
+      --max-width-wide: {{ theme.containers.wide | safe }};
+      --max-width-narrow: {{ theme.containers.narrow | safe }};
+      --container-padding-x: {{ theme.containers.paddingX | safe }};
+      --section-padding-y: {{ theme.sections.paddingY | safe }};
+      --logo-height: {{ theme.header.logoHeight | safe }};
+      --logo-height-mobile: {{ theme.header.logoHeightMobile | safe }};
+      --hero-min-height: {{ theme.hero.minHeight | safe }};
+      --hero-short-min-height: {{ theme.hero.shortMinHeight | safe }};
+      --hero-h1-size: {{ theme.hero.h1FontSize | safe }};
+      --hero-h1-max-width: {{ theme.hero.h1MaxWidth | safe }};
+      --hero-subtitle-size: {{ theme.hero.subtitleFontSize | safe }};
+      --hero-subtitle-max-width: {{ theme.hero.subtitleMaxWidth | safe }};
+      --hero-overlay: {{ theme.hero.overlayGradient | safe }};
+      --header-padding-x: {{ theme.header.headerPaddingX | safe }};
+      --nav-font-size: {{ theme.header.navFontSize | safe }};
+      --nav-font-weight: {{ theme.header.navFontWeight | safe }};
+      --nav-padding-x: {{ theme.header.navPaddingX | safe }};
+      --blog-card-img-height: {{ theme.blogCards.imageHeight | safe }};
+      --blog-card-title-size: {{ theme.blogCards.titleFontSize | safe }};
+      --blog-card-title-color: {{ theme.blogCards.titleColor | safe }};
+      --blog-card-body-padding: {{ theme.blogCards.bodyPadding | safe }};
+      --trust-bar-font-size: {{ theme.trustBar.fontSize | safe }};
+    }
+  </style>
 
   <!-- Structured Data -->
   {% if schema_type == "LocalBusiness" %}

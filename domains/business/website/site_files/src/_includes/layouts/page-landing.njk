@@ -1,0 +1,55 @@
+---
+layout: layouts/base-landing.njk
+---
+
+{# ── Hero ── #}
+<section class="hero" {% if hero_image %}style="background-image: url('{{ hero_image }}')"{% endif %}>
+  <div class="hero-overlay">
+    <div class="container-wide">
+      <h1>{{ h1 | default(title) }}</h1>
+      {% if hero_subtitle %}<p class="hero-subtitle">{{ hero_subtitle }}</p>{% endif %}
+      <div class="hero-cta">
+        <a href="{{ hero_cta_url | default('#contact-form') }}" class="btn btn-primary">{{ hero_cta_text | default('Tell Us About Your Project') }}</a>
+        <a href="{{ site.phoneLink }}" class="btn btn-outline-light">Call {{ site.phone }}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── Trust Bar ── #}
+{% if trust_items %}
+<div class="trust-bar">
+  <div class="container-wide trust-bar-inner">
+    {% for item in trust_items %}
+    <span>{{ item }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="trust-bar">
+  <div class="container-wide trust-bar-inner">
+    <span>Licensed & Insured</span>
+    <span>5+ Years in Bozeman</span>
+    <span>3D Design Previews</span>
+    <span>Transparent Pricing</span>
+  </div>
+</div>
+{% endif %}
+
+{# ── Page Content (from markdown body) ── #}
+{{ content | safe }}
+
+{# ── Testimonials ── #}
+{% include "partials/section-testimonials.njk" %}
+
+{# ── CTA + Form ── #}
+{% if show_form != false %}
+<section class="section section-cta section-alt" data-section="cta">
+  <div class="container container-narrow text-center">
+    <h2>{{ cta_heading | default("Ready to Talk About Your Project?") }}</h2>
+    <p>{{ cta_text | default("Tell us about your project and we'll be in touch to discuss next steps.") }}</p>
+  </div>
+</section>
+
+{% include "partials/form-contact.njk" %}
+{% endif %}

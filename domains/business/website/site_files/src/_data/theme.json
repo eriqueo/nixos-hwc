@@ -1,0 +1,43 @@
+{
+  "fonts": {
+    "body": "'Source Serif 4', Georgia, serif",
+    "heading": "'Playfair Display', Georgia, serif",
+    "googleUrl": "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400&display=swap"
+  },
+  "header": {
+    "logoHeight": "120px",
+    "logoHeightMobile": "64px",
+    "navFontSize": "1.7rem",
+    "navFontWeight": "600",
+    "navPaddingX": "1.5rem",
+    "headerPaddingX": "clamp(1.5rem, 1rem + 2vw, 3.5rem)",
+    "showPhone": false
+  },
+  "hero": {
+    "minHeight": "clamp(400px, 35vw + 100px, 650px)",
+    "shortMinHeight": "clamp(300px, 25vw + 50px, 450px)",
+    "h1FontSize": "clamp(2.5rem, 1.6rem + 2.5vw, 4rem)",
+    "h1MaxWidth": "900px",
+    "subtitleFontSize": "clamp(1.125rem, 1rem + 0.4vw, 1.375rem)",
+    "subtitleMaxWidth": "750px",
+    "overlayGradient": "linear-gradient(rgba(35,40,45,0.7), rgba(35,40,45,0.8))"
+  },
+  "containers": {
+    "wide": "1500px",
+    "standard": "1340px",
+    "narrow": "800px",
+    "paddingX": "clamp(1.5rem, 1rem + 1.5vw, 2.5rem)"
+  },
+  "sections": {
+    "paddingY": "clamp(3rem, 2rem + 2.5vw, 5rem)"
+  },
+  "blogCards": {
+    "imageHeight": "300px",
+    "titleFontSize": "clamp(1.5rem, 1.2rem + 0.8vw, 1.75rem)",
+    "titleColor": "#dfd8cc",
+    "bodyPadding": "1.75rem 2rem 2rem"
+  },
+  "trustBar": {
+    "fontSize": "0.875rem"
+  }
+}

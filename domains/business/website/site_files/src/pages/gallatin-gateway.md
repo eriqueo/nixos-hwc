@@ -34,16 +34,16 @@ I'm based in Bozeman and work in Gallatin Gateway. I know the area, I know the h
 
 **Gallatin County permits.** Remodeling permits in Gallatin Gateway go through Gallatin County. I handle the permit applications and coordinate inspections.
 
-**Rural scheduling.** I factor in the drive to Gateway properties and plan work days efficiently. You get the same daily updates, the same structured process, and the same quality — just with a better view out the window while I work.
+**Rural scheduling.** I factor in the drive to Gateway properties and plan work days efficiently. You get the same regular updates, the same structured process, and the same quality — just with a better view out the window while I work.
 
 ## The Same Process, Every Project
 
 - Itemized estimates with every line item visible
 - 3D design previews before construction
-- Daily photo updates during the build
+- Regular progress updates during the build
 - Milestone payments tied to real progress
 - Change orders priced and approved before any scope changes
 
 ## Ready to Talk?
 
-Call [406-551-5061](tel:4065515061) or fill out the form below. I'll call back within an hour to talk about your Gallatin Gateway project.
+Call [406-551-5061](tel:4065515061) or fill out the form below to talk about your Gallatin Gateway project.

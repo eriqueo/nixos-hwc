@@ -1,7 +1,7 @@
 ---
 layout: layouts/page-simple.njk
 title: "Contact Heartwood Craft | Bozeman Remodeling"
-meta_description: "Call 406-551-5061 or fill out the form for a free remodeling estimate in Bozeman, MT. I call back within an hour. No pressure, no commitment."
+meta_description: "Call 406-551-5061 or fill out the form to discuss your Bozeman remodeling project. Bathrooms, basements, decks, and custom carpentry."
 h1: "Let's Talk About Your Project"
 permalink: "/contact/"
 ---
@@ -18,10 +18,10 @@ Whether you're ready to start or just exploring what's possible, I'd love to hea
 
 ### What Happens When You Reach Out
 
-1. I call you back within an hour during business hours (or first thing the next morning).
+1. I return your call during business hours (or first thing the next morning).
 2. We talk for 10-15 minutes about your project — what you're thinking, your timeline, and your budget range.
-3. If it sounds like a good fit, I schedule a free 45-minute site visit at your home.
-4. After the visit, you get a detailed, itemized estimate within 48 hours. No pressure, no follow-up calls you didn't ask for.
+3. If it sounds like a good fit, we schedule a site visit at your home.
+4. After the visit, you get a detailed, itemized estimate.
 
 ### Business Hours
 

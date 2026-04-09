@@ -1,7 +1,7 @@
 ---
 layout: layouts/page-service.njk
 title: "Bathroom Remodel Bozeman | Heartwood Craft | Licensed & Insured"
-meta_description: "Bathroom remodeling in Bozeman, MT. 3D design previews, itemized estimates, daily updates. Gut remodels, refreshes, and tub-to-shower conversions. 406-551-5061."
+meta_description: "Bathroom remodeling in Bozeman, MT. 3D design previews, itemized estimates, and clear communication. Gut remodels, refreshes, and tub-to-shower conversions. 406-551-5061."
 h1: "Bathroom Remodeling in Bozeman"
 hero_image: "/img/hero/bathroom-renovation-bozeman.webp"
 hero_subtitle: "3D design previews, transparent estimates, and craftsmanship that lasts."
@@ -42,19 +42,19 @@ A full gut remodel typically takes **4-6 weeks**. A refresh — keeping the layo
 
 Here's exactly what happens when you call:
 
-1. **You reach out.** Call, text, or fill out the form. I call back within an hour during business hours.
+1. **You reach out.** Call, text, or fill out the form. We'll set up a time to talk about your project.
 
 2. **We talk.** A 10-15 minute phone conversation about your project — what you want to change, your timeline, and whether you have a budget range in mind. I'm figuring out if we're a good fit before either of us invests more time.
 
-3. **Free site visit.** I come to your home for a 45-minute visit. I measure everything, check conditions behind access panels where I can, take photos, and capture the full scope. No sales pitch — just an honest assessment of what needs to happen.
+3. **Site visit.** I come to your home for a 45-minute visit. I measure everything, check conditions behind access panels where I can, take photos, and capture the full scope — an honest assessment of what the project needs.
 
-4. **Detailed estimate.** Within 48 hours, you get an itemized estimate showing every line item — labor by trade, materials by item, allowances for selections you haven't made yet. You see where every dollar goes.
+4. **Detailed estimate.** You get an itemized estimate showing every line item — labor by trade, materials by item, allowances for selections you haven't made yet. You see where every dollar goes.
 
 5. **3D rendering.** I build a photorealistic rendering of your bathroom so you see tile patterns, fixture placement, and vanity layout before construction starts. We adjust until you're happy with the design.
 
-6. **Construction with daily updates.** During the build, I text you a photo and progress update every day. You always know what happened and what's next. If anything changes scope, I price it as a formal change order before proceeding — no surprise costs.
+6. **Construction with regular updates.** During the build, you get progress updates with photos. You always know where things stand and what's next. If anything changes scope, I price it as a formal change order before proceeding — no surprise costs.
 
-7. **Final walkthrough.** When it's done, we walk through everything together. Any punch list items get resolved within 48 hours.
+7. **Final walkthrough.** When it's done, we walk through everything together. Any punch list items get resolved promptly.
 
 See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
 
@@ -89,4 +89,4 @@ After the build, we have the three-image story: before, rendering, completed. Th
 
 **Want a quick ballpark first?** Try the [bathroom cost calculator](/calculator/).
 
-**Ready for a real estimate?** Fill out the form below or call [406-551-5061](tel:4065515061). I'll call back within an hour.
+**Ready for a real estimate?** Fill out the form below or call [406-551-5061](tel:4065515061).

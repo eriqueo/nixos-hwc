@@ -36,10 +36,10 @@ Every Belgrade project gets the full Heartwood Craft treatment:
 
 - Itemized estimates with every line item visible
 - 3D design previews before construction
-- Daily photo updates during the build
+- Regular progress updates during the build
 - Milestone payments tied to real progress
 - Change orders priced and approved before any scope changes
 
 ## Ready to Talk?
 
-Call [406-551-5061](tel:4065515061) or fill out the form below. I'll call back within an hour.
+Call [406-551-5061](tel:4065515061) or fill out the form below.
