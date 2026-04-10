@@ -170,7 +170,13 @@
       "WebFetch(domain:trash-guides.info)",
       "Bash(rm:*)",
       "Bash(vdirsyncer sync:*)",
-      "Bash(unzip:*)"
+      "Bash(unzip:*)",
+      "mcp__claude_ai_HWC__hwc_website_read",
+      "mcp__claude_ai_HWC__hwc_website_list",
+      "mcp__claude_ai_HWC__hwc_website_write",
+      "mcp__hwc-jt__jt_get_active_jobs",
+      "mcp__claude_ai_datax__jobtread_organizations",
+      "mcp__hwc-jt__jt_get_custom_fields"
     ],
     "deny": [],
     "ask": [],
