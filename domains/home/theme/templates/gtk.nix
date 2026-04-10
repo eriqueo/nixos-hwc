@@ -149,6 +149,8 @@ in
     gtk2.extraConfig = gtk2Extra;
     gtk3.extraConfig = gtk3Extra;
     gtk4.extraConfig = gtk4Extra;
+
+    gtk4.theme = config.gtk.theme;
   };
 
   # Palette-driven CSS drops

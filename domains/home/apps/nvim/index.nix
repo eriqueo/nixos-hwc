@@ -35,13 +35,15 @@ in
       defaultEditor = true;
       viAlias = true;
       vimAlias = true;
+      withRuby = false;
+      withPython3 = false;
       extraPackages = with pkgs; [
         wl-clipboard
         stylua
         luajitPackages.jsregexp
       ];
       # Load the lua configuration
-      extraLuaConfig = ''
+      initLua = ''
         require("core")
       '';
 
