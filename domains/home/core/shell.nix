@@ -204,6 +204,7 @@ in
     # Git configuration
     programs.git = lib.mkIf cfg.git.enable {
       enable = true;
+      signing.format = null;
       settings = {
         user.name = cfg.git.userName;
         user.email = cfg.git.userEmail;
