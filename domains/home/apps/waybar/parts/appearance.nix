@@ -74,7 +74,7 @@ window#waybar {
 }
 
 /* === CLOCK & WEATHER — cohesive with active workspace === */
-#clock, #custom-weather {
+#clock, #custom-weather, #custom-khal {
   padding: 8px 10px;
   min-height: 0;
   background-color: #504945;   /* bg3 — same as active workspace */
@@ -153,7 +153,7 @@ window#waybar {
 #custom-battery:hover, #clock:hover, #custom-gpu:hover, #custom-ollama:hover,
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
-#custom-weather:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
+#custom-weather:hover, #custom-khal:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
 #hyprland-language:hover {
   background-color: #504945;   /* bg3 */
 }

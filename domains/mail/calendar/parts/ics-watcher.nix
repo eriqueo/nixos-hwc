@@ -6,7 +6,7 @@ let
   importScript = pkgs.writeShellScript "khal-import-ics" ''
     set -euo pipefail
     INBOX="$HOME/000_inbox/downloads"
-    DONE="$HOME/000_inbox/downloads/imported"
+    DONE="$HOME/000_inbox/downloads/events"
     mkdir -p "$DONE"
 
     shopt -s nullglob

@@ -3,7 +3,7 @@
 let
   commonModules = {
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" ];
-    modules-center = [ "clock" "custom/weather" ];
+    modules-center = [ "custom/khal" "clock" "custom/weather" ];
     modules-right = [
       "custom/sep-pre"
       "custom/gpu" "custom/ollama" "idle_inhibitor" "custom/lid-sleep"
@@ -101,6 +101,14 @@ let
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
     "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-lid-toggle"; };
+
+    "custom/khal" = {
+      format = "{}";
+      exec = "waybar-khal";
+      return-type = "json";
+      interval = 300;
+      on-click = "kitty --single-instance -e ikhal";
+    };
 
     # === NEW: Weather for Bozeman ===
     "custom/weather" = {
