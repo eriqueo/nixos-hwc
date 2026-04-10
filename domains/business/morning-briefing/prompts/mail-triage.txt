@@ -87,6 +87,12 @@ Known noise senders (always assign to noise bucket, suggested_action: trash):
 - mail.instagram.com
 - bniconnectglobal.com
 - Any sender matching "*estimat*", "*takeoff*", "*bid*" @gmail.com cold outreach pattern
+- nextdoor.com
+- quora.com (digest emails)
+- zillow.com (marketing)
+- angi.com, angieslist.com (lead spam)
+- thumbtack.com (notifications)
+- yelp.com (business promotions)
 
 Known review senders (always assign to review):
 - ollama (tech newsletter)
@@ -95,6 +101,10 @@ Known review senders (always assign to review):
 - GitHub (unless CI failure from eriqueo/* repo → urgent)
 - iCloud (system/security notifications)
 - MxToolbox (deliverability summary)
+- Quo/OpenPhone (quo.com, openphone.com) — business phone notifications
+- Stripe (stripe.com) — payment processing
+- QuickBooks (intuit.com) — accounting
+- JobTread (jobtread.com) — project management
 
 ## Reasoning discipline
 
@@ -104,6 +114,8 @@ Known review senders (always assign to review):
 - Multiple threads from the same sender in one window: only include the most recent one in urgent/review; consolidate or drop the rest into noise.
 - If you are uncertain between urgent and review, prefer review. If uncertain between review and noise, prefer noise.
 - Summaries must be specific to the actual subject and sender — never generic.
+- If a thread has the 'sent' tag, it means Eric sent a message in this thread. Threads where Eric participated are more likely to be urgent if someone replied.
+- Threads with both 'flagged' and 'work' tags from unknown senders should go to review, not noise.
 
 ## Input format
 

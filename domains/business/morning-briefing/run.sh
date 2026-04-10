@@ -35,8 +35,27 @@ trap 'rm -f "${LOCK_FILE}"' EXIT
 log "START"
 cd "${AGENT_DIR}"
 
+# ── Step 0: Pre-flight ───────────────────────────────────────────────────────
+if [ ! -x "${CLAUDE_BIN}" ]; then
+  log "FATAL: Claude binary not found at ${CLAUDE_BIN}"
+  cat > "${OUTPUT_DIR}/briefing.json.tmp" <<ERRJSON
+{
+  "generated_at": "$(date -Iseconds)",
+  "error": true,
+  "error_message": "Claude Code CLI not found at ${CLAUDE_BIN}",
+  "sections": {},
+  "alerts": [{"level": "critical", "section": "system", "message": "Claude Code CLI binary missing — cannot compile briefing"}]
+}
+ERRJSON
+  mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
+  cp "${OUTPUT_DIR}/briefing.json" "${DASHBOARD_DIR}/briefing.json"
+  exit 1
+fi
+log "OK: Pre-flight passed (claude binary exists)"
+
 # ── Step 1: Main briefing ─────────────────────────────────────────────────────
 log "STEP 1: Main briefing (Claude Code CLI)..."
+STEP1_START=$(date +%s)
 
 TODAY="$(date +%Y-%m-%d)"
 RESULT=$("${CLAUDE_BIN}" \
@@ -59,6 +78,10 @@ ERRJSON
   exit 1
 }
 
+STEP1_END=$(date +%s)
+STEP1_ELAPSED=$((STEP1_END - STEP1_START))
+log "STEP 1: completed in ${STEP1_ELAPSED}s"
+
 if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
   # Stamp generated_at with the real time — don't trust Claude's timestamp
   NOW="$(date -Iseconds)"
@@ -67,12 +90,20 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
   && mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
   ALERT_COUNT=$(jq '.alerts | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "?")
   log "OK: Main briefing compiled (${ALERT_COUNT} alerts)"
+
+  # Validate minimum structure
+  HAS_SECTIONS=$(jq 'has("sections") and (.sections | has("calendar")) and (.sections | has("jobs"))' \
+    "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "false")
+  if [ "${HAS_SECTIONS}" != "true" ]; then
+    log "WARN: briefing.json missing expected sections (calendar/jobs) — partial data, continuing"
+  fi
 else
   log "WARN: Claude ran but no output/briefing.json found"
 fi
 
 # ── Step 2: Mail triage ───────────────────────────────────────────────────────
 log "STEP 2: Mail triage..."
+STEP2_START=$(date +%s)
 
 MAIL_PROMPT="${PROMPTS_DIR}/mail-triage.txt"
 MAIL_TRIAGE_JSON="${OUTPUT_DIR}/mail-triage.json"
@@ -145,6 +176,10 @@ else
     fi
   fi
 fi
+
+STEP2_END=$(date +%s)
+STEP2_ELAPSED=$((STEP2_END - STEP2_START))
+log "STEP 2: completed in ${STEP2_ELAPSED}s"
 
 # ── Step 3: Merge ─────────────────────────────────────────────────────────────
 log "STEP 3: Merging..."
