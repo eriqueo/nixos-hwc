@@ -124,8 +124,7 @@ in
     # Proton Pass - tile on workspace 8
     "match:class ^(Proton Pass)$, tile on, workspace 8 silent"
 
-    # DOSBox ECE (eXoWin3x) — float on primary monitor, inhibit idle during play
-    "match:class ^(dosbox)$, float on, monitor eDP-1, move 0 0"
+    # DOSBox ECE (eXoWin3x) — inhibit idle during play
     "match:class ^(dosbox)$, idle_inhibit always"
 
     # PiP
