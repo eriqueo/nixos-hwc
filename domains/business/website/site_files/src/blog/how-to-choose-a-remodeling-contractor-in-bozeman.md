@@ -1,10 +1,15 @@
 ---
 layout: layouts/page-blog.njk
-title: "How to Choose a Remodeling Contractor in Bozeman"
-meta_description: "What to look for, what questions to ask, and the red flags that matter when hiring a remodeling contractor in Bozeman, MT. Practical advice, no fluff."
-date: 2026-03-28
-tags: ["remodeling", "bozeman", "tips"]
-permalink: "/how-to-choose-a-remodeling-contractor-in-bozeman/"
+title: How to Choose a Remodeling Contractor in Bozeman
+meta_description: >-
+  What to look for, what questions to ask, and the red flags that matter when
+  hiring a remodeling contractor in Bozeman, MT. Practical advice, no fluff.
+date: '2026-03-28T00:00:00.000Z'
+tags:
+  - remodeling
+  - bozeman
+  - tips
+permalink: /how-to-choose-a-remodeling-contractor-in-bozeman/
 ---
 
 Hiring a remodeling contractor is one of the higher-stakes decisions a homeowner makes. You're inviting someone into your house for weeks, trusting them with a significant amount of money, and relying on their judgment when problems show up — and in older Bozeman homes, problems show up. Here's the honest version of how to evaluate who you're dealing with.
@@ -21,7 +26,7 @@ Also ask for a certificate of insurance showing general liability and workers' c
 
 Ask for photos of completed projects — specifically before-and-after photos from jobs similar to yours. A bathroom specialist should have a portfolio of finished bathrooms. Not stock images, not renderings — actual completed work.
 
-Pay attention to the quality of the finish work: grout lines, tile alignment, how trim pieces meet at corners, the fit of fixtures. These details don't lie. Anyone can take a wide-angle photo of a nice vanity. The closeups tell you about the actual craftsmanship.
+Pay attention to the quality of the finish work: grout lines, tile alignment, how trim pieces meet at corners, the fit of fixtures. These details don't lie. Anyone can take a wide-angle photo of a nice vanity. The closeups tell you about the actual craftsmanship. See [examples of Heartwood Craft's completed projects](/our-work/) and read verified [client reviews](/reviews/).
 
 Also look for consistency across multiple projects. One great bathroom might be their best job. Ten bathrooms at the same quality level tells you something about their standard process.
 
@@ -87,4 +92,4 @@ Bozeman has good contractors. The screening process above will help you find the
 
 ---
 
-If you'd like to see how I approach it, check out [my process](/how-it-works/) or [give me a call](/contact/).
+If you'd like to see how I approach it, check out [my process](/how-it-works/) or [give me a call](/contact/). You can also read a companion post: [what to ask a contractor before a remodel in Bozeman](/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/).

@@ -122,7 +122,7 @@ in
       tab-title-account = {{.Account}}{{if .Unread}} ({{.Unread}}){{end}}
 
       # Live column templates
-      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude `^personal_`) (exclude `_google$`) (exclude `_proton$`) (exclude "newsletter") (exclude "notifications") (exclude "notification") (exclude "aerc-notes") (exclude "action") (exclude "hide_my_email") (exclude "website") (exclude "starred") (exclude "important") (exclude "personal") ${tagStyleMapCases} (default "default") | join " " }}
+      column-tags    = {{.StyleMap .Labels (exclude "inbox") (exclude "unread") (exclude "new") (exclude "sent") (exclude "draft") (exclude "trash") (exclude "spam") (exclude "archive") (exclude "flagged") (exclude "replied") (exclude "passed") (exclude "attachment") (exclude "signed") (exclude "encrypted") (exclude `^hwc`) (exclude `^proton`) (exclude `^gmail`) (exclude `^acc:`) (exclude `^personal_`) (exclude `_google$`) (exclude `_proton$`) (exclude "newsletter") (exclude "notifications") (exclude "notification") (exclude "aerc-notes") (exclude "action") (exclude "hide_my_email") (exclude "starred") (exclude "important") ${tagStyleMapCases} (default "default") | join " " }}
       column-date    = {{.Style (.DateAutoFormat .Date.Local) ${rowStyle}}}
       column-from    = {{.Style (index (.From | names) 0) ${rowStyle}}}
       column-flags   = {{.Flags | join "" }}

@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Are the 4 Types of Decks for Bozeman Homes?"
-meta_description: "Attached, freestanding, multi-level, rooftop — the four main deck types each suit different yards, budgets, and uses. Here's how to think through the choice for a Bozeman home."
-date: 2025-11-01
-tags: ["deck", "bozeman", "tips"]
-permalink: "/what-are-the-4-types-of-decks-for-bozeman-homes/"
+title: What Are the 4 Types of Decks for Bozeman Homes?
+meta_description: >-
+  Attached, freestanding, multi-level, rooftop — the four main deck types each
+  suit different yards, budgets, and uses. Here's how to think through the
+  choice for a Bozeman home.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - deck
+  - bozeman
+  - tips
+permalink: /what-are-the-4-types-of-decks-for-bozeman-homes/
 ---
 
 Before you pick materials or settle on a size, it's worth understanding what kind of deck structure actually fits your yard. The four main types — attached, freestanding, multi-level, and rooftop — each have different structural requirements, permit implications, and suitability for Montana's climate.
@@ -47,7 +53,7 @@ A 20x20 deck — 400 square feet — is a common size for Bozeman homeowners. Re
 
 **PVC decking: $15,000–$25,000.** Fully synthetic, maximum moisture resistance, minimal lifetime maintenance. The right call for demanding sites or homeowners who want the lowest possible upkeep.
 
-These ranges cover materials and basic installation. Labor, railings, stairs, permit fees, and structural complexity all affect the final number.
+These ranges cover materials and basic installation. Labor, railings, stairs, permit fees, and structural complexity all affect the final number. Try the [deck cost calculator](/deck-calculator/) for a quick estimate based on real Bozeman project data.
 
 ## What Type of Deck Is Best?
 
@@ -55,7 +61,7 @@ The honest answer: it depends on your yard, your use case, and how much ongoing 
 
 Bozeman's climate narrows the field meaningfully. For homeowners prioritizing durability and low maintenance, composite or PVC on a properly engineered frame is the clear choice. For budget-conscious projects where the homeowner commits to regular maintenance, pressure-treated remains viable when properly installed and sealed.
 
-For yards with significant grade changes — common across Bozeman's residential neighborhoods — multi-level decks deliver functional flexibility and visual appeal that flat platforms can't match. I look at each site individually before recommending a type, because the right structure depends on what the yard allows and what the homeowner actually wants to do with the space.
+For yards with significant grade changes — common across Bozeman's residential neighborhoods — multi-level decks deliver functional flexibility and visual appeal that flat platforms can't match. I look at each site individually before recommending a type, because the right structure depends on what the yard allows and what the homeowner actually wants to do with the space. Wondering about sizing? See whether [a 12x20 deck is big enough for your Bozeman home](/is-a-12x20-deck-big-enough-for-a-bozeman-home/).
 
 ## What to Ask a Deck Contractor
 
@@ -81,4 +87,4 @@ Both Trex composite and PVC are strong low-maintenance alternatives to wood, and
 
 For most Bozeman homeowners, Trex composite is the best overall balance. For maximum durability with minimum maintenance — particularly on sites with exceptional moisture exposure — PVC is the stronger choice.
 
-Ready to figure out which style works for your home? [Get in touch.](/contact/)
+Ready to figure out which style works for your home? [Get in touch.](/contact/) Learn more about our [deck building and remodeling services](/remodeling/).

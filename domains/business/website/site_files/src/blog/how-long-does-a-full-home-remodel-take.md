@@ -1,10 +1,15 @@
 ---
 layout: layouts/page-blog.njk
-title: "How Long Does a Full Home Remodel Take in Bozeman?"
-meta_description: "A full home remodel in Bozeman typically takes 4–8 months. Here's a realistic breakdown by project type, plus what actually causes delays in Montana."
-date: 2025-11-01
-tags: ["remodeling", "bozeman", "tips"]
-permalink: "/how-long-does-a-full-home-remodel-take/"
+title: How Long Does a Full Home Remodel Take in Bozeman?
+meta_description: >-
+  A full home remodel in Bozeman typically takes 4–8 months. Here's a realistic
+  breakdown by project type, plus what actually causes delays in Montana.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - remodeling
+  - bozeman
+  - tips
+permalink: /how-long-does-a-full-home-remodel-take/
 ---
 
 One of the first questions homeowners ask when planning a remodel is: how long is this actually going to take? It's a fair question, and the honest answer is that it depends — but there are reliable benchmarks you can use to plan.
@@ -15,7 +20,7 @@ Here's a realistic look at timelines for different project types in Bozeman, and
 
 A full home renovation in Bozeman typically takes four to eight months. That range assumes comprehensive work — kitchens, bathrooms, flooring, mechanical systems, and layout updates. Projects involving structural changes or major energy upgrades tend toward the longer end.
 
-Most full remodels begin with two to six weeks of planning, design, and permitting before construction starts. Bozeman uses the ProjectDox system for permit submissions, and permit timelines need to be baked into the schedule from the beginning. Construction itself runs three to six months for a standard-sized home.
+Most full remodels begin with two to six weeks of planning, design, and permitting before construction starts. Bozeman uses the ProjectDox system for permit submissions, and permit timelines need to be baked into the schedule from the beginning. Construction itself runs three to six months for a standard-sized home. Learn more about what's involved on our [general remodeling services page](/remodeling/).
 
 For a 2,000 square foot home, five to seven months is a reasonable expectation for a comprehensive renovation.
 
@@ -62,3 +67,5 @@ The biggest timeline mistakes I see happen before construction even starts. Sele
 The pre-construction phase — design, selections, permits, material orders — typically runs 3–6 weeks. Building that window into the schedule from the beginning is what keeps the construction phase clean and predictable.
 
 Want to understand the full process? [Here's how it works →](/how-it-works/)
+
+Ready to start planning your timeline? [Get in touch](/contact/) to schedule a site visit.

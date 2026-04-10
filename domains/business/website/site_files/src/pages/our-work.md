@@ -1,22 +1,27 @@
 ---
 layout: layouts/page-simple.njk
-title: "Our Work | Heartwood Craft Portfolio"
-meta_description: "See bathroom remodels, custom decks, timber framing, and interior work from Heartwood Craft in Bozeman, Montana. Photos of real projects."
-h1: "Our Work"
-permalink: "/our-work/"
+title: Our Work | Heartwood Craft Portfolio
+meta_description: >-
+  Portfolio of bathroom remodels, decks, timber framing, and custom builds by
+  Heartwood Craft in Bozeman, MT. Real project photos from Big Sky to the
+  Gallatin Valley.
+h1: Our Work
+permalink: /our-work/
 ---
 
-Every project tells a story — what the homeowner was dealing with, what we designed, and how it turned out. Here's a look at the range of work I've done, from timber framing and custom builds to interior finishing and decks.
+My work spans from heavy timber framing in Big Sky and the Yellowstone Club to residential remodeling right here in Bozeman. That range matters — I understand structure and load paths, not just finish surfaces. Whether it's a 40-foot timber bent or a bathroom gut remodel, the same principles apply: measure twice, build it right, don't cut corners where it counts.
 
-I'm currently building out before-and-after galleries for recent Heartwood Craft bathroom and basement projects. In the meantime, these photos show the depth of craftsmanship I bring to every job.
+Every Heartwood Craft project now starts with a 3D design preview and an itemized estimate. You see what you're getting and what it costs before I pick up a hammer. This page is organized by category — timber framing, decks, porches, interiors, and custom builds. I'm also adding before-and-after galleries for recent bathroom and basement projects as they're assembled.
 
-*Want to see photos of a specific recent project? Call [406-551-5061](tel:4065515061) — I'm happy to walk you through completed work.*
+Want to see photos of a specific recent project? Call [406-551-5061](tel:4065515061) — I'm happy to walk you through completed work.
 
 ---
 
 ## Timber Framing & Structural Work
 
 Heavy timber construction, post-and-beam framing, and structural carpentry. This is the work I cut my teeth on — years of building in Big Sky and the Yellowstone Club, where precision and craftsmanship aren't optional.
+
+Every joint in a timber frame is visible — there's nowhere to hide a bad cut. These projects demand exact tolerances on timbers weighing hundreds of pounds, and the connections need to carry serious loads through Montana's snow seasons. It's the most demanding carpentry I do, and it built the foundation for everything else.
 
 <div class="portfolio-grid" data-portfolio-section="timber-framing">
   <div class="card project-card">
@@ -53,6 +58,8 @@ Heavy timber construction, post-and-beam framing, and structural carpentry. This
 
 Cedar and composite decks built for Montana's freeze-thaw cycles. Proper footings, galvanized hardware, and flashing details that protect your home for decades.
 
+Most deck failures I see around Bozeman come down to two things: footings that aren't below the 36-inch frost line and ledger connections that let water into the house. I build to avoid both. Whether it's a simple attached deck or a multi-level composite build on a sloped lot, the engineering has to match the climate. Learn more about [deck options and pricing](/deck-building/) or try the [deck cost calculator](/deck-calculator/).
+
 <div class="portfolio-grid" data-portfolio-section="decks">
   <div class="card project-card">
     <div class="project-images">
@@ -88,6 +95,8 @@ Cedar and composite decks built for Montana's freeze-thaw cycles. Proper footing
 
 Front porches, covered entries, siding, and exterior trim — the work that defines how a home looks from the street and holds up against Montana weather.
 
+Porch projects often uncover rotted substructure, inadequate flashing, or framing that was undersized from the start. I address the structural issues alongside the visible work so the finished product holds up — not just for curb appeal, but through years of snow, ice, and spring runoff.
+
 <div class="portfolio-grid" data-portfolio-section="porches">
   <div class="card project-card">
     <div class="project-images">
@@ -109,6 +118,8 @@ Front porches, covered entries, siding, and exterior trim — the work that defi
 ## Interior Work
 
 Trim, cabinetry, built-ins, and finish carpentry. The interior details that make a room feel complete — not just renovated, but crafted.
+
+This is where precision shows up in the details you interact with every day — the drawer that closes smoothly, the crown molding that meets in a tight miter, the built-in that fits the space exactly. Interior work requires patience and an understanding of how wood moves seasonally, especially in Montana's dry winters and humid summers.
 
 <div class="portfolio-grid" data-portfolio-section="interiors">
   <div class="card project-card">
@@ -145,6 +156,8 @@ Trim, cabinetry, built-ins, and finish carpentry. The interior details that make
 
 One-of-a-kind projects — the kind of work where the design and the craftsmanship are inseparable.
 
+These are jobs that don't come from a catalog. A homeowner has a specific vision — a piece of furniture, a feature wall, a structure that doesn't fit a standard category — and my job is to figure out how to build it so it looks right and holds up.
+
 <div class="portfolio-grid" data-portfolio-section="custom-builds">
   <div class="card project-card">
     <div class="project-images">
@@ -163,10 +176,19 @@ One-of-a-kind projects — the kind of work where the design and the craftsmansh
 
 ---
 
-## Coming Soon: Before & After Galleries
+## Bathrooms & Basements
 
-I'm building out project galleries in the format that shows the full story: **before photo, 3D rendering, completed project**. This three-image format is unique to Heartwood Craft — it shows you exactly what was promised and exactly what was delivered.
+This is the core of what I do at Heartwood Craft — full bathroom remodels and basement finishing for Bozeman homeowners. I'm currently assembling before-and-after galleries that show the full story: **existing condition → 3D rendering → completed project**.
 
-Recent Bozeman bathroom and basement projects will be added as galleries are assembled.
+In the meantime, I'm happy to walk you through photos of recent work over the phone. Call [406-551-5061](tel:4065515061) or [check the cost calculator](/calculator/) to get a ballpark for your project.
 
-In the meantime, check out what homeowners say about working with me on the [reviews page](/reviews/), or call [406-551-5061](tel:4065515061) to see photos of recent work.
+---
+
+## More Coming Soon
+
+I'm adding project galleries as they're ready. Here's where to go next:
+
+- [Bathroom cost calculator](/calculator/) — get a ballpark in 2 minutes
+- [Deck cost calculator](/deck-calculator/) — estimate your deck project
+- [What homeowners say](/reviews/) — read reviews from Bozeman clients
+- [Get in touch](/contact/) — let's talk about your project

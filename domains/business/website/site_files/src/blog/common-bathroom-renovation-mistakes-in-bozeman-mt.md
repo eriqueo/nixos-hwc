@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "Common Bathroom Renovation Mistakes in Bozeman, MT"
-meta_description: "The bathroom remodel mistakes Bozeman homeowners make most — skipped permits, budget surprises, ventilation failures, and design decisions they later regret."
-date: 2025-11-01
-tags: ["bathroom", "bozeman", "tips"]
-permalink: "/common-bathroom-renovation-mistakes-in-bozeman-mt/"
+title: 'Common Bathroom Renovation Mistakes in Bozeman, MT'
+meta_description: >-
+  The bathroom remodel mistakes Bozeman homeowners make most — skipped permits,
+  budget surprises, ventilation failures, and design decisions they later
+  regret.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - bathroom
+  - bozeman
+  - tips
+permalink: /common-bathroom-renovation-mistakes-in-bozeman-mt/
 ---
 
 A bathroom remodel is one of the more complex projects in a home — plumbing, electrical, tile, waterproofing, and ventilation all in a small space where everything has to work together. I've seen the same mistakes come up on project after project. Most of them are avoidable with a bit of planning up front.
@@ -13,7 +19,7 @@ A bathroom remodel is one of the more complex projects in a home — plumbing, e
 
 The single most common problem I see is starting with a number that doesn't match the scope. People hear "bathroom remodel" and assume $8,000–$10,000 covers everything. It doesn't — not in Bozeman, not anymore.
 
-A realistic mid-range project here runs $18,000–$35,000 for a full gut. A cosmetic refresh — new fixtures, paint, vanity swap — can land in the $10,000–$18,000 range. Once you're moving plumbing, replacing tile, and dealing with whatever's behind the walls, you're in the higher tier.
+A realistic mid-range project here runs $18,000–$35,000 for a full gut. A cosmetic refresh — new fixtures, paint, vanity swap — can land in the $10,000–$18,000 range. Once you're moving plumbing, replacing tile, and dealing with whatever's behind the walls, you're in the higher tier. Get a quick ballpark for your specific project with the [bathroom cost calculator](/calculator/).
 
 Always build in a 10–20% contingency, especially in homes built before 1990. I've opened up walls in Bozeman homes and found galvanized pipe, subfloor rot, and insulation that was inadequate to code the day it was installed. None of that shows up on a walkthrough estimate — it shows up in demo.
 
@@ -75,3 +81,5 @@ Save DIY energy for painting, hardware, and cosmetic work. The technical rough-i
 ---
 
 Planning a bathroom project? I'm happy to walk through the details. [Get in touch →](/contact/)
+
+You can also learn more about [our bathroom remodeling process](/bathroom/remodeling/), including 3D design previews and itemized estimates.

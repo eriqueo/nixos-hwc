@@ -1,15 +1,20 @@
 ---
 layout: layouts/page-blog.njk
-title: "3D Design Previews: See Your Remodel Before We Build It"
-meta_description: "Before construction starts, I build a photorealistic 3D model of your finished bathroom or basement. See exactly what you're getting — no guessing required."
-date: 2026-03-28
-tags: ["remodeling", "bozeman", "process"]
-permalink: "/3d-design-previews-see-your-remodel-before-we-build-it/"
+title: '3D Design Previews: See Your Remodel Before We Build It'
+meta_description: >-
+  Before construction starts, I build a photorealistic 3D model of your finished
+  bathroom or basement. See exactly what you're getting — no guessing required.
+date: '2026-03-28T00:00:00.000Z'
+tags:
+  - remodeling
+  - bozeman
+  - process
+permalink: /3d-design-previews-see-your-remodel-before-we-build-it/
 ---
 
 The biggest fear I hear from homeowners considering a bathroom or basement project isn't about the money. It's this: "What if it doesn't look like I imagined?" They've picked tile samples in a showroom, circled things in a catalog, described what they want in words — and they still can't picture the finished room.
 
-That's why I started doing 3D design previews. You see exactly what your space will look like before we build a single thing.
+That's why I started doing 3D design previews. You see exactly what your space will look like before we build a single thing. This is a standard part of every [bathroom remodeling](/bathroom/remodeling/) and [basement finishing](/basement/remodeling/) project I do.
 
 ## What a 3D Design Preview Actually Is
 
@@ -65,7 +70,7 @@ This option is useful for homeowners who want to see a realistic vision of what 
 
 Every rendering becomes part of the project documentation. The before photo, the 3D render, and the completed photo make a sequence that shows the full arc from existing space to finished room. That sequence lives in the project portfolio and tells the story of the work in a way that words don't.
 
-If you've looked at the portfolio section of this site, you've seen that sequence at work. The render sits between the before and after photo and shows that the finished project matched the plan.
+If you've looked at [the portfolio section](/our-work/) of this site, you've seen that sequence at work. The render sits between the before and after photo and shows that the finished project matched the plan.
 
 ## What Homeowners Say About It
 

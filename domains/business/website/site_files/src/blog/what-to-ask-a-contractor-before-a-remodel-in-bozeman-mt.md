@@ -1,15 +1,21 @@
 ---
 layout: layouts/page-blog.njk
-title: "What to Ask a Contractor Before a Remodel in Bozeman"
-meta_description: "The right questions to ask a Bozeman remodeling contractor — licensing, permits, cost breakdowns, contingencies, and what to watch out for in a first meeting."
-date: 2025-11-01
-tags: ["bozeman", "process", "tips"]
-permalink: "/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/"
+title: What to Ask a Contractor Before a Remodel in Bozeman
+meta_description: >-
+  The right questions to ask a Bozeman remodeling contractor — licensing,
+  permits, cost breakdowns, contingencies, and what to watch out for in a first
+  meeting.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - bozeman
+  - process
+  - tips
+permalink: /what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/
 ---
 
 Hiring a contractor is one of the higher-stakes decisions in a remodel. The wrong choice costs you time, money, and sometimes means paying someone else to fix what the first crew did. The right questions, asked early, tell you most of what you need to know.
 
-Here's how I'd approach vetting a contractor in Bozeman — including what I'd ask if I were the homeowner hiring me.
+Here's how I'd approach vetting a contractor in Bozeman — including what I'd ask if I were the homeowner hiring me. You can also read [how to choose a remodeling contractor in Bozeman](/how-to-choose-a-remodeling-contractor-in-bozeman/) for a broader perspective on the evaluation process.
 
 ## Start With Licensing and Insurance
 
@@ -99,8 +105,10 @@ For bathroom projects, clarify upfront whether you're looking at a cosmetic refr
 
 You're not just evaluating technical competence — you're evaluating whether this contractor will be honest with you when things get complicated, whether their process is organized enough to protect your timeline, and whether you trust them in your home for 4–8 weeks.
 
-Good answers to these questions are specific, documented, and don't require follow-up pressure. Vague answers are worth taking seriously.
+Good answers to these questions are specific, documented, and don't require follow-up pressure. Vague answers are worth taking seriously. Check out our [client reviews](/reviews/) to see what working with Heartwood Craft is actually like.
 
 ---
 
 Want to see how I answer these questions? [Here's my full process →](/how-it-works/)
+
+[Get in touch](/contact/) when you're ready to start the conversation.

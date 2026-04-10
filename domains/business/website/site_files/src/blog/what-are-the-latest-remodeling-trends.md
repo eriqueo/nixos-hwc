@@ -1,10 +1,15 @@
 ---
 layout: layouts/page-blog.njk
-title: "2026 Remodeling Trends I'm Actually Seeing in Bozeman"
-meta_description: "Spa bathrooms, aging-in-place design, 3D previews, and durable low-maintenance materials — here's what Bozeman homeowners are actually requesting in 2026."
-date: 2025-11-01
-tags: ["remodeling", "bozeman", "tips"]
-permalink: "/what-are-the-latest-remodeling-trends/"
+title: 2026 Remodeling Trends I'm Actually Seeing in Bozeman
+meta_description: >-
+  Spa bathrooms, aging-in-place design, 3D previews, and durable low-maintenance
+  materials — here's what Bozeman homeowners are actually requesting in 2026.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - remodeling
+  - bozeman
+  - tips
+permalink: /what-are-the-latest-remodeling-trends/
 ---
 
 Remodeling trend articles tend to be full of things that look good in a Pinterest board but rarely show up in real Bozeman homes. So let me skip the fluff and tell you what I'm actually seeing clients request in 2026 — and which of those requests I think hold up long-term.
@@ -13,7 +18,7 @@ Remodeling trend articles tend to be full of things that look good in a Pinteres
 
 The most common thing clients bring to the first meeting is a bathroom inspiration photo with a curbless walk-in shower, large-format tile, and a clean, minimal aesthetic. Sometimes there's a freestanding tub. Almost always there's a frameless glass enclosure.
 
-This isn't new — spa-style bathrooms have been trending for a few years — but what's changed is that it's no longer a luxury request. Clients across a wide budget range are asking for it. A $22,000 bathroom can deliver the core of this look: a curbless shower with good tile, proper linear drainage, simple matte-black fixtures, and no threshold to step over.
+This isn't new — spa-style bathrooms have been trending for a few years — but what's changed is that it's no longer a luxury request. Clients across a wide budget range are asking for it. A $22,000 bathroom can deliver the core of this look: a curbless shower with good tile, proper linear drainage, simple matte-black fixtures, and no threshold to step over. See how we approach these projects on our [bathroom remodeling page](/bathroom/remodeling/).
 
 The curbless entry is worth calling out specifically. It used to be associated with accessibility needs. Now people want it because it looks better, cleans more easily, and feels more intentional. It also happens to be a smart design choice for aging-in-place, even if that's not why someone is asking for it.
 
@@ -61,13 +66,13 @@ Basement finishing requests have changed. A few years ago, the typical ask was a
 
 The underlying shift is that people are living in their homes differently than they did five years ago. Remote work made the home office non-optional. More time at home made the question of how every square foot functions more important.
 
-For Bozeman specifically, a finished basement is particularly valuable because it extends functional living space without requiring any additional footprint. Basic basement finishes run $25,000–$35,000. Mid-range with a bathroom runs $35,000–$50,000. Full finishes with custom built-ins, a bar, and a full bath can reach $50,000–$75,000. In a market where square footage is expensive to add any other way, that's often the best return available.
+For Bozeman specifically, a finished basement is particularly valuable because it extends functional living space without requiring any additional footprint. Basic basement finishes run $25,000–$35,000. Mid-range with a bathroom runs $35,000–$50,000. Full finishes with custom built-ins, a bar, and a full bath can reach $50,000–$75,000. Learn more about the process on our [basement remodeling page](/basement/remodeling/). In a market where square footage is expensive to add any other way, that's often the best return available.
 
 ## Outdoor Living That Connects to the Interior
 
 Clients are thinking about decks and outdoor spaces differently in 2026 — less as an afterthought and more as a room that happens to be outside. The design conversations have shifted from "I want a deck" to "I want an outdoor space that flows from the living room and works from May through September."
 
-That means: composite decking in colors that coordinate with the home's exterior, cable railings that don't block views, outdoor lighting that extends use into the evening, and roof overhangs or pergolas that make the space usable even in light rain. On the material side, composite has almost entirely replaced cedar for new deck builds — the 25-year performance advantage is hard to argue against given Bozeman's winters.
+That means: composite decking in colors that coordinate with the home's exterior, cable railings that don't block views, outdoor lighting that extends use into the evening, and roof overhangs or pergolas that make the space usable even in light rain. On the material side, composite has almost entirely replaced cedar for new deck builds — the 25-year performance advantage is hard to argue against given Bozeman's winters. We cover the full range of exterior work on our [remodeling services page](/remodeling/).
 
 ## What's Going Out of Style
 

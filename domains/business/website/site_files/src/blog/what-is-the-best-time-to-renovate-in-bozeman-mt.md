@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Is the Best Time to Renovate in Bozeman, MT?"
-meta_description: "The best time to renovate in Bozeman depends on the project type. Interior work can start any time — including winter. Exterior work has a narrower window. Here's how to plan."
-date: 2025-11-01
-tags: ["remodeling", "bozeman", "tips"]
-permalink: "/what-is-the-best-time-to-renovate-in-bozeman-mt/"
+title: 'What Is the Best Time to Renovate in Bozeman, MT?'
+meta_description: >-
+  The best time to renovate in Bozeman depends on the project type. Interior
+  work can start any time — including winter. Exterior work has a narrower
+  window. Here's how to plan.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - remodeling
+  - bozeman
+  - tips
+permalink: /what-is-the-best-time-to-renovate-in-bozeman-mt/
 ---
 
 Timing a remodel in Bozeman is more nuanced than just picking a season. The right time depends on what you're doing, what contractors are available, and whether you're being proactive or reactive. Here's how I think about it — and what I've seen work best for homeowners in the Gallatin Valley.
@@ -53,7 +59,7 @@ But the honest answer is that bathroom work is interior work. I've done bathroom
 
 The real seasonal advantage in spring/summer is that you can see the home in natural light during design selections, ventilation during demo is easier with windows open, and if you need to use alternative facilities for a few weeks, summer is more comfortable than February.
 
-That said, if you want to start in November, I'm not going to tell you to wait. Especially if your current bathroom has moisture problems, delayed ventilation damage, or aging tile that's letting water get behind the walls. Those problems don't get better by waiting until May.
+That said, if you want to start in November, I'm not going to tell you to wait. Especially if your current bathroom has moisture problems, delayed ventilation damage, or aging tile that's letting water get behind the walls. Those problems don't get better by waiting until May. When you're ready, learn more about our [bathroom remodeling process](/bathroom/remodeling/).
 
 ## Contractor Availability in Bozeman: Plan Further Out Than You Think
 
@@ -83,7 +89,7 @@ When timing your project, it's worth considering what to prioritize first:
 
 **Basement finishes** add livable square footage that appraisers count and buyers can immediately use. It's some of the strongest square-footage ROI available in Bozeman remodeling.
 
-**Decks** return strong value if built with proper footings, durable materials, and structural connections designed for Montana's climate. A well-built cedar or composite deck that survives 10 winters adds real value. A cheap treated lumber deck that needs replacing in 5 years adds almost none.
+**Decks** return strong value if built with proper footings, durable materials, and structural connections designed for Montana's climate. A well-built cedar or composite deck that survives 10 winters adds real value. Try the [deck cost calculator](/deck-calculator/) for a quick estimate. A cheap treated lumber deck that needs replacing in 5 years adds almost none.
 
 ## The Correct Order of Renovation
 

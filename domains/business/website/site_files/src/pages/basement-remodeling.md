@@ -1,13 +1,16 @@
 ---
 layout: layouts/page-service.njk
-title: "Basement Remodel Bozeman | Heartwood Craft | Licensed & Insured"
-meta_description: "Basement finishing in Bozeman, MT. Egress windows, moisture control, 3D design previews, transparent pricing. Turn unused space into your best room. 406-551-5061."
-h1: "Basement Remodeling in Bozeman"
-hero_image: "/img/hero/basement-remodeling-bozeman.webp"
-hero_subtitle: "Turn unused square footage into your favorite room."
-service_tag: "basement"
-permalink: "/basement/remodeling/"
-schema_type: "Service"
+title: Basement Remodel Bozeman | Heartwood Craft | Licensed & Insured
+meta_description: >-
+  Basement finishing in Bozeman, MT. Egress windows, moisture control, 3D design
+  previews, transparent pricing. Turn unused space into your best room.
+  406-551-5061.
+h1: Basement Remodeling in Bozeman
+hero_image: /img/hero/basement-remodeling-bozeman.webp
+hero_subtitle: Turn unused square footage into your favorite room.
+service_tag: basement
+permalink: /basement/remodeling/
+schema_type: Service
 ---
 
 ## That Space Downstairs Could Be Your Best Room
@@ -64,6 +67,8 @@ Real numbers from Bozeman-area basement projects:
 
 What drives the cost: total square footage, number of rooms, whether you add a bathroom (plumbing through the slab adds cost), egress window requirements, and finish level.
 
+For a detailed cost breakdown with Bozeman-specific factors, see [what it costs to finish a basement in Bozeman](/what-does-it-cost-to-finish-a-basement-in-bozeman/).
+
 ### The Egress Window Question
 
 If your basement will have a bedroom, you need an egress window. Budget roughly $3,000-$5,000 per window including excavation, the window well, and the window itself. It's a code requirement, not optional — and it's also the thing that makes the room feel like a real bedroom instead of a cave.
@@ -78,9 +83,13 @@ You see the bedroom layout, the bathroom placement, where the TV goes, how the w
 
 **Moisture.** Bozeman gets snow. Snow melts. Water finds its way to the lowest point — your basement. Any basement finish needs to account for spring runoff and address drainage before finishes go in.
 
+Not sure if your space is ready? Read about [when you should — and shouldn't — finish a basement in Bozeman](/when-should-you-not-finish-a-basement-in-bozeman-mt/).
+
 **Insulation.** Montana winters mean your basement needs proper insulation to be comfortable. Below-grade walls lose heat differently than above-grade, and the insulation strategy matters for both comfort and energy costs.
 
 **Permits.** Gallatin County requires permits for basement finishes that include bedrooms, bathrooms, or structural changes. I handle the permitting process and make sure everything is inspected and approved.
+
+See [examples of our finished work](/our-work/) and read [what homeowners say about the experience](/reviews/).
 
 ## Ready to Use That Space?
 

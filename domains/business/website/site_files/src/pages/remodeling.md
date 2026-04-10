@@ -1,13 +1,18 @@
 ---
 layout: layouts/page-service.njk
-title: "General Remodeling Bozeman | Heartwood Craft | Licensed & Insured"
-meta_description: "Home remodeling in Bozeman, MT. Custom decks, whole-home renovations, structural updates, and finish carpentry. Licensed and insured. Call 406-551-5061."
-h1: "General Remodeling in Bozeman"
-hero_image: "/img/hero/bozeman-remodeling.webp"
-hero_subtitle: "Custom decks, whole-home renovations, and the carpentry that ties it all together."
-service_tag: "remodeling"
-permalink: "/remodeling/"
-schema_type: "Service"
+title: General Remodeling Bozeman | Heartwood Craft | Licensed & Insured
+meta_description: >-
+  Home remodeling in Bozeman, MT. Custom decks, whole-home renovations,
+  structural updates, and finish carpentry. Licensed and insured. Call
+  406-551-5061.
+h1: General Remodeling in Bozeman
+hero_image: /img/hero/bozeman-remodeling.webp
+hero_subtitle: >-
+  Custom decks, whole-home renovations, and the carpentry that ties it all
+  together.
+service_tag: remodeling
+permalink: /remodeling/
+schema_type: Service
 ---
 
 ## When Your Project Doesn't Fit Neatly Into a Box
@@ -33,6 +38,8 @@ Whether it's a simple platform off the back door or a multi-level space with bui
 
 **Want a quick ballpark?** Try the [deck cost calculator](/deck-calculator/) — 7 questions, real numbers from local projects.
 
+Not sure which style fits your yard? Learn about [the four main deck types for Bozeman homes](/what-are-the-4-types-of-decks-for-bozeman-homes/).
+
 ## Whole-Home Renovations
 
 When the project spans multiple rooms or involves structural changes, having one contractor manage the entire scope keeps things organized and on budget. I coordinate all the trades — plumbing, electrical, drywall, painting — and manage the timeline so work flows in the right order.
@@ -44,6 +51,8 @@ Common whole-home projects I handle:
 - **Multi-room refreshes** — painting, flooring, trim throughout
 - **Structural repairs** — sagging floors, water damage, foundation issues
 - **Aging-in-place modifications** — grab bars, walk-in showers, wider doorways
+
+Unexpected discoveries are part of working in older homes — learn about [the most common hidden renovation costs from real Bozeman projects](/what-are-hidden-renovation-costs/).
 
 ## Custom Carpentry & Finish Work
 
@@ -68,6 +77,8 @@ Regardless of scope, every project follows the same structured approach:
 - **Formal change orders** for any scope changes — priced and approved before I proceed
 
 No surprises. No crossed fingers. Just clear communication from start to finish. See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
+
+See [examples of our work](/our-work/) and read [what clients say about the experience](/reviews/).
 
 ## Ready to Talk About Your Project?
 

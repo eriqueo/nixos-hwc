@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "What's the Biggest Deck You Can Build Without a Permit in Bozeman, MT?"
-meta_description: "In Bozeman, decks under 30 inches above grade don't require a permit — but there are real limits and real risks. Here's what you need to know before you build."
-date: 2025-11-01
-tags: ["deck", "bozeman", "permits"]
-permalink: "/what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/"
+title: 'What''s the Biggest Deck You Can Build Without a Permit in Bozeman, MT?'
+meta_description: >-
+  In Bozeman, decks under 30 inches above grade don't require a permit — but
+  there are real limits and real risks. Here's what you need to know before you
+  build.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - deck
+  - bozeman
+  - permits
+permalink: /what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/
 ---
 
 Bozeman homeowners ask about permits early in the deck planning process, and for good reason. The permit question determines your timeline, your costs, and what a contractor can legally build for you. Getting this wrong has consequences that surface later — at resale, during an insurance claim, or when the city shows up.
@@ -45,7 +51,7 @@ Yes, with realistic expectations about what that buys you.
 
 At $5,000, you're looking at a ground-level deck around 200–250 square feet using pressure-treated lumber or basic composite boards. DIY labor can reduce costs, but you still need concrete footings, proper hardware, and materials that meet Bozeman's structural requirements.
 
-The budget ceiling drops quickly when you add railings, stairs, or premium decking. A 12x20 pressure-treated deck with railings and stairs typically runs $8,000–$12,000 when professionally built with Bozeman-appropriate materials. Composite starts at $12,000 for the same size.
+The budget ceiling drops quickly when you add railings, stairs, or premium decking. A 12x20 pressure-treated deck with railings and stairs typically runs $8,000–$12,000 when professionally built with Bozeman-appropriate materials. Composite starts at $12,000 for the same size. Try the [deck cost calculator](/deck-calculator/) for a quick estimate tailored to your project.
 
 Cutting corners on footings or fasteners to hit a budget target is the wrong trade-off. In Montana's climate, those are exactly the components that fail first if they're undersized or improperly installed. The repairs cost more than doing it right initially.
 
@@ -66,3 +72,5 @@ The permit threshold in Bozeman is 30 inches above grade. Below that, no permit 
 Unpermitted work that should have been permitted creates problems that are expensive, time-consuming, and sometimes legally complicated to resolve. The permit process in Bozeman is genuinely manageable — I navigate it on every project and build the timeline and fees into every estimate from the start.
 
 Need help navigating Bozeman's permit process? I handle that as part of every deck project. [Here's how it works.](/how-it-works/)
+
+Ready to start planning? [Get in touch](/contact/) or learn about [proper deck foundations for Bozeman's climate](/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).

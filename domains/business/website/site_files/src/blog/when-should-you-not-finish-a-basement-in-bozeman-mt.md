@@ -1,10 +1,17 @@
 ---
 layout: layouts/page-blog.njk
-title: "When Should You Not Finish a Basement in Bozeman?"
-meta_description: "Honest signs that your Bozeman basement isn't ready to finish — moisture problems, ceiling height, structural issues, and when waiting is the smarter move."
-date: 2025-11-01
-tags: ["basement", "bozeman", "tips", "process"]
-permalink: "/when-should-you-not-finish-a-basement-in-bozeman-mt/"
+title: When Should You Not Finish a Basement in Bozeman?
+meta_description: >-
+  Honest signs that your Bozeman basement isn't ready to finish — moisture
+  problems, ceiling height, structural issues, and when waiting is the smarter
+  move.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - basement
+  - bozeman
+  - tips
+  - process
+permalink: /when-should-you-not-finish-a-basement-in-bozeman-mt/
 ---
 
 Finishing a basement can add real value and livable square footage to a Bozeman home. But it's not always the right move — and doing it under the wrong conditions creates problems that cost significantly more to fix than the original project would have.
@@ -64,7 +71,7 @@ A basement is a good candidate for finishing when:
 - Existing mechanicals (electrical panel, HVAC) have capacity for the added load
 - Your budget can accommodate the full scope, including proper insulation to R-15 and any required egress windows
 
-A finished basement done right — permitted, inspected, insulated to current code, with egress windows where bedrooms are in the plan — adds genuine appraised value and performs well at resale. The "done right" part is load-bearing.
+A finished basement done right — permitted, inspected, insulated to current code, with egress windows where bedrooms are in the plan — adds genuine appraised value and performs well at resale. The "done right" part is load-bearing. Learn more about our approach on the [basement remodeling service page](/basement/remodeling/), including 3D design previews and itemized estimates.
 
 ## Does a Finished Basement Help When You Sell?
 
@@ -72,7 +79,7 @@ Yes, but only if it was built correctly. A properly finished basement with permi
 
 A poorly finished basement — unpermitted work, moisture problems, inadequate egress — can actually hurt your negotiating position compared to an unfinished space. An unfinished basement sets clear expectations. A questionable finish raises questions about everything else in the house.
 
-The finish quality isn't what creates value. The quality and compliance behind the finish is.
+The finish quality isn't what creates value. The quality and compliance behind the finish is. For real cost ranges and what drives the number, see [what it costs to finish a basement in Bozeman](/what-does-it-cost-to-finish-a-basement-in-bozeman/) or [what a contractor charges for basement finishing](/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/).
 
 ---
 

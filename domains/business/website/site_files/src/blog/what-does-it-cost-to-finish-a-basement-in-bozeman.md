@@ -1,13 +1,19 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Does It Cost to Finish a Basement in Bozeman?"
-meta_description: "Finishing a basement in Bozeman runs $25,000–$75,000+ depending on size and scope. Here's what drives the price, Bozeman-specific factors, and how long it takes."
-date: 2026-03-28
-tags: ["basement", "bozeman", "cost"]
-permalink: "/what-does-it-cost-to-finish-a-basement-in-bozeman/"
+title: What Does It Cost to Finish a Basement in Bozeman?
+meta_description: >-
+  Finishing a basement in Bozeman runs $25,000–$75,000+ depending on size and
+  scope. Here's what drives the price, Bozeman-specific factors, and how long it
+  takes.
+date: '2026-03-28T00:00:00.000Z'
+tags:
+  - basement
+  - bozeman
+  - cost
+permalink: /what-does-it-cost-to-finish-a-basement-in-bozeman/
 ---
 
-Finishing a basement in Bozeman typically runs $25,000 to $75,000+, depending on size, scope, and whether you're adding a bathroom. That range covers a lot of ground — a basic finished rec room is a fundamentally different project than a full lower level with a bedroom, bathroom, and wet bar. Here's how to figure out where your project lands.
+Finishing a basement in Bozeman typically runs $25,000 to $75,000+, depending on size, scope, and whether you're adding a bathroom. That range covers a lot of ground — a basic finished rec room is a fundamentally different project than a full lower level with a bedroom, bathroom, and wet bar. Here's how to figure out where your project lands. For a full overview of the process, see our [basement remodeling service page](/basement/remodeling/).
 
 ## What You Get at Each Price Point
 
@@ -29,7 +35,7 @@ If you want a full bathroom — not just a half bath, but a shower — the rough
 
 Finishing a basement in the Gallatin Valley isn't the same as finishing one in, say, Denver or Seattle. A few things specific to this area:
 
-**Moisture.** The Gallatin Valley has real groundwater pressure, spring snowmelt, and wet springs. A basement that seems dry in October might take on moisture in April. Before any insulation or framing goes in, I assess the moisture situation — efflorescence on walls, staining patterns, history of water intrusion. If moisture is present, it gets addressed before it gets covered up. Finishing over an active moisture problem is how you get mold in a brand-new basement two years later.
+**Moisture.** The Gallatin Valley has real groundwater pressure, spring snowmelt, and wet springs. A basement that seems dry in October might take on moisture in April. Before any insulation or framing goes in, I assess the moisture situation — efflorescence on walls, staining patterns, history of water intrusion. If moisture is present, it gets addressed before it gets covered up. Finishing over an active moisture problem is how you get mold in a brand-new basement two years later. Not sure if your basement is ready? Read [when you should — and shouldn't — finish a basement](/when-should-you-not-finish-a-basement-in-bozeman-mt/).
 
 **Insulation requirements.** Montana's energy code (IECC) requires R-15 minimum for basement walls. That's not optional and it's not something to underspec — Bozeman winters are real, and an under-insulated basement is uncomfortable and expensive to heat. I use continuous rigid foam on the exterior face of framing, sometimes combined with batt insulation in the stud cavity depending on the assembly.
 
@@ -71,7 +77,7 @@ The inspections aren't a bureaucratic nuisance. They're the reason the work is d
 
 A finished basement adds livable square footage at a lower cost-per-square-foot than any addition. In Bozeman's housing market, that square footage has real value — both for how you use the space and for resale. A well-finished basement with a bathroom is attractive to buyers in a way that an unfinished one is not.
 
-The math works. The question is what scope makes sense for your house, your budget, and how long you plan to be there.
+The math works. The question is what scope makes sense for your house, your budget, and how long you plan to be there. For a contractor's perspective on pricing, see [how much a contractor charges to finish a basement in Bozeman](/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/).
 
 ---
 

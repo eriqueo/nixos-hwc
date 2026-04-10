@@ -1,10 +1,17 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Adds the Most Value to a Bathroom Remodel?"
-meta_description: "Walk-in shower conversions, updated tile, and proper ventilation consistently return the most value in Bozeman bathroom remodels. Here's what actually moves the needle."
-date: 2025-11-01
-tags: ["bathroom", "bozeman", "cost", "tips"]
-permalink: "/what-adds-the-most-value-to-a-bathroom/"
+title: What Adds the Most Value to a Bathroom Remodel?
+meta_description: >-
+  Walk-in shower conversions, updated tile, and proper ventilation consistently
+  return the most value in Bozeman bathroom remodels. Here's what actually moves
+  the needle.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - bathroom
+  - bozeman
+  - cost
+  - tips
+permalink: /what-adds-the-most-value-to-a-bathroom/
 ---
 
 Not every bathroom upgrade is worth the same money. Some changes dramatically improve both daily use and resale appeal. Others are expensive and barely register at sale. Before you start pulling up tile, here's an honest look at which upgrades actually move the needle — and which ones are mostly for you.
@@ -15,7 +22,7 @@ If your bathroom still has a tub-shower combo — especially a fiberglass insert
 
 A dedicated walk-in shower with large-format porcelain tile, a frameless glass panel, and a linear drain reads as genuinely modern to buyers. It transforms how the room feels. Buyers in Bozeman — many of them coming from Denver, Seattle, or the Bay Area — are used to seeing this in mid-range and above homes. When they don't find it, they notice.
 
-The cost for a tub-to-shower conversion typically runs $12,000–$20,000 depending on tile selection, glass configuration, and whether plumbing needs to move. That's not cheap, but it's also the upgrade I've seen do more work at the sale table than almost anything else.
+The cost for a tub-to-shower conversion typically runs $12,000–$20,000 depending on tile selection, glass configuration, and whether plumbing needs to move. That's not cheap, but it's also the upgrade I've seen do more work at the sale table than almost anything else. See the full scope of what's included on our [bathroom remodeling service page](/bathroom/remodeling/).
 
 Keep the tub if you have two bathrooms and it's in the secondary one. Buyers with kids want a tub somewhere. But in a primary bathroom, a properly built walk-in shower usually wins.
 
@@ -96,3 +103,5 @@ Focus your budget on the primary bathroom first. That's where buyers pay the mos
 Secondary bathrooms benefit from functional updates — new fixtures, fresh tile, good ventilation — but don't need the same level of investment. A clean, well-lit secondary bathroom beats a fancy one every time.
 
 Want to see which upgrades make the biggest difference in your bathroom? [Try the calculator →](/calculator/)
+
+Ready to talk specifics? [Get in touch](/contact/) to schedule a site visit.

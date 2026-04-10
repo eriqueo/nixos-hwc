@@ -34,11 +34,9 @@ layout: layouts/base.njk
 </div>
 {% endif %}
 
-{{ content | safe }}
+{% include "partials/section-portfolio-strip.njk" %}
 
-{% if process_link_text %}
-<p class="text-center section-link-below"><a href="{{ process_link_url | default('/how-it-works/') }}">{{ process_link_text }} &rarr;</a></p>
-{% endif %}
+{{ content | safe }}
 
 {% if show_services != false %}
 {% include "partials/section-services-grid.njk" %}

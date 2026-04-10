@@ -1,13 +1,16 @@
 ---
 layout: layouts/page-service.njk
-title: "Bathroom Remodel Bozeman | Heartwood Craft | Licensed & Insured"
-meta_description: "Bathroom remodeling in Bozeman, MT. 3D design previews, itemized estimates, and clear communication. Gut remodels, refreshes, and tub-to-shower conversions. 406-551-5061."
-h1: "Bathroom Remodeling in Bozeman"
-hero_image: "/img/hero/bathroom-renovation-bozeman.webp"
-hero_subtitle: "3D design previews, transparent estimates, and craftsmanship that lasts."
-service_tag: "bathroom"
-permalink: "/bathroom/remodeling/"
-schema_type: "Service"
+title: Bathroom Remodel Bozeman | Heartwood Craft | Licensed & Insured
+meta_description: >-
+  Bathroom remodeling in Bozeman, MT. 3D design previews, itemized estimates,
+  and clear communication. Gut remodels, refreshes, and tub-to-shower
+  conversions. 406-551-5061.
+h1: Bathroom Remodeling in Bozeman
+hero_image: /img/hero/bathroom-renovation-bozeman.webp
+hero_subtitle: '3D design previews, transparent estimates, and craftsmanship that lasts.'
+service_tag: bathroom
+permalink: /bathroom/remodeling/
+schema_type: Service
 ---
 
 ## Your Bathroom Should Work for You, Not Against You
@@ -58,6 +61,8 @@ Here's exactly what happens when you call:
 
 See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
 
+Wondering what daily life looks like during the build? Read [what to expect during a bathroom remodel](/what-to-expect-during-a-bathroom-remodel-in-bozeman/).
+
 ## What It Costs
 
 I believe in being upfront about pricing. Here are real ranges based on actual Heartwood Craft projects in Bozeman:
@@ -68,6 +73,8 @@ I believe in being upfront about pricing. Here are real ranges based on actual H
 - **High-end or large master bath**: **$35,000 - $50,000+**
 
 What determines where you land: bathroom size, tile and fixture selections, plumbing changes, and what we find behind the walls.
+
+For a detailed breakdown of what drives the price, see [what a bathroom remodel actually costs in Bozeman](/what-does-a-bathroom-remodel-cost-in-bozeman/).
 
 ### How Allowances Work
 
@@ -84,6 +91,8 @@ Not a sketch. Not a Pinterest board with "something like this." A photorealistic
 You can see how the penny round floor tile works with the subway shower walls. You can see whether the double vanity makes the room feel cramped. You can decide between the frameless glass door and the barn door slider before I order anything.
 
 After the build, we have the three-image story: before, rendering, completed. That's proof I deliver what I promise.
+
+Browse [completed bathroom projects in our portfolio](/our-work/) and read [what Bozeman homeowners say about working with us](/reviews/).
 
 ## Ready to Talk?
 

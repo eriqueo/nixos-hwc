@@ -1,15 +1,21 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Are Hidden Renovation Costs? Real Examples from Bozeman Jobs"
-meta_description: "Moisture damage, outdated electrical, asbestos in pre-1980 homes, permit fees — here's what actually shows up in Bozeman remodels and how to plan for it."
-date: 2025-11-01
-tags: ["remodeling", "bozeman", "cost", "tips"]
-permalink: "/what-are-hidden-renovation-costs/"
+title: What Are Hidden Renovation Costs? Real Examples from Bozeman Jobs
+meta_description: >-
+  Moisture damage, outdated electrical, asbestos in pre-1980 homes, permit fees
+  — here's what actually shows up in Bozeman remodels and how to plan for it.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - remodeling
+  - bozeman
+  - cost
+  - tips
+permalink: /what-are-hidden-renovation-costs/
 ---
 
 Every experienced contractor will tell you the same thing: the real cost of a remodel isn't always visible before demolition starts. That's not an excuse — it's the nature of working in existing structures. Walls hide things. And in Bozeman, with a lot of housing stock from the 1960s through the 1980s, walls hide things more often than average.
 
-Here's what I actually encounter on jobs, what it typically costs, and how I try to minimize surprises before they become budget shocks.
+Here's what I actually encounter on jobs, what it typically costs, and how I try to minimize surprises before they become budget shocks. For a broader look at what projects cost overall, see [what a bathroom remodel costs in Bozeman](/what-does-a-bathroom-remodel-cost-in-bozeman/) or our [remodeling services overview](/remodeling/).
 
 ## Moisture Damage Behind Walls
 
@@ -25,7 +31,7 @@ Bozeman has a lot of homes built before modern electrical standards were in plac
 
 This isn't optional — the City of Bozeman's inspectors check this work, and they will not sign off on a bathroom remodel that leaves unsafe wiring in place. Nor should they.
 
-Bringing a bathroom's electrical up to code typically adds $400–$1,200 to a project. Plumbing corrections that require rerouting a drain or replacing galvanized pipe can run $800–$2,500 depending on access and scope. These numbers feel like surprises only when they weren't anticipated — which is why I try to set honest expectations about older homes before we start.
+Bringing a bathroom's electrical up to code typically adds $400–$1,200 to a project. Plumbing corrections that require rerouting a drain or replacing galvanized pipe can run $800–$2,500 depending on access and scope. These numbers feel like surprises only when they weren't anticipated — which is why I try to set honest expectations about older homes before we start. These are the kinds of issues a good contractor knows to look for — read [how to choose a remodeling contractor in Bozeman](/how-to-choose-a-remodeling-contractor-in-bozeman/) for what to ask during the vetting process.
 
 ## Asbestos in Pre-1980 Homes
 

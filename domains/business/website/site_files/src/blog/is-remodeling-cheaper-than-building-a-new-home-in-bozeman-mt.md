@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "Is Remodeling Cheaper Than Building New in Bozeman, MT?"
-meta_description: "New construction in Bozeman runs $250–$300/sqft. A full remodel typically costs $50K–$150K. Here's an honest breakdown of both paths and which makes financial sense."
-date: 2025-11-01
-tags: ["remodeling", "bozeman", "cost"]
-permalink: "/is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/"
+title: 'Is Remodeling Cheaper Than Building New in Bozeman, MT?'
+meta_description: >-
+  New construction in Bozeman runs $250–$300/sqft. A full remodel typically
+  costs $50K–$150K. Here's an honest breakdown of both paths and which makes
+  financial sense.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - remodeling
+  - bozeman
+  - cost
+permalink: /is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/
 ---
 
 When you're weighing a major update, the question comes up: do I remodel what I have, or start fresh with new construction? It's a real financial decision, and the answer depends on your budget, your home's condition, and what you're actually trying to accomplish.
@@ -17,7 +23,7 @@ In most cases, remodeling is significantly cheaper than building new — especia
 
 A full home remodel in Bozeman typically runs $50,000 to $150,000 depending on scope and finish level. New construction in the same market often lands at $250–$300 per square foot, which means a standard 2,000 sq ft home easily clears $400,000 before you've chosen a single fixture. That gap is substantial.
 
-The advantage of remodeling is selectivity. A bathroom update, a kitchen refresh, or a flooring upgrade can dramatically improve livability and value without touching everything else. You invest where it matters most.
+The advantage of remodeling is selectivity. A bathroom update, a kitchen refresh, or a flooring upgrade can dramatically improve livability and value without touching everything else. You invest where it matters most. See the full range of projects we handle on our [remodeling services page](/remodeling/).
 
 That said, costs can escalate when structural issues surface. Outdated wiring, failing plumbing, deteriorating insulation, or foundation concerns can turn a targeted remodel into a much larger project. This is where upfront assessment matters — walking through the home carefully before committing to a budget, not after demolition starts.
 
@@ -60,3 +66,5 @@ Applied strategically across a bathroom, a basement, and targeted cosmetic updat
 The 30% framework is also useful for phasing larger projects — bathroom or kitchen first, then deck or basement when timing and budget align. This builds value progressively rather than taking on everything at once.
 
 Curious what your remodel might cost? [Try the calculator →](/calculator/)
+
+Or [reach out directly](/contact/) to discuss your specific project and get a real estimate.

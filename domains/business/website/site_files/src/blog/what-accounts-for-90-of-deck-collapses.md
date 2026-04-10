@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Accounts for 90% of Deck Collapses?"
-meta_description: "Ledger board failure, rotted posts, and bad footings cause nearly all deck collapses. Here's what to look for and how to build or inspect a deck that won't fail."
-date: 2025-11-01
-tags: ["deck", "bozeman", "safety"]
-permalink: "/what-accounts-for-90-of-deck-collapses/"
+title: What Accounts for 90% of Deck Collapses?
+meta_description: >-
+  Ledger board failure, rotted posts, and bad footings cause nearly all deck
+  collapses. Here's what to look for and how to build or inspect a deck that
+  won't fail.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - deck
+  - bozeman
+  - safety
+permalink: /what-accounts-for-90-of-deck-collapses/
 ---
 
 Deck collapses make the news because they're dramatic and injurious — but they're almost never random. The failures follow a predictable pattern, and understanding that pattern is the first step toward either building a safe deck or evaluating whether the one you have is still sound.
@@ -19,7 +25,7 @@ Three structural failures account for the vast majority of deck collapses:
 
 **Rot and corrosion in posts, joists, and fasteners.** Bozeman's snowmelt and moisture from wet shoulder seasons, combined with freeze-thaw cycling, accelerates rot in wood that wasn't properly treated or hasn't been maintained. Galvanized fasteners rust out. Joist hangers corrode. The structural members weaken from the inside of the assembly, invisible until the load they can no longer carry arrives all at once.
 
-**Poor footing installation.** Posts must anchor to concrete footings that extend below the frost line — 36 to 48 inches in Bozeman. Shallow footings heave during freeze-thaw cycles, compromising post alignment and creating dangerous load imbalances. Footings set on unstable or improperly compacted soil can settle unevenly for the same reason.
+**Poor footing installation.** Posts must anchor to concrete footings that extend below the frost line — 36 to 48 inches in Bozeman. Shallow footings heave during freeze-thaw cycles, compromising post alignment and creating dangerous load imbalances. Footings set on unstable or improperly compacted soil can settle unevenly for the same reason. For more on getting footings right in Montana's climate, see [what is the best foundation for a deck in Bozeman](/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
 
 ## Why Ledger Failures Are So Dangerous
 
@@ -76,4 +82,4 @@ You don't need to be a contractor to do a useful visual inspection. Look for:
 
 If you find any of these, the deck needs a closer look before your next gathering. Annual inspection of ledger boards, post bases, and hardware is a reasonable standard for any deck in Montana.
 
-Want to make sure your existing deck is safe — or build a new one right? [Schedule a site visit.](/contact/)
+Want to make sure your existing deck is safe — or build a new one right? [Schedule a site visit.](/contact/) Get a quick cost estimate with the [deck cost calculator](/deck-calculator/), or learn more about our [deck building services](/remodeling/).

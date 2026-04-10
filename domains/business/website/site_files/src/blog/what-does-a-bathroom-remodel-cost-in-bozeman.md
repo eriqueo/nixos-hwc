@@ -1,13 +1,18 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Does a Bathroom Remodel Cost in Bozeman?"
-meta_description: "A bathroom remodel in Bozeman runs $10,000–$50,000+ depending on scope. Here's what drives the price, how estimates are built, and what to expect."
-date: 2026-03-28
-tags: ["bathroom", "bozeman", "cost"]
-permalink: "/what-does-a-bathroom-remodel-cost-in-bozeman/"
+title: What Does a Bathroom Remodel Cost in Bozeman?
+meta_description: >-
+  A bathroom remodel in Bozeman runs $10,000–$50,000+ depending on scope. Here's
+  what drives the price, how estimates are built, and what to expect.
+date: '2026-03-28T00:00:00.000Z'
+tags:
+  - bathroom
+  - bozeman
+  - cost
+permalink: /what-does-a-bathroom-remodel-cost-in-bozeman/
 ---
 
-A bathroom remodel in Bozeman typically runs $10,000 to $50,000+, depending on scope. That's a wide range, and it's wide for a reason — replacing a toilet and vanity is a fundamentally different project than gutting a master bath down to the studs and rebuilding from scratch. Let me break down exactly what you're looking at.
+A bathroom remodel in Bozeman typically runs $10,000 to $50,000+, depending on scope. That's a wide range, and it's wide for a reason — replacing a toilet and vanity is a fundamentally different project than gutting a master bath down to the studs and rebuilding from scratch. Let me break down exactly what you're looking at. (If you already know what you want, head to our [bathroom remodeling service page](/bathroom/remodeling/) for a quick overview of how the project works.)
 
 ## What You Get at Each Price Point
 
@@ -105,6 +110,10 @@ The homeowners who end up happiest with their bathroom project are the ones who 
 
 That's what I build. If you want to see what a real estimate looks like for your project, the best first step is a site visit.
 
+[Get in touch](/contact/) to schedule a site visit and get real numbers for your project.
+
 ---
 
 Want a quick ballpark before that conversation? [Try the bathroom cost calculator](/calculator/) — 7 questions, 2 minutes, no email required.
+
+Or read [what to expect week by week during a bathroom remodel](/what-to-expect-during-a-bathroom-remodel-in-bozeman/) so you know what you're signing up for.

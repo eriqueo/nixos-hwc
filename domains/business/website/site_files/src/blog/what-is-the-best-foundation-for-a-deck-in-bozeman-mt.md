@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Is the Best Foundation for a Deck in Bozeman, MT?"
-meta_description: "The best deck foundation in Bozeman is a concrete footing or pier below the frost line — at least 36 inches deep. Here's why that matters and what your options are."
-date: 2025-11-01
-tags: ["deck", "bozeman", "tips"]
-permalink: "/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/"
+title: 'What Is the Best Foundation for a Deck in Bozeman, MT?'
+meta_description: >-
+  The best deck foundation in Bozeman is a concrete footing or pier below the
+  frost line — at least 36 inches deep. Here's why that matters and what your
+  options are.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - deck
+  - bozeman
+  - tips
+permalink: /what-is-the-best-foundation-for-a-deck-in-bozeman-mt/
 ---
 
 Most homeowners planning a deck spend their early thinking on materials and aesthetics — composite vs. wood, railing styles, stair placement. The foundation doesn't get the same attention. That's backwards.
@@ -29,7 +35,7 @@ For larger decks, elevated structures, or sites with heavy snow load considerati
 
 A common scenario I see: the deck looks fine for a season or two, then one winter the posts lift just enough to throw the frame out of level. Nothing catastrophic, just a gradual shift that gets worse each year. Boards start to gap unevenly. Railings go out of plumb. Stairs develop a lean.
 
-That's frost heave, and it's entirely preventable. The City of Bozeman enforces the 2021 International Residential Code (IRC), which requires footing inspections before framing begins on permitted deck projects. That inspection happens at the right moment — before the footings are backfilled, when there's still something to inspect. Skip the permit on an elevated deck and you skip that check.
+That's frost heave, and it's entirely preventable. Poor footings are also a leading cause of [deck collapses — here's what accounts for 90% of them](/what-accounts-for-90-of-deck-collapses/). The City of Bozeman enforces the 2021 International Residential Code (IRC), which requires footing inspections before framing begins on permitted deck projects. That inspection happens at the right moment — before the footings are backfilled, when there's still something to inspect. Skip the permit on an elevated deck and you skip that check.
 
 ## What Kind of Foundation Do You Need?
 
@@ -72,3 +78,5 @@ If it is, the corner is a true 90 degrees. Scale up for larger structures: 6/8/1
 In Bozeman's climate, the foundation isn't where you save money. It's where you protect everything built above it. Concrete footings below the frost line, metal post bases that keep wood off concrete, and proper drainage below the frame — these aren't luxury details. They're the baseline for a deck that survives Montana winters without becoming a maintenance problem.
 
 Ready to build on a solid foundation? [Let's talk about your deck project.](/contact/)
+
+Get a quick cost estimate with the [deck cost calculator](/deck-calculator/), or learn more about our [deck building services](/remodeling/).

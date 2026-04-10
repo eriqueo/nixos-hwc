@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "Does Home Depot Do Bathroom Remodels? Honest Comparison."
-meta_description: "Home Depot offers bathroom remodels through subcontractors, with standard packages ranging $12K–$25K. Here's how that compares to hiring a local Bozeman contractor."
-date: 2025-11-01
-tags: ["bathroom", "bozeman", "cost"]
-permalink: "/does-home-depot-do-bathroom-remodels/"
+title: Does Home Depot Do Bathroom Remodels? Honest Comparison.
+meta_description: >-
+  Home Depot offers bathroom remodels through subcontractors, with standard
+  packages ranging $12K–$25K. Here's how that compares to hiring a local Bozeman
+  contractor.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - bathroom
+  - bozeman
+  - cost
+permalink: /does-home-depot-do-bathroom-remodels/
 ---
 
 Yes, Home Depot does offer bathroom remodeling services. Before you write them off or book them, here's an honest look at how their program actually works — and where it fits versus where a local contractor makes more sense.
@@ -53,7 +59,7 @@ Here's what my process looks like on a typical bathroom project, so you have som
 
 The project starts with a site visit. I walk through the bathroom, note the age of the home, look for signs of moisture, assess the plumbing and electrical situation, and identify anything that might complicate the project. That visit produces a site assessment that informs an accurate estimate — not a template quote adjusted for square footage.
 
-From there, I run through a design process using 3D rendering software. You can see what your tile selection looks like on the floor and walls together, whether the vanity size feels right for the space, and how the lighting changes the room. Changes at this stage cost nothing. Changes after tile is set cost a lot.
+From there, I run through a design process using 3D rendering software. You can see what your tile selection looks like on the floor and walls together, whether the vanity size feels right for the space, and how the lighting changes the room. Changes at this stage cost nothing. Changes after tile is set cost a lot. Learn more about [our full bathroom remodeling approach](/bathroom/remodeling/), including cost ranges and what's included.
 
 Once selections are finalized, I submit permits to the City of Bozeman through the ProjectDox portal and order materials. Construction doesn't start until permits are approved and materials are on site. That pre-construction phase typically runs 3–5 weeks.
 
@@ -90,3 +96,5 @@ If you have a straightforward project — replace a dated tub with a standard sh
 If your project involves any complexity, any older home conditions, any custom design, or any desire for direct communication with the contractor building your bathroom, you're better served by hiring locally.
 
 Want to compare? [See my process →](/how-it-works/) or [request a consultation →](/contact/)
+
+You can also try the [bathroom cost calculator](/calculator/) for a quick ballpark — no email required.

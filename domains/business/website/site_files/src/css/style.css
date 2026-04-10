@@ -18,7 +18,7 @@
   --text: #2d2d2d;
   --text-muted: #6b7280;
   --white: #ffffff;
-  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Source Serif 4', Georgia, serif;
   --font-heading: 'Playfair Display', Georgia, serif;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -78,10 +78,8 @@ p { line-height: 1.7; margin-bottom: 1rem; }
 .section-alt { background: var(--warm-gray); }
 .section-white { background: var(--white); }
 .text-center { text-align: center; }
-.section-subtitle { color: var(--gray-600); font-size: var(--text-lg); max-width: 600px; margin-bottom: var(--space-md); }
-.text-center .section-subtitle { margin-left: auto; margin-right: auto; }
+.section-subtitle { color: var(--gray-600); font-size: var(--text-lg); max-width: 600px; margin: 0 auto var(--space-md); }
 .tagline { font-size: clamp(1.25rem, 1rem + 0.7vw, 1.625rem); font-weight: 600; color: var(--charcoal); line-height: 1.4; }
-.section-link-below { margin-top: calc(var(--space-lg) * -1); margin-bottom: var(--space-lg); }
 
 .grid-2, .grid-3, .services-grid, .testimonial-grid, .blog-grid, .portfolio-grid {
   display: grid;
@@ -96,6 +94,7 @@ p { line-height: 1.7; margin-bottom: 1rem; }
 @media (min-width: 1024px) {
   .grid-3, .services-grid { grid-template-columns: repeat(3, 1fr); }
   .testimonial-grid { grid-template-columns: repeat(3, 1fr); }
+  .blog-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* ---- Header (sticky) ---- */
@@ -410,7 +409,7 @@ p { line-height: 1.7; margin-bottom: 1rem; }
   padding: 2rem;
   transition: transform 0.2s, box-shadow 0.2s;
 }
-.card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+a.card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
 
 /* Service cards */
 .service-card {
@@ -586,14 +585,15 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .footer-logo-text {
   font-family: var(--font-heading);
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   font-weight: 700;
-  color: var(--white);
-  letter-spacing: 0.05em;
+  color: var(--warm-white);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 .footer-logo { text-decoration: none; }
 .footer-logo:hover { text-decoration: none; }
-.footer-tagline { color: var(--gray-400); margin: var(--space-xs) 0 var(--space-sm); }
+.footer-tagline { color: var(--copper-light); font-style: italic; margin: var(--space-xs) 0 var(--space-sm); }
 .footer-contact { display: flex; flex-direction: column; gap: var(--space-xs); }
 .footer-contact-link {
   display: inline-flex;
@@ -714,7 +714,7 @@ textarea { resize: vertical; min-height: 100px; }
 .trust-bar {
   background: var(--charcoal);
   border-top: 2px solid var(--copper);
-  padding: 0.75rem 0;
+  padding: 1rem 0;
 }
 .trust-bar-inner {
   display: flex;
@@ -777,4 +777,36 @@ textarea { resize: vertical; min-height: 100px; }
 .areas-links a {
   font-weight: 600;
   font-size: var(--text-lg);
+}
+
+/* ---- Homepage: Portfolio Strip ---- */
+.portfolio-strip {
+  padding: var(--space-md) 0;
+}
+.portfolio-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+}
+@media (min-width: 768px) {
+  .portfolio-strip-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.portfolio-strip-grid img {
+  width: 100%;
+  height: 280px;
+  object-fit: cover;
+  border-radius: var(--border-radius-lg);
+}
+
+/* ---- Section Divider (vintage tool icons) ---- */
+.section-divider {
+  text-align: center;
+  padding: var(--space-md) 0;
+}
+.section-divider img {
+  height: 80px;
+  width: auto;
+  opacity: 0.35;
+  filter: sepia(0.3);
+  display: inline-block;
 }

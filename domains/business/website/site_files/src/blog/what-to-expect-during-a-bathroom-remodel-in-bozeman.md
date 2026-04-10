@@ -1,15 +1,21 @@
 ---
 layout: layouts/page-blog.njk
-title: "What to Expect During a Bathroom Remodel in Bozeman"
-meta_description: "A week-by-week look at what actually happens during a bathroom remodel — timeline, daily life disruption, how communication works, and the emotional curve."
-date: 2026-03-28
-tags: ["bathroom", "bozeman", "process"]
-permalink: "/what-to-expect-during-a-bathroom-remodel-in-bozeman/"
+title: What to Expect During a Bathroom Remodel in Bozeman
+meta_description: >-
+  A week-by-week look at what actually happens during a bathroom remodel —
+  timeline, daily life disruption, how communication works, and the emotional
+  curve.
+date: '2026-03-28T00:00:00.000Z'
+tags:
+  - bathroom
+  - bozeman
+  - process
+permalink: /what-to-expect-during-a-bathroom-remodel-in-bozeman/
 ---
 
 Most remodeling anxiety comes from not knowing what's coming next. You're living in your house, the bathroom is torn apart, and it's hard to tell if what you're looking at is progress or a problem. This post is the honest walkthrough — what happens each week, what daily life looks like during construction, and what to do when something unexpected shows up.
 
-This is based on how I run a typical full gut bathroom remodel in Bozeman. Simpler refreshes move faster. Complex master baths take longer. But the phases are the same.
+This is based on how I run a typical full gut bathroom remodel in Bozeman. Simpler refreshes move faster. Complex master baths take longer. But the phases are the same. For pricing details on each scope level, see [what a bathroom remodel costs in Bozeman](/what-does-a-bathroom-remodel-cost-in-bozeman/).
 
 ## Week by Week: What's Actually Happening
 
@@ -90,3 +96,5 @@ No surprise bills at the end. Every dollar of additional scope is agreed to befo
 ---
 
 Want the full picture from first call to final walkthrough? [See how it works →](/how-it-works/)
+
+Want a ballpark before scheduling a site visit? Try the [bathroom cost calculator](/calculator/) — 7 questions, 2 minutes, no email required. Or [reach out directly](/contact/) to start the conversation.

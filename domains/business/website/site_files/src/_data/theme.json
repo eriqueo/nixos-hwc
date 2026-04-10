@@ -38,6 +38,6 @@
     "bodyPadding": "1.75rem 2rem 2rem"
   },
   "trustBar": {
-    "fontSize": "0.875rem"
+    "fontSize": "1rem"
   }
 }

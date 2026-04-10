@@ -1,10 +1,15 @@
 ---
 layout: layouts/page-blog.njk
-title: "Is a 12x20 Deck Big Enough for a Bozeman Home?"
-meta_description: "A 12x20 deck gives you 240 sq ft — enough for dining, lounging, and a grill. Here's what that looks like in practice and what it costs in Bozeman."
-date: 2025-11-01
-tags: ["deck", "bozeman", "cost"]
-permalink: "/is-a-12x20-deck-big-enough-for-a-bozeman-home/"
+title: Is a 12x20 Deck Big Enough for a Bozeman Home?
+meta_description: >-
+  A 12x20 deck gives you 240 sq ft — enough for dining, lounging, and a grill.
+  Here's what that looks like in practice and what it costs in Bozeman.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - deck
+  - bozeman
+  - cost
+permalink: /is-a-12x20-deck-big-enough-for-a-bozeman-home/
 ---
 
 When Bozeman homeowners start planning a deck, one of the first questions is size. The 12x20 footprint comes up constantly. At 240 square feet, it hits a practical sweet spot — versatile enough for real outdoor living, affordable enough for most budgets.
@@ -34,7 +39,7 @@ Material choice drives the cost range more than almost anything else. Here's wha
 
 **PVC decking: $15,000–$22,000.** Fully synthetic, no wood fiber, maximum moisture resistance. The right call for sites with heavy snow accumulation or homeowners who want minimal lifetime maintenance. Slightly higher upfront, but the performance in demanding conditions is hard to match.
 
-These ranges cover materials and basic installation. Railings, stairs, built-in lighting, permit fees, frost-depth footings, ledger waterproofing, and any grading work all add to the final number. I put together detailed line-item estimates for every project so you know exactly what you're investing in before we break ground.
+These ranges cover materials and basic installation. Railings, stairs, built-in lighting, permit fees, frost-depth footings, ledger waterproofing, and any grading work all add to the final number. I put together detailed line-item estimates for every project so you know exactly what you're investing in before we break ground. Try the [deck cost calculator](/deck-calculator/) for a quick ballpark based on real Gallatin Valley pricing.
 
 ## What's the Ideal Deck Size?
 
@@ -62,6 +67,6 @@ The cost difference between a 10x20 and 12x20 is roughly $1,000–$3,000 dependi
 
 For most Bozeman families, yes. It provides the outdoor living space needed for everyday use and casual entertaining, and when it's built from the right materials and engineered for Montana's snow loads and frost conditions, it holds up well through every season.
 
-The main limitation is ambition. If your vision involves large gatherings, multiple entertainment zones, or an outdoor kitchen with dedicated prep and dining space, sizing up before construction starts is the smarter move. A well-built 12x20 that's right for how you live beats a larger deck that stretches the budget and sits half-empty.
+The main limitation is ambition. If your vision involves large gatherings, multiple entertainment zones, or an outdoor kitchen with dedicated prep and dining space, sizing up before construction starts is the smarter move. A well-built 12x20 that's right for how you live beats a larger deck that stretches the budget and sits half-empty. For a deeper look at foundation and structural considerations, read [what is the best foundation for a deck in Bozeman](/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
 
-Wondering what size deck fits your yard and budget? [Let's talk about it.](/contact/)
+Wondering what size deck fits your yard and budget? [Let's talk about it.](/contact/) You can also learn more about our [deck building and remodeling services](/remodeling/).

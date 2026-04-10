@@ -1,10 +1,16 @@
 ---
 layout: layouts/page-blog.njk
-title: "What Is a Reasonable Budget for a Bathroom Remodel in Bozeman?"
-meta_description: "Real cost ranges for a bathroom remodel in Bozeman, MT — from cosmetic refreshes to full gut jobs, with local labor rates and what actually drives the price."
-date: 2025-11-01
-tags: ["bathroom", "bozeman", "cost"]
-permalink: "/what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/"
+title: What Is a Reasonable Budget for a Bathroom Remodel in Bozeman?
+meta_description: >-
+  Real cost ranges for a bathroom remodel in Bozeman, MT — from cosmetic
+  refreshes to full gut jobs, with local labor rates and what actually drives
+  the price.
+date: '2025-11-01T00:00:00.000Z'
+tags:
+  - bathroom
+  - bozeman
+  - cost
+permalink: /what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/
 ---
 
 Bozeman remodeling costs catch a lot of people off guard. Materials aren't cheap here, skilled trade labor is in demand, and the city's permitting process adds time and money that homeowners from bigger markets don't always expect. Here's what I tell people when they ask what a bathroom project should actually cost.
@@ -29,7 +35,7 @@ If you're building a number to take into a contractor conversation, here's a pra
 - **Mid-range gut remodel**: $18,000–$35,000
 - **High-end or large bathroom**: $35,000+
 
-The mid-range tier is what I work on most often and where you get the strongest return — around 70–80% ROI based on what I see at resale in this market. It covers new tile, updated plumbing fixtures, a new vanity, flooring, improved ventilation, and proper waterproofing.
+The mid-range tier is what I work on most often and where you get the strongest return — around 70–80% ROI based on what I see at resale in this market. It covers new tile, updated plumbing fixtures, a new vanity, flooring, improved ventilation, and proper waterproofing. Learn more about exactly what's included on our [bathroom remodeling page](/bathroom/remodeling/).
 
 One note on the lower end: $10,000 gets you a solid refresh, but it doesn't cover plumbing moves, structural work, or any scope that requires a permit. Know which kind of project you have before you set your number.
 
@@ -49,7 +55,7 @@ Custom shower glass, heated floors, and specialty tile are real cost drivers too
 
 In Bozeman, not really. At $5,000 you can repaint, swap a mirror, change out a faucet, and maybe replace a light fixture. That's it. You're not touching tile, plumbing, flooring, or the shower.
 
-If your budget is tight and you can't get to $10,000–$12,000 yet, the phased approach works well. Prioritize the things that will cause damage if deferred — ventilation, waterproofing, anything with moisture risk — and plan the cosmetic upgrades for a second phase when the budget is there.
+If your budget is tight and you can't get to $10,000–$12,000 yet, the phased approach works well. Prioritize the things that will cause damage if deferred — ventilation, waterproofing, anything with moisture risk — and plan the cosmetic upgrades for a second phase when the budget is there. When you're ready to move forward, [reach out to schedule a site visit](/contact/) and we'll help you prioritize.
 
 ## How Much Does a Large (10x10) Bathroom Cost?
 
