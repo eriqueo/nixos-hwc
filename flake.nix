@@ -86,6 +86,15 @@
   let
     system = "x86_64-linux";
 
+    # Suppress upstream nixpkgs deprecation warnings for renamed pkgs attributes.
+    # pkgs.hostPlatform and pkgs.system are warnAlias'd in aliases.nix; upstream
+    # packages still use them, firing 4+ warnings per build.  Overriding them
+    # here replaces the warnAlias thunk with the plain value so no warn fires.
+    silenceDeprecatedAliases = final: prev: {
+      hostPlatform = prev.stdenv.hostPlatform;
+      system       = prev.stdenv.hostPlatform.system;
+    };
+
     # Add the overlay here - this is the safest approach
     mkPkgs = system: nixpkgsInput:
       import nixpkgsInput {
@@ -100,6 +109,7 @@
           ];
         };
         overlays = [
+          silenceDeprecatedAliases
           inputs.claude-desktop.overlays.default
         ];
       };
@@ -119,7 +129,7 @@
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ claudeCodeOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases claudeCodeOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;

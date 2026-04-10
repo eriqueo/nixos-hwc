@@ -17,12 +17,17 @@ let
   khal = import ./parts/khal.nix { inherit lib pkgs cfg; };
   service = import ./parts/service.nix { inherit lib pkgs; };
   parser = import ./parts/parser.nix { inherit lib pkgs cfg; };
+  icsWatcher = import ./parts/ics-watcher.nix { inherit lib pkgs; };
 
 in
 {
   # OPTIONS
   options.hwc.mail.calendar = {
     enable = lib.mkEnableOption "calendar sync via khal + vdirsyncer";
+
+    icsWatch = {
+      enable = lib.mkEnableOption "auto-import .ics files dropped in ~/000_inbox/downloads into khal";
+    };
 
     accounts = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
@@ -65,6 +70,9 @@ in
     # systemd timer for periodic sync
     service
     parser.homeFiles
+
+    # .ics file watcher (optional)
+    (lib.mkIf cfg.icsWatch.enable icsWatcher)
 
     # VALIDATION
     {
