@@ -22,6 +22,7 @@
 
     calendar = {
       enable = true;
+      icsWatch.enable = true;
       accounts.icloud = {
         email = "eric@iheartwoodcraft.com";
         color = "dark green";

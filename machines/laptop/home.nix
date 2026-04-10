@@ -23,7 +23,7 @@
   # Calendar: Apple iCloud sync via khal + vdirsyncer (CalDAV)
   hwc.mail.calendar = {
     enable = true;
-    icsWatch.enable = true;
+    icsWatch.enable = false;
     accounts = {
       icloud = {
         email = "eric@iheartwoodcraft.com";
