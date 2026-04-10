@@ -43,7 +43,6 @@
         google-cloud-sdk.enable = false;
         n8n.enable = false;
         aerc.enable = false;
-        betterbird.enable = false;
         neomutt.enable = false;
         proton-mail.enable = false;
         proton-authenticator.enable = false;
