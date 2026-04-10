@@ -87,6 +87,24 @@ in
     waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC"
   '';
   
+  "khal" = sh "waybar-khal" ''
+    EVENTS=$(${pkgs.khal}/bin/khal list --format "{start-time} {title}" --day-format "" today tomorrow 2>/dev/null | grep -Ev "^[[:space:]]*$" || true)
+
+    if [[ -z "''$EVENTS" ]]; then
+      printf '{"text":"󰃭","class":"empty","tooltip":"No events today"}\n'
+      exit 0
+    fi
+
+    FIRST=$(echo "''$EVENTS" | head -1)
+    FIRST_SHORT="''${FIRST:0:22}"
+    TOOLTIP=$(echo "''$EVENTS" | head -6 | awk '{printf "%s\\n",$0}' | tr -d '\n')
+
+    TEXT_ESC=$(printf '%s' "󰃭 ''$FIRST_SHORT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    TOOLTIP_ESC=$(printf '%s' "''$TOOLTIP" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+    printf '{"text":"%s","class":"has-events","tooltip":"%s"}\n' "''$TEXT_ESC" "''$TOOLTIP_ESC"
+  '';
+
   "weather" = sh "waybar-weather" ''
     LOCATION="Bozeman"
     MAIN=$(curl -s "wttr.in/$LOCATION?u&format=%c+%t" 2>/dev/null | sed 's/  */ /g' || echo "❓ N/A")
