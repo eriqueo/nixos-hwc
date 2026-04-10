@@ -59,7 +59,6 @@
 
       # Mail Clients
       neomutt.enable = lib.mkDefault false;
-      betterbird.enable = lib.mkDefault false;
       proton-mail.enable = lib.mkDefault true;
 
       # Security
@@ -115,7 +114,6 @@
       ipcalc.enable = lib.mkDefault true;
       wasistlos.enable = lib.mkDefault false;
       bottles-unwrapped.enable = lib.mkDefault true;
-      thunderbird.enable = lib.mkDefault true;
       localsend.enable = lib.mkDefault true;
       opencode.enable = lib.mkDefault true;
       google-cloud-sdk.enable = lib.mkDefault true;
