@@ -131,11 +131,10 @@ let
         ffmpeg = ffmpegDefaults // {
           inputs = [
             { path = "rtsp://127.0.0.1:8554/cobra_cam_1_sub"; roles = [ "detect" ]; }
-            { path = "rtsp://127.0.0.1:8554/cobra_cam_1"; roles = [ "record" ]; }
           ];
         };
-        record.retain.days = 0;  # No motion recording — events only
-        detect = { width = 1280; height = 720; fps = 5; };
+        record.enabled = false;  # No recording — detect only (saves 4K stream decode)
+        detect = { width = 1280; height = 720; fps = 3; };
         motion.mask = [
           "0,0,1280,50"       # Timestamp strip
           "350,0,750,200"     # Bright light area (top center)
@@ -178,7 +177,7 @@ let
             { path = "rtsp://127.0.0.1:8554/cobra_cam_3"; roles = [ "record" ]; }
           ];
         };
-        detect = { width = 1280; height = 720; fps = 5; };
+        detect = { width = 1280; height = 720; fps = 3; };
         motion.mask = [
           "0,0,1280,50"       # Timestamp strip
           # Street and sidewalk beyond the fence (polygon covering top area)
@@ -209,25 +208,25 @@ let
             { path = "rtsp://127.0.0.1:8554/reolink_record"; roles = [ "record" ]; }
           ];
         };
-        detect = { width = 640; height = 360; fps = 3; };
+        detect = { width = 480; height = 270; fps = 2; };
         motion.mask = [
-          "0,0,640,30"        # Timestamp strip
-          "0,0,0,200,100,180,100,0"  # Neighbor's area (left side with blue car)
-          "580,0,580,120,640,120,640,0"  # Far right edge
+          "0,0,480,23"        # Timestamp strip (scaled from 640x360)
+          "0,0,0,150,75,135,75,0"  # Neighbor's area (left side with blue car)
+          "435,0,435,90,480,90,480,0"  # Far right edge
         ];
         objects = {
           track = [ "person" "dog" "cat" "car" "truck" ];
           filters = {
-            person = { min_score = 0.70; threshold = 0.75; min_area = 1200; };
-            dog    = { min_score = 0.65; threshold = 0.70; min_area = 750;  };
-            cat    = { min_score = 0.65; threshold = 0.70; min_area = 750;  };
-            car    = { min_score = 0.80; threshold = 0.85; min_area = 3000; };
-            truck  = { min_score = 0.80; threshold = 0.85; min_area = 3500; };
+            person = { min_score = 0.70; threshold = 0.75; min_area = 675; };
+            dog    = { min_score = 0.65; threshold = 0.70; min_area = 420;  };
+            cat    = { min_score = 0.65; threshold = 0.70; min_area = 420;  };
+            car    = { min_score = 0.80; threshold = 0.85; min_area = 1690; };
+            truck  = { min_score = 0.80; threshold = 0.85; min_area = 1970; };
           };
         };
         # Property zone — yard inside the fence + driveway
         zones.property = {
-          coordinates = "100,160,580,160,580,360,100,360";
+          coordinates = "75,120,435,120,435,270,75,270";
           objects = [ "person" "dog" "cat" "car" "truck" ];
         };
         review.alerts.required_zones = [ "property" ];
