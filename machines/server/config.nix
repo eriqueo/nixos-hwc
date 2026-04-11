@@ -501,9 +501,9 @@
         dryRun = false;  # Set to true for testing
       };
 
-      # Automatic daily journaling
+      # Automatic daily journaling (disabled — Restart=on-failure loop hammers GPU)
       journaling = {
-        enable = true;
+        enable = false;
         outputDir = "/home/eric/Documents/HWC-AI-Journal";
         sources = [ "systemd-journal" "container-logs" "nixos-rebuilds" ];
         schedule = "daily";
