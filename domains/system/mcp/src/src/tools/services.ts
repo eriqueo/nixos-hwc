@@ -401,7 +401,7 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
       name: "hwc_services_compare_declared_vs_running",
       description:
         "Compare what should be running (enabled systemd units) vs what is running. " +
-        "Finds services that are enabled but down, or containers running without systemd management. Use for drift detection.",
+        "Finds services that are enabled but down, or containers running without systemd management.",
       inputSchema: {
         type: "object",
         properties: {},
@@ -450,9 +450,7 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
       name: "hwc_services_by_domain",
       description:
         "Map NixOS domain names to their associated services, ports, and config files. " +
-        "Pass a domain (e.g. 'media', 'monitoring', 'mail') or omit for all. " +
-        "Scans the declarative config for systemd.services and oci-containers definitions, " +
-        "then cross-references with live service state.",
+        "Pass a domain (e.g. 'media', 'monitoring', 'mail') or omit for all.",
       inputSchema: {
         type: "object",
         properties: {

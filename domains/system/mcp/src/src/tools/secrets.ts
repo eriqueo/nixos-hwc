@@ -19,121 +19,107 @@ interface SecretDeclaration {
 
 export function secretsTools(nixosConfigPath: string): ToolDef[] {
   return [
-    // ── hwc_secrets_inventory ───────────────────────────────────────────
+    // ── hwc_secrets_info ──────────────────────────────────────────────
     {
-      name: "hwc_secrets_inventory",
+      name: "hwc_secrets_info",
       description:
-        "List all agenix-managed secrets — name, category, .age file existence, permissions. " +
-        "NEVER returns secret values. Filter by category (system, home, services, infrastructure).",
+        "Agenix secret inventory and/or usage map. NEVER returns secret values. " +
+        "Default returns both inventory and usage cross-references.",
       inputSchema: {
         type: "object",
         properties: {
+          view: {
+            type: "string",
+            enum: ["inventory", "usage", "both"],
+            default: "both",
+            description: "What to return (default: both)",
+          },
           category: {
             type: "string",
-            description: "Filter by category (e.g. 'system', 'home', 'services', 'infrastructure')",
+            description: "Filter inventory by category (e.g. 'system', 'home', 'services')",
           },
-        },
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const filterCategory = args.category as string | undefined;
-          const declDir = join(nixosConfigPath, "domains/secrets/declarations");
-          const partsDir = join(nixosConfigPath, "domains/secrets/parts");
-
-          const entries = await readdir(declDir);
-          const nixFiles = entries.filter(
-            (f) => f.endsWith(".nix") && f !== "index.nix" && f !== "caddy.nix"
-          );
-
-          const secrets: SecretDeclaration[] = [];
-
-          for (const file of nixFiles) {
-            const category = file.replace(".nix", "");
-            if (filterCategory && category !== filterCategory) continue;
-
-            const content = await readFile(join(declDir, file), "utf-8");
-            const parsed = parseSecretDeclarations(content, category, partsDir);
-            secrets.push(...(await parsed));
-          }
-
-          secrets.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-
-          const byCategory: Record<string, number> = {};
-          for (const s of secrets) {
-            byCategory[s.category] = (byCategory[s.category] || 0) + 1;
-          }
-
-          return {
-            status: "ok",
-            message: `${secrets.length} secrets across ${Object.keys(byCategory).length} categories`,
-            data: { secrets, byCategory, total: secrets.length },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to read secret inventory", err, "Check that domains/secrets/declarations/ exists");
-        }
-      },
-    },
-
-    // ── hwc_secrets_usage_map ───────────────────────────────────────────
-    {
-      name: "hwc_secrets_usage_map",
-      description:
-        "Map which services reference which secrets. Greps for age.secrets references across the codebase. " +
-        "Use to understand secret rotation impact or find unused secrets.",
-      inputSchema: {
-        type: "object",
-        properties: {
           service: {
             type: "string",
-            description: "Filter to show secrets used by a specific domain/service.",
+            description: "Filter usage by domain/service name",
           },
         },
       },
       handler: async (args): Promise<ToolResult> => {
         try {
-          const filterService = (args.service as string)?.toLowerCase();
-          const domainsDir = join(nixosConfigPath, "domains");
-          const usageMap = await buildSecretUsageMap(domainsDir);
+          const view = (args.view as string) || "both";
+          const data: Record<string, unknown> = {};
+          const parts: string[] = [];
 
-          const filtered = filterService
-            ? usageMap.filter((entry) =>
-                entry.domain.toLowerCase().includes(filterService) ||
-                entry.file.toLowerCase().includes(filterService)
-              )
-            : usageMap;
+          // Inventory
+          if (view === "both" || view === "inventory") {
+            const filterCategory = args.category as string | undefined;
+            const declDir = join(nixosConfigPath, "domains/secrets/declarations");
+            const partsDir = join(nixosConfigPath, "domains/secrets/parts");
 
-          // Group by secret name
-          const bySecret: Record<string, string[]> = {};
-          for (const entry of filtered) {
-            for (const secret of entry.secrets) {
-              if (!bySecret[secret]) bySecret[secret] = [];
-              bySecret[secret].push(`${entry.domain}/${entry.file}`);
+            const entries = await readdir(declDir);
+            const nixFiles = entries.filter(
+              (f) => f.endsWith(".nix") && f !== "index.nix" && f !== "caddy.nix"
+            );
+
+            const secrets: SecretDeclaration[] = [];
+            for (const file of nixFiles) {
+              const category = file.replace(".nix", "");
+              if (filterCategory && category !== filterCategory) continue;
+              const content = await readFile(join(declDir, file), "utf-8");
+              secrets.push(...(await parseSecretDeclarations(content, category, partsDir)));
             }
+
+            secrets.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+            const byCategory: Record<string, number> = {};
+            for (const s of secrets) {
+              byCategory[s.category] = (byCategory[s.category] || 0) + 1;
+            }
+
+            data.inventory = { secrets, byCategory, total: secrets.length };
+            parts.push(`${secrets.length} secrets`);
           }
 
-          // Group by domain
-          const byDomain: Record<string, string[]> = {};
-          for (const entry of filtered) {
-            if (!byDomain[entry.domain]) byDomain[entry.domain] = [];
-            byDomain[entry.domain].push(...entry.secrets);
-          }
-          // Deduplicate
-          for (const key of Object.keys(byDomain)) {
-            byDomain[key] = [...new Set(byDomain[key])];
+          // Usage map
+          if (view === "both" || view === "usage") {
+            const filterService = (args.service as string)?.toLowerCase();
+            const domainsDir = join(nixosConfigPath, "domains");
+            const usageMap = await buildSecretUsageMap(domainsDir);
+
+            const filtered = filterService
+              ? usageMap.filter((entry) =>
+                  entry.domain.toLowerCase().includes(filterService) ||
+                  entry.file.toLowerCase().includes(filterService)
+                )
+              : usageMap;
+
+            const bySecret: Record<string, string[]> = {};
+            for (const entry of filtered) {
+              for (const secret of entry.secrets) {
+                if (!bySecret[secret]) bySecret[secret] = [];
+                bySecret[secret].push(`${entry.domain}/${entry.file}`);
+              }
+            }
+
+            const byDomain: Record<string, string[]> = {};
+            for (const entry of filtered) {
+              if (!byDomain[entry.domain]) byDomain[entry.domain] = [];
+              byDomain[entry.domain].push(...entry.secrets);
+            }
+            for (const key of Object.keys(byDomain)) {
+              byDomain[key] = [...new Set(byDomain[key])];
+            }
+
+            data.usage = { bySecret, byDomain, totalSecrets: Object.keys(bySecret).length };
+            parts.push(`${Object.keys(byDomain).length} domains`);
           }
 
           return {
             status: "ok",
-            message: `${Object.keys(bySecret).length} secrets referenced across ${Object.keys(byDomain).length} domains`,
-            data: {
-              bySecret,
-              byDomain,
-              totalSecrets: Object.keys(bySecret).length,
-              totalReferences: filtered.reduce((sum, e) => sum + e.secrets.length, 0),
-            },
+            message: parts.join(" across "),
+            data,
           };
         } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to build secret usage map", err);
+          return catchError("INTERNAL_ERROR", "Failed to read secrets info", err, "Check that domains/secrets/declarations/ exists");
         }
       },
     },

@@ -278,105 +278,36 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
       },
     },
 
-    // ── hwc_config_read_file ─────────────────────────────────────────────
+    // ── hwc_config_browse ──────────────────────────────────────────────
     {
-      name: "hwc_config_read_file",
+      name: "hwc_config_browse",
       description:
-        "Read a file from the nixos-hwc repo by relative path. Supports offset/limit for large files. " +
-        "Returns numbered lines. Scoped to repo — cannot read outside. Use hwc_config_list_dir to find paths.",
+        "Browse the nixos-hwc repo — read a file or list a directory by relative path. " +
+        "Auto-detects file vs directory. Scoped to repo root.",
       inputSchema: {
         type: "object",
         properties: {
           path: {
             type: "string",
-            description:
-              "File path relative to repo root, e.g. 'domains/system/mcp/index.nix' " +
-              "or 'machines/server/config.nix'",
+            description: "Path relative to repo root (default: root dir)",
           },
           offset: {
             type: "number",
-            description: "Start reading from this line number (1-based, default 1)",
+            description: "For files: start line (1-based, default 1)",
           },
           limit: {
             type: "number",
-            description: "Max lines to return (default 200, max 500)",
-          },
-        },
-        required: ["path"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const rawPath = args.path as string;
-          const offset = Math.max(1, (args.offset as number) || 1);
-          const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
-
-          // Security: resolve to absolute and verify it's within the repo
-          const absPath = resolve(nixosConfigPath, rawPath);
-          const normalRepo = normalize(nixosConfigPath);
-          if (!absPath.startsWith(normalRepo + "/") && absPath !== normalRepo) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes repo root: ${rawPath}`, suggestion: "Paths must be relative to the nixos-hwc repo root" });
-          }
-
-          // Check it exists and is a file
-          let fileStat;
-          try {
-            fileStat = await stat(absPath);
-          } catch {
-            return mcpError({ type: "NOT_FOUND", message: `File not found: ${rawPath}`, suggestion: "Use hwc_config_list_dir to browse available files" });
-          }
-          if (!fileStat.isFile()) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Not a file: ${rawPath}`, suggestion: "Use hwc_config_list_dir for directories" });
-          }
-
-          const content = await readFile(absPath, "utf-8");
-          const allLines = content.split("\n");
-          const totalLines = allLines.length;
-          const startIdx = offset - 1;
-          const slice = allLines.slice(startIdx, startIdx + limit);
-
-          // Number the lines like cat -n
-          const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} │ ${line}`).join("\n");
-
-          return {
-            status: "ok",
-            message: `${rawPath} (lines ${offset}–${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
-            data: {
-              path: rawPath,
-              totalLines,
-              offset,
-              limit,
-              content: numbered,
-            },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to read file", err);
-        }
-      },
-    },
-
-    // ── hwc_config_list_dir ───────────────────────────────────────────────
-    {
-      name: "hwc_config_list_dir",
-      description:
-        "List directory contents in the nixos-hwc repo. Shows files with sizes and subdirectories. " +
-        "Set recursive=true for up to 3 levels deep. Scoped to repo root.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          path: {
-            type: "string",
-            description: "Directory path relative to repo root (default: repo root)",
+            description: "For files: max lines (default 200, max 500)",
           },
           recursive: {
             type: "boolean",
-            description: "List recursively (default false, max 3 levels deep)",
+            description: "For directories: recurse up to 3 levels (default false)",
           },
         },
       },
       handler: async (args): Promise<ToolResult> => {
         try {
           const rawPath = (args.path as string) || ".";
-          const recursive = (args.recursive as boolean) ?? false;
 
           const absPath = resolve(nixosConfigPath, rawPath);
           const normalRepo = normalize(nixosConfigPath);
@@ -384,15 +315,40 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes repo root: ${rawPath}`, suggestion: "Paths must be relative to the nixos-hwc repo root" });
           }
 
-          const entries = await listDirEntries(absPath, normalRepo, recursive ? 3 : 0);
+          let pathStat;
+          try {
+            pathStat = await stat(absPath);
+          } catch {
+            return mcpError({ type: "NOT_FOUND", message: `Not found: ${rawPath}` });
+          }
 
+          if (pathStat.isFile()) {
+            const offset = Math.max(1, (args.offset as number) || 1);
+            const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
+            const content = await readFile(absPath, "utf-8");
+            const allLines = content.split("\n");
+            const totalLines = allLines.length;
+            const startIdx = offset - 1;
+            const slice = allLines.slice(startIdx, startIdx + limit);
+            const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} │ ${line}`).join("\n");
+
+            return {
+              status: "ok",
+              message: `${rawPath} (lines ${offset}–${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
+              data: { type: "file", path: rawPath, totalLines, offset, limit, content: numbered },
+            };
+          }
+
+          // Directory listing
+          const recursive = (args.recursive as boolean) ?? false;
+          const entries = await listDirEntries(absPath, normalRepo, recursive ? 3 : 0);
           return {
             status: "ok",
             message: `${entries.length} entries in ${rawPath}`,
-            data: { path: rawPath, entries },
+            data: { type: "directory", path: rawPath, entries },
           };
         } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to list directory", err);
+          return catchError("INTERNAL_ERROR", "Failed to browse path", err);
         }
       },
     },

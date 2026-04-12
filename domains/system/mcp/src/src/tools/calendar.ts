@@ -251,50 +251,24 @@ async function triggerSync(): Promise<void> {
 export function calendarTools(): ToolDef[] {
   return [
 
-    /* ── Today ───────────────────────────────────────────────────── */
+    /* ── List events (today / week / custom range) ─────────────────── */
     {
-      name: "hwc_calendar_today",
+      name: "hwc_calendar_list",
       description:
-        "Get today's calendar events from iCloud via khal (local sync, no network call). " +
-        "vdirsyncer syncs from iCloud every 15 minutes automatically. " +
-        "Always returns exactly today's events in America/Denver timezone. " +
-        "Use this instead of Google Calendar MCP — faster, more reliable, correct date.",
+        "Get calendar events from iCloud via khal. " +
+        "Use range='today' for today, 'week' for this week grouped by date, " +
+        "or 'custom' with start/end dates (YYYY-MM-DD).",
       inputSchema: {
         type: "object",
         properties: {
-          timezone: {
+          range: {
             type: "string",
-            description: "IANA timezone for today's date (default: America/Denver)",
+            enum: ["today", "week", "custom"],
+            default: "today",
+            description: "Preset range or 'custom' for start/end dates",
           },
-        },
-      },
-      handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
-        try {
-          const tz = (args.timezone as string) || "America/Denver";
-          const dateStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
-          const events = await khalList(dateStr, dateStr);
-          return {
-            status: "ok",
-            message: `${events.length} event${events.length !== 1 ? "s" : ""} on ${dateStr}`,
-            data: { date: dateStr, timezone: tz, event_count: events.length, events },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to get today's calendar events", err,
-            "Check that khal is installed and vdirsyncer has synced at least once");
-        }
-      },
-    },
-
-    /* ── Week ────────────────────────────────────────────────────── */
-    {
-      name: "hwc_calendar_week",
-      description:
-        "Get this week's calendar events from iCloud via khal (today through end of week). " +
-        "Returns events grouped by date across all synced calendars. " +
-        "Use for the morning briefing weekly overview and the dashboard week view.",
-      inputSchema: {
-        type: "object",
-        properties: {
+          start: { type: "string", description: "Start date YYYY-MM-DD (required for custom)" },
+          end: { type: "string", description: "End date YYYY-MM-DD (defaults to start)" },
           timezone: {
             type: "string",
             description: "IANA timezone (default: America/Denver)",
@@ -303,77 +277,62 @@ export function calendarTools(): ToolDef[] {
       },
       handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
         try {
+          const range = (args.range as string) || "today";
           const tz = (args.timezone as string) || "America/Denver";
-          const bin = await khalBin();
 
-          // "week" keyword shows the full week containing today in khal 0.13
-          const { stdout, stderr, exitCode } = await runBin(bin, [
-            "list",
-            "--format", "{start-time}|{end-time}|{title}|{location}",
-            "today",
-            "week",
-          ]);
-
-          if (exitCode !== 0 && stderr) {
-            log.warn("khal list week failed", { stderr });
+          if (range === "today") {
+            const dateStr = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+            const events = await khalList(dateStr, dateStr);
+            return {
+              status: "ok",
+              message: `${events.length} event${events.length !== 1 ? "s" : ""} on ${dateStr}`,
+              data: { range: "today", date: dateStr, timezone: tz, event_count: events.length, events },
+            };
           }
 
-          const events = parseKhalOutput(stdout);
-
-          // Group by date for dashboard rendering
-          const byDate: Record<string, CalendarEvent[]> = {};
-          for (const ev of events) {
-            if (!byDate[ev.date]) byDate[ev.date] = [];
-            byDate[ev.date].push(ev);
+          if (range === "week") {
+            const bin = await khalBin();
+            const { stdout, stderr, exitCode } = await runBin(bin, [
+              "list",
+              "--format", "{start-time}|{end-time}|{title}|{location}",
+              "today",
+              "week",
+            ]);
+            if (exitCode !== 0 && stderr) {
+              log.warn("khal list week failed", { stderr });
+            }
+            const events = parseKhalOutput(stdout);
+            const byDate: Record<string, CalendarEvent[]> = {};
+            for (const ev of events) {
+              if (!byDate[ev.date]) byDate[ev.date] = [];
+              byDate[ev.date].push(ev);
+            }
+            return {
+              status: "ok",
+              message: `${events.length} event${events.length !== 1 ? "s" : ""} this week`,
+              data: { range: "week", timezone: tz, event_count: events.length, by_date: byDate, events },
+            };
           }
 
-          return {
-            status: "ok",
-            message: `${events.length} event${events.length !== 1 ? "s" : ""} this week`,
-            data: { timezone: tz, event_count: events.length, by_date: byDate, events },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to get week's calendar events", err,
-            "Check that khal is installed and vdirsyncer has synced at least once");
-        }
-      },
-    },
-
-    /* ── Date range ──────────────────────────────────────────────── */
-    {
-      name: "hwc_calendar_list",
-      description:
-        "Get calendar events for a specific date range from iCloud via khal. " +
-        "Pass start and end as YYYY-MM-DD.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          start: { type: "string", description: "Start date YYYY-MM-DD (inclusive)" },
-          end: { type: "string", description: "End date YYYY-MM-DD (inclusive, defaults to start)" },
-        },
-        required: ["start"],
-      },
-      handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
-        try {
+          // custom range
           const start = args.start as string;
           const end = (args.end as string) || start;
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
-            return {
-              status: "error",
-              message: "Invalid date format",
-              error: "Use YYYY-MM-DD format for start and end dates",
-              error_type: "VALIDATION_ERROR",
-            };
+          if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+            return mcpError({
+              type: "VALIDATION_ERROR",
+              message: "Custom range requires start date in YYYY-MM-DD format",
+              suggestion: "Provide start (and optionally end) as YYYY-MM-DD",
+            });
           }
           const events = await khalList(start, end);
           return {
             status: "ok",
             message: `${events.length} event${events.length !== 1 ? "s" : ""} from ${start} to ${end}`,
-            data: { start, end, event_count: events.length, events },
+            data: { range: "custom", start, end, event_count: events.length, events },
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Failed to list calendar events", err,
-            "Check khal is installed and dates are valid YYYY-MM-DD");
+            "Check that khal is installed and vdirsyncer has synced at least once");
         }
       },
     },

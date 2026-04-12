@@ -99,3 +99,10 @@
 2026-04-10T06:03:54-06:00 OK: Merge complete
 2026-04-10T06:03:54-06:00 OK: Dashboard symlink already points to output
 2026-04-10T06:03:54-06:00 DONE
+2026-04-11T06:00:00-06:00 START
+2026-04-11T06:00:00-06:00 OK: Pre-flight passed (claude binary exists)
+2026-04-11T06:00:00-06:00 STEP 1: Main briefing (Claude Code CLI)...
+2026-04-11T06:00:06-06:00 STEP 1: completed in 6s
+2026-04-11T06:00:06-06:00 OK: Main briefing compiled (0 alerts)
+2026-04-11T06:00:06-06:00 STEP 2: Mail triage...
+2026-04-11T06:00:06-06:00 mail-triage: 1 unread threads

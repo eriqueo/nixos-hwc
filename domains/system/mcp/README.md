@@ -265,9 +265,9 @@ The Caddy reverse proxy on :18080 has `flush_interval -1` for the MCP routes. Wi
 
 The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` means the restart loads the old compiled code. The startup log version vs health endpoint version mismatch is a telltale sign.
 
-## Tools (46 hwc-sys)
+## Tools (44 hwc-sys)
 
-### Configuration (8)
+### Configuration (7)
 
 | Tool | Description |
 |------|-------------|
@@ -276,8 +276,7 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 | `hwc_config_get_port_map` | Parse `routes.nix` for complete port allocation. Optional `filter`. |
 | `hwc_config_get_host_profile` | Parse a machine's config.nix for profiles and domain imports. |
 | `hwc_config_search_options` | Grep `domains/` for `mkOption`/`mkEnableOption` matching a query. |
-| `hwc_config_read_file` | Read any repo file (scoped, cannot escape). Supports offset/limit. |
-| `hwc_config_list_dir` | List directory contents with sizes. Optional recursive (3 levels max). |
+| `hwc_config_browse` | Read file or list directory in repo (auto-detects). Supports offset/limit, recursive. |
 | `hwc_config_flake_metadata` | All flake inputs with name, URL, revision, last-modified. |
 
 ### Services (6)
@@ -300,62 +299,71 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 | `hwc_monitoring_prometheus_query` | PromQL instant or range queries against Prometheus. |
 | `hwc_monitoring_gpu_status` | NVIDIA GPU temp, utilization, power, processes. |
 
-### Secrets (2)
+### Secrets (1)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_secrets_inventory` | Parse agenix declarations. **Never returns values.** |
-| `hwc_secrets_usage_map` | Which domains use which secrets. |
+| `hwc_secrets_info` | Agenix secret inventory and/or usage map. view=inventory/usage/both. **Never returns values.** |
 
-### Storage (2)
-
-| Tool | Description |
-|------|-------------|
-| `hwc_storage_disk_usage` | `df -h` across tiers: root, hot, media, backup. |
-| `hwc_storage_backup_status` | Borg backup timer status, last run, next scheduled. |
-
-### Network (3)
+### Storage (1)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_network_tailscale_status` | Self hostname/IP, all peers. |
+| `hwc_storage_status` | Disk usage across tiers and/or Borg backup status. include=all/disk/backup. |
+
+### Network (2)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_network_tunnel_status` | Tailscale peers and/or Gluetun VPN status. tunnel=tailscale/vpn/all. |
 | `hwc_network_caddy_routes` | Live route config from Caddy admin API. Falls back to routes.nix. |
-| `hwc_network_vpn_status` | Gluetun VPN public IP and connection state. |
 
-### Mail (11)
+### Mail (9)
 
 | Tool | Description |
 |------|-------------|
 | `hwc_mail_health` | Health timer state, Bridge status, sync freshness, notmuch stats. |
-| `hwc_mail_search` | Raw notmuch queries OR saved search names (inbox, action, etc.). |
+| `hwc_mail_search` | Search or count mail. Saved search names or raw notmuch queries. count_only flag. |
 | `hwc_mail_read` | Read message/thread by notmuch ID. Headers + body text. |
-| `hwc_mail_count` | Count messages matching a query or saved search name. |
-| `hwc_mail_tag` | Raw (+/-tag), category (exclusive), or flag (additive) modes. |
-| `hwc_mail_actions` | Archive, trash, spam, read/unread, clear-categories. |
+| `hwc_mail_tag` | Tag or act on messages. action (archive/trash/etc), category, flag, or raw tag ops. |
 | `hwc_mail_send` | Send via msmtp. Proton accounts, cc/bcc, in-reply-to. |
 | `hwc_mail_reply` | Reply to thread with auto-populated recipients, subject, threading headers. |
-| `hwc_mail_sync` | Trigger full sync cycle (afew → mbsync → notmuch). |
+| `hwc_mail_sync` | Trigger full sync cycle. |
 | `hwc_mail_accounts` | Configured accounts, identities, search names, tag taxonomy. |
 | `hwc_mail_folders` | Maildir folders with notmuch message counts. |
 
-### Calendar (7)
+### Calendar (5)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_calendar_today` | Today's iCloud calendar events via khal (America/Denver). |
-| `hwc_calendar_week` | This week's events grouped by date. |
-| `hwc_calendar_list` | Events for a specific date range (YYYY-MM-DD). |
+| `hwc_calendar_list` | Events for today, this week, or custom date range. range=today/week/custom. |
 | `hwc_calendar_sync` | Trigger immediate vdirsyncer sync to/from iCloud. |
 | `hwc_calendar_create` | Create event (timed, all-day, or multi-day). Syncs to iCloud. |
 | `hwc_calendar_delete` | Delete event by search (two-step: dry-run then confirm). |
 | `hwc_calendar_edit` | Modify event fields (delete + recreate pattern). |
 
-### Media (2)
+### Website (4)
 
 | Tool | Description |
 |------|-------------|
-| `hwc_media_arr_status` | *arr API health warnings and queue depth. |
-| `hwc_media_download_queue` | SABnzbd queue and qBittorrent torrent list. |
+| `hwc_website_list` | List pages or blog posts with frontmatter summaries. |
+| `hwc_website_read` | Read page/blog (source=content) or JSON data file (source=data). |
+| `hwc_website_write` | Write page/blog (source=content) or JSON data file (source=data). Atomic. |
+| `hwc_website_delete` | Soft-delete page/blog to .trash/ directory. |
+
+### CMS (3)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_cms_browse` | Browse Heartwood business app — read file or list directory (auto-detects). |
+| `hwc_cms_write_file` | Write or create file in scoped app. Atomic write. |
+| `hwc_cms_delete_file` | Delete file in scoped app. Permanent. |
+
+### Media (1)
+
+| Tool | Description |
+|------|-------------|
+| `hwc_media_status` | *arr stack status and/or download queue. include=all/arr/downloads. |
 
 ### Build (1)
 

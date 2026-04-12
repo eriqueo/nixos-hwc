@@ -44,6 +44,7 @@
 
       # <Space>g - Alternative go commands (via plugin for extensibility)
       { on = [ "<Space>", "g", "g" ], run = "plugin bookmarks", desc = "Go: show all bookmarks" },
+      { on = [ "<Space>", "g", "m" ], run = "cd /mnt/media", desc = "Go: media mount" },
 
       # <Space>f - Find/Search
       { on = [ "<Space>", "f" ], run = "filter --smart", desc = "Filter" },

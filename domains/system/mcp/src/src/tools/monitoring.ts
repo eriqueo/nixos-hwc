@@ -28,8 +28,7 @@ export function monitoringTools(
       name: "hwc_monitoring_health_check",
       description:
         "Run a comprehensive health check across services, storage, and containers. " +
-        "Returns traffic-light summary (green/yellow/red) per component. " +
-        "Use as a first-pass system overview.",
+        "Returns traffic-light summary (green/yellow/red) per component.",
       inputSchema: {
         type: "object",
         properties: {
@@ -90,8 +89,7 @@ export function monitoringTools(
       name: "hwc_monitoring_journal_errors",
       description:
         "Get recent error-level journal entries grouped by unit. " +
-        "Returns error counts and most recent messages per service. " +
-        "Use to quickly find what's broken.",
+        "Returns error counts and most recent messages per service.",
       inputSchema: {
         type: "object",
         properties: {

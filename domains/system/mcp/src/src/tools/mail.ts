@@ -359,8 +359,7 @@ export function mailTools(): ToolDef[] {
       name: "hwc_mail_health",
       description:
         "Check mail system health. Returns Proton Bridge status, sync freshness, notmuch stats, " +
-        "and health timer state (last-healthy, first-failure, cooldowns). " +
-        "Use when diagnosing mail delivery or sync issues. Read-only.",
+        "and health timer state (last-healthy, first-failure, cooldowns). Read-only.",
       inputSchema: { type: "object", properties: {} },
       handler: async (): Promise<ToolResult> => {
         try {
@@ -480,8 +479,7 @@ export function mailTools(): ToolDef[] {
       description:
         "Search mail via notmuch. Accepts saved search names (inbox, unread, action, pending, " +
         "label:finance, all:personal, etc.) or raw notmuch queries (from:user@example.com, " +
-        "date:2024..today). Returns thread summaries with subjects, authors, dates, tags. " +
-        "Use for browsing mail or finding specific messages.",
+        "date:2024..today). Returns thread summaries or count only.",
       inputSchema: {
         type: "object",
         properties: {
@@ -492,6 +490,7 @@ export function mailTools(): ToolDef[] {
           },
           limit: { type: "number", description: "Max results (default 20)" },
           offset: { type: "number", description: "Skip first N results" },
+          count_only: { type: "boolean", description: "Return message count only, no thread details (default false)" },
         },
         required: ["query"],
       },
@@ -500,9 +499,21 @@ export function mailTools(): ToolDef[] {
           const rawQuery = args.query as string;
           const query = resolveQuery(rawQuery);
           const wasResolved = query !== rawQuery;
+          const countOnly = (args.count_only as boolean) ?? false;
+          const nm = await notmuchBin();
+
+          // Count-only mode
+          if (countOnly) {
+            const res = await notmuchExec(nm, ["count", query]);
+            if (res.exitCode !== 0) {
+              return mcpError({ type: "COMMAND_FAILED", message: "notmuch count failed", error: res.stderr.slice(0, 300), suggestion: "Check query syntax", context: { query } });
+            }
+            const count = parseInt(res.stdout.trim(), 10) || 0;
+            return { status: "ok", message: `${count} messages`, data: { count, query } };
+          }
+
           const limit = (args.limit as number) || 20;
           const offset = (args.offset as number) || 0;
-          const nm = await notmuchBin();
 
           const res = await notmuchExec(
             nm,
@@ -577,45 +588,22 @@ export function mailTools(): ToolDef[] {
       },
     },
 
-    /* ── Count ───────────────────────────────────────────────── */
-    {
-      name: "hwc_mail_count",
-      description:
-        "Count messages matching a notmuch query or saved search name. Default: all messages.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          query: { type: "string", description: "Notmuch query or saved search name (default '*')" },
-        },
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const rawQuery = (args.query as string) || "*";
-          const query = resolveQuery(rawQuery);
-          const nm = await notmuchBin();
-          const res = await notmuchExec(nm, ["count", query]);
-          if (res.exitCode !== 0) {
-            return mcpError({ type: "COMMAND_FAILED", message: "notmuch count failed", error: res.stderr.slice(0, 300), suggestion: "Check query syntax", context: { query } });
-          }
-          const count = parseInt(res.stdout.trim(), 10) || 0;
-          return { status: "ok", message: `${count} messages`, data: { count, query } };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Count failed", err);
-        }
-      },
-    },
-
-    /* ── Tag (raw + category/flag modes) ─────────────────────── */
+    /* ── Tag (raw + category/flag + named actions) ─────────── */
     {
       name: "hwc_mail_tag",
       description:
-        "Tag messages. Three modes: (1) Raw: tags=['+archive','-inbox']. " +
-        "(2) Category: category='work' — exclusive, auto-removes other categories. " +
-        "(3) Flag: flag='+action' — additive. SIDE EFFECT: modifies the Xapian database.",
+        "Tag or act on messages. Modes: (1) action — archive, trash, spam, read/unread, etc. " +
+        "(2) category — exclusive (auto-removes others). (3) flag — additive (+action, +pending). " +
+        "(4) tags — raw ops (['+tag','-tag']). SIDE EFFECT: modifies the Xapian database.",
       inputSchema: {
         type: "object",
         properties: {
           query: { type: "string", description: "Notmuch query or saved search name" },
+          action: {
+            type: "string",
+            enum: ["archive", "trash", "untrash", "spam", "unspam", "read", "unread", "clear-categories"],
+            description: "Named action (maps to correct tag combination)",
+          },
           tags: {
             type: "array",
             items: { type: "string" },
@@ -636,6 +624,7 @@ export function mailTools(): ToolDef[] {
         try {
           const rawQuery = args.query as string;
           const query = resolveQuery(rawQuery);
+          const actionName = args.action as string | undefined;
           const rawTags = args.tags as string[] | undefined;
           const category = args.category as string | undefined;
           const flag = args.flag as string | undefined;
@@ -644,7 +633,23 @@ export function mailTools(): ToolDef[] {
           let ops: string[];
           let mode: string;
 
-          if (category) {
+          if (actionName) {
+            const actionMap: Record<string, string[]> = {
+              archive: ["+archive", "-inbox"],
+              trash: ["+trash", "-inbox", "-unread"],
+              untrash: ["-trash", "+inbox"],
+              spam: ["+spam", "-inbox", "-unread"],
+              unspam: ["-spam", "+inbox"],
+              read: ["-unread"],
+              unread: ["+unread"],
+              "clear-categories": clearAllCustomOps(),
+            };
+            ops = actionMap[actionName];
+            if (!ops) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Unknown action '${actionName}'. Valid: ${Object.keys(actionMap).join(", ")}`, suggestion: "Use one of the supported actions" });
+            }
+            mode = `action:${actionName}`;
+          } else if (category) {
             if (!CATEGORY_TAGS.includes(category)) {
               return mcpError({ type: "VALIDATION_ERROR", message: `Unknown category '${category}'. Valid: ${CATEGORY_TAGS.join(", ")}`, suggestion: "Use one of the defined category tags" });
             }
@@ -670,7 +675,7 @@ export function mailTools(): ToolDef[] {
             ops = rawTags;
             mode = "raw";
           } else {
-            return mcpError({ type: "VALIDATION_ERROR", message: "Specify tags, category, or flag.", suggestion: "Provide one of: tags (raw ops), category (exclusive), or flag (additive)" });
+            return mcpError({ type: "VALIDATION_ERROR", message: "Specify action, tags, category, or flag.", suggestion: "Provide one of: action (named preset), tags (raw ops), category (exclusive), or flag (additive)" });
           }
 
           const nm = await notmuchBin();
@@ -684,62 +689,6 @@ export function mailTools(): ToolDef[] {
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Tag failed", err, "Check notmuch binary and Xapian DB write permissions");
-        }
-      },
-    },
-
-    /* ── Actions (high-level semantic operations) ────────────── */
-    {
-      name: "hwc_mail_actions",
-      description:
-        "High-level mail actions: archive, trash, untrash, spam, unspam, read, unread, " +
-        "clear-categories. Each maps to the correct tag combination. " +
-        "SIDE EFFECT: modifies the Xapian database.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          query: { type: "string", description: "Notmuch query or saved search name" },
-          action: {
-            type: "string",
-            enum: ["archive", "trash", "untrash", "spam", "unspam", "read", "unread", "clear-categories"],
-            description: "Action to perform",
-          },
-        },
-        required: ["query", "action"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const rawQuery = args.query as string;
-          const query = resolveQuery(rawQuery);
-          const action = args.action as string;
-
-          const actionMap: Record<string, string[]> = {
-            archive: ["+archive", "-inbox"],
-            trash: ["+trash", "-inbox", "-unread"],
-            untrash: ["-trash", "+inbox"],
-            spam: ["+spam", "-inbox", "-unread"],
-            unspam: ["-spam", "+inbox"],
-            read: ["-unread"],
-            unread: ["+unread"],
-            "clear-categories": clearAllCustomOps(),
-          };
-
-          const ops = actionMap[action];
-          if (!ops) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Unknown action '${action}'. Valid: ${Object.keys(actionMap).join(", ")}`, suggestion: "Use one of the supported high-level actions" });
-          }
-
-          const nm = await notmuchBin();
-          const res = await notmuchExec(nm, ["tag", ...ops, "--", query]);
-          if (res.exitCode !== 0) {
-            return mcpError({ type: "COMMAND_FAILED", message: `Action '${action}' failed`, error: res.stderr.slice(0, 500), suggestion: "Check query syntax and Xapian DB write permissions", context: { action, query, ops } });
-          }
-          return {
-            status: "ok",
-            message: `${action}: applied [${ops.join(", ")}] to: ${rawQuery}`,
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Action failed", err, "Check notmuch binary and Xapian DB write permissions");
         }
       },
     },
@@ -1043,7 +992,7 @@ export function mailTools(): ToolDef[] {
     {
       name: "hwc_mail_sync",
       description:
-        "Trigger a full mail sync cycle: afew move → label copy-back → mbsync → notmuch new. " +
+        "Trigger a full mail sync cycle. " +
         "By default waits up to 2 min for completion. Set wait=false for fire-and-forget. " +
         "SIDE EFFECT: syncs with remote IMAP server.",
       inputSchema: {
