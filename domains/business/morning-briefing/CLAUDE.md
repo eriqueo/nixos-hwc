@@ -17,7 +17,7 @@ This file is read by a static HTML dashboard and an n8n workflow. You are a data
 
 ## Data Collection Steps
 
-1. Calendar: Call hwc_calendar_week (HWC MCP tool) to get this week's events from iCloud via khal. Do not use Google Calendar MCP.
+1. Calendar: Call hwc_calendar_list with range="week" (HWC MCP tool) to get this week's events from iCloud via khal.
 2. Jobs: Get active jobs. Mark as is_test:true if name contains "test", "Test", or is junk data
 3. Leads: Jobs in Phase "1. Contacted" with Status "New Lead"
 4. Overdue Docs: Check for overdue documents
@@ -26,7 +26,7 @@ This file is read by a static HTML dashboard and an n8n workflow. You are a data
 7. Weather: Use web search or a weather MCP tool if available to get today's Bozeman forecast. If no weather tool is available, set all values to null and add a note. The outdoor_work_ok field should be false if: temp < 20F, wind > 30mph, or active precipitation expected during work hours (7am-5pm).
 8. Comms: If Quo/OpenPhone API data is available via MCP or webhook output, summarize yesterday's call and text activity. Otherwise, output the empty placeholder structure.
 9. Weekly Snapshot: Aggregate from JT data already gathered — count active jobs, count leads created this week, count estimates/invoices sent this week, sum outstanding invoice balances.
-10. Backup Status: Call hwc_storage_backup_status to get Borg backup status. Record last_run time, next_scheduled, exit_status, archive_count, and total_size.
+10. Backup Status: Call hwc_storage_status to get Borg backup status. Record last_run time, next_scheduled, exit_status, archive_count, and total_size.
 11. Tasks Due: Call jt_get_tasks filtered to tasks due today and this week for active jobs. Include task name, due date, job name, assignee, and completion status. Separate into due_today, due_this_week, and overdue arrays.
 12. Recent Documents: Call jt_get_documents to check for estimates, invoices, and change orders created or updated in the last 48 hours. Include document name, type, status, amount, and associated job.
 

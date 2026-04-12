@@ -111,35 +111,77 @@ export function websiteTools(nixosConfigPath: string): ToolDef[] {
     {
       name: "hwc_website_read",
       description:
-        "Read a website page or blog post by slug. Returns parsed YAML frontmatter " +
-        "as an object and the markdown body separately. Supports .md and .njk files.",
+        "Read a website page, blog post, or JSON data file. " +
+        "Use source='content' (default) for pages/blog with frontmatter, or 'data' for _data/ JSON files.",
       inputSchema: {
         type: "object",
         properties: {
+          source: {
+            type: "string",
+            enum: ["content", "data"],
+            default: "content",
+            description: "Source: 'content' for pages/blog, 'data' for _data/ JSON",
+          },
           type: {
             type: "string",
             enum: CONTENT_TYPES,
-            description: "Content type: 'pages' or 'blog'",
+            description: "Content type: 'pages' or 'blog' (required for source=content)",
           },
           slug: {
             type: "string",
-            description: "File slug (filename without extension), e.g. 'about', 'bathroom-remodeling'",
+            description: "File slug without extension (required for source=content)",
+          },
+          name: {
+            type: "string",
+            description: "Data file name without .json (required for source=data)",
           },
         },
-        required: ["type", "slug"],
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          const source = (args.source as string) || "content";
+
+          if (source === "data") {
+            const name = args.name as string;
+            if (!name) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "name is required for source=data" });
+            }
+            if (name.includes("..") || name.includes("/") || name.includes("\\")) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "Invalid data file name" });
+            }
+
+            const filePath = join(siteRoot, "_data", `${name}.json`);
+            let content: string;
+            try {
+              content = await readFile(filePath, "utf-8");
+            } catch {
+              const dataDir = join(siteRoot, "_data");
+              const files = (await readdir(dataDir)).filter((f) => f.endsWith(".json"));
+              return mcpError({
+                type: "NOT_FOUND",
+                message: `Data file '${name}.json' not found`,
+                suggestion: `Available: ${files.map((f) => f.replace(".json", "")).join(", ")}`,
+              });
+            }
+            return {
+              status: "ok",
+              message: `_data/${name}.json`,
+              data: { source: "data", name, content: JSON.parse(content) },
+            };
+          }
+
+          // Content mode
           const type = args.type as ContentType;
           const slug = args.slug as string;
 
-          if (!CONTENT_TYPES.includes(type)) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid type: ${type}` });
+          if (!type || !CONTENT_TYPES.includes(type)) {
+            return mcpError({ type: "VALIDATION_ERROR", message: "type (pages/blog) is required for source=content" });
+          }
+          if (!slug) {
+            return mcpError({ type: "VALIDATION_ERROR", message: "slug is required for source=content" });
           }
 
           const dir = contentDir(type);
-
-          // Try each extension
           let filePath: string | undefined;
           let ext: string | undefined;
           for (const e of PAGE_EXTENSIONS) {
@@ -149,9 +191,7 @@ export function websiteTools(nixosConfigPath: string): ToolDef[] {
               filePath = candidate;
               ext = e;
               break;
-            } catch {
-              // try next
-            }
+            } catch { /* try next */ }
           }
 
           if (!filePath || !ext) {
@@ -169,14 +209,7 @@ export function websiteTools(nixosConfigPath: string): ToolDef[] {
           return {
             status: "ok",
             message: `${type}/${slug}${ext}`,
-            data: {
-              type,
-              slug,
-              extension: ext,
-              frontmatter,
-              body,
-              lastModified: s.mtime.toISOString(),
-            },
+            data: { source: "content", type, slug, extension: ext, frontmatter, body, lastModified: s.mtime.toISOString() },
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Failed to read content", err);
@@ -188,49 +221,86 @@ export function websiteTools(nixosConfigPath: string): ToolDef[] {
     {
       name: "hwc_website_write",
       description:
-        "Create or update a website page or blog post. Accepts frontmatter (object) and " +
-        "markdown body (string). Atomic write (tmp + rename). For new files, slug must be " +
-        "lowercase alphanumeric with hyphens. Set create_new=true to create (prevents accidental overwrites).",
+        "Write a website page, blog post, or JSON data file. Atomic write. " +
+        "Use source='content' (default) for pages/blog, or 'data' for _data/ JSON files.",
       inputSchema: {
         type: "object",
         properties: {
+          source: {
+            type: "string",
+            enum: ["content", "data"],
+            default: "content",
+            description: "Source: 'content' for pages/blog, 'data' for _data/ JSON",
+          },
           type: {
             type: "string",
             enum: CONTENT_TYPES,
-            description: "Content type: 'pages' or 'blog'",
+            description: "Content type: 'pages' or 'blog' (for source=content)",
           },
           slug: {
             type: "string",
-            description: "File slug (filename without extension)",
+            description: "File slug without extension (for source=content)",
           },
           frontmatter: {
             type: "object",
-            description: "YAML frontmatter fields (title, description, date, layout, etc.)",
+            description: "YAML frontmatter fields (for source=content)",
           },
           body: {
             type: "string",
-            description: "Markdown body content",
+            description: "Markdown body (for source=content)",
           },
           create_new: {
             type: "boolean",
-            description: "Set true to create a new file. Fails if file already exists. Default false (update).",
+            description: "Create new file; fails if exists (for source=content, default false)",
+          },
+          name: {
+            type: "string",
+            description: "Data file name without .json (for source=data)",
+          },
+          content: {
+            type: ["object", "array"],
+            description: "JSON content to write (for source=data)",
           },
         },
-        required: ["type", "slug", "frontmatter", "body"],
       },
       handler: async (args): Promise<ToolResult> => {
         try {
+          const source = (args.source as string) || "content";
+
+          // Data write mode
+          if (source === "data") {
+            const dataName = args.name as string;
+            const dataContent = args.content;
+            if (!dataName) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "name is required for source=data" });
+            }
+            if (dataName.includes("..") || dataName.includes("/") || dataName.includes("\\")) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "Invalid data file name" });
+            }
+            const dataPath = join(siteRoot, "_data", `${dataName}.json`);
+            const json = JSON.stringify(dataContent, null, 2) + "\n";
+            const tmpDataPath = dataPath + ".tmp";
+            await writeFile(tmpDataPath, json, "utf-8");
+            await rename(tmpDataPath, dataPath);
+            return {
+              status: "ok",
+              message: `Wrote _data/${dataName}.json`,
+              data: { source: "data", name: dataName, path: `_data/${dataName}.json`, bytes: json.length },
+            };
+          }
+
+          // Content write mode
           const type = args.type as ContentType;
           const slug = args.slug as string;
           const frontmatter = args.frontmatter as Record<string, unknown>;
           const body = args.body as string;
           const createNew = (args.create_new as boolean) ?? false;
 
-          if (!CONTENT_TYPES.includes(type)) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid type: ${type}` });
+          if (!type || !CONTENT_TYPES.includes(type)) {
+            return mcpError({ type: "VALIDATION_ERROR", message: "type (pages/blog) is required for source=content" });
           }
 
-          if (!isValidSlug(slug)) {
+          if (!slug || !isValidSlug(slug)) {
             return mcpError({
               type: "VALIDATION_ERROR",
               message: `Invalid slug: "${slug}"`,
@@ -372,103 +442,5 @@ export function websiteTools(nixosConfigPath: string): ToolDef[] {
       },
     },
 
-    // ── hwc_website_read_data ────────────────────────────────────────────
-    {
-      name: "hwc_website_read_data",
-      description:
-        "Read a JSON data file from the site's _data/ directory. " +
-        "Available files: testimonials.json, site.json, navigation.json, header.json, " +
-        "services.json, calculator-bathroom.json, calculator-deck.json.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "Data file name without .json extension, e.g. 'testimonials', 'site'",
-          },
-        },
-        required: ["name"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const name = args.name as string;
-
-          // Security: no path traversal
-          if (name.includes("..") || name.includes("/") || name.includes("\\")) {
-            return mcpError({ type: "VALIDATION_ERROR", message: "Invalid data file name" });
-          }
-
-          const filePath = join(siteRoot, "_data", `${name}.json`);
-          let content: string;
-          try {
-            content = await readFile(filePath, "utf-8");
-          } catch {
-            // List available files for suggestion
-            const dataDir = join(siteRoot, "_data");
-            const files = (await readdir(dataDir)).filter((f) => f.endsWith(".json"));
-            return mcpError({
-              type: "NOT_FOUND",
-              message: `Data file '${name}.json' not found`,
-              suggestion: `Available: ${files.map((f) => f.replace(".json", "")).join(", ")}`,
-            });
-          }
-
-          const data = JSON.parse(content);
-          return {
-            status: "ok",
-            message: `_data/${name}.json`,
-            data: { name, content: data },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to read data file", err);
-        }
-      },
-    },
-
-    // ── hwc_website_write_data ───────────────────────────────────────────
-    {
-      name: "hwc_website_write_data",
-      description:
-        "Write a JSON data file to the site's _data/ directory. Atomic write. " +
-        "Content must be valid JSON. Overwrites the existing file.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "Data file name without .json extension, e.g. 'testimonials', 'site'",
-          },
-          content: {
-            type: ["object", "array"],
-            description: "JSON content to write (object or array)",
-          },
-        },
-        required: ["name", "content"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const name = args.name as string;
-          const content = args.content;
-
-          if (name.includes("..") || name.includes("/") || name.includes("\\")) {
-            return mcpError({ type: "VALIDATION_ERROR", message: "Invalid data file name" });
-          }
-
-          const filePath = join(siteRoot, "_data", `${name}.json`);
-          const json = JSON.stringify(content, null, 2) + "\n";
-          const tmpPath = filePath + ".tmp";
-          await writeFile(tmpPath, json, "utf-8");
-          await rename(tmpPath, filePath);
-
-          return {
-            status: "ok",
-            message: `Wrote _data/${name}.json`,
-            data: { name, path: `_data/${name}.json`, bytes: json.length },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to write data file", err);
-        }
-      },
-    },
   ];
 }

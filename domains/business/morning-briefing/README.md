@@ -38,7 +38,7 @@ Post-step-1: `generated_at` is stamped by `jq` from `date -Iseconds` (not Claude
 
 | Section | Data Source | MCP Tool | Dashboard Location |
 |---------|------------|----------|-------------------|
-| Calendar | iCloud via khal | `hwc_calendar_week` | Top |
+| Calendar | iCloud via khal | `hwc_calendar_list` (range=week) | Top |
 | Weather | Web search | N/A (web search) | After Calendar |
 | Tasks | JobTread | `jt_get_tasks` | After Weather |
 | Jobs | JobTread | `jt_search_jobs` | After Tasks |
@@ -47,7 +47,7 @@ Post-step-1: `generated_at` is stamped by `jq` from `date -Iseconds` (not Claude
 | Overdue Docs | JobTread | `jt_get_overdue_documents` | After Leads |
 | Recent Documents | JobTread | `jt_get_documents` | After Overdue |
 | System Health | HWC server | `hwc_monitoring_health_check` | After Recent Docs |
-| Backup | Borg via HWC | `hwc_storage_backup_status` | After System |
+| Backup | Borg via HWC | `hwc_storage_status` | After System |
 | Mail Triage | notmuch + Claude | Step 2 pipeline | After Backup |
 | Comms | Quo/OpenPhone | Placeholder (future) | After Mail |
 
@@ -78,8 +78,8 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 **HWC-SYS** — server health
 - `hwc_monitoring_health_check` — services, containers, storage
 - `hwc_mail_health` — mail system status
-- `hwc_storage_backup_status` — Borg backup status
-- `hwc_calendar_week` — iCloud calendar via khal
+- `hwc_storage_status` — Borg backup and disk usage
+- `hwc_calendar_list` (range=week) — iCloud calendar via khal
 
 ## Troubleshooting
 

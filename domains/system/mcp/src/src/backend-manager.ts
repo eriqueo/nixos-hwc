@@ -4,6 +4,10 @@
  *
  * Routes callTool requests to the correct backend by tool name.
  * Detects name collisions at startup.
+ *
+ * Lazy loading: backends can be marked as "lazy". Their tools are hidden
+ * from ListTools until a connect meta-tool is called. This reduces token
+ * overhead for Claude.ai sessions that don't need all backends.
  */
 
 import { log } from "./log.js";
@@ -23,12 +27,20 @@ export class BackendManager {
   private backends: StdioBackend[] = [];
   private toolMap = new Map<string, { source: string; backend?: StdioBackend; local?: ToolDef }>();
 
+  /** Backends marked lazy start hidden — their tools only appear after connect. */
+  private lazyBackends = new Set<string>();
+  /** Activated backends have been "connected" — their tools appear in allTools(). */
+  private activatedBackends = new Set<string>();
+
   registerLocal(tools: ToolDef[]): void {
     this.localTools = tools;
   }
 
-  addBackend(backend: StdioBackend): void {
+  addBackend(backend: StdioBackend, options?: { lazy?: boolean }): void {
     this.backends.push(backend);
+    if (options?.lazy) {
+      this.lazyBackends.add(backend.name);
+    }
   }
 
   async startAll(): Promise<void> {
@@ -51,7 +63,10 @@ export class BackendManager {
 
     // Log summary
     const localCount = this.localTools.length;
-    const backendSummary = this.backends.map((b) => `${b.name}: ${b.toolCount}`).join(", ");
+    const backendSummary = this.backends.map((b) => {
+      const lazy = this.lazyBackends.has(b.name) ? " (lazy)" : "";
+      return `${b.name}: ${b.toolCount}${lazy}`;
+    }).join(", ");
     const total = this.toolMap.size;
     log.info(`Gateway ready: ${total} tools (hwc-sys: ${localCount}, ${backendSummary})`);
   }
@@ -79,6 +94,56 @@ export class BackendManager {
         this.toolMap.set(tool.name, { source: backend.name, backend });
       }
     }
+
+    // Register connect meta-tools for lazy backends
+    for (const backend of this.backends) {
+      if (!this.lazyBackends.has(backend.name)) continue;
+      if (backend.status !== "ready") continue;
+      const metaName = `hwc_connect_${backend.name.replace(/-/g, "_")}`;
+      this.toolMap.set(metaName, {
+        source: "hwc-sys",
+        local: {
+          name: metaName,
+          description: `Activate ${backend.name} tools (${backend.toolCount} tools). ` +
+            `Call this first to access ${backend.name} capabilities.`,
+          inputSchema: { type: "object", properties: {} },
+          handler: async () => this.activateBackend(backend.name),
+        },
+      });
+    }
+  }
+
+  /**
+   * Activate a lazy backend — its tools will appear in allTools() after this.
+   * Returns a summary of the activated tools.
+   */
+  private async activateBackend(backendName: string): Promise<{
+    status: "ok" | "error" | "partial";
+    message: string;
+    data?: unknown;
+  }> {
+    const backend = this.backends.find((b) => b.name === backendName);
+    if (!backend) {
+      return { status: "error", message: `Backend not found: ${backendName}` };
+    }
+    if (backend.status !== "ready") {
+      return { status: "error", message: `Backend ${backendName} is not ready (status: ${backend.status})` };
+    }
+
+    this.activatedBackends.add(backendName);
+    log.info(`Backend "${backendName}" activated — ${backend.toolCount} tools now visible`);
+
+    // Return tool catalog so Claude knows what's available without another ListTools round-trip
+    const toolSummary = backend.tools.map((t) => ({
+      name: t.name,
+      description: t.description,
+    }));
+
+    return {
+      status: "ok",
+      message: `Activated ${backend.toolCount} ${backendName} tools. They are now available for use.`,
+      data: { tools: toolSummary },
+    };
   }
 
   allTools(): AggregatedTool[] {
@@ -95,6 +160,26 @@ export class BackendManager {
 
     for (const backend of this.backends) {
       if (backend.status !== "ready" && backend.status !== "restarting") continue;
+
+      const isLazy = this.lazyBackends.has(backend.name);
+      const isActivated = this.activatedBackends.has(backend.name);
+
+      if (isLazy && !isActivated) {
+        // Lazy and not activated: only show the connect meta-tool
+        const metaName = `hwc_connect_${backend.name.replace(/-/g, "_")}`;
+        const metaEntry = this.toolMap.get(metaName);
+        if (metaEntry?.local) {
+          tools.push({
+            name: metaEntry.local.name,
+            description: metaEntry.local.description,
+            inputSchema: metaEntry.local.inputSchema,
+            source: "hwc-sys",
+          });
+        }
+        continue;
+      }
+
+      // Non-lazy or activated: include all tools
       for (const t of backend.tools) {
         tools.push({
           name: t.name,
@@ -126,7 +211,7 @@ export class BackendManager {
       };
     }
 
-    // Local tool
+    // Local tool (including connect meta-tools)
     if (entry.local) {
       const startMs = Date.now();
       try {
@@ -151,8 +236,14 @@ export class BackendManager {
       }
     }
 
-    // Backend tool
+    // Backend tool — works even if backend is lazy (tools are in toolMap from startup)
     if (entry.backend) {
+      // Auto-activate lazy backends on first tool call
+      if (this.lazyBackends.has(entry.backend.name) && !this.activatedBackends.has(entry.backend.name)) {
+        this.activatedBackends.add(entry.backend.name);
+        log.info(`Backend "${entry.backend.name}" auto-activated via direct tool call: ${name}`);
+      }
+
       const result = await entry.backend.callTool(name, args);
 
       // Apply n8n response transforms
@@ -178,13 +269,17 @@ export class BackendManager {
     };
   }
 
-  healthReport(): Record<string, { status: BackendStatus; toolCount: number; lastSeen: number }> {
-    const report: Record<string, { status: BackendStatus; toolCount: number; lastSeen: number }> = {};
+  healthReport(): Record<string, { status: BackendStatus; toolCount: number; lastSeen: number; lazy?: boolean; activated?: boolean }> {
+    const report: Record<string, { status: BackendStatus; toolCount: number; lastSeen: number; lazy?: boolean; activated?: boolean }> = {};
     for (const backend of this.backends) {
       report[backend.name] = {
         status: backend.status,
         toolCount: backend.toolCount,
         lastSeen: backend.lastSeen,
+        ...(this.lazyBackends.has(backend.name) ? {
+          lazy: true,
+          activated: this.activatedBackends.has(backend.name),
+        } : {}),
       };
     }
     return report;

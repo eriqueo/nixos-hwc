@@ -14,51 +14,93 @@ const cache = new TtlCache();
 export function networkTools(runtimeTtl: number, nixosConfigPath?: string): ToolDef[] {
   return [
     {
-      name: "hwc_network_tailscale_status",
+      name: "hwc_network_tunnel_status",
       description:
-        "Get Tailscale network status — self info, connected peers, IPs, online/offline state. " +
-        "Collapses funnel-ingress-nodes into a summary. Read-only.",
+        "Get tunnel/VPN status — Tailscale peers and/or Gluetun VPN. " +
+        "Default returns both. Read-only.",
       inputSchema: {
         type: "object",
-        properties: {},
+        properties: {
+          tunnel: {
+            type: "string",
+            enum: ["tailscale", "vpn", "all"],
+            default: "all",
+            description: "Which tunnel to check (default: all)",
+          },
+        },
       },
-      handler: async (): Promise<ToolResult> => {
+      handler: async (args): Promise<ToolResult> => {
         try {
-          const status = await cache.getOrCompute(
-            "tailscale:status",
-            runtimeTtl,
-            () => getTailscaleStatus()
-          );
+          const tunnel = (args.tunnel as string) || "all";
+          const data: Record<string, unknown> = {};
+          const parts: string[] = [];
 
-          // Collapse funnel-ingress-node entries into a summary
-          const funnelNodes = status.peers.filter((p) =>
-            p.hostname.startsWith("funnel-ingress-node")
-          );
-          const regularPeers = status.peers.filter((p) =>
-            !p.hostname.startsWith("funnel-ingress-node")
-          );
-          const online = regularPeers.filter((p) => p.online);
+          if (tunnel === "all" || tunnel === "tailscale") {
+            try {
+              const status = await cache.getOrCompute(
+                "tailscale:status",
+                runtimeTtl,
+                () => getTailscaleStatus()
+              );
 
-          const collapsedPeers = [
-            ...regularPeers,
-            ...(funnelNodes.length > 0
-              ? [{
-                  hostname: `funnel-ingress-nodes (${funnelNodes.length} total)`,
-                  ip: "",
-                  os: "linux",
-                  online: funnelNodes.some((f) => f.online),
-                  exitNode: false,
-                }]
-              : []),
-          ];
+              const funnelNodes = status.peers.filter((p) =>
+                p.hostname.startsWith("funnel-ingress-node")
+              );
+              const regularPeers = status.peers.filter((p) =>
+                !p.hostname.startsWith("funnel-ingress-node")
+              );
+              const online = regularPeers.filter((p) => p.online);
+
+              const collapsedPeers = [
+                ...regularPeers,
+                ...(funnelNodes.length > 0
+                  ? [{
+                      hostname: `funnel-ingress-nodes (${funnelNodes.length} total)`,
+                      ip: "",
+                      os: "linux",
+                      online: funnelNodes.some((f) => f.online),
+                      exitNode: false,
+                    }]
+                  : []),
+              ];
+
+              data.tailscale = { ...status, peers: collapsedPeers };
+              parts.push(`Tailscale: ${online.length}/${regularPeers.length} peers`);
+            } catch {
+              data.tailscale = { error: "tailscaled not reachable" };
+              parts.push("Tailscale: down");
+            }
+          }
+
+          if (tunnel === "all" || tunnel === "vpn") {
+            try {
+              const [ipResult, statusResult] = await Promise.allSettled([
+                fetch("http://localhost:8000/v1/publicip/ip", {
+                  signal: AbortSignal.timeout(5000),
+                }).then((r) => r.json()),
+                fetch("http://localhost:8000/v1/openvpn/status", {
+                  signal: AbortSignal.timeout(5000),
+                }).then((r) => r.json()),
+              ]);
+
+              data.vpn = {
+                publicIp: ipResult.status === "fulfilled" ? ipResult.value : "unavailable",
+                vpnStatus: statusResult.status === "fulfilled" ? statusResult.value : "unavailable",
+              };
+              parts.push("VPN: connected");
+            } catch {
+              data.vpn = { error: "Gluetun not reachable" };
+              parts.push("VPN: down");
+            }
+          }
 
           return {
             status: "ok",
-            message: `${online.length}/${regularPeers.length} peers online (+ ${funnelNodes.length} funnel nodes)`,
-            data: { ...status, peers: collapsedPeers },
+            message: parts.join(", "),
+            data,
           };
         } catch (err) {
-          return catchError("UNAVAILABLE", "Failed to get Tailscale status", err, "Is tailscaled running?");
+          return catchError("UNAVAILABLE", "Failed to get tunnel status", err);
         }
       },
     },
@@ -66,8 +108,7 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
     {
       name: "hwc_network_caddy_routes",
       description:
-        "Get Caddy reverse proxy configuration. Tries live admin API first, falls back to " +
-        "parsing routes.nix. Optionally probes upstream health (slower). Read-only.",
+        "Get Caddy reverse proxy configuration. Optionally probes upstream health (slower). Read-only.",
       inputSchema: {
         type: "object",
         properties: {
@@ -208,39 +249,6 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
       },
     },
 
-    {
-      name: "hwc_network_vpn_status",
-      description:
-        "Get Gluetun VPN status — connected server, public IP, port forwarding. " +
-        "Requires Gluetun container running on port 8000.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-      handler: async (): Promise<ToolResult> => {
-        try {
-          const [ipResult, statusResult] = await Promise.allSettled([
-            fetch("http://localhost:8000/v1/publicip/ip", {
-              signal: AbortSignal.timeout(5000),
-            }).then((r) => r.json()),
-            fetch("http://localhost:8000/v1/openvpn/status", {
-              signal: AbortSignal.timeout(5000),
-            }).then((r) => r.json()),
-          ]);
-
-          return {
-            status: "ok",
-            message: "VPN status retrieved",
-            data: {
-              publicIp: ipResult.status === "fulfilled" ? ipResult.value : "unavailable",
-              vpnStatus: statusResult.status === "fulfilled" ? statusResult.value : "unavailable",
-            },
-          };
-        } catch (err) {
-          return catchError("UNAVAILABLE", "Failed to get VPN status (Gluetun may not be running)", err, "Check that the Gluetun container is running on port 8000");
-        }
-      },
-    },
   ];
 }
 

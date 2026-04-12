@@ -78,14 +78,13 @@ export function cmsTools(scopes: CmsScope[]): ToolDef[] {
   const scopeDescriptions = scopes.map((s) => `'${s.name}' — ${s.description}`).join("; ");
 
   return [
-    // ── hwc_cms_list_dir ─────────────────────────────────────────────────
+    // ── hwc_cms_browse ─────────────────────────────────────────────────
     {
-      name: "hwc_cms_list_dir",
+      name: "hwc_cms_browse",
       description:
-        "List directory contents in a Heartwood business app. " +
+        "Browse a Heartwood business app — read a file or list a directory. " +
         `Scopes: ${scopeDescriptions}. ` +
-        "Shows files with sizes and subdirectories. Set recursive=true for up to 3 levels. " +
-        "Scoped — cannot escape the selected root.",
+        "Auto-detects file vs directory. Scoped — cannot escape the selected root.",
       inputSchema: {
         type: "object",
         properties: {
@@ -96,11 +95,19 @@ export function cmsTools(scopes: CmsScope[]): ToolDef[] {
           },
           path: {
             type: "string",
-            description: "Directory path relative to scope root (default: root). E.g. 'lib', 'routes', 'src'",
+            description: "Path relative to scope root (default: root dir)",
+          },
+          offset: {
+            type: "number",
+            description: "For files: start line (1-based, default 1)",
+          },
+          limit: {
+            type: "number",
+            description: "For files: max lines (default 200, max 500)",
           },
           recursive: {
             type: "boolean",
-            description: "List recursively (default false, max 3 levels deep)",
+            description: "For directories: recurse up to 3 levels (default false)",
           },
         },
       },
@@ -113,114 +120,52 @@ export function cmsTools(scopes: CmsScope[]): ToolDef[] {
 
           const root = normalize(scope.path);
           const rawPath = (args.path as string) || ".";
-          const recursive = (args.recursive as boolean) ?? false;
 
           const abs = safePath(root, rawPath);
           if (!abs) {
             return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
           }
 
+          let pathStat;
+          try {
+            pathStat = await stat(abs);
+          } catch {
+            return mcpError({ type: "NOT_FOUND", message: `Not found: ${rawPath}` });
+          }
+
+          if (pathStat.isFile()) {
+            const offset = Math.max(1, (args.offset as number) || 1);
+            const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
+            const content = await readFile(abs, "utf-8");
+            const allLines = content.split("\n");
+            const totalLines = allLines.length;
+            const startIdx = offset - 1;
+            const slice = allLines.slice(startIdx, startIdx + limit);
+            const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} | ${line}`).join("\n");
+
+            return {
+              status: "ok",
+              message: `[${scope.name}] ${rawPath} (lines ${offset}-${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
+              data: { type: "file", scope: scope.name, path: rawPath, totalLines, offset, limit, content: numbered },
+            };
+          }
+
+          // Directory listing
+          const recursive = (args.recursive as boolean) ?? false;
           let entries: DirEntry[];
           try {
             entries = await listDirEntries(abs, recursive ? 3 : 0);
           } catch {
-            return mcpError({ type: "NOT_FOUND", message: `Directory not found: ${rawPath}` });
+            return mcpError({ type: "NOT_FOUND", message: `Directory not readable: ${rawPath}` });
           }
 
           return {
             status: "ok",
             message: `[${scope.name}] ${entries.length} entries in ${rawPath}`,
-            data: { scope: scope.name, path: rawPath, entries },
+            data: { type: "directory", scope: scope.name, path: rawPath, entries },
           };
         } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to list directory", err);
-        }
-      },
-    },
-
-    // ── hwc_cms_read_file ────────────────────────────────────────────────
-    {
-      name: "hwc_cms_read_file",
-      description:
-        "Read a file from a Heartwood business app by relative path. " +
-        `Scopes: ${scopeDescriptions}. ` +
-        "Supports offset/limit for large files. Returns numbered lines. " +
-        "Scoped — cannot read outside the selected root.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          scope: {
-            type: "string",
-            enum: scopeNames,
-            description: `App scope to operate in (default: '${scopeNames[0]}')`,
-          },
-          path: {
-            type: "string",
-            description: "File path relative to scope root, e.g. 'server.js', 'lib/content.js', 'src/main.jsx'",
-          },
-          offset: {
-            type: "number",
-            description: "Start reading from this line number (1-based, default 1)",
-          },
-          limit: {
-            type: "number",
-            description: "Max lines to return (default 200, max 500)",
-          },
-        },
-        required: ["path"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const scope = resolveScope(scopes, args.scope as string | undefined);
-          if (!scope) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
-          }
-
-          const root = normalize(scope.path);
-          const rawPath = args.path as string;
-          const offset = Math.max(1, (args.offset as number) || 1);
-          const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
-
-          const abs = safePath(root, rawPath);
-          if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
-          }
-
-          let fileStat;
-          try {
-            fileStat = await stat(abs);
-          } catch {
-            return mcpError({
-              type: "NOT_FOUND",
-              message: `File not found: ${rawPath}`,
-              suggestion: "Use hwc_cms_list_dir to browse available files",
-            });
-          }
-          if (!fileStat.isFile()) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Not a file: ${rawPath}`, suggestion: "Use hwc_cms_list_dir for directories" });
-          }
-
-          const content = await readFile(abs, "utf-8");
-          const allLines = content.split("\n");
-          const totalLines = allLines.length;
-          const startIdx = offset - 1;
-          const slice = allLines.slice(startIdx, startIdx + limit);
-          const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} | ${line}`).join("\n");
-
-          return {
-            status: "ok",
-            message: `[${scope.name}] ${rawPath} (lines ${offset}-${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
-            data: {
-              scope: scope.name,
-              path: rawPath,
-              totalLines,
-              offset,
-              limit,
-              content: numbered,
-            },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to read file", err);
+          return catchError("INTERNAL_ERROR", "Failed to browse path", err);
         }
       },
     },
@@ -230,9 +175,8 @@ export function cmsTools(scopes: CmsScope[]): ToolDef[] {
       name: "hwc_cms_write_file",
       description:
         "Write or create a file in a Heartwood business app. " +
-        `Scopes: ${scopeDescriptions}. ` +
-        "Creates parent directories if needed. Atomic write (tmp + rename). " +
-        "Scoped — cannot write outside the selected root.",
+        "Same scopes as hwc_cms_list_dir. " +
+        "Creates parent directories if needed. Atomic write.",
       inputSchema: {
         type: "object",
         properties: {
@@ -311,8 +255,7 @@ export function cmsTools(scopes: CmsScope[]): ToolDef[] {
       name: "hwc_cms_delete_file",
       description:
         "Delete a file in a Heartwood business app. Permanent deletion (no trash). " +
-        `Scopes: ${scopeDescriptions}. ` +
-        "Scoped — cannot delete outside the selected root. Cannot delete directories.",
+        "Same scopes as hwc_cms_list_dir. Cannot delete directories.",
       inputSchema: {
         type: "object",
         properties: {

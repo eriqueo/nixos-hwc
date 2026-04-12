@@ -86,30 +86,33 @@ function createMCPServer(
 
 // ── Backend configuration from environment ──────────────────────────────
 
-function buildBackends(): StdioBackend[] {
-  const backends: StdioBackend[] = [];
+function buildBackends(): Array<{ backend: StdioBackend; lazy: boolean }> {
+  const backends: Array<{ backend: StdioBackend; lazy: boolean }> = [];
   const nodePath = process.env.HWC_NODE_PATH || "node";
 
   // heartwood-mcp (JobTread tools) — spawned as stdio child
   const jtSrcDir = process.env.HWC_JT_SRC_DIR;
   if (jtSrcDir) {
-    backends.push(new StdioBackend({
-      name: "heartwood-mcp",
-      command: nodePath,
-      args: [`${jtSrcDir}/dist/index.js`],
-      env: {
-        TRANSPORT: "stdio",
-        JT_GRANT_KEY: process.env.JT_GRANT_KEY || "",
-        JT_ORG_ID: process.env.JT_ORG_ID || "22Nm3uFevXMb",
-        JT_USER_ID: process.env.JT_USER_ID || "22Nm3uFeRB7s",
-        JT_API_URL: process.env.JT_API_URL || "https://api.jobtread.com/pave",
-        LOG_LEVEL: process.env.HWC_MCP_LOG_LEVEL || "info",
-        NODE_ENV: "production",
-      },
-      cwd: jtSrcDir,
-      callTimeoutMs: 60_000, // JT API calls can be slow
-    }));
-    log.info("Configured heartwood-mcp backend", { srcDir: jtSrcDir });
+    backends.push({
+      backend: new StdioBackend({
+        name: "heartwood-mcp",
+        command: nodePath,
+        args: [`${jtSrcDir}/dist/index.js`],
+        env: {
+          TRANSPORT: "stdio",
+          JT_GRANT_KEY: process.env.JT_GRANT_KEY || "",
+          JT_ORG_ID: process.env.JT_ORG_ID || "22Nm3uFevXMb",
+          JT_USER_ID: process.env.JT_USER_ID || "22Nm3uFeRB7s",
+          JT_API_URL: process.env.JT_API_URL || "https://api.jobtread.com/pave",
+          LOG_LEVEL: process.env.HWC_MCP_LOG_LEVEL || "info",
+          NODE_ENV: "production",
+        },
+        cwd: jtSrcDir,
+        callTimeoutMs: 60_000, // JT API calls can be slow
+      }),
+      lazy: true, // JT tools hidden until hwc_connect_heartwood_mcp is called
+    });
+    log.info("Configured heartwood-mcp backend (lazy)", { srcDir: jtSrcDir });
   } else {
     log.info("heartwood-mcp backend skipped (HWC_JT_SRC_DIR not set)");
   }
@@ -117,21 +120,24 @@ function buildBackends(): StdioBackend[] {
   // n8n-mcp (workflow automation tools) — spawned as stdio child
   const n8nEntryPoint = process.env.HWC_N8N_ENTRY_POINT;
   if (n8nEntryPoint) {
-    backends.push(new StdioBackend({
-      name: "n8n-mcp",
-      command: nodePath,
-      args: [n8nEntryPoint],
-      env: {
-        MCP_MODE: "stdio",
-        N8N_API_KEY: process.env.N8N_API_KEY || "",
-        N8N_API_URL: process.env.N8N_API_URL || "http://localhost:5678",
-        N8N_API_TIMEOUT: "60000",
-        LOG_LEVEL: process.env.HWC_MCP_LOG_LEVEL || "info",
-        NODE_ENV: "production",
-      },
-      callTimeoutMs: 60_000, // n8n API calls can be slow
-    }));
-    log.info("Configured n8n-mcp backend", { entryPoint: n8nEntryPoint });
+    backends.push({
+      backend: new StdioBackend({
+        name: "n8n-mcp",
+        command: nodePath,
+        args: [n8nEntryPoint],
+        env: {
+          MCP_MODE: "stdio",
+          N8N_API_KEY: process.env.N8N_API_KEY || "",
+          N8N_API_URL: process.env.N8N_API_URL || "http://localhost:5678",
+          N8N_API_TIMEOUT: "60000",
+          LOG_LEVEL: process.env.HWC_MCP_LOG_LEVEL || "info",
+          NODE_ENV: "production",
+        },
+        callTimeoutMs: 60_000, // n8n API calls can be slow
+      }),
+      lazy: true, // n8n tools hidden until hwc_connect_n8n_mcp is called
+    });
+    log.info("Configured n8n-mcp backend (lazy)", { entryPoint: n8nEntryPoint });
   } else {
     log.info("n8n-mcp backend skipped (HWC_N8N_ENTRY_POINT not set)");
   }
@@ -164,8 +170,8 @@ async function main() {
   manager.registerLocal(registry.getAll());
 
   const backends = buildBackends();
-  for (const b of backends) {
-    manager.addBackend(b);
+  for (const { backend, lazy } of backends) {
+    manager.addBackend(backend, { lazy });
   }
 
   // Start all stdio backends (non-fatal failures — partial startup)
