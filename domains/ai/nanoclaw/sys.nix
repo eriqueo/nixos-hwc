@@ -111,7 +111,7 @@ in
       environment = {
         HOST_PROJECT_ROOT = cfg.dataDir;
         HOME = "/root";
-        # Use port 3002 to avoid conflict with open-webui on 3001
+        # Credential proxy port
         CREDENTIAL_PROXY_PORT = "3002";
         # Trigger word must match the Slack bot's display name
         ASSISTANT_NAME = "NanoClaw";

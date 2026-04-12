@@ -30,7 +30,7 @@ in
 
     dataDir = lib.mkOption {
       type = lib.types.path;
-      default = "${config.hwc.paths.ai.root}/nanoclaw";
+      default = "/var/lib/ai/nanoclaw";
       description = "Persistent directory for NanoClaw project and data";
     };
 

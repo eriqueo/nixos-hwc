@@ -140,9 +140,3 @@
         description: Photos
         server: localhost
         container: immich-server
-    - Open WebUI:
-        icon: mdi-robot
-        href: https://hwc.ocelot-wahoo.ts.net:3443
-        description: Local LLM
-        server: localhost
-        container: open-webui

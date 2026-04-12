@@ -135,16 +135,9 @@
     local-workflows = {
       enable = false;
       fileCleanup.enable = false;
-      journaling.enable = false;
       autoDoc.enable = false;
       chatCli.enable = false;
-      api.enable = false;
     };
-  };
-
-  hwc.ai.open-webui = {
-    enable = false;
-    enableAuth = false;
   };
 
   hwc.ai.mcp = {
@@ -152,11 +145,6 @@
     filesystem.nixos.enable = true;
     proxy.enable = true;
     reverseProxy.enable = true;
-  };
-
-  hwc.ai.router = {
-    enable = false;
-    port = 11435;
   };
 
   hwc.ai.agent = {
