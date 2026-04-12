@@ -501,16 +501,6 @@
         dryRun = false;  # Set to true for testing
       };
 
-      # Automatic daily journaling (disabled — Restart=on-failure loop hammers GPU)
-      journaling = {
-        enable = false;
-        outputDir = "/home/eric/Documents/HWC-AI-Journal";
-        sources = [ "systemd-journal" "container-logs" "nixos-rebuilds" ];
-        schedule = "daily";
-        timeOfDay = "02:00";
-        model = "llama3.2:3b";
-        retentionDays = 90;
-      };
 
       # Auto-documentation generator (CLI tool)
       autoDoc = {
@@ -525,25 +515,7 @@
         # systemPrompt inherited from domain default
       };
 
-      # Workflows HTTP API (Sprint 5.4)
-      api = {
-        enable = true;
-        port = 6021;
-        # All other settings use defaults from domain options
-      };
     };
-  };
-
-  # Open WebUI - Modern web interface for Ollama
-  # Access: https://hwc.ocelot-wahoo.ts.net:3443 (via Caddy port mode)
-  hwc.ai.open-webui = {
-    enable = true;
-    enableAuth = false;  # TEMPORARY: Disabled to bypass signup page rendering issue
-    healthCheck.enable = false;  # Avoid failing rebuild on unhealthy healthcheck
-    # All other settings use defaults:
-    # - port: 3001
-    # - defaultModel: "phi3:3.8b"
-    # - enableRAG: true
   };
 
   # MCP (Model Context Protocol) server infrastructure
@@ -558,11 +530,6 @@
 
   # Navidrome music streaming (container)
   hwc.media.navidrome.enable = true;
-  # Enable AI router and agent on server
-  hwc.ai.router = {
-    enable = true;
-    port = 11435;
-  };
   hwc.ai.agent = {
     enable = true;
     port = 6020;
@@ -935,6 +902,9 @@
     enable = lib.mkDefault true;
   };
 
+  # Business database layer (hwc PostgreSQL database)
+  hwc.business.databases.enable = lib.mkDefault true;
+
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
 
@@ -1018,7 +988,7 @@
     version = "15";
     backup.perDatabase = {
       enable = true;
-      databases = [ "hwc" ];
+      # Per-database list managed by consumer modules (e.g. hwc.business.databases)
       # outputDir = "/home/eric/backups/postgres";  # default
       # retentionDays = 30;  # default
       # schedule = "*-*-* 02:30:00";  # default (2:30 AM)
