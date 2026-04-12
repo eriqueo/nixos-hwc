@@ -4,6 +4,7 @@
 # NAMESPACE: hwc.business.*
 #
 # Modules:
+#   - databases      — hwc PostgreSQL business database layer
 #   - estimator      — Estimate Assembler PWA (Vite/React)
 #   - firefly        — Firefly III + Pico (personal finance, containerized)
 #   - paperless      — Paperless-ngx (document management, containerized)
@@ -14,6 +15,7 @@
 { config, lib, ... }:
 {
   imports = [
+    ./databases/index.nix
     ./estimator/index.nix
     ./firefly/index.nix
     ./paperless/index.nix

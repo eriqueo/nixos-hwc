@@ -61,32 +61,6 @@ hwc.data.databases = {
 - **Extensions**: pgvector (vector search), vectorchord (Immich compatibility)
 - **Network access**: localhost + container gateway (10.89.0.1)
 
-## hwc Database Schema
-
-The `hwc` database contains business data in the `hwc` schema:
-
-| Table | Purpose | Used By |
-|-------|---------|---------|
-| `hwc.calculator_leads` | Bathroom remodel calculator submissions | n8n Workflow 09 |
-| `hwc.daily_logs` | Voice-transcribed daily job logs | n8n Workflow 12 |
-
-### calculator_leads
-
-```sql
--- Key columns
-id, name, phone, email, project_type, bathroom_size,
-estimate_low, estimate_high, status, jt_account_id, jt_job_id, created_at
-```
-
-### daily_logs
-
-```sql
--- Key columns
-id, job_id, job_name, date, total_hours, time_entries (JSONB),
-materials (JSONB), conditions (JSONB), tomorrow_plan, raw_transcript,
-jt_pushed, jt_daily_log_id, created_at
-```
-
 ## Backup Services
 
 | Service | Type | Output | Schedule |
@@ -99,12 +73,10 @@ jt_pushed, jt_daily_log_id, created_at
 - `domains/media/immich/` - PostgreSQL + Redis
 - `domains/media/paperless/` - PostgreSQL + Redis
 - `domains/business/firefly/` - PostgreSQL
-- `domains/business/` - PostgreSQL (hwc database)
+- `domains/business/databases/` - PostgreSQL (hwc database — see that module's README for schema docs)
 - `profiles/server.nix` - n8n uses PostgreSQL
 
 ## Changelog
 
-- 2026-03-24: Granted n8n postgres user access to hwc schema (USAGE + ALL on tables/sequences) for calculator_lead workflow
-- 2026-03-23: Created hwc schema with calculator_leads and daily_logs tables for n8n workflows
 - 2026-03-23: Added `backup.perDatabase` for compressed per-database backups with retention
 - 2026-02-27: Migrated from server/native/networking/ per Law 2 namespace compliance
