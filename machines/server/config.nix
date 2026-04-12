@@ -266,24 +266,14 @@
   };
 
   # Syncthing — bidirectional home folder sync with hwc-laptop
-  # Phase 1: service running, pair devices via GUI (SSH tunnel: ssh -L 8384:localhost:8384 server)
-  # Phase 2: add device IDs + folder declarations for fully declarative config.
-  services.syncthing = {
+  hwc.data.syncthing = {
     enable = true;
-    user = "eric";
-    dataDir = "/home/eric";
-    openDefaultPorts = true;
-    overrideDevices = true;
-    overrideFolders = true;
-    settings = {
-      options.globalAnnounceEnabled = false;  # Tailscale only, no cloud relay
-      devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
-      folders = {
-        "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-        "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-        "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-        "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-      };
+    devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
+    folders = {
+      "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-laptop" ]; };
+      "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-laptop" ]; };
+      "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; };
+      "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
     };
   };
 
@@ -628,40 +618,9 @@
     firewall.tailscaleOnly = true;
 
     exporter.enable = false;
-  };
 
-  # Automated surveillance cleanup (enforce Frigate retention policy)
-  systemd.timers.frigate-cleanup = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "daily";
-      Persistent = true;
-      RandomizedDelaySec = "1h";
-    };
-  };
-
-  systemd.services.frigate-cleanup = {
-    description = "Cleanup old Frigate surveillance recordings";
-    serviceConfig = {
-      Type = "oneshot";
-      User = "root";
-    };
-    script = ''
-      # Frigate handles its own cleanup, but this provides backup enforcement
-      # Delete recordings older than 7 days (Frigate config retention)
-      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate/recordings -type f -name "*.mp4" -mtime +7 -delete 2>/dev/null || true
-
-      # Delete clips older than 10 days (event retention)
-      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate/clips -type f -name "*.mp4" -mtime +10 -delete 2>/dev/null || true
-
-      # Delete empty directories
-      ${pkgs.findutils}/bin/find /mnt/media/surveillance/frigate -type d -empty -delete 2>/dev/null || true
-
-      # Log cleanup stats
-      RECORDINGS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate/recordings 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
-      CLIPS_SIZE=$(${pkgs.coreutils}/bin/du -sh /mnt/media/surveillance/frigate/clips 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1)
-      echo "Frigate cleanup complete - Recordings: $RECORDINGS_SIZE, Clips: $CLIPS_SIZE"
-    '';
+    # Automated surveillance cleanup (backup enforcement for Frigate retention)
+    cleanup.enable = true;
   };
 
   # Native Media Services now handled by Charter-compliant domain modules
