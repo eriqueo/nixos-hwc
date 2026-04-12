@@ -248,11 +248,11 @@ snapshots:
 - Manages database and clips
 
 **2. Systemd Backup Timer** (Secondary)
-- File: `machines/server/config.nix` → `frigate-cleanup.service`
+- Module: `hwc.media.frigate.cleanup` (parts/cleanup.nix)
 - Schedule: Daily with 1-hour random delay
 - Actions:
-  - Delete recordings >7 days old
-  - Delete clips >10 days old
+  - Delete recordings >7 days old (configurable: `cleanup.recordingRetentionDays`)
+  - Delete clips >10 days old (configurable: `cleanup.clipRetentionDays`)
   - Remove empty directories
 
 ```bash
@@ -636,7 +636,7 @@ hwc.media.frigate = {
 | `domains/media/frigate/exporter/index.nix` | Prometheus exporter (if enabled) |
 | `/opt/surveillance/frigate/config/config.yaml` | Generated runtime config |
 | `/opt/surveillance/frigate/config/models/` | AI model files |
-| `machines/server/config.nix` | Storage paths, cleanup timer |
+| `domains/media/frigate/parts/cleanup.nix` | Retention cleanup timer + service |
 
 ### Secrets (Agenix)
 
@@ -691,6 +691,7 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+- 2026-04-12: Extract cleanup timer/service into parts/cleanup.nix with configurable retention options
 - 2026-04-12: Reduce detection load — drop FPS (5→3 cobra, 3→2 reolink), disable cobra_cam_1 4K record stream (detect-only), lower reolink detect resolution (640×360→480×270). GPU temp 74°C→61°C.
 - 2026-04-07: Switch reolink_record from ffmpeg transcode to 4K passthrough — transcode (both hardware and software) destabilized go2rtc, killing all live streams. Re-enable after reboot aligns nvidia driver.
 - 2026-04-07: Disable cobra_cam_2 while physically offline — retry storm every 10s was generating constant errors.

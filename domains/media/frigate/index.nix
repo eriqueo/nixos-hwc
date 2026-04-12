@@ -17,6 +17,7 @@ in
 {
   imports = [
     ./parts/config.nix
+    ./parts/cleanup.nix
     ./exporter/index.nix
   ];
 
@@ -56,6 +57,28 @@ in
       memory = lib.mkOption { type = lib.types.str; default = "4g"; description = "Container memory limit"; };
       cpus = lib.mkOption { type = lib.types.str; default = "1.5"; description = "Container CPU limit"; };
       shmSize = lib.mkOption { type = lib.types.str; default = "1g"; description = "Shared memory size"; };
+    };
+
+    cleanup = {
+      enable = lib.mkEnableOption "Automated surveillance recording cleanup";
+
+      schedule = lib.mkOption {
+        type = lib.types.str;
+        default = "daily";
+        description = "systemd OnCalendar schedule for cleanup";
+      };
+
+      recordingRetentionDays = lib.mkOption {
+        type = lib.types.int;
+        default = 7;
+        description = "Delete recordings older than N days";
+      };
+
+      clipRetentionDays = lib.mkOption {
+        type = lib.types.int;
+        default = 10;
+        description = "Delete clips/events older than N days";
+      };
     };
 
     firewall.tailscaleOnly = lib.mkOption { type = lib.types.bool; default = true; description = "Restrict access to Tailscale interface only"; };

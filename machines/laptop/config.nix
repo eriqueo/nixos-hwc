@@ -234,28 +234,17 @@ in
   };
 
   # Syncthing — bidirectional home folder sync with hwc-server
-  # Phase 1: service running, pair devices via GUI at http://localhost:8384
-  # Phase 2: add device IDs + folder declarations for fully declarative config.
-  # overrideDevices/Folders = false so GUI-paired state survives rebuilds during bootstrap.
-  services.syncthing = {
+  hwc.data.syncthing = {
     enable = true;
-    user = "eric";
-    dataDir = "/home/eric";
-    openDefaultPorts = true;
-    overrideDevices = true;
-    overrideFolders = true;
-    settings = {
-      options.globalAnnounceEnabled = false;  # Tailscale only, no cloud relay
-      devices."hwc-server" = {
-        id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
-        addresses = [ "tcp://100.114.232.124:22000" ];  # Server Tailscale IP
-      };
-      folders = {
-        "000_inbox"   = { path = "/home/eric/000_inbox";   devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-        "100_hwc"     = { path = "/home/eric/100_hwc";     devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-        "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-        "300_tech"    = { path = "/home/eric/300_tech";    devices = [ "hwc-server" ]; versioning.type = "staggered"; versioning.params.maxAge = "2592000"; };
-      };
+    devices."hwc-server" = {
+      id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
+      addresses = [ "tcp://100.114.232.124:22000" ];  # Server Tailscale IP
+    };
+    folders = {
+      "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-server" ]; };
+      "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-server" ]; };
+      "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; };
+      "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
     };
   };
 

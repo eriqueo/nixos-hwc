@@ -3,11 +3,11 @@
 ## Purpose
 
 Consolidates all data infrastructure: databases (PostgreSQL), backup (rsync/borg),
-storage (mount management), and CouchDB (Obsidian LiveSync).
+storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSync).
 
 ## Boundaries
 
-- Owns: database services, backup automation, storage mounts, CouchDB
+- Owns: database services, backup automation, storage mounts, Syncthing file sync, CouchDB
 - Does NOT own: application-level data (that belongs to the apps using these services)
 
 ## Structure
@@ -19,10 +19,12 @@ data/
 ├── databases/      # PostgreSQL management
 ├── backup/         # Rsync + Borg backup automation
 ├── storage/        # Storage mount management
+├── syncthing/      # Bidirectional file sync over Tailscale
 └── couchdb/        # CouchDB for Obsidian LiveSync
 ```
 
 ## Changelog
+- 2026-04-12: Add syncthing module (hwc.data.syncthing.*), extracted from machine configs
 - 2026-03-18: Add CloudBeaver container for managing PostgreSQL databases, expanding data infrastructure capabilities.
 
 - 2026-03-04: Namespace migration hwc.server.{databases,storage,native.backup,native.couchdb} → hwc.data.*
