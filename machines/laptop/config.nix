@@ -6,71 +6,6 @@
 
 { config, lib, pkgs, modulesPath, ... }:
 
-let
-  user = config.hwc.system.users.user.name;
-
-  # Generic USB drive auto-mount with user-accessible permissions.
-  # Handles NTFS, exFAT, and FAT32. Skips drives already declared in
-  # /etc/fstab (e.g., the Seagate via fileSystems) so there's no conflict.
-  usbAutoMount = pkgs.writeShellScript "usb-automount" ''
-    #!/usr/bin/env bash
-    set -euo pipefail
-    [[ -z "''${1:-}" ]] && exit 1
-    DEVICE="/dev/$1"
-
-    # Skip drives managed declaratively (UUID present in /etc/fstab)
-    UUID=$(${pkgs.util-linux}/bin/blkid -o value -s UUID "$DEVICE" 2>/dev/null || true)
-    [[ -n "$UUID" ]] && grep -qiF "$UUID" /etc/fstab && exit 0
-
-    FSTYPE=$(${pkgs.util-linux}/bin/blkid -o value -s TYPE "$DEVICE" 2>/dev/null || true)
-    [[ -z "$FSTYPE" ]] && exit 0
-
-    LABEL=$(${pkgs.util-linux}/bin/blkid -o value -s LABEL "$DEVICE" 2>/dev/null \
-      | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-' '_')
-    # Strip leading dots/underscores — a label of ".." would otherwise resolve
-    # to /mnt/.. = / and mount -t ntfs3 $DEVICE / as root. Not great.
-    LABEL="''${LABEL##*([._])}"
-    [[ -z "$LABEL" ]] && LABEL="usb-$(basename "$DEVICE")"
-
-    # Check the device itself, not the mount point — avoids false "already mounted"
-    # if two drives happen to share a label.
-    ${pkgs.util-linux}/bin/findmnt -n "$DEVICE" >/dev/null 2>&1 && exit 0
-
-    MOUNT="/mnt/$LABEL"
-    mkdir -p "$MOUNT"
-    # Clean up the empty dir if mount fails so we don't leave stray /mnt/* entries.
-    trap '${pkgs.util-linux}/bin/mountpoint -q "$MOUNT" || rmdir "$MOUNT" 2>/dev/null || true' EXIT
-
-    case "$FSTYPE" in
-      ntfs|ntfs3)
-        ${pkgs.util-linux}/bin/mount -t ntfs3 \
-          -o uid=1000,gid=100,dmask=0000,fmask=0000,force,iocharset=utf8 \
-          "$DEVICE" "$MOUNT"
-        # NTFS Windows ACLs can map dirs to root — fix so Yazi can delete
-        ${pkgs.findutils}/bin/find "$MOUNT" -maxdepth 1 -not -user ${user} \
-          -exec ${pkgs.coreutils}/bin/chown -R ${user}:users {} + 2>/dev/null || true
-        ;;
-      exfat)
-        ${pkgs.util-linux}/bin/mount -t exfat \
-          -o uid=1000,gid=100,dmask=0000,fmask=0000 \
-          "$DEVICE" "$MOUNT"
-        ;;
-      vfat|fat32|fat)
-        ${pkgs.util-linux}/bin/mount -t vfat \
-          -o uid=1000,gid=100,dmask=0000,fmask=0000,codepage=437,iocharset=utf8 \
-          "$DEVICE" "$MOUNT"
-        ;;
-    esac
-  '';
-
-  usbAutoUnmount = pkgs.writeShellScript "usb-autounmount" ''
-    #!/usr/bin/env bash
-    DEVICE="/dev/$1"
-    TARGET=$(${pkgs.util-linux}/bin/findmnt -n -o TARGET "$DEVICE" 2>/dev/null || true)
-    [[ -n "$TARGET" ]] && ${pkgs.util-linux}/bin/umount "$TARGET" 2>/dev/null || true
-  '';
-in
-
 {
   ##############################################################################
   ##  MACHINE: HWC-LAPTOP
@@ -281,21 +216,12 @@ in
 
   systemd.tmpfiles.rules = [ "d /mnt/seagate 0755 root root -" ];
 
-  systemd.services.seagate-fixperms = {
-    description = "Fix Seagate NTFS directory ownership for user access";
-    after = [ "mnt-seagate.mount" ];
-    wantedBy = [ "mnt-seagate.mount" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      # Only chown top-level dirs owned by root — sufficient for deletion (write on parent = delete child)
-      # This persists to NTFS ACLs, so each run is faster as files gain eric ownership
-      ExecStart = pkgs.writeShellScript "seagate-fixperms" ''
-        ${pkgs.findutils}/bin/find /mnt/seagate -maxdepth 1 -not -user eric \
-          -exec ${pkgs.coreutils}/bin/chown -R eric:users {} + 2>/dev/null || true
-      '';
-    };
-  };
+  # USB auto-mount for external drives + NTFS fixperms for Seagate
+  hwc.system.usb.autoMount.enable = true;
+  hwc.system.usb.ntfsFixperms = [{
+    mountPoint = "/mnt/seagate";
+    afterUnit = "mnt-seagate.mount";
+  }];
 
   #============================================================================
   # === [domains/system/hardware] Orchestration ================================
@@ -323,43 +249,8 @@ in
 
   #============================================================================
   # VIRTUALIZATION
-  #============================================================================
-  # Libvirt/QEMU: make OVMF visible and avoid extra groups by using wheel sockets.
-  virtualisation.libvirtd = {
-    # Use wheel for socket perms so you don't need extra groups.
-    extraConfig = ''
-      unix_sock_group = "wheel"
-      unix_sock_ro_perms = "0770"
-      unix_sock_rw_perms = "0770"
-    '';
-
-    # OVMF is now available by default with QEMU
-    qemu = {
-      runAsRoot = lib.mkForce true;     # fixes OVMF metadata enumeration edge cases
-      # OVMF images are now available by default in newer versions
-    };
-  };
-
-  # Container engines enabled for Ollama AI workloads
   # Podman is required by hwc.ai.ollama module
-  virtualisation.docker.enable = lib.mkForce false;  # Use podman, not docker
-
-  # --- Declarative libvirt storage pool (requires NixVirt in flake) --
-  # Commented out until NixVirt module is imported in flake.nix
-  # virtualisation.libvirt.pools = [
-  #   {
-  #     name = "ISOs";
-  #     present = true;
-  #     type = "dir";
-  #     target = {
-  #       path = "${config.hwc.paths.hot}/ISOs";
-  #       owner = "root";
-  #       group = "root";
-  #       mode  = "0755";
-  #     };
-  #     autostart = true;
-  #   }
-  # ];
+  virtualisation.docker.enable = lib.mkForce false;
 
   #============================================================================
   # === [profiles/home.nix] Orchestration =====================================
@@ -502,22 +393,9 @@ in
     "fs.inotify.max_user_watches" = 524288;
   };
 
-  # Device rules: kyber scheduler on NVMe + generic USB drive auto-mount
+  # Device rules: kyber scheduler on NVMe
   services.udev.extraRules = lib.mkAfter ''
     ACTION=="add|change", KERNEL=="nvme*n*", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="kyber"
-
-    # Auto-mount external USB drives (NTFS/exFAT/FAT32) at /mnt/<label>
-    # Drives in /etc/fstab (e.g., Seagate) are skipped — systemd handles those.
-    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="ntfs", \
-      RUN+="${usbAutoMount} %k"
-    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="ntfs3", \
-      RUN+="${usbAutoMount} %k"
-    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="exfat", \
-      RUN+="${usbAutoMount} %k"
-    ACTION=="add", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="vfat", \
-      RUN+="${usbAutoMount} %k"
-    ACTION=="remove", KERNEL=="sd[b-z][0-9]*", SUBSYSTEMS=="usb", \
-      RUN+="${usbAutoUnmount} %k"
   '';
 
   # Intel NPU support (permissions, firmware, Level Zero loader)

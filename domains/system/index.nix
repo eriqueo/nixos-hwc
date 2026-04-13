@@ -6,7 +6,8 @@
     ./gpu.nix                  # NVIDIA/AMD/Intel GPU acceleration
     ./hardware.nix             # audio, keyboard, bluetooth, monitoring
     ./networking.nix           # SSH, Tailscale, Samba, firewall
-    ./mounts.nix               # storage tiers, USB auto-mount
+    ./mounts.nix               # storage tiers
+    ./usb-automount.nix        # USB drive auto-mount + NTFS fixperms
     ./users.nix                # accounts, identity, SSH
     ./mcp/index.nix            # Infrastructure MCP server
   ];
