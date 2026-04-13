@@ -1,6 +1,6 @@
 /**
  * BackendManager — aggregates tools from in-process hwc-sys tools and
- * stdio backends (heartwood-mcp, n8n-mcp) into a unified tool namespace.
+ * stdio backends (jt-mcp, n8n-mcp) into a unified tool namespace.
  *
  * Routes callTool requests to the correct backend by tool name.
  * Detects name collisions at startup.

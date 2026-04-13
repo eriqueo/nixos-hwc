@@ -159,7 +159,7 @@
       "Bash(sudo tailscale:*)",
       "Bash(git checkout:*)",
       "Bash(sudo:*)",
-      "Read(//opt/business/heartwood-mcp/**)",
+      "Read(//opt/business/jt-mcp/**)",
       "Bash(node -e \":*)",
       "Bash(do echo:*)",
       "mcp__hwc-sys__hwc_services_logs",
@@ -178,7 +178,10 @@
       "mcp__claude_ai_datax__jobtread_organizations",
       "mcp__hwc-jt__jt_get_custom_fields",
       "Read(//nix/store/**)",
-      "Read(//home/eric/**)"
+      "Read(//home/eric/**)",
+      "mcp__hwc-sys__hwc_monitoring_gpu_status",
+      "mcp__hwc-sys__hwc_services_container_stats",
+      "mcp__hwc-sys__hwc_monitoring_health_check"
     ],
     "deny": [],
     "ask": [],

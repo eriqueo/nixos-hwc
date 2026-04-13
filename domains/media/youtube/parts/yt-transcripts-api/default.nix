@@ -1,20 +1,14 @@
 # domains/media/youtube/parts/yt-transcripts-api/default.nix
 #
-# YOUTUBE TRANSCRIPTS API - Transcript extraction REST API with worker
-# Provides async job-based transcript extraction from YouTube videos/playlists/channels
+# YOUTUBE TRANSCRIPTS API — single FastAPI service for transcript extraction
 #
 # NAMESPACE: hwc.media.youtube.transcripts.*
 #
 # ARCHITECTURE:
-#   - API Server: FastAPI with --workers 1 (single process)
-#   - Worker: Separate background processor (independent systemd unit)
-#   - Database: PostgreSQL with yt_transcripts schema
-#   - Deduplication: Global transcripts table prevents re-extraction
-#
-# DEPENDENCIES:
-#   - PostgreSQL (hwc.data.databases.postgresql)
-#   - YouTube API key (optional, for playlist expansion)
-#   - yt_core and yt_transcripts_api Python packages
+#   - Single FastAPI process
+#   - youtube-transcript-api for captions, yt-dlp for metadata only
+#   - No LLM, no spaCy, no PostgreSQL
+#   - Caddy reverse proxy at hwc.ocelot-wahoo.ts.net:3443
 
 { config, lib, pkgs, ... }:
 
@@ -22,247 +16,91 @@ let
   cfg = config.hwc.media.youtube.transcripts;
   paths = config.hwc.paths;
 
-  # Build Python packages with repo-relative paths for reproducibility
-  yt-core = pkgs.python3Packages.buildPythonPackage {
-    pname = "yt-core";
-    version = "0.1.0";
-    src = lib.cleanSource "${paths.nixos}/workspace/media/youtube-services/packages/yt_core";
-    format = "pyproject";
+  scriptDir = "${paths.nixos}/workspace/media/youtube-services";
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
-      sqlalchemy
-      asyncpg
-      alembic
-      pydantic
-      pydantic-settings
-      google-api-python-client
-      httpx
-      structlog
-    ];
+  pythonPackages = with pkgs.python3Packages; [
+    fastapi
+    uvicorn
+    pydantic
+    youtube-transcript-api
+  ];
 
-    nativeBuildInputs = with pkgs.python3Packages; [
-      setuptools
-      wheel
-    ];
+  pythonPath = pkgs.python3Packages.makePythonPath pythonPackages;
 
-    # Skip tests during build (run separately if needed)
-    doCheck = false;
-  };
-
-  yt-transcripts-api = pkgs.python3Packages.buildPythonPackage {
-    pname = "yt-transcripts-api";
-    version = "0.1.0";
-    src = lib.cleanSource "${paths.nixos}/workspace/media/youtube-services/packages/yt_transcripts_api";
-    format = "pyproject";
-
-    propagatedBuildInputs = with pkgs.python3Packages; [
-      yt-core
-      fastapi
-      uvicorn
-      youtube-transcript-api
-      python-slugify
-    ];
-
-    nativeBuildInputs = with pkgs.python3Packages; [
-      setuptools
-      wheel
-    ];
-
-    doCheck = false;
-  };
-
-  # Python environment with all dependencies
-  pythonEnv = pkgs.python3.withPackages (ps: [
-    yt-core
-    yt-transcripts-api
-    ps.alembic  # For migrations
-  ]);
-
-  # API server wrapper script
   apiWrapper = pkgs.writeShellScript "yt-transcripts-api-wrapper" ''
     set -euo pipefail
 
-    # Load secrets from systemd credentials
-    export YT_TRANSCRIPTS_DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/db-url")"
-
-    # YouTube API key is optional (only needed for playlist expansion)
-    if [ -f "$CREDENTIALS_DIRECTORY/youtube-api-key" ]; then
-      export YT_TRANSCRIPTS_YOUTUBE_API_KEY="$(cat "$CREDENTIALS_DIRECTORY/youtube-api-key")"
-    fi
-
-    # Configuration from options
+    export PYTHONPATH="${pythonPath}:${scriptDir}"
+    export PATH="${pkgs.yt-dlp}/bin:$PATH"
     export YT_TRANSCRIPTS_HOST="127.0.0.1"
     export YT_TRANSCRIPTS_PORT="${toString cfg.port}"
-    export YT_TRANSCRIPTS_OUTPUT_DIRECTORY="${cfg.outputDirectory}"
-    export YT_TRANSCRIPTS_DEFAULT_OUTPUT_FORMAT="${cfg.defaultOutputFormat}"
-    export YT_TRANSCRIPTS_RATE_LIMIT_RPS="${toString cfg.rateLimit.requestsPerSecond}"
-    export YT_TRANSCRIPTS_RATE_LIMIT_BURST="${toString cfg.rateLimit.burst}"
-    export YT_TRANSCRIPTS_QUOTA_LIMIT="${toString cfg.rateLimit.quotaLimit}"
+    export YT_TRANSCRIPTS_OUTPUT_DIR="${cfg.outputDirectory}"
+    export YT_TRANSCRIPTS_DEFAULT_MODE="${cfg.defaultFormat}"
+    export YT_TRANSCRIPTS_LANGUAGES="${lib.concatStringsSep "," cfg.languages}"
 
-    # Run FastAPI with single worker (worker runs separately)
-    exec ${pythonEnv}/bin/uvicorn yt_transcripts_api.main:app \
-      --host "$YT_TRANSCRIPTS_HOST" \
-      --port "$YT_TRANSCRIPTS_PORT" \
-      --workers 1 \
-      --log-level info
+    exec ${pkgs.python3}/bin/python3 ${scriptDir}/api.py
   '';
 
-  # Worker process wrapper script
-  workerWrapper = pkgs.writeShellScript "yt-transcripts-worker-wrapper" ''
+  # n8n integration script — calls HTTP API
+  n8nScript = pkgs.writeShellScriptBin "n8n-transcript-extract" ''
     set -euo pipefail
 
-    # Load secrets
-    export YT_TRANSCRIPTS_DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/db-url")"
+    YOUTUBE_URL="''${1:?YouTube URL is required}"
+    MODE="''${2:-clean}"
+    JOB_ID="''${3:-txn-$(date +%s)-$(${pkgs.openssl}/bin/openssl rand -hex 3)}"
 
-    if [ -f "$CREDENTIALS_DIRECTORY/youtube-api-key" ]; then
-      export YT_TRANSCRIPTS_YOUTUBE_API_KEY="$(cat "$CREDENTIALS_DIRECTORY/youtube-api-key")"
-    fi
+    API_RESPONSE=$(${pkgs.curl}/bin/curl -sf --max-time 35 -X POST \
+      http://127.0.0.1:${toString cfg.port}/transcript \
+      -H "Content-Type: application/json" \
+      -d "{\"url\": \"$YOUTUBE_URL\", \"mode\": \"$MODE\"}")
 
-    # Configuration
-    export YT_TRANSCRIPTS_OUTPUT_DIRECTORY="${cfg.outputDirectory}"
-    export YT_TRANSCRIPTS_DEFAULT_OUTPUT_FORMAT="${cfg.defaultOutputFormat}"
-    export YT_TRANSCRIPTS_WORKERS="${toString cfg.workers}"
-    export YT_TRANSCRIPTS_RATE_LIMIT_RPS="${toString cfg.rateLimit.requestsPerSecond}"
-    export YT_TRANSCRIPTS_RATE_LIMIT_BURST="${toString cfg.rateLimit.burst}"
-    export YT_TRANSCRIPTS_QUOTA_LIMIT="${toString cfg.rateLimit.quotaLimit}"
-
-    # Run worker
-    exec ${pythonEnv}/bin/python3 -m yt_transcripts_api.worker
-  '';
-
-  # Database setup script (runs Alembic migrations)
-  setupScript = pkgs.writeShellScript "yt-transcripts-setup" ''
-    set -euo pipefail
-
-    echo "[yt-transcripts-api-setup] Running database migrations..."
-
-    # Load database URL
-    export DATABASE_URL="$(cat "$CREDENTIALS_DIRECTORY/db-url")"
-
-    # Run Alembic migrations
-    cd ${paths.nixos}/workspace/media/youtube-services/packages/yt_transcripts_api/migrations
-    ${pythonEnv}/bin/alembic upgrade head
-
-    echo "[yt-transcripts-api-setup] Migrations complete"
+    echo "STATUS=success"
+    echo "JOB_ID=$JOB_ID"
+    echo "TITLE=$(echo "$API_RESPONSE" | ${pkgs.jq}/bin/jq -r .title)"
+    echo "EXTRACTED_FILE=$(echo "$API_RESPONSE" | ${pkgs.jq}/bin/jq -r .filename)"
+    echo "TIMESTAMP=$(date -Iseconds)"
   '';
 
 in
 {
-  #============================================================================
-  # IMPLEMENTATION
-  #============================================================================
   config = lib.mkIf cfg.enable {
 
-    # Database setup service (runs migrations before API/worker start)
-    systemd.services.yt-transcripts-api-setup = {
-      description = "YouTube Transcripts API Database Setup";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "postgresql.service" ];
-      before = [ "yt-transcripts-api.service" "yt-transcripts-worker.service" ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = setupScript;
-        User = "yt-transcripts-api";
-        Group = "yt-transcripts-api";
-        StateDirectory = "hwc/yt-transcripts-api";
-        LoadCredential = [
-          "db-url:${config.age.secrets.youtube-transcripts-db-url.path}"
-        ];
-      };
-    };
-
-    # API server service (FastAPI with --workers 1)
     systemd.services.yt-transcripts-api = {
-      description = "YouTube Transcripts API Server";
+      description = "YouTube Transcripts API";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network.target" "postgresql.service" "yt-transcripts-api-setup.service" ];
-      requires = [ "yt-transcripts-api-setup.service" ];
+      after = [ "network.target" ];
 
       serviceConfig = {
         Type = "exec";
         ExecStart = apiWrapper;
         Restart = "always";
-        User = "yt-transcripts-api";
-        Group = "yt-transcripts-api";
-        SupplementaryGroups = [ "secrets" ];
+        RestartSec = 5;
+
+        # Run as eric (owns output dirs)
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+
         StateDirectory = "hwc/yt-transcripts-api";
 
-        # Load credentials via systemd LoadCredential
-        LoadCredential = [
-          "db-url:${config.age.secrets.youtube-transcripts-db-url.path}"
-        ] ++ lib.optional (config.age.secrets.youtube-api-key or null != null)
-          "youtube-api-key:${config.age.secrets.youtube-api-key.path}";
-
-        # Security hardening
+        # Hardening
         NoNewPrivileges = true;
         PrivateTmp = true;
+        PrivateDevices = true;
         ProtectSystem = "strict";
+        ProtectHome = "read-only";
+        ProtectKernelTunables = true;
+        ProtectControlGroups = true;
+        SystemCallArchitectures = "native";
         ReadWritePaths = [ cfg.outputDirectory ];
       };
     };
 
-    # Worker service (separate process, processes jobs)
-    systemd.services.yt-transcripts-worker = {
-      description = "YouTube Transcripts Worker";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "postgresql.service" "yt-transcripts-api-setup.service" ];
-      requires = [ "yt-transcripts-api-setup.service" ];
-
-      serviceConfig = {
-        Type = "exec";
-        ExecStart = workerWrapper;
-        Restart = "always";
-        User = "yt-transcripts-api";
-        Group = "yt-transcripts-api";
-        SupplementaryGroups = [ "secrets" ];
-        StateDirectory = "hwc/yt-transcripts-api";
-
-        LoadCredential = [
-          "db-url:${config.age.secrets.youtube-transcripts-db-url.path}"
-        ] ++ lib.optional (config.age.secrets.youtube-api-key or null != null)
-          "youtube-api-key:${config.age.secrets.youtube-api-key.path}";
-
-        # Security hardening
-        NoNewPrivileges = true;
-        PrivateTmp = true;
-        ProtectSystem = "strict";
-        ReadWritePaths = [ cfg.outputDirectory ];
-      };
-    };
-
-    # Create system user and group
-    users.users.yt-transcripts-api = {
-      isSystemUser = true;
-      group = "yt-transcripts-api";
-      extraGroups = [ "secrets" ];
-      description = "YouTube Transcripts API service user";
-    };
-
-    users.groups.yt-transcripts-api = {};
-
-    # Create output directory
+    # Ensure output directory exists
     systemd.tmpfiles.rules = [
-      "d ${cfg.outputDirectory} 0755 yt-transcripts-api yt-transcripts-api -"
+      "d ${cfg.outputDirectory} 0755 eric users -"
     ];
 
-    # Firewall rules (API port accessible on all interfaces)
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
-
-    # Also allow on Tailscale interface
-    networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ cfg.port ];
-
-    # Validation assertions
-    assertions = [
-      {
-        assertion = !cfg.enable || config.hwc.data.databases.postgresql.enable;
-        message = "yt-transcripts-api requires PostgreSQL to be enabled";
-      }
-      {
-        assertion = !cfg.enable || (config.age.secrets.youtube-transcripts-db-url or null != null);
-        message = "yt-transcripts-api requires age.secrets.youtube-transcripts-db-url to be configured";
-      }
-    ];
+    # Provide n8n integration script system-wide
+    environment.systemPackages = [ n8nScript ];
   };
 }

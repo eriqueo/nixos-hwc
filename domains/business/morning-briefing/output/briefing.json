@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-11T06:00:06-06:00",
+  "generated_at": "2026-04-12T06:01:34-06:00",
   "sections": {
     "calendar": {
       "events": [
@@ -94,398 +94,113 @@
   },
   "alerts": [],
   "mail_triage": {
-    "generated_at": "2026-04-10T12:03:02Z",
-    "query_window_hours": 48,
-    "total_unread": 23,
+    "generated_at": "2026-04-12T06:21:00Z",
+    "query_window_hours": 24,
+    "total_unread": 5,
     "buckets": {
       "urgent": [],
       "review": [
         {
-          "thread_id": "000000000000468e",
-          "subject": "Your March 2026 transaction history",
-          "from_name": "Venmo",
-          "from_address": "venmo@venmo.com",
-          "date_relative": "Yest. 21:23",
+          "thread_id": "00000000000046c1",
+          "subject": "We received your Intuit subscription payment!",
+          "from_name": "Intuit",
+          "from_address": "intuit.com",
+          "date_relative": "4 mins. ago",
           "tags": [
-            "inbox",
-            "personal_proton",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Monthly Venmo transaction statement for March 2026.",
-          "suggested_action": "archive",
-          "urgency_reason": "Financial statement worth a quick review for accuracy."
-        },
-        {
-          "thread_id": "0000000000004687",
-          "subject": "eTicket Itinerary and Receipt for Confirmation E1ZC6N",
-          "from_name": "United Airlines",
-          "from_address": "united@united.com",
-          "date_relative": "Yest. 13:48",
-          "tags": [
-            "inbox",
-            "personal_proton",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Flight itinerary and receipt for upcoming United Airlines trip, confirmation E1ZC6N.",
-          "suggested_action": "archive",
-          "urgency_reason": "Travel document Eric may need to reference for his upcoming trip."
-        },
-        {
-          "thread_id": "0000000000004685",
-          "subject": "Business Before Hours - The Baxter Hotel - Thursday, May 7, 2026",
-          "from_name": "Bozeman Area Chamber of Commerce",
-          "from_address": "chamber@bozemanchamber.com",
-          "date_relative": "Yest. 13:00",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Chamber networking event at The Baxter Hotel on May 7 — registration open.",
-          "suggested_action": "flag_action",
-          "urgency_reason": "Local business networking opportunity Eric may want to attend."
-        },
-        {
-          "thread_id": "0000000000004679",
-          "subject": "ChatGPT - Your plan will not renew",
-          "from_name": "OpenAI",
-          "from_address": "noreply@openai.com",
-          "date_relative": "Yest. 09:08",
-          "tags": [
+            "eriqueokeefe",
+            "finance",
             "flagged",
             "inbox",
             "notification",
+            "personal",
+            "personal_google",
+            "personal_proton",
             "unread",
             "work"
           ],
           "has_attachment": false,
-          "summary": "OpenAI subscription is set to expire and will not auto-renew — action needed if Eric wants to keep it.",
+          "summary": "QuickBooks subscription payment confirmation — verify charge amount matches expected plan.",
           "suggested_action": "read_only",
-          "urgency_reason": "Subscription ending for a tool Eric actively uses; may want to confirm intentional cancellation."
+          "urgency_reason": "Flagged financial notification from active accounting platform"
         },
         {
-          "thread_id": "000000000000467b",
-          "subject": "Heartwood Craft: Your current Maps rank is 13.95",
-          "from_name": "Semrush Map Rank Tracker",
-          "from_address": "noreply@semrush.com",
-          "date_relative": "Yest. 10:05",
+          "thread_id": "00000000000046c0",
+          "subject": "GLM-5.1 on Ollama's cloud",
+          "from_name": "Ollama",
+          "from_address": "ollama.com",
+          "date_relative": "Today 01:29",
           "tags": [
-            "hwc_google",
-            "hwcmt",
+            "flagged",
+            "inbox",
+            "tech",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Ollama announcing GLM-5.1 model availability on their cloud platform.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Tech newsletter from subscribed source"
+        },
+        {
+          "thread_id": "00000000000046bc",
+          "subject": "Your statement is available",
+          "from_name": "Bank of America",
+          "from_address": "bankofamerica.com",
+          "date_relative": "Yest. 21:43",
+          "tags": [
+            "bank",
+            "eriqueokeefe",
+            "finance",
+            "flagged",
             "inbox",
             "personal",
-            "personal_proton",
-            "tech",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Semrush reports Heartwood Craft's Google Maps ranking is 13.95 — SEO tracking update.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Business SEO metric worth monitoring for local search visibility."
-        },
-        {
-          "thread_id": "0000000000004672",
-          "subject": "Good news!「How to Run Bozeman Weekend Events Digest Script」is now processing.",
-          "from_name": "Manus Team",
-          "from_address": "notifications@manus.im",
-          "date_relative": "Yest. 08:05",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Manus AI agent began processing a Bozeman weekend events digest script Eric submitted.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Status update on a tech task Eric initiated."
-        },
-        {
-          "thread_id": "000000000000466f",
-          "subject": "NIHFCU Annual Meeting – April 21",
-          "from_name": "NIHFCU",
-          "from_address": "noreply@nihfcu.org",
-          "date_relative": "Yest. 06:49",
-          "tags": [
-            "inbox",
             "personal_google",
-            "unread"
+            "personal_proton",
+            "unread",
+            "work"
           ],
           "has_attachment": false,
-          "summary": "Credit union annual meeting on April 21 — Eric may want to attend or note the date.",
-          "suggested_action": "archive",
-          "urgency_reason": "Financial institution notice about upcoming member meeting."
+          "summary": "Monthly Bank of America statement ready for review.",
+          "suggested_action": "flag_action",
+          "urgency_reason": "Bank statement — may need to reconcile or download for records"
         }
       ],
       "noise": [
         {
-          "thread_id": "000000000000468d",
-          "subject": "🍪 Startup idea #564: Layoffs",
-          "from_name": "Half Baked",
-          "from_address": "newsletter@halfbaked.com",
-          "date_relative": "Yest. 17:16",
+          "thread_id": "00000000000046bd",
+          "subject": "Please provide feedback + $1,000 chance to win",
+          "from_name": "Walmart Customer Experience",
+          "from_address": "medallia.com",
+          "date_relative": "Yest. 22:02",
           "tags": [
             "inbox",
-            "personal_proton",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Humor newsletter with a startup idea parody.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "000000000000468a",
-          "subject": "Reminder: event starting at 4:44 PM (GMT-6) on Thursday, April 9",
-          "from_name": "Proton",
-          "from_address": "calendar@proton.me",
-          "date_relative": "Yest. 16:29",
-          "tags": [
-            "flagged",
-            "inbox",
-            "notification",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Calendar reminder for yesterday's 4:44 @ 4C Chamber event — already passed.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004689",
-          "subject": "TONIGHT: Revenue is Vanity. Profit is Sanity.",
-          "from_name": "Tom Reber",
-          "from_address": "tom@thecontractorfight.com",
-          "date_relative": "Yest. 15:04",
-          "tags": [
-            "coaching",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Contractor coaching drip email promoting a live event.",
+          "summary": "Walmart post-purchase survey disguised as sweepstakes bait.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "0000000000004688",
-          "subject": "Recommended for you: Powerful iOS Photos Applets",
+          "thread_id": "00000000000046b2",
+          "subject": "7 automations for people who hate mornings ☀️",
           "from_name": "IFTTT",
-          "from_address": "noreply@ifttt.com",
-          "date_relative": "Yest. 14:48",
+          "from_address": "ifttt.com",
+          "date_relative": "Fri. 22:54",
           "tags": [
             "inbox",
             "personal_proton",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "IFTTT promotional email suggesting iOS photo automations.",
+          "summary": "IFTTT marketing email promoting automation templates.",
           "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004686",
-          "subject": "Your United Airlines booking confirmation –  E1ZC6N",
-          "from_name": "United Airlines",
-          "from_address": "united@united.com",
-          "date_relative": "Yest. 13:47",
-          "tags": [
-            "inbox",
-            "notification",
-            "personal_proton",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Duplicate booking confirmation for the same flight already captured in the receipt email.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004684",
-          "subject": "Remember, your Premium membership includes ad-free listening in the Music app",
-          "from_name": "YouTube Premium",
-          "from_address": "noreply@youtube.com",
-          "date_relative": "Yest. 12:31",
-          "tags": [
-            "inbox",
-            "notification",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "YouTube Premium marketing reminder about music app features.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004680",
-          "subject": "Your first Applet is live! ⚡️ What's next?",
-          "from_name": "Chelsea with IFTTT",
-          "from_address": "chelsea@ifttt.com",
-          "date_relative": "Yest. 10:39",
-          "tags": [
-            "inbox",
-            "personal_proton",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "IFTTT onboarding drip email after creating first applet.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "000000000000467e",
-          "subject": "TONIGHT: Are you in the fight?",
-          "from_name": "Tom Reber",
-          "from_address": "tom@thecontractorfight.com",
-          "date_relative": "Yest. 10:05",
-          "tags": [
-            "coaching",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Second contractor coaching drip email from same sender.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "000000000000467a",
-          "subject": "Eric, you're invited to a virtual networking event",
-          "from_name": "Chuck Casto via Alignable",
-          "from_address": "noreply@alignable.com",
-          "date_relative": "Yest. 09:22",
-          "tags": [
-            "bank",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Alignable virtual networking event invitation — platform spam.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004677",
-          "subject": "Your authentication code",
-          "from_name": "noreply@tm.openai.com",
-          "from_address": "noreply@tm.openai.com",
-          "date_relative": "Yest. 09:07",
-          "tags": [
-            "eriqueokeefe",
-            "flagged",
-            "inbox",
-            "notification",
-            "personal",
-            "personal_google",
-            "personal_proton",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Expired OpenAI authentication code from yesterday — no longer usable.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004676",
-          "subject": "🍌24 Hours of Banan-a-Synth on Kickstarter",
-          "from_name": "Dave from MicroKits",
-          "from_address": "microkits@klaviyomail.com",
-          "date_relative": "Yest. 09:01",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Kickstarter marketing email for a synthesizer kit — no business relevance.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004674",
-          "subject": "-68k to 230k net profit in ONE year",
-          "from_name": "Marti Amos",
-          "from_address": "marti@bf10x.hubspotemail.net",
-          "date_relative": "Yest. 08:04",
-          "tags": [
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Contractor coaching cold outreach from known spam domain bf10x.hubspotemail.net.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004671",
-          "subject": "4:44 @ 4C - Thursday, April 9, 2026 - Dry Hills Distillery",
-          "from_name": "Bozeman Area Chamber of Commerce",
-          "from_address": "chamber@bozemanchamber.com",
-          "date_relative": "Yest. 08:00",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Chamber event that already occurred yesterday — consolidated under most recent Chamber email.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "000000000000465d",
-          "subject": "Become VIP To Reserve Your Epic Brick Adventure!",
-          "from_name": "Richard",
-          "from_address": "richard@brickadventure.com",
-          "date_relative": "Wed. 22:07",
-          "tags": [
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Marketing email for a brick-themed event — no business relevance.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "000000000000465a",
-          "subject": "Eric, you're invited to a virtual networking event",
-          "from_name": "Cherri Pedrioli via Alignable",
-          "from_address": "noreply@alignable.com",
-          "date_relative": "Wed. 17:43",
-          "tags": [
-            "bank",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Second Alignable virtual networking invitation — platform spam.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004653",
-          "subject": "Register Now! Business Lunch Seminar - Planning Your Financial Future: Tax, Retirement, and Legacy Strategies - Wednesday, April 22, 2026",
-          "from_name": "Bozeman Area Chamber of Commerce",
-          "from_address": "chamber@bozemanchamber.com",
-          "date_relative": "Wed. 13:00",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Chamber seminar registration — consolidated under most recent Chamber email.",
-          "suggested_action": "archive"
         }
       ]
     },
     "stats": {
       "urgent_count": 0,
-      "review_count": 7,
-      "noise_count": 16
+      "review_count": 3,
+      "noise_count": 2
     }
   }
 }

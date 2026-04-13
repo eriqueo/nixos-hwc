@@ -1,6 +1,6 @@
 # domains/business/mcp/index.nix
 #
-# Heartwood MCP Server — unified interface to all business systems
+# JT MCP Server — unified interface to all business systems
 # (JobTread, Paperless-ngx, Firefly III, n8n workflows)
 #
 # NAMESPACE: hwc.business.mcp.*
@@ -19,12 +19,12 @@ let
   inherit (lib) mkIf mkMerge;
 
   # Health check script — verifies the SSE port is reachable, restarts + notifies if not
-  healthCheckScript = pkgs.writeShellScript "heartwood-mcp-health" ''
+  healthCheckScript = pkgs.writeShellScript "jt-mcp-health" ''
     PORT=${toString cfg.sse.port}
     export PATH="/run/current-system/sw/bin:$PATH"
 
     # Check if the service is supposed to be running
-    if ! ${pkgs.systemd}/bin/systemctl is-active --quiet heartwood-mcp; then
+    if ! ${pkgs.systemd}/bin/systemctl is-active --quiet jt-mcp; then
       exit 0  # Service intentionally stopped, nothing to do
     fi
 
@@ -35,20 +35,20 @@ let
     fi
 
     # Port not responding — service is hung
-    LOGS=$(${pkgs.systemd}/bin/journalctl -u heartwood-mcp -n 10 --no-pager 2>&1 || echo "no logs")
+    LOGS=$(${pkgs.systemd}/bin/journalctl -u jt-mcp -n 10 --no-pager 2>&1 || echo "no logs")
 
     # Send Gotify notification before restart
     hwc-gotify-send --priority 9 \
-      "Heartwood MCP Hung" \
+      "JT MCP Hung" \
       "Port $PORT not responding (HTTP $HTTP_CODE). Restarting. Recent logs: $LOGS" || true
 
     # Restart the service
-    ${pkgs.systemd}/bin/systemctl restart heartwood-mcp
+    ${pkgs.systemd}/bin/systemctl restart jt-mcp
   '';
 
   # Build the environment file content from secrets
-  envFileScript = pkgs.writeShellScript "heartwood-mcp-env" ''
-    cat > /run/heartwood-mcp/env <<ENVEOF
+  envFileScript = pkgs.writeShellScript "jt-mcp-env" ''
+    cat > /run/jt-mcp/env <<ENVEOF
     JT_GRANT_KEY=$(cat ${config.age.secrets.jobtread-grant-key.path})
     JT_ORG_ID=${cfg.jt.orgId}
     JT_USER_ID=${cfg.jt.userId}
@@ -59,9 +59,9 @@ let
     LOG_LEVEL=${cfg.logLevel}
     ENVEOF
     # Strip leading whitespace from env file (heredoc indentation artifact)
-    sed -i 's/^[[:space:]]*//' /run/heartwood-mcp/env
-    chmod 0400 /run/heartwood-mcp/env
-    chown ${cfg.user}:users /run/heartwood-mcp/env
+    sed -i 's/^[[:space:]]*//' /run/jt-mcp/env
+    chmod 0400 /run/jt-mcp/env
+    chown ${cfg.user}:users /run/jt-mcp/env
   '';
 
 in
@@ -70,13 +70,13 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.business.mcp = {
-    enable = lib.mkEnableOption "Heartwood MCP Server — unified business system interface";
+    enable = lib.mkEnableOption "JT MCP Server — unified business system interface";
 
     # ── Server source ────────────────────────────────────────────────────
     srcDir = lib.mkOption {
       type = lib.types.path;
-      default = "${paths.business.root or "/opt/business"}/heartwood-mcp";
-      description = "Path to the built Heartwood MCP server (contains dist/)";
+      default = "${paths.business.root or "/opt/business"}/jt-mcp";
+      description = "Path to the built JT MCP server (contains dist/)";
     };
 
     # ── Identity ─────────────────────────────────────────────────────────
@@ -149,16 +149,16 @@ in
     # TMPFILES (Runtime directories)
     #--------------------------------------------------------------------------
     systemd.tmpfiles.rules = [
-      "d /run/heartwood-mcp 0750 ${cfg.user} users -"
+      "d /run/jt-mcp 0750 ${cfg.user} users -"
     ];
 
     #--------------------------------------------------------------------------
     # ENVIRONMENT SETUP SERVICE (generates env file from secrets)
     #--------------------------------------------------------------------------
-    systemd.services.heartwood-mcp-env = {
-      description = "Generate Heartwood MCP environment from secrets";
+    systemd.services.jt-mcp-env = {
+      description = "Generate JT MCP environment from secrets";
       after = [ "network.target" ];
-      before = [ "heartwood-mcp.service" ];
+      before = [ "jt-mcp.service" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
         Type = "oneshot";
@@ -171,17 +171,17 @@ in
     #--------------------------------------------------------------------------
     # HEARTWOOD MCP SERVICE
     #--------------------------------------------------------------------------
-    systemd.services.heartwood-mcp = {
-      description = "Heartwood MCP Server — unified business system interface";
-      after = [ "network.target" "heartwood-mcp-env.service" ];
-      requires = [ "heartwood-mcp-env.service" ];
+    systemd.services.jt-mcp = {
+      description = "JT MCP Server — unified business system interface";
+      after = [ "network.target" "jt-mcp-env.service" ];
+      requires = [ "jt-mcp-env.service" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = mkMerge [
         {
           Type = "simple";
           ExecStart = "${pkgs.nodejs_22}/bin/node ${cfg.srcDir}/dist/index.js";
-          EnvironmentFile = "/run/heartwood-mcp/env";
+          EnvironmentFile = "/run/jt-mcp/env";
           WorkingDirectory = cfg.srcDir;
           Restart = "on-failure";
           RestartSec = "5s";
@@ -192,7 +192,7 @@ in
           PrivateTmp = true;
           ProtectSystem = "strict";
           ProtectHome = false; # Needs access to srcDir
-          ReadWritePaths = [ "/run/heartwood-mcp" ];
+          ReadWritePaths = [ "/run/jt-mcp" ];
           ProtectKernelTunables = true;
           ProtectKernelModules = true;
           ProtectControlGroups = true;
@@ -212,9 +212,9 @@ in
     #--------------------------------------------------------------------------
     # HEALTH CHECK (catches hung process that OnFailure can't detect)
     #--------------------------------------------------------------------------
-    systemd.services.heartwood-mcp-health = {
-      description = "Heartwood MCP health check — detect hung process";
-      after = [ "heartwood-mcp.service" ];
+    systemd.services.jt-mcp-health = {
+      description = "JT MCP health check — detect hung process";
+      after = [ "jt-mcp.service" ];
 
       serviceConfig = {
         Type = "oneshot";
@@ -223,8 +223,8 @@ in
       };
     };
 
-    systemd.timers.heartwood-mcp-health = {
-      description = "Heartwood MCP health check timer";
+    systemd.timers.jt-mcp-health = {
+      description = "JT MCP health check timer";
       wantedBy = [ "timers.target" ];
 
       timerConfig = {

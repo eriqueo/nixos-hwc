@@ -1,6 +1,6 @@
 /**
  * Tool registry — maps tool names to their definitions.
- * Mirrors the heartwood-mcp pattern.
+ * Mirrors the jt-mcp pattern.
  */
 
 import type { ToolDef } from "../types.js";
