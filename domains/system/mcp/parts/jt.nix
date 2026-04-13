@@ -1,6 +1,6 @@
 # domains/system/mcp/parts/jt.nix
 #
-# HWC JobTread MCP configuration — Heartwood business tools (63 JT PAVE tools)
+# HWC JobTread MCP configuration — JT PAVE tools (63 JT PAVE tools)
 #
 # NOTE: JT is now a stdio backend of the unified gateway (hwc-sys-mcp).
 # This file only declares options used by the gateway. The standalone
@@ -22,7 +22,7 @@ in
   # OPTIONS (consumed by gateway in index.nix)
   #==========================================================================
   options.hwc.system.mcp.jt = {
-    enable = lib.mkEnableOption "HWC JobTread MCP tools — Heartwood business tools via gateway stdio backend";
+    enable = lib.mkEnableOption "HWC JobTread MCP tools — JT PAVE tools via gateway stdio backend";
 
     port = lib.mkOption {
       type = lib.types.port;
@@ -39,13 +39,13 @@ in
     logLevel = lib.mkOption {
       type = lib.types.enum [ "debug" "info" "warn" "error" ];
       default = "info";
-      description = "Server log level (passed to heartwood-mcp child process)";
+      description = "Server log level (passed to jt-mcp child process)";
     };
 
     srcDir = lib.mkOption {
       type = lib.types.path;
-      default = "${paths.business.root or "/opt/business"}/heartwood-mcp";
-      description = "Path to the built Heartwood MCP server (contains dist/)";
+      default = "${paths.business.root or "/opt/business"}/jt-mcp";
+      description = "Path to the built JT MCP server (contains dist/)";
     };
 
     # ── JobTread configuration ───────────────────────────────────────────

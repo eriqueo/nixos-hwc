@@ -1,12 +1,12 @@
 # domains/system/mcp — HWC MCP Gateway
 
-Unified MCP gateway (v0.3.1) aggregating 138 tools from three sources into a single endpoint. Connects to Claude Code (stdio), Claude.ai (Streamable HTTP via Tailscale Funnel), and any MCP-compatible client.
+Unified MCP gateway (v0.3.2) aggregating 121 tools from three sources. Connects to Claude Code (stdio), Claude.ai (Streamable HTTP via Tailscale Funnel), and any MCP-compatible client. JT and n8n backends use lazy loading — 46 tools visible by default, backends activate on demand.
 
-| Source | Tools | Transport |
-|--------|-------|-----------|
-| hwc-sys (local, in-process) | 46 | Direct function calls |
-| heartwood-mcp (JobTread) | 71 | stdio child process |
-| n8n-mcp (workflow automation) | 21 | stdio child process |
+| Source | Tools | Transport | Loading |
+|--------|-------|-----------|---------|
+| hwc-sys (local, in-process) | 44 | Direct function calls | Always |
+| jt-mcp (JobTread) | 56 | stdio child process | Lazy (`hwc_connect_jt_mcp`) |
+| n8n-mcp (workflow automation) | 21 | stdio child process | Lazy (`hwc_connect_n8n_mcp`) |
 
 ## Connection Guide
 
@@ -26,7 +26,7 @@ Configured in `.mcp.json`:
 }
 ```
 
-In stdio mode, Claude Code spawns the gateway directly. All 129 tools appear as a single server. The gateway spawns heartwood-mcp and n8n-mcp as stdio child processes internally.
+In stdio mode, Claude Code spawns the gateway directly. All 129 tools appear as a single server. The gateway spawns jt-mcp and n8n-mcp as stdio child processes internally.
 
 ### Claude.ai (Streamable HTTP over Tailscale Funnel)
 
@@ -96,7 +96,7 @@ Standard JSON-RPC over stdin/stdout. One `Server` instance for the lifetime of t
 
 The `BackendManager` aggregates tools from all sources. When `tools/call` arrives, it routes by tool name:
 - hwc-sys tools → local function call via `ToolRegistry`
-- heartwood-mcp tools → forwarded over stdio to the child process
+- jt-mcp tools → forwarded over stdio to the child process
 - n8n-mcp tools → forwarded over stdio to the child process, then **response-transformed** before returning
 
 Each stdio backend (`StdioBackend`) has a circuit breaker: 5 failures in 2 minutes triggers backoff. The backend auto-reconnects on the next request after cooldown.
@@ -476,6 +476,11 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-04-12**: v0.3.2 — Tool consolidation, lazy loading, rename:
+  - **hwc-sys tools 56→44**: Merged calendar today/week/list→`hwc_calendar_list` (range param), mail search+count→`hwc_mail_search` (count_only flag), mail tag+actions→`hwc_mail_tag` (action enum), storage→`hwc_storage_status`, secrets→`hwc_secrets_info`, network ts+vpn→`hwc_network_tunnel_status`, config read+list→`hwc_config_browse`, CMS read+list→`hwc_cms_browse`, website read/write pairs merged (source param), media→`hwc_media_status`. Trimmed verbose descriptions.
+  - **jt-mcp tools 71→56**: Merged static lookups→`jt_get_lookups`, templates→`jt_get_templates`, delete pair→`jt_delete_budget_item`. Absorbed 5 detail tools into parent search tools. Absorbed summary tools into time entries/daily logs (summary flag). Merged org users+orgs→`jt_org_info`. Removed broken `jt_get_cost_group_templates`.
+  - **Lazy loading**: JT and n8n backends hidden from `tools/list` until `hwc_connect_jt_mcp` / `hwc_connect_n8n_mcp` is called. Default: 46 tools visible (was 148). Auto-activates on direct tool call.
+  - **Rename**: heartwood-mcp→jt-mcp everywhere (gateway backend name, package.json, systemd services, /opt/business/ directory, NixOS modules, docs).
 - **2026-04-07**: v0.3.1 — Calendar write tools + mail reply:
   - **hwc_calendar_create**: Create iCloud events via khal (timed, all-day, multi-day). Auto-syncs to iCloud.
   - **hwc_calendar_delete**: Delete events by summary search. Two-step safety (dry-run → confirm).
@@ -497,7 +502,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-04**: v0.2.0 — Unified gateway with stdio backends:
   - **Architecture**: Replaced HTTP reverse proxies (`/jt/*`, `/n8n/*`) with stdio child processes. BackendManager aggregates all tools into a single `/mcp` endpoint.
   - **Circuit breaker**: StdioBackend tracks failures; 5 in 2 minutes triggers exponential backoff.
-  - **129 tools**: hwc-sys (38) + heartwood-mcp (70) + n8n-mcp (21) served from one endpoint.
+  - **129 tools**: hwc-sys (38) + jt-mcp (70) + n8n-mcp (21) served from one endpoint.
 - **2026-04-03**: Streamable HTTP transport, Tailscale Funnel, Caddy :443 conflict resolution, SSE keepalive, session management, n8n proxy, tool audit, mail tools expansion (1→10), LLM self-service tools, structured errors.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 

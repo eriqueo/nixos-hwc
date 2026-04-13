@@ -16,7 +16,7 @@
 
 **Mirrors existing domain architecture.** The notification taxonomy extends the NixOS domain-driven architecture (CHARTER.md) and the Heartwood business operating system (HEARTWOOD_OPERATING_SYSTEM.md). Naming conventions are consistent across all three. A service that lives at `domains/media/frigate/` in NixOS has the canonical source slug `frigate` in notifications.
 
-**Infrastructure is not a universe — it's a cross-cutting concern.** A failed service inherits urgency from whichever universe it serves. Heartwood MCP down is `hwc:ops` (revenue-blocking). Sabnzbd down is `home:media` (fix on Saturday). There is no standalone "infrastructure" domain.
+**Infrastructure is not a universe — it's a cross-cutting concern.** A failed service inherits urgency from whichever universe it serves. JT MCP down is `hwc:ops` (revenue-blocking). Sabnzbd down is `home:media` (fix on Saturday). There is no standalone "infrastructure" domain.
 
 **Emitters tag, routers route, consumers filter.** n8n workflows, Alertmanager rules, and scripts are emitters — they produce structured payloads with `source`, `category`, `severity`, and `action_hint`. The notification router sub-workflow handles fan-out to all consumers. Consumers (your phone, dashboards, Ollama) filter on whatever dimensions they need.
 
@@ -65,7 +65,7 @@ Different systems consume different parts:
 | `ops` | The active business. All JT, lead funnel end-to-end, voice logs, client comms, OpenPhone, active job management, estimate pipeline. Also infrastructure that directly serves ops (MCP down, lead workflow failed, JT API unreachable). | Act now (leads) to review-soon (job updates) |
 | `financial` | Money movement. Stripe payments, receipt pipeline, Paperless-ngx (business docs), Firefly III, QuickBooks, tax deadlines, budget variance. | Review-soon. Own cadence, own automation future. |
 | `dev` | Building the business. CMS, blog posts, portfolio uploads, SEO scrapes, marketing metrics, website deploys, brand/content work. Website management lives here — uploading photos and writing posts is development, not operations. | Batch. |
-| `admin` | Business infrastructure catchall. Heartwood MCP health (when not directly blocking ops), n8n engine health (not individual workflow results), domain/hosting, email deliverability. Anything that supports the business but isn't the business itself. | Warning to info. |
+| `admin` | Business infrastructure catchall. JT MCP health (when not directly blocking ops), n8n engine health (not individual workflow results), domain/hosting, email deliverability. Anything that supports the business but isn't the business itself. | Warning to info. |
 
 **Personal domains (home):**
 
@@ -86,7 +86,7 @@ Every emitting service has one canonical slug. This slug is used in notification
 |------|---------|----------------|
 | `jobtread` | JobTread CRM/PM (PAVE API) | hwc:ops |
 | `openphone` | OpenPhone (calls/SMS) | hwc:ops |
-| `heartwood-mcp` | Heartwood MCP Server (port 6100) | hwc:ops or hwc:admin |
+| `jt-mcp` | JT MCP Server (port 6100) | hwc:ops or hwc:admin |
 | `calculator` | Bathroom cost calculator (website widget) | hwc:ops |
 | `website-cms` | Heartwood website CMS dashboard | hwc:dev |
 | `stripe` | Stripe payment processing | hwc:financial |

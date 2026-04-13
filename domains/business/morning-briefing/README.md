@@ -69,7 +69,7 @@ journalctl -u morning-briefing.service -f
 
 The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gateway):
 
-**HWC-JT (heartwood-mcp)** — JobTread data at `/opt/business/heartwood-mcp/`
+**HWC-JT (jt-mcp)** — JobTread data at `/opt/business/jt-mcp/`
 - `jt_search_jobs` — list all open jobs (`status: "open"`, searchTerm optional)
 - `jt_get_overdue_documents` — docs past due with outstanding balances
 - `jt_get_tasks` — tasks due today/this week/overdue for active jobs
@@ -95,5 +95,6 @@ The briefing relies on tools from two MCP backends (both via `hwc-sys-mcp` gatew
 
 ## Changelog
 
+- **2026-04-12** — Update tool references for MCP consolidation: `hwc_calendar_week`→`hwc_calendar_list` (range=week), `hwc_storage_backup_status`→`hwc_storage_status`. Rename heartwood-mcp→jt-mcp in docs.
 - **2026-04-09** — Add backup status, tasks due, and recent documents sections. Expand mail triage with known noise senders (nextdoor, quora, zillow, angi, thumbtack, yelp) and review senders (Quo, Stripe, QuickBooks, JobTread). Add reasoning rules for 'sent' tag and flagged+work threads. Dashboard: add backup row, collapsible tasks view, recent docs with type badges, footer with section count, keyboard 'r' refresh, fade-in animation, prominent day-of-week header. Pipeline: add pre-flight check, post-step-1 validation, per-step timing. New alert rules: backup errors, stale backups, overdue tasks, incomplete tasks after 3pm
 - **2026-04-07** — Upgrade dashboard with mail triage UI (expandable thread cards, action buttons, urgent/review/noise buckets). Add `jt_get_overdue_documents` tool to heartwood-mcp. Make `jt_search_jobs` searchTerm optional (allows listing all open jobs). Fix stale paths (routes.nix + old systemd unit), fix mail triage JSON parsing (remove `--output=threads`, extract JSON with sed range instead of fence strip), fix `cp` same-file error on dashboard symlink, stamp `generated_at` from shell, pass explicit date in prompt, increase timeout to 300s, reduce thread limit to 30, add debug logging on triage parse failure

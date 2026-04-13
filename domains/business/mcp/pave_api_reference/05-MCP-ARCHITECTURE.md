@@ -1,6 +1,6 @@
 # MCP Architecture: How Tools Wrap Pave
 
-This file explains how MCP (Model Context Protocol) tools translate user requests into Pave queries. Covers both the DataX MCP (third-party) and the Heartwood MCP (self-hosted).
+This file explains how MCP (Model Context Protocol) tools translate user requests into Pave queries. Covers both the DataX MCP (third-party) and the JT MCP (self-hosted).
 
 ---
 
@@ -60,19 +60,19 @@ For the allowance feature, Elliott said it would be ~2 new tools: `create_allowa
 
 ---
 
-## Heartwood MCP (Self-Hosted)
+## JT MCP (Self-Hosted)
 
-The Heartwood MCP server is a self-hosted alternative running on the homeserver. Built in TypeScript, deployed via NixOS.
+The JT MCP server is a self-hosted alternative running on the homeserver. Built in TypeScript, deployed via NixOS.
 
-**Location:** `workspace/projects/heartwood-mcp/`
-**Deployed to:** `/opt/business/heartwood-mcp/dist/`
-**Service:** `heartwood-mcp.service` on `127.0.0.1:6100`
+**Location:** `workspace/projects/jt-mcp/`
+**Deployed to:** `/opt/business/jt-mcp/dist/`
+**Service:** `jt-mcp.service` on `127.0.0.1:6100`
 **Caddy proxy:** `https://hwc.ocelot-wahoo.ts.net:16100/sse`
 
 ### Architecture
 
 ```
-Claude.ai ──SSE──→ Caddy (16100) ──→ heartwood-mcp (6100) ──POST──→ api.jobtread.com/pave
+Claude.ai ──SSE──→ Caddy (16100) ──→ jt-mcp (6100) ──POST──→ api.jobtread.com/pave
 ```
 
 ### PaveClient Methods (`src/pave/client.ts`)
@@ -97,18 +97,18 @@ Uses the low-level `Server` class, NOT `McpServer`. The `McpServer.tool()` metho
 ### Deployment
 
 ```bash
-cd workspace/projects/heartwood-mcp
+cd workspace/projects/jt-mcp
 npm run build
-sudo cp -r dist/* /opt/business/heartwood-mcp/dist/
-sudo systemctl restart heartwood-mcp
-journalctl -u heartwood-mcp -f
+sudo cp -r dist/* /opt/business/jt-mcp/dist/
+sudo systemctl restart jt-mcp
+journalctl -u jt-mcp -f
 ```
 
 ---
 
 ## Building a New MCP Tool — Step by Step
 
-Whether contributing to DataX or adding to the Heartwood MCP:
+Whether contributing to DataX or adding to the JT MCP:
 
 ### 1. Find the Pave operation
 Search the schema for the relevant `createXxx`, `updateXxx`, or query pattern. Reference `02-PAVE-OPERATIONS.md`.
@@ -155,12 +155,12 @@ The description is what tells Claude how to use the tool. Include:
 
 ---
 
-## DataX vs Heartwood MCP — When to Use Which
+## DataX vs JT MCP — When to Use Which
 
 | Scenario | Use |
 |---|---|
 | Standard JT operations with team | DataX — it's maintained, tested by the community |
-| Custom Heartwood-specific automations | Heartwood MCP — tailored to your workflow |
+| Custom Heartwood-specific automations | JT MCP — tailored to your workflow |
 | Contributing new features | DataX — broader impact, revenue share |
 | Debugging / understanding the API | Either — both hit the same Pave endpoint |
-| Operations DataX doesn't support yet | Heartwood MCP — you control the tool set |
+| Operations DataX doesn't support yet | JT MCP — you control the tool set |

@@ -3,7 +3,7 @@
  *
  * Single Streamable HTTP transport serving tools from:
  *   - hwc-sys (local, in-process): NixOS config + runtime tools
- *   - heartwood-mcp (stdio backend): 63 JobTread PAVE tools
+ *   - jt-mcp (stdio backend): 56 JobTread PAVE tools
  *   - n8n-mcp (stdio backend): workflow automation tools
  *
  * Transports:
@@ -90,12 +90,12 @@ function buildBackends(): Array<{ backend: StdioBackend; lazy: boolean }> {
   const backends: Array<{ backend: StdioBackend; lazy: boolean }> = [];
   const nodePath = process.env.HWC_NODE_PATH || "node";
 
-  // heartwood-mcp (JobTread tools) — spawned as stdio child
+  // jt-mcp (JobTread tools) — spawned as stdio child
   const jtSrcDir = process.env.HWC_JT_SRC_DIR;
   if (jtSrcDir) {
     backends.push({
       backend: new StdioBackend({
-        name: "heartwood-mcp",
+        name: "jt-mcp",
         command: nodePath,
         args: [`${jtSrcDir}/dist/index.js`],
         env: {
@@ -110,11 +110,11 @@ function buildBackends(): Array<{ backend: StdioBackend; lazy: boolean }> {
         cwd: jtSrcDir,
         callTimeoutMs: 60_000, // JT API calls can be slow
       }),
-      lazy: true, // JT tools hidden until hwc_connect_heartwood_mcp is called
+      lazy: true, // JT tools hidden until hwc_connect_jt_mcp is called
     });
-    log.info("Configured heartwood-mcp backend (lazy)", { srcDir: jtSrcDir });
+    log.info("Configured jt-mcp backend (lazy)", { srcDir: jtSrcDir });
   } else {
-    log.info("heartwood-mcp backend skipped (HWC_JT_SRC_DIR not set)");
+    log.info("jt-mcp backend skipped (HWC_JT_SRC_DIR not set)");
   }
 
   // n8n-mcp (workflow automation tools) — spawned as stdio child

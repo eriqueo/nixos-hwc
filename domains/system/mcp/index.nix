@@ -1,7 +1,7 @@
 # domains/system/mcp/index.nix
 #
 # HWC Infrastructure MCP Gateway — unified entry point for all MCP tools.
-# Aggregates hwc-sys (local), heartwood-mcp (stdio), and n8n-mcp (stdio)
+# Aggregates hwc-sys (local), jt-mcp (stdio), and n8n-mcp (stdio)
 # into a single Streamable HTTP transport for Claude.ai and stdio for Claude Code.
 #
 # NAMESPACE: hwc.system.mcp.*
@@ -205,7 +205,7 @@ in
         # CMS app path for hwc_cms_* tools
         HWC_CMS_APP_PATH = "/opt/business/heartwood-cms";
 
-        # stdio backend: heartwood-mcp (JT tools)
+        # stdio backend: jt-mcp (JT tools)
         HWC_JT_SRC_DIR = jtCfg.srcDir;
         JT_ORG_ID = jtCfg.jt.orgId;
         JT_USER_ID = jtCfg.jt.userId;
@@ -266,7 +266,7 @@ in
             "/run/user/1000/gnupg"
             # agenix secrets for gmail passwordeval
             "/run/agenix"
-            # heartwood-mcp source (stdio backend reads dist/)
+            # jt-mcp source (stdio backend reads dist/)
             jtCfg.srcDir
             # n8n-mcp npm package
             "/opt/n8n-mcp"

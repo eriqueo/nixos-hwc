@@ -25,7 +25,7 @@ export interface ToolResult<T = unknown> {
   context?: Record<string, unknown>;
 }
 
-/** Tool definition matching the heartwood-mcp pattern */
+/** Tool definition matching the jt-mcp pattern */
 export interface ToolDef {
   name: string;
   description: string;

@@ -923,21 +923,14 @@
 
   # YouTube services
   hwc.media.youtube.legacyApi = {
-    enable = lib.mkDefault true;
+    enable = lib.mkDefault false;  # Superseded by yt-transcripts-api v2
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
   };
   hwc.media.youtube.transcripts = {
-    enable = lib.mkDefault false;
+    enable = lib.mkDefault true;
     port = 8100;
-    workers = 4;
-    outputDirectory = "/mnt/hot/youtube-transcripts";
-  };
-  hwc.media.youtube.videos = {
-    enable = lib.mkDefault false;
-    port = 8101;
-    workers = 2;
-    outputDirectory = "/mnt/media/youtube";
+    outputDirectory = "/mnt/media/transcripts";
   };
 
   # PostgreSQL (always enabled — used by many services)

@@ -235,40 +235,12 @@ in
       upstream = "http://127.0.0.1:8945";
     }
 
-    # Transcript API - preserve path (FastAPI routes expect /api prefix)
-    {
-      name = "transcript-api";
-      mode = "subpath";
-      path = "/api";
-      upstream = "http://127.0.0.1:8099";
-      needsUrlBase = true;  # Preserve /api prefix - app routes expect it
-      headers = { "X-Forwarded-Prefix" = "/api"; };
-    }
-
     # YouTube Transcripts API - FastAPI transcript extraction service
     {
       name = "yt-transcripts-api";
-      mode = "subpath";
-      path = "/api/transcripts";
+      mode = "port";
+      port = 3443;
       upstream = "http://127.0.0.1:8100";
-      needsUrlBase = false;  # Strip prefix - app routes at root
-      headers = {
-        "X-Forwarded-For" = "{remote_host}";
-        "X-Forwarded-Proto" = "{scheme}";
-      };
-    }
-
-    # YouTube Videos API - FastAPI video download service
-    {
-      name = "yt-videos-api";
-      mode = "subpath";
-      path = "/api/videos";
-      upstream = "http://127.0.0.1:8101";
-      needsUrlBase = false;  # Strip prefix - app routes at root
-      headers = {
-        "X-Forwarded-For" = "{remote_host}";
-        "X-Forwarded-Proto" = "{scheme}";
-      };
     }
 
     # n8n - Workflow automation platform (port mode - subpath not properly supported)

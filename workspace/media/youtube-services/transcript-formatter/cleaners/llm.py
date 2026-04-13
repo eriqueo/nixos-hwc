@@ -22,7 +22,7 @@ import httpx
 class LLMTranscriptPolisher:
     """Polish transcripts using local Ollama LLM."""
 
-    def __init__(self, model: str = "llama3:8b", temperature: float = 0.3, max_concurrent: int = 2):
+    def __init__(self, model: str = "llama3.2:3b", temperature: float = 0.3, max_concurrent: int = 2):
         """
         Initialize LLM polisher.
 
@@ -40,8 +40,8 @@ class LLMTranscriptPolisher:
         self.ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 
         # Chunking parameters
-        self.chunk_size = 6000  # Characters per chunk
-        self.chunk_overlap = 400  # Overlap to avoid losing context
+        self.chunk_size = 4000  # Characters per chunk (smaller = faster, avoids timeouts)
+        self.chunk_overlap = 300  # Overlap to avoid losing context
 
         # Semaphore for rate limiting concurrent Ollama calls
         self._semaphore = asyncio.Semaphore(max_concurrent)
@@ -138,7 +138,7 @@ Return ONLY the cleaned markdown, starting immediately with the content:"""
                 self.logger.debug(f"Polishing chunk {chunk_num}/{total_chunks}")
 
                 # Use HTTP API for non-blocking execution
-                async with httpx.AsyncClient(timeout=180.0) as client:
+                async with httpx.AsyncClient(timeout=600.0) as client:
                     response = await client.post(
                         f"{self.ollama_host}/api/generate",
                         json={
