@@ -1,20 +1,27 @@
-{ config, lib, pkgs, ... }:
+# domains/system/core/packages.nix
+#
+# System packages (base, server, security bundles) + filesystem bootstrap
+#
+# NAMESPACE: hwc.system.core.packages.*
+# USAGE: hwc.system.core.packages.enable = true; (default)
+
+{ config, lib, pkgs, inputs, ... }:
 let
   cfg = config.hwc.system.core.packages;
 in
 {
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  imports = [ ./options.nix ];
+  # Options defined in core/index.nix
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
     environment.systemPackages =
+      # Agenix CLI from flake input (not in nixpkgs)
+      [ inputs.agenix.packages.${pkgs.system}.default ]
+
       # Base bundle
-      (lib.optionals cfg.base.enable (with pkgs; [
+      ++ (lib.optionals cfg.base.enable (with pkgs; [
         # Core shells and editors
         zsh git micro neovim vim tmux
 
@@ -22,24 +29,30 @@ in
         pass gnupg sops age ssh-to-age
 
         # CLI improvements
-        bat eza fzf ripgrep fd zoxide which less diffutils
+        bat eza fzf ripgrep fd zoxide which less diffutils jq yq
 
         # System utilities
-        htop btop tree ncdu neofetch usbutils pciutils dmidecode
+        htop btop tree ncdu fastfetch usbutils pciutils dmidecode
 
         # Networking basics
-        wget curl
+        wget curl aria2
 
         # Archives and file management
         unzip zip p7zip rsync
 
+        # Media
+        ffmpeg
+
         # Language servers and dev toolchain
-        lua-language-server nil pyright nodePackages.typescript-language-server
+        lua-language-server nil pyright typescript-language-server
         gopls clang-tools gcc gnumake cmake pkg-config nodejs python3 cargo go
         python3Packages.pip python3Packages.pynvim tree-sitter universal-ctags
 
         # GitHub CLI
         gh
+
+        # qBittorrent Web API CLI
+        qbittorrent-cli
 
         # Desktop-capable tools (works over X11 forwarding too)
         kitty
@@ -47,12 +60,12 @@ in
 
       # Server bundle
       ++ (lib.optionals cfg.server.enable (with pkgs; [
-        xorg.xauth evince feh fping ethtool  # file-roller not available in 24.05
+        xorg.xauth evince feh fping ethtool
         picard claude-code flac
         htop iotop lsof nettools iproute2 tcpdump nmap
         age docker-compose podman-compose rsync rclone unzip p7zip
         postgresql redis ffmpeg imagemagick mediainfo
-        python3  # aider-chat and gemini-cli not available in 24.05
+        python3
         borgbackup restic
       ]))
 
@@ -67,9 +80,11 @@ in
         ++ (lib.optionals cfg.security.protonDrive.enable (with pkgs; [ rclone ]))
       ));
 
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    assertions = [];
+    # Filesystem bootstrap — HWC state directories
+    systemd.tmpfiles.rules = [
+      "d /var/lib/hwc 0755 eric users -"
+      "d /var/cache/hwc 0755 eric users -"
+      "d /var/log/hwc 0755 eric users -"
+    ];
   };
 }

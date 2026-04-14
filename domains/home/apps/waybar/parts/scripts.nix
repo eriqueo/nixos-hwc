@@ -17,41 +17,87 @@ in
       exit 1
     fi
 
-    MONITORS=$(hyprctl monitors -j 2>/dev/null || true)
+    # Wait for Hyprland IPC to be ready (up to 30 seconds)
+    for attempt in $(seq 1 30); do
+      MONITORS=$(hyprctl monitors -j 2>/dev/null || echo "[]")
+      if echo "''$MONITORS" | jq empty 2>/dev/null; then
+        MONITOR_COUNT=$(echo "''$MONITORS" | jq 'length')
+        if [[ "''$MONITOR_COUNT" -gt 0 ]]; then
+          break
+        fi
+      fi
+      echo "waybar-launch: waiting for Hyprland (attempt ''$attempt/30)..." >&2
+      sleep 1
+    done
 
-    INTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name' | head -1)
-    if [[ -z "''$INTERNAL" ]]; then
-      INTERNAL=$(echo "''$MONITORS" | jq -r '.[0].name' 2>/dev/null || "")
+    # Final check after wait loop
+    MONITORS=$(hyprctl monitors -j 2>/dev/null || echo "[]")
+    if ! echo "''$MONITORS" | jq empty 2>/dev/null; then
+      echo "waybar-launch: Hyprland not ready after 30s" >&2
+      exit 1
     fi
 
-    if [[ -z "''$INTERNAL" ]]; then
-      echo "waybar-launch: no monitors detected; exiting" >&2
-      exit 0
+    MONITOR_COUNT=$(echo "''$MONITORS" | jq 'length')
+    if [[ "''$MONITOR_COUNT" -eq 0 ]]; then
+      echo "waybar-launch: no monitors detected after 30s" >&2
+      exit 1
     fi
 
-    EXTERNAL=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")==false) | .name' | head -1)
+    # Get all monitor names, classifying each as internal or external
+    # Internal: eDP-*, LVDS-* patterns (laptop screens)
+    # External: everything else
+    INTERNAL_MONITORS=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name')
+    EXTERNAL_MONITORS=$(echo "''$MONITORS" | jq -r '.[] | select(.name | test("^(eDP|LVDS)") | not) | .name')
 
+    # Read template configs from the static config file
+    # Index 0 = external template, Index 1 = internal template
+    EXTERNAL_TEMPLATE=$(jq '.[0]' "''$CONFIG_SRC")
+    INTERNAL_TEMPLATE=$(jq '.[1]' "''$CONFIG_SRC")
+
+    # Build dynamic config array
     TMP_CONFIG=$(mktemp)
     trap 'rm -f "''$TMP_CONFIG"' EXIT
-    jq --arg internal "''$INTERNAL" --arg external "''$EXTERNAL" '
-      map(
-        if .output == "__INTERNAL_OUTPUT__" then
-          .output = $internal
-        elif .output == "__EXTERNAL_OUTPUT__" then
-          if ($external | length) > 0 then
-            .output = $external
-          else
-            empty
-          end
-        else
-          .
-        end
-      )
-    ' "''$CONFIG_SRC" > "''$TMP_CONFIG"
+
+    echo "[" > "''$TMP_CONFIG"
+    FIRST=true
+
+    # Generate config for each internal monitor
+    for MON in ''$INTERNAL_MONITORS; do
+      if [[ "''$FIRST" != "true" ]]; then echo "," >> "''$TMP_CONFIG"; fi
+      FIRST=false
+      echo "''$INTERNAL_TEMPLATE" | jq --arg mon "''$MON" '.output = $mon' >> "''$TMP_CONFIG"
+    done
+
+    # Generate config for each external monitor
+    for MON in ''$EXTERNAL_MONITORS; do
+      if [[ "''$FIRST" != "true" ]]; then echo "," >> "''$TMP_CONFIG"; fi
+      FIRST=false
+      echo "''$EXTERNAL_TEMPLATE" | jq --arg mon "''$MON" '.output = $mon' >> "''$TMP_CONFIG"
+    done
+
+    echo "]" >> "''$TMP_CONFIG"
+
+    # Validate generated config
+    if ! jq empty "''$TMP_CONFIG" 2>/dev/null; then
+      echo "waybar-launch: generated invalid JSON config" >&2
+      cat "''$TMP_CONFIG" >&2
+      exit 1
+    fi
 
     waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC"
   '';
-
+  
+  "weather" = sh "waybar-weather" ''
+    LOCATION="Bozeman"
+    MAIN=$(curl -s "wttr.in/$LOCATION?u&format=%c+%t" 2>/dev/null | sed 's/  */ /g' || echo "❓ N/A")
+    # Get simple one-line weather for tooltip (no ANSI, no fancy formatting)
+    TOOLTIP=$(curl -s "wttr.in/$LOCATION?u&format=%l:+%c+%t+%w" 2>/dev/null || echo "Weather unavailable")
+    # Escape quotes and backslashes for JSON
+    MAIN_ESC=$(echo "$MAIN" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    TOOLTIP_ESC=$(echo "$TOOLTIP" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    printf '{"text":"%s","class":"weather","tooltip":"%s"}\n' "$MAIN_ESC" "$TOOLTIP_ESC"
+  '';
+  
   "workspace-switcher" = sh "waybar-workspace-switcher" ''
     if [[ ''$# -eq 0 ]]; then
       exit 1
@@ -148,22 +194,22 @@ in
       TIME_STR="N/A"
     fi
     
-    ICON="󰁺"; CLASS="critical"
+    CLASS="critical"
     if [[ ''$CAPACITY -gt 90 ]]; then
-      ICON="󰁹"; CLASS="full"
+      CLASS="full"
     elif [[ ''$CAPACITY -gt 75 ]]; then
-      ICON="󰂂"; CLASS="high"
+      CLASS="high"
     elif [[ ''$CAPACITY -gt 50 ]]; then
-      ICON="󰁿"; CLASS="medium"
+      CLASS="medium"
     elif [[ ''$CAPACITY -gt 25 ]]; then
-      ICON="󰁼"; CLASS="low"
+      CLASS="low"
     fi
     if [[ "''$STATUS" == "Charging" ]]; then
-      ICON="󰂄"; CLASS="charging"
+      CLASS="charging"
     fi
 
-    printf '{"text":"%s %s%%","class":"%s","tooltip":"Battery: %s%%\\nStatus: %s\\nHealth: %s\\nCycles: %s\\nTime: %s"}\n' \
-           "''$ICON" "''$CAPACITY" "''$CLASS" "''$CAPACITY" "''$STATUS" "''$HEALTH" "''$CYCLE_COUNT" "''$TIME_STR"
+    printf '{"text":"[%s%%]","class":"%s","tooltip":"Battery: %s%%\\nStatus: %s\\nHealth: %s\\nCycles: %s\\nTime: %s"}\n' \
+           "''$CAPACITY" "''$CLASS" "''$CAPACITY" "''$STATUS" "''$HEALTH" "''$CYCLE_COUNT" "''$TIME_STR"
   '';
 
 
@@ -368,20 +414,11 @@ in
   '';
 
   "ollama-status" = sh "waybar-ollama-status" ''
-    # Check if podman-ollama service is running
     if systemctl is-active --quiet podman-ollama.service; then
-      STATUS="running"
-      ICON="🦙"
-      CLASS="running"
-      TOOLTIP="Ollama: Running\\nClick to stop"
+      printf '{"text":"AI","class":"running","tooltip":"Ollama: Running\\nClick to stop"}\n'
     else
-      STATUS="stopped"
-      ICON="🦙"
-      CLASS="stopped"
-      TOOLTIP="Ollama: Stopped\\nClick to start"
+      printf '{"text":"AI","class":"stopped","tooltip":"Ollama: Stopped\\nClick to start"}\n'
     fi
-
-    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "''$ICON" "''$CLASS" "''$TOOLTIP"
   '';
 
   "ollama-toggle" = sh "waybar-ollama-toggle" ''
@@ -394,6 +431,26 @@ in
       notify-send "Ollama" "Starting Ollama service..." -t 2000 -i dialog-information
       sudo systemctl start podman-ollama.service
       notify-send "Ollama" "Ollama started" -t 2000 -i dialog-information
+    fi
+  '';
+
+  "lid-status" = sh "waybar-lid-status" ''
+    if systemctl --user is-active --quiet lid-sleep-inhibitor; then
+      printf '{"text":"Lid","class":"sleep-disabled","tooltip":"Lid Close: Ignore\\nClick to enable sleep"}\n'
+    else
+      printf '{"text":"Lid","class":"sleep-enabled","tooltip":"Lid Close: Sleep\\nClick to disable"}\n'
+    fi
+  '';
+
+  "lid-toggle" = sh "waybar-lid-toggle" ''
+    # Toggle lid sleep by starting/stopping the inhibitor service
+    # No sudo, no logind HUP, no touchpad disruption
+    if systemctl --user is-active --quiet lid-sleep-inhibitor; then
+      systemctl --user stop lid-sleep-inhibitor
+      notify-send "Lid Sleep" "Enabled - closing lid will suspend" -i system-suspend -t 3000
+    else
+      systemctl --user start lid-sleep-inhibitor
+      notify-send "Lid Sleep" "Disabled - lid close now ignored" -i computer -t 3000
     fi
   '';
 }

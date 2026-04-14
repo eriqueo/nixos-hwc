@@ -62,10 +62,17 @@ in
   #============================================================================
   input = {
     kb_layout = "us";
+    kb_options = "caps:escape_shifted_capslock";  # CapsLock=Esc, Shift+CapsLock=CapsLock
     follow_mouse = 1;
     touchpad = {
       natural_scroll = true;
+      scroll_factor = 1.0;
+      tap-to-click = true;
+      drag_lock = false;
+      disable_while_typing = true;
     };
+    sensitivity = -0.2;  # -1.0 to 1.0, 0 = no modification. Lowered for better control.
+    accel_profile = "flat"; # Disables acceleration for more predictable movement.
   };
 
   # Tools moved to parts/system.nix for system-wide access

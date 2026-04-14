@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Bathroom Remodeling",
+    "slug": "bathroom",
+    "url": "/bathroom/remodeling/",
+    "tagline": "From outdated to outstanding — custom tile, 3D design previews, and craftsmanship that lasts.",
+    "icon": "bath"
+  },
+  {
+    "name": "Basement Remodeling",
+    "slug": "basement",
+    "url": "/basement/remodeling/",
+    "tagline": "Turn unused square footage into your favorite room — offices, theaters, guest suites.",
+    "icon": "layers"
+  },
+  {
+    "name": "General Remodeling",
+    "slug": "remodeling",
+    "url": "/remodeling/",
+    "tagline": "Full-home renovations, structural updates, and the behind-the-scenes work that makes it all come together.",
+    "icon": "home"
+  },
+  {
+    "name": "Custom Decks",
+    "slug": "decks",
+    "url": "/remodeling/",
+    "tagline": "Built for Montana — cedar and composite decks designed for beauty and durability through every season.",
+    "icon": "grid"
+  }
+]

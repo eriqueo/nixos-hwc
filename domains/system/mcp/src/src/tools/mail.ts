@@ -1,0 +1,1110 @@
+/**
+ * hwc_mail_* tools — health, search, read, tag, actions, send, sync, accounts, folders.
+ *
+ * Health: consumes state files written by the real mail-health timer.
+ * Mail ops: notmuch for search/read/count/tag, msmtp for send.
+ * Tag system: category tags are mutually exclusive, flag tags are additive.
+ *
+ * Runs as a system service — notmuch/msmtp/sync-mail may not be in PATH.
+ * Binary resolution tries PATH first, then /etc/profiles/per-user/eric/bin/.
+ */
+
+import { execFile, spawn } from "node:child_process";
+import { readFile, stat, readdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import type { ToolDef, ToolResult } from "../types.js";
+import { getServiceStatus } from "../executors/systemd.js";
+import { log } from "../log.js";
+import { mcpError, catchError } from "../errors.js";
+
+/* ════════════════════════════════════════════════════════════════ */
+/*  Constants                                                      */
+/* ════════════════════════════════════════════════════════════════ */
+
+const HOME = homedir();
+const MAIL_HEALTH_STATE = join(HOME, ".local/state/mail-health");
+const MBSYNC_SUCCESS_MARKER = join(HOME, ".cache/mbsync-last-success");
+const MAILDIR = join(HOME, "400_mail/Maildir");
+const SYNC_MAIL = join(HOME, ".local/bin/sync-mail");
+
+/* ── Tag taxonomy (mirrors tags.nix — single source of truth) ── */
+
+/** Category tags are mutually exclusive — assigning one removes all others. */
+const CATEGORY_TAGS = [
+  // Business (copper-orange)
+  "office", "work", "hwcmt",
+  // Money (blue)
+  "finance", "bank", "insurance",
+  // Personal (warm amber)
+  "personal", "family", "eriqueokeefe",
+  // Growth (sage green)
+  "admin", "coaching",
+  // System (muted gray)
+  "tech", "aerc", "website",
+];
+
+/** Flag tags are additive — they coexist with categories. */
+const FLAG_TAGS = ["action", "pending"];
+
+/** Junk tags cleared by clear-categories action. */
+const JUNK_TAGS = ["important", "flagged", "starred"];
+
+/* ── Saved searches (mirrors searches.nix + aerc notmuch-queries) */
+
+const SAVED_SEARCHES: Record<string, string> = {
+  // Core views
+  inbox: "tag:inbox AND NOT tag:trash",
+  unread: "tag:unread AND NOT tag:trash",
+  sent: "tag:sent",
+  drafts: "tag:draft",
+  archive: "tag:archive AND NOT tag:trash",
+  trash: "tag:trash",
+  spam: "tag:spam",
+  important: "tag:important AND NOT tag:trash",
+  // Flag views (inbox-scoped)
+  action: "(tag:action AND NOT tag:trash) AND tag:inbox",
+  pending: "(tag:pending AND NOT tag:trash) AND tag:inbox",
+  // Category views (inbox-scoped)
+  office: "(tag:office AND NOT tag:trash) AND tag:inbox",
+  work: "(tag:work AND NOT tag:trash) AND tag:inbox",
+  hwcmt: "(tag:hwcmt AND NOT tag:trash) AND tag:inbox",
+  finance: "(tag:finance AND NOT tag:trash) AND tag:inbox",
+  bank: "(tag:bank AND NOT tag:trash) AND tag:inbox",
+  insurance: "(tag:insurance AND NOT tag:trash) AND tag:inbox",
+  personal: "(tag:personal AND NOT tag:trash) AND tag:inbox",
+  family: "(tag:family AND NOT tag:trash) AND tag:inbox",
+  eriqueokeefe: "(tag:eriqueokeefe AND NOT tag:trash) AND tag:inbox",
+  admin: "(tag:admin AND NOT tag:trash) AND tag:inbox",
+  coaching: "(tag:coaching AND NOT tag:trash) AND tag:inbox",
+  tech: "(tag:tech AND NOT tag:trash) AND tag:inbox",
+  website: "(tag:website AND NOT tag:trash) AND tag:inbox",
+  // Label views (all mail, not inbox-scoped)
+  "label:work": "tag:work AND NOT tag:trash",
+  "label:finance": "tag:finance AND NOT tag:trash",
+  "label:coaching": "tag:coaching AND NOT tag:trash",
+  "label:tech": "tag:tech AND NOT tag:trash",
+  "label:bank": "tag:bank AND NOT tag:trash",
+  "label:insurance": "tag:insurance AND NOT tag:trash",
+  "label:personal": "tag:personal AND NOT tag:trash",
+  "label:hwcmt": "tag:hwcmt AND NOT tag:trash",
+  "label:hide": "tag:hide",
+  // Unified / identity views
+  unified: "tag:inbox",
+  "inbox:hwc": "tag:inbox AND tag:hwc",
+  "inbox:proton-hwc": "tag:inbox AND tag:proton-hwc",
+  "inbox:proton-personal": "tag:inbox AND tag:proton-personal",
+  "all:work": "tag:inbox AND tag:hwc",
+  "all:personal": "tag:inbox AND tag:proton-personal",
+};
+
+/* ── Account definitions (mirrors accounts/index.nix) ─────────── */
+
+const ACCOUNTS = [
+  {
+    name: "proton",
+    msmtpAccount: "proton-hwc",
+    email: "eric@iheartwoodcraft.com",
+    type: "proton-bridge",
+    sync: true,
+    send: true,
+    primary: true,
+    identities: [
+      { msmtpAccount: "proton-personal", email: "eriqueo@proton.me" },
+      { msmtpAccount: "proton-office", email: "office@iheartwoodcraft.com" },
+    ],
+  },
+  {
+    name: "gmail-personal",
+    msmtpAccount: "gmail-personal",
+    email: "eriqueokeefe@gmail.com",
+    type: "gmail",
+    sync: false,
+    send: true,
+    primary: false,
+    identities: [],
+  },
+  {
+    name: "gmail-business",
+    msmtpAccount: "gmail-business",
+    email: "heartwoodcraftmt@gmail.com",
+    type: "gmail",
+    sync: false,
+    send: true,
+    primary: false,
+    identities: [],
+  },
+];
+
+/** msmtp account → from address for send tool. */
+const FROM_MAP: Record<string, string> = {};
+for (const acct of ACCOUNTS) {
+  FROM_MAP[acct.msmtpAccount] = acct.email;
+  for (const id of acct.identities) {
+    FROM_MAP[id.msmtpAccount] = id.email;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/*  Binary resolution                                              */
+/* ════════════════════════════════════════════════════════════════ */
+
+const NOTMUCH_CANDIDATES = ["notmuch", `/etc/profiles/per-user/eric/bin/notmuch`];
+const MSMTP_CANDIDATES = ["msmtp", `/etc/profiles/per-user/eric/bin/msmtp`];
+
+let _notmuch: string | null = null;
+let _msmtp: string | null = null;
+
+async function resolveBin(candidates: string[]): Promise<string> {
+  for (const bin of candidates) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        execFile(bin, ["--version"], { timeout: 3000 }, (err) => {
+          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") reject(err);
+          else resolve();
+        });
+      });
+      return bin;
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(`Binary not found in: ${candidates.join(", ")}`);
+}
+
+async function notmuchBin(): Promise<string> {
+  if (!_notmuch) _notmuch = await resolveBin(NOTMUCH_CANDIDATES);
+  return _notmuch;
+}
+
+async function msmtpBin(): Promise<string> {
+  if (!_msmtp) _msmtp = await resolveBin(MSMTP_CANDIDATES);
+  return _msmtp;
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/*  Executors                                                      */
+/* ════════════════════════════════════════════════════════════════ */
+
+/**
+ * Run notmuch via execFile (no shell) — safe from injection.
+ * Unlike safeExec, allows parentheses in args (needed for notmuch queries).
+ */
+function notmuchExec(
+  bin: string,
+  args: string[],
+  opts: { timeout?: number; maxBuffer?: number } = {},
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const { timeout = 15000, maxBuffer = 5 * 1024 * 1024 } = opts;
+  return new Promise((resolve) => {
+    log.debug("notmuch", { args });
+    execFile(bin, args, { timeout, maxBuffer }, (error, stdout, stderr) => {
+      const code = error && "code" in error ? (error.code as number) : 0;
+      resolve({
+        exitCode: typeof code === "number" ? code : 1,
+        stdout: stdout?.toString() ?? "",
+        stderr: stderr?.toString() ?? "",
+      });
+    });
+  });
+}
+
+/** Pipe an RFC-822 message to msmtp via spawn. */
+function msmtpSend(
+  bin: string,
+  account: string,
+  recipients: string[],
+  message: string,
+): Promise<{ exitCode: number; stderr: string }> {
+  return new Promise((resolve) => {
+    const args = ["-a", account, "--", ...recipients];
+    log.debug("msmtp", { args });
+    const proc = spawn(bin, args, { timeout: 30000 });
+    let stderr = "";
+    proc.stderr.on("data", (d: Buffer) => {
+      stderr += d.toString();
+    });
+    proc.on("close", (code) => resolve({ exitCode: code ?? 1, stderr }));
+    proc.on("error", (err) => resolve({ exitCode: 1, stderr: err.message }));
+    proc.stdin.write(message);
+    proc.stdin.end();
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/*  Helpers                                                        */
+/* ════════════════════════════════════════════════════════════════ */
+
+async function readSafe(path: string): Promise<string | null> {
+  try {
+    return (await readFile(path, "utf-8")).trim();
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve a query — if it matches a saved search name, expand it. */
+function resolveQuery(query: string): string {
+  return SAVED_SEARCHES[query] ?? query;
+}
+
+/** Build exclusive category tag ops: +category -all-other-categories. */
+function exclusiveCategoryOps(category: string): string[] {
+  const ops = [`+${category}`];
+  for (const c of CATEGORY_TAGS) {
+    if (c !== category) ops.push(`-${c}`);
+  }
+  return ops;
+}
+
+/** Build clear-all-custom tag ops: -all-categories -all-flags -junk. */
+function clearAllCustomOps(): string[] {
+  return [...CATEGORY_TAGS, ...FLAG_TAGS, ...JUNK_TAGS].map((t) => `-${t}`);
+}
+
+/* ── notmuch output parsers ────────────────────────────────────── */
+
+function flattenShow(data: unknown): unknown[] {
+  const msgs: unknown[] = [];
+  function walk(node: unknown): void {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+    } else if (node && typeof node === "object" && "id" in node) {
+      const m = node as Record<string, unknown>;
+      const extracted: Record<string, unknown> = {
+        id: m.id,
+        match: m.match,
+        timestamp: m.timestamp,
+        date_relative: m.date_relative,
+        tags: m.tags,
+        headers: m.headers,
+      };
+      if (Array.isArray(m.body)) extracted.body = extractText(m.body);
+      msgs.push(extracted);
+    }
+  }
+  walk(data);
+  return msgs;
+}
+
+/** Strip HTML tags for plain-text extraction. */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractText(parts: unknown[]): string[] {
+  const texts: string[] = [];
+  function walk(part: unknown): void {
+    if (Array.isArray(part)) {
+      for (const p of part) walk(p);
+    } else if (part && typeof part === "object") {
+      const p = part as Record<string, unknown>;
+      if (p["content-type"] === "text/plain" && typeof p.content === "string") {
+        texts.push(p.content);
+      } else if (p["content-type"] === "text/html" && typeof p.content === "string") {
+        texts.push(stripHtml(p.content as string));
+      } else if (Array.isArray(p.content)) {
+        for (const c of p.content) walk(c);
+      }
+    }
+  }
+  for (const part of parts) walk(part);
+  return texts;
+}
+
+async function walkMaildir(
+  dir: string,
+  root: string,
+  results: Array<{ path: string; name: string }>,
+): Promise<void> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    const subdirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith("."));
+    if (entries.some((e) => e.name === "cur" && e.isDirectory())) {
+      const rel = dir.slice(root.length + 1);
+      if (rel) results.push({ path: dir, name: rel });
+    }
+    for (const sub of subdirs) {
+      if (sub.name === "cur" || sub.name === "new" || sub.name === "tmp") continue;
+      await walkMaildir(join(dir, sub.name), root, results);
+    }
+  } catch {
+    /* dir not readable */
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/*  Tool definitions                                               */
+/* ════════════════════════════════════════════════════════════════ */
+
+export function mailTools(): ToolDef[] {
+  return [
+    /* ── Health ──────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_health",
+      description:
+        "Check mail system health. Returns Proton Bridge status, sync freshness, notmuch stats, " +
+        "and health timer state (last-healthy, first-failure, cooldowns). Read-only.",
+      inputSchema: { type: "object", properties: {} },
+      handler: async (): Promise<ToolResult> => {
+        try {
+          const result: Record<string, unknown> = {};
+          const now = Math.floor(Date.now() / 1000);
+
+          const lastHealthyRaw = await readSafe(join(MAIL_HEALTH_STATE, "last-healthy"));
+          const firstFailureRaw = await readSafe(join(MAIL_HEALTH_STATE, "first-failure"));
+
+          if (lastHealthyRaw) {
+            const ts = parseInt(lastHealthyRaw, 10);
+            result.lastHealthy = {
+              epoch: ts,
+              iso: new Date(ts * 1000).toISOString(),
+              ageMinutes: Math.round((now - ts) / 60),
+            };
+          }
+          if (firstFailureRaw) {
+            const ts = parseInt(firstFailureRaw, 10);
+            const downMin = Math.round((now - ts) / 60);
+            result.ongoingFailure = {
+              since: new Date(ts * 1000).toISOString(),
+              downMinutes: downMin,
+              severity: downMin >= 30 ? "critical" : "warning",
+            };
+          }
+
+          try {
+            const entries = await readdir(MAIL_HEALTH_STATE);
+            const cooldownFiles = entries.filter((e) => e.startsWith("cooldown-"));
+            if (cooldownFiles.length > 0) {
+              // Summarize cooldowns by level instead of dumping every fingerprint
+              const byLevel: Record<string, { count: number; oldest: number; newest: number }> = {};
+              for (const c of cooldownFiles) {
+                const level = c.replace("cooldown-", "").split("-")[0] || "unknown";
+                const tsRaw = await readSafe(join(MAIL_HEALTH_STATE, c));
+                const ts = tsRaw ? parseInt(tsRaw, 10) : 0;
+                if (!byLevel[level]) {
+                  byLevel[level] = { count: 0, oldest: ts || Infinity, newest: 0 };
+                }
+                byLevel[level].count++;
+                if (ts && ts < byLevel[level].oldest) byLevel[level].oldest = ts;
+                if (ts && ts > byLevel[level].newest) byLevel[level].newest = ts;
+              }
+              const cooldowns: Record<string, { count: number; oldestAt: string; newestAt: string }> = {};
+              for (const [level, info] of Object.entries(byLevel)) {
+                cooldowns[level] = {
+                  count: info.count,
+                  oldestAt: info.oldest !== Infinity ? new Date(info.oldest * 1000).toISOString() : "unknown",
+                  newestAt: info.newest > 0 ? new Date(info.newest * 1000).toISOString() : "unknown",
+                };
+              }
+              result.cooldowns = cooldowns;
+            }
+          } catch {
+            /* state dir may not exist yet */
+          }
+
+          try {
+            const bs = await getServiceStatus("protonmail-bridge.service");
+            result.bridge = {
+              active: bs.activeState === "active",
+              state: bs.activeState,
+              uptime: bs.uptime,
+              memoryUsage: bs.memoryUsage,
+            };
+          } catch {
+            result.bridge = { active: false, error: "Service not queryable" };
+          }
+
+          try {
+            const ms = await stat(MBSYNC_SUCCESS_MARKER);
+            const ageMin = Math.round((Date.now() - ms.mtime.getTime()) / 60000);
+            result.sync = { lastSuccess: ms.mtime.toISOString(), ageMinutes: ageMin, healthy: ageMin < 30 };
+          } catch {
+            result.sync = { error: "No sync marker — mbsync may not have run" };
+          }
+
+          try {
+            const nm = await notmuchBin();
+            const cntRes = await notmuchExec(nm, ["count"]);
+            if (cntRes.exitCode === 0) {
+              const total = parseInt(cntRes.stdout.trim(), 10) || 0;
+              const urRes = await notmuchExec(nm, ["count", "tag:unread"]);
+              const unread = urRes.exitCode === 0 ? parseInt(urRes.stdout.trim(), 10) || 0 : 0;
+              result.notmuch = { totalMessages: total, unread };
+            }
+          } catch {
+            result.notmuch = { error: "notmuch not available" };
+          }
+
+          const bridgeOk = (result.bridge as Record<string, unknown>)?.active === true;
+          const syncOk = (result.sync as Record<string, unknown>)?.healthy === true;
+          const hasFailure = !!firstFailureRaw;
+
+          let status: "ok" | "partial" | "error";
+          if (!hasFailure && bridgeOk && syncOk) status = "ok";
+          else if (hasFailure && (result.ongoingFailure as Record<string, unknown>)?.severity === "critical")
+            status = "error";
+          else status = "partial";
+
+          const parts: string[] = [];
+          if (hasFailure) parts.push(`Failing ${(result.ongoingFailure as Record<string, unknown>)?.downMinutes}m`);
+          parts.push(`Bridge: ${bridgeOk ? "up" : "down"}`);
+          parts.push(`Sync: ${syncOk ? "fresh" : "stale"}`);
+
+          return { status, message: parts.join(", "), data: result };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Failed to check mail health", err, "Check that mail-health timer is running and state files exist at ~/.local/state/mail-health");
+        }
+      },
+    },
+
+    /* ── Search ──────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_search",
+      description:
+        "Search mail via notmuch. Accepts saved search names (inbox, unread, action, pending, " +
+        "label:finance, all:personal, etc.) or raw notmuch queries (from:user@example.com, " +
+        "date:2024..today). Returns thread summaries or count only.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "Notmuch query or saved search name (e.g. 'inbox', 'label:finance', 'from:github.com')",
+          },
+          limit: { type: "number", description: "Max results (default 20)" },
+          offset: { type: "number", description: "Skip first N results" },
+          count_only: { type: "boolean", description: "Return message count only, no thread details (default false)" },
+        },
+        required: ["query"],
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const rawQuery = args.query as string;
+          const query = resolveQuery(rawQuery);
+          const wasResolved = query !== rawQuery;
+          const countOnly = (args.count_only as boolean) ?? false;
+          const nm = await notmuchBin();
+
+          // Count-only mode
+          if (countOnly) {
+            const res = await notmuchExec(nm, ["count", query]);
+            if (res.exitCode !== 0) {
+              return mcpError({ type: "COMMAND_FAILED", message: "notmuch count failed", error: res.stderr.slice(0, 300), suggestion: "Check query syntax", context: { query } });
+            }
+            const count = parseInt(res.stdout.trim(), 10) || 0;
+            return { status: "ok", message: `${count} messages`, data: { count, query } };
+          }
+
+          const limit = (args.limit as number) || 20;
+          const offset = (args.offset as number) || 0;
+
+          const res = await notmuchExec(
+            nm,
+            ["search", "--format=json", `--limit=${limit}`, `--offset=${offset}`, query],
+            { timeout: 10000 },
+          );
+          if (res.exitCode !== 0) {
+            return mcpError({ type: "COMMAND_FAILED", message: "notmuch search failed", error: res.stderr.slice(0, 500), suggestion: "Check query syntax. Use saved search names (inbox, action, label:finance) or raw notmuch queries.", context: { query, exitCode: res.exitCode } });
+          }
+
+          const threads = JSON.parse(res.stdout || "[]") as Array<Record<string, unknown>>;
+          // Slim each thread: replace query array with a single messageId string
+          const slimmed = threads.map((t) => {
+            const { query: qArr, ...rest } = t;
+            const result: Record<string, unknown> = { ...rest };
+            if (Array.isArray(qArr) && typeof qArr[0] === "string") {
+              // Strip "id:" prefix — caller knows to add it back
+              result.messageId = (qArr[0] as string).replace(/^id:/, "");
+            }
+            return result;
+          });
+          const resolvedNote = wasResolved ? ` (resolved '${rawQuery}' → '${query}')` : "";
+          return {
+            status: "ok",
+            message: `${slimmed.length} threads (offset ${offset}, limit ${limit})${resolvedNote}`,
+            data: slimmed,
+          };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Search failed", err, "Is notmuch installed and the Xapian database accessible?");
+        }
+      },
+    },
+
+    /* ── Read ────────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_read",
+      description:
+        "Read a specific email thread or message. Pass a notmuch thread ID (thread:XXXX) or " +
+        "message ID (id:msgid@host) from search results. Returns headers, body text, and HTML " +
+        "(stripped to plain text). Set entireThread=true for full conversation.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            description: "Thread or message ID (e.g. 'thread:000000000012ab' or 'id:msgid@host')",
+          },
+          entireThread: { type: "boolean", description: "Show entire thread (default false)" },
+        },
+        required: ["id"],
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const id = args.id as string;
+          const entireThread = (args.entireThread as boolean) ?? false;
+          const nm = await notmuchBin();
+
+          const res = await notmuchExec(
+            nm,
+            ["show", "--format=json", "--include-html", `--entire-thread=${entireThread}`, "--body=true", id],
+            { timeout: 15000, maxBuffer: 10 * 1024 * 1024 },
+          );
+          if (res.exitCode !== 0) {
+            return mcpError({ type: "COMMAND_FAILED", message: "notmuch show failed", error: res.stderr.slice(0, 500), suggestion: "Verify the thread/message ID format: thread:XXXX or id:msgid@host", context: { id } });
+          }
+
+          const messages = flattenShow(JSON.parse(res.stdout || "[]"));
+          return { status: "ok", message: `${messages.length} message(s)`, data: messages };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Read failed", err, "Is notmuch installed and the message ID valid?");
+        }
+      },
+    },
+
+    /* ── Tag (raw + category/flag + named actions) ─────────── */
+    {
+      name: "hwc_mail_tag",
+      description:
+        "Tag or act on messages. Modes: (1) action — archive, trash, spam, read/unread, etc. " +
+        "(2) category — exclusive (auto-removes others). (3) flag — additive (+action, +pending). " +
+        "(4) tags — raw ops (['+tag','-tag']). SIDE EFFECT: modifies the Xapian database.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Notmuch query or saved search name" },
+          action: {
+            type: "string",
+            enum: ["archive", "trash", "untrash", "spam", "unspam", "read", "unread", "clear-categories"],
+            description: "Named action (maps to correct tag combination)",
+          },
+          tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Raw tag ops: '+tag' to add, '-tag' to remove",
+          },
+          category: {
+            type: "string",
+            description: `Exclusive category: ${CATEGORY_TAGS.join(", ")}`,
+          },
+          flag: {
+            type: "string",
+            description: "Additive flag: '+action', '-action', '+pending', '-pending'",
+          },
+        },
+        required: ["query"],
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const rawQuery = args.query as string;
+          const query = resolveQuery(rawQuery);
+          const actionName = args.action as string | undefined;
+          const rawTags = args.tags as string[] | undefined;
+          const category = args.category as string | undefined;
+          const flag = args.flag as string | undefined;
+
+          // Determine tag operations
+          let ops: string[];
+          let mode: string;
+
+          if (actionName) {
+            const actionMap: Record<string, string[]> = {
+              archive: ["+archive", "-inbox"],
+              trash: ["+trash", "-inbox", "-unread"],
+              untrash: ["-trash", "+inbox"],
+              spam: ["+spam", "-inbox", "-unread"],
+              unspam: ["-spam", "+inbox"],
+              read: ["-unread"],
+              unread: ["+unread"],
+              "clear-categories": clearAllCustomOps(),
+            };
+            ops = actionMap[actionName];
+            if (!ops) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Unknown action '${actionName}'. Valid: ${Object.keys(actionMap).join(", ")}`, suggestion: "Use one of the supported actions" });
+            }
+            mode = `action:${actionName}`;
+          } else if (category) {
+            if (!CATEGORY_TAGS.includes(category)) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Unknown category '${category}'. Valid: ${CATEGORY_TAGS.join(", ")}`, suggestion: "Use one of the defined category tags" });
+            }
+            ops = exclusiveCategoryOps(category);
+            mode = `category:${category}`;
+          } else if (flag) {
+            const flagMatch = flag.match(/^([+-])([a-zA-Z]+)$/);
+            if (!flagMatch) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Invalid flag format: '${flag}'. Use '+action' or '-pending'.`, suggestion: "Flag format is +name or -name where name is: " + FLAG_TAGS.join(", ") });
+            }
+            const [, op, name] = flagMatch;
+            if (!FLAG_TAGS.includes(name)) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Unknown flag '${name}'. Valid: ${FLAG_TAGS.join(", ")}`, suggestion: "Use one of the defined flag tags" });
+            }
+            ops = [`${op}${name}`];
+            mode = `flag:${op}${name}`;
+          } else if (rawTags && rawTags.length > 0) {
+            for (const t of rawTags) {
+              if (!/^[+-][a-zA-Z0-9_:/.@-]+$/.test(t)) {
+                return mcpError({ type: "VALIDATION_ERROR", message: `Invalid tag format: ${t}. Use +tag or -tag.`, suggestion: "Each tag op must start with + or - followed by alphanumeric/underscore characters" });
+              }
+            }
+            ops = rawTags;
+            mode = "raw";
+          } else {
+            return mcpError({ type: "VALIDATION_ERROR", message: "Specify action, tags, category, or flag.", suggestion: "Provide one of: action (named preset), tags (raw ops), category (exclusive), or flag (additive)" });
+          }
+
+          const nm = await notmuchBin();
+          const res = await notmuchExec(nm, ["tag", ...ops, "--", query]);
+          if (res.exitCode !== 0) {
+            return mcpError({ type: "COMMAND_FAILED", message: "notmuch tag failed", error: res.stderr.slice(0, 500), suggestion: "Check that the query matches existing messages and the Xapian DB is writable", context: { query, ops } });
+          }
+          return {
+            status: "ok",
+            message: `[${mode}] Applied [${ops.join(", ")}] to: ${rawQuery}`,
+          };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Tag failed", err, "Check notmuch binary and Xapian DB write permissions");
+        }
+      },
+    },
+
+    /* ── Send ────────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_send",
+      description:
+        "Send an email via msmtp. Default account: proton-hwc (eric@iheartwoodcraft.com). " +
+        "Alternates: proton-personal, proton-office, gmail-personal, gmail-business. " +
+        "Requires Proton Bridge for proton accounts. SIDE EFFECT: sends real email.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "Recipient(s), comma-separated" },
+          subject: { type: "string", description: "Subject line" },
+          body: { type: "string", description: "Plain text body" },
+          from: { type: "string", description: "From address (auto-set from account)" },
+          cc: { type: "string", description: "CC address(es)" },
+          bcc: { type: "string", description: "BCC address(es)" },
+          account: { type: "string", description: "msmtp account (default proton-hwc)" },
+          inReplyTo: { type: "string", description: "Message-ID for threading (In-Reply-To header)" },
+        },
+        required: ["to", "subject", "body"],
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const to = args.to as string;
+          const subject = args.subject as string;
+          const body = args.body as string;
+          const account = (args.account as string) || "proton-hwc";
+          const cc = args.cc as string | undefined;
+          const bcc = args.bcc as string | undefined;
+          const inReplyTo = args.inReplyTo as string | undefined;
+          const from = (args.from as string) || FROM_MAP[account] || FROM_MAP["proton-hwc"];
+
+          const hdrs: string[] = [
+            `From: ${from}`,
+            `To: ${to}`,
+            `Subject: ${subject}`,
+            `Date: ${new Date().toUTCString()}`,
+            "MIME-Version: 1.0",
+            "Content-Type: text/plain; charset=utf-8",
+          ];
+          if (cc) hdrs.push(`Cc: ${cc}`);
+          if (inReplyTo) hdrs.push(`In-Reply-To: ${inReplyTo}`);
+
+          const msg = hdrs.join("\r\n") + "\r\n\r\n" + body;
+
+          const rcpts = to.split(",").map((s) => s.trim());
+          if (cc) rcpts.push(...cc.split(",").map((s) => s.trim()));
+          if (bcc) rcpts.push(...bcc.split(",").map((s) => s.trim()));
+
+          const bin = await msmtpBin();
+          const res = await msmtpSend(bin, account, rcpts, msg);
+          if (res.exitCode !== 0) {
+            return mcpError({ type: "COMMAND_FAILED", message: "Send failed", error: res.stderr.slice(0, 500), suggestion: "Check msmtp config, account name, and that Proton Bridge is running", context: { account, to, exitCode: res.exitCode } });
+          }
+
+          return {
+            status: "ok",
+            message: `Sent to ${to} via ${account}`,
+            data: { from, to, cc, subject, account },
+          };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Send failed", err, "Is msmtp installed and configured? Is Proton Bridge running?");
+        }
+      },
+    },
+
+    /* ── Reply ───────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_reply",
+      description:
+        "Reply to an existing email thread. Reads the thread to auto-populate recipients, subject, " +
+        "and In-Reply-To header for proper threading. Set replyAll=true to include all original recipients. " +
+        "Auto-detects which send account to use based on which of our addresses was in To/Cc. " +
+        "SIDE EFFECT: sends a real email reply.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          threadId: {
+            type: "string",
+            description: "Thread or message ID (thread:XXXX or id:msgid@host)",
+          },
+          body: { type: "string", description: "Reply body (plain text)" },
+          replyAll: { type: "boolean", description: "Include all original recipients (default false)" },
+          account: { type: "string", description: "Override msmtp account (default: auto-detect)" },
+        },
+        required: ["threadId", "body"],
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const threadId = args.threadId as string;
+          const body = args.body as string;
+          const replyAll = (args.replyAll as boolean) ?? false;
+          const accountOverride = args.account as string | undefined;
+
+          const nm = await notmuchBin();
+
+          // Read the thread/message to get headers
+          const res = await notmuchExec(
+            nm,
+            ["show", "--format=json", "--entire-thread=false", "--body=false", threadId],
+            { timeout: 10000 },
+          );
+          if (res.exitCode !== 0) {
+            return mcpError({
+              type: "COMMAND_FAILED",
+              message: "Failed to read thread",
+              error: res.stderr.slice(0, 500),
+              suggestion: "Verify the thread/message ID format: thread:XXXX or id:msgid@host",
+              context: { threadId },
+            });
+          }
+
+          // Parse the message(s)
+          const messages = flattenShow(JSON.parse(res.stdout || "[]"));
+          if (messages.length === 0) {
+            return mcpError({
+              type: "NOT_FOUND",
+              message: `No messages found for ${threadId}`,
+              suggestion: "Check the thread ID is correct. Use hwc_mail_search to find threads.",
+            });
+          }
+
+          // Get the last message for reply context
+          const lastMsg = messages[messages.length - 1] as Record<string, unknown>;
+          const headers = lastMsg.headers as Record<string, string> | undefined;
+          if (!headers) {
+            return mcpError({
+              type: "INTERNAL_ERROR",
+              message: "Could not parse message headers",
+              suggestion: "Try reading the thread with hwc_mail_read first",
+            });
+          }
+
+          const originalFrom = headers.From || "";
+          const originalTo = headers.To || "";
+          const originalCc = headers.Cc || "";
+          const originalSubject = headers.Subject || "";
+          const originalMessageId = headers["Message-ID"] || (lastMsg.id as string);
+
+          // Build list of our known addresses for auto-detection
+          const ourAddresses: Set<string> = new Set();
+          for (const acct of ACCOUNTS) {
+            ourAddresses.add(acct.email.toLowerCase());
+            for (const id of acct.identities) {
+              ourAddresses.add(id.email.toLowerCase());
+            }
+          }
+
+          // Parse addresses from header string
+          const parseAddresses = (header: string): string[] => {
+            if (!header) return [];
+            return header
+              .split(",")
+              .map((a) => {
+                // Extract email from "Name <email>" format
+                const match = a.match(/<([^>]+)>/) || [null, a.trim()];
+                return match[1]?.trim() || "";
+              })
+              .filter((a) => a.length > 0);
+          };
+
+          const originalFromAddrs = parseAddresses(originalFrom);
+          const originalToAddrs = parseAddresses(originalTo);
+          const originalCcAddrs = parseAddresses(originalCc);
+
+          // Auto-detect which account we should reply from
+          let sendAccount = accountOverride;
+          let fromAddress = "";
+
+          if (!sendAccount) {
+            // Check To and Cc for our addresses
+            const allRecipients = [...originalToAddrs, ...originalCcAddrs];
+            for (const addr of allRecipients) {
+              const lowerAddr = addr.toLowerCase();
+              if (ourAddresses.has(lowerAddr)) {
+                // Find the msmtp account for this address
+                for (const acct of ACCOUNTS) {
+                  if (acct.email.toLowerCase() === lowerAddr) {
+                    sendAccount = acct.msmtpAccount;
+                    fromAddress = acct.email;
+                    break;
+                  }
+                  for (const id of acct.identities) {
+                    if (id.email.toLowerCase() === lowerAddr) {
+                      sendAccount = id.msmtpAccount;
+                      fromAddress = id.email;
+                      break;
+                    }
+                  }
+                }
+                if (sendAccount) break;
+              }
+            }
+          }
+
+          // Default to primary account if not detected
+          if (!sendAccount) {
+            const primary = ACCOUNTS.find((a) => a.primary);
+            sendAccount = primary?.msmtpAccount || "proton-hwc";
+            fromAddress = primary?.email || FROM_MAP[sendAccount] || "";
+          }
+          if (!fromAddress) {
+            fromAddress = FROM_MAP[sendAccount] || "";
+          }
+
+          // Build recipient list
+          let replyTo: string[] = [];
+          let replyCc: string[] = [];
+
+          if (replyAll) {
+            // Reply-All: reply to From + all To/Cc except ourselves
+            replyTo = originalFromAddrs;
+            const allOthers = [...originalToAddrs, ...originalCcAddrs].filter(
+              (a) => !ourAddresses.has(a.toLowerCase()),
+            );
+            replyCc = allOthers;
+          } else {
+            // Reply: just reply to the original From
+            replyTo = originalFromAddrs;
+          }
+
+          if (replyTo.length === 0) {
+            return mcpError({
+              type: "VALIDATION_ERROR",
+              message: "Could not determine reply recipient from original message",
+              suggestion: "Check that the original message has a valid From header",
+              context: { originalFrom },
+            });
+          }
+
+          // Build subject with Re: prefix
+          let subject = originalSubject;
+          if (!subject.toLowerCase().startsWith("re:")) {
+            subject = `Re: ${subject}`;
+          }
+
+          // Build message
+          const hdrs: string[] = [
+            `From: ${fromAddress}`,
+            `To: ${replyTo.join(", ")}`,
+            `Subject: ${subject}`,
+            `Date: ${new Date().toUTCString()}`,
+            "MIME-Version: 1.0",
+            "Content-Type: text/plain; charset=utf-8",
+          ];
+          if (replyCc.length > 0) {
+            hdrs.push(`Cc: ${replyCc.join(", ")}`);
+          }
+          if (originalMessageId) {
+            // Clean up Message-ID if needed (remove angle brackets if present, then add them)
+            const cleanId = originalMessageId.replace(/^<|>$/g, "");
+            hdrs.push(`In-Reply-To: <${cleanId}>`);
+            hdrs.push(`References: <${cleanId}>`);
+          }
+
+          const msg = hdrs.join("\r\n") + "\r\n\r\n" + body;
+
+          // All recipients
+          const allRcpts = [...replyTo];
+          if (replyCc.length > 0) {
+            allRcpts.push(...replyCc);
+          }
+
+          const bin = await msmtpBin();
+          const sendRes = await msmtpSend(bin, sendAccount, allRcpts, msg);
+          if (sendRes.exitCode !== 0) {
+            return mcpError({
+              type: "COMMAND_FAILED",
+              message: "Reply send failed",
+              error: sendRes.stderr.slice(0, 500),
+              suggestion: "Check msmtp config and that Proton Bridge is running",
+              context: { account: sendAccount, to: replyTo.join(", "), exitCode: sendRes.exitCode },
+            });
+          }
+
+          return {
+            status: "ok",
+            message: `Replied to ${replyTo.join(", ")}${replyAll ? " (reply-all)" : ""} via ${sendAccount}`,
+            data: {
+              from: fromAddress,
+              to: replyTo,
+              cc: replyCc.length > 0 ? replyCc : undefined,
+              subject,
+              account: sendAccount,
+              inReplyTo: originalMessageId,
+              replyAll,
+            },
+          };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Reply failed", err,
+            "Is msmtp installed and configured? Is Proton Bridge running?");
+        }
+      },
+    },
+
+    /* ── Sync ────────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_sync",
+      description:
+        "Trigger a full mail sync cycle. " +
+        "By default waits up to 2 min for completion. Set wait=false for fire-and-forget. " +
+        "SIDE EFFECT: syncs with remote IMAP server.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          wait: {
+            type: "boolean",
+            description: "Wait for sync to complete (default true, max 2 min)",
+          },
+        },
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const wait = (args.wait as boolean) ?? true;
+
+          if (wait) {
+            // Run sync-mail and wait for completion
+            const result = await new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve) => {
+              execFile(SYNC_MAIL, [], { timeout: 120000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+                const code = error && "code" in error ? (error.code as number) : 0;
+                resolve({
+                  exitCode: typeof code === "number" ? code : 1,
+                  stdout: stdout?.toString() ?? "",
+                  stderr: stderr?.toString() ?? "",
+                });
+              });
+            });
+
+            if (result.exitCode !== 0) {
+              return {
+                status: "partial",
+                message: `Sync completed with exit code ${result.exitCode} (partial failures are normal — Bridge rejects some messages)`,
+                data: {
+                  exitCode: result.exitCode,
+                  output: result.stdout.slice(-1000),
+                  errors: result.stderr.slice(-500),
+                },
+              };
+            }
+
+            return {
+              status: "ok",
+              message: "Sync complete",
+              data: { output: result.stdout.slice(-500) },
+            };
+          } else {
+            // Fire and forget
+            const proc = spawn(SYNC_MAIL, [], { detached: true, stdio: "ignore" });
+            proc.unref();
+            return { status: "ok", message: `Sync started (PID ${proc.pid})` };
+          }
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Sync failed", err, "Is sync-mail script at ~/.local/bin/sync-mail? Is Proton Bridge running?");
+        }
+      },
+    },
+
+    /* ── Accounts ─────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_accounts",
+      description:
+        "List configured mail accounts with capabilities (sync, send, identities, msmtp account names).",
+      inputSchema: { type: "object", properties: {} },
+      handler: async (): Promise<ToolResult> => {
+        return {
+          status: "ok",
+          message: `${ACCOUNTS.length} accounts configured`,
+          data: {
+            accounts: ACCOUNTS,
+            savedSearches: Object.keys(SAVED_SEARCHES),
+            categoryTags: CATEGORY_TAGS,
+            flagTags: FLAG_TAGS,
+          },
+        };
+      },
+    },
+
+    /* ── Folders ──────────────────────────────────────────────── */
+    {
+      name: "hwc_mail_folders",
+      description: "List Maildir folders with message counts.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          account: { type: "string", description: "Filter to account (e.g. 'proton')" },
+        },
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const account = args.account as string | undefined;
+          const baseDir = account ? join(MAILDIR, account) : MAILDIR;
+
+          const folders: Array<{ path: string; name: string; count?: number }> = [];
+          await walkMaildir(baseDir, MAILDIR, folders);
+
+          try {
+            const nm = await notmuchBin();
+            for (const f of folders) {
+              const res = await notmuchExec(nm, ["count", `folder:${f.name}`]);
+              if (res.exitCode === 0) {
+                f.count = parseInt(res.stdout.trim(), 10) || 0;
+              }
+            }
+          } catch {
+            /* counts unavailable */
+          }
+
+          return { status: "ok", message: `${folders.length} folders`, data: folders };
+        } catch (err) {
+          return catchError("INTERNAL_ERROR", "Folder listing failed", err, "Check Maildir path exists at ~/400_mail/Maildir");
+        }
+      },
+    },
+  ];
+}

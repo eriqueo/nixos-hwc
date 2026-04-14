@@ -4,90 +4,188 @@ let
   palette = config.hwc.home.theme.colors;
 in
 ''
-/* Generated from ${palette.name} palette */
+/* HWC Waybar — Gruvbox Material Dark (official hex values) */
+
+/* Gruvbox Material Dark palette reference:
+   bg0=#32302f  bg1=#3c3836  bg3=#504945  bg5=#665c54
+   fg0=#d4be98  fg1=#ddc7a1  grey0=#7c6f64  grey1=#928374
+   blue=#7daea3  aqua=#89b482  green=#a9b665
+   yellow=#d8a657  orange=#e78a4e  red=#ea6962  purple=#d3869b
+*/
+
 window#waybar {
-  background-color: #${palette.bg};
-  color: #${palette.fg};
+  background-color: rgba(50, 48, 47, 0.88);  /* bg0 @ 88% */
+  color: #d4be98;                             /* fg0 */
+  font-family: "Hack Nerd Font";
+  font-weight: bold;
+  font-size: 16px;
+  border-radius: 0px;
+  margin: 0px 0px;
+  padding: 5px 0px;
+}
+
+#workspaces {
+  margin: 0;
+  padding: 0;
+  background-color: #576f69;
 }
 
 #workspaces button {
-  padding: 0 5px;
-  background-color: transparent;
-  color: #${palette.fg};
-  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  min-height: 0;
+  min-width: 26px;
+  background-color: #576f69;
+  color: #32302f;
+  border-radius: 0;
+  font-size: 16px;
+  transition: none;
+  border: none;
+}
+
+/* Empty: same teal bg, dimmed via opacity so section stays uniform for powerline */
+#workspaces button.empty {
+  background-color: #576f69;
+  color: #32302f;
+  opacity: 0.4;
 }
 
 #workspaces button.active {
-  color: #${palette.accent};
-  border-bottom: 2px solid #${palette.accent};
+  background-color: #7daea3;
+  color: #32302f;
+  opacity: 1;
 }
 
 #workspaces button.urgent {
-  color: #${palette.crit};
-  border-bottom: 2px solid #${palette.crit};
+  background-color: #ea6962;
+  color: #32302f;
 }
 
+#workspaces button:hover {
+  background-color: #6b8a84;
+}
+
+/* === MODE === */
 #mode {
-  background-color: #${palette.accent};
-  color: #${palette.bg};
-  border-radius: 5px;
-  padding: 0 10px;
-  margin: 0 5px;
+  background-color: #665c54;   /* bg5 */
+  color: #d4be98;
+  border-radius: 0px;
+  padding: 0px 8px;
+  margin: 8px 4px;
 }
 
-#window { padding: 0 10px; }
-
-#cpu, #memory, #temperature, #network, #pulseaudio,
-#battery, #clock, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
-#custom-notification, #custom-power, #custom-fan, #custom-load,
-#custom-power-profile, #custom-disk-space, #backlight, #bluetooth {
-  padding: 0 10px;
-  margin: 0 5px;
-  color: #${palette.fg};
+/* === CLOCK & WEATHER — cohesive with active workspace === */
+#clock, #custom-weather {
+  padding: 8px 10px;
+  min-height: 0;
+  background-color: #504945;   /* bg3 — same as active workspace */
+  color: #ddc7a1;               /* fg1 */
+  border: none;
+  border-bottom: 2px solid #7daea3;  /* blue — same as active workspace */
+  border-radius: 0px;
+  margin: 0px 0px;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s ease;
 }
 
-#cpu { background-color: #${palette.surface1}; }
-#memory { background-color: #${palette.surface2}; }
-#temperature { background-color: #${palette.muted}; }
-#custom-fan { background-color: #${palette.surface1}; }
-#custom-load { background-color: #${palette.surface2}; }
-#custom-power-profile { background-color: #${palette.muted}; }
-#custom-disk-space { background-color: #${palette.surface1}; }
-#network { background-color: #${palette.surface2}; }
-#bluetooth { background-color: #${palette.muted}; }
-#pulseaudio { background-color: #${palette.surface1}; }
-#battery { background-color: #${palette.surface2}; }
-#backlight { background-color: #${palette.muted}; }
-#clock { background-color: #${palette.surface1}; color: #${palette.fg}; }
-#custom-gpu { background-color: #${palette.surface2}; }
-#custom-ollama { background-color: #${palette.muted}; }
-#idle_inhibitor { background-color: #${palette.muted}; }
-#mpd { background-color: #${palette.surface1}; }
-#tray { background-color: #${palette.surface2}; }
-#custom-notification { background-color: #${palette.muted}; }
-#custom-power { background-color: #${palette.surface1}; }
+/* === BASE MODULE STYLE === */
+#cpu, #memory, #temperature, #custom-network, #pulseaudio,
+#custom-battery, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
+#custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
+#custom-lid-sleep, #custom-proton-auth, #hyprland-language {
+  padding: 8px 6px;
+  min-height: 0;
+  margin: 0px 0px;
+  background-color: #3c3836;   /* bg1 baseline */
+  border: none;
+  border-radius: 0px;
+  color: #d4be98;               /* fg0 */
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
 
-/* Specific styles for custom modules based on their class */
-.intel { color: #${palette.ansi.blue}; }
-.nvidia { color: #${palette.ansi.green}; }
-.performance { color: #${palette.ansi.red}; }
-.disconnected { color: #${palette.crit}; }
-.excellent { color: #${palette.good}; }
-.good { color: #${palette.info}; }
-.fair { color: #${palette.warn}; }
-.poor { color: #${palette.crit}; }
-.charging { color: #${palette.good}; }
-.full { color: #${palette.good}; }
-.high { color: #${palette.info}; }
-.medium { color: #${palette.warn}; }
-.low { color: #${palette.crit}; }
-.critical { color: #${palette.crit}; }
-.normal { color: #${palette.fg}; }
-.idle { color: #${palette.ansi.cyan}; }
-.warning { color: #${palette.warn}; }
-.balanced { color: #${palette.info}; }
-.powersave { color: #${palette.good}; }
-.unknown { color: #${palette.muted}; }
-.running { color: #${palette.good}; }
-.stopped { color: #${palette.muted}; }
+/* === COLOR GROUPS — opaque computed (50% blend over #32302f, required for powerline) === */
+
+/* Toggles — teal #576f69 */
+#custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
+  background-color: #576f69;
+}
+
+/* Connectivity — sage green #5d7258 */
+#pulseaudio, #bluetooth, #custom-network {
+  background-color: #5d7258;
+}
+
+#custom-network { padding-right: 10px; }
+
+/* System health — amber #856b43 */
+#temperature, #custom-disk-space, #custom-battery {
+  background-color: #856b43;
+}
+
+/* Actions — bg3 #504945 */
+#custom-proton-auth, #tray, #custom-notification, #custom-power {
+  background-color: #504945;
+}
+
+/* === POWERLINE SEPARATORS === */
+/* Convention: color = left-section-bg, background-color = right-section-bg */
+#custom-ws-enter, #custom-ws-exit,
+#custom-sep-pre,
+#custom-sep-1, #custom-sep-2, #custom-sep-3 {
+  padding: 0;
+  margin: 0;
+  font-size: 18px;
+  border: none;
+  min-width: 0;
+}
+
+/* ws-enter: powerline entry arrow — bar bg color on teal workspace section */
+#custom-ws-enter { color: rgba(50,48,47,0.88); background-color: #576f69; }  /* ▶ bar→teal */
+
+#custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
+#custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
+#custom-sep-2   { color: #5d7258; background-color: #856b43; }  /* conn → health */
+#custom-sep-3   { color: #856b43; background-color: #504945; }  /* health → actions */
+
+/* === HOVER — universal === */
+#cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
+#custom-battery:hover, #clock:hover, #custom-gpu:hover, #custom-ollama:hover,
+#idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
+#custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
+#custom-weather:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
+#hyprland-language:hover {
+  background-color: #504945;   /* bg3 */
+}
+
+/* === STATE CLASSES (semantic — keep palette refs) === */
+
+.stopped, .sleep-disabled {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.intel        { color: #7daea3; }   /* blue */
+.nvidia       { color: #a9b665; }   /* green */
+.performance  { color: #ea6962; }   /* red */
+.disconnected { color: #ea6962; text-decoration: line-through; opacity: 0.6; }
+.excellent    { color: #a9b665; }
+.good         { color: #89b482; }
+.fair         { color: #d8a657; }
+.poor         { color: #e78a4e; }
+.charging     { color: #a9b665; }
+.full         { color: #a9b665; }
+.high         { color: #7daea3; }
+.medium       { color: #d8a657; }
+.low          { color: #e78a4e; }
+.critical     { color: #ea6962; }
+.normal       { color: #d4be98; }
+.idle         { color: #89b482; }
+.warning      { color: #d8a657; }
+.balanced     { color: #7daea3; }
+.powersave    { color: #a9b665; }
+.unknown      { color: #7c6f64; }
+.running      { color: #a9b665; }
+.weather      { color: #d4be98; }
+.sleep-enabled { color: #a9b665; }
 ''

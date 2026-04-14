@@ -26,6 +26,10 @@ domains/system/
 │   ├── session/          # Display/login/session policies
 │   ├── shell/            # System shell defaults
 │   └── vpn/              # VPN client/service wiring
+├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
+│   ├── index.nix         # NixOS module, systemd service, Caddy route
+│   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
+│   └── src/              # TypeScript source (Node.js, MCP SDK)
 ├── storage/              # Storage-tier policies and retention helpers
 └── users/                # Account and group management
 ```
@@ -36,6 +40,7 @@ domains/system/
 - **storage/** – Houses storage policy modules (tiers, cleanup/retention timers) to satisfy the data retention contract.
 - **packages.nix** – Core package bundles (base/server/security) under `hwc.system.core.packages.*`.
 - **users/** – System-level accounts required by other domains.
+- **mcp/** – HWC Infrastructure MCP Server exposing system/container/network/config state as MCP tools. See `domains/system/mcp/README.md`.
 
 ## Usage
 - Import `domains/system/index.nix` from machine configs; enable modules via `hwc.system.*` and `hwc.filesystem.*` options.

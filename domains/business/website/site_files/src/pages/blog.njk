@@ -1,0 +1,31 @@
+---
+title: Remodeling Blog
+meta_description: >-
+  Practical remodeling advice for Bozeman homeowners — bathroom costs, basement
+  finishing, deck building, and what to expect when you remodel.
+h1: The Plane Truth
+hero_image: /img/hero/plane-truth-header.webp
+hero_inline: true
+hero_subtitle: 'Insights, Opinions, and Rants - from a Remodeler''s Point of View'
+permalink: /blog/
+layout: layouts/page-simple.njk
+content_wide: true
+show_form: false
+---
+
+<div class="blog-grid">
+{% for post in collections.blog | reverse %}
+  <a href="{{ post.url }}" class="card blog-card">
+    {% if post.data.featured_image %}
+    <img src="{{ post.data.featured_image }}" alt="{{ post.data.title }}" loading="lazy">
+    {% endif %}
+    <div class="blog-card-body">
+      <h3>{{ post.data.title }}</h3>
+      <p class="blog-card-meta">{{ post.date | dateReadable }}</p>
+      {% if post.data.meta_description %}
+      <p class="blog-card-excerpt">{{ post.data.meta_description }}</p>
+      {% endif %}
+    </div>
+  </a>
+{% endfor %}
+</div>

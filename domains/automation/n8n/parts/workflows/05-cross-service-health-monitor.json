@@ -1,0 +1,361 @@
+{
+  "name": "Cross-Service Health Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule: Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define all health checks\nconst checks = [\n  { name: 'Jellyfin', url: 'http://127.0.0.1:8096/health', type: 'http', timeout: 5000 },\n  { name: 'Immich', url: 'http://127.0.0.1:2283/api/server/ping', type: 'http', timeout: 5000 },\n  { name: 'Frigate', url: 'http://127.0.0.1:5000/api/config', type: 'http', timeout: 5000 },\n  { name: 'ntfy', url: 'http://127.0.0.1:2586/v1/health', type: 'http', timeout: 5000 },\n  { name: 'n8n', url: 'http://127.0.0.1:5678/healthz', type: 'http', timeout: 5000 },\n  { name: 'Prometheus', url: 'http://127.0.0.1:9090/-/healthy', type: 'http', timeout: 5000 },\n  { name: 'Alertmanager', url: 'http://127.0.0.1:9093/-/healthy', type: 'http', timeout: 5000 },\n  { name: 'Caddy', service: 'caddy', type: 'systemd' },\n  { name: 'Tailscale', service: 'tailscaled', type: 'systemd' }\n];\n\nreturn checks.map(check => ({ json: check }));"
+      },
+      "id": "define-checks",
+      "name": "Define Health Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "loop-checks",
+      "name": "Loop Over Checks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.type }}",
+                    "value2": "http"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "http"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.type }}",
+                    "value2": "systemd"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "systemd"
+            }
+          ]
+        }
+      },
+      "id": "branch-by-type",
+      "name": "Branch by Check Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 5000,
+          "retry": {
+            "retry": {
+              "maxRetries": 0
+            }
+          }
+        },
+        "ignoreResponseCode": true
+      },
+      "id": "http-check",
+      "name": "HTTP Health Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "command": "=systemctl is-active {{ $json.service }}",
+        "options": {}
+      },
+      "id": "systemd-check",
+      "name": "Systemd Health Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evaluate health check result\nconst checkData = $input.first().json;\nconst responseData = $input.item.json;\n\nlet healthy = false;\nlet statusCode = 0;\nlet errorMessage = '';\n\nif (checkData.type === 'http') {\n  statusCode = responseData.statusCode || 0;\n  healthy = statusCode >= 200 && statusCode < 300;\n  if (!healthy) {\n    errorMessage = `HTTP ${statusCode}`;\n  }\n} else if (checkData.type === 'systemd') {\n  const output = (responseData.stdout || '').trim();\n  healthy = output === 'active';\n  if (!healthy) {\n    errorMessage = `Service ${output || 'unknown'}`;\n  }\n}\n\nreturn {\n  json: {\n    name: checkData.name,\n    type: checkData.type,\n    healthy: healthy,\n    statusCode: statusCode,\n    errorMessage: errorMessage,\n    timestamp: new Date().toISOString(),\n    service: checkData.service || null,\n    url: checkData.url || null\n  }\n};"
+      },
+      "id": "evaluate-result",
+      "name": "Evaluate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.healthy }}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "id": "check-failure",
+      "name": "Check if Failed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determine if service can be auto-restarted\nconst { name, service } = $json;\n\n// Critical services that should NEVER be auto-restarted\nconst criticalServices = ['caddy', 'sshd', 'tailscaled'];\n\nconst isCritical = service && criticalServices.includes(service);\nconst canRestart = !isCritical;\n\nreturn {\n  json: {\n    ...($json),\n    canRestart: canRestart,\n    isCritical: isCritical\n  }\n};"
+      },
+      "id": "check-restart-safety",
+      "name": "Check Restart Safety",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.canRestart }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "can-restart-check",
+      "name": "Can Auto-Restart?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1850, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"script_name\": \"service-restart\",\n  \"args\": [\"{{ $json.service || $json.name.toLowerCase() }}\"],\n  \"async\": true,\n  \"requester\": \"workflow-5-health-monitor\"\n}",
+        "options": {}
+      },
+      "id": "attempt-restart",
+      "name": "Attempt Service Restart",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "id": "wait-restart",
+      "name": "Wait for Restart",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Re-check health after restart attempt\nconst checkData = $json;\n\nreturn {\n  json: {\n    ...checkData,\n    recheckNeeded: true\n  }\n};"
+      },
+      "id": "prepare-recheck",
+      "name": "Prepare Re-check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate notification based on health status and remediation\nconst { name, healthy, canRestart, isCritical, errorMessage } = $json;\n\nlet title, message, topic, priority, sendToSlack;\n\nif (!healthy && isCritical) {\n  // Critical service down, no auto-restart\n  title = `🔴 CRITICAL: ${name} Down`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nManual intervention required!\\nCritical service cannot be auto-restarted.`;\n  topic = 'hwc-critical';\n  priority = 5;\n  sendToSlack = true;\n} else if (!healthy && !canRestart) {\n  // Service down, auto-restart failed\n  title = `⚠️ ${name} Down - Restart Failed`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nAuto-restart attempted but failed.\\nManual intervention may be needed.`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = true;\n} else if (!healthy && canRestart) {\n  // Service down, attempting auto-fix\n  title = `⚠️ ${name} Down - Attempting Restart`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nAttempting automatic restart...`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = false;\n} else {\n  // Service recovered\n  title = `✅ ${name} Recovered`;\n  message = `Service: ${name}\\n\\nService has been restored.`;\n  topic = 'hwc-monitoring';\n  priority = 3;\n  sendToSlack = false;\n}\n\nreturn {\n  json: {\n    title: title,\n    message: message,\n    topic: topic,\n    priority: priority,\n    tags: `health,${name.toLowerCase()},monitoring`,\n    sendToSlack: sendToSlack\n  }\n};"
+      },
+      "id": "generate-notification",
+      "name": "Generate Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2050, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.sendToSlack }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-slack",
+      "name": "Check if Slack needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2250, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-ntfy",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2450, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.title }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.message }}\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "send-slack",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2450, 700]
+    }
+  ],
+  "connections": {
+    "Schedule: Every 5 Minutes": {
+      "main": [[{ "node": "Define Health Checks", "type": "main", "index": 0 }]]
+    },
+    "Define Health Checks": {
+      "main": [[{ "node": "Loop Over Checks", "type": "main", "index": 0 }]]
+    },
+    "Loop Over Checks": {
+      "main": [[{ "node": "Branch by Check Type", "type": "main", "index": 0 }]]
+    },
+    "Branch by Check Type": {
+      "main": [
+        [{ "node": "HTTP Health Check", "type": "main", "index": 0 }],
+        [{ "node": "Systemd Health Check", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP Health Check": {
+      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+    },
+    "Systemd Health Check": {
+      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+    },
+    "Evaluate Result": {
+      "main": [[{ "node": "Check if Failed", "type": "main", "index": 0 }]]
+    },
+    "Check if Failed": {
+      "main": [
+        [{ "node": "Check Restart Safety", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Check Restart Safety": {
+      "main": [[{ "node": "Can Auto-Restart?", "type": "main", "index": 0 }]]
+    },
+    "Can Auto-Restart?": {
+      "main": [
+        [{ "node": "Attempt Service Restart", "type": "main", "index": 0 }],
+        [{ "node": "Generate Notification", "type": "main", "index": 0 }]
+      ]
+    },
+    "Attempt Service Restart": {
+      "main": [[{ "node": "Wait for Restart", "type": "main", "index": 0 }]]
+    },
+    "Wait for Restart": {
+      "main": [[{ "node": "Prepare Re-check", "type": "main", "index": 0 }]]
+    },
+    "Prepare Re-check": {
+      "main": [[{ "node": "Generate Notification", "type": "main", "index": 0 }]]
+    },
+    "Generate Notification": {
+      "main": [[{ "node": "Check if Slack needed", "type": "main", "index": 0 }]]
+    },
+    "Check if Slack needed": {
+      "main": [
+        [{ "node": "Send to ntfy", "type": "main", "index": 0 }, { "node": "Send to Slack", "type": "main", "index": 0 }],
+        [{ "node": "Send to ntfy", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "monitoring",
+      "id": "monitoring-tag"
+    },
+    {
+      "name": "health",
+      "id": "health-tag"
+    },
+    {
+      "name": "automation",
+      "id": "automation-tag"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-08T00:00:00.000Z",
+  "versionId": "1"
+}

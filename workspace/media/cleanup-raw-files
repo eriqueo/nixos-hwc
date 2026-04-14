@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+#
+# cleanup-raw-files - Remove RAW image files when matching JPG exists
+#
+# Safely removes RAW files (CR2, CR3, NEF, ARW, RAF, DNG, ORF, RW2) when a
+# corresponding JPG/JPEG exists in the same directory.
+#
+# Handles variant suffixes: IMG_1234-1.CR2 is deleted if IMG_1234.JPG exists
+#
+
+set -uo pipefail
+
+# RAW extensions to clean up (case-insensitive matching)
+RAW_EXTENSIONS=("cr2" "cr3" "nef" "arw" "raf" "dng" "orf" "rw2")
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Counters
+deleted_count=0
+skipped_count=0
+total_bytes_freed=0
+
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[SKIP]${NC} $1"; }
+log_delete() { echo -e "${RED}[DEL]${NC} $1"; }
+
+human_readable_size() {
+    local bytes=$1
+    if (( bytes >= 1073741824 )); then
+        local gb=$((bytes / 1073741824))
+        local mb=$(((bytes % 1073741824) / 10737418))  # Two decimal places
+        echo "${gb}.${mb} GB"
+    elif (( bytes >= 1048576 )); then
+        local mb=$((bytes / 1048576))
+        echo "${mb} MB"
+    elif (( bytes >= 1024 )); then
+        local kb=$((bytes / 1024))
+        echo "${kb} KB"
+    else
+        echo "$bytes bytes"
+    fi
+}
+
+# Extract base name, removing -1, -2, etc. suffixes
+# IMG_1234-1.CR2 -> IMG_1234
+# IMG_1234.CR2 -> IMG_1234
+get_base_name() {
+    local filename="$1"
+    # Remove extension first
+    local name="${filename%.*}"
+    # Remove trailing -N suffix (where N is one or more digits)
+    echo "${name}" | sed 's/-[0-9]\+$//'
+}
+
+# Check if a matching JPG exists (case-insensitive)
+find_matching_jpg() {
+    local dir="$1"
+    local base_name="$2"
+
+    # Check for various JPG extensions, case-insensitive
+    for ext in jpg jpeg JPG JPEG Jpg Jpeg; do
+        if [[ -f "${dir}/${base_name}.${ext}" ]]; then
+            echo "${dir}/${base_name}.${ext}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+process_directory() {
+    local target_dir="$1"
+
+    log_info "Scanning for RAW files in: $target_dir"
+    echo ""
+
+    # Find all RAW files using multiple -iname patterns
+    while IFS= read -r -d '' raw_file; do
+        local dir
+        dir=$(dirname "$raw_file")
+        local filename
+        filename=$(basename "$raw_file")
+        local base_name
+        base_name=$(get_base_name "$filename")
+
+        # Check if matching JPG exists
+        if matching_jpg=$(find_matching_jpg "$dir" "$base_name"); then
+            # Get file size before deletion
+            local file_size
+            file_size=$(stat -c %s "$raw_file" 2>/dev/null || echo 0)
+
+            # Delete the RAW file
+            if rm "$raw_file"; then
+                log_delete "$raw_file (matched: $(basename "$matching_jpg"))"
+                deleted_count=$((deleted_count + 1))
+                total_bytes_freed=$((total_bytes_freed + file_size))
+            else
+                log_warn "Failed to delete: $raw_file"
+                skipped_count=$((skipped_count + 1))
+            fi
+        else
+            log_warn "$raw_file (no matching JPG for base: $base_name)"
+            skipped_count=$((skipped_count + 1))
+        fi
+    done < <(find "$target_dir" -type f \( \
+        -iname "*.cr2" -o -iname "*.cr3" -o -iname "*.nef" -o \
+        -iname "*.arw" -o -iname "*.raf" -o -iname "*.dng" -o \
+        -iname "*.orf" -o -iname "*.rw2" \
+        \) -print0 2>/dev/null)
+}
+
+main() {
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║           RAW File Cleanup Tool                              ║"
+    echo "║  Removes RAW files when matching JPG exists                  ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+
+    # Get target directory
+    if [[ $# -ge 1 ]]; then
+        target_dir="$1"
+    else
+        read -r -p "Enter folder path to clean up: " target_dir
+    fi
+
+    # Expand ~ if present
+    target_dir="${target_dir/#\~/$HOME}"
+
+    # Validate directory
+    if [[ ! -d "$target_dir" ]]; then
+        echo -e "${RED}Error: Directory does not exist: $target_dir${NC}"
+        exit 1
+    fi
+
+    # Convert to absolute path
+    target_dir=$(realpath "$target_dir")
+
+    log_info "Target directory: $target_dir"
+    log_info "RAW formats: ${RAW_EXTENSIONS[*]}"
+    log_info "Matching rule: RAW files deleted if base-name JPG exists"
+    log_info "              (e.g., IMG_1234-1.CR2 deleted if IMG_1234.JPG exists)"
+    echo ""
+
+    # Count files first
+    local raw_count=0
+    for ext in "${RAW_EXTENSIONS[@]}"; do
+        count=$(find "$target_dir" -type f -iname "*.${ext}" 2>/dev/null | wc -l)
+        raw_count=$((raw_count + count))
+    done
+
+    log_info "Found $raw_count RAW files to check"
+    echo ""
+
+    if [[ $raw_count -eq 0 ]]; then
+        log_success "No RAW files found. Nothing to do."
+        exit 0
+    fi
+
+    # Process the directory
+    process_directory "$target_dir"
+
+    # Summary
+    echo ""
+    echo "════════════════════════════════════════════════════════════════"
+    echo -e "${GREEN}Cleanup Complete${NC}"
+    echo "════════════════════════════════════════════════════════════════"
+    echo -e "  Files deleted:  ${GREEN}$deleted_count${NC}"
+    echo -e "  Files skipped:  ${YELLOW}$skipped_count${NC} (no matching JPG)"
+    echo -e "  Space freed:    ${GREEN}$(human_readable_size $total_bytes_freed)${NC}"
+    echo "════════════════════════════════════════════════════════════════"
+}
+
+main "$@"

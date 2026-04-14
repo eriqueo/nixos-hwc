@@ -1,5 +1,5 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/qutebrowser/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.qutebrowser;
   package = if cfg.package != null then cfg.package else pkgs.qutebrowser;
@@ -8,7 +8,21 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.qutebrowser = {
+    enable = lib.mkEnableOption "Qutebrowser keyboard-focused browser";
+
+    package = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = "Package to use for qutebrowser.";
+    };
+
+    extraPackages = lib.mkOption {
+      type = lib.types.listOf lib.types.package;
+      default = [];
+      description = "Additional packages to install alongside qutebrowser.";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

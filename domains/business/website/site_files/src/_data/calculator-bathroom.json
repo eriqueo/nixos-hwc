@@ -1,0 +1,157 @@
+{
+  "calculator": "bathroom",
+  "title": "Bathroom Remodel Cost Calculator",
+  "subtitle": "7 questions, real numbers from Bozeman bathroom projects. Not national averages — actual Gallatin Valley material and labor costs.",
+  "steps": [
+    {
+      "id": "project_type",
+      "question": "What kind of project is this?",
+      "subtitle": "This sets the baseline for everything else.",
+      "why": "A full gut remodel means all-new plumbing, waterproofing, and subfloor — a refresh keeps most of that in place. This one question changes the estimate by thousands.",
+      "type": "cards",
+      "options": [
+        { "value": "full_gut", "label": "Full remodel", "desc": "Down to studs — new everything", "emoji": "🔨" },
+        { "value": "refresh", "label": "Refresh & update", "desc": "New tile, fixtures, finishes — same layout", "emoji": "✨" },
+        { "value": "tub_to_shower", "label": "Tub → walk-in shower", "desc": "Convert the tub space into a shower", "emoji": "🚿" },
+        { "value": "specific_fix", "label": "Fix a specific problem", "desc": "Leak, damage, or one thing to address", "emoji": "🔧" }
+      ]
+    },
+    {
+      "id": "bathroom_size",
+      "question": "How big is the bathroom?",
+      "subtitle": "A rough estimate is totally fine — we'll measure on-site.",
+      "why": "Labor and materials scale directly with square footage. Tile, waterproofing membrane, and heated floor systems are all priced per square foot, so even a rough size estimate meaningfully affects the range.",
+      "type": "cards",
+      "options": [
+        { "value": "small", "label": "Small", "desc": "Under 40 sq ft (typical half bath or powder room)", "emoji": "▪️", "sqft": 35 },
+        { "value": "medium", "label": "Medium", "desc": "40–70 sq ft (standard full bathroom)", "emoji": "▫️", "sqft": 55 },
+        { "value": "large", "label": "Large", "desc": "70–100 sq ft (primary bathroom)", "emoji": "⬜", "sqft": 85 },
+        { "value": "xl", "label": "Extra large", "desc": "100+ sq ft (luxury primary suite)", "emoji": "🔳", "sqft": 120 }
+      ]
+    },
+    {
+      "id": "shower_tub",
+      "question": "What's your shower and tub situation?",
+      "subtitle": "Select what you want in the finished bathroom.",
+      "why": "A tub/shower combo is standard plumbing. Separate tub and shower means two drain locations, more tile, and more waterproofing — that's where the cost jumps.",
+      "type": "cards",
+      "options": [
+        { "value": "shower_only", "label": "Shower only", "desc": "Walk-in shower, no tub", "emoji": "🚿" },
+        { "value": "tub_shower", "label": "Tub + shower combo", "desc": "Bathtub with a showerhead above", "emoji": "🛁" },
+        { "value": "both_separate", "label": "Separate tub & shower", "desc": "Freestanding tub plus a separate shower", "emoji": "✨" },
+        { "value": "tub_only", "label": "Tub only", "desc": "Soaking tub, no shower in this room", "emoji": "🛁" }
+      ]
+    },
+    {
+      "id": "tile_level",
+      "question": "What level of tile work?",
+      "subtitle": "Tile is often the biggest design choice — and the biggest cost driver.",
+      "why": "Basic subway tile runs $3–5/sq ft. Natural stone and mosaic work can hit $15–25/sq ft — and takes 2–3× longer to install. Tile choice alone can swing a bathroom by $3,000–8,000.",
+      "type": "cards",
+      "options": [
+        { "value": "basic", "label": "Clean & simple", "desc": "Large format subway or single pattern, minimal accent", "emoji": "▢" },
+        { "value": "mid", "label": "Designed & detailed", "desc": "Mixed patterns, accent band or niche feature, quality tile", "emoji": "▦" },
+        { "value": "high", "label": "Custom & premium", "desc": "Complex patterns, natural stone, mosaic accents, floor-to-ceiling", "emoji": "▩" }
+      ]
+    },
+    {
+      "id": "fixtures",
+      "question": "What about fixtures and finishes?",
+      "subtitle": "Faucets, showerheads, hardware, vanity — the things you touch every day.",
+      "why": "A standard Moen faucet is $150. A Brizo or Kohler Purist is $400–600. Multiply that across every fixture in the room and the tier choice adds $2,000–8,000 to the project.",
+      "type": "cards",
+      "options": [
+        { "value": "standard", "label": "Good quality basics", "desc": "Reliable brands, clean look, great value (Moen, Delta)", "emoji": "$" },
+        { "value": "upgraded", "label": "Upgraded selections", "desc": "Designer finishes, rain showerhead, solid hardware (Kohler, Brizo)", "emoji": "$$" },
+        { "value": "premium", "label": "Premium / luxury", "desc": "High-end brands, custom vanity, statement pieces", "emoji": "$$$" }
+      ]
+    },
+    {
+      "id": "features",
+      "question": "Any special features?",
+      "subtitle": "Select all that apply. These are common adds that affect the budget.",
+      "why": "Each of these is a standalone scope item with its own materials and labor. We price these from actual Bozeman project costs — not national averages.",
+      "type": "multi",
+      "options": [
+        { "value": "heated_floor", "label": "Heated floors", "add": 1500 },
+        { "value": "niches", "label": "Built-in shower niches", "add": 800 },
+        { "value": "bench", "label": "Shower bench", "add": 1200 },
+        { "value": "double_vanity", "label": "Double vanity", "add": 1800 },
+        { "value": "lighting", "label": "New lighting / electrical", "add": 1200 },
+        { "value": "ventilation", "label": "New ventilation / fan", "add": 600 }
+      ]
+    },
+    {
+      "id": "timeline",
+      "question": "When are you hoping to start?",
+      "subtitle": "No pressure — this helps us plan our schedule.",
+      "why": "Bozeman remodeling contractors book up — if you're targeting a specific season, starting the conversation early gives you the best shot at getting on the schedule.",
+      "type": "cards",
+      "options": [
+        { "value": "asap", "label": "As soon as possible", "desc": "Ready to move forward now", "emoji": "🚀" },
+        { "value": "1_3_months", "label": "1–3 months", "desc": "Planning ahead, want to get quotes", "emoji": "📅" },
+        { "value": "3_6_months", "label": "3–6 months", "desc": "Still in the thinking stage", "emoji": "🗓️" },
+        { "value": "just_exploring", "label": "Just exploring", "desc": "Curious about costs, no rush", "emoji": "🔍" }
+      ]
+    }
+  ],
+  "pricing": {
+    "bases": {
+      "full_gut": [18000, 28000],
+      "refresh": [10000, 18000],
+      "tub_to_shower": [12000, 20000],
+      "specific_fix": [5000, 12000]
+    },
+    "sizeMultipliers": { "small": 0.7, "medium": 1.0, "large": 1.35, "xl": 1.7 },
+    "showerAdds": {
+      "shower_only": [0, 0],
+      "tub_shower": [1500, 3000],
+      "both_separate": [4000, 8000],
+      "tub_only": [-500, -1000]
+    },
+    "tileMultipliers": { "basic": 0.85, "mid": 1.0, "high": 1.3 },
+    "fixtureAdds": {
+      "standard": [0, 0],
+      "upgraded": [2000, 4000],
+      "premium": [5000, 10000]
+    }
+  },
+  "reportContext": {
+    "project_type": {
+      "full_gut": "A full gut means demo to studs — we inspect every layer and rebuild with modern waterproofing.",
+      "refresh": "A refresh keeps the layout and plumbing positions but replaces all visible surfaces.",
+      "tub_to_shower": "Tub-to-shower conversions involve plumbing relocation and new waterproofing at the drain.",
+      "specific_fix": "Targeted repairs address the problem without unnecessary demo — most cost-effective approach."
+    },
+    "bathroom_size": {
+      "small": "Small bathrooms are quicker builds but require careful layout planning — every inch matters.",
+      "medium": "Standard full bathrooms are our most common project — well-understood scope and timeline.",
+      "large": "Primary bathrooms have more tile area, often dual vanities, and larger shower builds.",
+      "xl": "Luxury primary suites involve complex tile patterns, freestanding tubs, and custom cabinetry."
+    },
+    "shower_tub": {
+      "shower_only": "Walk-in showers are the most popular choice in Bozeman remodels right now.",
+      "tub_shower": "Tub/shower combos are practical and cost-effective — still the standard in most homes.",
+      "both_separate": "Separate tub and shower is a premium layout that adds significant plumbing and tile work.",
+      "tub_only": "Soaking tubs are a design statement — we handle the structural support and drain positioning."
+    },
+    "tile_level": {
+      "basic": "Clean subway or large-format tile installs quickly and looks timeless — great value.",
+      "mid": "Mixed patterns and accent features require more layout time but create a custom look.",
+      "high": "Natural stone and mosaic work is labor-intensive — this is where craftsmanship shows most."
+    },
+    "fixtures": {
+      "standard": "Moen and Delta deliver reliable quality at a good price point — we install these regularly.",
+      "upgraded": "Kohler and Brizo fixtures are a noticeable step up in feel and finish.",
+      "premium": "High-end fixtures and custom vanities are the details that make a bathroom feel luxurious."
+    },
+    "features": {
+      "heated_floor": "Electric radiant heat under tile — a game-changer for Bozeman's cold mornings.",
+      "niches": "Built-in shower niches are tiled into the wall during the waterproofing stage.",
+      "bench": "A tiled shower bench adds comfort and accessibility — built on a waterproofed frame.",
+      "double_vanity": "Double vanities require wider plumbing rough-in and a larger countertop.",
+      "lighting": "Updated lighting and wiring modernizes the space — we coordinate with a licensed electrician.",
+      "ventilation": "Proper ventilation prevents moisture damage — critical in Montana's cold, dry winters."
+    }
+  }
+}

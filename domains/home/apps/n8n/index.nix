@@ -1,21 +1,21 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/n8n/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.n8n;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.n8n = {
+    enable = lib.mkEnableOption "n8n workflow automation";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      n8n
-    ];
+    home.packages = [ pkgs.n8n ];
 
     home.sessionVariables = {
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS = "true";
@@ -24,8 +24,4 @@ in
       N8N_BLOCK_ENV_ACCESS_IN_NODE = "false";
     };
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

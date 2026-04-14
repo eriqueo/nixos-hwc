@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ meta_description | default(site.description) }}">
+  <link rel="canonical" href="{{ site.url }}{{ page.url }}">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ meta_description | default(site.description) }}">
+  <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+  <meta property="og:type" content="{{ og_type | default('website') }}">
+  {% if og_image %}<meta property="og:image" content="{{ site.url }}{{ og_image }}">{% endif %}
+  <meta property="og:site_name" content="{{ site.name }}">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
+
+  <!-- Google Fonts (from theme.json) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="{{ theme.fonts.googleUrl | safe }}" rel="stylesheet">
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8CF06TJ7ZK"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-8CF06TJ7ZK');
+  </script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- CMS Layout Overrides (from _data/theme.json) -->
+  <style>
+    :root {
+      --font-body: {{ theme.fonts.body | safe }};
+      --font-heading: {{ theme.fonts.heading | safe }};
+      --max-width: {{ theme.containers.standard | safe }};
+      --max-width-wide: {{ theme.containers.wide | safe }};
+      --max-width-narrow: {{ theme.containers.narrow | safe }};
+      --container-padding-x: {{ theme.containers.paddingX | safe }};
+      --section-padding-y: {{ theme.sections.paddingY | safe }};
+      --logo-height: {{ theme.header.logoHeight | safe }};
+      --logo-height-mobile: {{ theme.header.logoHeightMobile | safe }};
+      --hero-min-height: {{ theme.hero.minHeight | safe }};
+      --hero-short-min-height: {{ theme.hero.shortMinHeight | safe }};
+      --hero-h1-size: {{ theme.hero.h1FontSize | safe }};
+      --hero-h1-max-width: {{ theme.hero.h1MaxWidth | safe }};
+      --hero-subtitle-size: {{ theme.hero.subtitleFontSize | safe }};
+      --hero-subtitle-max-width: {{ theme.hero.subtitleMaxWidth | safe }};
+      --hero-overlay: {{ theme.hero.overlayGradient | safe }};
+      --header-padding-x: {{ theme.header.headerPaddingX | safe }};
+      --nav-font-size: {{ theme.header.navFontSize | safe }};
+      --nav-font-weight: {{ theme.header.navFontWeight | safe }};
+      --nav-padding-x: {{ theme.header.navPaddingX | safe }};
+      --blog-card-img-height: {{ theme.blogCards.imageHeight | safe }};
+      --blog-card-title-size: {{ theme.blogCards.titleFontSize | safe }};
+      --blog-card-title-color: {{ theme.blogCards.titleColor | safe }};
+      --blog-card-body-padding: {{ theme.blogCards.bodyPadding | safe }};
+      --trust-bar-font-size: {{ theme.trustBar.fontSize | safe }};
+    }
+  </style>
+
+  <!-- Structured Data -->
+  {% if schema_type == "LocalBusiness" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "{{ site.name }}",
+    "description": "{{ site.description }}",
+    "telephone": "{{ site.phone }}",
+    "email": "{{ site.email }}",
+    "url": "{{ site.url }}",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Bozeman",
+      "addressRegion": "MT",
+      "addressCountry": "US"
+    },
+    "areaServed": ["Bozeman, MT", "Belgrade, MT", "Gallatin Gateway, MT"],
+    "priceRange": "$$"
+  }
+  </script>
+  {% elif schema_type == "Service" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "{{ title }}",
+    "description": "{{ meta_description | default(site.description) }}",
+    "provider": {
+      "@type": "LocalBusiness",
+      "name": "{{ site.name }}",
+      "telephone": "{{ site.phone }}",
+      "url": "{{ site.url }}"
+    },
+    "areaServed": ["Bozeman, MT", "Belgrade, MT", "Gallatin Gateway, MT"]
+  }
+  </script>
+  {% elif schema_type == "BlogPosting" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "{{ title }}",
+    "description": "{{ meta_description | default(site.description) }}",
+    "author": {
+      "@type": "Person",
+      "name": "Eric"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "{{ site.name }}"
+    },
+    "datePublished": "{{ date | dateISO }}",
+    "url": "{{ site.url }}{{ page.url }}"{% if featured_image %},
+    "image": "{{ site.url }}{{ featured_image }}"{% endif %}
+  }
+  </script>
+  {% else %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "{{ title }}",
+    "description": "{{ meta_description | default(site.description) }}",
+    "url": "{{ site.url }}{{ page.url }}"
+  }
+  </script>
+  {% endif %}
+</head>
+<body>
+
+{% include "partials/header.njk" %}
+
+<main>
+  {{ content | safe }}
+</main>
+
+{% include "partials/footer.njk" %}
+
+<script src="/js/main.js" defer></script>
+<script src="/js/tracking.js" defer></script>
+</body>
+</html>

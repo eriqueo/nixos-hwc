@@ -1,0 +1,12 @@
+{
+  "name": "Heartwood Craft",
+  "phone": "406-551-5061",
+  "phoneLink": "tel:4065515061",
+  "email": "eric@iheartwoodcraft.com",
+  "url": "https://iheartwoodcraft.com",
+  "webhookContact": "https://hwc.ocelot-wahoo.ts.net/webhook/new-lead",
+  "webhookCalculator": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead",
+  "address": "Bozeman, Montana",
+  "tagline": "Quality. Integrity. Beauty.",
+  "description": "Licensed bathroom remodeling, basement finishing, decks, and custom carpentry in Bozeman, Belgrade, and Gallatin Gateway, Montana."
+}

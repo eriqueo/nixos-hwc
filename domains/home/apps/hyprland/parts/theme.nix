@@ -5,7 +5,9 @@ let
   toHypr = colorStr:
     let
       hex = if colorStr == null then "888888" else lib.removePrefix "#" colorStr;
-    in "0x${hex}";
+      # Legacy 0x format requires ARGB order, add full opacity alpha if missing
+      hexWithAlpha = if builtins.stringLength hex == 6 then "ff${hex}" else hex;
+    in "0x${hexWithAlpha}";
 
   activeBorder1 = toHypr (c.accent or null);
   activeBorder2 = toHypr (c.accentAlt or (c.accent or null));
@@ -27,20 +29,28 @@ in
     rounding = 12;
     blur = {
       enabled = true;
-      size = 6;
-      passes = 3;
+      size = 4;
+      passes = 2;
       new_optimizations = true;
-      ignore_opacity = true;
+      ignore_opacity = false;
+      vibrancy = 0.2;        # Slight color boost (0.0-0.5)
+      vibrancy_darkness = 0.1;
     };
     shadow = {
       enabled = true;
       range = 8;
       render_power = 2;
-      color = "rgba(0, 0, 0, 0.4)";
+      color = "rgba(0,0,0,0.4)";
     };
     dim_inactive = false;
   };
 
+  layerrule = [
+    #"blur on, match:namespace waybar"
+    #"blur_popups on, match:namespace waybar"
+    #"ignore_alpha 0.1, match:namespace waybar"  # 0.1–0.3 common; prevents sharp edges on rounded corners
+  ];
+  
   animations = {
     enabled = true;
     bezier = [
@@ -69,12 +79,12 @@ in
     disable_splash_rendering = true;
     mouse_move_enables_dpms = true;
     key_press_enables_dpms = true;
-    vrr = 1;
+    vrr = 0;
     enable_swallow = true;
     swallow_regex = "^(kitty)$";
     animate_manual_resizes = true;
     animate_mouse_windowdragging = true;
     focus_on_activate = true;
-    new_window_takes_over_fullscreen = 2;
+    on_focus_under_fullscreen = 2;
   };
 }

@@ -54,7 +54,7 @@ let
   # Server defaults
   serverHotRoot = "/mnt/hot";
   serverMediaRoot = "/mnt/media";
-  serverPhotos = "/mnt/photos";
+  serverPhotos = "/mnt/media/photos";  # Under media for unified storage
   serverBusinessRoot = "/opt/business";
   serverAiRoot = "/opt/ai";
   serverAdhdRoot = "/opt/adhd";
@@ -68,6 +68,8 @@ in
   #============================================================================
   # OPTIONS - All paths with machine-appropriate defaults
   #============================================================================
+
+  options.hwc.server.enable = lib.mkEnableOption "server workloads (controls path defaults)";
 
   options.hwc.paths = {
 
@@ -127,6 +129,12 @@ in
         default = null; # Auto-derived in config section
         description = "Surveillance buffer (auto-derived from hot.root)";
       };
+
+      receipts = mkOption {
+        type = types.nullOr types.path;
+        default = null; # Auto-derived in config section
+        description = "Receipts storage (auto-derived from hot.root)";
+      };
     };
 
     media = {
@@ -144,6 +152,43 @@ in
         default = null; # Auto-derived in config section
         description = "Music library (auto-derived from media.root)";
       };
+
+      books = mkOption {
+        type = types.nullOr types.path;
+        default = null; # Auto-derived in config section
+        description = "Books library (auto-derived from media.root)";
+      };
+
+      audiobooks = mkOption {
+        type = types.nullOr types.path;
+        default = null; # Auto-derived in config section
+        description = "Audiobooks library (auto-derived from media.root)";
+      };
+
+      podcasts = mkOption {
+        type = types.nullOr types.path;
+        default = null; # Auto-derived in config section
+        description = "Podcasts library (auto-derived from media.root)";
+      };
+
+      youtube = mkOption {
+        type = types.nullOr types.path;
+        default = null; # Auto-derived in config section
+        description = "YouTube content (auto-derived from media.root)";
+      };
+
+      retroarch = {
+        roms = mkOption {
+          type = types.nullOr types.path;
+          default = null; # Auto-derived in config section
+          description = "RetroArch ROMs (auto-derived from media.root)";
+        };
+        system = mkOption {
+          type = types.nullOr types.path;
+          default = null; # Auto-derived in config section
+          description = "RetroArch BIOS/system files (auto-derived from media.root)";
+        };
+      };
     };
 
     cold = mkOption {
@@ -154,7 +199,7 @@ in
 
     backup = mkOption {
       type = types.nullOr types.path;
-      default = if isLaptop then laptopBackup else null;
+      default = laptopBackup;
       description = "Backup destination";
     };
 
@@ -228,8 +273,20 @@ in
 
       config = mkOption {
         type = types.nullOr types.path;
-        default = if isLaptop then laptopConfig else null;
-        description = "User config directory - laptop only";
+        default = laptopConfig;
+        description = "User config directory (~/.config)";
+      };
+
+      claude = mkOption {
+        type = types.nullOr types.path;
+        default = "${userHome}/.claude";
+        description = "Claude Code settings directory";
+      };
+
+      shared = mkOption {
+        type = types.nullOr types.path;
+        default = "${userHome}/600_shared";
+        description = "Shared folder between machines (NFS over Tailscale)";
       };
     };
 
@@ -242,6 +299,12 @@ in
         type = types.nullOr types.path;
         default = if isServer then "/opt" else null;
         description = "Application config root (server only)";
+      };
+
+      webapps = mkOption {
+        type = types.nullOr types.path;
+        default = null; # Auto-derived in config section
+        description = "Web apps hosting directory (auto-derived from apps.root)";
       };
     };
 
@@ -352,9 +415,16 @@ in
     # Hot storage sub-paths
     hot.downloads = mkIf (cfg.hot.root != null) (mkDefault "${cfg.hot.root}/downloads");
     hot.surveillance = mkIf (cfg.hot.root != null) (mkDefault "${cfg.hot.root}/surveillance");
+    hot.receipts = mkIf (cfg.hot.root != null) (mkDefault "${cfg.hot.root}/receipts");
 
     # Media sub-paths
     media.music = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/music");
+    media.books = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/books");
+    media.audiobooks = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/books/audiobooks");
+    media.podcasts = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/podcasts");
+    media.youtube = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/youtube");
+    media.retroarch.roms = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/retroarch/roms");
+    media.retroarch.system = mkIf (cfg.media.root != null) (mkDefault "${cfg.media.root}/retroarch/system");
 
     # Business sub-paths
     business.api = mkIf (cfg.business.root != null) (mkDefault "${cfg.business.root}/api");
@@ -364,6 +434,9 @@ in
     # AI sub-paths
     ai.models = mkIf (cfg.ai.root != null) (mkDefault "${cfg.ai.root}/models");
     ai.context = mkIf (cfg.ai.root != null) (mkDefault "${cfg.ai.root}/context-snapshots");
+
+    # Apps sub-paths
+    apps.webapps = mkIf (cfg.apps.root != null) (mkDefault "${cfg.apps.root}/webapps");
 
     # Surveillance sub-paths
     surveillance.frigate = mkIf (cfg.surveillance.root != null) (mkDefault "${cfg.surveillance.root}/frigate");
@@ -388,6 +461,10 @@ in
     HWC_HOT_SURVEILLANCE = cfg.hot.surveillance;
     HWC_MEDIA_STORAGE = cfg.media.root;
     HWC_MEDIA_MUSIC = cfg.media.music;
+    HWC_MEDIA_BOOKS = cfg.media.books;
+    HWC_MEDIA_AUDIOBOOKS = cfg.media.audiobooks;
+    HWC_MEDIA_PODCASTS = cfg.media.podcasts;
+    HWC_MEDIA_YOUTUBE = cfg.media.youtube;
     HWC_COLD_STORAGE = cfg.cold;
     HWC_BACKUP_STORAGE = cfg.backup;
     HWC_PHOTOS_STORAGE = cfg.photos;
@@ -401,6 +478,7 @@ in
     HWC_MAIL_DIR = cfg.user.mail;
     HWC_MEDIA_DIR = cfg.user.media;
     HWC_VAULTS_DIR = cfg.user.vaults;
+    HWC_SHARED_DIR = cfg.user.shared;
 
     # Application roots
     HWC_APPS_ROOT = cfg.apps.root;

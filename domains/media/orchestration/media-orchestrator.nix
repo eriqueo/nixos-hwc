@@ -1,0 +1,82 @@
+{ config, pkgs, lib, ... }:
+let
+  pythonWithRequests = pkgs.python3.withPackages (ps: with ps; [ requests ]);
+  cfgRoot = config.hwc.paths.hot.downloads;
+  paths = config.hwc.paths;
+  hotRoot = config.hwc.paths.hot.root;
+
+  # Get username from system configuration
+  userName = config.hwc.system.users.user.name;
+  userHome = config.users.users.${userName}.home;
+  workspaceDir = "${userHome}/.nixos/workspace";
+in
+{
+  options.hwc.media.orchestration.mediaOrchestrator = {
+    enable = lib.mkEnableOption "Media orchestrator service";
+  };
+
+  config = lib.mkIf config.hwc.media.orchestration.mediaOrchestrator.enable {
+    systemd.services.media-orchestrator-install = {
+      description = "Install media orchestrator assets";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        set -e
+        mkdir -p ${cfgRoot}/scripts ${hotRoot}/events
+
+        # Deploy automation scripts from workspace
+        cp ${workspaceDir}/hooks/media-orchestrator.py ${cfgRoot}/scripts/
+        cp ${workspaceDir}/hooks/qbt-finished.sh ${cfgRoot}/scripts/
+        cp ${workspaceDir}/hooks/sab-finished.py ${cfgRoot}/scripts/
+        chmod +x ${cfgRoot}/scripts/*.py ${cfgRoot}/scripts/*.sh
+
+        chown -R 1000:1000 ${cfgRoot}/scripts ${hotRoot}/events
+        chmod 775 ${cfgRoot}/scripts ${hotRoot}/events
+      '';
+    };
+
+    systemd.services.media-orchestrator = {
+      description = "Event-driven *Arr nudger (no file moves)";
+      after = [
+        "network-online.target"
+        "media-orchestrator-install.service"
+        "podman-sonarr.service" "podman-radarr.service" "podman-lidarr.service"
+      ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+
+      # Create environment file with agenix secrets
+      preStart = ''
+        # Read API keys from agenix secrets and create environment file
+        cat > /tmp/media-orchestrator.env << EOF
+SONARR_API_KEY=$(cat ${config.age.secrets.sonarr-api-key.path})
+RADARR_API_KEY=$(cat ${config.age.secrets.radarr-api-key.path})
+LIDARR_API_KEY=$(cat ${config.age.secrets.lidarr-api-key.path})
+PROWLARR_API_KEY=$(cat ${config.age.secrets.prowlarr-api-key.path})
+AUDIOBOOKSHELF_API_KEY=$(cat ${config.age.secrets.audiobookshelf-api-key.path})
+SONARR_URL=http://localhost:8989
+RADARR_URL=http://localhost:7878
+LIDARR_URL=http://localhost:8686
+AUDIOBOOKSHELF_URL=http://localhost:13378
+SOURCE_DIR=${config.hwc.paths.hot.downloads}/books
+DEST_DIR=${config.hwc.paths.media.root}/books/audiobooks
+STATE_DIR=/var/lib/hwc/audiobook-copier
+EOF
+      '';
+
+      serviceConfig = {
+        Type = "simple";
+        # Run as eric user for simplified permissions (single-user system)
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+        # The '-' prefix makes the file optional (created by preStart)
+        EnvironmentFile = "-/tmp/media-orchestrator.env";
+        ExecStart = "${pythonWithRequests}/bin/python3 ${cfgRoot}/scripts/media-orchestrator.py";
+        Restart = "always";
+        RestartSec = "3s";
+      };
+    };
+  };
+}

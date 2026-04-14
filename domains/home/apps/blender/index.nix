@@ -1,27 +1,20 @@
+# domains/home/apps/blender/index.nix
 { config, lib, pkgs, osConfig ? {}, ... }:
-
 let
-  enabled = config.hwc.home.apps.blender.enable or false;
   cfg = config.hwc.home.apps.blender;
 
-  # Feature Detection: Check if we're on a NixOS host with HWC system config
   isNixOSHost = osConfig ? hwc;
   osCfg = if isNixOSHost then osConfig else {};
+  gpuCfg = lib.attrByPath [ "hwc" "system" "hardware" "gpu" ] { type = "none"; enable = false; } osCfg;
 
-  # Access system GPU config via osConfig (available in Home Manager)
-  gpuCfg = osCfg.hwc.infrastructure.hardware.gpu or { type = "none"; enable = false; };
-
-  # Build Blender with CUDA support for Cycles GPU rendering
   blenderPackage = pkgs.blender.override {
     cudaSupport = cfg.cudaSupport && (gpuCfg.type == "nvidia");
+    
     rocmSupport = cfg.rocmSupport && (gpuCfg.type == "amd");
   };
 
-  # Create a GPU-enabled wrapper for NVIDIA systems
-  # Note: The system already provides blender-offload script in gpu.nix
   blenderGpuWrapper = pkgs.writeShellScriptBin "blender-gpu" ''
     #!/usr/bin/env bash
-    # Launch Blender with NVIDIA GPU offload enabled
     export __NV_PRIME_RENDER_OFFLOAD=1
     export __GLX_VENDOR_LIBRARY_NAME=nvidia
     export __VK_LAYER_NV_optimus=NVIDIA_only
@@ -32,12 +25,26 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.blender = {
+    enable = lib.mkEnableOption "Blender 3D creation suite";
+
+    cudaSupport = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable CUDA GPU rendering support (NVIDIA).";
+    };
+
+    rocmSupport = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable ROCm/HIP support for GPU rendering (AMD).";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf cfg.enable {
     # Install regular Blender (binary-cached, no rebuild!)
     home.packages = [
       blenderPackage
@@ -55,11 +62,11 @@ in
       # On non-NixOS hosts, user is responsible for GPU driver setup
       {
         assertion = !cfg.cudaSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "nvidia");
-        message = "Blender CUDA support requires hwc.infrastructure.hardware.gpu.type = \"nvidia\" and GPU to be enabled";
+        message = "Blender CUDA support requires hwc.system.hardware.gpu.type = \"nvidia\" and GPU to be enabled";
       }
       {
         assertion = !cfg.rocmSupport || !isNixOSHost || (gpuCfg.enable && gpuCfg.type == "amd");
-        message = "Blender ROCm support requires hwc.infrastructure.hardware.gpu.type = \"amd\" and GPU to be enabled";
+        message = "Blender ROCm support requires hwc.system.hardware.gpu.type = \"amd\" and GPU to be enabled";
       }
     ];
   };

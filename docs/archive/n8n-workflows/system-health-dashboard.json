@@ -1,0 +1,251 @@
+{
+  "name": "HWC System Health Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "health-check",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "webhook-manual",
+      "name": "Webhook: Manual Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "webhookId": "hwc-health-check"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HWC Health Check Definitions\n// Uses environment variables for API keys (set in n8n systemd service)\n\nconst SONARR_KEY = process.env.SONARR_API_KEY || '';\nconst RADARR_KEY = process.env.RADARR_API_KEY || '';\nconst LIDARR_KEY = process.env.LIDARR_API_KEY || '';\nconst PROWLARR_KEY = process.env.PROWLARR_API_KEY || '';\nconst JELLYFIN_KEY = process.env.JELLYFIN_API_KEY || '';\n\nconst checks = [\n  // Media Services\n  { name: 'Jellyfin', url: 'http://127.0.0.1:8096/health', type: 'http', domain: 'media', timeout: 5000 },\n  { name: 'Immich', url: 'http://127.0.0.1:2283/api/server/ping', type: 'http', domain: 'media', timeout: 5000 },\n  { name: 'Navidrome', url: 'http://127.0.0.1:4533/rest/ping', type: 'http', domain: 'media', timeout: 5000 },\n  { name: 'Audiobookshelf', url: 'http://127.0.0.1:13378/healthcheck', type: 'http', domain: 'media', timeout: 5000 },\n  \n  // Surveillance\n  { name: 'Frigate', url: 'http://127.0.0.1:5001/api/stats', type: 'http', domain: 'surveillance', timeout: 5000 },\n  \n  // Arr Stack (with API keys)\n  { name: 'Sonarr', url: 'http://127.0.0.1:8989/api/v3/health', type: 'http', domain: 'arr', timeout: 5000, headers: SONARR_KEY ? { 'X-Api-Key': SONARR_KEY } : {} },\n  { name: 'Radarr', url: 'http://127.0.0.1:7878/api/v3/health', type: 'http', domain: 'arr', timeout: 5000, headers: RADARR_KEY ? { 'X-Api-Key': RADARR_KEY } : {} },\n  { name: 'Lidarr', url: 'http://127.0.0.1:8686/api/v1/health', type: 'http', domain: 'arr', timeout: 5000, headers: LIDARR_KEY ? { 'X-Api-Key': LIDARR_KEY } : {} },\n  { name: 'Prowlarr', url: 'http://127.0.0.1:9696/api/v1/health', type: 'http', domain: 'arr', timeout: 5000, headers: PROWLARR_KEY ? { 'X-Api-Key': PROWLARR_KEY } : {} },\n  { name: 'Readarr', url: 'http://127.0.0.1:8787/api/v1/health', type: 'http', domain: 'arr', timeout: 5000 },\n  \n  // Downloads\n  { name: 'Sabnzbd', url: 'http://127.0.0.1:8081/api?mode=queue&output=json', type: 'http', domain: 'download', timeout: 5000 },\n  { name: 'qBittorrent', url: 'http://127.0.0.1:8080/api/v2/app/version', type: 'http', domain: 'download', timeout: 5000 },\n  \n  // Infrastructure\n  { name: 'Grafana', url: 'http://127.0.0.1:3000/api/health', type: 'http', domain: 'monitoring', timeout: 5000 },\n  { name: 'Prometheus', url: 'http://127.0.0.1:9090/-/healthy', type: 'http', domain: 'monitoring', timeout: 5000 },\n  { name: 'Alertmanager', url: 'http://127.0.0.1:9093/-/healthy', type: 'http', domain: 'monitoring', timeout: 5000 },\n  { name: 'ntfy', url: 'http://127.0.0.1:2586/v1/health', type: 'http', domain: 'infrastructure', timeout: 5000 },\n  { name: 'CouchDB', url: 'http://127.0.0.1:5984/_up', type: 'http', domain: 'infrastructure', timeout: 5000 },\n  \n  // AI Services\n  { name: 'Ollama', url: 'http://127.0.0.1:11434/api/tags', type: 'http', domain: 'ai', timeout: 10000 },\n  { name: 'Open-WebUI', url: 'http://127.0.0.1:3001/health', type: 'http', domain: 'ai', timeout: 5000 },\n  \n  // Documents & Finance\n  { name: 'Paperless', url: 'http://127.0.0.1:8102/api/', type: 'http', domain: 'documents', timeout: 5000 },\n  { name: 'Firefly', url: 'http://127.0.0.1:8085/', type: 'http', domain: 'finance', timeout: 5000 },\n  \n  // Containers (via podman)\n  { name: 'sonarr-container', container: 'sonarr', type: 'container', domain: 'arr' },\n  { name: 'radarr-container', container: 'radarr', type: 'container', domain: 'arr' },\n  { name: 'gluetun-container', container: 'gluetun', type: 'container', domain: 'download' },\n  \n  // Systemd Services\n  { name: 'Caddy', service: 'caddy', type: 'systemd', domain: 'infrastructure' },\n  { name: 'Tailscale', service: 'tailscaled', type: 'systemd', domain: 'infrastructure' },\n  { name: 'n8n', service: 'n8n', type: 'systemd', domain: 'infrastructure' }\n];\n\nreturn checks.map(check => ({ json: check }));"
+      },
+      "id": "define-checks",
+      "name": "Define Health Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 100]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "split-checks",
+      "name": "Loop Over Checks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [440, 100]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "outputKey": "http", "conditions": { "conditions": [{ "leftValue": "={{ $json.type }}", "rightValue": "http" }] } },
+            { "outputKey": "systemd", "conditions": { "conditions": [{ "leftValue": "={{ $json.type }}", "rightValue": "systemd" }] } },
+            { "outputKey": "container", "conditions": { "conditions": [{ "leftValue": "={{ $json.type }}", "rightValue": "container" }] } }
+          ]
+        }
+      },
+      "id": "switch-type",
+      "name": "Check Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [660, 100]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": "={{ $json.headers ? Object.entries($json.headers).map(([k,v]) => ({name: k, value: v})) : [] }}"
+        },
+        "options": {
+          "timeout": "={{ $json.timeout || 5000 }}",
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "http-check",
+      "name": "HTTP Health Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "command": "=systemctl is-active {{ $json.service }} 2>/dev/null || echo 'inactive'"
+      },
+      "id": "systemd-check",
+      "name": "Systemd Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [880, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "command": "=podman inspect --format '{{.State.Status}}' {{ $json.container }} 2>/dev/null || echo 'not-found'"
+      },
+      "id": "container-check",
+      "name": "Container Check",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [880, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evaluate check results and determine health status\nconst items = $input.all();\nconst checkData = items[0]?.json || {};\nconst response = items[items.length - 1]?.json || {};\n\nlet healthy = false;\nlet errorMessage = '';\n\nif (checkData.type === 'http') {\n  const statusCode = response.statusCode || response.$response?.statusCode || 0;\n  healthy = (statusCode >= 200 && statusCode < 400) || (statusCode === 0 && !response.error);\n  if (!healthy) {\n    errorMessage = response.error?.message || `HTTP ${statusCode}` || 'Connection failed';\n  }\n} else if (checkData.type === 'systemd') {\n  const output = (response.stdout || '').trim();\n  healthy = output === 'active';\n  errorMessage = healthy ? '' : `Service ${output || 'unknown'}`;\n} else if (checkData.type === 'container') {\n  const output = (response.stdout || '').trim();\n  healthy = output === 'running';\n  errorMessage = healthy ? '' : `Container ${output || 'unknown'}`;\n}\n\nreturn {\n  json: {\n    name: checkData.name,\n    type: checkData.type,\n    domain: checkData.domain,\n    healthy,\n    errorMessage,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "eval-result",
+      "name": "Evaluate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// STATE TRACKING: Compare with previous state to detect changes\n// Uses n8n static data to persist state between executions\n\nconst results = $input.all().map(item => item.json);\nconst staticData = $getWorkflowStaticData('global');\n\n// Initialize state if not present\nif (!staticData.previousState) {\n  staticData.previousState = {};\n}\nif (!staticData.alertsSent) {\n  staticData.alertsSent = {};\n}\n\nconst previousState = staticData.previousState;\nconst alertsSent = staticData.alertsSent;\nconst now = Date.now();\nconst ALERT_COOLDOWN = 30 * 60 * 1000; // 30 minutes between repeated alerts\n\n// Categorize services\nconst newlyDown = [];\nconst stillDown = [];\nconst recovered = [];\nconst healthy = [];\n\nresults.forEach(r => {\n  const wasHealthy = previousState[r.name]?.healthy !== false;\n  const isHealthy = r.healthy;\n  \n  if (isHealthy) {\n    healthy.push(r);\n    if (!wasHealthy) {\n      recovered.push(r);\n    }\n    // Clear alert tracking for recovered services\n    delete alertsSent[r.name];\n  } else {\n    if (wasHealthy) {\n      newlyDown.push(r);\n      alertsSent[r.name] = now;\n    } else {\n      // Check if we should re-alert (cooldown expired)\n      const lastAlert = alertsSent[r.name] || 0;\n      if (now - lastAlert > ALERT_COOLDOWN) {\n        stillDown.push({ ...r, isRepeated: true });\n        alertsSent[r.name] = now;\n      } else {\n        stillDown.push({ ...r, isRepeated: false });\n      }\n    }\n  }\n  \n  // Update state\n  previousState[r.name] = { healthy: isHealthy, timestamp: r.timestamp };\n});\n\n// Save state\nstaticData.previousState = previousState;\nstaticData.alertsSent = alertsSent;\n\n// Determine what notifications to send\nconst shouldNotifyDown = newlyDown.length > 0 || stillDown.some(s => s.isRepeated);\nconst shouldNotifyRecovery = recovered.length > 0;\n\nreturn {\n  json: {\n    summary: {\n      total: results.length,\n      healthy: healthy.length,\n      unhealthy: newlyDown.length + stillDown.length\n    },\n    newlyDown,\n    stillDown,\n    recovered,\n    healthy,\n    shouldNotifyDown,\n    shouldNotifyRecovery,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "state-tracking",
+      "name": "State Tracking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.shouldNotifyDown || $json.shouldNotifyRecovery }}", "value2": true }]
+        }
+      },
+      "id": "if-notify",
+      "name": "Should Notify?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1540, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Slack notification blocks\nconst data = $input.first().json;\nconst { newlyDown, stillDown, recovered, summary } = data;\n\nconst blocks = [];\nconst messages = [];\n\n// NEWLY DOWN - Critical alert\nif (newlyDown.length > 0) {\n  blocks.push({\n    type: 'header',\n    text: { type: 'plain_text', text: ':rotating_light: Services Down', emoji: true }\n  });\n  \n  const downList = newlyDown.map(s => \n    `:x: *${s.name}* - ${s.errorMessage}`\n  ).join('\\n');\n  \n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: downList }\n  });\n  \n  messages.push({\n    channel: '#hwc-alerts',\n    text: `:rotating_light: ${newlyDown.length} service(s) DOWN: ${newlyDown.map(s => s.name).join(', ')}`,\n    blocks: [...blocks],\n    severity: 'critical'\n  });\n  blocks.length = 0; // Reset for next message\n}\n\n// RECOVERED - Success notification\nif (recovered.length > 0) {\n  blocks.push({\n    type: 'header',\n    text: { type: 'plain_text', text: ':white_check_mark: Services Recovered', emoji: true }\n  });\n  \n  const recoveredList = recovered.map(s => \n    `:white_check_mark: *${s.name}* is back online`\n  ).join('\\n');\n  \n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: recoveredList }\n  });\n  \n  messages.push({\n    channel: '#hwc-system',\n    text: `:white_check_mark: ${recovered.length} service(s) recovered: ${recovered.map(s => s.name).join(', ')}`,\n    blocks: [...blocks],\n    severity: 'success'\n  });\n  blocks.length = 0;\n}\n\n// Add timestamp to all messages\nmessages.forEach(msg => {\n  msg.blocks.push({\n    type: 'context',\n    elements: [{\n      type: 'mrkdwn',\n      text: `Checked at ${new Date().toLocaleString('en-US', { timeZone: 'America/Denver' })} | ${summary.healthy}/${summary.total} healthy`\n    }]\n  });\n});\n\nreturn messages.map(msg => ({ json: msg }));"
+      },
+      "id": "build-notifications",
+      "name": "Build Notifications",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 0]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel }}",
+          "mode": "name"
+        },
+        "text": "={{ $json.text }}",
+        "blocksUi": "={{ JSON.stringify($json.blocks) }}",
+        "otherOptions": {}
+      },
+      "id": "slack-notify",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [1980, 0],
+      "credentials": {
+        "slackApi": {
+          "id": "oqCsazQ1a4gdXCDQ",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('State Tracking').first().json) }}"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1980, 200]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [[{ "node": "Define Health Checks", "type": "main", "index": 0 }]]
+    },
+    "Webhook: Manual Trigger": {
+      "main": [[{ "node": "Define Health Checks", "type": "main", "index": 0 }]]
+    },
+    "Define Health Checks": {
+      "main": [[{ "node": "Loop Over Checks", "type": "main", "index": 0 }]]
+    },
+    "Loop Over Checks": {
+      "main": [
+        [{ "node": "Check Type", "type": "main", "index": 0 }],
+        [{ "node": "State Tracking", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Type": {
+      "main": [
+        [{ "node": "HTTP Health Check", "type": "main", "index": 0 }],
+        [{ "node": "Systemd Check", "type": "main", "index": 0 }],
+        [{ "node": "Container Check", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP Health Check": {
+      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+    },
+    "Systemd Check": {
+      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+    },
+    "Container Check": {
+      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+    },
+    "Evaluate Result": {
+      "main": [[{ "node": "Loop Over Checks", "type": "main", "index": 0 }]]
+    },
+    "State Tracking": {
+      "main": [[{ "node": "Should Notify?", "type": "main", "index": 0 }]]
+    },
+    "Should Notify?": {
+      "main": [
+        [{ "node": "Build Notifications", "type": "main", "index": 0 }],
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Notifications": {
+      "main": [[{ "node": "Send to Slack", "type": "main", "index": 0 }]]
+    },
+    "Send to Slack": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "global": {
+      "previousState": {},
+      "alertsSent": {}
+    }
+  },
+  "tags": [
+    { "name": "foundation" },
+    { "name": "monitoring" },
+    { "name": "health-check" }
+  ]
+}

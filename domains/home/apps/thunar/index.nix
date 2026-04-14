@@ -1,7 +1,5 @@
-# HWC Charter Module/domains/home/apps/thunar.nix
-# ... (header is the same)
-
-{ config, lib, pkgs, osConfig ? {}, ... }:
+# domains/home/apps/thunar/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.thunar;
   thunarPkg = if pkgs ? thunar then pkgs.thunar else pkgs.xfce.thunar;
@@ -12,12 +10,15 @@ let
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
-  #============================================================================
-  # IMPLEMENTATION - Thunar file manager configuration
-  #============================================================================
+  options.hwc.home.apps.thunar = {
+    enable = lib.mkEnableOption "Thunar file manager";
+  };
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
   config = {
     #==========================================================================
     # UNCONDITIONAL DESKTOP ENTRY
@@ -83,7 +84,3 @@ in
     };
   };
 }
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================

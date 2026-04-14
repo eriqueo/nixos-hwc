@@ -1,0 +1,74 @@
+<header class="site-header" id="site-header">
+  <div class="header-inner">
+    <a class="logo" href="/">
+      <img src="/img/brand/logo-header-v2.webp" alt="Heartwood Craft" class="logo-img">
+    </a>
+
+    <nav class="nav-desktop" aria-label="Main navigation">
+      <ul class="nav-list">
+        {% for item in navigation.main %}
+        {% if item.children %}
+        <li class="nav-item nav-dropdown-parent">
+          <button class="nav-link nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
+            {{ item.label }}
+            <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+              <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <ul class="nav-dropdown">
+            {% for child in item.children %}
+            <li><a href="{{ child.url }}" class="nav-dropdown-link">{{ child.label }}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
+        {% else %}
+        <li class="nav-item">
+          <a href="{{ item.url }}" class="nav-link">{{ item.label }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+      {% if header.showPhone %}<a class="header-phone" href="{{ site.phoneLink }}">{{ site.phone }}</a>{% endif %}
+      <a class="btn btn-get-started" href="{{ header.ctaUrl }}">{{ header.ctaText }}</a>
+
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-mobile">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+    </div>
+  </div>
+
+  <nav class="nav-mobile" id="nav-mobile" aria-label="Mobile navigation" hidden>
+    <ul class="nav-mobile-list">
+      {% for item in navigation.main %}
+      {% if item.children %}
+      <li class="nav-mobile-item nav-mobile-dropdown-parent">
+        <button class="nav-mobile-link nav-mobile-dropdown-toggle" aria-expanded="false">
+          {{ item.label }}
+          <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+            <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <ul class="nav-mobile-dropdown" hidden>
+          {% for child in item.children %}
+          <li><a href="{{ child.url }}" class="nav-mobile-dropdown-link">{{ child.label }}</a></li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% else %}
+      <li class="nav-mobile-item">
+        <a href="{{ item.url }}" class="nav-mobile-link">{{ item.label }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+      <li class="nav-mobile-item nav-mobile-cta">
+        <a href="{{ site.phoneLink }}" class="btn btn-primary btn-full">Call {{ site.phone }}</a>
+        <a href="/contact/" class="btn btn-outline btn-full" style="margin-top: 0.5rem;">Get Started</a>
+      </li>
+    </ul>
+  </nav>
+</header>

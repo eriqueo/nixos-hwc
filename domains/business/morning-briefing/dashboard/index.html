@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Briefing">
+<meta name="theme-color" content="#0a0a0c">
+<title>Heartwood Briefing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a0c;--surface:#131316;--surface2:#1a1a1f;--border:#1e1e24;--border2:#2a2a33;
+    --text:#c8c8d0;--dim:#6b6b78;--faint:#3a3a44;
+    --amber:#d4a04a;--amber-dim:#8a6a2f;--amber-bg:#1a1508;
+    --green:#4a9e6a;--green-bg:#0a1610;
+    --yellow:#c9a84c;--yellow-bg:#1a1508;
+    --red:#c94a4a;--red-bg:#1a0a0a;
+    --urgent:#e05c5c;--urgent-bg:#1c0d0d;--urgent-border:#3a1515;
+    --review:#c9a84c;--review-bg:#1a1508;--review-border:#3a3010;
+    --noise:#3a3a44;--noise-bg:#111114;
+    --mono:'JetBrains Mono',monospace;--sans:'Source Sans 3',sans-serif;
+  }
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);
+    line-height:1.5;min-height:100dvh;-webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:contain}
+  .shell{max-width:640px;margin:0 auto;padding:16px 16px 80px;
+    opacity:0;animation:fadeIn .3s ease forwards}
+  @keyframes fadeIn{to{opacity:1}}
+
+  /* Pull to refresh */
+  .ptr{text-align:center;font-family:var(--mono);font-size:11px;color:var(--amber-dim);
+    height:0;overflow:hidden;transition:height .2s}
+  .ptr.visible{height:32px;line-height:32px}
+
+  /* Header */
+  .hdr{padding:12px 0 20px;border-bottom:1px solid var(--border);margin-bottom:20px}
+  .hdr-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--amber-dim)}
+  .hdr-day{font-size:26px;font-weight:700;color:var(--amber);margin:4px 0 0}
+  .hdr-date{font-size:16px;font-weight:600;color:var(--text);margin:0 0 2px}
+  .hdr-updated{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .hdr-updated .fresh{color:var(--green)}
+  .hdr-updated .stale{color:var(--red)}
+
+  /* Alerts */
+  .alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+  .alert{font-family:var(--mono);font-size:12px;padding:10px 12px;border-left:3px solid;border-radius:2px}
+  .alert-critical{background:var(--red-bg);border-color:var(--red);color:#e88}
+  .alert-warning{background:var(--yellow-bg);border-color:var(--yellow);color:#ddb860}
+
+  /* Section */
+  .section{margin-bottom:28px}
+  .sec-hdr{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;
+    color:var(--dim);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:12px;
+    display:flex;justify-content:space-between;align-items:baseline}
+  .sec-count{color:var(--amber-dim);font-size:11px}
+
+  /* Calendar */
+  .ev{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .ev:last-child{border-bottom:none}
+  .ev-time{font-family:var(--mono);font-size:13px;color:var(--amber);min-width:56px;flex-shrink:0;padding-top:1px}
+  .ev-info{flex:1}
+  .ev-title{font-size:14px;font-weight:600}
+  .ev-loc{font-size:12px;color:var(--dim);margin-top:2px}
+  .ev-allday{font-family:var(--mono);font-size:10px;color:var(--amber-dim);background:var(--amber-bg);padding:1px 6px;border-radius:2px}
+
+  /* Jobs */
+  .job{padding:10px 0;border-bottom:1px solid var(--border)}
+  .job:last-child{border-bottom:none}
+  .job-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .job-name{font-size:14px;font-weight:600;flex:1}
+  .job-num{font-family:var(--mono);font-size:11px;color:var(--amber-dim)}
+  .job-meta{font-size:12px;color:var(--dim);margin-top:3px;display:flex;gap:8px;align-items:center}
+  .job-phase{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:2px;
+    background:var(--surface);border:1px solid var(--border)}
+  .test-note{font-family:var(--mono);font-size:11px;color:var(--faint);padding:8px 0}
+
+  /* Leads */
+  .lead{padding:8px 0;border-bottom:1px solid var(--border)}
+  .lead:last-child{border-bottom:none}
+  .lead-name{font-size:14px;font-weight:600}
+  .lead-meta{font-size:12px;color:var(--dim);margin-top:2px}
+  .lead-age{font-family:var(--mono);font-size:11px}
+  .lead-age.old{color:var(--yellow)}
+  .lead-age.urgent{color:var(--red)}
+
+  /* Overdue */
+  .overdue-item{padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline}
+  .overdue-item:last-child{border-bottom:none}
+  .overdue-name{font-size:14px;font-weight:600}
+  .overdue-amt{font-family:var(--mono);font-size:12px;color:var(--red)}
+  .overdue-total{font-family:var(--mono);font-size:13px;color:var(--red);margin-bottom:8px}
+
+  /* System */
+  .sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .sys-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
+  .sys-val{font-family:var(--mono);font-size:24px;font-weight:600}
+  .sys-val.ok{color:var(--green)}.sys-val.bad{color:var(--red)}
+  .sys-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+  .storage-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .storage-mount{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:80px}
+  .storage-bar{flex:1;height:6px;background:var(--surface);border-radius:3px;overflow:hidden}
+  .storage-fill{height:100%;border-radius:3px;transition:width .5s}
+  .storage-fill.green{background:var(--green)}.storage-fill.yellow{background:var(--yellow)}.storage-fill.red{background:var(--red)}
+  .storage-pct{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:36px;text-align:right}
+  .storage-avail{font-family:var(--mono);font-size:11px;color:var(--dim);min-width:48px;text-align:right}
+
+  /* Mail health */
+  .mail-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .badge{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:2px;text-transform:uppercase;letter-spacing:1px}
+  .badge-ok{background:var(--green-bg);color:var(--green);border:1px solid #1a3020}
+  .badge-err{background:var(--red-bg);color:var(--red);border:1px solid #301a1a}
+  .badge-warn{background:var(--yellow-bg);color:var(--yellow);border:1px solid #3a3010}
+  .mail-detail{font-size:12px;color:var(--dim)}
+
+  /* Mail triage */
+  .triage-bucket{margin-bottom:16px}
+  .bucket-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .bucket-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
+  .bucket-label.urgent{color:var(--urgent)}
+  .bucket-label.review{color:var(--review)}
+  .bucket-label.noise{color:var(--dim)}
+  .bucket-count{font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:10px}
+  .bucket-count.urgent{background:var(--urgent-bg);color:var(--urgent);border:1px solid var(--urgent-border)}
+  .bucket-count.review{background:var(--review-bg);color:var(--review);border:1px solid var(--review-border)}
+  .bucket-count.noise{background:var(--surface);color:var(--dim);border:1px solid var(--border)}
+
+  .thread{border:1px solid var(--border);border-radius:4px;margin-bottom:6px;overflow:hidden;transition:border-color .15s}
+  .thread:hover{border-color:var(--border2)}
+  .thread.urgent{border-left:3px solid var(--urgent)}
+  .thread.review{border-left:3px solid var(--review)}
+  .thread.noise{border-left:3px solid var(--noise)}
+  .thread.done{opacity:.35}
+
+  .thread-main{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;cursor:pointer;user-select:none}
+  .thread-body{flex:1;min-width:0}
+  .thread-top{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;flex-wrap:wrap}
+  .thread-from{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+  .thread-subject{font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  .thread-date{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap;margin-left:auto}
+  .thread-summary{font-size:12px;color:var(--dim);line-height:1.5}
+  .thread-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+  .tag{font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:2px;background:var(--surface2);color:var(--faint)}
+  .tag.attachment{background:#0f1520;color:#5a7aaa}
+  .thread-chevron{font-family:var(--mono);font-size:10px;color:var(--faint);flex-shrink:0;margin-top:2px;transition:transform .15s}
+  .thread.open .thread-chevron{transform:rotate(180deg)}
+
+  .thread-actions{display:flex;gap:6px;padding:8px 12px 10px;background:var(--surface);border-top:1px solid var(--border);flex-wrap:wrap}
+  .act{font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:3px;cursor:pointer;
+    border:1px solid var(--border2);background:transparent;color:var(--dim);transition:all .12s;letter-spacing:.03em}
+  .act:hover{border-color:var(--amber-dim);color:var(--amber)}
+  .act.primary{border-color:var(--amber-dim);color:var(--amber);background:var(--amber-bg)}
+  .act.primary:hover{background:#221c08}
+  .act.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+  .act.done-state{border-color:var(--green);color:var(--green);background:var(--green-bg);cursor:default}
+  .act.err-state{border-color:var(--red);color:var(--red);cursor:default}
+  .act:disabled{opacity:.4;cursor:default}
+
+  /* Weather */
+  .wx-row{display:flex;align-items:flex-start;gap:16px;padding:8px 0}
+  .wx-temp{font-family:var(--mono);font-size:32px;font-weight:600;color:var(--amber);line-height:1}
+  .wx-range{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:4px}
+  .wx-detail{flex:1}
+  .wx-cond{font-size:14px;font-weight:600;margin-bottom:4px}
+  .wx-meta{font-family:var(--mono);font-size:12px;color:var(--dim);display:flex;gap:12px;flex-wrap:wrap}
+  .wx-warn{font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:2px;margin-top:8px;
+    background:var(--yellow-bg);border:1px solid var(--yellow);color:#ddb860}
+  .wx-note{font-size:12px;color:var(--dim);margin-top:6px}
+
+  /* Weekly snapshot */
+  .snap-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .snap-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
+  .snap-val{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--amber)}
+  .snap-val.zero{color:var(--dim)}
+  .snap-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+  /* Comms */
+  .comms-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .comms-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
+  .comms-val{font-family:var(--mono);font-size:24px;font-weight:600}
+  .comms-val.ok{color:var(--green)}.comms-val.warn{color:var(--yellow)}
+  .comms-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+  .comms-item{padding:8px 0;border-bottom:1px solid var(--border)}
+  .comms-item:last-child{border-bottom:none}
+  .comms-item-name{font-size:14px;font-weight:600}
+  .comms-item-meta{font-size:12px;color:var(--dim);margin-top:2px}
+
+  /* Backup */
+  .bak-row{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}
+  .bak-stat{display:flex;align-items:center;gap:8px}
+  .bak-detail{font-family:var(--mono);font-size:12px;color:var(--dim)}
+
+  /* Tasks */
+  .task-group{margin-bottom:12px}
+  .task-group-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none}
+  .task-group-hdr.static{cursor:default}
+  .task-group-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:var(--dim)}
+  .task-group-label.overdue{color:var(--red)}
+  .task-group-label.today{color:var(--amber)}
+  .task-group-count{font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:10px;background:var(--surface);color:var(--dim);border:1px solid var(--border)}
+  .task-group-chevron{font-family:var(--mono);font-size:10px;color:var(--faint);transition:transform .15s}
+  .task-group.collapsed .task-group-chevron{transform:rotate(-90deg)}
+  .task-group-items{overflow:hidden}
+  .task-group.collapsed .task-group-items{display:none}
+  .task-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+  .task-item:last-child{border-bottom:none}
+  .task-check{font-family:var(--mono);font-size:13px;flex-shrink:0;margin-top:1px;color:var(--faint)}
+  .task-check.done{color:var(--green)}
+  .task-info{flex:1;min-width:0}
+  .task-name{font-size:13px;font-weight:600}
+  .task-name.done{text-decoration:line-through;color:var(--dim)}
+  .task-job{font-size:11px;color:var(--dim)}
+  .task-due{font-family:var(--mono);font-size:11px;color:var(--dim);flex-shrink:0}
+  .task-due.overdue{color:var(--red)}
+
+  /* Recent documents */
+  .doc-item{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .doc-item:last-child{border-bottom:none}
+  .doc-type{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
+  .doc-type.estimate{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-dim)}
+  .doc-type.invoice{background:var(--green-bg);color:var(--green);border:1px solid #1a3020}
+  .doc-type.change-order{background:#0f1520;color:#5a7aaa;border:1px solid #1a2a3a}
+  .doc-type.other{background:var(--surface);color:var(--dim);border:1px solid var(--border)}
+  .doc-info{flex:1;min-width:0}
+  .doc-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .doc-meta{font-size:11px;color:var(--dim)}
+  .doc-amt{font-family:var(--mono);font-size:12px;color:var(--amber);flex-shrink:0;text-align:right}
+
+  /* Footer */
+  .footer{font-family:var(--mono);font-size:10px;color:var(--faint);text-align:center;
+    padding:20px 0 0;border-top:1px solid var(--border);margin-top:20px;letter-spacing:.5px}
+
+  /* Misc */
+  .empty{font-family:var(--mono);font-size:12px;color:var(--dim);padding:10px 0}
+  .err-box{background:var(--red-bg);border:1px solid #301a1a;border-radius:4px;padding:20px;text-align:center;margin:40px 0}
+  .err-box h2{font-family:var(--mono);font-size:14px;color:var(--red);margin-bottom:8px}
+  .err-box p{font-size:13px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="ptr" id="ptr">pull to refresh</div>
+  <div id="app"></div>
+</div>
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const WEBHOOK = 'https://hwc.ocelot-wahoo.ts.net/webhook/mail-action'; // Caddy routes /webhook/* → n8n
+
+// ── DOM helper ────────────────────────────────────────────────────────────────
+const $=(tag,attrs,...ch)=>{
+  const el=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{
+    if(k==='class')el.className=v;
+    else if(k==='html')el.innerHTML=v;
+    else if(k.startsWith('on'))el.addEventListener(k.slice(2),v);
+    else el.setAttribute(k,v);
+  });
+  ch.flat().forEach(c=>{if(c!=null)el.appendChild(typeof c==='string'?document.createTextNode(c):c)});
+  return el;
+};
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+function timeAgo(iso){
+  const m=Math.floor((Date.now()-new Date(iso).getTime())/60000);
+  if(m<1)return{text:'just now',cls:'fresh'};
+  if(m<60)return{text:`${m}m ago`,cls:m<30?'fresh':''};
+  const h=Math.floor(m/60);
+  if(h<24)return{text:`${h}h ago`,cls:h<2?'':'stale'};
+  return{text:`${Math.floor(h/24)}d ago`,cls:'stale'};
+}
+function fmtTime(iso){
+  if(!iso)return null;
+  const d=new Date(iso);let h=d.getHours(),m=d.getMinutes();
+  const ap=h>=12?'p':'a';h=h%12||12;
+  return`${h}:${String(m).padStart(2,'0')}${ap}`;
+}
+function fmtDate(d){
+  const mos=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return`${mos[d.getMonth()]} ${d.getDate()}`;
+}
+function fmtDay(d){
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return days[d.getDay()];
+}
+function stColor(p){return p>=90?'red':p>=75?'yellow':'green'}
+function fmtShortDate(iso){
+  if(!iso)return'';
+  const d=new Date(iso);
+  return`${d.getMonth()+1}/${d.getDate()}`;
+}
+
+// ── Mail action webhook ───────────────────────────────────────────────────────
+async function doAction(threadId, action){
+  const r=await fetch(WEBHOOK,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({threadId, action})
+  });
+  if(!r.ok)throw new Error(`HTTP ${r.status}`);
+  const data = await r.json();
+  if (!data.ok) throw new Error('notmuch reported failure');
+  return data; //includes .tags
+}
+
+// ── Thread card ───────────────────────────────────────────────────────────────
+function makeThread(t, bucket){
+  const wrap=$('div',{class:`thread ${bucket}`});
+  let expanded=false, actDone=false;
+
+  const chevron=$('span',{class:'thread-chevron'},'▾');
+  const body=$('div',{class:'thread-body'});
+  const top=$('div',{class:'thread-top'});
+  top.appendChild($('span',{class:'thread-from'},t.from_name||t.from_address));
+  top.appendChild($('span',{class:'thread-subject'},t.subject));
+  top.appendChild($('span',{class:'thread-date'},t.date_relative||''));
+  body.appendChild(top);
+  body.appendChild($('div',{class:'thread-summary'},t.summary));
+
+  if(t.tags&&t.tags.length){
+    const tg=$('div',{class:'thread-tags'});
+    t.tags.filter(x=>!['inbox','unread','flagged'].includes(x)).forEach(x=>{
+      tg.appendChild($('span',{class:`tag ${x==='attachment'?'attachment':''}`},x));
+    });
+    body.appendChild(tg);
+  }
+
+  const main=$('div',{class:'thread-main'});
+  main.appendChild(body);
+  main.appendChild(chevron);
+  wrap.appendChild(main);
+
+  // Actions panel
+  const actions=$('div',{class:'thread-actions',style:'display:none'});
+
+  function setDone(label, tags){
+    actions.innerHTML='';
+    const tagStr = tags && tags.length
+      ? tags.filter(t => !['inbox', 'unread'].includes(t)).join(', ')
+      : '';
+    actions.appendChild($('span',{class:'act done-state'},
+        `✓ ${label}${tagStr ? ' . ' + tagStr : ''}`
+    ));
+    wrap.classList.add('done');
+    actDone=true;
+  }
+  function setErr(){
+    actions.querySelectorAll('.act').forEach(b=>{b.disabled=false});
+    const e=$('span',{class:'act err-state'},'✗ failed');
+    actions.insertBefore(e,actions.firstChild);
+    setTimeout(()=>e.remove(),3000);
+  }
+  function makeBtn(label, action, cls=''){
+    const b=$('button',{class:`act ${cls}`,onclick:async()=>{
+      if(actDone)return;
+      actions.querySelectorAll('.act').forEach(x=>x.disabled=true);
+      try{
+        const data = await doAction(t.thread_id, action);
+        setDone(label, data.tags);
+      }catch{
+        setErr();
+      }
+    }},label);
+    return b;
+  }
+
+  // Primary action (suggested)
+  const suggested=t.suggested_action||'none';
+  const primaryLabels={reply:'Reply',archive:'Archive',trash:'Trash',
+    flag_action:'Flag: action',flag_pending:'Flag: pending',read_only:'Mark read',none:'Mark read'};
+  const primaryAction=suggested==='reply'?'read_only':suggested==='none'?'read_only':suggested;
+  actions.appendChild(makeBtn(primaryLabels[suggested]||'Mark read', primaryAction, 'primary'));
+
+  // Secondary actions
+  if(suggested!=='archive') actions.appendChild(makeBtn('Archive','archive'));
+  if(suggested!=='trash')   actions.appendChild(makeBtn('Trash','trash','danger'));
+  if(!['flag_action','flag_pending'].includes(suggested)){
+    actions.appendChild(makeBtn('⚑ Action','flag_action'));
+    actions.appendChild(makeBtn('⏸ Pending','flag_pending'));
+  }
+
+  wrap.appendChild(actions);
+
+  // Toggle expand
+  main.addEventListener('click',()=>{
+    expanded=!expanded;
+    wrap.classList.toggle('open',expanded);
+    actions.style.display=expanded?'flex':'none';
+  });
+
+  return wrap;
+}
+
+// ── Triage section ────────────────────────────────────────────────────────────
+function makeTriage(triage){
+  const sec=$('div',{class:'section'});
+  const hdrRight=$('div',{style:'display:flex;gap:12px;align-items:baseline'});
+
+  if(triage.error){
+    hdrRight.appendChild($('span',{class:'sec-count',style:'color:var(--red)'},'error'));
+  } else {
+    const s=triage.stats||{};
+    if(s.urgent_count) hdrRight.appendChild($('span',{class:'bucket-count urgent'},`${s.urgent_count} urgent`));
+    if(s.review_count) hdrRight.appendChild($('span',{class:'bucket-count review'},`${s.review_count} review`));
+    if(s.noise_count)  hdrRight.appendChild($('span',{class:'bucket-count noise'},`${s.noise_count} noise`));
+  }
+
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Mail'),$('div',null,...hdrRight.childNodes)));
+
+  if(triage.error){
+    sec.appendChild($('div',{class:'empty'},`Triage unavailable: ${triage.error}`));
+    return sec;
+  }
+
+  const b=triage.buckets||{};
+  const buckets=[
+    {key:'urgent',label:'Urgent',threads:b.urgent||[]},
+    {key:'review',label:'Review',threads:b.review||[]},
+    {key:'noise', label:'Noise', threads:b.noise||[]},
+  ];
+
+  let total=0;
+  buckets.forEach(({key,label,threads})=>{
+    if(!threads.length)return;
+    total+=threads.length;
+    const bkt=$('div',{class:'triage-bucket'});
+    const hdr=$('div',{class:'bucket-hdr'});
+    hdr.appendChild($('span',{class:`bucket-label ${key}`},label));
+    hdr.appendChild($('span',{class:`bucket-count ${key}`},`${threads.length}`));
+    bkt.appendChild(hdr);
+    threads.forEach(t=>bkt.appendChild(makeThread(t,key)));
+    sec.appendChild(bkt);
+  });
+
+  if(total===0) sec.appendChild($('div',{class:'empty'},'Inbox clear'));
+
+  // Mail health row below triage
+  return sec;
+}
+
+// ── Weather section ──────────────────────────────────────────────────────────
+function makeWeather(wx){
+  const sec=$('div',{class:'section'});
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Weather'),$('span',{class:'sec-count'},wx.location||'')));
+  const row=$('div',{class:'wx-row'});
+  const tempVal=wx.current_temp_f!=null?`${Math.round(wx.current_temp_f)}°`:'--°';
+  row.appendChild($('div',null,
+    $('div',{class:'wx-temp'},tempVal),
+    $('div',{class:'wx-range'},wx.high_f!=null&&wx.low_f!=null?`${Math.round(wx.high_f)}° / ${Math.round(wx.low_f)}°`:'')
+  ));
+  const detail=$('div',{class:'wx-detail'});
+  detail.appendChild($('div',{class:'wx-cond'},wx.conditions||'No data'));
+  const meta=$('div',{class:'wx-meta'});
+  if(wx.precipitation_chance!=null)meta.appendChild($('span',null,`${wx.precipitation_chance}% precip`));
+  if(wx.wind_mph!=null)meta.appendChild($('span',null,`${wx.wind_mph} mph wind`));
+  detail.appendChild(meta);
+  row.appendChild(detail);
+  sec.appendChild(row);
+  if(wx.outdoor_work_ok===false){
+    sec.appendChild($('div',{class:'wx-warn'},'⚠ NOT IDEAL FOR OUTDOOR WORK'+(wx.notes?' — '+wx.notes:'')));
+  } else if(wx.notes){
+    sec.appendChild($('div',{class:'wx-note'},wx.notes));
+  }
+  return sec;
+}
+
+// ── Weekly snapshot section ──────────────────────────────────────────────────
+function makeSnapshot(snap){
+  const sec=$('div',{class:'section'});
+  const weekLabel=snap.week_start?`Week of ${new Date(snap.week_start).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:'This Week';
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Weekly Snapshot'),$('span',{class:'sec-count'},weekLabel)));
+  const g=$('div',{class:'snap-grid'});
+  const items=[
+    {val:snap.active_job_count||0,label:'Active Jobs'},
+    {val:snap.leads_received_this_week||0,label:'Leads'},
+    {val:snap.estimates_sent_this_week||0,label:'Estimates Sent'},
+    {val:snap.invoices_outstanding_amount!=null?'$'+snap.invoices_outstanding_amount.toLocaleString():'$0',
+     label:`Outstanding (${snap.invoices_outstanding||0})`,raw:snap.invoices_outstanding_amount||0}
+  ];
+  items.forEach(i=>{
+    const val=typeof i.val==='string'?i.val:`${i.val}`;
+    const numVal=i.raw!=null?i.raw:(typeof i.val==='number'?i.val:0);
+    g.appendChild($('div',{class:'snap-card'},
+      $('div',{class:`snap-val${numVal===0?' zero':''}`},val),
+      $('div',{class:'snap-label'},i.label)
+    ));
+  });
+  sec.appendChild(g);
+  return sec;
+}
+
+// ── Comms section ────────────────────────────────────────────────────────────
+function makeComms(comms){
+  const sec=$('div',{class:'section'});
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Comms'),$('span',{class:'sec-count'},comms.source||'')));
+  const g=$('div',{class:'comms-grid'});
+  const cards=[
+    {val:comms.calls_yesterday||0,label:'Calls Yest.'},
+    {val:comms.texts_yesterday||0,label:'Texts Yest.'},
+    {val:comms.missed_calls||0,label:'Missed',warn:true},
+    {val:comms.unread_texts||0,label:'Unread',warn:true}
+  ];
+  cards.forEach(c=>{
+    const cls=c.warn&&c.val>0?'warn':'ok';
+    g.appendChild($('div',{class:'comms-card'},
+      $('div',{class:`comms-val ${cls}`},`${c.val}`),
+      $('div',{class:'comms-label'},c.label)
+    ));
+  });
+  sec.appendChild(g);
+  if(comms.items&&comms.items.length){
+    comms.items.forEach(i=>{
+      const el=$('div',{class:'comms-item'});
+      el.appendChild($('div',{class:'comms-item-name'},i.name||'Unknown'));
+      const meta=[i.time,i.summary].filter(Boolean).join(' — ');
+      if(meta)el.appendChild($('div',{class:'comms-item-meta'},meta));
+      sec.appendChild(el);
+    });
+  }
+  return sec;
+}
+
+// ── Backup section ───────────────────────────────────────────────────────────
+function makeBackup(bak){
+  const sec=$('div',{class:'section'});
+  const statusCls=bak.exit_status==='success'?'badge-ok':bak.exit_status==='warning'?'badge-warn':'badge-err';
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Backup'),$('span',{class:'sec-count'},bak.total_size||'')));
+  const row=$('div',{class:'bak-row'});
+  row.appendChild($('span',{class:`badge ${statusCls}`},bak.exit_status||'unknown'));
+  if(bak.last_run){
+    const ago=timeAgo(bak.last_run);
+    row.appendChild($('span',{class:'bak-detail'},`Last: ${ago.text}`));
+  }
+  if(bak.archive_count!=null)row.appendChild($('span',{class:'bak-detail'},`${bak.archive_count} archives`));
+  if(bak.next_scheduled){
+    const next=fmtTime(bak.next_scheduled);
+    if(next)row.appendChild($('span',{class:'bak-detail'},`Next: ${next}`));
+  }
+  sec.appendChild(row);
+  return sec;
+}
+
+// ── Tasks section ────────────────────────────────────────────────────────────
+function makeTasks(tasks){
+  const sec=$('div',{class:'section'});
+  const overdueArr=tasks.overdue||[];
+  const todayArr=tasks.due_today||[];
+  const weekArr=tasks.due_this_week||[];
+  const total=overdueArr.length+todayArr.length+weekArr.length;
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Tasks'),$('span',{class:'sec-count'},`${total}`)));
+
+  if(total===0){
+    sec.appendChild($('div',{class:'empty'},'No tasks scheduled'));
+    return sec;
+  }
+
+  function makeTaskItem(t, isOverdue){
+    const item=$('div',{class:'task-item'});
+    const done=t.completed===true;
+    item.appendChild($('span',{class:`task-check${done?' done':''}`},done?'[x]':'[ ]'));
+    const info=$('div',{class:'task-info'});
+    info.appendChild($('div',{class:`task-name${done?' done':''}`},t.name));
+    const jobStr=[t.job_name,t.job_number?`#${t.job_number}`:''].filter(Boolean).join(' ');
+    if(jobStr)info.appendChild($('div',{class:'task-job'},jobStr));
+    item.appendChild(info);
+    if(t.due_date)item.appendChild($('span',{class:`task-due${isOverdue?' overdue':''}`},fmtShortDate(t.due_date)));
+    return item;
+  }
+
+  function makeGroup(label, items, cssLabel, collapsed){
+    if(!items.length)return null;
+    const grp=$('div',{class:`task-group${collapsed?' collapsed':''}`});
+    const hdr=$('div',{class:`task-group-hdr${collapsed?'':' static'}`});
+    hdr.appendChild($('span',{class:`task-group-label ${cssLabel}`},label));
+    hdr.appendChild($('span',{class:'task-group-count'},`${items.length}`));
+    if(collapsed)hdr.appendChild($('span',{class:'task-group-chevron'},'▾'));
+    grp.appendChild(hdr);
+    const body=$('div',{class:'task-group-items'});
+    items.forEach(t=>body.appendChild(makeTaskItem(t,cssLabel==='overdue')));
+    grp.appendChild(body);
+    if(collapsed){
+      hdr.addEventListener('click',()=>grp.classList.toggle('collapsed'));
+    }
+    return grp;
+  }
+
+  const g1=makeGroup('Overdue',overdueArr,'overdue',false);
+  const g2=makeGroup('Due Today',todayArr,'today',false);
+  const g3=makeGroup('This Week',weekArr,'',true);
+  if(g1)sec.appendChild(g1);
+  if(g2)sec.appendChild(g2);
+  if(g3)sec.appendChild(g3);
+  return sec;
+}
+
+// ── Recent documents section ─────────────────────────────────────────────────
+function makeRecentDocs(docs){
+  const items=docs.items||[];
+  if(!items.length)return null;
+  const sec=$('div',{class:'section'});
+  sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Recent Documents'),$('span',{class:'sec-count'},`${items.length}`)));
+  items.forEach(d=>{
+    const typeRaw=(d.type||'').toLowerCase();
+    let typeCls='other';
+    if(typeRaw.includes('estimate'))typeCls='estimate';
+    else if(typeRaw.includes('invoice'))typeCls='invoice';
+    else if(typeRaw.includes('change'))typeCls='change-order';
+    const row=$('div',{class:'doc-item'});
+    row.appendChild($('span',{class:`doc-type ${typeCls}`},d.type||'Doc'));
+    const info=$('div',{class:'doc-info'});
+    info.appendChild($('div',{class:'doc-name'},d.name||'Untitled'));
+    const metaParts=[d.status,d.job_name,d.job_number?`#${d.job_number}`:''].filter(Boolean);
+    if(metaParts.length)info.appendChild($('div',{class:'doc-meta'},metaParts.join(' · ')));
+    row.appendChild(info);
+    if(d.amount)row.appendChild($('span',{class:'doc-amt'},'$'+d.amount.toLocaleString()));
+    sec.appendChild(row);
+  });
+  return sec;
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+let _sectionCount=0;
+function render(data){
+  app.innerHTML='';
+  _sectionCount=0;
+  if(data.error){
+    app.appendChild($('div',{class:'err-box'},$('h2',null,'Briefing Unavailable'),$('p',null,data.error_message||'Failed to compile briefing')));
+    renderFooter(data);
+    return;
+  }
+  const s=data.sections,ago=timeAgo(data.generated_at);
+
+  // Header — day name prominent, date secondary
+  const now=new Date();
+  app.appendChild($('div',{class:'hdr'},
+    $('div',{class:'hdr-label'},'Heartwood Briefing'),
+    $('div',{class:'hdr-day'},fmtDay(now)),
+    $('div',{class:'hdr-date'},fmtDate(now)),
+    $('div',{class:'hdr-updated',html:`updated <span class="${ago.cls}">${ago.text}</span>`})
+  ));
+
+  // Alerts
+  if(data.alerts&&data.alerts.length){
+    const a=$('div',{class:'alerts'});
+    data.alerts.forEach(al=>a.appendChild($('div',{class:`alert alert-${al.level}`},al.message)));
+    app.appendChild(a);
+  }
+
+  // Calendar
+  if(s.calendar){
+    _sectionCount++;
+    const evts=s.calendar.events||[],sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Calendar'),$('span',{class:'sec-count'},`${evts.length}`)));
+    if(!evts.length)sec.appendChild($('div',{class:'empty'},'No events today'));
+    else evts.forEach(ev=>{
+      const time=ev.allDay
+        ?$('div',{class:'ev-time'},$('span',{class:'ev-allday'},'ALL DAY'))
+        :$('div',{class:'ev-time'},fmtTime(ev.start)||'');
+      const info=$('div',{class:'ev-info'},$('div',{class:'ev-title'},ev.summary));
+      if(ev.location)info.appendChild($('div',{class:'ev-loc'},ev.location));
+      sec.appendChild($('div',{class:'ev'},time,info));
+    });
+    app.appendChild(sec);
+  }
+
+  // Weather (after Calendar, before Tasks)
+  if(s.weather){_sectionCount++;app.appendChild(makeWeather(s.weather))}
+
+  // Tasks (after Weather, before Jobs)
+  if(s.tasks){_sectionCount++;app.appendChild(makeTasks(s.tasks))}
+
+  // Jobs
+  if(s.jobs){
+    _sectionCount++;
+    const all=s.jobs.active||[],real=all.filter(j=>!j.is_test),tc=all.length-real.length;
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Active Jobs'),$('span',{class:'sec-count'},`${real.length}`)));
+    if(!real.length)sec.appendChild($('div',{class:'empty'},'No active jobs'));
+    else real.forEach(j=>{
+      const el=$('div',{class:'job'});
+      el.appendChild($('div',{class:'job-top'},$('span',{class:'job-name'},j.name),$('span',{class:'job-num'},`#${j.number}`)));
+      const meta=[j.account,j.city].filter(Boolean).join(' \u2014 ');
+      el.appendChild($('div',{class:'job-meta'},$('span',{class:'job-phase'},j.phase||j.status||''),meta?` ${meta}`:''));
+      if(j.description)el.appendChild($('div',{style:'font-size:12px;color:var(--dim);margin-top:4px'},j.description));
+      sec.appendChild(el);
+    });
+    if(tc>0)sec.appendChild($('div',{class:'test-note'},`+${tc} test job${tc>1?'s':''} hidden`));
+    app.appendChild(sec);
+  }
+
+  // Weekly Snapshot (after Jobs, before Leads)
+  if(s.weekly_snapshot){_sectionCount++;app.appendChild(makeSnapshot(s.weekly_snapshot))}
+
+  // Leads
+  if(s.leads&&s.leads.items&&s.leads.items.length){
+    _sectionCount++;
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'New Leads'),$('span',{class:'sec-count'},`${s.leads.new_count}`)));
+    s.leads.items.forEach(l=>{
+      const ac=l.days_old>5?'urgent':l.days_old>2?'old':'';
+      sec.appendChild($('div',{class:'lead'},
+        $('div',{class:'lead-name'},l.name),
+        $('div',{class:'lead-meta'},l.job_type?`${l.job_type} \u2014 `:'',$('span',{class:`lead-age ${ac}`},`${l.days_old}d old`))
+      ));
+    });
+    app.appendChild(sec);
+  }
+
+  // Overdue
+  if(s.overdue&&s.overdue.count>0){
+    _sectionCount++;
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Overdue Documents'),$('span',{class:'sec-count'},`${s.overdue.count}`)));
+    if(s.overdue.total_amount)sec.appendChild($('div',{class:'overdue-total'},`${s.overdue.total_amount.toLocaleString()} outstanding`));
+    (s.overdue.items||[]).forEach(i=>sec.appendChild($('div',{class:'overdue-item'},
+      $('span',{class:'overdue-name'},i.name||i.description||'Document'),
+      i.amount?$('span',{class:'overdue-amt'},`${i.amount.toLocaleString()}`):null
+    )));
+    app.appendChild(sec);
+  }
+
+  // Recent Documents (after Overdue, before System)
+  if(s.recent_documents){
+    const docSec=makeRecentDocs(s.recent_documents);
+    if(docSec){_sectionCount++;app.appendChild(docSec)}
+  }
+
+  // System
+  if(s.system){
+    _sectionCount++;
+    const sys=s.system,sec=$('div',{class:'section'});
+    const statusColor=sys.overall==='green'?'var(--green)':sys.overall==='yellow'?'var(--yellow)':'var(--red)';
+    sec.appendChild($('div',{class:'sec-hdr'},
+      $('span',null,'System'),
+      $('span',{style:`color:${statusColor};font-family:var(--mono);font-size:11px`},(sys.overall||'').toUpperCase())
+    ));
+    const g=$('div',{class:'sys-grid'});
+    g.appendChild($('div',{class:'sys-card'},
+      $('div',{class:`sys-val ${sys.services_failed?'bad':'ok'}`},`${sys.services_active}`),
+      $('div',{class:'sys-label'},'Services')
+    ));
+    g.appendChild($('div',{class:'sys-card'},
+      $('div',{class:`sys-val ${sys.containers_stopped?'bad':'ok'}`},`${sys.containers_running}`),
+      $('div',{class:'sys-label'},'Containers')
+    ));
+    sec.appendChild(g);
+    if(sys.storage&&sys.storage.length)sys.storage.forEach(st=>{
+      sec.appendChild($('div',{class:'storage-row'},
+        $('span',{class:'storage-mount'},st.mount),
+        $('div',{class:'storage-bar'},$('div',{class:`storage-fill ${stColor(st.percent)}`,style:`width:${st.percent}%`})),
+        $('span',{class:'storage-pct'},`${st.percent}%`),
+        $('span',{class:'storage-avail'},st.available)
+      ));
+    });
+    app.appendChild(sec);
+  }
+
+  // Backup (after System, before Mail)
+  if(s.backup){_sectionCount++;app.appendChild(makeBackup(s.backup))}
+
+  // Mail triage (primary) + health badge
+  if(data.mail_triage){
+    _sectionCount++;
+    const sec=makeTriage(data.mail_triage);
+    // Append mail health row at bottom of section if available
+    if(s.mail){
+      const row=$('div',{class:'mail-row',style:'margin-top:12px;padding-top:12px;border-top:1px solid var(--border)'});
+      row.appendChild($('span',{class:`badge ${s.mail.healthy?'badge-ok':'badge-err'}`},s.mail.healthy?'healthy':'unhealthy'));
+      if(s.mail.summary)row.appendChild($('span',{class:'mail-detail'},s.mail.summary));
+      sec.appendChild(row);
+    }
+    app.appendChild(sec);
+  } else if(s.mail){
+    _sectionCount++;
+    // Fallback: just health badge if no triage data
+    const sec=$('div',{class:'section'});
+    sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Mail'),$('span')));
+    sec.appendChild($('div',{class:'mail-row'},
+      $('span',{class:`badge ${s.mail.healthy?'badge-ok':'badge-err'}`},s.mail.healthy?'healthy':'unhealthy'),
+      $('span',{class:'mail-detail'},s.mail.summary||'')
+    ));
+    app.appendChild(sec);
+  }
+
+  // Comms (after Mail Triage)
+  if(s.comms){_sectionCount++;app.appendChild(makeComms(s.comms))}
+
+  // Footer
+  renderFooter(data);
+}
+
+function renderFooter(data){
+  const ago=data.generated_at?timeAgo(data.generated_at):null;
+  const parts=['Heartwood Briefing'];
+  if(ago)parts.push(`Last compiled ${ago.text}`);
+  if(_sectionCount)parts.push(`${_sectionCount} sections loaded`);
+  app.appendChild($('div',{class:'footer'},parts.join(' · ')));
+}
+
+// ── Load + refresh ────────────────────────────────────────────────────────────
+const app=document.getElementById('app');
+async function load(){
+  try{
+    const r=await fetch(`./briefing.json?t=${Date.now()}`);
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    render(await r.json());
+  }catch(e){render({error:true,error_message:`Could not load briefing: ${e.message}`})}
+}
+
+// Pull to refresh
+let startY=0,pulling=false;const ptr=document.getElementById('ptr');
+document.addEventListener('touchstart',e=>{if(window.scrollY===0&&e.touches.length===1){startY=e.touches[0].clientY;pulling=true}},{passive:true});
+document.addEventListener('touchmove',e=>{if(!pulling)return;const dy=e.touches[0].clientY-startY;ptr.classList.toggle('visible',dy>120)},{passive:true});
+document.addEventListener('touchend',()=>{if(ptr.classList.contains('visible')){ptr.textContent='refreshing...';load().then(()=>setTimeout(()=>{ptr.classList.remove('visible');ptr.textContent='pull to refresh'},500))}pulling=false});
+
+// Keyboard shortcut: 'r' to refresh
+document.addEventListener('keydown',e=>{if(e.key==='r'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&document.activeElement===document.body)load()});
+
+setInterval(load,5*60*1000);
+load();
+</script>
+</body>
+</html>

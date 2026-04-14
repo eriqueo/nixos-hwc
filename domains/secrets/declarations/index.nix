@@ -2,29 +2,23 @@
 #
 # Aggregates all domain secret declarations into a single import
 # Each domain file contains only age.secrets declarations, no logic
-# Organized by HWC domain structure: home, system, server, infrastructure, apps
 { config, lib, ... }:
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.secrets.declarations = {
+    enable = lib.mkEnableOption "secret declarations aggregation" // {
+      default = true;
+    };
+  };
+
   imports = [
-    ./options.nix
     ./caddy.nix
     ../parts/caddy.nix
     ./home.nix
     ./system.nix
-    ./server.nix
+    ./services.nix
     ./infrastructure.nix
   ];
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = {};
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
-    config.assertions = lib.mkIf (config ? enable && config.enable) [];
-
 }

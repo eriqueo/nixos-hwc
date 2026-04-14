@@ -1,0 +1,103 @@
+{
+  "sites": [
+    {
+      "name": "Facebook Group",
+      "url_pattern": "https://www.facebook.com/groups/",
+      "login_required": true,
+      "post_container_selector": "div[role=\"article\"][data-pagelet^=\"GroupFeed\"]",
+      "scrapers": {
+        "author": {
+          "selector": "h3 a, strong a, a[role=\"link\"][aria-label]",
+          "type": "text"
+        },
+        "date": {
+          "selector": "a[aria-label][href*=\"/posts/\"] > span, a[aria-label][href*=\"/videos/\"] > span",
+          "type": "text"
+        },
+        "text": {
+          "selector": "div[data-ad-preview=\"message\"], div[style=\"text-align: start;\"]",
+          "type": "text"
+        },
+        "reactions": {
+          "selector": "[aria-label*=\"reaction\"]",
+          "type": "text"
+        },
+        "comments_container_selector": "div[data-testid=\"UFI2Comment/root_depth_0\"]",
+        "comment_author": {
+            "selector": "a[data-hovercard-prefer-more-content-show=\"1\"]",
+            "type": "text"
+        },
+        "comment_text": {
+            "selector": "div[data-ad-preview=\"message\"]",
+            "type": "text"
+        }
+      }
+    },
+    {
+      "name": "Reddit",
+      "url_pattern": "https://www.reddit.com/r/",
+      "login_required": false,
+      "post_container_selector": "div[data-testid=\"post-container\"]",
+      "scrapers": {
+        "author": {
+          "selector": "a[data-testid=\"post_author_link\"]",
+          "type": "text"
+        },
+        "date": {
+          "selector": "span[data-testid=\"post_timestamp\"]",
+          "type": "text"
+        },
+        "text": {
+          "selector": "h1, [data-adclicklocation=\"title\"]",
+          "type": "text"
+        },
+        "reactions": {
+          "selector": "[data-testid=\"post-title\"] + div > div > button[data-testid=\"vote-button\"] + div",
+          "type": "text"
+        },
+        "comments_container_selector": "div[data-testid=\"comment\"]",
+        "comment_author": {
+            "selector": "a[data-testid=\"comment_author_link\"]",
+            "type": "text"
+        },
+        "comment_text": {
+            "selector": "[data-testid=\"comment\"] > div:last-child",
+            "type": "text"
+        }
+      }
+    },
+    {
+      "name": "Nextdoor",
+      "url_pattern": "https://nextdoor.com/",
+      "login_required": true,
+      "post_container_selector": "article[data-testid=\"post-content\"]",
+      "scrapers": {
+        "author": {
+          "selector": "a[data-testid=\"post-author-name-link\"]",
+          "type": "text"
+        },
+        "date": {
+          "selector": "a.post-byline__timestamp",
+          "type": "text"
+        },
+        "text": {
+          "selector": "div.post-text-content, p[data-testid=\"post-text-content\"]",
+          "type": "text"
+        },
+        "reactions": {
+          "selector": "[data-testid=\"post-ufi-thank-button\"] > span",
+          "type": "text"
+        },
+        "comments_container_selector": "li.comment-item",
+        "comment_author": {
+            "selector": "a.comment-author__name",
+            "type": "text"
+        },
+        "comment_text": {
+            "selector": "div.comment-text",
+            "type": "text"
+        }
+      }
+    }
+  ]
+}

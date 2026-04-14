@@ -1,0 +1,48 @@
+{
+  "brand_tagline": "Craftsmanship through process. Trust through transparency.",
+  "voice": {
+    "tone": "Confident, direct, knowledgeable, warm, understated",
+    "never_say": [
+      "free estimate",
+      "free consultation",
+      "call you back within the hour",
+      "estimate within 48 hours",
+      "one-person company",
+      "go above and beyond",
+      "your satisfaction is our priority",
+      "we treat your home like our own",
+      "no job too big or small",
+      "your dream bathroom",
+      "transform your space",
+      "experience the difference",
+      "your vision, our expertise"
+    ],
+    "cta_approved": [
+      "Request a Consultation",
+      "Tell Us About Your Project",
+      "Schedule a Site Visit",
+      "Get In Touch",
+      "Start the Conversation"
+    ],
+    "cta_banned": [
+      "Get Your Free Estimate",
+      "Schedule My Free Estimate",
+      "Book Now",
+      "Claim Your Free Consultation"
+    ]
+  },
+  "positioning": {
+    "premium_not_luxury": true,
+    "process_driven": true,
+    "selective_not_desperate": true,
+    "local_expertise": true,
+    "charges_for_estimates": true
+  },
+  "audience_priorities": [
+    "Will this person show up and do what they say?",
+    "Will the work be done right?",
+    "What will it cost — any surprises?",
+    "How long will it take?",
+    "Will my house be a disaster during construction?"
+  ]
+}

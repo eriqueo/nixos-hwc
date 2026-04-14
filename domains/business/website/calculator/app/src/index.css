@@ -1,0 +1,5 @@
+/* Calculator reset — both components use inline styles */
+#calculator-root,
+#deck-calculator-root {
+  min-height: 50vh;
+}

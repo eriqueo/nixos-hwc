@@ -21,17 +21,21 @@ let
     if (hc ? assetPathRel) then ../../.. + "/${hc.assetPathRel}" else null;
 
   # Get screenshots path from osConfig if available, fallback to default
-  screenshotsDir = lib.attrByPath ["hwc" "paths" "screenshots"] "/home/eric/500_media/510_pictures/screenshots" osConfig;
+  # Note: attrByPath returns the value even if null, so we need explicit null handling
+  screenshotsPath = lib.attrByPath ["hwc" "paths" "screenshots"] null osConfig;
+  screenshotsDir = if screenshotsPath != null then screenshotsPath else "/home/eric/500_media/510_pictures/screenshots";
 
 in
 {
   # FLAT KEYS (NO nested `settings = {}`!)
   execOnce = [
     "xfconfd"
-
     "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
     "hyprland-startup"
-    "hyprpaper"
+    "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill"
+    # Proton apps - start on workspace 8 (windowrules handle placement)
+    "proton-pass"
+    "kitty --start-as=minimized"
   ];
 
   env = [

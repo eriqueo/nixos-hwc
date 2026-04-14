@@ -1,4 +1,5 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
+# domains/home/apps/gpg/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.gpg;
 in
@@ -6,7 +7,9 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.gpg = {
+    enable = lib.mkEnableOption "GPG and gpg-agent";
+  };
 
   #==========================================================================
   # IMPLEMENTATION

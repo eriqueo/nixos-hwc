@@ -8,14 +8,16 @@
     users.eric = {
       imports = [
         ../../domains/home/index.nix
+        ../../domains/mail/index.nix
       ];
 
       home.stateVersion = "24.05";
 
+      hwc.mail.enable = false;
+
       hwc.home = {
         shell.enable = true;
         development.enable = false;
-        mail.enable = false;
 
         apps = {
           hyprland.enable = true;
@@ -41,7 +43,6 @@
         google-cloud-sdk.enable = false;
         n8n.enable = false;
         aerc.enable = false;
-        betterbird.enable = false;
         neomutt.enable = false;
         proton-mail.enable = false;
         proton-authenticator.enable = false;

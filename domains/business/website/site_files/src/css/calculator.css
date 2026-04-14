@@ -1,0 +1,13 @@
+/* Calculator pages — break out of narrow container */
+#calculator-root,
+#deck-calculator-root {
+  min-height: 50vh;
+}
+
+/* Override container-narrow on calculator pages */
+.page-content:has(#calculator-root),
+.page-content:has(#deck-calculator-root) {
+  max-width: 1000px;
+  padding-left: clamp(1rem, 0.5rem + 1vw, 2rem);
+  padding-right: clamp(1rem, 0.5rem + 1vw, 2rem);
+}

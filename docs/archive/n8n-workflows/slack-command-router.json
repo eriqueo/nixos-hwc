@@ -1,0 +1,195 @@
+{
+  "name": "HWC Slack Command Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack-commands",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "webhook-slack-cmd",
+      "name": "Webhook: /slack-commands",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "hwc-slack-commands"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verify Slack signature (security)\nconst crypto = require('crypto');\n\nconst input = $input.first();\nconst headers = input.headers || {};\nconst body = input.body || '';\n\nconst slackSignature = headers['x-slack-signature'];\nconst slackTimestamp = headers['x-slack-request-timestamp'];\nconst signingSecret = process.env.SLACK_SIGNING_SECRET;\n\n// Skip verification if no signing secret configured\nif (!signingSecret) {\n  return { json: { verified: true, warning: 'No signing secret configured', body } };\n}\n\n// Check timestamp to prevent replay attacks (5 min window)\nconst now = Math.floor(Date.now() / 1000);\nif (Math.abs(now - parseInt(slackTimestamp)) > 300) {\n  throw new Error('Request timestamp too old');\n}\n\n// Verify signature\nconst sigBasestring = `v0:${slackTimestamp}:${body}`;\nconst mySignature = 'v0=' + crypto\n  .createHmac('sha256', signingSecret)\n  .update(sigBasestring)\n  .digest('hex');\n\nif (!crypto.timingSafeEqual(Buffer.from(mySignature), Buffer.from(slackSignature || ''))) {\n  throw new Error('Invalid Slack signature');\n}\n\nreturn { json: { verified: true, body } };"
+      },
+      "id": "verify-signature",
+      "name": "Verify Slack Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Slack command payload\nconst input = $input.first().json;\n\n// Handle verification failure\nif (input.error) {\n  return {\n    json: {\n      response_type: 'ephemeral',\n      text: ':x: Request verification failed',\n      error: true\n    }\n  };\n}\n\nconst body = input.body || '';\nconst params = new URLSearchParams(body);\n\nconst command = params.get('command') || '';\nconst text = params.get('text') || '';\nconst userId = params.get('user_id') || '';\nconst userName = params.get('user_name') || '';\nconst channelId = params.get('channel_id') || '';\nconst responseUrl = params.get('response_url') || '';\nconst triggerId = params.get('trigger_id') || '';\n\nconst parts = text.trim().split(/\\s+/);\nconst subcommand = parts[0] || 'help';\nconst args = parts.slice(1);\n\nconst commandRoutes = {\n  '/hwc': 'hwc',\n  '/media': 'media',\n  '/arr': 'arr',\n  '/dl': 'download',\n  '/sys': 'system',\n  '/cam': 'camera',\n  '/ai': 'ai',\n  '/docs': 'documents',\n  '/finance': 'finance',\n  '/books': 'books'\n};\n\nconst domain = commandRoutes[command] || 'hwc';\n\nreturn {\n  json: {\n    domain,\n    command,\n    subcommand,\n    args,\n    argsText: args.join(' '),\n    user: { id: userId, name: userName },\n    channelId,\n    responseUrl,\n    triggerId,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-command",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "outputKey": "system", "conditions": { "conditions": [{ "leftValue": "={{ $json.domain }}", "rightValue": "system" }] } },
+            { "outputKey": "arr", "conditions": { "conditions": [{ "leftValue": "={{ $json.domain }}", "rightValue": "arr" }] } },
+            { "outputKey": "download", "conditions": { "conditions": [{ "leftValue": "={{ $json.domain }}", "rightValue": "download" }] } }
+          ],
+          "fallbackOutput": "help"
+        }
+      },
+      "id": "route-domain",
+      "name": "Route by Domain",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// System commands - REAL implementations\nconst input = $input.first().json;\nconst { subcommand, args, responseUrl } = input;\n\nlet response = { response_type: 'ephemeral', text: '' };\nlet asyncAction = null;\n\nswitch (subcommand) {\n  case 'status':\n    // Trigger health check workflow and return immediate ack\n    response.text = ':hourglass: Checking system health...';\n    asyncAction = {\n      type: 'health-check',\n      responseUrl\n    };\n    break;\n    \n  case 'disk':\n    response.text = ':hourglass: Checking disk usage...';\n    asyncAction = {\n      type: 'disk-check',\n      responseUrl\n    };\n    break;\n    \n  case 'logs':\n    if (!args[0]) {\n      response.text = ':warning: Usage: `/sys logs <service>`\\nExample: `/sys logs caddy`';\n    } else {\n      response.text = `:hourglass: Fetching logs for ${args[0]}...`;\n      asyncAction = {\n        type: 'logs',\n        service: args[0],\n        responseUrl\n      };\n    }\n    break;\n    \n  case 'restart':\n    if (!args[0]) {\n      response.text = ':warning: Usage: `/sys restart <service>`';\n    } else {\n      response.text = `:warning: Are you sure you want to restart *${args[0]}*?\\nThis is a potentially disruptive action.`;\n      response.blocks = [\n        { type: 'section', text: { type: 'mrkdwn', text: response.text } },\n        {\n          type: 'actions',\n          elements: [\n            {\n              type: 'button',\n              text: { type: 'plain_text', text: 'Confirm Restart' },\n              style: 'danger',\n              action_id: `restart_${args[0]}`,\n              value: args[0]\n            },\n            {\n              type: 'button',\n              text: { type: 'plain_text', text: 'Cancel' },\n              action_id: 'cancel'\n            }\n          ]\n        }\n      ];\n    }\n    break;\n    \n  case 'help':\n  default:\n    response.blocks = [\n      {\n        type: 'section',\n        text: {\n          type: 'mrkdwn',\n          text: '*System Commands*\\n\\n' +\n            '`/sys status` - System health overview\\n' +\n            '`/sys disk` - Disk usage summary\\n' +\n            '`/sys logs <service>` - Recent service logs\\n' +\n            '`/sys restart <service>` - Restart a service (with confirmation)'\n        }\n      }\n    ];\n    response.text = 'System Commands';\n}\n\nreturn { json: { ...response, asyncAction, originalCommand: input } };"
+      },
+      "id": "handler-system",
+      "name": "System Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Arr stack commands\nconst input = $input.first().json;\nconst { subcommand, args, argsText, responseUrl } = input;\n\nlet response = { response_type: 'ephemeral', text: '' };\nlet asyncAction = null;\n\nswitch (subcommand) {\n  case 'status':\n    response.text = ':hourglass: Checking *arr stack status...';\n    asyncAction = { type: 'arr-status', responseUrl };\n    break;\n    \n  case 'queue':\n    response.text = ':hourglass: Fetching download queue...';\n    asyncAction = { type: 'arr-queue', responseUrl };\n    break;\n    \n  case 'search':\n    if (!argsText) {\n      response.text = ':warning: Usage: `/arr search <query>`';\n    } else {\n      response.text = `:mag: Searching for \"${argsText}\"...`;\n      asyncAction = { type: 'arr-search', query: argsText, responseUrl };\n    }\n    break;\n    \n  case 'missing':\n    response.text = ':hourglass: Checking missing content...';\n    asyncAction = { type: 'arr-missing', responseUrl };\n    break;\n    \n  case 'help':\n  default:\n    response.blocks = [\n      {\n        type: 'section',\n        text: {\n          type: 'mrkdwn',\n          text: '*Arr Stack Commands*\\n\\n' +\n            '`/arr status` - Health of Sonarr, Radarr, Lidarr, etc\\n' +\n            '`/arr queue` - Current download queue\\n' +\n            '`/arr search <query>` - Search all libraries\\n' +\n            '`/arr missing` - Missing content summary'\n        }\n      }\n    ];\n    response.text = 'Arr Stack Commands';\n}\n\nreturn { json: { ...response, asyncAction, originalCommand: input } };"
+      },
+      "id": "handler-arr",
+      "name": "Arr Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Download commands\nconst input = $input.first().json;\nconst { subcommand, responseUrl } = input;\n\nlet response = { response_type: 'ephemeral', text: '' };\nlet asyncAction = null;\n\nswitch (subcommand) {\n  case 'status':\n    response.text = ':hourglass: Checking download clients...';\n    asyncAction = { type: 'dl-status', responseUrl };\n    break;\n    \n  case 'queue':\n    response.text = ':hourglass: Fetching active downloads...';\n    asyncAction = { type: 'dl-queue', responseUrl };\n    break;\n    \n  case 'vpn':\n    response.text = ':hourglass: Checking VPN status...';\n    asyncAction = { type: 'dl-vpn', responseUrl };\n    break;\n    \n  case 'help':\n  default:\n    response.blocks = [\n      {\n        type: 'section',\n        text: {\n          type: 'mrkdwn',\n          text: '*Download Commands*\\n\\n' +\n            '`/dl status` - qBittorrent, SABnzbd status\\n' +\n            '`/dl queue` - Active downloads\\n' +\n            '`/dl vpn` - Gluetun VPN status'\n        }\n      }\n    ];\n    response.text = 'Download Commands';\n}\n\nreturn { json: { ...response, asyncAction, originalCommand: input } };"
+      },
+      "id": "handler-download",
+      "name": "Download Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Main help menu\nconst input = $input.first().json;\n\nreturn {\n  json: {\n    response_type: 'ephemeral',\n    blocks: [\n      {\n        type: 'header',\n        text: { type: 'plain_text', text: ':desktop_computer: HWC Server Commands', emoji: true }\n      },\n      {\n        type: 'section',\n        text: {\n          type: 'mrkdwn',\n          text: '`/sys` - System & infrastructure\\n' +\n            '`/arr` - Sonarr, Radarr, Lidarr, Prowlarr\\n' +\n            '`/dl` - Downloads (qBit, SAB, VPN)\\n' +\n            '`/media` - Media services (Jellyfin, Immich)\\n' +\n            '`/cam` - Surveillance (Frigate)\\n' +\n            '`/ai` - AI services (Ollama)\\n' +\n            '`/docs` - Documents (Paperless)\\n' +\n            '`/finance` - Finance (Firefly)\\n' +\n            '`/books` - Books & audiobooks'\n        }\n      },\n      {\n        type: 'context',\n        elements: [{ type: 'mrkdwn', text: 'Add `help` to any command for details' }]\n      }\n    ],\n    text: 'HWC Server Commands',\n    originalCommand: input\n  }\n};"
+      },
+      "id": "handler-help",
+      "name": "Help Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",\n        "responseBody": "={{ JSON.stringify({ response_type: $json.response_type, text: $json.text, blocks: $json.blocks }) }}"
+      },
+      "id": "respond-immediate",
+      "name": "Respond Immediately",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.asyncAction?.type }}", "operation": "isNotEmpty" }]
+        }
+      },
+      "id": "if-async",
+      "name": "Has Async Action?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Execute async action and send result to response_url\nconst input = $input.first().json;\nconst action = input.asyncAction;\n\nlet result = { text: ':x: Unknown action', blocks: [] };\n\ntry {\n  switch (action.type) {\n    case 'health-check':\n      // Call health check webhook\n      const healthResponse = await this.helpers.httpRequest({\n        method: 'POST',\n        url: 'http://127.0.0.1:5678/webhook/health-check',\n        json: true\n      });\n      \n      const { summary, unhealthyServices } = healthResponse;\n      const statusEmoji = summary.unhealthy === 0 ? ':white_check_mark:' : ':warning:';\n      \n      result.blocks = [\n        {\n          type: 'header',\n          text: { type: 'plain_text', text: `${statusEmoji} System Health`, emoji: true }\n        },\n        {\n          type: 'section',\n          fields: [\n            { type: 'mrkdwn', text: `*Healthy:*\\n${summary.healthy}` },\n            { type: 'mrkdwn', text: `*Unhealthy:*\\n${summary.unhealthy}` }\n          ]\n        }\n      ];\n      \n      if (unhealthyServices?.length > 0) {\n        result.blocks.push({\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: '*Down:*\\n' + unhealthyServices.map(s => `:x: ${s.name}`).join('\\n')\n          }\n        });\n      }\n      result.text = `${statusEmoji} ${summary.healthy}/${summary.total} services healthy`;\n      break;\n      \n    case 'disk-check':\n      const diskResult = await this.helpers.executeCommand('df -h / /mnt/media /mnt/hot 2>/dev/null | tail -n +2');\n      const diskLines = diskResult.stdout.trim().split('\\n').map(line => {\n        const parts = line.split(/\\s+/);\n        return `${parts[5]}: ${parts[4]} used (${parts[2]}/${parts[1]})`;\n      });\n      \n      result.blocks = [{\n        type: 'section',\n        text: { type: 'mrkdwn', text: '*Disk Usage*\\n```' + diskLines.join('\\n') + '```' }\n      }];\n      result.text = 'Disk Usage';\n      break;\n      \n    case 'dl-vpn':\n      const vpnResult = await this.helpers.httpRequest({\n        method: 'GET',\n        url: 'http://127.0.0.1:8000/v1/publicip/ip',\n        returnFullResponse: true\n      }).catch(() => ({ body: 'Unknown' }));\n      \n      result.blocks = [{\n        type: 'section',\n        text: { type: 'mrkdwn', text: `*VPN Status*\\nPublic IP: \\`${vpnResult.body || 'Unknown'}\\`` }\n      }];\n      result.text = 'VPN Status';\n      break;\n      \n    default:\n      result.text = `:construction: Action \\`${action.type}\\` not yet implemented`;\n  }\n} catch (error) {\n  result.text = `:x: Error: ${error.message}`;\n}\n\nreturn { json: { responseUrl: action.responseUrl, ...result } };"
+      },
+      "id": "execute-async",
+      "name": "Execute Async Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.responseUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ response_type: 'in_channel', text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      },
+      "id": "send-async-response",
+      "name": "Send Async Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 0],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook: /slack-commands": {
+      "main": [[{ "node": "Verify Slack Signature", "type": "main", "index": 0 }]]
+    },
+    "Verify Slack Signature": {
+      "main": [[{ "node": "Parse Command", "type": "main", "index": 0 }]]
+    },
+    "Parse Command": {
+      "main": [[{ "node": "Route by Domain", "type": "main", "index": 0 }]]
+    },
+    "Route by Domain": {
+      "main": [
+        [{ "node": "System Handler", "type": "main", "index": 0 }],
+        [{ "node": "Arr Handler", "type": "main", "index": 0 }],
+        [{ "node": "Download Handler", "type": "main", "index": 0 }],
+        [{ "node": "Help Handler", "type": "main", "index": 0 }]
+      ]
+    },
+    "System Handler": {
+      "main": [[{ "node": "Respond Immediately", "type": "main", "index": 0 }]]
+    },
+    "Arr Handler": {
+      "main": [[{ "node": "Respond Immediately", "type": "main", "index": 0 }]]
+    },
+    "Download Handler": {
+      "main": [[{ "node": "Respond Immediately", "type": "main", "index": 0 }]]
+    },
+    "Help Handler": {
+      "main": [[{ "node": "Respond Immediately", "type": "main", "index": 0 }]]
+    },
+    "Respond Immediately": {
+      "main": [[{ "node": "Has Async Action?", "type": "main", "index": 0 }]]
+    },
+    "Has Async Action?": {
+      "main": [
+        [{ "node": "Execute Async Action", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Execute Async Action": {
+      "main": [[{ "node": "Send Async Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "foundation" },
+    { "name": "slack" }
+  ]
+}

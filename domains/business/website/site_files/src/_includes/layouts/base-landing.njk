@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ meta_description | default(site.description) }}">
+  {% if noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
+  <link rel="canonical" href="{{ site.url }}{{ page.url }}">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ meta_description | default(site.description) }}">
+  <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+  <meta property="og:type" content="website">
+  {% if og_image %}<meta property="og:image" content="{{ site.url }}{{ og_image }}">{% endif %}
+  <meta property="og:site_name" content="{{ site.name }}">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8CF06TJ7ZK"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-8CF06TJ7ZK');
+  </script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+{# ── Minimal Landing Page Header — logo + phone only, no nav ── #}
+<header class="site-header" id="site-header">
+  <div class="container header-inner" style="justify-content: space-between;">
+    <a class="logo" href="/">
+      <img src="/img/brand/logo-header-v2.webp" alt="Heartwood Craft" class="logo-img">
+    </a>
+    <a href="{{ site.phoneLink }}" class="btn btn-get-started">Call {{ site.phone }}</a>
+  </div>
+</header>
+
+<main>
+  {{ content | safe }}
+</main>
+
+{# ── Minimal footer — no nav, just brand + phone ── #}
+<footer class="site-footer" style="padding: 2rem 0; text-align: center;">
+  <div class="container">
+    <p style="color: var(--gray-400); font-size: 0.85rem; margin: 0;">
+      Heartwood Craft · Bozeman, Montana · <a href="{{ site.phoneLink }}" style="color: var(--copper);">{{ site.phone }}</a>
+      <br>Licensed & Insured · Serving Bozeman, Belgrade & Gallatin Gateway
+    </p>
+  </div>
+</footer>
+
+<script src="/js/main.js" defer></script>
+<script src="/js/tracking.js" defer></script>
+</body>
+</html>

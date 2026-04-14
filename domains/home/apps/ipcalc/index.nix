@@ -1,24 +1,20 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/ipcalc/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.ipcalc;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.ipcalc = {
+    enable = lib.mkEnableOption "ipcalc IP calculator";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      ipcalc
-    ];
+    home.packages = [ pkgs.ipcalc ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

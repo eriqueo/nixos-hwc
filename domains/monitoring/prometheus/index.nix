@@ -1,0 +1,169 @@
+# domains/monitoring/prometheus/index.nix
+#
+# PROMETHEUS - Metrics collection and monitoring
+#
+# NAMESPACE: hwc.monitoring.prometheus.*
+#
+# DEPENDENCIES:
+#   - hwc.paths.state (data directory)
+#
+# USED BY:
+#   - Grafana (metrics datasource)
+#   - Alertmanager (alert source)
+
+{ config, lib, pkgs, ... }:
+
+let
+  cfg = config.hwc.monitoring.prometheus;
+  paths = config.hwc.paths;
+in
+{
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  options.hwc.monitoring.prometheus = {
+    enable = lib.mkEnableOption "Prometheus monitoring and metrics collection";
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 9090;
+      description = "Prometheus HTTP server port";
+    };
+
+    dataDir = lib.mkOption {
+      type = lib.types.path;
+      default = "${paths.state}/prometheus";
+      description = "Data directory for Prometheus time-series database";
+    };
+
+    retention = lib.mkOption {
+      type = lib.types.str;
+      default = "30d";
+      description = "Data retention period (e.g., '30d', '90d')";
+    };
+
+    scrapeConfigs = lib.mkOption {
+      type = lib.types.listOf lib.types.attrs;
+      default = [];
+      description = "Additional scrape configurations (extended by other modules)";
+    };
+
+    blackbox = lib.mkOption {
+           description = "Blackbox exporter configuration";
+           default = {};
+           type = lib.types.submodule {
+             options = {
+               enable = lib.mkEnableOption "Blackbox exporter for health checks";
+             };
+           };
+         };
+  };
+
+  #==========================================================================
+  # IMPLEMENTATION
+  #==========================================================================
+  config = lib.mkIf cfg.enable {
+      # 1. Blackbox Exporter Implementation (Using NixOS module)
+      services.prometheus.exporters.blackbox = lib.mkIf cfg.blackbox.enable {
+        enable = true;
+        port = 9115;
+        configFile = pkgs.writeText "blackbox.yml" (builtins.toJSON {
+          modules = {
+            http_health_check = {
+              prober = "http";
+              timeout = "15s";
+              http = {
+                method = "GET";
+                valid_status_codes = [ 200 ];
+              };
+            };
+          };
+        });
+      };
+
+      # 2. Prometheus Service Configuration
+      services.prometheus = {
+        enable = true;
+        port = cfg.port;
+        stateDir = "hwc/prometheus";
+        retentionTime = cfg.retention;
+
+        globalConfig = {
+          scrape_interval = "15s";
+          evaluation_interval = "15s";
+        };
+
+        scrapeConfigs = [
+          {
+            job_name = "node";
+            static_configs = [{
+              targets = [ "localhost:9100" ];
+            }];
+          }
+        ]++ lib.optional ((config.hwc.media.youtube.legacyApi.enable or false) && cfg.blackbox.enable) {
+                job_name = "transcript-api-health";
+                metrics_path = "/probe";
+                params = { module = [ "http_health_check" ]; };
+                static_configs = [{
+                  targets = [ "http://localhost:${toString config.hwc.media.youtube.legacyApi.port}/health" ];
+                }];
+                relabel_configs = [
+                  { source_labels = [ "__address__" ]; target_label = "__param_target"; }
+                  { source_labels = [ "__param_target" ]; target_label = "instance"; }
+                  { target_label = "__address__"; replacement = "localhost:9115"; }
+                ];
+              }
+        ++ cfg.scrapeConfigs; # Include scrape configs added by other modules
+
+        # Alert rules organized by severity (P5/P4/P3)
+        ruleFiles = [
+          (pkgs.writeText "prometheus-alerts.yml" (builtins.toJSON (import ./parts/alerts.nix { inherit lib; })))
+        ];
+      };
+
+    services.prometheus.exporters.node = {
+      enable = true;
+      port = 9100;
+    };
+
+    # Run prometheus, node-exporter, and blackbox-exporter as eric user for simplified permissions
+    systemd.services.prometheus = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+        StateDirectory = lib.mkForce "hwc/prometheus";
+        WorkingDirectory = lib.mkForce "${paths.state}/prometheus";
+      };
+    };
+    systemd.services.prometheus-node-exporter = {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+      };
+    };
+    systemd.services.prometheus-blackbox-exporter = lib.mkIf cfg.blackbox.enable {
+      serviceConfig = {
+        User = lib.mkForce "eric";
+        Group = lib.mkForce "users";
+      };
+    };
+
+    #==========================================================================
+    # VALIDATION
+    #==========================================================================
+    assertions = [
+      {
+        assertion = !cfg.enable || (cfg.port != 0);
+        message = "Prometheus port must be configured";
+      }
+      {
+        assertion = !cfg.enable || (cfg.dataDir != "");
+        message = "Prometheus data directory must be configured";
+      }
+      {
+        assertion = !cfg.enable || (builtins.match "^[0-9]+d$" cfg.retention != null);
+        message = "Prometheus retention must be in format '<number>d' (e.g., '30d', '90d')";
+      }
+    ];
+  };
+}

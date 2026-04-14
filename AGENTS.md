@@ -1,43 +1,62 @@
-# Repository Guidelines
+# nixos-hwc
 
-- Always align with the latest `CHARTER.md`; if in doubt, read it first and re-check for updates after changes.
+NixOS flake managing two machines via domain-driven architecture. Charter v11.1.
 
-## Project Structure & Module Organization
-- Root `flake.nix` defines inputs/outputs and delegates to machine configs in `machines/*/config.nix` with matching `hardware.nix` per host.
-- Domain modules live under `domains/*/` (e.g., `domains/server`, `domains/home`, `domains/secrets`); keep logic and options inside the relevant domain to avoid cross-coupling.
-- Profiles in `profiles/*.nix` compose common stacks (base, security, media, ai, infrastructure). Extend profiles rather than duplicating options.
-- Workspace scripts sit in `workspace/` (purpose-driven directories like `nixos/`, `monitoring/`, `hooks/`, `diagnostics/`); Tier 1 shell derivations in `domains/home/environment/shell/parts/` wrap these scripts.
-- Repository scripts for maintenance and lints live in `scripts/`; see `scripts/lints/` for Charter and container checks.
+## Machines
+- **hwc-laptop** — NixOS desktop (Hyprland, dev tools, GPU)
+- **hwc-server** — headless (Podman containers, Caddy, monitoring, media)
+Always run `hostname` before nixos-rebuild. Hooks enforce this.
 
-## Build, Test, and Development Commands
-- `nixos-rebuild test --flake .#hwc-laptop` (or `.#hwc-server`): dry-run system build and activate in a disposable generation.
-- `nixos-rebuild switch --flake .#hwc-laptop`: build and switch the target host.
-- `nix flake check`: run flake-level evaluations; use before commits.
-- `./scripts/lints/charter-lint.sh`: verify Charter/module structure and lane purity.
-- `./scripts/lints/container-lint.sh [--verbose] [name]`: validate container configs; run per-container, then full pass.
-- For editing Tier 2 scripts, run directly from `workspace/...` (no rebuild); for Tier 1 commands, regenerate via `nixos-rebuild` after edits.
+## Repo Map
+```
+flake.nix                          # Entry point (orchestration only)
+machines/{laptop,server}/          # Hardware + profile imports
+profiles/                          # Domain menus (system, home, server, media, etc.)
+domains/
+  home/apps/                       # Home Manager apps (waybar, hyprland, aerc, kitty, etc.)
+  home/environment/shell/          # Shell config, scripts, env vars
+  home/theme/                      # Gruvbox Material Dark palette + adapters
+  networking/routes.nix            # ALL Caddy reverse proxy routes (ports 1443-18095)
+  server/containers/               # Podman containers (immich, frigate, arr stack, etc.)
+  secrets/declarations/            # agenix secret declarations
+  secrets/parts/                   # Encrypted .age files
+  paths/paths.nix                  # ALL path definitions (Law 3: no hardcoded paths elsewhere)
+  system/core/                     # Boot, kernel, users
+  automation/n8n/                  # n8n workflow automation
+  business/heartwood-cms/          # Heartwood Craft CMS + 11ty site
+  monitoring/                      # Grafana, Prometheus, Uptime Kuma
+```
 
-## Coding Style & Naming Conventions
-- Nix files use 2-space indentation, lowercase attr names, and prefer `lib.mkIf`/`lib.mkDefault` patterns already in `domains/*/index.nix`.
-- Module anatomy: keep `index.nix` (wiring), `options.nix` (interfaces), and `sys.nix` or `parts/` (implementation) aligned with Charter expectations; avoid mixing Home Manager logic in NixOS modules.
-- Shell/Python scripts: shebang plus `set -euo pipefail` (bash) and clear usage output; place scripts in the correct workspace directory by purpose.
-- Path canon: all filesystem paths defined in `domains/system/core/paths.nix` and consumed via `config.hwc.paths.*`; no hardcoded `/mnt`/`/opt` defaults except as explicit fallbacks.
-- Permission model: services/containers run as `eric:users` (UID 1000/GID 100), containers use `PUID=1000`/`PGID=100`, secrets via `group = "secrets"` and `mode = "0440"`.
-- Lane purity: system/home lanes stay separate; `sys.nix` lives with modules but exposes system-lane options under `hwc.system.*`; Home can assert system via `osConfig`, never the reverse.
-- Validation: every toggleable module needs a `# VALIDATION` section with assertions for required dependencies.
-- Complex services use config-first pattern: keep canonical YAML/TOML under `domains/server/<svc>/config/`, mount via Nix; Nix handles infra (image, mounts, env, ports) only.
-- Data retention is declarative: define retention policies in Nix with fail-safe systemd timers; back up only critical/irreplaceable data.
+## Architecture Laws (errors if violated)
+- **Namespace = folder**: `domains/home/apps/X/` → `hwc.home.apps.X.*` (no shortcuts)
+- **No hardcoded paths**: use `config.hwc.paths.*` from `domains/paths/paths.nix`
+- **osConfig safety**: use `osConfig.hwc or {}` or `attrByPath`, NEVER `osConfig.hwc.x or null`
+- **Secrets**: always `group = "secrets"; mode = "0440"` (hooks remind on edit)
+- **Assertions**: go INSIDE `config = lib.mkIf ...` block, not separate
+- **Native services**: need `User = lib.mkForce "eric"` (mkForce is critical)
+- **PGID=100** (users group), NOT 1000
 
-## Testing Guidelines
-- Prefer `nix flake check` before rebuilds; follow with `nixos-rebuild test` on the target host to catch activation issues.
-- Run `./scripts/lints/charter-lint.sh` after adding or moving modules; run `./scripts/lints/container-lint.sh` whenever touching `domains/server/containers/*`.
-- Name new tests/lints descriptively and keep outputs under `.lint-reports/` if applicable.
+## Recurring Mistakes (from git history)
+- Port conflicts in routes.nix — always check existing assignments first
+- Wrong paths — paths.nix is in `domains/paths/`, NOT `domains/system/core/`
+- Container PGID=1000 — must be 100
+- osConfig crashes — `osConfig.hwc.x or null` fails when osConfig={}
 
-## Commit & Pull Request Guidelines
-- Commit style follows Conventional Commit flavor seen in history: `fix(scope): description`, `refactor(scope): ...`, `feat(scope): ...`; keep scope aligned to domain or host (e.g., `server.containers`, `laptop`, `home.mail`).
-- Commits should be small and reversible; include relevant lints/builds in the body if non-obvious.
-- PRs: describe the change, affected hosts/profiles, and commands run (`nix flake check`, lints, rebuild). Link issues where applicable; include config diffs or screenshots for UI-facing changes (rare here).
+## Available Skills
+`/build` `/check` `/cp` `/status` `/update` — and from system prompt:
+`/add-server-container` `/add-home-app` `/secret-provision`
+`/nixos-build-doctor` `/charter-check` `/module-migrate` `/system-checkup`
 
-## Security & Secrets
-- Never commit secrets; use agenix files in `domains/secrets/` and follow `domains/secrets/SECRETS-MANAGEMENT-GUIDE.md`.
-- Keep secrets wiring isolated to the secrets domain; reference age files rather than embedding credentials in modules or scripts.
+## MCP Servers
+- **heartwood**: 63 JobTread tools (Heartwood Craft business data)
+- **postgres**: databases heartwood_business, immich
+- **n8n**: workflow automation (get/list/update/delete workflows)
+- **memory**: persistent knowledge graph across sessions
+- **prometheus**: service health metrics and container monitoring
+
+## Before Any Change
+- Read CHARTER.md if touching architecture
+- `nix flake check` before and after changes
+
+## On Commit
+Update the changed domain's README.md: `## Structure` + `## Changelog` entry.

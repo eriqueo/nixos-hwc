@@ -14,7 +14,7 @@
 #   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
 #   - nixosConfigurations.hwc-server -> ./machines/server/config.nix
 #   - nixosConfigurations.hwc-xps -> ./machines/xps/config.nix
-#   - nixosConfigurations.hwc-gaming -> ./machines/gaming/config.nix
+#   - nixosConfigurations.hwc-kids -> ./machines/kids/config.nix
 #   - nixosConfigurations.hwc-firestick -> ./machines/firestick/config.nix
 #
 # IMPORTS REQUIRED IN:
@@ -24,7 +24,7 @@
 #   nixos-rebuild switch --flake .#hwc-laptop
 #   nixos-rebuild switch --flake .#hwc-server
 #   nixos-rebuild switch --flake .#hwc-xps
-#   nixos-rebuild switch --flake .#hwc-gaming
+#   nixos-rebuild switch --flake .#hwc-kids
 
 {
   #============================================================================
@@ -66,6 +66,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    claude-desktop = {
+      url = "github:aaddrick/claude-desktop-debian";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Reference repo during migration (non-flake)
     legacy-config = {
       url = "github:eriqueo/nixos-hwc";
@@ -92,10 +97,38 @@
           # Allow insecure qtwebengine for jellyfin-media-player
           permittedInsecurePackages = [
             "qtwebengine-5.15.19"
-            "n8n-1.91.3"  # CVE-2025-68613 - workflow automation tool
           ];
         };
-        overlays = [];
+        overlays = [
+          inputs.claude-desktop.overlays.default
+        ];
+      };
+
+    # Server-specific overlay for CUDA support
+    # Uses cache.nixos-cuda.org for pre-built binaries (avoid 8+ hour local builds)
+    serverOverlay = final: prev: {
+      # Let nixpkgs.config.cudaSupport handle CUDA globally
+      # No per-package overrides needed with binary cache
+    };
+
+    # Claude Code overlay - backport from unstable to stable
+    claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; };
+
+    # Pkgs helper with optional overlays (server uses this)
+    # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
+    mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
+      import nixpkgsInput {
+        inherit system;
+        overlays = [ claudeCodeOverlay ] ++ extraOverlays;
+        config = {
+          allowUnfree = true;
+          nvidia.acceptLicense = true;
+          cudaSupport = true;  # Binary cache should provide pre-built CUDA packages
+          permittedInsecurePackages = [
+            "qtwebengine-5.15.19"
+            "n8n-1.91.3"
+          ];
+        };
       };
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
@@ -103,6 +136,9 @@
 
     # pkgs-stable (25.11 - claude-code now available natively)
     pkgs-stable = mkPkgs system nixpkgs-stable;
+
+    # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
+    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay ];
     
     lib = nixpkgs.lib;
 
@@ -113,7 +149,7 @@
       import os
 
       # Add the graph directory to Python path
-      graph_dir = "${self}/workspace/utilities/graph"
+      graph_dir = "${self}/workspace/nixos/graph"
       sys.path.insert(0, graph_dir)
 
       # Change to repo root for scanning
@@ -142,16 +178,48 @@
       hwc-graph = hwc-graph-pkg;
     };
 
+    #========================================================================
+    # STANDALONE HOME MANAGER — fast user-level rebuilds (~5-10s)
+    # Usage: home-manager switch --flake ~/.nixos#eric@$(hostname)
+    # Alias: hms
+    #========================================================================
+    homeConfigurations = {
+      "eric@hwc-server" = home-manager-stable.lib.homeManagerConfiguration {
+        pkgs = pkgs-stable;
+        extraSpecialArgs = {
+          inherit inputs;
+          nixosApiVersion = "stable";
+        };
+        modules = [
+          ./machines/server/home.nix
+          { home.username = "eric"; home.homeDirectory = "/home/eric"; }
+        ];
+      };
+      "eric@hwc-laptop" = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+        extraSpecialArgs = {
+          inherit inputs;
+          nixosApiVersion = "unstable";
+        };
+        modules = [
+          ./profiles/home-session.nix
+          ./machines/laptop/home.nix
+          { home.username = "eric"; home.homeDirectory = "/home/eric"; }
+        ];
+      };
+    };
+
     nixosConfigurations = {
       # CHARTER v9.0: Server uses stable nixpkgs (packages AND NixOS modules)
+      # Uses CUDA-enabled overlay for Immich ML GPU acceleration
       hwc-server = nixpkgs-stable.lib.nixosSystem {
-        inherit system;
-        pkgs = pkgs-stable;  # Use nixpkgs-stable for predictable updates
+        pkgs = pkgs-stable-cuda;  # Use nixpkgs-stable with CUDA overlay for GPU ML
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "stable";  # Stable API (nixos-25.11)
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix-stable.nixosModules.default  # Use stable agenix for stable nixpkgs
           home-manager-stable.nixosModules.home-manager  # Use stable HM for stable nixpkgs
           ./machines/server/config.nix
@@ -168,13 +236,13 @@
         ];
       };
       hwc-xps = nixpkgs-stable.lib.nixosSystem {
-        inherit system;
         pkgs = pkgs-stable;
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "stable";
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix-stable.nixosModules.default
           home-manager-stable.nixosModules.home-manager
           ./machines/xps/config.nix
@@ -189,12 +257,13 @@
         ];
       };
       hwc-laptop = lib.nixosSystem {
-        inherit system pkgs;
+        inherit pkgs;
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix.nixosModules.default
           inputs.nixvirt.nixosModules.default
           home-manager.nixosModules.home-manager
@@ -208,16 +277,17 @@
           }
         ];
       };
-      hwc-gaming = lib.nixosSystem {
-        inherit system pkgs;
+      hwc-kids = lib.nixosSystem {
+        inherit pkgs;
         specialArgs = {
           inherit inputs;
-          nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
+          nixosApiVersion = "unstable";
         };
         modules = [
+          { nixpkgs.hostPlatform = system; }
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
-          ./machines/gaming/config.nix
+          ./machines/kids/config.nix
           {
             home-manager.users.eric.home.stateVersion = "24.05";
             home-manager.backupFileExtension = "backup";
@@ -229,13 +299,13 @@
         ];
       };
       hwc-firestick = lib.nixosSystem {
-        system = "aarch64-linux";
         pkgs = mkPkgs "aarch64-linux" nixpkgs;
         specialArgs = {
           inherit inputs;
           nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
         };
         modules = [
+          { nixpkgs.hostPlatform = "aarch64-linux"; }
           agenix.nixosModules.default
           home-manager.nixosModules.home-manager
           ./machines/firestick/config.nix

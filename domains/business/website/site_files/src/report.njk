@@ -1,0 +1,321 @@
+---
+layout: layouts/page-simple.njk
+show_form: false
+title: "Your Project Summary | Heartwood Craft"
+meta_description: "Your personalized project summary from Heartwood Craft, based on real Bozeman pricing data."
+permalink: "/report/"
+noindex: true
+---
+
+<style>
+  /* ── Report-specific styles ── */
+  .hwc-report { max-width: 680px; margin: 0 auto; font-family: 'DM Sans', 'Helvetica Neue', sans-serif; color: #23282d; }
+  .hwc-report-loading { text-align: center; padding: 80px 20px; color: #9ca3af; }
+  .hwc-report-loading .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #cf995f; border-radius: 50%; animation: hwc-spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes hwc-spin { to { transform: rotate(360deg); } }
+  .hwc-report-error { text-align: center; padding: 80px 20px; color: #6b7280; }
+  .hwc-report-error h2 { font-family: 'Playfair Display', serif; color: #23282d; margin: 0 0 8px; }
+
+  .hwc-rpt-header { text-align: center; margin-bottom: 32px; }
+  .hwc-rpt-badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #cf995f; margin-bottom: 8px; }
+  .hwc-rpt-title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: #23282d; margin: 0 0 4px; line-height: 1.2; }
+  .hwc-rpt-meta { font-size: 13px; color: #9ca3af; margin: 0; }
+
+  .hwc-rpt-estimate { text-align: center; padding: 28px 20px; background: #faf8f5; border-radius: 14px; margin-bottom: 28px; border: 1px solid #e8d5c4; }
+  .hwc-rpt-estimate-label { font-size: 13px; color: #6b7280; margin-bottom: 6px; font-weight: 500; }
+  .hwc-rpt-estimate-number { font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 700; color: #23282d; line-height: 1; }
+  .hwc-rpt-estimate-note { font-size: 12px; color: #9ca3af; margin-top: 10px; max-width: 400px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+
+  .hwc-rpt-section { margin-bottom: 28px; }
+  .hwc-rpt-section-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #23282d; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid #cf995f; }
+
+  .hwc-rpt-row { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #e5e7eb; }
+  .hwc-rpt-row:last-child { border-bottom: none; }
+  .hwc-rpt-row-label { font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; min-width: 100px; flex-shrink: 0; padding-top: 2px; }
+  .hwc-rpt-row-content { flex: 1; }
+  .hwc-rpt-row-value { font-size: 15px; font-weight: 600; color: #23282d; margin-bottom: 3px; }
+  .hwc-rpt-row-context { font-size: 13px; color: #6b7280; line-height: 1.5; }
+
+  .hwc-rpt-features { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 0; }
+  .hwc-rpt-feature-pill { font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: #F5EDE4; color: #a67a45; }
+
+  .hwc-rpt-process { background: #faf8f5; border-radius: 14px; padding: 24px; margin-bottom: 28px; }
+  .hwc-rpt-process-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #23282d; margin: 0 0 14px; }
+  .hwc-rpt-process-step { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+  .hwc-rpt-process-step:last-child { margin-bottom: 0; }
+  .hwc-rpt-process-num { width: 28px; height: 28px; border-radius: 50%; background: #cf995f; color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .hwc-rpt-process-text { font-size: 14px; color: #4b5563; line-height: 1.5; padding-top: 3px; }
+  .hwc-rpt-process-text strong { color: #23282d; }
+
+  .hwc-rpt-footer { text-align: center; padding: 24px 0; border-top: 1px solid #e5e7eb; margin-top: 12px; }
+  .hwc-rpt-footer-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #23282d; margin-bottom: 4px; }
+  .hwc-rpt-footer-info { font-size: 13px; color: #6b7280; line-height: 1.7; }
+  .hwc-rpt-footer-info a { color: #cf995f; text-decoration: none; font-weight: 600; }
+
+  .hwc-rpt-disclaimer { font-size: 11px; color: #9ca3af; text-align: center; line-height: 1.6; margin-top: 20px; }
+
+  /* Print styles */
+  @media print {
+    .site-header, .site-footer, .site-nav, nav, header, footer { display: none !important; }
+    .hwc-report { max-width: 100%; padding: 0; }
+    .hwc-rpt-estimate { break-inside: avoid; }
+    .hwc-rpt-section { break-inside: avoid; }
+    .hwc-rpt-process { break-inside: avoid; }
+    .hwc-rpt-print-btn { display: none !important; }
+  }
+
+  .hwc-rpt-print-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: #6b7280; font-family: inherit; transition: all 0.15s; margin-top: 16px; }
+  .hwc-rpt-print-btn:hover { border-color: #cf995f; color: #cf995f; }
+</style>
+
+<div class="hwc-report" id="hwc-report">
+  <div class="hwc-report-loading" id="hwc-report-loading">
+    <div class="spinner"></div>
+    <div>Loading your project summary...</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── Content maps ──────────────────────────────────────────────────────────
+  var CONTEXT = {
+    deck: {
+      project_type: {
+        new_build: "New builds in the Gallatin Valley typically require permits and engineered footings due to frost depth.",
+        full_rebuild: "Demo and haul-off of the existing deck is included — we handle everything.",
+        partial_rebuild: "Reusing the existing frame saves significant cost if the structure is sound.",
+        repair_refresh: "Targeted repairs are the most cost-effective way to extend your deck's life."
+      },
+      deck_size: {
+        small: "Smaller decks are straightforward builds — typically 2–4 days of construction.",
+        medium: "The most common size we build in Bozeman — good balance of space and cost.",
+        large: "Larger footprints need more foundation points and material — but cost per square foot drops.",
+        xl: "Multi-level or wraparound decks involve more complex framing and often need engineered plans."
+      },
+      deck_height: {
+        ground_level: "Ground-level decks in Bozeman often skip permits and railings — simplest build.",
+        low: "Low-profile decks can use deck blocks instead of poured footings in most Gallatin County soils.",
+        standard: "Above 30 inches, Gallatin County requires railings and typically a building permit.",
+        elevated: "Elevated decks need engineered plans, deeper footings, and structural bracing for Montana wind loads."
+      },
+      material: {
+        pt_lumber: "Pressure-treated is the workhorse — $2–3/LF at Kenyon Noble, needs re-staining every 2–3 Montana winters.",
+        cedar: "Cedar weathers beautifully in Montana's dry climate but costs 25–40% more than PT.",
+        composite_mid: "Mid-range composite handles Bozeman's freeze-thaw cycles well with zero annual maintenance.",
+        composite_premium: "Premium composite has the best color retention through Montana's intense UV — 25-year fade warranty."
+      },
+      railing: {
+        none: "No railing keeps the profile clean and the cost down — works great for ground-level decks.",
+        wood: "Wood railings are the most cost-effective option and match the Bozeman mountain aesthetic.",
+        metal_cable: "Cable rail gives you unobstructed mountain views — popular for decks facing the Bridgers.",
+        glass: "Glass panels maximize views but add significant cost — $90–150 per linear foot installed."
+      },
+      features: {
+        stairs: "Custom stairs with wide treads and solid stringers — built for Montana's snow and ice.",
+        lighting: "Low-voltage LED lighting extends your deck season into Bozeman's long summer evenings.",
+        builtin_bench: "Built-in benches double as railing in some configurations — saves cost and looks sharp.",
+        pergola: "Pergolas provide shade during Montana's intense summer sun and anchor the outdoor space.",
+        hottub_pad: "Hot tub pads need reinforced framing or a separate foundation — we account for the 3,000+ lb load.",
+        skirting: "Skirting keeps critters out and gives a finished look — lattice or solid board options."
+      }
+    },
+    bathroom: {
+      project_type: {
+        full_gut: "A full gut means demo to studs — we inspect every layer and rebuild with modern waterproofing.",
+        refresh: "A refresh keeps the layout and plumbing positions but replaces all visible surfaces.",
+        tub_to_shower: "Tub-to-shower conversions involve plumbing relocation and new waterproofing at the drain.",
+        specific_fix: "Targeted repairs address the problem without unnecessary demo — most cost-effective approach."
+      },
+      bathroom_size: {
+        small: "Small bathrooms are quicker builds but require careful layout planning — every inch matters.",
+        medium: "Standard full bathrooms are our most common project — well-understood scope and timeline.",
+        large: "Primary bathrooms have more tile area, often dual vanities, and larger shower builds.",
+        xl: "Luxury primary suites involve complex tile patterns, freestanding tubs, and custom cabinetry."
+      },
+      shower_tub: {
+        shower_only: "Walk-in showers are the most popular choice in Bozeman remodels right now.",
+        tub_shower: "Tub/shower combos are practical and cost-effective — still the standard in most homes.",
+        both_separate: "Separate tub and shower is a premium layout that adds significant plumbing and tile work.",
+        tub_only: "Soaking tubs are a design statement — we handle the structural support and drain positioning."
+      },
+      tile_level: {
+        basic: "Clean subway or large-format tile installs quickly and looks timeless — great value.",
+        mid: "Mixed patterns and accent features require more layout time but create a custom look.",
+        high: "Natural stone and mosaic work is labor-intensive — this is where craftsmanship shows most."
+      },
+      fixtures: {
+        standard: "Moen and Delta deliver reliable quality at a good price point — we install these regularly.",
+        upgraded: "Kohler and Brizo fixtures are a noticeable step up in feel and finish.",
+        premium: "High-end fixtures and custom vanities are the details that make a bathroom feel luxurious."
+      },
+      features: {
+        heated_floor: "Electric radiant heat under tile — a game-changer for Bozeman's cold mornings.",
+        niches: "Built-in shower niches are tiled into the wall during the waterproofing stage.",
+        bench: "A tiled shower bench adds comfort and accessibility — built on a waterproofed frame.",
+        double_vanity: "Double vanities require wider plumbing rough-in and a larger countertop.",
+        lighting: "Updated lighting and wiring modernizes the space — we coordinate with a licensed electrician.",
+        ventilation: "Proper ventilation prevents moisture damage — critical in Montana's cold, dry winters."
+      }
+    }
+  };
+
+  // Human-readable labels for step IDs
+  var STEP_LABELS = {
+    project_type: "Project", deck_size: "Size", bathroom_size: "Size",
+    deck_height: "Height", shower_tub: "Shower / Tub", material: "Material",
+    tile_level: "Tile", fixtures: "Fixtures", railing: "Railing",
+    features: "Extras", timeline: "Timeline"
+  };
+
+  // Calculator display names
+  var CALC_NAMES = { deck: "Deck", bathroom: "Bathroom Remodel" };
+
+  // ── Fetch and render ────────────────────────────────────────────────────
+  var params = new URLSearchParams(window.location.search);
+  var reportId = params.get('id');
+
+  if (!reportId) {
+    showError("No report ID found. If you just completed a calculator, check your email for the correct link.");
+    return;
+  }
+
+  fetch("https://hwc.ocelot-wahoo.ts.net/webhook/report-data?id=" + encodeURIComponent(reportId))
+    .then(function(res) {
+      if (!res.ok) throw new Error("Not found");
+      return res.json();
+    })
+    .then(function(data) { render(data); })
+    .catch(function() {
+      showError("Couldn't load this report. The link may have expired or been entered incorrectly. Call 406-551-5061 and I'll walk you through the numbers.");
+    });
+
+  function showError(msg) {
+    document.getElementById('hwc-report').innerHTML =
+      '<div class="hwc-report-error">' +
+        '<h2>Report not found</h2>' +
+        '<p>' + msg + '</p>' +
+      '</div>';
+  }
+
+  function render(d) {
+    var calc = d.calculator || 'bathroom';
+    var ctx = CONTEXT[calc] || {};
+    var state = d.project_state || {};
+    var name = d.contact_name || '';
+    var firstName = name.split(' ')[0];
+    var date = new Date(d.created_at || Date.now());
+    var dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    var calcName = CALC_NAMES[calc] || calc;
+    var lo = (d.estimate_low || 0).toLocaleString();
+    var hi = (d.estimate_high || 0).toLocaleString();
+
+    // Build selection rows
+    var selectionRows = '';
+    var featurePills = '';
+    var stepOrder = calc === 'deck'
+      ? ['project_type','deck_size','deck_height','material','railing','timeline']
+      : ['project_type','bathroom_size','shower_tub','tile_level','fixtures','timeline'];
+
+    stepOrder.forEach(function(key) {
+      var val = state[key];
+      if (!val) return;
+      // Find the label from context or humanize the value
+      var label = STEP_LABELS[key] || key;
+      var valLabel = val.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      var context = (ctx[key] && ctx[key][val]) || '';
+
+      selectionRows +=
+        '<div class="hwc-rpt-row">' +
+          '<div class="hwc-rpt-row-label">' + label + '</div>' +
+          '<div class="hwc-rpt-row-content">' +
+            '<div class="hwc-rpt-row-value">' + valLabel + '</div>' +
+            (context ? '<div class="hwc-rpt-row-context">' + context + '</div>' : '') +
+          '</div>' +
+        '</div>';
+    });
+
+    // Features
+    var features = state.features || [];
+    if (features.length > 0) {
+      features.forEach(function(f) {
+        var fLabel = f.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        var fContext = (ctx.features && ctx.features[f]) || '';
+        featurePills +=
+          '<div class="hwc-rpt-row">' +
+            '<div class="hwc-rpt-row-label">' + (featurePills === '' ? 'Extras' : '') + '</div>' +
+            '<div class="hwc-rpt-row-content">' +
+              '<div class="hwc-rpt-row-value">' + fLabel + '</div>' +
+              (fContext ? '<div class="hwc-rpt-row-context">' + fContext + '</div>' : '') +
+            '</div>' +
+          '</div>';
+      });
+    }
+
+    var html =
+      // Header
+      '<div class="hwc-rpt-header">' +
+        '<div class="hwc-rpt-badge">Heartwood Craft · Bozeman</div>' +
+        '<h1 class="hwc-rpt-title">' + firstName + '\'s ' + calcName + ' Summary</h1>' +
+        '<p class="hwc-rpt-meta">Prepared ' + dateStr + '</p>' +
+      '</div>' +
+
+      // Estimate
+      '<div class="hwc-rpt-estimate">' +
+        '<div class="hwc-rpt-estimate-label">Estimated project range</div>' +
+        '<div class="hwc-rpt-estimate-number">$' + lo + ' – $' + hi + '</div>' +
+        '<div class="hwc-rpt-estimate-note">Based on real Heartwood Craft projects in the Gallatin Valley — not national averages. Your actual price depends on site conditions, exact dimensions, and final material selections.</div>' +
+      '</div>' +
+
+      // Selections
+      '<div class="hwc-rpt-section">' +
+        '<div class="hwc-rpt-section-title">Your Selections</div>' +
+        selectionRows +
+        featurePills +
+      '</div>' +
+
+      // What to expect
+      '<div class="hwc-rpt-process">' +
+        '<div class="hwc-rpt-process-title">What to Expect from Heartwood</div>' +
+        '<div class="hwc-rpt-process-step">' +
+          '<div class="hwc-rpt-process-num">1</div>' +
+          '<div class="hwc-rpt-process-text"><strong>We talk.</strong> I\'ll call to discuss your project, ask a few follow-up questions, and find a time for a site visit.</div>' +
+        '</div>' +
+        '<div class="hwc-rpt-process-step">' +
+          '<div class="hwc-rpt-process-num">2</div>' +
+          '<div class="hwc-rpt-process-text"><strong>Site visit.</strong> I come to your home, take measurements, assess existing conditions, and photograph everything. About 45 minutes.</div>' +
+        '</div>' +
+        '<div class="hwc-rpt-process-step">' +
+          '<div class="hwc-rpt-process-num">3</div>' +
+          '<div class="hwc-rpt-process-text"><strong>Detailed estimate.</strong> Itemized by phase — you\'ll see exactly what every dollar pays for. No hidden costs, no surprises.</div>' +
+        '</div>' +
+        '<div class="hwc-rpt-process-step">' +
+          '<div class="hwc-rpt-process-num">4</div>' +
+          '<div class="hwc-rpt-process-text"><strong>We walk through it together.</strong> I present the estimate in person or on a call — never just email it. Questions get answered on the spot.</div>' +
+        '</div>' +
+      '</div>' +
+
+      // Footer
+      '<div class="hwc-rpt-footer">' +
+        '<div class="hwc-rpt-footer-name">Eric · Heartwood Craft</div>' +
+        '<div class="hwc-rpt-footer-info">' +
+          '<a href="tel:4065515061">406-551-5061</a><br>' +
+          '<a href="mailto:eric@iheartwoodcraft.com">eric@iheartwoodcraft.com</a><br>' +
+          'Bozeman, Montana' +
+        '</div>' +
+        '<button class="hwc-rpt-print-btn" onclick="window.print()">🖨️ Print this summary</button>' +
+      '</div>' +
+
+      // Disclaimer
+      '<div class="hwc-rpt-disclaimer">' +
+        'This estimate range is based on typical costs from completed Heartwood Craft projects in the Gallatin Valley. ' +
+        'Final pricing is determined after a site visit and depends on specific material selections, existing conditions, ' +
+        'permit requirements, and scope details. Numbers reflect Bozeman-area pricing as of 2026.' +
+      '</div>';
+
+    document.getElementById('hwc-report').innerHTML = html;
+
+    // Update page title
+    document.title = firstName + '\'s ' + calcName + ' Summary | Heartwood Craft';
+  }
+})();
+</script>

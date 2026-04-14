@@ -4,7 +4,8 @@
 
 {
   files = profileBase: {
-    # ProtonPass desktop client uses system theming
-    # No specific configuration files needed
+    # Proton Pass manages its own config at ~/.config/Proton Pass/config.json
+    # Cannot be managed by Home Manager - app needs write access
+    # Set dark mode manually in app: Settings > Theme > Dark
   };
 }

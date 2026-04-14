@@ -1,18 +1,17 @@
 { lib, ... }:
 
 {
-  # Lean travel-TV stack: reuse system profile defaults, then strip extras.
+  # Lean travel-TV stack: reuse core profile defaults, then strip extras.
   imports = [
-    ./system.nix
-    ./security.nix
+    ./core.nix
   ];
 
   # No backups or Samba on the stick.
-  hwc.system.services.backup.enable = lib.mkForce false;
+  hwc.data.backup.enable = lib.mkForce false;
   hwc.system.networking.samba.enable = lib.mkForce false;
 
   # Keep audio, trim monitoring/key remapping to stay lightweight.
-  hwc.system.services.hardware = {
+  hwc.system.hardware = {
     monitoring.enable = lib.mkForce false;
     keyboard.enable = lib.mkForce false;
   };

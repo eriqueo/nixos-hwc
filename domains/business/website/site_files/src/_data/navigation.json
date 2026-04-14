@@ -1,0 +1,50 @@
+{
+  "main": [
+    {
+      "label": "Home",
+      "url": "/"
+    },
+    {
+      "label": "Our Work",
+      "children": [
+        {
+          "label": "Bathroom Remodeling",
+          "url": "/bathroom/remodeling/"
+        },
+        {
+          "label": "Basement Remodeling",
+          "url": "/basement/remodeling/"
+        },
+        {
+          "label": "General Remodeling",
+          "url": "/remodeling/"
+        },
+        {
+          "label": "Aging in Place",
+          "url": "/aging-in-place/"
+        }
+      ]
+    },
+    {
+      "label": "Plan Your Project",
+      "children": [
+        {
+          "label": "Bathroom Remodel Calculator",
+          "url": "/calculator/"
+        },
+        {
+          "label": "Deck Cost Calculator",
+          "url": "/deck-calculator/"
+        }
+      ]
+    },
+    {
+      "label": "Our Process",
+      "url": "/how-it-works/"
+    },
+    {
+      "label": "The Plane Truth",
+      "url": "/blog/"
+    }
+  ]
+}

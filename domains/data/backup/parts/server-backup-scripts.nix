@@ -1,0 +1,230 @@
+# Server backup scripts - automated backup of containers, databases, and configuration
+{ config, lib, pkgs, ... }:
+
+let
+  cfg = config.hwc.data.backup;
+
+  # Backup script for containers
+  containerBackupScript = pkgs.writeScriptBin "backup-containers" ''
+    #!${pkgs.bash}/bin/bash
+    set -euo pipefail
+
+    BACKUP_DIR="${config.hwc.paths.hot.root}/backups/containers"
+    DATE=$(date +%Y%m%d_%H%M%S)
+    RETENTION_DAYS=30
+
+    echo "=== Container Backup Started at $(date) ==="
+
+    # Create backup directory
+    mkdir -p "$BACKUP_DIR"
+
+    # Backup container volumes (excluding media directories that exist elsewhere)
+    for container in $(${pkgs.podman}/bin/podman ps --format '{{.Names}}'); do
+      echo "Backing up $container..."
+
+      # Export container config
+      ${pkgs.podman}/bin/podman inspect "$container" > "$BACKUP_DIR/$container-config-$DATE.json"
+
+      # Backup container volumes (skip media/hot paths - they're backed up separately or are the backup dest)
+      VOLUMES=$(${pkgs.podman}/bin/podman inspect "$container" | ${pkgs.jq}/bin/jq -r '.[].Mounts[].Source' | grep -v '^$' || true)
+
+      if [ -n "$VOLUMES" ]; then
+        echo "$VOLUMES" | while read volume; do
+          volume_name=$(basename "$volume")
+
+          # Skip paths that shouldn't be backed up
+          case "$volume" in
+            /mnt/media/*|/mnt/hot/*|/var/lib/containers*|/dev/*|/sys/*|/proc/*|/run/*)
+              echo "  Skipping $volume_name (media/system path)"
+              continue
+              ;;
+          esac
+
+          if [ -e "$volume" ]; then
+            echo "  Backing up volume: $volume_name"
+            ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/$container-$volume_name-$DATE.tar.gz" -C "$(dirname "$volume")" "$volume_name" 2>/dev/null || echo "    Warning: Failed to backup $volume_name"
+          else
+            echo "  Skipping $volume_name: path does not exist"
+          fi
+        done
+      fi
+    done
+
+    # Clean up old backups
+    echo "Cleaning up backups older than $RETENTION_DAYS days..."
+    find "$BACKUP_DIR" -type f -mtime +$RETENTION_DAYS -delete
+
+    echo "=== Container Backup Completed at $(date) ==="
+  '';
+
+  # Backup script for databases
+  databaseBackupScript = pkgs.writeScriptBin "backup-databases" ''
+    #!${pkgs.bash}/bin/bash
+    set -euo pipefail
+
+    BACKUP_DIR="${config.hwc.paths.hot.root}/backups/databases"
+    DATE=$(date +%Y%m%d_%H%M%S)
+    RETENTION_DAYS=30
+
+    echo "=== Database Backup Started at $(date) ==="
+
+    # Create backup directory
+    mkdir -p "$BACKUP_DIR"
+
+    # Backup CouchDB (skip if auth required or not responding)
+    if systemctl is-active --quiet couchdb; then
+      echo "Backing up CouchDB..."
+      COUCHDB_RESPONSE=$(${pkgs.curl}/bin/curl -sf http://127.0.0.1:5984/_all_dbs 2>/dev/null || echo "")
+      if [ -n "$COUCHDB_RESPONSE" ] && echo "$COUCHDB_RESPONSE" | ${pkgs.jq}/bin/jq -e 'type == "array"' >/dev/null 2>&1; then
+        echo "$COUCHDB_RESPONSE" | ${pkgs.jq}/bin/jq -r '.[]' | while read db; do
+          if [ "$db" != "_replicator" ] && [ "$db" != "_users" ]; then
+            echo "  Backing up database: $db"
+            ${pkgs.curl}/bin/curl -sf "http://127.0.0.1:5984/$db/_all_docs?include_docs=true" > "$BACKUP_DIR/couchdb-$db-$DATE.json" 2>/dev/null || echo "    Warning: Failed to backup $db"
+          fi
+        done
+      else
+        echo "  Skipping CouchDB: requires authentication or not responding"
+      fi
+    fi
+
+    # Backup Immich database (if running)
+    if systemctl is-active --quiet immich-server; then
+      echo "Backing up Immich PostgreSQL database..."
+      sudo -u postgres ${pkgs.postgresql}/bin/pg_dump immich > "$BACKUP_DIR/immich-$DATE.sql"
+    fi
+
+    # Clean up old backups
+    echo "Cleaning up database backups older than $RETENTION_DAYS days..."
+    find "$BACKUP_DIR" -type f -mtime +$RETENTION_DAYS -delete
+
+    echo "=== Database Backup Completed at $(date) ==="
+  '';
+
+  # System configuration backup
+  systemBackupScript = pkgs.writeScriptBin "backup-system" ''
+    #!${pkgs.bash}/bin/bash
+    set -euo pipefail
+
+    BACKUP_DIR="${config.hwc.paths.hot.root}/backups/system"
+    DATE=$(date +%Y%m%d_%H%M%S)
+    RETENTION_DAYS=90
+
+    echo "=== System Backup Started at $(date) ==="
+
+    # Create backup directory
+    mkdir -p "$BACKUP_DIR"
+
+    # Backup system configuration
+    echo "Backing up NixOS configuration..."
+    NIXOS_DIR="${config.hwc.paths.nixos}"
+    if [ -d "$NIXOS_DIR" ]; then
+      ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/nixos-config-$DATE.tar.gz" -C "$(dirname "$NIXOS_DIR")" "$(basename "$NIXOS_DIR")"
+    fi
+
+    # Backup important system files
+    echo "Backing up system state..."
+    ${pkgs.gnutar}/bin/tar -czf "$BACKUP_DIR/system-state-$DATE.tar.gz" \
+      /etc/nixos \
+      /etc/age \
+      /var/lib/systemd \
+      /etc/machine-id \
+      2>/dev/null || true
+
+    # List installed packages (system packages from NixOS config)
+    echo "Saving package list..."
+    ${pkgs.coreutils}/bin/ls -la /run/current-system/sw/bin > "$BACKUP_DIR/system-binaries-$DATE.txt" 2>/dev/null || true
+    ${pkgs.nix}/bin/nix profile list --profile /nix/var/nix/profiles/system > "$BACKUP_DIR/system-profile-$DATE.txt" 2>/dev/null || true
+
+    # Save system info
+    echo "Saving system information..."
+    {
+      echo "Hostname: $(hostname)"
+      echo "Kernel: $(uname -r)"
+      echo "NixOS Version: $(/run/current-system/sw/bin/nixos-version)"
+      echo "Backup Date: $(date)"
+      df -h
+      free -h
+    } > "$BACKUP_DIR/system-info-$DATE.txt"
+
+    # Clean up old backups
+    echo "Cleaning up system backups older than $RETENTION_DAYS days..."
+    find "$BACKUP_DIR" -type f -mtime +$RETENTION_DAYS -delete
+
+    echo "=== System Backup Completed at $(date) ==="
+  '';
+
+  # Master backup script
+  masterBackupScript = pkgs.writeScriptBin "backup-all" ''
+    #!${pkgs.bash}/bin/bash
+    set -euo pipefail
+
+    echo "======================================"
+    echo "Starting Full Server Backup"
+    echo "======================================"
+
+    # Run all backup scripts
+    ${systemBackupScript}/bin/backup-system
+    ${databaseBackupScript}/bin/backup-databases
+    ${containerBackupScript}/bin/backup-containers
+
+    echo "======================================"
+    echo "Full Server Backup Completed"
+    echo "======================================"
+  '';
+
+in
+{
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = [
+      systemBackupScript
+      databaseBackupScript
+      containerBackupScript
+      masterBackupScript
+    ];
+
+    # Systemd service for automated backups
+    systemd.services.server-backup = {
+      description = "Automated server backup (containers, databases, system)";
+      # Provide PATH for unqualified commands used in scripts
+      path = with pkgs; [
+        coreutils      # date, mkdir, basename, dirname, df, uname
+        findutils      # find
+        gnutar         # tar
+        gzip           # required by tar -czf
+        gnugrep        # grep
+        curl           # CouchDB backup
+        jq             # JSON parsing
+        podman         # container inspection
+        postgresql     # pg_dump for database backups
+        nix            # nix profile list
+        nettools       # hostname
+        procps         # free
+      ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${masterBackupScript}/bin/backup-all";
+        User = "root";
+      };
+    };
+
+    # Timer for daily backups
+    systemd.timers.server-backup = {
+      description = "Daily server backup timer";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        OnBootSec = "15min";  # Run 15 minutes after boot
+        Persistent = true;
+        RandomizedDelaySec = "30min";
+      };
+    };
+
+    # Create backup directories
+    systemd.tmpfiles.rules = [
+      "d ${config.hwc.paths.hot.root}/backups 0755 root root -"
+      "d ${config.hwc.paths.hot.root}/backups/containers 0755 root root -"
+      "d ${config.hwc.paths.hot.root}/backups/databases 0755 root root -"
+      "d ${config.hwc.paths.hot.root}/backups/system 0755 root root -"
+    ];
+  };
+}

@@ -1,0 +1,10 @@
+<section class="section section-cta section-alt animate-in" data-section="cta">
+  <div class="container text-center">
+    <h2>{{ cta_heading if cta_heading else "Ready to Talk About Your Project?" }}</h2>
+    <p>{{ cta_text if cta_text else "Tell us about your project, or give us a call. We'd like to hear what you're thinking." }}</p>
+    <div class="cta-buttons">
+      <a href="{{ site.phoneLink }}" class="btn btn-primary">Call {{ site.phone }}</a>
+      <a href="#contact-form" class="btn btn-outline">Request an Estimate</a>
+    </div>
+  </div>
+</section>
