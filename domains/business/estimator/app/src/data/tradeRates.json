@@ -1,0 +1,52 @@
+{
+  "planning": {
+    "wage": 35,
+    "burden": 1.35,
+    "markup": 1.43
+  },
+  "demo": {
+    "wage": 35,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "framing": {
+    "wage": 38,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "plumbing": {
+    "wage": 42,
+    "burden": 1.35,
+    "markup": 1.75
+  },
+  "electrical": {
+    "wage": 45,
+    "burden": 1.35,
+    "markup": 1.75
+  },
+  "tiling": {
+    "wage": 45,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "drywall": {
+    "wage": 35,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "painting": {
+    "wage": 35,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "cabinetry": {
+    "wage": 38,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "waterproofing": {
+    "wage": 42,
+    "burden": 1.35,
+    "markup": 1.75
+  }
+}

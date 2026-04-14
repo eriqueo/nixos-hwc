@@ -22,6 +22,7 @@
 let
   palettes = rec {
     deep-nord = import ./palettes/deep-nord.nix { };
+    hwc       = import ./palettes/hwc.nix { };
     gruv      = import ./palettes/gruv.nix { };
   };
 in
@@ -29,10 +30,23 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
+  options.hwc.home.theme = {
+    palette = lib.mkOption {
+      type = lib.types.enum [ "deep-nord" "gruv" "hwc" ];
+      default = "hwc";
+      description = "Active theme palette (single source of truth).";
+    };
+
+    colors = lib.mkOption {
+      type = lib.types.attrs;
+      default = {};
+      description = "Materialized color tokens from selected palette.";
+    };
+  };
+
   imports = [
     ./templates/gtk.nix
     ./fonts/index.nix
-    ./options.nix
   ];
 
   #==========================================================================

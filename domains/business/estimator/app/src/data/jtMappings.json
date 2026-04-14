@@ -1,0 +1,48 @@
+{
+  "codes": {
+    "0000": "22Nm3uGRAMmG",
+    "0100": "22Nm3uGRAMmH",
+    "0200": "22Nm3uGRAMmJ",
+    "0600": "22Nm3uGRAMmN",
+    "0800": "22Nm3uGRAMmQ",
+    "1000": "22Nm3uGRAMmS",
+    "1100": "22Nm3uGRAMmT",
+    "1300": "22Nm3uGRAMmV",
+    "1400": "22Nm3uGRAMmW",
+    "1500": "22Nm3uGRAMmX",
+    "1700": "22Nm3uGRAMmZ",
+    "1800": "22Nm3uGRAMma",
+    "1900": "22Nm3uGRAMmb",
+    "2000": "22Nm3uGRAMmc",
+    "2100": "22Nm3uGRAMmd",
+    "2200": "22Nm3uGRAMme",
+    "2300": "22Nm3uGRAMmf",
+    "2400": "22Nm3uGRAMmg",
+    "2500": "22Nm3uGRAMmh",
+    "2600": "22Nm3uGRAMmi",
+    "2800": "22Nm3uGRAMmk",
+    "3000": "22Nm3uGRAMmn",
+    "3100": "22Nm3uGRAMmp"
+  },
+  "types": {
+    "Admin": "22PJuNqewZmV",
+    "Labor": "22Nm3uGRAMmq",
+    "Materials": "22Nm3uGRAMmr",
+    "Other": "22Nm3uGRAMmt",
+    "Selections": "22PQ4KZExZjP",
+    "Subcontractor": "22Nm3uGRAMms"
+  },
+  "units": {
+    "Cubic Yards": "22Nm3uGRAMm5",
+    "Days": "22Nm3uGRAMm6",
+    "Each": "22Nm3uGRAMm7",
+    "Gallons": "22Nm3uGRAMm8",
+    "Hours": "22Nm3uGRAMm9",
+    "Linear Feet": "22Nm3uGRAMmA",
+    "Lump Sum": "22Nm3uGRAMmB",
+    "Pounds": "22Nm3uGRAMmC",
+    "Square Feet": "22Nm3uGRAMmD",
+    "Squares": "22Nm3uGRAMmE",
+    "Tons": "22Nm3uGRAMmF"
+  }
+}

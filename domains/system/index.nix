@@ -1,19 +1,16 @@
 # domains/system/index.nix — domain aggregator
 { ... }:
 {
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
   imports = [
-    ./core/index.nix
-    ./networking/index.nix  # Promoted from services/ per Charter v10.3
-    ./services/index.nix
-    ./storage/index.nix
-    ./users/index.nix
+    ./core/index.nix           # packages, login, authentik
+    ./gpu.nix                  # NVIDIA/AMD/Intel GPU acceleration
+    ./hardware.nix             # audio, keyboard, bluetooth, monitoring
+    ./networking.nix           # SSH, Tailscale, Samba, firewall
+    ./mounts.nix               # storage tiers
+    ./usb-automount.nix        # USB drive auto-mount + NTFS fixperms
+    ./users.nix                # accounts, identity, SSH
+    ./mcp/index.nix            # Infrastructure MCP server
   ];
 
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
   config = {};
 }

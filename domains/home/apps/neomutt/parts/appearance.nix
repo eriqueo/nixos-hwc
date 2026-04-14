@@ -2,8 +2,8 @@
 { lib, pkgs, config, theme, osConfig ? {}, ... }:
 
 let
-  # Accounts (now under hwc.home.mail.accounts)
-  accVals   = lib.attrValues (config.hwc.home.mail.accounts or {});
+  # Accounts (now under hwc.mail.accounts)
+  accVals   = lib.attrValues (config.hwc.mail.accounts or {});
   haveAccs  = accVals != [];
 
   # Theme tokens (t may be partial; m is optional mono attributes)

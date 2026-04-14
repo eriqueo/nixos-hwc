@@ -1,19 +1,26 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/jellyfin-media-player/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.jellyfin-media-player;
-  enabled = cfg.enable or false;
 in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.jellyfin-media-player = {
+    enable = lib.mkEnableOption "Jellyfin Media Player";
+
+    autoStart = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Start Jellyfin Media Player automatically on login.";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.jellyfin-media-player ];
 
     # Optional autostart as a user service so it works across sessions.

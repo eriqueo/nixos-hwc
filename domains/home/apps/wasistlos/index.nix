@@ -1,24 +1,20 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/wasistlos/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.wasistlos;
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.wasistlos = {
+    enable = lib.mkEnableOption "WasIstLos WhatsApp client";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      wasistlos
-    ];
+    home.packages = [ pkgs.wasistlos ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

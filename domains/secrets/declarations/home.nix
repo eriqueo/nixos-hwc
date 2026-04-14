@@ -33,6 +33,18 @@
       owner = "root";
       group = "secrets";
     };
+    google-oauth-client-id = {
+      file = ../parts/home/google-oauth-client-id.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    google-oauth-client-secret = {
+      file = ../parts/home/google-oauth-client-secret.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
 
     openai-api-key = {
       file = ../parts/home/openai-api-key.age;
@@ -41,5 +53,37 @@
       group = "secrets";
     };
 
+    # Scraper credentials for social media login
+    scraper-facebook-email = {
+      file = ../parts/home/scraper/facebook-email.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    scraper-facebook-password = {
+      file = ../parts/home/scraper/facebook-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    scraper-nextdoor-email = {
+      file = ../parts/home/scraper/nextdoor-email.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    scraper-nextdoor-password = {
+      file = ../parts/home/scraper/nextdoor-password.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+  apple-app-pw = {
+    file = ../parts/home/apple-app-pw.age;
+    mode = "0440";
+    owner = "root";
+    group = "secrets";
+  };
   };
 }

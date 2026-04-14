@@ -1,0 +1,17 @@
+{
+  "categories": [
+    {
+      "tag": "receipts",
+      "display": "receipts_R",
+      "spaceKey": "R",
+      "group": "money"
+    },
+    {
+      "tag": "ads",
+      "display": "ads_g",
+      "spaceKey": "g",
+      "group": "business"
+    }
+  ],
+  "flags": []
+}

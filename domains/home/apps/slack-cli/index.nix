@@ -1,9 +1,8 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/slack-cli/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.slack-cli;
 
-  # Rename binary from 'slack' to 'slack-term' to avoid collision with desktop client
   slack-cli-wrapped = pkgs.symlinkJoin {
     name = "slack-cli-wrapped";
     paths = [ pkgs.slack-cli ];
@@ -18,7 +17,9 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.slack-cli = {
+    enable = lib.mkEnableOption "Slack CLI (terminal client)";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
@@ -26,8 +27,4 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ slack-cli-wrapped ];
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

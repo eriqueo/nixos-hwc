@@ -21,24 +21,27 @@
     ./hardware.nix
     "${modulesPath}/hardware/cpu/intel-npu.nix"
 
-    # Profiles that define the machine's capabilities.
-    # The system.nix profile is now the main entry point for all system services.
-    ../../profiles/system.nix
-    ../../profiles/home.nix
-    ./home.nix
-    ../../profiles/security.nix
-    ../../profiles/ai.nix  # Enable local AI for laptop
+    # Profiles — core (system/paths/secrets) + session (GUI/audio/HM)
+    ../../profiles/core.nix
+    ../../profiles/session.nix
+    # Machine-specific HM overrides imported via home-manager.users.eric below
 
-    # Infrastructure domain for GPU only (not storage)
-    ../../domains/infrastructure/hardware/index.nix
-
-    # Virtualization domain for WinApps/VMs (without full infrastructure profile)
-    ../../domains/infrastructure/virtualization/index.nix
-
-    # WinApps domain for Windows application integration
-    ../../domains/infrastructure/winapps/index.nix
+    # Domains — laptop-specific capabilities
+    ../../domains/ai/index.nix
+    ../../domains/automation/index.nix
+    ../../domains/notifications/index.nix
+    ../../domains/networking/index.nix
   ];
-
+  nix.settings = {
+    substituters = [
+      "https://cache.nixos.org/"
+      "https://cache.nixos-cuda.org"
+    ];
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
+    ];
+  };
   # Blender 3D modeling with GPU rendering support (configured in profiles/home.nix)
   # External presets stored in ~/500_media/540_blender
 
@@ -47,6 +50,7 @@
   #============================================================================
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.kernelParams = [ "button.lid_init_state=open" ];
   networking.hostName = "hwc-laptop";
   system.stateVersion = "24.05";
 
@@ -60,9 +64,9 @@
     # All settings are now consolidated under the 'settings' attribute set.
     settings = {
       Login = {
-        # Ignore lid close to prevent suspend during remote access
-        HandleLidSwitch = "ignore";
-        HandleLidSwitchExternalPower = "ignore";
+        # Base: suspend on lid close (inhibitor service blocks at runtime)
+        HandleLidSwitch = "suspend";
+        HandleLidSwitchExternalPower = "suspend";
         # Suspend on power button (hibernation disabled with zram)
         HandlePowerKey = "suspend";
         # Disable idle suspend (laptop left running for extended period)
@@ -80,86 +84,53 @@
   #============================================================================
 
   # --- System Services Configuration ---
-  # Enable the core shell environment with development tools.
-  hwc.system.services.shell = {
-    enable = true;
-    development.enable = true;
+  hwc.system.core.shell.enable = true;
+
+  # BOM-PROOF LOGIN: Ensure 'il0wwlm?' always works for 'eric' and 'root' on laptop.
+  # This makes the login screen independent of secret decryption.
+  hwc.system.users.user.useSecrets = false;
+  hwc.secrets.emergency = {
+    hashedPassword = lib.mkForce "$6$McKMuWn2JliY4HR.$0pDd/FJPdbENIqCwXIMsXXEZcaLOriieUZlXEb0YxnqAUrJiZ05SIdVJVQ5BnR3TksU9DGoZcGBGzB5qiFT0b/";
+    hashedPasswordFile = lib.mkForce null;
   };
 
   # Enable hardware services for keyboard remapping and audio.
-  hwc.system.services.hardware = {
+  hwc.system.hardware = {
     enable = true;
     keyboard.enable = true;
     audio.enable = true;
     bluetooth.enable = true;
     monitoring.enable = true;
     fanControl.enable = true;
-  };
-
-  # ntfy notification system for laptop alerts
-  # Multi-topic architecture: critical, alerts, backups, media, monitoring, updates, ai
-  # See: docs/infrastructure/ntfy-notification-classes.md
-  hwc.system.services.ntfy = {
-    enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";  # Self-hosted ntfy via Tailscale at /notify subpath
-    defaultTopic = "hwc-laptop-events";  # General laptop events
-    defaultTags = [ "hwc" "laptop" ];
-    defaultPriority = 3;  # Normal priority for laptop
-    hostTag = true;       # Adds "host-hwc-laptop" tag automatically
-
-    # Authentication disabled for self-hosted (can enable if needed)
-    auth.enable = false;
-    # To enable auth, add secrets and configure:
-    # auth = {
-    #   enable = true;
-    #   method = "token";
-    #   tokenFile = "/run/secrets/ntfy-token";
-    # };
-  };
-
-  # Backup configuration for laptop
-  # Supports plugging in external drives for local backups
-  hwc.system.services.backup = {
-    enable = true;
-
-    # Local backup when external drive is connected
-    local = {
+    peripherals = {
       enable = true;
-      mountPoint = config.hwc.paths.backup;  # Laptop backup SSD
-      keepDaily = 5;    # Keep 5 daily backups
-      keepWeekly = 2;   # Keep 2 weekly backups
-      keepMonthly = 3;  # Keep 3 monthly backups
-      minSpaceGB = 20;  # Require 20GB free space
+      avahi = true;  # Network printer discovery
+      drivers = [ pkgs.brlaser pkgs.hplip ];  # HP and Brother drivers
     };
-
-    # Cloud backup as fallback (optional)
-    cloud.enable = false;  # Set to true to enable cloud backup
-    protonDrive.enable = false;  # TODO: Configure rclone-proton-config secret
-
-    # Notifications configuration
-    notifications = {
-      enable = true;
-      ntfy = {
-        enable = true;
-        onSuccess = false;
-        topic = "hwc-critical";  # Backup failures are critical (P5)
-        onFailure = true;
-      };
-    };
-
-    # Disable automatic scheduling to avoid backups during rebuild; run manually when desired
-    schedule.enable = false;
-
   };
+
+  # Gotify notification system for laptop alerts
+  # Per-app tokens: each service gets its own gotify application token
+  hwc.notifications.send.gotify = {
+    enable = true;
+    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted gotify via Tailscale HTTPS
+    defaultTokenFile = config.hwc.secrets.api."gotify-token-laptop" or null;
+    defaultPriority = 5;  # Normal priority for laptop
+    hostTag = true;       # Prepends "[host: hwc-laptop]" to messages
+  };
+
+  # Rsync backup DISABLED - consolidated to Borg
+  # TODO: Enable Borg on laptop when backup drive is mounted
+  hwc.data.backup.enable = false;
 
   # Enable the declarative VPN service using the official CLI.
-  hwc.system.services.vpn.protonvpn.enable = true;
+  hwc.networking.vpn.protonvpn.enable = true;
 
   # Proton Mail Bridge managed by Home Manager user service (NOT system service)
-  # hwc.system.services.protonmail-bridge.enable = false;  # Disabled in profile
+  # hwc.home.mail.bridge.system.enable = false;  # Disabled in profile
 
   # Enable session management (greetd autologin, sudo, lingering).
-  hwc.system.services.session = {
+  hwc.system.core.session = {
     enable = true;
     loginManager.enable = true;
     loginManager.autoLoginUser = "eric";
@@ -190,16 +161,74 @@
 
     ssh.enable = true;            # Enable the SSH server.
     firewall.level = "strict";
+    firewall.extraTcpPorts = [ 56037 ];
+    firewall.extraUdpPorts = [ 56037 ];
     tailscale.enable = true;
     tailscale.extraUpFlags = [ "--accept-dns" ];
+    nfs.client.enable = true;
   };
 
+  # Syncthing — bidirectional home folder sync with hwc-server
+  hwc.data.syncthing = {
+    enable = true;
+    devices."hwc-server" = {
+      id = "5UCUDT4-CUUGX7U-F2XVLET-SE3QGCA-JRYGXK3-45MQOBP-SYMQZM7-O653IAA";
+      addresses = [ "tcp://100.114.232.124:22000" ];  # Server Tailscale IP
+    };
+    folders = {
+      "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-server" ]; };
+      "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-server" ]; };
+      "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; };
+      "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
+    };
+  };
+
+  # NFS mount: shared folder from server over Tailscale
+  # Note: Literal path to avoid infinite recursion (fileSystems → paths → users → rpcbind → fileSystems)
+  # Matches hwc.paths.user.shared default
+  fileSystems."/home/eric/600_shared" = {
+    device = "100.114.232.124:/home/eric/600_shared";
+    fsType = "nfs";
+    options = [
+      "nfsvers=4.2"
+      "soft"                          # Return errors instead of hanging if server unreachable
+      "timeo=150"                     # 15-second timeout
+      "x-systemd.automount"          # Mount on first access, not at boot
+      "x-systemd.idle-timeout=600"   # Unmount after 10 min idle
+      "noauto"                        # Don't mount at boot (automount handles it)
+      "_netdev"                       # Network-dependent mount
+    ];
+  };
+
+  # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver
+  # UUID-based so it works regardless of device enumeration order (/dev/sdb vs /dev/sdc etc.)
+  # noauto: not mounted at boot (USB may not be present). Mount manually: sudo mount /mnt/seagate
+  # seagate-fixperms.service: chowns root-owned dirs after each mount so Yazi can delete
+  fileSystems."/mnt/seagate" = {
+    device = "/dev/disk/by-uuid/A802BE5102BE23EA";
+    fsType = "ntfs3";
+    options = [
+      "uid=1000" "gid=100" "dmask=0000" "fmask=0000"
+      "force" "iocharset=utf8"
+      "noauto" "nofail"
+    ];
+  };
+
+  systemd.tmpfiles.rules = [ "d /mnt/seagate 0755 root root -" ];
+
+  # USB auto-mount for external drives + NTFS fixperms for Seagate
+  hwc.system.usb.autoMount.enable = true;
+  hwc.system.usb.ntfsFixperms = [{
+    mountPoint = "/mnt/seagate";
+    afterUnit = "mnt-seagate.mount";
+  }];
+
   #============================================================================
-  # === [domains/infrastructure/hardware] Orchestration ========================
+  # === [domains/system/hardware] Orchestration ================================
   #============================================================================
 
   # GPU capability (remains unchanged).
-  hwc.infrastructure.hardware.gpu = {
+  hwc.system.hardware.gpu = {
     enable = true;
     type = "nvidia";
     nvidia = {
@@ -219,66 +248,9 @@
   };
 
   #============================================================================
-  # === [domains/infrastructure/virtualization] Orchestration ==================
-  #============================================================================
-  # Minimal virtualization for WinApps/VMs. We avoid pulling full infra profile.
-  hwc.infrastructure.virtualization = {
-    enable = true;
-    spiceSupport = false;  # no SPICE USB redirection on laptop
-  };
-
-  # WinApps configuration for Excel access
-  hwc.infrastructure.winapps = {
-    enable = true;
-    rdpSettings = {
-      vmName = "RDPWindows";
-      ip = "192.168.122.10";  # Update this after VM creation
-      user = "eric";  # Update with Windows username
-    };
-    multiMonitor = true;
-    debug = false;
-  };
-
-  # Fabric AI integration - REMOVED
-  # The Fabric app configuration has been removed from the system.
-  # See commit: refactor: cleanup unused AI tools and improve server configuration
-
-  # Libvirt/QEMU: make OVMF visible and avoid extra groups by using wheel sockets.
-  virtualisation.libvirtd = {
-    # Use wheel for socket perms so you don't need extra groups.
-    extraConfig = ''
-      unix_sock_group = "wheel"
-      unix_sock_ro_perms = "0770"
-      unix_sock_rw_perms = "0770"
-    '';
-
-    # OVMF is now available by default with QEMU
-    qemu = {
-      runAsRoot = lib.mkForce true;     # fixes OVMF metadata enumeration edge cases
-      # OVMF images are now available by default in newer versions
-    };
-  };
-
-  # Container engines enabled for Ollama AI workloads
+  # VIRTUALIZATION
   # Podman is required by hwc.ai.ollama module
-  virtualisation.docker.enable = lib.mkForce false;  # Use podman, not docker
-
-  # --- Declarative libvirt storage pool (requires NixVirt in flake) --
-  # Commented out until NixVirt module is imported in flake.nix
-  # virtualisation.libvirt.pools = [
-  #   {
-  #     name = "ISOs";
-  #     present = true;
-  #     type = "dir";
-  #     target = {
-  #       path = "${config.hwc.paths.hot}/ISOs";
-  #       owner = "root";
-  #       group = "root";
-  #       mode  = "0755";
-  #     };
-  #     autostart = true;
-  #   }
-  # ];
+  virtualisation.docker.enable = lib.mkForce false;
 
   #============================================================================
   # === [profiles/home.nix] Orchestration =====================================
@@ -304,7 +276,8 @@
   hwc.paths.hot.root = "/home/eric/500_media/hot";     # Override: laptop uses hot for active work
   hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
 
-  # Machine-specific Home Manager overrides live in ./home.nix
+  # Machine-specific Home Manager overrides (HM-format, shared with standalone HM)
+  home-manager.users.eric = { imports = [ ./home.nix ]; };
 
   #============================================================================
   # AI DOMAIN CONFIGURATION (Laptop)
@@ -312,8 +285,6 @@
   # Profile auto-detection: laptop (GPU: nvidia, RAM: 32GB < 16GB threshold)
   # Result: Conservative limits (2 cores, 4GB, 70°C warning, 80°C critical)
   hwc.ai = {
-    enable = true;
-
     # Profile selection (auto-detects laptop based on RAM/GPU)
     profiles.selected = "auto";
 
@@ -343,25 +314,14 @@
       # - Models pulled on first boot
     };
 
-    # AnythingLLM - Local AI assistant with file access
-    # Access: http://localhost:3002
-    anything-llm = {
-      enable = false;
-      # Mount ~/.nixos for AI to read/analyze NixOS configs
-      workspace.nixosDir = true;
-      # Default uses llama3.2:3b and nomic-embed-text from Ollama
-    };
-
     # Local AI workflows disabled (can enable if needed)
     local-workflows.enable = false;
   };
 
   # Fix Ollama systemd service type (container sd-notify unreliable)
-  systemd.services = lib.mkIf config.hwc.ai.ollama.enable {
-    podman-ollama.serviceConfig = {
-      Type = lib.mkForce "forking";
-      NotifyAccess = lib.mkForce "none";
-    };
+  systemd.services.podman-ollama.serviceConfig = lib.mkIf config.hwc.ai.ollama.enable {
+    Type = lib.mkForce "forking";
+    NotifyAccess = lib.mkForce "none";
   };
 
   # Static hosts for local services (remains unchanged).
@@ -471,4 +431,22 @@
   ];
 
   programs.dconf.enable = true;
+  services.flatpak.enable = true;
+  environment.sessionVariables.XDG_DATA_DIRS = [
+    "/var/lib/flatpak/exports/share"
+    "$HOME/.local/share/flatpak/exports/share"
+  ];
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    glib glibc gtk3 pango cairo gdk-pixbuf atk
+    nss nspr dbus expat libdrm mesa
+    alsa-lib cups libpulseaudio
+    libX11 libXcomposite libXcursor libXdamage libXext libXfixes
+    libXi libXrandr libXrender libXtst libxcb libxscrnsaver
+    at-spi2-atk at-spi2-core
+    libgbm libxkbcommon
+  ];
+
+  # Allow password auth for SSH (same as server)
+  services.openssh.settings.PasswordAuthentication = lib.mkForce true;
 }

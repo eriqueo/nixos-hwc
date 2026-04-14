@@ -1,0 +1,206 @@
+{
+  "generated_at": "2026-04-12T06:01:34-06:00",
+  "sections": {
+    "calendar": {
+      "events": [
+        {
+          "summary": "Dempsey walkthrough — mudroom measurements",
+          "start": "2026-04-04T09:00:00-06:00",
+          "end": "2026-04-04T10:30:00-06:00",
+          "location": "4218 Cottonwood Rd, Bozeman",
+          "allDay": false
+        },
+        {
+          "summary": "Pick up truck from Les Schwab",
+          "start": "2026-04-04T14:00:00-06:00",
+          "end": "2026-04-04T14:30:00-06:00",
+          "location": null,
+          "allDay": false
+        }
+      ]
+    },
+    "jobs": {
+      "active": [
+        {
+          "name": "Mudroom Conversion",
+          "number": "286",
+          "phase": "3. Budgeting",
+          "status": "Estimating",
+          "account": "Rachel Dempsey",
+          "city": "Bozeman",
+          "description": "Convert attached garage bay to mudroom with custom built-ins, heated tile floor, and exterior dutch door",
+          "is_test": false
+        },
+        {
+          "name": "test job delete me",
+          "number": "999",
+          "phase": "1. Contacted",
+          "status": "New Lead",
+          "account": "Test Account",
+          "city": null,
+          "description": null,
+          "is_test": true
+        },
+        {
+          "name": "rrt ytjs;",
+          "number": "998",
+          "phase": "1. Contacted",
+          "status": "New Lead",
+          "account": "Test",
+          "city": null,
+          "description": null,
+          "is_test": true
+        }
+      ]
+    },
+    "leads": {
+      "new_count": 0,
+      "items": []
+    },
+    "overdue": {
+      "count": 0,
+      "total_amount": 0,
+      "items": []
+    },
+    "system": {
+      "overall": "green",
+      "services_active": 55,
+      "services_failed": 0,
+      "containers_running": 42,
+      "containers_stopped": 0,
+      "storage": [
+        {
+          "mount": "/",
+          "percent": 64,
+          "available": "160G"
+        },
+        {
+          "mount": "/mnt/hot",
+          "percent": 13,
+          "available": "759G"
+        },
+        {
+          "mount": "/mnt/media",
+          "percent": 70,
+          "available": "2.2T"
+        }
+      ]
+    },
+    "mail": {
+      "healthy": true,
+      "last_sync": "2026-04-04T05:47:00-06:00",
+      "summary": "All accounts synced, 2 new messages"
+    }
+  },
+  "alerts": [],
+  "mail_triage": {
+    "generated_at": "2026-04-12T06:21:00Z",
+    "query_window_hours": 24,
+    "total_unread": 5,
+    "buckets": {
+      "urgent": [],
+      "review": [
+        {
+          "thread_id": "00000000000046c1",
+          "subject": "We received your Intuit subscription payment!",
+          "from_name": "Intuit",
+          "from_address": "intuit.com",
+          "date_relative": "4 mins. ago",
+          "tags": [
+            "eriqueokeefe",
+            "finance",
+            "flagged",
+            "inbox",
+            "notification",
+            "personal",
+            "personal_google",
+            "personal_proton",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "QuickBooks subscription payment confirmation — verify charge amount matches expected plan.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Flagged financial notification from active accounting platform"
+        },
+        {
+          "thread_id": "00000000000046c0",
+          "subject": "GLM-5.1 on Ollama's cloud",
+          "from_name": "Ollama",
+          "from_address": "ollama.com",
+          "date_relative": "Today 01:29",
+          "tags": [
+            "flagged",
+            "inbox",
+            "tech",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Ollama announcing GLM-5.1 model availability on their cloud platform.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Tech newsletter from subscribed source"
+        },
+        {
+          "thread_id": "00000000000046bc",
+          "subject": "Your statement is available",
+          "from_name": "Bank of America",
+          "from_address": "bankofamerica.com",
+          "date_relative": "Yest. 21:43",
+          "tags": [
+            "bank",
+            "eriqueokeefe",
+            "finance",
+            "flagged",
+            "inbox",
+            "personal",
+            "personal_google",
+            "personal_proton",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Monthly Bank of America statement ready for review.",
+          "suggested_action": "flag_action",
+          "urgency_reason": "Bank statement — may need to reconcile or download for records"
+        }
+      ],
+      "noise": [
+        {
+          "thread_id": "00000000000046bd",
+          "subject": "Please provide feedback + $1,000 chance to win",
+          "from_name": "Walmart Customer Experience",
+          "from_address": "medallia.com",
+          "date_relative": "Yest. 22:02",
+          "tags": [
+            "inbox",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Walmart post-purchase survey disguised as sweepstakes bait.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "00000000000046b2",
+          "subject": "7 automations for people who hate mornings ☀️",
+          "from_name": "IFTTT",
+          "from_address": "ifttt.com",
+          "date_relative": "Fri. 22:54",
+          "tags": [
+            "inbox",
+            "personal_proton",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "IFTTT marketing email promoting automation templates.",
+          "suggested_action": "trash"
+        }
+      ]
+    },
+    "stats": {
+      "urgent_count": 0,
+      "review_count": 3,
+      "noise_count": 2
+    }
+  }
+}

@@ -1,18 +1,20 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/mpv/index.nix
+{ config, lib, pkgs, ... }:
 let
-  enabled = config.hwc.home.apps.mpv.enable or false;
+  cfg = config.hwc.home.apps.mpv;
 in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.mpv = {
+    enable = lib.mkEnableOption "mpv media player";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf cfg.enable {
     programs.mpv = {
       enable = true;
       config = {

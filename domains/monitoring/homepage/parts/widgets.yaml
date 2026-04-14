@@ -1,0 +1,16 @@
+- search:
+    provider: google
+    target: _blank
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+    label: System
+- resources:
+    disk: /mnt/backup
+    label: Backup Pool
+- datetime:
+    text_size: xl
+    format:
+      dateStyle: short
+      timeStyle: short

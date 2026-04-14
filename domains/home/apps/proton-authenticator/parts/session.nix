@@ -9,22 +9,11 @@ in
   # ProtonAuthenticator desktop package
   packages = [ pkgs.proton-authenticator ];
 
-  # User services (unused for autostart; autostart handled via XDG entry)
+  # User services (unused - autostart handled via Hyprland exec-once)
   services = { };
 
-  # XDG autostart entry to launch hidden into the system tray (Waybar tray)
-  autostartFiles = lib.mkIf cfg.autoStart {
-    "autostart/proton-authenticator.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=Proton Authenticator
-      Comment=Proton Authenticator auto-start
-      Exec=${pkgs.proton-authenticator}/bin/proton-authenticator --hidden
-      Icon=proton-authenticator
-      Terminal=false
-      X-GNOME-Autostart-enabled=true
-    '';
-  };
+  # XDG autostart removed - exec-once in Hyprland handles boot-only startup
+  autostartFiles = { };
 
   # Environment variables
   env = {

@@ -1,4 +1,4 @@
-# domains/server/ai/local-workflows/parts/file-cleanup.nix
+# domains/ai/local-workflows/parts/file-cleanup.nix
 #
 # AI-powered file cleanup and organization agent
 

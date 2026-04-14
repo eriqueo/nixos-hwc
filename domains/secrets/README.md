@@ -10,28 +10,27 @@
 domains/secrets/
 ├── index.nix            # Aggregator (imports declarations, API, emergency, hardening)
 ├── declarations/        # Data-only age.secrets declarations
-│   ├── options.nix
+│   ├── index.nix        # Aggregates all declaration files
 │   ├── caddy.nix
 │   ├── home.nix
 │   ├── infrastructure.nix
-│   ├── server.nix
+│   ├── services.nix     # Service credentials (ARR stack, APIs, etc.)
 │   └── system.nix
-├── parts/               # Reusable fragments for declaration files
-│   ├── caddy/
-│   ├── home/
-│   ├── infrastructure/
-│   ├── networking/
-│   ├── server/
-│   └── system/
+├── parts/               # Encrypted .age files organized by domain
+│   ├── caddy/           # TLS certificates
+│   ├── home/            # Email, OAuth, scraper credentials
+│   ├── infrastructure/  # Database, VPN, camera credentials
+│   ├── services/        # Service API keys and passwords
+│   └── system/          # User passwords, SSH keys, backups
 ├── secrets-api.nix      # Stable path facade → `hwc.secrets.api.*`
 ├── emergency.nix        # Recovery account/password wiring
 ├── hardening.nix        # Firewall/SSH/fail2ban/audit toggles under `hwc.secrets.hardening.*`
-├── options.nix          # Domain options
-└── (encrypted *.age files live outside this tree)
+└── vaultwarden/         # Self-hosted Bitwarden password manager (hwc.secrets.vaultwarden.*)
+    └── index.nix
 ```
 
 ## How It Fits Together
-1. **Declarations** (`declarations/*.nix`): define `age.secrets.<name>` entries grouped by domain (home, system, server, infrastructure, caddy). No logic beyond declarations.
+1. **Declarations** (`declarations/*.nix`): define `age.secrets.<name>` entries grouped by domain (home, system, services, infrastructure, caddy). No logic beyond declarations.
 2. **Parts**: shared snippets imported by declaration files to avoid duplication.
 3. **API Facade** (`secrets-api.nix`): maps decrypted paths to `config.hwc.secrets.api.*` so consumers never touch `age.secrets.*` directly.
 4. **Emergency** (`emergency.nix`): opt-in recovery credentials and wiring for lockout scenarios.
@@ -46,3 +45,6 @@ domains/secrets/
 - System lane modules read from `hwc.secrets.api.*` and must avoid declaring secrets themselves.
 - Permission model: secrets are owned by `root:secrets` with mode `0440` as defined in declaration files.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
+
+## Changelog
+- 2026-03-26: Added Vaultwarden self-hosted password manager module

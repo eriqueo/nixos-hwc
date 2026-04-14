@@ -44,22 +44,32 @@ let
     ${ollamaWrapperTool}/bin/ollama-wrapper lint small "$@"
   '';
 
-  # Grebuild integration script
-  grebuildDocsTool = pkgs.writeScript "grebuild-docs" (''
-    #!${pkgs.bash}/bin/bash
-    export PATH="${lib.makeBinPath [ pkgs.coreutils pkgs.curl pkgs.git pkgs.systemd pkgs.util-linux pkgs.libnotify pkgs.nettools ollamaWrapperTool ]}:$PATH"
-    export NIXOS_DIR="${config.hwc.paths.nixos}"
-    export OUTPUT_DIR="${config.hwc.paths.nixos}/docs/ai-generated"
-    export OLLAMA_ENDPOINT="http://localhost:11434"
-    export VERBOSE="false"
-  '' + builtins.readFile ./parts/grebuild-docs.sh);
-
 in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.ai.tools = {
+    enable = lib.mkEnableOption "AI CLI tools";
+
+    charter = {
+      charterPath = lib.mkOption {
+        type = lib.types.str;
+        default = "${config.hwc.paths.nixos}/CHARTER.md";
+        description = "Path to CHARTER.md file";
+      };
+    };
+
+    logging = {
+      enable = lib.mkEnableOption "AI tool logging";
+
+      logDir = lib.mkOption {
+        type = lib.types.str;
+        default = "${config.hwc.paths.user.home}/.local/share/ai-logs";
+        description = "Directory for AI tool logs";
+      };
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
@@ -79,21 +89,6 @@ in
     systemd.tmpfiles.rules = lib.optionals cfg.logging.enable [
       "d ${cfg.logging.logDir} 0755 eric users -"
     ];
-
-    # Post-rebuild AI documentation service (grebuild integration)
-    systemd.services.post-rebuild-ai-docs = {
-      description = "AI Tools - Post-rebuild documentation generator";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        User = "root";
-        ExecStart = "${pkgs.bash}/bin/bash ${grebuildDocsTool}";
-        StandardOutput = "journal";
-        StandardError = "journal";
-      };
-    };
 
     #==========================================================================
     # VALIDATION

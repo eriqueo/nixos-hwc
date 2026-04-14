@@ -24,20 +24,18 @@ if [ -z "$GPU_TEMP" ]; then
 fi
 
 if [ "$GPU_TEMP" -gt "$CRITICAL_TEMP" ]; then
-  # Critical temperature - P5
-  hwc-ntfy-send --priority 5 --tag gpu,temperature,critical \
-    hwc-critical \
-    "🔥 CRITICAL: GPU Temperature" \
+  # Critical temperature - priority 10
+  hwc-gotify-send --priority 10 \
+    "CRITICAL: GPU Temperature" \
     "[$HOSTNAME] $GPU_NAME at ${GPU_TEMP}°C!
 Utilization: ${GPU_UTIL}%
 Memory: $GPU_MEM
 Thermal throttling likely. Check cooling."
 
 elif [ "$GPU_TEMP" -gt "$WARNING_TEMP" ]; then
-  # Warning temperature - P4
-  hwc-ntfy-send --priority 4 --tag gpu,temperature,warning \
-    hwc-alerts \
-    "🌡️ GPU Temperature Warning" \
+  # Warning temperature - priority 7
+  hwc-gotify-send --priority 7 \
+    "GPU Temperature Warning" \
     "[$HOSTNAME] $GPU_NAME at ${GPU_TEMP}°C
 Utilization: ${GPU_UTIL}%
 Memory: $GPU_MEM
@@ -45,11 +43,9 @@ Monitor closely."
 fi
 
 # Check for sustained high utilization (>80% for extended period)
-# This could be tracked with state file, but for now just notify if critical
 if [ "$GPU_UTIL" -gt 95 ]; then
-  hwc-ntfy-send --priority 2 --tag gpu,utilization \
-    hwc-monitoring \
-    "💻 GPU High Utilization" \
+  hwc-gotify-send --priority 3 \
+    "GPU High Utilization" \
     "[$HOSTNAME] $GPU_NAME at ${GPU_UTIL}%
 Temperature: ${GPU_TEMP}°C
 Memory: $GPU_MEM"

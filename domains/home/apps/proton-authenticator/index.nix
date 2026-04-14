@@ -1,5 +1,5 @@
-{ config, lib, pkgs, osConfig ? {}, ...}:
-
+# domains/home/apps/proton-authenticator/index.nix
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.proton-authenticator;
   session = import ./parts/session.nix { inherit lib pkgs config; };
@@ -9,26 +9,23 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.proton-authenticator = {
+    enable = lib.mkEnableOption "Proton Authenticator";
+
+    autoStart = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Auto-start Proton Authenticator on login";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    # Packages that belong with the app
     home.packages = (session.packages or []) ++ [ toggleScript ];
-
-    # Session variables
     home.sessionVariables = (session.env or {});
-
-    # User services
     systemd.user.services = (session.services or {});
-
-    # XDG config files (autostart entries, etc.)
     xdg.configFile = (session.autostartFiles or {});
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

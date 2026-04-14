@@ -9,8 +9,8 @@ let
   cfg = config.hwc.ai.profiles;
 
   # Hardware detection logic
-  hasGPU = config.hwc.infrastructure.hardware.gpu.enable or false;
-  gpuType = config.hwc.infrastructure.hardware.gpu.type or "none";
+  hasGPU = config.hwc.system.hardware.gpu.enable or false;
+  gpuType = config.hwc.system.hardware.gpu.type or "none";
 
   # Memory detection (convert to GB)
   totalRAM_MB = config.hardware.memorySize or 8192;  # Default to 8GB if unknown

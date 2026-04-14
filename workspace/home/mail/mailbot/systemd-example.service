@@ -1,0 +1,36 @@
+# Example systemd user service for automated mailbot cleanup
+#
+# Installation:
+#   1. Copy to ~/.config/systemd/user/mailbot-cleanup.service
+#   2. Copy systemd-example.timer to ~/.config/systemd/user/mailbot-cleanup.timer
+#   3. Run: systemctl --user daemon-reload
+#   4. Run: systemctl --user enable --now mailbot-cleanup.timer
+#
+# Manual run:
+#   systemctl --user start mailbot-cleanup.service
+#
+# Check logs:
+#   journalctl --user -u mailbot-cleanup.service
+
+[Unit]
+Description=Gmail bulk unsubscribe cleanup
+Documentation=file://%h/.nixos/workspace/projects/mailbot/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/.nixos/workspace/projects/mailbot
+ExecStart=%h/.nixos/workspace/projects/mailbot/.venv/bin/mailbot --max 500
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening (optional)
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.nixos/workspace/projects/mailbot
+
+[Install]
+WantedBy=default.target

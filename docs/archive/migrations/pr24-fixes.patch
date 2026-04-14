@@ -1,0 +1,69 @@
+--- a/domains/server/containers/beets/options.nix
++++ b/domains/server/containers/beets/options.nix
+@@ -20,12 +20,12 @@
+
+     musicInbox = lib.mkOption {
+       type = lib.types.str;
+-      default = config.hwc.paths.hot.downloads.music or "/mnt/hot/downloads/music";
++      default = "${config.hwc.paths.hot.downloads}/music";
+       description = "Path for music download staging area";
+     };
+
+     beetsDir = lib.mkOption {
+       type = lib.types.str;
+-      default = "${config.hwc.paths.arr.downloads}/beets";
++      default = "/opt/downloads/beets";
+       description = "Path for beets configuration and database";
+     };
+
+--- a/domains/server/native/beets-native/options.nix
++++ b/domains/server/native/beets-native/options.nix
+@@ -15,7 +15,7 @@
+
+     musicInbox = lib.mkOption {
+       type = lib.types.str;
+-      default = config.hwc.paths.hot.downloads.music or "/mnt/hot/downloads/music";
++      default = "${config.hwc.paths.hot.downloads}/music";
+       description = "Path for music download staging area (hot tier)";
+     };
+
+--- a/domains/server/native/storage/options.nix
++++ b/domains/server/native/storage/options.nix
+@@ -25,7 +25,7 @@
+       type = lib.types.listOf lib.types.str;
+       default = [
+         config.hwc.paths.hot.root
+-        "${config.hwc.paths.hot.downloads.root}/incomplete"
++        "${config.hwc.paths.hot.downloads}/incomplete"
+       ];
+       description = "List of directories to exclude from cleanup";
+     };
+--- a/domains/server/native/frigate/options.nix
++++ b/domains/server/native/frigate/options.nix
+@@ -18,7 +18,7 @@
+
+       mediaDir = lib.mkOption {
+         type = lib.types.str;
+-        default = "${config.hwc.paths.media.surveillance}/frigate/media";
++        default = "${config.hwc.paths.media.root}/surveillance/frigate/media";
+         description = "Path for Frigate recordings and clips";
+       };
+
+--- a/domains/server/containers/pihole/options.nix
++++ b/domains/server/containers/pihole/options.nix
+@@ -15,12 +15,12 @@
+
+     dataDir = lib.mkOption {
+       type = lib.types.str;
+-      default = config.hwc.paths.networking.pihole;
++      default = "/opt/networking/pihole";
+       description = "Pi-hole persistent data directory";
+     };
+
+     dnsmasqDir = lib.mkOption {
+       type = lib.types.str;
+-      default = "${config.hwc.paths.networking.pihole}/dnsmasq.d";
++      default = "/opt/networking/pihole/dnsmasq.d";
+       description = "Custom dnsmasq configuration directory";
+     };
+

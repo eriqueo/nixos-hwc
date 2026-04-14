@@ -1,3 +1,4 @@
+# domains/ai/mcp/index.nix
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.ai.mcp;
@@ -108,9 +109,82 @@ let
 in
 {
   #==========================================================================
+  # IMPORTS
+  #==========================================================================
+  imports = [
+    # Heartwood MCP moved to domains/business/mcp/ (hwc.business.mcp.*)
+  ];
+
+  #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.ai.mcp = {
+    enable = lib.mkEnableOption "MCP (Model Context Protocol) server infrastructure";
+
+    # Proxy configuration
+    proxy = {
+      enable = lib.mkEnableOption "MCP proxy for stdio ↔ HTTP bridging" // { default = true; };
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 6001;
+        description = "Port for mcp-proxy HTTP listener (localhost only)";
+      };
+
+      host = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = "Host address for mcp-proxy (should remain localhost)";
+      };
+    };
+
+    # Filesystem MCP server
+    filesystem = {
+      nixos = {
+        enable = lib.mkEnableOption "Filesystem MCP server for ~/.nixos directory";
+
+        allowedDirs = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [];
+          description = "Directories accessible to the filesystem MCP server (defaults set dynamically in index.nix)";
+        };
+
+        draftsDir = lib.mkOption {
+          type = lib.types.path;
+          default = "/tmp/.nixos-mcp-drafts";
+          description = "Directory for LLM-proposed changes (read/write) (default set dynamically in index.nix)";
+        };
+
+        user = lib.mkOption {
+          type = lib.types.str;
+          default = "eric";
+          description = "User to run the filesystem MCP server as";
+        };
+      };
+    };
+
+    # Reverse proxy configuration
+    reverseProxy = {
+      enable = lib.mkEnableOption "Expose MCP servers via Caddy reverse proxy" // { default = false; };
+
+      path = lib.mkOption {
+        type = lib.types.str;
+        default = "/mcp";
+        description = "URL path for MCP proxy endpoint";
+      };
+
+      authType = lib.mkOption {
+        type = lib.types.enum [ "none" "basic" "apikey" ];
+        default = "none";
+        description = ''
+          Authentication type for MCP reverse proxy:
+          - none: No authentication (local network only)
+          - basic: HTTP Basic authentication
+          - apikey: API key in header (X-API-Key)
+        '';
+      };
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION

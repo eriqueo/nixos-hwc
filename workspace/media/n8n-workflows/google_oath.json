@@ -1,0 +1,8 @@
+{
+  "NOTE": "Credentials managed by agenix. See domains/secrets/declarations/home.nix",
+  "secrets": {
+    "client_id": "/run/agenix/google-oauth-client-id",
+    "client_secret": "/run/agenix/google-oauth-client-secret",
+    "full_json": "/run/agenix/gmail-oauth-client"
+  }
+}

@@ -1,13 +1,11 @@
-{ lib, pkgs, config, osConfig ? {}, ...}:
-
+# domains/home/apps/librewolf/index.nix
+{ lib, pkgs, config, ... }:
 let
-  cfg = config.hwc.home.apps.librewolf or { enable = false; };
+  cfg = config.hwc.home.apps.librewolf;
   theme = import ./parts/theme.nix { inherit lib config; };
 
-  # Check if HM version supports profiles (unstable) or uses old API (24.05)
   hasProfiles = builtins.hasAttr "profiles" (config.programs.librewolf or {});
 
-  # Palette validation (from remote)
   paletteName = lib.attrByPath [ "hwc" "home" "theme" "palette" ] null config;
   palettePath = if paletteName != null then ../../theme/palettes/${paletteName}.nix else null;
   paletteExists = palettePath == null || builtins.pathExists palettePath;
@@ -16,7 +14,9 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.librewolf = {
+    enable = lib.mkEnableOption "Librewolf browser";
+  };
 
   #==========================================================================
   # IMPLEMENTATION

@@ -28,12 +28,12 @@ in
       #========================================================================
       assertions = [
         {
-          assertion = config.hwc.system.services.hardware.audio.enable;
-          message = "waybar's pulseaudio module requires hwc.system.services.hardware.audio.enable = true";
+          assertion = config.hwc.system.hardware.audio.enable;
+          message = "waybar's pulseaudio module requires hwc.system.hardware.audio.enable = true";
         }
         {
-          assertion = config.hwc.system.services.hardware.bluetooth.enable;
-          message = "waybar's bluetooth module requires hwc.system.services.hardware.bluetooth.enable = true";
+          assertion = config.hwc.system.hardware.bluetooth.enable;
+          message = "waybar's bluetooth module requires hwc.system.hardware.bluetooth.enable = true";
         }
         {
           assertion = config.hwc.system.networking.enable;

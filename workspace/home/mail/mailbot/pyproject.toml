@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hwc-mailbot"
+version = "0.2.0"
+description = "Gmail bulk unsubscribe automation tool"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  {name = "Eric", email = "eric@heartwoodcraft.com"},
+]
+keywords = ["gmail", "unsubscribe", "automation", "email"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: End Users/Desktop",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "google-api-python-client>=2.146.0",
+  "google-auth>=2.35.0",
+  "google-auth-oauthlib>=1.2.1",
+  "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-cov>=4.1.0",
+  "ruff>=0.7.0",
+]
+
+[project.scripts]
+mailbot = "mailbot.bulk_unsubscribe:main"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]  # Line too long (handled by formatter)

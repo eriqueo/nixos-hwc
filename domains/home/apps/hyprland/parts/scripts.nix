@@ -19,6 +19,40 @@ with pkgs;
 
 [
   #============================================================================
+  # SMART WINDOW MOVE - Move within workspace, cross monitors at edges
+  #============================================================================
+  (writeShellScriptBin "hyprland-smart-move" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    DIRECTION="''${1:-r}"  # l, r, u, d
+
+    # Get window position before move
+    BEFORE=$(${hyprland}/bin/hyprctl activewindow -j)
+    POS_BEFORE=$(echo "$BEFORE" | ${jq}/bin/jq -r '"\(.at[0]),\(.at[1])"')
+
+    # Try to move within workspace
+    ${hyprland}/bin/hyprctl dispatch movewindow "$DIRECTION"
+
+    # Small delay for Hyprland to process
+    sleep 0.05
+
+    # Get window position after move
+    AFTER=$(${hyprland}/bin/hyprctl activewindow -j)
+    POS_AFTER=$(echo "$AFTER" | ${jq}/bin/jq -r '"\(.at[0]),\(.at[1])"')
+
+    # If position unchanged, window was at edge - move to adjacent monitor
+    if [[ "$POS_BEFORE" == "$POS_AFTER" ]]; then
+      case "$DIRECTION" in
+        l) ${hyprland}/bin/hyprctl dispatch movewindow mon:-1 ;;
+        r) ${hyprland}/bin/hyprctl dispatch movewindow mon:+1 ;;
+        u) ${hyprland}/bin/hyprctl dispatch movewindow mon:-1 ;;
+        d) ${hyprland}/bin/hyprctl dispatch movewindow mon:+1 ;;
+      esac
+    fi
+  '')
+
+  #============================================================================
   # WORKSPACE OVERVIEW - Enhanced workspace selector with window previews
   #============================================================================
   (writeShellScriptBin "hyprland-workspace-overview" ''
@@ -52,37 +86,43 @@ with pkgs;
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # Get list of connected monitors
-    MONITORS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[].name')
-    LAPTOP=$(echo "$MONITORS" | ${gnugrep}/bin/grep -E "(eDP|LVDS)" | head -1)
-    EXTERNAL=$(echo "$MONITORS" | ${gnugrep}/bin/grep -v -E "(eDP|LVDS)" | head -1)
+    # Get monitor data once
+    MONITOR_DATA=$(${hyprland}/bin/hyprctl monitors -j)
+
+    # Identify laptop and external monitors
+    LAPTOP=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.name | test("eDP|LVDS")) | .name' | head -1)
+    EXTERNAL=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r '.[] | select(.name | test("eDP|LVDS") | not) | .name' | head -1)
 
     if [[ -z "$EXTERNAL" ]]; then
       ${libnotify}/bin/notify-send "Monitor" "No external monitor detected" -t 2000 -i display
       exit 1
     fi
 
-    # Get current positions
-    LAPTOP_POS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .x")
-    EXTERNAL_POS=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | .x")
+    # Get current laptop position
+    LAPTOP_POS=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .x")
 
-    # Get monitor specs
-    LAPTOP_SPEC=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | \"\(.width)x\(.height)@\(.refreshRate)\"")
-    EXTERNAL_SPEC=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | \"\(.width)x\(.height)@\(.refreshRate)\"")
-    LAPTOP_WIDTH=$(echo "$LAPTOP_SPEC" | cut -d'x' -f1)
-    EXTERNAL_WIDTH=$(echo "$EXTERNAL_SPEC" | cut -d'x' -f1)
+    # Get monitor specs (resolution@refresh,position,scale)
+    LAPTOP_SPEC=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | \"\(.width)x\(.height)@\(.refreshRate | floor)\"")
+    EXTERNAL_SPEC=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | \"\(.width)x\(.height)@\(.refreshRate | floor)\"")
+    LAPTOP_SCALE=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | .scale")
+    EXTERNAL_SCALE=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | .scale")
+
+    # Calculate effective widths (accounting for scale)
+    LAPTOP_WIDTH=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$LAPTOP\") | (.width / .scale | floor)")
+    EXTERNAL_WIDTH=$(echo "$MONITOR_DATA" | ${jq}/bin/jq -r ".[] | select(.name==\"$EXTERNAL\") | (.width / .scale | floor)")
 
     if [[ $LAPTOP_POS -eq 0 ]]; then
-      # Laptop is on left, move external to left
-      ${hyprland}/bin/hyprctl keyword monitor "$EXTERNAL,$EXTERNAL_SPEC,0x0,1"
-      ${hyprland}/bin/hyprctl keyword monitor "$LAPTOP,$LAPTOP_SPEC,''${EXTERNAL_WIDTH}x0,1"
-      ${libnotify}/bin/notify-send "Monitor" "External monitor moved to left" -t 2000 -i display
+      # Laptop is on left, move external to left (use --batch for atomic change)
+      ${hyprland}/bin/hyprctl --batch "keyword monitor $EXTERNAL,$EXTERNAL_SPEC,0x0,$EXTERNAL_SCALE ; keyword monitor $LAPTOP,$LAPTOP_SPEC,''${EXTERNAL_WIDTH}x0,$LAPTOP_SCALE"
+      ${libnotify}/bin/notify-send "Monitor" "External on left" -t 1500 -i display
     else
       # Laptop is on right, move external to right
-      ${hyprland}/bin/hyprctl keyword monitor "$LAPTOP,$LAPTOP_SPEC,0x0,1"
-      ${hyprland}/bin/hyprctl keyword monitor "$EXTERNAL,$EXTERNAL_SPEC,''${LAPTOP_WIDTH}x0,1"
-      ${libnotify}/bin/notify-send "Monitor" "External monitor moved to right" -t 2000 -i display
+      ${hyprland}/bin/hyprctl --batch "keyword monitor $LAPTOP,$LAPTOP_SPEC,0x0,$LAPTOP_SCALE ; keyword monitor $EXTERNAL,$EXTERNAL_SPEC,''${LAPTOP_WIDTH}x0,$EXTERNAL_SCALE"
+      ${libnotify}/bin/notify-send "Monitor" "External on right" -t 1500 -i display
     fi
+
+    # Restart waybar to pick up monitor changes
+    ${systemd}/bin/systemctl --user restart waybar
   '')
 
   #============================================================================
@@ -118,5 +158,36 @@ with pkgs;
 
     # If all checks pass, show success
     ${libnotify}/bin/notify-send "System Health" "All systems nominal ✓\nDisk: $DISK_USAGE% | Memory: $MEM_USAGE% | CPU: $TEMP°C" -t 3000 -i emblem-ok-symbolic
+  '')
+
+  #============================================================================
+  # KEYBINDS VIEWER - Display all Hyprland keybindings in searchable wofi
+  #============================================================================
+  (writeShellScriptBin "hyprland-keybinds-viewer" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Get keybinds as JSON and format for display
+    KEYBINDS=$(${hyprland}/bin/hyprctl binds -j | ${jq}/bin/jq -r '
+      .[] |
+      .modmask as $m |
+      # Build modifier string from bitmask
+      (
+        [
+          (if ($m % 2) == 1 then "SHIFT" else empty end),
+          (if (($m / 4 | floor) % 2) == 1 then "CTRL" else empty end),
+          (if (($m / 8 | floor) % 2) == 1 then "ALT" else empty end),
+          (if (($m / 64 | floor) % 2) == 1 then "SUPER" else empty end)
+        ] | join("+")
+      ) as $mods |
+      (if ($mods | length) > 0 then $mods + "+" else "" end) +
+      .key +
+      " -> " +
+      .dispatcher +
+      (if (.arg | length) > 0 then " " + .arg else "" end)
+    ' | sort)
+
+    # Display in wofi
+    echo "$KEYBINDS" | ${wofi}/bin/wofi --dmenu --prompt "Keybindings:" --lines 20 --width 600
   '')
 ]

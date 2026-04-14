@@ -1,0 +1,163 @@
+{
+  "name": "HWC Notification Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notify",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "webhook-notify",
+      "name": "Webhook: /notify",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "hwc-notify-router"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HWC Notification Router with Deduplication\n// Normalizes incoming notifications and routes to appropriate Slack channel\n// Includes rate limiting and deduplication\n\nconst input = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\n\n// Initialize dedup cache\nif (!staticData.recentNotifications) {\n  staticData.recentNotifications = {};\n}\n\nconst now = Date.now();\nconst DEDUP_WINDOW = 5 * 60 * 1000; // 5 minute dedup window\nconst RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute rate limit window\nconst MAX_PER_MINUTE = 10; // Max notifications per minute\n\n// Clean old entries\nObject.keys(staticData.recentNotifications).forEach(key => {\n  if (now - staticData.recentNotifications[key].timestamp > DEDUP_WINDOW) {\n    delete staticData.recentNotifications[key];\n  }\n});\n\n// Default values\nconst defaults = {\n  channel: '#hwc-system',\n  severity: 'info',\n  service: 'unknown',\n  domain: 'system'\n};\n\n// Channel routing rules\nconst channelMap = {\n  'media': '#hwc-media',\n  'arr': '#hwc-media',\n  'download': '#hwc-media',\n  'surveillance': '#hwc-alerts',\n  'security': '#hwc-alerts',\n  'alert': '#hwc-alerts',\n  'error': '#hwc-alerts',\n  'critical': '#hwc-alerts',\n  'ai': '#hwc-system',\n  'finance': '#hwc-system',\n  'documents': '#hwc-system',\n  'books': '#hwc-media',\n  'system': '#hwc-system',\n  'infrastructure': '#hwc-system',\n  'monitoring': '#hwc-system'\n};\n\n// Severity to emoji mapping\nconst severityEmoji = {\n  'critical': ':rotating_light:',\n  'error': ':x:',\n  'warning': ':warning:',\n  'success': ':white_check_mark:',\n  'info': ':information_source:'\n};\n\n// Extract and normalize fields\nconst title = input.title || input.subject || 'Notification';\nconst message = input.message || input.body || input.text || '';\nconst severity = input.severity || input.level || defaults.severity;\nconst service = input.service || input.source || defaults.service;\nconst domain = input.domain || input.category || defaults.domain;\nconst timestamp = input.timestamp || new Date().toISOString();\nconst metadata = input.metadata || input.data || {};\nconst dedupKey = input.dedupKey || `${service}:${title}:${severity}`;\n\n// Check for duplicate\nconst isDuplicate = staticData.recentNotifications[dedupKey] && \n  (now - staticData.recentNotifications[dedupKey].timestamp < DEDUP_WINDOW);\n\n// Rate limiting check\nconst recentCount = Object.values(staticData.recentNotifications)\n  .filter(n => now - n.timestamp < RATE_LIMIT_WINDOW).length;\nconst isRateLimited = recentCount >= MAX_PER_MINUTE && severity !== 'critical';\n\nif (isDuplicate) {\n  return {\n    json: {\n      skipped: true,\n      reason: 'duplicate',\n      dedupKey,\n      message: 'Duplicate notification within 5 minutes'\n    }\n  };\n}\n\nif (isRateLimited) {\n  return {\n    json: {\n      skipped: true,\n      reason: 'rate_limited',\n      message: `Rate limit exceeded (${recentCount}/${MAX_PER_MINUTE} per minute)`\n    }\n  };\n}\n\n// Record this notification\nstaticData.recentNotifications[dedupKey] = {\n  timestamp: now,\n  title,\n  service\n};\n\n// Determine channel\nlet channel = input.channel || channelMap[domain.toLowerCase()] || defaults.channel;\nif (severity === 'critical' || severity === 'error') {\n  channel = '#hwc-alerts';\n}\n\n// Build Slack blocks\nconst emoji = severityEmoji[severity] || ':bell:';\nconst blocks = [\n  {\n    type: 'header',\n    text: {\n      type: 'plain_text',\n      text: `${emoji} ${title}`,\n      emoji: true\n    }\n  },\n  {\n    type: 'section',\n    fields: [\n      { type: 'mrkdwn', text: `*Service:*\\n${service}` },\n      { type: 'mrkdwn', text: `*Severity:*\\n${severity.toUpperCase()}` }\n    ]\n  }\n];\n\nif (message) {\n  blocks.push({\n    type: 'section',\n    text: { type: 'mrkdwn', text: message.substring(0, 3000) }\n  });\n}\n\n// Add metadata fields if present\nif (Object.keys(metadata).length > 0) {\n  const metaFields = Object.entries(metadata).slice(0, 4).map(([k, v]) => ({\n    type: 'mrkdwn',\n    text: `*${k}:*\\n${String(v).substring(0, 200)}`\n  }));\n  blocks.push({ type: 'section', fields: metaFields });\n}\n\n// Add timestamp footer\nblocks.push({\n  type: 'context',\n  elements: [{\n    type: 'mrkdwn',\n    text: `Sent at ${new Date(timestamp).toLocaleString('en-US', { timeZone: 'America/Denver' })}`\n  }]\n});\n\nreturn {\n  json: {\n    skipped: false,\n    channel,\n    text: `${emoji} [${service}] ${title}`,\n    blocks,\n    severity,\n    service,\n    domain,\n    dedupKey\n  }\n};"
+      },
+      "id": "code-normalize",
+      "name": "Normalize & Dedupe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.skipped }}", "value2": false }]
+        }
+      },
+      "id": "if-send",
+      "name": "Should Send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel }}",
+          "mode": "name"
+        },
+        "text": "={{ $json.text }}",
+        "blocksUi": "={{ JSON.stringify($json.blocks) }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-send",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [660, -100],
+      "credentials": {
+        "slackApi": {
+          "id": "oqCsazQ1a4gdXCDQ",
+          "name": "Slack account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fallback to ntfy if Slack fails\nconst input = $input.first().json;\n\nif (input.error) {\n  // Slack failed, try ntfy\n  return {\n    json: {\n      useFallback: true,\n      ntfyPayload: {\n        topic: 'hwc-alerts',\n        title: input.text || 'HWC Notification',\n        message: 'Slack notification failed, sent via ntfy',\n        priority: input.severity === 'critical' ? 5 : 3\n      },\n      originalError: input.error\n    }\n  };\n}\n\nreturn { json: { useFallback: false, success: true, ...input } };"
+      },
+      "id": "check-fallback",
+      "name": "Check Fallback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{ $json.useFallback }}", "value2": true }]
+        }
+      },
+      "id": "if-fallback",
+      "name": "Use Fallback?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, -100]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:2586/hwc-alerts",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "title", "value": "={{ $json.ntfyPayload.title }}" },
+            { "name": "message", "value": "={{ $json.ntfyPayload.message }}" },
+            { "name": "priority", "value": "={{ $json.ntfyPayload.priority }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ntfy-fallback",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, channel: $json.channel || 'skipped', skipped: $json.skipped || false, reason: $json.reason || null }) }}"
+      },
+      "id": "respond-success",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1320, 100]
+    }
+  ],
+  "connections": {
+    "Webhook: /notify": {
+      "main": [[{ "node": "Normalize & Dedupe", "type": "main", "index": 0 }]]
+    },
+    "Normalize & Dedupe": {
+      "main": [[{ "node": "Should Send?", "type": "main", "index": 0 }]]
+    },
+    "Should Send?": {
+      "main": [
+        [{ "node": "Send to Slack", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send to Slack": {
+      "main": [[{ "node": "Check Fallback", "type": "main", "index": 0 }]]
+    },
+    "Check Fallback": {
+      "main": [[{ "node": "Use Fallback?", "type": "main", "index": 0 }]]
+    },
+    "Use Fallback?": {
+      "main": [
+        [{ "node": "Send to ntfy", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send to ntfy": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "global": {
+      "recentNotifications": {}
+    }
+  },
+  "tags": [
+    { "name": "foundation" },
+    { "name": "slack" }
+  ]
+}

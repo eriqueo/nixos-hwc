@@ -1,0 +1,845 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scraper-complete",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        208,
+        304
+      ],
+      "webhookId": "scraper-complete"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_runs (workflow_name, started_at, status) VALUES ('Intelligence Pipeline', NOW(), 'running') RETURNING id",
+        "options": {}
+      },
+      "id": "log-start",
+      "name": "Log Workflow Start",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        304
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-hwc-cred",
+          "name": "HWC Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $('Webhook Trigger').item.json.filepath }}",
+        "options": {}
+      },
+      "id": "read-csv",
+      "name": "Read CSV",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        608,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fromText"
+      },
+      "id": "parse-csv",
+      "name": "Parse CSV",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 1,
+      "position": [
+        800,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT source, author, post_date FROM social_intelligence WHERE source = $1 AND author = $2 AND post_date::date = $3::date LIMIT 1",
+        "options": {}
+      },
+      "id": "check-duplicate",
+      "name": "Check Existing Posts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1008,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-hwc-cred",
+          "name": "HWC Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate, Clean, and Check for Duplicates\nconst items = $input.all();\nlet runId = 0;\nconst BATCH_SIZE = parseInt($env.OLLAMA_BATCH_SIZE) || 5;\n\ntry {\n  runId = $('Log Workflow Start').first().json.id;\n} catch(e) { runId = 0; }\n\nconst cleaned = [];\nconst duplicateChecks = [];\n\nfor (const item of items) {\n  const row = item.json;\n  \n  // Skip empty or too-short posts\n  const postText = (row.post_text || '').toString().trim();\n  if (postText.length < 20) continue;\n  \n  // Clean post text\n  let cleanText = postText\n    .replace(/&[a-z]+;/gi, ' ')\n    .replace(/&#\\d+;/g, ' ')\n    .replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n  \n  if (cleanText.length > 2000) {\n    cleanText = cleanText.substring(0, 1997) + '...';\n  }\n  \n  let postDate;\n  try {\n    const parsed = new Date(row.post_date);\n    if (isNaN(parsed.getTime())) throw new Error('Invalid');\n    postDate = parsed.toISOString();\n  } catch (e) {\n    postDate = new Date().toISOString();\n  }\n  \n  // Create a unique fingerprint for duplicate checking\n  const source = (row.source || 'unknown').toString().trim();\n  const author = (row.author || 'anonymous').toString().trim();\n  \n  cleaned.push({\n    json: {\n      source: source,\n      group_name: (row.group_name || '').toString().trim(),\n      author: author,\n      post_date: postDate,\n      post_text: cleanText,\n      comments: (row.comments || '').toString().trim(),\n      run_id: runId,\n      _check_duplicate: true,\n      _original_index: cleaned.length\n    }\n  });\n  \n  // Prepare duplicate check query params\n  duplicateChecks.push({\n    source: source,\n    author: author,\n    post_date: postDate.split('T')[0]\n  });\n}\n\nif (cleaned.length === 0) {\n  return [{ json: { _empty: true, run_id: runId } }];\n}\n\n// Store the items for the duplicate check node to process\nreturn cleaned;"
+      },
+      "id": "validate-clean",
+      "name": "Validate and Clean",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json._empty }}",
+              "value2": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-empty",
+      "name": "Check If Empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter out items that already exist in database\nconst checkResults = $('Check Existing Posts').all();\nconst originalItems = $('Validate and Clean').all();\n\n// Create a map of existing posts using source+author+date as key\nconst existingMap = new Map();\nfor (const result of checkResults) {\n  if (result.json && result.json.source) {\n    const key = `${result.json.source}|${result.json.author}|${result.json.post_date}`;\n    existingMap.set(key, true);\n  }\n}\n\n// Filter original items\nconst newItems = [];\nfor (const item of originalItems) {\n  const key = `${item.json.source}|${item.json.author}|${item.json.post_date.split('T')[0]}`;\n  if (!existingMap.has(key) && !item.json._skip) {\n    newItems.push(item);\n  }\n}\n\nif (newItems.length === 0) {\n  return [{ json: { _empty: true, run_id: originalItems[0]?.json.run_id || 0 } }];\n}\n\nreturn newItems;"
+      },
+      "id": "filter-duplicates",
+      "name": "Filter Duplicates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "Split Into Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1408,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "prompt",
+              "value": "=You are a business intelligence analyst for Heartwood Craft, a construction company in Bozeman, Montana specializing in custom homes and renovations.\n\nAnalyze this social media post and return ONLY valid JSON. No markdown, no backticks, no explanation - just the JSON object.\n\nPost from {{ $json.source }} ({{ $json.group_name }}):\nAuthor: {{ $json.author }}\nDate: {{ $json.post_date }}\nContent: {{ $json.post_text }}\n{{ $json.comments ? 'Comments: ' + $json.comments : '' }}\n\nReturn EXACTLY this JSON structure:\n{\"summary\":\"2-3 sentence summary\",\"category\":\"Pain Point|Service Request|Recommendation Needed|General Discussion\",\"themes\":[\"theme1\",\"theme2\"],\"sentiment\":\"Positive|Negative|Frustrated|Neutral\",\"business_relevance\":\"High|Medium|Low\",\"marketing_angle\":\"How Heartwood Craft could help or null\",\"pain_points\":[\"problem1\",\"problem2\"]}",
+              "type": "string"
+            },
+            {
+              "name": "source",
+              "value": "={{ $json.source }}",
+              "type": "string"
+            },
+            {
+              "name": "group_name",
+              "value": "={{ $json.group_name }}",
+              "type": "string"
+            },
+            {
+              "name": "author",
+              "value": "={{ $json.author }}",
+              "type": "string"
+            },
+            {
+              "name": "post_date",
+              "value": "={{ $json.post_date }}",
+              "type": "string"
+            },
+            {
+              "name": "post_text",
+              "value": "={{ $json.post_text }}",
+              "type": "string"
+            },
+            {
+              "name": "comments",
+              "value": "={{ $json.comments }}",
+              "type": "string"
+            },
+            {
+              "name": "run_id",
+              "value": "={{ $json.run_id }}",
+              "type": "number"
+            },
+            {
+              "name": "retry_count",
+              "value": "=0",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-prompt",
+      "name": "Format Ollama Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.containers.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama3.2:3b\",\n  \"prompt\": {{ JSON.stringify($json.prompt) }},\n  \"stream\": false,\n  \"options\": {\n    \"temperature\": 0.3,\n    \"num_predict\": 500\n  }\n}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ollama-request",
+      "name": "Ollama Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1808,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.retry_count }}",
+              "operation": "lesserEqual",
+              "value2": 3
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-retry",
+      "name": "Should Retry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "resumeMode": "webhook",
+        "options": {}
+      },
+      "id": "wait-retry",
+      "name": "Wait 5s for Retry",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Increment retry count and loop back\nconst input = $input.first().json;\ninput.retry_count = (input.retry_count || 0) + 1;\nreturn { json: input };"
+      },
+      "id": "increment-retry",
+      "name": "Increment Retry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Ollama Response with Confidence Scoring\nconst input = $input.first().json;\nconst prevData = $('Format Ollama Prompt').first().json;\n\nlet parsed = null;\nconst responseText = input.response || '';\nlet confidenceScore = 1.0;\nconst missingFields = [];\n\n// Try to parse JSON\ntry {\n  parsed = JSON.parse(responseText);\n} catch (e) {\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      parsed = JSON.parse(jsonMatch[0]);\n      confidenceScore -= 0.2; // Had to extract from text\n    } catch (e2) {\n      parsed = null;\n      confidenceScore = 0;\n    }\n  } else {\n    confidenceScore = 0;\n  }\n}\n\n// Validation arrays\nconst validCategories = ['Pain Point', 'Service Request', 'Recommendation Needed', 'General Discussion'];\nconst validSentiments = ['Positive', 'Negative', 'Frustrated', 'Neutral'];\nconst validRelevance = ['High', 'Medium', 'Low'];\n\n// Build result with defaults and track confidence\nlet result = {\n  source: prevData.source,\n  group_name: prevData.group_name,\n  author: prevData.author,\n  post_date: prevData.post_date,\n  post_text: prevData.post_text,\n  comments: prevData.comments,\n  run_id: prevData.run_id,\n  retry_count: prevData.retry_count,\n  summary: '',\n  category: 'General Discussion',\n  themes: [],\n  sentiment: 'Neutral',\n  business_relevance: 'Low',\n  marketing_angle: null,\n  pain_points: [],\n  analysis_confidence: confidenceScore,\n  _parse_error: false\n};\n\nif (!parsed) {\n  result.summary = 'Analysis failed - could not parse LLM response';\n  result._parse_error = true;\n  result.analysis_confidence = 0;\n} else {\n  // Check each field and adjust confidence\n  if (!parsed.summary) missingFields.push('summary');\n  else result.summary = parsed.summary.toString().substring(0, 1000);\n  \n  if (!parsed.category || !validCategories.includes(parsed.category)) {\n    missingFields.push('category');\n    confidenceScore -= 0.15;\n  } else {\n    result.category = parsed.category;\n  }\n  \n  if (!Array.isArray(parsed.themes) || parsed.themes.length === 0) {\n    missingFields.push('themes');\n    confidenceScore -= 0.1;\n  } else {\n    result.themes = parsed.themes.slice(0, 10);\n  }\n  \n  if (!parsed.sentiment || !validSentiments.includes(parsed.sentiment)) {\n    missingFields.push('sentiment');\n    confidenceScore -= 0.1;\n  } else {\n    result.sentiment = parsed.sentiment;\n  }\n  \n  if (!parsed.business_relevance || !validRelevance.includes(parsed.business_relevance)) {\n    missingFields.push('business_relevance');\n    confidenceScore -= 0.15;\n  } else {\n    result.business_relevance = parsed.business_relevance;\n  }\n  \n  result.marketing_angle = parsed.marketing_angle || null;\n  if (!parsed.marketing_angle) missingFields.push('marketing_angle');\n  \n  result.pain_points = Array.isArray(parsed.pain_points) ? parsed.pain_points.slice(0, 10) : [];\n  if (!Array.isArray(parsed.pain_points) || parsed.pain_points.length === 0) {\n    missingFields.push('pain_points');\n  }\n  \n  // Final confidence calculation (can't go below 0)\n  result.analysis_confidence = Math.max(0, confidenceScore);\n  result._missing_fields = missingFields;\n}\n\nreturn { json: result };"
+      },
+      "id": "parse-response",
+      "name": "Parse with Confidence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO social_intelligence (\n  source, group_name, author, post_date, post_text, comments,\n  summary, category, themes, sentiment, business_relevance,\n  marketing_angle, pain_points, analysis_confidence, processed_at\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW()\n)\nON CONFLICT (source, author, post_date, post_text) DO NOTHING\nRETURNING id",
+        "options": {
+          "queryReplacement": "={{ [$json.source, $json.group_name, $json.author, $json.post_date, $json.post_text, $json.comments, $json.summary, $json.category, JSON.stringify($json.themes), $json.sentiment, $json.business_relevance, $json.marketing_angle, JSON.stringify($json.pain_points), $json.analysis_confidence] }}"
+        }
+      },
+      "id": "save-intelligence",
+      "name": "Save to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2208,
+        304
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-hwc-cred",
+          "name": "HWC Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.business_relevance }}",
+              "operation": "regex",
+              "value2": "^(High|Medium)$"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "filter-relevance",
+      "name": "Filter High/Medium",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "slack_queue",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "queue-slack",
+      "name": "Queue for Slack",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2608,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "slack-batch",
+      "name": "Slack Batch Collector",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2800,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build batched Slack notification\nconst items = $input.all();\nconst batchSize = items.length;\n\nif (batchSize === 0) return [{ json: { _empty: true } }];\n\n// Build blocks for each item\nconst blocks = [];\nblocks.push({\n  \"type\": \"header\",\n  \"text\": {\n    \"type\": \"plain_text\",\n    \"text\": `📊 Intelligence Digest (${batchSize} new insights)`,\n    \"emoji\": true\n  }\n});\n\nfor (const item of items) {\n  const data = item.json;\n  const emoji = data.business_relevance === 'High' ? '🔴' : '🟡';\n  \n  blocks.push({\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": `${emoji} *${data.category}* (${data.business_relevance} relevance, ${Math.round(data.analysis_confidence * 100)}% confidence)\\n> ${data.summary.substring(0, 200)}`\n    }\n  });\n  \n  blocks.push({\n    \"type\": \"context\",\n    \"elements\": [\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": `Source: ${data.source}/${data.group_name} | Themes: ${(data.themes || []).slice(0, 3).join(', ')}`\n      }\n    ]\n  });\n}\n\nblocks.push({\n  \"type\": \"divider\"\n});\n\nreturn {\n  json: {\n    blocks: blocks,\n    count: batchSize\n  }\n};"
+      },
+      "id": "build-batch-slack",
+      "name": "Build Batch Slack",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3008,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": {{ JSON.stringify($json.blocks) }}\n}",
+        "options": {}
+      },
+      "id": "send-batch-slack",
+      "name": "Send Batch to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3208,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Continue to next batch\nreturn $input.all();"
+      },
+      "id": "continue-batch",
+      "name": "Continue Processing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3408,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Batch complete - count processed\nconst runId = $('Log Workflow Start').first().json.id;\nreturn { json: { run_id: runId } };"
+      },
+      "id": "batch-done",
+      "name": "Batch Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE workflow_runs SET completed_at = NOW(), items_processed = (SELECT COUNT(*) FROM social_intelligence WHERE processed_at > (SELECT started_at FROM workflow_runs WHERE id = {{ $json.run_id }}), status = 'completed' WHERE id = {{ $json.run_id }}",
+        "options": {}
+      },
+      "id": "log-complete",
+      "name": "Log Workflow Complete",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1808,
+        512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-hwc-cred",
+          "name": "HWC Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE workflow_runs SET completed_at = NOW(), items_processed = 0, status = 'completed_empty' WHERE id = {{ $('Log Workflow Start').first().json.id }}",
+        "options": {}
+      },
+      "id": "log-complete-empty",
+      "name": "Log Empty Complete",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1408,
+        512
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-hwc-cred",
+          "name": "HWC Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Handler with detailed context\nconst error = $input.first();\nconst runId = $('Log Workflow Start').first()?.json?.id || 0;\nconst currentNode = error.pairedItem?.node || 'Unknown';\nconst batchInfo = $('Split Into Batches')?.first()?.json || {};\n\nlet errorMsg = '';\nlet rawPayload = {};\nlet itemPreview = '';\n\ntry {\n  errorMsg = error.json?.message || error.json?.error || JSON.stringify(error.json || {});\n  rawPayload = error.json || {};\n  \n  // Try to capture the post that caused the error\n  if (error.json?.post_text) {\n    itemPreview = error.json.post_text.substring(0, 100);\n  }\n} catch(e) {\n  errorMsg = 'Unknown error';\n}\n\nreturn {\n  json: {\n    workflow_name: 'Intelligence Pipeline',\n    run_id: runId,\n    node_name: currentNode,\n    batch_index: batchInfo.batchIndex || 0,\n    item_preview: itemPreview,\n    error_message: errorMsg.substring(0, 2000),\n    raw_payload: rawPayload\n  }\n};"
+      },
+      "id": "format-error",
+      "name": "Format Error with Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO processing_errors (workflow_name, run_id, node_name, batch_index, item_preview, error_message, raw_payload, failed_at) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, NOW())",
+        "options": {
+          "queryReplacement": "={{ [$json.workflow_name, $json.run_id, $json.node_name, $json.batch_index, $json.item_preview, $json.error_message, JSON.stringify($json.raw_payload)] }}"
+        }
+      },
+      "id": "log-error",
+      "name": "Log Error to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2400,
+        608
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-hwc-cred",
+          "name": "HWC Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE workflow_runs SET completed_at = NOW(), status = 'failed', error_count = error_count + 1 WHERE id = {{ $json.run_id }}",
+        "options": {}
+      },
+      "id": "mark-run-failed",
+      "name": "Mark Run Failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2608,
+        608
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-hwc-cred",
+          "name": "HWC Postgres"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Workflow Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Workflow Start": {
+      "main": [
+        [
+          {
+            "node": "Read CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV": {
+      "main": [
+        [
+          {
+            "node": "Parse CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CSV": {
+      "main": [
+        [
+          {
+            "node": "Validate and Clean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Clean": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Posts": {
+      "main": [
+        [
+          {
+            "node": "Filter Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Check If Empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Empty": {
+      "main": [
+        [
+          {
+            "node": "Log Empty Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split Into Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Into Batches": {
+      "main": [
+        [
+          {
+            "node": "Format Ollama Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Batch Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Ollama Prompt": {
+      "main": [
+        [
+          {
+            "node": "Ollama Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse with Confidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse with Confidence": {
+      "main": [
+        [
+          {
+            "node": "Should Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Retry?": {
+      "main": [
+        [
+          {
+            "node": "Wait 5s for Retry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5s for Retry": {
+      "main": [
+        [
+          {
+            "node": "Increment Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Increment Retry": {
+      "main": [
+        [
+          {
+            "node": "Ollama Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Postgres": {
+      "main": [
+        [
+          {
+            "node": "Filter High/Medium",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter High/Medium": {
+      "main": [
+        [
+          {
+            "node": "Queue for Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Continue Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue for Slack": {
+      "main": [
+        [
+          {
+            "node": "Slack Batch Collector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Batch Collector": {
+      "main": [
+        [
+          {
+            "node": "Build Batch Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Continue Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Batch Slack": {
+      "main": [
+        [
+          {
+            "node": "Send Batch to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Batch to Slack": {
+      "main": [
+        [
+          {
+            "node": "Continue Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Processing": {
+      "main": [
+        [
+          {
+            "node": "Split Into Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Done": {
+      "main": [
+        [
+          {
+            "node": "Log Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error with Context": {
+      "main": [
+        [
+          {
+            "node": "Log Error to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error to DB": {
+      "main": [
+        [
+          {
+            "node": "Mark Run Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "ee9fdf8119918d7b973ca89acb6161f158c02319c8e88a37a71d177acacd8190"
+  }
+}

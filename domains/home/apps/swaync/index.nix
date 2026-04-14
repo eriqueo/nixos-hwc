@@ -1,22 +1,22 @@
 # domains/home/apps/swaync/index.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
-
+{ config, lib, pkgs, ... }:
 let
-  enabled = config.hwc.home.apps.swaync.enable or false;
-
+  cfg = config.hwc.home.apps.swaync;
   appearance = import ./parts/appearance.nix { inherit config lib pkgs; };
 in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.swaync = {
+    enable = lib.mkEnableOption "SwayNC notification center";
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
-    home.packages = with pkgs; [ swaynotificationcenter ];
+  config = lib.mkIf cfg.enable {
+    home.packages = [ pkgs.swaynotificationcenter ];
 
     services.swaync = {
       enable = true;
@@ -24,8 +24,4 @@ in
       style = appearance.style;
     };
   };
-
-  #==========================================================================
-  # VALIDATION
-  #==========================================================================
 }

@@ -1,25 +1,33 @@
 # domains/home/apps/codex/index.nix
-#
-# OpenAI Codex CLI for user environment - Home Manager implementation
-{ config, lib, pkgs, osConfig ? {}, ... }:
-
+{ config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.codex;
-  enabled = cfg.enable or false;
-
-  # Use package from config if specified, otherwise try nixpkgs (may not exist in stable)
   codexPkg = if cfg.package != null then cfg.package else (pkgs.codex or null);
 in
 {
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.codex = {
+    enable = lib.mkEnableOption "OpenAI Codex CLI";
+
+    package = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = "Codex package to use. If null, will use flake input.";
+    };
+
+    env = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      description = "Additional environment variables for Codex CLI";
+    };
+  };
 
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf enabled {
+  config = lib.mkIf cfg.enable {
     home.packages = [ codexPkg ];
 
     home.sessionVariables = cfg.env;

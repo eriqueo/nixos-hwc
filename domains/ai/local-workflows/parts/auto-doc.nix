@@ -1,4 +1,4 @@
-# domains/server/ai/local-workflows/parts/auto-doc.nix
+# domains/ai/local-workflows/parts/auto-doc.nix
 #
 # AI-powered code documentation generator (CLI tool)
 

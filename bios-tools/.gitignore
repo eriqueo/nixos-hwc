@@ -1,0 +1,25 @@
+# Python code
+__pycache__
+*.pyc
+
+# State
+/biostools_error.log
+biostools_*_*
+
+# bios_extract
+/bios_extract/bios_extract
+/bios_extract/lh5_test
+/bios_extract/ami_slab
+/bios_extract/bcpvpd
+/bios_extract/efidecomp
+/bios_extract/bruteforce
+/bios_extract/bruteforce_out
+*.o
+*~
+
+# UEFIExtract
+UEFIExtract
+
+# Local development
+/testcorpus
+/testdir

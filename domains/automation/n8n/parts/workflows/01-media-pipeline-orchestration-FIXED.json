@@ -1,0 +1,275 @@
+{
+  "name": "Media Pipeline Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "media-pipeline",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "media-pipeline"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize incoming webhook payload from Radarr/Sonarr/Lidarr\nconst input = $input.item.json;\n\n// Extract source from query parameter\nlet source = 'unknown';\ntry {\n  const url = new URL(input.headers?.['x-forwarded-url'] || input.query?.callbackUrl || 'http://dummy?source=unknown');\n  source = url.searchParams.get('source') || 'unknown';\n} catch (e) {\n  // Fallback: check body\n  source = input.query?.source || input.body?.source || 'unknown';\n}\n\n// Extract metadata based on source\nlet title, year, path, mediaType, quality;\n\nif (source === 'radarr') {\n  mediaType = 'movie';\n  title = input.movie?.title || input.remoteMovie?.title || 'Unknown Movie';\n  year = input.movie?.year || input.remoteMovie?.year || '';\n  path = input.movieFile?.relativePath || input.movieFile?.path || input.movie?.path || '';\n  quality = input.movieFile?.quality?.quality?.name || 'Unknown';\n} else if (source === 'sonarr') {\n  mediaType = 'episode';\n  const seriesTitle = input.series?.title || 'Unknown Series';\n  const seasonNum = input.episodes?.[0]?.seasonNumber || 0;\n  const episodeNum = input.episodes?.[0]?.episodeNumber || 0;\n  title = `${seriesTitle} S${String(seasonNum).padStart(2, '0')}E${String(episodeNum).padStart(2, '0')}`;\n  year = input.series?.year || '';\n  path = input.episodeFile?.relativePath || input.episodeFile?.path || input.series?.path || '';\n  quality = input.episodeFile?.quality?.quality?.name || 'Unknown';\n} else if (source === 'lidarr') {\n  mediaType = 'audio';\n  title = input.album?.title || input.artist?.name || 'Unknown Album';\n  year = input.album?.releaseDate?.substring(0, 4) || '';\n  path = input.trackFiles?.[0]?.relativePath || input.trackFiles?.[0]?.path || input.album?.path || '';\n  quality = input.trackFiles?.[0]?.quality?.quality?.name || 'Unknown';\n} else {\n  // Unknown source, try to extract generically\n  mediaType = 'unknown';\n  title = input.title || 'Unknown';\n  year = input.year || '';\n  path = input.path || '';\n  quality = 'Unknown';\n}\n\n// Extract filename from path\nconst filename = path.split('/').pop() || '';\nconst searchTerm = year ? `${title} (${year})` : title;\n\nreturn {\n  json: {\n    source: source,\n    mediaType: mediaType,\n    title: title,\n    year: year,\n    path: path,\n    filename: filename,\n    quality: quality,\n    searchTerm: searchTerm,\n    timestamp: new Date().toISOString(),\n    rawPayload: input\n  }\n};"
+      },
+      "id": "normalize-payload",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait-settlement",
+      "name": "Wait for File Settlement",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.mediaType }}",
+              "operation": "equals",
+              "value2": "audio"
+            }
+          ]
+        }
+      },
+      "id": "check-if-music",
+      "name": "Is Music?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"script_name\": \"beets-import\",\n  \"args\": [\"{{ $json.path }}\"],\n  \"async\": true,\n  \"requester\": \"workflow-1-media-pipeline\"\n}",
+        "options": {}
+      },
+      "id": "call-beets-import",
+      "name": "Call Beets Import",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://127.0.0.1:8096/Items?SearchTerm={{ encodeURIComponent($json.searchTerm) }}&Recursive=true&IncludeItemTypes={{ $json.mediaType === 'movie' ? 'Movie' : 'Episode' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Emby-Token",
+              "value": "={{ $env.JELLYFIN_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "search-jellyfin",
+      "name": "Search Jellyfin Item",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract ItemId from Jellyfin search results\nconst searchResults = $input.item.json;\nconst originalData = $input.first().json;\n\nif (!searchResults.Items || searchResults.Items.length === 0) {\n  // No item found\n  return {\n    json: {\n      ...originalData,\n      itemFound: false,\n      itemId: null,\n      errorMessage: `No Jellyfin item found for: ${originalData.searchTerm}`\n    }\n  };\n}\n\n// Get first matching item\nconst item = searchResults.Items[0];\n\nreturn {\n  json: {\n    ...originalData,\n    itemFound: true,\n    itemId: item.Id,\n    itemName: item.Name,\n    itemPath: item.Path\n  }\n};"
+      },
+      "id": "extract-item-id",
+      "name": "Extract Item ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.itemFound }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-item-found",
+      "name": "Item Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:8096/Items/{{ $json.itemId }}/Refresh?Recursive=true&ImageRefreshMode=Default&MetadataRefreshMode=Default&ReplaceAllImages=false&ReplaceAllMetadata=false",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Emby-Token",
+              "value": "={{ $env.JELLYFIN_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "refresh-item",
+      "name": "Refresh Jellyfin Item",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 150]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate success notification\nconst data = $json;\n\nconst emoji = {\n  movie: '🎬',\n  episode: '📺',\n  audio: '🎵'\n}[data.mediaType] || '📦';\n\nconst typeLabel = {\n  movie: 'Movie',\n  episode: 'TV Episode',\n  audio: 'Music'\n}[data.mediaType] || 'Media';\n\nreturn {\n  json: {\n    title: `${emoji} ${data.title}`,\n    message: `New ${typeLabel} added\\n\\nQuality: ${data.quality}\\nJellyfin: Refreshed\\nPath: ${data.filename}`,\n    topic: 'hwc-media',\n    priority: 2,\n    tags: `${data.source},media,success`\n  }\n};"
+      },
+      "id": "success-notification",
+      "name": "Success Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 150]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate failure notification (item not found)\nconst data = $json;\n\nreturn {\n  json: {\n    title: '⚠️ Media Pipeline: Item Not Found',\n    message: `Could not find item in Jellyfin\\n\\nTitle: ${data.title}\\nSearch: ${data.searchTerm}\\nSource: ${data.source}\\nPath: ${data.path}`,\n    topic: 'hwc-alerts',\n    priority: 4,\n    tags: `${data.source},media,failure`\n  }\n};"
+      },
+      "id": "failure-notification",
+      "name": "Failure Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 250]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Music success notification\nconst data = $json;\n\nreturn {\n  json: {\n    title: '🎵 ' + data.title,\n    message: `New music imported\\n\\nQuality: ${data.quality}\\nBeets: Import triggered\\nPath: ${data.filename}`,\n    topic: 'hwc-media',\n    priority: 2,\n    tags: `${data.source},music,beets`\n  }\n};"
+      },
+      "id": "music-notification",
+      "name": "Music Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://hwc.ocelot-wahoo.ts.net/{{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-ntfy",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Normalize Payload", "type": "main", "index": 0 }]]
+    },
+    "Normalize Payload": {
+      "main": [[{ "node": "Wait for File Settlement", "type": "main", "index": 0 }]]
+    },
+    "Wait for File Settlement": {
+      "main": [[{ "node": "Is Music?", "type": "main", "index": 0 }]]
+    },
+    "Is Music?": {
+      "main": [
+        [{ "node": "Call Beets Import", "type": "main", "index": 0 }],
+        [{ "node": "Search Jellyfin Item", "type": "main", "index": 0 }]
+      ]
+    },
+    "Call Beets Import": {
+      "main": [[{ "node": "Music Notification", "type": "main", "index": 0 }]]
+    },
+    "Search Jellyfin Item": {
+      "main": [[{ "node": "Extract Item ID", "type": "main", "index": 0 }]]
+    },
+    "Extract Item ID": {
+      "main": [[{ "node": "Item Found?", "type": "main", "index": 0 }]]
+    },
+    "Item Found?": {
+      "main": [
+        [{ "node": "Refresh Jellyfin Item", "type": "main", "index": 0 }],
+        [{ "node": "Failure Notification", "type": "main", "index": 0 }]
+      ]
+    },
+    "Refresh Jellyfin Item": {
+      "main": [[{ "node": "Success Notification", "type": "main", "index": 0 }]]
+    },
+    "Success Notification": {
+      "main": [[{ "node": "Send to ntfy", "type": "main", "index": 0 }]]
+    },
+    "Failure Notification": {
+      "main": [[{ "node": "Send to ntfy", "type": "main", "index": 0 }]]
+    },
+    "Music Notification": {
+      "main": [[{ "node": "Send to ntfy", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-08T00:00:00.000Z",
+  "versionId": "2"
+}
