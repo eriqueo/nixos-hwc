@@ -32,6 +32,7 @@
   # Session — display manager, sudo, lingering
   hwc.system.core.session = {
     enable = true;
+    loginManager.enable = lib.mkDefault true;
     loginManager.autoLoginUser = lib.mkDefault "eric";
     sudo.enable = true;
     sudo.wheelNeedsPassword = false;

@@ -104,6 +104,5 @@
     };
   };
 
-  # Morning Briefing — daily Claude Code CLI agent (6am MT)
-  hwc.business.morningBriefing.enable = true;
+  # Morning Briefing — enabled in domains/business/morning-briefing (hwc-server only)
 }

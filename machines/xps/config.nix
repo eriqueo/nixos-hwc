@@ -30,21 +30,28 @@
 
   hwc.server.enable = true;
 
-  # ZFS support for backup drives (if needed)
+  # ZFS support for DAS media pool
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
+  boot.zfs.extraPools = [ "media-pool" ];
 
-  # ZFS configuration (if using ZFS for backups)
+  # ZFS configuration
   services.zfs = {
     autoScrub = {
       enable = true;
-      interval = "monthly";  # Monthly scrub for data integrity
+      interval = "monthly";
     };
     trim = {
       enable = true;
-      interval = "weekly";  # Weekly TRIM for performance
+      interval = "weekly";
     };
+  };
+
+  # Make ZFS import non-blocking — don't hang boot if DAS is disconnected
+  systemd.services."zfs-import-media-pool" = {
+    serviceConfig.TimeoutStartSec = "30s";  # Fail fast if pool unavailable
+    unitConfig.ConditionPathExists = "/dev/sda";  # Skip entirely if DAS not connected
   };
 
   # Storage — external DAS not yet connected
@@ -116,16 +123,9 @@
   hwc.system.apps.waybar.enable = true;
   hwc.system.apps.chromium.enable = true;
 
-  # Display manager (greetd for Wayland)
-  services.greetd = {
-    enable = true;
-    settings = {
-      default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
-        user = "greeter";
-      };
-    };
-  };
+  # Session management (greetd + autologin) via hwc.system.core.session
+  # Enabled by profiles/session.nix — autoLoginUser = "eric"
+  hwc.system.core.session.loginManager.enable = true;
 
   # AI domain — laptop profile for conservative thermal limits
   hwc.ai = {

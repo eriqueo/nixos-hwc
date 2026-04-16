@@ -1,11 +1,7 @@
 # nixos-hwc/machines/xps/hardware.nix
 #
 # Hardware configuration for Dell XPS 2018 (hwc-xps)
-# This is a PLACEHOLDER - will be generated during NixOS installation
-# Run: nixos-generate-config --show-hardware-config > /tmp/hardware.nix
-# Then copy relevant sections below
-#
-# IMPORTANT: Update this file during installation with actual hardware detection results
+# Generated from working system 2026-04-16
 
 { config, lib, pkgs, modulesPath, ... }:
 
@@ -25,29 +21,21 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Root filesystem
-  # TODO: Update UUID during installation
-  # Run: lsblk -f or blkid to get UUID
+  # Root filesystem (nvme0n1p2)
   fileSystems."/" = {
-    device = "/dev/disk/by-uuid/PLACEHOLDER-ROOT-UUID";
+    device = "/dev/disk/by-uuid/c58554d0-1a3f-4d28-bf14-e6d8619f5fe2";
     fsType = "ext4";
   };
 
-  # Boot filesystem (EFI)
-  # TODO: Update UUID during installation
+  # Boot filesystem (EFI, nvme0n1p1)
   fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/PLACEHOLDER-BOOT-UUID";
+    device = "/dev/disk/by-uuid/8825-A4DE";
     fsType = "vfat";
     options = [ "fmask=0022" "dmask=0022" ];
   };
 
-  # Hot storage (remaining space on 1TB internal SSD)
-  # TODO: Update UUID during installation
-  # Partition layout: ~100GB root, ~1GB boot, remainder for /mnt/hot
-  fileSystems."/mnt/hot" = {
-    device = "/dev/disk/by-uuid/PLACEHOLDER-HOT-UUID";
-    fsType = "ext4";
-  };
+  # Hot storage — XPS has no separate hot partition
+  # /mnt/hot is a directory on root, managed via hwc.system.mounts.hot.enable = false in config.nix
 
   # Media storage (external DAS with 2x3TB HDDs)
   # TODO: Configure during installation
