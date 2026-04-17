@@ -222,7 +222,7 @@ record:
       mode: active_objects
 ```
 
-Note: cobra_cam_1 has recording fully disabled (detect-only) — no 4K stream pulled.
+Note: All active cameras record motion-based 4K via go2rtc passthrough (no GPU decode).
 
 #### Snapshots (Images)
 
@@ -271,7 +271,7 @@ journalctl -u frigate-cleanup.service --since "24 hours ago"
 
 | Camera | Location | Detect Stream | Record Stream | FPS | Zone | required_zones |
 |--------|----------|---------------|---------------|-----|------|----------------|
-| cobra_cam_1 | Carport | 1280×720 (sub) | disabled | 3 | carport | Yes |
+| cobra_cam_1 | Carport | 1280×720 (sub) | 3840×2160 (main) | 3 | carport | Yes |
 | cobra_cam_2 | Side yard | 1280×720 (sub) | 3840×2160 (main) | 5 | (TODO — offline) | No |
 | cobra_cam_3 | Front porch | 1280×720 (sub) | 3840×2160 (main) | 3 | front_yard | Yes |
 | reolink | Front yard | 480×270 (sub) | 3840×2160 (main) | 2 | property | Yes |
@@ -332,7 +332,7 @@ Camera Hardware
     ├─► Main Stream (4K @ 15fps) ─► go2rtc ─► Frigate Record
     │   - High quality for recordings
     │   - H.264 (Cobra) / HEVC (Reolink)
-    │   - cobra_cam_1 has no record stream (detect-only)
+    │   - All active cameras record via 4K passthrough
     │
     └─► Sub Stream ─► go2rtc ─► Frigate Detect
         - Cobra: 720p @ 3fps, Reolink: 480×270 @ 2fps
@@ -692,7 +692,8 @@ hwc.media.frigate = {
 
 ## Changelog
 - 2026-04-12: Extract cleanup timer/service into parts/cleanup.nix with configurable retention options
-- 2026-04-12: Reduce detection load — drop FPS (5→3 cobra, 3→2 reolink), disable cobra_cam_1 4K record stream (detect-only), lower reolink detect resolution (640×360→480×270). GPU temp 74°C→61°C.
+- 2026-04-14: Re-enable cobra_cam_1 4K recording — original GPU heat was from ollama, not Frigate. Record uses go2rtc passthrough (no GPU decode).
+- 2026-04-12: Reduce detection load — drop FPS (5→3 cobra, 3→2 reolink), lower reolink detect resolution (640×360→480×270). GPU temp 74°C→61°C.
 - 2026-04-07: Switch reolink_record from ffmpeg transcode to 4K passthrough — transcode (both hardware and software) destabilized go2rtc, killing all live streams. Re-enable after reboot aligns nvidia driver.
 - 2026-04-07: Disable cobra_cam_2 while physically offline — retry storm every 10s was generating constant errors.
 - 2026-04-07: Add review.alerts/detections.required_zones on cobra_cam_1 (carport), cobra_cam_3 (front_yard), reolink (property). Eliminates street/neighbor noise at the source. Update camera comments to match actual locations.

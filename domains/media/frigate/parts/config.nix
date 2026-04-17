@@ -131,9 +131,9 @@ let
         ffmpeg = ffmpegDefaults // {
           inputs = [
             { path = "rtsp://127.0.0.1:8554/cobra_cam_1_sub"; roles = [ "detect" ]; }
+            { path = "rtsp://127.0.0.1:8554/cobra_cam_1"; roles = [ "record" ]; }
           ];
         };
-        record.enabled = false;  # No recording — detect only (saves 4K stream decode)
         detect = { width = 1280; height = 720; fps = 3; };
         motion.mask = [
           "0,0,1280,50"       # Timestamp strip
