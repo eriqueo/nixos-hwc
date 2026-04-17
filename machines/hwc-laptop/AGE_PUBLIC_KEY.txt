@@ -1,0 +1,1 @@
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDR/sVf2R8t055Gc4/etTtIWS4mI23VS3ijjJEpNerOe root@heartwood-laptop

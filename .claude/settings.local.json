@@ -179,6 +179,8 @@
       "mcp__hwc-jt__jt_get_custom_fields",
       "Read(//nix/store/**)",
       "Read(//home/eric/**)",
+      "Read(//mnt/seagate/**)",
+      "Read(//mnt/t7/**)",
       "mcp__hwc-sys__hwc_monitoring_gpu_status",
       "mcp__hwc-sys__hwc_services_container_stats",
       "mcp__hwc-sys__hwc_monitoring_health_check",

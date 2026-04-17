@@ -12,7 +12,7 @@ let
   readKey = f: builtins.replaceStrings [ "\n" "\r" ] [ "" "" ] (builtins.readFile f);
 
   # ── machine host keys (age public keys matching /etc/age/keys.txt on each host) ──
-  # laptop = readKey ./machines/hwc-laptop/AGE_PUBLIC_KEY.txt;  # TODO: retrieve from laptop, add here, rekey
+  laptop = readKey ./machines/hwc-laptop/AGE_PUBLIC_KEY.txt;
   server = readKey ./machines/hwc-server/AGE_PUBLIC_KEY.txt;
   xps    = readKey ./machines/hwc-xps/AGE_PUBLIC_KEY.txt;
 
@@ -20,7 +20,7 @@ let
   eric = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPpGuiR4JKb0EyK8z+QmWo7qayRC01IHqUYspUbxgVgB eriqueo@homeserver";
 
   # ── recipient groups ──
-  allHosts = [ server xps ];       # laptop added after key retrieval
+  allHosts = [ server xps laptop ];
   allUsers = [ eric ];
   everyone = allHosts ++ allUsers;
 
