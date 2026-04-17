@@ -185,6 +185,9 @@
   # exportarr disabled — no *arr services on this machine
   hwc.monitoring.exportarr.enable = lib.mkForce false;
 
+  # n8n disabled — secrets not encrypted for XPS
+  hwc.automation.n8n.enable = lib.mkForce false;
+
   services.openssh.settings = {
     X11Forwarding = lib.mkForce true;
     PasswordAuthentication = lib.mkForce true;  # Temporary — remove after SSH key update
