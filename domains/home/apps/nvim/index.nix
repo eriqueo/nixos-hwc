@@ -43,7 +43,7 @@ in
         luajitPackages.jsregexp
       ];
       # Load the lua configuration
-      initLua = ''
+      extraLuaConfig = ''
         require("core")
       '';
 

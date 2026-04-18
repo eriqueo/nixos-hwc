@@ -24,7 +24,6 @@ in {
     xdg.userDirs = {
       enable = true;
       createDirectories = true;
-      setSessionVariables = false;
 
       # OS catch-all — anything the system or apps dump gets sorted from here
       desktop   = inbox;
