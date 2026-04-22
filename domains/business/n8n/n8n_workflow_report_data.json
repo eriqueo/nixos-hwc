@@ -1,0 +1,215 @@
+{
+  "name": "work_report_data",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "report-data",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook_get",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract report ID from query params\nconst query = $input.first().json.query || {};\nconst reportId = query.id;\n\nif (!reportId || typeof reportId !== 'string' || reportId.length < 6 || reportId.length > 20) {\n  return [{ json: { error: true, message: 'Invalid or missing report ID' } }];\n}\n\n// Basic sanitization — alphanumeric only\nconst clean = reportId.replace(/[^a-z0-9]/gi, '');\nif (clean !== reportId) {\n  return [{ json: { error: true, message: 'Invalid report ID format' } }];\n}\n\nreturn [{ json: { report_id: clean, error: false } }];"
+      },
+      "id": "extract_id",
+      "name": "Extract Report ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error_check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notTrue"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "valid_check",
+      "name": "Valid ID?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT report_id, calculator, contact_name, project_state, estimate_low, estimate_high, created_at FROM calculator_leads WHERE report_id = '{{ $json.report_id }}' LIMIT 1;",
+        "options": {}
+      },
+      "id": "postgres_select",
+      "name": "Postgres: Get Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 220],
+      "credentials": {
+        "postgres": {
+          "id": "FILL_POSTGRES_CREDENTIAL_ID",
+          "name": "heartwood_business"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.first().json;\n\n// Postgres node returns different shapes — handle both\nlet row;\nif (Array.isArray(rows)) {\n  row = rows[0];\n} else if (rows.report_id) {\n  row = rows;\n} else {\n  // No results\n  return [{ json: { found: false } }];\n}\n\nif (!row || !row.report_id) {\n  return [{ json: { found: false } }];\n}\n\n// Parse project_state if it's a string\nlet projectState = row.project_state;\nif (typeof projectState === 'string') {\n  try { projectState = JSON.parse(projectState); } catch(e) { projectState = {}; }\n}\n\nreturn [{\n  json: {\n    found: true,\n    report_id: row.report_id,\n    calculator: row.calculator,\n    contact_name: row.contact_name,\n    project_state: projectState,\n    estimate_low: row.estimate_low,\n    estimate_high: row.estimate_high,\n    created_at: row.created_at\n  }\n}];"
+      },
+      "id": "format_response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 220]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "found_check",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "found_check",
+      "name": "Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "https://heartwoodcraft.me" },
+              { "name": "Access-Control-Allow-Methods", "value": "GET" },
+              { "name": "Cache-Control", "value": "public, max-age=3600" }
+            ]
+          }
+        }
+      },
+      "id": "respond_ok",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1540, 140]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: 'Report not found' }) }}",
+        "options": {
+          "responseCode": 404,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "https://heartwoodcraft.me" }
+            ]
+          }
+        }
+      },
+      "id": "respond_404",
+      "name": "Respond 404",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: $json.message || 'Invalid request' }) }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "https://heartwoodcraft.me" }
+            ]
+          }
+        }
+      },
+      "id": "respond_400",
+      "name": "Respond 400",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 420]
+    }
+  ],
+  "connections": {
+    "Webhook GET": {
+      "main": [
+        [{ "node": "Extract Report ID", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Report ID": {
+      "main": [
+        [{ "node": "Valid ID?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Valid ID?": {
+      "main": [
+        [{ "node": "Postgres: Get Lead", "type": "main", "index": 0 }],
+        [{ "node": "Respond 400", "type": "main", "index": 0 }]
+      ]
+    },
+    "Postgres: Get Lead": {
+      "main": [
+        [{ "node": "Format Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [{ "node": "Found?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Found?": {
+      "main": [
+        [{ "node": "Respond 200", "type": "main", "index": 0 }],
+        [{ "node": "Respond 404", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "business" },
+    { "name": "calculator" }
+  ]
+}

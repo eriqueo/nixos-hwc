@@ -1,0 +1,414 @@
+{# ─────────────────────────────────────────────────────────────────────
+   Heartwood Craft — Contact Form (JT Web Form Embed + Attribution)
+   
+   JT creates customer account + contact directly. No job created.
+   contactCreated webhook fires to Quo for SMS auto-response.
+   GA4 form_submit event fires on successful submission.
+   Attribution appended to Notes field on submit.
+   
+   JT Web Form Key: 22SVpdtTrvNNMLqKwpYhZM3PVYfCyZXax8
+   
+   Field IDs (verified from JT embed export):
+     contact.name                    → Name (built-in)
+     contact.custom.22Nm3uGRBrPX    → Email
+     contact.custom.22Nm3uGb7WT2    → Phone
+     location.address                → Address
+     account.custom.22NnjWw3NTGc    → Appointment (date)
+     account.custom.22NnjXZhpFXn    → Time Choice (option)
+     account.custom.22Nnj9KTwMCe    → Notes (text)
+     account.custom.22PUGvBnXeYs    → Lead Source (option)
+     account.custom.22NnjXKR5868    → Days Choice (option)
+     account.custom.22Nnj9KMKEPC    → Project Type (option)
+   ───────────────────────────────────────────────────────────────────── #}
+
+<section class="section section-form" id="contact-form">
+  <div class="container container-narrow">
+    <h2>Get Your Free Estimate</h2>
+    <p class="section-subtitle">Tell us about your project and Eric will call during your preferred time to schedule a free site visit.</p>
+
+    <form 
+      class="jtwf hwc-form" 
+      id="hwc-contact-form"
+      data-jobtread-web-form="true" 
+      data-key="22SVpdtTrvNNMLqKwpYhZM3PVYfCyZXax8" 
+      data-success-message="Thanks for taking the first step — Eric will call you during your requested time slot!"
+      data-success-url="https://heartwoodcraft.me/our-work"
+    >
+
+      {# ── Name (required) ── #}
+      <div class="form-field">
+        <label for="jt-name">Name <span class="required">*</span></label>
+        <input 
+          type="text" id="jt-name" name="contact.name" 
+          placeholder="Your name" required 
+        />
+      </div>
+
+      {# ── Phone (required) ── #}
+      <div class="form-field">
+        <label for="jt-phone">Phone <span class="required">*</span></label>
+        <input 
+          type="tel" id="jt-phone" name="contact.custom.22Nm3uGb7WT2" 
+          placeholder="(406) 555-1234" required 
+        />
+      </div>
+
+      {# ── Email (required) ── #}
+      <div class="form-field">
+        <label for="jt-email">Email <span class="required">*</span></label>
+        <input 
+          type="email" id="jt-email" name="contact.custom.22Nm3uGRBrPX" 
+          placeholder="you@example.com" required 
+        />
+      </div>
+
+      {# ── How did you hear about us? (Lead Source) ── #}
+      <div class="form-field">
+        <label for="jt-source">How did you hear about us? <span class="required">*</span></label>
+        <select id="jt-source" name="account.custom.22PUGvBnXeYs" required>
+          <option value="">Select one...</option>
+          <option value="Google Local Service">Google ad</option>
+          <option value="Google General">Google search</option>
+          <option value="Word of Mouth">Friend or neighbor</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Instagram">Instagram</option>
+          <option value="Short Term Rental">Property manager / STR</option>
+          <option value="Chamber">Chamber of Commerce</option>
+          <option value="Website">Found your website</option>
+          <option value="Repeat">I'm a past customer</option>
+          <option value="Insurance">Insurance</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      {# ── What kind of project? (Project Type) ── #}
+      <div class="form-field">
+        <label for="jt-project">What kind of project? <span class="required">*</span></label>
+        <select id="jt-project" name="account.custom.22Nnj9KMKEPC" required>
+          <option value="">Select one...</option>
+          <option value="Bathroom Remodel">Bathroom remodel</option>
+          <option value="Deck">Deck or outdoor living</option>
+          <option value="Custom">Custom carpentry</option>
+          <option value="Interior">Interior remodel</option>
+          <option value="Exterior">Exterior work</option>
+          <option value="Addition">Addition</option>
+          <option value="Fence">Fence</option>
+        </select>
+      </div>
+
+      {# ── Project location (optional) ── #}
+      <div class="form-field">
+        <label for="jt-location">Project location <span class="optional">(optional)</span></label>
+        <textarea 
+          id="jt-location" name="location.address" rows="2"
+          placeholder="City, neighborhood, or address"
+        ></textarea>
+      </div>
+
+      {# ── Best days to call (Days Choice) ── #}
+      <div class="form-field form-field-full">
+        <label>Best days to reach you <span class="optional">(optional)</span></label>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXKR5868" value="Monday" />
+            <span>Mon</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXKR5868" value="Tuesday" />
+            <span>Tue</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXKR5868" value="Wednesday" />
+            <span>Wed</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXKR5868" value="Thursday" />
+            <span>Thu</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXKR5868" value="Friday" />
+            <span>Fri</span>
+          </label>
+        </div>
+      </div>
+
+      {# ── Best time to call (Time Choice) ── #}
+      <div class="form-field form-field-full">
+        <label>Best time to call <span class="optional">(optional)</span></label>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXZhpFXn" value="8am-10am" />
+            <span>8–10 am</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXZhpFXn" value="10am-12pm" />
+            <span>10 am–12 pm</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXZhpFXn" value="12pm-2pm" />
+            <span>12–2 pm</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXZhpFXn" value="2pm-4pm" />
+            <span>2–4 pm</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="account.custom.22NnjXZhpFXn" value="4pm-530pm" />
+            <span>4–5:30 pm</span>
+          </label>
+        </div>
+      </div>
+
+      {# ── Tell us about your project (Notes) ── #}
+      <div class="form-field form-field-full">
+        <label for="jt-notes">Tell us about your project <span class="optional">(optional)</span></label>
+        <textarea 
+          id="jt-notes" name="account.custom.22Nnj9KTwMCe" rows="4"
+          placeholder="What's driving the project? What are you hoping for? Anything that helps us prepare for your call."
+        ></textarea>
+      </div>
+
+      {# ── Submit ── #}
+      <div class="form-field form-field-full">
+        <button type="submit" class="btn btn-primary btn-full" data-submit-button="true">
+          Schedule My Free Estimate
+        </button>
+        <p class="form-note">No commitment. No pressure. Just a conversation about what's possible.</p>
+      </div>
+
+    </form>
+
+    <noscript>
+      <p>To request an estimate, call <a href="{{ site.phoneLink }}">{{ site.phone }}</a> or email <a href="mailto:{{ site.email }}">{{ site.email }}</a>.</p>
+    </noscript>
+  </div>
+</section>
+
+{# ── JT Web Form Script ── #}
+<script async src="https://app.jobtread.com/web-form.js"></script>
+
+{# ── Attribution Bridge + GA4 Event ── #}
+<script>
+(function() {
+  'use strict';
+  
+  var form = document.getElementById('hwc-contact-form');
+  if (!form) return;
+
+  function getAttribution() {
+    try {
+      var utm_source   = sessionStorage.getItem('hwc_utm_source') || '';
+      var utm_medium   = sessionStorage.getItem('hwc_utm_medium') || '';
+      var utm_campaign = sessionStorage.getItem('hwc_utm_campaign') || '';
+      var gclid        = sessionStorage.getItem('hwc_gclid') || '';
+      var referrer     = sessionStorage.getItem('hwc_referrer') || document.referrer || '';
+      var landing      = sessionStorage.getItem('hwc_landing_page') || '';
+      
+      var parts = [];
+      if (utm_source)   parts.push('utm_source: ' + utm_source);
+      if (utm_medium)   parts.push('utm_medium: ' + utm_medium);
+      if (utm_campaign) parts.push('utm_campaign: ' + utm_campaign);
+      if (gclid)        parts.push('gclid: ' + gclid);
+      if (referrer)     parts.push('referrer: ' + referrer);
+      if (landing)      parts.push('landing: ' + landing);
+      parts.push('page: ' + window.location.pathname);
+      
+      return parts.length > 0 ? '\n\n--- Attribution ---\n' + parts.join('\n') : '';
+    } catch(e) {
+      return '';
+    }
+  }
+
+  function autoSelectSource() {
+    var sourceSelect = document.getElementById('jt-source');
+    if (!sourceSelect || sourceSelect.value) return;
+    
+    try {
+      var gclid      = sessionStorage.getItem('hwc_gclid');
+      var utm_source = sessionStorage.getItem('hwc_utm_source') || '';
+      var utm_medium = sessionStorage.getItem('hwc_utm_medium') || '';
+      
+      if (gclid) {
+        sourceSelect.value = 'Google Local Service';
+      } else if (utm_source === 'google' && utm_medium === 'cpc') {
+        sourceSelect.value = 'Google Local Service';
+      } else if (utm_source === 'google') {
+        sourceSelect.value = 'Google General';
+      } else if (utm_source === 'facebook' || utm_source === 'fb') {
+        sourceSelect.value = 'Facebook';
+      } else if (utm_source === 'instagram' || utm_source === 'ig') {
+        sourceSelect.value = 'Instagram';
+      }
+    } catch(e) {}
+  }
+
+  form.addEventListener('submit', function() {
+    var notesField = document.getElementById('jt-notes');
+    if (notesField) {
+      var attribution = getAttribution();
+      if (attribution) {
+        notesField.value = (notesField.value || '') + attribution;
+      }
+    }
+
+    if (typeof gtag === 'function') {
+      var sourceField  = document.getElementById('jt-source');
+      var projectField = document.getElementById('jt-project');
+      gtag('event', 'form_submit', {
+        form_name: 'contact',
+        lead_source: sourceField ? sourceField.value : '',
+        project_type: projectField ? projectField.value : '',
+        page_location: window.location.pathname
+      });
+    }
+  });
+
+  autoSelectSource();
+})();
+</script>
+
+{# ── Scoped styles: override JT defaults to match Heartwood brand ── #}
+<style>
+  .hwc-form.jtwf {
+    max-width: none;
+    box-shadow: none;
+    background: transparent;
+    font-family: var(--font-body, 'DM Sans', 'Helvetica Neue', sans-serif);
+  }
+  .hwc-form .mx-auto,
+  .hwc-form .min-w-0,
+  .hwc-form .max-w-sm,
+  .hwc-form .rounded-sm.shadow-sm,
+  .hwc-form .bg-white,
+  .hwc-form .p-4,
+  .hwc-form .space-y-2 {
+    all: unset;
+    display: block;
+  }
+  .hwc-form .shadow-line-bottom,
+  .hwc-form .p-4.shadow-line-bottom {
+    display: none !important;
+  }
+
+  .hwc-form .form-field {
+    margin-bottom: 1.25rem;
+  }
+  .hwc-form .form-field > label:first-child {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--charcoal, #23282d);
+    margin-bottom: 0.35rem;
+  }
+  .hwc-form .required {
+    color: #b45309;
+    font-weight: 400;
+  }
+  .hwc-form .optional {
+    color: #9CA3AF;
+    font-weight: 400;
+    font-size: 0.85em;
+  }
+
+  .hwc-form input[type="text"],
+  .hwc-form input[type="email"],
+  .hwc-form input[type="tel"],
+  .hwc-form input[type="date"],
+  .hwc-form select,
+  .hwc-form textarea {
+    display: block;
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--charcoal, #23282d);
+    background: #fff;
+    border: 1.5px solid #d4d0cb;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .hwc-form input:focus,
+  .hwc-form select:focus,
+  .hwc-form textarea:focus {
+    border-color: var(--copper, #cf995f);
+    box-shadow: 0 0 0 2.5px rgba(207, 153, 95, 0.18);
+  }
+  .hwc-form input::placeholder,
+  .hwc-form textarea::placeholder {
+    color: #a3a09b;
+  }
+  .hwc-form select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    padding-right: 2.5rem;
+  }
+  .hwc-form textarea {
+    resize: vertical;
+    min-height: 4.5rem;
+  }
+
+  .hwc-form .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+    margin-top: 0.25rem;
+  }
+  .hwc-form .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--charcoal, #23282d);
+    padding: 0.25rem 0;
+  }
+  .hwc-form .checkbox-label input[type="checkbox"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--copper, #cf995f);
+    cursor: pointer;
+  }
+
+  .hwc-form .btn-primary {
+    display: block;
+    width: 100%;
+    padding: 0.9rem 1.5rem;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--charcoal, #23282d);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .hwc-form .btn-primary:hover {
+    background: #2f353b;
+  }
+  .hwc-form .btn-primary:active {
+    background: #1a1e22;
+  }
+  .hwc-form .form-note {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #9CA3AF;
+    margin-top: 0.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .hwc-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 1.25rem;
+    }
+    .hwc-form .form-field-full {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

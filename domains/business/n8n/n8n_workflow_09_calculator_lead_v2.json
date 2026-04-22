@@ -1,0 +1,360 @@
+{
+  "name": "work_calculator_lead_v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "calculator-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate + extract + generate report ID\nconst body = $input.first().json.body || $input.first().json;\n\nconst contact = body.contact || {};\nconst projectState = body.projectState || {};\nconst estimate = body.estimate || {};\n\n// Validate required fields\nif (!contact.name || !contact.phone || !contact.email) {\n  throw new Error('Missing required contact fields: name, phone, email');\n}\nif (!body.calculator && !body.project_type) {\n  // Infer calculator type from project state keys\n  if (projectState.deck_size || projectState.deck_height || projectState.material) {\n    body.calculator = 'deck';\n  } else {\n    body.calculator = 'bathroom';\n  }\n}\n\n// Generate 8-char report ID\nconst chars = 'abcdefghijklmnopqrstuvwxyz0123456789';\nlet reportId = '';\nfor (let i = 0; i < 8; i++) reportId += chars[Math.floor(Math.random() * chars.length)];\n\n// Parse name\nconst nameParts = contact.name.trim().split(/\\s+/);\nconst firstName = nameParts[0] || '';\nconst lastName = nameParts.slice(1).join(' ') || '';\n\n// Build calculator type label\nconst calcType = (body.calculator || 'bathroom');\nconst calcLabel = calcType === 'deck' ? 'Deck' : 'Bathroom';\n\n// Format selections for JT job description\nconst stateEntries = Object.entries(projectState)\n  .filter(([k]) => k !== 'features')\n  .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${String(v).replace(/_/g, ' ')}`)\n  .join('\\n');\n\nconst features = (projectState.features || []).join(', ').replace(/_/g, ' ');\n\nconst jobDescription = [\n  `Calculator: ${calcLabel}`,\n  `Estimate: $${(estimate.low || 0).toLocaleString()} – $${(estimate.high || 0).toLocaleString()}`,\n  '',\n  stateEntries,\n  features ? `Features: ${features}` : '',\n  '',\n  contact.preferred_date ? `Preferred call: ${contact.preferred_date}, ${contact.preferred_time || 'any time'}` : '',\n  contact.notes ? `Notes: ${contact.notes}` : '',\n  '',\n  `Report: https://heartwoodcraft.me/report/?id=${reportId}`\n].filter(Boolean).join('\\n');\n\nreturn [{\n  json: {\n    // Original payload\n    ...body,\n    // Extracted fields\n    report_id: reportId,\n    calculator: calcType,\n    calc_label: calcLabel,\n    contact_name: contact.name,\n    contact_phone: contact.phone,\n    contact_email: contact.email,\n    contact_notes: contact.notes || '',\n    first_name: firstName,\n    last_name: lastName,\n    project_state: projectState,\n    estimate_low: estimate.low || 0,\n    estimate_high: estimate.high || 0,\n    preferred_date: contact.preferred_date || null,\n    preferred_time: contact.preferred_time || null,\n    attribution: body.attribution || null,\n    landing_page: body.landing_page || '',\n    referrer: body.referrer || '',\n    source_page: body.source_page || '',\n    job_description: jobDescription,\n    report_url: `https://heartwoodcraft.me/report/?id=${reportId}`,\n    // For JT custom fields\n    jt_source_value: 'Website Calculator',\n    jt_job_type: calcLabel,\n    jt_job_name: `${contact.name}'s ${calcLabel} Project`\n  }\n}];"
+      },
+      "id": "extract",
+      "name": "Extract & Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_create_account', arguments: { name: $json.contact_name, organizationId: '22Nm3uFevXMb' } }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "jt_create_account",
+      "name": "JT: Create Account",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nlet accountId;\ntry {\n  const result = typeof prev.result === 'string' ? JSON.parse(prev.result) : prev.result;\n  accountId = result?.createAccount?.id || result?.id;\n} catch(e) {\n  // Try to find ID in the response\n  const str = JSON.stringify(prev);\n  const match = str.match(/\"id\"\\s*:\\s*\"([^\"]+)\"/);\n  accountId = match ? match[1] : null;\n}\nif (!accountId) throw new Error('Failed to extract account ID from JT response');\n\n// Merge with previous data from Extract node\nconst extractData = $('Extract & Validate').first().json;\nreturn [{ json: { ...extractData, jt_account_id: accountId } }];"
+      },
+      "id": "parse_account",
+      "name": "Parse Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_update_account', arguments: { id: $json.jt_account_id, customFieldValues: [{ customFieldId: '22PU427xzLaS', value: $json.jt_source_value }] } }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "jt_update_account",
+      "name": "JT: Set Source Field",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_create_contact', arguments: { accountId: $json.jt_account_id, firstName: $json.first_name, lastName: $json.last_name, phoneNumber: $json.contact_phone, email: $json.contact_email } }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "jt_create_contact",
+      "name": "JT: Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nlet contactId;\ntry {\n  const result = typeof prev.result === 'string' ? JSON.parse(prev.result) : prev.result;\n  contactId = result?.createContact?.id || result?.id;\n} catch(e) {\n  const str = JSON.stringify(prev);\n  const match = str.match(/\"id\"\\s*:\\s*\"([^\"]+)\"/);\n  contactId = match ? match[1] : null;\n}\nconst extractData = $('Parse Account ID').first().json;\nreturn [{ json: { ...extractData, jt_contact_id: contactId || 'unknown' } }];"
+      },
+      "id": "parse_contact",
+      "name": "Parse Contact ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:6100/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'jt_create_job', arguments: { accountId: $json.jt_account_id, name: $json.jt_job_name, description: $json.job_description, organizationId: '22Nm3uFevXMb' } }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "jt_create_job",
+      "name": "JT: Create Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $input.first().json;\nlet jobId;\ntry {\n  const result = typeof prev.result === 'string' ? JSON.parse(prev.result) : prev.result;\n  jobId = result?.createJob?.id || result?.id;\n} catch(e) {\n  const str = JSON.stringify(prev);\n  const match = str.match(/\"id\"\\s*:\\s*\"([^\"]+)\"/);\n  jobId = match ? match[1] : null;\n}\nconst extractData = $('Parse Contact ID').first().json;\nreturn [{ json: { ...extractData, jt_job_id: jobId || 'unknown' } }];"
+      },
+      "id": "parse_job",
+      "name": "Parse Job ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 100]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO calculator_leads (\n  report_id, calculator, contact_name, contact_phone, contact_email, contact_notes,\n  project_state, estimate_low, estimate_high, preferred_date, preferred_time,\n  attribution, landing_page, referrer, source_page,\n  jt_account_id, jt_contact_id, jt_job_id\n) VALUES (\n  '{{ $json.report_id }}',\n  '{{ $json.calculator }}',\n  '{{ $json.contact_name }}',\n  '{{ $json.contact_phone }}',\n  '{{ $json.contact_email }}',\n  '{{ $json.contact_notes }}',\n  '{{ JSON.stringify($json.project_state) }}'::jsonb,\n  {{ $json.estimate_low }},\n  {{ $json.estimate_high }},\n  {{ $json.preferred_date ? \"'\" + $json.preferred_date + \"'\" : 'NULL' }},\n  {{ $json.preferred_time ? \"'\" + $json.preferred_time + \"'\" : 'NULL' }},\n  {{ $json.attribution ? \"'\" + JSON.stringify($json.attribution) + \"'::jsonb\" : 'NULL' }},\n  '{{ $json.landing_page }}',\n  '{{ $json.referrer }}',\n  '{{ $json.source_page }}',\n  '{{ $json.jt_account_id }}',\n  '{{ $json.jt_contact_id }}',\n  '{{ $json.jt_job_id }}'\n) RETURNING id;",
+        "options": {}
+      },
+      "id": "postgres_insert",
+      "name": "Postgres: Archive Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [660, 500],
+      "credentials": {
+        "postgres": {
+          "id": "FILL_POSTGRES_CREDENTIAL_ID",
+          "name": "heartwood_business"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/FILL_ME' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '📋 *New Calculator Lead*\\n\\n*Name:* ' + $json.contact_name + '\\n*Phone:* ' + $json.contact_phone + '\\n*Email:* ' + $json.contact_email + '\\n*Calculator:* ' + $json.calc_label + '\\n*Estimate:* $' + ($json.estimate_low || 0).toLocaleString() + ' – $' + ($json.estimate_high || 0).toLocaleString() + '\\n\\n' + ($json.preferred_date ? '📅 *Preferred call:* ' + $json.preferred_date + ', ' + ($json.preferred_time || 'any time') + '\\n' : '') + '\\n🔗 Report: ' + $json.report_url }) }}",
+        "options": {}
+      },
+      "id": "slack_notify",
+      "name": "Slack: Notify Eric",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Google Calendar event creation\n// Only runs if preferred_date is set\nconst data = $input.first().json;\nif (!data.preferred_date) {\n  return [{ json: { ...data, gcal_event_id: null, gcal_skipped: true } }];\n}\n\n// Map preferred_time to hour\nconst timeMap = { morning: '09:00', afternoon: '13:00', evening: '17:00' };\nconst startTime = timeMap[data.preferred_time] || '09:00';\nconst dateStr = data.preferred_date; // YYYY-MM-DD\nconst startDateTime = `${dateStr}T${startTime}:00`;\n\n// End time = 15 min later\nconst [h, m] = startTime.split(':').map(Number);\nconst endMin = m + 15;\nconst endH = h + Math.floor(endMin / 60);\nconst endM = endMin % 60;\nconst endTime = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;\nconst endDateTime = `${dateStr}T${endTime}:00`;\n\nreturn [{\n  json: {\n    ...data,\n    gcal_summary: `📞 ${data.contact_name} — ${data.calc_label} (calculator lead)`,\n    gcal_description: data.job_description + '\\n\\nReport: ' + data.report_url,\n    gcal_start: startDateTime,\n    gcal_end: endDateTime,\n    gcal_timezone: 'America/Denver'\n  }\n}];"
+      },
+      "id": "gcal_prep",
+      "name": "Prep Calendar Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "gcal_check",
+              "leftValue": "={{ $json.gcal_skipped }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notTrue"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "gcal_check",
+      "name": "Has Preferred Time?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1320, 500]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendarId": "primary",
+        "start": "={{ $json.gcal_start }}",
+        "end": "={{ $json.gcal_end }}",
+        "additionalFields": {
+          "summary": "={{ $json.gcal_summary }}",
+          "description": "={{ $json.gcal_description }}",
+          "timeZone": "America/Denver"
+        }
+      },
+      "id": "gcal_create",
+      "name": "Google Calendar: Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [1540, 420],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "FILL_GCAL_CREDENTIAL_ID",
+          "name": "Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Send email via SMTP\n// This node prepares the email content\n// If SMTP isn't configured, this is a no-op\nconst data = $('Extract & Validate').first().json;\n\nconst html = `<div style=\"font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 520px; color: #23282d;\">\n  <p>Hi ${data.first_name},</p>\n  <p>Here's your project summary based on the selections you made:</p>\n  <p style=\"font-size: 20px; font-weight: bold;\">Estimated range: $${(data.estimate_low || 0).toLocaleString()} – $${(data.estimate_high || 0).toLocaleString()}</p>\n  <p><a href=\"${data.report_url}\" style=\"display: inline-block; padding: 12px 24px; background: #cf995f; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;\">View your project summary →</a></p>\n  <p style=\"color: #6b7280; font-size: 14px;\">These numbers are based on real Heartwood Craft projects in the Gallatin Valley. I'll follow up within the hour to discuss your project and answer any questions.</p>\n  <p>— Eric<br>Heartwood Craft<br>406-551-5061</p>\n</div>`;\n\nreturn [{\n  json: {\n    ...data,\n    email_to: data.contact_email,\n    email_subject: `Your ${data.calc_label} project summary — Heartwood Craft`,\n    email_html: html\n  }\n}];"
+      },
+      "id": "email_prep",
+      "name": "Prep Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 700]
+    },
+    {
+      "parameters": {
+        "fromEmail": "eric@iheartwoodcraft.com",
+        "toEmail": "={{ $json.email_to }}",
+        "subject": "={{ $json.email_subject }}",
+        "emailType": "html",
+        "html": "={{ $json.email_html }}",
+        "options": {}
+      },
+      "id": "send_email",
+      "name": "Send Email (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1320, 700],
+      "credentials": {
+        "smtp": {
+          "id": "FILL_SMTP_CREDENTIAL_ID",
+          "name": "Proton Bridge SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE calculator_leads SET email_sent = true, email_sent_at = NOW() WHERE report_id = '{{ $('Extract & Validate').first().json.report_id }}';",
+        "options": {}
+      },
+      "id": "postgres_email_update",
+      "name": "Postgres: Mark Email Sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1540, 700],
+      "credentials": {
+        "postgres": {
+          "id": "FILL_POSTGRES_CREDENTIAL_ID",
+          "name": "heartwood_business"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, reportUrl: $('Extract & Validate').first().json.report_url }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2200, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Extract & Validate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract & Validate": {
+      "main": [
+        [
+          { "node": "JT: Create Account", "type": "main", "index": 0 },
+          { "node": "Postgres: Archive Lead", "type": "main", "index": 0 },
+          { "node": "Slack: Notify Eric", "type": "main", "index": 0 },
+          { "node": "Prep Calendar Event", "type": "main", "index": 0 },
+          { "node": "Prep Email", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "JT: Create Account": {
+      "main": [
+        [{ "node": "Parse Account ID", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Account ID": {
+      "main": [
+        [{ "node": "JT: Set Source Field", "type": "main", "index": 0 }]
+      ]
+    },
+    "JT: Set Source Field": {
+      "main": [
+        [{ "node": "JT: Create Contact", "type": "main", "index": 0 }]
+      ]
+    },
+    "JT: Create Contact": {
+      "main": [
+        [{ "node": "Parse Contact ID", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Contact ID": {
+      "main": [
+        [{ "node": "JT: Create Job", "type": "main", "index": 0 }]
+      ]
+    },
+    "JT: Create Job": {
+      "main": [
+        [{ "node": "Parse Job ID", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Job ID": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prep Calendar Event": {
+      "main": [
+        [{ "node": "Has Preferred Time?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Preferred Time?": {
+      "main": [
+        [{ "node": "Google Calendar: Create Event", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Prep Email": {
+      "main": [
+        [{ "node": "Send Email (SMTP)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Email (SMTP)": {
+      "main": [
+        [{ "node": "Postgres: Mark Email Sent", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "business" },
+    { "name": "calculator" }
+  ]
+}

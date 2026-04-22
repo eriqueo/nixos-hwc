@@ -1,12 +1,15 @@
 { lib, pkgs, osConfig ? {}, ... }:
 
 let
+  ollamaEnabled = lib.attrByPath [ "hwc" "ai" "ollama" "enable" ] false osConfig;
+
   commonModules = {
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" ];
     modules-center = [ "custom/khal" "clock" "custom/weather" ];
     modules-right = [
       "custom/sep-pre"
-      "custom/gpu" "custom/ollama" "idle_inhibitor" "custom/lid-sleep"
+    ] ++ lib.optionals ollamaEnabled [ "custom/ollama" ] ++ [
+      "custom/gpu" "idle_inhibitor" "custom/lid-sleep"
       "custom/sep-1"
       "pulseaudio" "bluetooth" "custom/network"
       "custom/sep-2"
@@ -51,7 +54,11 @@ let
     on-scroll-down = "hyprctl dispatch workspace e-1";
   };
 
-  commonWidgetsBase = {
+  ollamaWidget = lib.optionalAttrs ollamaEnabled {
+    "custom/ollama" = { format = "{}"; exec = "waybar-ollama-status"; return-type = "json"; interval = 5; on-click = "waybar-ollama-toggle"; };
+  };
+
+  commonWidgetsBase = ollamaWidget // {
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
@@ -82,7 +89,6 @@ let
     };
 
     "custom/gpu" = { format = "{}"; exec = "gpu-status"; return-type = "json"; interval = 5; on-click = "gpu-toggle"; };
-    "custom/ollama" = { format = "{}"; exec = "waybar-ollama-status"; return-type = "json"; interval = 5; on-click = "waybar-ollama-toggle"; };
     idle_inhibitor = { format = "{icon}"; format-icons = { activated = "Awake"; deactivated = "Idle"; }; };
     pulseaudio = { format = "{icon} {volume}%"; format-muted = "󰝟 Muted"; format-icons = { default = ["󰕿" "󰖀" "󰖁"]; }; on-click = "pavucontrol"; };
     "custom/network" = { format = "{}"; exec = "waybar-network-status"; return-type = "json"; interval = 5; on-click = "waybar-network-settings"; };

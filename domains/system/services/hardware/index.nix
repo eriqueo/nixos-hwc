@@ -149,8 +149,18 @@ in
         DiscoverableTimeout = 0;
         AutoEnable = true;
         Experimental = true;
+        FastConnectable = true;
+      };
+      settings.Policy = {
+        ReconnectAttempts = 7;
+        ReconnectIntervals = "1,2,4,8,16,32,64";
       };
     };
+
+    # Prevent Bluetooth USB adapter from auto-suspending (causes slow reconnects)
+    boot.extraModprobeConfig = lib.mkIf cfg.bluetooth.enable ''
+      options btusb enable_autosuspend=n
+    '';
 
     services.blueman.enable = lib.mkIf cfg.bluetooth.enable true;
 

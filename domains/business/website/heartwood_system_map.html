@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heartwood Craft — System Map</title>
+<style>
+:root{
+--bg:#FAFAF8;--bg2:#F1EFE8;--text:#1A1E25;--text2:#6B7280;--text3:#9CA3AF;
+--border:#E5E7EB;--radius:10px;
+--doc-bg:#D5E8F0;--doc-c:#0C447C;--doc-b:#85B7EB;
+--ai-bg:#E8D5C4;--ai-c:#4A1B0C;--ai-b:#C9956B;
+--jt-bg:#F0997B;--jt-c:#4A1B0C;--jt-b:#D85A30;
+--db-bg:#C0DD97;--db-c:#173404;--db-b:#639922;
+--ext-bg:#F1EFE8;--ext-c:#5F5E5A;--ext-b:#B4B2A9;
+--slack-bg:#EEEDFE;--slack-c:#26215C;--slack-b:#7F77DD;
+--money-bg:#FAEEDA;--money-c:#412402;--money-b:#BA7517;
+}
+@media(prefers-color-scheme:dark){:root{
+--bg:#1a1a1a;--bg2:#2a2a2a;--text:#e0e0e0;--text2:#a0a0a0;--text3:#707070;
+--border:#3a3a3a;
+--doc-bg:#0C447C;--doc-c:#B5D4F4;--doc-b:#378ADD;
+--ai-bg:#4A1B0C;--ai-c:#F0997B;--ai-b:#D85A30;
+--jt-bg:#712B13;--jt-c:#F5C4B3;--jt-b:#D85A30;
+--db-bg:#27500A;--db-c:#C0DD97;--db-b:#639922;
+--ext-bg:#2a2a2a;--ext-c:#a0a0a0;--ext-b:#555;
+--slack-bg:#3C3489;--slack-c:#CECBF6;--slack-b:#7F77DD;
+--money-bg:#633806;--money-c:#FAC775;--money-b:#BA7517;
+}}
+*{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,system-ui,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);padding:1.5rem;max-width:900px;margin:0 auto;line-height:1.5}
+h1{font-size:20px;font-weight:600;margin:0 0 4px}
+.date{font-size:12px;color:var(--text3);margin:0 0 1.5rem}
+.section{margin:0 0 1.5rem;padding:1rem;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg)}
+.section h2{font-size:15px;font-weight:500;margin:0 0 4px}
+.section .sub{font-size:12px;color:var(--text2);margin:0 0 12px}
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0}
+.box{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:500;text-align:center;line-height:1.3;min-height:36px;max-width:150px;border:0.5px solid transparent}
+.b-doc{background:var(--doc-bg);color:var(--doc-c);border-color:var(--doc-b)}
+.b-ai{background:var(--ai-bg);color:var(--ai-c);border-color:var(--ai-b)}
+.b-jt{background:var(--jt-bg);color:var(--jt-c);border-color:var(--jt-b)}
+.b-db{background:var(--db-bg);color:var(--db-c);border-color:var(--db-b)}
+.b-ext{background:var(--ext-bg);color:var(--ext-c);border-color:var(--ext-b)}
+.b-slack{background:var(--slack-bg);color:var(--slack-c);border-color:var(--slack-b)}
+.b-money{background:var(--money-bg);color:var(--money-c);border-color:var(--money-b)}
+.b-planned{opacity:0.5;border-style:dashed}
+.arr{color:var(--text3);font-size:14px;flex-shrink:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 1.5rem;padding:10px 14px;background:var(--bg2);border-radius:var(--radius)}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}
+.legend-swatch{width:14px;height:14px;border-radius:3px;border:0.5px solid rgba(128,128,128,0.2)}
+.status{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;margin-left:4px;font-weight:600;vertical-align:middle}
+.s-live{background:#C0DD97;color:#173404}
+.s-partial{background:#FAEEDA;color:#412402}
+.s-planned{background:var(--bg2);color:var(--text3)}
+.s-unknown{background:#F7C1C1;color:#501313}
+.row{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;margin:6px 0}
+.col{display:flex;flex-direction:column;gap:4px;align-items:center}
+.note{font-size:10px;color:var(--text3);margin:4px 0 0;font-style:italic}
+.note.warn{color:#A32D2D}
+.db-row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
+.db-card{flex:1;min-width:200px;padding:12px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg)}
+.db-card h3{font-size:13px;font-weight:500;margin:0 0 6px}
+.db-card ul{font-size:11px;color:var(--text2);padding-left:16px;margin:0;line-height:1.7}
+.wf-item{display:flex;gap:8px;align-items:center;margin:3px 0;font-size:12px;color:var(--text2)}
+.wf-item strong{color:var(--text)}
+hr{border:none;border-top:0.5px solid var(--border);margin:1.5rem 0}
+.edit-hint{background:var(--bg2);border-radius:var(--radius);padding:10px 14px;font-size:11px;color:var(--text2);margin:0 0 1.5rem;line-height:1.6}
+.rhythm-flow .box{min-height:52px;max-width:110px;font-size:10px}
+</style>
+</head>
+<body>
+
+<h1>Heartwood Craft — System Map</h1>
+<p class="date">Last updated: 2026-03-22 &nbsp;·&nbsp; Eric O'Keefe &nbsp;·&nbsp; Bozeman, MT</p>
+
+<div class="edit-hint">
+<strong>How to edit:</strong> Open this file in any text editor (VS Code, Notepad, TextEdit). Search for <code>[ FILL ]</code> to find gaps. 
+Change status badges by editing the class: <code>s-live</code>, <code>s-partial</code>, <code>s-planned</code>, <code>s-unknown</code>. 
+Add new boxes by copying a <code>&lt;div class="box b-jt"&gt;...&lt;/div&gt;</code> block. Update the date at the top when you change anything.
+</div>
+
+<div class="legend">
+<div class="legend-item"><div class="legend-swatch" style="background:var(--doc-bg)"></div>Text / data</div>
+<div class="legend-item"><div class="legend-swatch" style="background:var(--ai-bg)"></div>Claude AI</div>
+<div class="legend-item"><div class="legend-swatch" style="background:var(--jt-bg)"></div>JobTread</div>
+<div class="legend-item"><div class="legend-swatch" style="background:var(--db-bg)"></div>Database</div>
+<div class="legend-item"><div class="legend-swatch" style="background:var(--slack-bg)"></div>Slack</div>
+<div class="legend-item"><div class="legend-swatch" style="background:var(--money-bg)"></div>Money</div>
+<div class="legend-item"><div class="legend-swatch" style="background:var(--ext-bg)"></div>External</div>
+<div class="legend-item" style="margin-left:12px"><span class="status s-live">LIVE</span> <span class="status s-partial">PARTIAL</span> <span class="status s-planned">PLANNED</span> <span class="status s-unknown">UNKNOWN</span></div>
+</div>
+
+<!-- =========== 1. LEAD GENERATION =========== -->
+<div class="section">
+<h2>1. Lead generation → pipeline <span class="status s-partial">PARTIAL</span></h2>
+<p class="sub">How prospects find Heartwood and enter Stage 1 (Attract)</p>
+
+<div class="row">
+<div class="col"><div class="box b-ext">Google LSA<br>$840/mo</div><div class="note">Phone → manual</div></div>
+<div class="col"><div class="box b-ext">GBP / organic</div><div class="note">Phone/form → manual</div></div>
+<div class="col"><div class="box b-ext">Referral</div><div class="note">Phone → manual</div></div>
+<div class="col"><div class="box b-ext">PM outreach</div><div class="note">Email → manual</div></div>
+<div class="col"><div class="box b-ext b-planned">Website form</div><div class="note warn">→ where does it go?</div></div>
+</div>
+
+<div class="flow">
+<div class="box b-ext">Prospect contacts Eric</div>
+<span class="arr">→</span>
+<div class="box b-jt">Create JT account + contact</div>
+<span class="arr">→</span>
+<div class="box b-jt">Set Source field</div>
+<span class="arr">→</span>
+<div class="box b-jt">Create JT job<br>Phase: 1. Contacted</div>
+</div>
+<p class="note warn">Source field empty on all 12 active accounts. Phase field not being updated consistently.</p>
+</div>
+
+<!-- =========== 2. WEBSITE CALCULATOR =========== -->
+<div class="section">
+<h2>2. Website calculator → lead capture <span class="status s-partial">PARTIAL</span></h2>
+<p class="sub">Public bathroom cost estimator → pre-qualified lead with structured scope data</p>
+
+<div class="flow">
+<div class="box b-ext">Visitor lands on<br>iheartwoodcraft.com</div>
+<span class="arr">→</span>
+<div class="box b-doc">7-question<br>calculator wizard</div>
+<span class="arr">→</span>
+<div class="box b-doc">Contact form<br>(gated behind range)</div>
+<span class="arr">→</span>
+<div class="box b-doc">POST to n8n<br>/webhook/calculator-lead</div>
+</div>
+<div class="flow" style="padding-left:40px"><span class="arr">↓ n8n fan-out</span></div>
+<div class="flow">
+<div class="box b-jt b-planned">Create JT account<br>Source: Calculator</div>
+<span class="arr">→</span>
+<div class="box b-jt b-planned">Create JT contact<br>+ location</div>
+<span class="arr">→</span>
+<div class="box b-jt b-planned">Create JT job<br>Phase: 1. Contacted</div>
+</div>
+<div class="flow">
+<div class="box b-slack b-planned">Slack notification<br>with config + range</div>
+<span class="arr">+</span>
+<div class="box b-db b-planned">Postgres<br>calculator_leads</div>
+</div>
+<p class="note">React app built (v2). Not embedded on website yet. n8n workflow #09: [ FILL status ].</p>
+</div>
+
+<!-- =========== 3. ESTIMATE ASSEMBLY =========== -->
+<div class="section">
+<h2>3. Site visit → estimate assembly → JT budget <span class="status s-partial">PARTIAL</span></h2>
+<p class="sub">Internal estimating pipeline (Stages 3-4: Discover → Propose)</p>
+
+<div class="flow">
+<div class="box b-ext">Site visit<br>(Stage 3: Discover)</div>
+<span class="arr">→</span>
+<div class="box b-doc">Capture project state<br>measurements, toggles,<br>selections, conditions</div>
+<span class="arr">→</span>
+<div class="box b-ai">Assembler app<br>toggle tree + rates</div>
+<span class="arr">→</span>
+<div class="box b-doc">Assembled estimate<br>60+ priced line items</div>
+</div>
+<div class="flow" style="padding-left:200px">
+<div class="box b-db" style="font-size:10px">SQLite catalog<br>62 items, 31 state keys</div>
+<span class="arr">↑ feeds assembler</span>
+</div>
+<div class="flow">
+<div class="box b-doc">POST to n8n<br>/webhook/estimate-push</div>
+<span class="arr">→</span>
+<div class="box b-jt">Push budget items<br>to JT job (PAVE API)</div>
+<span class="arr">+</span>
+<div class="box b-db b-planned">Archive to Postgres<br>estimates table</div>
+<span class="arr">+</span>
+<div class="box b-slack">Slack notification<br>summary + link</div>
+</div>
+<p class="note">Assembler deployed on homeserver. n8n #08a + #08b built. Test push to job #281. Postgres archive: [ FILL ].</p>
+</div>
+
+<!-- =========== 4. PROPOSAL → CLOSE =========== -->
+<div class="section">
+<h2>4. Propose → deliver → close (Stages 4–6) <span class="status s-partial">PARTIAL</span></h2>
+<p class="sub">Estimate → proposal → milestones → payment</p>
+
+<div class="flow">
+<div class="box b-jt">Create JT document<br>(customerOrder)</div>
+<span class="arr">→</span>
+<div class="box b-ext">Present in person<br>(never just email)</div>
+<span class="arr">→</span>
+<div class="box b-jt">Client approves<br>via JT portal</div>
+<span class="arr">→</span>
+<div class="box b-jt">Create milestone<br>invoices (30/20/40/10)</div>
+</div>
+<div class="flow">
+<div class="box b-money">Stripe collects<br>payments via JT</div>
+<span class="arr">→</span>
+<div class="box b-jt">JT marks paid</div>
+<span class="arr">→</span>
+<div class="box b-money">QB records income</div>
+</div>
+<div class="flow" style="margin-top:8px">
+<div class="box b-jt b-planned">JT task templates<br>16 checklist tasks/job</div>
+<span class="arr">→</span>
+<div class="box b-jt b-planned">Auto-create on<br>new job (n8n #13)</div>
+<span class="arr">→</span>
+<div class="box b-doc b-planned">Follow-up cadence<br>Day 3 / 7 / 14 / 21</div>
+</div>
+<p class="note">JT documents + Stripe working. Task templates on #280 but not auto-firing. Follow-up compliance: [ FILL ].</p>
+</div>
+
+<!-- =========== 5. DAILY OPERATIONS =========== -->
+<div class="section">
+<h2>5. Daily job operations — voice note pipeline <span class="status s-planned">PLANNED</span></h2>
+<p class="sub">Voice memo → AI extraction → JT time entries + daily log + client text</p>
+
+<div class="flow">
+<div class="box b-doc b-planned">Eric voice memo<br>(Granola / Plaud)<br>30-60 sec</div>
+<span class="arr">→</span>
+<div class="box b-doc b-planned">iOS Shortcut<br>→ transcript text</div>
+<span class="arr">→</span>
+<div class="box b-doc b-planned">POST to n8n<br>/webhook/daily-log</div>
+<span class="arr">→</span>
+<div class="box b-ai b-planned">Claude extraction<br>job, hours, materials,<br>conditions, notes</div>
+</div>
+<div class="flow" style="padding-left:40px"><span class="arr">↓ n8n fan-out (4 outputs from 1 input)</span></div>
+<div class="flow">
+<div class="box b-jt b-planned">JT time entries<br>(hours × trade)</div>
+<span class="arr">+</span>
+<div class="box b-jt b-planned">JT daily log<br>(narrative)</div>
+<span class="arr">+</span>
+<div class="box b-db b-planned">Postgres<br>daily_logs table</div>
+<span class="arr">+</span>
+<div class="box b-slack b-planned">Slack confirmation</div>
+</div>
+<div class="flow" style="margin-top:8px">
+<div class="box b-doc b-planned">daily_log_summary<br>→ client daily text</div>
+<span class="arr">← same extraction produces this</span>
+</div>
+<p class="note">Full spec: VOICE_NOTE_PIPELINE_SPEC.md. Nothing built. n8n workflow #12 planned. 4:30 PM daily trigger planned.</p>
+</div>
+
+<!-- =========== 6. POST-PROJECT =========== -->
+<div class="section">
+<h2>6. Post-project → multiply (Stage 7) <span class="status s-planned">PLANNED</span></h2>
+<p class="sub">Reviews + referrals + content → feed back to Stage 1</p>
+
+<div class="flow">
+<div class="box b-jt b-planned">Phase → "9. Final"<br>triggers sequence</div>
+<span class="arr">→</span>
+<div class="box b-doc b-planned">Day 1:<br>Review request</div>
+<span class="arr">→</span>
+<div class="box b-doc b-planned">Day 14:<br>Referral ask</div>
+<span class="arr">→</span>
+<div class="box b-doc b-planned">Day 30:<br>GBP content post</div>
+<span class="arr">→</span>
+<div class="box b-doc b-planned">6-mo / 1-yr<br>check-ins</div>
+</div>
+<div class="flow" style="margin-top:6px">
+<div class="box b-ext" style="border-color:var(--db-b)">Google reviews → LSA ranking ↑</div>
+<span class="arr">→</span>
+<div class="box b-ext" style="border-color:var(--db-b)">Referral leads → Stage 1</div>
+<span class="arr">→</span>
+<div class="box b-ext" style="border-color:var(--db-b)">GBP content → organic ↑</div>
+</div>
+<p class="note">Task templates exist. No automation built (n8n #14 planned). Currently manual — [ FILL: is it happening? ].</p>
+</div>
+
+<!-- =========== 7. CONTENT =========== -->
+<div class="section">
+<h2>7. Content capture → distribution <span class="status s-unknown">UNKNOWN</span></h2>
+<p class="sub">Every job produces content: 4 photos min + 3D rendering if applicable</p>
+
+<div class="flow">
+<div class="box b-doc">Before photo</div>
+<span class="arr">+</span>
+<div class="box b-doc">Progress photo</div>
+<span class="arr">+</span>
+<div class="box b-doc">Detail photo</div>
+<span class="arr">+</span>
+<div class="box b-doc">After photo</div>
+<span class="arr">+</span>
+<div class="box b-ai">3D rendering</div>
+</div>
+<div class="flow" style="padding-left:40px"><span class="arr">↓ distribute to 3 channels</span></div>
+<div class="flow">
+<div class="box b-ext b-planned">GBP post (Mon AM)</div>
+<span class="arr">+</span>
+<div class="box b-ext" style="border-color:#A32D2D">Website portfolio<br>"Our Work" page</div>
+<span class="arr">+</span>
+<div class="box b-ext b-planned">Instagram / FB<br>(when ready)</div>
+</div>
+<p class="note warn">Portfolio page: [ FILL — still empty? ] This is the #1 highest-leverage marketing action.</p>
+</div>
+
+<!-- =========== 8. FINANCIAL =========== -->
+<div class="section">
+<h2>8. Financial flow <span class="status s-partial">PARTIAL</span></h2>
+<p class="sub">JT → Stripe → QB. Weekly money ritual on Monday mornings.</p>
+
+<div class="flow">
+<div class="box b-jt">JT estimate<br>(line items)</div>
+<span class="arr">→</span>
+<div class="box b-jt">JT invoice<br>(milestone)</div>
+<span class="arr">→</span>
+<div class="box b-money">Stripe payment<br>(client pays)</div>
+<span class="arr">→</span>
+<div class="box b-jt">JT marks paid</div>
+<span class="arr">→</span>
+<div class="box b-money">QB income recorded</div>
+</div>
+<div class="flow" style="margin-top:8px">
+<div class="box b-money">Material purchases</div>
+<span class="arr">→</span>
+<div class="box b-money">QB expense (manual)</div>
+<span class="arr">→</span>
+<div class="box b-money">QB P&L per job<br>(actual vs estimated)</div>
+</div>
+<div class="flow" style="margin-top:8px">
+<div class="box b-money">30% of net profit</div>
+<span class="arr">→</span>
+<div class="box b-money">Tax savings acct<br>(quarterly payments)</div>
+</div>
+<p class="note">Stripe + JT invoicing: works. QB expenses: [ FILL — logging consistently? ]. Job-level P&L: [ FILL ].</p>
+</div>
+
+<hr>
+
+<!-- =========== 9. DATA ARCHITECTURE =========== -->
+<div class="section">
+<h2>9. Data architecture — parallel stores</h2>
+<p class="sub">JT = customer/job truth. Postgres = project state + analytics. SQLite = cost catalog (migrating to PG).</p>
+
+<div class="db-row">
+<div class="db-card" style="border-color:var(--jt-b)">
+<h3 style="color:var(--jt-b)">JobTread (cloud) <span class="status s-live">LIVE</span></h3>
+<ul>
+<li>Accounts (customers + vendors)</li>
+<li>Contacts + locations</li>
+<li>Jobs + custom fields (Phase, Type, Source)</li>
+<li>Budgets (cost groups + line items)</li>
+<li>Documents (estimates, invoices, POs)</li>
+<li>Tasks (16 per job checklist)</li>
+<li>Time entries + daily logs</li>
+<li>Files + photos</li>
+<li>Payments (via Stripe)</li>
+<li>Dashboards (Sales Pipeline + Lead Tracker)</li>
+</ul>
+</div>
+<div class="db-card" style="border-color:var(--db-b)">
+<h3 style="color:var(--db-b)">Postgres (homeserver) <span class="status s-planned">PLANNED</span></h3>
+<ul>
+<li>jt_cost_codes / types / units (mirror)</li>
+<li>catalog_items (assembler brain)</li>
+<li>trade_rates (wage × burden × markup)</li>
+<li>projects + project_state (canonical)</li>
+<li>estimates (versioned archives)</li>
+<li>calculator_leads (from website)</li>
+<li>daily_logs (from voice pipeline)</li>
+<li>workflow_log (n8n audit trail)</li>
+</ul>
+<p class="note">Schema: heartwood_schema.sql. [ FILL: is Postgres running? ]</p>
+</div>
+<div class="db-card" style="border-color:var(--doc-b)">
+<h3 style="color:var(--doc-b)">SQLite (homeserver) <span class="status s-live">LIVE</span></h3>
+<ul>
+<li>10 tables, 62 catalog items</li>
+<li>31 state keys</li>
+<li>All JT ID mappings</li>
+<li>Exported to JSON for apps at build time</li>
+</ul>
+<p class="note">Will migrate → Postgres catalog_items</p>
+</div>
+</div>
+</div>
+
+<!-- =========== 10. N8N WORKFLOWS =========== -->
+<div class="section">
+<h2>10. n8n workflow registry</h2>
+<p class="sub">All automation through n8n on homeserver. Accessed via Caddy + Tailscale at hwc.ocelot-wahoo.ts.net</p>
+
+<div class="wf-item"><span class="status s-live">LIVE</span> <strong>#08a</strong> JT Data Provider — GET → fetch JT customers/jobs for app dropdowns</div>
+<div class="wf-item"><span class="status s-live">LIVE</span> <strong>#08b</strong> Estimate Router — POST /estimate-push → validate → JT + Postgres + Slack</div>
+<div class="wf-item"><span class="status s-planned">PLANNED</span> <strong>#09</strong> Calculator Lead — POST /calculator-lead → JT account/job + Slack + Postgres</div>
+<div class="wf-item"><span class="status s-planned">PLANNED</span> <strong>#10</strong> Lead Response SMS — new JT customer → Twilio "calling within 1 hour"</div>
+<div class="wf-item"><span class="status s-planned">PLANNED</span> <strong>#11</strong> Follow-Up Reminders — cron → Slack alert when lead stale 7+ days</div>
+<div class="wf-item"><span class="status s-planned">PLANNED</span> <strong>#12</strong> Daily Voice Log — POST /daily-log → Claude → JT time entries + daily log + Slack</div>
+<div class="wf-item"><span class="status s-planned">PLANNED</span> <strong>#13</strong> Task Template Auto-Create — new JT job → create 16 checklist tasks</div>
+<div class="wf-item"><span class="status s-planned">PLANNED</span> <strong>#14</strong> Post-Project Sequence — Phase 9 → Day 1 review + Day 14 referral + Day 30 GBP</div>
+<div class="wf-item"><span class="status s-unknown">[ FILL ]</span> <strong>[ FILL ]</strong> — any other workflows on your n8n?</div>
+</div>
+
+<!-- =========== 11. INFRASTRUCTURE =========== -->
+<div class="section">
+<h2>11. Infrastructure — homeserver + services</h2>
+<p class="sub">NixOS homeserver running n8n, Caddy, Tailscale, databases, static hosting</p>
+
+<div class="flow">
+<div class="box b-ext">Tailscale mesh VPN<br>hwc.ocelot-wahoo.ts.net</div>
+<span class="arr">→</span>
+<div class="box b-ext">Caddy reverse proxy</div>
+<span class="arr">→</span>
+<div class="box b-doc">[ FILL: route table ]</div>
+</div>
+
+<div class="db-row">
+<div class="db-card">
+<h3>Caddy routes [ FILL ]</h3>
+<ul>
+<li>/assembler → [ FILL: path ]</li>
+<li>/calculator → [ FILL: path ]</li>
+<li>/webhook/* → n8n (port [ FILL ])</li>
+<li>[ FILL: any other routes ]</li>
+</ul>
+</div>
+<div class="db-card">
+<h3>Tailscale devices [ FILL ]</h3>
+<ul>
+<li>NixOS homeserver</li>
+<li>[ FILL: laptop? ]</li>
+<li>[ FILL: phone? ]</li>
+<li>[ FILL: iPad? ]</li>
+</ul>
+</div>
+<div class="db-card">
+<h3>External services</h3>
+<ul>
+<li>WordPress (iheartwoodcraft.com) — admin: [ FILL ]</li>
+<li>GA4 — [ FILL: installed? ]</li>
+<li>Search Console — [ FILL: installed? ]</li>
+<li>Contact form → [ FILL: agency? you? n8n? ]</li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- =========== 12. MONDAY RHYTHM =========== -->
+<div class="section">
+<h2>12. Monday morning operating rhythm <span class="status s-unknown">UNKNOWN</span></h2>
+<p class="sub">30 min weekly block. [ FILL: is this actually happening? ]</p>
+
+<div class="flow rhythm-flow">
+<div class="box b-jt">Pipeline review<br>JT dashboard<br>(5 min)</div>
+<span class="arr">→</span>
+<div class="box b-doc">Follow-up texts<br>stale leads<br>(5 min)</div>
+<span class="arr">→</span>
+<div class="box b-doc">Review check<br>completed jobs?<br>(3 min)</div>
+<span class="arr">→</span>
+<div class="box b-ext">GBP photo post<br>(2 min)</div>
+<span class="arr">→</span>
+<div class="box b-doc">PM outreach<br>2-3 emails<br>(10 min)</div>
+<span class="arr">→</span>
+<div class="box b-money">Money check<br>Stripe + QB + buffer<br>(5 min)</div>
+</div>
+</div>
+
+<!-- =========== 13. BUILT vs USED =========== -->
+<div class="section">
+<h2>13. Built vs. deployed vs. actually used</h2>
+<p class="sub">The honest inventory. Fill in the [ FILL ] markers.</p>
+
+<table style="width:100%;font-size:12px;border-collapse:collapse;color:var(--text2)">
+<tr style="border-bottom:0.5px solid var(--border);font-weight:600;color:var(--text)">
+<td style="padding:6px 8px">Thing</td><td style="padding:6px">Built?</td><td style="padding:6px">Deployed?</td><td style="padding:6px">Used?</td>
+</tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Estimate assembler app</td><td style="padding:6px">Yes</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL: how many jobs? ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Bathroom calculator app</td><td style="padding:6px">Yes (v2)</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL: taking leads? ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">n8n: assembler → JT push</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">n8n: calculator → JT</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">n8n: Slack notifications</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Postgres on homeserver</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">SQLite cost catalog</td><td style="padding:6px">Yes</td><td style="padding:6px">Yes</td><td style="padding:6px">[ FILL ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Website portfolio page</td><td style="padding:6px">No content</td><td style="padding:6px">—</td><td style="padding:6px">No</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Website calculator embed</td><td style="padding:6px">No</td><td style="padding:6px">—</td><td style="padding:6px">No</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">GA4 / Search Console</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td><td style="padding:6px">[ FILL ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">JT Source tracking</td><td style="padding:6px">Field exists</td><td style="padding:6px">—</td><td style="padding:6px">Not populated</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">JT Phase tracking</td><td style="padding:6px">Field exists</td><td style="padding:6px">—</td><td style="padding:6px">Not current</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Review request (post-close)</td><td style="padding:6px">No</td><td style="padding:6px">—</td><td style="padding:6px">[ FILL: manual? ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Referral ask (post-close)</td><td style="padding:6px">No</td><td style="padding:6px">—</td><td style="padding:6px">[ FILL: manual? ]</td></tr>
+<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:6px 8px">Daily client update texts</td><td style="padding:6px">No</td><td style="padding:6px">—</td><td style="padding:6px">[ FILL: doing manually? ]</td></tr>
+<tr><td style="padding:6px 8px">Monday morning rhythm</td><td style="padding:6px">Designed</td><td style="padding:6px">—</td><td style="padding:6px">[ FILL: happening? ]</td></tr>
+</table>
+</div>
+
+<div class="edit-hint" style="margin-top:2rem">
+<strong>Reference docs in Claude project:</strong><br>
+heartwood_schema.sql · jobtread_api_reference.md · SYSTEM_MAP.md · HEARTWOOD_OPERATING_SYSTEM.md<br>
+heartwood_marketing_operations.docx · heartwood_financial_operations.docx · VOICE_NOTE_PIPELINE_SPEC.md
+</div>
+
+</body>
+</html>
