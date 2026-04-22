@@ -846,11 +846,12 @@
   # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
   # the estimator is a first-class named app, not an ad-hoc published slot).
   # Access: https://hwc.ocelot-wahoo.ts.net:13443
-  # Build:  cd ~/.nixos/domains/business/estimator/app && npm install && npm run build
+  # Build:  sudo systemctl start estimator-build  (or: estimator-build alias)
   hwc.business.estimator = {
-    enable  = true;
-    distDir = "/home/eric/.nixos/domains/business/estimator/app/dist";
-    port    = 13443;
+    enable     = true;
+    port       = 13443;
+    webhookUrl = "https://hwc.ocelot-wahoo.ts.net/webhook/estimate-push";
+    apiKeyFile = config.age.secrets.estimator-api-key.path;
   };
 
   # Immich photo management (container-based)

@@ -24,6 +24,7 @@ secrets/keys/*
 
 # Node
 node_modules/
+domains/business/estimator/app/.env*
 
 # Python
 __pycache__/

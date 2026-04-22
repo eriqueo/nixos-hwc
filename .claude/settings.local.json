@@ -188,6 +188,7 @@
       "Bash(agenix --help)",
       "Bash(agenix -r)",
       "Bash(git pull:*)"
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": [],

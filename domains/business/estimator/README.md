@@ -6,24 +6,27 @@ Heartwood Estimate Assembler — a static React PWA (Vite-built) served via Cadd
 
 ## Boundaries
 
-- **Manages**: Caddy virtual host configuration, firewall rules, SPA routing
-- **Does NOT manage**: Build process (manual npm build), catalog data (→ `workspace/business/`), Caddy service itself (→ `domains/networking/`)
+- **Manages**: Caddy virtual host, firewall rules, SPA routing, build service
+- **Does NOT manage**: Catalog data, Caddy service itself (→ `domains/networking/`), n8n webhook workflows
 
 ## Structure
 
 ```
 domains/business/estimator/
-├── index.nix     # Options, Caddy config, firewall
+├── index.nix     # Options, build service, Caddy config, firewall
+├── app/          # Vite + React source (copied to Nix store at eval time)
+│   ├── src/      # React components
+│   ├── public/   # Static assets, manifest
+│   └── ...       # package.json, vite.config.js, etc.
 └── README.md     # This file
 ```
 
-### Workspace
+### Runtime paths (on server)
 
 ```
-workspace/business/estimator-pwa/
-├── dist/              # Built output served by Caddy
-├── scripts/           # export_catalog.sh
-└── src/data/          # catalog_export.json
+/var/lib/estimator/dist          # Symlink → current build
+/var/lib/estimator/builds/       # Versioned builds (last 3 kept)
+/var/lib/estimator-build/app/    # Working directory for npm builds
 ```
 
 ## Namespace
@@ -34,25 +37,33 @@ workspace/business/estimator-pwa/
 
 ```nix
 hwc.business.estimator = {
-  enable = true;
-  distDir = "/home/eric/.nixos/workspace/business/estimator-pwa/dist";
-  port = 13443;
-  webhookUrl = "";   # Optional n8n webhook URL (VITE_WEBHOOK_URL)
+  enable     = true;
+  port       = 13443;
+  webhookUrl = "https://hwc.ocelot-wahoo.ts.net/webhook/estimate-push";
+  apiKeyFile = config.age.secrets.estimator-api-key.path;
 };
+```
+
+## Build + Deploy
+
+The build is a NixOS-managed systemd oneshot service. It reads the API key from agenix at runtime, bakes it into the Vite bundle, and deploys with atomic symlink swap.
+
+```bash
+# Rebuild after source changes (requires nixos-rebuild switch first)
+estimator-build
+
+# Force rebuild (bypass hash check)
+sudo rm /var/lib/estimator-build/.last-build-hash
+estimator-build
+
+# Rollback to a previous build
+ls /var/lib/estimator/builds/
+sudo ln -sfn /var/lib/estimator/builds/dist-YYYYMMDD-HHMMSS /var/lib/estimator/dist
 ```
 
 ## Access
 
 `https://hwc.ocelot-wahoo.ts.net:13443`
-
-## Rebuild Steps
-
-```bash
-cd ~/.nixos/workspace/business/estimator-pwa
-./scripts/export_catalog.sh   # After catalog.db changes
-npm install && npm run build
-sudo systemctl reload caddy
-```
 
 ## Caddy Features
 
@@ -63,5 +74,6 @@ sudo systemctl reload caddy
 
 ## Changelog
 
+- 2026-04-22: NixOS-managed build service with baked-in secrets, versioned deploys
 - 2026-03-25: Created README per Law 12
 - 2026-03-23: Moved from webapps domain into business domain
