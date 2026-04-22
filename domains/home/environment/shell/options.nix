@@ -75,6 +75,7 @@
         "nixservercon" = "${pkgs.micro}/bin/micro \"$HWC_NIXOS_DIR/machines/server/config.nix\"";
         "nixsearch" = "nix search nixpkgs";
         "nixclean" = "nix-collect-garbage -d";
+        "estimator-build" = "sudo systemctl start estimator-build.service";
         "nixgen" = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
         "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh";
         "speedtest" = "speedtest-cli";
