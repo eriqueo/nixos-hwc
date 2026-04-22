@@ -1,0 +1,608 @@
+{
+  "name": "Media Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "media-pipeline",
+        "options": {}
+      },
+      "id": "trigger-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-1200, 0],
+      "webhookId": "media-pipeline"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize incoming *arr webhook into a standard shape\nconst body = $input.item.json.body || $input.item.json || {};\n\n// Detect source from query param or body\nconst query = $input.item.json.query || {};\nlet source = (query.source || body.source || '').toString().toLowerCase();\n\n// Auto-detect from payload shape if source param missing\nif (!source) {\n  if (body.movie || body.remoteMovie) source = 'radarr';\n  else if (body.series || body.episodes) source = 'sonarr';\n  else source = 'unknown';\n}\n\nlet title = '';\nlet path = '';\nlet quality = '';\nlet eventType = body.eventType || 'Download';\nlet searchTitle = '';\nlet itemType = '';\n\nif (source === 'radarr') {\n  title = body?.movie?.title || body?.remoteMovie?.title || '';\n  path = body?.movieFile?.path || body?.movie?.path || '';\n  quality = body?.movieFile?.quality?.quality?.name || '';\n  searchTitle = title;\n  itemType = 'Movie';\n} else if (source === 'sonarr') {\n  const seriesTitle = body?.series?.title || '';\n  const ep = (body?.episodes && body.episodes[0]) || {};\n  const epNum = ep.seasonNumber != null\n    ? `S${String(ep.seasonNumber).padStart(2,'0')}E${String(ep.episodeNumber).padStart(2,'0')}`\n    : '';\n  title = `${seriesTitle} ${epNum}`.trim();\n  path = body?.episodeFile?.path || '';\n  quality = body?.episodeFile?.quality?.quality?.name || '';\n  searchTitle = seriesTitle;\n  itemType = 'Series';\n} else {\n  title = body?.title || 'Unknown';\n  path = body?.path || '';\n  quality = body?.quality || '';\n  searchTitle = title;\n  itemType = 'Movie';\n}\n\nreturn {\n  json: {\n    mediaType: source,\n    title,\n    searchTitle,\n    itemType,\n    path,\n    quality,\n    eventType\n  }\n};"
+      },
+      "id": "parse-event",
+      "name": "Parse Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-960, 0]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait-settle",
+      "name": "Wait for File Settlement",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-720, 0],
+      "webhookId": "media-pipeline-wait"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.mediaType }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "radarr",
+              "outputKey": "movies"
+            },
+            {
+              "value2": "sonarr",
+              "outputKey": "tv"
+            }
+          ]
+        },
+        "fallbackOutput": 2
+      },
+      "id": "branch-media",
+      "name": "Branch by Media Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [-480, 0]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8096/Users/675930e06d024d9c8a20f262b92e2c3a/Views",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "get-libs-movies",
+      "name": "Get Libraries (Movies)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [-240, -160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find the movies library\nconst data = $input.item.json;\nconst items = data.Items || (Array.isArray(data) ? data : []);\n\nconst lib = items.find(l => l.CollectionType && l.CollectionType.toLowerCase() === 'movies')\n  || items[0]\n  || null;\n\nconst prev = $('Parse Event').first().json;\n\nreturn {\n  json: {\n    ...prev,\n    libraryId: lib ? lib.Id : null,\n    libraryName: lib ? lib.Name : null\n  }\n};"
+      },
+      "id": "choose-lib-movies",
+      "name": "Choose Movie Library",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, -160]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8096/Users/675930e06d024d9c8a20f262b92e2c3a/Views",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "get-libs-tv",
+      "name": "Get Libraries (TV)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [-240, 80],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find the TV library\nconst data = $input.item.json;\nconst items = data.Items || (Array.isArray(data) ? data : []);\n\nconst lib = items.find(l => l.CollectionType && l.CollectionType.toLowerCase() === 'tvshows')\n  || items[0]\n  || null;\n\nconst prev = $('Parse Event').first().json;\n\nreturn {\n  json: {\n    ...prev,\n    libraryId: lib ? lib.Id : null,\n    libraryName: lib ? lib.Name : null\n  }\n};"
+      },
+      "id": "choose-lib-tv",
+      "name": "Choose TV Library",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8096/Library/Refresh",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ Ids: [$json.libraryId] }) }}",
+        "options": {}
+      },
+      "id": "refresh-movies",
+      "name": "Jellyfin Refresh (Movies)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [240, -160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8096/Library/Refresh",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ Ids: [$json.libraryId] }) }}",
+        "options": {}
+      },
+      "id": "refresh-tv",
+      "name": "Jellyfin Refresh (TV)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [240, 80],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Carry forward the parsed event data through the refresh response\nconst prev = $('Parse Event').first().json;\nreturn { json: prev };"
+      },
+      "id": "restore-context-movies",
+      "name": "Restore Context (Movies)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, -160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Carry forward the parsed event data through the refresh response\nconst prev = $('Parse Event').first().json;\nreturn { json: prev };"
+      },
+      "id": "restore-context-tv",
+      "name": "Restore Context (TV)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 80]
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "id": "wait-for-index",
+      "name": "Wait for Indexing",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [720, -40],
+      "webhookId": "media-pipeline-index-wait"
+    },
+    {
+      "parameters": {
+        "url": "=http://127.0.0.1:8096/Items?SearchTerm={{ encodeURIComponent($json.searchTitle) }}&IncludeItemTypes={{ $json.itemType }}&Recursive=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "verify-indexed",
+      "name": "Verify Indexed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [960, -40],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2j2AbzmoZxsYTfAN",
+          "name": "jellyfin_api_key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if item was found in Jellyfin\nconst result = $input.item.json;\nconst items = result.Items || [];\nconst found = items.length > 0;\nconst prev = $('Parse Event').first().json;\n\nreturn {\n  json: {\n    ...prev,\n    indexed: found,\n    jellyfinItemCount: items.length\n  }\n};"
+      },
+      "id": "check-indexed",
+      "name": "Check Index Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, -40]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate notification\nconst { mediaType, title, quality, path, indexed } = $json;\nconst emoji = { radarr: '🎬', sonarr: '📺' }[mediaType] || '📦';\nconst mediaLabel = { radarr: 'Movie', sonarr: 'TV Show' }[mediaType] || 'Media';\nconst indexStatus = indexed ? '✅ Indexed in Jellyfin' : '⚠️ Not yet indexed — may need manual refresh';\n\nreturn {\n  json: {\n    title: `${emoji} ${title}`,\n    message: `New ${mediaLabel} available\\n\\nQuality: ${quality}\\nPath: ${path}\\n\\n${indexStatus}`,\n    topic: 'hwc-media',\n    priority: 2,\n    tags: `${mediaType},media,new`\n  }\n};"
+      },
+      "id": "gen-notification",
+      "name": "Generate Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, -40]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:2586/{{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "text/plain"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "send-ntfy",
+      "name": "Send to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1680, -40]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error notification\nconst err = $input.item.json || {};\nreturn {\n  json: {\n    title: '⚠️ Media Pipeline Error',\n    message: `Error in media pipeline workflow.\\n\\nError: ${JSON.stringify(err).substring(0, 500)}\\n\\nCheck n8n logs.`,\n    topic: 'hwc-alerts',\n    priority: 4,\n    tags: 'media,error,pipeline'\n  }\n};"
+      },
+      "id": "error-notification",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:2586/{{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "text/plain"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "send-error-ntfy",
+      "name": "Send Error to ntfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1680, 240]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [1200, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unsupported media type notification\nconst prev = $('Parse Event').first().json;\nreturn {\n  json: {\n    title: '⚠️ Unknown Media Type',\n    message: `Received webhook for unsupported media type: ${prev.mediaType}\\n\\nTitle: ${prev.title}\\nPath: ${prev.path}`,\n    topic: 'hwc-alerts',\n    priority: 3,\n    tags: 'media,unknown'\n  }\n};"
+      },
+      "id": "unknown-type",
+      "name": "Unknown Media Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-240, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://127.0.0.1:2586/{{ $json.topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.priority }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "text/plain"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "send-unknown-ntfy",
+      "name": "Notify Unknown Type",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [0, 280]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Event": {
+      "main": [
+        [
+          {
+            "node": "Wait for File Settlement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for File Settlement": {
+      "main": [
+        [
+          {
+            "node": "Branch by Media Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch by Media Type": {
+      "main": [
+        [
+          {
+            "node": "Get Libraries (Movies)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Libraries (TV)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unknown Media Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Libraries (Movies)": {
+      "main": [
+        [
+          {
+            "node": "Choose Movie Library",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose Movie Library": {
+      "main": [
+        [
+          {
+            "node": "Jellyfin Refresh (Movies)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Libraries (TV)": {
+      "main": [
+        [
+          {
+            "node": "Choose TV Library",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose TV Library": {
+      "main": [
+        [
+          {
+            "node": "Jellyfin Refresh (TV)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jellyfin Refresh (Movies)": {
+      "main": [
+        [
+          {
+            "node": "Restore Context (Movies)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jellyfin Refresh (TV)": {
+      "main": [
+        [
+          {
+            "node": "Restore Context (TV)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Context (Movies)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Indexing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Context (TV)": {
+      "main": [
+        [
+          {
+            "node": "Wait for Indexing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Indexing": {
+      "main": [
+        [
+          {
+            "node": "Verify Indexed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Indexed": {
+      "main": [
+        [
+          {
+            "node": "Check Index Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Index Result": {
+      "main": [
+        [
+          {
+            "node": "Generate Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Notification": {
+      "main": [
+        [
+          {
+            "node": "Send to ntfy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Notification": {
+      "main": [
+        [
+          {
+            "node": "Send Error to ntfy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unknown Media Type": {
+      "main": [
+        [
+          {
+            "node": "Notify Unknown Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ee9fdf8119918d7b973ca89acb6161f158c02319c8e88a37a71d177acacd8190"
+  }
+}

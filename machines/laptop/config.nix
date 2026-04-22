@@ -318,12 +318,6 @@
     local-workflows.enable = false;
   };
 
-  # Fix Ollama systemd service type (container sd-notify unreliable)
-  systemd.services.podman-ollama.serviceConfig = lib.mkIf config.hwc.ai.ollama.enable {
-    Type = lib.mkForce "forking";
-    NotifyAccess = lib.mkForce "none";
-  };
-
   # Static hosts for local services (remains unchanged).
   networking.hosts = {
     "100.114.232.124" = [
