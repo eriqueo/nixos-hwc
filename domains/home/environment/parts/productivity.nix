@@ -26,7 +26,6 @@
 
 let
   cfg = config.hwc.home.productivity;
-  whisper = pkgs.whisper-cpp.override { cudaSupport = true; };
 in
 {
   #============================================================================
@@ -38,7 +37,6 @@ in
     home.packages =
       (lib.optionals cfg.notes.obsidian        [ pkgs.obsidian ]) ++
       (lib.optionals cfg.office.libreoffice    [ pkgs.libreoffice ]) ++
-      [ pkgs.yt-dlp whisper ] ++
       cfg.extraPackages;
 
     # HM: browsers / mail
