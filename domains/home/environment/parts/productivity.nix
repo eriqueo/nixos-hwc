@@ -37,7 +37,7 @@ in
     home.packages =
       (lib.optionals cfg.notes.obsidian        [ pkgs.obsidian ]) ++
       (lib.optionals cfg.office.libreoffice    [ pkgs.libreoffice ]) ++
-      [ pkgs.yt-dlp ] ++
+      [ pkgs.yt-dlp pkgs.openai-whisper-cpp ] ++
       cfg.extraPackages;
 
     # HM: browsers / mail
