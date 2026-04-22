@@ -34,9 +34,10 @@ in
   config = lib.mkIf cfg.enable {
     
     # Pure Home-Manager packages
-    home.packages = 
+    home.packages =
       (lib.optionals cfg.notes.obsidian        [ pkgs.obsidian ]) ++
       (lib.optionals cfg.office.libreoffice    [ pkgs.libreoffice ]) ++
+      [ pkgs.yt-dlp ] ++
       cfg.extraPackages;
 
     # HM: browsers / mail
