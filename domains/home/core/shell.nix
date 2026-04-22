@@ -149,6 +149,8 @@ in
         eza bat procs dust zoxide
       ]);
 
+    home.sessionPath = [ "${config.home.homeDirectory}/bin" ];
+
     # Environment variables
     home.sessionVariables = cfg.sessionVariables // {
       COLORTERM = "truecolor";
