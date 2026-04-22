@@ -186,7 +186,8 @@
       "mcp__hwc-sys__hwc_monitoring_health_check",
       "Bash(age-keygen -y /etc/age/keys.txt)",
       "Bash(agenix --help)",
-      "Bash(agenix -r)"
+      "Bash(agenix -r)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": [],

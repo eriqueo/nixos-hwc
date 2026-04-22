@@ -2,6 +2,7 @@
 let
   on =
     (config.hwc.mail.enable or true) &&
+    (config.hwc.mail.mbsync.enable or true) &&
     ((lib.attrValues (config.hwc.mail.accounts or {})) != []);
 
   render   = import ./parts/render.nix { inherit lib pkgs config; };

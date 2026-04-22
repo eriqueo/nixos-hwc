@@ -31,6 +31,8 @@
       };
     };
   };
+  hwc.mail.mbsync.enable = false;
+
   hwc.mail.health = {
     enable = false;
   };

@@ -22,6 +22,8 @@ in
   options.hwc.mail = {
     enable = lib.mkEnableOption "Mail domain" // { default = true; };
 
+    mbsync.enable = lib.mkEnableOption "mbsync mail sync daemon and timer" // { default = true; };
+
     afew.enable = lib.mkEnableOption "Enable afew tagging and hook integration" // { default = true; };
     afew.package = lib.mkOption {
       type = t.nullOr t.package;

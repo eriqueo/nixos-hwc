@@ -69,6 +69,7 @@ in
         "application/json" = [ "micro.desktop" ];
         "application/xml" = [ "micro.desktop" ];
         "application/yaml" = [ "micro.desktop" ];
+        "application/pdf" = [ "org.pwmt.zathura.desktop" ];
       };
     };
 
