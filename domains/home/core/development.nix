@@ -107,6 +107,7 @@ in
     };
 
     home.sessionPath = [
+      "$HOME/bin"
       "$HOME/.local/bin"
     ] ++ lib.optionals cfg.languages.javascript [
       "$HOME/.npm-global/bin"
