@@ -32,7 +32,7 @@ let
   # ── Build script ───────────────────────────────────────────────────────────
   buildScript = pkgs.writeShellApplication {
     name = "estimator-build";
-    runtimeInputs = with pkgs; [ nodejs_20 rsync coreutils findutils ];
+    runtimeInputs = with pkgs; [ nodejs_20 rsync coreutils findutils bash ];
     text = ''
       source_dir="${appSource}"
       webhook_url="${cfg.webhookUrl}"

@@ -7,6 +7,7 @@ export const DEFAULT_STATE = {
   mode: 'existing',           // 'existing' | 'new_job'
   customerId: '',
   customerName: '',
+  locationId: '',
   jobId: '',
   jobNumber: '',
   jobName: '',
