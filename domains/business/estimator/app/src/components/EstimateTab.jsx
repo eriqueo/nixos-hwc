@@ -76,6 +76,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         newJob: state.mode === 'new_job' ? {
           customerId: state.customerId,
           customerName: state.customerName,
+          locationId: state.locationId,
           jobName: state.jobName,
           address: state.address,
         } : null,

@@ -89,6 +89,7 @@ export function JobSelector({ s, set }) {
     set('customerId', customerId);
     set('customerName', customer?.name || '');
     set('address', customer?.address || '');
+    set('locationId', customer?.locations?.[0]?.id || '');
     // Reset job selection when customer changes
     set('jobId', '');
     set('jobNumber', '');
