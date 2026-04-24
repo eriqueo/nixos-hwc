@@ -200,7 +200,54 @@ Even at `size: 100`, requesting entities with many nested fields (e.g., jobs wit
 
 ---
 
-## 20. cfv: Where Clauses Don't Work for Jobs
+## 20. Job Name Has 30-Character Limit
+
+**Discovered 2026-04-23.** `createJob` and `updateJob` enforce a 30-character max on the `name` field. Longer names cause HTTP 400. The estimator PWA should truncate or validate before pushing.
+
+---
+
+## 21. createCostItem with jobId Creates Org Catalog Entries
+
+**Discovered 2026-04-23.** `createCostItem` with `jobId` placement does NOT just add an item to the job budget. It creates a **new org-wide catalog entry** and links it to the job. JT enforces uniqueness on `name + costCode + costType + unit` across the entire catalog. If an item with the same combo exists, you get:
+
+```
+400 - "A cost item with the name \"Labor | Demo | Floor Tile\", code \"0200 Demolition\", type \"Labor\" and unit \"Hours\" already exists in the catalog"
+```
+
+**This is the wrong mutation for pushing estimates.** Two correct alternatives:
+
+1. **`createJob` / `updateJob` with `lineItems`** — declarative tree replacement, scoped to job (see Gotcha #22)
+2. **`createCostItem` with `costGroupId` placement** — additive, job-scoped, no catalog pollution. Create a cost group first (`createCostGroup` with `jobId`), then create items inside it with `costGroupId`. Only `jobId` placement triggers the catalog path.
+
+---
+
+## 22. lineItems on updateJob Is Declarative Tree Replacement
+
+**Discovered 2026-04-23.** Sending `lineItems` on `updateJob` **replaces the entire budget**:
+- Items with `id` → preserved (matched to existing)
+- Items without `id` → created new
+- Existing items NOT in the array → **deleted**
+
+To add items without destroying existing ones, first read the budget, merge, then send the full tree. For fresh jobs (just created), this isn't an issue.
+
+---
+
+## 23. Discriminated Union _type Syntax (Not Documented Publicly)
+
+**Discovered 2026-04-23 by capturing JT UI network traffic.**
+
+`lineItems` arrays in `createJob`/`updateJob`/`createCostGroup` use `_type` to discriminate between cost groups and cost items:
+
+```json
+{ "_type": "costGroup", "name": "Demo", "lineItems": [...] }
+{ "_type": "costItem", "name": "Floor Tile", "costCodeId": "...", ... }
+```
+
+NOT `_on_<TypeName>` (output only). NOT `{ newCostItem: {...} }` wrapping. See `01-PAVE-FUNDAMENTALS.md` for full syntax.
+
+---
+
+## 24. cfv: Where Clauses Don't Work for Jobs
 
 **Discovered 2026-04-04.** Despite the `["cfv:FIELD_ID", "values"]` field path syntax documented in Gotcha #5, using `cfv:` in `where` clauses for **job** custom fields in organization-level queries fails:
 

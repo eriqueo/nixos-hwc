@@ -272,6 +272,263 @@ Example — current month filter:
 
 ---
 
+## Discriminated Union Inputs (`_type`)
+
+**Discovered 2026-04-23 by capturing JT UI network traffic — not in public API docs.**
+
+Some input fields accept a discriminated union — an array of objects where each object's `_type` field determines its schema. This is used for `lineItems` in `createJob`, `updateJob`, `createCostGroup`, and `createDocument`.
+
+### `_type` Values for `lineItems`
+
+| `_type` | Purpose | Key Fields |
+|---------|---------|------------|
+| `"costGroup"` | Create a budget group/section | `name`, nested `lineItems` |
+| `"costItem"` | Create a budget line item | `name`, `costCodeId`, `costTypeId`, `unitId`, `quantity`, `unitCost`, `unitPrice` |
+
+### Example: `createJob` with Grouped Budget
+
+```json
+{
+  "query": {
+    "$": { "grantKey": "..." },
+    "createJob": {
+      "$": {
+        "locationId": "LOC_ID",
+        "name": "Bath Remodel",
+        "lineItems": [
+          {
+            "_type": "costGroup",
+            "name": "Demo",
+            "lineItems": [
+              {
+                "_type": "costItem",
+                "name": "Labor | Demo | Floor Tile",
+                "costCodeId": "22Nm3uGRAMmJ",
+                "costTypeId": "22Nm3uGRAMmq",
+                "unitId": "22Nm3uGRAMm9",
+                "quantity": 10.8,
+                "unitCost": 47.25,
+                "unitPrice": 94.50
+              }
+            ]
+          },
+          {
+            "_type": "costItem",
+            "name": "Ungrouped Item",
+            "quantity": 1,
+            "unitCost": 100,
+            "unitPrice": 150
+          }
+        ]
+      },
+      "createdJob": { "id": {}, "number": {}, "name": {} }
+    }
+  }
+}
+```
+
+### Declarative Tree Replacement
+
+`lineItems` on `updateJob` is a **full tree replacement**:
+- Items with an `id` field are preserved (matched to existing)
+- Items without `id` are created new
+- Existing items NOT in the array are **deleted**
+- To add items to an existing budget, you must first read the current budget and include all existing items with their IDs
+
+### Important
+
+- `_type` is the input discriminator — NOT `_on_<TypeName>` (that's query output only)
+- NOT `{ newCostItem: {...} }` wrapping — no such pattern exists
+- Line item name uniqueness is scoped **per-job**, NOT org-wide
+- `createCostItem` with `jobId` placement is a DIFFERENT code path that enforces org-wide catalog uniqueness — avoid it for budget pushes
+
+---
+
+## Additive Budget Push (createCostGroup + createCostItem)
+
+**Discovered 2026-04-23.** For adding items to an existing job budget WITHOUT replacing it, use the two-mutation sequence:
+
+1. **`createCostGroup`** with `jobId` → returns `createdCostGroup.id`
+2. **`createCostItem`** with `costGroupId` → returns `createdCostItem.id`
+
+This is **additive** — existing budget items are untouched. Unlike `createCostItem` with `jobId` placement (Gotcha #21), `costGroupId` placement is job-scoped and does NOT create org catalog entries.
+
+### Example: Add a Grouped Item to Job #300
+
+**Step 1 — Create the group:**
+```json
+{
+  "query": {
+    "$": { "grantKey": "...", "notify": false },
+    "createCostGroup": {
+      "$": { "jobId": "22PW6UsgufG3", "name": "Demo" },
+      "createdCostGroup": { "id": {}, "name": {} }
+    }
+  }
+}
+```
+
+**Step 2 — Create item inside the group:**
+```json
+{
+  "query": {
+    "$": { "grantKey": "...", "notify": false },
+    "createCostItem": {
+      "$": {
+        "costGroupId": "<id from step 1>",
+        "name": "Labor | Demo | Floor Tile",
+        "costCodeId": "22Nm3uGRAMmJ",
+        "costTypeId": "22Nm3uGRAMmq",
+        "unitId": "22Nm3uGRAMm9",
+        "quantity": 10.8,
+        "unitCost": 47.25,
+        "unitPrice": 94.50
+      },
+      "createdCostItem": { "id": {}, "name": {} }
+    }
+  }
+}
+```
+
+### Nested Groups (e.g. "Demo > Labor")
+
+For `groupName` with `>` separator:
+1. `createCostGroup` with `jobId` for top-level ("Demo") → `parentGroupId`
+2. `createCostGroup` with `parentCostGroupId` for sub-group ("Labor") → `childGroupId`
+3. `createCostItem` with `costGroupId = childGroupId` for each item
+
+### When to Use Which
+
+| Approach | Use Case | Behavior |
+|----------|----------|----------|
+| `createJob`/`updateJob` + `lineItems` | Full estimate push, known complete budget | Declarative replacement |
+| `createCostGroup` + `createCostItem` | Add items to existing budget | Additive, non-destructive |
+
+---
+
+## Verified Working Examples
+
+**Tested 2026-04-23 via Explorer + n8n workflow #08b (estimate-push).**
+
+These payloads were sent to production and confirmed working. Job IDs are proof of successful execution.
+
+### createJob with 73-item Grouped Budget (Job #300)
+
+Job `22PW6UsgufG3` — Greg Wagner, "bathroom remodel". Created via `updateJob` with full budget tree. 73 line items across 12 cost groups pushed successfully in a single call.
+
+### createJob with lineItems (Job #305)
+
+Job `22PW6nQdGWSY` — created via `createJob` with `lineItems` embedded. Single PAVE call created job + budget atomically.
+
+### Minimal Working Payload
+
+```json
+{
+  "query": {
+    "$": { "grantKey": "...", "notify": false },
+    "createJob": {
+      "$": {
+        "locationId": "22PVyFahVXVy",
+        "name": "Test Job",
+        "lineItems": [
+          {
+            "_type": "costGroup",
+            "name": "Demo",
+            "lineItems": [
+              {
+                "_type": "costGroup",
+                "name": "Labor",
+                "lineItems": [
+                  {
+                    "_type": "costItem",
+                    "name": "Labor | Demo | Floor Tile",
+                    "costCodeId": "22Nm3uGRAMmJ",
+                    "costTypeId": "22Nm3uGRAMmq",
+                    "unitId": "22Nm3uGRAMm9",
+                    "quantity": 10.8,
+                    "unitCost": 47.25,
+                    "unitPrice": 94.50
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "_type": "costGroup",
+            "name": "Allowances",
+            "lineItems": [
+              {
+                "_type": "costItem",
+                "name": "Allowance | Bathtub",
+                "costCodeId": "22Nm3uGRAMmg",
+                "costTypeId": "22Nm3uGRAMmr",
+                "unitId": "22Nm3uGRAMmB",
+                "quantity": 1,
+                "unitCost": 1200,
+                "unitPrice": 1714.32
+              }
+            ]
+          }
+        ]
+      },
+      "createdJob": { "id": {}, "number": {}, "name": {} }
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "createJob": {
+    "createdJob": {
+      "id": "22PW6nQdGWSY",
+      "number": "305",
+      "name": "Test Job"
+    }
+  }
+}
+```
+
+### updateJob with lineItems (Budget Replacement)
+
+```json
+{
+  "query": {
+    "$": { "grantKey": "...", "notify": false },
+    "updateJob": {
+      "$": {
+        "id": "22PW6UsgufG3",
+        "lineItems": [
+          {
+            "_type": "costGroup",
+            "name": "Preconstruction",
+            "lineItems": [
+              {
+                "_type": "costItem",
+                "name": "Admin | Planning | Site Walkthrough",
+                "costCodeId": "22Nm3uGRAMmH",
+                "costTypeId": "22Nm3uGRAMmq",
+                "unitId": "22Nm3uGRAMm9",
+                "quantity": 2,
+                "unitCost": 47.25,
+                "unitPrice": 67.57
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Response:** `{ "updateJob": {} }` (empty — standard for update mutations, see Gotcha #2).
+
+**Warning:** This replaces the ENTIRE job budget. See Gotcha #22.
+
+---
+
 ## Error Handling
 
 - **Pave returns HTTP 200 even on errors.** Always check `response.errors` array.

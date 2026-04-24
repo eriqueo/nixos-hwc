@@ -187,16 +187,13 @@
       "Bash(age-keygen -y /etc/age/keys.txt)",
       "Bash(agenix --help)",
       "Bash(agenix -r)",
-<<<<<<< HEAD
-      "Bash(git pull:*)"
-      "Bash(git push:*)"
-=======
+      "Bash(git pull:*)",
       "Bash(git push:*)",
       "Bash(git:*)",
       "mcp__claude_ai_HWC__n8n_update_partial_workflow",
       "mcp__claude_ai_HWC__n8n_executions",
-      "mcp__claude_ai_HWC__n8n_get_workflow"
->>>>>>> cb1ebbcd (estimator)
+      "mcp__claude_ai_HWC__n8n_get_workflow",
+      "mcp__claude_ai_HWC__jt_add_budget_line_items"
     ],
     "deny": [],
     "ask": [],

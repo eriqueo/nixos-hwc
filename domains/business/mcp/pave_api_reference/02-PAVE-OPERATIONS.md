@@ -149,7 +149,7 @@ Same optional fields as create, plus `id` (required). Also accepts `lineItems` t
 | Input | Required | Type | Notes |
 |---|---|---|---|
 | `locationId` | Yes | jobtreadId | Must create location first |
-| `name` | No (nullable) | string (max 30) | |
+| `name` | No (nullable) | string (**max 30**) | Job name. 30-char hard limit — longer names cause 400. |
 | `number` | No (nullable) | jobNumber (max 16) | Auto-generated if omitted |
 | `description` | No (nullable) | string (max 32768) | |
 | `parameters` | No (nullable) | parameters array | Job parameters for formulas |
@@ -157,11 +157,15 @@ Same optional fields as create, plus `id` (required). Also accepts `lineItems` t
 | `areas` | No | string array | Default: `["General"]` |
 | `closedOn` | No (nullable) | date | |
 | `customFieldValues` | No (nullable) | object | `{ fieldId: value }` |
-| `lineItems` | No | array (max 1500) | Initial budget |
+| `lineItems` | No | array (max 1500) | Initial budget — see Discriminated Union Inputs in `01-PAVE-FUNDAMENTALS.md` |
 | `copyCostsFromJobId` | No (nullable) | jobtreadId | Copy budget from another job |
 | `copyTasksFromJobId` | No (nullable) | jobtreadId | Copy tasks from another job |
 | `scheduleIsPublished` | No | boolean | |
 | `useSimpleSelections` | No (nullable) | boolean | |
+
+**lineItems** uses discriminated union `_type` syntax. Each entry is either `{ _type: "costGroup", name, lineItems: [...] }` or `{ _type: "costItem", name, costCodeId, costTypeId, unitId, quantity, unitCost, unitPrice }`. Groups can nest other groups/items. See `01-PAVE-FUNDAMENTALS.md` for full syntax and examples.
+
+**updateJob** also accepts `lineItems` with the same syntax, but it's a **declarative tree replacement** — include existing items with their `id` to preserve them, omit to delete. New items have no `id`.
 
 ---
 
