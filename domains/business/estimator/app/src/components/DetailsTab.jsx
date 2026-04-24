@@ -1,13 +1,48 @@
 import { useState } from 'react';
 import { C, mono } from '../styles/theme.js';
 import { Box, Label } from './Section.jsx';
-import { NumInput } from './NumInput.jsx';
 import { deriveGeometry } from '../engine/assembler.js';
 import tradeRates from '../data/tradeRates.json';
 import { tradeRate } from '../engine/pricing.js';
 
+function AllowanceRow({ label, value, onChange, enabled, onToggle, show = true }) {
+  if (!show) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+      <button
+        onClick={() => onToggle(!enabled)}
+        style={{
+          width: 18, height: 18, borderRadius: 3, border: `1px solid ${C.brd}`,
+          backgroundColor: enabled ? C.acc : 'transparent', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, color: enabled ? C.bg : 'transparent', fontWeight: 700, flexShrink: 0,
+        }}
+      >{enabled ? '\u2713' : ''}</button>
+      <span style={{ color: enabled ? C.tx : C.txD, fontSize: 12, fontFamily: mono, flex: 1,
+        textDecoration: enabled ? 'none' : 'line-through' }}>{label}</span>
+      <input
+        type="number"
+        value={value ?? ''}
+        onChange={e => onChange(parseFloat(e.target.value) || 0)}
+        disabled={!enabled}
+        step={100}
+        style={{
+          width: 80, padding: '3px 6px', borderRadius: 3,
+          border: `1px solid ${C.brd}`,
+          backgroundColor: enabled ? C.card2 : C.bg, color: enabled ? C.txB : C.txD,
+          fontSize: 13, textAlign: 'right', fontFamily: mono, outline: 'none',
+          opacity: enabled ? 1 : 0.4,
+        }}
+      />
+      <span style={{ color: C.txD, fontSize: 10, width: 14 }}>$</span>
+    </div>
+  );
+}
+
 export function DetailsTab({ s, set, isMobile = false }) {
   const { fl, wallTile } = deriveGeometry(s);
+  const yn = v => v === 'yes';
+
   const [newItem, setNewItem] = useState({
     name: '', group: 'Additional Items', qty: 1,
     cost: 0, type: 'Materials', unit: 'Each',
@@ -36,17 +71,28 @@ export function DetailsTab({ s, set, isMobile = false }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 10 : 14 }}>
 
-      {/* Allowances */}
+      {/* Allowances with toggles */}
       <Box>
-        <Label color={C.acc}>Allowance Amounts</Label>
-        <NumInput label="Bathtub"      value={s.tub_allowance}          onChange={v => set('tub_allowance',          v)} unit="$" show={s.has_tub}    step={100} />
-        <NumInput label="Shower Trim"  value={s.shower_trim_allowance}  onChange={v => set('shower_trim_allowance',  v)} unit="$" show={s.has_shower} step={100} />
-        <NumInput label="Toilet"       value={s.toilet_allowance}       onChange={v => set('toilet_allowance',       v)} unit="$" step={100} />
-        <NumInput label="Vanity"       value={s.vanity_allowance}       onChange={v => set('vanity_allowance',       v)} unit="$" step={100} />
-        <NumInput label="Accessories"  value={s.accessory_allowance}    onChange={v => set('accessory_allowance',    v)} unit="$" step={100} />
+        <Label color={C.acc}>Allowances</Label>
+        <div style={{ color: C.txD, fontSize: 10, marginBottom: 8 }}>
+          Uncheck to exclude from estimate. Amounts are editable.
+        </div>
+        <AllowanceRow label="Bathtub"     value={s.tub_allowance}         onChange={v => set('tub_allowance', v)}
+          enabled={yn(s.new_tub)}         onToggle={v => set('new_tub', v ? 'yes' : 'no')} />
+        <AllowanceRow label="Shower Trim" value={s.shower_trim_allowance} onChange={v => set('shower_trim_allowance', v)}
+          enabled={yn(s.has_shower_tile)} onToggle={v => set('has_shower_tile', v ? 'yes' : 'no')} />
+        <AllowanceRow label="Toilet"      value={s.toilet_allowance}      onChange={v => set('toilet_allowance', v)}
+          enabled={true}                  onToggle={() => {}} />
+        <AllowanceRow label="Vanity"      value={s.vanity_allowance}      onChange={v => set('vanity_allowance', v)}
+          enabled={yn(s.has_vanity)}      onToggle={v => set('has_vanity', v ? 'yes' : 'no')} />
+        <AllowanceRow label="Accessories" value={s.accessory_allowance}   onChange={v => set('accessory_allowance', v)}
+          enabled={true}                  onToggle={() => {}} />
+        <AllowanceRow label="Electrical"  value={800}                     onChange={() => {}}
+          enabled={yn(s.new_electrical)}  onToggle={v => set('new_electrical', v ? 'yes' : 'no')} />
+
         <div style={{ marginTop: 8, padding: 8, backgroundColor: C.card2, borderRadius: 4 }}>
           <span style={{ color: C.txD, fontSize: 10 }}>
-            Tile allowances are auto-calculated from sqft.
+            Tile allowances auto-calculated from sqft.
             Floor: ${Math.max(400, Math.round(fl * 10)).toLocaleString()} ·
             Shower: ${Math.max(800, Math.round(wallTile * 12)).toLocaleString()}
           </span>
@@ -93,9 +139,9 @@ export function DetailsTab({ s, set, isMobile = false }) {
           <div style={{ marginTop: 10 }}>
             {s.custom_items.map((ci, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: `1px solid ${C.brd}` }}>
-                <span style={{ color: C.tx, fontSize: 11 }}>{ci.name} ({ci.qty}× ${ci.cost})</span>
+                <span style={{ color: C.tx, fontSize: 11 }}>{ci.name} ({ci.qty}x ${ci.cost})</span>
                 <button onClick={() => removeCustomItem(idx)}
-                  style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 11, fontFamily: mono }}>×</button>
+                  style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 11, fontFamily: mono }}>x</button>
               </div>
             ))}
           </div>
@@ -104,7 +150,7 @@ export function DetailsTab({ s, set, isMobile = false }) {
 
       {/* Trade Rate Reference */}
       <Box style={{ gridColumn: '1/-1' }}>
-        <Label>Trade Labor Rates (reference — edit in catalog DB)</Label>
+        <Label>Trade Labor Rates (reference)</Label>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: 8 }}>
           {Object.keys(tradeRates).map(trade => {
             const r = tradeRate(trade);
