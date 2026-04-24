@@ -1,0 +1,40 @@
+{
+  "numeric": [
+    { "name": "bathroom_length_ft", "default": 10, "label": "Room Length (ft)", "section": "room" },
+    { "name": "bathroom_width_ft", "default": 8, "label": "Room Width (ft)", "section": "room" },
+    { "name": "wall_height_ft", "default": 8, "label": "Wall Height (ft)", "section": "room" },
+    { "name": "shower_wall_height_ft", "default": 8, "label": "Shower Wall Height (ft)", "section": "shower" },
+    { "name": "shower_wall_1_width_ft", "default": 4, "label": "Wall 1 Width (ft)", "section": "shower" },
+    { "name": "shower_wall_2_width_ft", "default": 4, "label": "Wall 2 Width (ft)", "section": "shower" },
+    { "name": "shower_wall_3_width_ft", "default": 4, "label": "Wall 3 Width (ft)", "section": "shower" },
+    { "name": "shower_wall_4_width_ft", "default": 0, "label": "Wall 4 Width (ft)", "section": "shower" },
+    { "name": "shower_pan_width_ft", "default": 4, "label": "Pan Width (ft)", "section": "shower" },
+    { "name": "shower_pan_length_ft", "default": 4, "label": "Pan Length (ft)", "section": "shower" },
+    { "name": "shower_curb_length_ft", "default": 4, "label": "Curb Length (ft)", "section": "shower" },
+    { "name": "shower_curb_width_in", "default": 6, "label": "Curb Width (in)", "section": "shower" },
+    { "name": "shower_curb_height_in", "default": 4, "label": "Curb Height (in)", "section": "shower" },
+    { "name": "bathroom_wall_repair_sqft", "default": 16, "label": "Wall Repair (sqft)", "section": "room" }
+  ],
+  "formula": [
+    { "name": "bathroom_floor_sqft", "formula": "{bathroom_width_ft}*{bathroom_length_ft}", "label": "Floor Area" },
+    { "name": "shower_wall_tile_sqft", "formula": "({shower_wall_1_width_ft}+{shower_wall_2_width_ft}+{shower_wall_3_width_ft}+{shower_wall_4_width_ft})*{shower_wall_height_ft}", "label": "Shower Wall Tile" },
+    { "name": "shower_pan_tile_sqft", "formula": "{shower_pan_width_ft}*{shower_pan_length_ft}", "label": "Shower Pan Tile" },
+    { "name": "shower_curb_tile_sqft", "formula": "ceil(({shower_curb_height_in}*2)/12*{shower_curb_length_ft}+({shower_curb_width_in}*2)/12*{shower_curb_length_ft})", "label": "Shower Curb Tile" },
+    { "name": "shower_accent_tile_sqft", "formula": "({shower_wall_1_width_ft}+{shower_wall_2_width_ft}+{shower_wall_3_width_ft}+{shower_wall_4_width_ft})*1.25", "label": "Accent Tile" },
+    { "name": "bathroom_wall_paint_sqft", "formula": "({bathroom_length_ft}+{bathroom_width_ft})*2*{wall_height_ft}", "label": "Wall Paint Area" },
+    { "name": "bathroom_perimeter_lf", "formula": "({bathroom_length_ft}+{bathroom_width_ft})*2", "label": "Perimeter" }
+  ],
+  "picklist": [
+    { "name": "demo_scope", "options": ["shower_only", "shower_and_floors", "full_gut"], "default": "shower_only", "label": "Demo Scope" },
+    { "name": "has_shower_tile", "options": ["yes", "no"], "default": "yes", "label": "Shower Tile" },
+    { "name": "has_floor_tile", "options": ["yes", "no"], "default": "yes", "label": "Floor Tile" },
+    { "name": "has_accent_tile", "options": ["yes", "no"], "default": "no", "label": "Accent Tile" },
+    { "name": "has_paint", "options": ["yes", "no"], "default": "yes", "label": "Paint" },
+    { "name": "has_vanity", "options": ["yes", "no"], "default": "yes", "label": "Vanity" },
+    { "name": "has_mirror", "options": ["yes", "no"], "default": "yes", "label": "Mirror" },
+    { "name": "new_tub", "options": ["yes", "no"], "default": "no", "label": "New Tub" },
+    { "name": "new_electrical", "options": ["yes", "no"], "default": "no", "label": "Electrical" },
+    { "name": "new_fan", "options": ["yes", "no"], "default": "no", "label": "Exhaust Fan" },
+    { "name": "shower_niches", "options": ["0", "1", "2", "3"], "default": "0", "label": "Shower Niches" }
+  ]
+}

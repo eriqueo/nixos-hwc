@@ -12,32 +12,47 @@ export const DEFAULT_STATE = {
   jobNumber: '',
   jobName: '',
   address: '',
-  projectType: 'bathroom',    // bathroom, deck, kitchen, general
+  projectType: 'bathroom',
 
-  // Measurements
-  room_length: 8, room_width: 7, wall_height: 8, tile_height: 6,
-  // Core toggles
-  demo_scope: 'full_gut', permit_required: true,
-  has_tub: true, has_shower: true, has_niche: true,
-  // Feature params
-  niche_count: 2, shower_pan_type: 'tub_combo', shower_head_config: 'single',
-  toilet_type: 'standard', vanity_size: 'single',
-  tile_complexity: 'simple',
-  // Framing
-  framing_hours: 4, has_pocket_door: false,
-  // Plumbing
-  plumbing_moved: false,
-  // Electrical
-  electrical_needed: false, electrical_scope: 'minor',
-  gfci_count: 1, light_fixture_count: 2, has_fan: true,
-  // Drywall
-  drywall_repair_needed: true, drywall_sheets: 3,
-  // Finish
-  has_mirror: true, has_trim_work: true, accessory_count: 5,
-  // Allowances
-  tub_allowance: 1200, shower_trim_allowance: 1200,
-  toilet_allowance: 1600, vanity_allowance: 2000, accessory_allowance: 1000,
-  // Custom
+  // ── Room measurements (JT numeric parameters) ──
+  bathroom_length_ft: 10,
+  bathroom_width_ft: 8,
+  wall_height_ft: 8,
+
+  // ── Shower measurements (JT numeric parameters) ──
+  shower_wall_height_ft: 8,
+  shower_wall_1_width_ft: 4,
+  shower_wall_2_width_ft: 4,
+  shower_wall_3_width_ft: 4,
+  shower_wall_4_width_ft: 0,
+  shower_pan_width_ft: 4,
+  shower_pan_length_ft: 4,
+  shower_curb_length_ft: 4,
+  shower_curb_width_in: 6,
+  shower_curb_height_in: 4,
+  bathroom_wall_repair_sqft: 16,
+
+  // ── Picklist parameters (JT picklists — string values) ──
+  demo_scope: 'shower_only',
+  has_shower_tile: 'yes',
+  has_floor_tile: 'yes',
+  has_accent_tile: 'no',
+  has_paint: 'yes',
+  has_vanity: 'yes',
+  has_mirror: 'yes',
+  new_tub: 'no',
+  new_electrical: 'no',
+  new_fan: 'no',
+  shower_niches: '0',
+
+  // ── Allowances ──
+  tub_allowance: 1200,
+  shower_trim_allowance: 1200,
+  toilet_allowance: 1600,
+  vanity_allowance: 2000,
+  accessory_allowance: 1000,
+
+  // ── Custom ──
   custom_items: [],
 };
 

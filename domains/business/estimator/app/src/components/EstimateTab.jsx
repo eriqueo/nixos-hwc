@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { C, GROUP_COLORS, mono } from '../styles/theme.js';
 import { Box } from './Section.jsx';
+import { buildParameters } from '../engine/assembler.js';
 import jtMappings from '../data/jtMappings.json';
 
-// Configurable webhook URL and API key — set via localStorage or env
 const WEBHOOK_URL = import.meta.env.VITE_WEBHOOK_URL ?? localStorage.getItem('hwc-webhook-url') ?? '';
 const API_KEY = import.meta.env.VITE_API_KEY ?? localStorage.getItem('hwc-api-key') ?? '';
 
@@ -25,24 +26,32 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
 
   const buildJtPayload = () => {
     const items = Object.values(groups).flat();
-    return items.map(i => ({
-      name:        i.name,
-      groupName:   i.group,
-      costCodeId:  jtMappings.codes[i.code],
-      costTypeId:  jtMappings.types[i.type],
-      unitId:      jtMappings.units[i.unit],
-      quantity:    i.qty,
-      unitCost:    i.uc,
-      unitPrice:   i.up,
-    }));
+    return items.map(i => {
+      const item = {
+        name:        i.name,
+        groupName:   i.group,
+        costCodeId:  jtMappings.codes[i.code],
+        costTypeId:  jtMappings.types[i.type],
+        unitId:      jtMappings.units[i.unit],
+        unitCost:    i.uc,
+        unitPrice:   i.up,
+      };
+      // Items with JT formulas get quantityFormula; others get numeric quantity
+      if (i.quantityFormula) {
+        item.quantityFormula = i.quantityFormula;
+      } else {
+        item.quantity = i.qty;
+      }
+      return item;
+    });
   };
 
   const copyPayload = async () => {
-    await navigator.clipboard.writeText(JSON.stringify(buildJtPayload(), null, 2));
+    const payload = { parameters: buildParameters(state), items: buildJtPayload() };
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
     setPushMsg('copied');
   };
 
-  // Check if job selection is complete
   const canPush = () => {
     if (!state) return false;
     if (!state.customerId) return false;
@@ -81,10 +90,13 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
           address: state.address,
         } : null,
 
+        // JT parameters array — pushed to createJob
+        parameters: buildParameters(state),
+
         // Full state for change order tracking
         projectState: state,
 
-        // Line items
+        // Line items (with quantityFormula where available)
         estimate: Object.values(groups).flat(),
         jtPayload: buildJtPayload(),
         totals: {
@@ -120,7 +132,6 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
     }
   };
 
-  // Mobile item card component
   const MobileItemCard = ({ item, gc }) => (
     <div style={{
       padding: '10px 12px',
@@ -135,7 +146,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
           </span>
         </div>
         <button onClick={() => setRemoved(r => ({ ...r, [item.id]: true }))}
-          style={{ background: 'none', border: 'none', color: C.txD, cursor: 'pointer', fontSize: 14, fontFamily: mono, padding: '0 0 0 8px' }}>×</button>
+          style={{ background: 'none', border: 'none', color: C.txD, cursor: 'pointer', fontSize: 14, fontFamily: mono, padding: '0 0 0 8px' }}>x</button>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -151,13 +162,17 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
           <div style={{ color: C.acc, fontSize: 14, fontWeight: 600 }}>${Math.round(item.extP).toLocaleString()}</div>
         </div>
       </div>
+      {item.quantityFormula && (
+        <div style={{ marginTop: 4, fontSize: 9, color: C.txD, fontFamily: mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          JT: {item.quantityFormula}
+        </div>
+      )}
     </div>
   );
 
   return (
     <div>
       <Box style={{ padding: 0, overflow: 'hidden' }}>
-        {/* Header row - desktop only */}
         {!isMobile && (
           <Row style={{ padding: '7px 10px', backgroundColor: C.card2, borderBottom: `1px solid ${C.brd}`,
             fontSize: 9, color: C.txD, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
@@ -179,7 +194,6 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
 
           return (
             <div key={gn}>
-              {/* Group header */}
               {isMobile ? (
                 <div style={{
                   padding: '10px 12px',
@@ -204,7 +218,6 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
                 </Row>
               )}
 
-              {/* Line items */}
               {isMobile ? (
                 items.map(item => <MobileItemCard key={item.id} item={item} gc={gc} />)
               ) : (
@@ -214,7 +227,10 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
                     backgroundColor: item._edited ? 'rgba(201,149,107,0.04)' : 'transparent' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
                       <div style={{ width: 2, height: 12, borderRadius: 1, backgroundColor: gc, flexShrink: 0 }} />
-                      <span style={{ color: C.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                      <span style={{ color: C.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.name}
+                        {item.quantityFormula && <span style={{ color: C.txD, fontSize: 8, marginLeft: 4 }}>f(x)</span>}
+                      </span>
                     </div>
                     <input type="number" value={item.qty}
                       onChange={e => setOverrides(o => ({ ...o, [item.id]: parseFloat(e.target.value) || 0 }))}
@@ -226,7 +242,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
                     <span style={{ color: C.tx,  textAlign: 'right' }}>${Math.round(item.extC).toLocaleString()}</span>
                     <span style={{ color: C.acc, textAlign: 'right', fontWeight: 600 }}>${Math.round(item.extP).toLocaleString()}</span>
                     <button onClick={() => setRemoved(r => ({ ...r, [item.id]: true }))}
-                      style={{ background: 'none', border: 'none', color: C.txD, cursor: 'pointer', fontSize: 10, fontFamily: mono, padding: 0 }}>×</button>
+                      style={{ background: 'none', border: 'none', color: C.txD, cursor: 'pointer', fontSize: 10, fontFamily: mono, padding: 0 }}>x</button>
                   </Row>
                 ))
               )}
@@ -270,7 +286,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         {isMobile ? (
           <>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={onBack} style={{ ...ghostBtn, flex: 1 }}>← Scope</button>
+              <button onClick={onBack} style={{ ...ghostBtn, flex: 1 }}>Scope</button>
               <button onClick={onDetails} style={{ ...ghostBtn, flex: 1 }}>Allowances</button>
             </div>
             <button
@@ -285,18 +301,14 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
                 cursor: canPush() ? 'pointer' : 'not-allowed',
               }}
             >
-              {pushMsg === 'pushing' ? '...' :
-               pushMsg === 'pushed' ? '✓ Pushed to JT' :
-               pushMsg === 'archived' ? '⚠ Archived (JT failed)' :
-               pushMsg === 'error' ? '✗ Error' :
-               'Push to JobTread'}
+              {pushLabel(pushMsg)}
             </button>
           </>
         ) : (
           <>
-            <button onClick={onBack} style={ghostBtn}>← Edit Scope</button>
-            <button onClick={onDetails} style={ghostBtn}>Allowances & Custom Items</button>
-            <button onClick={copyPayload} style={accentBtn}>{pushMsg === 'copied' ? '✓ Copied' : 'Copy JT Payload'}</button>
+            <button onClick={onBack} style={ghostBtn}>Edit Scope</button>
+            <button onClick={onDetails} style={ghostBtn}>Allowances</button>
+            <button onClick={copyPayload} style={accentBtn}>{pushMsg === 'copied' ? 'Copied' : 'Copy Payload'}</button>
             <button
               onClick={pushToWebhook}
               disabled={!canPush() || pushMsg === 'pushing'}
@@ -306,42 +318,16 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
                 cursor: canPush() ? 'pointer' : 'not-allowed',
               }}
             >
-              {pushMsg === 'pushing' ? '...' :
-               pushMsg === 'pushed' ? '✓ Pushed to JT' :
-               pushMsg === 'archived' ? '⚠ Archived (JT failed)' :
-               pushMsg === 'error' ? '✗ Error' :
-               'Push to JT'}
+              {pushLabel(pushMsg)}
             </button>
           </>
         )}
       </div>
 
       {/* Status messages */}
-      {pushMsg === 'no-url' && (
-        <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card, borderRadius: 5, border: `1px solid ${C.brd}` }}>
-          <span style={{ color: C.txD, fontSize: 10 }}>
-            No webhook URL configured. Set <code>VITE_WEBHOOK_URL</code> in .env or run{' '}
-            <code>localStorage.setItem('hwc-webhook-url', 'https://...')</code> in the browser console.
-          </span>
-        </div>
-      )}
-
-      {pushMsg === 'no-key' && (
-        <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card, borderRadius: 5, border: `1px solid ${C.brd}` }}>
-          <span style={{ color: C.txD, fontSize: 10 }}>
-            No API key configured. Set <code>VITE_API_KEY</code> in .env or run{' '}
-            <code>localStorage.setItem('hwc-api-key', 'your-secret')</code> in the browser console.
-          </span>
-        </div>
-      )}
-
-      {pushMsg === 'no-job' && (
-        <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card, borderRadius: 5, border: `1px solid ${C.brd}` }}>
-          <span style={{ color: C.txD, fontSize: 10 }}>
-            Please select a customer and job (or enter new job details) in the Scope tab before pushing.
-          </span>
-        </div>
-      )}
+      {pushMsg === 'no-url' && <StatusBox>No webhook URL. Set <code>VITE_WEBHOOK_URL</code> or localStorage.</StatusBox>}
+      {pushMsg === 'no-key' && <StatusBox>No API key. Set <code>VITE_API_KEY</code> or localStorage.</StatusBox>}
+      {pushMsg === 'no-job' && <StatusBox>Select a customer and job in Scope tab before pushing.</StatusBox>}
 
       {pushResult && (
         <div style={{
@@ -353,16 +339,14 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
             <div style={{ fontSize: 11, color: C.grn }}>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>Pushed to JobTread</div>
               <div style={{ color: C.tx }}>
-                Job #{pushResult.jobNumber} • {pushResult.itemsPushed} items pushed
-                {pushResult.jobCreated && ' • New job created'}
+                Job #{pushResult.jobNumber} · {pushResult.itemsPushed} items
+                {pushResult.jobCreated && ' · New job created'}
               </div>
             </div>
           ) : pushResult.archived ? (
             <div style={{ fontSize: 11, color: C.ylw }}>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>Archived (JT Push Failed)</div>
-              <div style={{ color: C.tx }}>
-                Estimate saved to database. Error: {pushResult.jtPushError}
-              </div>
+              <div style={{ color: C.tx }}>Error: {pushResult.jtPushError}</div>
             </div>
           ) : pushResult.error ? (
             <div style={{ fontSize: 11, color: C.red }}>
@@ -375,12 +359,28 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
   );
 }
 
-// ── Small helpers ──────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function usePushMsg() {
   const [msg, setMsg] = useState(null);
   const set = (v) => { setMsg(v); if (v !== 'pushing') setTimeout(() => setMsg(null), 2500); };
   return [msg, set];
+}
+
+function pushLabel(msg) {
+  if (msg === 'pushing') return '...';
+  if (msg === 'pushed') return 'Pushed to JT';
+  if (msg === 'archived') return 'Archived (JT failed)';
+  if (msg === 'error') return 'Error';
+  return 'Push to JT';
+}
+
+function StatusBox({ children }) {
+  return (
+    <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card, borderRadius: 5, border: `1px solid ${C.brd}` }}>
+      <span style={{ color: C.txD, fontSize: 10 }}>{children}</span>
+    </div>
+  );
 }
 
 const ghostBtn = {
@@ -395,6 +395,3 @@ const accentBtn = {
   backgroundColor: C.acc, color: C.bg,
   fontSize: 11, fontWeight: 700, fontFamily: mono,
 };
-
-// React import needed for usePushMsg
-import { useState } from 'react';
