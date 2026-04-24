@@ -6,6 +6,14 @@
 {
   # Server domain secrets - application credentials
   age.secrets = {
+
+  apple-app-pw = {
+    file = ../parts/home/apple-app-pw.age;
+    mode = "0440";
+    owner = "root";
+    group = "secrets";
+  };
+  
     # ARR stack API keys
     radarr-api-key = {
       file = ../parts/server/radarr-api-key.age;

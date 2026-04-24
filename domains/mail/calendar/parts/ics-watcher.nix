@@ -8,12 +8,26 @@ let
     INBOX="$HOME/000_inbox/downloads"
     DONE="$HOME/000_inbox/downloads/events"
     mkdir -p "$DONE"
-
     shopt -s nullglob
+
+    IMPORTED=0
     for f in "$INBOX"/*.ics; do
       echo "[khal-import] Importing: $f"
-      ${pkgs.khal}/bin/khal import --batch "$f" && mv "$f" "$DONE/"
+      if ${pkgs.khal}/bin/khal import --batch "$f"; then
+          mv "$f" "$DONE/"
+          IMPORTED=$((IMPORTED + 1))
+      else
+          echo "[khal-import] Failed to import: $f - leaving in place"
+      fi
     done
+    
+    if [ "$IMPORTED" -gt 0 ]; then
+        echo "[khal-import] Syncing $IMPORTED event(s) to iCloud via vdirsyncer..."
+        ${pkgs.vdirsyncer}/bin/vdirsyncer sync
+        echo "[khal-import] Done."
+    else
+        echo "[khal-import] No new .ics files found."
+    fi
   '';
 in
 {
@@ -21,6 +35,7 @@ in
     Unit.Description = "Import .ics files from downloads into khal";
     Service = {
       Type = "oneshot";
+      Environment = "HOME=%h";
       ExecStart = "${importScript}";
     };
   };
