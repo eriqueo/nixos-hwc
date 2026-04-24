@@ -66,9 +66,10 @@ in
     ] ++ lib.optionals cfg.languages.python [
       pyright
     ] ++ lib.optionals (cfg.languages.python && !config.hwc.home.apps.analysis.enable) [
-      python3
-      python3Packages.pip
-      python3Packages.virtualenv
+      (python3.withPackages (ps: with ps; [
+        pip virtualenv
+        requests beautifulsoup4 lxml icalendar pytz tzdata
+      ]))
 
     ] ++ lib.optionals cfg.languages.javascript [
       nodejs

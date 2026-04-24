@@ -45,8 +45,8 @@ in
 
         # Language servers and dev toolchain
         lua-language-server nil pyright typescript-language-server
-        gopls clang-tools gcc gnumake cmake pkg-config nodejs python3 cargo go
-        python3Packages.pip python3Packages.pynvim tree-sitter universal-ctags
+        gopls clang-tools gcc gnumake cmake pkg-config nodejs cargo go
+        tree-sitter universal-ctags
 
         # GitHub CLI
         gh
@@ -65,7 +65,9 @@ in
         htop iotop lsof nettools iproute2 tcpdump nmap
         age docker-compose podman-compose rsync rclone unzip p7zip
         postgresql redis ffmpeg imagemagick mediainfo
-        python3
+        (python3.withPackages (ps: with ps; [
+          pip pynvim requests beautifulsoup4 lxml icalendar pytz tzdata
+        ]))
         borgbackup restic
       ]))
 
