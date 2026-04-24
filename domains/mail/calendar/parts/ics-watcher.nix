@@ -35,7 +35,10 @@ in
     Unit.Description = "Import .ics files from downloads into khal";
     Service = {
       Type = "oneshot";
-      Environment = "HOME=%h";
+      Environment = [
+        "HOME=%h"
+        "PATH=${pkgs.coreutils}/bin"
+      ];
       ExecStart = "${importScript}";
     };
   };
