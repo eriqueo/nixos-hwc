@@ -54,10 +54,10 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
 
   const canPush = () => {
     if (!state) return false;
-    if (!state.customerId) return false;
-    if (state.mode === 'existing' && !state.jobId) return false;
-    if (state.mode === 'new_job' && !state.jobName) return false;
-    return true;
+    if (state.mode === 'existing') return !!state.customerId && !!state.jobId;
+    if (state.mode === 'new_job') return !!state.customerId && !!state.jobName;
+    if (state.mode === 'new_customer') return !!state.newCustomerName && !!state.jobName;
+    return false;
   };
 
   const pushToWebhook = async () => {
@@ -78,16 +78,27 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
         jobId: state.jobId || null,
         jobNumber: state.jobNumber || null,
         jobName: state.jobName || null,
-        customerId: state.customerId,
-        customerName: state.customerName,
+        customerId: state.customerId || null,
+        customerName: state.customerName || state.newCustomerName || null,
 
-        // For new job creation
-        newJob: state.mode === 'new_job' ? {
-          customerId: state.customerId,
-          customerName: state.customerName,
-          locationId: state.locationId,
+        // For new job creation (new_job and new_customer both need a new job)
+        newJob: (state.mode === 'new_job' || state.mode === 'new_customer') ? {
+          customerId: state.customerId || null,
+          customerName: state.customerName || state.newCustomerName,
+          locationId: state.locationId || null,
           jobName: state.jobName,
-          address: state.address,
+          address: state.address || '',
+        } : null,
+
+        // For new customer creation
+        newCustomer: state.mode === 'new_customer' ? {
+          name: state.newCustomerName,
+          phone: state.newCustomerPhone,
+          email: state.newCustomerEmail,
+          street: state.newCustomerStreet,
+          city: state.newCustomerCity,
+          state: state.newCustomerState,
+          zip: state.newCustomerZip,
         } : null,
 
         // JT parameters array — pushed to createJob
@@ -327,7 +338,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
       {/* Status messages */}
       {pushMsg === 'no-url' && <StatusBox>No webhook URL. Set <code>VITE_WEBHOOK_URL</code> or localStorage.</StatusBox>}
       {pushMsg === 'no-key' && <StatusBox>No API key. Set <code>VITE_API_KEY</code> or localStorage.</StatusBox>}
-      {pushMsg === 'no-job' && <StatusBox>Select a customer and job in Scope tab before pushing.</StatusBox>}
+      {pushMsg === 'no-job' && <StatusBox>Select a job, or fill in new job/customer details in Scope tab.</StatusBox>}
 
       {pushResult && (
         <div style={{
@@ -340,6 +351,7 @@ export function EstimateTab({ groups, totals, overrides, setOverrides, removed, 
               <div style={{ fontWeight: 600, marginBottom: 4 }}>Pushed to JobTread</div>
               <div style={{ color: C.tx }}>
                 Job #{pushResult.jobNumber} · {pushResult.itemsPushed} items
+                {pushResult.accountCreated && ' · New customer created'}
                 {pushResult.jobCreated && ' · New job created'}
               </div>
             </div>
