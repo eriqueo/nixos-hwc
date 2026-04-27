@@ -4,7 +4,7 @@ const STORAGE_KEY = 'hwc-estimate-state';
 
 export const DEFAULT_STATE = {
   // Job selection (for JT integration)
-  mode: 'existing',           // 'existing' | 'new_job'
+  mode: 'existing',           // 'existing' | 'new_job' | 'new_customer'
   customerId: '',
   customerName: '',
   locationId: '',
@@ -13,6 +13,15 @@ export const DEFAULT_STATE = {
   jobName: '',
   address: '',
   projectType: 'bathroom',
+
+  // New customer fields (for new_customer mode)
+  newCustomerName: '',
+  newCustomerPhone: '',
+  newCustomerEmail: '',
+  newCustomerStreet: '',
+  newCustomerCity: '',
+  newCustomerState: 'MT',
+  newCustomerZip: '',
 
   // ── Room measurements (JT numeric parameters) ──
   bathroom_length_ft: 10,

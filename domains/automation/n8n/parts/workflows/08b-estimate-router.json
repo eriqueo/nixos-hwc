@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Validate x-api-key header\nconst apiKey = $input.item.json.headers['x-api-key'];\nconst expectedKey = $env.ESTIMATOR_API_KEY;\n\nif (!apiKey || apiKey !== expectedKey) {\n  throw new Error('UNAUTHORIZED');\n}\n\nconst body = $input.item.json.body;\n\n// Validate required fields\nif (!body.action || body.action !== 'push_estimate') {\n  throw new Error('Invalid action');\n}\n\nif (!body.jtPayload || !Array.isArray(body.jtPayload) || body.jtPayload.length === 0) {\n  throw new Error('jtPayload is required and must be a non-empty array');\n}\n\n// Determine job mode\nconst isNewJob = body.mode === 'new_job';\n\nif (isNewJob) {\n  if (!body.newJob || !body.newJob.customerId) {\n    throw new Error('newJob.customerId is required for new jobs');\n  }\n} else {\n  if (!body.jobId) {\n    throw new Error('jobId is required for existing jobs');\n  }\n}\n\nreturn {\n  json: {\n    // Job identification\n    mode: body.mode || 'existing',\n    jobId: body.jobId || null,\n    jobNumber: body.jobNumber || null,\n    jobName: body.jobName || null,\n    customerId: body.customerId || body.newJob?.customerId || null,\n    customerName: body.customerName || body.newJob?.customerName || null,\n    projectType: body.projectType || 'general',\n    \n    // For new job creation\n    newJob: body.newJob || null,\n    \n    // Payload data\n    projectState: body.projectState || {},\n    jtPayload: body.jtPayload,\n    totals: body.totals || {},\n    \n    // Metadata\n    timestamp: body.timestamp || new Date().toISOString(),\n    requestId: `est-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`\n  }\n};"
+        "jsCode": "// Validate x-api-key header\nconst apiKey = $input.item.json.headers['x-api-key'];\nconst expectedKey = $env.ESTIMATOR_API_KEY;\n\nif (!apiKey || apiKey !== expectedKey) {\n  throw new Error('UNAUTHORIZED');\n}\n\nconst body = $input.item.json.body;\n\n// Validate required fields\nif (!body.action || body.action !== 'push_estimate') {\n  throw new Error('Invalid action');\n}\n\nif (!body.jtPayload || !Array.isArray(body.jtPayload) || body.jtPayload.length === 0) {\n  throw new Error('jtPayload is required and must be a non-empty array');\n}\n\n// Validate per mode\nif (body.mode === 'new_customer') {\n  if (!body.newCustomer || !body.newCustomer.name) {\n    throw new Error('newCustomer.name is required for new customers');\n  }\n} else if (body.mode === 'new_job') {\n  if (!body.newJob || !body.newJob.customerId) {\n    throw new Error('newJob.customerId is required for new jobs');\n  }\n} else {\n  if (!body.jobId) {\n    throw new Error('jobId is required for existing jobs');\n  }\n}\n\nreturn {\n  json: {\n    // Job identification\n    mode: body.mode || 'existing',\n    jobId: body.jobId || null,\n    jobNumber: body.jobNumber || null,\n    jobName: body.jobName || null,\n    customerId: body.customerId || body.newJob?.customerId || null,\n    customerName: body.customerName || body.newJob?.customerName || body.newCustomer?.name || null,\n    projectType: body.projectType || 'general',\n    \n    // For new job creation\n    newJob: body.newJob || null,\n    \n    // For new customer creation\n    newCustomer: body.newCustomer || null,\n    \n    // Payload data\n    projectState: body.projectState || {},\n    jtPayload: body.jtPayload,\n    totals: body.totals || {},\n    \n    // Metadata\n    timestamp: body.timestamp || new Date().toISOString(),\n    requestId: `est-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`\n  }\n};"
       },
       "id": "validate-request",
       "name": "Validate Request",
@@ -37,10 +37,10 @@
             {
               "id": "new-job-check",
               "leftValue": "={{ $json.mode }}",
-              "rightValue": "new_job",
+              "rightValue": "existing",
               "operator": {
                 "type": "string",
-                "operation": "equals"
+                "operation": "notEquals"
               }
             }
           ],
@@ -71,7 +71,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract created job details from Pave response\nconst response = $input.item.json;\nconst prevData = $('Validate Request').item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT job creation failed: ${response.errors[0].message}`);\n}\n\nconst createdJob = response.createJob;\n\nif (!createdJob || !createdJob.id) {\n  throw new Error('JT job creation returned no job ID');\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jobId: createdJob.id,\n    jobNumber: createdJob.number,\n    jobName: createdJob.name,\n    jobCreated: true\n  }\n};"
+        "jsCode": "// Extract created job details from Pave response\nconst response = $input.item.json;\nconst prevData = $('Validate Request').item.json;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT job creation failed: ${response.errors[0].message}`);\n}\n\nconst createdJob = response.createJob;\n\nif (!createdJob || !createdJob.id) {\n  throw new Error('JT job creation returned no job ID');\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jobId: createdJob.id,\n    jobNumber: createdJob.number,\n    jobName: createdJob.name,\n    jobCreated: true,\n    accountCreated: false\n  }\n};"
       },
       "id": "parse-created-job",
       "name": "Parse Created Job",
@@ -205,7 +205,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"jtPushSuccess\": {{ $json.jtPushSuccess }},\n  \"jtPushError\": {{ JSON.stringify($json.jtPushError) }},\n  \"jobId\": {{ JSON.stringify($json.jobId) }},\n  \"jobNumber\": {{ JSON.stringify($json.jobNumber) }},\n  \"jobCreated\": {{ $json.jobCreated || false }},\n  \"itemsPushed\": {{ $json.itemsPushed || 0 }},\n  \"archived\": true,\n  \"requestId\": {{ JSON.stringify($json.requestId) }}\n}"
+        "responseBody": "={\n  \"success\": true,\n  \"jtPushSuccess\": {{ $json.jtPushSuccess }},\n  \"jtPushError\": {{ JSON.stringify($json.jtPushError) }},\n  \"jobId\": {{ JSON.stringify($json.jobId) }},\n  \"jobNumber\": {{ JSON.stringify($json.jobNumber) }},\n  \"jobCreated\": {{ $json.jobCreated || false }},\n  \"accountCreated\": {{ $json.accountCreated || false }},\n  \"customerId\": {{ JSON.stringify($json.customerId) }},\n  \"itemsPushed\": {{ $json.itemsPushed || 0 }},\n  \"archived\": true,\n  \"requestId\": {{ JSON.stringify($json.requestId) }}\n}"
       },
       "id": "respond-success",
       "name": "Respond Success",
@@ -240,6 +240,96 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [680, 620]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "new-customer-check",
+              "leftValue": "={{ $json.mode }}",
+              "rightValue": "new_customer",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "is-new-customer",
+      "name": "Is New Customer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.jobtread.com/pave",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"createAccount\": {\n      \"$\": {\n        \"name\": \"{{ $json.newCustomer.name }}\",\n        \"type\": \"customer\",\n        \"organizationId\": \"22Nm3uFevXMb\"\n      },\n      \"createdAccount\": {\n        \"id\": {},\n        \"name\": {},\n        \"type\": {}\n      }\n    }\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "create-jt-account",
+      "name": "Create JT Account",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.jobtread.com/pave",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"createLocation\": {\n      \"$\": {\n        \"accountId\": \"{{ $json.createAccount.createdAccount.id }}\",\n        \"name\": \"Primary\",\n        \"address\": {\n          \"street1\": \"{{ $('Validate Request').item.json.newCustomer.street || '' }}\",\n          \"city\": \"{{ $('Validate Request').item.json.newCustomer.city || '' }}\",\n          \"state\": \"{{ $('Validate Request').item.json.newCustomer.state || '' }}\",\n          \"zip\": \"{{ $('Validate Request').item.json.newCustomer.zip || '' }}\"\n        }\n      },\n      \"createdLocation\": {\n        \"id\": {}\n      }\n    }\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "create-jt-location",
+      "name": "Create JT Location",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.jobtread.com/pave",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"createJob\": {\n      \"$\": {\n        \"locationId\": \"{{ $json.createLocation.createdLocation.id }}\",\n        \"name\": \"{{ $('Validate Request').item.json.jobName }}\"\n      },\n      \"id\": {},\n      \"number\": {},\n      \"name\": {}\n    }\n  }\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "create-job-new-customer",
+      "name": "Create Job (New Customer)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize new customer job data for Merge Job Data\nconst response = $input.item.json;\nconst prevData = $('Validate Request').item.json;\nconst accountId = $('Create JT Account').item.json.createAccount.createdAccount.id;\nconst locationId = $('Create JT Location').item.json.createLocation.createdLocation.id;\n\nif (response.errors && response.errors.length > 0) {\n  throw new Error(`JT job creation failed: ${response.errors[0].message}`);\n}\n\nconst createdJob = response.createJob;\nif (!createdJob || !createdJob.id) {\n  throw new Error('JT job creation for new customer returned no job ID');\n}\n\nreturn {\n  json: {\n    ...prevData,\n    customerId: accountId,\n    locationId: locationId,\n    customerName: prevData.newCustomer.name,\n    jobId: createdJob.id,\n    jobNumber: createdJob.number,\n    jobName: createdJob.name,\n    jobCreated: true,\n    accountCreated: true\n  }\n};"
+      },
+      "id": "parse-new-customer-job",
+      "name": "Parse New Customer Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 0]
     }
   ],
   "connections": {
@@ -251,9 +341,27 @@
     },
     "Is New Job?": {
       "main": [
-        [{ "node": "Create JT Job", "type": "main", "index": 0 }],
+        [{ "node": "Is New Customer?", "type": "main", "index": 0 }],
         [{ "node": "Use Existing Job", "type": "main", "index": 0 }]
       ]
+    },
+    "Is New Customer?": {
+      "main": [
+        [{ "node": "Create JT Account", "type": "main", "index": 0 }],
+        [{ "node": "Create JT Job", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create JT Account": {
+      "main": [[{ "node": "Create JT Location", "type": "main", "index": 0 }]]
+    },
+    "Create JT Location": {
+      "main": [[{ "node": "Create Job (New Customer)", "type": "main", "index": 0 }]]
+    },
+    "Create Job (New Customer)": {
+      "main": [[{ "node": "Parse New Customer Job", "type": "main", "index": 0 }]]
+    },
+    "Parse New Customer Job": {
+      "main": [[{ "node": "Merge Job Data", "type": "main", "index": 0 }]]
     },
     "Create JT Job": {
       "main": [[{ "node": "Parse Created Job", "type": "main", "index": 0 }]]

@@ -103,7 +103,36 @@ export function JobSelector({ s, set }) {
     set('jobName', job?.name || '');
   }, [jobs, set]);
 
-  const isNewJob = s.mode === 'new_job';
+  const handleModeChange = useCallback((newMode) => {
+    const oldMode = s.mode;
+    if (newMode === oldMode) return;
+
+    set('jobId', '');
+    set('jobNumber', '');
+
+    if (newMode === 'new_customer') {
+      set('customerId', '');
+      set('customerName', '');
+      set('locationId', '');
+      set('address', '');
+      set('jobName', '');
+    }
+
+    if (oldMode === 'new_customer') {
+      set('newCustomerName', '');
+      set('newCustomerPhone', '');
+      set('newCustomerEmail', '');
+      set('newCustomerStreet', '');
+      set('newCustomerCity', '');
+      set('newCustomerState', 'MT');
+      set('newCustomerZip', '');
+      set('jobName', '');
+    }
+
+    set('mode', newMode);
+  }, [s.mode, set]);
+
+  const isNewCustomer = s.mode === 'new_customer';
 
   // Show config warning if no API configured
   if (!API_BASE || !API_KEY) {
@@ -136,51 +165,50 @@ export function JobSelector({ s, set }) {
 
       {/* Mode toggle */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        <button
-          onClick={() => set('mode', 'existing')}
-          style={{
-            flex: 1, padding: '12px 12px', borderRadius: 6, cursor: 'pointer',
-            border: `1px solid ${!isNewJob ? C.acc : C.brd}`,
-            backgroundColor: !isNewJob ? 'rgba(201,149,107,0.15)' : 'transparent',
-            color: !isNewJob ? C.acc : C.txD,
-            fontSize: 12, fontWeight: 600, fontFamily: mono,
-            minHeight: 48,
-          }}
-        >
-          Existing Job
-        </button>
-        <button
-          onClick={() => set('mode', 'new_job')}
-          style={{
-            flex: 1, padding: '12px 12px', borderRadius: 6, cursor: 'pointer',
-            border: `1px solid ${isNewJob ? C.acc : C.brd}`,
-            backgroundColor: isNewJob ? 'rgba(201,149,107,0.15)' : 'transparent',
-            color: isNewJob ? C.acc : C.txD,
-            fontSize: 12, fontWeight: 600, fontFamily: mono,
-            minHeight: 48,
-          }}
-        >
-          New Job
-        </button>
+        {[
+          { id: 'existing', label: 'Existing Job' },
+          { id: 'new_job', label: 'New Job' },
+          { id: 'new_customer', label: 'New Customer' },
+        ].map(m => {
+          const active = s.mode === m.id;
+          return (
+            <button
+              key={m.id}
+              onClick={() => handleModeChange(m.id)}
+              style={{
+                flex: 1, padding: '12px 8px', borderRadius: 6, cursor: 'pointer',
+                border: `1px solid ${active ? C.acc : C.brd}`,
+                backgroundColor: active ? 'rgba(201,149,107,0.15)' : 'transparent',
+                color: active ? C.acc : C.txD,
+                fontSize: 11, fontWeight: 600, fontFamily: mono,
+                minHeight: 48,
+              }}
+            >
+              {m.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Customer dropdown */}
-      <FieldRow label="Customer">
-        <select
-          value={s.customerId}
-          onChange={e => handleCustomerChange(e.target.value)}
-          disabled={loading.customers}
-          style={selectStyle}
-        >
-          <option value="">{loading.customers ? 'Loading...' : '— Select Customer —'}</option>
-          {customers.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </FieldRow>
+      {/* Customer dropdown (existing + new_job modes) */}
+      {!isNewCustomer && (
+        <FieldRow label="Customer">
+          <select
+            value={s.customerId}
+            onChange={e => handleCustomerChange(e.target.value)}
+            disabled={loading.customers}
+            style={selectStyle}
+          >
+            <option value="">{loading.customers ? 'Loading...' : '— Select Customer —'}</option>
+            {customers.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </FieldRow>
+      )}
 
       {/* Existing job mode: job dropdown */}
-      {!isNewJob && s.customerId && (
+      {s.mode === 'existing' && s.customerId && (
         <FieldRow label="Job">
           <select
             value={s.jobId}
@@ -197,7 +225,7 @@ export function JobSelector({ s, set }) {
       )}
 
       {/* New job mode: job name + address inputs */}
-      {isNewJob && s.customerId && (
+      {s.mode === 'new_job' && s.customerId && (
         <>
           <FieldRow label="Job Name">
             <input
@@ -220,6 +248,88 @@ export function JobSelector({ s, set }) {
         </>
       )}
 
+      {/* New customer mode: customer info + job name */}
+      {isNewCustomer && (
+        <>
+          <FieldRow label="Name *">
+            <input
+              type="text"
+              value={s.newCustomerName}
+              onChange={e => set('newCustomerName', e.target.value)}
+              placeholder="Customer name"
+              style={inputStyle}
+            />
+          </FieldRow>
+          <FieldRow label="Phone">
+            <input
+              type="tel"
+              value={s.newCustomerPhone}
+              onChange={e => set('newCustomerPhone', e.target.value)}
+              placeholder="(406) 555-1234"
+              style={inputStyle}
+            />
+          </FieldRow>
+          <FieldRow label="Email">
+            <input
+              type="email"
+              value={s.newCustomerEmail}
+              onChange={e => set('newCustomerEmail', e.target.value)}
+              placeholder="email@example.com"
+              style={inputStyle}
+            />
+          </FieldRow>
+          <FieldRow label="Street">
+            <input
+              type="text"
+              value={s.newCustomerStreet}
+              onChange={e => set('newCustomerStreet', e.target.value)}
+              placeholder="123 Main St"
+              style={inputStyle}
+            />
+          </FieldRow>
+          <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={s.newCustomerCity}
+                onChange={e => set('newCustomerCity', e.target.value)}
+                placeholder="City"
+                style={inputStyle}
+              />
+            </div>
+            <div style={{ flex: 0.7 }}>
+              <input
+                type="text"
+                value={s.newCustomerState}
+                onChange={e => set('newCustomerState', e.target.value)}
+                placeholder="ST"
+                maxLength={2}
+                style={{ ...inputStyle, textAlign: 'center' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                type="text"
+                value={s.newCustomerZip}
+                onChange={e => set('newCustomerZip', e.target.value)}
+                placeholder="Zip"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+          <Divider />
+          <FieldRow label="Job Name *">
+            <input
+              type="text"
+              value={s.jobName}
+              onChange={e => set('jobName', e.target.value)}
+              placeholder="e.g. Master Bath Remodel"
+              style={inputStyle}
+            />
+          </FieldRow>
+        </>
+      )}
+
       {/* Project type */}
       <Divider />
       <Select
@@ -235,13 +345,25 @@ export function JobSelector({ s, set }) {
       />
 
       {/* Selected job summary */}
-      {s.jobId && !isNewJob && (
+      {s.mode === 'existing' && s.jobId && (
         <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card2, borderRadius: 5 }}>
           <div style={{ fontSize: 10, color: C.txD, marginBottom: 4 }}>Selected Job</div>
           <div style={{ fontSize: 12, color: C.acc, fontWeight: 600 }}>
             #{s.jobNumber} — {s.jobName}
           </div>
           <div style={{ fontSize: 11, color: C.tx }}>{s.customerName}</div>
+        </div>
+      )}
+
+      {/* New customer summary */}
+      {isNewCustomer && s.newCustomerName && (
+        <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card2, borderRadius: 5 }}>
+          <div style={{ fontSize: 10, color: C.txD, marginBottom: 4 }}>New Customer</div>
+          <div style={{ fontSize: 12, color: C.acc, fontWeight: 600 }}>
+            {s.newCustomerName}
+          </div>
+          {s.jobName && <div style={{ fontSize: 11, color: C.tx }}>{s.jobName}</div>}
+          {s.newCustomerPhone && <div style={{ fontSize: 10, color: C.txD }}>{s.newCustomerPhone}</div>}
         </div>
       )}
     </Box>
