@@ -62,28 +62,31 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
-    services.cloudflared = {
-      enable = true;
+  config = lib.mkMerge [
+    # CLI always available for tunnel setup (login, create, route dns)
+    { environment.systemPackages = [ pkgs.cloudflared ]; }
 
-      tunnels.${cfg.tunnelId} = {
-        credentialsFile = cfg.credentialsFile;
-        default = "http_status:404";
+    # Tunnel service — only when fully configured
+    (lib.mkIf cfg.enable {
+      services.cloudflared = {
+        enable = true;
 
-        ingress = {
-          ${cfg.domain} = "http://localhost:${toString cfg.n8nPort}";
-        } // cfg.extraIngress;
+        tunnels.${cfg.tunnelId} = {
+          credentialsFile = cfg.credentialsFile;
+          default = "http_status:404";
+
+          ingress = {
+            ${cfg.domain} = "http://localhost:${toString cfg.n8nPort}";
+          } // cfg.extraIngress;
+        };
       };
-    };
 
-    #========================================================================
-    # VALIDATION
-    #========================================================================
-    assertions = [
-      {
-        assertion = cfg.tunnelId != "";
-        message = "hwc.networking.cloudflared.tunnelId must be set (run: cloudflared tunnel create hwc-server)";
-      }
-    ];
-  };
+      assertions = [
+        {
+          assertion = cfg.tunnelId != "";
+          message = "hwc.networking.cloudflared.tunnelId must be set (run: cloudflared tunnel create hwc-server)";
+        }
+      ];
+    })
+  ];
 }
