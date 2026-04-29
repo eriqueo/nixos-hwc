@@ -30,5 +30,8 @@
 
     # ProtonVPN CLI service — MOVED from domains/system/services/vpn
     ./vpn/index.nix
+
+    # Cloudflare Tunnel — public webhook ingress (webhooks.heartwoodcraft.me)
+    ./cloudflared/index.nix
   ];
 }

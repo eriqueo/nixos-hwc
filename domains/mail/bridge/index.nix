@@ -27,7 +27,7 @@ in
       enable = lib.mkEnableOption "helper script" // { default = true; };
     };
     ensureConfigDir = lib.mkOption { type = lib.types.bool; default = true; };
-    restartSec = lib.mkOption { type = lib.types.int; default = 5; };
+    restartSec = lib.mkOption { type = lib.types.int; default = 30; };
     keychain = {
       helper = lib.mkOption {
         type = lib.types.str;

@@ -72,6 +72,7 @@ in
   "domains/secrets/parts/infrastructure/vpn-password.age".publicKeys              = everyone;
   "domains/secrets/parts/infrastructure/vpn-username.age".publicKeys              = everyone;
   "domains/secrets/parts/infrastructure/vpn-wireguard-private-key.age".publicKeys = everyone;
+  "domains/secrets/parts/infrastructure/cloudflared-tunnel-credentials.age".publicKeys = everyone;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Services — application API keys, passwords, tokens

@@ -1,99 +1,3 @@
-2026-04-09T06:00:17-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-09T06:00:54-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-09T06:00:54-06:00 STEP 2: Mail triage...
-2026-04-09T06:00:54-06:00 mail-triage: 5 unread threads
-2026-04-09T06:01:31-06:00 mail-triage: OK (1 urgent, 1 review, 3 noise)
-2026-04-09T06:01:31-06:00 STEP 3: Merging...
-2026-04-09T06:01:31-06:00 OK: Merge complete
-2026-04-09T06:01:31-06:00 OK: Dashboard symlink already points to output
-2026-04-09T06:01:31-06:00 DONE
-2026-04-10T06:00:07-06:00 START
-2026-04-10T06:00:07-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-10T06:00:07-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-10T06:01:25-06:00 STEP 1: completed in 78s
-2026-04-10T06:01:25-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-10T06:01:25-06:00 STEP 2: Mail triage...
-2026-04-10T06:01:26-06:00 mail-triage: 23 unread threads
-2026-04-10T06:03:54-06:00 mail-triage: OK (0 urgent, 7 review, 16 noise)
-2026-04-10T06:03:54-06:00 STEP 2: completed in 149s
-2026-04-10T06:03:54-06:00 STEP 3: Merging...
-2026-04-10T06:03:54-06:00 OK: Merge complete
-2026-04-10T06:03:54-06:00 OK: Dashboard symlink already points to output
-2026-04-10T06:03:54-06:00 DONE
-2026-04-11T06:00:00-06:00 START
-2026-04-11T06:00:00-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-11T06:00:00-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-11T06:00:06-06:00 STEP 1: completed in 6s
-2026-04-11T06:00:06-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-11T06:00:06-06:00 STEP 2: Mail triage...
-2026-04-11T06:00:06-06:00 mail-triage: 1 unread threads
-2026-04-12T06:00:29-06:00 START
-2026-04-12T06:00:29-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-12T06:00:29-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-12T06:01:34-06:00 STEP 1: completed in 65s
-2026-04-12T06:01:34-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-12T06:01:34-06:00 STEP 2: Mail triage...
-2026-04-12T06:01:34-06:00 mail-triage: 5 unread threads
-2026-04-12T06:01:58-06:00 mail-triage: OK (0 urgent, 3 review, 2 noise)
-2026-04-12T06:01:58-06:00 STEP 2: completed in 24s
-2026-04-12T06:01:58-06:00 STEP 3: Merging...
-2026-04-12T06:01:58-06:00 OK: Merge complete
-2026-04-12T06:01:58-06:00 OK: Dashboard symlink already points to output
-2026-04-12T06:01:58-06:00 DONE
-2026-04-13T06:00:07-06:00 START
-2026-04-13T06:00:07-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-13T06:00:07-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-13T06:01:02-06:00 STEP 1: completed in 55s
-2026-04-13T06:01:02-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-13T06:01:02-06:00 STEP 2: Mail triage...
-2026-04-13T06:01:02-06:00 mail-triage: 11 unread threads
-2026-04-13T06:02:35-06:00 mail-triage: OK (0 urgent, 6 review, 5 noise)
-2026-04-13T06:02:35-06:00 STEP 2: completed in 93s
-2026-04-13T06:02:35-06:00 STEP 3: Merging...
-2026-04-13T06:02:35-06:00 OK: Merge complete
-2026-04-13T06:02:35-06:00 OK: Dashboard symlink already points to output
-2026-04-13T06:02:35-06:00 DONE
-2026-04-14T06:00:10-06:00 START
-2026-04-14T06:00:10-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-14T06:00:10-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-14T06:00:56-06:00 STEP 1: completed in 46s
-2026-04-14T06:00:56-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-14T06:00:56-06:00 STEP 2: Mail triage...
-2026-04-14T06:00:56-06:00 mail-triage: 11 unread threads
-2026-04-14T06:02:21-06:00 mail-triage: OK (0 urgent, 6 review, 5 noise)
-2026-04-14T06:02:21-06:00 STEP 2: completed in 85s
-2026-04-14T06:02:21-06:00 STEP 3: Merging...
-2026-04-14T06:02:21-06:00 OK: Merge complete
-2026-04-14T06:02:21-06:00 OK: Dashboard symlink already points to output
-2026-04-14T06:02:21-06:00 DONE
-2026-04-15T06:00:24-06:00 START
-2026-04-15T06:00:24-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-15T06:00:24-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-15T06:02:12-06:00 STEP 1: completed in 108s
-2026-04-15T06:02:12-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-15T06:02:12-06:00 STEP 2: Mail triage...
-2026-04-15T06:02:12-06:00 mail-triage: 11 unread threads
-2026-04-15T06:03:14-06:00 mail-triage: OK (0 urgent, 4 review, 7 noise)
-2026-04-15T06:03:14-06:00 STEP 2: completed in 62s
-2026-04-15T06:03:14-06:00 STEP 3: Merging...
-2026-04-15T06:03:14-06:00 OK: Merge complete
-2026-04-15T06:03:14-06:00 OK: Dashboard symlink already points to output
-2026-04-15T06:03:14-06:00 DONE
-2026-04-16T06:00:20-06:00 START
-2026-04-16T06:00:20-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-16T06:00:20-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-16T06:03:31-06:00 STEP 1: completed in 191s
-2026-04-16T06:03:31-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-16T06:03:31-06:00 STEP 2: Mail triage...
-2026-04-16T06:03:31-06:00 mail-triage: 25 unread threads
-2026-04-17T06:00:17-06:00 START
-2026-04-17T06:00:17-06:00 OK: Pre-flight passed (claude binary exists)
-2026-04-17T06:00:17-06:00 STEP 1: Main briefing (Claude Code CLI)...
-2026-04-17T06:00:58-06:00 STEP 1: completed in 41s
-2026-04-17T06:00:58-06:00 OK: Main briefing compiled (0 alerts)
-2026-04-17T06:00:58-06:00 STEP 2: Mail triage...
-2026-04-17T06:00:58-06:00 mail-triage: 20 unread threads
-2026-04-17T06:05:01-06:00 mail-triage: OK (1 urgent, 9 review, 10 noise)
 2026-04-17T06:05:01-06:00 STEP 2: completed in 243s
 2026-04-17T06:05:01-06:00 STEP 3: Merging...
 2026-04-17T06:05:01-06:00 OK: Merge complete
@@ -134,3 +38,64 @@
 2026-04-22T06:00:15-06:00 OK: Main briefing compiled (0 alerts)
 2026-04-22T06:00:15-06:00 STEP 2: Mail triage...
 2026-04-22T06:00:15-06:00 mail-triage: 30 unread threads
+2026-04-26T16:23:13-06:00 START
+2026-04-26T16:23:13-06:00 OK: Pre-flight passed (claude binary exists)
+2026-04-26T16:23:13-06:00 STEP 1: Main briefing (Claude Code CLI)...
+2026-04-26T16:24:28-06:00 STEP 1: completed in 75s
+2026-04-26T16:24:28-06:00 OK: Main briefing compiled (0 alerts)
+2026-04-26T16:24:28-06:00 STEP 2: Mail triage...
+2026-04-26T16:24:28-06:00 mail-triage: 13 unread threads
+2026-04-26T16:25:54-06:00 mail-triage: OK (2 urgent, 5 review, 6 noise)
+2026-04-26T16:25:54-06:00 STEP 2: completed in 86s
+2026-04-26T16:25:54-06:00 STEP 3: Merging...
+2026-04-26T16:25:54-06:00 OK: Merge complete
+2026-04-26T16:25:54-06:00 OK: Dashboard symlink already points to output
+2026-04-26T16:25:54-06:00 DONE
+2026-04-27T06:00:31-06:00 START
+2026-04-27T06:00:31-06:00 OK: Pre-flight passed (claude binary exists)
+2026-04-27T06:00:31-06:00 STEP 1: Main briefing (Claude Code CLI)...
+2026-04-27T06:01:34-06:00 STEP 1: completed in 63s
+2026-04-27T06:01:34-06:00 OK: Main briefing compiled (0 alerts)
+2026-04-27T06:01:34-06:00 STEP 2: Mail triage...
+2026-04-27T06:01:34-06:00 mail-triage: 11 unread threads
+2026-04-27T06:02:49-06:00 mail-triage: OK (0 urgent, 4 review, 7 noise)
+2026-04-27T06:02:49-06:00 STEP 2: completed in 75s
+2026-04-27T06:02:49-06:00 STEP 3: Merging...
+2026-04-27T06:02:49-06:00 OK: Merge complete
+2026-04-27T06:02:49-06:00 OK: Dashboard symlink already points to output
+2026-04-27T06:02:49-06:00 DONE
+2026-04-28T06:00:16-06:00 START
+2026-04-28T06:00:16-06:00 OK: Pre-flight passed (claude binary exists)
+2026-04-28T06:00:16-06:00 STEP 1: Main briefing (Claude Code CLI)...
+2026-04-28T06:03:16-06:00 STEP 1: completed in 180s
+2026-04-28T06:03:16-06:00 OK: Main briefing compiled (0 alerts)
+2026-04-28T06:03:16-06:00 STEP 2: Mail triage...
+2026-04-28T06:03:16-06:00 mail-triage: 28 unread threads
+2026-04-28T13:26:45-06:00 START
+2026-04-28T13:26:45-06:00 OK: Pre-flight passed (claude binary exists)
+2026-04-28T13:26:45-06:00 STEP 1: Main briefing (Claude Code CLI)...
+2026-04-28T13:27:58-06:00 STEP 1: completed in 73s
+2026-04-28T13:27:58-06:00 OK: Main briefing compiled (0 alerts)
+2026-04-28T13:27:58-06:00 STEP 2: Mail triage...
+2026-04-28T13:27:58-06:00 mail-triage: 30 unread threads
+2026-04-28T13:30:14-06:00 mail-triage: OK (0 urgent, 8 review, 22 noise)
+2026-04-28T13:30:14-06:00 STEP 2: completed in 136s
+2026-04-28T13:30:14-06:00 STEP 3: Merging...
+2026-04-28T13:30:14-06:00 OK: Merge complete
+2026-04-28T13:30:14-06:00 OK: Dashboard symlink already points to output
+2026-04-28T13:30:14-06:00 DONE
+2026-04-29T06:00:04-06:00 START
+2026-04-29T06:00:04-06:00 OK: Pre-flight passed (claude binary exists)
+2026-04-29T06:00:04-06:00 STEP 1: Main briefing (Claude Code CLI)...
+2026-04-29T06:01:31-06:00 STEP 1: completed in 87s
+2026-04-29T06:01:31-06:00 OK: Main briefing compiled (0 alerts)
+2026-04-29T06:01:31-06:00 STEP 1b: Injecting live khal calendar...
+2026-04-29T06:01:31-06:00 WARN: khal calendar injection failed — keeping agent calendar
+2026-04-29T06:01:31-06:00 STEP 2: Mail triage...
+2026-04-29T06:01:31-06:00 mail-triage: 25 unread threads
+2026-04-29T06:04:59-06:00 mail-triage: OK (0 urgent, 11 review, 14 noise)
+2026-04-29T06:04:59-06:00 STEP 2: completed in 208s
+2026-04-29T06:04:59-06:00 STEP 3: Merging...
+2026-04-29T06:04:59-06:00 OK: Merge complete
+2026-04-29T06:04:59-06:00 OK: Dashboard symlink already points to output
+2026-04-29T06:04:59-06:00 DONE

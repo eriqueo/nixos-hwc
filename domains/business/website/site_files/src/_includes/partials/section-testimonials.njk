@@ -1,6 +1,6 @@
 <section class="section section-testimonials animate-in" data-section="testimonials">
   <div class="container-wide">
-    <h2>What Our Clients Say</h2>
+    <h2>{{ testimonials_heading if testimonials_heading else "What Our Clients Say" }}</h2>
     <div class="testimonial-grid">
       {% for review in testimonials %}
         {% if not filter_service or review.service == filter_service %}

@@ -101,4 +101,14 @@
       group = "secrets";
     };
   };
+
+  # Cloudflare Tunnel credentials — only when tunnel is enabled
+  # (the .age file won't exist until `cloudflared tunnel create` + agenix encrypt)
+  age.secrets.cloudflared-tunnel-credentials = lib.mkIf
+    (config.hwc.networking.cloudflared.enable or false) {
+      file = ../parts/infrastructure/cloudflared-tunnel-credentials.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
 }

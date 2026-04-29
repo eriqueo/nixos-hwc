@@ -4,6 +4,7 @@
 
 Provides network infrastructure that other domains depend on:
 - Caddy reverse proxy with route aggregation (subpath + port modes)
+- Cloudflare Tunnel for public webhook ingress
 - Podman media-network creation
 - Gluetun VPN container for download stack
 - Pi-hole DNS container
@@ -11,7 +12,7 @@ Provides network infrastructure that other domains depend on:
 
 ## Boundaries
 
-- Owns: reverse proxy config, VPN, DNS, podman networking
+- Owns: reverse proxy config, Cloudflare Tunnel, VPN, DNS, podman networking
 - Does NOT own: individual service containers (those live in their own domains)
 - Route definitions: currently centralized in `routes.nix`, will be distributed to individual domains as they migrate
 
@@ -25,6 +26,8 @@ networking/
 ├── routes-lib.nix      # Route accumulator option + mkRoute helper
 ├── routes.nix          # Centralized service route definitions
 ├── podman-network.nix  # media-network systemd service
+├── cloudflared/        # Cloudflare Tunnel (public webhook ingress)
+│   └── index.nix
 ├── gluetun/            # VPN container (WireGuard via ProtonVPN)
 │   ├── index.nix
 │   ├── options.nix
@@ -38,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-04-29: Add Cloudflare Tunnel module (hwc.networking.cloudflared) for public webhook ingress via webhooks.heartwoodcraft.me
 - 2026-04-04: Update gluetun gotify ref from `hwc.automation.gotify` to `hwc.notifications.send.gotify` (domain redistribution)
 - 2026-03-18: Add CloudBeaver web-based database manager routing configuration with port mode and subpath-hostile handling.
 - 2026-03-15: Add n8n flow routing configuration with Origin header stripping for security enhancement

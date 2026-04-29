@@ -809,7 +809,64 @@ textarea { resize: vertical; min-height: 100px; }
   text-align: center;
 }
 
-/* ---- Homepage: Differentiators ---- */
+/* ---- Eyebrow label ---- */
+.eyebrow {
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--fg3);
+}
+.eyebrow-accent { color: var(--copper); }
+
+/* ---- Editorial section header ---- */
+.section-header { max-width: 720px; margin-bottom: 3rem; }
+.section-header h2 { margin-top: 1rem; }
+.section-header .rule { height: 2px; width: 64px; background: var(--copper); margin-top: 1.5rem; }
+.section-header p { margin-top: 1.5rem; }
+
+/* ---- Process steps (numbered) ---- */
+.process-steps { display: flex; flex-direction: column; }
+.process-step {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 1.5rem;
+  padding: 1.75rem 0;
+  border-top: 1px solid var(--border-dark);
+}
+.process-step:first-child { border-top: none; }
+.step-number {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  color: var(--copper);
+  font-weight: 500;
+  line-height: 1;
+}
+.process-step h3 {
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--fg1);
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+.process-step p { font-size: 0.9375rem; line-height: 1.7; max-width: 52ch; }
+
+/* ---- Two-column editorial layout ---- */
+.editorial-split {
+  display: grid;
+  gap: 5rem;
+  align-items: start;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+@media (min-width: 768px) {
+  .editorial-split { grid-template-columns: 1fr 1.4fr; }
+}
+.editorial-split .sticky { position: sticky; top: 120px; }
+
+/* ---- Homepage: Differentiators (legacy support) ---- */
 .differentiator-grid {
   display: grid;
   gap: var(--space-md);
