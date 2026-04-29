@@ -48,6 +48,9 @@ let
 
     mkdir -p "$STATE_DIR"
 
+    # Purge cooldown files older than 7 days to prevent unbounded accumulation
+    ${pkgs.findutils}/bin/find "$STATE_DIR" -name 'cooldown-*' -mtime +7 -delete 2>/dev/null || true
+
     # ─── Helpers ─────────────────────────────────────────────────
     FAILURES=()
     WARNINGS=()
@@ -108,7 +111,9 @@ let
     alert() {
       local level="$1" title="$2" body="$3"
       local fp
-      fp=$(echo "$body" | ${pkgs.coreutils}/bin/md5sum | cut -d' ' -f1)
+      # Strip numbers so dynamic content (elapsed minutes, ages) doesn't
+      # poison the fingerprint — "mbsync was 156m ago" and "161m ago" dedup.
+      fp=$(echo "$body" | ${pkgs.gnused}/bin/sed 's/[0-9]//g' | ${pkgs.coreutils}/bin/md5sum | cut -d' ' -f1)
 
       if ! should_alert "$fp" "$level"; then
         return 0
@@ -183,8 +188,20 @@ let
     check_bridge() {
       # Service running?
       if ! ${pkgs.systemd}/bin/systemctl --user is-active protonmail-bridge.service >/dev/null 2>&1; then
-        fail "protonmail-bridge.service is not running"
-        return
+        if [[ "$AUTO_REMEDIATE" == "true" ]]; then
+          ${pkgs.systemd}/bin/systemctl --user restart protonmail-bridge.service 2>/dev/null || true
+          sleep 5
+          if ${pkgs.systemd}/bin/systemctl --user is-active protonmail-bridge.service >/dev/null 2>&1; then
+            remed "Restarted protonmail-bridge.service (was not running)"
+            # Continue to port checks — bridge may need a moment to bind
+          else
+            fail "protonmail-bridge.service is not running (auto-restart failed)"
+            return
+          fi
+        else
+          fail "protonmail-bridge.service is not running"
+          return
+        fi
       fi
 
       # IMAP port accepting connections?

@@ -441,6 +441,7 @@
         maxRequestSeconds = 600;      # 10 minute timeout
       };
 
+      healthCheck.interval = "30min";  # Was 5min — just a ping, no need to hammer
       idleShutdown.enable = false;    # Always-on service
       thermalProtection.enable = false; # Datacenter cooling
     };
@@ -495,8 +496,8 @@
   # NanoClaw AI agent orchestrator
   # Connects to Slack via Socket Mode, spawns agents in containers
   hwc.ai.nanoclaw = {
-    enable = true;
-    slack.enable = true;  # Inject Slack tokens from agenix
+    enable = false;
+    slack.enable = false;
   };
 
   # CouchDB for Obsidian LiveSync
@@ -705,6 +706,18 @@
   };
 
   #============================================================================
+  # CLOUDFLARE TUNNEL (public webhook ingress)
+  #============================================================================
+  # Exposes webhooks.heartwoodcraft.me → n8n for external services (Quo, etc.)
+  # Setup: cloudflared tunnel login → cloudflared tunnel create hwc-server
+  #        then encrypt credentials JSON with agenix and set tunnelId below
+  hwc.networking.cloudflared = {
+    enable = false;  # Enable after: tunnel created + credentials encrypted + DNS CNAME set
+    tunnelId = "PLACEHOLDER";  # Replace with UUID from `cloudflared tunnel create hwc-server`
+    credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
+  };
+
+  #============================================================================
   # REVERSE PROXY
   #============================================================================
   hwc.networking.reverseProxy = {
@@ -761,7 +774,7 @@
     enable = lib.mkDefault true;
     services.lidarr.enable = false;
   };
-  hwc.media.organizr.enable = lib.mkDefault true;
+  hwc.media.organizr.enable = false;
   hwc.media.pinchflat.enable = lib.mkDefault true;
 
   # Native media services
@@ -833,6 +846,9 @@
 
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
+
+  # Morning briefing — daily Claude Code agent (6am MT)
+  hwc.business.morningBriefing.enable = true;
 
   #============================================================================
   # WEB APPS DOMAIN

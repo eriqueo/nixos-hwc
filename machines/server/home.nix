@@ -32,6 +32,7 @@
     health = {
       enable = true;
       webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+      freshnessHours = 12;
     };
 
     notmuch = {

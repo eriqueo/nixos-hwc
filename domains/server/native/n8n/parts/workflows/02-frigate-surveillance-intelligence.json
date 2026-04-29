@@ -1,175 +1,153 @@
 {
-  "name": "Frigate Surveillance Intelligence",
+  "name": "home:security:frigate-detect",
+  "id": "mNJKL8puSZpWhsR2",
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "frigate-events",
-        "responseMode": "onReceived",
-        "options": {}
-      },
-      "id": "webhook-trigger",
+      "id": "fce42fc9-c05c-44f4-9aba-d63c98b30eb5",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
-      "webhookId": "frigate-events"
+      "position": [-1440, -32],
+      "webhookId": "frigate-events",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "frigate-events"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// Parse and filter Frigate events with smart priority\nconst event = $input.item.json.after || $input.item.json;\nconst now = new Date();\nconst hour = now.getHours();\n\n// Time-based context\nconst isNight = hour >= 22 || hour <= 6;\n\n// Event details\nconst eventId = event.id;\nconst camera = event.camera;\nconst object = event.label;\nconst score = event.top_score || 0;\n\n// Filter low confidence\nif (score < 0.6) {\n  return []; // Drop low confidence detections\n}\n\n// Determine priority\nlet priority = 2; // Info by default\nlet topic = 'hwc-monitoring';\nlet sendToSlack = false;\n\n// Critical: Person or car at night\nif ((object === 'person' && isNight) || (object === 'car' && isNight && camera === 'cobra_cam_3')) {\n  priority = 5;\n  topic = 'hwc-critical';\n  sendToSlack = true;\n}\n// High: Person during day\nelse if (object === 'person' && !isNight) {\n  priority = 4;\n  topic = 'hwc-alerts';\n}\n// Info: Animals, packages, etc.\nelse if (['dog', 'cat', 'package', 'bicycle'].includes(object)) {\n  priority = 2;\n  topic = 'hwc-monitoring';\n}\n// Drop known false positives\nelse if (['plant', 'tree'].includes(object)) {\n  return [];\n}\n\nreturn {\n  json: {\n    eventId: eventId,\n    camera: camera,\n    object: object,\n    score: score,\n    priority: priority,\n    topic: topic,\n    sendToSlack: sendToSlack,\n    isNight: isNight,\n    timestamp: now.toISOString()\n  }\n};"
-      },
-      "id": "parse-filter",
+      "id": "64d640e9-bd2f-4ff7-8129-a97ec808f90f",
       "name": "Parse & Filter Events",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [-1248, -32],
+      "parameters": {
+        "jsCode": "// Parse and filter Frigate events with smart priority + cooldown dedup\nconst body = $input.item.json.body || $input.item.json;\n\n// CRITICAL: Only process 'end' events for one notification per detection\nconst eventType = body.type;\nif (eventType !== 'end') {\n  return [];\n}\n\nconst event = body.after || body;\nconst date = new Date();\nconst hour = date.getHours();\nconst nowMs = date.getTime();\nconst formattedTime = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });\nconst formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });\n\nconst isDaytime = hour >= 7 && hour < 22;\nconst isNight = !isDaytime;\n\nconst eventId = event.id;\nconst camera = event.camera;\nconst object = event.label;\nconst score = event.top_score || 0;\n\nconst cameraNames = {\n  'cobra_cam_1': 'Front Door',\n  'cobra_cam_2': 'Driveway',\n  'cobra_cam_3': 'Backyard',\n  'cobra_cam_4': 'Carport'\n};\nconst cameraName = cameraNames[camera] || camera;\n\n// --- Hard filters ---\nif (score < 0.6) return [];\nif (['plant', 'tree'].includes(object)) return [];\n\n// Drop daytime cars entirely — never interesting\nif (object === 'car' && isDaytime) return [];\n\n// Higher confidence threshold for non-person objects\nif (object !== 'person' && score < 0.85) return [];\n\n// --- Cooldown dedup (per camera+object) ---\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.cooldowns) staticData.cooldowns = {};\n\n// Purge stale entries older than 1 hour\nfor (const key of Object.keys(staticData.cooldowns)) {\n  if (nowMs - staticData.cooldowns[key] > 3600000) {\n    delete staticData.cooldowns[key];\n  }\n}\n\nconst cooldownKey = `${camera}:${object}`;\nconst cooldownMs = object === 'person' ? 120000 : 300000; // 2min person, 5min other\n\nif (staticData.cooldowns[cooldownKey] && (nowMs - staticData.cooldowns[cooldownKey]) < cooldownMs) {\n  return []; // Still in cooldown — suppress\n}\nstaticData.cooldowns[cooldownKey] = nowMs;\n\n// --- Priority assignment ---\nlet priority = 2;\nlet isPerson = false;\n\nif (object === 'person') {\n  isPerson = true;\n  priority = isNight ? 5 : 4;\n} else if (object === 'car' && isNight && camera === 'cobra_cam_3') {\n  isPerson = true;\n  priority = 5;\n} else {\n  priority = 2;\n}\n\nreturn [\n  {\n    json: {\n      eventId,\n      camera,\n      cameraName,\n      object,\n      score,\n      priority,\n      isPerson,\n      isNight,\n      formattedTime,\n      formattedDate,\n      timestamp: date.toISOString()\n    }\n  }\n];\n"
+      }
     },
     {
+      "id": "70f0441c-5856-4146-b3b4-7f1a54f54868",
+      "name": "Person or Other",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-1040, -32],
+      "alwaysOutputData": false,
       "parameters": {
-        "method": "GET",
-        "url": "http://127.0.0.1:5000/api/events/={{ $json.eventId }}/snapshot.jpg",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file"
+        "options": { "fallbackOutput": 1 },
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "28ea1378-5bd4-4c9b-b99d-d79098c888c7",
+                    "leftValue": "={{ $json.isPerson }}",
+                    "operator": { "operation": "true", "type": "boolean" },
+                    "rightValue": true
+                  }
+                ],
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 }
+              }
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "9400ce80-a756-4c4c-87d0-d79410365dc2",
+                    "leftValue": "={{ $json.isPerson }}",
+                    "operator": { "operation": "false", "type": "boolean" },
+                    "rightValue": false
+                  }
+                ],
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 }
+              }
             }
-          }
+          ]
         }
-      },
-      "id": "fetch-snapshot",
+      }
+    },
+    {
+      "id": "d79a3120-9250-44d2-874b-b9e794a366e0",
+      "name": "Wait for Snapshot",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-832, -192],
+      "parameters": { "amount": 2, "unit": "seconds" }
+    },
+    {
+      "id": "7f5ac99a-bfa5-4fda-bf58-8d29c4264738",
       "name": "Fetch Event Snapshot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [650, 300]
-    },
-    {
+      "position": [-624, -192],
+      "onError": "continueRegularOutput",
       "parameters": {
-        "jsCode": "// Generate context-aware notification\nconst { camera, object, score, priority, isNight } = $json;\n\n// Camera friendly names\nconst cameraNames = {\n  'cobra_cam_1': 'Front Door',\n  'cobra_cam_2': 'Driveway',\n  'cobra_cam_3': 'Backyard'\n};\n\nconst cameraName = cameraNames[camera] || camera;\n\n// Object emojis\nconst emojis = {\n  person: '🚶',\n  car: '🚗',\n  dog: '🐕',\n  cat: '🐈',\n  package: '📦',\n  bicycle: '🚲'\n};\n\nconst emoji = emojis[object] || '👁️';\n\n// Build title based on priority\nlet title;\nif (priority === 5) {\n  title = `🔴 CRITICAL: ${object} detected at ${cameraName}`;\n} else if (priority === 4) {\n  title = `⚠️ ${object} detected at ${cameraName}`;\n} else {\n  title = `${emoji} ${object} at ${cameraName}`;\n}\n\n// Build message\nconst confidencePercent = (score * 100).toFixed(0);\nconst timeContext = isNight ? '🌙 Night detection' : '☀️ Day detection';\nconst message = `${timeContext}\\n\\nConfidence: ${confidencePercent}%\\nTime: ${new Date().toLocaleString()}\\n\\nCamera: ${cameraName}`;\n\nreturn {\n  json: {\n    title: title,\n    message: message,\n    topic: $json.topic,\n    priority: priority,\n    tags: `frigate,${camera},${object},detection`,\n    sendToSlack: $json.sendToSlack\n  }\n};"
-      },
-      "id": "generate-notification",
-      "name": "Generate Notification",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [850, 300]
+        "url": "=http://127.0.0.1:5000/api/events/{{ $json.eventId }}/snapshot.jpg",
+        "options": { "response": { "response": { "responseFormat": "file" } } }
+      }
     },
     {
+      "id": "47de5595-95e8-451b-a727-a059fd96594d",
+      "name": "Snapshot OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-416, -192],
       "parameters": {
         "conditions": {
-          "boolean": [
+          "combinator": "and",
+          "conditions": [
             {
-              "value1": "={{ $json.sendToSlack }}",
-              "value2": true
+              "id": "check-binary",
+              "leftValue": "={{ Object.keys($binary || {}).length > 0 }}",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true },
+              "rightValue": true
             }
-          ]
+          ],
+          "options": { "version": 3, "leftValue": "", "caseSensitive": true, "typeValidation": "strict" }
         }
-      },
-      "id": "check-slack",
-      "name": "Check if Slack needed",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1050, 300]
+      }
     },
     {
+      "id": "9b7d0d8a-1cad-4654-8e15-1f187c8dcd51",
+      "name": "Upload Snapshot to Person Channel",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [-576, -192],
       "parameters": {
-        "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Tags",
-              "value": "={{ $json.tags }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.priority }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "body",
-              "value": "={{ $json.message }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-ntfy",
-      "name": "Send to ntfy",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1250, 200]
+        "authentication": "oAuth2",
+        "resource": "file",
+        "options": {
+          "channelId": "C0AL9A2MPHD",
+          "initialComment": "=Date:     {{ $json.formattedDate }}\nCamera:   {{ $json.cameraName }}\nObject:   {{ $json.object }}\nTime:     {{ $json.formattedTime }}\nPriority: {{ $json.priority === 5 ? '\ud83d\udd34 High' : '\u26a0\ufe0f meh' }}\nEvent:    {{ $json.eventId }}\nConfidence: {{ ($json.score * 100).toFixed(0) }}%"
+        }
+      }
     },
     {
+      "id": "5b9bb905-a435-48b5-934f-777005a5b4c8",
+      "name": "Text to Person Channel (No Snapshot)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [-176, -112],
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.title }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.message }}\"\n      }\n    }\n  ]\n}",
-        "options": {}
-      },
-      "id": "send-slack",
-      "name": "Send to Slack",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1250, 400]
+        "authentication": "oAuth2",
+        "channelId": "C0AL9A2MPHD",
+        "select": "=channel",
+        "text": "=\ud83d\udcf7 Snapshot unavailable\nDate:     {{ $json.formattedDate }}\nCamera:   {{ $json.cameraName }}\nObject:   {{ $json.object }}\nTime:     {{ $json.formattedTime }}\nPriority: {{ $json.priority === 5 ? '\ud83d\udd34 High' : '\u26a0\ufe0f meh' }}\nEvent:    {{ $json.eventId }}\nConfidence: {{ ($json.score * 100).toFixed(0) }}%"
+      }
     },
     {
+      "id": "281477d9-c2fb-47f5-891e-538cadfdd35e",
+      "name": "Text to Other Channel",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [-832, 128],
       "parameters": {
-        "jsCode": "// Generate error notification\nconst error = $input.item.json.error || 'Unknown error';\nconst workflow = 'Frigate Surveillance Intelligence';\n\nreturn {\n  json: {\n    title: '⚠️ Frigate Workflow Error',\n    message: `Workflow: ${workflow}\\n\\nError: ${error}\\n\\nCheck n8n and Frigate logs.`,\n    topic: 'hwc-alerts',\n    priority: 4,\n    tags: 'error,frigate,n8n'\n  }\n};"
-      },
-      "id": "error-notification",
-      "name": "Error Notification",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [650, 500]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "Tags",
-              "value": "={{ $json.tags }}"
-            },
-            {
-              "name": "Priority",
-              "value": "={{ $json.priority }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "body",
-              "value": "={{ $json.message }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-error-ntfy",
-      "name": "Send Error to ntfy",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [850, 500]
+        "authentication": "oAuth2",
+        "channelId": "C0AL9A3F3JT",
+        "select": "=channel",
+        "text": "=Date:     {{ $json.formattedDate }}\nCamera:   {{ $json.cameraName }}\nObject:   {{ $json.object }}\nTime:     {{ $json.formattedTime }}\nPriority: \u26a0\ufe0f Low\nEvent:    {{ $json.eventId }}\nConfidence: {{ ($json.score * 100).toFixed(0) }}%"
+      }
     }
   ],
   "connections": {
@@ -177,43 +155,28 @@
       "main": [[{ "node": "Parse & Filter Events", "type": "main", "index": 0 }]]
     },
     "Parse & Filter Events": {
+      "main": [[{ "node": "Person or Other", "type": "main", "index": 0 }]]
+    },
+    "Person or Other": {
+      "main": [
+        [{ "node": "Wait for Snapshot", "type": "main", "index": 0 }],
+        [{ "node": "Text to Other Channel", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait for Snapshot": {
       "main": [[{ "node": "Fetch Event Snapshot", "type": "main", "index": 0 }]]
     },
     "Fetch Event Snapshot": {
-      "main": [[{ "node": "Generate Notification", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Snapshot OK?", "type": "main", "index": 0 }]]
     },
-    "Generate Notification": {
-      "main": [[{ "node": "Check if Slack needed", "type": "main", "index": 0 }]]
-    },
-    "Check if Slack needed": {
+    "Snapshot OK?": {
       "main": [
-        [{ "node": "Send to ntfy", "type": "main", "index": 0 }, { "node": "Send to Slack", "type": "main", "index": 0 }],
-        [{ "node": "Send to ntfy", "type": "main", "index": 0 }]
+        [{ "node": "Upload Snapshot to Person Channel", "type": "main", "index": 0 }],
+        [{ "node": "Text to Person Channel (No Snapshot)", "type": "main", "index": 0 }]
       ]
-    },
-    "Error Notification": {
-      "main": [[{ "node": "Send Error to ntfy", "type": "main", "index": 0 }]]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [
-    {
-      "name": "surveillance",
-      "id": "surveillance-tag"
-    },
-    {
-      "name": "frigate",
-      "id": "frigate-tag"
-    },
-    {
-      "name": "automation",
-      "id": "automation-tag"
-    }
-  ],
-  "triggerCount": 1,
-  "updatedAt": "2025-12-08T00:00:00.000Z",
-  "versionId": "1"
+  "settings": { "executionOrder": "v1" },
+  "tags": ["detection", "frigate", "home", "security"],
+  "updatedAt": "2026-04-25T00:00:00.000Z"
 }

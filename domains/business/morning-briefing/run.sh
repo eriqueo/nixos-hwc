@@ -60,7 +60,7 @@ STEP1_START=$(date +%s)
 TODAY="$(date +%Y-%m-%d)"
 RESULT=$("${CLAUDE_BIN}" \
   --print \
-  -p "Today is ${TODAY} ($(date '+%A, %B %-d, %Y')). Compile today's morning briefing as specified in CLAUDE.md. IMPORTANT: For the calendar section, call gcal_list_events with timeMin='${TODAY}T00:00:00' and timeMax='${TODAY}T23:59:59' and timeZone='America/Denver' to get only today's events."
+  -p "Today is ${TODAY} ($(date '+%A, %B %-d, %Y')). Compile today's morning briefing as specified in CLAUDE.md. IMPORTANT: For the calendar section, call hwc_calendar_list with range='today' to get today's events from iCloud via khal."
   2>&1) || {
   log "ERROR: Claude Code CLI failed"
   echo "${RESULT}" >> "${LOG_FILE}"
@@ -96,6 +96,59 @@ if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
     "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo "false")
   if [ "${HAS_SECTIONS}" != "true" ]; then
     log "WARN: briefing.json missing expected sections (calendar/jobs) — partial data, continuing"
+  fi
+
+  # ── Step 1b: Inject live khal calendar (overrides agent's stale data) ──────
+  KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
+  if [ -x "${KHAL_BIN}" ]; then
+    log "STEP 1b: Injecting live khal calendar..."
+    KHAL_JSON=$(${KHAL_BIN} list \
+      --format='{start-date}T{start-time}|{end-date}T{end-time}|{title}|{location}|{all-day}' \
+      today today 2>/dev/null \
+      | python3 -c "
+import sys, json
+events = []
+tz = '-06:00'
+lines = sys.stdin.read().split('\n')
+merged = []
+for line in lines:
+    line = line.strip()
+    if not line:
+        continue
+    if len(line) >= 11 and line[4] == '-' and line[7] == '-' and 'T' in line[:11]:
+        merged.append(line)
+    elif merged:
+        merged[-1] += ' ' + line
+for line in merged:
+    if '|' not in line:
+        continue
+    parts = line.split('|', 4)
+    if len(parts) < 5:
+        continue
+    start, end, title, location, allday = [p.strip() for p in parts]
+    is_allday = allday.lower() == 'true'
+    ev = {
+        'summary': title,
+        'start': start + tz if not is_allday else start[:10],
+        'end': end + tz if not is_allday else end[:10],
+        'location': location if location else None,
+        'allDay': is_allday
+    }
+    events.append(ev)
+print(json.dumps({'events': events}))
+" 2>/dev/null) && {
+      if echo "${KHAL_JSON}" | jq empty 2>/dev/null; then
+        jq --argjson cal "${KHAL_JSON}" '.sections.calendar = $cal' \
+          "${OUTPUT_DIR}/briefing.json" > "${OUTPUT_DIR}/briefing.json.tmp" \
+        && mv "${OUTPUT_DIR}/briefing.json.tmp" "${OUTPUT_DIR}/briefing.json"
+        EV_COUNT=$(echo "${KHAL_JSON}" | jq '.events | length' 2>/dev/null || echo "?")
+        log "OK: Calendar injected (${EV_COUNT} events from khal)"
+      else
+        log "WARN: khal output was not valid JSON — keeping agent calendar"
+      fi
+    } || log "WARN: khal calendar injection failed — keeping agent calendar"
+  else
+    log "WARN: khal binary not found — keeping agent calendar"
   fi
 else
   log "WARN: Claude ran but no output/briefing.json found"
