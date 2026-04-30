@@ -22,6 +22,93 @@ const btnPrimary = {
   fontSize: 15, fontWeight: 600, fontFamily: "inherit", transition: "opacity 0.15s",
 };
 
+// ─── Image Card v2 ────────────────────────────────────────────────────────
+// SVGs: contained on warm bg. Photos: full-bleed cover. Missing: placeholder.
+function ImageCard({ option, selected, onClick }) {
+  const [imgError, setImgError] = useState(false);
+  const isSvg = typeof option.image === "string" && option.image.toLowerCase().endsWith(".svg");
+
+  const mediaContainerStyle = {
+    width: "100%",
+    height: 140,
+    overflow: "hidden",
+    borderBottom: `1px solid ${selected ? T.copperBorder : T.border}`,
+    background: isSvg ? T.surfaceBg : "transparent",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+  const imgStyle = isSvg
+    ? { width: "82%", height: "82%", objectFit: "contain", display: "block" }
+    : { width: "100%", height: "100%", objectFit: "cover",  display: "block" };
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: "1 1 calc(50% - 6px)",
+        minWidth: 160,
+        borderRadius: 12,
+        cursor: "pointer",
+        textAlign: "left",
+        border: selected ? `2px solid ${T.copper}` : `1.5px solid ${T.border}`,
+        background: selected ? T.copperLight : T.white,
+        transition: "all 0.15s ease",
+        fontFamily: "inherit",
+        overflow: "hidden",
+        padding: 0,
+        boxShadow: T.cardShadow,
+      }}
+      onMouseEnter={(e) => {
+        if (!selected) {
+          e.currentTarget.style.borderColor = T.copperMid;
+          e.currentTarget.style.boxShadow = T.cardShadowHover;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!selected) {
+          e.currentTarget.style.borderColor = T.border;
+          e.currentTarget.style.boxShadow = T.cardShadow;
+        }
+      }}
+    >
+      {option.image && !imgError ? (
+        <div style={mediaContainerStyle}>
+          <img
+            src={option.image}
+            alt={option.label}
+            onError={() => setImgError(true)}
+            style={imgStyle}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            ...mediaContainerStyle,
+            background: T.surfaceBg,
+            color: T.textLight,
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+          }}
+        >
+          {option.icon || ""}
+        </div>
+      )}
+      <div style={{ padding: "12px 14px" }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: T.heading, marginBottom: 2 }}>
+          {option.label}
+        </div>
+        <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.4 }}>
+          {option.desc}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 // ─── CompactCard ───────────────────────────────────────────────────────────
 function CompactCard({ option, selected, onClick }) {
   return (
@@ -136,6 +223,11 @@ export default function DeckCalculator() {
             <p style={{ fontSize: 14, color: T.textMuted, margin: "0 0 12px", lineHeight: 1.5 }}>{cur.subtitle}</p>
             {cur.why && <WhyToggle text={cur.why} />}
 
+            {cur.type === "image-cards" && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                {cur.options.map((o) => <ImageCard key={o.value} option={o} selected={state[cur.id] === o.value} onClick={() => pick(cur.id, o.value)} />)}
+              </div>
+            )}
             {cur.type === "cards" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {cur.options.map((o) => <CompactCard key={o.value} option={o} selected={state[cur.id] === o.value} onClick={() => pick(cur.id, o.value)} />)}

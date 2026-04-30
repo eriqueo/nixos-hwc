@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-29T06:01:31-06:00",
+  "generated_at": "2026-04-30T06:01:17-06:00",
   "sections": {
     "calendar": {
       "events": [
@@ -94,343 +94,168 @@
   },
   "alerts": [],
   "mail_triage": {
-    "generated_at": "2026-04-29T08:00:00-06:00",
-    "query_window_hours": 48,
-    "total_unread": 25,
+    "generated_at": "2026-04-30T05:00:00-06:00",
+    "query_window_hours": 24,
+    "total_unread": 30,
     "buckets": {
       "urgent": [],
       "review": [
         {
-          "thread_id": "000000000000492e",
-          "subject": "Position Tracking Update (iheartwoodcraft.com)",
-          "from_name": "Semrush Position Tracking",
-          "from_address": "positiontracking@semrush.com",
-          "date_relative": "Today 02:21",
+          "thread_id": "0000000000004971",
+          "subject": "Shipped: \"10 Pack 3D Embossing Label...\"",
+          "from_name": "Amazon.com",
+          "from_address": "shipment-tracking@amazon.com",
+          "date_relative": "Today 04:51",
           "tags": [
-            "hwc_google",
-            "hwcmt",
-            "inbox",
-            "personal",
-            "personal_proton",
-            "tech",
-            "unread",
-            "website"
-          ],
-          "has_attachment": false,
-          "summary": "Weekly SEO position tracking report for iheartwoodcraft.com showing ranking changes.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Active business SEO monitoring tool — worth checking for ranking drops."
-        },
-        {
-          "thread_id": "0000000000004923",
-          "subject": "Give Big Gallatin Valley 2026",
-          "from_name": "Bozeman Art Museum",
-          "from_address": "info@bozemanartmuseum.org",
-          "date_relative": "Yest. 12:15",
-          "tags": [
-            "inbox",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Local Gallatin Valley community giving campaign from Bozeman Art Museum.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Local community event — good visibility opportunity for Heartwood Craft."
-        },
-        {
-          "thread_id": "0000000000004921",
-          "subject": "{CBS} Your April Replay",
-          "from_name": "Tom Reber",
-          "from_address": "tom@thecontractorfight.com",
-          "date_relative": "Yest. 12:02",
-          "tags": [
-            "coaching",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "April replay link for Contractor Business School coaching session.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Active coaching subscription — replay available for limited time."
-        },
-        {
-          "thread_id": "0000000000004919",
-          "subject": "Quo is now in Claude's Connectors Directory",
-          "from_name": "Jenn at Quo",
-          "from_address": "jenn@quo.com",
-          "date_relative": "Yest. 10:55",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Quo announcing their integration with Claude's Connectors Directory — product update from business phone provider.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Business phone provider product update — may affect Eric's Quo/Claude integration."
-        },
-        {
-          "thread_id": "0000000000004918",
-          "subject": "Economic Development Regional Update Seminar - Wednesday, May 27, 2026",
-          "from_name": "Bozeman Area Chamber of Commerce",
-          "from_address": "info@bozemanchamber.com",
-          "date_relative": "Yest. 08:00",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Chamber of Commerce economic development seminar on May 27 — registration open.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Chamber event relevant to local business networking and market awareness."
-        },
-        {
-          "thread_id": "0000000000004914",
-          "subject": "Review inactive ad accounts connected to your payment method",
-          "from_name": "Meta for Business",
-          "from_address": "notification@business.facebook.com",
-          "date_relative": "Yest. 02:57",
-          "tags": [
-            "flagged",
-            "inbox",
-            "newsletter",
-            "notification",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Meta asking to review inactive Facebook ad accounts still linked to payment method — may be charging.",
-          "suggested_action": "flag_action",
-          "urgency_reason": "Potential unwanted charges on payment method from inactive ad accounts."
-        },
-        {
-          "thread_id": "0000000000004911",
-          "subject": "DeepSeek V4 Pro is now available on Ollama's cloud",
-          "from_name": "Ollama",
-          "from_address": "newsletter@ollama.com",
-          "date_relative": "Mon. 22:43",
-          "tags": [
-            "flagged",
-            "inbox",
-            "tech",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Ollama announcing DeepSeek V4 Pro model availability on their cloud platform.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Tech newsletter from actively used local AI platform."
-        },
-        {
-          "thread_id": "0000000000004905",
-          "subject": "MxToolbox Blacklist Summary",
-          "from_name": "MxToolBox",
-          "from_address": "alerts@mxtoolbox.com",
-          "date_relative": "Mon. 13:01",
-          "tags": [
-            "flagged",
-            "inbox",
-            "notification",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Weekly email deliverability blacklist monitoring summary for Heartwood Craft mail domain.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Mail deliverability monitoring — blacklist hits would affect business email."
-        },
-        {
-          "thread_id": "00000000000048fc",
-          "subject": "Your receipt from Hammer & Grind LLC #2700-7569",
-          "from_name": "Hammer & Grind LLC",
-          "from_address": "receipts@hammerandgrind.com",
-          "date_relative": "Mon. 10:34",
-          "tags": [
-            "action",
-            "attachment",
             "finance",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": true,
-          "summary": "Purchase receipt from Hammer & Grind LLC — financial record with attachment for bookkeeping.",
-          "suggested_action": "archive",
-          "urgency_reason": "Financial receipt with attachment — needs filing for business expense tracking."
-        },
-        {
-          "thread_id": "000000000000490b",
-          "subject": "Heartwood, we saved you a virtual seat at Google Marketing Live 2026",
-          "from_name": "Google Ads",
-          "from_address": "ads-noreply@google.com",
-          "date_relative": "Mon. 16:27",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Google Ads inviting Heartwood Craft to attend Google Marketing Live 2026 virtual event.",
-          "suggested_action": "archive",
-          "urgency_reason": "Google Ads platform event — low priority but from active advertising platform."
-        },
-        {
-          "thread_id": "00000000000048ed",
-          "subject": "You're invited to join your child's class on ClassDojo!",
-          "from_name": "ClassDojo",
-          "from_address": "noreply@classdojo.com",
-          "date_relative": "Mon. 06:28",
-          "tags": [
             "inbox",
             "personal_google",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Teacher-initiated invite to join child's classroom on ClassDojo school communication platform.",
+          "summary": "Amazon shipping confirmation for label maker supplies order.",
+          "suggested_action": "archive",
+          "urgency_reason": "Legitimate order notification from active Amazon account; most recent of 3 Amazon threads."
+        },
+        {
+          "thread_id": "000000000000495f",
+          "subject": "New text message from (406) 518-1035",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:54",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Most recent of 7 inbound texts from (406) 518-1035 via Quo business phone — active customer conversation yesterday afternoon.",
           "suggested_action": "flag_action",
-          "urgency_reason": "Child's school communication platform — teacher expecting parent to join."
+          "urgency_reason": "7 texts from same number in under an hour suggests active customer conversation needing follow-up."
+        },
+        {
+          "thread_id": "0000000000004955",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Most recent of 12 inbound texts from (406) 518-7776 via Quo — all arrived at 13:08, likely a sync flood of older messages.",
+          "suggested_action": "read_only",
+          "urgency_reason": "12 notifications from same number at identical timestamp; check Quo app for actual message content."
+        },
+        {
+          "thread_id": "000000000000494c",
+          "subject": "New text message from (406) 551-5061",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:03",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Inbound text from (406) 551-5061 via Quo — same number that also called and was handled by Sona AI.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Customer who also called; Sona handled the call but text may need human review."
+        },
+        {
+          "thread_id": "0000000000004944",
+          "subject": "Sona handled a call from (406) 551-5061",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 12:22",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Quo AI assistant Sona answered a call from (406) 551-5061 — review transcript to ensure customer was helped properly.",
+          "suggested_action": "read_only",
+          "urgency_reason": "AI-handled inbound business call; verify Sona gave correct information."
+        },
+        {
+          "thread_id": "0000000000004942",
+          "subject": "3 new notifications since 12:28 pm (Apr 28, 2026)",
+          "from_name": "Clief Notes (Skool)",
+          "from_address": "notifications@skool.com",
+          "date_relative": "Yest. 12:28",
+          "tags": [
+            "inbox",
+            "notification",
+            "personal_proton",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Skool community notifications from Clief Notes group.",
+          "suggested_action": "archive",
+          "urgency_reason": "Platform notification from community Eric participates in."
         }
       ],
       "noise": [
         {
-          "thread_id": "0000000000004922",
-          "subject": "Eric, you're invited to a virtual networking event",
-          "from_name": "Jason Integrity via Alignable",
-          "from_address": "notify@alignable.com",
-          "date_relative": "Yest. 12:07",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Alignable virtual networking event spam.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004906",
-          "subject": "Eric, you're invited to a virtual networking event",
-          "from_name": "Joe Moore via Alignable",
-          "from_address": "notify@alignable.com",
-          "date_relative": "Mon. 13:35",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Duplicate Alignable virtual networking event spam.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "000000000000490a",
-          "subject": "{CBS}  Eric - I'll see you in a hour",
-          "from_name": "Tom Reber",
-          "from_address": "tom@thecontractorfight.com",
-          "date_relative": "Mon. 16:02",
-          "tags": [
-            "coaching",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Older CBS coaching session reminder — superseded by newer April replay thread.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004904",
-          "subject": "Register Now - Leadership & Mental Health Series",
-          "from_name": "Bozeman Area Chamber of Commerce",
-          "from_address": "info@bozemanchamber.com",
-          "date_relative": "Mon. 13:00",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Second Chamber email — leadership series registration, consolidated under newer Chamber thread.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004910",
-          "subject": "Stream UEFA Champions League on Paramount+",
-          "from_name": "Paramount+ on Prime Video",
-          "from_address": "noreply@paramountplus.com",
-          "date_relative": "Mon. 22:13",
-          "tags": [
-            "inbox",
-            "notification",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Paramount+ streaming service sports content promotion.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "000000000000490e",
-          "subject": "NEW! Chords & lyrics in one place 🎤🎵",
-          "from_name": "Chordify",
-          "from_address": "noreply@chordify.net",
-          "date_relative": "Mon. 19:09",
+          "thread_id": "0000000000004970",
+          "subject": "Thoughtful gifts, with free priority shipping",
+          "from_name": "Kyrgies",
+          "from_address": "marketing@kyrgies.com",
+          "date_relative": "Today 03:57",
           "tags": [
             "inbox",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Chordify music app feature announcement marketing.",
+          "summary": "Retail promotion from Kyrgies slipper company.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "000000000000490d",
-          "subject": "Matthew Creamer posted \"🏆 Weekly Comp #2: The Artifact Sprint 🏆 \"",
-          "from_name": "Clief Notes",
-          "from_address": "notifications@cliefnotes.com",
-          "date_relative": "Mon. 17:11",
+          "thread_id": "000000000000496f",
+          "subject": "Shipped: \"Perler 83-99788 1000 Pack...\" and ⁦1⁩ more item",
+          "from_name": "Amazon.com",
+          "from_address": "shipment-tracking@amazon.com",
+          "date_relative": "Today 03:34",
           "tags": [
-            "inbox",
-            "notification",
-            "personal_proton",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Social platform post notification from Clief Notes community.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004902",
-          "subject": "Diploma: ✅ Half yard: Waiting for you",
-          "from_name": "Yard House",
-          "from_address": "noreply@yardhouse.com",
-          "date_relative": "Mon. 12:28",
-          "tags": [
+            "finance",
             "inbox",
             "personal_google",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Yard House restaurant loyalty marketing email.",
-          "suggested_action": "trash"
+          "summary": "Duplicate Amazon shipping notification — consolidated under most recent thread.",
+          "suggested_action": "archive"
         },
         {
-          "thread_id": "0000000000004901",
-          "subject": "GigWorx Brief",
-          "from_name": "GigWorx",
-          "from_address": "hello@gigworx.com",
-          "date_relative": "Mon. 12:11",
+          "thread_id": "000000000000496b",
+          "subject": "Ordered: \"Perler 83-99788 1000 Pack...\" and ⁦2⁩ more items",
+          "from_name": "Amazon.com",
+          "from_address": "order-update@amazon.com",
+          "date_relative": "Yest. 17:59",
+          "tags": [
+            "finance",
+            "inbox",
+            "personal_google",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Amazon order confirmation — consolidated under most recent shipping thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000496c",
+          "subject": "Eric, you're invited to a virtual networking event",
+          "from_name": "Cherri Pedrioli via Alignable",
+          "from_address": "messages@alignable.com",
+          "date_relative": "Yest. 17:54",
           "tags": [
             "flagged",
             "inbox",
@@ -438,15 +263,15 @@
             "work"
           ],
           "has_attachment": false,
-          "summary": "GigWorx marketing newsletter via HubSpot drip campaign.",
+          "summary": "Alignable networking event spam — known noise sender.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "0000000000004900",
-          "subject": "Missed our invite? There's still spots left!",
-          "from_name": "The Houzz Pro Team",
-          "from_address": "noreply@houzz.com",
-          "date_relative": "Mon. 11:20",
+          "thread_id": "0000000000004960",
+          "subject": "Eric, you're invited to a virtual networking event",
+          "from_name": "Chris Scully via Alignable",
+          "from_address": "messages@alignable.com",
+          "date_relative": "Yest. 14:03",
           "tags": [
             "flagged",
             "inbox",
@@ -454,81 +279,319 @@
             "work"
           ],
           "has_attachment": false,
-          "summary": "Houzz Pro re-engagement marketing for missed webinar or event.",
+          "summary": "Alignable networking event spam — known noise sender.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "00000000000048fe",
-          "subject": "Neighbors are looking for a business like Heartwood Craft",
-          "from_name": "Nextdoor",
-          "from_address": "noreply@nextdoor.com",
-          "date_relative": "Mon. 11:15",
+          "thread_id": "000000000000495e",
+          "subject": "New text message from (406) 518-1035",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:51",
           "tags": [
-            "hwc_google",
-            "hwcmt",
+            "flagged",
             "inbox",
-            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-1035 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000495d",
+          "subject": "New text message from (406) 518-1035",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:37",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-1035 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000495c",
+          "subject": "New text message from (406) 518-1035",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:14",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-1035 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000494f",
+          "subject": "New text message from (406) 518-1035",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-1035 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000494e",
+          "subject": "New text message from (406) 518-1035",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:07",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-1035 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000494d",
+          "subject": "New text message from (406) 518-1035",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:04",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-1035 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004951",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004950",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004952",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004953",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004956",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004959",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000495a",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "000000000000495b",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004954",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004958",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004957",
+          "subject": "New text message from (406) 518-7776",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 13:08",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 518-7776 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004945",
+          "subject": "New text message from (406) 551-5061",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@cio42337.quo.com",
+          "date_relative": "Yest. 12:35",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Quo notification — consolidated under most recent 551-5061 thread.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004948",
+          "subject": "Reading practice designed for your Pre-K kid",
+          "from_name": "Dojo Sparks",
+          "from_address": "hello@dojosparks.com",
+          "date_relative": "Yest. 13:05",
+          "tags": [
+            "family",
+            "inbox",
             "personal_proton",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Nextdoor lead-generation marketing disguised as neighbor interest.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "00000000000048fd",
-          "subject": "BuilderBase Updates + Early Bird Discount Codes Inside",
-          "from_name": "Chris at BuilderBase",
-          "from_address": "chris@builderbase.com",
-          "date_relative": "Mon. 10:44",
-          "tags": [
-            "inbox",
-            "office",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "BuilderBase product update with promotional discount codes.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "00000000000048fb",
-          "subject": "[Hammer & Grind] Thank you for your recent purchase",
-          "from_name": "Hammer & Grind",
-          "from_address": "noreply@hammerandgrind.com",
-          "date_relative": "Mon. 10:36",
-          "tags": [
-            "attachment",
-            "coaching",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": true,
-          "summary": "Automated purchase thank-you from Hammer & Grind — receipt already captured in separate thread.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000048f5",
-          "subject": "🍌*2^10 Backers!",
-          "from_name": "Dave from MicroKits",
-          "from_address": "dave@microkits.com",
-          "date_relative": "Mon. 08:05",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "MicroKits crowdfunding campaign backer milestone marketing via Klaviyo.",
+          "summary": "Marketing email from kids education app.",
           "suggested_action": "trash"
         }
       ]
     },
     "stats": {
       "urgent_count": 0,
-      "review_count": 11,
-      "noise_count": 14
+      "review_count": 6,
+      "noise_count": 24
     }
   }
 }

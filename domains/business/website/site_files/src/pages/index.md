@@ -10,17 +10,12 @@ hero_cta_1_text: Get Started
 hero_cta_1_url: /contact/
 hero_cta_2_text: See Our Work
 hero_cta_2_url: /our-work/
-trust_items:
-  - Licensed & Insured Here In Montana
-  - Bathrooms
-  - Universal Design
-  - Decks
-  - Custom Carpentry
+trust_items: []
 process_link_text: ''
 process_link_url: ''
 show_services: true
-show_testimonials: true
-show_cta: true
+show_testimonials: false
+show_cta: false
 show_form: true
 permalink: /
 layout: layouts/page-home.njk

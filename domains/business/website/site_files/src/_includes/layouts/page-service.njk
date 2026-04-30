@@ -5,8 +5,10 @@ layout: layouts/base.njk
 <section class="hero{% if not hero_image %} hero-no-image{% endif %}" {% if hero_image %}style="background-image: url('{{ hero_image }}')"{% endif %}>
   <div class="hero-overlay">
     <div class="container-wide">
+      {% if hero_eyebrow %}<span class="hero-eyebrow">{{ hero_eyebrow }}</span>{% endif %}
       <h1>{{ h1 | default(title) }}</h1>
       {% if hero_subtitle %}<p class="hero-subtitle">{{ hero_subtitle }}</p>{% endif %}
+      <hr class="long">
       <div class="hero-cta">
         <a href="{{ site.phoneLink }}" class="btn btn-primary">Call {{ site.phone }}</a>
         <a href="#contact-form" class="btn btn-outline-light">Request a Consultation</a>
@@ -14,6 +16,21 @@ layout: layouts/base.njk
     </div>
   </div>
 </section>
+
+{% if stats %}
+<section class="section section-tight">
+  <div class="container-wide">
+    <div class="stat-strip">
+      {% for stat in stats %}
+      <div class="stat-strip__item">
+        <div class="stat-strip__num">{{ stat.value }}</div>
+        <div class="stat-strip__label">{{ stat.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 
 <article class="service-content section">
   <div class="container container-narrow">

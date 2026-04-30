@@ -1,10 +1,10 @@
 ---
+title: 'About Heartwood Craft | Eric, Bozeman Remodeling Contractor'
+meta_description: 'Meet Eric, the craftsman behind Heartwood Craft.'
+h1: About Heartwood Craft
+permalink: /about/
 layout: layouts/page-simple.njk
-title: "About Heartwood Craft | Eric, Bozeman Remodeling Contractor"
-meta_description: "Meet Eric, the craftsman behind Heartwood Craft. Licensed remodeling in Bozeman with 3D design previews and transparent pricing. Call 406-551-5061."
-h1: "About Heartwood Craft"
-permalink: "/about/"
-schema_type: "Person"
+schema_type: Person
 ---
 
 <!-- ERIC: Please review this about page. I wrote it from your notes and operating docs. Add your personal story, correct anything that's off, and I'll revise. The bones are here but it needs your voice on the personal details. -->

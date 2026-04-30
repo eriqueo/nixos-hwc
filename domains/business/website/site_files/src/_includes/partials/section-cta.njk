@@ -1,10 +1,21 @@
-<section class="section section-cta section-alt animate-in" data-section="cta">
-  <div class="container text-center">
-    <h2>{{ cta_heading if cta_heading else "Ready to Talk About Your Project?" }}</h2>
-    <p>{{ cta_text if cta_text else "Tell us about your project, or give us a call. We'd like to hear what you're thinking." }}</p>
-    <div class="cta-buttons">
-      <a href="{{ site.phoneLink }}" class="btn btn-primary">Call {{ site.phone }}</a>
-      <a href="#contact-form" class="btn btn-outline">Request an Estimate</a>
+{# Editorial CTA box #}
+<section class="section section-cta animate-in" data-section="cta">
+  <div class="container-wide">
+    <div class="ed-cta">
+      <div class="ed-cta__inner">
+        <div>
+          <span class="eyebrow eyebrow-accent">NEXT STEP</span>
+          <h2 class="ed-cta__heading">{{ cta_heading if cta_heading else "Have a project in mind?" }}</h2>
+          <p class="ed-cta__lede">{{ cta_text if cta_text else "A short message is enough to start. We'll read it, reach out, and find a time for a site visit." }}</p>
+        </div>
+        <div class="ed-cta__actions">
+          <a href="{{ site.phoneLink }}" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            Call {{ site.phone }}
+          </a>
+          <a href="#contact-form" class="btn btn-secondary">Request a Consultation</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>

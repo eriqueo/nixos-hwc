@@ -1,4 +1,4 @@
-nixos-hwc/machines/server/config.nix
+# nixos-hwc/machines/server/config.nix
 #
 # MACHINE: HWC-SERVER
 # Declares machine identity and composes profiles; states hardware reality.

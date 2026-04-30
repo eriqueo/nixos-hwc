@@ -3,28 +3,56 @@
     "name": "Bathroom Remodeling",
     "slug": "bathroom",
     "url": "/bathroom/remodeling/",
-    "tagline": "From outdated to outstanding — custom tile, 3D design previews, and craftsmanship that lasts.",
-    "icon": "bath"
+    "tagline": "Full gut remodels, refreshes, tub-to-shower conversions, targeted repairs. Waterproofing behind every tile.",
+    "tagline_italic": "where every morning starts.",
+    "eyebrow": "SERVICE \u00b7 01",
+    "icon": "bath",
+    "stats": [
+      { "value": "6\u201310",  "label": "week typical job" },
+      { "value": "12",     "label": "yr waterproofing warranty" },
+      { "value": "40+",    "label": "bathrooms built" }
+    ]
   },
   {
     "name": "Basement Remodeling",
     "slug": "basement",
     "url": "/basement/remodeling/",
-    "tagline": "Turn unused square footage into your favorite room — offices, theaters, guest suites.",
-    "icon": "layers"
-  },
-  {
-    "name": "General Remodeling",
-    "slug": "remodeling",
-    "url": "/remodeling/",
-    "tagline": "Full-home renovations, structural updates, and the behind-the-scenes work that makes it all come together.",
-    "icon": "home"
+    "tagline": "Turn unused square footage into your favorite room \u2014 offices, theaters, guest suites.",
+    "tagline_italic": "the bonus room you actually use.",
+    "eyebrow": "SERVICE \u00b7 02",
+    "icon": "layers",
+    "stats": [
+      { "value": "4\u20138",  "label": "week typical job" },
+      { "value": "Egress",  "label": "windows always to code" },
+      { "value": "R-21",    "label": "framed wall insulation" }
+    ]
   },
   {
     "name": "Custom Decks",
     "slug": "decks",
     "url": "/remodeling/",
-    "tagline": "Built for Montana — cedar and composite decks designed for beauty and durability through every season.",
-    "icon": "grid"
+    "tagline": "Cedar and composite decks, railings, stairs, pergolas, skirting. Built for Montana freeze-thaw.",
+    "tagline_italic": "built for Montana freeze-thaw.",
+    "eyebrow": "SERVICE \u00b7 03",
+    "icon": "grid",
+    "stats": [
+      { "value": "3\u20135",  "label": "week typical job" },
+      { "value": "48\"",    "label": "footings below frost line" },
+      { "value": "Lifetime","label": "fastener warranty" }
+    ]
+  },
+  {
+    "name": "Universal Design",
+    "slug": "aging-in-place",
+    "url": "/aging-in-place/",
+    "tagline": "Aging-in-place remodels, accessible bathrooms, curbless showers, zero-step entries. Designed so they look like design choices.",
+    "tagline_italic": "a home that works for every stage.",
+    "eyebrow": "SERVICE \u00b7 04",
+    "icon": "ruler",
+    "stats": [
+      { "value": "CAPS",    "label": "certified approach" },
+      { "value": "36\"",    "label": "min clear doorway" },
+      { "value": "0",       "label": "curbs at entries" }
+    ]
   }
 ]

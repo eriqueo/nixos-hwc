@@ -1,115 +1,315 @@
 {
   "calculator": "deck",
   "title": "Deck Cost Calculator",
-  "subtitle": "7 questions, real numbers from Bozeman deck projects. Not national averages — actual Gallatin Valley material and labor costs.",
+  "subtitle": "7 questions, real numbers from Bozeman deck projects. Not national averages \u2014 actual Gallatin Valley material and labor costs.",
+  "webhook": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead",
+  "imageBase": "/img/calculator/deck",
   "steps": [
     {
       "id": "project_type",
       "question": "What kind of deck project is this?",
       "subtitle": "This sets the baseline for everything else.",
       "why": "A brand-new deck build means foundation, framing, and decking from scratch. A rebuild reuses some existing structure. A repair might just be boards and rails. This one question changes the estimate by thousands.",
-      "type": "cards",
+      "type": "image-cards",
       "options": [
-        { "value": "new_build", "label": "New deck build", "desc": "No existing deck — building from the ground up", "emoji": "🔨" },
-        { "value": "full_rebuild", "label": "Full rebuild", "desc": "Tear off the old deck and start fresh", "emoji": "♻️" },
-        { "value": "partial_rebuild", "label": "Partial rebuild", "desc": "Keep the frame, replace decking and rails", "emoji": "🔧" },
-        { "value": "repair_refresh", "label": "Repair or refresh", "desc": "Fix specific issues — boards, stairs, rails", "emoji": "✨" }
+        {
+          "value": "new_build",
+          "label": "New deck build",
+          "desc": "No existing deck \u2014 building from the ground up",
+          "image": "project_type_new_build.svg",
+          "icon": "NB"
+        },
+        {
+          "value": "full_rebuild",
+          "label": "Full rebuild",
+          "desc": "Tear off the old deck and start fresh",
+          "image": "project_type_full_rebuild.svg",
+          "icon": "FR"
+        },
+        {
+          "value": "partial_rebuild",
+          "label": "Partial rebuild",
+          "desc": "Keep the frame, replace decking and rails",
+          "image": "project_type_partial_rebuild.svg",
+          "icon": "PR"
+        },
+        {
+          "value": "repair_refresh",
+          "label": "Repair or refresh",
+          "desc": "Fix specific issues \u2014 boards, stairs, rails",
+          "image": "project_type_repair_refresh.svg",
+          "icon": "RR"
+        }
       ]
     },
     {
       "id": "deck_size",
       "question": "How big is the deck?",
-      "subtitle": "A rough estimate works — we'll measure precisely on-site.",
-      "why": "Materials and labor both scale with square footage. Lumber, fasteners, and joist count are all driven by size. Even a rough number gets us in the right ballpark — Bozeman lumber prices are what make this accurate, not national averages.",
-      "type": "cards",
+      "subtitle": "A rough estimate works \u2014 we'll measure precisely on-site.",
+      "why": "Materials and labor both scale with square footage. Lumber, fasteners, and joist count are all driven by size. Even a rough number gets us in the right ballpark \u2014 Bozeman lumber prices are what make this accurate, not national averages.",
+      "type": "image-cards",
       "options": [
-        { "value": "small", "label": "Small", "desc": "Under 150 sq ft (8×16, entry landing, small patio)", "emoji": "▪️", "sqft": 120 },
-        { "value": "medium", "label": "Medium", "desc": "150–300 sq ft (12×20, standard back deck)", "emoji": "▫️", "sqft": 225 },
-        { "value": "large", "label": "Large", "desc": "300–500 sq ft (16×24, entertaining deck)", "emoji": "⬜", "sqft": 400 },
-        { "value": "xl", "label": "Extra large", "desc": "500+ sq ft (multi-level, wraparound, or custom)", "emoji": "🔳", "sqft": 600 }
+        {
+          "value": "small",
+          "label": "Small",
+          "desc": "Under 150 sq ft \u00b7 8\u00d716, entry landing",
+          "image": "deck_size_small.svg",
+          "icon": "S",
+          "sqft": 120
+        },
+        {
+          "value": "medium",
+          "label": "Medium",
+          "desc": "150\u2013300 sq ft \u00b7 12\u00d720, standard",
+          "image": "deck_size_medium.svg",
+          "icon": "M",
+          "sqft": 225
+        },
+        {
+          "value": "large",
+          "label": "Large",
+          "desc": "300\u2013500 sq ft \u00b7 16\u00d724, entertaining",
+          "image": "deck_size_large.svg",
+          "icon": "L",
+          "sqft": 400
+        },
+        {
+          "value": "xl",
+          "label": "Extra large",
+          "desc": "500+ sq ft \u00b7 multi-level, wraparound",
+          "image": "deck_size_xl.svg",
+          "icon": "XL",
+          "sqft": 600
+        }
       ]
     },
     {
       "id": "deck_height",
       "question": "How high off the ground?",
       "subtitle": "This affects foundation, railing requirements, and permits.",
-      "why": "In Gallatin County, decks over 30 inches above grade require railings and typically need a building permit. Ground-level decks skip both — saving $1,500–4,000 in railings alone. Height also determines whether you need concrete footings or can use deck blocks.",
-      "type": "cards",
+      "why": "In Gallatin County, decks over 30 inches above grade require railings and typically need a building permit. Ground-level decks skip both \u2014 saving $1,500\u20134,000 in railings alone. Height also determines whether you need concrete footings or can use deck blocks.",
+      "type": "image-cards",
       "options": [
-        { "value": "ground_level", "label": "Ground level", "desc": "Under 12 inches — floating or on blocks", "emoji": "⏚" },
-        { "value": "low", "label": "Low profile", "desc": "12–30 inches — no railing required", "emoji": "▬" },
-        { "value": "standard", "label": "Standard height", "desc": "30–60 inches — railing required", "emoji": "📐" },
-        { "value": "elevated", "label": "Elevated", "desc": "5+ feet — second story, walkout, or hillside", "emoji": "🏔️" }
+        {
+          "value": "ground_level",
+          "label": "Ground level",
+          "desc": "Under 12 inches \u2014 floating or on blocks",
+          "image": "deck_height_ground_level.svg",
+          "icon": "GL"
+        },
+        {
+          "value": "low",
+          "label": "Low profile",
+          "desc": "12\u201330 inches \u2014 no railing required",
+          "image": "deck_height_low.svg",
+          "icon": "LP"
+        },
+        {
+          "value": "standard",
+          "label": "Standard height",
+          "desc": "30\u201360 inches \u2014 railing required",
+          "image": "deck_height_standard.svg",
+          "icon": "SH"
+        },
+        {
+          "value": "elevated",
+          "label": "Elevated",
+          "desc": "5+ feet \u2014 second story or hillside",
+          "image": "deck_height_elevated.svg",
+          "icon": "EL"
+        }
       ]
     },
     {
       "id": "material",
       "question": "What material for the decking?",
       "subtitle": "This is your biggest material cost decision.",
-      "why": "Pressure-treated lumber runs $2–3 per linear foot in Bozeman — solid and affordable, but needs maintenance every few years. Cedar is beautiful but pricier. Composite (Trex, TimberTech) costs 2–3× more upfront but lasts decades with zero staining. Material choice alone can swing a deck project by $3,000–8,000.",
-      "type": "cards",
+      "why": "Pressure-treated lumber runs $2\u20133 per linear foot in Bozeman \u2014 solid and affordable, but needs maintenance every few years. Cedar is beautiful but pricier. Composite (Trex, TimberTech) costs 2\u20133\u00d7 more upfront but lasts decades with zero staining. Material choice alone can swing a deck project by $3,000\u20138,000.",
+      "type": "image-cards",
       "options": [
-        { "value": "pt_lumber", "label": "Pressure-treated", "desc": "Affordable, proven — needs staining every 2–3 years", "emoji": "🪵" },
-        { "value": "cedar", "label": "Cedar", "desc": "Beautiful grain, natural weather resistance", "emoji": "🌲" },
-        { "value": "composite_mid", "label": "Composite (mid)", "desc": "Trex Select, TimberTech Edge — low maintenance", "emoji": "📋" },
-        { "value": "composite_premium", "label": "Composite (premium)", "desc": "Trex Transcend, TimberTech Vintage — top tier", "emoji": "💎" }
+        {
+          "value": "pt_lumber",
+          "label": "Pressure-treated",
+          "desc": "Affordable, proven \u2014 needs staining every 2\u20133 years",
+          "image": "material_pt_lumber.svg",
+          "icon": "PT"
+        },
+        {
+          "value": "cedar",
+          "label": "Cedar",
+          "desc": "Beautiful grain, natural weather resistance",
+          "image": "material_cedar.svg",
+          "icon": "CD"
+        },
+        {
+          "value": "composite_mid",
+          "label": "Composite (mid)",
+          "desc": "Trex Select, TimberTech Edge \u2014 low maintenance",
+          "image": "material_composite_mid.svg",
+          "icon": "CM"
+        },
+        {
+          "value": "composite_premium",
+          "label": "Composite (premium)",
+          "desc": "Trex Transcend, TimberTech Vintage \u2014 top tier",
+          "image": "material_composite_premium.svg",
+          "icon": "CP"
+        }
       ]
     },
     {
       "id": "railing",
       "question": "What about railings?",
       "subtitle": "Required if your deck is over 30\" above grade.",
-      "why": "Wood railings are the budget option at $30–50 per linear foot installed. Cable rail and metal balusters look sharp but cost 2–3× more. Glass panels are premium at $80–150+ per foot. If your deck is under 30 inches, you might skip them entirely — or add a simple cap rail for looks.",
-      "type": "cards",
+      "why": "Wood railings are the budget option at $30\u201350 per linear foot installed. Cable rail and metal balusters look sharp but cost 2\u20133\u00d7 more. Glass panels are premium at $80\u2013150+ per foot. If your deck is under 30 inches, you might skip them entirely \u2014 or add a simple cap rail for looks.",
+      "type": "image-cards",
       "options": [
-        { "value": "none", "label": "No railing", "desc": "Ground-level or low deck — not required", "emoji": "—" },
-        { "value": "wood", "label": "Wood railing", "desc": "PT or cedar posts and balusters — classic look", "emoji": "🪵" },
-        { "value": "metal_cable", "label": "Metal or cable", "desc": "Aluminum balusters or cable rail — modern and clean", "emoji": "⚡" },
-        { "value": "glass", "label": "Glass panels", "desc": "Tempered glass — unobstructed views, premium cost", "emoji": "🪟" }
+        {
+          "value": "none",
+          "label": "No railing",
+          "desc": "Ground-level or low deck \u2014 not required",
+          "image": "railing_none.svg",
+          "icon": "\u2014"
+        },
+        {
+          "value": "wood",
+          "label": "Wood railing",
+          "desc": "PT or cedar posts and balusters \u2014 classic look",
+          "image": "railing_wood.svg",
+          "icon": "WR"
+        },
+        {
+          "value": "metal_cable",
+          "label": "Metal or cable",
+          "desc": "Aluminum balusters or cable rail \u2014 modern",
+          "image": "railing_metal_cable.svg",
+          "icon": "MC"
+        },
+        {
+          "value": "glass",
+          "label": "Glass panels",
+          "desc": "Tempered glass \u2014 unobstructed views, premium",
+          "image": "railing_glass.svg",
+          "icon": "GP"
+        }
       ]
     },
     {
       "id": "features",
       "question": "Any extras?",
-      "subtitle": "Select everything that applies. These are the common add-ons we see in Bozeman.",
-      "why": "Each of these is a standalone scope item with its own materials and labor. Built-in benches and planters add $800–2,000 each. Lighting runs $600–2,000 depending on complexity. A pergola can add $3,000–8,000. We price these from our actual Bozeman project costs.",
+      "subtitle": "Select everything that applies.",
+      "why": "Each of these is a standalone scope item with its own materials and labor. Built-in benches and planters add $800\u20132,000 each. Lighting runs $600\u20132,000 depending on complexity. A pergola can add $3,000\u20138,000.",
       "type": "multi",
       "options": [
-        { "value": "stairs", "label": "Stairs (3+ steps)", "add": 1500 },
-        { "value": "lighting", "label": "Deck lighting", "add": 1200 },
-        { "value": "builtin_bench", "label": "Built-in bench seating", "add": 1400 },
-        { "value": "pergola", "label": "Pergola or shade structure", "add": 5000 },
-        { "value": "hottub_pad", "label": "Hot tub pad / reinforcement", "add": 2000 },
-        { "value": "skirting", "label": "Deck skirting / lattice", "add": 1000 }
+        {
+          "value": "stairs",
+          "label": "Stairs (3+ steps)",
+          "add": 1500
+        },
+        {
+          "value": "lighting",
+          "label": "Deck lighting",
+          "add": 1200
+        },
+        {
+          "value": "builtin_bench",
+          "label": "Built-in bench seating",
+          "add": 1400
+        },
+        {
+          "value": "pergola",
+          "label": "Pergola or shade structure",
+          "add": 5000
+        },
+        {
+          "value": "hottub_pad",
+          "label": "Hot tub pad / reinforcement",
+          "add": 2000
+        },
+        {
+          "value": "skirting",
+          "label": "Deck skirting / lattice",
+          "add": 1000
+        }
       ]
     },
     {
       "id": "timeline",
       "question": "When are you thinking?",
-      "subtitle": "Helps us plan the schedule — Bozeman deck season books up fast.",
-      "why": "Montana's build season for outdoor work is roughly May through October. Bozeman contractors book up quickly in spring — if you're targeting summer, starting the conversation now gives you the best shot at getting on the schedule.",
+      "subtitle": "Helps us plan the schedule \u2014 Bozeman deck season books up fast.",
+      "why": "Montana's build season for outdoor work is roughly May through October. Bozeman contractors book up quickly in spring \u2014 if you're targeting summer, starting the conversation now gives you the best shot at getting on the schedule.",
       "type": "cards",
       "options": [
-        { "value": "asap", "label": "As soon as possible", "desc": "Ready to move — let's get on the schedule", "emoji": "🚀" },
-        { "value": "1_3_months", "label": "1–3 months", "desc": "Planning ahead, want to get numbers", "emoji": "📅" },
-        { "value": "3_6_months", "label": "3–6 months", "desc": "Thinking about next season", "emoji": "🗓️" },
-        { "value": "exploring", "label": "Just exploring", "desc": "Curious what a deck costs in Bozeman", "emoji": "🔍" }
+        {
+          "value": "asap",
+          "label": "As soon as possible",
+          "desc": "Ready to move \u2014 let's get on the schedule",
+          "icon": "\u2192"
+        },
+        {
+          "value": "1_3_months",
+          "label": "1\u20133 months",
+          "desc": "Planning ahead, want to get numbers",
+          "icon": "\u25c7"
+        },
+        {
+          "value": "3_6_months",
+          "label": "3\u20136 months",
+          "desc": "Thinking about next season",
+          "icon": "\u25c7\u25c7"
+        },
+        {
+          "value": "exploring",
+          "label": "Just exploring",
+          "desc": "Curious what a deck costs in Bozeman",
+          "icon": "\u2026"
+        }
       ]
     }
   ],
   "pricing": {
+    "engine": "deck",
     "bases": {
-      "new_build": [12000, 22000],
-      "full_rebuild": [10000, 18000],
-      "partial_rebuild": [5000, 12000],
-      "repair_refresh": [2500, 7000]
+      "new_build": [
+        12000,
+        22000
+      ],
+      "full_rebuild": [
+        10000,
+        18000
+      ],
+      "partial_rebuild": [
+        5000,
+        12000
+      ],
+      "repair_refresh": [
+        2500,
+        7000
+      ]
     },
-    "sizeMultipliers": { "small": 0.65, "medium": 1.0, "large": 1.55, "xl": 2.2 },
+    "sizeMultipliers": {
+      "small": 0.65,
+      "medium": 1.0,
+      "large": 1.55,
+      "xl": 2.2
+    },
     "heightAdds": {
-      "ground_level": [0, 0],
-      "low": [500, 1000],
-      "standard": [1500, 3000],
-      "elevated": [4000, 8000]
+      "ground_level": [
+        0,
+        0
+      ],
+      "low": [
+        500,
+        1000
+      ],
+      "standard": [
+        1500,
+        3000
+      ],
+      "elevated": [
+        4000,
+        8000
+      ]
     },
     "materialMultipliers": {
       "pt_lumber": 1.0,
@@ -119,51 +319,76 @@
     },
     "materialPortionRatio": 0.4,
     "railingPerFoot": {
-      "none": [0, 0],
-      "wood": [30, 50],
-      "metal_cable": [60, 90],
-      "glass": [90, 150]
+      "none": [
+        0,
+        0
+      ],
+      "wood": [
+        30,
+        50
+      ],
+      "metal_cable": [
+        60,
+        90
+      ],
+      "glass": [
+        90,
+        150
+      ]
     },
-    "perimeterBySize": { "small": 30, "medium": 44, "large": 58, "xl": 75 }
+    "perimeterBySize": {
+      "small": 30,
+      "medium": 44,
+      "large": 58,
+      "xl": 75
+    },
+    "featureAdds": {
+      "stairs": 1500,
+      "lighting": 1200,
+      "builtin_bench": 1400,
+      "pergola": 5000,
+      "hottub_pad": 2000,
+      "skirting": 1000
+    }
   },
   "reportContext": {
     "project_type": {
       "new_build": "New builds in the Gallatin Valley typically require permits and engineered footings due to frost depth.",
-      "full_rebuild": "Demo and haul-off of the existing deck is included — we handle everything.",
+      "full_rebuild": "Demo and haul-off of the existing deck is included \u2014 we handle everything.",
       "partial_rebuild": "Reusing the existing frame saves significant cost if the structure is sound.",
       "repair_refresh": "Targeted repairs are the most cost-effective way to extend your deck's life."
     },
     "deck_size": {
-      "small": "Smaller decks are straightforward builds — typically 2–4 days of construction.",
-      "medium": "The most common size we build in Bozeman — good balance of space and cost.",
-      "large": "Larger footprints need more foundation points and material — but cost per square foot drops.",
+      "small": "Smaller decks are straightforward builds \u2014 typically 2\u20134 days of construction.",
+      "medium": "The most common size we build in Bozeman \u2014 good balance of space and cost.",
+      "large": "Larger footprints need more foundation points and material \u2014 but cost per square foot drops.",
       "xl": "Multi-level or wraparound decks involve more complex framing and often need engineered plans."
     },
     "deck_height": {
-      "ground_level": "Ground-level decks in Bozeman often skip permits and railings — simplest build.",
+      "ground_level": "Ground-level decks in Bozeman often skip permits and railings \u2014 simplest build.",
       "low": "Low-profile decks can use deck blocks instead of poured footings in most Gallatin County soils.",
       "standard": "Above 30 inches, Gallatin County requires railings and typically a building permit.",
       "elevated": "Elevated decks need engineered plans, deeper footings, and structural bracing for Montana wind loads."
     },
     "material": {
-      "pt_lumber": "Pressure-treated is the workhorse — $2–3/LF at Kenyon Noble, needs staining every 2–3 Montana winters.",
-      "cedar": "Cedar weathers beautifully in Montana's dry climate but costs 25–40% more than PT.",
+      "pt_lumber": "Pressure-treated is the workhorse \u2014 $2\u20133/LF at Kenyon Noble, needs re-staining every 2\u20133 Montana winters.",
+      "cedar": "Cedar weathers beautifully in Montana's dry climate but costs 25\u201340% more than PT.",
       "composite_mid": "Mid-range composite handles Bozeman's freeze-thaw cycles well with zero annual maintenance.",
-      "composite_premium": "Premium composite has the best color retention through Montana's intense UV — 25-year fade warranty."
+      "composite_premium": "Premium composite has the best color retention through Montana's intense UV \u2014 25-year fade warranty."
     },
     "railing": {
-      "none": "No railing keeps the profile clean and the cost down — works great for ground-level decks.",
+      "none": "No railing keeps the profile clean and the cost down \u2014 works great for ground-level decks.",
       "wood": "Wood railings are the most cost-effective option and match the Bozeman mountain aesthetic.",
-      "metal_cable": "Cable rail gives you unobstructed mountain views — popular for decks facing the Bridgers.",
-      "glass": "Glass panels maximize views but add significant cost — $90–150 per linear foot installed."
+      "metal_cable": "Cable rail gives you unobstructed mountain views \u2014 popular for decks facing the Bridgers.",
+      "glass": "Glass panels maximize views but add significant cost \u2014 $90\u2013150 per linear foot installed."
     },
     "features": {
-      "stairs": "Custom stairs with wide treads and solid stringers — we build for Montana's snow and ice.",
+      "stairs": "Custom stairs with wide treads and solid stringers \u2014 built for Montana's snow and ice.",
       "lighting": "Low-voltage LED lighting extends your deck season into Bozeman's long summer evenings.",
-      "builtin_bench": "Built-in benches double as railing in some configurations — saves cost and looks sharp.",
+      "builtin_bench": "Built-in benches double as railing in some configurations \u2014 saves cost and looks sharp.",
       "pergola": "Pergolas provide shade during Montana's intense summer sun and anchor the outdoor space.",
-      "hottub_pad": "Hot tub pads need reinforced framing or a separate foundation — we account for the 3,000+ lb load.",
-      "skirting": "Skirting keeps critters out and gives a finished look — lattice or solid board options."
+      "hottub_pad": "Hot tub pads need reinforced framing or a separate foundation \u2014 we account for the 3,000+ lb load.",
+      "skirting": "Skirting keeps critters out and gives a finished look \u2014 lattice or solid board options."
     }
   }
 }

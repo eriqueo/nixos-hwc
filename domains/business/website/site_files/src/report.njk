@@ -8,68 +8,511 @@ noindex: true
 ---
 
 <style>
-  /* ── Report-specific styles ── */
-  .hwc-report { max-width: 680px; margin: 0 auto; font-family: 'DM Sans', 'Helvetica Neue', sans-serif; color: #23282d; }
-  .hwc-report-loading { text-align: center; padding: 80px 20px; color: #9ca3af; }
-  .hwc-report-loading .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #cf995f; border-radius: 50%; animation: hwc-spin 0.8s linear infinite; margin: 0 auto 16px; }
+  /* ──────────────────────────────────────────────────────────────────────
+     Heartwood Craft project summary report
+     Ported from a Claude Design hi-fi mock to vanilla JS/CSS to match
+     the existing site architecture.
+     Uses site CSS vars (--copper, --fg1, --fg2, --fg3, --bg-dark, --bg-darker, --link)
+     ─────────────────────────────────────────────────────────────────── */
+
+  /* Shell */
+  .hwc-rpt {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+    color: var(--fg1);
+    font-family: var(--font-body);
+  }
+  @media (min-width: 720px) {
+    .hwc-rpt { padding: 0 40px; }
+  }
+
+  /* Loading & error */
+  .hwc-rpt-loading,
+  .hwc-rpt-error {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--fg3);
+  }
+  .hwc-rpt-loading .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border-dark);
+    border-top-color: var(--copper);
+    border-radius: 50%;
+    animation: hwc-spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
   @keyframes hwc-spin { to { transform: rotate(360deg); } }
-  .hwc-report-error { text-align: center; padding: 80px 20px; color: #6b7280; }
-  .hwc-report-error h2 { font-family: 'Playfair Display', serif; color: #23282d; margin: 0 0 8px; }
+  .hwc-rpt-error h2 {
+    font-family: var(--font-heading);
+    color: var(--fg1);
+    margin: 0 0 8px;
+  }
 
-  .hwc-rpt-header { text-align: center; margin-bottom: 32px; }
-  .hwc-rpt-badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #cf995f; margin-bottom: 8px; }
-  .hwc-rpt-title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: #23282d; margin: 0 0 4px; line-height: 1.2; }
-  .hwc-rpt-meta { font-size: 13px; color: #9ca3af; margin: 0; }
+  /* Eyebrow */
+  .hwc-eyebrow {
+    font-family: var(--font-body);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--fg3);
+  }
+  .hwc-eyebrow.hwc-eyebrow--accent { color: var(--copper); }
 
-  .hwc-rpt-estimate { text-align: center; padding: 28px 20px; background: #faf8f5; border-radius: 14px; margin-bottom: 28px; border: 1px solid #e8d5c4; }
-  .hwc-rpt-estimate-label { font-size: 13px; color: #6b7280; margin-bottom: 6px; font-weight: 500; }
-  .hwc-rpt-estimate-number { font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 700; color: #23282d; line-height: 1; }
-  .hwc-rpt-estimate-note { font-size: 12px; color: #9ca3af; margin-top: 10px; max-width: 400px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+  /* Rule */
+  .hwc-rule {
+    height: 2px;
+    width: 64px;
+    background: var(--copper);
+    border: 0;
+    margin: 0;
+  }
 
-  .hwc-rpt-section { margin-bottom: 28px; }
-  .hwc-rpt-section-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #23282d; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid #cf995f; }
+  /* Photo placeholder — replaced with a real <img> when available */
+  .hwc-photo {
+    aspect-ratio: 16 / 9;
+    background: #1a1c1d;
+    background-image:
+      repeating-linear-gradient(135deg, rgba(235,219,178,0.018) 0 12px, transparent 12px 24px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 14px;
+    box-sizing: border-box;
+    border: 1px solid rgba(235,219,178,0.06);
+  }
+  .hwc-photo--card { aspect-ratio: 16 / 10; border: none; }
+  .hwc-photo__label {
+    font-family: var(--font-body);
+    letter-spacing: 0.18em;
+    color: #5a5d61;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  .hwc-photo__img {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
 
-  .hwc-rpt-row { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #e5e7eb; }
-  .hwc-rpt-row:last-child { border-bottom: none; }
-  .hwc-rpt-row-label { font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; min-width: 100px; flex-shrink: 0; padding-top: 2px; }
-  .hwc-rpt-row-content { flex: 1; }
-  .hwc-rpt-row-value { font-size: 15px; font-weight: 600; color: #23282d; margin-bottom: 3px; }
-  .hwc-rpt-row-context { font-size: 13px; color: #6b7280; line-height: 1.5; }
+  /* Header strip */
+  .hwc-rpt-header {
+    padding: 24px 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .hwc-rpt-header__logo { height: 22px; }
+  .hwc-rpt-header__id {
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg3);
+    font-weight: 500;
+  }
 
-  .hwc-rpt-features { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 0; }
-  .hwc-rpt-feature-pill { font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; background: #F5EDE4; color: #a67a45; }
+  /* Section heading */
+  .hwc-section { padding: 56px 0 0; }
+  .hwc-section--hero { padding: 40px 0 8px; }
+  .hwc-section--cta { padding: 64px 0 0; }
+  .hwc-section--footer { padding: 56px 0 80px; }
 
-  .hwc-rpt-process { background: #faf8f5; border-radius: 14px; padding: 24px; margin-bottom: 28px; }
-  .hwc-rpt-process-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #23282d; margin: 0 0 14px; }
-  .hwc-rpt-process-step { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
-  .hwc-rpt-process-step:last-child { margin-bottom: 0; }
-  .hwc-rpt-process-num { width: 28px; height: 28px; border-radius: 50%; background: #cf995f; color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .hwc-rpt-process-text { font-size: 14px; color: #4b5563; line-height: 1.5; padding-top: 3px; }
-  .hwc-rpt-process-text strong { color: #23282d; }
+  .hwc-sechead {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .hwc-sechead__num {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--copper);
+    font-weight: 600;
+    font-feature-settings: "tnum";
+  }
+  .hwc-sechead__title {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: clamp(22px, 4.5vw, 28px);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    color: var(--fg1);
+    margin: 0;
+  }
 
-  .hwc-rpt-footer { text-align: center; padding: 24px 0; border-top: 1px solid #e5e7eb; margin-top: 12px; }
-  .hwc-rpt-footer-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #23282d; margin-bottom: 4px; }
-  .hwc-rpt-footer-info { font-size: 13px; color: #6b7280; line-height: 1.7; }
-  .hwc-rpt-footer-info a { color: #cf995f; text-decoration: none; font-weight: 600; }
+  /* Hero */
+  .hwc-hero__price {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: clamp(48px, 9vw, 88px);
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    color: var(--fg1);
+    margin: 20px 0 0;
+    font-feature-settings: "lnum";
+  }
+  .hwc-hero__dash {
+    color: var(--copper);
+    font-style: italic;
+    font-weight: 500;
+    margin: 0 0.15em;
+  }
+  .hwc-hero__caption {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--fg2);
+    margin: 20px 0 32px;
+    max-width: 52ch;
+  }
 
-  .hwc-rpt-disclaimer { font-size: 11px; color: #9ca3af; text-align: center; line-height: 1.6; margin-top: 20px; }
+  /* Selections grid */
+  .hwc-selections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .hwc-selection {
+    background: var(--bg-darker);
+    border: 1px solid rgba(235,219,178,0.06);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .hwc-selection__label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg3);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .hwc-selection__value {
+    font-size: 14px;
+    color: var(--fg1);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  /* Budget bar */
+  .hwc-budget__bar {
+    margin-top: 28px;
+    display: flex;
+    height: 56px;
+    width: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(235,219,178,0.08);
+  }
+  .hwc-budget__seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+    border-right: 1px solid rgba(35,40,45,0.6);
+  }
+  .hwc-budget__seg:last-child { border-right: none; }
+  .hwc-budget__legend {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    row-gap: 10px;
+    column-gap: 18px;
+  }
+  .hwc-budget__legend-row {
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .hwc-budget__swatch {
+    width: 10px; height: 10px;
+    margin-top: 4px;
+    border-radius: 2px;
+  }
+  .hwc-budget__legend-label {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--fg1);
+    line-height: 1.3;
+  }
+  .hwc-budget__legend-range {
+    font-size: 11.5px;
+    color: var(--fg3);
+    margin-top: 2px;
+  }
+  .hwc-budget__legend-pct {
+    font-feature-settings: "tnum";
+    font-size: 13px;
+    color: var(--copper);
+    font-weight: 600;
+  }
+  .hwc-budget__caption {
+    margin-top: 28px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--fg3);
+    font-style: italic;
+    max-width: 60ch;
+  }
+
+  /* Recent work */
+  .hwc-recent {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  @media (min-width: 760px) {
+    .hwc-recent { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .hwc-recent__card {
+    background: var(--bg-darker);
+    border: 1px solid rgba(235,219,178,0.06);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .hwc-recent__body { padding: 20px 22px 22px; }
+  .hwc-recent__loc {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .hwc-recent__title {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--fg1);
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .hwc-recent__desc {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg2);
+    margin: 0 0 18px;
+    max-width: 60ch;
+  }
+  .hwc-recent__total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-top: 14px;
+    border-top: 1px solid rgba(235,219,178,0.06);
+    gap: 12px;
+  }
+  .hwc-recent__amount {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--fg1);
+    font-feature-settings: "lnum";
+  }
+  .hwc-recent__note {
+    margin-top: 22px;
+    font-size: 12.5px;
+    color: var(--fg3);
+    font-style: italic;
+  }
+
+  /* Timeline */
+  .hwc-tl {
+    list-style: none;
+    padding: 0;
+    margin: 32px 0 0;
+    position: relative;
+  }
+  .hwc-tl__item {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 18px;
+    padding-bottom: 28px;
+    position: relative;
+  }
+  .hwc-tl__item:last-child { padding-bottom: 0; }
+  .hwc-tl__connector {
+    position: absolute;
+    left: 19px;
+    top: 40px;
+    bottom: 0;
+    width: 2px;
+    background: rgba(207,153,95,0.25);
+  }
+  .hwc-tl__node {
+    width: 40px; height: 40px;
+    border-radius: 999px;
+    border: 1.5px solid var(--copper);
+    color: var(--copper);
+    background: var(--bg-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+  .hwc-tl__week { color: var(--copper); margin-bottom: 4px; }
+  .hwc-tl__title {
+    font-family: var(--font-heading);
+    font-size: 19px;
+    font-weight: 500;
+    color: var(--fg1);
+    line-height: 1.25;
+    margin: 4px 0 8px;
+    letter-spacing: -0.005em;
+  }
+  .hwc-tl__body {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg2);
+    max-width: 58ch;
+  }
+
+  /* CTA */
+  .hwc-cta {
+    background: var(--bg-darker);
+    border: 1px solid rgba(235,219,178,0.08);
+    border-radius: 8px;
+    padding: clamp(28px, 6vw, 44px);
+    position: relative;
+    overflow: hidden;
+  }
+  .hwc-cta::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    height: 3px;
+    width: 96px;
+    background: var(--copper);
+  }
+  .hwc-cta__heading {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: clamp(28px, 5.5vw, 40px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--fg1);
+    margin: 14px 0 0;
+    max-width: 20ch;
+  }
+  .hwc-cta__subhead {
+    font-size: 15.5px;
+    line-height: 1.6;
+    color: var(--fg2);
+    margin: 18px 0 28px;
+    max-width: 50ch;
+  }
+  .hwc-cta__phone {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    text-decoration: none;
+    background: var(--copper);
+    color: var(--bg-dark);
+    padding: 16px 22px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.005em;
+    font-feature-settings: "tnum";
+    border: 0;
+  }
+  .hwc-cta__email {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 14px;
+    color: var(--link);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .hwc-cta__email:hover { border-bottom-color: currentColor; }
+  .hwc-cta__checklist-wrap {
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(235,219,178,0.08);
+  }
+  .hwc-cta__checklist {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+  }
+  .hwc-cta__checklist li {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 7px 0;
+    color: var(--fg2);
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .hwc-cta__check {
+    color: var(--copper);
+    margin-top: 3px;
+    display: flex;
+  }
+
+  /* Footer */
+  .hwc-rpt-footer-text {
+    margin-top: 24px;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg3);
+    font-weight: 500;
+  }
+  .hwc-rpt-disclaimer {
+    margin-top: 16px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--fg3);
+    max-width: 60ch;
+  }
+  .hwc-rpt-print {
+    margin-top: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    color: var(--fg1);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--copper);
+    cursor: pointer;
+    font-family: inherit;
+  }
 
   /* Print styles */
   @media print {
-    .site-header, .site-footer, .site-nav, nav, header, footer { display: none !important; }
-    .hwc-report { max-width: 100%; padding: 0; }
-    .hwc-rpt-estimate { break-inside: avoid; }
-    .hwc-rpt-section { break-inside: avoid; }
-    .hwc-rpt-process { break-inside: avoid; }
-    .hwc-rpt-print-btn { display: none !important; }
+    .site-header, .site-footer, .site-nav, nav, header.site-header { display: none !important; }
+    body { background: #fff !important; color: #23282d !important; }
+    .hwc-rpt { max-width: 100% !important; padding: 0 !important; color: #23282d !important; }
+    .hwc-rpt * { color: #23282d !important; }
+    .hwc-photo { background: #ececec !important; }
+    .hwc-rpt-print { display: none !important; }
+    .hwc-section { padding: 32px 0 0 !important; break-inside: avoid; }
+    .hwc-cta { background: #f7f5f0 !important; }
+    .hwc-cta__phone { background: #cf995f !important; color: #fff !important; }
+    .hwc-recent__card,
+    .hwc-selection,
+    .hwc-cta { background: #f7f5f0 !important; }
   }
-
-  .hwc-rpt-print-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: #6b7280; font-family: inherit; transition: all 0.15s; margin-top: 16px; }
-  .hwc-rpt-print-btn:hover { border-color: #cf995f; color: #cf995f; }
 </style>
 
-<div class="hwc-report" id="hwc-report">
-  <div class="hwc-report-loading" id="hwc-report-loading">
+<div class="hwc-rpt" id="hwc-report">
+  <div class="hwc-rpt-loading">
     <div class="spinner"></div>
     <div>Loading your project summary...</div>
   </div>
@@ -77,100 +520,196 @@ noindex: true
 
 <script>
 (function() {
-  // ── Content maps ──────────────────────────────────────────────────────────
-  var CONTEXT = {
-    deck: {
-      project_type: {
-        new_build: "New builds in the Gallatin Valley typically require permits and engineered footings due to frost depth.",
-        full_rebuild: "Demo and haul-off of the existing deck is included — we handle everything.",
-        partial_rebuild: "Reusing the existing frame saves significant cost if the structure is sound.",
-        repair_refresh: "Targeted repairs are the most cost-effective way to extend your deck's life."
+  // ────────────────────────────────────────────────────────────────────────
+  // STATIC CONTENT
+  // ────────────────────────────────────────────────────────────────────────
+
+  // Step labels for selection chips
+  var STEP_LABELS = {
+    project_type: "Project",
+    deck_size: "Size", bathroom_size: "Size",
+    deck_height: "Height",
+    shower_tub: "Layout", material: "Material",
+    tile_level: "Tile", fixtures: "Fixtures", railing: "Railing",
+    timeline: "Timeline"
+  };
+
+  var CALC_LABELS = { bathroom: "bathroom remodel", deck: "deck" };
+
+  // Budget breakdown segments per calculator type. Percentages sum to 100.
+  // Colors are an orange-tinted gruvbox stack: copper dominates, others step
+  // to warmer/darker browns. Foreground is chosen for contrast on each.
+  var BUDGET = {
+    bathroom: [
+      { label: "Demo & prep",          pct: 8,  color: "#5b4a36", fg: "#ebdbb2" },
+      { label: "Plumbing & rough",     pct: 14, color: "#7a5e3e", fg: "#ebdbb2" },
+      { label: "Tile & waterproofing", pct: 18, color: "#a07a4a", fg: "#1d2021" },
+      { label: "Fixtures",             pct: 14, color: "#c79462", fg: "#1d2021" },
+      { label: "Cabinetry & millwork", pct: 16, color: "#cf995f", fg: "#1d2021" },
+      { label: "Labor & finish",       pct: 22, color: "#b88550", fg: "#1d2021" },
+      { label: "Contingency",          pct: 8,  color: "#6b5238", fg: "#ebdbb2" }
+    ],
+    deck: [
+      { label: "Foundation",       pct: 14, color: "#5b4a36", fg: "#ebdbb2" },
+      { label: "Framing",          pct: 18, color: "#7a5e3e", fg: "#ebdbb2" },
+      { label: "Decking material", pct: 22, color: "#a07a4a", fg: "#1d2021" },
+      { label: "Railings",         pct: 12, color: "#c79462", fg: "#1d2021" },
+      { label: "Stairs & extras",  pct: 8,  color: "#cf995f", fg: "#1d2021" },
+      { label: "Labor",            pct: 18, color: "#b88550", fg: "#1d2021" },
+      { label: "Contingency",      pct: 8,  color: "#6b5238", fg: "#ebdbb2" }
+    ]
+  };
+
+  // Recent-work placeholders. Swap the photoLabel for an actual image path
+  // (and add `photoSrc: "/img/portfolio/xyz.webp"`) when you have real photos.
+  var RECENT = {
+    bathroom: [
+      {
+        photoLabel: "XL primary bath · north Bozeman",
+        location:   "North Bozeman · 2025",
+        title:      "XL primary bath, full gut",
+        desc:       "Walk-in shower with a curbless pan, custom oak vanity, and heated tile floor. Original 1996 layout was opened up to fit a freestanding tub under the window.",
+        total:      94800
       },
-      deck_size: {
-        small: "Smaller decks are straightforward builds — typically 2–4 days of construction.",
-        medium: "The most common size we build in Bozeman — good balance of space and cost.",
-        large: "Larger footprints need more foundation points and material — but cost per square foot drops.",
-        xl: "Multi-level or wraparound decks involve more complex framing and often need engineered plans."
-      },
-      deck_height: {
-        ground_level: "Ground-level decks in Bozeman often skip permits and railings — simplest build.",
-        low: "Low-profile decks can use deck blocks instead of poured footings in most Gallatin County soils.",
-        standard: "Above 30 inches, Gallatin County requires railings and typically a building permit.",
-        elevated: "Elevated decks need engineered plans, deeper footings, and structural bracing for Montana wind loads."
-      },
-      material: {
-        pt_lumber: "Pressure-treated is the workhorse — $2–3/LF at Kenyon Noble, needs re-staining every 2–3 Montana winters.",
-        cedar: "Cedar weathers beautifully in Montana's dry climate but costs 25–40% more than PT.",
-        composite_mid: "Mid-range composite handles Bozeman's freeze-thaw cycles well with zero annual maintenance.",
-        composite_premium: "Premium composite has the best color retention through Montana's intense UV — 25-year fade warranty."
-      },
-      railing: {
-        none: "No railing keeps the profile clean and the cost down — works great for ground-level decks.",
-        wood: "Wood railings are the most cost-effective option and match the Bozeman mountain aesthetic.",
-        metal_cable: "Cable rail gives you unobstructed mountain views — popular for decks facing the Bridgers.",
-        glass: "Glass panels maximize views but add significant cost — $90–150 per linear foot installed."
-      },
-      features: {
-        stairs: "Custom stairs with wide treads and solid stringers — built for Montana's snow and ice.",
-        lighting: "Low-voltage LED lighting extends your deck season into Bozeman's long summer evenings.",
-        builtin_bench: "Built-in benches double as railing in some configurations — saves cost and looks sharp.",
-        pergola: "Pergolas provide shade during Montana's intense summer sun and anchor the outdoor space.",
-        hottub_pad: "Hot tub pads need reinforced framing or a separate foundation — we account for the 3,000+ lb load.",
-        skirting: "Skirting keeps critters out and gives a finished look — lattice or solid board options."
+      {
+        photoLabel: "Primary bath · belgrade",
+        location:   "Belgrade · 2024",
+        title:      "Primary bath with heated floors",
+        desc:       "Tub-and-shower combo replaced with a separate soaking tub and tiled shower. Niches, double vanity, and a quiet exhaust fan tied into the lighting circuit.",
+        total:      81200
       }
-    },
+    ],
+    deck: [
+      {
+        photoLabel: "Cedar deck · gallatin gateway",
+        location:   "Gallatin Gateway · 2025",
+        title:      "L-shaped cedar deck, cable rail",
+        desc:       "Helical piles, 2x6 cedar laid on hidden fasteners, steel cable rail with locally-fabricated posts. Built between two snowstorms in late October.",
+        total:      38400
+      },
+      {
+        photoLabel: "Wraparound deck · belgrade",
+        location:   "Belgrade · 2024",
+        title:      "Wraparound deck with stair landing",
+        desc:       "Replaced a failing pressure-treated deck with cedar over a properly flashed ledger. New stair run with a half-landing for easier code compliance.",
+        total:      42600
+      }
+    ]
+  };
+
+  // Project-type-specific timelines. Keyed by [calculator][project_type].
+  // Falls back to bathroom.full_gut / deck.new_build if a key is missing.
+  var TIMELINES = {
     bathroom: {
-      project_type: {
-        full_gut: "A full gut means demo to studs — we inspect every layer and rebuild with modern waterproofing.",
-        refresh: "A refresh keeps the layout and plumbing positions but replaces all visible surfaces.",
-        tub_to_shower: "Tub-to-shower conversions involve plumbing relocation and new waterproofing at the drain.",
-        specific_fix: "Targeted repairs address the problem without unnecessary demo — most cost-effective approach."
-      },
-      bathroom_size: {
-        small: "Small bathrooms are quicker builds but require careful layout planning — every inch matters.",
-        medium: "Standard full bathrooms are our most common project — well-understood scope and timeline.",
-        large: "Primary bathrooms have more tile area, often dual vanities, and larger shower builds.",
-        xl: "Luxury primary suites involve complex tile patterns, freestanding tubs, and custom cabinetry."
-      },
-      shower_tub: {
-        shower_only: "Walk-in showers are the most popular choice in Bozeman remodels right now.",
-        tub_shower: "Tub/shower combos are practical and cost-effective — still the standard in most homes.",
-        both_separate: "Separate tub and shower is a premium layout that adds significant plumbing and tile work.",
-        tub_only: "Soaking tubs are a design statement — we handle the structural support and drain positioning."
-      },
-      tile_level: {
-        basic: "Clean subway or large-format tile installs quickly and looks timeless — great value.",
-        mid: "Mixed patterns and accent features require more layout time but create a custom look.",
-        high: "Natural stone and mosaic work is labor-intensive — this is where craftsmanship shows most."
-      },
-      fixtures: {
-        standard: "Moen and Delta deliver reliable quality at a good price point — we install these regularly.",
-        upgraded: "Kohler and Brizo fixtures are a noticeable step up in feel and finish.",
-        premium: "High-end fixtures and custom vanities are the details that make a bathroom feel luxurious."
-      },
-      features: {
-        heated_floor: "Electric radiant heat under tile — a game-changer for Bozeman's cold mornings.",
-        niches: "Built-in shower niches are tiled into the wall during the waterproofing stage.",
-        bench: "A tiled shower bench adds comfort and accessibility — built on a waterproofed frame.",
-        double_vanity: "Double vanities require wider plumbing rough-in and a larger countertop.",
-        lighting: "Updated lighting and wiring modernizes the space — we coordinate with a licensed electrician.",
-        ventilation: "Proper ventilation prevents moisture damage — critical in Montana's cold, dry winters."
-      }
+      full_gut: [
+        { week: "Week 1",     icon: "pickaxe",     title: "Demo & prep",            body: "We protect the rest of the house, pull the existing bath down to the studs, and haul out everything that's leaving. By Friday the room is empty and clean." },
+        { week: "Week 2",     icon: "wrench",      title: "Rough-in & inspection",  body: "Plumbing rough, electrical rough, framing tweaks for the new layout, and the heated-floor mat. Inspections happen before anything gets covered." },
+        { week: "Week 2 – 3", icon: "droplets",    title: "Tile & waterproofing",   body: "Pan and walls waterproofed, then tiled. This is where the schedule is most sensitive to material lead times — premium tile lots can add a few days." },
+        { week: "Week 3",     icon: "list-checks", title: "Finish & punch list",    body: "Vanity, fixtures, mirrors, lighting, glass, paint touch-ups. We walk the room with you, write down anything you notice, and don't leave until it's right." }
+      ],
+      refresh: [
+        { week: "Days 1–2",   icon: "pickaxe",     title: "Selective demo",         body: "Old fixtures, vanity, tile, and finishes come out — but plumbing and layout stay. Less dust, less surprise." },
+        { week: "Days 3–4",   icon: "wrench",      title: "Prep & install",         body: "New backerboard, any minor electrical updates, fresh waterproofing where it makes sense, vanity install." },
+        { week: "Days 4–6",   icon: "droplets",    title: "Tile & finish",          body: "Tile goes in over the weekend if grout cures allow. Fixtures, mirrors, paint touch-ups." },
+        { week: "Day 7",      icon: "list-checks", title: "Walkthrough",            body: "Final walk with you. Anything you want adjusted gets adjusted before we pack up." }
+      ],
+      tub_to_shower: [
+        { week: "Days 1–2",   icon: "pickaxe",     title: "Tub demo & relocation",  body: "Old tub out. Drain location moved if needed for the new shower pan. Walls opened where required." },
+        { week: "Day 3",      icon: "wrench",      title: "Plumbing rough",         body: "Drain reset, valve repositioned, supply lines updated. Inspection before close-up." },
+        { week: "Days 4–5",   icon: "droplets",    title: "Pan & waterproofing",    body: "Curb or curbless pan built, walls waterproofed. This is the work that has to outlast everything else." },
+        { week: "Day 5–6",    icon: "list-checks", title: "Tile, fixtures, walk",   body: "Tile, glass, fixtures. Final walk before the door closes for good." }
+      ],
+      specific_fix: [
+        { week: "Day 1",      icon: "pickaxe",     title: "Diagnose & open",        body: "We assess the actual problem on-site. Sometimes the scope shrinks once we can see behind the wall — sometimes it grows." },
+        { week: "Days 2–3",   icon: "wrench",      title: "Repair the cause",       body: "Fix the leak, the rot, the failed waterproofing — whatever's actually broken. We don't just patch the surface." },
+        { week: "Days 3–4",   icon: "droplets",    title: "Restore",                body: "Replace materials in kind or as upgraded if you'd rather not do this twice." },
+        { week: "Day 4",      icon: "list-checks", title: "Walk & document",        body: "We walk through the repair and give you photos of what was behind the walls — so you have a record." }
+      ]
+    },
+    deck: {
+      new_build: [
+        { week: "Week 1",     icon: "pickaxe",     title: "Site & footings",        body: "Layout, permits in hand, and helical piles or poured footings installed. Foundations are signed off before any framing starts." },
+        { week: "Week 2",     icon: "square",      title: "Framing & ledger",       body: "Beams, joists, and a properly flashed ledger to the house. Montana freeze-thaw is unforgiving here — this is where decks fail when they fail." },
+        { week: "Week 2 – 3", icon: "grid",        title: "Decking & railings",     body: "Boards laid with hidden fasteners or screws (your call), then the rail system. Cable rail is slower than picket but worth the look." },
+        { week: "Week 3",     icon: "list-checks", title: "Stairs, skirting, walk", body: "Stair run, post-cap lighting if you went that route, skirting, and a final walk. Anything that catches your eye gets fixed before we pack up." }
+      ],
+      full_rebuild: [
+        { week: "Week 1",     icon: "pickaxe",     title: "Demo & footings check",  body: "Old deck comes off. We inspect the existing footings; if they're sound, they stay. If they're not, helical piles go in." },
+        { week: "Week 2",     icon: "square",      title: "Framing & ledger",       body: "Fresh beams, joists, and a re-flashed ledger. The ledger is the #1 failure point on old Montana decks — we redo it right." },
+        { week: "Week 2 – 3", icon: "grid",        title: "Decking & railings",     body: "Boards laid, rails up. If you upgraded the rail system from the old deck, this stage takes longer." },
+        { week: "Week 3",     icon: "list-checks", title: "Stairs & punch list",    body: "Stair run rebuilt, finishing touches, walk-through." }
+      ],
+      partial_rebuild: [
+        { week: "Days 1–2",   icon: "pickaxe",     title: "Selective demo",         body: "Decking and rails come off. Existing frame stays — we inspect every joist and replace anything questionable." },
+        { week: "Days 3–4",   icon: "square",      title: "Frame remediation",      body: "Replace any compromised joists, re-flash the ledger if needed, sister beams where structural." },
+        { week: "Days 5–7",   icon: "grid",        title: "Decking & railings",     body: "New boards, new rails. Materials and lead times drive the pace here." },
+        { week: "Day 8",      icon: "list-checks", title: "Walkthrough",            body: "Walk-through with you. Stairs and skirting if those are part of the scope." }
+      ],
+      repair_refresh: [
+        { week: "Day 1",      icon: "pickaxe",     title: "Assess & quote",         body: "We come out, look at the actual condition, and confirm the scope. Sometimes the fix is smaller than expected, sometimes larger." },
+        { week: "Days 2–3",   icon: "wrench",      title: "Targeted repair",        body: "Replace what's failed — joists, decking boards, stair stringers, rail sections. Stain or seal as part of the same visit." },
+        { week: "Days 3–4",   icon: "list-checks", title: "Walk & finish",          body: "Final walk-through. We document what we touched so you have a clear record." }
+      ]
     }
   };
 
-  // Human-readable labels for step IDs
-  var STEP_LABELS = {
-    project_type: "Project", deck_size: "Size", bathroom_size: "Size",
-    deck_height: "Height", shower_tub: "Shower / Tub", material: "Material",
-    tile_level: "Tile", fixtures: "Fixtures", railing: "Railing",
-    features: "Extras", timeline: "Timeline"
+  // CTA copy — brand-compliant. No "free", no time-bound promises.
+  var CTA_COPY = {
+    bathroom: {
+      heading: "Eric will be in touch.",
+      subhead: "Your project summary is on its way to {email}. Eric will review the details and call to walk through the numbers in person — no script, no sales pitch.",
+      checklist: [
+        "Photos of the current bathroom — wide shots and close-ups of anything you want to keep or change.",
+        "Your must-haves vs. nice-to-haves. The first list shapes the budget; the second shapes the trade-offs.",
+        "A budget ceiling you're comfortable saying out loud. It saves us both time and lets the conversation be honest."
+      ]
+    },
+    deck: {
+      heading: "Eric will be in touch.",
+      subhead: "Your project summary is on its way to {email}. Eric will review the details and call to walk through the numbers — and the deck-season build window — in person.",
+      checklist: [
+        "Photos of where the deck will sit — the house wall, ground conditions, and any existing deck or patio.",
+        "Your must-haves vs. nice-to-haves. Cable rail, lighting, and skirting are common trade-offs to budget around.",
+        "A budget ceiling you're comfortable saying out loud. It saves us both time and lets the conversation be honest."
+      ]
+    }
   };
 
-  // Calculator display names
-  var CALC_NAMES = { deck: "Deck", bathroom: "Bathroom Remodel" };
+  // Lucide-style icons (1.75 stroke, currentColor). Same set as the mock.
+  var ICONS = {
+    pickaxe:       '<path d="M14 12 9 7l-1 1 5 5"/><path d="M22 2c-3 1-5 3-7 6l4 4c3-2 5-4 6-7"/><path d="m13 13-9 9"/>',
+    wrench:        '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 1 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>',
+    droplets:      '<path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/>',
+    square:        '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18"/><path d="M9 3v18"/>',
+    grid:          '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+    'list-checks': '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+    phone:         '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>',
+    mail:          '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    printer:       '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/>',
+    check:         '<polyline points="20 6 9 17 4 12"/>',
+    'map-pin':     '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'
+  };
 
-  // ── Fetch and render ────────────────────────────────────────────────────
+  function icon(name, size) {
+    size = size || 20;
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (ICONS[name] || '') + '</svg>';
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function humanize(s) {
+    return String(s || '').replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // FETCH AND RENDER
+  // ────────────────────────────────────────────────────────────────────────
   var params = new URLSearchParams(window.location.search);
   var reportId = params.get('id');
 
@@ -191,131 +730,228 @@ noindex: true
 
   function showError(msg) {
     document.getElementById('hwc-report').innerHTML =
-      '<div class="hwc-report-error">' +
+      '<div class="hwc-rpt-error">' +
         '<h2>Report not found</h2>' +
-        '<p>' + msg + '</p>' +
+        '<p>' + esc(msg) + '</p>' +
       '</div>';
   }
 
   function render(d) {
     var calc = d.calculator || 'bathroom';
-    var ctx = CONTEXT[calc] || {};
+    var calcLabel = CALC_LABELS[calc] || calc;
     var state = d.project_state || {};
     var name = d.contact_name || '';
-    var firstName = name.split(' ')[0];
-    var date = new Date(d.created_at || Date.now());
-    var dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    var calcName = CALC_NAMES[calc] || calc;
-    var lo = (d.estimate_low || 0).toLocaleString();
-    var hi = (d.estimate_high || 0).toLocaleString();
+    var firstName = name.split(' ')[0] || 'you';
+    var email = d.contact_email || 'you';
+    var lo = Number(d.estimate_low || 0);
+    var hi = Number(d.estimate_high || 0);
+    var shortcode = (d.report_id || reportId || '').toUpperCase();
 
-    // Build selection rows
-    var selectionRows = '';
-    var featurePills = '';
+    var ctaCopy = CTA_COPY[calc] || CTA_COPY.bathroom;
+    var budget = BUDGET[calc] || BUDGET.bathroom;
+    var recent = RECENT[calc] || RECENT.bathroom;
+
+    // Pick the timeline matching project_type, with a sensible fallback.
+    var timelineSet = TIMELINES[calc] || TIMELINES.bathroom;
+    var timeline = timelineSet[state.project_type] ||
+                   (calc === 'deck' ? timelineSet.new_build : timelineSet.full_gut);
+
+    document.getElementById('hwc-report').innerHTML =
+      headerStrip(shortcode) +
+      hero(calcLabel, firstName, lo, hi) +
+      selections(state, calc) +
+      budgetSection(budget, lo, hi) +
+      recentWork(recent) +
+      timelineSection(timeline) +
+      cta(ctaCopy, email) +
+      footer();
+
+    document.title = firstName + "'s " + (calc === 'deck' ? 'Deck' : 'Bathroom') + ' Summary | Heartwood Craft';
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // RENDER FUNCTIONS
+  // ────────────────────────────────────────────────────────────────────────
+
+  function headerStrip(shortcode) {
+    return '<header class="hwc-rpt-header">' +
+      '<img class="hwc-rpt-header__logo" src="/img/logo-wordmark-cream.svg" alt="Heartwood Craft" onerror="this.style.display=\'none\'" />' +
+      '<div class="hwc-rpt-header__id">Project summary' + (shortcode ? ' · ' + esc(shortcode) : '') + '</div>' +
+    '</header>';
+  }
+
+  function hero(calcLabel, firstName, lo, hi) {
+    return '<section class="hwc-section hwc-section--hero">' +
+      '<div class="hwc-eyebrow hwc-eyebrow--accent">Your ' + esc(calcLabel) + ' estimate · prepared for ' + esc(firstName) + '</div>' +
+      '<h1 class="hwc-hero__price">' +
+        '<span style="white-space:nowrap">$' + lo.toLocaleString() + '</span>' +
+        '<span class="hwc-hero__dash">–</span>' +
+        '<span style="white-space:nowrap">$' + hi.toLocaleString() + '</span>' +
+      '</h1>' +
+      '<hr class="hwc-rule" style="margin-top:28px" />' +
+      '<p class="hwc-hero__caption">Based on real Heartwood Craft projects in the Gallatin Valley — not national averages.</p>' +
+      '<div class="hwc-photo">' +
+        '<div class="hwc-photo__label">Recent Heartwood Craft ' + esc(calcLabel) + '</div>' +
+      '</div>' +
+    '</section>';
+  }
+
+  function selections(state, calc) {
+    // Display order matches what the customer answered in the calculator.
     var stepOrder = calc === 'deck'
-      ? ['project_type','deck_size','deck_height','material','railing','timeline']
-      : ['project_type','bathroom_size','shower_tub','tile_level','fixtures','timeline'];
+      ? ['project_type','deck_size','deck_height','material','railing']
+      : ['project_type','bathroom_size','shower_tub','tile_level','fixtures'];
 
+    var items = [];
     stepOrder.forEach(function(key) {
       var val = state[key];
       if (!val) return;
-      // Find the label from context or humanize the value
-      var label = STEP_LABELS[key] || key;
-      var valLabel = val.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-      var context = (ctx[key] && ctx[key][val]) || '';
-
-      selectionRows +=
-        '<div class="hwc-rpt-row">' +
-          '<div class="hwc-rpt-row-label">' + label + '</div>' +
-          '<div class="hwc-rpt-row-content">' +
-            '<div class="hwc-rpt-row-value">' + valLabel + '</div>' +
-            (context ? '<div class="hwc-rpt-row-context">' + context + '</div>' : '') +
-          '</div>' +
-        '</div>';
+      items.push({
+        label: STEP_LABELS[key] || humanize(key),
+        value: humanize(val)
+      });
     });
-
-    // Features
+    // Features become a single chip with a comma-separated list, if any.
     var features = state.features || [];
-    if (features.length > 0) {
-      features.forEach(function(f) {
-        var fLabel = f.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-        var fContext = (ctx.features && ctx.features[f]) || '';
-        featurePills +=
-          '<div class="hwc-rpt-row">' +
-            '<div class="hwc-rpt-row-label">' + (featurePills === '' ? 'Extras' : '') + '</div>' +
-            '<div class="hwc-rpt-row-content">' +
-              '<div class="hwc-rpt-row-value">' + fLabel + '</div>' +
-              (fContext ? '<div class="hwc-rpt-row-context">' + fContext + '</div>' : '') +
-            '</div>' +
-          '</div>';
+    if (features.length) {
+      items.push({
+        label: 'Features',
+        value: features.map(humanize).join(' · ')
       });
     }
+    if (state.timeline) {
+      items.push({ label: 'Timeline', value: humanize(state.timeline) });
+    }
 
-    var html =
-      // Header
-      '<div class="hwc-rpt-header">' +
-        '<div class="hwc-rpt-badge">Heartwood Craft · Bozeman</div>' +
-        '<h1 class="hwc-rpt-title">' + firstName + '\'s ' + calcName + ' Summary</h1>' +
-        '<p class="hwc-rpt-meta">Prepared ' + dateStr + '</p>' +
-      '</div>' +
+    if (!items.length) return '';
 
-      // Estimate
-      '<div class="hwc-rpt-estimate">' +
-        '<div class="hwc-rpt-estimate-label">Estimated project range</div>' +
-        '<div class="hwc-rpt-estimate-number">$' + lo + ' – $' + hi + '</div>' +
-        '<div class="hwc-rpt-estimate-note">Based on real Heartwood Craft projects in the Gallatin Valley — not national averages. Your actual price depends on site conditions, exact dimensions, and final material selections.</div>' +
-      '</div>' +
-
-      // Selections
-      '<div class="hwc-rpt-section">' +
-        '<div class="hwc-rpt-section-title">Your Selections</div>' +
-        selectionRows +
-        featurePills +
-      '</div>' +
-
-      // What to expect
-      '<div class="hwc-rpt-process">' +
-        '<div class="hwc-rpt-process-title">What to Expect from Heartwood</div>' +
-        '<div class="hwc-rpt-process-step">' +
-          '<div class="hwc-rpt-process-num">1</div>' +
-          '<div class="hwc-rpt-process-text"><strong>We talk.</strong> I\'ll call to discuss your project, ask a few follow-up questions, and find a time for a site visit.</div>' +
-        '</div>' +
-        '<div class="hwc-rpt-process-step">' +
-          '<div class="hwc-rpt-process-num">2</div>' +
-          '<div class="hwc-rpt-process-text"><strong>Site visit.</strong> I come to your home, take measurements, assess existing conditions, and photograph everything. About 45 minutes.</div>' +
-        '</div>' +
-        '<div class="hwc-rpt-process-step">' +
-          '<div class="hwc-rpt-process-num">3</div>' +
-          '<div class="hwc-rpt-process-text"><strong>Detailed estimate.</strong> Itemized by phase — you\'ll see exactly what every dollar pays for. No hidden costs, no surprises.</div>' +
-        '</div>' +
-        '<div class="hwc-rpt-process-step">' +
-          '<div class="hwc-rpt-process-num">4</div>' +
-          '<div class="hwc-rpt-process-text"><strong>We walk through it together.</strong> I present the estimate in person or on a call — never just email it. Questions get answered on the spot.</div>' +
-        '</div>' +
-      '</div>' +
-
-      // Footer
-      '<div class="hwc-rpt-footer">' +
-        '<div class="hwc-rpt-footer-name">Eric · Heartwood Craft</div>' +
-        '<div class="hwc-rpt-footer-info">' +
-          '<a href="tel:4065515061">406-551-5061</a><br>' +
-          '<a href="mailto:eric@iheartwoodcraft.com">eric@iheartwoodcraft.com</a><br>' +
-          'Bozeman, Montana' +
-        '</div>' +
-        '<button class="hwc-rpt-print-btn" onclick="window.print()">🖨️ Print this summary</button>' +
-      '</div>' +
-
-      // Disclaimer
-      '<div class="hwc-rpt-disclaimer">' +
-        'This estimate range is based on typical costs from completed Heartwood Craft projects in the Gallatin Valley. ' +
-        'Final pricing is determined after a site visit and depends on specific material selections, existing conditions, ' +
-        'permit requirements, and scope details. Numbers reflect Bozeman-area pricing as of 2026.' +
+    var html = '<section class="hwc-section">' +
+      sectionHead('01', 'Your selections') +
+      '<div class="hwc-selections">';
+    items.forEach(function(it) {
+      html += '<div class="hwc-selection">' +
+        '<div class="hwc-selection__label">' + esc(it.label) + '</div>' +
+        '<div class="hwc-selection__value">' + esc(it.value) + '</div>' +
       '</div>';
+    });
+    html += '</div></section>';
+    return html;
+  }
 
-    document.getElementById('hwc-report').innerHTML = html;
+  function budgetSection(segments, lo, hi) {
+    var html = '<section class="hwc-section">' +
+      sectionHead('02', 'Where the budget goes') +
+      '<div class="hwc-budget__bar">';
 
-    // Update page title
-    document.title = firstName + '\'s ' + calcName + ' Summary | Heartwood Craft';
+    segments.forEach(function(s, i) {
+      html += '<div class="hwc-budget__seg" style="' +
+        'flex:' + s.pct + ';' +
+        'background:' + s.color + ';' +
+        'color:' + s.fg + ';' +
+        (i === segments.length - 1 ? 'border-right:none;' : '') +
+      '">' + (s.pct >= 8 ? s.pct + '%' : '') + '</div>';
+    });
+    html += '</div><div class="hwc-budget__legend">';
+    segments.forEach(function(s) {
+      var segLo = Math.round(lo * s.pct / 100 / 100) * 100;
+      var segHi = Math.round(hi * s.pct / 100 / 100) * 100;
+      html += '<div class="hwc-budget__legend-row">' +
+        '<div class="hwc-budget__swatch" style="background:' + s.color + '"></div>' +
+        '<div>' +
+          '<div class="hwc-budget__legend-label">' + esc(s.label) + '</div>' +
+          '<div class="hwc-budget__legend-range">$' + segLo.toLocaleString() + '–$' + segHi.toLocaleString() + '</div>' +
+        '</div>' +
+        '<div class="hwc-budget__legend-pct">' + s.pct + '%</div>' +
+      '</div>';
+    });
+    html += '</div>' +
+      '<p class="hwc-budget__caption">Illustrative — actual breakdown depends on selections, site conditions, and final material picks. We walk through every line item together at the site visit.</p>' +
+    '</section>';
+    return html;
+  }
+
+  function recentWork(projects) {
+    var html = '<section class="hwc-section">' +
+      sectionHead('03', 'Recent work like yours') +
+      '<div class="hwc-recent">';
+    projects.forEach(function(p) {
+      html += '<article class="hwc-recent__card">' +
+        '<div class="hwc-photo hwc-photo--card">' +
+          '<div class="hwc-photo__label">' + esc(p.photoLabel) + '</div>' +
+        '</div>' +
+        '<div class="hwc-recent__body">' +
+          '<div class="hwc-recent__loc">' + icon('map-pin', 14) +
+            '<span class="hwc-eyebrow">' + esc(p.location) + '</span>' +
+          '</div>' +
+          '<h3 class="hwc-recent__title">' + esc(p.title) + '</h3>' +
+          '<p class="hwc-recent__desc">' + esc(p.desc) + '</p>' +
+          '<div class="hwc-recent__total">' +
+            '<span class="hwc-eyebrow">Project total</span>' +
+            '<div class="hwc-recent__amount">$' + Number(p.total).toLocaleString() + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    });
+    html += '</div>' +
+      '<p class="hwc-recent__note">These are real Heartwood Craft jobs, completed in the Gallatin Valley.</p>' +
+    '</section>';
+    return html;
+  }
+
+  function timelineSection(steps) {
+    var html = '<section class="hwc-section">' +
+      sectionHead('04', 'What a project like yours typically looks like') +
+      '<ol class="hwc-tl">';
+    steps.forEach(function(step, i) {
+      html += '<li class="hwc-tl__item">' +
+        (i < steps.length - 1 ? '<div class="hwc-tl__connector"></div>' : '') +
+        '<div class="hwc-tl__node">' + icon(step.icon, 18) + '</div>' +
+        '<div>' +
+          '<div class="hwc-eyebrow hwc-tl__week">' + esc(step.week) + '</div>' +
+          '<div class="hwc-tl__title">' + esc(step.title) + '</div>' +
+          '<div class="hwc-tl__body">' + esc(step.body) + '</div>' +
+        '</div>' +
+      '</li>';
+    });
+    html += '</ol></section>';
+    return html;
+  }
+
+  function cta(ctaCopy, email) {
+    var subhead = ctaCopy.subhead.replace('{email}', '<strong>' + esc(email) + '</strong>');
+    var html = '<section class="hwc-section hwc-section--cta">' +
+      '<div class="hwc-cta">' +
+        '<div class="hwc-eyebrow">Next step</div>' +
+        '<h2 class="hwc-cta__heading">' + esc(ctaCopy.heading) + '</h2>' +
+        '<p class="hwc-cta__subhead">' + subhead + '</p>' +
+        '<a class="hwc-cta__phone" href="tel:4065515061">' + icon('phone', 22) + '406-551-5061</a>' +
+        '<div><a class="hwc-cta__email" href="mailto:eric@iheartwoodcraft.com">' + icon('mail', 14) + 'eric@iheartwoodcraft.com</a></div>' +
+        '<div class="hwc-cta__checklist-wrap">' +
+          '<div class="hwc-eyebrow">What to have ready when we talk</div>' +
+          '<ul class="hwc-cta__checklist">';
+    ctaCopy.checklist.forEach(function(c) {
+      html += '<li><span class="hwc-cta__check">' + icon('check', 16) + '</span><span>' + esc(c) + '</span></li>';
+    });
+    html += '</ul></div></div></section>';
+    return html;
+  }
+
+  function footer() {
+    return '<footer class="hwc-section hwc-section--footer">' +
+      '<hr class="hwc-rule" />' +
+      '<div class="hwc-rpt-footer-text">Heartwood Craft · Bozeman, Montana</div>' +
+      '<p class="hwc-rpt-disclaimer">' +
+        'Estimates are based on actual project data from Bozeman remodels. Final pricing is established after a site visit and detailed scope discussion.' +
+      '</p>' +
+      '<button class="hwc-rpt-print" onclick="window.print()">' + icon('printer', 16) + 'Print this report</button>' +
+    '</footer>';
+  }
+
+  function sectionHead(num, title) {
+    return '<div class="hwc-sechead">' +
+      '<span class="hwc-sechead__num">' + esc(num) + '</span>' +
+      '<h2 class="hwc-sechead__title">' + esc(title) + '</h2>' +
+    '</div>';
   }
 })();
 </script>

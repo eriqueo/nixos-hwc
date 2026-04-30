@@ -1,9 +1,17 @@
-<section class="section section-testimonials animate-in" data-section="testimonials">
+{# Testimonials — editorial pull-quote when no service filter, grid otherwise #}
+
+{% if filter_service %}
+{# Service-page version: filtered grid #}
+<section class="section section-testimonials section-alt animate-in" data-section="testimonials">
   <div class="container-wide">
-    <h2>{{ testimonials_heading if testimonials_heading else "What Our Clients Say" }}</h2>
+    <div class="section-header">
+      <span class="eyebrow">CLIENT VOICES</span>
+      <h2>{{ testimonials_heading if testimonials_heading else "What our clients say." }}</h2>
+      <hr>
+    </div>
     <div class="testimonial-grid">
       {% for review in testimonials %}
-        {% if not filter_service or review.service == filter_service %}
+        {% if review.service == filter_service %}
         <div class="card testimonial-card animate-in">
           <div class="testimonial-rating" aria-label="{{ review.rating }} out of 5 stars">
             {% for i in range(0, review.rating) %}&#9733;{% endfor %}
@@ -13,12 +21,28 @@
             <strong>{{ review.name }}</strong>
             <span>{{ review.location }}</span>
           </div>
-          <div class="testimonial-source">
-            via {{ review.source }}
-          </div>
+          <div class="testimonial-source">via {{ review.source }}</div>
         </div>
         {% endif %}
       {% endfor %}
     </div>
   </div>
 </section>
+
+{% else %}
+{# Home/general version: editorial single pull-quote (first testimonial) #}
+{% set t = testimonials[0] %}
+<section class="section section-alt animate-in" data-section="testimonial">
+  <div class="container-wide">
+    <div class="ed-quote">
+      <hr>
+      <blockquote class="ed-quote__body">{{ t.text }}</blockquote>
+      <div class="ed-quote__attr">
+        <span class="ed-quote__name">{{ t.name }} &mdash; {{ t.location }}</span>
+        <span class="ed-quote__sep">·</span>
+        <span class="ed-quote__meta">VERIFIED VIA {{ t.source | upper }}</span>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
