@@ -1,6 +1,7 @@
-// ─── CalculatorLayout ──────────────────────────────────────────────────────
-// Shared responsive wrapper for both calculators.
-// Desktop: two-column grid (questions + sidebar). Mobile: single column + sticky bar.
+// ─── CalculatorLayout v2 ──────────────────────────────────────────────────
+// Self-contained light-background container so the calculator is readable
+// on any host page (including the dark page-simple.njk layout).
+// Desktop: two-column grid (questions + sidebar). Mobile: single column.
 
 import useIsMobile from "./useIsMobile";
 import MobileEstimateBar from "./MobileEstimateBar";
@@ -19,7 +20,17 @@ export default function CalculatorLayout({
   const isMobile = useIsMobile(768);
 
   return (
-    <div style={{ fontFamily: fonts.sans, color: T.text }}>
+    // Outer wrapper: provides the light background that protects readability
+    // regardless of what color the host page uses.
+    <div
+      style={{
+        background: T.pageBg,
+        fontFamily: fonts.sans,
+        color: T.text,
+        padding: isMobile ? "1.5rem 0" : "2.5rem 0",
+        margin: isMobile ? "0 -1rem" : "0",  // bleed to edges on mobile
+      }}
+    >
       <link href={fontsUrl} rel="stylesheet" />
 
       <div

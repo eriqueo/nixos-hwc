@@ -212,7 +212,15 @@
       "mcp__claude_ai_HWC__hwc_calendar_list",
       "Bash(/etc/profiles/per-user/eric/bin/khal list:*)",
       "Bash(nix-instantiate --eval -E '\\(import <nixpkgs/nixos> { configuration = { }; }\\).options.services.cloudflared or null')",
-      "Bash(nixos-option services.cloudflared)"
+      "Bash(nixos-option services.cloudflared)",
+      "Bash(mkdir -p /tmp/files2_extract)",
+      "Read(//tmp/**)",
+      "Bash([ -f \"$base/$f\" ])",
+      "Bash(cp /tmp/files3_extract/style.css /home/eric/.nixos/domains/business/website/site_files/src/css/style.css)",
+      "Bash(cp /tmp/files3_extract/section-services-grid.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/partials/section-services-grid.njk)",
+      "Bash(cp /tmp/files3_extract/section-testimonials.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/partials/section-testimonials.njk)",
+      "Bash(cp /tmp/files3_extract/section-cta.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/partials/section-cta.njk)",
+      "Bash(cp /tmp/files3_extract/page-home.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/layouts/page-home.njk)"
     ],
     "deny": [],
     "ask": [],
