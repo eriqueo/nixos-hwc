@@ -6,7 +6,7 @@ date: 2026-03-06
 tags:
   - bozeman
   - bathroom
-permalink: "/common-bathroom-remodel-mistakes-in-bozeman-mt/"
+permalink: "/blog/common-bathroom-remodel-mistakes-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

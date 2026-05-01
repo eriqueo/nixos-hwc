@@ -10,7 +10,7 @@ tags:
   - deck
   - bozeman
   - tips
-permalink: /what-are-the-4-types-of-decks-for-bozeman-homes/
+permalink: /blog/what-are-the-4-types-of-decks-for-bozeman-homes/
 ---
 
 Before you pick materials or settle on a size, it's worth understanding what kind of deck structure actually fits your yard. The four main types — attached, freestanding, multi-level, and rooftop — each have different structural requirements, permit implications, and suitability for Montana's climate.
@@ -61,7 +61,7 @@ The honest answer: it depends on your yard, your use case, and how much ongoing 
 
 Bozeman's climate narrows the field meaningfully. For homeowners prioritizing durability and low maintenance, composite or PVC on a properly engineered frame is the clear choice. For budget-conscious projects where the homeowner commits to regular maintenance, pressure-treated remains viable when properly installed and sealed.
 
-For yards with significant grade changes — common across Bozeman's residential neighborhoods — multi-level decks deliver functional flexibility and visual appeal that flat platforms can't match. I look at each site individually before recommending a type, because the right structure depends on what the yard allows and what the homeowner actually wants to do with the space. Wondering about sizing? See whether [a 12x20 deck is big enough for your Bozeman home](/is-a-12x20-deck-big-enough-for-a-bozeman-home/).
+For yards with significant grade changes — common across Bozeman's residential neighborhoods — multi-level decks deliver functional flexibility and visual appeal that flat platforms can't match. I look at each site individually before recommending a type, because the right structure depends on what the yard allows and what the homeowner actually wants to do with the space. Wondering about sizing? See whether [a 12x20 deck is big enough for your Bozeman home](/blog/is-a-12x20-deck-big-enough-for-a-bozeman-home/).
 
 ## What to Ask a Deck Contractor
 

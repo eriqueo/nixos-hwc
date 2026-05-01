@@ -6,7 +6,7 @@ date: 2026-01-16
 tags:
   - bozeman
   - planning
-permalink: "/what-comes-first-when-remodeling-a-house/"
+permalink: "/blog/what-comes-first-when-remodeling-a-house/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

@@ -6,7 +6,7 @@ date: 2026-01-19
 tags:
   - bozeman
   - basement
-permalink: "/should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/"
+permalink: "/blog/should-i-hire-a-contractor-to-finish-my-basement-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

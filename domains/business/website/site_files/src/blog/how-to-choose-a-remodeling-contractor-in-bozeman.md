@@ -9,7 +9,7 @@ tags:
   - remodeling
   - bozeman
   - tips
-permalink: /how-to-choose-a-remodeling-contractor-in-bozeman/
+permalink: /blog/how-to-choose-a-remodeling-contractor-in-bozeman/
 ---
 
 Hiring a remodeling contractor is one of the higher-stakes decisions a homeowner makes. You're inviting someone into your house for weeks, trusting them with a significant amount of money, and relying on their judgment when problems show up — and in older Bozeman homes, problems show up. Here's the honest version of how to evaluate who you're dealing with.
@@ -92,4 +92,4 @@ Bozeman has good contractors. The screening process above will help you find the
 
 ---
 
-If you'd like to see how I approach it, check out [my process](/how-it-works/) or [give me a call](/contact/). You can also read a companion post: [what to ask a contractor before a remodel in Bozeman](/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/).
+If you'd like to see how I approach it, check out [my process](/how-it-works/) or [give me a call](/contact/). You can also read a companion post: [what to ask a contractor before a remodel in Bozeman](/blog/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/).

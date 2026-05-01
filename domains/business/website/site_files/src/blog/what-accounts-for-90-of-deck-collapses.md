@@ -10,7 +10,7 @@ tags:
   - deck
   - bozeman
   - safety
-permalink: /what-accounts-for-90-of-deck-collapses/
+permalink: /blog/what-accounts-for-90-of-deck-collapses/
 ---
 
 Deck collapses make the news because they're dramatic and injurious — but they're almost never random. The failures follow a predictable pattern, and understanding that pattern is the first step toward either building a safe deck or evaluating whether the one you have is still sound.
@@ -25,7 +25,7 @@ Three structural failures account for the vast majority of deck collapses:
 
 **Rot and corrosion in posts, joists, and fasteners.** Bozeman's snowmelt and moisture from wet shoulder seasons, combined with freeze-thaw cycling, accelerates rot in wood that wasn't properly treated or hasn't been maintained. Galvanized fasteners rust out. Joist hangers corrode. The structural members weaken from the inside of the assembly, invisible until the load they can no longer carry arrives all at once.
 
-**Poor footing installation.** Posts must anchor to concrete footings that extend below the frost line — 36 to 48 inches in Bozeman. Shallow footings heave during freeze-thaw cycles, compromising post alignment and creating dangerous load imbalances. Footings set on unstable or improperly compacted soil can settle unevenly for the same reason. For more on getting footings right in Montana's climate, see [what is the best foundation for a deck in Bozeman](/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
+**Poor footing installation.** Posts must anchor to concrete footings that extend below the frost line — 36 to 48 inches in Bozeman. Shallow footings heave during freeze-thaw cycles, compromising post alignment and creating dangerous load imbalances. Footings set on unstable or improperly compacted soil can settle unevenly for the same reason. For more on getting footings right in Montana's climate, see [what is the best foundation for a deck in Bozeman](/blog/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
 
 ## Why Ledger Failures Are So Dangerous
 

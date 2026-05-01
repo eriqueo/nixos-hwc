@@ -6,7 +6,7 @@ date: 2026-01-07
 tags:
   - bozeman
   - planning
-permalink: "/what-are-the-trends-for-home-remodel-in-2025/"
+permalink: "/blog/what-are-the-trends-for-home-remodel-in-2025/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

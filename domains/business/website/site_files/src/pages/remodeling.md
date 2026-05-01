@@ -38,7 +38,7 @@ Whether it's a simple platform off the back door or a multi-level space with bui
 
 **Want a quick ballpark?** Try the [deck cost calculator](/deck-calculator/) — 7 questions, real numbers from local projects.
 
-Not sure which style fits your yard? Learn about [the four main deck types for Bozeman homes](/what-are-the-4-types-of-decks-for-bozeman-homes/).
+Not sure which style fits your yard? Learn about [the four main deck types for Bozeman homes](/blog/what-are-the-4-types-of-decks-for-bozeman-homes/).
 
 ## Whole-Home Renovations
 
@@ -52,7 +52,7 @@ Common whole-home projects I handle:
 - **Structural repairs** — sagging floors, water damage, foundation issues
 - **Aging-in-place modifications** — grab bars, walk-in showers, wider doorways
 
-Unexpected discoveries are part of working in older homes — learn about [the most common hidden renovation costs from real Bozeman projects](/what-are-hidden-renovation-costs/).
+Unexpected discoveries are part of working in older homes — learn about [the most common hidden renovation costs from real Bozeman projects](/blog/what-are-hidden-renovation-costs/).
 
 ## Custom Carpentry & Finish Work
 

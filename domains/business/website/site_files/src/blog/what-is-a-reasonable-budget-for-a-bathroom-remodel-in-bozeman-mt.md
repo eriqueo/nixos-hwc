@@ -10,7 +10,7 @@ tags:
   - bathroom
   - bozeman
   - cost
-permalink: /what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/
+permalink: /blog/what-is-a-reasonable-budget-for-a-bathroom-remodel-in-bozeman-mt/
 ---
 
 Bozeman remodeling costs catch a lot of people off guard. Materials aren't cheap here, skilled trade labor is in demand, and the city's permitting process adds time and money that homeowners from bigger markets don't always expect. Here's what I tell people when they ask what a bathroom project should actually cost.

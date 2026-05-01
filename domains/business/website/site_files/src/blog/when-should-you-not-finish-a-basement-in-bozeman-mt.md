@@ -11,7 +11,7 @@ tags:
   - bozeman
   - tips
   - process
-permalink: /when-should-you-not-finish-a-basement-in-bozeman-mt/
+permalink: /blog/when-should-you-not-finish-a-basement-in-bozeman-mt/
 ---
 
 Finishing a basement can add real value and livable square footage to a Bozeman home. But it's not always the right move — and doing it under the wrong conditions creates problems that cost significantly more to fix than the original project would have.
@@ -79,7 +79,7 @@ Yes, but only if it was built correctly. A properly finished basement with permi
 
 A poorly finished basement — unpermitted work, moisture problems, inadequate egress — can actually hurt your negotiating position compared to an unfinished space. An unfinished basement sets clear expectations. A questionable finish raises questions about everything else in the house.
 
-The finish quality isn't what creates value. The quality and compliance behind the finish is. For real cost ranges and what drives the number, see [what it costs to finish a basement in Bozeman](/what-does-it-cost-to-finish-a-basement-in-bozeman/) or [what a contractor charges for basement finishing](/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/).
+The finish quality isn't what creates value. The quality and compliance behind the finish is. For real cost ranges and what drives the number, see [what it costs to finish a basement in Bozeman](/blog/what-does-it-cost-to-finish-a-basement-in-bozeman/) or [what a contractor charges for basement finishing](/blog/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/).
 
 ---
 

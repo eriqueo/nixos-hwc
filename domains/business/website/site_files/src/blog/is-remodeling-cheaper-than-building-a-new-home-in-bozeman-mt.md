@@ -10,7 +10,7 @@ tags:
   - remodeling
   - bozeman
   - cost
-permalink: /is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/
+permalink: /blog/is-remodeling-cheaper-than-building-a-new-home-in-bozeman-mt/
 ---
 
 When you're weighing a major update, the question comes up: do I remodel what I have, or start fresh with new construction? It's a real financial decision, and the answer depends on your budget, your home's condition, and what you're actually trying to accomplish.

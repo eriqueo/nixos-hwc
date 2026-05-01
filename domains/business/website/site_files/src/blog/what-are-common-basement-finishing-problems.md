@@ -6,7 +6,7 @@ date: 2026-02-25
 tags:
   - bozeman
   - basement
-permalink: "/what-are-common-basement-finishing-problems/"
+permalink: "/blog/what-are-common-basement-finishing-problems/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

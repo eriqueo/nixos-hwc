@@ -6,7 +6,7 @@ date: 2025-12-19
 tags:
   - bozeman
   - planning
-permalink: "/what-is-the-difference-between-renovation-and-remodeling/"
+permalink: "/blog/what-is-the-difference-between-renovation-and-remodeling/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

@@ -6,7 +6,7 @@ date: 2025-12-24
 tags:
   - bozeman
   - basement
-permalink: "/is-it-worth-renovating-a-basement/"
+permalink: "/blog/is-it-worth-renovating-a-basement/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

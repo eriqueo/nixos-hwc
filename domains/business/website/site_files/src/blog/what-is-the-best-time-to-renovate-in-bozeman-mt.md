@@ -10,7 +10,7 @@ tags:
   - remodeling
   - bozeman
   - tips
-permalink: /what-is-the-best-time-to-renovate-in-bozeman-mt/
+permalink: /blog/what-is-the-best-time-to-renovate-in-bozeman-mt/
 ---
 
 Timing a remodel in Bozeman is more nuanced than just picking a season. The right time depends on what you're doing, what contractors are available, and whether you're being proactive or reactive. Here's how I think about it — and what I've seen work best for homeowners in the Gallatin Valley.

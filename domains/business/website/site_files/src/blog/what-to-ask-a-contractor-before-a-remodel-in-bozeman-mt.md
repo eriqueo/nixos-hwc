@@ -10,12 +10,12 @@ tags:
   - bozeman
   - process
   - tips
-permalink: /what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/
+permalink: /blog/what-to-ask-a-contractor-before-a-remodel-in-bozeman-mt/
 ---
 
 Hiring a contractor is one of the higher-stakes decisions in a remodel. The wrong choice costs you time, money, and sometimes means paying someone else to fix what the first crew did. The right questions, asked early, tell you most of what you need to know.
 
-Here's how I'd approach vetting a contractor in Bozeman — including what I'd ask if I were the homeowner hiring me. You can also read [how to choose a remodeling contractor in Bozeman](/how-to-choose-a-remodeling-contractor-in-bozeman/) for a broader perspective on the evaluation process.
+Here's how I'd approach vetting a contractor in Bozeman — including what I'd ask if I were the homeowner hiring me. You can also read [how to choose a remodeling contractor in Bozeman](/blog/how-to-choose-a-remodeling-contractor-in-bozeman/) for a broader perspective on the evaluation process.
 
 ## Start With Licensing and Insurance
 

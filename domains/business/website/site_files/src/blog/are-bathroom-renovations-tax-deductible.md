@@ -6,7 +6,7 @@ date: 2026-03-02
 tags:
   - bozeman
   - bathroom
-permalink: "/are-bathroom-renovations-tax-deductible/"
+permalink: "/blog/are-bathroom-renovations-tax-deductible/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

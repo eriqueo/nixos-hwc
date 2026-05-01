@@ -6,7 +6,7 @@ date: 2025-12-31
 tags:
   - bozeman
   - basement
-permalink: "/how-expensive-is-it-to-redo-a-basement/"
+permalink: "/blog/how-expensive-is-it-to-redo-a-basement/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

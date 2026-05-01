@@ -9,7 +9,7 @@ tags:
   - remodeling
   - bozeman
   - tips
-permalink: /how-long-does-a-full-home-remodel-take/
+permalink: /blog/how-long-does-a-full-home-remodel-take/
 ---
 
 One of the first questions homeowners ask when planning a remodel is: how long is this actually going to take? It's a fair question, and the honest answer is that it depends — but there are reliable benchmarks you can use to plan.

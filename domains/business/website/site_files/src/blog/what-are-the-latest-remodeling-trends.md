@@ -9,7 +9,7 @@ tags:
   - remodeling
   - bozeman
   - tips
-permalink: /what-are-the-latest-remodeling-trends/
+permalink: /blog/what-are-the-latest-remodeling-trends/
 ---
 
 Remodeling trend articles tend to be full of things that look good in a Pinterest board but rarely show up in real Bozeman homes. So let me skip the fluff and tell you what I'm actually seeing clients request in 2026 — and which of those requests I think hold up long-term.

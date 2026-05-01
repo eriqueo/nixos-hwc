@@ -9,7 +9,7 @@ tags:
   - remodeling
   - bozeman
   - process
-permalink: /3d-design-previews-see-your-remodel-before-we-build-it/
+permalink: /blog/3d-design-previews-see-your-remodel-before-we-build-it/
 ---
 
 The biggest fear I hear from homeowners considering a bathroom or basement project isn't about the money. It's this: "What if it doesn't look like I imagined?" They've picked tile samples in a showroom, circled things in a catalog, described what they want in words — and they still can't picture the finished room.

@@ -10,7 +10,7 @@ tags:
   - basement
   - bozeman
   - cost
-permalink: /how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/
+permalink: /blog/how-much-does-a-contractor-charge-to-finish-a-basement-in-bozeman-mt/
 ---
 
 If you're pricing out a basement finish in Bozeman, you want real numbers — not ranges so wide they're useless. Here's how I think about basement costs, what drives them up or keeps them reasonable, and what you're actually paying for when you hire a licensed contractor. For a full overview of the basement finishing process, visit our [basement remodeling service page](/basement/remodeling/).
@@ -64,13 +64,13 @@ The construction sequence goes: framing → rough-in plumbing/electrical/HVAC �
 
 Nationally, finished basements return about 65–75% of their cost at resale. In Bozeman's market, properly permitted and code-compliant work performs at the higher end of that range. The "properly permitted" part matters — a basement finished without permits doesn't add legal square footage, raises red flags in buyer inspections, and often requires disclosure or remediation before a sale can close.
 
-For families who need the space now — extra bedroom, home office, kids' area — the practical value often justifies the investment well beyond the resale calculation. That's a different math than a pure pre-sale improvement, and it's worth being clear about which kind of project you're doing. For a broader look at cost factors, see [what it costs to finish a basement in Bozeman](/what-does-it-cost-to-finish-a-basement-in-bozeman/).
+For families who need the space now — extra bedroom, home office, kids' area — the practical value often justifies the investment well beyond the resale calculation. That's a different math than a pure pre-sale improvement, and it's worth being clear about which kind of project you're doing. For a broader look at cost factors, see [what it costs to finish a basement in Bozeman](/blog/what-does-it-cost-to-finish-a-basement-in-bozeman/).
 
 ## What to Watch Out For
 
 A few things I mention in every basement cost conversation:
 
-**Moisture conditions have to be resolved before finishing, not after.** A wet basement that gets drywalled is a mold problem waiting to happen. If there's active water infiltration, address the drainage or waterproofing first. That work might run $3,000–$10,000 depending on severity, but it's money you can't skip. Read more about [when a basement isn't ready to finish](/when-should-you-not-finish-a-basement-in-bozeman-mt/) — and what to do first.
+**Moisture conditions have to be resolved before finishing, not after.** A wet basement that gets drywalled is a mold problem waiting to happen. If there's active water infiltration, address the drainage or waterproofing first. That work might run $3,000–$10,000 depending on severity, but it's money you can't skip. Read more about [when a basement isn't ready to finish](/blog/when-should-you-not-finish-a-basement-in-bozeman-mt/) — and what to do first.
 
 **Budget a 10–20% contingency.** Basements hide things — old wiring that doesn't meet current code, slab cracks, plumbing that's been leaking slowly behind a wall. These show up during demo, not during the estimate walkthrough.
 

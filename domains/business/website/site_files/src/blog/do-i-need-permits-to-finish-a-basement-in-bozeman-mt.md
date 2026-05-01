@@ -6,7 +6,7 @@ date: 2026-03-30
 tags:
   - bozeman
   - basement
-permalink: "/do-i-need-permits-to-finish-a-basement-in-bozeman-mt/"
+permalink: "/blog/do-i-need-permits-to-finish-a-basement-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

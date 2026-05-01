@@ -6,7 +6,7 @@ date: 2025-12-29
 tags:
   - bozeman
   - planning
-permalink: "/what-does-a-full-remodel-include/"
+permalink: "/blog/what-does-a-full-remodel-include/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

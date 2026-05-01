@@ -6,7 +6,7 @@ date: 2026-01-09
 tags:
   - bozeman
   - basement
-permalink: "/what-do-i-wish-i-knew-before-finishing-the-basement/"
+permalink: "/blog/what-do-i-wish-i-knew-before-finishing-the-basement/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

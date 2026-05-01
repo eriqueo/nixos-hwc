@@ -6,7 +6,7 @@ date: 2026-04-08
 tags:
   - bozeman
   - decks
-permalink: "/how-much-does-a-10x20-deck-cost-in-bozeman-mt/"
+permalink: "/blog/how-much-does-a-10x20-deck-cost-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

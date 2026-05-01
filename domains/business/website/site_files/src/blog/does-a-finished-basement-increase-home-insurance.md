@@ -6,7 +6,7 @@ date: 2026-01-28
 tags:
   - bozeman
   - basement
-permalink: "/does-a-finished-basement-increase-home-insurance/"
+permalink: "/blog/does-a-finished-basement-increase-home-insurance/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

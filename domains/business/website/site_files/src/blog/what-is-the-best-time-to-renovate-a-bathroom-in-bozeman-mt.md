@@ -6,7 +6,7 @@ date: 2026-01-02
 tags:
   - bozeman
   - bathroom
-permalink: "/what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/"
+permalink: "/blog/what-is-the-best-time-to-renovate-a-bathroom-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

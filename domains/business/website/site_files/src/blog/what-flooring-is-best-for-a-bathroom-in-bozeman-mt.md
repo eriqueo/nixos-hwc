@@ -6,7 +6,7 @@ date: 2026-01-21
 tags:
   - bozeman
   - bathroom
-permalink: "/what-flooring-is-best-for-a-bathroom-in-bozeman-mt/"
+permalink: "/blog/what-flooring-is-best-for-a-bathroom-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

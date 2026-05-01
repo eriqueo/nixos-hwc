@@ -6,7 +6,7 @@ date: 2026-04-01
 tags:
   - bozeman
   - planning
-permalink: "/when-not-to-renovate-a-house-in-bozeman-mt/"
+permalink: "/blog/when-not-to-renovate-a-house-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

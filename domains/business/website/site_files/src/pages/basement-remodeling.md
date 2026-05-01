@@ -67,7 +67,7 @@ Real numbers from Bozeman-area basement projects:
 
 What drives the cost: total square footage, number of rooms, whether you add a bathroom (plumbing through the slab adds cost), egress window requirements, and finish level.
 
-For a detailed cost breakdown with Bozeman-specific factors, see [what it costs to finish a basement in Bozeman](/what-does-it-cost-to-finish-a-basement-in-bozeman/).
+For a detailed cost breakdown with Bozeman-specific factors, see [what it costs to finish a basement in Bozeman](/blog/what-does-it-cost-to-finish-a-basement-in-bozeman/).
 
 ### The Egress Window Question
 
@@ -83,7 +83,7 @@ You see the bedroom layout, the bathroom placement, where the TV goes, how the w
 
 **Moisture.** Bozeman gets snow. Snow melts. Water finds its way to the lowest point — your basement. Any basement finish needs to account for spring runoff and address drainage before finishes go in.
 
-Not sure if your space is ready? Read about [when you should — and shouldn't — finish a basement in Bozeman](/when-should-you-not-finish-a-basement-in-bozeman-mt/).
+Not sure if your space is ready? Read about [when you should — and shouldn't — finish a basement in Bozeman](/blog/when-should-you-not-finish-a-basement-in-bozeman-mt/).
 
 **Insulation.** Montana winters mean your basement needs proper insulation to be comfortable. Below-grade walls lose heat differently than above-grade, and the insulation strategy matters for both comfort and energy costs.
 

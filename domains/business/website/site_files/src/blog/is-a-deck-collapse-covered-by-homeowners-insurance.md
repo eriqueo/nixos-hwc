@@ -6,7 +6,7 @@ date: 2026-02-27
 tags:
   - bozeman
   - decks
-permalink: "/is-a-deck-collapse-covered-by-homeowners-insurance/"
+permalink: "/blog/is-a-deck-collapse-covered-by-homeowners-insurance/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

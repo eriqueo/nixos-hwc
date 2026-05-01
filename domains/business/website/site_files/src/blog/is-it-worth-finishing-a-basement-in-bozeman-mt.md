@@ -6,7 +6,7 @@ date: 2026-04-06
 tags:
   - bozeman
   - basement
-permalink: "/is-it-worth-finishing-a-basement-in-bozeman-mt/"
+permalink: "/blog/is-it-worth-finishing-a-basement-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

@@ -9,7 +9,7 @@ tags:
   - deck
   - bozeman
   - cost
-permalink: /is-a-12x20-deck-big-enough-for-a-bozeman-home/
+permalink: /blog/is-a-12x20-deck-big-enough-for-a-bozeman-home/
 ---
 
 When Bozeman homeowners start planning a deck, one of the first questions is size. The 12x20 footprint comes up constantly. At 240 square feet, it hits a practical sweet spot — versatile enough for real outdoor living, affordable enough for most budgets.
@@ -67,6 +67,6 @@ The cost difference between a 10x20 and 12x20 is roughly $1,000–$3,000 dependi
 
 For most Bozeman families, yes. It provides the outdoor living space needed for everyday use and casual entertaining, and when it's built from the right materials and engineered for Montana's snow loads and frost conditions, it holds up well through every season.
 
-The main limitation is ambition. If your vision involves large gatherings, multiple entertainment zones, or an outdoor kitchen with dedicated prep and dining space, sizing up before construction starts is the smarter move. A well-built 12x20 that's right for how you live beats a larger deck that stretches the budget and sits half-empty. For a deeper look at foundation and structural considerations, read [what is the best foundation for a deck in Bozeman](/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
+The main limitation is ambition. If your vision involves large gatherings, multiple entertainment zones, or an outdoor kitchen with dedicated prep and dining space, sizing up before construction starts is the smarter move. A well-built 12x20 that's right for how you live beats a larger deck that stretches the budget and sits half-empty. For a deeper look at foundation and structural considerations, read [what is the best foundation for a deck in Bozeman](/blog/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
 
 Wondering what size deck fits your yard and budget? [Let's talk about it.](/contact/) You can also learn more about our [deck building and remodeling services](/remodeling/).

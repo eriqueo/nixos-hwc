@@ -6,7 +6,7 @@ date: 2026-02-18
 tags:
   - bozeman
   - bathroom
-permalink: "/what-color-flooring-makes-a-bathroom-look-bigger/"
+permalink: "/blog/what-color-flooring-makes-a-bathroom-look-bigger/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

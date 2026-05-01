@@ -10,7 +10,7 @@ tags:
   - bathroom
   - bozeman
   - tips
-permalink: /common-bathroom-renovation-mistakes-in-bozeman-mt/
+permalink: /blog/common-bathroom-renovation-mistakes-in-bozeman-mt/
 ---
 
 A bathroom remodel is one of the more complex projects in a home — plumbing, electrical, tile, waterproofing, and ventilation all in a small space where everything has to work together. I've seen the same mistakes come up on project after project. Most of them are avoidable with a bit of planning up front.

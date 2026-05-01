@@ -61,7 +61,7 @@ Here's exactly what happens when you call:
 
 See the [full step-by-step process](/how-it-works/) from first call to final walkthrough.
 
-Wondering what daily life looks like during the build? Read [what to expect during a bathroom remodel](/what-to-expect-during-a-bathroom-remodel-in-bozeman/).
+Wondering what daily life looks like during the build? Read [what to expect during a bathroom remodel](/blog/what-to-expect-during-a-bathroom-remodel-in-bozeman/).
 
 ## What It Costs
 
@@ -74,7 +74,7 @@ I believe in being upfront about pricing. Here are real ranges based on actual H
 
 What determines where you land: bathroom size, tile and fixture selections, plumbing changes, and what we find behind the walls.
 
-For a detailed breakdown of what drives the price, see [what a bathroom remodel actually costs in Bozeman](/what-does-a-bathroom-remodel-cost-in-bozeman/).
+For a detailed breakdown of what drives the price, see [what a bathroom remodel actually costs in Bozeman](/blog/what-does-a-bathroom-remodel-cost-in-bozeman/).
 
 ### How Allowances Work
 

@@ -6,7 +6,7 @@ date: 2026-02-02
 tags:
   - bozeman
   - decks
-permalink: "/is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/"
+permalink: "/blog/is-it-cheaper-to-build-or-buy-a-deck-in-bozeman-mt/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

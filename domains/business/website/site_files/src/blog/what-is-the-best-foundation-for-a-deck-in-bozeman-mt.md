@@ -10,7 +10,7 @@ tags:
   - deck
   - bozeman
   - tips
-permalink: /what-is-the-best-foundation-for-a-deck-in-bozeman-mt/
+permalink: /blog/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/
 ---
 
 Most homeowners planning a deck spend their early thinking on materials and aesthetics — composite vs. wood, railing styles, stair placement. The foundation doesn't get the same attention. That's backwards.
@@ -35,7 +35,7 @@ For larger decks, elevated structures, or sites with heavy snow load considerati
 
 A common scenario I see: the deck looks fine for a season or two, then one winter the posts lift just enough to throw the frame out of level. Nothing catastrophic, just a gradual shift that gets worse each year. Boards start to gap unevenly. Railings go out of plumb. Stairs develop a lean.
 
-That's frost heave, and it's entirely preventable. Poor footings are also a leading cause of [deck collapses — here's what accounts for 90% of them](/what-accounts-for-90-of-deck-collapses/). The City of Bozeman enforces the 2021 International Residential Code (IRC), which requires footing inspections before framing begins on permitted deck projects. That inspection happens at the right moment — before the footings are backfilled, when there's still something to inspect. Skip the permit on an elevated deck and you skip that check.
+That's frost heave, and it's entirely preventable. Poor footings are also a leading cause of [deck collapses — here's what accounts for 90% of them](/blog/what-accounts-for-90-of-deck-collapses/). The City of Bozeman enforces the 2021 International Residential Code (IRC), which requires footing inspections before framing begins on permitted deck projects. That inspection happens at the right moment — before the footings are backfilled, when there's still something to inspect. Skip the permit on an elevated deck and you skip that check.
 
 ## What Kind of Foundation Do You Need?
 

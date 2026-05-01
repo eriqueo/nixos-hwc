@@ -6,7 +6,7 @@ date: 2026-03-20
 tags:
   - bozeman
   - bathroom
-permalink: "/what-flooring-is-urine-proof-best-options-for-bozeman-homes/"
+permalink: "/blog/what-flooring-is-urine-proof-best-options-for-bozeman-homes/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

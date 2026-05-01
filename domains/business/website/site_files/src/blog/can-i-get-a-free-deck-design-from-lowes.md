@@ -6,7 +6,7 @@ date: 2026-04-03
 tags:
   - bozeman
   - decks
-permalink: "/can-i-get-a-free-deck-design-from-lowes/"
+permalink: "/blog/can-i-get-a-free-deck-design-from-lowes/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

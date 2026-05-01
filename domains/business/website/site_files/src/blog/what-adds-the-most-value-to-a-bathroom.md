@@ -11,7 +11,7 @@ tags:
   - bozeman
   - cost
   - tips
-permalink: /what-adds-the-most-value-to-a-bathroom/
+permalink: /blog/what-adds-the-most-value-to-a-bathroom/
 ---
 
 Not every bathroom upgrade is worth the same money. Some changes dramatically improve both daily use and resale appeal. Others are expensive and barely register at sale. Before you start pulling up tile, here's an honest look at which upgrades actually move the needle — and which ones are mostly for you.

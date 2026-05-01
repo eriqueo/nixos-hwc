@@ -10,7 +10,7 @@ tags:
   - bathroom
   - bozeman
   - cost
-permalink: /does-home-depot-do-bathroom-remodels/
+permalink: /blog/does-home-depot-do-bathroom-remodels/
 ---
 
 Yes, Home Depot does offer bathroom remodeling services. Before you write them off or book them, here's an honest look at how their program actually works — and where it fits versus where a local contractor makes more sense.

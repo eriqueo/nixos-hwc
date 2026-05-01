@@ -6,7 +6,7 @@ date: 2026-02-16
 tags:
   - bozeman
   - basement
-permalink: "/does-home-depot-renovate-basements/"
+permalink: "/blog/does-home-depot-renovate-basements/"
 imported_from: wordpress
 imported_date: 2026-04-30
 ---

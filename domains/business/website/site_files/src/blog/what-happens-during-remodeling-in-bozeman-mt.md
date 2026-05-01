@@ -10,7 +10,7 @@ tags:
   - remodeling
   - bozeman
   - tips
-permalink: /what-happens-during-remodeling-in-bozeman-mt/
+permalink: /blog/what-happens-during-remodeling-in-bozeman-mt/
 ---
 
 If you're getting ready for a remodel, you don't want vague reassurances. You want to know what's actually happening in your home, in what order, and why each step matters. Especially in Bozeman, where energy codes, older housing stock, and inspection requirements add layers that aren't always obvious up front. For an overview of the services we offer, see our [remodeling services page](/remodeling/).
@@ -55,7 +55,7 @@ Several things affect these numbers in ways homeowners often underestimate. Perm
 
 Zooming out from active construction, the entire process follows five phases. Rushing or skipping any one of them is where cost overruns and delays consistently come from.
 
-**Phase 1 — Scope and budget.** Define priorities, determine whether the project is cosmetic or structural, and set a realistic investment range. For a bathroom remodel, this means understanding the actual difference between a $10K refresh and a $25K gut renovation. Hidden costs are common in older homes — read about [the most common surprises from real Bozeman jobs](/what-are-hidden-renovation-costs/).
+**Phase 1 — Scope and budget.** Define priorities, determine whether the project is cosmetic or structural, and set a realistic investment range. For a bathroom remodel, this means understanding the actual difference between a $10K refresh and a $25K gut renovation. Hidden costs are common in older homes — read about [the most common surprises from real Bozeman jobs](/blog/what-are-hidden-renovation-costs/).
 
 **Phase 2 — Design and selections.** Finalize layouts, choose finishes, and confirm everything meets code requirements. Decisions made here determine how efficiently every phase after it runs. Changes mid-construction are expensive.
 

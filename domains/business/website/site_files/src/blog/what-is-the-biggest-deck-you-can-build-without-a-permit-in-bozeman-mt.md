@@ -10,7 +10,7 @@ tags:
   - deck
   - bozeman
   - permits
-permalink: /what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/
+permalink: /blog/what-is-the-biggest-deck-you-can-build-without-a-permit-in-bozeman-mt/
 ---
 
 Bozeman homeowners ask about permits early in the deck planning process, and for good reason. The permit question determines your timeline, your costs, and what a contractor can legally build for you. Getting this wrong has consequences that surface later — at resale, during an insurance claim, or when the city shows up.
@@ -73,4 +73,4 @@ Unpermitted work that should have been permitted creates problems that are expen
 
 Need help navigating Bozeman's permit process? I handle that as part of every deck project. [Here's how it works.](/how-it-works/)
 
-Ready to start planning? [Get in touch](/contact/) or learn about [proper deck foundations for Bozeman's climate](/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
+Ready to start planning? [Get in touch](/contact/) or learn about [proper deck foundations for Bozeman's climate](/blog/what-is-the-best-foundation-for-a-deck-in-bozeman-mt/).
