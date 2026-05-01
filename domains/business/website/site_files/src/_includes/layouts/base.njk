@@ -87,6 +87,7 @@
       "postalCode": "59715",
       "addressCountry": "US"
     },
+
     "geo": {
       "@type": "GeoCoordinates",
       "latitude": 45.6770,
@@ -138,6 +139,25 @@
     "sameAs": [
       "https://www.google.com/maps/place/Heartwood+Craft"
     ]
+
+    "areaServed": [
+      {"@type": "City", "name": "Bozeman"},
+      {"@type": "City", "name": "Belgrade"},
+      {"@type": "City", "name": "Gallatin Gateway"}
+    ],
+    "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Remodeling Services",
+    "itemListElement": [
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Bathroom Remodeling"}},
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Basement Finishing"}},
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Bathroom Remodeling"}},
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Universal Design"}}
+     ]
+    }
+    
+    "priceRange": "$$"
+
   }
   </script>
   {% elif schema_type == "Service" %}
