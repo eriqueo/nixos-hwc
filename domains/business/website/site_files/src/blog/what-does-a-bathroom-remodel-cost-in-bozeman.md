@@ -34,7 +34,7 @@ This is where you're opening walls, moving plumbing, upgrading electrical, and r
 
 Large footprint, heated floors, frameless glass, custom vanity, dual sinks, freestanding tub, specialty tile. This tier is about premium selections as much as scope.
 
-## What Actually Drives the Cost
+## What Actually nulls the Cost
 
 I build estimates as line-item documents, not lump sums. When I look across the projects I've completed, the budget tends to break down like this:
 

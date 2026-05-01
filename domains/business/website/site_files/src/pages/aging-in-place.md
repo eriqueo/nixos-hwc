@@ -299,4 +299,4 @@ Whether you're planning a remodel now, preparing for a parent to move in, or jus
 
 No pressure. Just an honest look at what's possible and what it would take.
 
-Call [406-551-5061](tel:4065515061) or [tell us about your project](https://heartwoodcraft.me/contact/).
+Call [406-551-5061](tel:4065515061) or [tell us about your project](https://iheartwoodcraft.com/contact/).

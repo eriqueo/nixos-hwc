@@ -5,6 +5,7 @@ module.exports = function(eleventyConfig) {
   eleventyConfig.addPassthroughCopy("src/img");
   eleventyConfig.addPassthroughCopy("src/_redirects");
   eleventyConfig.addPassthroughCopy("src/.htaccess");
+  eleventyConfig.addPassthroughCopy("src/robots.txt");
 
   // Blog collection sorted by date
   eleventyConfig.addCollection("blog", function(collectionApi) {
@@ -24,6 +25,8 @@ module.exports = function(eleventyConfig) {
   eleventyConfig.addFilter("rejectByUrl", (array, url) => array.filter(p => p.url !== url));
   eleventyConfig.addFilter("divide", (num, d) => num / d);
   eleventyConfig.addFilter("round", (num) => Math.ceil(num));
+  eleventyConfig.addFilter("split", (str, sep) => str ? str.split(sep) : []);
+  eleventyConfig.addFilter("compact", (arr) => arr.filter(Boolean));
   eleventyConfig.addFilter("wordCount", (content) => {
     if (!content) return 0;
     return content.split(/\s+/).filter(Boolean).length;

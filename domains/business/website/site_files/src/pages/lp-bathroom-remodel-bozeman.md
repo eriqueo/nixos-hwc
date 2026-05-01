@@ -59,7 +59,7 @@ show_form: true
         <p>I specialize in bathroom remodels — from full gut renovations to targeted refreshes. Every project starts with a 3D rendering so you see your new space before I pick up a hammer.</p>
         <a href="#contact-form" class="btn btn-primary">Tell Us About Your Project</a>
       </div>
-      <img src="/img/portfolio/interiors/20200412_135322.webp" alt="Bathroom remodel by Heartwood Craft in Bozeman" loading="lazy">
+      <img src="/img/portfolio/interiors/completed-bathroom-remodel-bozeman.webp" alt="Completed bathroom remodel in Bozeman with modern fixtures and tile work" loading="lazy">
     </div>
   </div>
 </section>

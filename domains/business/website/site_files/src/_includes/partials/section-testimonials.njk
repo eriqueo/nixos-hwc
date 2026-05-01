@@ -9,16 +9,19 @@
       <h2>{{ testimonials_heading if testimonials_heading else "What our clients say." }}</h2>
       <hr>
     </div>
-    <div class="testimonial-grid">
+    <div class="testimonial-grid" itemscope itemtype="https://schema.org/LocalBusiness">
+      <meta itemprop="name" content="{{ site.name }}">
       {% for review in testimonials %}
         {% if review.service == filter_service %}
-        <div class="card testimonial-card animate-in">
-          <div class="testimonial-rating" aria-label="{{ review.rating }} out of 5 stars">
+        <div class="card testimonial-card animate-in" itemprop="review" itemscope itemtype="https://schema.org/Review">
+          <div class="testimonial-rating" aria-label="{{ review.rating }} out of 5 stars" itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating">
+            <meta itemprop="ratingValue" content="{{ review.rating }}">
+            <meta itemprop="bestRating" content="5">
             {% for i in range(0, review.rating) %}&#9733;{% endfor %}
           </div>
-          <blockquote class="testimonial-text">{{ review.text }}</blockquote>
-          <div class="testimonial-author">
-            <strong>{{ review.name }}</strong>
+          <blockquote class="testimonial-text" itemprop="reviewBody">{{ review.text }}</blockquote>
+          <div class="testimonial-author" itemprop="author" itemscope itemtype="https://schema.org/Person">
+            <strong itemprop="name">{{ review.name }}</strong>
             <span>{{ review.location }}</span>
           </div>
           <div class="testimonial-source">via {{ review.source }}</div>
@@ -34,11 +37,13 @@
 {% set t = testimonials[0] %}
 <section class="section section-alt animate-in" data-section="testimonial">
   <div class="container-wide">
-    <div class="ed-quote">
+    <div class="ed-quote" itemprop="review" itemscope itemtype="https://schema.org/Review">
+      <meta itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating" content="">
+      <meta itemprop="ratingValue" content="{{ t.rating }}">
       <hr>
-      <blockquote class="ed-quote__body">{{ t.text }}</blockquote>
+      <blockquote class="ed-quote__body" itemprop="reviewBody">{{ t.text }}</blockquote>
       <div class="ed-quote__attr">
-        <span class="ed-quote__name">{{ t.name }} &mdash; {{ t.location }}</span>
+        <span class="ed-quote__name" itemprop="author">{{ t.name }} &mdash; {{ t.location }}</span>
         <span class="ed-quote__sep">·</span>
         <span class="ed-quote__meta">VERIFIED VIA {{ t.source | upper }}</span>
       </div>

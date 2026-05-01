@@ -34,7 +34,7 @@
       data-jobtread-web-form="true" 
       data-key="22SVpdtTrvNNMLqKwpYhZM3PVYfCyZXax8" 
       data-success-message="Thanks — we'll be in touch soon to discuss your project."
-      data-success-url="https://heartwoodcraft.me/our-work"
+      data-success-url="https://iheartwoodcraft.com/our-work"
     >
 
       {# ── Required: Name ── #}
@@ -275,7 +275,7 @@
 })();
 </script>
 
-{# ── Scoped form styles (override JT defaults to match Heartwood brand) ── #}
+{# ── Scoped form styles (override JT defaults for dark theme) ── #}
 <style>
   /* Reset JT's default container styling */
   .hwc-form.jtwf {
@@ -303,15 +303,15 @@
     display: block;
     font-weight: 600;
     font-size: 0.9rem;
-    color: var(--charcoal, #23282d);
+    color: var(--fg1, #ebdbb2);
     margin-bottom: 0.35rem;
   }
   .hwc-form .required {
-    color: #b45309;
+    color: var(--copper, #cf995f);
     font-weight: 400;
   }
   .hwc-form .optional {
-    color: #9CA3AF;
+    color: var(--fg3, #7c6f64);
     font-weight: 400;
     font-size: 0.85em;
   }
@@ -328,9 +328,9 @@
     padding: 0.7rem 0.85rem;
     font-family: inherit;
     font-size: 0.95rem;
-    color: var(--charcoal, #23282d);
-    background: #fff;
-    border: 1.5px solid #d4d0cb;
+    color: var(--fg1, #ebdbb2);
+    background: var(--bg-dark, #1d2021);
+    border: 1.5px solid rgba(207, 153, 95, 0.3);
     border-radius: 6px;
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -345,10 +345,10 @@
   }
   .hwc-form input::placeholder,
   .hwc-form textarea::placeholder {
-    color: #a3a09b;
+    color: var(--fg3, #7c6f64);
   }
   .hwc-form select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a89984' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.85rem center;
     padding-right: 2.5rem;
@@ -372,8 +372,11 @@
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 400;
-    color: var(--charcoal, #23282d);
+    color: var(--fg2, #d5c4a1);
     padding: 0.3rem 0;
+  }
+  .hwc-form .checkbox-label span {
+    color: var(--fg2, #d5c4a1);
   }
   .hwc-form .checkbox-label input[type="checkbox"] {
     width: 1.1rem;
@@ -382,7 +385,7 @@
     cursor: pointer;
   }
 
-  /* Submit button — matches site's btn-primary */
+  /* Submit button */
   .hwc-form .btn-primary {
     display: block;
     width: 100%;
@@ -391,25 +394,25 @@
     font-family: inherit;
     font-size: 1rem;
     font-weight: 600;
-    color: #fff;
-    background: var(--charcoal, #23282d);
+    color: #1d2021;
+    background: var(--copper, #cf995f);
     border: none;
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.2s ease;
   }
   .hwc-form .btn-primary:hover {
-    background: #2f353b;
+    background: var(--copper-hover, #d4a76a);
   }
   .hwc-form .btn-primary:active {
-    background: #1a1e22;
+    background: #c48d4f;
   }
 
   /* Form note */
   .hwc-form .form-note {
     text-align: center;
     font-size: 0.8rem;
-    color: #9CA3AF;
+    color: var(--fg3, #7c6f64);
     margin-top: 0.75rem;
   }
 

@@ -72,20 +72,72 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@type": "HomeAndConstructionBusiness",
     "name": "{{ site.name }}",
     "description": "{{ site.description }}",
     "telephone": "{{ site.phone }}",
     "email": "{{ site.email }}",
     "url": "{{ site.url }}",
+    "logo": "{{ site.url }}/img/brand/logo.webp",
+    "image": "{{ site.url }}/img/hero/bozeman-remodeling.webp",
     "address": {
       "@type": "PostalAddress",
       "addressLocality": "Bozeman",
       "addressRegion": "MT",
+      "postalCode": "59715",
       "addressCountry": "US"
     },
-    "areaServed": ["Bozeman, MT", "Belgrade, MT", "Gallatin Gateway, MT"],
-    "priceRange": "$$"
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 45.6770,
+      "longitude": -111.0429
+    },
+    "areaServed": [
+      {"@type": "City", "name": "Bozeman", "sameAs": "https://en.wikipedia.org/wiki/Bozeman,_Montana"},
+      {"@type": "City", "name": "Belgrade", "sameAs": "https://en.wikipedia.org/wiki/Belgrade,_Montana"},
+      {"@type": "City", "name": "Gallatin Gateway", "sameAs": "https://en.wikipedia.org/wiki/Gallatin_Gateway,_Montana"}
+    ],
+    "priceRange": "$$",
+    "currenciesAccepted": "USD",
+    "paymentAccepted": "Cash, Check, Credit Card",
+    "knowsAbout": ["bathroom remodeling", "basement finishing", "deck building", "timber framing", "universal design", "aging in place"],
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Remodeling Services",
+      "itemListElement": [
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Bathroom Remodeling", "url": "{{ site.url }}/bathroom/remodeling/"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Basement Finishing", "url": "{{ site.url }}/basement/remodeling/"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Custom Deck Building", "url": "{{ site.url }}/deck-building/"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Universal Design & Aging in Place", "url": "{{ site.url }}/aging-in-place/"}}
+      ]
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "bestRating": "5",
+      "ratingCount": "{{ testimonials | length }}",
+      "reviewCount": "{{ testimonials | length }}"
+    },
+    "review": [
+      {% for review in testimonials %}
+      {
+        "@type": "Review",
+        "reviewRating": {"@type": "Rating", "ratingValue": "{{ review.rating }}", "bestRating": "5"},
+        "author": {"@type": "Person", "name": "{{ review.name }}"},
+        "reviewBody": "{{ review.text }}",
+        "publisher": {"@type": "Organization", "name": "{{ review.source }}"}
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "founder": {
+      "@type": "Person",
+      "name": "Eric",
+      "jobTitle": "Owner & Licensed Contractor",
+      "url": "{{ site.url }}/about/"
+    },
+    "sameAs": [
+      "https://www.google.com/maps/place/Heartwood+Craft"
+    ]
   }
   </script>
   {% elif schema_type == "Service" %}
@@ -95,13 +147,30 @@
     "@type": "Service",
     "name": "{{ title }}",
     "description": "{{ meta_description | default(site.description) }}",
+    "url": "{{ site.url }}{{ page.url }}",
     "provider": {
-      "@type": "LocalBusiness",
+      "@type": "HomeAndConstructionBusiness",
       "name": "{{ site.name }}",
       "telephone": "{{ site.phone }}",
-      "url": "{{ site.url }}"
+      "url": "{{ site.url }}",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Bozeman",
+        "addressRegion": "MT",
+        "addressCountry": "US"
+      }
     },
-    "areaServed": ["Bozeman, MT", "Belgrade, MT", "Gallatin Gateway, MT"]
+    "areaServed": [
+      {"@type": "City", "name": "Bozeman"},
+      {"@type": "City", "name": "Belgrade"},
+      {"@type": "City", "name": "Gallatin Gateway"}
+    ],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "bestRating": "5",
+      "ratingCount": "{{ testimonials | length }}"
+    }
   }
   </script>
   {% elif schema_type == "BlogPosting" %}
@@ -113,15 +182,20 @@
     "description": "{{ meta_description | default(site.description) }}",
     "author": {
       "@type": "Person",
-      "name": "Eric"
+      "name": "Eric",
+      "url": "{{ site.url }}/about/",
+      "jobTitle": "Owner & Licensed Contractor"
     },
     "publisher": {
       "@type": "Organization",
-      "name": "{{ site.name }}"
+      "name": "{{ site.name }}",
+      "logo": {"@type": "ImageObject", "url": "{{ site.url }}/img/brand/logo.webp"}
     },
     "datePublished": "{{ date | dateISO }}",
     "url": "{{ site.url }}{{ page.url }}"{% if featured_image %},
-    "image": "{{ site.url }}{{ featured_image }}"{% endif %}
+    "image": "{{ site.url }}{{ featured_image }}"{% endif %}{% if tags %},
+    "keywords": "{{ tags | join(', ') }}"{% endif %},
+    "mainEntityOfPage": {"@type": "WebPage", "@id": "{{ site.url }}{{ page.url }}"}
   }
   </script>
   {% else %}
@@ -132,6 +206,21 @@
     "name": "{{ title }}",
     "description": "{{ meta_description | default(site.description) }}",
     "url": "{{ site.url }}{{ page.url }}"
+  }
+  </script>
+  {% endif %}
+
+  <!-- Breadcrumbs -->
+  {% set crumbs = page.url | split("/") | compact %}
+  {% if crumbs | length > 0 %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "{{ site.url }}/"}
+      ,{"@type": "ListItem", "position": 2, "name": "{{ title }}", "item": "{{ site.url }}{{ page.url }}"}
+    ]
   }
   </script>
   {% endif %}

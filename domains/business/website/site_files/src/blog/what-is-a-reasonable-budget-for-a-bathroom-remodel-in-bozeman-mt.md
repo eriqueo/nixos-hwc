@@ -66,7 +66,7 @@ A 10-by-10 bathroom is genuinely large for a residential project. More square fo
 
 The per-square-foot cost in a larger bathroom is actually a bit lower than a small one because certain fixed costs (demo, rough plumbing, permit) don't change with room size. But the total number still goes up.
 
-## What Drives Costs Up in Bozeman Specifically?
+## What nulls Costs Up in Bozeman Specifically?
 
 A few things I mention in every budget conversation:
 

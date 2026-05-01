@@ -43,7 +43,7 @@ Finishing a basement in the Gallatin Valley isn't the same as finishing one in, 
 
 **Permits.** All basement finishing work in Bozeman requires permits filed through the city's ProjectDox portal. Framing, electrical, mechanical, and plumbing each get their own inspection. Plan for 2–4 weeks between permit application and approval, and build inspection holds into your schedule — you can't frame over rough electrical until the inspector signs off.
 
-## What Drives the Cost Up
+## What nulls the Cost Up
 
 **Adding a bathroom** is the single biggest cost variable. The slab core drilling and drain rough-in is a fixed cost regardless of how nice the bathroom ends up being — you're paying for access to the drain system below the slab, and that work doesn't get cheaper if you choose a simpler vanity. A half bath (toilet and sink, no shower) adds roughly $12,000–$18,000. A full bathroom with a shower adds $20,000–$30,000 to the base scope.
 

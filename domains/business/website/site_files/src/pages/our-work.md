@@ -38,18 +38,18 @@ Every joint in a timber frame is visible — there's nowhere to hide a bad cut. 
 
 <div class="portfolio-grid" data-portfolio-section="timber-framing">
   <div class="project-images">
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20190527_112527.webp" alt="Timber frame raising" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20190610_144907.webp" alt="Timber framing detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20190826_085958.webp" alt="Completed timber structure" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20180925_090404.webp" alt="Timber frame joint detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20190726_141704.webp" alt="Large timber frame" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20190530_115235.webp" alt="Timber framing in progress" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20180912_082637.webp" alt="Timber beam installation" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20180925_090619.webp" alt="Post and beam connection" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20190528_120119.webp" alt="Timber frame assembly" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20190527_083836.webp" alt="Heavy timber bent" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20180925_090210.webp" alt="Structural timber detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/timber_framing/20180516_162957.webp" alt="Timber frame structure" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-raising-crew-lift.webp" alt="Timber frame raising with crew lifting heavy bent into position" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-detail-beam-bracket.webp" alt="Timber frame detail showing decorative beam bracket and knee brace" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/completed-timber-frame-cabin-structure.webp" alt="Completed timber frame cabin structure with roof and walls framed" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-joint-detail-closeup.webp" alt="Close-up of timber frame joint showing hand-cut mortise and tenon connection" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/large-timber-frame-structure-raising.webp" alt="Large timber frame structure during raising showing scale and complexity" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-progress-multiple-bents.webp" alt="Timber frame construction progress with multiple bents raised and connected" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-beam-installation-crane.webp" alt="Heavy timber beam installation during frame raising" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/post-and-beam-connection-hardware.webp" alt="Post-and-beam timber frame connection with structural hardware" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-assembly-connecting-bents.webp" alt="Connecting timber frame bents with tie beams and purlins" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/heavy-timber-bent-ground-assembly.webp" alt="Heavy timber bent being assembled on the ground before raising" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-structural-detail-joint.webp" alt="Timber frame structural joint detail showing precision carpentry" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/timber_framing/timber-frame-structure-completed-view.webp" alt="Completed timber frame structure showing post-and-beam construction" loading="lazy"></figure>
   </div>
 </div>
 
@@ -63,18 +63,18 @@ Most deck failures I see around Bozeman come down to two things: footings that a
 
 <div class="portfolio-grid" data-portfolio-section="decks">
   <div class="project-images">
-    <figure><img src="/img/portfolio/exteriors/decks/20180822_155203.webp" alt="Custom deck construction" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/20180821_124358.webp" alt="Deck framing" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/20180822_183025.webp" alt="Completed deck" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/20171005_125108.webp" alt="Deck design" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/20171005_155735.webp" alt="Deck build in progress" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/20170925_162846.webp" alt="Finished outdoor deck" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/IMG_3263.webp" alt="Deck detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/IMG_3264.webp" alt="Deck railing detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/20190913_151334.webp" alt="Deck project" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/IMG_20190913_152611_252.webp" alt="Completed deck build" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/IMG_20190911_100302_541.webp" alt="Deck framing progress" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/decks/IMG_2475.webp" alt="Custom deck" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/completed-cedar-deck-multi-level-residential.webp" alt="Completed multi-level cedar deck with angled corner on residential home in Bozeman" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/cedar-deck-construction-joist-framing-progress.webp" alt="Cedar deck construction showing joist framing and partial decking on residential home" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/completed-cedar-deck-full-view-homeowner.webp" alt="Finished cedar deck showing full scope with homeowner for scale" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/covered-porch-deck-timber-frame-interior-03.webp" alt="Timber frame covered porch interior showing beam connections and windows" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/cedar-deck-board-installation-joist-framing.webp" alt="Cedar deck board installation over joist framing on green-sided home" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/cedar-deck-under-timber-pergola-01.webp" alt="Cedar deck under timber frame pergola with open rafter roof in Bozeman MT" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/herringbone-deck-pattern-wide-view.webp" alt="Wide view of herringbone pattern deck showing full design layout" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/herringbone-deck-border-detail.webp" alt="Herringbone deck pattern border and edge detail" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/deck-foundation-framing-log-cabin.webp" alt="Deck foundation and framing work at log cabin structure" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/deck-joist-framing-installation-01.webp" alt="Deck joist framing installation with galvanized hardware connections" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/deck-footing-excavation-frost-depth-01.webp" alt="Deck footing excavation to frost depth for proper foundation support" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/decks/deck-herringbone-pattern-closeup.webp" alt="Close-up of herringbone pattern cedar deck boards showing craftsmanship" loading="lazy"></figure>
   </div>
 </div>
 
@@ -88,15 +88,15 @@ Porch projects often uncover rotted substructure, inadequate flashing, or framin
 
 <div class="portfolio-grid" data-portfolio-section="porches">
   <div class="project-images">
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_20160825_104008659.webp" alt="Porch construction" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_20160915_144812720.webp" alt="Porch framing" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_20160922_173733453_HDR.webp" alt="Completed porch" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_20160825_104041086_HDR.webp" alt="Porch detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_20160907_171425246.webp" alt="Porch build progress" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_20160908_081854232.webp" alt="Exterior porch work" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_5355.webp" alt="Front porch" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_5359.webp" alt="Porch trim detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/exteriors/porches/IMG_20191104_074643_825.webp" alt="Covered entry" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/covered-porch-roof-structure-gable.webp" alt="Covered porch construction showing gable roof structure and exposed framing" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/porch-rafter-beam-framing-progress.webp" alt="Porch rafter and beam framing in progress on residential project" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/completed-covered-porch-exterior.webp" alt="Completed covered porch exterior with finished trim and roofing" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/covered-porch-bracket-corbel-detail.webp" alt="Covered porch with decorative bracket and corbel details at beam connections" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/porch-corbel-bracket-closeup.webp" alt="Close-up of custom porch corbel bracket at post-to-beam connection" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/porch-structural-framing-detail.webp" alt="Porch structural framing detail showing load-bearing connections" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/porch-post-construction-clamps.webp" alt="Porch post construction with bar clamps securing timber frame connections" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/porch-trim-carpentry-detail.webp" alt="Porch trim and finish carpentry detail work in progress" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/porches/covered-entry-porch-completed.webp" alt="Completed covered entry porch with timber posts on residential home" loading="lazy"></figure>
   </div>
 </div>
 
@@ -110,18 +110,18 @@ This is where precision shows up in the details you interact with every day — 
 
 <div class="portfolio-grid" data-portfolio-section="interiors">
   <div class="project-images">
-    <figure><img src="/img/portfolio/interiors/20200412_135322.webp" alt="Interior finish work" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20200402_184040.webp" alt="Interior carpentry" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20200328_093149.webp" alt="Custom interior details" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20190621_123844.webp" alt="Interior woodwork" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20190712_203909.webp" alt="Custom built-ins" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20190602_175619.webp" alt="Interior finish details" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20200331_152847.webp" alt="Millwork detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20190618_152018.webp" alt="Interior trim" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/20200411_130722.webp" alt="Cabinet installation" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/IMG_6635.webp" alt="Interior project" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/IMG_6689.webp" alt="Finish carpentry" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/interiors/IMG_6706.webp" alt="Built-in shelving" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/completed-bathroom-remodel-bozeman.webp" alt="Completed bathroom remodel in Bozeman with modern fixtures and tile work" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/bathroom-remodel-vanity-round-mirror-lvp.webp" alt="Bathroom remodel with dark vanity, round mirror, and LVP wood-look flooring" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/bathroom-vanity-mirror-lvp-flooring-progress.webp" alt="Bathroom vanity with round mirror and LVP flooring installation in progress" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/interior-remodel-lighting-install.webp" alt="Interior remodel with new light fixtures and wall finish work" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/interior-drywall-remodel-construction.webp" alt="Interior drywall installation during home remodel construction phase" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/kitchen-remodel-white-walls-hardwood-floors.webp" alt="Kitchen remodel with fresh white walls and refinished hardwood floors" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/interior-trim-baseboard-installation.webp" alt="Interior trim and baseboard installation showing finish carpentry" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/room-remodel-drywall-progress.webp" alt="Room interior during drywall and remodeling work in progress" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/kitchen-cabinet-installation-progress.webp" alt="Kitchen cabinet installation in progress during remodel" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/custom-built-in-cabinet-interior.webp" alt="Custom built-in cabinet with finished interior shelving and trim" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/finish-carpentry-trim-baseboard.webp" alt="Finish carpentry with baseboard trim and wall transition detail" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/interiors/built-in-bookshelf-completed.webp" alt="Completed built-in bookshelf unit with finished trim and paint" loading="lazy"></figure>
   </div>
 </div>
 
@@ -135,15 +135,15 @@ These are jobs that don't come from a catalog. A homeowner has a specific vision
 
 <div class="portfolio-grid" data-portfolio-section="custom-builds">
   <div class="project-images">
-    <figure><img src="/img/portfolio/custom_builds/IMG_20190919_194225_572.webp" alt="Custom build project" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG_20190909_135208_639.webp" alt="Custom woodwork" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG_20190926_151132_530.webp" alt="Completed custom build" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG_20190829_092606_295.webp" alt="Custom project detail" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG_20190830_132946_343.webp" alt="Custom fabrication" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG_20190906_185931_168.webp" alt="Custom build finished" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG952095.webp" alt="Custom woodwork project" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG952098.webp" alt="One-of-a-kind build" loading="lazy"></figure>
-    <figure><img src="/img/portfolio/custom_builds/IMG_20190903_104129_102.webp" alt="Custom build in progress" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/custom-starburst-end-grain-table.webp" alt="Custom starburst end-grain table top showing radial wood pattern design" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/live-edge-coffee-table-steel-legs.webp" alt="Live-edge coffee table with welded steel legs and clear finish" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/custom-wood-bench-completed.webp" alt="Completed custom handmade wood bench with finished surface" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/live-edge-slab-table-build-01.webp" alt="Live-edge wood slab table being built on steel hairpin legs" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/custom-wood-slab-furniture-workshop.webp" alt="Custom wood slab furniture piece being crafted in workshop" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/custom-wood-furniture-piece-finished.webp" alt="Finished custom wood furniture piece with natural edge and clear coat" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/handmade-wood-bench-trestle-base.webp" alt="Handmade wood bench with trestle base shown outdoors" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/custom-wood-table-completed-outdoors.webp" alt="Completed custom wood table displayed outdoors showing craftsmanship" loading="lazy"></figure>
+    <figure><img src="/img/portfolio/custom_builds/custom-woodwork-project-assembly.webp" alt="Custom woodwork project being assembled with hand tools" loading="lazy"></figure>
   </div>
 </div>
 

@@ -59,7 +59,7 @@ show_form: true
         <p>I build decks engineered for Bozeman's climate — proper frost-depth footings, flashing that keeps water out of your walls, and materials rated for Montana's freeze-thaw cycles. Whether it's a full tear-off and rebuild or a new deck from scratch, the result is a structure you don't have to worry about.</p>
         <a href="#contact-form" class="btn btn-primary">Tell Us About Your Deck Project</a>
       </div>
-      <img src="/img/portfolio/exteriors/decks/20180822_155203.webp" alt="Custom deck built by Heartwood Craft in Bozeman" loading="lazy">
+      <img src="/img/portfolio/decks/completed-cedar-deck-multi-level-residential.webp" alt="Completed multi-level cedar deck with angled corner on residential home in Bozeman" loading="lazy">
     </div>
   </div>
 </section>
