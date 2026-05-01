@@ -220,7 +220,8 @@
       "Bash(cp /tmp/files3_extract/section-services-grid.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/partials/section-services-grid.njk)",
       "Bash(cp /tmp/files3_extract/section-testimonials.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/partials/section-testimonials.njk)",
       "Bash(cp /tmp/files3_extract/section-cta.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/partials/section-cta.njk)",
-      "Bash(cp /tmp/files3_extract/page-home.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/layouts/page-home.njk)"
+      "Bash(cp /tmp/files3_extract/page-home.njk /home/eric/.nixos/domains/business/website/site_files/src/_includes/layouts/page-home.njk)",
+      "Bash(identify:*)"
     ],
     "deny": [],
     "ask": [],
