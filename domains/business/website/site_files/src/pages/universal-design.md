@@ -1,15 +1,33 @@
 ---
-hero_eyebrow: NARI CERTIFIED UNIVERSAL DESIGN
-hero_subtitle: >-
-  Professional accessibility remodeling that prioritizes craftsmanship over
-  clinical appearance.
-hero_title: Stay in the Home You Love — Without the Obstacles
-layout: layouts/page-service.njk
+title: Universal Design Remodeling
 meta_description: >-
   NARI UDCP-certified remodeler in Bozeman, MT. Curbless showers, wider
   doorways, and accessible kitchens designed to look like upgrades — not medical
   retrofits.
+h1: ''
+hero_image: ''
+hero_subtitle: >-
+  Learn about this emerging field, which focuses on how an individual uses their
+  home in all stages of life.
+hero_cta_1_text: ''
+hero_cta_1_url: ''
+hero_cta_2_text: ''
+hero_cta_2_url: ''
+trust_items: []
+process_link_text: ''
+process_link_url: ''
+sections: []
+process_eyebrow: ''
+process_heading: ''
+process_intro: ''
+locations_heading: ''
+locations_text: ''
+cta_heading: ''
+cta_text: ''
 permalink: /aging-in-place/
+hero_eyebrow: NARI CERTIFIED UNIVERSAL DESIGN
+hero_title: Stay in the Home You Love — Without the Obstacles
+layout: layouts/page-service.njk
 schema_type: Service
 service_tag: universal-design
 show_cta: true
@@ -22,7 +40,6 @@ stats:
     value: 77M
   - label: of seniors want to stay in their home (AARP)
     value: 75%
-title: Universal Design & Aging in Place | Certified Accessible Remodeling Bozeman
 ---
 
 ## What Is Universal Design?
@@ -37,13 +54,18 @@ The most important idea: **function does not have to sacrifice beauty.** A unive
 
 ---
 
-## Why This Matters Now
+## By the Numbers
 
-The U.S. Census Bureau projects the 65+ population will reach 77 million by 2034. Another 81.5 million Americans aged 45–64 are already experiencing aging-related health conditions. According to AARP, 75% of seniors want to remain in their home for the rest of their lives — but the vast majority of American homes were never designed for changing mobility.
+The U.S. Census Bureau projects :
+ - ### 77 million people will be aged 65 +by 2034. 
+ - ### 81.5 million Americans aged 45–64 are already have aging-related health conditions.
+ - ###  According to AARP, 75% of seniors prefer their home to assisted living facilities
+ - ### 20% of Americans are living with a disability
 
-Only 4.5% of older adults are in nursing homes. The rest are at home, navigating houses with narrow doorways, bathtub curbs, and light switches they can't reach from a seated position. The gap between wanting to stay home and *being able to* stay home is where a certified universal design professional comes in.
+This doesn't even include people recovering from injuries, families with newborns, Multi-generational households — all who could benefit from their home accommodating those changes. 
 
-This isn't only an aging issue. Twenty percent of the population will live with a disability at some point. Multi-generational households — aging parents and young children under the same roof — are increasingly common. Anyone recovering from surgery or injury benefits from the same features. Universal design serves all of them.
+#### Universal Design addresses these unique concerns. 
+Becoming a certified universal design remodeler was a choice in line with why I started this business in the first place - to meet the needs of everyday people. 
 
 ---
 

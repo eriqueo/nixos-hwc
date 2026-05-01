@@ -25,5 +25,6 @@ show_form: false
 permalink: /
 layout: layouts/page-home.njk
 schema_type: LocalBusiness
+services_heading: Here is what we do.
 ---
 

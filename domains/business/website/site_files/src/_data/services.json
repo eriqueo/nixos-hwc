@@ -1,30 +1,48 @@
 [
   {
+    "name": "Universal Design",
+    "slug": "aging-in-place",
+    "url": "/aging-in-place/",
+    "tagline": "Aging-in-place remodels, accessible bathrooms, curbless showers, zero-step entries. Designed so they look like design choices.",
+    "tagline_italic": "a home that works for every stage.",
+    "eyebrow": "SERVICE · 01",
+    "icon": "ruler",
+    "stats": [
+      {
+        "value": "CAPS",
+        "label": "certified approach"
+      },
+      {
+        "value": "36",
+        "label": "min clear doorway"
+      },
+      {
+        "value": "0",
+        "label": "curbs at entries"
+      }
+    ]
+  },
+  {
     "name": "Bathroom Remodeling",
     "slug": "bathroom",
     "url": "/bathroom/remodeling/",
     "tagline": "Full gut remodels, refreshes, tub-to-shower conversions, targeted repairs. Waterproofing behind every tile.",
     "tagline_italic": "where every morning starts.",
-    "eyebrow": "SERVICE \u00b7 01",
+    "eyebrow": "SERVICE · 02",
     "icon": "bath",
     "stats": [
-      { "value": "6\u201310",  "label": "week typical job" },
-      { "value": "12",     "label": "yr waterproofing warranty" },
-      { "value": "40+",    "label": "bathrooms built" }
-    ]
-  },
-  {
-    "name": "Basement Remodeling",
-    "slug": "basement",
-    "url": "/basement/remodeling/",
-    "tagline": "Turn unused square footage into your favorite room \u2014 offices, theaters, guest suites.",
-    "tagline_italic": "the bonus room you actually use.",
-    "eyebrow": "SERVICE \u00b7 02",
-    "icon": "layers",
-    "stats": [
-      { "value": "4\u20138",  "label": "week typical job" },
-      { "value": "Egress",  "label": "windows always to code" },
-      { "value": "R-21",    "label": "framed wall insulation" }
+      {
+        "value": "6–10",
+        "label": "week typical job"
+      },
+      {
+        "value": "12",
+        "label": "yr waterproofing warranty"
+      },
+      {
+        "value": "40+",
+        "label": "bathrooms built"
+      }
     ]
   },
   {
@@ -33,26 +51,44 @@
     "url": "/remodeling/",
     "tagline": "Cedar and composite decks, railings, stairs, pergolas, skirting. Built for Montana freeze-thaw.",
     "tagline_italic": "built for Montana freeze-thaw.",
-    "eyebrow": "SERVICE \u00b7 03",
+    "eyebrow": "SERVICE · 03",
     "icon": "grid",
     "stats": [
-      { "value": "3\u20135",  "label": "week typical job" },
-      { "value": "48\"",    "label": "footings below frost line" },
-      { "value": "Lifetime","label": "fastener warranty" }
+      {
+        "value": "3–5",
+        "label": "week typical job"
+      },
+      {
+        "value": "48\"",
+        "label": "footings below frost line"
+      },
+      {
+        "value": "Lifetime",
+        "label": "fastener warranty"
+      }
     ]
   },
   {
-    "name": "Universal Design",
-    "slug": "aging-in-place",
-    "url": "/aging-in-place/",
-    "tagline": "Aging-in-place remodels, accessible bathrooms, curbless showers, zero-step entries. Designed so they look like design choices.",
-    "tagline_italic": "a home that works for every stage.",
-    "eyebrow": "SERVICE \u00b7 04",
-    "icon": "ruler",
+    "name": "Custom Carpentry",
+    "slug": "basement",
+    "url": "/basement/remodeling/",
+    "tagline": "Timber Framing, Custom Furniture, Unique Ideas that don't Exist yet.",
+    "tagline_italic": "the bonus room you actually use.",
+    "eyebrow": "SERVICE · 04",
+    "icon": "home",
     "stats": [
-      { "value": "CAPS",    "label": "certified approach" },
-      { "value": "36\"",    "label": "min clear doorway" },
-      { "value": "0",       "label": "curbs at entries" }
+      {
+        "value": "4–8",
+        "label": "week typical job"
+      },
+      {
+        "value": "Egress",
+        "label": "windows always to code"
+      },
+      {
+        "value": "R-21",
+        "label": "framed wall insulation"
+      }
     ]
   }
 ]
