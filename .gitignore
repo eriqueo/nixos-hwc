@@ -22,6 +22,10 @@ secrets/keys/*
 .lint-reports/
 .script-inventory/
 
+# Obsidian
+.obsidian/
+.trash/
+
 # Node
 node_modules/
 domains/business/estimator/app/.env*

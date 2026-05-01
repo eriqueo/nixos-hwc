@@ -33,6 +33,9 @@
     gtag('config', 'G-8CF06TJ7ZK');
   </script>
 
+  <!-- Preload hero image -->
+  {% if hero_image %}<link rel="preload" as="image" href="{{ hero_image }}" fetchpriority="high">{% endif %}
+
   <!-- Styles -->
   <link rel="stylesheet" href="/css/style.css">
 
@@ -108,7 +111,7 @@
       "itemListElement": [
         {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Bathroom Remodeling", "url": "{{ site.url }}/bathroom/remodeling/"}},
         {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Basement Finishing", "url": "{{ site.url }}/basement/remodeling/"}},
-        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Custom Deck Building", "url": "{{ site.url }}/deck-building/"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Custom Deck Building", "url": "{{ site.url }}/remodeling/"}},
         {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Universal Design & Aging in Place", "url": "{{ site.url }}/aging-in-place/"}}
       ]
     },
@@ -139,25 +142,6 @@
     "sameAs": [
       "https://www.google.com/maps/place/Heartwood+Craft"
     ]
-
-    "areaServed": [
-      {"@type": "City", "name": "Bozeman"},
-      {"@type": "City", "name": "Belgrade"},
-      {"@type": "City", "name": "Gallatin Gateway"}
-    ],
-    "hasOfferCatalog": {
-    "@type": "OfferCatalog",
-    "name": "Remodeling Services",
-    "itemListElement": [
-      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Bathroom Remodeling"}},
-      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Basement Finishing"}},
-      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Bathroom Remodeling"}},
-      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Universal Design"}}
-     ]
-    }
-    
-    "priceRange": "$$"
-
   }
   </script>
   {% elif schema_type == "Service" %}

@@ -29,11 +29,11 @@
       "label": "Plan Your Project",
       "children": [
         {
-          "label": "Bathroom Remodel Calculator",
+          "label": "Bathroom Remodel Estimate",
           "url": "/calculator/"
         },
         {
-          "label": "Deck Cost Calculator",
+          "label": "Deck Cost Estimate",
           "url": "/deck-calculator/"
         }
       ]

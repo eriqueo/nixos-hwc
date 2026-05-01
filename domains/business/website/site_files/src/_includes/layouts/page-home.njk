@@ -36,20 +36,21 @@ layout: layouts/base.njk
 </div>
 {% endif %}
 
-{{ content | safe }}
-
-{% if show_services != false %}
-{% include "partials/section-services-grid.njk" %}
-{% endif %}
-
-{% if show_testimonials != false %}
-{% include "partials/section-testimonials.njk" %}
-{% endif %}
-
-{% if show_cta != false %}
-{% include "partials/section-cta.njk" %}
-{% endif %}
-
-{% if show_form != false %}
-{% include "partials/form-contact.njk" %}
+{% if sections %}
+  {% for section in sections %}
+    {% if section == "process" %}{% include "partials/section-process.njk" %}
+    {% elif section == "services" %}{% include "partials/section-services-grid.njk" %}
+    {% elif section == "locations" %}{% include "partials/section-locations.njk" %}
+    {% elif section == "testimonials" %}{% include "partials/section-testimonials.njk" %}
+    {% elif section == "portfolio" %}{% include "partials/section-portfolio-strip.njk" %}
+    {% elif section == "cta" %}{% include "partials/section-cta.njk" %}
+    {% elif section == "form" %}{% include "partials/form-contact.njk" %}
+    {% endif %}
+  {% endfor %}
+{% else %}
+  {{ content | safe }}
+  {% if show_services != false %}{% include "partials/section-services-grid.njk" %}{% endif %}
+  {% if show_testimonials != false %}{% include "partials/section-testimonials.njk" %}{% endif %}
+  {% if show_cta != false %}{% include "partials/section-cta.njk" %}{% endif %}
+  {% if show_form != false %}{% include "partials/form-contact.njk" %}{% endif %}
 {% endif %}
