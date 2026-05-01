@@ -129,6 +129,8 @@
         # Health check aliases
         "caddy" = "caddy-health";
         "health" = "caddy-health";
+        # SSH aliases
+        "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";
       };
       description = "Shell aliases for zsh";
     };
