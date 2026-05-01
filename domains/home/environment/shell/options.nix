@@ -131,6 +131,8 @@
         "health" = "caddy-health";
         # SSH aliases
         "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";
+        # Website deployment
+        "deploy-website" = "API_KEY=$(sudo cat /run/agenix/cms-api-key) && curl -s -X POST -H \"x-api-key: $API_KEY\" http://localhost:8095/api/deploy | jq && cd ~/.nixos/domains/business/website/site_files/dist && git add -A && (git diff-index --quiet HEAD || git commit -m 'deploy update' && git push)";
       };
       description = "Shell aliases for zsh";
     };
