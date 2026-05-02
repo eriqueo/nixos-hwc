@@ -13,6 +13,7 @@ export const DEFAULT_STATE = {
   jobName: '',
   address: '',
   projectType: 'bathroom',
+  job_type: 'Bathroom',
 
   // New customer fields (for new_customer mode)
   newCustomerName: '',
@@ -60,6 +61,19 @@ export const DEFAULT_STATE = {
   toilet_allowance: 1600,
   vanity_allowance: 2000,
   accessory_allowance: 1000,
+
+  // ── Deck measurements ──
+  deck_length_ft: 12,
+  deck_width_ft: 8,
+  deck_height_ft: 3,
+  joist_spacing_in: 16,
+  railing_lf: 0,
+  stair_tread_count: 0,
+  stair_stringer_count: 3,
+  stair_width_ft: 4,
+  decking_material: 'pt',
+  railing_type: 'no',
+  project_scope: 'new_build',
 
   // ── Custom ──
   custom_items: [],

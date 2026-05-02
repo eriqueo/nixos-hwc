@@ -36,5 +36,20 @@
     { "name": "new_electrical", "options": ["yes", "no"], "default": "no", "label": "Electrical" },
     { "name": "new_fan", "options": ["yes", "no"], "default": "no", "label": "Exhaust Fan" },
     { "name": "shower_niches", "options": ["0", "1", "2", "3"], "default": "0", "label": "Shower Niches" }
+  ],
+  "deck_numeric": [
+    { "name": "deck_length_ft", "default": 12, "label": "Deck Length (ft)", "section": "deck" },
+    { "name": "deck_width_ft", "default": 8, "label": "Deck Width (ft)", "section": "deck" },
+    { "name": "deck_height_ft", "default": 3, "label": "Deck Height (ft)", "section": "deck" },
+    { "name": "joist_spacing_in", "default": 16, "label": "Joist Spacing (in)", "section": "deck" },
+    { "name": "railing_lf", "default": 0, "label": "Railing (LF)", "section": "deck" },
+    { "name": "stair_tread_count", "default": 0, "label": "Stair Treads", "section": "deck" },
+    { "name": "stair_stringer_count", "default": 3, "label": "Stair Stringers", "section": "deck" },
+    { "name": "stair_width_ft", "default": 4, "label": "Stair Width (ft)", "section": "deck" }
+  ],
+  "deck_picklist": [
+    { "name": "decking_material", "options": ["pt", "cedar", "redwood", "composite_mid", "composite_premium"], "default": "pt", "label": "Decking Material" },
+    { "name": "railing_type", "options": ["no", "wood", "composite", "metal_cable", "glass"], "default": "no", "label": "Railing Type" },
+    { "name": "project_scope", "options": ["new_build", "full_rebuild", "partial_rebuild", "repair"], "default": "new_build", "label": "Project Scope" }
   ]
 }

@@ -3,7 +3,8 @@ import { Box, Label, Divider } from './Section.jsx';
 import { NumInput } from './NumInput.jsx';
 import { Select } from './Select.jsx';
 import { JobSelector } from './JobSelector.jsx';
-import { deriveGeometry } from '../engine/assembler.js';
+import { deriveGeometry, deriveDeckGeometry } from '../engine/assembler.js';
+import templates from '../data/templates.json';
 
 function PillToggle({ label, value, onChange }) {
   const on = value === 'yes';
@@ -33,6 +34,7 @@ function DerivedStat({ label, value, unit }) {
 
 export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
   const { fl, perim, wallTile, panTile, curbTile, paintSqft } = deriveGeometry(s);
+  const isDeck = s.job_type === 'Deck';
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 10 : 14 }}>
@@ -42,7 +44,112 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
         <JobSelector s={s} set={set} />
       </div>
 
-      {/* Room Measurements */}
+      {/* Job Type Selector */}
+      <div style={{ gridColumn: '1/-1' }}>
+        <Box>
+          <Label color={C.acc}>Project Type</Label>
+          <Select label="Type" value={s.job_type || 'Bathroom'} onChange={v => set('job_type', v)} options={[
+            { v: 'Bathroom', l: 'Bathroom' },
+            { v: 'Deck', l: 'Deck' },
+          ]} />
+        </Box>
+      </div>
+
+      {/* Template Selector */}
+      {templates.length > 0 && (() => {
+        const jobType = (s.job_type || 'Bathroom').toLowerCase();
+        const filtered = templates.filter(t => t.project_type === jobType);
+        if (filtered.length === 0) return null;
+        return (
+          <div style={{ gridColumn: '1/-1' }}>
+            <Box>
+              <Label color={C.teal}>Load Template</Label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 0' }}>
+                {filtered.map(t => (
+                  <button key={t.id || t.name}
+                    onClick={() => {
+                      const keep = ['mode','customerId','customerName','locationId','jobId','jobNumber','jobName','address',
+                        'newCustomerName','newCustomerPhone','newCustomerEmail','newCustomerStreet','newCustomerCity','newCustomerState','newCustomerZip'];
+                      const preserved = {};
+                      keep.forEach(k => { if (s[k]) preserved[k] = s[k]; });
+                      const ts = typeof t.state === 'string' ? JSON.parse(t.state) : t.state;
+                      Object.entries(ts).forEach(([k, v]) => set(k, v));
+                      Object.entries(preserved).forEach(([k, v]) => set(k, v));
+                    }}
+                    title={t.description || ''}
+                    style={{
+                      padding: '6px 12px', borderRadius: 20, border: `1px solid ${C.brd}`,
+                      cursor: 'pointer', backgroundColor: C.card2, color: C.txB,
+                      fontSize: 11, fontWeight: 500, fontFamily: mono,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </Box>
+          </div>
+        );
+      })()}
+
+      {/* ── DECK FORM ──────────────────────────────────────────────────── */}
+      {isDeck && (() => {
+        const dg = deriveDeckGeometry(s);
+        return (
+          <>
+            <Box>
+              <Label color={C.blu}>Deck Dimensions</Label>
+              <NumInput label="Length" value={s.deck_length_ft} onChange={v => set('deck_length_ft', v)} unit="ft" step={1} />
+              <NumInput label="Width" value={s.deck_width_ft} onChange={v => set('deck_width_ft', v)} unit="ft" step={1} />
+              <NumInput label="Height" value={s.deck_height_ft} onChange={v => set('deck_height_ft', v)} unit="ft" step={0.5} />
+              <NumInput label="Joist Spacing" value={s.joist_spacing_in} onChange={v => set('joist_spacing_in', v)} unit="in" step={4} />
+
+              <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card2, borderRadius: 5,
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <DerivedStat label="Deck Area" value={dg.deckSqft.toFixed(0)} unit="sqft" />
+                <DerivedStat label="Perimeter" value={dg.perimeter.toFixed(0)} unit="lf" />
+                <DerivedStat label="Joists" value={dg.joistCount.toString()} unit="ea" />
+              </div>
+            </Box>
+
+            <Box>
+              <Label color={C.pur}>Stairs & Railing</Label>
+              <NumInput label="Stair Treads" value={s.stair_tread_count} onChange={v => set('stair_tread_count', v)} unit="ea" step={1} min={0} />
+              <NumInput label="Stringers" value={s.stair_stringer_count} onChange={v => set('stair_stringer_count', v)} unit="ea" step={1} min={2} />
+              <NumInput label="Stair Width" value={s.stair_width_ft} onChange={v => set('stair_width_ft', v)} unit="ft" step={0.5} />
+              <NumInput label="Railing" value={s.railing_lf} onChange={v => set('railing_lf', v)} unit="lf" step={1} min={0} />
+            </Box>
+
+            <Box>
+              <Label color={C.red}>Scope</Label>
+              <Select label="Project" value={s.project_scope} onChange={v => set('project_scope', v)} options={[
+                { v: 'new_build', l: 'New Build' },
+                { v: 'full_rebuild', l: 'Full Rebuild' },
+                { v: 'partial_rebuild', l: 'Partial Rebuild (keep frame)' },
+                { v: 'repair', l: 'Repair' },
+              ]} />
+              <Select label="Decking" value={s.decking_material} onChange={v => set('decking_material', v)} options={[
+                { v: 'pt', l: 'Pressure-Treated' },
+                { v: 'cedar', l: 'Western Red Cedar' },
+                { v: 'redwood', l: 'Redwood' },
+                { v: 'composite_mid', l: 'Composite (Trex Enhance)' },
+                { v: 'composite_premium', l: 'Composite Premium (TimberTech)' },
+              ]} />
+              <Select label="Railing" value={s.railing_type} onChange={v => set('railing_type', v)} options={[
+                { v: 'no', l: 'None' },
+                { v: 'wood', l: 'Wood' },
+                { v: 'composite', l: 'Composite' },
+                { v: 'metal_cable', l: 'Metal / Cable' },
+                { v: 'glass', l: 'Glass Panel' },
+              ]} />
+            </Box>
+          </>
+        );
+      })()}
+
+      {/* ── BATHROOM FORM ──────────────────────────────────────────────── */}
+      {!isDeck && <>
       <Box>
         <Label color={C.blu}>Room Measurements</Label>
         <NumInput label="Room Length"  value={s.bathroom_length_ft} onChange={v => set('bathroom_length_ft', v)} unit="ft" step={0.25} />
@@ -114,6 +221,7 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
           <PillToggle label="Exhaust Fan"  value={s.new_fan}          onChange={v => set('new_fan',          v)} />
         </div>
       </Box>
+      </>}
 
       {/* Assemble button */}
       <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end' }}>
