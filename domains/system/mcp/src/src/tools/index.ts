@@ -15,6 +15,7 @@ import { mediaTools } from "./media.js";
 import { calendarTools } from "./calendar.js";
 import { websiteTools } from "./website.js";
 import { cmsTools } from "./cms.js";
+import { estimatorTools } from "./estimator.js";
 
 
 export function allTools(config: ServerConfig): ToolDef[] {
@@ -34,5 +35,6 @@ export function allTools(config: ServerConfig): ToolDef[] {
       { name: "cms", path: config.cmsAppPath, description: "Heartwood CMS app (Express backend + vanilla JS frontend)" },
       { name: "calculator", path: `${config.nixosConfigPath}/domains/business/website/calculator/app`, description: "Cost calculator app (Vite + React)" },
     ]),
+    ...estimatorTools(config.nixosConfigPath),
   ];
 }

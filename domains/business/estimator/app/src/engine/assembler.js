@@ -108,13 +108,19 @@ export function buildCatalog(s) {
   // ── PRECONSTRUCTION ────────────────────────────────────────────────────────
   add('Admin | Planning | Site Walkthrough', 'Preconstruction', '0100', 'Labor', 'Hours',
     2, 0, 'planning', true, null);
+  add('Labor | Admin | Project Management', 'Preconstruction', '0100', 'Labor', 'Hours',
+    4, 0, 'planning', true, null);
+  add('Other | Admin | Building Permit', 'Preconstruction', '0100', 'Other', 'Each',
+    1, 350, null,
+    s.demo_scope === 'full_gut' || yn(s.new_tub),
+    null);
 
   // ── DEMO ───────────────────────────────────────────────────────────────────
   add('Labor | Demo | Install Floor Protection', 'Demo > Labor', '0200', 'Labor', 'Hours',
     3, 0, 'demo', true, null);
 
   add('Labor | Demo | Floor Tile', 'Demo > Labor', '0200', 'Labor', 'Hours',
-    Math.ceil(0.15 * fl), 0, 'demo',
+    Math.ceil(0.08 * fl), 0, 'demo',
     s.demo_scope === 'shower_and_floors' || s.demo_scope === 'full_gut',
     'ceil({production_rate}*{bathroom_floor_sqft})');
 
@@ -135,6 +141,10 @@ export function buildCatalog(s) {
     'IF({bathroom_floor_sqft}>80,2,1)');
   add('Material | Demo | Dump Trailer', 'Demo > Materials', '0200', 'Other', 'Each',
     1, 200, null, s.demo_scope === 'shower_and_floors' || s.demo_scope === 'full_gut', null);
+
+  // ── CLOSE-OUT ──────────────────────────────────────────────────────────────
+  add('Labor | Admin | Final Cleanup', 'Close-Out', '0100', 'Labor', 'Hours',
+    3, 0, 'planning', true, null);
 
   // ── FRAMING ────────────────────────────────────────────────────────────────
   add('Labor | Framing | General', 'Rough Carpentry > Labor', '0600', 'Labor', 'Hours',
@@ -175,6 +185,12 @@ export function buildCatalog(s) {
     2, 0, 'plumbing', true, null);
   add('Material | Plumbing | PVC Fittings', 'Plumbing > Materials', '1100', 'Materials', 'Each',
     6, 3, null, true, null);
+  add('Labor | Plumbing | Vanity Sink Hookup', 'Plumbing > Labor', '1100', 'Labor', 'Hours',
+    3, 0, 'plumbing', yn(s.has_vanity), null);
+  add('Material | Plumbing | Vanity Faucet Assembly', 'Plumbing > Materials', '1100', 'Materials', 'Each',
+    1, 85, null, yn(s.has_vanity), null);
+  add('Material | Plumbing | Toilet Supply Line', 'Plumbing > Materials', '1100', 'Materials', 'Each',
+    1, 25, null, true, null);
 
   // ── ELECTRICAL ─────────────────────────────────────────────────────────────
   if (yn(s.new_electrical)) {
@@ -192,20 +208,20 @@ export function buildCatalog(s) {
   if (yn(s.has_shower_tile)) {
     const wpSqft = wallTile + fl * 0.3;
     add('Labor | Waterproofing | Membrane Application', 'Waterproofing > Labor', '1800', 'Labor', 'Hours',
-      Math.max(6, Math.ceil(wpSqft * 0.04)), 0, 'waterproofing', true,
-      'ceil(({shower_wall_tile_sqft}+{bathroom_floor_sqft}*0.3)*0.04)');
+      Math.max(6, Math.ceil(wpSqft * 0.15)), 0, 'waterproofing', true,
+      'ceil(({shower_wall_tile_sqft}+{bathroom_floor_sqft}*0.3)*0.15)');
   }
 
   // ── TILEWORK ───────────────────────────────────────────────────────────────
   // Floor tile
   add('Labor | Tile | Floor Installation', 'Tilework > Floor Tile Labor', '1800', 'Labor', 'Hours',
-    Math.max(8, Math.ceil(fl * 0.22)), 0, 'tiling', yn(s.has_floor_tile),
+    Math.max(8, Math.ceil(fl * 0.28)), 0, 'tiling', yn(s.has_floor_tile),
     'ceil({production_rate}*{bathroom_floor_sqft})');
 
   // Shower tile
   if (yn(s.has_shower_tile)) {
     add('Labor | Tile | Shower Installation', 'Tilework > Shower Tile Labor', '1800', 'Labor', 'Hours',
-      Math.max(12, Math.ceil(wallTile * 0.18)), 0, 'tiling', true,
+      Math.max(12, Math.ceil(wallTile * 0.33)), 0, 'tiling', true,
       'ceil({production_rate}*{shower_wall_tile_sqft})');
     add('Labor | Tile | Shower Pan', 'Tilework > Shower Tile Labor', '1800', 'Labor', 'Hours',
       Math.max(4, Math.ceil(panTile * 0.25)), 0, 'tiling', true,
@@ -251,8 +267,8 @@ export function buildCatalog(s) {
   const sheets = Math.ceil(repairSqft / 32);
   if (repairSqft > 0) {
     add('Labor | Drywall | Remove and Replace', 'Drywall > Labor', '1400', 'Labor', 'Hours',
-      Math.ceil(sheets * 1.5), 0, 'drywall', true,
-      'ceil({bathroom_wall_repair_sqft}/32*1.5)');
+      Math.max(2, Math.ceil(repairSqft * 0.05)), 0, 'drywall', true,
+      'ceil({bathroom_wall_repair_sqft}*0.05)');
     add('Material | Drywall | Drywall 1/2" 4x8', 'Drywall > Materials', '1400', 'Materials', 'Each',
       Math.max(1, Math.floor(sheets * 0.6)), 20.48, null, true, null);
     add('Material | Drywall | Mold Resistant 1/2" 4x8', 'Drywall > Materials', '1400', 'Materials', 'Each',
@@ -302,6 +318,10 @@ export function buildCatalog(s) {
     8, 0, 'cabinetry', true, null);
   add('Labor | Finish Carpentry | Mirror Install', 'Finish Carpentry > Labor', '1900', 'Labor', 'Hours',
     2, 0, 'cabinetry', yn(s.has_mirror), null);
+  add('Labor | Finish Carpentry | Shower Door Install', 'Finish Carpentry > Labor', '1900', 'Labor', 'Hours',
+    3, 0, 'cabinetry', yn(s.has_shower_tile), null);
+  add('Labor | Finish Carpentry | Accessories Install', 'Finish Carpentry > Labor', '1900', 'Labor', 'Hours',
+    4, 0, 'cabinetry', true, null);
 
   // ── ALLOWANCES ─────────────────────────────────────────────────────────────
   add('Allowance | Bathtub', 'Allowances', '2400', 'Materials', 'Lump Sum',
@@ -349,6 +369,200 @@ export function applyEdits(catalog, overrides, removed) {
         _edited: overrides[i.id] !== undefined,
       };
     });
+}
+
+// ─── Deck Assembler ──────────────────────────────────────────────────────────
+
+export function deriveDeckGeometry(s) {
+  const deckSqft   = s.deck_length_ft * s.deck_width_ft;
+  const perimeter  = 2 * (s.deck_length_ft + s.deck_width_ft);
+  const joistCount = Math.ceil(s.deck_length_ft / (s.joist_spacing_in / 12)) + 1;
+  const railingLf  = s.railing_lf || 0;
+  const stairCount = s.stair_tread_count || 0;
+  const footingCount = Math.max(4, Math.ceil(deckSqft / 36));
+  const deckingLf  = Math.ceil(deckSqft / 0.5);
+  return { deckSqft, perimeter, joistCount, railingLf, stairCount, footingCount, deckingLf };
+}
+
+export function buildDeckParameters(s) {
+  return [
+    { name: 'd_length', value: s.deck_length_ft ?? 12 },
+    { name: 'd_width', value: s.deck_width_ft ?? 8 },
+    { name: 'd_height_ft', value: s.deck_height_ft ?? 3 },
+    { name: 'joist_spacing', value: s.joist_spacing_in ?? 16 },
+    { name: 'railing_lf', value: s.railing_lf ?? 0 },
+    { name: 'stair_tread_count', value: s.stair_tread_count ?? 0 },
+    { name: 'waste_factor', value: 1.1 },
+    { name: 'decking', options: ['pt','cedar','redwood','composite_mid','composite_premium'], value: s.decking_material ?? 'pt' },
+    { name: 'railings', options: ['no','wood','composite','metal_cable','glass'], value: s.railing_type ?? 'no' },
+    { name: 'project_scope', options: ['new_build','full_rebuild','partial_rebuild','repair'], value: s.project_scope ?? 'new_build' },
+  ];
+}
+
+export function buildDeckCatalog(s) {
+  const { deckSqft, perimeter, joistCount, railingLf, stairCount, footingCount, deckingLf } = deriveDeckGeometry(s);
+  const items = [];
+  let id = 0;
+  const isNew = s.project_scope === 'new_build' || s.project_scope === 'full_rebuild';
+  const hasDemo = s.project_scope === 'full_rebuild';
+  const hasStairs = stairCount > 0;
+  const hasRailing = s.railing_type && s.railing_type !== 'no' && railingLf > 0;
+  const waste = 1.1;
+
+  const add = (name, group, code, type, unit, qty, cost, trade, trigger, formula) => {
+    if (!trigger) return;
+    let uc, up;
+    if (type === 'Labor') {
+      const r = tradeRate(trade);
+      uc = r.cost;
+      up = r.price;
+    } else {
+      uc = cost;
+      up = matPrice(cost);
+    }
+    items.push({
+      id: ++id, name, group, code, type, unit,
+      qty: Math.ceil(qty * 100) / 100,
+      uc, up,
+      extC: Math.round(uc * qty * 100) / 100,
+      extP: Math.round(up * qty * 100) / 100,
+      trade,
+      quantityFormula: formula || null,
+    });
+  };
+
+  // ── PRECONSTRUCTION ──────────────────────────────────────────────────
+  add('Labor | Admin | Site Walkthrough', 'Preconstruction', '0100', 'Labor', 'Hours',
+    2, 0, 'planning', true, null);
+  add('Labor | Admin | Project Management', 'Preconstruction', '0100', 'Labor', 'Hours',
+    4, 0, 'planning', true, null);
+  add('Other | Admin | Building Permit', 'Preconstruction', '0100', 'Other', 'Each',
+    1, 350, null, isNew, null);
+  add('Material | Admin | Jobsite Mobilization', 'Preconstruction', '0100', 'Materials', 'Lump Sum',
+    1, 330, null, true, null);
+
+  // ── SITEWORK ─────────────────────────────────────────────────────────
+  add('Labor | Sitework | Cleanup', 'Sitework > Labor', '0110', 'Labor', 'Hours',
+    Math.max(4, Math.ceil(deckSqft * 0.04)), 0, 'demo', true,
+    'ceil({d_length}*{d_width}*0.04)');
+  add('Material | Sitework | Trash Bags', 'Sitework > Materials', '0100', 'Materials', 'Each',
+    2, 27, null, true, null);
+  add('Material | Sitework | Dump Trailer', 'Sitework > Materials', '0200', 'Other', 'Each',
+    1, 200, null, true, null);
+
+  // ── DEMO (full_rebuild only) ─────────────────────────────────────────
+  add('Labor | Demo | Deck Removal', 'Demolition > Labor', '0200', 'Labor', 'Hours',
+    Math.max(4, Math.ceil(deckSqft * 0.06)), 0, 'demo', hasDemo,
+    'ceil({d_length}*{d_width}*0.06)');
+  add('Labor | Demo | Move Furnishings', 'Demolition > Labor', '0200', 'Labor', 'Hours',
+    2, 0, 'demo', hasDemo, null);
+
+  // ── FOOTINGS ─────────────────────────────────────────────────────────
+  add('Labor | Concrete | Pour Footings', 'Footings > Labor', '2800', 'Labor', 'Hours',
+    footingCount * 1.5, 0, 'framing', isNew, null);
+  add('Material | Concrete | Sonotubes 12"x4\'', 'Footings > Materials', '2800', 'Materials', 'Each',
+    footingCount, 17.47, null, isNew, null);
+  add('Material | Concrete | Concrete Mix 80lb', 'Footings > Materials', '2800', 'Materials', 'Each',
+    footingCount * 3, 4.38, null, isNew, null);
+  add('Material | Concrete | Post Bases', 'Footings > Materials', '2800', 'Materials', 'Each',
+    footingCount, 54, null, isNew, null);
+  add('Material | Concrete | Anchor Bolts', 'Footings > Materials', '2800', 'Materials', 'Each',
+    footingCount, 2, null, isNew, null);
+
+  // ── FRAMING ──────────────────────────────────────────────────────────
+  // 0.27 mh/SF (Job #265: 26 hrs / 97 SF)
+  add('Labor | Framing | Deck Frame', 'Framing > Labor', '0600', 'Labor', 'Hours',
+    Math.max(8, Math.ceil(deckSqft * 0.27)), 0, 'framing', isNew,
+    'ceil({d_length}*{d_width}*0.27)');
+  add('Labor | Framing | Temporary Bracing', 'Framing > Labor', '0600', 'Labor', 'Hours',
+    Math.max(4, Math.ceil(deckSqft * 0.10)), 0, 'framing',
+    isNew && s.deck_height_ft >= 3,
+    'ceil({d_length}*{d_width}*0.10)');
+
+  // Lumber
+  add('Material | Framing | Joists 2x8', 'Framing > Lumber', '0600', 'Materials', 'Each',
+    joistCount, 23.15, null, isNew, null);
+  add('Material | Framing | Rim Joists 2x8', 'Framing > Lumber', '0600', 'Materials', 'Each',
+    4, 23.15, null, isNew, null);
+  add('Material | Framing | Blocking 2x8', 'Framing > Lumber', '0600', 'Materials', 'Each',
+    Math.max(1, Math.ceil(deckSqft / 48)), 23.15, null, isNew, null);
+  add('Material | Framing | Ledger Board 2x8', 'Framing > Lumber', '0600', 'Materials', 'Each',
+    Math.ceil(s.deck_width_ft / 16) + 1, 23.15, null, isNew, null);
+  add('Material | Framing | Fascia 1x8', 'Framing > Lumber', '2500', 'Materials', 'Each',
+    Math.ceil(perimeter / 16) + 1, 31.44, null, true, null);
+
+  // Hardware
+  add('Material | Framing | Joist Hangers', 'Framing > Hardware', '2500', 'Materials', 'Each',
+    joistCount * 2, 2.98, null, isNew, null);
+  add('Material | Framing | Hurricane Ties', 'Framing > Hardware', '2500', 'Materials', 'Each',
+    joistCount, 0.98, null, isNew, null);
+  add('Material | Framing | Structural Screws 5lb', 'Framing > Hardware', '3100', 'Materials', 'Each',
+    1, 46.02, null, true, null);
+  add('Material | Framing | Joist Hanger Nails', 'Framing > Hardware', '2500', 'Materials', 'Each',
+    2, 7.38, null, isNew, null);
+  add('Material | Framing | Bolts 1/2"x6"', 'Framing > Hardware', '2500', 'Materials', 'Each',
+    4, 2, null, isNew, null);
+  add('Material | Framing | Flashing / Ledger Tape', 'Framing > Hardware', '2500', 'Materials', 'Each',
+    1, 130.55, null, isNew, null);
+
+  // ── DECKING ──────────────────────────────────────────────────────────
+  // 0.08 mh/SF (Job #265: 7 hrs / ~84 SF field)
+  add('Labor | Decking | Install Decking', 'Decking > Labor', '2500', 'Labor', 'Hours',
+    Math.max(6, Math.ceil(deckSqft * 0.08)), 0, 'framing', true,
+    'ceil({d_length}*{d_width}*0.08)');
+
+  const materialCosts = {
+    pt: 1.50, cedar: 2.20, redwood: 2.50,
+    composite_mid: 2.34, composite_premium: 6.80,
+  };
+  const matCostPerLf = materialCosts[s.decking_material] || 2.50;
+  const boardLf = Math.ceil(deckingLf * waste);
+  add('Material | Decking | Deck Boards', 'Decking > Materials', '2500', 'Materials', 'Linear Feet',
+    boardLf, matCostPerLf, null, true, null);
+
+  const useHidden = s.decking_material?.startsWith('composite');
+  add('Material | Decking | Hidden Fasteners', 'Decking > Materials', '2500', 'Materials', 'Each',
+    deckSqft < 500 ? 1 : 2, 319.99, null, useHidden, null);
+  add('Material | Decking | Deck Screws 350ct', 'Decking > Materials', '2500', 'Materials', 'Each',
+    Math.ceil(deckSqft / 100), 63.33, null, !useHidden, null);
+
+  // ── STAIRS ───────────────────────────────────────────────────────────
+  add('Labor | Decking | Install Stairs', 'Stairs > Labor', '2500', 'Labor', 'Hours',
+    Math.max(4, stairCount * 1.5), 0, 'framing', hasStairs, null);
+  add('Material | Stairs | Stringers 2x12x14', 'Stairs > Materials', '0600', 'Materials', 'Each',
+    s.stair_stringer_count || 3, 30, null, hasStairs, null);
+  add('Material | Stairs | Tread Stock', 'Stairs > Materials', '2500', 'Materials', 'Linear Feet',
+    Math.ceil(stairCount * (s.stair_width_ft || 4) * waste), matCostPerLf, null, hasStairs, null);
+  add('Material | Stairs | Stringer Connectors', 'Stairs > Materials', '2500', 'Materials', 'Each',
+    s.stair_stringer_count || 3, 1.98, null, hasStairs, null);
+
+  // ── RAILING ──────────────────────────────────────────────────────────
+  // 0.33 mh/LF (Job #265: 5 hrs / 15 LF)
+  add('Labor | Decking | Install Railing', 'Railing > Labor', '2500', 'Labor', 'Hours',
+    Math.max(4, Math.ceil(railingLf * 0.33)), 0, 'framing', hasRailing,
+    'ceil({railing_lf}*0.33)');
+  const railCosts = { wood: 35, composite: 50, metal_cable: 75, glass: 120 };
+  const railCost = railCosts[s.railing_type] || 35;
+  add('Material | Railing | Railing Package', 'Railing > Materials', '2500', 'Materials', 'Linear Feet',
+    Math.ceil(railingLf * waste), railCost, null, hasRailing, null);
+  const postCount = Math.ceil(railingLf / 6) + 1;
+  add('Material | Railing | Post Caps', 'Railing > Materials', '2500', 'Materials', 'Each',
+    postCount, 20, null, hasRailing, null);
+
+  // ── CLOSE-OUT ────────────────────────────────────────────────────────
+  add('Labor | Admin | Final Cleanup', 'Close-Out', '0100', 'Labor', 'Hours',
+    3, 0, 'planning', true, null);
+
+  // ── CUSTOM LINE ITEMS ────────────────────────────────────────────────
+  (s.custom_items ?? []).forEach(ci => {
+    if (ci.name && ci.qty > 0) {
+      add(ci.name, ci.group ?? 'Additional Items', ci.code ?? '3100',
+        ci.type ?? 'Materials', ci.unit ?? 'Each', ci.qty, ci.cost ?? 0,
+        ci.trade ?? null, true, null);
+    }
+  });
+
+  return items;
 }
 
 /**
