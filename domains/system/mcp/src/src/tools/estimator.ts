@@ -252,13 +252,73 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
       },
     },
 
-    // ── Catalog ──────────────────────────────────────────────────────────
+    // ── Catalog (Price Book) ────────────────────────────────────────────
 
     {
       name: "hwc_estimator_catalog",
       description:
-        "Query catalog items from the hwc database. Returns scope items used by " +
-        "the calculator and assembler. Filter by project_type and/or item_type.",
+        "Query the price book (catalog_items). Returns items with pricing and " +
+        "JT metadata. No assembly logic — use hwc_estimator_rules for that. " +
+        "Filter by item_type, trade, or search term.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          item_type: {
+            type: "string",
+            enum: ["labor", "material", "allowance", "other"],
+            description: "Filter by item type",
+          },
+          trade: {
+            type: "string",
+            description: "Filter by trade (e.g., 'demo', 'tile', 'plumbing')",
+          },
+          search: {
+            type: "string",
+            description: "Search display_name, canonical_name, or description (case-insensitive)",
+          },
+        },
+      },
+      handler: async (args): Promise<ToolResult> => {
+        try {
+          const conditions = ["is_active = true"];
+          const it = args.item_type as string | undefined;
+          const trade = args.trade as string | undefined;
+          const search = args.search as string | undefined;
+
+          if (it) conditions.push(`item_type = '${it.replace(/'/g, "''")}'`);
+          if (trade) conditions.push(`trade = '${trade.replace(/'/g, "''")}'`);
+          if (search) {
+            const s = search.replace(/'/g, "''");
+            conditions.push(
+              `(display_name ILIKE '%${s}%' OR canonical_name ILIKE '%${s}%' OR description ILIKE '%${s}%')`,
+            );
+          }
+
+          const rows = await psqlJson(
+            `SELECT id, display_name, item_type, trade, unit_cost, unit_price, ` +
+            `budget_group_path, vendor, description ` +
+            `FROM catalog_items WHERE ${conditions.join(" AND ")} ` +
+            `ORDER BY item_type, trade, display_name LIMIT 100`,
+          );
+          return {
+            status: "ok",
+            message: `${rows.length} catalog items (price book)`,
+            data: rows,
+          };
+        } catch (err) {
+          return catchError("COMMAND_FAILED", "Failed to query catalog", err);
+        }
+      },
+    },
+
+    // ── Assembly Rules ──────────────────────────────────────────────────
+
+    {
+      name: "hwc_estimator_rules",
+      description:
+        "Query assembly rules joined to catalog items. Shows how items are used " +
+        "in automated estimates per project type. Filter by project_type, trade, " +
+        "or search term.",
       inputSchema: {
         type: "object",
         properties: {
@@ -266,44 +326,49 @@ export function estimatorTools(nixosConfigPath: string): ToolDef[] {
             type: "string",
             description: "Filter by project type (bathroom, deck, kitchen, general)",
           },
-          item_type: {
+          trade: {
             type: "string",
-            enum: ["labor", "material", "allowance", "other"],
-            description: "Filter by item type",
+            description: "Filter by trade",
           },
           search: {
             type: "string",
-            description: "Search canonical_name or description (case-insensitive)",
+            description: "Search item name or description (case-insensitive)",
           },
         },
       },
       handler: async (args): Promise<ToolResult> => {
         try {
-          const conditions = ["is_active = true"];
+          const conditions = ["ar.is_active = true", "ci.is_active = true"];
           const pt = args.project_type as string | undefined;
-          const it = args.item_type as string | undefined;
+          const trade = args.trade as string | undefined;
           const search = args.search as string | undefined;
 
-          if (pt) conditions.push(`project_type = '${pt.replace(/'/g, "''")}'`);
-          if (it) conditions.push(`item_type = '${it.replace(/'/g, "''")}'`);
+          if (pt) conditions.push(`ar.project_type = '${pt.replace(/'/g, "''")}'`);
+          if (trade) conditions.push(`ci.trade = '${trade.replace(/'/g, "''")}'`);
           if (search) {
             const s = search.replace(/'/g, "''");
-            conditions.push(`(canonical_name ILIKE '%${s}%' OR description ILIKE '%${s}%')`);
+            conditions.push(`(ci.display_name ILIKE '%${s}%' OR ar.description ILIKE '%${s}%')`);
           }
 
           const rows = await psqlJson(
-            `SELECT canonical_name, item_type, trade, unit_cost, unit_price, ` +
-            `condition_trigger, default_qty, production_rate, project_type ` +
-            `FROM catalog_items WHERE ${conditions.join(" AND ")} ` +
-            `ORDER BY project_type, canonical_name LIMIT 100`,
+            `SELECT ar.id AS rule_id, ci.display_name, ci.item_type, ci.trade, ` +
+            `COALESCE(ar.unit_cost_override, ci.unit_cost) AS unit_cost, ` +
+            `COALESCE(ar.unit_price_override, ci.unit_price) AS unit_price, ` +
+            `ar.project_type, ar.condition_trigger, ar.qty_formula, ` +
+            `ar.default_qty, ar.production_rate, ar.waste_factor, ar.sort_order, ` +
+            `ar.budget_group_path ` +
+            `FROM assembly_rules ar ` +
+            `JOIN catalog_items ci ON ar.catalog_item_id = ci.id ` +
+            `WHERE ${conditions.join(" AND ")} ` +
+            `ORDER BY ar.sort_order LIMIT 100`,
           );
           return {
             status: "ok",
-            message: `${rows.length} catalog items`,
+            message: `${rows.length} assembly rules`,
             data: rows,
           };
         } catch (err) {
-          return catchError("COMMAND_FAILED", "Failed to query catalog", err);
+          return catchError("COMMAND_FAILED", "Failed to query assembly rules", err);
         }
       },
     },

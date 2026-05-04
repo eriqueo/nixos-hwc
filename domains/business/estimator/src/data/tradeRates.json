@@ -1,0 +1,132 @@
+{
+  "appliances": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "cabinetry": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "cleanup": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "concrete": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "countertop": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "decking": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "demo": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "doors_windows": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "drywall": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "electrical": {
+    "wage": 45.0,
+    "burden": 1.35,
+    "markup": 1.75
+  },
+  "flooring": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "framing": {
+    "wage": 38.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "furnishings": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "hvac": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "insulation": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "miscellaneous": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "painting": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "planning": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "plumbing": {
+    "wage": 42.0,
+    "burden": 1.35,
+    "markup": 1.75
+  },
+  "siding": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "sitework": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "specialty": {
+    "wage": 35.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "tile": {
+    "wage": 45.0,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "tiling": {
+    "wage": 45.0,
+    "burden": 1.35,
+    "markup": 2.0
+  },
+  "trimwork": {
+    "wage": 38.0,
+    "burden": 1.35,
+    "markup": 1.85
+  },
+  "waterproofing": {
+    "wage": 42.0,
+    "burden": 1.35,
+    "markup": 1.75
+  }
+}

@@ -91,8 +91,12 @@ INSERT INTO jt_units (id, name) VALUES
 
 
 -- ============================================================================
--- SECTION 2: COST CATALOG
--- The stable knowledge that changes slowly. Your assembler's brain.
+-- SECTION 2: COST CATALOG (Three-Layer Architecture)
+--
+-- Layer 1: trade_rates    — labor pricing by trade
+-- Layer 2: catalog_items  — the price book (what things cost, universal)
+-- Layer 3: assembly_rules — project intelligence (how to use items per type)
+--
 -- Exported to JSON for apps at build time.
 -- ============================================================================
 
@@ -118,40 +122,78 @@ INSERT INTO trade_rates (trade, base_wage, burden_factor, markup_factor) VALUES
 ('finish_carpentry',  35.00, 1.35, 2.00),
 ('electrical',        35.00, 1.35, 2.00);
 
+-- Layer 1: Price Book — one row per distinct thing you buy or bill.
+-- No assembly logic, no project type. A 2x4 is a 2x4.
 CREATE TABLE catalog_items (
     id                  SERIAL PRIMARY KEY,
-    canonical_name      TEXT NOT NULL UNIQUE,     -- 'Labor | Tile | Shower Installation'
+    canonical_name      TEXT,                    -- 'Labor | Tile | Shower Installation'
     display_name        TEXT NOT NULL,            -- Human-readable for JT
     item_type           TEXT NOT NULL CHECK (item_type IN ('labor', 'material', 'allowance', 'other')),
     trade               TEXT REFERENCES trade_rates(trade),
-    -- JT classification (references the jt_ tables)
+    subject             TEXT,                    -- Structured name part: 'Shower Installation'
+    spec                TEXT DEFAULT '',         -- Optional spec: '12x24 Porcelain'
+    -- JT classification
     jt_cost_code_id     TEXT REFERENCES jt_cost_codes(id),
     jt_cost_type_id     TEXT REFERENCES jt_cost_types(id),
     jt_unit_id          TEXT REFERENCES jt_units(id),
-    -- For linking to JT's org-level cost item catalog
-    jt_org_cost_item_id TEXT,                    -- JT's org catalog item ID if synced
-    -- Pricing
+    jt_org_cost_item_id TEXT,
+    jt_catalog_id       TEXT,                    -- JT's org catalog item ID
+    -- Pricing (universal — not project-type-specific)
     unit_cost           NUMERIC(10,2),           -- For materials: actual cost. For labor: from trade_rates
     unit_price          NUMERIC(10,2),           -- For materials: cost * 1.43. For labor: from trade_rates
-    -- Assembly logic
-    budget_group_path   TEXT,                    -- e.g., 'Tilework > Shower Tile Labor'
-    condition_trigger   TEXT,                    -- Boolean expression: 'has_shower AND tile_level != "none"'
-    qty_driver          TEXT,                    -- State key(s) that drive quantity: 'wall_tile_sqft'
-    qty_formula         TEXT,                    -- Expression: 'wall_tile_sqft * 0.25' or 'niche_count * 4'
-    default_qty         NUMERIC(10,2) DEFAULT 1,
-    waste_factor        NUMERIC(4,2) DEFAULT 1.0,
-    production_rate     NUMERIC(8,2),            -- hrs/sqft or hrs/unit for labor items
-    -- Metadata
+    labor_wage          NUMERIC(10,2),           -- Optional labor wage override
+    labor_burden        NUMERIC(10,2),           -- Optional labor burden override
+    -- Catalog metadata
+    budget_group_path   TEXT,                    -- Default budget group for catalog picks
+    vendor              TEXT,                    -- Preferred vendor
+    available_finishes  TEXT,                    -- Available finish options
     source              TEXT DEFAULT 'heartwood' CHECK (source IN ('heartwood', 'craftsman', 'custom')),
     description         TEXT,
-    project_type        TEXT DEFAULT 'bathroom' CHECK (project_type IN ('bathroom', 'deck', 'kitchen', 'general')),
+    project_type        TEXT,                    -- Legacy; NULL for universal items
+    is_active           BOOLEAN DEFAULT true,
+    created_at          TIMESTAMPTZ DEFAULT now(),
+    updated_at          TIMESTAMPTZ DEFAULT now(),
+    -- Uniqueness: item_type + trade + subject + spec
+    UNIQUE (item_type, trade, subject, spec)
+);
+
+CREATE INDEX idx_catalog_trade ON catalog_items(trade);
+CREATE INDEX idx_catalog_type ON catalog_items(item_type);
+CREATE INDEX idx_catalog_subject ON catalog_items(subject);
+CREATE INDEX idx_catalog_jt_catalog_id ON catalog_items(jt_catalog_id) WHERE jt_catalog_id IS NOT NULL;
+
+-- Layer 2: Assembly Rules — how to use catalog items in automated estimates.
+-- One rule per catalog item per project-type context.
+-- Same catalog item can have different rules per project type.
+CREATE TABLE assembly_rules (
+    id                  SERIAL PRIMARY KEY,
+    catalog_item_id     INT NOT NULL REFERENCES catalog_items(id),
+    project_type        TEXT NOT NULL,
+
+    -- Assembly logic
+    budget_group_path   TEXT NOT NULL,           -- 'Demo > Labor' (overrides catalog default)
+    condition_trigger   TEXT NOT NULL DEFAULT 'always',
+    qty_formula         TEXT,                    -- 'ceil(0.08 * bathroom_floor_sqft)'
+    qty_driver          TEXT,                    -- 'bathroom_floor_sqft'
+    default_qty         NUMERIC(10,2) DEFAULT 1,
+    production_rate     NUMERIC(8,4),            -- hrs/sqft or hrs/unit
+    waste_factor        NUMERIC(4,2) DEFAULT 1.0,
+    sort_order          INT NOT NULL,
+
+    -- Optional pricing overrides (null = use catalog item values)
+    unit_cost_override  NUMERIC(10,2),
+    unit_price_override NUMERIC(10,2),
+
+    -- Metadata
+    description         TEXT,
     is_active           BOOLEAN DEFAULT true,
     created_at          TIMESTAMPTZ DEFAULT now(),
     updated_at          TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_catalog_project_type ON catalog_items(project_type) WHERE is_active;
-CREATE INDEX idx_catalog_trade ON catalog_items(trade);
+CREATE INDEX idx_rules_project ON assembly_rules(project_type) WHERE is_active;
+CREATE INDEX idx_rules_catalog ON assembly_rules(catalog_item_id);
+CREATE INDEX idx_rules_sort ON assembly_rules(project_type, sort_order) WHERE is_active;
 
 
 -- ============================================================================
@@ -219,6 +261,7 @@ CREATE INDEX idx_state_key ON project_state(key);
 -- ============================================================================
 -- SECTION 4: ESTIMATES
 -- Assembled output. Versioned so you can track changes over time.
+-- estimate_line_items stores the actual line items (replaces line_items_json).
 -- ============================================================================
 
 CREATE TABLE estimates (
@@ -230,17 +273,61 @@ CREATE TABLE estimates (
     total_price     NUMERIC(12,2),
     margin_pct      NUMERIC(5,2),
     item_count      INT,
-    -- The full assembled output (for archival + change order diffs)
-    line_items_json JSONB NOT NULL,          -- Array of assembled line items
+    -- Legacy: JSONB blob (kept for migration; new estimates use estimate_line_items)
+    line_items_json JSONB,
     state_snapshot  JSONB NOT NULL,          -- Project state at time of assembly
     -- Metadata
-    assembled_by    TEXT DEFAULT 'assembler', -- 'assembler' or 'manual'
+    assembled_by    TEXT DEFAULT 'assembler', -- 'assembler', 'manual', 'catalog_pick'
     pushed_to_jt    BOOLEAN DEFAULT false,
     jt_push_at      TIMESTAMPTZ,
     notes           TEXT,
     created_at      TIMESTAMPTZ DEFAULT now(),
     UNIQUE (project_id, version)
 );
+
+-- Estimate line items — the actual editable line items on a job.
+-- Once created, independent of catalog and assembly rules (snapshot).
+CREATE TABLE estimate_line_items (
+    id                  SERIAL PRIMARY KEY,
+    estimate_id         INT NOT NULL REFERENCES estimates(id) ON DELETE CASCADE,
+
+    -- Origin tracking
+    catalog_item_id     INT REFERENCES catalog_items(id),
+    assembly_rule_id    INT REFERENCES assembly_rules(id),
+    source              TEXT NOT NULL DEFAULT 'assembled'
+                        CHECK (source IN ('assembled', 'catalog_pick', 'custom')),
+
+    -- Line item data (snapshot — independent of catalog after creation)
+    name                TEXT NOT NULL,
+    budget_group        TEXT,
+    item_type           TEXT NOT NULL,
+    trade               TEXT,
+    cost_code           TEXT,
+    unit                TEXT,
+
+    -- Quantities and pricing (editable per project)
+    quantity            NUMERIC(10,2) NOT NULL,
+    unit_cost           NUMERIC(10,2) NOT NULL,
+    unit_price          NUMERIC(10,2) NOT NULL,
+    extended_cost       NUMERIC(12,2) GENERATED ALWAYS AS (quantity * unit_cost) STORED,
+    extended_price      NUMERIC(12,2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+
+    -- Assembly traceability
+    qty_formula_used    TEXT,
+    waste_factor_used   NUMERIC(4,2),
+    used_default        BOOLEAN DEFAULT false,
+
+    -- Project-level edits
+    is_edited           BOOLEAN DEFAULT false,
+    notes               TEXT,
+
+    -- Ordering
+    sort_order          INT,
+    created_at          TIMESTAMPTZ DEFAULT now(),
+    updated_at          TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_line_items_estimate ON estimate_line_items(estimate_id);
 
 
 -- ============================================================================
