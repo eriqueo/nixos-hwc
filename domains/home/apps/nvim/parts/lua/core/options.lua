@@ -11,6 +11,8 @@ opt.incsearch = true
 
 -- Mouse & clipboard
 opt.mouse = "a"
+-- Explicit wl-clipboard provider (more reliable than auto-detection in nvim 0.12)
+vim.g.clipboard = "wl-copy"
 opt.clipboard = "unnamedplus"
 
 -- Indentation

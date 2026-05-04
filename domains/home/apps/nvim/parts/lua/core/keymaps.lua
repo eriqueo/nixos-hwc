@@ -55,7 +55,9 @@ map("n", "<leader>t2", "2gt", { desc = "Tab: 2" })
 map("n", "<leader>t3", "3gt", { desc = "Tab: 3" })
 map("n", "<leader>t4", "4gt", { desc = "Tab: 4" })
 
--- YANK / CUT / PASTE (lowercase after leader)
+-- YANK / CUT / PASTE
+map({ "n", "x" }, "<leader>y", '"+y', { desc = "Yank: to system clipboard" })
+map("n", "<leader>yy", '"+yy', { desc = "Yank: line to clipboard" })
 map({ "n", "x" }, "<leader>Y", '"+y', { desc = "Yank: to system clipboard" })
 map("n", "<leader>Yy", '"+yy', { desc = "Yank: line to clipboard" })
 map({ "n", "x" }, "<leader>x", '"+d', { desc = "Cut: to system clipboard" })
@@ -63,9 +65,7 @@ map({ "n", "x" }, "<leader>p", '"+p', { desc = "Paste: from system clipboard" })
 map("n", "<leader>yp", "<cmd>let @+=expand('%:p')<cr>", { desc = "Yank: file path" })
 map("n", "<leader>yn", "<cmd>let @+=expand('%:t')<cr>", { desc = "Yank: filename" })
 map("n", "<leader>yd", "<cmd>let @+=expand('%:h')<cr>", { desc = "Yank: directory" })
--- YANK ALL
 map("n", "<leader>ya", ":%y+<CR>", { desc = "Yank: entire buffer to system clipboard" })
-map("n", "<leader>ya", "ggVG\"+y", { desc = "Yank: entire buffer to system clipboard" })  -- alternative
 
 -- DELETE / CLEANUP
 map({ "n", "v" }, "<leader>dd", [["_d]], { desc = "Delete: to black hole" })
