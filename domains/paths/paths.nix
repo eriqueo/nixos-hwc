@@ -301,11 +301,6 @@ in
         description = "Application config root (server only)";
       };
 
-      webapps = mkOption {
-        type = types.nullOr types.path;
-        default = null; # Auto-derived in config section
-        description = "Web apps hosting directory (auto-derived from apps.root)";
-      };
     };
 
     business = {
@@ -435,8 +430,7 @@ in
     ai.models = mkIf (cfg.ai.root != null) (mkDefault "${cfg.ai.root}/models");
     ai.context = mkIf (cfg.ai.root != null) (mkDefault "${cfg.ai.root}/context-snapshots");
 
-    # Apps sub-paths
-    apps.webapps = mkIf (cfg.apps.root != null) (mkDefault "${cfg.apps.root}/webapps");
+    # Business sub-paths (webapps moved here from apps.*)
 
     # Surveillance sub-paths
     surveillance.frigate = mkIf (cfg.surveillance.root != null) (mkDefault "${cfg.surveillance.root}/frigate");

@@ -1,14 +1,14 @@
-# domains/webapps/index.nix
+# domains/business/website/webapps.nix
 #
-# Web Apps Hosting Domain
-# NAMESPACE: hwc.webapps.*
+# Web Apps Hosting — static web app publishing system
+# NAMESPACE: hwc.business.website.webapps.*
 #
 # Manages a reserved port range (14000–14099) on the Tailscale interface for
 # quickly publishing static web apps (HTML, React, etc.) without NixOS rebuilds.
 #
 # Architecture:
-#   - Caddy picks up per-app config via:  import /opt/webapps/*/Caddyfile
-#   - Each app gets its own subdirectory:  /opt/webapps/<name>/
+#   - Caddy picks up per-app config via:  import /opt/business/webapps/*/Caddyfile
+#   - Each app gets its own subdirectory:  /opt/business/webapps/<name>/
 #   - `hwc-publish` script handles deploy/list/remove + `systemctl reload caddy`
 #   - Port assignments are tracked by the Caddyfiles themselves (no manifest needed)
 #
@@ -18,14 +18,11 @@
 #   hwc-publish --list                    # show all running apps + URLs
 #   hwc-publish --remove my-tool          # undeploy + reload
 #   hwc-publish --port 14005 my-tool ./   # explicit port
-#
-# One rebuild to set up. Every deploy after that is instant.
-#
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg  = config.hwc.webapps;
+  cfg  = config.hwc.business.website.webapps;
   paths = config.hwc.paths;
   root = config.hwc.networking.shared.rootHost or "localhost";
 
@@ -205,12 +202,12 @@ let
 
 in {
   # ── OPTIONS ───────────────────────────────────────────────────────────────
-  options.hwc.webapps = {
+  options.hwc.business.website.webapps = {
     enable = lib.mkEnableOption "Web app hosting system (hwc-publish + port range)";
 
     baseDir = lib.mkOption {
       type        = lib.types.path;
-      default     = toString paths.apps.webapps;
+      default     = "${paths.business.root or "/opt/business"}/webapps";
       description = "Base directory for deployed web apps. Each app gets a subdirectory.";
     };
 
