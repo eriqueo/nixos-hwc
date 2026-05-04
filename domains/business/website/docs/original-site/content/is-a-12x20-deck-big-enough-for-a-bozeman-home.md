@@ -34,7 +34,7 @@ For a 12&#215;20 deck in Bozeman, realistic cost ranges by material are:
 
 **PVC decking: $15,000–$22,000.** The most moisture-resistant option available, fully synthetic, and built for maximum durability in demanding climates. Slightly higher upfront cost than composite, but minimal lifetime maintenance and exceptional performance in conditions where snow sits on the deck surface for extended periods.
 
-These ranges cover materials and basic installation. Railings, stairs, built-in lighting, permit fees through the City of Bozeman, and any site-specific structural requirements, frost-depth footings, slope grading, ledger waterproofing, all affect the final number. Heartwood Craft provides detailed, line-item estimates for every deck project so Bozeman homeowners understand exactly what they're investing in before construction begins.
+These ranges cover materials and basic installation. Railings, stairs, built-in lighting, permit fees through the City of Bozeman, and any site-specific structural requirements, frost-depth footings, slope grading, ledger waterproofing, all affect the final number. Heartwood Craft provides detailed estimates for every deck project so Bozeman homeowners understand the full scope before construction begins.
 
 ## What Is the Ideal Size of a Deck?
 

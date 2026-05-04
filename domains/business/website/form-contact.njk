@@ -14,12 +14,10 @@
      contact.name           → Contact name (built-in)
      contact.custom.22Nm3uGRBrPX → Email
      contact.custom.22Nm3uGb7WT2 → Phone
-     location.address       → Project location (built-in)
      account.custom.22PUGvBnXeYs → Lead Source (option field)
      account.custom.22Nnj9KMKEPC → Project Type (option field)
      account.custom.22NnjWw3NTGc → Appointment date
      account.custom.22NnjXZhpFXn → Time Choice (option field)
-     account.custom.22Nnj9KTwMCe → Notes (text)
    ───────────────────────────────────────────────────────────────────── #}
 
 <section class="section section-form" id="contact-form">
@@ -71,24 +69,6 @@
           placeholder="you@example.com" 
           required 
         />
-      </div>
-
-      {# ── Required: How did you hear about us? (Lead Source) ── #}
-      <div class="form-field">
-        <label for="jt-source">How did you hear about us? <span class="required">*</span></label>
-        <select id="jt-source" name="account.custom.22PUGvBnXeYs" required>
-          <option value="">Select one...</option>
-          <option value="Google Local Service">Google ad</option>
-          <option value="Google General">Google search</option>
-          <option value="Word of Mouth">Friend or neighbor</option>
-          <option value="Facebook">Facebook</option>
-          <option value="Instagram">Instagram</option>
-          <option value="Short Term Rental">Short-term rental / property manager</option>
-          <option value="Chamber">Chamber of Commerce</option>
-          <option value="Website">Found your website</option>
-          <option value="Repeat">I'm a past customer</option>
-          <option value="Other">Other</option>
-        </select>
       </div>
 
       {# ── Required: Project Type ── #}
@@ -143,34 +123,26 @@
         </div>
       </div>
 
-      {# ── Optional: Project location ── #}
+      {# ── Required: How did you hear about us? (Lead Source) ── #}
       <div class="form-field">
-        <label for="jt-location">Project location — city or neighborhood <span class="optional">(optional)</span></label>
-        <input 
-          type="text" 
-          id="jt-location" 
-          name="location.address" 
-          placeholder="e.g. Northeast Bozeman, Belgrade" 
-        />
+        <label for="jt-source">How did you hear about us? <span class="required">*</span></label>
+        <select id="jt-source" name="account.custom.22PUGvBnXeYs" required>
+          <option value="">Select one...</option>
+          <option value="Google Local Service">Google ad</option>
+          <option value="Google General">Google search</option>
+          <option value="Word of Mouth">Friend or neighbor</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Instagram">Instagram</option>
+          <option value="Short Term Rental">Short-term rental / property manager</option>
+          <option value="Chamber">Chamber of Commerce</option>
+          <option value="Website">Found your website</option>
+          <option value="Repeat">I'm a past customer</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
 
-      {# ── Optional: Project details ── #}
-      <div class="form-field">
-        <label for="jt-notes">Tell us about your project <span class="optional">(optional)</span></label>
-        <textarea 
-          id="jt-notes" 
-          name="account.custom.22Nnj9KTwMCe" 
-          placeholder="What's driving the project? What are you hoping for? Anything that helps us prepare for your call."
-          rows="4"
-        ></textarea>
-      </div>
-
-      {# ── Hidden: UTM attribution backup ── #}
-      <input type="hidden" id="jt-utm-source" name="account.custom.22Nnj9KTwMCe" disabled />
-      {# NOTE: The hidden UTM field is disabled by default so it doesn't
-         conflict with the visible Notes textarea (same field ID). 
-         The attribution JS below appends UTM data to the notes field
-         value on submit instead. #}
+      {# ── Hidden: satisfy JT's required location.address validation ── #}
+      <input type="hidden" name="location.address" value="Bozeman, MT" />
 
       {# ── Submit ── #}
       <button type="submit" class="btn btn-primary btn-full" data-submit-button="true">
@@ -197,31 +169,6 @@
   var form = document.getElementById('hwc-contact-form');
   if (!form) return;
 
-  // ── Read UTM / referrer from sessionStorage (set by tracking.js) ──
-  function getAttribution() {
-    try {
-      var utm_source  = sessionStorage.getItem('hwc_utm_source') || '';
-      var utm_medium  = sessionStorage.getItem('hwc_utm_medium') || '';
-      var utm_campaign = sessionStorage.getItem('hwc_utm_campaign') || '';
-      var gclid       = sessionStorage.getItem('hwc_gclid') || '';
-      var referrer    = sessionStorage.getItem('hwc_referrer') || document.referrer || '';
-      var landing     = sessionStorage.getItem('hwc_landing_page') || '';
-      
-      var parts = [];
-      if (utm_source)   parts.push('utm_source: ' + utm_source);
-      if (utm_medium)   parts.push('utm_medium: ' + utm_medium);
-      if (utm_campaign) parts.push('utm_campaign: ' + utm_campaign);
-      if (gclid)        parts.push('gclid: ' + gclid);
-      if (referrer)     parts.push('referrer: ' + referrer);
-      if (landing)      parts.push('landing: ' + landing);
-      parts.push('page: ' + window.location.pathname);
-      
-      return parts.length > 0 ? '\n\n--- Attribution ---\n' + parts.join('\n') : '';
-    } catch(e) {
-      return '';
-    }
-  }
-
   // ── Auto-select Lead Source from UTM if user hasn't chosen ──
   function autoSelectSource() {
     var sourceSelect = document.getElementById('jt-source');
@@ -246,17 +193,8 @@
     } catch(e) {}
   }
 
-  // ── On submit: append attribution to notes + fire GA4 ──
+  // ── On submit: fire GA4 ──
   form.addEventListener('submit', function() {
-    // Append attribution data to the notes textarea
-    var notesField = document.getElementById('jt-notes');
-    if (notesField) {
-      var attribution = getAttribution();
-      if (attribution) {
-        notesField.value = (notesField.value || '') + attribution;
-      }
-    }
-
     // Fire GA4 event
     if (typeof gtag === 'function') {
       var sourceField = document.getElementById('jt-source');
@@ -422,7 +360,7 @@
       gap: 0 1.25rem;
     }
     /* Full-width fields */
-    .hwc-form .form-field:nth-child(n+6),
+    .hwc-form .form-field:nth-child(n+5),
     .hwc-form .btn-primary,
     .hwc-form .form-note {
       grid-column: 1 / -1;

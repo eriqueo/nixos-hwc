@@ -44,7 +44,7 @@ A 20&#215;20 deck, 400 square feet of outdoor living space, is a common size for
 
 **PVC decking:** $15,000–$25,000. The most moisture-resistant option available, fully synthetic, and exceptionally durable in extreme weather conditions. Slightly higher upfront cost than composite, but minimal lifetime maintenance.
 
-These ranges reflect material and basic installation costs. Labor, railings, stairs, built-in seating, permit fees, and structural complexity all affect the final number. Heartwood Craft provides detailed, line-item estimates for every deck project, so Bozeman homeowners understand exactly where the budget is going before construction begins.
+These ranges reflect material and basic installation costs. Labor, railings, stairs, built-in seating, permit fees, and structural complexity all affect the final number. Heartwood Craft provides detailed estimates for every deck project so Bozeman homeowners understand the full scope before construction begins.
 
 ## What Type of Deck Is The Best?
 
@@ -64,7 +64,7 @@ Hiring the right contractor for a deck build is as important as choosing the rig
 
 **What materials do you recommend for Bozeman's climate, and why?** The answer should reflect specific knowledge of freeze-thaw performance, snow load design, and drainage requirements, not a generic pitch for whatever material carries the highest margin.
 
-**Can you provide a detailed line-item cost breakdown and projected timeline?** Lump-sum estimates without scope detail leave homeowners unable to evaluate what they're actually buying. Heartwood Craft provides itemized estimates for every deck project as a standard part of the consultation process.
+**Can you provide a detailed written estimate and projected timeline?** Lump-sum estimates without scope detail leave homeowners unable to evaluate what they're actually buying. Heartwood Craft provides detailed estimates for every deck project as a standard part of the consultation process.
 
 **Do you offer a warranty on materials and workmanship?** A contractor confident in their work stands behind it in writing.
 

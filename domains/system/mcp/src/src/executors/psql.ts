@@ -1,5 +1,6 @@
 /**
- * Safe Postgres executor — runs queries via `sudo -u postgres psql`.
+ * Postgres executor — runs queries via `psql` using peer authentication.
+ * Service runs as eric, connects via Unix socket — no sudo needed.
  * Uses execFile (no shell), SQL passed as a single -c argument.
  * Returns parsed JSON rows via json_agg.
  */
@@ -24,8 +25,8 @@ export function psqlRaw(
     log.debug("psql", { db, sql: sql.slice(0, 80) });
 
     execFile(
-      "sudo",
-      ["-u", "postgres", "psql", "-d", db, "-t", "-A", "-c", sql],
+      "psql",
+      ["-d", db, "-t", "-A", "-c", sql],
       { timeout, maxBuffer: 1024 * 1024 },
       (error, stdout, stderr) => {
         const exitCode = error && "code" in error ? (error.code as number) : 0;
