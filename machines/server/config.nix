@@ -19,7 +19,6 @@
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
-    ../../domains/webapps/index.nix   # Static web app hosting (hwc-publish, port 14000–14099)
   ];
 
   assertions = [
@@ -856,7 +855,7 @@
   # hwc-publish: deploy static apps instantly, no rebuild needed.
   # Reserved range: 14000–14099 (on tailscale0)
   # Usage: hwc-publish <name> <dist/> [--port N]
-  hwc.webapps.enable = true;
+  hwc.business.website.webapps.enable = true;
 
   # Heartwood Estimate Assembler — React PWA
   # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
