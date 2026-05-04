@@ -17,7 +17,7 @@ noindex: true
 trust_items:
   - Licensed & Insured
   - Engineered for Montana Climate
-  - Transparent Line-Item Pricing
+  - Honest, Upfront Pricing
   - Composite & Cedar Options
 cta_heading: Let's Talk About Your Deck
 cta_text: Tell us about your project and we'll be in touch to discuss next steps.
@@ -36,7 +36,7 @@ show_form: true
       </div>
       <div class="card differentiator-item">
         <h3>Transparent Pricing</h3>
-        <p>Line-item estimates showing labor, materials, hardware. Every dollar accounted for. No lump-sum guessing.</p>
+        <p>Detailed estimates covering full scope. No lump-sum guessing, no surprise costs.</p>
       </div>
       <div class="card differentiator-item">
         <h3>Material Guidance</h3>
@@ -75,7 +75,7 @@ show_form: true
       </div>
       <div class="card differentiator-item" style="text-align: center;">
         <h3 style="color: var(--copper);">2. Design + Estimate</h3>
-        <p>You get a detailed line-item estimate with material specs, footing plan, and timeline. No lump sums — you see every cost.</p>
+        <p>You get a detailed estimate with material specs, footing plan, and timeline.</p>
       </div>
       <div class="card differentiator-item" style="text-align: center;">
         <h3 style="color: var(--copper);">3. Build</h3>

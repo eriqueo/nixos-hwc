@@ -71,7 +71,7 @@ A basement is a good candidate for finishing when:
 - Existing mechanicals (electrical panel, HVAC) have capacity for the added load
 - Your budget can accommodate the full scope, including proper insulation to R-15 and any required egress windows
 
-A finished basement done right — permitted, inspected, insulated to current code, with egress windows where bedrooms are in the plan — adds genuine appraised value and performs well at resale. The "done right" part is load-bearing. Learn more about our approach on the [basement remodeling service page](/basement/remodeling/), including 3D design previews and itemized estimates.
+A finished basement done right — permitted, inspected, insulated to current code, with egress windows where bedrooms are in the plan — adds genuine appraised value and performs well at resale. The "done right" part is load-bearing. Learn more about our approach on the [basement remodeling service page](/basement/remodeling/), including 3D design previews and detailed estimates.
 
 ## Does a Finished Basement Help When You Sell?
 

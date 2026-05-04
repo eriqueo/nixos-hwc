@@ -1,13 +1,12 @@
-<section class="section section-alt">
+<section class="section section-alt animate-in" data-section="process">
   <div class="container-wide">
-    <div class="editorial-split">
-      <div class="sticky">
-        <div class="eyebrow eyebrow-accent">{{ process_eyebrow | default("HOW IT WORKS") }}</div>
-        <h2>{{ process_heading | default("Process first. Everything follows from that.") }}</h2>
-        <div class="rule"></div>
-        <p>{{ process_intro | default("With remodels, every project is different. How we run them isn't. Most contractor horror stories come from unclear scope and no communication. We fix that by running the same four steps on every job.") }}</p>
-      </div>
-      <div class="process-steps">
+    <div class="section-header">
+      <span class="eyebrow">{{ process_eyebrow if process_eyebrow else "OUR PROCESS" }}</span>
+      <h2>{{ process_heading if process_heading else "This is how we do it." }}</h2>
+      <hr>
+      {% if process_intro %}<p>{{ process_intro }}</p>{% endif %}
+    </div>
+    <div class="process-grid">
         {% if process_steps %}
           {% for step in process_steps %}
           <div class="process-step">
@@ -48,7 +47,6 @@
             </div>
           </div>
         {% endif %}
-      </div>
     </div>
   </div>
 </section>

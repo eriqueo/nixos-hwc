@@ -49,6 +49,14 @@ in
     # Register for per-database backups
     hwc.data.databases.postgresql.backup.perDatabase.databases = [ cfg.databaseName ];
 
+    # Grant eric full access to business database (peer auth from MCP service)
+    systemd.services.postgresql.postStart = lib.mkAfter ''
+      $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON DATABASE ${cfg.databaseName} TO ${cfg.user};" || true
+      $PSQL -d ${cfg.databaseName} -c "GRANT USAGE, CREATE ON SCHEMA public TO ${cfg.user};" || true
+      $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${cfg.user};" || true
+      $PSQL -d ${cfg.databaseName} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${cfg.user};" || true
+    '';
+
     # VALIDATION
     assertions = [
       {

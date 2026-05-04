@@ -14,12 +14,10 @@
      contact.name           → Contact name (built-in)
      contact.custom.22Nm3uGRBrPX → Email
      contact.custom.22Nm3uGb7WT2 → Phone
-     location.address       → Project location (built-in)
      account.custom.22PUGvBnXeYs → Lead Source (option field)
      account.custom.22Nnj9KMKEPC → Project Type (option field)
      account.custom.22NnjWw3NTGc → Appointment date
      account.custom.22NnjXZhpFXn → Time Choice (option field)
-     account.custom.22Nnj9KTwMCe → Notes (text)
    ───────────────────────────────────────────────────────────────────── #}
 
 <section class="section section-form" id="contact-form">
@@ -71,24 +69,6 @@
           placeholder="you@example.com" 
           required 
         />
-      </div>
-
-      {# ── Required: How did you hear about us? (Lead Source) ── #}
-      <div class="form-field">
-        <label for="jt-source">How did you hear about us? <span class="required">*</span></label>
-        <select id="jt-source" name="account.custom.22PUGvBnXeYs" required>
-          <option value="">Select one...</option>
-          <option value="Google Local Service">Google ad</option>
-          <option value="Google General">Google search</option>
-          <option value="Word of Mouth">Friend or neighbor</option>
-          <option value="Facebook">Facebook</option>
-          <option value="Instagram">Instagram</option>
-          <option value="Short Term Rental">Short-term rental / property manager</option>
-          <option value="Chamber">Chamber of Commerce</option>
-          <option value="Website">Found your website</option>
-          <option value="Repeat">I'm a past customer</option>
-          <option value="Other">Other</option>
-        </select>
       </div>
 
       {# ── Required: Project Type ── #}
@@ -143,34 +123,32 @@
         </div>
       </div>
 
-      {# ── Optional: Project location ── #}
+      {# ── Required: How did you hear about us? (Lead Source) ── #}
       <div class="form-field">
-        <label for="jt-location">Project location — city or neighborhood <span class="optional">(optional)</span></label>
-        <input 
-          type="text" 
-          id="jt-location" 
-          name="location.address" 
-          placeholder="e.g. Northeast Bozeman, Belgrade" 
-        />
+        <label for="jt-source">How did you hear about us? <span class="required">*</span></label>
+        <select id="jt-source" name="account.custom.22PUGvBnXeYs" required>
+          <option value="">Select one...</option>
+          <option value="Google Local Service">Google ad</option>
+          <option value="Google General">Google search</option>
+          <option value="Word of Mouth">Friend or neighbor</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Instagram">Instagram</option>
+          <option value="Short Term Rental">Short-term rental / property manager</option>
+          <option value="Chamber">Chamber of Commerce</option>
+          <option value="Website">Found your website</option>
+          <option value="Repeat">I'm a past customer</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
 
-      {# ── Optional: Project details ── #}
-      <div class="form-field">
-        <label for="jt-notes">Tell us about your project <span class="optional">(optional)</span></label>
-        <textarea 
-          id="jt-notes" 
-          name="account.custom.22Nnj9KTwMCe" 
-          placeholder="What's driving the project? What are you hoping for? Anything that helps us prepare for your call."
-          rows="4"
-        ></textarea>
-      </div>
+      {# ── Hidden: satisfy JT's required location.address validation ── #}
+      <input type="hidden" name="location.address" value="Bozeman, MT" />
 
-      {# ── Hidden: UTM attribution backup ── #}
-      <input type="hidden" id="jt-utm-source" name="account.custom.22Nnj9KTwMCe" disabled />
-      {# NOTE: The hidden UTM field is disabled by default so it doesn't
-         conflict with the visible Notes textarea (same field ID). 
-         The attribution JS below appends UTM data to the notes field
-         value on submit instead. #}
+      {# ── Honeypot: hidden field that bots fill, humans never see ── #}
+      <div class="form-field hp-wrap" aria-hidden="true">
+        <label for="hp-website">Website</label>
+        <input type="text" id="hp-website" name="website" tabindex="-1" autocomplete="off" />
+      </div>
 
       {# ── Submit ── #}
       <button type="submit" class="btn btn-primary btn-full" data-submit-button="true">
@@ -196,31 +174,6 @@
   var form = document.getElementById('hwc-contact-form');
   if (!form) return;
 
-  // ── Read UTM / referrer from sessionStorage (set by tracking.js) ──
-  function getAttribution() {
-    try {
-      var utm_source  = sessionStorage.getItem('hwc_utm_source') || '';
-      var utm_medium  = sessionStorage.getItem('hwc_utm_medium') || '';
-      var utm_campaign = sessionStorage.getItem('hwc_utm_campaign') || '';
-      var gclid       = sessionStorage.getItem('hwc_gclid') || '';
-      var referrer    = sessionStorage.getItem('hwc_referrer') || document.referrer || '';
-      var landing     = sessionStorage.getItem('hwc_landing_page') || '';
-      
-      var parts = [];
-      if (utm_source)   parts.push('utm_source: ' + utm_source);
-      if (utm_medium)   parts.push('utm_medium: ' + utm_medium);
-      if (utm_campaign) parts.push('utm_campaign: ' + utm_campaign);
-      if (gclid)        parts.push('gclid: ' + gclid);
-      if (referrer)     parts.push('referrer: ' + referrer);
-      if (landing)      parts.push('landing: ' + landing);
-      parts.push('page: ' + window.location.pathname);
-      
-      return parts.length > 0 ? '\n\n--- Attribution ---\n' + parts.join('\n') : '';
-    } catch(e) {
-      return '';
-    }
-  }
-
   // ── Auto-select Lead Source from UTM if user hasn't chosen ──
   function autoSelectSource() {
     var sourceSelect = document.getElementById('jt-source');
@@ -245,15 +198,19 @@
     } catch(e) {}
   }
 
-  // ── On submit: append attribution to notes + fire GA4 ──
-  form.addEventListener('submit', function() {
-    // Append attribution data to the notes textarea
-    var notesField = document.getElementById('jt-notes');
-    if (notesField) {
-      var attribution = getAttribution();
-      if (attribution) {
-        notesField.value = (notesField.value || '') + attribution;
-      }
+  // ── On submit: honeypot check + fire GA4 ──
+  form.addEventListener('submit', function(e) {
+    // Honeypot: if bot filled the hidden field, silently block submission
+    var hp = document.getElementById('hp-website');
+    if (hp && hp.value) {
+      e.preventDefault();
+      // Fake success so bot thinks it worked
+      form.hidden = true;
+      var msg = document.createElement('p');
+      msg.className = 'section-subtitle';
+      msg.textContent = 'Thanks — we\'ll be in touch soon to discuss your project.';
+      form.parentElement.appendChild(msg);
+      return;
     }
 
     // Fire GA4 event
@@ -275,9 +232,18 @@
 })();
 </script>
 
-{# ── Scoped form styles (override JT defaults for dark theme) ── #}
+{# ── Scoped: JT reset + honeypot only (visual styles in style.css) ── #}
 <style>
-  /* Reset JT's default container styling */
+  .hp-wrap {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    height: 0;
+    width: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
   .hwc-form.jtwf {
     max-width: none;
     box-shadow: none;
@@ -293,141 +259,5 @@
   .hwc-form .p-4 {
     all: unset;
     display: block;
-  }
-
-  /* Form field layout */
-  .hwc-form .form-field {
-    margin-bottom: 1.25rem;
-  }
-  .hwc-form .form-field label:first-child {
-    display: block;
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--fg1, #ebdbb2);
-    margin-bottom: 0.35rem;
-  }
-  .hwc-form .required {
-    color: var(--copper, #cf995f);
-    font-weight: 400;
-  }
-  .hwc-form .optional {
-    color: var(--fg3, #7c6f64);
-    font-weight: 400;
-    font-size: 0.85em;
-  }
-
-  /* Inputs, selects, textareas */
-  .hwc-form input[type="text"],
-  .hwc-form input[type="email"],
-  .hwc-form input[type="tel"],
-  .hwc-form input[type="date"],
-  .hwc-form select,
-  .hwc-form textarea {
-    display: block;
-    width: 100%;
-    padding: 0.7rem 0.85rem;
-    font-family: inherit;
-    font-size: 0.95rem;
-    color: var(--fg1, #ebdbb2);
-    background: var(--bg-dark, #1d2021);
-    border: 1.5px solid rgba(207, 153, 95, 0.3);
-    border-radius: 6px;
-    outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .hwc-form input:focus,
-  .hwc-form select:focus,
-  .hwc-form textarea:focus {
-    border-color: var(--copper, #cf995f);
-    box-shadow: 0 0 0 2.5px rgba(207, 153, 95, 0.18);
-  }
-  .hwc-form input::placeholder,
-  .hwc-form textarea::placeholder {
-    color: var(--fg3, #7c6f64);
-  }
-  .hwc-form select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a89984' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.85rem center;
-    padding-right: 2.5rem;
-  }
-  .hwc-form textarea {
-    resize: vertical;
-    min-height: 5rem;
-  }
-
-  /* Checkbox group */
-  .hwc-form .checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem 1rem;
-    margin-top: 0.25rem;
-  }
-  .hwc-form .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 400;
-    color: var(--fg2, #d5c4a1);
-    padding: 0.3rem 0;
-  }
-  .hwc-form .checkbox-label span {
-    color: var(--fg2, #d5c4a1);
-  }
-  .hwc-form .checkbox-label input[type="checkbox"] {
-    width: 1.1rem;
-    height: 1.1rem;
-    accent-color: var(--copper, #cf995f);
-    cursor: pointer;
-  }
-
-  /* Submit button */
-  .hwc-form .btn-primary {
-    display: block;
-    width: 100%;
-    padding: 0.9rem 1.5rem;
-    margin-top: 1.5rem;
-    font-family: inherit;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1d2021;
-    background: var(--copper, #cf995f);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-  }
-  .hwc-form .btn-primary:hover {
-    background: var(--copper-hover, #d4a76a);
-  }
-  .hwc-form .btn-primary:active {
-    background: #c48d4f;
-  }
-
-  /* Form note */
-  .hwc-form .form-note {
-    text-align: center;
-    font-size: 0.8rem;
-    color: var(--fg3, #7c6f64);
-    margin-top: 0.75rem;
-  }
-
-  /* Two-column grid on wider screens */
-  @media (min-width: 768px) {
-    .hwc-form {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0 1.25rem;
-    }
-    /* Full-width fields */
-    .hwc-form .form-field:nth-child(n+6),
-    .hwc-form .btn-primary,
-    .hwc-form .form-note {
-      grid-column: 1 / -1;
-    }
   }
 </style>

@@ -19,25 +19,16 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/apple-touch-icon.png">
 
-  <!-- Google Fonts (from theme.json) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="{{ theme.fonts.googleUrl | safe }}" rel="stylesheet">
-
-  <!-- Google Analytics 4 -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8CF06TJ7ZK"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-8CF06TJ7ZK');
-  </script>
+  <!-- Preconnect for third-party resources -->
+  <link rel="preconnect" href="https://chambermaster.blob.core.windows.net">
+  <link rel="preconnect" href="https://bozemanchamber.chambermaster.com">
 
   <!-- Preload hero image -->
-  {% if hero_image %}<link rel="preload" as="image" href="{{ hero_image }}" fetchpriority="high">{% endif %}
+  {% if hero_image %}<link rel="preload" as="image" href="{{ hero_image | replace('.webp', '-800.webp') }}" imagesrcset="{{ hero_image | replace('.webp', '-800.webp') }} 800w, {{ hero_image }} 1600w" imagesizes="100vw" fetchpriority="high">{% endif %}
+  {% if featured_image %}<link rel="preload" as="image" href="{{ featured_image | replace('.webp', '-800.webp') }}" imagesrcset="{{ featured_image | replace('.webp', '-800.webp') }} 800w, {{ featured_image }} 1600w" imagesizes="100vw" fetchpriority="high">{% endif %}
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="/css/style.css">
+  <!-- Styles (inlined for performance) -->
+  <style>{{ "" | inlineCSS | safe }}</style>
 
   <!-- CMS Layout Overrides (from _data/theme.json) -->
   <style>
@@ -241,5 +232,25 @@
 
 <script src="/js/main.js" defer></script>
 <script src="/js/tracking.js" defer></script>
+<script>
+  function loadGA4() {
+    var s = document.createElement('script');
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-8CF06TJ7ZK';
+    s.async = true;
+    document.head.appendChild(s);
+    s.onload = function() {
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', 'G-8CF06TJ7ZK');
+    };
+  }
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(loadGA4, { timeout: 4000 });
+  } else {
+    setTimeout(loadGA4, 3000);
+  }
+</script>
 </body>
 </html>

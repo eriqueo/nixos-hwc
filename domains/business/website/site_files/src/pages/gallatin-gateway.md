@@ -38,7 +38,7 @@ I'm based in Bozeman and work in Gallatin Gateway. I know the area, I know the h
 
 ## The Same Process, Every Project
 
-- Itemized estimates with every line item visible
+- No-surprise pricing — your estimate is a commitment
 - 3D design previews before construction
 - Regular progress updates during the build
 - Milestone payments tied to real progress

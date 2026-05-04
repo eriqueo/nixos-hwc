@@ -2,7 +2,10 @@
 layout: layouts/base.njk
 ---
 
-<section class="hero{% if not hero_image %} hero-no-image{% endif %}" {% if hero_image %}style="background-image: url('{{ hero_image }}')"{% endif %}>
+<section class="hero{% if not hero_image %} hero-no-image{% endif %}">
+  {% if hero_image %}
+  <img class="hero__img" src="{{ hero_image }}" srcset="{{ hero_image | replace('.webp', '-800.webp') }} 800w, {{ hero_image }} 1600w" sizes="100vw" alt="{{ h1 | default(title) }}" fetchpriority="high" decoding="async" width="1600" height="1066">
+  {% endif %}
   <div class="hero-overlay">
     <div class="container-wide">
       {% if hero_eyebrow %}<span class="hero-eyebrow">{{ hero_eyebrow }}</span>{% endif %}

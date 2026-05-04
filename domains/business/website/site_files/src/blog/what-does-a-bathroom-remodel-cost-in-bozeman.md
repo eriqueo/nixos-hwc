@@ -36,19 +36,19 @@ Large footprint, heated floors, frameless glass, custom vanity, dual sinks, free
 
 ## What Actually nulls the Cost
 
-I build estimates as line-item documents, not lump sums. When I look across the projects I've completed, the budget tends to break down like this:
+When I look across the projects I've completed, the budget tends to break down like this:
 
 - **41% — Selections.** The tile, fixtures, toilet, vanity, faucets, accessories — everything you pick. This is the variable that homeowners control most directly. A $4 per square foot floor tile and a $14 per square foot floor tile both get installed the same way. The labor cost is identical. The material cost is not.
 
 - **25% — Labor.** Demo, plumbing, electrical, tile installation, carpentry, and cleanup. In Bozeman, skilled trade rates run around $35/hour as a base for experienced workers, with licensed plumbers and electricians higher. Labor isn't a place to negotiate down — the guys who actually know what they're doing are worth the rate.
 
-- **18% — Allowances.** More on this below. These are line items where the selection hasn't been made at estimate time.
+- **18% — Allowances.** More on this below. These cover selections that haven't been made at estimate time.
 
 - **15% — Fixed materials.** Backer board, Kerdi membrane, cement board, waterproofing, lumber, fasteners, adhesive. This is what's going in the walls and floor whether you pick the $4 tile or the $14 tile.
 
 ## How the Allowance Model Works
 
-You'll see line items in my estimates marked as "allowances" — for example, "Tile allowance: $2,500" or "Vanity allowance: $1,800." This means we haven't nailed down that specific selection yet, but I've budgeted a realistic number based on typical costs at your stated quality level.
+My estimates include allowances — for example, "Tile allowance: $2,500" or "Vanity allowance: $1,800." This means we haven't nailed down that specific selection yet, but I've budgeted a realistic number based on typical costs at your stated quality level.
 
 Allowances protect you. They mean the estimate reflects your actual project rather than forcing a lump sum that obscures what things cost. When you select a tile that comes in above allowance, we talk about it explicitly, and you decide whether to adjust or upgrade. Nothing gets hidden inside a bloated contingency line.
 
@@ -106,7 +106,7 @@ A few questions worth asking any contractor before you commit:
 
 ## The Honest Version of This Conversation
 
-The homeowners who end up happiest with their bathroom project are the ones who got clear numbers before they started. Not a ballpark from a gut-feel contractor, and not a suspiciously low bid that grew by 40% once demo started. A line-item estimate with realistic allowances, local labor rates, and an honest assessment of what the permit process will look like.
+The homeowners who end up happiest with their bathroom project are the ones who got clear numbers before they started. Not a ballpark from a gut-feel contractor, and not a suspiciously low bid that grew by 40% once demo started. A detailed estimate with realistic allowances, local labor rates, and an honest assessment of what the permit process will look like.
 
 That's what I build. If you want to see what a real estimate looks like for your project, the best first step is a site visit.
 

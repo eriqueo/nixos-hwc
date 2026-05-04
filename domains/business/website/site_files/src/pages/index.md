@@ -14,17 +14,41 @@ trust_items: []
 process_link_text: ''
 process_link_url: ''
 sections:
+  - intro
   - services
+  - portfolio-grid
+  - form-inline
   - process
   - locations
+  - reviews
   - form
+intro_eyebrow: ''
+intro_heading: This is Heartwood Craft.
+intro_text: >-
+  I'm Eric — a licensed remodeler, NARI-certified universal design professional,
+  and I started Heartwood Craft to bring design-build quality to regular
+  homeowners in the Gallatin Valley.
+intro_image: /img/brand/eric-headshot.webp
+portfolio_eyebrow: ''
+portfolio_heading: This is what we make.
+form_inline_heading: Like what you see?
+process_eyebrow: ''
+process_heading: This is how we do it.
+process_intro: ''
+locations_eyebrow: ''
+locations_heading: This is who we serve.
+locations_intro: ''
+reviews_eyebrow: ''
+reviews_heading: This is what they say.
+cta_heading: ''
+cta_text: ''
+permalink: /
+services_heading: Here is what we do.
 show_services: true
 show_testimonials: true
 show_cta: false
 show_form: false
-permalink: /
 layout: layouts/page-home.njk
 schema_type: LocalBusiness
-services_heading: Here is what we do.
 ---
 

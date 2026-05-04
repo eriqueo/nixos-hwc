@@ -34,7 +34,7 @@ These homes have character, but they also have quirks. Older homes mean knob-and
 
 Whether your home is on Willson Avenue or out past Valley Center Road:
 
-- Itemized estimates with every line item visible
+- No-surprise pricing — your estimate is a commitment
 - 3D design previews before construction starts
 - Regular progress updates during the build
 - Milestone payments tied to real progress

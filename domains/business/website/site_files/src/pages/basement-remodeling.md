@@ -1,15 +1,40 @@
 ---
-layout: layouts/page-service.njk
 title: Basement Remodel Bozeman | Heartwood Craft | Licensed & Insured
 meta_description: >-
   Basement finishing in Bozeman, MT. Egress windows, moisture control, 3D design
   previews, transparent pricing. Turn unused space into your best room.
   406-551-5061.
-h1: Basement Remodeling in Bozeman
+h1: Basement Remodeling
 hero_image: /img/hero/basement-remodeling-bozeman.webp
 hero_subtitle: Turn unused square footage into your favorite room.
-service_tag: basement
+hero_cta_1_text: ''
+hero_cta_1_url: ''
+hero_cta_2_text: ''
+hero_cta_2_url: ''
+trust_items: []
+process_link_text: ''
+process_link_url: ''
+sections: []
+intro_eyebrow: ''
+intro_heading: ''
+intro_text: ''
+intro_image: ''
+portfolio_eyebrow: ''
+portfolio_heading: ''
+form_inline_heading: ''
+process_eyebrow: ''
+process_heading: ''
+process_intro: ''
+locations_eyebrow: ''
+locations_heading: ''
+locations_intro: ''
+reviews_eyebrow: ''
+reviews_heading: ''
+cta_heading: ''
+cta_text: ''
 permalink: /basement/remodeling/
+layout: layouts/page-service.njk
+service_tag: basement
 schema_type: Service
 ---
 
@@ -47,7 +72,7 @@ The same transparent, structured process I use for every project:
 
 2. **Site visit.** I spend 45-60 minutes in your basement measuring, checking ceiling height, looking at existing mechanicals, and identifying any moisture concerns. I take photos and detailed notes.
 
-3. **Estimate.** You get an itemized estimate — every line item visible. Labor, materials, allowances, and any subcontractor costs broken out clearly.
+3. **Estimate.** You get a detailed estimate covering the full scope of work — labor, materials, allowances, and subcontractor costs all accounted for.
 
 4. **3D rendering.** This is where basements get exciting. I build a rendering that shows your unfinished concrete box transformed into the finished space. You see the layout, the finishes, the lighting — and we adjust before I frame a single wall.
 

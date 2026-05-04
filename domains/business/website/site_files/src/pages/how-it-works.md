@@ -2,7 +2,7 @@
 title: Our Process | Heartwood Craft
 meta_description: >-
   See exactly how a remodeling project works with Heartwood Craft — from first
-  call to final walkthrough. 3D design previews, itemized estimates, regular
+  call to final walkthrough. 3D design previews, transparent pricing, regular
   updates.
 h1: Our Process
 hero_image: /img/hero/bozeman-remodeling.webp
@@ -38,9 +38,9 @@ If your project involves design decisions (layout changes, tile patterns, fixtur
 
 ### Step 4: The Estimate
 
-After the site visit, you get a detailed, itemized estimate. Every line item is visible: labor by trade, materials by item, allowances for selections you haven't made yet. If I've budgeted $1,500 for tile and you find something you love for $1,200, you keep the $300. The estimate is not a ballpark — it's a commitment.
+After the site visit, you get a detailed estimate covering the full scope of work. Allowances are built in for selections you haven't made yet — if I've budgeted $1,500 for tile and you find something you love for $1,200, you keep the $300. The estimate is not a ballpark — it's a commitment.
 
-**What you get:** Complete cost transparency. You see where every dollar goes.
+**What you get:** A fixed-scope estimate you can rely on.
 
 ### Step 5: Construction
 

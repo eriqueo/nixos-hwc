@@ -1,0 +1,29 @@
+{# Portfolio grid — curated best work #}
+<section class="section section-portfolio-feat animate-in" data-section="portfolio-grid">
+  <div class="container-wide">
+    <div class="section-header">
+      <span class="eyebrow">{{ portfolio_eyebrow if portfolio_eyebrow else "OUR WORK" }}</span>
+      <h2>{{ portfolio_heading if portfolio_heading else "This is what we make." }}</h2>
+      <hr>
+    </div>
+    <div class="portfolio-feat-grid">
+      {% for item in curated.homepage_featured %}
+      <a href="{{ item.project_url | default('/our-work/') }}" class="portfolio-feat-item animate-in">
+        <img
+          src="{{ item.src | thumb }}"
+          alt="{{ item.alt }}"
+          loading="lazy"
+          width="400"
+          height="267"
+        />
+      </a>
+      {% endfor %}
+    </div>
+    <div class="portfolio-feat-cta">
+      <a href="/our-work/" class="card-link">
+        See Our Work
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>

@@ -56,7 +56,7 @@ For a structured, risk-aware approach to hiring a contractor for any Bozeman rem
 
 **Permits and Code Compliance** Will you handle permits through Bozeman's ProjectDox system? How do you ensure compliance with 2021 IRC and IECC standards on a bathroom remodel in Bozeman, a basement remodel in Bozeman, or a deck project? Who is responsible if work fails inspection?
 
-**Budget Clarity** Can you provide a line-item estimate rather than a lump sum? How are allowances handled when actual material costs differ from estimates? What typically causes cost overruns in projects like mine, and how do you manage them?
+**Budget Clarity** Can you provide a detailed written estimate rather than a lump sum? How are allowances handled when actual material costs differ from estimates? What typically causes cost overruns in projects like mine, and how do you manage them?
 
 **Project Management** Who is on-site daily? How often will I receive progress updates, and through what channel? What are the projected start and completion dates, and what factors could affect them?
 

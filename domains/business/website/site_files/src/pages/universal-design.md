@@ -4,8 +4,8 @@ meta_description: >-
   NARI UDCP-certified remodeler in Bozeman, MT. Curbless showers, wider
   doorways, and accessible kitchens designed to look like upgrades — not medical
   retrofits.
-h1: ''
-hero_image: ''
+h1: Universal Design
+hero_image: /img/portfolio/bathrooms/marble-shower-triple-niche-accent-tile.webp
 hero_subtitle: >-
   Learn about this emerging field, which focuses on how an individual uses their
   home in all stages of life.
@@ -17,14 +17,25 @@ trust_items: []
 process_link_text: ''
 process_link_url: ''
 sections: []
+intro_eyebrow: ''
+intro_heading: ''
+intro_text: ''
+intro_image: ''
+portfolio_eyebrow: ''
+portfolio_heading: ''
+form_inline_heading: ''
 process_eyebrow: ''
 process_heading: ''
 process_intro: ''
+locations_eyebrow: ''
 locations_heading: ''
-locations_text: ''
+locations_intro: ''
+reviews_eyebrow: ''
+reviews_heading: ''
 cta_heading: ''
 cta_text: ''
 permalink: /aging-in-place/
+locations_text: ''
 hero_eyebrow: NARI CERTIFIED UNIVERSAL DESIGN
 hero_title: Stay in the Home You Love — Without the Obstacles
 layout: layouts/page-service.njk

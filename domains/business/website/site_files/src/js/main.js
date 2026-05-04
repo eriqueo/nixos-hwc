@@ -155,6 +155,14 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      // Honeypot check: silently fake success for bots
+      const hp = form.querySelector('[name="website"]');
+      if (hp && hp.value) {
+        form.hidden = true;
+        if (successEl) successEl.hidden = false;
+        return;
+      }
+
       // Validate required fields
       let hasErrors = false;
       form.querySelectorAll('[required]').forEach(field => {

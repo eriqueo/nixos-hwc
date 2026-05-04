@@ -19,7 +19,7 @@ Answer 7 quick questions and get a ballpark estimate for your Bozeman deck proje
   <p><em>Calculator loading... If it doesn't appear, call us at <a href="tel:4065515061">406-551-5061</a> for a quick estimate.</em></p>
 </div>
 
-<script src="/js/calculator.bundle.js" defer></script>
+<script src="/js/calculator.bundle.js?v=20260502" defer></script>
 
 ### How this calculator works
 

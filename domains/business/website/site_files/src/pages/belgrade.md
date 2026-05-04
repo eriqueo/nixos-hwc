@@ -34,7 +34,7 @@ I'm based in Bozeman and work in Belgrade regularly. It's a short drive, and I k
 
 Every Belgrade project gets the full Heartwood Craft treatment:
 
-- Itemized estimates with every line item visible
+- No-surprise pricing — your estimate is a commitment
 - 3D design previews before construction
 - Regular progress updates during the build
 - Milestone payments tied to real progress

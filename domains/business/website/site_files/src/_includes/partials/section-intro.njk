@@ -1,0 +1,23 @@
+{# Intro — "This is Heartwood Craft" personal introduction #}
+<section class="section section-intro animate-in" data-section="intro">
+  <div class="container-wide">
+    <div class="intro-split">
+      <div class="intro-content">
+        <div class="section-header">
+          <span class="eyebrow">{{ intro_eyebrow if intro_eyebrow else "WHO WE ARE" }}</span>
+          <h2>{{ intro_heading if intro_heading else "This is Heartwood Craft." }}</h2>
+          <hr>
+        </div>
+        <p>{{ intro_text | default("I'm Eric — a licensed remodeler, NARI-certified universal design professional, and the only person you'll deal with from first call to final walkthrough. I started Heartwood Craft to bring design-build quality to regular homeowners in the Gallatin Valley.") }}</p>
+      </div>
+      <div class="intro-image">
+        <img
+          src="{{ intro_image | default('/img/brand/eric-toolbelt-dog.webp') }}"
+          alt="Eric — owner of Heartwood Craft, licensed remodeler in Bozeman, MT"
+          loading="lazy"
+          width="400" height="544"
+        />
+      </div>
+    </div>
+  </div>
+</section>

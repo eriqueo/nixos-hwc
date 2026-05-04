@@ -76,7 +76,7 @@ A few things I mention in every budget conversation:
 
 **Permit timelines.** The city processes permits through ProjectDox, and review times fluctuate with demand. Right now, plan for 2–4 weeks from submission to approval. Building this into the schedule prevents the frustration of a crew standing by with no permit to pull.
 
-The bottom line: if someone quotes you a bathroom remodel in Bozeman for under $10,000 and includes tile, plumbing, and a new shower, they're either leaving work out of scope or cutting corners somewhere. Clear pricing with line items is what to look for.
+The bottom line: if someone quotes you a bathroom remodel in Bozeman for under $10,000 and includes tile, plumbing, and a new shower, they're either leaving work out of scope or cutting corners somewhere. Clear, written estimates are what to look for.
 
 ---
 

@@ -42,7 +42,7 @@ Costs vary significantly based on finishes, features, and local labor rates:
 - **Luxury finishes with extra features:** $50,000+ (custom cabinetry, wet bar, full bathroom, engineered hardwood, recessed lighting)
 - **DIY minimal upgrades:** Potentially $10,000, but limited to cosmetic improvements only
 
-For **Bozeman remodeling** projects, expect costs on the higher end of these ranges due to labor availability, material transport, and the climate-specific requirements Montana basements demand. **Heartwood Craft** provides transparent, itemized estimates that account for these local factors, so you're never caught off guard by hidden costs.
+For **Bozeman remodeling** projects, expect costs on the higher end of these ranges due to labor availability, material transport, and the climate-specific requirements Montana basements demand. **Heartwood Craft** provides transparent, detailed estimates that account for these local factors, so you're never caught off guard by hidden costs.
 
 If you're also planning a **bathroom remodel Bozeman** within the basement or coordinating with outdoor projects like **decks Bozeman** residents love for summer entertaining, bundling these projects can sometimes improve efficiency and reduce overall costs.
 

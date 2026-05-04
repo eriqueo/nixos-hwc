@@ -4,7 +4,10 @@ schema_type: BlogPosting
 ---
 
 <article class="blog-post">
-  <section class="hero{% if not featured_image %} hero-no-image{% endif %} hero-short" {% if featured_image %}style="background-image: url('{{ featured_image }}')"{% endif %}>
+  <section class="hero{% if not featured_image %} hero-no-image{% endif %} hero-short">
+    {% if featured_image %}
+    <img class="hero__img" src="{{ featured_image }}" srcset="{{ featured_image | replace('.webp', '-800.webp') }} 800w, {{ featured_image }} 1600w" sizes="100vw" alt="{{ title }}" fetchpriority="high" decoding="async" width="1600" height="1066">
+    {% endif %}
     <div class="hero-overlay">
       <div class="container-wide">
         <h1>{{ title }}</h1>

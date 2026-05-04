@@ -1,15 +1,40 @@
 ---
-layout: layouts/page-service.njk
 title: Bathroom Remodel Bozeman | Heartwood Craft | Licensed & Insured
 meta_description: >-
-  Bathroom remodeling in Bozeman, MT. 3D design previews, itemized estimates,
+  Bathroom remodeling in Bozeman, MT. 3D design previews, transparent pricing,
   and clear communication. Gut remodels, refreshes, and tub-to-shower
   conversions. 406-551-5061.
-h1: Bathroom Remodeling in Bozeman
+h1: Bathroom Remodeling
 hero_image: /img/hero/bathroom-renovation-bozeman.webp
 hero_subtitle: '3D design previews, transparent estimates, and craftsmanship that lasts.'
-service_tag: bathroom
+hero_cta_1_text: ''
+hero_cta_1_url: ''
+hero_cta_2_text: ''
+hero_cta_2_url: ''
+trust_items: []
+process_link_text: ''
+process_link_url: ''
+sections: []
+intro_eyebrow: ''
+intro_heading: ''
+intro_text: ''
+intro_image: ''
+portfolio_eyebrow: ''
+portfolio_heading: ''
+form_inline_heading: ''
+process_eyebrow: ''
+process_heading: ''
+process_intro: ''
+locations_eyebrow: ''
+locations_heading: ''
+locations_intro: ''
+reviews_eyebrow: ''
+reviews_heading: ''
+cta_heading: ''
+cta_text: ''
 permalink: /bathroom/remodeling/
+layout: layouts/page-service.njk
+service_tag: bathroom
 schema_type: Service
 ---
 
@@ -51,7 +76,7 @@ Here's exactly what happens when you call:
 
 3. **Site visit.** I come to your home for a 45-minute visit. I measure everything, check conditions behind access panels where I can, take photos, and capture the full scope — an honest assessment of what the project needs.
 
-4. **Detailed estimate.** You get an itemized estimate showing every line item — labor by trade, materials by item, allowances for selections you haven't made yet. You see where every dollar goes.
+4. **Detailed estimate.** You get a detailed estimate covering the full scope of work. Allowances are built in for selections you haven't made yet. The estimate is not a ballpark — it's a commitment.
 
 5. **3D rendering.** I build a photorealistic rendering of your bathroom so you see tile patterns, fixture placement, and vanity layout before construction starts. We adjust until you're happy with the design.
 

@@ -54,6 +54,7 @@ in
         "web-build" = "cd /home/eric/.nixos/domains/business/website/site_files && npx @11ty/eleventy";
         "htop" = "btop"; "open" = "xdg-open";
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
+        "web-speed" = "${ws}/tools/web-speed.sh";
         "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";
         "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d"; "hms" = "$(nix build --no-link --print-out-paths ~/.nixos#homeConfigurations.\\\"eric@$(hostname)\\\".activationPackage)/activate";
         "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
@@ -150,7 +151,10 @@ in
         eza bat procs dust zoxide
       ]);
 
-    home.sessionPath = [ "${config.home.homeDirectory}/bin" ];
+    home.sessionPath = [
+      "${config.home.homeDirectory}/bin"
+      "${config.home.homeDirectory}/.npm-global/bin"
+    ];
 
     # Environment variables
     home.sessionVariables = cfg.sessionVariables // {

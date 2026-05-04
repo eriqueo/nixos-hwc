@@ -30,7 +30,7 @@ Pay attention to the quality of the finish work: grout lines, tile alignment, ho
 
 Also look for consistency across multiple projects. One great bathroom might be their best job. Ten bathrooms at the same quality level tells you something about their standard process.
 
-## Get a Written, Itemized Estimate
+## Get a Written, Detailed Estimate
 
 A good estimate is a document you can read and understand, line by line. It should tell you:
 

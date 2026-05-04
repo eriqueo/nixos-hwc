@@ -16,7 +16,7 @@ noindex: true
 trust_items:
   - Licensed & Insured
   - 3D Design Before Demo
-  - Transparent Line-Item Pricing
+  - Honest, Upfront Pricing
   - Regular Progress Updates
 cta_heading: Let's Talk About Your Bathroom
 cta_text: >-
@@ -36,7 +36,7 @@ show_form: true
       </div>
       <div class="card differentiator-item">
         <h3>Transparent Pricing</h3>
-        <p>Your estimate shows every line item — labor by trade, materials by item. You see where every dollar goes. No surprises, no hidden fees.</p>
+        <p>Your estimate covers the full scope of work. No surprises, no hidden fees.</p>
       </div>
       <div class="card differentiator-item">
         <h3>Regular Progress Updates</h3>
@@ -75,7 +75,7 @@ show_form: true
       </div>
       <div class="card differentiator-item" style="text-align: center;">
         <h3 style="color: var(--copper);">2. 3D Design + Estimate</h3>
-        <p>You get a 3D rendering of your new bathroom and a detailed, line-item estimate. We refine until it's right.</p>
+        <p>You get a 3D rendering of your new bathroom and a detailed estimate. We refine until it's right.</p>
       </div>
       <div class="card differentiator-item" style="text-align: center;">
         <h3 style="color: var(--copper);">3. Build Day</h3>

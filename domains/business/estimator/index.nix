@@ -20,13 +20,15 @@ let
   # Filtered copy: excludes node_modules, dist, .env files.
   # Store path changes only when actual source content changes.
   appSource = lib.cleanSourceWith {
-    src = ./app;
+    src = ./.;
     name = "estimator-app-source";
     filter = path: _type:
       let name = builtins.baseNameOf path; in
       name != "node_modules"
       && name != "dist"
-      && !(lib.hasPrefix ".env" name);
+      && name != "README.md"
+      && !(lib.hasPrefix ".env" name)
+      && !(lib.hasSuffix ".nix" (builtins.baseNameOf path));
   };
 
   # ── Build script ───────────────────────────────────────────────────────────

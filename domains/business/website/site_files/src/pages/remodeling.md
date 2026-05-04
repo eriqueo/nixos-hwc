@@ -1,17 +1,42 @@
 ---
-layout: layouts/page-service.njk
 title: General Remodeling Bozeman | Heartwood Craft | Licensed & Insured
 meta_description: >-
   Home remodeling in Bozeman, MT. Custom decks, whole-home renovations,
   structural updates, and finish carpentry. Licensed and insured. Call
   406-551-5061.
-h1: General Remodeling in Bozeman
+h1: General Remodeling
 hero_image: /img/hero/bozeman-remodeling.webp
 hero_subtitle: >-
   Custom decks, whole-home renovations, and the carpentry that ties it all
   together.
-service_tag: remodeling
+hero_cta_1_text: ''
+hero_cta_1_url: ''
+hero_cta_2_text: ''
+hero_cta_2_url: ''
+trust_items: []
+process_link_text: ''
+process_link_url: ''
+sections: []
+intro_eyebrow: ''
+intro_heading: ''
+intro_text: ''
+intro_image: ''
+portfolio_eyebrow: ''
+portfolio_heading: ''
+form_inline_heading: ''
+process_eyebrow: ''
+process_heading: ''
+process_intro: ''
+locations_eyebrow: ''
+locations_heading: ''
+locations_intro: ''
+reviews_eyebrow: ''
+reviews_heading: ''
+cta_heading: ''
+cta_text: ''
 permalink: /remodeling/
+layout: layouts/page-service.njk
+service_tag: remodeling
 schema_type: Service
 ---
 
@@ -70,7 +95,7 @@ I've spent years doing finish carpentry and custom woodwork, from timber framing
 
 Regardless of scope, every project follows the same structured approach:
 
-- **Itemized estimates** with every line item visible
+- **No-surprise pricing** — your estimate is a commitment
 - **3D renderings** for projects where visualization helps (and it usually does)
 - **Regular progress updates** during construction
 - **Milestone payments** tied to progress (30/20/40/10)

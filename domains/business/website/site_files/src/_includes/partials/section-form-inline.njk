@@ -1,0 +1,83 @@
+{# Inline quick-capture form — horizontal on desktop, stacked on mobile #}
+<section class="section section-form-inline section-alt" data-section="form-inline">
+  <div class="container-wide">
+    <div class="form-inline-header">
+      <h2>{{ form_inline_heading | default("Like what you see?") }}</h2>
+    </div>
+    <form
+      class="jtwf form-inline-row"
+      id="hwc-inline-form"
+      data-jobtread-web-form="true"
+      data-key="22SVpdtTrvNNMLqKwpYhZM3PVYfCyZXax8"
+      data-success-message="Thanks — we'll be in touch soon."
+      data-success-url="https://iheartwoodcraft.com/our-work"
+    >
+      <div class="form-inline-field">
+        <input
+          type="text"
+          name="contact.name"
+          placeholder="Your name"
+          required
+          aria-label="Name"
+        />
+      </div>
+      <div class="form-inline-field">
+        <input
+          type="email"
+          name="contact.custom.22Nm3uGRBrPX"
+          placeholder="you@email.com"
+          required
+          aria-label="Email"
+        />
+      </div>
+      <div class="form-inline-field">
+        <input
+          type="tel"
+          name="contact.custom.22Nm3uGb7WT2"
+          placeholder="(406) 555-1234"
+          required
+          aria-label="Phone"
+        />
+      </div>
+      <div class="form-inline-field">
+        <select name="account.custom.22Nnj9KMKEPC" required aria-label="Project type">
+          <option value="">Project type...</option>
+          <option value="Bathroom Remodel">Bathroom</option>
+          <option value="Deck">Deck</option>
+          <option value="Interior">Interior remodel</option>
+          <option value="Custom">Custom carpentry</option>
+          <option value="Exterior">Exterior</option>
+          <option value="Addition">Addition</option>
+          <option value="Fence">Fence</option>
+        </select>
+      </div>
+
+      {# Honeypot #}
+      <div class="hp-wrap" aria-hidden="true">
+        <input type="text" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <button type="submit" class="btn btn-primary" data-submit-button="true">
+        Get Started
+      </button>
+    </form>
+  </div>
+</section>
+
+<script>
+(function() {
+  var form = document.getElementById('hwc-inline-form');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    var hp = form.querySelector('[name="website"]');
+    if (hp && hp.value) {
+      e.preventDefault();
+      form.hidden = true;
+      var msg = document.createElement('p');
+      msg.className = 'section-subtitle';
+      msg.textContent = 'Thanks — we\'ll be in touch soon.';
+      form.parentElement.appendChild(msg);
+    }
+  });
+})();
+</script>

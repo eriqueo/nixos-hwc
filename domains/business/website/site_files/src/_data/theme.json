@@ -5,6 +5,7 @@
     "googleUrl": "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@500;600;700&display=swap"
   },
   "header": {
+    "logoSrc": "/img/brand/logo-header-v2.webp",
     "logoHeight": "50px",
     "logoHeightMobile": "36px",
     "navFontSize": "0.8125rem",

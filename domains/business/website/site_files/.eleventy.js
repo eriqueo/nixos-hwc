@@ -1,8 +1,24 @@
+const fs = require('fs');
+const path = require('path');
+
 module.exports = function(eleventyConfig) {
+  // CSS inline filter — reads style.css at build time
+  eleventyConfig.addFilter("inlineCSS", function() {
+    return fs.readFileSync(path.join(__dirname, "src", "css", "style.css"), "utf8");
+  });
+
+  // Thumbnail path filter — /img/portfolio/cat/file.webp → /img/portfolio/cat/thumbs/file.webp
+  eleventyConfig.addFilter("thumb", function(src) {
+    if (!src) return src;
+    const lastSlash = src.lastIndexOf('/');
+    return src.substring(0, lastSlash) + '/thumbs/' + src.substring(lastSlash + 1).replace(/\.[^.]+$/, '.webp');
+  });
+
   // Passthrough copy
   eleventyConfig.addPassthroughCopy("src/css");
   eleventyConfig.addPassthroughCopy("src/js");
   eleventyConfig.addPassthroughCopy("src/img");
+  eleventyConfig.addPassthroughCopy("src/fonts");
   eleventyConfig.addPassthroughCopy("src/.htaccess");
   eleventyConfig.addPassthroughCopy("src/robots.txt");
 

@@ -35,11 +35,11 @@ Ask directly: will you pull and manage permits for this project, or will I need 
 
 A contractor who suggests skipping permits to save time or money is telling you something important about how they work.
 
-## Get a Line-Item Estimate, Not a Lump Sum
+## Get a Detailed, Written Estimate
 
 A lump-sum bid — "$22,000 for the bathroom" — doesn't tell you anything useful. You can't evaluate it, compare it, or understand what happens if scope changes.
 
-Ask for an itemized breakdown: labor by trade, materials with allowances, permit fees, project management. When you can see the components, you can have an honest conversation about where money is going and what adjustments make sense if you need to scale back.
+Ask for a detailed written estimate with clear scope, allowances, and permit fees included. A thorough estimate lets you have an honest conversation about priorities and what adjustments make sense if you need to scale back.
 
 On the Dempsey project I did last year, the breakdown looked roughly like this: 41% went to selections the client chose (tile, fixtures, vanity), 25% was labor, 18% was allowances for items not yet selected at bid time, and 15% was materials I specified. Seeing that breakdown changed the conversation — the client realized most of the cost was in their own hands.
 

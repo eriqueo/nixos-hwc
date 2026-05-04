@@ -1,11 +1,45 @@
-<section class="section section-alt">
-  <div class="container-wide text-center">
-    <h2>{{ locations_heading | default("Serving Bozeman, Belgrade & Gallatin Gateway") }}</h2>
-    <p class="section-subtitle">{{ locations_text | default("We're based in Bozeman and work across the Gallatin Valley. Whether you're in a 1970s ranch near campus, a newer build in Belgrade, or a mountain property in Gallatin Gateway — we know the housing stock, the codes, and the local suppliers.") }}</p>
-    <div class="areas-links">
-      <a href="/bozeman/">Bozeman</a>
-      <a href="/belgrade/">Belgrade</a>
-      <a href="/gallatin-gateway/">Gallatin Gateway</a>
+<section class="section section-locations animate-in" data-section="locations">
+  <div class="container-wide">
+    <div class="section-header">
+      <span class="eyebrow">{{ locations_eyebrow if locations_eyebrow else "WHERE WE WORK" }}</span>
+      <h2>{{ locations_heading if locations_heading else "This is who we serve." }}</h2>
+      <hr>
+      {% if locations_intro %}<p class="section-intro">{{ locations_intro }}</p>{% else %}<p class="section-intro">We work across the Gallatin Valley — from homeowners renovating a 1970s ranch to families planning for the next chapter with universal design.</p>{% endif %}
+    </div>
+    <div class="services-grid locations-grid">
+      <a href="/bozeman/" class="card service-card animate-in">
+        <div class="service-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <h3>Bozeman</h3>
+        <p>Our home base in the Gallatin Valley.</p>
+        <span class="card-link">
+          Learn more
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </span>
+      </a>
+      <a href="/belgrade/" class="card service-card animate-in">
+        <div class="service-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <h3>Belgrade</h3>
+        <p>Growing community, growing homes.</p>
+        <span class="card-link">
+          Learn more
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </span>
+      </a>
+      <a href="/gallatin-gateway/" class="card service-card animate-in">
+        <div class="service-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <h3>Gallatin Gateway</h3>
+        <p>Mountain properties, built right.</p>
+        <span class="card-link">
+          Learn more
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </span>
+      </a>
     </div>
   </div>
 </section>

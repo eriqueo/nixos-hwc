@@ -39,7 +39,7 @@ Material choice drives the cost range more than almost anything else. Here's wha
 
 **PVC decking: $15,000–$22,000.** Fully synthetic, no wood fiber, maximum moisture resistance. The right call for sites with heavy snow accumulation or homeowners who want minimal lifetime maintenance. Slightly higher upfront, but the performance in demanding conditions is hard to match.
 
-These ranges cover materials and basic installation. Railings, stairs, built-in lighting, permit fees, frost-depth footings, ledger waterproofing, and any grading work all add to the final number. I put together detailed line-item estimates for every project so you know exactly what you're investing in before we break ground. Try the [deck cost calculator](/deck-calculator/) for a quick ballpark based on real Gallatin Valley pricing.
+These ranges cover materials and basic installation. Railings, stairs, built-in lighting, permit fees, frost-depth footings, ledger waterproofing, and any grading work all add to the final number. I put together detailed estimates for every project so you understand the full scope before we break ground. Try the [deck cost calculator](/deck-calculator/) for a quick ballpark based on real Gallatin Valley pricing.
 
 ## What's the Ideal Deck Size?
 

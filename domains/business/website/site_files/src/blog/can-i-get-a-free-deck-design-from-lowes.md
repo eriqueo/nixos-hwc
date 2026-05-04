@@ -62,7 +62,7 @@ Realistic Bozeman cost ranges for a 20x20 deck:
 
 **PVC decking: $25,000–$35,000.** Maximum moisture resistance and durability with minimal lifetime maintenance. For a large deck that will see heavy use through Bozeman's seasonal extremes, PVC's performance advantage is most pronounced at this scale.
 
-Additional costs at the 20x20 scale include permit fees, structural engineering for the larger load area, optional features like lighting and built-in seating, and any site-specific requirements, slope grading, extended footing depths, or complex ledger configurations. Heartwood Craft provides detailed, line-item estimates for every deck project so Bozeman homeowners know exactly where their investment is going before construction begins.
+Additional costs at the 20x20 scale include permit fees, structural engineering for the larger load area, optional features like lighting and built-in seating, and any site-specific requirements, slope grading, extended footing depths, or complex ledger configurations. Heartwood Craft provides detailed estimates for every deck project so Bozeman homeowners understand the full scope before construction begins.
 
 ## Turning a Free Design Into a Finished Deck
 Free design tools from Lowe's, Trex, or Home Depot are genuinely useful for the early stages of planning, visualizing proportions, comparing materials, and building a clearer picture of what you want your outdoor space to become. They're a solid starting point for any deck conversation.

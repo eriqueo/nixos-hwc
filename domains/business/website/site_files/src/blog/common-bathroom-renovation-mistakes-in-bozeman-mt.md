@@ -82,4 +82,4 @@ Save DIY energy for painting, hardware, and cosmetic work. The technical rough-i
 
 Planning a bathroom project? I'm happy to walk through the details. [Get in touch →](/contact/)
 
-You can also learn more about [our bathroom remodeling process](/bathroom/remodeling/), including 3D design previews and itemized estimates.
+You can also learn more about [our bathroom remodeling process](/bathroom/remodeling/), including 3D design previews and detailed estimates.

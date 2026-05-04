@@ -1,25 +1,25 @@
 {# Testimonials — editorial pull-quote when no service filter, grid otherwise #}
 
-{% if filter_service %}
+{% if show_reviews_grid or filter_service %}
 {# Service-page version: filtered grid #}
 <section class="section section-testimonials section-alt animate-in" data-section="testimonials">
   <div class="container-wide">
     <div class="section-header">
-      <span class="eyebrow">CLIENT VOICES</span>
-      <h2>{{ testimonials_heading if testimonials_heading else "What our clients say." }}</h2>
+      <span class="eyebrow">{{ reviews_eyebrow if reviews_eyebrow else "CLIENT VOICES" }}</span>
+      <h2>{{ reviews_heading if reviews_heading else (testimonials_heading if testimonials_heading else "What our clients say.") }}</h2>
       <hr>
     </div>
     <div class="testimonial-grid" itemscope itemtype="https://schema.org/LocalBusiness">
       <meta itemprop="name" content="{{ site.name }}">
       {% for review in testimonials %}
-        {% if review.service == filter_service %}
+        {% if show_reviews_grid or review.service == filter_service %}
         <div class="card testimonial-card animate-in" itemprop="review" itemscope itemtype="https://schema.org/Review">
           <div class="testimonial-rating" aria-label="{{ review.rating }} out of 5 stars" itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating">
             <meta itemprop="ratingValue" content="{{ review.rating }}">
             <meta itemprop="bestRating" content="5">
             {% for i in range(0, review.rating) %}&#9733;{% endfor %}
           </div>
-          <blockquote class="testimonial-text" itemprop="reviewBody">{{ review.text }}</blockquote>
+          <blockquote class="testimonial-text" itemprop="reviewBody">{{ review.text | truncate(150) }} <a href="/reviews/" class="review-more">Read more →</a></blockquote>
           <div class="testimonial-author" itemprop="author" itemscope itemtype="https://schema.org/Person">
             <strong itemprop="name">{{ review.name }}</strong>
             <span>{{ review.location }}</span>

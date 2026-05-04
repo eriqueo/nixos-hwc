@@ -300,6 +300,7 @@ in
         procps
         util-linux
         nodejs_22
+        postgresql  # psql binary for estimator tools (peer auth as eric)
         # msmtp passwordeval chain: sh -c 'pass show ...' → gpg → gpg-agent
         bash
         pass

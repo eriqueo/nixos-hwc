@@ -58,7 +58,7 @@ Additional significant costs include:
 - **Electrical upgrades:** Meeting code requirements for outlets, lighting, and potentially upgrading your panel can run $3,000–$8,000
 - **Flooring:** Quality moisture-resistant flooring for 2,000 sq ft ranges from $6,000–$15,000 installed
 
-**Heartwood Craft** provides transparent, itemized estimates that break down these costs, so you understand exactly where your investment goes and can make informed decisions about where to prioritize.
+**Heartwood Craft** provides transparent, detailed estimates that break down these costs, so you understand exactly where your investment goes and can make informed decisions about where to prioritize.
 
 ## How much would it cost to finish a 2000 sq ft basement?
 For a 2,000 sq ft **basement remodel Bozeman**, expect these cost ranges:

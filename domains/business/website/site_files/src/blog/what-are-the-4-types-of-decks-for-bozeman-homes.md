@@ -73,7 +73,7 @@ Before hiring anyone for a deck project in Bozeman, ask these questions directly
 
 **What materials do you recommend for Bozeman's climate, and why?** The answer should reflect specific knowledge of freeze-thaw performance, snow load requirements, and drainage — not a generic pitch for whatever carries the highest margin.
 
-**Can you provide a detailed, line-item cost breakdown?** Lump-sum estimates leave you unable to evaluate what you're actually buying. I provide itemized estimates for every project as a standard part of the consultation.
+**Can you provide a detailed written estimate?** Lump-sum estimates leave you unable to evaluate what you're actually buying. I provide detailed estimates for every project as a standard part of the consultation.
 
 **Do you offer a warranty on materials and workmanship?** A contractor confident in their work stands behind it in writing.
 
