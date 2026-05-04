@@ -221,7 +221,7 @@ in
     services.keyd = lib.mkIf cfg.keyboard.enable {
       enable = true;
       keyboards.default = {
-        ids = [ "*" ];
+        ids = [ "*" "-1038:1830" ];  # exclude Rival 3 Wireless keyboard interface (breaks middle button)
         settings.main = {
           f1  = "XF86AudioMute";
           f2  = "XF86AudioLowerVolume";
