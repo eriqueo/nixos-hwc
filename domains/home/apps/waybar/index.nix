@@ -47,19 +47,19 @@ in
 
     xdg.configFile."waybar/style.css".text = appearance;
 
-    # Inhibitor service: blocks lid-switch suspend at runtime.
-    # Active = lid close ignored (default on login). Stopped = lid close suspends.
-    # Toggled by waybar-lid-toggle script — no sudo, no logind HUP, no touchpad disruption.
-    systemd.user.services.lid-sleep-inhibitor = {
+    # Lid state init: create the ignore-file on session start so lid close is
+    # disabled by default (same default as the old inhibitor service).
+    # acpid reads the file; toggle just writes/deletes it — no D-Bus, no logind.
+    systemd.user.services.hwc-lid-state-init = {
       Unit = {
-        Description = "Inhibit lid-close suspend";
+        Description = "Initialize lid sleep state (disabled by default)";
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
       };
       Service = {
-        ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=handle-lid-switch --who=waybar-lid-toggle --why='User disabled lid sleep' --mode=block ${pkgs.coreutils}/bin/sleep infinity";
-        Restart = "on-failure";
-        RestartSec = 2;
+        Type = "oneshot";
+        ExecStart = "${pkgs.coreutils}/bin/touch %t/hwc-lid-ignore";
+        RemainAfterExit = true;
       };
       Install = { WantedBy = [ "graphical-session.target" ]; };
     };
