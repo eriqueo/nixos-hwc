@@ -339,10 +339,10 @@
     "productionRate": null,
     "qtyDriverKey": null,
     "qtyFormula": null,
-    "conditionTrigger": "new_tub == \"yes\" AND demo_scope == \"full_gut\"",
+    "conditionTrigger": "new_tub == \"yes\" OR has_existing_tub == \"yes\"",
     "sortOrder": 203,
     "projectType": "bathroom",
-    "notes": ""
+    "notes": "Fires when installing new tub OR removing existing tub (e.g. tub-to-shower)"
   },
   {
     "id": 1216,
@@ -1991,7 +1991,7 @@
     "unitPrice": 114.29,
     "laborWage": null,
     "laborBurden": null,
-    "wasteFactor": 0.1,
+    "wasteFactor": 1.0,
     "productionRate": null,
     "qtyDriverKey": "shower_niches",
     "qtyFormula": "shower_niches * 4",

@@ -31,8 +31,8 @@ const ALLOWANCE_COST_KEY = {
 // Trade name -> tradeRates key mapping
 const TRADE_RATE_KEY = {
   'admin': 'planning',
-  'finish_carpentry': 'cabinetry',
-  'finish carpentry': 'cabinetry',
+  'finish_carpentry': 'trimwork',
+  'finish carpentry': 'trimwork',
   'tile': 'tiling',
   'waterproofing': 'waterproofing',
   'protection': 'planning',
