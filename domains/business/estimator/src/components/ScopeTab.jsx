@@ -1,6 +1,7 @@
 import { C, mono } from '../styles/theme.js';
 import { Box, Label, Divider } from './Section.jsx';
 import { NumInput } from './NumInput.jsx';
+import { FtInInput } from './FtInInput.jsx';
 import { Select } from './Select.jsx';
 import { JobSelector } from './JobSelector.jsx';
 import { deriveGeometry, deriveDeckGeometry } from '../engine/assembler.js';
@@ -152,9 +153,9 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
       {!isDeck && <>
       <Box>
         <Label color={C.blu}>Room Measurements</Label>
-        <NumInput label="Room Length"  value={s.bathroom_length_ft} onChange={v => set('bathroom_length_ft', v)} unit="ft" step={0.25} />
-        <NumInput label="Room Width"   value={s.bathroom_width_ft}  onChange={v => set('bathroom_width_ft',  v)} unit="ft" step={0.25} />
-        <NumInput label="Wall Height"  value={s.wall_height_ft}     onChange={v => set('wall_height_ft',     v)} unit="ft" step={0.5}  />
+        <FtInInput label="Room Length"  value={s.bathroom_length_ft} onChange={v => set('bathroom_length_ft', v)} />
+        <FtInInput label="Room Width"   value={s.bathroom_width_ft}  onChange={v => set('bathroom_width_ft',  v)} />
+        <FtInInput label="Wall Height"  value={s.wall_height_ft}     onChange={v => set('wall_height_ft',     v)} />
         <NumInput label="Wall Repair"  value={s.bathroom_wall_repair_sqft} onChange={v => set('bathroom_wall_repair_sqft', v)} unit="sf" step={4} />
 
         <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card2, borderRadius: 5,
@@ -168,14 +169,14 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
       {/* Shower Measurements */}
       <Box>
         <Label color={C.pur}>Shower Measurements</Label>
-        <NumInput label="Tile Height"  value={s.shower_wall_height_ft}  onChange={v => set('shower_wall_height_ft',  v)} unit="ft" step={0.5} />
-        <NumInput label="Wall 1 Width" value={s.shower_wall_1_width_ft} onChange={v => set('shower_wall_1_width_ft', v)} unit="ft" step={0.25} />
-        <NumInput label="Wall 2 Width" value={s.shower_wall_2_width_ft} onChange={v => set('shower_wall_2_width_ft', v)} unit="ft" step={0.25} />
-        <NumInput label="Wall 3 Width" value={s.shower_wall_3_width_ft} onChange={v => set('shower_wall_3_width_ft', v)} unit="ft" step={0.25} />
-        <NumInput label="Wall 4 Width" value={s.shower_wall_4_width_ft} onChange={v => set('shower_wall_4_width_ft', v)} unit="ft" step={0.25} min={0} />
-        <NumInput label="Pan Width"    value={s.shower_pan_width_ft}    onChange={v => set('shower_pan_width_ft',    v)} unit="ft" step={0.25} />
-        <NumInput label="Pan Length"   value={s.shower_pan_length_ft}   onChange={v => set('shower_pan_length_ft',   v)} unit="ft" step={0.25} />
-        <NumInput label="Curb Length"  value={s.shower_curb_length_ft}  onChange={v => set('shower_curb_length_ft',  v)} unit="ft" step={0.25} />
+        <FtInInput label="Tile Height"  value={s.shower_wall_height_ft}  onChange={v => set('shower_wall_height_ft',  v)} />
+        <FtInInput label="Wall 1 Width" value={s.shower_wall_1_width_ft} onChange={v => set('shower_wall_1_width_ft', v)} />
+        <FtInInput label="Wall 2 Width" value={s.shower_wall_2_width_ft} onChange={v => set('shower_wall_2_width_ft', v)} />
+        <FtInInput label="Wall 3 Width" value={s.shower_wall_3_width_ft} onChange={v => set('shower_wall_3_width_ft', v)} />
+        <FtInInput label="Wall 4 Width" value={s.shower_wall_4_width_ft} onChange={v => set('shower_wall_4_width_ft', v)} min={0} />
+        <FtInInput label="Pan Width"    value={s.shower_pan_width_ft}    onChange={v => set('shower_pan_width_ft',    v)} />
+        <FtInInput label="Pan Length"   value={s.shower_pan_length_ft}   onChange={v => set('shower_pan_length_ft',   v)} />
+        <FtInInput label="Curb Length"  value={s.shower_curb_length_ft}  onChange={v => set('shower_curb_length_ft',  v)} />
         <NumInput label="Curb Width"   value={s.shower_curb_width_in}   onChange={v => set('shower_curb_width_in',   v)} unit="in" step={1} />
         <NumInput label="Curb Height"  value={s.shower_curb_height_in}  onChange={v => set('shower_curb_height_in',  v)} unit="in" step={1} />
 
