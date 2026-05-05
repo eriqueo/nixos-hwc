@@ -94,17 +94,28 @@ in
       };
     };
 
-    # Sensel SNSL002D touchpad fix: the i2c_hid_acpi driver fires a spurious
-    # "lid closed" event on every init (boot, resume). libinput sees this and
-    # suspends the touchpad, killing scroll events.
+    # Sensel SNSL002D touchpad fix: the i2c_hid_acpi driver fires spurious
+    # SW_LID (lid closed) events. libinput sees these and suspends the touchpad,
+    # killing two-finger scroll. The bug affects TWO devices:
+    #   - /dev/input/event3  "Lid Switch"      — dedicated lid switch device
+    #   - /dev/input/event10 "SNSL002D Touchpad" — the touchpad itself also emits SW_LID
     #
-    # Two-layer fix (kernel + udev):
-    # 1. Kernel: button.lid_init_state=open (in boot.kernelParams) — tells ACPI
-    #    button driver to report initial lid state as "open", ignoring firmware lies.
-    # 2. Udev: hide the lid switch from libinput entirely. Logind still reads lid
-    #    state directly via evdev, so suspend-on-lid-close still works.
+    # Three-layer fix:
+    # 1. Kernel: button.lid_init_state=open (boot.kernelParams) — suppresses
+    #    the spurious initial "lid closed" ACPI report on boot/resume.
+    # 2. Udev: LIBINPUT_IGNORE_DEVICE=1 on the dedicated Lid Switch device.
+    # 3. libinput quirk: strip EV_SW:SW_LID from the touchpad device itself,
+    #    so libinput never sees a lid event from the touchpad regardless of
+    #    what triggers it (the root cause of the two-finger scroll breakage).
     services.udev.extraRules = lib.mkBefore ''
       KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Lid Switch", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+    '';
+
+    environment.etc."libinput/local-overrides.quirks".text = ''
+      [SNSL002D Touchpad SW_LID suppression]
+      MatchUdevType=touchpad
+      MatchName=SNSL002D:00 2C2F:002D Touchpad
+      AttrEventCode=-EV_SW
     '';
 
     #==========================================================================
