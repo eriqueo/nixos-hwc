@@ -61,18 +61,37 @@
   # Power management for laptop
   powerManagement.enable = true;
   services.logind = {
-    # All settings are now consolidated under the 'settings' attribute set.
     settings = {
       Login = {
-        # Base: suspend on lid close (inhibitor service blocks at runtime)
-        HandleLidSwitch = "suspend";
-        HandleLidSwitchExternalPower = "suspend";
+        # Lid close is handled by acpid + state file — NOT logind.
+        # Using logind's handle-lid-switch (even via systemd-inhibit) triggers the
+        # Sensel i2c_hid_acpi spurious "lid closed" bug, killing two-finger scroll.
+        # acpid reads ACPI netlink events independently of logind/libinput.
+        HandleLidSwitch = "ignore";
+        HandleLidSwitchExternalPower = "ignore";
         # Suspend on power button (hibernation disabled with zram)
         HandlePowerKey = "suspend";
         # Disable idle suspend (laptop left running for extended period)
         IdleAction = "ignore";
-        # IdleActionSec = "30min";  # Disabled - no idle action configured
       };
+    };
+  };
+
+  # Lid-close suspend: handled here via acpid, NOT logind inhibitors.
+  # State file: /run/user/1000/hwc-lid-ignore
+  #   - present  → lid close does nothing (default on login)
+  #   - absent   → lid close triggers suspend
+  # Toggle is managed by waybar-lid-toggle (writes/deletes the file — no D-Bus).
+  services.acpid = {
+    enable = true;
+    handlers."hwc-lid-close" = {
+      event = "button/lid LID close";
+      action = ''
+        STATE="/run/user/1000/hwc-lid-ignore"
+        if [[ ! -f "$STATE" ]]; then
+          ${pkgs.systemd}/bin/systemctl suspend
+        fi
+      '';
     };
   };
 

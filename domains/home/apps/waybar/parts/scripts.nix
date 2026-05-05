@@ -453,7 +453,8 @@ in
   '';
 
   "lid-status" = sh "waybar-lid-status" ''
-    if systemctl --user is-active --quiet lid-sleep-inhibitor; then
+    STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-lid-ignore"
+    if [[ -f "$STATE" ]]; then
       printf '{"text":"Lid","class":"sleep-disabled","tooltip":"Lid Close: Ignore\\nClick to enable sleep"}\n'
     else
       printf '{"text":"Lid","class":"sleep-enabled","tooltip":"Lid Close: Sleep\\nClick to disable"}\n'
@@ -461,13 +462,14 @@ in
   '';
 
   "lid-toggle" = sh "waybar-lid-toggle" ''
-    # Toggle lid sleep by starting/stopping the inhibitor service
-    # No sudo, no logind HUP, no touchpad disruption
-    if systemctl --user is-active --quiet lid-sleep-inhibitor; then
-      systemctl --user stop lid-sleep-inhibitor
+    # Toggle lid sleep via plain state file — no D-Bus, no logind, no touchpad disruption.
+    # acpid reads /run/user/1000/hwc-lid-ignore; present = ignore, absent = suspend.
+    STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-lid-ignore"
+    if [[ -f "$STATE" ]]; then
+      rm "$STATE"
       notify-send "Lid Sleep" "Enabled - closing lid will suspend" -i system-suspend -t 3000
     else
-      systemctl --user start lid-sleep-inhibitor
+      touch "$STATE"
       notify-send "Lid Sleep" "Disabled - lid close now ignored" -i computer -t 3000
     fi
   '';
