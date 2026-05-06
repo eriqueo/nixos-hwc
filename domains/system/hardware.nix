@@ -100,13 +100,16 @@ in
     #   - /dev/input/event3  "Lid Switch"      — dedicated lid switch device
     #   - /dev/input/event10 "SNSL002D Touchpad" — the touchpad itself also emits SW_LID
     #
-    # Three-layer fix:
+    # Four-layer fix:
     # 1. Kernel: button.lid_init_state=open (boot.kernelParams) — suppresses
     #    the spurious initial "lid closed" ACPI report on boot/resume.
     # 2. Udev: LIBINPUT_IGNORE_DEVICE=1 on the dedicated Lid Switch device.
     # 3. libinput quirk: strip EV_SW:SW_LID from the touchpad device itself,
     #    so libinput never sees a lid event from the touchpad regardless of
     #    what triggers it (the root cause of the two-finger scroll breakage).
+    # 4. Resume hook: rebind the i2c_hid_acpi driver after every resume so
+    #    Hyprland re-opens the device with the quirk applied fresh, clearing
+    #    the stale SW_LID=1 state the driver retains from the lid-close event.
     services.udev.extraRules = lib.mkBefore ''
       KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Lid Switch", ENV{LIBINPUT_IGNORE_DEVICE}="1"
     '';
@@ -116,6 +119,16 @@ in
       MatchUdevType=touchpad
       MatchName=SNSL002D:00 2C2F:002D Touchpad
       AttrEventCode=-EV_SW
+    '';
+
+    # Layer 4: rebind SNSL002D after every resume (see comment above).
+    # The driver retains SW_LID=1 across suspend/resume; unbind+bind forces
+    # Hyprland to re-open the device, which makes libinput apply the quirk
+    # fresh and read the actual lid state (open = 0).
+    powerManagement.resumeCommands = ''
+      echo "i2c-SNSL002D:00" > /sys/bus/i2c/drivers/i2c_hid_acpi/unbind || true
+      sleep 0.3
+      echo "i2c-SNSL002D:00" > /sys/bus/i2c/drivers/i2c_hid_acpi/bind || true
     '';
 
     #==========================================================================
