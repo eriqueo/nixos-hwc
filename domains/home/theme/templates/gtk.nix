@@ -76,7 +76,11 @@ let
     gtk-application-prefer-dark-theme = true;
   };
 
-  gtk4Extra = gtk3Extra;
+  gtk4Extra = {
+    # GTK4/libadwaita uses color-scheme, not gtk-application-prefer-dark-theme
+    inherit (gtk3Extra) gtk-theme-name gtk-icon-theme-name gtk-cursor-theme-name gtk-font-name;
+    color-scheme = "prefer-dark";
+  };
 
   # ----------------------------
   # Palette-driven CSS
@@ -149,11 +153,14 @@ in
     gtk2.extraConfig = gtk2Extra;
     gtk3.extraConfig = gtk3Extra;
     gtk4.extraConfig = gtk4Extra;
-
-    gtk4.theme = config.gtk.theme;
+    # gtk4.theme intentionally omitted: gnome-themes-extra has no GTK4 CSS for Adwaita-dark,
+    # and setting it causes HM to emit an @import that fails at runtime.
   };
 
   # Palette-driven CSS drops
   xdg.configFile."gtk-3.0/gtk.css".text = gtk3Css;
   xdg.configFile."gtk-4.0/gtk.css".text = gtk4Css;
+
+  # libadwaita dark mode: AdwStyleManager reads this dconf key
+  dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
 }
