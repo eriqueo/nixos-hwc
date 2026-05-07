@@ -239,7 +239,10 @@
       "mcp__claude_ai_HWC__hwc_network_tunnel_status",
       "Bash(tailscale cert:*)",
       "Bash(tailscale status:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(nvim:*)",
+      "Bash(wl-paste)",
+      "Bash(printf \"new test\\\\n\")"
     ],
     "deny": [],
     "ask": [],
