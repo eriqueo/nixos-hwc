@@ -112,6 +112,12 @@ in
     #    the stale SW_LID=1 state the driver retains from the lid-close event.
     services.udev.extraRules = lib.mkBefore ''
       KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Lid Switch", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+      # Rival 3 Wireless: the keyboard HID interface (event7) also has pointer
+      # capabilities and emits its own BTN_MIDDLE. Without this, libinput exposes
+      # BOTH event6 (mouse) and event7 (keyboard) as pointer devices, causing two
+      # conflicting middle-button events per scroll-wheel click. The keyboard
+      # interface events are not needed — DPI and extra buttons are firmware-driven.
+      KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="SteelSeries SteelSeries Rival 3 Wireless Keyboard", ENV{LIBINPUT_IGNORE_DEVICE}="1"
     '';
 
     environment.etc."libinput/local-overrides.quirks".text = ''
