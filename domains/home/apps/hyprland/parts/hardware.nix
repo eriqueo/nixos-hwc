@@ -68,6 +68,8 @@ in
     {
       name = "steelseries-steelseries-rival-3-wireless";
       scroll_method = "no_scroll";
+      sensitivity = 0.75;
+      accel_profile = "flat";
     }
   ];
 
