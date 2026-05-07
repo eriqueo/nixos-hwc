@@ -60,6 +60,17 @@ in
   #============================================================================
   # INPUT CONFIGURATION - Keyboard and touchpad settings
   #============================================================================
+  # Per-device overrides: disable on_button_down scroll for the Rival 3 Wireless.
+  # libinput marks BTN_MIDDLE as the scroll button and (in wlroots) defaults to
+  # on_button_down scroll mode. Any mouse movement during the press suppresses
+  # the click — light presses fail because hand tremor triggers scroll mode.
+  device = [
+    {
+      name = "steelseries-steelseries-rival-3-wireless";
+      scroll_method = "no_scroll";
+    }
+  ];
+
   input = {
     kb_layout = "us";
     kb_options = "caps:escape_shifted_capslock";  # CapsLock=Esc, Shift+CapsLock=CapsLock

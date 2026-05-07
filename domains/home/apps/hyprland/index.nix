@@ -110,6 +110,7 @@ in
         (lib.optionalAttrs (hw ? monitor   && hw.monitor   != null) { monitor   = hw.monitor;   })
         (lib.optionalAttrs (hw ? workspace && hw.workspace != null) { workspace = hw.workspace; })
         (lib.optionalAttrs (hw ? input     && hw.input     != null) { input     = hw.input;     })
+        (lib.optionalAttrs (hw ? device    && hw.device    != null) { device    = hw.device;    })
 
         behavior
 
