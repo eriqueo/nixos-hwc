@@ -123,6 +123,7 @@ in
   "domains/secrets/parts/services/prowlarr-api-key.age".publicKeys               = everyone;
   "domains/secrets/parts/services/radarr-api-key.age".publicKeys                 = everyone;
   "domains/secrets/parts/services/slack-signing-secret.age".publicKeys           = everyone;
+  "domains/secrets/parts/services/datax-discord-webhook.age".publicKeys           = everyone;
   "domains/secrets/parts/services/slack-webhook-url.age".publicKeys              = everyone;
   "domains/secrets/parts/services/slskd-api-key.age".publicKeys                  = everyone;
   "domains/secrets/parts/services/slskd-soulseek-password.age".publicKeys        = everyone;

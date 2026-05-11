@@ -90,6 +90,34 @@ in
         description = "Podman image name for the scraper";
       };
     };
+
+    fbClassifier = {
+      enable = lib.mkEnableOption "FB post classifier (Claude CLI + Discord notifications)";
+
+      claudeBin = lib.mkOption {
+        type = lib.types.str;
+        default = "/etc/profiles/per-user/eric/bin/claude";
+        description = "Path to Claude Code CLI binary";
+      };
+
+      limit = lib.mkOption {
+        type = lib.types.int;
+        default = 100;
+        description = "Max unclassified posts to process per run";
+      };
+
+      timerInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "*-*-* 07,13,19,01:00:00";
+        description = "systemd calendar expression for classify schedule (1h after each scrape)";
+      };
+
+      discordWebhookSecret = lib.mkOption {
+        type = lib.types.str;
+        default = "datax-discord-webhook";
+        description = "Name of the agenix secret containing the Discord webhook URL";
+      };
+    };
   };
 
   #==========================================================================
@@ -97,6 +125,14 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable (
     let
+      fb-classify-script = pkgs.writeShellApplication {
+        name = "fb-classify";
+        runtimeInputs = [ pythonEnv ];
+        text = ''
+          exec python ${./fb-classifier/classify.py} "$@"
+        '';
+      };
+
       fb-scrape-script = pkgs.writeShellApplication {
         name = "fb-scrape";
         runtimeInputs = [ pkgs.podman ];
@@ -154,9 +190,10 @@ in
         '';
       };
     in {
-      # fb-merge always available; scraper scripts only when fbScraper enabled
+      # fb-merge always available; scraper/classifier scripts only when enabled
       environment.systemPackages = [ mergeScript ]
-        ++ lib.optionals cfg.fbScraper.enable [ fb-scrape-script fb-scrape-run ];
+        ++ lib.optionals cfg.fbScraper.enable [ fb-scrape-script fb-scrape-run ]
+        ++ lib.optionals cfg.fbClassifier.enable [ fb-classify-script ];
 
       systemd.tmpfiles.rules = lib.mkIf cfg.fbScraper.enable [
         "d ${cfg.fbScraper.dataDir} 0755 eric users -"
@@ -181,6 +218,41 @@ in
           OnCalendar = cfg.fbScraper.timerInterval;
           Persistent = true;
           RandomizedDelaySec = "5min";
+        };
+      };
+
+      age.secrets = lib.mkIf cfg.fbClassifier.enable {
+        ${cfg.fbClassifier.discordWebhookSecret} = {
+          file = ../../secrets/parts/services/datax-discord-webhook.age;
+          mode = "0440";
+          owner = "eric";
+          group = "secrets";
+        };
+      };
+
+      systemd.services.fb-classify = lib.mkIf cfg.fbClassifier.enable {
+        description = "FB post classifier";
+        after = [ "postgresql.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        environment = {
+          CLAUDE_BIN = cfg.fbClassifier.claudeBin;
+          PROMPT_FILE = "${./fb-classifier/prompt.txt}";
+          DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.fbClassifier.discordWebhookSecret}.path;
+        };
+        serviceConfig = {
+          Type = "oneshot";
+          User = "eric";
+          ExecStart = "${fb-classify-script}/bin/fb-classify --limit ${toString cfg.fbClassifier.limit}";
+          TimeoutStartSec = "10min";
+        };
+      };
+
+      systemd.timers.fb-classify = lib.mkIf cfg.fbClassifier.enable {
+        description = "FB post classifier timer";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = cfg.fbClassifier.timerInterval;
+          Persistent = true;
         };
       };
     }
