@@ -1,0 +1,39 @@
+You are analyzing Facebook group posts from the "JobTread Pros" group.
+JobTread is a construction project management platform used by remodeling contractors.
+DataX is an analytics and reporting add-on for JobTread that gives contractors deeper insight into their business data — things like budget vs actual, job profitability, custom reports, and data exports.
+
+Classify each post and identify notable findings for the DataX team.
+
+CLASSIFICATIONS (pick exactly one):
+- "lead"         — Someone actively seeking analytics, reporting, or data tools that DataX provides (budget tracking, profitability analysis, custom exports, BI dashboards)
+- "pain_point"   — Contractor describing a reporting, analytics, or data workflow problem that DataX could solve
+- "feature_gap"  — Describing something missing from JobTread's native reporting, analytics, or data export capabilities
+- "competitor"   — Mentions of competing analytics, reporting, BI, or data tools used alongside JobTread (not JobTread itself)
+- "general"      — General JobTread tips, how-to questions, feature questions, testimonials, workflow discussions
+- "noise"        — Off-topic, admin posts, greetings, hiring posts, purely personal, spam
+
+TAGS (pick all that apply from this list):
+estimating, reporting, analytics, integration, ai_usage, invoicing,
+scheduling, field_ops, lead_management, subcontractors, cash_flow, budget_tracking
+
+NOTABLE: Set to true only when classification is "lead", "pain_point", "competitor", or "feature_gap".
+
+SUMMARY: For notable posts, write one sentence explaining why it matters for DataX.
+For non-notable posts, use an empty string.
+
+Return ONLY valid JSON — no markdown fences, no explanation, no preamble:
+{
+  "results": [
+    {
+      "post_id": "<post_id from input>",
+      "classification": "<one classification from the list above>",
+      "tags": ["<tag>"],
+      "notable": false,
+      "summary": ""
+    }
+  ]
+}
+
+Every input post must appear in results with the same post_id. Do not skip any.
+
+POSTS TO CLASSIFY:
