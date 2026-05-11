@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { chromium } from 'playwright';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
   parseFeedResponse, extractComments, mergeComments,
@@ -13,7 +13,7 @@ import {
 const DEFAULTS = {
   posts: 50,
   depth: 'posts',
-  session: './data/session.json',
+  profile: './data/browser-profile',
 };
 
 const SCROLL = {
@@ -41,7 +41,7 @@ function parseArgs() {
       case '-n': case '--posts':   opts.posts = parseInt(next(), 10); break;
       case '-d': case '--depth':   opts.depth = next(); break;
       case '-o': case '--output':  opts.output = next(); break;
-      case '--session':            opts.session = next(); break;
+      case '--profile':            opts.profile = next(); break;
       default: a.startsWith('-') ? die(`Unknown flag: ${a}`) : positional.push(a);
     }
   }
@@ -62,14 +62,14 @@ Usage:
   node index.mjs --login --headed
 
 Options:
-  -n, --posts <n>       Posts to collect (default: 50)
-  -d, --depth <mode>    'posts' or 'comments' (default: posts)
-  -o, --output <path>   Write JSON to file (default: stdout)
-      --session <path>  Session state file (default: ./data/session.json)
-      --headed          Show the browser window
-      --login           Interactive login — saves session then exits
-  -q, --quiet           Suppress progress output (stderr)
-  -h, --help            This message
+  -n, --posts <n>        Posts to collect (default: 50)
+  -d, --depth <mode>     'posts' or 'comments' (default: posts)
+  -o, --output <path>    Write JSON to file (default: stdout)
+      --profile <path>   Browser profile directory (default: ./data/browser-profile)
+      --headed           Show the browser window
+      --login            Interactive login — saves profile then exits
+  -q, --quiet            Suppress progress output (stderr)
+  -h, --help             This message
 
 Examples:
   node index.mjs --login --headed
@@ -95,60 +95,49 @@ function log(opts, ...args) { if (!opts.quiet) console.error(...args); }
 // ── Browser ──
 
 async function launch(opts) {
-  const browser = await chromium.launch({
+  const context = await chromium.launchPersistentContext(opts.profile, {
     headless: !opts.headed && !opts.login,
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
     args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+    viewport: { width: 1280, height: 900 },
+    locale: 'en-US',
   });
-  const ctxOpts = { viewport: { width: 1280, height: 900 }, locale: 'en-US' };
-  if (existsSync(opts.session)) ctxOpts.storageState = opts.session;
-  const context = await browser.newContext(ctxOpts);
-  const page = await context.newPage();
-  return { browser, context, page };
+  const page = context.pages()[0] || await context.newPage();
+  return { context, page };
 }
 
-async function checkAuth(page) {
-  await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await sleep(2000, 3000);
-  return !(await page.$('#login_form, input[name="email"]'));
+async function checkAuth(context) {
+  const cookies = await context.cookies('https://www.facebook.com');
+  return cookies.some(c => c.name === 'c_user');
 }
 
-async function waitForLogin(context) {
-  while (true) {
-    const cookies = await context.cookies('https://www.facebook.com');
-    const cUser = cookies.find(c => c.name === 'c_user');
-    if (cUser) return cUser.value;
-    await new Promise(r => setTimeout(r, 2000));
-  }
-}
-
-async function doLogin(page, context, sessionPath) {
+async function doLogin(page, context, opts) {
   const cookies = await context.cookies('https://www.facebook.com');
   if (cookies.some(c => c.name === 'c_user')) {
-    console.error('Already logged in. Saving session.');
+    console.error('Already logged in.');
   } else {
     await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded' });
     console.error('Log in (including passkey) in the browser window.');
     console.error('Session will auto-save when login completes.');
-    await waitForLogin(context);
+    while (true) {
+      const current = await context.cookies('https://www.facebook.com');
+      if (current.some(c => c.name === 'c_user')) break;
+      await new Promise(r => setTimeout(r, 2000));
+    }
     console.error('Login detected.');
     await new Promise(r => setTimeout(r, 3000));
   }
-  mkdirSync(dirname(sessionPath), { recursive: true });
-  await context.storageState({ path: sessionPath });
-  console.error(`Session saved → ${sessionPath}`);
+  console.error(`Profile saved → ${opts.profile}`);
 }
 
 // ── Feed Scraping ──
 
 async function scrapeGroup(page, opts) {
-  const posts = new Map(); // postId → post
+  const posts = new Map();
   let stale = 0;
 
-  // Intercept feed GraphQL responses
   page.on('response', async (res) => {
     if (!res.url().includes('/api/graphql')) return;
-    // Only parse feed responses — check request body for operation name
     try {
       const req = res.request();
       const reqBody = req.postData() || '';
@@ -167,7 +156,7 @@ async function scrapeGroup(page, opts) {
           log(opts, `  [${posts.size}/${opts.posts}] ${post.author}: ${(post.body || '').slice(0, 60).replace(/\n/g, ' ')}`);
         }
       }
-    } catch { /* non-feed responses are expected and ignored */ }
+    } catch { /* non-feed responses ignored */ }
   });
 
   log(opts, `→ ${opts.url}`);
@@ -204,7 +193,6 @@ async function expandAllComments(page, posts, opts) {
 
     const batch = [];
 
-    // Route responses by operation name, matching the TM script's behavior
     const handler = async (res) => {
       if (!res.url().includes('/api/graphql')) return;
       try {
@@ -212,7 +200,6 @@ async function expandAllComments(page, posts, opts) {
         const text = await res.text();
 
         if (op === 'CometSinglePostDialogContentQuery') {
-          // Full post detail — extract comments, verify postId matches
           const responsePostId = findPostIdInResponse(text);
           if (responsePostId === postId) {
             const comments = extractComments(text);
@@ -220,7 +207,6 @@ async function expandAllComments(page, posts, opts) {
             lastExpandedPostId = postId;
           }
         } else if (op.includes('CommentsListPaginationQuery') && lastExpandedPostId === postId) {
-          // Pagination follow-up for the post we just opened
           batch.push(...extractComments(text));
         }
       } catch {}
@@ -230,14 +216,9 @@ async function expandAllComments(page, posts, opts) {
     try {
       await page.goto(post.url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
       await sleep(2500, 4000);
-
-      // Scroll to load comments
       await scrollComments(page);
-
-      // Expand reply threads (multi-pass, matching TM script's expandReplyThreads)
       await expandReplyThreads(page);
 
-      // Merge collected comments
       if (batch.length) {
         const added = mergeComments(post, batch);
         post._commentsExpanded = true;
@@ -350,16 +331,15 @@ function formatExport(posts, opts) {
 
 async function main() {
   const opts = parseArgs();
-  const { browser, context, page } = await launch(opts);
+  const { context, page } = await launch(opts);
 
   try {
     if (opts.login) {
-      await doLogin(page, context, opts.session);
+      await doLogin(page, context, opts);
       return;
     }
 
-    if (!existsSync(opts.session)) die('No session found. Run with --login --headed first.');
-    if (!(await checkAuth(page))) die('Session expired. Run with --login --headed to re-authenticate.');
+    if (!(await checkAuth(context))) die('Not logged in. Run with --login --headed first.');
 
     const posts = await scrapeGroup(page, opts);
 
@@ -380,7 +360,7 @@ async function main() {
     }
 
   } finally {
-    await browser.close();
+    await context.close();
   }
 }
 
