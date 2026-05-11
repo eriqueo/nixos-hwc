@@ -82,7 +82,7 @@ export function DetailsTab({ s, set, isMobile = false }) {
         <AllowanceRow label="Shower Trim" value={s.shower_trim_allowance} onChange={v => set('shower_trim_allowance', v)}
           enabled={yn(s.has_shower_tile)} onToggle={v => set('has_shower_tile', v ? 'yes' : 'no')} />
         <AllowanceRow label="Toilet"      value={s.toilet_allowance}      onChange={v => set('toilet_allowance', v)}
-          enabled={true}                  onToggle={() => {}} />
+          enabled={yn(s.has_toilet)}      onToggle={v => set('has_toilet', v ? 'yes' : 'no')} />
         <AllowanceRow label="Vanity"      value={s.vanity_allowance}      onChange={v => set('vanity_allowance', v)}
           enabled={yn(s.has_vanity)}      onToggle={v => set('has_vanity', v ? 'yes' : 'no')} />
         <AllowanceRow label="Accessories" value={s.accessory_allowance}   onChange={v => set('accessory_allowance', v)}

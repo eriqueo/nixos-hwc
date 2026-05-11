@@ -1,28 +1,6 @@
 {
-  "generated_at": "2026-05-03T21:57:58",
+  "generated_at": "2026-05-03T23:32:11",
   "matches": [
-    {
-      "pg_id": 1,
-      "pg_name": "Labor | Admin | Site Walkthrough",
-      "jt_id": "22NmAGBg5aax",
-      "jt_name": "Site Walkthrough & Measurements",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [1, 1153])"
-      ]
-    },
-    {
-      "pg_id": 2,
-      "pg_name": "Other | Admin | Building Permit",
-      "jt_id": "22NmAGBedRdg",
-      "jt_name": "Remodeling Permit",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [2, 1106])"
-      ]
-    },
     {
       "pg_id": 3,
       "pg_name": "Labor | Demo | Floor Tile",
@@ -60,50 +38,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 15,
-      "pg_name": "Labor | Plumbing | Tub Drain",
-      "jt_id": "22PW6zr8X64Q",
-      "jt_name": "Labor | Plumbing | Tub Drain Hookup",
-      "method": "fuzzy_name",
-      "score": 0.839,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [15, 1231])"
-      ]
-    },
-    {
-      "pg_id": 16,
-      "pg_name": "Labor | Plumbing | Toilet Install",
-      "jt_id": "22NmAGDAWcGh",
-      "jt_name": "Labor - Install Toilet",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [16, 940])"
-      ]
-    },
-    {
-      "pg_id": 17,
-      "pg_name": "Labor | Plumbing | Vanity Sink",
-      "jt_id": "22PWW46UxZ2v",
-      "jt_name": "Labor | Plumbing | Vanity Sink Hookup",
-      "method": "fuzzy_name",
-      "score": 0.848,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [17, 1232])"
-      ]
-    },
-    {
-      "pg_id": 19,
-      "pg_name": "Labor | Electrical | General Wiring",
-      "jt_id": "22NmAGC2CtBz",
-      "jt_name": "Labor - Electrical",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [19, 930])"
-      ]
-    },
-    {
       "pg_id": 20,
       "pg_name": "Labor | Electrical | GFCI Install",
       "jt_id": "22PW6zr8X64W",
@@ -113,17 +47,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 21,
-      "pg_name": "Labor | Electrical | Light Fixtures",
-      "jt_id": "22NmAGCRdedg",
-      "jt_name": "Light Fixtures",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [21, 981])"
-      ]
-    },
-    {
       "pg_id": 22,
       "pg_name": "Labor | Electrical | Exhaust Fan",
       "jt_id": "22PW6zr8X64Y",
@@ -131,28 +54,6 @@
       "method": "exact_name",
       "score": 1.0,
       "conflicts": []
-    },
-    {
-      "pg_id": 24,
-      "pg_name": "Labor | Tile | Waterproofing Membrane",
-      "jt_id": "22PW6zr8X64d",
-      "jt_name": "Labor | Waterproofing | Membrane Application",
-      "method": "fuzzy_name",
-      "score": 0.875,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [24, 1238])"
-      ]
-    },
-    {
-      "pg_id": 25,
-      "pg_name": "Labor | Tile | Floor Installation",
-      "jt_id": "22NmAGFE8caR",
-      "jt_name": "Labor - Tile Installation",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [25, 959])"
-      ]
     },
     {
       "pg_id": 27,
@@ -173,17 +74,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 34,
-      "pg_name": "Labor | Finish Carpentry | Vanity Install",
-      "jt_id": "22P3DNcgbbc7",
-      "jt_name": "Labor - Install Vanity",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [34, 941])"
-      ]
-    },
-    {
       "pg_id": 35,
       "pg_name": "Labor | Finish Carpentry | Accessories",
       "jt_id": "22PW6zr8X65M",
@@ -202,19 +92,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 38,
-      "pg_name": "Allowance | Fixtures | Bathtub Standard",
-      "jt_id": "22P4fhTZKfih",
-      "jt_name": "Bathtub Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=700 vs JT=1200",
-        "unit_price: PG=1000 vs JT=1714.2857142857144",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [38, 39, 40, 708])"
-      ]
-    },
-    {
       "pg_id": 39,
       "pg_name": "Allowance | Fixtures | Bathtub Upgraded",
       "jt_id": "22P4fhTZKfih",
@@ -222,47 +99,7 @@
       "method": "exact_id",
       "score": 1.0,
       "conflicts": [
-        "unit_price: PG=1714 vs JT=1714.2857142857144",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [38, 39, 40, 708])"
-      ]
-    },
-    {
-      "pg_id": 40,
-      "pg_name": "Allowance | Fixtures | Bathtub Premium",
-      "jt_id": "22P4fhTZKfih",
-      "jt_name": "Bathtub Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=3000 vs JT=1200",
-        "unit_price: PG=4286 vs JT=1714.2857142857144",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [38, 39, 40, 708])"
-      ]
-    },
-    {
-      "pg_id": 41,
-      "pg_name": "Allowance | Fixtures | Shower Trim Standard",
-      "jt_id": "22P4fhTkHftA",
-      "jt_name": "Shower Trim Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=200 vs JT=1200",
-        "unit_price: PG=286 vs JT=1714.2857142857144",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [41, 42, 43, 1148])"
-      ]
-    },
-    {
-      "pg_id": 42,
-      "pg_name": "Allowance | Fixtures | Shower Trim Upgraded",
-      "jt_id": "22P4fhTkHftA",
-      "jt_name": "Shower Trim Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=500 vs JT=1200",
-        "unit_price: PG=714 vs JT=1714.2857142857144",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [41, 42, 43, 1148])"
+        "unit_price: PG=1714 vs JT=1714.2857142857144"
       ]
     },
     {
@@ -274,34 +111,7 @@
       "score": 1.0,
       "conflicts": [
         "unit_cost: PG=900 vs JT=1200",
-        "unit_price: PG=1286 vs JT=1714.2857142857144",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [41, 42, 43, 1148])"
-      ]
-    },
-    {
-      "pg_id": 44,
-      "pg_name": "Allowance | Fixtures | Toilet Standard",
-      "jt_id": "22P4fhTcuZin",
-      "jt_name": "Toilet Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=300 vs JT=1600",
-        "unit_price: PG=429 vs JT=2285.714285714286",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [44, 45, 46, 1181])"
-      ]
-    },
-    {
-      "pg_id": 45,
-      "pg_name": "Allowance | Fixtures | Toilet Upgraded",
-      "jt_id": "22P4fhTcuZin",
-      "jt_name": "Toilet Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=700 vs JT=1600",
-        "unit_price: PG=1000 vs JT=2285.714285714286",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [44, 45, 46, 1181])"
+        "unit_price: PG=1286 vs JT=1714.2857142857144"
       ]
     },
     {
@@ -313,21 +123,7 @@
       "score": 1.0,
       "conflicts": [
         "unit_cost: PG=1500 vs JT=1600",
-        "unit_price: PG=2143 vs JT=2285.714285714286",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [44, 45, 46, 1181])"
-      ]
-    },
-    {
-      "pg_id": 47,
-      "pg_name": "Allowance | Fixtures | Vanity Standard",
-      "jt_id": "22PPw4MHExEF",
-      "jt_name": "Vanity Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=1000 vs JT=2000",
-        "unit_price: PG=1429 vs JT=2857.1428571428573",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [47, 48, 49, 1197])"
+        "unit_price: PG=2143 vs JT=2285.714285714286"
       ]
     },
     {
@@ -338,58 +134,7 @@
       "method": "exact_id",
       "score": 1.0,
       "conflicts": [
-        "unit_price: PG=2857 vs JT=2857.1428571428573",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [47, 48, 49, 1197])"
-      ]
-    },
-    {
-      "pg_id": 49,
-      "pg_name": "Allowance | Fixtures | Vanity Premium",
-      "jt_id": "22PPw4MHExEF",
-      "jt_name": "Vanity Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=4000 vs JT=2000",
-        "unit_price: PG=5714 vs JT=2857.1428571428573",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [47, 48, 49, 1197])"
-      ]
-    },
-    {
-      "pg_id": 51,
-      "pg_name": "Allowance | Tile | Floor Tile Mid",
-      "jt_id": "22NvtLykPeyi",
-      "jt_name": "Floor Tile",
-      "method": "fuzzy_name",
-      "score": 0.833,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [51, 847])"
-      ]
-    },
-    {
-      "pg_id": 56,
-      "pg_name": "Allowance | Fixtures | Accessories Standard",
-      "jt_id": "22P4fhTgpsuP",
-      "jt_name": "Bathroom Accessories Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=200 vs JT=1000",
-        "unit_price: PG=286 vs JT=1428.5714285714287",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [56, 57, 58, 701])"
-      ]
-    },
-    {
-      "pg_id": 57,
-      "pg_name": "Allowance | Fixtures | Accessories Upgraded",
-      "jt_id": "22P4fhTgpsuP",
-      "jt_name": "Bathroom Accessories Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=500 vs JT=1000",
-        "unit_price: PG=714 vs JT=1428.5714285714287",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [56, 57, 58, 701])"
+        "unit_price: PG=2857 vs JT=2857.1428571428573"
       ]
     },
     {
@@ -400,18 +145,8 @@
       "method": "exact_id",
       "score": 1.0,
       "conflicts": [
-        "unit_price: PG=1429 vs JT=1428.5714285714287",
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [56, 57, 58, 701])"
+        "unit_price: PG=1429 vs JT=1428.5714285714287"
       ]
-    },
-    {
-      "pg_id": 64,
-      "pg_name": "Allowance | Fixtures | Electrical Fixtures Premium",
-      "jt_id": "22NnDvCGPr24",
-      "jt_name": "Electrical fixtures",
-      "method": "fuzzy_name",
-      "score": 0.826,
-      "conflicts": []
     },
     {
       "pg_id": 67,
@@ -422,17 +157,6 @@
       "score": 0.917,
       "conflicts": [
         "unit_price: PG=121.47 vs JT=121.43"
-      ]
-    },
-    {
-      "pg_id": 69,
-      "pg_name": "Labor | Finish Carpentry | Shower Door Install",
-      "jt_id": "22NtWFTnF5f9",
-      "jt_name": "Shower door install",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [69, 1142])"
       ]
     },
     {
@@ -985,17 +709,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 701,
-      "pg_name": "Material | Furnishings | Bathroom Accessories Allowance",
-      "jt_id": "22P4fhTgpsuP",
-      "jt_name": "Bathroom Accessories Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [56, 57, 58, 701])"
-      ]
-    },
-    {
       "pg_id": 702,
       "pg_name": "Material | Tile | Bathroom Floor Allowance",
       "jt_id": "22NtY3hcqjVH",
@@ -1048,17 +761,6 @@
       "method": "exact_id",
       "score": 1.0,
       "conflicts": []
-    },
-    {
-      "pg_id": 708,
-      "pg_name": "Material | Appliances | Bathtub Allowance",
-      "jt_id": "22P4fhTZKfih",
-      "jt_name": "Bathtub Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [38, 39, 40, 708])"
-      ]
     },
     {
       "pg_id": 709,
@@ -1909,11 +1611,13 @@
     {
       "pg_id": 804,
       "pg_name": "Labor | Drywall | Drywall Hang/Tape/Texture",
-      "jt_id": "22NvtLtpgeFk",
+      "jt_id": "22NvtLngkNmv",
       "jt_name": "Drywall Hang/Tape/Texture",
-      "method": "exact_id",
+      "method": "exact_id_to_keeper",
       "score": 1.0,
-      "conflicts": []
+      "conflicts": [
+        "redirected from dupe 22NvtLtpgeFk to keeper 22NvtLngkNmv"
+      ]
     },
     {
       "pg_id": 805,
@@ -2062,11 +1766,13 @@
     {
       "pg_id": 822,
       "pg_name": "Labor | Electrical | Electrical Rough",
-      "jt_id": "22NvtLtCiY3j",
+      "jt_id": "22NvtLn9JDk7",
       "jt_name": "Electrical Rough",
-      "method": "exact_id",
+      "method": "exact_id_to_keeper",
       "score": 1.0,
-      "conflicts": []
+      "conflicts": [
+        "redirected from dupe 22NvtLtCiY3j to keeper 22NvtLn9JDk7"
+      ]
     },
     {
       "pg_id": 823,
@@ -2224,11 +1930,13 @@
     {
       "pg_id": 840,
       "pg_name": "Labor | Cleanup | ",
-      "jt_id": "22NvtM32iE62",
-      "jt_name": "Final Clean",
-      "method": "exact_id",
+      "jt_id": "22NtWFUJePbs",
+      "jt_name": "Final clean",
+      "method": "exact_id_to_keeper",
       "score": 1.0,
-      "conflicts": []
+      "conflicts": [
+        "redirected from dupe 22NvtM32iE62 to keeper 22NtWFUJePbs"
+      ]
     },
     {
       "pg_id": 841,
@@ -2291,9 +1999,7 @@
       "jt_name": "Floor Tile",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [51, 847])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 848,
@@ -2325,11 +2031,13 @@
     {
       "pg_id": 852,
       "pg_name": "Labor | Plumbing | Gas Line Labor",
-      "jt_id": "22NvtLsxhiKh",
+      "jt_id": "22NvtLmwFPey",
       "jt_name": "Gas Line Labor",
-      "method": "exact_id",
+      "method": "exact_id_to_keeper",
       "score": 1.0,
-      "conflicts": []
+      "conflicts": [
+        "redirected from dupe 22NvtLsxhiKh to keeper 22NvtLmwFPey"
+      ]
     },
     {
       "pg_id": 853,
@@ -2388,11 +2096,13 @@
     {
       "pg_id": 860,
       "pg_name": "Labor | HVAC | HVAC",
-      "jt_id": "22NvtLspLFut",
+      "jt_id": "22NvtLmpJQWh",
       "jt_name": "HVAC",
-      "method": "exact_id",
+      "method": "exact_id_to_keeper",
       "score": 1.0,
-      "conflicts": []
+      "conflicts": [
+        "redirected from dupe 22NvtLspLFut to keeper 22NvtLmpJQWh"
+      ]
     },
     {
       "pg_id": 861,
@@ -2541,11 +2251,15 @@
     {
       "pg_id": 877,
       "pg_name": "Material | Decking | Joist Hanger 2x8",
-      "jt_id": "22NmAGnFnNh8",
-      "jt_name": "Joist Hanger 2x8",
-      "method": "exact_id",
+      "jt_id": "22Ns2rameTu3",
+      "jt_name": "Joist hanger 2x8",
+      "method": "exact_id_to_keeper",
       "score": 1.0,
-      "conflicts": []
+      "conflicts": [
+        "redirected from dupe 22NmAGnFnNh8 to keeper 22Ns2rameTu3",
+        "unit_cost: PG=2.38 vs JT=2",
+        "unit_price: PG=3.4 vs JT=2.857142857142857"
+      ]
     },
     {
       "pg_id": 878,
@@ -3013,9 +2727,7 @@
       "jt_name": "Labor - Electrical",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [19, 930])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 931,
@@ -3105,9 +2817,7 @@
       "jt_name": "Labor - Install Toilet",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [16, 940])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 941,
@@ -3116,9 +2826,7 @@
       "jt_name": "Labor - Install Vanity",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [34, 941])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 942,
@@ -3271,9 +2979,7 @@
       "jt_name": "Labor - Tile Installation",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [25, 959])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 960,
@@ -3471,9 +3177,7 @@
       "jt_name": "Light Fixtures",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [21, 981])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 982,
@@ -4351,11 +4055,13 @@
     {
       "pg_id": 1080,
       "pg_name": "Labor | Plumbing | Plumbing Labor",
-      "jt_id": "22NvtLsjz8g6",
+      "jt_id": "22NvtLmjyCS8",
       "jt_name": "Plumbing Labor",
-      "method": "exact_id",
+      "method": "exact_id_to_keeper",
       "score": 1.0,
-      "conflicts": []
+      "conflicts": [
+        "redirected from dupe 22NvtLsjz8g6 to keeper 22NvtLmjyCS8"
+      ]
     },
     {
       "pg_id": 1081,
@@ -4589,9 +4295,7 @@
       "jt_name": "Remodeling Permit",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [2, 1106])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 1107,
@@ -4915,9 +4619,7 @@
       "jt_name": "Shower door install",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [69, 1142])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 1143,
@@ -4965,17 +4667,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 1148,
-      "pg_name": "Labor | Plumbing | Shower Trim Allowance",
-      "jt_id": "22P4fhTkHftA",
-      "jt_name": "Shower Trim Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [41, 42, 43, 1148])"
-      ]
-    },
-    {
       "pg_id": 1149,
       "pg_name": "Material | Furnishings | Signature Hardware Lentz Towel Bar | 24\"",
       "jt_id": "22PQAnQKsfc4",
@@ -5018,9 +4709,7 @@
       "jt_name": "Site Walkthrough & Measurements",
       "method": "exact_id",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [1, 1153])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 1154,
@@ -5266,17 +4955,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 1181,
-      "pg_name": "Material | Appliances | Toilet Allowance",
-      "jt_id": "22P4fhTcuZin",
-      "jt_name": "Toilet Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [44, 45, 46, 1181])"
-      ]
-    },
-    {
       "pg_id": 1182,
       "pg_name": "Material | Plumbing | Toilet Wax Ring - reinforced",
       "jt_id": "22NmAGDSedAh",
@@ -5401,17 +5079,6 @@
       "method": "exact_id",
       "score": 1.0,
       "conflicts": []
-    },
-    {
-      "pg_id": 1197,
-      "pg_name": "Material | Furnishings | Vanity Allowance",
-      "jt_id": "22PPw4MHExEF",
-      "jt_name": "Vanity Allowance",
-      "method": "exact_id",
-      "score": 1.0,
-      "conflicts": [
-        "many-to-one: 4 PG items \u2192 same JT item (PG IDs: [47, 48, 49, 1197])"
-      ]
     },
     {
       "pg_id": 1198,
@@ -5652,11 +5319,9 @@
       "pg_name": "Labor | Plumbing | Tub Drain Hookup",
       "jt_id": "22PW6zr8X64Q",
       "jt_name": "Labor | Plumbing | Tub Drain Hookup",
-      "method": "exact_name",
+      "method": "exact_name_keeper",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [15, 1231])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 1232,
@@ -5665,9 +5330,7 @@
       "jt_name": "Labor | Plumbing | Vanity Sink Hookup",
       "method": "exact_name",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [17, 1232])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 1234,
@@ -5703,9 +5366,7 @@
       "jt_name": "Labor | Waterproofing | Membrane Application",
       "method": "exact_name",
       "score": 1.0,
-      "conflicts": [
-        "many-to-one: 2 PG items \u2192 same JT item (PG IDs: [24, 1238])"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 1240,
@@ -5714,15 +5375,6 @@
       "jt_name": "Labor | Tile | Shower Installation",
       "method": "exact_name",
       "score": 1.0,
-      "conflicts": []
-    },
-    {
-      "pg_id": 1243,
-      "pg_name": "Labor | Tile | Accent Band Installation",
-      "jt_id": "22PW6zr8X64j",
-      "jt_name": "Labor | Tile | Niche Installation",
-      "method": "fuzzy_name",
-      "score": 0.833,
       "conflicts": []
     },
     {
@@ -5807,18 +5459,6 @@
       "conflicts": []
     },
     {
-      "pg_id": 1254,
-      "pg_name": "Material | Drywall | Screws 1-5/8\" 1lb",
-      "jt_id": "22PW6zr8X656",
-      "jt_name": "Material | Drywall | Screws 1-5/8\" 5lb",
-      "method": "fuzzy_name",
-      "score": 0.974,
-      "conflicts": [
-        "unit_cost: PG=7.98 vs JT=25.98",
-        "unit_price: PG=11.4 vs JT=37.12"
-      ]
-    },
-    {
       "pg_id": 1255,
       "pg_name": "Labor | Painting | Prep",
       "jt_id": "22PW6zr8X659",
@@ -5866,24 +5506,13 @@
     {
       "pg_id": 1260,
       "pg_name": "Labor | Finish Carpentry | Install Vanity",
-      "jt_id": "22PW6zr8X65L",
+      "jt_id": "22PPpsJ3bR88",
       "jt_name": "Labor | Finish Carpentry | Install Vanity",
-      "method": "exact_name",
+      "method": "exact_name_keeper",
       "score": 1.0,
       "conflicts": [
-        "unit_cost: PG=47.25 vs JT=51.3",
-        "unit_price: PG=87.41 vs JT=94.91"
-      ]
-    },
-    {
-      "pg_id": 1264,
-      "pg_name": "Labor | Finish Carpentry | Accessories Install",
-      "jt_id": "22PUPz9WkLzd",
-      "jt_name": "Labor | Finish Carpentry | Hall Tree Install",
-      "method": "fuzzy_name",
-      "score": 0.844,
-      "conflicts": [
-        "unit_price: PG=87.41 vs JT=94.5"
+        "unit_cost: PG=47.25 vs JT=48",
+        "unit_price: PG=87.41 vs JT=68.57142857142857"
       ]
     },
     {
@@ -5961,54 +5590,13 @@
     {
       "pg_id": 1275,
       "pg_name": "Labor | Sitework | Cleanup",
-      "jt_id": "22PG78WBtSbi",
-      "jt_name": "Labor | Sitework | Jobsite Cleanup",
+      "jt_id": "22PBzfYpsQgp",
+      "jt_name": "Labor - Site Cleanup",
       "method": "fuzzy_name",
-      "score": 0.867,
+      "score": 0.826,
       "conflicts": [
-        "unit_cost: PG=47.25 vs JT=42",
-        "unit_price: PG=94.5 vs JT=84"
+        "unit_price: PG=94.5 vs JT=80.325"
       ]
-    },
-    {
-      "pg_id": 1276,
-      "pg_name": "Material | Sitework | Trash Bags",
-      "jt_id": "22NmAWJSXXyF",
-      "jt_name": "Trash Bags",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "unit_price: PG=38.57 vs JT=37.800000000000004"
-      ]
-    },
-    {
-      "pg_id": 1277,
-      "pg_name": "Material | Sitework | Dump Trailer",
-      "jt_id": "22Nt5uG2mABt",
-      "jt_name": "Dump Trailer",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "unit_price: PG=285.72 vs JT=400"
-      ]
-    },
-    {
-      "pg_id": 1281,
-      "pg_name": "Material | Concrete | Concrete Mix 80lb",
-      "jt_id": "22NtWK9rcPue",
-      "jt_name": "Concrete 80 lb",
-      "method": "fuzzy_name",
-      "score": 0.839,
-      "conflicts": []
-    },
-    {
-      "pg_id": 1291,
-      "pg_name": "Material | Framing | Joist Hangers",
-      "jt_id": "22PGSREvRaQX",
-      "jt_name": "Joist Hanger 2x8",
-      "method": "fuzzy_name",
-      "score": 0.828,
-      "conflicts": []
     },
     {
       "pg_id": 1292,
@@ -6026,11 +5614,9 @@
       "pg_name": "Labor | Decking | Install Railing",
       "jt_id": "22NnDY6WeNKk",
       "jt_name": "Labor | Decking | Install Railing",
-      "method": "exact_name",
+      "method": "exact_name_keeper",
       "score": 1.0,
-      "conflicts": [
-        "Multiple JT matches: ['22NnDY6WeNKk', '22PG78WBtpXR', '22PGWK4BfRR6', '22PGWK9GuVDG', '22PGWKCLkbG8', '22PGrkQ8JmB8', '22PJukiyjaGP']"
-      ]
+      "conflicts": []
     },
     {
       "pg_id": 1306,
@@ -6042,93 +5628,21 @@
       "conflicts": [
         "unit_price: PG=94.5 vs JT=67.57"
       ]
-    },
-    {
-      "pg_id": 1307,
-      "pg_name": "Material | Decking | Deck Board | PT",
-      "jt_id": "22PTHvss3cTe",
-      "jt_name": "Deck Boards",
-      "method": "fuzzy_name",
-      "score": 0.952,
-      "conflicts": [
-        "unit_cost: PG=1.5 vs JT=15",
-        "unit_price: PG=2.14 vs JT=18.75"
-      ]
-    },
-    {
-      "pg_id": 1308,
-      "pg_name": "Material | Decking | Deck Board | Cedar",
-      "jt_id": "22PTfvyQBejK",
-      "jt_name": "Deck Boards",
-      "method": "fuzzy_name",
-      "score": 0.952,
-      "conflicts": [
-        "unit_cost: PG=2.2 vs JT=15",
-        "unit_price: PG=3.14 vs JT=18.75"
-      ]
-    },
-    {
-      "pg_id": 1316,
-      "pg_name": "Material | Stairs | Tread Stock | PT",
-      "jt_id": "22PG78WBtpXJ",
-      "jt_name": "Tread Stock",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=1.5 vs JT=2.5",
-        "unit_price: PG=2.14 vs JT=5"
-      ]
-    },
-    {
-      "pg_id": 1317,
-      "pg_name": "Material | Stairs | Tread Stock | Cedar",
-      "jt_id": "22PGWK4BfRQV",
-      "jt_name": "Tread Stock",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=2.2 vs JT=2.75",
-        "unit_price: PG=3.14 vs JT=5.5"
-      ]
-    },
-    {
-      "pg_id": 1318,
-      "pg_name": "Material | Stairs | Tread Stock | Redwood",
-      "jt_id": "22PGWK9GuVCf",
-      "jt_name": "Tread Stock",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=2.5 vs JT=2.2",
-        "unit_price: PG=3.57 vs JT=4.4"
-      ]
-    },
-    {
-      "pg_id": 1319,
-      "pg_name": "Material | Stairs | Tread Stock | Composite Mid",
-      "jt_id": "22PGWKCLkbFX",
-      "jt_name": "Tread Stock",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=2.34 vs JT=2.5",
-        "unit_price: PG=3.34 vs JT=5"
-      ]
-    },
-    {
-      "pg_id": 1320,
-      "pg_name": "Material | Stairs | Tread Stock | Composite Premium",
-      "jt_id": "22PGrkQ8JQGF",
-      "jt_name": "Tread Stock",
-      "method": "fuzzy_name",
-      "score": 1.0,
-      "conflicts": [
-        "unit_cost: PG=6.8 vs JT=2.5",
-        "unit_price: PG=9.71 vs JT=5"
-      ]
     }
   ],
   "unmatched_pg": [
+    {
+      "id": 1,
+      "canonical_name": "Labor | Admin | Site Walkthrough",
+      "item_type": "Labor",
+      "trade": "Admin"
+    },
+    {
+      "id": 2,
+      "canonical_name": "Other | Admin | Building Permit",
+      "item_type": "Other",
+      "trade": "Admin"
+    },
     {
       "id": 4,
       "canonical_name": "Labor | Demo | Shower Tub Surround",
@@ -6178,16 +5692,58 @@
       "trade": "Plumbing"
     },
     {
+      "id": 15,
+      "canonical_name": "Labor | Plumbing | Tub Drain",
+      "item_type": "Labor",
+      "trade": "Plumbing"
+    },
+    {
+      "id": 16,
+      "canonical_name": "Labor | Plumbing | Toilet Install",
+      "item_type": "Labor",
+      "trade": "Plumbing"
+    },
+    {
+      "id": 17,
+      "canonical_name": "Labor | Plumbing | Vanity Sink",
+      "item_type": "Labor",
+      "trade": "Plumbing"
+    },
+    {
       "id": 18,
       "canonical_name": "Material | Plumbing | Materials Package",
       "item_type": "Material",
       "trade": "Plumbing"
     },
     {
+      "id": 19,
+      "canonical_name": "Labor | Electrical | General Wiring",
+      "item_type": "Labor",
+      "trade": "Electrical"
+    },
+    {
+      "id": 21,
+      "canonical_name": "Labor | Electrical | Light Fixtures",
+      "item_type": "Labor",
+      "trade": "Electrical"
+    },
+    {
       "id": 23,
       "canonical_name": "Material | Electrical | Materials Package",
       "item_type": "Material",
       "trade": "Electrical"
+    },
+    {
+      "id": 24,
+      "canonical_name": "Labor | Tile | Waterproofing Membrane",
+      "item_type": "Labor",
+      "trade": "Tile"
+    },
+    {
+      "id": 25,
+      "canonical_name": "Labor | Tile | Floor Installation",
+      "item_type": "Labor",
+      "trade": "Tile"
     },
     {
       "id": 26,
@@ -6226,14 +5782,74 @@
       "trade": "Painting"
     },
     {
+      "id": 34,
+      "canonical_name": "Labor | Finish Carpentry | Vanity Install",
+      "item_type": "Labor",
+      "trade": "Finish Carpentry"
+    },
+    {
       "id": 37,
       "canonical_name": "Labor | Finish Carpentry | Trim and Baseboard",
       "item_type": "Labor",
       "trade": "Finish Carpentry"
     },
     {
+      "id": 38,
+      "canonical_name": "Allowance | Fixtures | Bathtub Standard",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 40,
+      "canonical_name": "Allowance | Fixtures | Bathtub Premium",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 41,
+      "canonical_name": "Allowance | Fixtures | Shower Trim Standard",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 42,
+      "canonical_name": "Allowance | Fixtures | Shower Trim Upgraded",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 44,
+      "canonical_name": "Allowance | Fixtures | Toilet Standard",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 45,
+      "canonical_name": "Allowance | Fixtures | Toilet Upgraded",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 47,
+      "canonical_name": "Allowance | Fixtures | Vanity Standard",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 49,
+      "canonical_name": "Allowance | Fixtures | Vanity Premium",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
       "id": 50,
       "canonical_name": "Allowance | Tile | Floor Tile Standard",
+      "item_type": "Allowance",
+      "trade": "Tile"
+    },
+    {
+      "id": 51,
+      "canonical_name": "Allowance | Tile | Floor Tile Mid",
       "item_type": "Allowance",
       "trade": "Tile"
     },
@@ -6260,6 +5876,18 @@
       "canonical_name": "Allowance | Tile | Shower Tile High",
       "item_type": "Allowance",
       "trade": "Tile"
+    },
+    {
+      "id": 56,
+      "canonical_name": "Allowance | Fixtures | Accessories Standard",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
+      "id": 57,
+      "canonical_name": "Allowance | Fixtures | Accessories Upgraded",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
     },
     {
       "id": 59,
@@ -6292,6 +5920,12 @@
       "trade": "Fixtures"
     },
     {
+      "id": 64,
+      "canonical_name": "Allowance | Fixtures | Electrical Fixtures Premium",
+      "item_type": "Allowance",
+      "trade": "Fixtures"
+    },
+    {
       "id": 65,
       "canonical_name": "Labor | Admin | Project Management",
       "item_type": "Labor",
@@ -6310,10 +5944,46 @@
       "trade": "Plumbing"
     },
     {
+      "id": 69,
+      "canonical_name": "Labor | Finish Carpentry | Shower Door Install",
+      "item_type": "Labor",
+      "trade": "Finish Carpentry"
+    },
+    {
       "id": 70,
       "canonical_name": "Labor | Electrical | Refresh Scope",
       "item_type": "Labor",
       "trade": "Electrical"
+    },
+    {
+      "id": 701,
+      "canonical_name": "Material | Furnishings | Bathroom Accessories Allowance",
+      "item_type": "Material",
+      "trade": "Furnishings"
+    },
+    {
+      "id": 708,
+      "canonical_name": "Material | Appliances | Bathtub Allowance",
+      "item_type": "Material",
+      "trade": "Appliances"
+    },
+    {
+      "id": 1148,
+      "canonical_name": "Labor | Plumbing | Shower Trim Allowance",
+      "item_type": "Labor",
+      "trade": "Plumbing"
+    },
+    {
+      "id": 1181,
+      "canonical_name": "Material | Appliances | Toilet Allowance",
+      "item_type": "Material",
+      "trade": "Appliances"
+    },
+    {
+      "id": 1197,
+      "canonical_name": "Material | Furnishings | Vanity Allowance",
+      "item_type": "Material",
+      "trade": "Furnishings"
     },
     {
       "id": 1241,
@@ -6328,8 +5998,26 @@
       "trade": "Tile"
     },
     {
+      "id": 1243,
+      "canonical_name": "Labor | Tile | Accent Band Installation",
+      "item_type": "Labor",
+      "trade": "Tile"
+    },
+    {
+      "id": 1254,
+      "canonical_name": "Material | Drywall | Screws 1-5/8\" 1lb",
+      "item_type": "Material",
+      "trade": "Drywall"
+    },
+    {
       "id": 1261,
       "canonical_name": "Labor | Finish Carpentry | General",
+      "item_type": "Labor",
+      "trade": "Finish Carpentry"
+    },
+    {
+      "id": 1264,
+      "canonical_name": "Labor | Finish Carpentry | Accessories Install",
       "item_type": "Labor",
       "trade": "Finish Carpentry"
     },
@@ -6338,6 +6026,18 @@
       "canonical_name": "Material | Admin | Jobsite Mobilization",
       "item_type": "Material",
       "trade": "Admin"
+    },
+    {
+      "id": 1276,
+      "canonical_name": "Material | Sitework | Trash Bags",
+      "item_type": "Material",
+      "trade": "Sitework"
+    },
+    {
+      "id": 1277,
+      "canonical_name": "Material | Sitework | Dump Trailer",
+      "item_type": "Material",
+      "trade": "Sitework"
     },
     {
       "id": 1278,
@@ -6354,6 +6054,12 @@
     {
       "id": 1280,
       "canonical_name": "Material | Concrete | Sonotubes 12\"x4'",
+      "item_type": "Material",
+      "trade": "Concrete"
+    },
+    {
+      "id": 1281,
+      "canonical_name": "Material | Concrete | Concrete Mix 80lb",
       "item_type": "Material",
       "trade": "Concrete"
     },
@@ -6412,6 +6118,12 @@
       "trade": "Framing"
     },
     {
+      "id": 1291,
+      "canonical_name": "Material | Framing | Joist Hangers",
+      "item_type": "Material",
+      "trade": "Framing"
+    },
+    {
       "id": 1293,
       "canonical_name": "Material | Framing | Structural Screws 5lb",
       "item_type": "Material",
@@ -6466,6 +6178,18 @@
       "trade": "Railing"
     },
     {
+      "id": 1307,
+      "canonical_name": "Material | Decking | Deck Board | PT",
+      "item_type": "Material",
+      "trade": "Decking"
+    },
+    {
+      "id": 1308,
+      "canonical_name": "Material | Decking | Deck Board | Cedar",
+      "item_type": "Material",
+      "trade": "Decking"
+    },
+    {
       "id": 1309,
       "canonical_name": "Material | Decking | Deck Board | Redwood",
       "item_type": "Material",
@@ -6508,6 +6232,36 @@
       "trade": "Railing"
     },
     {
+      "id": 1316,
+      "canonical_name": "Material | Stairs | Tread Stock | PT",
+      "item_type": "Material",
+      "trade": "Stairs"
+    },
+    {
+      "id": 1317,
+      "canonical_name": "Material | Stairs | Tread Stock | Cedar",
+      "item_type": "Material",
+      "trade": "Stairs"
+    },
+    {
+      "id": 1318,
+      "canonical_name": "Material | Stairs | Tread Stock | Redwood",
+      "item_type": "Material",
+      "trade": "Stairs"
+    },
+    {
+      "id": 1319,
+      "canonical_name": "Material | Stairs | Tread Stock | Composite Mid",
+      "item_type": "Material",
+      "trade": "Stairs"
+    },
+    {
+      "id": 1320,
+      "canonical_name": "Material | Stairs | Tread Stock | Composite Premium",
+      "item_type": "Material",
+      "trade": "Stairs"
+    },
+    {
       "id": 1321,
       "canonical_name": "Other | Admin | Building Permit | Deck",
       "item_type": "Other",
@@ -6515,6 +6269,12 @@
     }
   ],
   "unmatched_jt": [
+    {
+      "id": "22NmAGnFnNh8",
+      "name": "Joist Hanger 2x8",
+      "cost_code": "Decking",
+      "cost_type": "Materials"
+    },
     {
       "id": "22NmAJErsSiP",
       "name": "Design and Product Research",
@@ -6651,6 +6411,12 @@
       "id": "22NmAJErspf9",
       "name": "Sherwin Williams Emerald Urethane Semi Gloss 1 gal",
       "cost_code": "Painting",
+      "cost_type": "Materials"
+    },
+    {
+      "id": "22NmAWJSXXyF",
+      "name": "Trash Bags",
+      "cost_code": "Planning",
       "cost_type": "Materials"
     },
     {
@@ -8288,6 +8054,12 @@
     {
       "id": "22NnDvCCuKym",
       "name": "Plumbing fixtures",
+      "cost_code": "Uncategorized",
+      "cost_type": "Materials"
+    },
+    {
+      "id": "22NnDvCGPr24",
+      "name": "Electrical fixtures",
       "cost_code": "Uncategorized",
       "cost_type": "Materials"
     },
@@ -10296,12 +10068,6 @@
       "cost_type": "Materials"
     },
     {
-      "id": "22Ns2rameTu3",
-      "name": "Joist hanger 2x8",
-      "cost_code": "Uncategorized",
-      "cost_type": "Materials"
-    },
-    {
       "id": "22Ns3KTiXqty",
       "name": "Design fee",
       "cost_code": "Planning",
@@ -11434,6 +11200,12 @@
       "name": "Trash Bags",
       "cost_code": "Planning",
       "cost_type": "Materials"
+    },
+    {
+      "id": "22Nt5uG2mABt",
+      "name": "Dump Trailer",
+      "cost_code": "Demolition",
+      "cost_type": "Labor"
     },
     {
       "id": "22Nt5uG2mABw",
@@ -12816,12 +12588,6 @@
       "cost_type": "Other"
     },
     {
-      "id": "22NtWFUJePbs",
-      "name": "Final clean",
-      "cost_code": "Uncategorized",
-      "cost_type": "Other"
-    },
-    {
       "id": "22NtWFUL98x5",
       "name": "Project Photos",
       "cost_code": "Uncategorized",
@@ -13383,6 +13149,12 @@
       "id": "22NtWK9rcPud",
       "name": "Joist hanger 4x10",
       "cost_code": "Decking",
+      "cost_type": "Materials"
+    },
+    {
+      "id": "22NtWK9rcPue",
+      "name": "Concrete 80 lb",
+      "cost_code": "Concrete",
       "cost_type": "Materials"
     },
     {
@@ -15012,28 +14784,10 @@
       "cost_type": "Materials"
     },
     {
-      "id": "22NvtLmjyCS8",
-      "name": "Plumbing Labor",
-      "cost_code": "Uncategorized",
-      "cost_type": "Other"
-    },
-    {
-      "id": "22NvtLmpJQWh",
-      "name": "HVAC",
-      "cost_code": "Uncategorized",
-      "cost_type": "Materials"
-    },
-    {
       "id": "22NvtLmsuQLn",
       "name": "Floor Insulation",
       "cost_code": "Uncategorized",
       "cost_type": "Materials"
-    },
-    {
-      "id": "22NvtLmwFPey",
-      "name": "Gas Line Labor",
-      "cost_code": "Uncategorized",
-      "cost_type": "Other"
     },
     {
       "id": "22NvtLn2WJR9",
@@ -15044,12 +14798,6 @@
     {
       "id": "22NvtLn5xyTS",
       "name": "Backout",
-      "cost_code": "Uncategorized",
-      "cost_type": "Other"
-    },
-    {
-      "id": "22NvtLn9JDk7",
-      "name": "Electrical Rough",
       "cost_code": "Uncategorized",
       "cost_type": "Other"
     },
@@ -15096,12 +14844,6 @@
       "cost_type": "Other"
     },
     {
-      "id": "22NvtLngkNmv",
-      "name": "Drywall Hang/Tape/Texture",
-      "cost_code": "Uncategorized",
-      "cost_type": "Other"
-    },
-    {
       "id": "22NvtLnkaDKe",
       "name": "Deliver Interior Trim",
       "cost_code": "Uncategorized",
@@ -15120,14 +14862,38 @@
       "cost_type": "Labor"
     },
     {
+      "id": "22NvtLsjz8g6",
+      "name": "Plumbing Labor",
+      "cost_code": "Uncategorized",
+      "cost_type": "Labor"
+    },
+    {
+      "id": "22NvtLspLFut",
+      "name": "HVAC",
+      "cost_code": "Uncategorized",
+      "cost_type": "Labor"
+    },
+    {
       "id": "22NvtLstTFjk",
       "name": "Floor Insulation",
       "cost_code": "Uncategorized",
       "cost_type": "Labor"
     },
     {
+      "id": "22NvtLsxhiKh",
+      "name": "Gas Line Labor",
+      "cost_code": "Uncategorized",
+      "cost_type": "Labor"
+    },
+    {
       "id": "22NvtLt3rRnn",
       "name": "Rough Gas/Plumbing Inspection",
+      "cost_code": "Uncategorized",
+      "cost_type": "Labor"
+    },
+    {
+      "id": "22NvtLtCiY3j",
+      "name": "Electrical Rough",
       "cost_code": "Uncategorized",
       "cost_type": "Labor"
     },
@@ -15176,6 +14942,12 @@
     {
       "id": "22NvtLtjSEex",
       "name": "Insulation Inspection",
+      "cost_code": "Uncategorized",
+      "cost_type": "Labor"
+    },
+    {
+      "id": "22NvtLtpgeFk",
+      "name": "Drywall Hang/Tape/Texture",
       "cost_code": "Uncategorized",
       "cost_type": "Labor"
     },
@@ -15302,6 +15074,12 @@
     {
       "id": "22NvtM2wirYg",
       "name": "Final Inspections - Electrical/Plumbing/HVAC",
+      "cost_code": "Uncategorized",
+      "cost_type": "Labor"
+    },
+    {
+      "id": "22NvtM32iE62",
+      "name": "Final Clean",
       "cost_code": "Uncategorized",
       "cost_type": "Labor"
     },
@@ -24372,12 +24150,6 @@
       "cost_type": "Labor"
     },
     {
-      "id": "22PBzfYpsQgp",
-      "name": "Labor - Site Cleanup",
-      "cost_code": "Demolition",
-      "cost_type": "Labor"
-    },
-    {
       "id": "22PBzfYpsQgu",
       "name": "Labor - Rim Joist Replacement",
       "cost_code": "Framing",
@@ -25068,6 +24840,12 @@
       "cost_type": "Materials"
     },
     {
+      "id": "22PG78WBtSbi",
+      "name": "Labor | Sitework | Jobsite Cleanup",
+      "cost_code": "Specialty Finishes",
+      "cost_type": "Labor"
+    },
+    {
       "id": "22PG78WBtSbm",
       "name": "Labor | Demolition | Concrete",
       "cost_code": "Demolition",
@@ -25196,6 +24974,12 @@
     {
       "id": "22PG78WBtpXG",
       "name": "Riser Stock",
+      "cost_code": "Decking",
+      "cost_type": "Materials"
+    },
+    {
+      "id": "22PG78WBtpXJ",
+      "name": "Tread Stock",
       "cost_code": "Decking",
       "cost_type": "Materials"
     },
@@ -25329,6 +25113,12 @@
       "id": "22PGSREvRaQW",
       "name": "Joist hanger 2x6",
       "cost_code": "Uncategorized",
+      "cost_type": "Materials"
+    },
+    {
+      "id": "22PGSREvRaQX",
+      "name": "Joist Hanger 2x8",
+      "cost_code": "Decking",
       "cost_type": "Materials"
     },
     {
@@ -25860,6 +25650,12 @@
       "cost_type": "Materials"
     },
     {
+      "id": "22PGWK4BfRQV",
+      "name": "Tread Stock",
+      "cost_code": "Decking",
+      "cost_type": "Materials"
+    },
+    {
       "id": "22PGWK4BfRQY",
       "name": "Decking | Wood | Red Cedar | 1\" x 6\" x 20' -",
       "cost_code": "Decking",
@@ -26382,6 +26178,12 @@
       "cost_type": "Materials"
     },
     {
+      "id": "22PGWK9GuVCf",
+      "name": "Tread Stock",
+      "cost_code": "Decking",
+      "cost_type": "Materials"
+    },
+    {
       "id": "22PGWK9GuVCi",
       "name": "Decking | Wood | Red Cedar | 1\" x 6\" x 20' -",
       "cost_code": "Decking",
@@ -26900,6 +26702,12 @@
     {
       "id": "22PGWKCLkbFV",
       "name": "Decking | Composite | Timbertech | Reserve | 1\" x 6\" x 16'",
+      "cost_code": "Decking",
+      "cost_type": "Materials"
+    },
+    {
+      "id": "22PGWKCLkbFX",
+      "name": "Tread Stock",
       "cost_code": "Decking",
       "cost_type": "Materials"
     },
@@ -27662,6 +27470,12 @@
     {
       "id": "22PGrkQ8JQGD",
       "name": "Decking | Composite | Timbertech | Reserve | 1\" x 6\" x 16'",
+      "cost_code": "Decking",
+      "cost_type": "Materials"
+    },
+    {
+      "id": "22PGrkQ8JQGF",
+      "name": "Tread Stock",
       "cost_code": "Decking",
       "cost_type": "Materials"
     },
@@ -30630,12 +30444,6 @@
       "cost_type": "Materials"
     },
     {
-      "id": "22PPpsJ3bR88",
-      "name": "Labor | Finish Carpentry | Install Vanity",
-      "cost_code": "Uncategorized",
-      "cost_type": "Labor"
-    },
-    {
       "id": "22PPpsJ3bR8A",
       "name": "Labor | Cabinetry | Install Cabinets",
       "cost_code": "Cabinetry",
@@ -32214,6 +32022,12 @@
       "cost_type": "Labor"
     },
     {
+      "id": "22PTHvss3cTe",
+      "name": "Deck Boards",
+      "cost_code": "Uncategorized",
+      "cost_type": "Admin"
+    },
+    {
       "id": "22PTHvss3cTf",
       "name": "4x4 Posts",
       "cost_code": "Uncategorized",
@@ -32294,6 +32108,12 @@
     {
       "id": "22PTSqwhtBLk",
       "name": "Beam Inspect and Repair",
+      "cost_code": "Uncategorized",
+      "cost_type": "Admin"
+    },
+    {
+      "id": "22PTfvyQBejK",
+      "name": "Deck Boards",
       "cost_code": "Uncategorized",
       "cost_type": "Admin"
     },
@@ -32630,6 +32450,12 @@
     {
       "id": "22PUPz9WkLzc",
       "name": "Labor | Finish Carpentry | Interior Casing + Baseboard",
+      "cost_code": "Cabinetry",
+      "cost_type": "Labor"
+    },
+    {
+      "id": "22PUPz9WkLzd",
+      "name": "Labor | Finish Carpentry | Hall Tree Install",
       "cost_code": "Cabinetry",
       "cost_type": "Labor"
     },
@@ -33396,6 +33222,12 @@
       "cost_type": "Labor"
     },
     {
+      "id": "22PW6zr8X64j",
+      "name": "Labor | Tile | Niche Installation",
+      "cost_code": "Tiling",
+      "cost_type": "Labor"
+    },
+    {
       "id": "22PW6zr8X64m",
       "name": "Material | Tile | Schluter Shower Pan",
       "cost_code": "Tiling",
@@ -33420,6 +33252,12 @@
       "cost_type": "Materials"
     },
     {
+      "id": "22PW6zr8X656",
+      "name": "Material | Drywall | Screws 1-5/8\" 5lb",
+      "cost_code": "Drywall",
+      "cost_type": "Materials"
+    },
+    {
       "id": "22PW6zr8X65A",
       "name": "Labor | Painting | Caulking",
       "cost_code": "Painting",
@@ -33436,6 +33274,12 @@
       "name": "Material | Painting | BIN Shellac Primer",
       "cost_code": "Painting",
       "cost_type": "Materials"
+    },
+    {
+      "id": "22PW6zr8X65L",
+      "name": "Labor | Finish Carpentry | Install Vanity",
+      "cost_code": "Cabinetry",
+      "cost_type": "Labor"
     },
     {
       "id": "22PW6zr8X65P",

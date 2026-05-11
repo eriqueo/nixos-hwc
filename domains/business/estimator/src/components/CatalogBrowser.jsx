@@ -8,10 +8,10 @@ const ALL_TRADES = [...new Set(pricebook.map(i => i.trade).filter(Boolean))].sor
 
 const TYPE_FILTERS = [
   { key: null, label: 'All' },
-  { key: 'labor', label: 'Labor' },
-  { key: 'material', label: 'Material' },
-  { key: 'allowance', label: 'Allowance' },
-  { key: 'other', label: 'Other' },
+  { key: 'Labor', label: 'Labor' },
+  { key: 'Material', label: 'Material' },
+  { key: 'Allowance', label: 'Allowance' },
+  { key: 'Other', label: 'Other' },
 ];
 
 /**

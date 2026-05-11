@@ -1,6 +1,5 @@
-// ─── CalculatorLayout v2 ──────────────────────────────────────────────────
-// Self-contained light-background container so the calculator is readable
-// on any host page (including the dark page-simple.njk layout).
+// ─── CalculatorLayout v3 ──────────────────────────────────────────────────
+// Full-page calculator experience. Larger type, more breathing room.
 // Desktop: two-column grid (questions + sidebar). Mobile: single column.
 
 import useIsMobile from "./useIsMobile";
@@ -16,31 +15,54 @@ export default function CalculatorLayout({
   totalSteps,
   fmt,
   phase,
+  title,
 }) {
   const isMobile = useIsMobile(768);
 
   return (
-    // Outer wrapper: provides the light background that protects readability
-    // regardless of what color the host page uses.
     <div
       style={{
         background: T.pageBg,
         fontFamily: fonts.sans,
         color: T.text,
-        padding: isMobile ? "1.5rem 0" : "2.5rem 0",
-        margin: isMobile ? "0 -1rem" : "0",  // bleed to edges on mobile
+        padding: isMobile ? "2rem 0" : "3rem 0",
+        margin: isMobile ? "0 -1rem" : "0",
       }}
     >
       <link href={fontsUrl} rel="stylesheet" />
 
+      {/* Page title — built into the calculator, not the host page */}
+      {title && (
+        <div
+          style={{
+            maxWidth: isMobile ? 640 : 1120,
+            margin: "0 auto",
+            padding: isMobile ? "0 1.25rem 1.5rem" : "0 2rem 2rem",
+          }}
+        >
+          <h1
+            style={{
+              fontFamily: fonts.serif,
+              fontSize: isMobile ? 28 : 40,
+              fontWeight: 700,
+              color: T.heading,
+              margin: 0,
+              lineHeight: 1.15,
+            }}
+          >
+            {title}
+          </h1>
+        </div>
+      )}
+
       <div
         style={{
           display: isMobile ? "block" : "grid",
-          gridTemplateColumns: isMobile ? undefined : "1fr 320px",
-          gap: isMobile ? 0 : 32,
-          maxWidth: isMobile ? 600 : 960,
+          gridTemplateColumns: isMobile ? undefined : "1fr 360px",
+          gap: isMobile ? 0 : 48,
+          maxWidth: isMobile ? 640 : 1120,
           margin: "0 auto",
-          padding: isMobile ? "0 1rem 5rem" : "0 1.5rem 3rem",
+          padding: isMobile ? "0 1.25rem 5rem" : "0 2rem 3rem",
           alignItems: "start",
         }}
       >
@@ -53,18 +75,18 @@ export default function CalculatorLayout({
 
       {/* Mobile sticky estimate bar */}
       {isMobile && phase !== "submitted" && (
-        <MobileEstimateBar lo={lo} hi={hi} step={step} totalSteps={totalSteps} fmt={fmt} />
+        <MobileEstimateBar lo={lo} hi={hi} step={step} totalSteps={totalSteps} fmt={fmt} phase={phase} />
       )}
 
       {/* Footer */}
       <div
         style={{
-          maxWidth: isMobile ? 600 : 960,
+          maxWidth: isMobile ? 640 : 1120,
           margin: "0 auto",
-          padding: "20px 1.5rem 0",
+          padding: "24px 2rem 0",
           borderTop: `1px solid ${T.border}`,
           textAlign: "center",
-          fontSize: 11,
+          fontSize: 13,
           color: T.textLight,
           lineHeight: 1.7,
         }}

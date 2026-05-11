@@ -1,0 +1,207 @@
+﻿Cost Group Template ID,Cost Group Template Name,Cost Group Name,Cost Item ID,Cost Item Name,Description,Quantity,Quantity Formula,Unit,Unit Cost,Unit Cost Formula,Unit Price,Unit Price Formula,Cost Code,Cost Type,Taxable,Allowance Type,Allows Customer Write-In,Specification,Require Specification Approval,Selected,Minimum Selections,Maximum Selections,Show Child Costs,Show Child Deltas,Show Children,Show Description,Show Quantity,Custom Field: URL,Custom Field: Production Rate,Custom Field: Available Finishes,Custom Field: Labor Wage,Custom Field: Labor Burden,Custom Field: Category,Custom Field: Vendor,Custom Field: Waste,Custom Field: Formula Notes,Custom Field: Ordered Status,Custom Field: Dimensions,Custom Field: Specifications
+22PGrkQ8FR4F,New Deck Template,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,New Deck Template,Preconstruction,,,All project management (Includes permitting as needed.).,1,,,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Preconstruction,22NnDvWgxmSp,Other | Planning | Estimating Fee,Charging clients for preparation of estimate,0,ceil({parent quantity}* {production rate}),Hours,,ceil({Labor Wage}*{Labor Burden}),,,0100 Planning,Other,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Preconstruction,22NnDvWihvby,"Other | Planning | Project Management, Standard Permits, & Oversight",All project management to include permitting as needed and on-site porta potty as required by city/county ordinance.,0,ceil({parent quantity}* {production rate}),Hours,,ceil({Labor Wage}*{Labor Burden}),,,0100 Planning,Other,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Preconstruction,22NnDvWkGmsf,Other | Planning | Project Management - Clerical,"Estimates, Revisions, Material Spec",0,ceil({parent quantity}* {production rate}),Hours,,ceil({Labor Wage}*{Labor Burden}),,,0100 Planning,Other,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Preconstruction,22NnDY6Jackc,Building Plans/Drawings,,0,,Each,,,,,0000 Uncategorized,Other,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Preconstruction,22NnDvWmqUPa,Other | Planning | Residential Building Permit Cost - County,Construction permits In the city,1,,Lump Sum,,,0,,0100 Planning,Other,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Preconstruction,22NnDvWpe5CH,Material | Planning | Jobsite Tools & Equipment for Project Mobilization,"Lockboxes, yard signs, specialty tools, demo tools, referral gift, clean-up materials, fuel",1,,Lump Sum,330,,511.47,,0100 Planning,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Sitework,,,Job site cleanup & dispose of all construction debris in contractor's off-site dumpster.,,ceil(({d_total_sf}*{waste_factor})),Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Sitework; Labor,,,,,{Parent Quantity},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Sitework; Labor,22NnDvXBjua7,Labor | Specialty | Sitework | Jobsite Cleanup,Cleaning at the end of the day,0,ceil({parent quantity}* {production rate}),Hours,,ceil({Labor Wage}*{Labor Burden}),,,2200 Specialty Finishes,Labor,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Sitework; Materials,,,,,{Parent Quantity},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Sitework; Materials,22Nn3Yr3Ne5S,Material | Planning | Trash Bags,,2,,Each,27,,38.57,,0100 Planning,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Sitework; Materials,22NnDY6MwFmu,Other | Sitework | Dump Fee,,1,,Each,20,,28.57,,0110 Site Preparation,Other,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Sitework; Materials,22NnDvX9mVT2,Material | Demo | Trash- Dump Trailer - (Trash disposal),Trailer Dump fee at Transfer Station or unload @ shop dumpster,1,,Each,,,,,0200 Demolition,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Demolition,,,"Remove existing railing, decking and framing.",,ceil(({d_total_sf}*{waste_factor})),Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Demolition; Labor,,,,,{Parent Quantity},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Demolition; Labor,22NtWSWy2pTt,Labor | Demo | Concrete,,0,0,Hours,,ceil({Labor Wage}*{Labor Burden}),,,0200 Demolition,Labor,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Demolition; Labor,22NtWRDU9fM9,Labor | Demo | Exterior,,0,ceil({parent quantity}* {production rate}),Hours,435.2,ceil({Labor Wage}*{Labor Burden}),621.71,,0200 Demolition,Labor,false,,false,false,true,false,,,,,,true,true,,0.04,,,,,,,,,,
+,New Deck Template,Demolition; Labor,22NnDvWreKRY,Labor | Planning | Sitework | Move Client's Furnishings,Move Owners Furnishings to adjacent room or garage (Wrapping & packing not included),0,ceil({parent quantity}* {production rate}),Hours,,ceil({Labor Wage}*{Labor Burden}),,,0100 Planning,Labor,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Demolition; Materials,,,,,{Parent Quantity},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Footings,,,Inspect Footings for,,{footings_#},Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Footings; Labor,,,,0,0,,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Footings; Labor,22NnDY6YBn4L,Labor | Concrete | Pour Footings,,0,ceil({parent quantity}* {production rate}),Hours,100.19999999999999,ceil({Labor Wage}*{Labor Burden}),143.14285714285714,,2800 Concrete,Labor,false,,false,false,true,false,,,,,,true,true,,0.421,,,,,,,,,,
+,New Deck Template,Footings; Materials,,,,0,0,,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Footings; Materials,22Np3xcPPtb3,Material | Decking | ABU66Z Adjustable Post Base with Standoff (ZMAX®),ABU66Z,0,{Parent Quantity},Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Footings; Materials,22PGrkPd7ebV,Material | Siding | ABA ZMAX Galvanized Adjustable Standoff Post Base for 6x6 Nominal Lumber,,0,{Parent Quantity},Each,54,,108,,0800 Siding,Materials,false,,false,false,true,false,,,,,,true,true,https://www.homedepot.com/p/Simpson-Strong-Tie-ABA-ZMAX-Galvanized-Adjustable-Standoff-Post-Base-for-6x6-Nominal-Lumber-ABA66Z/100375370,,,35,0.2,,None,1.2,ABA66Z,false,,
+,New Deck Template,Footings; Materials,22PGrkPfRACp,"Material | Siding | SDS-Plus Drill Bit | 5/8x8""",,0,{Parent Quantity},Each,16.77,,33.54,,0800 Siding,Materials,false,,false,false,true,false,,,,,,true,true,https://www.homedepot.com/p/Milwaukee-5-8-in-x-8-in-4-Cutter-SDS-PLUS-Carbide-Drill-Bit-48-20-8300/300879137,,,35,0.2,,None,1.2,48-20-8300,false,,
+,New Deck Template,Footings; Materials,22Np3xcTNJmQ,"Material | Decking | Titen HD Anchor | 5/8x6""",THDB62600H4SSF1,0,{Parent Quantity},Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing,,,"Inspect Existing Framing for integrity.
+Remove, Replace as needed.
+Tape all farming with Butyl Tape",,ceil(({d_total_sf}*{waste_factor})),Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber,,,,,{Parent Quantity},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Stairs Lumber,,,,,,Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Stairs Lumber; Stringers,,,,,{s_stringers_qty},,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Stairs Lumber; Stringers,22Np3xdtzap8,"Material | Framing | KD SPF | 2""x12""x14'",,0,{s_stringers_qty},Each,,,,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Stairs Lumber; Risers,,,,,{s_riser_qty},Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Stairs Lumber; Risers,22Np3xcVFW3s,"Material | Decking | Wood Board | Red Cedar 1"" x 6"" x 20' -",,,,Each,44,,88,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Joists,,,,,,Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Joists,22Np3xcmjrQB,"Material | Framing | KD SPF | 2""x8""x12'",12 Footers,0,"IF({j_buy_length}=""8 ft"",{j_buy_qty},0)",Each,17.37,,34.74,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Joists,22Np3xd4NbZ6,"Material | Framing | KD SPF | 2""x12""x10'",,0,"IF({j_buy_length}=""12 ft"",{j_buy_qty},0)",Each,,,,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Joists,22Np3xd4NbZ6,"Material | Framing | KD SPF | 2""x12""x10'",,0,"IF({j_buy_length}=""16 ft"",{j_buy_qty},0)",Each,,,,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (long),,,,,,Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (long),22Np3xcmjrQB,"Material | Framing | KD SPF | 2""x8""x12'",12 Footers,0,"IF(  FLOOR(8/{d_length})>0 AND CEIL(2/FLOOR(8/{d_length})) < MIN( IF(FLOOR(12/{d_length})>0, CEIL(2/FLOOR(12/{d_length})), 999),    IF(FLOOR(16/{d_length})>0, CEIL(2/FLOOR(16/{d_length})), 999)),  CEIL(2/FLOOR(8/{d_length})),  0)",Each,17.37,,34.74,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (long),22Np3xd4NbZ6,"Material | Framing | KD SPF | 2""x12""x10'",,0,"IF(  FLOOR(12/{d_length})>0  AND CEIL(2/FLOOR(12/{d_length})) <= IF(FLOOR(8/{d_length})>0, CEIL(2/FLOOR(8/{d_length})), 999)  AND CEIL(2/FLOOR(12/{d_length})) <  CEIL(2/FLOOR(16/{d_length})),  CEIL(2/FLOOR(12/{d_length})),  0)",Each,,,,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (long),22Np3xd4NbZ6,"Material | Framing | KD SPF | 2""x12""x10'",,0,"IF(  FLOOR(16/{d_length})>0  AND CEIL(2/FLOOR(16/{d_length})) <= MIN(        IF(FLOOR(12/{d_length})>0, CEIL(2/FLOOR(12/{d_length})), 999),        IF(FLOOR(8/{d_length})>0,  CEIL(2/FLOOR(8/{d_length})),  999)),  CEIL(2/FLOOR(16/{d_length})), 0)",Each,,,,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (short),,,,,,Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (short),22Np3xcmjrQB,"Material | Framing | KD SPF | 2""x8""x12'",12 Footers,0,"IF(
+  FLOOR(8/{d_width})>0
+  AND CEIL(4/FLOOR(8/{d_width})) <
+      MIN(
+        IF(FLOOR(12/{d_width})>0, CEIL(4/FLOOR(12/{d_width})), 999),
+        IF(FLOOR(16/{d_width})>0, CEIL(4/FLOOR(16/{d_width})), 999)
+      ),
+  CEIL(4/FLOOR(8/{d_width})),
+  0
+)",Each,17.37,,34.74,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (short),22Np3xd4NbZ6,"Material | Framing | KD SPF | 2""x12""x10'",,0,"IF(
+  FLOOR(12/{d_width})>0
+  AND CEIL(4/FLOOR(12/{d_width})) <= IF(FLOOR(8/{d_width})>0, CEIL(4/FLOOR(8/{d_width})), 999)
+  AND CEIL(4/FLOOR(12/{d_width})) <  CEIL(4/FLOOR(16/{d_width})),
+  CEIL(4/FLOOR(12/{d_width})),
+  0
+)",Each,,,,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Rim Joists (short),22Np3xd4NbZ6,"Material | Framing | KD SPF | 2""x12""x10'",,0,"IF(
+  FLOOR(16/{d_width})>0
+  AND CEIL(4/FLOOR(16/{d_width})) <= MIN(
+        IF(FLOOR(12/{d_width})>0, CEIL(4/FLOOR(12/{d_width})), 999),
+        IF(FLOOR(8/{d_width})>0,  CEIL(4/FLOOR(8/{d_width})),  999)
+  ),
+  CEIL(4/FLOOR(16/{d_width})),
+  0
+)",Each,,,,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Blocking,,,,,,Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Blocking,22Np3xcmjrQB,"Material | Framing | KD SPF | 2""x8""x12'",12 Footers,0,"IF(
+  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 8 )
+    <  MIN(
+          CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 12 ),
+          CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 16 )
+       ),
+  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 8 ),
+  0
+)",Each,17.37,,34.74,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Blocking,22Np3xcmjrQB,"Material | Framing | KD SPF | 2""x8""x12'",12 Footers,0,"IF(
+  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 12 )
+    <  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 16 )
+  AND
+  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 12 )
+    <= CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 8 ),
+  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 12 ),
+  0
+)",Each,17.37,,34.74,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Blocking,22Np3xcfpxKB,"Material | Framing | KD SPF | 2""x8""x16'",16 Footers,0,"IF(
+  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 16 )
+    <= MIN(
+          CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 12 ),
+          CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 8 )
+       ),
+  CEIL( (MAX(0, CEIL({d_width}/4)-1) * {d_length}) / 16 ),
+  0
+)",Each,23.15,,46.3,,0600 Framing,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Fascia,,,,,,Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Fascia,22Np3xdXEu7m,Material | Decking | Lumber WRC | 1x8x12,,0,"IF(
+  CEIL( (2*{d_length}+{d_width}) / 8 )
+    <  MIN(
+          CEIL( (2*{d_length}+{d_width}) / 12 ),
+          CEIL( (2*{d_length}+{d_width}) / 16 )
+       ),
+  CEIL( (2*{d_length}+{d_width}) / 8 ),
+  0
+)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Fascia,22Np3xdXEu7m,Material | Decking | Lumber WRC | 1x8x12,,0,"IF(
+  CEIL( (2*{d_length}+{d_width}) / 12 )
+    <  CEIL( (2*{d_length}+{d_width}) / 16 )
+  AND
+  CEIL( (2*{d_length}+{d_width}) / 12 )
+    <= CEIL( (2*{d_length}+{d_width}) / 8 ),
+  CEIL( (2*{d_length}+{d_width}) / 12 ),
+  0
+)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Lumber; Fascia,22Np3xdXEu7m,Material | Decking | Lumber WRC | 1x8x12,,0,"IF(
+  CEIL( (2*{d_length}+{d_width}) / 16 )
+    <= MIN(
+          CEIL( (2*{d_length}+{d_width}) / 12 ),
+          CEIL( (2*{d_length}+{d_width}) / 8 )
+       ),
+  CEIL( (2*{d_length}+{d_width}) / 16 ),
+  0
+)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Labor,,,"Your deck framing supports the main structure of your deck, acting as the foundation. This will include all the labor to build your deck.",,{Parent Quantity},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Labor,22NmAzFsX5MS,Labor | Framing | Exterior,,0,ceil({parent quantity}* {production rate}),Hours,46.15384615384615,ceil({Labor Wage}*{Labor Burden}),65.93406593406594,,0600 Framing,Labor,false,,false,false,true,false,,,,,,true,true,,0.26,,,,,,,,,,
+,New Deck Template,Framing; Labor,22Ns2ra9ekyz,Labor | Sitework | Temporary Bracing,,0,ceil({parent quantity}* {production rate}),Hours,70,ceil({Labor Wage}*{Labor Burden}),100,,0000 Uncategorized,Labor,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials,,,,,{Parent Quantity},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,,,,,,,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,22PGrkPhsc7Y,Material | Framing | Joist hanger 2x6,LUS26Z,0,{j_qty}*2,Each,1.36,,2.72,,0600 Framing,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,1.2,,None,1.2,,false,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,22NmAGnFnNh8,Joist Hanger 2x8,,0,{j_qty}*2,Each,2.38,,3.4,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,22NnayzD22SL,Material | Decking | Joist Hangers - 2x8 / 2x10,,0,{j_qty}*2,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,22Ns2rapwzXj,Material | Framing | Joist hanger 4x10,,0,,Each,4,,5.71,,0600 Framing,Materials,false,,false,false,true,true,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,22Np3xdEbgGb,Material | Decking | LS50Z Skewable Angle (ZMAX®),LS50Z,0,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,22Np3xdBd9RB,Material | Decking | H2.5AZ Hurricane Tie (ZMAX®),H2.5AZ,0,{j_qty},Each,1.28,,2.56,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Hangers/Connectors,22Np3xdGE9hZ,Material | Decking | DTT2Z Connector (ZMAX®)(Fasteners and Washers included),DTT2Z,0,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Nails/Screws,,,,,,,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Nails/Screws,22Nn3YrUGPCS,"Material | Cabinetry | Screws Trim Head - 5lb | 2""",,1,,Each,35,,49,,1900 Cabinetry,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Nails/Screws,22NmAGnAQQcq,"Material | Miscellaneous | Screws 3"" exterior | 5lb",,1,,Each,46.02,,65.74,,3100 Miscellaneous,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Nails/Screws,22Np3xdHnDd2,"Material | Decking | Strong-Drive SCN Connector Nail | 1 1/2"" 10ga 1 LB",N8DHDG,2,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Bolts,,,,,,,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Bolts,22Np3xdNXuxz,"Material | Decking | Bolt Nut HDG | 1/2""",NUT-1/2 MBHDG,4,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Bolts,22Np3xdM2TBn,"Material | Decking | Machine Bolt | 1/2x6""",1/2 MBHDGH,4,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Stairs Materials,,,,,{Parent Quantity},Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Stairs Materials; Hardware,,,,,,,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Stairs Materials; Hardware,22Np3xgSRWvP,"Material | Decking | DWP Deck Screws | #10 2-1/2"" 305SS FLAT T25 1#",S10250WP1,2,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Framing; Materials; Stairs Materials; Hardware,22Np3xdvVKzW,Material | Decking | LSCZ Adjustable Stair-Stringer Connector (ZMAX®),LSCZ,0,{s_stringers_qty},Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking,,,Install Cedarwood Decking with traditional or hidden fastener system.,,ceil({d_total_lf}*{waste_factor}),Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Materials,,,,,{d_total_qty},Square Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Materials,22PGrkPk6vaw,"Material | Decking | Composite Deck Screws | 2 1/2""",350 ct,0,"if({screw_type}=""normal"", CEIL( ({Parent Quantity} / 100) * (16 / {j_spacing}) ),0)",Each,63.33,,126.66,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,1.2,,None,1.2,,false,,
+,New Deck Template,Decking; Materials,22Ns2ra6hq7C,Material | Miscellaneous | Hidden Fasteners - 500 sq ft,,0,"if({screw_type}=""hidden"",if(({d_total_sf}+{s_decking_sf})<500,1,2),0)",Each,319.99,,457.13,,3100 Miscellaneous,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Materials,22Np3xdRjcP3,"Material | Decking | Strong-Drive SCN Connector Nail | 1 1/2"" 9ga 1 LB",N10DHDG,3,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Labor,,,,,{d_total_sf},Hours,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Labor,22PGT3tHLnaW,Labor | Decking | Install Stairs,,0,ceil({parent quantity}* {production rate}),Hours,42,ceil({Labor Wage}*{Labor Burden}),84,,0000 Uncategorized,Labor,false,,false,false,true,false,,,,,,true,true,,0.2,,35,1.2,,None,1.2,,false,,
+,New Deck Template,Decking; Labor,22NnDY6VDpFa,Labor | Decking | Install Decking,,0,ceil({parent quantity}* {production rate}),Hours,,ceil({Labor Wage}*{Labor Burden}),,,2500 Decking,Labor,false,,false,false,true,false,,,,,,true,true,,0.072,,,1.35,,,,,,,
+,New Deck Template,Decking; Picture Frame,,,Number of Picture Frame Boards,,ceil({pf_qty}*{waste_factor}),Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Picture Frame; Deck Boards,,,Linear Feet,,ceil({pf_lf}*{waste_factor}),Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Picture Frame; Deck Boards,22Np3xcVFW3s,"Material | Decking | Wood Board | Red Cedar 1"" x 6"" x 20' -",,0,"if({decking}=""wrc"",{Parent Quantity},0)",Each,44,,88,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Picture Frame; Deck Boards,22NpAUYyGcNB,"Material | Decking | Wood Board | Alaskan Yellow Cedar 1"" x 6"" x 16'",,0,"if({decking}=""ayc"",{Parent Quantity},0)",Each,32,,64,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Picture Frame; Deck Boards,22Np3xcX8sPj,"Material | Decking | Wood Board | Redwood 2"" x 6"" x 16'",,0,"if({decking}=""redwood"",{Parent Quantity},0)",Each,90,,180,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Picture Frame; Deck Boards,22NmAGnSmUgF,"Material | Decking | Composite Board | Trex Transcend 1"" x 6"" x 16'",,0,"if({decking}=""transcend"",{Parent Quantity},0)",Each,94.35,,50.29,,0600 Framing,Materials,false,,false,false,true,true,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Picture Frame; Deck Boards,22NnDY6hixd8,"Material | Decking | Composite Board | TimberTech Legacy 1"" x 6"" x 16'",,0,"if({decking}=""legacy"",{Parent Quantity},0)",Each,108.75,,155.36,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Picture Frame; Deck Boards,22NnDY6gEEM7,"Material | Decking | Composite Board | Timbertech Reserve 1"" x 6"" x 16'",,0,"if({decking}=""legacy"",{Parent Quantity},0)",Each,91.25,,130.36,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Stairs,,,Number of treads,,ceil({s_tread_qty}*{waste_factor}),Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Stairs,22Np3xcVFW3s,"Material | Decking | Wood Board | Red Cedar 1"" x 6"" x 20' -",,0,"ceil({s_tread_qty}* {s_total_width_ft}*{waste_factor},0)",Each,44,,88,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck,,,Number of Field Boards (minus picture frame),,ceil({d_field_qty}*{waste_factor}),Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck; Deck Boards,,,Linear Feet,,ceil({d_field_lf}*{waste_factor}),Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck; Deck Boards,22Np3xcVFW3s,"Material | Decking | Wood Board | Red Cedar 1"" x 6"" x 20' -",,0,"if({decking}=""wrc"",{Parent Quantity},0)",Each,44,,88,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck; Deck Boards,22NpAUYyGcNB,"Material | Decking | Wood Board | Alaskan Yellow Cedar 1"" x 6"" x 16'",,0,"if({decking}=""ayc"",{Parent Quantity},0)",Each,32,,64,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck; Deck Boards,22Np3xcX8sPj,"Material | Decking | Wood Board | Redwood 2"" x 6"" x 16'",,0,"if({decking}=""redwood"",{Parent Quantity},0)",Each,90,,180,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck; Deck Boards,22NmAGnSmUgF,"Material | Decking | Composite Board | Trex Transcend 1"" x 6"" x 16'",,0,"if({decking}=""transcend"",{Parent Quantity},0)",Each,94.35,,50.29,,0600 Framing,Materials,false,,false,false,true,true,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck; Deck Boards,22NnDY6hixd8,"Material | Decking | Composite Board | TimberTech Legacy 1"" x 6"" x 16'",,0,"if({decking}=""legacy"",{Parent Quantity},0)",Each,108.75,,155.36,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Decking; Main Deck; Deck Boards,22NnDY6gEEM7,"Material | Decking | Composite Board | Timbertech Reserve 1"" x 6"" x 16'",,0,"if({decking}=""legacy"",{Parent Quantity},0)",Each,91.25,,130.36,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing,,,Install New Railing with Cedarwood with IRC spacing.,,{r_lf},Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber,,,,,{Parent Quantity},Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Spindles,,,,,"if ({railings} != ""no"",{r_spin_qty}, 0)",Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Spindles,22PGrkPngTbR,"Material | Decking | Railing Spindles | Alaskan Yellow Cedar 2"" x 2"" x 3""",,0,"if({railings}=""ayc"",{Parent Quantity},0)",Each,0,"if({Quantity}!=0,{$_spin_ea},0)",,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,0.2,,None,1.2,,false,,
+,New Deck Template,Railing; Lumber; Spindles,22PGrkPqspKb,"Material | Decking | Railing Spindles | Red Cedar 2"" x 2"" x 3'",,0,"if({railings}=""wrc"",{Parent Quantity},0)",Each,0,"if({Quantity}!=0,{$_spin_ea},0)",,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,0.2,,None,1.2,,false,,
+,New Deck Template,Railing; Lumber; Spindles,22PGrkPtTHrX,"Material | Decking | Railing Spindles | Redwood 2"" x 2"" x 3'",,0,"if({railings}=""redwood"",{Parent Quantity},0)",Each,2.87,"if({Quantity}!=0,{$_spin_ea},0)",5.74,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,0.2,,None,1.2,,false,,
+,New Deck Template,Railing; Lumber; Spindles,22PGrkPvpDV4,"Material | Decking | Railing Spindles | Composite 2"" x 2"" x 3'",70 in. package,0,"if({railings}=""composite"",{r_bays},0)",Each,0,"if({Quantity}!=0,{$_spin_ea},0)",,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,0.2,,None,1.2,,false,,
+,New Deck Template,Railing; Lumber; Top Rails,,,,,"if({railings} !=""no"", ceil({r_lf}* {waste_factor}), 0)",Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Top Rails,22PGrkPyu8zy,"Material | Decking | Railing Top Rail | Alaskan Yellow Cedar 2""x 6""",,0,"if({railings}=""ayc"", {Parent Quantity}, 0)",Linear Feet,0,"if({Quantity}!=0,{$_2x6_lf},0)",,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,0.2,,None,1.2,,false,,
+,New Deck Template,Railing; Lumber; Top Rails,22Np3xdrad6w,Material | Decking | Railing Top Rail | 2x4 6ft,,0,"if({railings}=""wrc"", {Parent Quantity}, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Top Rails,22Np3xdrad6w,Material | Decking | Railing Top Rail | 2x4 6ft,,0,"if({railings}=""redwood"", {Parent Quantity}, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Top Rails,22Np3xdrad6w,Material | Decking | Railing Top Rail | 2x4 6ft,,0,"if({railings}=""composite"", {Parent Quantity}, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Bottom Rails,,,,,"if({railings} !=""no"", ceil({r_lf}* {waste_factor}), 0)",Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Bottom Rails,22PGrkQ3LELE,"Material | Decking | Railing Bottom Rail | Alaskan Yellow Cedar 2""x 6""",,0,"if({railings}=""ayc"", {Parent Quantity}, 0)",Linear Feet,0,"if({Quantity}!=0,{$_2x6_lf},0)",,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,0.2,,None,1.2,,false,,
+,New Deck Template,Railing; Lumber; Bottom Rails,22Np3xdrad6w,Material | Decking | Railing Top Rail | 2x4 6ft,,0,"if({railings}=""wrc"", {Parent Quantity}, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Bottom Rails,22Np3xdrad6w,Material | Decking | Railing Top Rail | 2x4 6ft,,0,"if({railings}=""redwood"", {Parent Quantity}, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Bottom Rails,22Np3xdrad6w,Material | Decking | Railing Top Rail | 2x4 6ft,,0,"if({railings}=""composite"", {Parent Quantity}, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Railing Posts,,,,,"IF({railings}!=""no"",
+              {r_bays} + 1,0)",Each,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Railing Posts,22Np3xdkughu,Material | Decking | Ball Cap,,0,{r_posts},Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Railing Posts,22PGrkQ64sfx,"Material | Decking | Railing Posts | Alaskan Yellow Cedar 4"" x 4"" x 16'",,0,"if({railings}=""ayc"", {Parent Quantity}*8, 0)",Linear Feet,0,"if({Quantity}!=0,{$_post_lf},0)",,,2500 Decking,Materials,false,,false,false,true,false,,,,,,true,true,,,,35,0.2,,None,1.2,,false,,
+,New Deck Template,Railing; Lumber; Railing Posts,22Np3xdnQqxP,Material | Decking | Lumber WRC | 4x4x16,,0,"if({railings}=""wrc"", {Parent Quantity}*8, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Railing Posts,22Np3xdnQqxP,Material | Decking | Lumber WRC | 4x4x16,,0,"if({railings}=""redwood"", {Parent Quantity}*8, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Lumber; Railing Posts,22Np3xdnQqxP,Material | Decking | Lumber WRC | 4x4x16,,0,"if({railings}=""composite"", {Parent Quantity}, 0)",Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,
+,New Deck Template,Railing; Labor,,,,,{Parent Quantity},Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Labor,22NnDY6WeNKk,Labor | Decking | Install Railing,,0,ceil({Parent Quantity}*{production rate}),Hours,51.3,ceil({Labor Wage}*{Labor Burden}),94.91,,2500 Decking,Labor,false,,false,false,true,false,,,,,,true,true,,0.333,,,,,,,,,,
+,New Deck Template,Railing; Materials,,,,,{Parent Quantity},Linear Feet,,,,,,,,,,,,false,,,true,false,true,true,,,,,,,,,,,,,
+,New Deck Template,Railing; Materials,22Np3xdGE9hZ,Material | Decking | DTT2Z Connector (ZMAX®)(Fasteners and Washers included),DTT2Z,0,,Each,,,,,2500 Decking,Materials,true,,false,false,true,false,,,,,,true,true,,,,,,,,,,,,

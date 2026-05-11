@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-03T06:01:11-06:00",
+  "generated_at": "2026-05-11T06:01:01-06:00",
   "sections": {
     "calendar": {
       "events": [
@@ -94,75 +94,18 @@
   },
   "alerts": [],
   "mail_triage": {
-    "generated_at": "2026-05-03T01:15:00-06:00",
-    "query_window_hours": 43,
+    "generated_at": "2026-05-11T14:00:00Z",
+    "query_window_hours": 48,
     "total_unread": 29,
     "buckets": {
-      "urgent": [
-        {
-          "thread_id": "00000000000049db",
-          "subject": "Undelivered Mail Returned to Sender",
-          "from_name": "MAILER-DAEMON",
-          "from_address": "MAILER-DAEMON@proton.me",
-          "date_relative": "Yest. 08:38",
-          "tags": [
-            "flagged",
-            "inbox",
-            "newsletter",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Outbound business email bounced — indicates a failed delivery from Eric's Proton account; two additional bounces in the same window suggest a systemic issue.",
-          "suggested_action": "flag_action",
-          "urgency_reason": "Three bounce-backs in quick succession from Eric's work email may indicate a sending or DNS problem affecting business communications."
-        },
-        {
-          "thread_id": "00000000000049d2",
-          "subject": "New payment request from Super Dot Storage - invoice 4896",
-          "from_name": "Super Dot Storage",
-          "from_address": "Super Dot Storage",
-          "date_relative": "Yest. 03:15",
-          "tags": [
-            "attachment",
-            "finance",
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": true,
-          "summary": "Invoice #4896 from Super Dot Storage requesting payment — likely business storage unit for Heartwood Craft.",
-          "suggested_action": "flag_action",
-          "urgency_reason": "Flagged payment request with attachment from a business vendor; needs review and payment action."
-        },
-        {
-          "thread_id": "00000000000049b3",
-          "subject": "[GitHub] A new SSH authentication public key was added to your account",
-          "from_name": "GitHub",
-          "from_address": "GitHub",
-          "date_relative": "Fri. 09:32",
-          "tags": [
-            "flagged",
-            "inbox",
-            "notification",
-            "tech",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Security alert: a new SSH public key was added to Eric's GitHub account — verify this was intentional.",
-          "suggested_action": "flag_action",
-          "urgency_reason": "Security-sensitive account change on GitHub; must confirm this was Eric's own action and not unauthorized access."
-        }
-      ],
+      "urgent": [],
       "review": [
         {
-          "thread_id": "00000000000049ec",
-          "subject": "New Review snippets structured data issues detected for https://iheartwoodcraft.com/",
+          "thread_id": "0000000000004b70",
+          "subject": "New reasons prevent pages from being indexed on site heartwoodcraft.me",
           "from_name": "Google Search Console Team",
-          "from_address": "Google Search Console Team",
-          "date_relative": "Today 00:50",
+          "from_address": "sc-noreply@google.com",
+          "date_relative": "Yest. 20:17",
           "tags": [
             "hwc_google",
             "inbox",
@@ -170,212 +113,70 @@
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Google Search Console detected structured data problems on iheartwoodcraft.com that could affect search appearance.",
-          "suggested_action": "read_only"
+          "summary": "Google Search Console flagged new indexing errors on heartwoodcraft.me that are preventing pages from appearing in search results.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Indexing failure on the primary business website is a meaningful SEO state change that warrants a look."
         },
         {
-          "thread_id": "00000000000049ed",
-          "subject": "Report domain: iheartwoodcraft.com Submitter: google.com Report-ID: 15489530014360197788",
-          "from_name": "noreply-dmarc-support@google.com",
-          "from_address": "noreply-dmarc-support@google.com",
-          "date_relative": "Yest. 17:59",
+          "thread_id": "0000000000004b6f",
+          "subject": "New reasons prevent pages in a sitemap from being indexed on site https://iheartwoodcraft.com/",
+          "from_name": "Google Search Console Team",
+          "from_address": "sc-noreply@google.com",
+          "date_relative": "Yest. 20:12",
           "tags": [
-            "admin",
-            "attachment",
+            "hwc_google",
             "inbox",
             "notification",
-            "unread",
-            "website"
-          ],
-          "has_attachment": true,
-          "summary": "DMARC aggregate report for iheartwoodcraft.com from Google — shows email authentication results for Eric's domain.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000049ea",
-          "subject": "May Arts Marathon Day 2!",
-          "from_name": "Drew Clark",
-          "from_address": "Drew Clark",
-          "date_relative": "Yest. 15:27",
-          "tags": [
-            "attachment",
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": true,
-          "summary": "Drew Clark sharing Day 2 of a local May Arts Marathon event — possibly a community connection.",
-          "suggested_action": "read_only"
-        },
-        {
-          "thread_id": "00000000000049df",
-          "subject": "Your child heard a sound. Then another. That's how it starts.",
-          "from_name": "Dojo Sparks",
-          "from_address": "Dojo Sparks",
-          "date_relative": "Yest. 13:07",
-          "tags": [
-            "family",
-            "inbox",
-            "personal_proton",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Update from Dojo Sparks children's program about Eric's kids' activities.",
-          "suggested_action": "read_only"
+          "summary": "Google Search Console flagged separate sitemap indexing errors on iheartwoodcraft.com, a distinct property from the heartwoodcraft.me issue.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Affects a second business web property with its own indexing problems; both sites need attention."
         },
         {
-          "thread_id": "00000000000049de",
-          "subject": "iheartwoodcraft.com: robots.txt updated. Review changes",
-          "from_name": "Semrush Site Audit",
-          "from_address": "Semrush Site Audit",
-          "date_relative": "Yest. 12:15",
+          "thread_id": "0000000000004b68",
+          "subject": "Your receipt from DATAx #2727-5170",
+          "from_name": "DATAx",
+          "from_address": "billing@datax.io",
+          "date_relative": "Yest. 14:02",
           "tags": [
-            "hwc_google",
+            "action",
+            "attachment",
+            "finance",
+            "flagged",
             "inbox",
             "tech",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Semrush detected robots.txt changes on iheartwoodcraft.com — may affect crawlability and SEO.",
-          "suggested_action": "read_only"
-        },
-        {
-          "thread_id": "00000000000049dd",
-          "subject": "Your bill is available.",
-          "from_name": "State Farm",
-          "from_address": "State Farm",
-          "date_relative": "Yest. 10:33",
-          "tags": [
-            "finance",
-            "inbox",
-            "insurance",
-            "personal",
-            "personal_proton",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "State Farm insurance bill is ready for review and payment.",
-          "suggested_action": "flag_action"
-        },
-        {
-          "thread_id": "00000000000049d5",
-          "subject": "Your most recent billing statement for Alden O'Keefe is now available",
-          "from_name": "MSU Early Learning Center",
-          "from_address": "MSU Early Learning Center",
-          "date_relative": "Yest. 05:13",
-          "tags": [
-            "inbox",
-            "notification",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Childcare billing statement for Alden O'Keefe from MSU Early Learning Center.",
-          "suggested_action": "flag_action"
-        },
-        {
-          "thread_id": "00000000000049d4",
-          "subject": "Your most recent billing statement for Sylvan O'Keefe is now available",
-          "from_name": "MSU Early Learning Center",
-          "from_address": "MSU Early Learning Center",
-          "date_relative": "Yest. 05:13",
-          "tags": [
-            "inbox",
-            "notification",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Childcare billing statement for Sylvan O'Keefe from MSU Early Learning Center.",
-          "suggested_action": "flag_action"
-        },
-        {
-          "thread_id": "00000000000049d1",
-          "subject": "Congrats on reaching 20 clicks in 28 days!",
-          "from_name": "Google Search Console Team",
-          "from_address": "Google Search Console Team",
-          "date_relative": "Yest. 03:50",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Google Search Console milestone notification — iheartwoodcraft.com reached 20 clicks in 28 days.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000049c5",
-          "subject": "Google Ads: Your bank account will be debited soon",
-          "from_name": "Google Payments",
-          "from_address": "Google Payments",
-          "date_relative": "Fri. 13:04",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Google Ads billing notice — upcoming debit for Heartwood Craft advertising spend.",
-          "suggested_action": "read_only"
-        },
-        {
-          "thread_id": "00000000000049b6",
-          "subject": "Sales tax updates - May 1, 2026",
-          "from_name": "Intuit QuickBooks",
-          "from_address": "Intuit QuickBooks",
-          "date_relative": "Fri. 09:57",
-          "tags": [
-            "finance",
-            "flagged",
-            "inbox",
-            "notification",
             "unread",
             "work"
           ],
-          "has_attachment": false,
-          "summary": "QuickBooks sales tax rate updates effective May 1 — may affect Heartwood Craft invoicing.",
-          "suggested_action": "read_only"
+          "has_attachment": true,
+          "summary": "Billing receipt #2727-5170 from DATAx, a business data service Eric actively uses, with an attached invoice.",
+          "suggested_action": "flag_pending",
+          "urgency_reason": "Finance receipt with attachment from an active business service; tagged action and flagged by Eric's own rules."
         },
         {
-          "thread_id": "00000000000049b2",
-          "subject": "Your backup files are ready",
-          "from_name": "Hostinger",
-          "from_address": "Hostinger",
-          "date_relative": "Fri. 09:08",
+          "thread_id": "0000000000004b69",
+          "subject": "May ARTS Marathon Day 8",
+          "from_name": "Drew Clark",
+          "from_address": "drewclark@gmail.com",
+          "date_relative": "Yest. 13:58",
           "tags": [
-            "flagged",
+            "attachment",
             "inbox",
-            "unread",
-            "work"
+            "unread"
           ],
-          "has_attachment": false,
-          "summary": "Hostinger website backup completed and ready for download — likely for iheartwoodcraft.com.",
-          "suggested_action": "archive"
+          "has_attachment": true,
+          "summary": "Day 8 update in a recurring ARTS Marathon series from Drew Clark via Gmail, with an attachment; most recent entry from this sender in the window.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Real person sending a series email with attachment; surfacing only this most recent entry, Day 7 is in noise."
         },
         {
-          "thread_id": "00000000000049ad",
-          "subject": "Business Before Hours - The Baxter Hotel - Thursday, May 7, 2026",
-          "from_name": "Bozeman Area Chamber of Commerce",
-          "from_address": "Bozeman Area Chamber of Commerce",
-          "date_relative": "Fri. 08:00",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Chamber networking event at The Baxter Hotel on May 7 — local business networking opportunity.",
-          "suggested_action": "flag_action"
-        },
-        {
-          "thread_id": "00000000000049ac",
-          "subject": "Weekly digest for Thu, Apr 23 2026",
-          "from_name": "BlueCollarOS - AI for Trades (Skool)",
-          "from_address": "BlueCollarOS - AI for Trades (Skool)",
-          "date_relative": "Fri. 07:43",
+          "thread_id": "0000000000004b5e",
+          "subject": "Weekly digest for Thu, Apr 30 2026",
+          "from_name": "Tactical Household (Skool)",
+          "from_address": "noreply@skool.com",
+          "date_relative": "Yest. 08:49",
           "tags": [
             "inbox",
             "notification",
@@ -383,214 +184,428 @@
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Weekly digest from BlueCollarOS trade-focused AI community on Skool.",
-          "suggested_action": "read_only"
+          "summary": "Weekly activity digest from the Tactical Household community on Skool, a platform Eric subscribes to via his personal Proton account.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Legitimate community subscription Eric chose; digest format makes it worth a glance rather than noise."
         },
         {
-          "thread_id": "00000000000049aa",
-          "subject": "Curic Recall Command v2 is now available.",
-          "from_name": "Curic - SketchUp Extensions",
-          "from_address": "Curic - SketchUp Extensions",
-          "date_relative": "Fri. 07:06",
+          "thread_id": "0000000000004b5b",
+          "subject": "Your caller ID name \"Heartwood Craft\" has been approved",
+          "from_name": "The Quo Team",
+          "from_address": "notifications@quo.com",
+          "date_relative": "Yest. 05:57",
           "tags": [
+            "flagged",
             "inbox",
-            "personal_google",
-            "unread"
+            "unread",
+            "work"
           ],
           "has_attachment": false,
-          "summary": "SketchUp plugin update from Curic — new version of Recall Command tool for 3D modeling workflow.",
-          "suggested_action": "read_only"
+          "summary": "Quo/OpenPhone confirmed that the business caller ID name 'Heartwood Craft' has been approved and is now active for outbound calls.",
+          "suggested_action": "archive",
+          "urgency_reason": "Positive state change on the business phone system Eric uses; no action needed but confirms a pending setup task is resolved."
         },
         {
-          "thread_id": "00000000000049a8",
-          "subject": "Reminder: Office Hours starts in 2 hours",
-          "from_name": "DATAx",
-          "from_address": "DATAx",
-          "date_relative": "Fri. 06:01",
+          "thread_id": "0000000000004b54",
+          "subject": "Your statement is available",
+          "from_name": "Bank of America",
+          "from_address": "onlinebanking@bankofamerica.com",
+          "date_relative": "Sat. 21:47",
+          "tags": [
+            "bank",
+            "finance",
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Bank of America monthly statement is ready to view; tagged finance and flagged as work-related in Eric's taxonomy.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Financial account statement worth checking for business reconciliation; flagged by Eric's own tagging rules."
+        },
+        {
+          "thread_id": "0000000000004b77",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "33 mins. ago",
           "tags": [
             "flagged",
             "inbox",
             "newsletter",
+            "notification",
             "unread",
             "work"
           ],
           "has_attachment": false,
-          "summary": "DATAx office hours reminder from Friday — event has already passed.",
-          "suggested_action": "archive"
+          "summary": "Most recent Meta Ads billing receipt for account 1891243818000745; nine older identical receipts from the same account are consolidated into the noise bucket.",
+          "suggested_action": "archive",
+          "urgency_reason": "Active ad spend confirmation surfaced once as the most recent entry; the high-volume receipt stream suggests frequent billing cycles worth monitoring."
+        },
+        {
+          "thread_id": "0000000000004b60",
+          "subject": "Ordered: \"SIMPERAC GCV160 Carburetor...\"",
+          "from_name": "Amazon.com",
+          "from_address": "order-update@amazon.com",
+          "date_relative": "Yest. 10:34",
+          "tags": [
+            "finance",
+            "inbox",
+            "personal_google",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Amazon order confirmation for a GCV160 carburetor part, likely a tool or equipment repair purchase.",
+          "suggested_action": "archive",
+          "urgency_reason": "Order confirmation for a recent purchase; useful to have on record in case of shipping issues."
+        },
+        {
+          "thread_id": "0000000000004b5a",
+          "subject": "Item relisted: Eversharp Luxury 707 Symphony Fountain Pen 14K Gold Nib.",
+          "from_name": "eBay",
+          "from_address": "ebay@ebay.com",
+          "date_relative": "Yest. 06:00",
+          "tags": [
+            "inbox",
+            "personal_google",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "eBay notification that a 14K gold nib fountain pen listing was automatically relisted after not selling.",
+          "suggested_action": "read_only",
+          "urgency_reason": "State change on an active personal listing Eric may want to reprice, relist, or end."
+        },
+        {
+          "thread_id": "0000000000004b45",
+          "subject": "Free Webinars in May and June",
+          "from_name": "NARI Education",
+          "from_address": "nari@informz.net",
+          "date_relative": "Sat. 09:30",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "NARI (National Association of the Remodeling Industry) is offering free professional development webinars in May and June.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Industry association content directly relevant to Eric's remodeling business; free training with a time-limited registration window."
+        },
+        {
+          "thread_id": "0000000000004b41",
+          "subject": "Google Ads: Your bank account will be debited soon",
+          "from_name": "Google Payments",
+          "from_address": "payments-noreply@google.com",
+          "date_relative": "Sat. 06:00",
+          "tags": [
+            "hwc_google",
+            "inbox",
+            "notification",
+            "personal_google",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Google Ads billing notice that an upcoming debit for ad spend will hit Eric's bank account soon; a duplicate copy is in noise.",
+          "suggested_action": "read_only",
+          "urgency_reason": "Upcoming bank debit for active Google Ads campaign is a financial state change worth being aware of."
         }
       ],
       "noise": [
         {
-          "thread_id": "00000000000049eb",
-          "subject": "Meet ChatGPT Images 2.0",
-          "from_name": "ChatGPT",
-          "from_address": "ChatGPT",
-          "date_relative": "Yest. 16:57",
+          "thread_id": "0000000000004b6d",
+          "subject": "This Took Her 35 Minutes",
+          "from_name": "Tom Reber",
+          "from_address": "tom@thecontractorfight.com",
+          "date_relative": "Yest. 16:03",
           "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "tech",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "OpenAI marketing email promoting ChatGPT Images 2.0 feature launch.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000049d8",
-          "subject": "Undelivered Mail Returned to Sender",
-          "from_name": "MAILER-DAEMON",
-          "from_address": "MAILER-DAEMON@proton.me",
-          "date_relative": "Yest. 08:18",
-          "tags": [
+            "coaching",
             "flagged",
             "inbox",
-            "newsletter",
             "unread",
             "work"
           ],
           "has_attachment": false,
-          "summary": "Duplicate bounce-back — consolidated under most recent MAILER-DAEMON thread in urgent.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000049d7",
-          "subject": "Undelivered Mail Returned to Sender",
-          "from_name": "MAILER-DAEMON",
-          "from_address": "MAILER-DAEMON@proton.me",
-          "date_relative": "Yest. 08:16",
-          "tags": [
-            "flagged",
-            "inbox",
-            "newsletter",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Duplicate bounce-back — consolidated under most recent MAILER-DAEMON thread in urgent.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000049d0",
-          "subject": "Update to our privacy policy and more controls",
-          "from_name": "OpenAI",
-          "from_address": "OpenAI",
-          "date_relative": "Fri. 22:57",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "personal_google",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Mass privacy policy update email from OpenAI — no action required.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000049b4",
-          "subject": "Update to our privacy policy and more controls",
-          "from_name": "OpenAI",
-          "from_address": "OpenAI",
-          "date_relative": "Fri. 09:54",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Duplicate OpenAI privacy policy email sent to a second address.",
+          "summary": "Contractor Fight drip email from Tom Reber with a vague hook subject line; domain is on the known coaching-noise list.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "00000000000049ce",
-          "subject": "May Arts Marathon Begins!",
+          "thread_id": "0000000000004b6a",
+          "subject": "Make the Grade with CVS Photo — 60% Off Premium Cards Perfect for Graduation!",
+          "from_name": "CVS Photo",
+          "from_address": "promotions@your.cvs.com",
+          "date_relative": "Yest. 14:23",
+          "tags": [
+            "inbox",
+            "personal_google",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "CVS Photo retail promotion for 60% off graduation cards; no relevance to a remodeling business.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "0000000000004b67",
+          "subject": "Eric, you're invited to a virtual networking event",
+          "from_name": "Char Ferguson via Alignable",
+          "from_address": "notifications@alignable.com",
+          "date_relative": "Yest. 13:46",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Alignable virtual networking invite dressed as a personal connection; alignable.com is a known social re-engagement noise sender.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "0000000000004b62",
+          "subject": "Neighbors are looking for a business like Heartwood Craft",
+          "from_name": "Nextdoor",
+          "from_address": "noreply@nextdoor.com",
+          "date_relative": "Yest. 11:14",
+          "tags": [
+            "hwc_google",
+            "inbox",
+            "notification",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Nextdoor marketing email using Eric's business name as a hook; nextdoor.com is on the known noise list.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "0000000000004b56",
+          "subject": "crash report",
+          "from_name": "Michael Orlov",
+          "from_address": "michael.orlov@yandex.ru",
+          "date_relative": "Yest. 03:41",
+          "tags": [
+            "inbox",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Unsolicited 'crash report' from an unknown Russian Yandex address with no connection to Eric's systems; almost certainly phishing or spam.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "0000000000004b4f",
+          "subject": "May ARTS Marathon - Day 7",
           "from_name": "Drew Clark",
-          "from_address": "Drew Clark",
-          "date_relative": "Fri. 16:49",
+          "from_address": "drewclark@gmail.com",
+          "date_relative": "Sat. 17:14",
           "tags": [
             "attachment",
             "inbox",
             "unread"
           ],
           "has_attachment": true,
-          "summary": "Older Drew Clark email — consolidated under most recent Arts Marathon thread in review.",
+          "summary": "Day 7 of Drew Clark's ARTS Marathon series; superseded by the Day 8 email already surfaced in review.",
           "suggested_action": "archive"
         },
         {
-          "thread_id": "00000000000049cb",
-          "subject": "Delivered: \"10 Pack 3D Embossing Label...\"",
-          "from_name": "Amazon.com",
-          "from_address": "Amazon.com",
-          "date_relative": "Fri. 15:06",
-          "tags": [
-            "finance",
-            "inbox",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Amazon delivery confirmation for label maker supplies.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "00000000000049c2",
-          "subject": "Locals EP 285: Religious Tech Support (Rumble)",
-          "from_name": "Revenge Of The Cis",
-          "from_address": "Revenge Of The Cis",
-          "date_relative": "Fri. 12:31",
+          "thread_id": "0000000000004b4a",
+          "subject": "3 new notifications since 12:08 pm (May 8, 2026)",
+          "from_name": "Clief Notes (Skool)",
+          "from_address": "noreply@skool.com",
+          "date_relative": "Sat. 12:09",
           "tags": [
             "inbox",
             "notification",
-            "personal_google",
+            "personal_proton",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Podcast episode notification from Locals platform — entertainment content.",
+          "summary": "Skool notification count digest for the Clief Notes community; low-signal activity summary with no actionable content.",
           "suggested_action": "archive"
         },
         {
-          "thread_id": "00000000000049b8",
-          "subject": "Take - offs",
-          "from_name": "Cherry Estimanians",
-          "from_address": "Cherry Estimanians",
-          "date_relative": "Fri. 10:07",
+          "thread_id": "0000000000004b42",
+          "subject": "Google Ads: Your bank account will be debited soon",
+          "from_name": "Google Payments",
+          "from_address": "payments-noreply@google.com",
+          "date_relative": "Sat. 06:00",
+          "tags": [
+            "hwc_google",
+            "inbox",
+            "notification",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Duplicate Google Ads debit notice; identical message already surfaced in the review bucket as thread 4b41.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b71",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Yest. 20:57",
           "tags": [
             "flagged",
             "inbox",
-            "trash",
+            "newsletter",
+            "notification",
             "unread",
             "work"
           ],
           "has_attachment": false,
-          "summary": "Cold outreach from estimating/takeoff service — matches known noise sender pattern.",
-          "suggested_action": "trash"
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
         },
         {
-          "thread_id": "00000000000049b5",
-          "subject": "🍌Know a STEM Teacher? + 1 Week Left for Banan-a-Synth",
-          "from_name": "Dave from MicroKits",
-          "from_address": "Dave from MicroKits",
-          "date_relative": "Fri. 10:01",
+          "thread_id": "0000000000004b6e",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Yest. 16:21",
           "tags": [
-            "hwc_google",
+            "flagged",
             "inbox",
-            "unread"
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
           ],
           "has_attachment": false,
-          "summary": "Marketing email from electronics kit company — no business relevance.",
-          "suggested_action": "trash"
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b61",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Yest. 10:42",
+          "tags": [
+            "flagged",
+            "inbox",
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b5d",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Yest. 06:26",
+          "tags": [
+            "flagged",
+            "inbox",
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b55",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Yest. 00:27",
+          "tags": [
+            "flagged",
+            "inbox",
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b51",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Sat. 20:30",
+          "tags": [
+            "flagged",
+            "inbox",
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b50",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Sat. 20:26",
+          "tags": [
+            "flagged",
+            "inbox",
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b4e",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Sat. 16:46",
+          "tags": [
+            "flagged",
+            "inbox",
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Older Meta Ads receipt; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004b4d",
+          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
+          "from_name": "Meta for Business",
+          "from_address": "noreply@business-updates.facebook.com",
+          "date_relative": "Sat. 16:42",
+          "tags": [
+            "flagged",
+            "inbox",
+            "newsletter",
+            "notification",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Oldest Meta Ads receipt in the window; most recent receipt already surfaced in review.",
+          "suggested_action": "archive"
         }
       ]
     },
     "stats": {
-      "urgent_count": 3,
-      "review_count": 16,
-      "noise_count": 10
+      "urgent_count": 0,
+      "review_count": 12,
+      "noise_count": 17
     }
   }
 }

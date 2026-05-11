@@ -20,8 +20,11 @@ export function deriveGeometry(s) {
     + (s.shower_curb_width_in * 2) / 12 * s.shower_curb_length_ft
   );
   const accentTile = showerW * 1.25;
-  const paintSqft  = perim * s.wall_height_ft;
-  return { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, showerW };
+  const wallArea   = perim * s.wall_height_ft;             // total wall surface
+  const ceilArea   = fl;                                    // ceiling = floor area
+  const paintableWalls = Math.max(0, wallArea - wallTile);  // walls minus tiled shower area
+  const paintSqft  = wallArea;                              // legacy — kept for compat
+  return { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, wallArea, ceilArea, paintableWalls, showerW };
 }
 
 // ─── Deck geometry ──────────────────────────────────────────────────────────
@@ -43,7 +46,7 @@ export function deriveDeckGeometry(s) {
 export function enrichState(state) {
   const enriched = { ...state };
 
-  if (state.job_type === 'Deck') {
+  if ((state.projectType || state.job_type || '').toLowerCase() === 'deck') {
     const g = deriveDeckGeometry(state);
     enriched.deck_sqft          = g.deckSqft;
     enriched.deck_perimeter_lf  = g.perimeter;
@@ -58,13 +61,32 @@ export function enrichState(state) {
     enriched.stair_stringer_count = state.stair_stringer_count || 3;
   } else {
     const g = deriveGeometry(state);
-    enriched.bathroom_floor_sqft      = g.fl;
+    enriched.bathroom_floor_sqft      = state.bathroom_floor_sqft != null ? state.bathroom_floor_sqft : g.fl;
     enriched.bathroom_perimeter_lf    = g.perim;
     enriched.shower_wall_tile_sqft    = g.wallTile;
     enriched.shower_pan_tile_sqft     = g.panTile;
     enriched.shower_curb_tile_sqft    = g.curbTile;
-    enriched.shower_accent_tile_sqft  = g.accentTile;
-    enriched.bathroom_wall_paint_sqft = g.paintSqft;
+    enriched.shower_accent_tile_sqft  = state.shower_accent_tile_sqft != null ? state.shower_accent_tile_sqft : g.accentTile;
+
+    // Paint area — derived from scope unless manually overridden
+    if (state.bathroom_wall_paint_sqft != null) {
+      enriched.bathroom_wall_paint_sqft = state.bathroom_wall_paint_sqft;
+    } else {
+      const ps = state.paint_scope || 'walls_and_ceiling';
+      enriched.bathroom_wall_paint_sqft = ps === 'walls_only' ? g.paintableWalls
+        : ps === 'ceiling_only' ? g.ceilArea
+        : g.paintableWalls + g.ceilArea;
+    }
+
+    // Drywall area — derived from scope unless manually overridden
+    if (state.drywall_sqft != null) {
+      enriched.drywall_sqft = state.drywall_sqft;
+    } else {
+      const ds = state.drywall_scope || 'walls_and_ceiling';
+      enriched.drywall_sqft = ds === 'walls_only' ? g.paintableWalls
+        : ds === 'ceiling_only' ? g.ceilArea
+        : g.paintableWalls + g.ceilArea;
+    }
   }
 
   return enriched;

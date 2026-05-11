@@ -4,8 +4,8 @@
 
 import { T, fonts } from "./theme";
 
-export default function MobileEstimateBar({ lo, hi, step, totalSteps, fmt }) {
-  const hasEstimate = lo > 0;
+export default function MobileEstimateBar({ lo, hi, step, totalSteps, fmt, phase }) {
+  const showDollars = phase === "results" || phase === "submitted";
 
   return (
     <div
@@ -15,7 +15,7 @@ export default function MobileEstimateBar({ lo, hi, step, totalSteps, fmt }) {
         left: 0,
         right: 0,
         background: T.sidebarBg,
-        padding: "12px 20px",
+        padding: "14px 20px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -25,12 +25,14 @@ export default function MobileEstimateBar({ lo, hi, step, totalSteps, fmt }) {
       }}
     >
       <div>
-        {hasEstimate ? (
-          <div style={{ fontFamily: fonts.serif, fontSize: 20, fontWeight: 700, color: T.white, lineHeight: 1.2 }}>
+        {showDollars ? (
+          <div style={{ fontFamily: fonts.serif, fontSize: 24, fontWeight: 700, color: T.white, lineHeight: 1.2 }}>
             {fmt(lo)} – {fmt(hi)}
           </div>
         ) : (
-          <div style={{ fontSize: 13, color: T.textOnDarkMuted }}>Your estimate</div>
+          <div style={{ fontSize: 16, color: T.textOnDarkMuted }}>
+            {step > 0 ? `Step ${step} of ${totalSteps}` : "Your selections"}
+          </div>
         )}
       </div>
       <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -38,8 +40,8 @@ export default function MobileEstimateBar({ lo, hi, step, totalSteps, fmt }) {
           <div
             key={i}
             style={{
-              width: 7,
-              height: 7,
+              width: 8,
+              height: 8,
               borderRadius: "50%",
               background: i < step ? T.copper : i === step ? T.copperDark : "rgba(255,255,255,0.15)",
               transition: "background 0.3s ease",

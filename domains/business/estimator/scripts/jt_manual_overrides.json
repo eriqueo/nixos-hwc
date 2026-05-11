@@ -1,1 +1,81 @@
-{}
+{
+  "_comment_fuzzy_rejects": "Bad fuzzy matches — create new JT items instead",
+  "51": null,
+  "64": null,
+  "1254": null,
+  "1264": null,
+  "1291": null,
+  "1307": null,
+  "1308": null,
+  "1309": null,
+  "1310": null,
+  "1311": null,
+  "1316": null,
+  "1317": null,
+  "1318": null,
+  "1319": null,
+  "1320": null,
+  "1321": null,
+
+  "_comment_allowance_tiers": "Allowance tiers — keep closest-pricing tier, reject others",
+
+  "_comment_bathtub": "JT Bathtub Allowance $1200 → keep PG#39 Upgraded ($1200 exact)",
+  "38": null,
+  "40": null,
+  "708": null,
+
+  "_comment_shower_trim": "JT Shower Trim Allowance $1200 → keep PG#43 Premium ($900 closest)",
+  "41": null,
+  "42": null,
+  "1148": null,
+
+  "_comment_toilet": "JT Toilet Allowance $1600 → keep PG#46 Premium ($1500 closest)",
+  "44": null,
+  "45": null,
+  "1181": null,
+
+  "_comment_vanity": "JT Vanity Allowance $2000 → keep PG#48 Upgraded ($2000 exact)",
+  "47": null,
+  "49": null,
+  "1197": null,
+
+  "_comment_accessories": "JT Accessories Allowance $1000 → keep PG#58 Premium ($1000 exact)",
+  "56": null,
+  "57": null,
+  "701": null,
+
+  "_comment_duplicate_pairs": "Non-allowance many-to-one — assembler items create new, legacy keeps JT link",
+
+  "_comment_site_walkthrough": "PG#1153 keeps JT link, PG#1 (assembler) creates new",
+  "1": null,
+
+  "_comment_permit": "PG#1106 keeps JT link, PG#2 (assembler) creates new",
+  "2": null,
+
+  "_comment_tub_drain": "PG#1231 keeps JT via fuzzy, PG#15 (assembler) creates new",
+  "15": null,
+
+  "_comment_toilet_install": "PG#940 keeps JT link, PG#16 (assembler) creates new",
+  "16": null,
+
+  "_comment_vanity_sink": "PG#1232 keeps JT via fuzzy, PG#17 (assembler) creates new",
+  "17": null,
+
+  "_comment_electrical": "PG#930 keeps JT link, PG#19 (assembler) creates new",
+  "19": null,
+
+  "_comment_light_fixtures": "PG#981 keeps JT link (Material), PG#21 (Labor assembler) creates new",
+  "21": null,
+
+  "_comment_waterproofing": "PG#1238 keeps JT via fuzzy, PG#24 (assembler) creates new",
+  "24": null,
+
+  "_comment_tile_floor": "PG#959 keeps JT link, PG#25 (assembler) creates new",
+  "25": null,
+
+  "_comment_vanity_install": "PG#941 keeps JT link, PG#34 (assembler) creates new",
+  "34": null,
+
+  "_comment_shower_door": "PG#1142 keeps JT link, PG#69 (assembler) creates new",
+  "69": null
+}

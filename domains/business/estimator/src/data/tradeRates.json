@@ -92,7 +92,7 @@
   "plumbing": {
     "wage": 42.0,
     "burden": 1.35,
-    "markup": 2.116
+    "markup": 2.12
   },
   "siding": {
     "wage": 35.0,
@@ -112,12 +112,12 @@
   "tile": {
     "wage": 45.0,
     "burden": 1.35,
-    "markup": 1.646
+    "markup": 1.65
   },
   "tiling": {
     "wage": 45.0,
     "burden": 1.35,
-    "markup": 1.646
+    "markup": 1.65
   },
   "trimwork": {
     "wage": 38.0,

@@ -101,25 +101,18 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.jobtread.com/pave",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"query\": {\n    \"$\": { \"grantKey\": \"{{ $env.JOBTREAD_GRANT_KEY }}\" },\n    \"addBudgetLineItems\": {\n      \"$\": {\n        \"jobId\": \"{{ $json.jobId }}\",\n        \"items\": {{ JSON.stringify($json.jtPayload) }}\n      },\n      \"id\": {},\n      \"name\": {}\n    }\n  }\n}",
-        "options": {
-          "timeout": 30000
-        }
+        "jsCode": "// Batched budget push: one createCostGroup per top-level group with nested lineItems.\n// Replaces ~97 sequential API calls with ~5-8 parallel calls.\n// Uses same nested lineItems pattern as Build Create Job Query (createJob path).\nconst grantKey = $env.JOBTREAD_GRANT_KEY;\nif (!grantKey) throw new Error('Missing JOBTREAD_GRANT_KEY');\nconst prev = $json;\nconst jobId = prev.jobId;\nconst jtPayload = prev.jtPayload;\nif (!jobId) return { json: { ...prev, jtPushSuccess: false, jtPushError: 'No jobId', itemsPushed: 0 } };\n\n// Build nested group structure from flat jtPayload\n// groupName: \"TopGroup\" or \"TopGroup > SubGroup\"\nconst groupMap = {};\nfor (const item of jtPayload) {\n  const path = item.groupName || 'Other';\n  const parts = path.split(' > ').map(s => s.trim());\n  const top = parts[0];\n  if (!groupMap[top]) groupMap[top] = { direct: [], subs: {} };\n  if (parts.length === 1) {\n    groupMap[top].direct.push(item);\n  } else {\n    const sub = parts.slice(1).join(' > ');\n    if (!groupMap[top].subs[sub]) groupMap[top].subs[sub] = [];\n    groupMap[top].subs[sub].push(item);\n  }\n}\n\nfunction toCostItem(item) {\n  const ci = { _type: 'costItem', name: item.name, unitCost: item.unitCost, unitPrice: item.unitPrice };\n  if (item.quantityFormula) ci.quantityFormula = item.quantityFormula;\n  else ci.quantity = item.quantity;\n  if (item.costCodeId) ci.costCodeId = item.costCodeId;\n  if (item.costTypeId) ci.costTypeId = item.costTypeId;\n  if (item.unitId) ci.unitId = item.unitId;\n  return ci;\n}\n\n// Build one createCostGroup query per top-level group, each with nested lineItems\nconst queries = Object.entries(groupMap).map(([topName, group]) => {\n  const children = [\n    ...group.direct.map(toCostItem),\n    ...Object.entries(group.subs).map(([subName, items]) => ({\n      _type: 'costGroup', name: subName, lineItems: items.map(toCostItem)\n    }))\n  ];\n  const count = children.reduce((n, c) =>\n    n + (c._type === 'costGroup' ? (c.lineItems?.length || 0) : 1), 0);\n  return {\n    name: topName, count,\n    body: {\n      query: {\n        '$': { grantKey, notify: false },\n        createCostGroup: {\n          '$': { jobId, name: topName, lineItems: children },\n          createdCostGroup: { id: {}, name: {} }\n        }\n      }\n    }\n  };\n});\n\n// Execute all top-level groups in parallel\nconst results = await Promise.all(queries.map(async (q) => {\n  try {\n    const data = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.jobtread.com/pave',\n      headers: { 'Content-Type': 'application/json' },\n      body: q.body,\n      json: true,\n    });\n    if (data.errors?.length) return { group: q.name, ok: false, error: data.errors[0].message };\n    return { group: q.name, ok: true, id: data.createCostGroup?.createdCostGroup?.id, items: q.count };\n  } catch (e) {\n    return { group: q.name, ok: false, error: e.message };\n  }\n}));\n\nconst ok = results.filter(r => r.ok);\nconst fail = results.filter(r => !r.ok);\nconst itemsPushed = ok.reduce((n, r) => n + (r.items || 0), 0);\n\nreturn { json: {\n  ...prev,\n  jtPushSuccess: ok.length > 0 && fail.length === 0,\n  jtPushError: fail.length ? fail.map(f => f.group + ': ' + f.error).join('; ') : null,\n  itemsPushed,\n  jtPushResult: { groups: ok.length, failed: fail.length, calls: queries.length, details: results },\n}};"
       },
       "id": "push-to-jt",
-      "name": "Push to JobTread",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "name": "Additive Budget Push",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1560, 300],
       "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "// Parse JT push result and determine success\nconst response = $input.item.json;\nconst prevData = $('Merge Job Data').item.json;\n\nlet jtPushSuccess = false;\nlet jtPushError = null;\nlet jtPushResult = null;\n\nif (response.errors && response.errors.length > 0) {\n  jtPushError = response.errors.map(e => e.message).join('; ');\n} else if (response.addBudgetLineItems) {\n  jtPushSuccess = true;\n  jtPushResult = response.addBudgetLineItems;\n} else if (response.error) {\n  // HTTP-level error\n  jtPushError = response.error.message || 'HTTP request failed';\n} else {\n  jtPushError = 'Unknown JT response format';\n}\n\nreturn {\n  json: {\n    ...prevData,\n    jtPushSuccess,\n    jtPushError,\n    jtPushResult,\n    itemsPushed: jtPushSuccess ? prevData.jtPayload.length : 0\n  }\n};"
+        "jsCode": "// Additive Budget Push already returns parsed result — pass through\nreturn { json: $json };"
       },
       "id": "parse-jt-result",
       "name": "Parse JT Result",
@@ -373,9 +366,9 @@
       "main": [[{ "node": "Merge Job Data", "type": "main", "index": 0 }]]
     },
     "Merge Job Data": {
-      "main": [[{ "node": "Push to JobTread", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Additive Budget Push", "type": "main", "index": 0 }]]
     },
-    "Push to JobTread": {
+    "Additive Budget Push": {
       "main": [[{ "node": "Parse JT Result", "type": "main", "index": 0 }]]
     },
     "Parse JT Result": {
@@ -411,6 +404,6 @@
     { "name": "jobtread", "id": "jobtread-tag" }
   ],
   "triggerCount": 1,
-  "updatedAt": "2026-03-20T00:00:00.000Z",
-  "versionId": "2"
+  "updatedAt": "2026-05-06T00:00:00.000Z",
+  "versionId": "3"
 }

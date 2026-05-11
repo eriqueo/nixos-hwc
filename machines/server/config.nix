@@ -843,6 +843,20 @@
   # Business database layer (hwc PostgreSQL database)
   hwc.business.databases.enable = lib.mkDefault true;
 
+  # DataX — Facebook group monitoring pipeline
+  hwc.business.datax = {
+    enable = true;
+    fbScraper = {
+      enable = true;
+      groups = [
+        "https://www.facebook.com/groups/jobtreadpros"
+      ];
+      postsPerRun = 50;
+      depth = "posts";
+      timerInterval = "*-*-* 06,12,18,00:00:00"; # 4x daily
+    };
+  };
+
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
 

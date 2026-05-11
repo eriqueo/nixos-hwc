@@ -9,6 +9,66 @@ let
     withNvenc  = true;
   };
 
+  encodingXml = pkgs.writeText "jellyfin-encoding.xml" ''
+    <?xml version="1.0" encoding="utf-8"?>
+    <EncodingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <EncodingThreadCount>-1</EncodingThreadCount>
+      <EnableFallbackFont>false</EnableFallbackFont>
+      <EnableAudioVbr>false</EnableAudioVbr>
+      <DownMixAudioBoost>2</DownMixAudioBoost>
+      <DownMixStereoAlgorithm>None</DownMixStereoAlgorithm>
+      <MaxMuxingQueueSize>2048</MaxMuxingQueueSize>
+      <EnableThrottling>false</EnableThrottling>
+      <ThrottleDelaySeconds>180</ThrottleDelaySeconds>
+      <EnableSegmentDeletion>false</EnableSegmentDeletion>
+      <SegmentKeepSeconds>720</SegmentKeepSeconds>
+      <HardwareAccelerationType>nvenc</HardwareAccelerationType>
+      <VaapiDevice>/dev/dri/renderD128</VaapiDevice>
+      <QsvDevice />
+      <EnableTonemapping>false</EnableTonemapping>
+      <EnableVppTonemapping>false</EnableVppTonemapping>
+      <EnableVideoToolboxTonemapping>false</EnableVideoToolboxTonemapping>
+      <TonemappingAlgorithm>bt2390</TonemappingAlgorithm>
+      <TonemappingMode>auto</TonemappingMode>
+      <TonemappingRange>auto</TonemappingRange>
+      <TonemappingDesat>0</TonemappingDesat>
+      <TonemappingPeak>100</TonemappingPeak>
+      <TonemappingParam>0</TonemappingParam>
+      <VppTonemappingBrightness>16</VppTonemappingBrightness>
+      <VppTonemappingContrast>1</VppTonemappingContrast>
+      <H264Crf>23</H264Crf>
+      <H265Crf>28</H265Crf>
+      <EncoderPreset>auto</EncoderPreset>
+      <DeinterlaceDoubleRate>false</DeinterlaceDoubleRate>
+      <DeinterlaceMethod>yadif</DeinterlaceMethod>
+      <EnableDecodingColorDepth10Hevc>true</EnableDecodingColorDepth10Hevc>
+      <EnableDecodingColorDepth10Vp9>true</EnableDecodingColorDepth10Vp9>
+      <EnableDecodingColorDepth10HevcRext>false</EnableDecodingColorDepth10HevcRext>
+      <EnableDecodingColorDepth12HevcRext>false</EnableDecodingColorDepth12HevcRext>
+      <EnableEnhancedNvdecDecoder>true</EnableEnhancedNvdecDecoder>
+      <PreferSystemNativeHwDecoder>false</PreferSystemNativeHwDecoder>
+      <EnableIntelLowPowerH264HwEncoder>false</EnableIntelLowPowerH264HwEncoder>
+      <EnableIntelLowPowerHevcHwEncoder>false</EnableIntelLowPowerHevcHwEncoder>
+      <EnableHardwareEncoding>true</EnableHardwareEncoding>
+      <AllowHevcEncoding>true</AllowHevcEncoding>
+      <AllowAv1Encoding>false</AllowAv1Encoding>
+      <EnableSubtitleExtraction>true</EnableSubtitleExtraction>
+      <HardwareDecodingCodecs>
+        <string>h264</string>
+        <string>vc1</string>
+        <string>hevc</string>
+        <string>mpeg2video</string>
+        <string>mpeg4</string>
+        <string>vp8</string>
+        <string>vp9</string>
+        <string>av1</string>
+      </HardwareDecodingCodecs>
+      <AllowOnDemandMetadataBasedKeyframeExtractionForExtensions>
+        <string>mkv</string>
+      </AllowOnDemandMetadataBasedKeyframeExtractionForExtensions>
+    </EncodingOptions>
+  '';
+
   # NOTE: User initialization script removed (2026-02-08)
   # The init-users.nix script is incompatible with Jellyfin 10.9.11+ EF Core migrations.
   # Users should be created through the Jellyfin web UI wizard on first boot.
@@ -90,6 +150,9 @@ in
           echo "Removing obsolete migrations.xml (incompatible with Jellyfin 10.11.x)"
           rm -f "$CONFIG_DIR/migrations.xml"
         fi
+
+        # Write declarative encoding config (nvenc encode + cuvid decode, no system native decoder)
+        cp ${encodingXml} "$CONFIG_DIR/encoding.xml"
       '';
 
       serviceConfig = {
