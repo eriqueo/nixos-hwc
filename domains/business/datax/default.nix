@@ -102,6 +102,7 @@ in
         runtimeInputs = [ pkgs.podman ];
         text = ''
           exec podman run --rm \
+            --network=host \
             -v "${cfg.fbScraper.dataDir}:/data:Z" \
             -e "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright" \
             ${cfg.fbScraper.containerImage} \
@@ -128,6 +129,7 @@ in
             echo "[fb-scrape-run] Scraping $GROUP_URL → $OUTFILE"
 
             podman run --rm \
+              --network=host \
               -v "${cfg.fbScraper.dataDir}:/data:Z" \
               -e "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright" \
               ${cfg.fbScraper.containerImage} \
