@@ -3,7 +3,6 @@
 import { chromium } from 'playwright';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { createInterface } from 'node:readline';
 import {
   parseFeedResponse, extractComments, mergeComments,
   findPostIdInResponse, getOpName,
@@ -93,11 +92,6 @@ const sleep = (min, max) => new Promise(r => setTimeout(r, min + Math.random() *
 
 function log(opts, ...args) { if (!opts.quiet) console.error(...args); }
 
-async function prompt(msg) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise(r => rl.question(msg, () => { rl.close(); r(); }));
-}
-
 // ── Browser ──
 
 async function launch(opts) {
@@ -120,12 +114,20 @@ async function checkAuth(page) {
 }
 
 async function doLogin(page, context, sessionPath) {
-  const loggedIn = await checkAuth(page);
+  await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await sleep(2000, 3000);
+
+  const loggedIn = !(await page.$('#login_form, input[name="email"]'));
   if (!loggedIn) {
-    console.error('Log in manually in the browser window.');
-    await prompt('Press Enter when done... ');
-    if (!(await checkAuth(page))) die('Still not logged in.');
+    console.error('Log in manually in the browser. Session saves automatically when complete...');
+    // Wait for login form to disappear — no Enter needed
+    await page.waitForFunction(
+      () => !document.querySelector('#login_form, input[name="email"]'),
+      { timeout: 300_000 } // 5 min
+    );
+    await sleep(3000, 4000); // let FB finish redirecting
   }
+
   mkdirSync(dirname(sessionPath), { recursive: true });
   await context.storageState({ path: sessionPath });
   console.error(`Session saved → ${sessionPath}`);
