@@ -27,7 +27,9 @@ in
       $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON DATABASE ${cfg.databaseName} TO ${cfg.databaseUser};" || true
       $PSQL -d ${cfg.databaseName} -c "GRANT USAGE, CREATE ON SCHEMA public TO ${cfg.databaseUser};" || true
       $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${cfg.databaseUser};" || true
+      $PSQL -d ${cfg.databaseName} -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ${cfg.databaseUser};" || true
       $PSQL -d ${cfg.databaseName} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${cfg.databaseUser};" || true
+      $PSQL -d ${cfg.databaseName} -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${cfg.databaseUser};" || true
       $PSQL -d ${cfg.databaseName} -f ${./fb-monitor-bak/schema.sql} || true
     '';
 
