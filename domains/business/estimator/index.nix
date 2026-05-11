@@ -159,10 +159,10 @@ in {
         @immutable path /assets/*
         header @immutable Cache-Control "public, max-age=31536000, immutable"
 
-        @sw path /sw.js
-        header @sw Cache-Control "no-cache"
+        @nocache path /sw.js /index.html /registerSW.js /manifest.json
+        header @nocache Cache-Control "no-cache, no-store, must-revalidate"
 
-        header / Cache-Control "no-cache"
+        header / Cache-Control "no-cache, no-store, must-revalidate"
       }
     '';
 

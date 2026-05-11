@@ -8,13 +8,13 @@ layout: layouts/base.njk
   {% endif %}
   <div class="hero-overlay">
     <div class="container-wide text-center">
-      {% if hero_eyebrow %}<span class="hero-eyebrow">{{ hero_eyebrow }}</span>{% else %}<span class="hero-eyebrow">BATHROOMS · DECKS · CARPENTRY · UNIVERSAL DESIGN</span>{% endif %}
+      <span class="hero-eyebrow"><a href="/bathroom/remodeling/">BATHROOMS</a> · <a href="/services/">DECKS</a> · <a href="/services/">CARPENTRY</a> · <a href="/aging-in-place/">UNIVERSAL DESIGN</a></span>
       <h1>{{ h1 | default(title) }}</h1>
       {% if hero_subtitle %}<p class="hero-subtitle">{{ hero_subtitle }}</p>{% endif %}
       <hr class="long">
       <div class="hero-cta">
         <a href="{{ hero_cta_1_url | default('/contact/') }}" class="btn btn-primary">{{ hero_cta_1_text | default('Request a Consultation') }}</a>
-        <a href="{{ hero_cta_2_url | default('/our-work/') }}" class="btn btn-outline-light">{{ hero_cta_2_text | default('See the Process') }}</a>
+        <a href="{{ hero_cta_2_url | default('/our-work/') }}" class="btn btn-secondary-solid">{{ hero_cta_2_text | default('See the Process') }}</a>
       </div>
     </div>
   </div>

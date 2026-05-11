@@ -392,17 +392,17 @@ This is **additive** — existing budget items are untouched. Unlike `createCost
 
 ### Nested Groups (e.g. "Demo > Labor")
 
-For `groupName` with `>` separator:
-1. `createCostGroup` with `jobId` for top-level ("Demo") → `parentGroupId`
-2. `createCostGroup` with `parentCostGroupId` for sub-group ("Labor") → `childGroupId`
-3. `createCostItem` with `costGroupId = childGroupId` for each item
+**Preferred (batched):** Use `createCostGroup` with `jobId` and nested `lineItems` containing both `_type: 'costGroup'` and `_type: 'costItem'` entries. One API call per top-level group carries its entire subtree. Run all top-level groups via `Promise.all` for parallelism.
+
+**Legacy (sequential — avoid):** Individual `createCostGroup` + `createCostItem` calls per group/item. ~97 sequential API calls for a typical estimate.
 
 ### When to Use Which
 
-| Approach | Use Case | Behavior |
-|----------|----------|----------|
-| `createJob`/`updateJob` + `lineItems` | Full estimate push, known complete budget | Declarative replacement |
-| `createCostGroup` + `createCostItem` | Add items to existing budget | Additive, non-destructive |
+| Approach | Use Case | Behavior | API Calls |
+|----------|----------|----------|-----------|
+| `createJob`/`updateJob` + `lineItems` | Full estimate push, known complete budget | Declarative replacement | 1 |
+| `createCostGroup` + nested `lineItems` | Add items to existing budget (batched) | Additive, non-destructive | ~5-8 parallel |
+| `createCostGroup` + `createCostItem` (sequential) | Legacy — avoid | Additive, non-destructive | ~97 sequential |
 
 ---
 

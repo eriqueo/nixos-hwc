@@ -7,7 +7,6 @@
     "state": {
       "new_fan": "yes",
       "new_tub": "yes",
-      "has_existing_tub": "yes",
       "job_type": "Bathroom",
       "has_paint": "yes",
       "demo_scope": "full_gut",
@@ -131,7 +130,6 @@
     "state": {
       "new_fan": "yes",
       "new_tub": "no",
-      "has_existing_tub": "yes",
       "job_type": "Bathroom",
       "has_paint": "yes",
       "demo_scope": "full_gut",

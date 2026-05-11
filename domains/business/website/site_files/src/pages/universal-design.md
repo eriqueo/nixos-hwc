@@ -43,7 +43,7 @@ schema_type: Service
 service_tag: universal-design
 show_cta: true
 show_services: true
-show_testimonials: true
+show_testimonials: false
 stats:
   - label: NARI Certified Professional
     value: UDCP

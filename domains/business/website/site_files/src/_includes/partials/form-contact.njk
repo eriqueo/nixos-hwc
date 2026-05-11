@@ -166,24 +166,24 @@
 {# ── JT Web Form Script ── #}
 <script async src="https://app.jobtread.com/web-form.js"></script>
 
-{# ── Attribution Bridge + GA4 Event ── #}
+{# ── Attribution Bridge + dataLayer Event ── #}
 <script>
 (function() {
   'use strict';
-  
+
   var form = document.getElementById('hwc-contact-form');
   if (!form) return;
 
   // ── Auto-select Lead Source from UTM if user hasn't chosen ──
   function autoSelectSource() {
     var sourceSelect = document.getElementById('jt-source');
-    if (!sourceSelect || sourceSelect.value) return; // User already picked one
-    
+    if (!sourceSelect || sourceSelect.value) return;
+
     try {
       var gclid = sessionStorage.getItem('hwc_gclid');
       var utm_source = sessionStorage.getItem('hwc_utm_source') || '';
       var utm_medium = sessionStorage.getItem('hwc_utm_medium') || '';
-      
+
       if (gclid) {
         sourceSelect.value = 'Google Local Service';
       } else if (utm_source === 'google' && utm_medium === 'cpc') {
@@ -198,13 +198,11 @@
     } catch(e) {}
   }
 
-  // ── On submit: honeypot check + fire GA4 ──
+  // ── Honeypot check on submit ──
   form.addEventListener('submit', function(e) {
-    // Honeypot: if bot filled the hidden field, silently block submission
     var hp = document.getElementById('hp-website');
     if (hp && hp.value) {
       e.preventDefault();
-      // Fake success so bot thinks it worked
       form.hidden = true;
       var msg = document.createElement('p');
       msg.className = 'section-subtitle';
@@ -212,23 +210,58 @@
       form.parentElement.appendChild(msg);
       return;
     }
-
-    // Fire GA4 event
-    if (typeof gtag === 'function') {
-      var sourceField = document.getElementById('jt-source');
-      var projectField = document.getElementById('jt-project');
-      gtag('event', 'form_submit', {
-        form_name: 'contact',
-        lead_source: sourceField ? sourceField.value : '',
-        project_type: projectField ? projectField.value : '',
-        page_location: window.location.pathname
-      });
-    }
+    // Mark as submitted for beforeunload handler
+    form.dataset.submitted = 'true';
   });
 
-  // ── On page load: try to auto-select source from UTM ──
-  autoSelectSource();
+  // ── Fire lead_form_submit AFTER JT confirms success ──
+  // Watch for JT's success message appearing in the DOM
+  var fired = false;
+  function fireSuccessEvent() {
+    if (fired) return;
+    fired = true;
+    var sourceField = document.getElementById('jt-source');
+    var projectField = document.getElementById('jt-project');
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'lead_form_submit',
+      form_id: 'contact',
+      lead_source: sourceField ? sourceField.value : '',
+      project_type: projectField ? projectField.value : '',
+      page_location: window.location.pathname
+    });
+  }
 
+  // Strategy 1: MutationObserver watches for JT's success message
+  var observer = new MutationObserver(function(mutations) {
+    for (var i = 0; i < mutations.length; i++) {
+      var added = mutations[i].addedNodes;
+      for (var j = 0; j < added.length; j++) {
+        var node = added[j];
+        if (node.nodeType === 1) {
+          var text = (node.textContent || '').toLowerCase();
+          if (text.indexOf('thanks') !== -1 || text.indexOf("we'll be in touch") !== -1) {
+            fireSuccessEvent();
+            observer.disconnect();
+            return;
+          }
+        }
+      }
+    }
+  });
+  observer.observe(form.parentElement, { childList: true, subtree: true });
+
+  // Strategy 2: catch navigation to success URL as backup
+  var successUrl = form.getAttribute('data-success-url');
+  if (successUrl) {
+    window.addEventListener('beforeunload', function() {
+      if (form.dataset.submitted === 'true') {
+        fireSuccessEvent();
+      }
+    });
+  }
+
+  autoSelectSource();
 })();
 </script>
 

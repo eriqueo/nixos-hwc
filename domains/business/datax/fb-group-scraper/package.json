@@ -1,0 +1,12 @@
+{
+  "name": "fb-group-scraper",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "login": "node index.mjs --login --headed",
+    "scrape": "node index.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

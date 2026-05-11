@@ -9,5 +9,6 @@ export const STEPS = buildSteps(data);
 export const calculateRange = makeCalculator(data);
 export const { getLabel, getAttribution, fireEvent, fmt } = makeHelpers(data);
 export const WEBHOOK = data.webhook;
+export const WEBHOOK_APPT = data.webhookAppointment;
 export const REPORT_CONTEXT = data.reportContext;
 export const IMAGE_BASE = data.imageBase;

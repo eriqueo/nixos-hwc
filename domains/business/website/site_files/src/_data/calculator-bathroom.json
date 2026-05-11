@@ -4,6 +4,7 @@
   "title": "Bathroom Remodel Cost Calculator",
   "subtitle": "7 questions, real numbers from Bozeman bathroom projects. Not national averages \u2014 actual Gallatin Valley material and labor costs.",
   "webhook": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead",
+  "webhookAppointment": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-appointment",
   "imageBase": "/img/calculator/bathroom",
   "steps": [
     {
@@ -176,41 +177,27 @@
     },
     {
       "id": "features",
-      "question": "Any special features?",
-      "subtitle": "Select all that apply \u2014 or skip if none.",
-      "why": "Each of these is a standalone scope item with its own materials and labor. Heated floors alone need an electrician, dedicated circuit, and Ditra membrane \u2014 $1,200\u2013$1,800.",
+      "question": "What else does your bathroom need?",
+      "subtitle": "Check everything that applies \u2014 these are the details that make a bathroom feel finished.",
+      "why": "Most bathroom remodels involve more than just tile and a vanity. These items get overlooked during planning but they're part of the real scope. Checking them now gives you a more accurate estimate.",
       "type": "multi",
       "options": [
-        {
-          "value": "heated_floor",
-          "label": "Heated floors",
-          "add": 1800
-        },
-        {
-          "value": "niches",
-          "label": "Built-in shower niches",
-          "add": 1000
-        },
-        {
-          "value": "bench",
-          "label": "Shower bench",
-          "add": 1400
-        },
-        {
-          "value": "double_vanity",
-          "label": "Double vanity",
-          "add": 2200
-        },
-        {
-          "value": "lighting",
-          "label": "New lighting / electrical",
-          "add": 1500
-        },
-        {
-          "value": "ventilation",
-          "label": "New ventilation / fan",
-          "add": 800
-        }
+        { "value": "heated_floor", "label": "Heated floors", "add": 1800 },
+        { "value": "niches", "label": "Built-in shower niche(s)", "add": 1000 },
+        { "value": "bench", "label": "Shower bench (built-in)", "add": 1400 },
+        { "value": "glass_door", "label": "Frameless glass shower door", "add": 2400 },
+        { "value": "double_vanity", "label": "Double vanity", "add": 2200 },
+        { "value": "new_toilet", "label": "New toilet", "add": 650 },
+        { "value": "lighting", "label": "New light fixtures", "add": 1500 },
+        { "value": "mirror", "label": "New mirror / medicine cabinet", "add": 450 },
+        { "value": "ventilation", "label": "New exhaust fan", "add": 800 },
+        { "value": "towel_bars", "label": "Towel bars / hooks / rings", "add": 250 },
+        { "value": "tp_holder", "label": "Toilet paper holder", "add": 85 },
+        { "value": "shower_shelf", "label": "Shower corner shelf / caddy", "add": 200 },
+        { "value": "gfci", "label": "GFCI outlet upgrades", "add": 350 },
+        { "value": "paint", "label": "Fresh paint (walls & ceiling)", "add": 600 },
+        { "value": "baseboard", "label": "New baseboards / trim", "add": 500 },
+        { "value": "door", "label": "New bathroom door / hardware", "add": 450 }
       ]
     },
     {
@@ -308,29 +295,36 @@
     }
   },
   "featureMap": {
-    "heated_floor": {
-      "has_heated_floor": true
-    },
-    "niches": {
-      "has_niches": true,
-      "niche_count": 2
-    },
-    "bench": {
-      "has_bench": true
-    },
-    "double_vanity": {
-      "is_double_vanity": true
-    },
-    "lighting": {
-      "has_new_lighting": true
-    },
-    "ventilation": {
-      "has_new_ventilation": true
-    }
+    "heated_floor": { "has_heated_floor": true },
+    "niches": { "has_niches": true, "niche_count": 2 },
+    "bench": { "has_bench": true },
+    "glass_door": { "has_glass_door": true },
+    "double_vanity": { "is_double_vanity": true },
+    "new_toilet": { "has_new_toilet": true },
+    "lighting": { "has_new_lighting": true },
+    "mirror": { "has_new_mirror": true },
+    "ventilation": { "has_new_ventilation": true },
+    "towel_bars": { "has_towel_bars": true },
+    "tp_holder": { "has_tp_holder": true },
+    "shower_shelf": { "has_shower_shelf": true },
+    "gfci": { "has_gfci": true },
+    "paint": { "has_paint": true },
+    "baseboard": { "has_baseboard": true },
+    "door": { "has_new_door": true }
   },
   "featureAdds": {
     "heated_floor": 1800,
-    "bench": 1400
+    "bench": 1400,
+    "glass_door": 2400,
+    "new_toilet": 650,
+    "mirror": 450,
+    "towel_bars": 250,
+    "tp_holder": 85,
+    "shower_shelf": 200,
+    "gfci": 350,
+    "paint": 600,
+    "baseboard": 500,
+    "door": 450
   },
   "refreshFactors": {
     "demo": 0.5,
@@ -356,8 +350,8 @@
       "price": 94.5
     },
     "demo": {
-      "cost": 47.25,
-      "price": 94.5
+      "cost": 35,
+      "price": 70
     },
     "drywall": {
       "cost": 47.25,
@@ -381,11 +375,11 @@
     },
     "plumbing": {
       "cost": 56.7,
-      "price": 99.23
+      "price": 120
     },
     "tile": {
       "cost": 60.75,
-      "price": 121.5
+      "price": 100
     }
   },
   "materialMarkup": 1.429,
@@ -500,7 +494,7 @@
       "budget_group_path": "Demo > Materials",
       "condition_trigger": "project_type != \"specific_fix\"",
       "qty_driver": null,
-      "qty_formula": null,
+      "qty_formula": "CASE WHEN project_type_is_refresh THEN 0.5 ELSE 1 END",
       "default_qty": 1.0,
       "waste_factor": 1.0,
       "production_rate": null,
@@ -585,7 +579,7 @@
       "budget_group_path": "Plumbing > Mixer Valve",
       "condition_trigger": "has_shower",
       "qty_driver": null,
-      "qty_formula": null,
+      "qty_formula": "CASE WHEN project_type_is_refresh THEN 2 ELSE 4 END",
       "default_qty": 4.0,
       "waste_factor": 1.0,
       "production_rate": null,
@@ -619,7 +613,7 @@
       "budget_group_path": "Plumbing > Showerhead",
       "condition_trigger": "has_shower",
       "qty_driver": null,
-      "qty_formula": null,
+      "qty_formula": "CASE WHEN project_type_is_refresh THEN 1 ELSE 4 END",
       "default_qty": 4.0,
       "waste_factor": 1.0,
       "production_rate": null,
@@ -636,7 +630,7 @@
       "budget_group_path": "Plumbing > Tub Drain",
       "condition_trigger": "has_tub",
       "qty_driver": null,
-      "qty_formula": null,
+      "qty_formula": "CASE WHEN project_type_is_refresh THEN 1.5 ELSE 4 END",
       "default_qty": 4.0,
       "waste_factor": 1.0,
       "production_rate": null,
@@ -687,7 +681,7 @@
       "budget_group_path": "Plumbing > Materials",
       "condition_trigger": "true",
       "qty_driver": null,
-      "qty_formula": null,
+      "qty_formula": "CASE WHEN project_type_is_refresh THEN 0.6 ELSE 1 END",
       "default_qty": 1.0,
       "waste_factor": 1.0,
       "production_rate": null,
@@ -772,7 +766,7 @@
       "budget_group_path": "Electrical > Materials",
       "condition_trigger": "project_type != \"specific_fix\"",
       "qty_driver": null,
-      "qty_formula": null,
+      "qty_formula": "CASE WHEN project_type_is_refresh THEN 0.4 ELSE 1 END",
       "default_qty": 1.0,
       "waste_factor": 1.0,
       "production_rate": null,
@@ -857,7 +851,7 @@
       "budget_group_path": "Tilework > Tile Materials",
       "condition_trigger": "true",
       "qty_driver": "shower_wall_sqft",
-      "qty_formula": null,
+      "qty_formula": "CASE WHEN project_type_is_refresh THEN 0.85 ELSE 1 END",
       "default_qty": 1.0,
       "waste_factor": 1.0,
       "production_rate": null,
@@ -1433,7 +1427,7 @@
       "item_type": "allowance",
       "trade": null,
       "budget_group_path": "Allowances > Electrical Fixtures",
-      "condition_trigger": "has_new_lighting",
+      "condition_trigger": "has_new_lighting AND fixtures = \"standard\"",
       "qty_driver": null,
       "qty_formula": null,
       "default_qty": 1.0,

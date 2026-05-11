@@ -47,6 +47,21 @@ domains/
 `/add-server-container` `/add-home-app` `/secret-provision`
 `/nixos-build-doctor` `/charter-check` `/module-migrate` `/system-checkup`
 
+## MCP vs Bash — Token Efficiency
+On hwc-server, prefer direct bash over MCP for server ops. MCP wraps shell
+commands in JSON — costs ~3x more tokens for equivalent info.
+
+**Use bash for**: systemctl, journalctl, podman, df, sqlite3, curl, anything
+you can run directly on the box.
+
+**Use MCP only when**:
+- Tool hits an external API with no CLI equivalent (JobTread `jt_*`, n8n workflows)
+- Tool does complex business logic (estimator, mail health)
+- Tool evaluates Nix expressions (`hwc_config_*`)
+
+**Skip MCP for**: monitoring health checks, service status, storage status,
+journal errors, container stats — these just run shell commands with JSON tax.
+
 ## MCP Servers
 - **heartwood**: 63 JobTread tools (Heartwood Craft business data)
 - **postgres**: databases heartwood_business, immich

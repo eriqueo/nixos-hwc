@@ -68,6 +68,16 @@ function tokenize(expr) {
     if (expr[i] === ')') { tokens.push({ type: TOKEN.RPAREN }); i++; continue; }
     if (expr[i] === ',') { tokens.push({ type: TOKEN.COMMA });  i++; continue; }
 
+    // {param} bracketed parameter reference — strip braces, emit as IDENT
+    if (expr[i] === '{') {
+      i++; // skip {
+      let id = '';
+      while (i < expr.length && expr[i] !== '}') id += expr[i++];
+      i++; // skip }
+      tokens.push({ type: TOKEN.IDENT, value: id });
+      continue;
+    }
+
     // Identifier or keyword (alphanumeric + underscore)
     if (/[a-zA-Z_]/.test(expr[i])) {
       let id = '';

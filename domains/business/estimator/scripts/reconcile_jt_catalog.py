@@ -34,6 +34,12 @@ SCRIPT_DIR = Path(__file__).parent
 CACHE_FILE = SCRIPT_DIR / "jt_catalog_cache.json"
 MAP_FILE = SCRIPT_DIR / "jt_catalog_map.json"
 MANUAL_MAP_FILE = SCRIPT_DIR / "jt_manual_overrides.json"
+KEEPERS_FILE = SCRIPT_DIR / "jt_dedup_keepers.json"
+DELETIONS_FILE = SCRIPT_DIR / "jt_dedup_deletions.json"
+PRE_SYNC_JT = SCRIPT_DIR / "jt_catalog_pre_sync.json"
+PRE_SYNC_PG = SCRIPT_DIR / "pg_jt_links_pre_sync.json"
+SYNC_LOG = SCRIPT_DIR / "sync_log.json"
+SYNC_STATE = SCRIPT_DIR / "sync_state.json"
 DB = "hwc"
 
 PAVE_URL = "https://api.jobtread.com/pave"
@@ -150,7 +156,7 @@ class PaveAPI:
     def __init__(self, grant_key: str):
         self.grant_key = grant_key
 
-    def _request(self, operations: dict) -> dict:
+    def _request(self, operations: dict, retries: int = 3) -> dict:
         envelope = {
             "query": {
                 "$": {
@@ -161,23 +167,30 @@ class PaveAPI:
                 **operations,
             }
         }
-        req = Request(
-            PAVE_URL,
-            data=json.dumps(envelope).encode(),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
         from urllib.error import HTTPError as _HTTPError
-        try:
-            with urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read())
-        except _HTTPError as e:
-            body = e.read().decode()[:500]
-            raise RuntimeError(f"PAVE HTTP {e.code}: {body}") from e
-        if data.get("errors"):
-            msgs = "; ".join(e.get("message", "?") for e in data["errors"])
-            raise RuntimeError(f"PAVE error: {msgs}")
-        return data
+        for attempt in range(retries + 1):
+            req = Request(
+                PAVE_URL,
+                data=json.dumps(envelope).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read())
+            except _HTTPError as e:
+                if e.code == 429 and attempt < retries:
+                    delay = 2 ** (attempt + 1)
+                    print(f"    Rate limited (429), waiting {delay}s...")
+                    time.sleep(delay)
+                    continue
+                body = e.read().decode()[:500]
+                raise RuntimeError(f"PAVE HTTP {e.code}: {body}") from e
+            if data.get("errors"):
+                msgs = "; ".join(e.get("message", "?") for e in data["errors"])
+                raise RuntimeError(f"PAVE error: {msgs}")
+            return data
+        raise RuntimeError("Max retries exceeded")
 
     def get_all_cost_items(self) -> list[dict]:
         """Fetch all org cost items. PAVE costItems supports size but not after.
@@ -378,18 +391,32 @@ def fuzzy_score(a: str, b: str) -> float:
 
 
 def build_mapping(pg_items: list[PgItem], jt_items: list[JtItem]) -> dict:
-    """Match Postgres items to JT items."""
+    """Match Postgres items to JT items. Prefers dedup keepers when available."""
     # Index JT items
     jt_by_id = {j.id: j for j in jt_items}
-    jt_by_name_norm = {}
+    jt_by_name_norm: dict[str, list[JtItem]] = {}
     for j in jt_items:
         key = normalize(j.name)
         jt_by_name_norm.setdefault(key, []).append(j)
 
+    # Load dedup keepers (name → keeper_id)
+    keeper_ids: set[str] = set()
+    keeper_by_name: dict[str, str] = {}  # normalized name → keeper JT ID
+    if KEEPERS_FILE.exists():
+        keepers_data = json.loads(KEEPERS_FILE.read_text())
+        for name, info in keepers_data.items():
+            kid = info["keeper_id"]
+            keeper_ids.add(kid)
+            keeper_by_name[normalize(name)] = kid
+        print(f"Loaded {len(keeper_ids)} dedup keepers")
+    else:
+        print("WARNING: No dedup keepers file — run dedup_jt_catalog.py first for best results")
+
     # Load manual overrides
     manual_map = {}
     if MANUAL_MAP_FILE.exists():
-        manual_map = json.loads(MANUAL_MAP_FILE.read_text())
+        raw = json.loads(MANUAL_MAP_FILE.read_text())
+        manual_map = {k: v for k, v in raw.items() if not k.startswith("_")}
         print(f"Loaded {len(manual_map)} manual overrides")
 
     matches: list[Match] = []
@@ -400,18 +427,30 @@ def build_mapping(pg_items: list[PgItem], jt_items: list[JtItem]) -> dict:
     for pg in pg_items:
         match = None
 
-        # Strategy 1: Manual override (pg_id → jt_id)
+        # Strategy 1: Manual override (pg_id → jt_id, or null to force create-new)
         pg_id_str = str(pg.id)
         if pg_id_str in manual_map:
             jt_id = manual_map[pg_id_str]
+            if jt_id is None:
+                # Explicitly rejected — skip all matching, force create-new
+                unmatched_pg.append(pg)
+                continue
             if jt_id in jt_by_id:
                 jt = jt_by_id[jt_id]
                 match = Match(pg.id, pg.canonical_name, jt.id, jt.name, "manual")
 
-        # Strategy 2: Exact jt_catalog_id match
+        # Strategy 2: Exact jt_catalog_id match (redirect to keeper if it's a dupe)
         if not match and pg.jt_catalog_id and pg.jt_catalog_id in jt_by_id:
             jt = jt_by_id[pg.jt_catalog_id]
-            match = Match(pg.id, pg.canonical_name, jt.id, jt.name, "exact_id")
+            # If this ID is not the keeper and a keeper exists for this name, use keeper
+            name_key = normalize(jt.name)
+            keeper_id = keeper_by_name.get(name_key)
+            if keeper_id and keeper_id != pg.jt_catalog_id and keeper_id in jt_by_id:
+                keeper_jt = jt_by_id[keeper_id]
+                match = Match(pg.id, pg.canonical_name, keeper_jt.id, keeper_jt.name, "exact_id_to_keeper")
+                match.conflicts.append(f"redirected from dupe {pg.jt_catalog_id} to keeper {keeper_id}")
+            else:
+                match = Match(pg.id, pg.canonical_name, jt.id, jt.name, "exact_id")
 
         # Strategy 3: Exact name match (canonical_name or display_name)
         if not match:
@@ -424,7 +463,14 @@ def build_mapping(pg_items: list[PgItem], jt_items: list[JtItem]) -> dict:
                         match = Match(pg.id, pg.canonical_name, jt.id, jt.name, "exact_name")
                         break
                     elif len(candidates) > 1:
-                        # Multiple JT items with same name — try to disambiguate by cost code
+                        # Multiple JT items with same name — prefer keeper
+                        keeper_id = keeper_by_name.get(key)
+                        if keeper_id:
+                            keeper_jt = jt_by_id.get(keeper_id)
+                            if keeper_jt:
+                                match = Match(pg.id, pg.canonical_name, keeper_jt.id, keeper_jt.name, "exact_name_keeper")
+                                break
+                        # Fallback: disambiguate by cost code
                         pg_cc = pg.jt_cost_code_id or TRADE_TO_COST_CODE.get(pg.trade)
                         for c in candidates:
                             if c.cost_code_id == pg_cc:
@@ -433,15 +479,17 @@ def build_mapping(pg_items: list[PgItem], jt_items: list[JtItem]) -> dict:
                         if not match:
                             jt = candidates[0]
                             match = Match(pg.id, pg.canonical_name, jt.id, jt.name, "exact_name")
-                            match.conflicts.append(f"Multiple JT matches: {[c.id for c in candidates]}")
+                            match.conflicts.append(f"Multiple JT matches, no keeper: {[c.id for c in candidates[:5]]}")
                         break
 
-        # Strategy 4: Fuzzy name match within same cost code
+        # Strategy 4: Fuzzy name match — only match against keepers to avoid dupes
         if not match:
             pg_cc = pg.jt_cost_code_id or TRADE_TO_COST_CODE.get(pg.trade)
+            # Build candidate pool: keepers only (or all if no keepers file)
+            fuzzy_pool = [j for j in jt_items if j.id in keeper_ids] if keeper_ids else jt_items
             best_score = 0.0
             best_jt = None
-            for jt in jt_items:
+            for jt in fuzzy_pool:
                 if jt.id in matched_jt_ids:
                     continue
                 # Prefer same cost code
@@ -455,7 +503,7 @@ def build_mapping(pg_items: list[PgItem], jt_items: list[JtItem]) -> dict:
 
             # Also try without cost code filter if nothing good found
             if best_score < 0.7:
-                for jt in jt_items:
+                for jt in fuzzy_pool:
                     if jt.id in matched_jt_ids:
                         continue
                     for name_to_try in [pg.display_name, pg.subject]:
@@ -495,14 +543,23 @@ def build_mapping(pg_items: list[PgItem], jt_items: list[JtItem]) -> dict:
         if len(pg_ids) > 1:
             m.conflicts.append(f"many-to-one: {len(pg_ids)} PG items → same JT item (PG IDs: {pg_ids})")
 
-    # Unmatched JT items
-    unmatched_jt = [j for j in jt_items if j.id not in matched_jt_ids]
+    # Unmatched JT items (only count keepers as meaningful unmatched)
+    unmatched_jt_all = [j for j in jt_items if j.id not in matched_jt_ids]
+    unmatched_jt_keepers = [j for j in unmatched_jt_all if j.id in keeper_ids] if keeper_ids else unmatched_jt_all
+
+    # Count matches to keepers vs non-keepers
+    matches_to_keeper = sum(1 for m in matches if m.jt_id in keeper_ids) if keeper_ids else 0
+    matches_to_nonkeeper = len(matches) - matches_to_keeper if keeper_ids else 0
 
     return {
         "matches": matches,
         "unmatched_pg": unmatched_pg,
-        "unmatched_jt": unmatched_jt,
+        "unmatched_jt": unmatched_jt_all,
+        "unmatched_jt_keepers": unmatched_jt_keepers,
         "errors": errors,
+        "matches_to_keeper": matches_to_keeper,
+        "matches_to_nonkeeper": matches_to_nonkeeper,
+        "keeper_ids": keeper_ids,
     }
 
 
@@ -517,16 +574,22 @@ def print_report(mapping: dict, pg_items: list[PgItem], jt_items: list[JtItem]):
     print("JT CATALOG RECONCILIATION REPORT")
     print("=" * 80)
 
+    keeper_ids = mapping.get("keeper_ids", set())
+    unmatched_jt_keepers = mapping.get("unmatched_jt_keepers", [])
+
     print(f"\nPostgres catalog: {len(pg_items)} active items")
-    print(f"JT org catalog:   {len(jt_items)} items")
+    print(f"JT org catalog:   {len(jt_items)} items ({len(keeper_ids)} keepers after dedup)")
 
     # Match summary
-    by_method = {}
+    by_method: dict[str, list] = {}
     for m in matches:
         by_method.setdefault(m.method, []).append(m)
     print(f"\n── Matches: {len(matches)} ──")
     for method, items in sorted(by_method.items()):
         print(f"  {method}: {len(items)}")
+    if keeper_ids:
+        print(f"  → to keeper: {mapping.get('matches_to_keeper', 0)}")
+        print(f"  → to non-keeper (will redirect): {mapping.get('matches_to_nonkeeper', 0)}")
 
     # Conflicts
     conflicts = [m for m in matches if m.conflicts]
@@ -557,14 +620,19 @@ def print_report(mapping: dict, pg_items: list[PgItem], jt_items: list[JtItem]):
     if len(unmatched_pg) > 30:
         print(f"  ... and {len(unmatched_pg) - 30} more")
 
-    # Unmatched JT (candidates for deactivation)
-    print(f"\n── Unmatched JT items ({len(unmatched_jt)}) — review for deactivation ──")
-    for jt in unmatched_jt[:30]:
+    # Unmatched JT (split keepers vs dupes)
+    unmatched_dupes = len(unmatched_jt) - len(unmatched_jt_keepers)
+    print(f"\n── Unmatched JT items ({len(unmatched_jt)}) ──")
+    if keeper_ids:
+        print(f"  Keepers (unique, no PG match): {len(unmatched_jt_keepers)}")
+        print(f"  Duplicates (dedup candidates):  {unmatched_dupes}")
+    print(f"  Showing keepers only:")
+    for jt in unmatched_jt_keepers[:30]:
         cc = jt.cost_code_name or "?"
         ct = jt.cost_type_name or "?"
-        print(f"  JT:{jt.id}: {jt.name} [{cc}/{ct}]")
-    if len(unmatched_jt) > 30:
-        print(f"  ... and {len(unmatched_jt) - 30} more")
+        print(f"    JT:{jt.id}: {jt.name} [{cc}/{ct}]")
+    if len(unmatched_jt_keepers) > 30:
+        print(f"    ... and {len(unmatched_jt_keepers) - 30} more")
 
     print("\n" + "=" * 80)
 
@@ -634,6 +702,49 @@ def resolve_unit(pg: PgItem) -> Optional[str]:
     return UNIT_NAME_TO_ID["Lump Sum"]
 
 
+def take_snapshots(api: "PaveAPI", execute: bool):
+    """Save pre-sync state for rollback."""
+    if not execute:
+        return
+    # Snapshot JT catalog
+    if not PRE_SYNC_JT.exists():
+        print("Taking JT catalog snapshot...")
+        raw = api.get_all_cost_items()
+        PRE_SYNC_JT.write_text(json.dumps(raw, indent=2))
+        print(f"  Saved {len(raw)} JT items to {PRE_SYNC_JT.name}")
+    else:
+        print(f"  JT snapshot exists ({PRE_SYNC_JT.name}), skipping")
+
+    # Snapshot PG links
+    if not PRE_SYNC_PG.exists():
+        print("Taking Postgres jt_catalog_id snapshot...")
+        rows = psql_json("SELECT id, jt_catalog_id FROM catalog_items WHERE is_active = true ORDER BY id")
+        PRE_SYNC_PG.write_text(json.dumps(rows, indent=2))
+        print(f"  Saved {len(rows)} PG links to {PRE_SYNC_PG.name}")
+    else:
+        print(f"  PG snapshot exists ({PRE_SYNC_PG.name}), skipping")
+
+
+def load_sync_state() -> dict:
+    """Load resume state — tracks completed operations."""
+    if SYNC_STATE.exists():
+        return json.loads(SYNC_STATE.read_text())
+    return {"completed_updates": [], "completed_creates": [], "completed_pg_writes": []}
+
+
+def save_sync_state(state: dict):
+    SYNC_STATE.write_text(json.dumps(state, indent=2))
+
+
+def append_sync_log(entry: dict):
+    """Append a mutation to the sync log."""
+    log: list = []
+    if SYNC_LOG.exists():
+        log = json.loads(SYNC_LOG.read_text())
+    log.append({**entry, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")})
+    SYNC_LOG.write_text(json.dumps(log, indent=2))
+
+
 def sync_catalog(mapping: dict, pg_items: list[PgItem], grant_key: str,
                  execute: bool = False):
     """Phase B: sync matched items and create unmatched ones."""
@@ -642,11 +753,17 @@ def sync_catalog(mapping: dict, pg_items: list[PgItem], grant_key: str,
     matches = mapping["matches"]
     unmatched_pg = mapping["unmatched_pg"]
 
-    stats = {"updated": 0, "created": 0, "skipped": 0, "errors": 0}
-    pg_updates = []  # (pg_id, jt_catalog_id) pairs to write back
+    stats = {"updated": 0, "created": 0, "repurposed": 0, "skipped": 0, "errors": 0}
+    pg_updates: list[tuple[int, str]] = []
+    op_count = 0
 
     print(f"\n{'EXECUTING' if execute else 'DRY RUN'}: Sync Phase")
     print("=" * 60)
+
+    # Take snapshots before any changes
+    if execute:
+        take_snapshots(api, execute)
+    state = load_sync_state() if execute else {"completed_updates": [], "completed_creates": [], "completed_pg_writes": []}
 
     # Step 1: Update matched items
     print(f"\n── Updating {len(matches)} matched items ──")
@@ -657,101 +774,167 @@ def sync_catalog(mapping: dict, pg_items: list[PgItem], grant_key: str,
 
         # Already synced?
         if pg.jt_catalog_id == m.jt_id:
-            # Check if name needs update
             if normalize(pg.canonical_name) == normalize(m.jt_name):
                 stats["skipped"] += 1
                 continue
 
-        update_fields = {}
-        # Rename to canonical name
+        # Resume: skip already completed
+        op_key = f"update:{m.pg_id}:{m.jt_id}"
+        if op_key in state["completed_updates"]:
+            stats["skipped"] += 1
+            if pg.jt_catalog_id != m.jt_id:
+                pg_updates.append((pg.id, m.jt_id))
+            continue
+
+        update_fields: dict = {}
         if normalize(pg.canonical_name) != normalize(m.jt_name):
             update_fields["name"] = pg.canonical_name
 
-        # Update cost code if different
         target_cc = resolve_cost_code(pg)
-        # We don't know current JT cost code from match alone, so always set
         update_fields["costCodeId"] = target_cc
         update_fields["costTypeId"] = resolve_cost_type(pg)
 
         unit_id = resolve_unit(pg)
         if unit_id:
             update_fields["unitId"] = unit_id
-
         if pg.unit_cost is not None:
-            update_fields["unitCost"] = pg.unit_cost
+            update_fields["unitCost"] = float(pg.unit_cost)
         if pg.unit_price is not None:
-            update_fields["unitPrice"] = pg.unit_price
-
-        action = f"UPDATE JT:{m.jt_id}"
-        detail = f"  PG#{m.pg_id}: {pg.canonical_name}"
-        if update_fields.get("name"):
-            detail += f"\n    rename: '{m.jt_name}' → '{pg.canonical_name}'"
-
-        print(f"{action}\n{detail}")
+            update_fields["unitPrice"] = float(pg.unit_price)
 
         if execute:
             try:
                 api.update_cost_item(m.jt_id, **update_fields)
+                append_sync_log({"op": "update", "jt_id": m.jt_id, "pg_id": m.pg_id,
+                                 "old_name": m.jt_name, "new_name": pg.canonical_name,
+                                 "fields": update_fields})
+                state["completed_updates"].append(op_key)
+                save_sync_state(state)
                 stats["updated"] += 1
                 time.sleep(0.2)
             except Exception as e:
-                print(f"    ERROR: {e}")
+                print(f"  ERROR updating JT:{m.jt_id} for PG#{m.pg_id}: {e}")
                 stats["errors"] += 1
         else:
+            rename_tag = ""
+            if update_fields.get("name"):
+                rename_tag = f" rename:'{m.jt_name}'→'{pg.canonical_name}'"
+            print(f"  UPDATE JT:{m.jt_id} PG#{m.pg_id}{rename_tag}")
             stats["updated"] += 1
 
-        # Queue Postgres update
         if pg.jt_catalog_id != m.jt_id:
             pg_updates.append((pg.id, m.jt_id))
 
-    # Step 2: Create unmatched Postgres items in JT
-    print(f"\n── Creating {len(unmatched_pg)} new JT items ──")
+        op_count += 1
+        if execute and op_count % 50 == 0:
+            print(f"  ... {op_count} API calls done ({stats['updated']} updated, {stats['errors']} errors)")
+
+    # Step 2: Create unmatched Postgres items in JT (or repurpose duplicates)
+    repurpose_pool: dict[str, list[dict]] = {}
+    if DELETIONS_FILE.exists():
+        deletions = json.loads(DELETIONS_FILE.read_text())
+        for d in deletions:
+            key = normalize(d["name"])
+            repurpose_pool.setdefault(key, []).append(d)
+
+    print(f"\n── Creating/repurposing {len(unmatched_pg)} new JT items ──")
     for pg in unmatched_pg:
         cc = resolve_cost_code(pg)
         ct = resolve_cost_type(pg)
         unit = resolve_unit(pg)
 
-        print(f"  CREATE: {pg.canonical_name}")
-        print(f"    type={pg.item_type} trade={pg.trade} cost={pg.unit_cost} price={pg.unit_price}")
+        # Resume: skip already completed
+        create_key = f"create:{pg.id}"
+        if create_key in state["completed_creates"]:
+            stats["skipped"] += 1
+            continue
 
-        if execute:
-            try:
-                new_id = api.create_cost_item(
-                    name=pg.canonical_name,
-                    cost_code_id=cc,
-                    cost_type_id=ct,
-                    unit_id=unit,
-                    unit_cost=pg.unit_cost,
-                    unit_price=pg.unit_price,
-                )
-                if new_id:
-                    pg_updates.append((pg.id, new_id))
-                    print(f"    → JT:{new_id}")
-                    stats["created"] += 1
-                else:
-                    print("    ERROR: No ID returned")
+        # Check repurpose pool
+        repurpose_id = None
+        for name_to_check in [pg.canonical_name, pg.display_name]:
+            key = normalize(name_to_check)
+            if key in repurpose_pool and repurpose_pool[key]:
+                dupe = repurpose_pool[key].pop(0)
+                repurpose_id = dupe["id"]
+                break
+
+        if repurpose_id:
+            if execute:
+                try:
+                    update = {"name": pg.canonical_name, "costCodeId": cc, "costTypeId": ct}
+                    if unit:
+                        update["unitId"] = unit
+                    if pg.unit_cost is not None:
+                        update["unitCost"] = float(pg.unit_cost)
+                    if pg.unit_price is not None:
+                        update["unitPrice"] = float(pg.unit_price)
+                    api.update_cost_item(repurpose_id, **update)
+                    pg_updates.append((pg.id, repurpose_id))
+                    append_sync_log({"op": "repurpose", "jt_id": repurpose_id,
+                                     "pg_id": pg.id, "new_name": pg.canonical_name})
+                    state["completed_creates"].append(create_key)
+                    save_sync_state(state)
+                    stats["repurposed"] += 1
+                    time.sleep(0.2)
+                except Exception as e:
+                    print(f"  ERROR repurposing JT:{repurpose_id}: {e}")
                     stats["errors"] += 1
-                time.sleep(0.2)
-            except Exception as e:
-                print(f"    ERROR: {e}")
-                stats["errors"] += 1
+            else:
+                print(f"  REPURPOSE JT:{repurpose_id} → {pg.canonical_name}")
+                stats["repurposed"] += 1
         else:
-            stats["created"] += 1
+            if execute:
+                try:
+                    new_id = api.create_cost_item(
+                        name=pg.canonical_name,
+                        cost_code_id=cc,
+                        cost_type_id=ct,
+                        unit_id=unit,
+                        unit_cost=float(pg.unit_cost) if pg.unit_cost else None,
+                        unit_price=float(pg.unit_price) if pg.unit_price else None,
+                    )
+                    if new_id:
+                        pg_updates.append((pg.id, new_id))
+                        append_sync_log({"op": "create", "jt_id": new_id,
+                                         "pg_id": pg.id, "name": pg.canonical_name})
+                        state["completed_creates"].append(create_key)
+                        save_sync_state(state)
+                        stats["created"] += 1
+                    else:
+                        print(f"  ERROR: No ID returned for PG#{pg.id}")
+                        stats["errors"] += 1
+                    time.sleep(0.2)
+                except Exception as e:
+                    print(f"  ERROR creating PG#{pg.id} '{pg.canonical_name}': {e}")
+                    stats["errors"] += 1
+            else:
+                print(f"  CREATE: {pg.canonical_name} [{pg.item_type}/{pg.trade}]")
+                stats["created"] += 1
+
+        op_count += 1
+        if execute and op_count % 50 == 0:
+            print(f"  ... {op_count} API calls done")
 
     # Step 3: Write JT IDs back to Postgres
     if pg_updates:
         print(f"\n── Writing {len(pg_updates)} JT IDs back to Postgres ──")
         if execute:
             for pg_id, jt_id in pg_updates:
+                pg_key = f"pg:{pg_id}"
+                if pg_key in state["completed_pg_writes"]:
+                    continue
                 try:
                     safe_jt = jt_id.replace("'", "''")
                     psql_exec(
                         f"UPDATE catalog_items SET jt_catalog_id = '{safe_jt}', "
                         f"updated_at = now() WHERE id = {int(pg_id)}"
                     )
+                    state["completed_pg_writes"].append(pg_key)
                 except Exception as e:
                     print(f"  ERROR updating PG#{pg_id}: {e}")
                     stats["errors"] += 1
+            save_sync_state(state)
+            print(f"  Done — {len(pg_updates)} PG rows updated")
         else:
             for pg_id, jt_id in pg_updates[:5]:
                 print(f"  PG#{pg_id} → jt_catalog_id = '{jt_id}'")
@@ -760,12 +943,14 @@ def sync_catalog(mapping: dict, pg_items: list[PgItem], grant_key: str,
 
     # Summary
     print(f"\n── Sync Summary ──")
-    print(f"  Updated: {stats['updated']}")
-    print(f"  Created: {stats['created']}")
-    print(f"  Skipped: {stats['skipped']}")
-    print(f"  Errors:  {stats['errors']}")
+    print(f"  Updated:    {stats['updated']}")
+    print(f"  Created:    {stats['created']}")
+    print(f"  Repurposed: {stats['repurposed']}")
+    print(f"  Skipped:    {stats['skipped']}")
+    print(f"  Errors:     {stats['errors']}")
+    print(f"  Total API:  {op_count}")
     if not execute:
-        print("\n  ⚡ DRY RUN — no changes made. Use --execute to apply.")
+        print("\n  DRY RUN — no changes made. Use --execute to apply.")
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
@@ -790,6 +975,7 @@ def main():
     parser.add_argument("--sync", action="store_true", help="Run sync phase (DRY_RUN unless --execute)")
     parser.add_argument("--execute", action="store_true", help="Actually make changes (requires --sync)")
     parser.add_argument("--refresh", action="store_true", help="Force refresh JT cache before mapping")
+    parser.add_argument("--dedup-first", action="store_true", help="Run dedup analysis before reconciliation")
     args = parser.parse_args()
 
     grant_key = load_grant_key()
@@ -802,6 +988,18 @@ def main():
     # Refresh cache if requested
     if args.refresh or not CACHE_FILE.exists():
         fetch_jt_catalog(grant_key)
+
+    # Run dedup first if requested
+    if args.dedup_first:
+        print("\n── Running dedup analysis first ──")
+        import subprocess as _sp
+        result = _sp.run(
+            ["python3", str(SCRIPT_DIR / "dedup_jt_catalog.py")],
+            capture_output=False,
+        )
+        if result.returncode != 0:
+            print("WARNING: dedup script failed, continuing without keepers")
+        print()
 
     # Load data
     print("Loading Postgres catalog...")

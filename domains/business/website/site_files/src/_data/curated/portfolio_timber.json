@@ -1,0 +1,54 @@
+[
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-early-project-alaska.webp",
+    "alt": "timber frame early project alaska"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-brace-connection-detail.webp",
+    "alt": "timber frame brace connection detail"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-base-plate-detail.webp",
+    "alt": "timber frame base plate detail"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-beam-installation-crane.webp",
+    "alt": "Beam installation during frame raising",
+    "caption": "Beam installation"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/large-timber-frame-structure-raising.webp",
+    "alt": "Large timber frame structure during raising",
+    "caption": "Timber frame raising",
+    "hero": true
+  },
+  {
+    "src": "/img/portfolio/timber_framing/completed-timber-frame-cabin-structure.webp",
+    "alt": "Completed timber frame cabin structure",
+    "caption": "Completed timber frame cabin"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-detail-beam-bracket.webp",
+    "alt": "Decorative beam bracket and knee brace",
+    "caption": "Beam bracket detail"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-joint-detail-closeup.webp",
+    "alt": "Hand-cut mortise and tenon joint",
+    "caption": "Mortise & tenon joint"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-structure-completed-view.webp",
+    "alt": "Completed post-and-beam structure",
+    "caption": "Post-and-beam complete"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/post-and-beam-connection-hardware.webp",
+    "alt": "Post-and-beam connection with structural hardware",
+    "caption": "Connection hardware"
+  },
+  {
+    "src": "/img/portfolio/timber_framing/timber-frame-structure-taking-shape.webp",
+    "alt": "timber frame structure taking shape"
+  }
+]

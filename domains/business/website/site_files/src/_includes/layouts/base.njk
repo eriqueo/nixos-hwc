@@ -120,6 +120,7 @@
         "reviewRating": {"@type": "Rating", "ratingValue": "{{ review.rating }}", "bestRating": "5"},
         "author": {"@type": "Person", "name": "{{ review.name }}"},
         "reviewBody": "{{ review.text }}",
+        "itemReviewed": {"@type": "HomeAndConstructionBusiness", "name": "{{ site.name }}"},
         "publisher": {"@type": "Organization", "name": "{{ review.source }}"}
       }{% if not loop.last %},{% endif %}
       {% endfor %}
@@ -164,8 +165,21 @@
       "@type": "AggregateRating",
       "ratingValue": "5",
       "bestRating": "5",
-      "ratingCount": "{{ testimonials | length }}"
-    }
+      "ratingCount": "{{ testimonials | length }}",
+      "reviewCount": "{{ testimonials | length }}"
+    },
+    "review": [
+      {% for review in testimonials %}
+      {
+        "@type": "Review",
+        "reviewRating": {"@type": "Rating", "ratingValue": "{{ review.rating }}", "bestRating": "5"},
+        "author": {"@type": "Person", "name": "{{ review.name }}"},
+        "reviewBody": "{{ review.text }}",
+        "itemReviewed": {"@type": "Service", "name": "{{ title }}"},
+        "publisher": {"@type": "Organization", "name": "{{ review.source }}"}
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
   }
   </script>
   {% elif schema_type == "BlogPosting" %}
@@ -219,8 +233,19 @@
   }
   </script>
   {% endif %}
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-K3JD7X96');</script>
+<!-- End Google Tag Manager -->
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K3JD7X96"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 
 {% include "partials/header.njk" %}
 
@@ -232,25 +257,5 @@
 
 <script src="/js/main.js" defer></script>
 <script src="/js/tracking.js" defer></script>
-<script>
-  function loadGA4() {
-    var s = document.createElement('script');
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-8CF06TJ7ZK';
-    s.async = true;
-    document.head.appendChild(s);
-    s.onload = function() {
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      window.gtag = gtag;
-      gtag('js', new Date());
-      gtag('config', 'G-8CF06TJ7ZK');
-    };
-  }
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(loadGA4, { timeout: 4000 });
-  } else {
-    setTimeout(loadGA4, 3000);
-  }
-</script>
 </body>
 </html>

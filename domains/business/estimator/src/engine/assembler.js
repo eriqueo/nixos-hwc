@@ -173,8 +173,11 @@ export function deriveGeometry(s) {
     + (s.shower_curb_width_in * 2) / 12 * s.shower_curb_length_ft
   );
   const accentTile = showerW * 1.25;
-  const paintSqft  = perim * s.wall_height_ft;
-  return { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, showerW };
+  const wallArea   = perim * s.wall_height_ft;
+  const ceilArea   = fl;
+  const paintableWalls = Math.max(0, wallArea - wallTile);
+  const paintSqft  = wallArea;
+  return { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, wallArea, ceilArea, paintableWalls, showerW };
 }
 
 export function deriveDeckGeometry(s) {

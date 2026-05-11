@@ -52,8 +52,16 @@ export const DEFAULT_STATE = {
   has_mirror: 'yes',
   new_tub: 'no',
   new_electrical: 'no',
+  has_toilet: 'yes',
   new_fan: 'no',
   shower_niches: '0',
+  has_baseboard: 'yes',
+  has_drywall_touchup: 'yes',
+
+  // ── Scope dimensions ──
+  paint_scope: 'walls_and_ceiling',   // walls_only | ceiling_only | walls_and_ceiling
+  drywall_scope: 'walls_and_ceiling', // walls_only | ceiling_only | walls_and_ceiling
+  baseboard_lf: 20,
 
   // ── Allowances ──
   tub_allowance: 1200,

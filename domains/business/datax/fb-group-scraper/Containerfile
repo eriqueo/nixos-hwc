@@ -1,0 +1,18 @@
+FROM mcr.microsoft.com/playwright:v1.49.0-noble
+
+WORKDIR /app
+
+# Copy lockfile first for layer caching
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# Copy scraper source
+COPY index.mjs parse.mjs ./
+
+# Playwright's bundled Chromium — let Playwright discover via BROWSERS_PATH
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Data directory for session persistence
+VOLUME /data
+
+ENTRYPOINT ["node", "index.mjs"]

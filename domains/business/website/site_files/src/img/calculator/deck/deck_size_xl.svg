@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80">
+
+  <rect x="8" y="24" width="84" height="38" fill="#C4956A" stroke="#8B6D3F" stroke-width="1.5"/>
+  <line x1="24.8" y1="24" x2="24.8" y2="62" stroke="#8B6D3F" stroke-width="0.8"/>
+  <line x1="41.6" y1="24" x2="41.6" y2="62" stroke="#8B6D3F" stroke-width="0.8"/>
+  <line x1="58.400000000000006" y1="24" x2="58.400000000000006" y2="62" stroke="#8B6D3F" stroke-width="0.8"/>
+  <line x1="75.2" y1="24" x2="75.2" y2="62" stroke="#8B6D3F" stroke-width="0.8"/>
+  <line x1="8" y1="33.5" x2="92" y2="33.5" stroke="#8B6D3F" stroke-width="0.5"/>
+  <line x1="8" y1="43.0" x2="92" y2="43.0" stroke="#8B6D3F" stroke-width="0.5"/>
+  <line x1="8" y1="52.5" x2="92" y2="52.5" stroke="#8B6D3F" stroke-width="0.5"/>
+  <rect x="8" y="14" width="46" height="12" fill="#C4956A88" stroke="#8B6D3F" stroke-width="1"/>
+  <line x1="8" y1="14" x2="8" y2="24" stroke="#5C4A1E" stroke-width="1.5"/>  <line x1="54" y1="14" x2="54" y2="24" stroke="#5C4A1E" stroke-width="1.5"/>
+  <text x="50" y="70" fill="#5C4A1E" font-size="9" font-weight="600" text-anchor="middle" font-family="sans-serif">500+ sq ft</text>
+</svg>

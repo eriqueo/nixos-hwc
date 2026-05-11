@@ -10,7 +10,8 @@ import { enrichState } from '../engine/geometry.js';
  */
 export function useCatalog(state, overrides, removed) {
   const enrichedState = useMemo(() => enrichState(state), [state]);
-  const projectType = state.job_type === 'Deck' ? 'deck' : 'bathroom';
+  const pt = (state.projectType || state.job_type || 'bathroom').toLowerCase();
+  const projectType = pt === 'deck' ? 'deck' : 'bathroom';
   const assembled = useMemo(() => assemble(enrichedState, projectType), [enrichedState, projectType]);
 
   // Merge catalog picks into the assembled line items

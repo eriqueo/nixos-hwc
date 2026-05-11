@@ -8,6 +8,7 @@ hero_image: ''
 hero_subtitle: ''
 permalink: /reviews/
 layout: layouts/page-simple.njk
+schema_type: LocalBusiness
 ---
 
 Homeowners across the Gallatin Valley trust Heartwood Craft with their homes. Here's what they have to say.

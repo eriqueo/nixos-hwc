@@ -27,29 +27,19 @@
   <!-- Styles (inlined for performance) -->
   <style>{{ "" | inlineCSS | safe }}</style>
 
-  <!-- Google Analytics 4 (deferred to not block rendering) -->
-  <script>
-    function loadGA4() {
-      var s = document.createElement('script');
-      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-8CF06TJ7ZK';
-      s.async = true;
-      document.head.appendChild(s);
-      s.onload = function() {
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        window.gtag = gtag;
-        gtag('js', new Date());
-        gtag('config', 'G-8CF06TJ7ZK');
-      };
-    }
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(loadGA4, { timeout: 4000 });
-    } else {
-      setTimeout(loadGA4, 3000);
-    }
-  </script>
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-K3JD7X96');</script>
+  <!-- End Google Tag Manager -->
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-K3JD7X96"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 
 {# ── Minimal Landing Page Header — logo + phone only, no nav ── #}
 <header class="site-header" id="site-header">

@@ -152,9 +152,7 @@
 6. `Parse Created Job` — Code: extract created job ID/number/name
 7. `Use Existing Job` — Code: passthrough for existing job branch
 8. `Merge Job Data` — Code: merge from either branch
-9. `Build Budget Push Query` — Code: build PAVE addBudgetLineItems query
-10. `Push to JobTread` — HTTP POST to PAVE (continueOnFail=true, 30s timeout)
-11. `Parse JT Result` — Code: check for PAVE errors, extract result
+9. `Additive Budget Push` — Code: batched createCostGroup with nested lineItems (~5-8 parallel calls instead of ~97 sequential). Builds group tree from flat jtPayload, executes via Promise.all (continueOnFail=true)
 12. `Archive to Postgres` — Postgres INSERT into `estimates` table (continueOnFail=true)
 13. `JT Push Success?` — IF: jtPushSuccess === true
 14. `Slack: Success` — Slack post to #leads with job/customer/items/total

@@ -4,7 +4,7 @@ import { NumInput } from './NumInput.jsx';
 import { FtInInput } from './FtInInput.jsx';
 import { Select } from './Select.jsx';
 import { JobSelector } from './JobSelector.jsx';
-import { deriveGeometry, deriveDeckGeometry } from '../engine/assembler.js';
+import { deriveGeometry, deriveDeckGeometry } from '../engine/geometry.js';
 import templates from '../data/templates.json';
 
 function PillToggle({ label, value, onChange }) {
@@ -34,8 +34,9 @@ function DerivedStat({ label, value, unit }) {
 }
 
 export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
-  const { fl, perim, wallTile, panTile, curbTile, paintSqft } = deriveGeometry(s);
-  const isDeck = s.job_type === 'Deck';
+  const geo = deriveGeometry(s);
+  const { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, wallArea, ceilArea, paintableWalls } = geo;
+  const isDeck = (s.projectType || s.job_type || '').toLowerCase() === 'deck';
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 10 : 14 }}>
@@ -45,26 +46,15 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
         <JobSelector s={s} set={set} />
       </div>
 
-      {/* Job Type Selector */}
-      <div style={{ gridColumn: '1/-1' }}>
-        <Box>
-          <Label color={C.acc}>Project Type</Label>
-          <Select label="Type" value={s.job_type || 'Bathroom'} onChange={v => set('job_type', v)} options={[
-            { v: 'Bathroom', l: 'Bathroom' },
-            { v: 'Deck', l: 'Deck' },
-          ]} />
-        </Box>
-      </div>
-
       {/* Template Selector */}
       {templates.length > 0 && (() => {
-        const jobType = (s.job_type || 'Bathroom').toLowerCase();
+        const jobType = (s.projectType || s.job_type || 'bathroom').toLowerCase();
         const filtered = templates.filter(t => t.project_type === jobType);
         if (filtered.length === 0) return null;
         return (
           <div style={{ gridColumn: '1/-1' }}>
             <Box>
-              <Label color={C.teal}>Load Template</Label>
+              <Label color={C.teal}>Quick Start Presets</Label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 0' }}>
                 {filtered.map(t => (
                   <button key={t.id || t.name}
@@ -151,6 +141,99 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
 
       {/* ── BATHROOM FORM ──────────────────────────────────────────────── */}
       {!isDeck && <>
+
+      {/* Scope of Work — phases with dimensions */}
+      <Box>
+        <Label color={C.acc}>Scope of Work</Label>
+        <div style={{ display: 'flex', gap: 12, padding: '4px 0', flexWrap: 'wrap' }}>
+          <Select label="Demo" value={s.demo_scope} onChange={v => set('demo_scope', v)} options={[
+            { v: 'shower_only',       l: 'Shower Only' },
+            { v: 'shower_and_floors', l: 'Shower + Floors' },
+            { v: 'full_gut',          l: 'Full Gut' },
+          ]} />
+          <Select label="Niches" value={s.shower_niches} onChange={v => set('shower_niches', v)} options={[
+            { v: '0', l: 'None' },
+            { v: '1', l: '1 Niche' },
+            { v: '2', l: '2 Niches' },
+            { v: '3', l: '3 Niches' },
+          ]} />
+        </div>
+        <Divider />
+        <span style={{ color: C.txD, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Work Phases</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 0' }}>
+          <PillToggle label="Shower Tile"     value={s.has_shower_tile}      onChange={v => set('has_shower_tile',      v)} />
+          <PillToggle label="Floor Tile"      value={s.has_floor_tile}       onChange={v => set('has_floor_tile',       v)} />
+          <PillToggle label="Accent Tile"     value={s.has_accent_tile}      onChange={v => set('has_accent_tile',      v)} />
+          <PillToggle label="Paint"           value={s.has_paint}            onChange={v => set('has_paint',            v)} />
+          <PillToggle label="Baseboard"       value={s.has_baseboard}        onChange={v => set('has_baseboard',        v)} />
+          <PillToggle label="Drywall Touchup" value={s.has_drywall_touchup}  onChange={v => set('has_drywall_touchup',  v)} />
+        </div>
+        {/* Inline dimensions for active phases */}
+        {(s.has_floor_tile === 'yes' || s.has_accent_tile === 'yes' || s.has_paint === 'yes' || s.has_baseboard === 'yes' || s.demo_scope === 'full_gut') && (() => {
+          const ps = s.paint_scope || 'walls_and_ceiling';
+          const derivedPaint = ps === 'walls_only' ? paintableWalls
+            : ps === 'ceiling_only' ? ceilArea
+            : paintableWalls + ceilArea;
+          const ds = s.drywall_scope || 'walls_and_ceiling';
+          const derivedDrywall = ds === 'walls_only' ? paintableWalls
+            : ds === 'ceiling_only' ? ceilArea
+            : paintableWalls + ceilArea;
+          return (
+          <div style={{ marginTop: 6, padding: 8, backgroundColor: C.card2, borderRadius: 4 }}>
+            <NumInput label="Floor Tile" value={s.bathroom_floor_sqft ?? fl}
+              onChange={v => set('bathroom_floor_sqft', v)} unit="sf" step={5}
+              show={s.has_floor_tile === 'yes'} />
+            <NumInput label="Accent Tile" value={s.shower_accent_tile_sqft ?? accentTile}
+              onChange={v => set('shower_accent_tile_sqft', v)} unit="sf" step={2}
+              show={s.has_accent_tile === 'yes'} />
+            {s.has_paint === 'yes' && (<>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <Select label="Paint" value={ps} onChange={v => { set('paint_scope', v); set('bathroom_wall_paint_sqft', null); }} options={[
+                    { v: 'walls_and_ceiling', l: 'Walls + Ceiling' },
+                    { v: 'walls_only',        l: 'Walls Only' },
+                    { v: 'ceiling_only',      l: 'Ceiling Only' },
+                  ]} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <NumInput label="Area" value={s.bathroom_wall_paint_sqft ?? Math.round(derivedPaint)}
+                    onChange={v => set('bathroom_wall_paint_sqft', v)} unit="sf" step={10} />
+                </div>
+              </div>
+            </>)}
+            <NumInput label="Baseboard" value={s.baseboard_lf}
+              onChange={v => set('baseboard_lf', v)} unit="lf" step={1}
+              show={s.has_baseboard === 'yes'} />
+            {s.demo_scope === 'full_gut' && (<>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <Select label="Drywall" value={ds} onChange={v => { set('drywall_scope', v); set('drywall_sqft', null); }} options={[
+                    { v: 'walls_and_ceiling', l: 'Walls + Ceiling' },
+                    { v: 'walls_only',        l: 'Walls Only' },
+                    { v: 'ceiling_only',      l: 'Ceiling Only' },
+                  ]} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <NumInput label="Area" value={s.drywall_sqft ?? Math.round(derivedDrywall)}
+                    onChange={v => set('drywall_sqft', v)} unit="sf" step={10} />
+                </div>
+              </div>
+            </>)}
+          </div>
+          );
+        })()}
+        <Divider />
+        <span style={{ color: C.txD, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Fixtures & Systems</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 0' }}>
+          <PillToggle label="Vanity"       value={s.has_vanity}       onChange={v => set('has_vanity',       v)} />
+          <PillToggle label="Mirror"       value={s.has_mirror}       onChange={v => set('has_mirror',       v)} />
+          <PillToggle label="Toilet"       value={s.has_toilet}       onChange={v => set('has_toilet',       v)} />
+          <PillToggle label="New Tub"      value={s.new_tub}          onChange={v => set('new_tub',          v)} />
+          <PillToggle label="Electrical"   value={s.new_electrical}   onChange={v => set('new_electrical',   v)} />
+          <PillToggle label="Exhaust Fan"  value={s.new_fan}          onChange={v => set('new_fan',          v)} />
+        </div>
+      </Box>
+
       <Box>
         <Label color={C.blu}>Room Measurements</Label>
         <FtInInput label="Room Length"  value={s.bathroom_length_ft} onChange={v => set('bathroom_length_ft', v)} />
@@ -159,9 +242,10 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
         <NumInput label="Wall Repair"  value={s.bathroom_wall_repair_sqft} onChange={v => set('bathroom_wall_repair_sqft', v)} unit="sf" step={4} />
 
         <div style={{ marginTop: 10, padding: 10, backgroundColor: C.card2, borderRadius: 5,
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <DerivedStat label="Floor" value={fl.toFixed(0)} unit="sqft" />
-          <DerivedStat label="Paint Area" value={paintSqft.toFixed(0)} unit="sqft" />
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+          <DerivedStat label="Floor / Ceiling" value={fl.toFixed(0)} unit="sf" />
+          <DerivedStat label="Wall Area" value={wallArea.toFixed(0)} unit="sf" />
+          <DerivedStat label="Walls − Tile" value={paintableWalls.toFixed(0)} unit="sf" />
           <DerivedStat label="Perimeter" value={perim.toFixed(0)} unit="lf" />
         </div>
       </Box>
@@ -188,41 +272,11 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
         </div>
       </Box>
 
-      {/* Demo Scope & Niches */}
-      <Box>
-        <Label color={C.red}>Demo Scope</Label>
-        <Select label="Scope" value={s.demo_scope} onChange={v => set('demo_scope', v)} options={[
-          { v: 'shower_only',       l: 'Shower Only' },
-          { v: 'shower_and_floors', l: 'Shower + Floors' },
-          { v: 'full_gut',          l: 'Full Gut' },
-        ]} />
+      {/* Demo Scope & Niches now in Project Scope box above */}
 
-        <Divider />
-        <Label color={C.teal}>Shower Niches</Label>
-        <Select label="Niches" value={s.shower_niches} onChange={v => set('shower_niches', v)} options={[
-          { v: '0', l: 'None' },
-          { v: '1', l: '1 Niche' },
-          { v: '2', l: '2 Niches' },
-          { v: '3', l: '3 Niches' },
-        ]} />
-      </Box>
-
-      {/* Feature Toggles */}
-      <Box>
-        <Label color={C.acc}>Feature Toggles</Label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 0' }}>
-          <PillToggle label="Shower Tile"  value={s.has_shower_tile}  onChange={v => set('has_shower_tile',  v)} />
-          <PillToggle label="Floor Tile"   value={s.has_floor_tile}   onChange={v => set('has_floor_tile',   v)} />
-          <PillToggle label="Accent Tile"  value={s.has_accent_tile}  onChange={v => set('has_accent_tile',  v)} />
-          <PillToggle label="Paint"        value={s.has_paint}        onChange={v => set('has_paint',        v)} />
-          <PillToggle label="Vanity"       value={s.has_vanity}       onChange={v => set('has_vanity',       v)} />
-          <PillToggle label="Mirror"       value={s.has_mirror}       onChange={v => set('has_mirror',       v)} />
-          <PillToggle label="New Tub"      value={s.new_tub}          onChange={v => set('new_tub',          v)} />
-          <PillToggle label="Electrical"   value={s.new_electrical}   onChange={v => set('new_electrical',   v)} />
-          <PillToggle label="Exhaust Fan"  value={s.new_fan}          onChange={v => set('new_fan',          v)} />
-        </div>
-      </Box>
       </>}
+
+      {/* Scope dimensions now inline in Scope of Work box above */}
 
       {/* Assemble button */}
       <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end' }}>

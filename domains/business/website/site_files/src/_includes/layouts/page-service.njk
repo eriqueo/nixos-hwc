@@ -35,15 +35,31 @@ layout: layouts/base.njk
 </section>
 {% endif %}
 
+{% if photo_strip_images %}
+<div class="photo-strip">
+  {% for img in photo_strip_images %}
+  <figure class="photo-strip__item">
+    <img src="{{ img.src }}" alt="{{ img.alt }}" loading="lazy">
+  </figure>
+  {% endfor %}
+</div>
+{% endif %}
+
 <article class="service-content section">
-  <div class="container container-narrow">
+  <div class="container {% if content_wide %}container-wide{% else %}container-narrow{% endif %}">
     {{ content | safe }}
   </div>
 </article>
 
+{% if show_testimonials != false %}
 {% set filter_service = service_tag %}
 {% include "partials/section-testimonials.njk" %}
+{% endif %}
 
+{% if show_cta != false %}
 {% include "partials/section-cta.njk" %}
+{% endif %}
 
+{% if show_form != false %}
 {% include "partials/form-contact.njk" %}
+{% endif %}

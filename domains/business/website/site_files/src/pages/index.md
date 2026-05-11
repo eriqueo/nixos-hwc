@@ -3,7 +3,7 @@ title: Bathroom Remodeling Bozeman | Heartwood Craft
 meta_description: >-
   Licensed bathroom remodeling, custom decks and universal design in Bozeman,
   MT. 3D design, transparent pricing, reliable communication. Call 406-551-5061.
-h1: Your Vision Is Our Craft
+h1: Bozeman's Reliable Remodeler
 hero_image: /img/hero/bathroom-remodel-bozeman.webp
 hero_subtitle: Craftsmanship is our Process. Quality is our Habit.
 hero_cta_1_text: Get Started

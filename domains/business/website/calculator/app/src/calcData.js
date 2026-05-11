@@ -317,9 +317,11 @@ export function makeHelpers(data) {
   }
 
   function fireEvent(name, params) {
-    if (typeof gtag === "function") {
-      gtag("event", name, { ...params, calculator_type: calculator });
-    }
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push(Object.assign({
+      event: name,
+      calculator_type: calculator
+    }, params || {}));
   }
 
   const fmt = (n) => "$" + n.toLocaleString();

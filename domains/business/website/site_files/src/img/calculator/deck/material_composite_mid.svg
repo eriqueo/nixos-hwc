@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80">
+
+    <rect x="8" y="12" width="84" height="12" fill="#C4956A" stroke="#8B6D3F" stroke-width="0.8"/>
+    <rect x="10" y="18" width="80" height="1" fill="#C09060" stroke="none" stroke-width="0"/>  <rect x="8" y="25" width="84" height="12" fill="#D4A878" stroke="#8B6D3F" stroke-width="0.8"/>
+    <rect x="10" y="31" width="80" height="1" fill="#C09060" stroke="none" stroke-width="0"/>  <rect x="8" y="38" width="84" height="12" fill="#C4956A" stroke="#8B6D3F" stroke-width="0.8"/>
+    <rect x="10" y="44" width="80" height="1" fill="#C09060" stroke="none" stroke-width="0"/>  <rect x="8" y="51" width="84" height="12" fill="#D4A878" stroke="#8B6D3F" stroke-width="0.8"/>
+    <rect x="10" y="57" width="80" height="1" fill="#C09060" stroke="none" stroke-width="0"/>  <rect x="8" y="64" width="84" height="12" fill="#C4956A" stroke="#8B6D3F" stroke-width="0.8"/>
+    <rect x="10" y="70" width="80" height="1" fill="#C09060" stroke="none" stroke-width="0"/>
+  <text x="50" y="75" fill="#5C4A1E" font-size="9" font-weight="600" text-anchor="middle" font-family="sans-serif">Composite (mid)</text>
+</svg>

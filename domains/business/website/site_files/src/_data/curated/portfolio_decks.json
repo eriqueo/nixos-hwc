@@ -1,0 +1,33 @@
+[
+  {
+    "src": "/img/portfolio/decks/completed-cedar-deck-multi-level-residential.webp",
+    "alt": "Multi-level cedar deck on residential home in Bozeman",
+    "caption": "Multi-level cedar deck",
+    "hero": true
+  },
+  {
+    "src": "/img/portfolio/decks/completed-cedar-deck-full-view-homeowner.webp",
+    "alt": "Finished cedar deck with homeowner for scale",
+    "caption": "Cedar deck — full view"
+  },
+  {
+    "src": "/img/portfolio/decks/herringbone-deck-pattern-wide-view.webp",
+    "alt": "Herringbone pattern deck design",
+    "caption": "Herringbone pattern"
+  },
+  {
+    "src": "/img/portfolio/decks/cedar-deck-under-timber-pergola-01.webp",
+    "alt": "Cedar deck under timber frame pergola",
+    "caption": "Deck with timber pergola"
+  },
+  {
+    "src": "/img/portfolio/decks/covered-porch-deck-timber-frame-interior-03.webp",
+    "alt": "Covered porch with timber frame",
+    "caption": "Covered porch interior"
+  },
+  {
+    "src": "/img/portfolio/decks/cedar-deck-board-installation-joist-framing.webp",
+    "alt": "Cedar deck board installation in progress",
+    "caption": "Installation in progress"
+  }
+]

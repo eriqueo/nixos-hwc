@@ -10,7 +10,14 @@ export default defineConfig({
       includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: false, // we use our own public/manifest.json
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        // Only precache the app shell — NOT data JSON files
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Never cache sw.js itself
+        dontCacheBustURLsMatching: /assets\//,
+        cleanupOutdatedCaches: true,
+        // Force new SW to take over immediately
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
