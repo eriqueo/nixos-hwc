@@ -2,10 +2,10 @@
 pkgs.mkShell {
   packages = [
     pkgs.nodejs
-    pkgs.playwright-driver.browsers
+    pkgs.chromium
   ];
   shellHook = ''
-    export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
+    export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${pkgs.chromium}/bin/chromium
     export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
   '';
 }
