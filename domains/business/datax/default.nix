@@ -106,7 +106,7 @@ in
             -v "${cfg.fbScraper.dataDir}:/data:Z" \
             -e "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright" \
             ${cfg.fbScraper.containerImage} \
-            --session /data/session.json \
+            --profile /data/browser-profile \
             "$@"
         '';
       };
@@ -133,7 +133,7 @@ in
               -v "${cfg.fbScraper.dataDir}:/data:Z" \
               -e "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright" \
               ${cfg.fbScraper.containerImage} \
-              --session /data/session.json \
+              --profile /data/browser-profile \
               -n ${toString cfg.fbScraper.postsPerRun} \
               -d ${cfg.fbScraper.depth} \
               -o "/data/exports/''${SLUG}_''${TIMESTAMP}.json" \
