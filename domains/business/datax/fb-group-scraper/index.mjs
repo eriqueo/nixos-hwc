@@ -119,13 +119,17 @@ async function doLogin(page, context, sessionPath) {
 
   const loggedIn = !(await page.$('#login_form, input[name="email"]'));
   if (!loggedIn) {
-    console.error('Log in manually in the browser. Session saves automatically when complete...');
-    // Wait for login form to disappear — no Enter needed
+    console.error('Log in manually in the browser (including passkey). Session saves automatically when complete...');
+    // Wait for logged-in UI — not just absence of login form, so passkey step can complete
     await page.waitForFunction(
-      () => !document.querySelector('#login_form, input[name="email"]'),
+      () => {
+        const noLoginForm = !document.querySelector('#login_form, input[name="email"]');
+        const loggedInUI = !!document.querySelector('[data-pagelet="LeftRail"], [data-pagelet="NavigationSidebar"], [aria-label="Facebook"][role="navigation"]');
+        return noLoginForm && loggedInUI;
+      },
       { timeout: 300_000 } // 5 min
     );
-    await sleep(3000, 4000); // let FB finish redirecting
+    await sleep(3000, 4000); // let FB settle
   }
 
   mkdirSync(dirname(sessionPath), { recursive: true });
