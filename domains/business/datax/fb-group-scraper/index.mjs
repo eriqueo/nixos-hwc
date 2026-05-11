@@ -120,16 +120,19 @@ async function doLogin(page, context, sessionPath) {
   const loggedIn = !(await page.$('#login_form, input[name="email"]'));
   if (!loggedIn) {
     console.error('Log in manually in the browser (including passkey). Session saves automatically when complete...');
-    // Wait for logged-in UI — not just absence of login form, so passkey step can complete
-    await page.waitForFunction(
-      () => {
-        const noLoginForm = !document.querySelector('#login_form, input[name="email"]');
-        const loggedInUI = !!document.querySelector('[data-pagelet="LeftRail"], [data-pagelet="NavigationSidebar"], [aria-label="Facebook"][role="navigation"]');
-        return noLoginForm && loggedInUI;
-      },
-      { timeout: 300_000 } // 5 min
-    );
-    await sleep(3000, 4000); // let FB settle
+    // Poll from Node — survives FB redirecting through passkey/checkpoint pages
+    const deadline = Date.now() + 300_000; // 5 min
+    let authed = false;
+    while (Date.now() < deadline) {
+      await sleep(3000, 3000);
+      try {
+        const noLoginForm = !(await page.$('#login_form, input[name="email"]'));
+        const hasNav = !!(await page.$('[data-pagelet="LeftRail"], [data-pagelet="NavigationSidebar"]'));
+        if (noLoginForm && hasNav) { authed = true; break; }
+      } catch { /* page is mid-navigation, keep waiting */ }
+    }
+    if (!authed) die('Login timed out.');
+    await sleep(2000, 3000);
   }
 
   mkdirSync(dirname(sessionPath), { recursive: true });
