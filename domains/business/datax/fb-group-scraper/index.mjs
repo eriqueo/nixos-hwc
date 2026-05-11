@@ -113,28 +113,27 @@ async function checkAuth(page) {
   return !(await page.$('#login_form, input[name="email"]'));
 }
 
-async function doLogin(page, context, sessionPath) {
-  await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  await sleep(2000, 3000);
-
-  const loggedIn = !(await page.$('#login_form, input[name="email"]'));
-  if (!loggedIn) {
-    console.error('Log in manually in the browser (including passkey). Session saves automatically when complete...');
-    // Poll from Node — survives FB redirecting through passkey/checkpoint pages
-    const deadline = Date.now() + 300_000; // 5 min
-    let authed = false;
-    while (Date.now() < deadline) {
-      await sleep(3000, 3000);
-      try {
-        const noLoginForm = !(await page.$('#login_form, input[name="email"]'));
-        const hasNav = !!(await page.$('[data-pagelet="LeftRail"], [data-pagelet="NavigationSidebar"]'));
-        if (noLoginForm && hasNav) { authed = true; break; }
-      } catch { /* page is mid-navigation, keep waiting */ }
-    }
-    if (!authed) die('Login timed out.');
-    await sleep(2000, 3000);
+async function waitForLogin(context) {
+  while (true) {
+    const cookies = await context.cookies('https://www.facebook.com');
+    const cUser = cookies.find(c => c.name === 'c_user');
+    if (cUser) return cUser.value;
+    await new Promise(r => setTimeout(r, 2000));
   }
+}
 
+async function doLogin(page, context, sessionPath) {
+  const cookies = await context.cookies('https://www.facebook.com');
+  if (cookies.some(c => c.name === 'c_user')) {
+    console.error('Already logged in. Saving session.');
+  } else {
+    await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded' });
+    console.error('Log in (including passkey) in the browser window.');
+    console.error('Session will auto-save when login completes.');
+    await waitForLogin(context);
+    console.error('Login detected.');
+    await new Promise(r => setTimeout(r, 3000));
+  }
   mkdirSync(dirname(sessionPath), { recursive: true });
   await context.storageState({ path: sessionPath });
   console.error(`Session saved → ${sessionPath}`);
