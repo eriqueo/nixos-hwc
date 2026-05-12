@@ -26,6 +26,14 @@ import psycopg2
 
 BATCH_SIZE = 20
 
+CATEGORIES = [
+    ("warm_lead",          "🟢", "Leads"),
+    ("pain_point",         "🔴", "Pain Points"),
+    ("migration_signal",   "🔄", "Migration"),
+    ("competitor_mention", "⚔️",  "Competitors"),
+    ("feature_request",    "💡", "Feature Gaps"),
+]
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -38,7 +46,7 @@ def get_unclassified(conn, limit):
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT p.post_id, p.body, p.author, p.source_group,
+            SELECT p.post_id, p.body, p.author, p.url, p.source_group,
                    p.comment_count,
                    COALESCE(
                      (SELECT string_agg(c.body, ' | ' ORDER BY c.id)
@@ -118,7 +126,7 @@ def classify_batch(batch, claude_bin, prompt_text):
         return json.loads(raw[start:end + 1])
     except json.JSONDecodeError as e:
         print(f'[classify] JSON parse error: {e}', file=sys.stderr)
-        print(f'[classify] Raw snippet: {raw[start:start+300]}', file=sys.stderr)
+        print(f'[classify] Raw snippet: {raw[start:start + 300]}', file=sys.stderr)
         return None
 
 
@@ -149,31 +157,44 @@ def update_classifications(conn, results):
     return updated
 
 
-def send_discord(webhook_url, notable):
-    """Returns True on success, False on failure."""
-    if not notable or not webhook_url:
-        return False
-
+def build_discord_message(notify_posts):
+    """Build grouped Discord message. Returns message string."""
     by_class = {}
-    for p in notable:
+    for p in notify_posts:
         c = p.get('classification', 'unknown')
         by_class.setdefault(c, []).append(p)
 
-    lines = [f"**FB Classifier — {len(notable)} notable posts**"]
-    for cls, posts in sorted(by_class.items()):
-        lines.append(f"\n**{cls.upper()} ({len(posts)})**")
-        for p in posts[:3]:
+    total = len(notify_posts)
+    lines = [f"📊 JT Pros — {total} notable post{'s' if total != 1 else ''}"]
+
+    for cls, emoji, label in CATEGORIES:
+        posts = by_class.get(cls, [])
+        if not posts:
+            continue
+        lines.append(f"\n{emoji} **{label} ({len(posts)})**")
+        for p in posts:
+            author = (p.get('author') or 'Unknown')[:40]
             summary = (p.get('summary') or '')[:120]
-            author = (p.get('author') or 'Unknown')[:30]
+            url = p.get('url') or ''
             lines.append(f"• {author}: {summary}")
-        if len(posts) > 3:
-            lines.append(f"  _…and {len(posts) - 3} more_")
+            if url:
+                lines.append(f"  → {url}")
 
-    content = '\n'.join(lines)
-    if len(content) > 1900:
-        content = content[:1900] + '\n…'
+    return '\n'.join(lines)
 
-    payload = json.dumps({'content': content}).encode()
+
+def send_discord(webhook_url, notify_posts):
+    """Build and send grouped Discord message. Returns True on success."""
+    if not notify_posts or not webhook_url:
+        return False
+
+    message = build_discord_message(notify_posts)
+
+    if len(message) > 1900:
+        print(f'[classify] Discord message truncated ({len(message)} chars)', file=sys.stderr)
+        message = message[:1900] + '\n…'
+
+    payload = json.dumps({'content': message}).encode()
     req = urllib.request.Request(
         webhook_url,
         data=payload,
@@ -189,10 +210,10 @@ def send_discord(webhook_url, notable):
                 print(f'[classify] Discord returned HTTP {resp.status}', file=sys.stderr)
                 return False
     except urllib.error.HTTPError as e:
-        print(f'[classify] Discord notification failed: HTTP {e.code} — {e.read().decode()[:200]}', file=sys.stderr)
+        print(f'[classify] Discord failed: HTTP {e.code} — {e.read().decode()[:200]}', file=sys.stderr)
         return False
     except urllib.error.URLError as e:
-        print(f'[classify] Discord notification failed: {e}', file=sys.stderr)
+        print(f'[classify] Discord failed: {e}', file=sys.stderr)
         return False
     return True
 
@@ -226,7 +247,7 @@ def main():
 
         print(f'[classify] {len(posts)} unclassified posts to process')
 
-        all_notable = []
+        all_notify = []
         total_updated = 0
 
         for i in range(0, len(posts), BATCH_SIZE):
@@ -240,31 +261,33 @@ def main():
                 continue
 
             results = parsed.get('results', [])
-            # Attach body/author from original post for Discord message
+
+            # Attach url/author from original post for Discord message
             post_map = {p['post_id']: p for p in batch}
             for r in results:
                 src = post_map.get(r.get('post_id', ''), {})
-                r['body'] = src.get('body', '')
+                r['url'] = src.get('url', '')
                 r['author'] = src.get('author', '')
 
-            notable = [r for r in results if r.get('notable')]
-            all_notable.extend(notable)
+            notify = [r for r in results if r.get('notify')]
+            all_notify.extend(notify)
 
             if not args.dry_run:
                 updated = update_classifications(conn, results)
                 total_updated += updated
-                print(f'[classify] Batch {batch_num}: updated {updated}/{len(results)} posts ({len(notable)} notable)')
+                print(f'[classify] Batch {batch_num}: updated {updated}/{len(results)} posts ({len(notify)} notify)')
             else:
                 print(f'[classify] [dry-run] Batch {batch_num}: would update {len(results)} posts')
                 for r in results:
                     tags = ', '.join(r.get('tags', []))
                     summary = (r.get('summary') or '')[:80]
-                    print(f"  {r.get('post_id')}: [{r.get('classification')}] {tags} — {summary}")
+                    notify_flag = '★' if r.get('notify') else ' '
+                    print(f"  {notify_flag} {r.get('post_id')}: [{r.get('classification')}] {tags} — {summary}")
 
-        if all_notable and not args.dry_run:
-            ok = send_discord(webhook_url, all_notable)
+        if all_notify and not args.dry_run:
+            ok = send_discord(webhook_url, all_notify)
             if ok:
-                print(f'[classify] Discord notified ({len(all_notable)} notable posts)')
+                print(f'[classify] Discord notified ({len(all_notify)} posts)')
             elif webhook_url:
                 print(f'[classify] Discord notification failed — check logs', file=sys.stderr)
 
