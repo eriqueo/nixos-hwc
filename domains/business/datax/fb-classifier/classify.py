@@ -150,8 +150,9 @@ def update_classifications(conn, results):
 
 
 def send_discord(webhook_url, notable):
+    """Returns True on success, False on failure."""
     if not notable or not webhook_url:
-        return
+        return False
 
     lines = [f"**FB Group Classifier — {len(notable)} notable post(s)**\n"]
     for p in notable[:5]:
@@ -168,15 +169,24 @@ def send_discord(webhook_url, notable):
     req = urllib.request.Request(
         webhook_url,
         data=payload,
-        headers={'Content-Type': 'application/json'},
+        headers={
+            'Content-Type': 'application/json',
+            'User-Agent': 'DiscordBot (hwc-datax, 1.0)',
+        },
         method='POST',
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             if resp.status not in (200, 204):
                 print(f'[classify] Discord returned HTTP {resp.status}', file=sys.stderr)
+                return False
+    except urllib.error.HTTPError as e:
+        print(f'[classify] Discord notification failed: HTTP {e.code} — {e.read().decode()[:200]}', file=sys.stderr)
+        return False
     except urllib.error.URLError as e:
         print(f'[classify] Discord notification failed: {e}', file=sys.stderr)
+        return False
+    return True
 
 
 def main():
@@ -244,8 +254,11 @@ def main():
                     print(f"  {r.get('post_id')}: [{r.get('classification')}] {tags} — {summary}")
 
         if all_notable and not args.dry_run:
-            send_discord(webhook_url, all_notable)
-            print(f'[classify] Discord notified ({len(all_notable)} notable posts)')
+            ok = send_discord(webhook_url, all_notable)
+            if ok:
+                print(f'[classify] Discord notified ({len(all_notable)} notable posts)')
+            elif webhook_url:
+                print(f'[classify] Discord notification failed — check logs', file=sys.stderr)
 
         print(f'[classify] Done. Total updated: {total_updated}')
     finally:
