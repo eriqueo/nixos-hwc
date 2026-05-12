@@ -21,6 +21,7 @@ import sys
 import urllib.request
 import urllib.error
 import argparse
+from datetime import date
 import psycopg2
 
 
@@ -33,6 +34,16 @@ CATEGORIES = [
     ("competitor_mention", "⚔️",  "Competitors"),
     ("feature_request",    "💡", "Feature Gaps"),
 ]
+
+CATEGORY_COLORS = {
+    "warm_lead":          0x57F287,
+    "pain_point":         0xED4245,
+    "migration_signal":   0x3498DB,
+    "competitor_mention": 0xF1C40F,
+    "feature_request":    0xE67E22,
+}
+
+SUMMARY_COLOR = 0xCF995F  # Heartwood copper
 
 
 def parse_args():
@@ -163,43 +174,78 @@ def update_classifications(conn, results):
 
 
 def build_discord_message(notify_posts):
-    """Build grouped Discord message. Returns message string."""
+    """Build list of Discord embed dicts, grouped by category."""
     by_class = {}
     for p in notify_posts:
         c = p.get('classification', 'unknown')
         by_class.setdefault(c, []).append(p)
 
     total = len(notify_posts)
-    lines = [f"📊 JT Pros — {total} notable post{'s' if total != 1 else ''}"]
+    counts = []
+    for cls, _, label in CATEGORIES:
+        n = len(by_class.get(cls, []))
+        if n:
+            counts.append(f"{n} {label.lower()}")
+
+    summary_embed = {
+        "title": f"JT Pros — {total} notable post{'s' if total != 1 else ''}",
+        "description": ", ".join(counts),
+        "color": SUMMARY_COLOR,
+        "footer": {"text": f"fb-classifier · JT Pros · {date.today().isoformat()}"},
+    }
+
+    embeds = [summary_embed]
 
     for cls, emoji, label in CATEGORIES:
         posts = by_class.get(cls, [])
         if not posts:
             continue
-        lines.append(f"\n{emoji} **{label} ({len(posts)})**")
+
+        lines = []
         for p in posts:
             author = (p.get('author') or 'Unknown')[:40]
             summary = (p.get('summary') or '')[:120]
             url = p.get('url') or ''
-            lines.append(f"• {author}: {summary}")
             if url:
-                lines.append(f"  → {url}")
+                lines.append(f"• [{author}]({url}) — {summary}")
+            else:
+                lines.append(f"• {author} — {summary}")
 
-    return '\n'.join(lines)
+        description = '\n'.join(lines)
+        if len(description) > 4096:
+            # Truncate to fit — drop trailing entries
+            truncated = []
+            dropped = 0
+            for line in lines:
+                candidate = '\n'.join(truncated + [line])
+                if len(candidate) > 4000:
+                    dropped += 1
+                else:
+                    truncated.append(line)
+            description = '\n'.join(truncated)
+            if dropped:
+                description += f'\n*…and {dropped} more*'
+
+        embeds.append({
+            "title": f"{emoji} {label} ({len(posts)})",
+            "color": CATEGORY_COLORS.get(cls, 0x99AAB5),
+            "description": description,
+        })
+
+        if len(embeds) >= 10:
+            break
+
+    return embeds
 
 
 def send_discord(webhook_url, notify_posts):
-    """Build and send grouped Discord message. Returns True on success."""
+    """Build and send Discord embed message. Returns True on success."""
     if not notify_posts or not webhook_url:
         return False
 
-    message = build_discord_message(notify_posts)
+    embeds = build_discord_message(notify_posts)
 
-    if len(message) > 1900:
-        print(f'[classify] Discord message truncated ({len(message)} chars)', file=sys.stderr)
-        message = message[:1900] + '\n…'
-
-    payload = json.dumps({'content': message}).encode()
+    payload = json.dumps({'embeds': embeds}).encode()
     req = urllib.request.Request(
         webhook_url,
         data=payload,
