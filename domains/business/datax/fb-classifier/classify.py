@@ -109,7 +109,7 @@ def classify_batch(batch, claude_bin, prompt_text):
             timeout=180,
         )
     except subprocess.TimeoutExpired:
-        print('[classify] Claude timed out after 120s', file=sys.stderr)
+        print('[classify] Claude timed out after 180s', file=sys.stderr)
         return None
     except FileNotFoundError:
         print(f'[classify] FATAL: claude binary not found at {claude_bin}', file=sys.stderr)
@@ -146,6 +146,37 @@ def classify_batch(batch, claude_bin, prompt_text):
         return None
 
 
+def derive_classification(scores):
+    """Deterministically derive a classification category from numeric scores."""
+    if scores.get('datax_mentioned'):
+        return 'warm_lead'
+    if scores.get('migration'):
+        return 'migration_signal'
+    if scores.get('competitor_tool'):
+        return 'competitor_mention'
+    relevance = scores.get('datax_relevance', 0)
+    pain = scores.get('pain_level', 0)
+    action = scores.get('actionability', 0)
+    if relevance >= 2 and action >= 2:
+        return 'warm_lead'
+    if pain >= 2:
+        return 'pain_point'
+    if pain >= 1 and relevance >= 2:
+        return 'pain_point'
+    if relevance >= 1 and action >= 1:
+        return 'feature_request'
+    return 'general'
+
+
+def should_notify(classification, scores):
+    """Return True if this post warrants a Discord notification."""
+    if classification in ('warm_lead', 'migration_signal', 'competitor_mention'):
+        return True
+    if classification == 'pain_point' and scores.get('datax_relevance', 0) >= 2:
+        return True
+    return False
+
+
 def update_classifications(conn, results):
     updated = 0
     with conn.cursor() as cur:
@@ -156,6 +187,7 @@ def update_classifications(conn, results):
                    SET classification = %s,
                        classification_tags = %s,
                        notes = %s,
+                       scores = %s,
                        last_updated = NOW()
                  WHERE post_id = %s
                    AND classification IS NULL
@@ -164,6 +196,7 @@ def update_classifications(conn, results):
                     r.get('classification'),
                     r.get('tags', []),
                     r.get('summary', ''),
+                    json.dumps(r.get('scores', {})),
                     r['post_id'],
                 ),
             )
@@ -171,6 +204,9 @@ def update_classifications(conn, results):
                 updated += 1
     conn.commit()
     return updated
+
+
+DISCORD_EMBED_TOTAL_LIMIT = 5800  # Discord hard limit is 6000; leave headroom
 
 
 def build_discord_message(notify_posts):
@@ -187,53 +223,56 @@ def build_discord_message(notify_posts):
         if n:
             counts.append(f"{n} {label.lower()}")
 
+    summary_title = f"JT Pros — {total} notable post{'s' if total != 1 else ''}"
+    summary_desc = ", ".join(counts)
+    footer_text = f"fb-classifier · JT Pros · {date.today().isoformat()}"
+
     summary_embed = {
-        "title": f"JT Pros — {total} notable post{'s' if total != 1 else ''}",
-        "description": ", ".join(counts),
+        "title": summary_title,
+        "description": summary_desc,
         "color": SUMMARY_COLOR,
-        "footer": {"text": f"fb-classifier · JT Pros · {date.today().isoformat()}"},
+        "footer": {"text": footer_text},
     }
 
+    # Track total chars across all embed fields (Discord limit: 6000)
+    used = len(summary_title) + len(summary_desc) + len(footer_text)
     embeds = [summary_embed]
 
     for cls, emoji, label in CATEGORIES:
         posts = by_class.get(cls, [])
         if not posts:
             continue
+        if len(embeds) >= 10:
+            break
+
+        embed_title = f"{emoji} {label} ({len(posts)})"
+        used += len(embed_title)
 
         lines = []
+        dropped = 0
         for p in posts:
             author = (p.get('author') or 'Unknown')[:40]
-            summary = (p.get('summary') or '')[:120]
+            summary = (p.get('summary') or '')[:100]
             url = p.get('url') or ''
-            if url:
-                lines.append(f"• [{author}]({url}) — {summary}")
+            line = f"• [{author}]({url}) — {summary}" if url else f"• {author} — {summary}"
+
+            if used + len('\n'.join(lines + [line])) > DISCORD_EMBED_TOTAL_LIMIT:
+                dropped += 1
             else:
-                lines.append(f"• {author} — {summary}")
+                lines.append(line)
 
         description = '\n'.join(lines)
-        if len(description) > 4096:
-            # Truncate to fit — drop trailing entries
-            truncated = []
-            dropped = 0
-            for line in lines:
-                candidate = '\n'.join(truncated + [line])
-                if len(candidate) > 4000:
-                    dropped += 1
-                else:
-                    truncated.append(line)
-            description = '\n'.join(truncated)
-            if dropped:
-                description += f'\n*…and {dropped} more*'
+        if dropped:
+            note = f'\n*…and {dropped} more*'
+            description += note
+            used += len(note)
+        used += len(description)
 
         embeds.append({
-            "title": f"{emoji} {label} ({len(posts)})",
+            "title": embed_title,
             "color": CATEGORY_COLORS.get(cls, 0x99AAB5),
             "description": description,
         })
-
-        if len(embeds) >= 10:
-            break
 
     return embeds
 
@@ -313,9 +352,12 @@ def main():
 
             results = parsed.get('results', [])
 
-            # Attach url/author from original post for Discord message
+            # Derive classification and notify flag from scores
             post_map = {p['post_id']: p for p in batch}
             for r in results:
+                scores = r.get('scores', {})
+                r['classification'] = derive_classification(scores)
+                r['notify'] = should_notify(r['classification'], scores)
                 src = post_map.get(r.get('post_id', ''), {})
                 r['url'] = src.get('url', '')
                 r['author'] = src.get('author', '')
@@ -330,10 +372,14 @@ def main():
             else:
                 print(f'[classify] [dry-run] Batch {batch_num}: would update {len(results)} posts')
                 for r in results:
+                    scores = r.get('scores', {})
                     tags = ', '.join(r.get('tags', []))
                     summary = (r.get('summary') or '')[:80]
                     notify_flag = '★' if r.get('notify') else ' '
-                    print(f"  {notify_flag} {r.get('post_id')}: [{r.get('classification')}] {tags} — {summary}")
+                    rel = scores.get('datax_relevance', 0)
+                    pain = scores.get('pain_level', 0)
+                    act = scores.get('actionability', 0)
+                    print(f"  {notify_flag} {r.get('post_id')}: [{r.get('classification')}] r={rel} p={pain} a={act} — {summary}")
 
         if all_notify and not args.dry_run:
             ok = send_discord(webhook_url, all_notify)
