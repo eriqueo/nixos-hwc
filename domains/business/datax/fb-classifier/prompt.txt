@@ -1,54 +1,70 @@
-You are analyzing Facebook group posts from the "JobTread Pros" group.
-JobTread is a construction project management platform used by remodeling contractors.
-DataX is a data and analytics platform built on top of JobTread.
+You are classifying Facebook group posts from "JobTread Pros" for the DataX team.
 
-Classify each post. Return ONLY valid JSON — no markdown, no explanation, no preamble.
+JobTread (JT) = construction project management software.
+DataX = SaaS add-on for JT: AI agents, automated reports, budget vs actual analysis, integrations (QuickBooks, Google Drive, CompanyCam, RingCentral), data migration from other platforms, and custom workflows.
 
-CLASSIFICATIONS (pick exactly one):
-- "warm_lead"          — Someone actively looking for a tool, report, integration, or capability
-                         that DataX provides. They want something and don't have it yet.
-- "pain_point"         — A contractor describing friction, a manual workaround, or a broken
-                         workflow. Any expressed frustration with how data flows (or doesn't).
-- "migration_signal"   — Someone considering leaving JobTread, evaluating alternatives,
-                         or frustrated enough with the platform to be at risk of churning.
-- "feature_request"    — Something missing or broken in JobTread itself (not a third-party
-                         integration need) — a native feature gap.
-- "competitor_mention" — Mentions of software used alongside or instead of JobTread:
-                         QuickBooks, Zapier, ConstructConnect, Buildertrend, Excel, etc.
-- "general"            — Everything else: tips, how-tos, celebrations, questions with no
-                         friction signal, announcements.
+Classify each post. Err toward flagging — the team wants to see any friction, gap, or unmet need, not just posts that explicitly mention DataX.
 
-BIAS RULES:
-- If a post expresses any friction or manual work → prefer pain_point over general
-- If a post mentions any third-party tool → prefer competitor_mention over general
-- If a post asks for something JobTread doesn't do → prefer feature_request over general
-- Reserve "general" for posts with zero friction or gap signal
+INPUT FORMAT:
 
-TAGS — pick all that apply:
-estimating, reporting, analytics, integration, ai_usage, invoicing,
-scheduling, field_ops, lead_management, subcontractors, cash_flow, budget_tracking, quickbooks
+You will receive a JSON array of up to 20 posts. Each post has:
+- post_id: unique identifier (return this exactly in your response)
+- body: the post text
+- author: who wrote the post
+- url: link to the FB post
+- comment_count: total comments on the post
+- comments: array of comment objects with author, body, and depth (0 = top-level, 1+ = replies). May be empty or partial.
 
-NOTIFY: Set to true for warm_lead, pain_point, migration_signal, competitor_mention, feature_request.
-Set to false for general only.
+CLASSIFICATIONS (exactly one per post):
 
-SUMMARY: One sentence stating the problem or need. Be factual and specific.
-- Good: "Contractor manually exports job data to Excel weekly because JT has no scheduled report export."
-- Good: "GC looking for a way to track budget vs actual hours per employee across jobs."
-- Bad: "This contractor struggles with reporting and DataX could help them."
-- Bad: "User is frustrated with JobTread's limitations."
-For general posts, use empty string.
+- "warm_lead" — Someone actively looking for automation, reporting, integrations, AI, or data tools that DataX already provides. Also: someone a commenter has already pointed toward DataX.
+- "pain_point" — Workflow friction, manual processes, workarounds, broken functionality, data integrity issues. Anything a contractor is struggling with operationally.
+- "migration_signal" — Switching TO JobTread from Buildertrend, CoConstruct, Xactimate, or another platform. Or importing/migrating historical data. DataX offers migration services.
+- "feature_request" — Wishing JT could do something it can't. Missing functionality, UX complaints, automation gaps.
+- "competitor_mention" — References to tools used alongside or instead of JT: Zapier, ConstructConnect, Notion, Excel workarounds, other AI tools, etc.
+- "general" — Tips, celebrations, how-to with no friction expressed, testimonials.
 
-Return ONLY this JSON structure — every input post_id must appear in results:
+Bias: if a post has ANY friction signal, prefer pain_point/feature_request over general. If it mentions a third-party tool solving a JT gap, prefer competitor_mention. Reserve general for posts with zero actionable signal.
+
+HOW COMMENTS INFLUENCE CLASSIFICATION:
+
+Comments provide context that can upgrade a classification. The classification is always about the original poster's need — comments tell you whether that need is real and actionable.
+
+- Post asks "how do I generate AP reports?" with no friction = general. But if a commenter says "I use DataX agents for this" → upgrade to warm_lead (someone already referred them).
+- Post asks "anyone use Zapier with JT?" vaguely = could be general. Commenter describes their Zapier setup → competitor_mention.
+- Post describes a workaround. Commenter confirms "yeah we all do that, JT needs to fix this" → reinforces pain_point.
+- A commenter mentioning DataX by name in response to someone's problem is always a warm_lead signal.
+
+TAGS (all that apply):
+estimating, scheduling, budgets, templates, integrations, permissions, onboarding, reporting, invoicing, change-orders, ai-usage, automation, document-management, client-communication, subcontractors, material-tracking, job-costing, quickbooks, google-drive, companycam, data-export, migration
+
+NOTIFY: true for warm_lead, pain_point, migration_signal, competitor_mention. Also true for feature_request posts that DataX could plausibly address. false for general and feature requests that are purely JT-internal.
+
+SUMMARY: One short sentence — what the person needs or is struggling with. Empty string for non-notify posts.
+
+Good: "Needs to export 900+ job transactions with cost codes for expense audit"
+Good: "Schedule template only imports first task, remaining tasks silently dropped"
+Good: "Using Claude AI directly for field reports and job analysis"
+Good: "Switching from Buildertrend, needs to migrate 200 closed jobs"
+Bad: "This highlights the fragility of integration dependencies that DataX reporting surfaces"
+Bad: "Unmatched trade invoices create data gaps that corrupt job-cost actuals — exactly the kind of issue DataX could help flag"
+
+RESPONSE FORMAT:
+
+Return ONLY valid JSON. No markdown fences, no preamble, no explanation.
+
 {
   "results": [
     {
-      "post_id": "<post_id from input>",
-      "classification": "<one of the six classifications>",
+      "post_id": "<exact post_id from input>",
+      "classification": "<classification>",
       "tags": ["<tag>"],
-      "notify": true,
-      "summary": "<one factual sentence or empty string>"
+      "notify": false,
+      "summary": ""
     }
   ]
 }
+
+Every input post must appear in results with its exact post_id. Do not skip any.
 
 POSTS TO CLASSIFY:

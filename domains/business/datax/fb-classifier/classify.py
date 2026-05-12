@@ -74,8 +74,13 @@ def classify_batch(batch, claude_bin, prompt_text):
                 'post_id': p['post_id'],
                 'author': p['author'],
                 'body': (p['body'] or '')[:1000],
-                'top_comments': (p['top_comments'] or '')[:500],
+                'url': p.get('url', ''),
                 'comment_count': p['comment_count'],
+                'comments': [
+                    {'author': '', 'body': c.strip(), 'depth': 0}
+                    for c in (p['top_comments'] or '').split(' | ')
+                    if c.strip()
+                ],
             }
             for p in batch
         ],
