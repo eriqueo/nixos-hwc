@@ -243,7 +243,7 @@ in
           Type = "oneshot";
           User = "eric";
           ExecStart = "${fb-classify-script}/bin/fb-classify --limit ${toString cfg.fbClassifier.limit}";
-          TimeoutStartSec = "10min";
+          TimeoutStartSec = "30min";
         };
       };
 
