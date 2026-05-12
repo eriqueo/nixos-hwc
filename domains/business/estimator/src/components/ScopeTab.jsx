@@ -232,6 +232,13 @@ export function ScopeTab({ s, set, onAssemble, isMobile = false }) {
           <PillToggle label="Electrical"   value={s.new_electrical}   onChange={v => set('new_electrical',   v)} />
           <PillToggle label="Exhaust Fan"  value={s.new_fan}          onChange={v => set('new_fan',          v)} />
         </div>
+        <Divider />
+        <span style={{ color: C.txD, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Enhanced Options</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 0' }}>
+          <PillToggle label="Relocate Plumbing" value={s.has_plumbing_relocation} onChange={v => set('has_plumbing_relocation', v)} />
+          <PillToggle label="Pony Wall + Glass"  value={s.has_pony_wall}           onChange={v => set('has_pony_wall',           v)} />
+          <PillToggle label="New Door"           value={s.has_new_door}            onChange={v => set('has_new_door',            v)} />
+        </div>
       </Box>
 
       <Box>

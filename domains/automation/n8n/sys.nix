@@ -31,6 +31,10 @@ let
       echo "SLACK_WEBHOOK_URL=$(cat ${cfg.secrets.slackWebhookUrlFile})" >> ${secretsEnvFile}
     ''}
 
+    ${lib.optionalString (cfg.secrets.discordWebhookUrlFile != null) ''
+      echo "DISCORD_WEBHOOK_URL=$(cat ${cfg.secrets.discordWebhookUrlFile})" >> ${secretsEnvFile}
+    ''}
+
     ${lib.optionalString (cfg.secrets.anthropicApiKeyFile != null) ''
       echo "ANTHROPIC_API_KEY=$(cat ${cfg.secrets.anthropicApiKeyFile})" >> ${secretsEnvFile}
     ''}
@@ -45,6 +49,7 @@ let
   hasSecrets = cfg.secrets.estimatorApiKeyFile != null
             || cfg.secrets.jobtreadGrantKeyFile != null
             || cfg.secrets.slackWebhookUrlFile != null
+            || cfg.secrets.discordWebhookUrlFile != null
             || cfg.secrets.anthropicApiKeyFile != null
             || cfg.secrets.gotifyTokenFiles != {};
 in

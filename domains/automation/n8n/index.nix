@@ -105,6 +105,12 @@ in
         description = "Path to file containing SLACK_WEBHOOK_URL (via agenix)";
       };
 
+      discordWebhookUrlFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to file containing DISCORD_WEBHOOK_URL (via agenix)";
+      };
+
       anthropicApiKeyFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;

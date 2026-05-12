@@ -179,6 +179,13 @@
     gotify-token-leads = { file = ../parts/services/gotify-token-leads.age; mode = "0440"; owner = "root"; group = "secrets"; };
     gotify-token-laptop = { file = ../parts/services/gotify-token-laptop.age; mode = "0440"; owner = "root"; group = "secrets"; };
 
+    discord-webhook-url = {
+      file = ../parts/services/discord-webhook-url.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
     slack-webhook-url = {
       file = ../parts/services/slack-webhook-url.age;
       mode = "0440";

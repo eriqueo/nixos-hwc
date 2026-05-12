@@ -128,6 +128,22 @@
     "notes": ""
   },
   {
+    "id": 1332,
+    "name": "Allowance | Electrical | Vanity Light Fixture",
+    "itemType": "Allowance",
+    "trade": "Electrical",
+    "code": "1000",
+    "type": "Materials",
+    "unit": "Each",
+    "unitAbbr": "ea",
+    "unitCost": 120.0,
+    "unitPrice": 171.43,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Client selection \u2014 vanity light fixture allowance."
+  },
+  {
     "id": 58,
     "name": "Bathroom Accessories - Premium",
     "itemType": "Allowance",
@@ -1088,6 +1104,22 @@
     "notes": "Demolition of ceramic tile wall surround. Craftsman: 0.06 mh/SF (Sm crew)."
   },
   {
+    "id": 1328,
+    "name": "Labor | Doors & Windows | Hang Bathroom Door",
+    "itemType": "Labor",
+    "trade": "Doors & Windows",
+    "code": "1500",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 47.25,
+    "unitPrice": 87.41,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Hang new prehung or slab door, install hardware."
+  },
+  {
     "id": 935,
     "name": "Labor - Hang Pocket Door and Install Hardware",
     "itemType": "Labor",
@@ -1294,6 +1326,22 @@
     "vendor": "",
     "finishes": "",
     "notes": "6 hours fixed (4 outlets). Install GFCI receptacles with code-compliant wiring."
+  },
+  {
+    "id": 1331,
+    "name": "Labor | Electrical | Light and Switch Install",
+    "itemType": "Labor",
+    "trade": "Electrical",
+    "code": "1000",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 60.75,
+    "unitPrice": 106.31,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Install new vanity light and relocate/add switch."
   },
   {
     "id": 21,
@@ -1584,6 +1632,22 @@
     "notes": "Studs/plates 16\" oc, adjusted for remodel context. 0.05 mh/SF. Refresh: 4 hrs fixed."
   },
   {
+    "id": 1326,
+    "name": "Labor | Framing | Glass Panel Install",
+    "itemType": "Labor",
+    "trade": "Framing",
+    "code": "0600",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 51.3,
+    "unitPrice": 94.91,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Install tempered glass panel on pony wall with U-channel mount."
+  },
+  {
     "id": 870,
     "name": "Install New 8x8 Post",
     "itemType": "Labor",
@@ -1662,6 +1726,22 @@
     "vendor": "",
     "finishes": "",
     "notes": ""
+  },
+  {
+    "id": 1325,
+    "name": "Labor | Framing | Pony Wall",
+    "itemType": "Labor",
+    "trade": "Framing",
+    "code": "0600",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 51.3,
+    "unitPrice": 94.91,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Frame half-wall (~36-42\" tall) with blocking for glass panel mount."
   },
   {
     "id": 949,
@@ -2206,6 +2286,22 @@
     "vendor": "",
     "finishes": "",
     "notes": "Labor to move water line, hook up dishwasher, move baseboard heat at living/kitchen wall\nInstall new sink/faucet at laundry"
+  },
+  {
+    "id": 1323,
+    "name": "Labor | Plumbing | Relocate Supply Lines",
+    "itemType": "Labor",
+    "trade": "Plumbing",
+    "code": "1100",
+    "type": "Labor",
+    "unit": "Hours",
+    "unitAbbr": "hrs",
+    "unitCost": 56.7,
+    "unitPrice": 120.2,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Move shower supply lines to opposite wall. PEX or copper through wall cavity."
   },
   {
     "id": 1114,
@@ -4880,6 +4976,22 @@
     "notes": "JELD-WEN"
   },
   {
+    "id": 1329,
+    "name": "Material | Doors & Windows | Bathroom Door Slab",
+    "itemType": "Material",
+    "trade": "Doors & Windows",
+    "code": "1500",
+    "type": "Materials",
+    "unit": "Each",
+    "unitAbbr": "ea",
+    "unitCost": 250.0,
+    "unitPrice": 357.14,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Solid core interior door."
+  },
+  {
     "id": 727,
     "name": "Cavity Sliders Pocket Door Frame Kit",
     "itemType": "Material",
@@ -4942,6 +5054,22 @@
     "vendor": "",
     "finishes": "",
     "notes": ""
+  },
+  {
+    "id": 1330,
+    "name": "Material | Doors & Windows | Door Hardware Set",
+    "itemType": "Material",
+    "trade": "Doors & Windows",
+    "code": "1500",
+    "type": "Materials",
+    "unit": "Each",
+    "unitAbbr": "ea",
+    "unitCost": 45.0,
+    "unitPrice": 64.29,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Knob/lever, hinges, strike plate."
   },
   {
     "id": 817,
@@ -6062,6 +6190,22 @@
     "vendor": "",
     "finishes": "",
     "notes": ""
+  },
+  {
+    "id": 1327,
+    "name": "Material | Framing | Tempered Glass Panel",
+    "itemType": "Material",
+    "trade": "Framing",
+    "code": "0600",
+    "type": "Materials",
+    "unit": "Each",
+    "unitAbbr": "ea",
+    "unitCost": 450.0,
+    "unitPrice": 642.86,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "Custom-cut tempered glass for pony wall opening with U-channel and clips."
   },
   {
     "id": 1191,
@@ -7406,6 +7550,22 @@
     "vendor": "",
     "finishes": "",
     "notes": ""
+  },
+  {
+    "id": 1324,
+    "name": "Material | Plumbing | PEX Relocation Kit",
+    "itemType": "Material",
+    "trade": "Plumbing",
+    "code": "1100",
+    "type": "Materials",
+    "unit": "Lump Sum",
+    "unitAbbr": "ls",
+    "unitCost": 100.0,
+    "unitPrice": 142.86,
+    "group": "",
+    "vendor": "",
+    "finishes": "",
+    "notes": "PEX pipe, fittings, shut-offs for shower supply relocation."
   },
   {
     "id": 1074,

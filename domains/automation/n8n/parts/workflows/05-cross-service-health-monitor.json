@@ -16,7 +16,10 @@
       "name": "Schedule: Every 5 Minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -26,7 +29,10 @@
       "name": "Define Health Checks",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -36,7 +42,10 @@
       "name": "Loop Over Checks",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [650, 300]
+      "position": [
+        650,
+        300
+      ]
     },
     {
       "parameters": {
@@ -74,7 +83,10 @@
       "name": "Branch by Check Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [
+        850,
+        300
+      ]
     },
     {
       "parameters": {
@@ -94,7 +106,10 @@
       "name": "HTTP Health Check",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1050, 200]
+      "position": [
+        1050,
+        200
+      ]
     },
     {
       "parameters": {
@@ -105,7 +120,10 @@
       "name": "Systemd Health Check",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1050, 400]
+      "position": [
+        1050,
+        400
+      ]
     },
     {
       "parameters": {
@@ -115,7 +133,10 @@
       "name": "Evaluate Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1250, 300]
+      "position": [
+        1250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -132,7 +153,10 @@
       "name": "Check if Failed",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1450, 300]
+      "position": [
+        1450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -142,7 +166,10 @@
       "name": "Check Restart Safety",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1650, 400]
+      "position": [
+        1650,
+        400
+      ]
     },
     {
       "parameters": {
@@ -159,7 +186,10 @@
       "name": "Can Auto-Restart?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1850, 400]
+      "position": [
+        1850,
+        400
+      ]
     },
     {
       "parameters": {
@@ -174,7 +204,10 @@
       "name": "Attempt Service Restart",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2050, 300]
+      "position": [
+        2050,
+        300
+      ]
     },
     {
       "parameters": {
@@ -185,7 +218,10 @@
       "name": "Wait for Restart",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
-      "position": [2250, 300]
+      "position": [
+        2250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -195,17 +231,23 @@
       "name": "Prepare Re-check",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2450, 300]
+      "position": [
+        2450,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Generate notification based on health status and remediation\nconst { name, healthy, canRestart, isCritical, errorMessage } = $json;\n\nlet title, message, topic, priority, sendToSlack;\n\nif (!healthy && isCritical) {\n  // Critical service down, no auto-restart\n  title = `🔴 CRITICAL: ${name} Down`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nManual intervention required!\\nCritical service cannot be auto-restarted.`;\n  topic = 'hwc-critical';\n  priority = 5;\n  sendToSlack = true;\n} else if (!healthy && !canRestart) {\n  // Service down, auto-restart failed\n  title = `⚠️ ${name} Down - Restart Failed`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nAuto-restart attempted but failed.\\nManual intervention may be needed.`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = true;\n} else if (!healthy && canRestart) {\n  // Service down, attempting auto-fix\n  title = `⚠️ ${name} Down - Attempting Restart`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nAttempting automatic restart...`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = false;\n} else {\n  // Service recovered\n  title = `✅ ${name} Recovered`;\n  message = `Service: ${name}\\n\\nService has been restored.`;\n  topic = 'hwc-monitoring';\n  priority = 3;\n  sendToSlack = false;\n}\n\nreturn {\n  json: {\n    title: title,\n    message: message,\n    topic: topic,\n    priority: priority,\n    tags: `health,${name.toLowerCase()},monitoring`,\n    sendToSlack: sendToSlack\n  }\n};"
+        "jsCode": "// Generate notification based on health status and remediation\nconst { name, healthy, canRestart, isCritical, errorMessage } = $json;\n\nlet title, message, topic, priority, sendToSlack;\n\nif (!healthy && isCritical) {\n  // Critical service down, no auto-restart\n  title = `\ud83d\udd34 CRITICAL: ${name} Down`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nManual intervention required!\\nCritical service cannot be auto-restarted.`;\n  topic = 'hwc-critical';\n  priority = 5;\n  sendToSlack = true;\n} else if (!healthy && !canRestart) {\n  // Service down, auto-restart failed\n  title = `\u26a0\ufe0f ${name} Down - Restart Failed`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nAuto-restart attempted but failed.\\nManual intervention may be needed.`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = true;\n} else if (!healthy && canRestart) {\n  // Service down, attempting auto-fix\n  title = `\u26a0\ufe0f ${name} Down - Attempting Restart`;\n  message = `Service: ${name}\\nStatus: ${errorMessage}\\n\\nAttempting automatic restart...`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = false;\n} else {\n  // Service recovered\n  title = `\u2705 ${name} Recovered`;\n  message = `Service: ${name}\\n\\nService has been restored.`;\n  topic = 'hwc-monitoring';\n  priority = 3;\n  sendToSlack = false;\n}\n\nreturn {\n  json: {\n    title: title,\n    message: message,\n    topic: topic,\n    priority: priority,\n    tags: `health,${name.toLowerCase()},monitoring`,\n    sendToSlack: sendToSlack\n  }\n};"
       },
       "id": "generate-notification",
       "name": "Generate Notification",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2050, 600]
+      "position": [
+        2050,
+        600
+      ]
     },
     {
       "parameters": {
@@ -222,7 +264,10 @@
       "name": "Check if Slack needed",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2250, 600]
+      "position": [
+        2250,
+        600
+      ]
     },
     {
       "parameters": {
@@ -260,7 +305,10 @@
       "name": "Send to ntfy",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2450, 500]
+      "position": [
+        2450,
+        500
+      ]
     },
     {
       "parameters": {
@@ -275,65 +323,226 @@
       "name": "Send to Slack",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2450, 700]
+      "position": [
+        2450,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"embeds\": [{\n    \"title\": \"{{ $json.title }}\",\n    \"description\": \"{{ $json.message }}\",\n    \"color\": 15105570\n  }]\n}",
+        "options": {}
+      },
+      "id": "send-discord",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2450,
+        860
+      ]
     }
   ],
   "connections": {
     "Schedule: Every 5 Minutes": {
-      "main": [[{ "node": "Define Health Checks", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Define Health Checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Define Health Checks": {
-      "main": [[{ "node": "Loop Over Checks", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Loop Over Checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Loop Over Checks": {
-      "main": [[{ "node": "Branch by Check Type", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Branch by Check Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Branch by Check Type": {
       "main": [
-        [{ "node": "HTTP Health Check", "type": "main", "index": 0 }],
-        [{ "node": "Systemd Health Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "HTTP Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Systemd Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "HTTP Health Check": {
-      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Systemd Health Check": {
-      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Evaluate Result": {
-      "main": [[{ "node": "Check if Failed", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check if Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check if Failed": {
       "main": [
-        [{ "node": "Check Restart Safety", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "Check Restart Safety",
+            "type": "main",
+            "index": 0
+          }
+        ],
         []
       ]
     },
     "Check Restart Safety": {
-      "main": [[{ "node": "Can Auto-Restart?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Can Auto-Restart?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Can Auto-Restart?": {
       "main": [
-        [{ "node": "Attempt Service Restart", "type": "main", "index": 0 }],
-        [{ "node": "Generate Notification", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Attempt Service Restart",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Attempt Service Restart": {
-      "main": [[{ "node": "Wait for Restart", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Wait for Restart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Wait for Restart": {
-      "main": [[{ "node": "Prepare Re-check", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Re-check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Re-check": {
-      "main": [[{ "node": "Generate Notification", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Generate Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Generate Notification": {
-      "main": [[{ "node": "Check if Slack needed", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check if Slack needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check if Slack needed": {
       "main": [
-        [{ "node": "Send to ntfy", "type": "main", "index": 0 }, { "node": "Send to Slack", "type": "main", "index": 0 }],
-        [{ "node": "Send to ntfy", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Send to ntfy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send to Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send to Discord",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to ntfy",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

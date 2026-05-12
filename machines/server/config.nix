@@ -856,7 +856,7 @@
       timerInterval = "*-*-* 06,12,18,00:00:00"; # 4x daily
     };
     fbClassifier = {
-      enable = false; # TODO: set true after creating the Discord webhook secret
+      enable = true; # TODO: set true after creating the Discord webhook secret
       # timerInterval defaults to 1h after each scrape: 07,13,19,01:00
     };
   };
