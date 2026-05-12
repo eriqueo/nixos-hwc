@@ -233,6 +233,54 @@
     "projectType": "bathroom"
   },
   {
+    "key": "has_plumbing_relocation",
+    "category": "condition",
+    "valueType": "boolean",
+    "default": "no",
+    "options": ["yes", "no"],
+    "unit": null,
+    "description": "Relocate shower plumbing to opposite wall",
+    "drives": "Plumbing relocation labor + PEX kit",
+    "required": false,
+    "projectType": "bathroom"
+  },
+  {
+    "key": "has_pony_wall",
+    "category": "condition",
+    "valueType": "boolean",
+    "default": "no",
+    "options": ["yes", "no"],
+    "unit": null,
+    "description": "Pony wall + tempered glass panel",
+    "drives": "Pony wall framing, glass panel install + material",
+    "required": false,
+    "projectType": "bathroom"
+  },
+  {
+    "key": "has_new_door",
+    "category": "condition",
+    "valueType": "boolean",
+    "default": "no",
+    "options": ["yes", "no"],
+    "unit": null,
+    "description": "New bathroom door",
+    "drives": "Door hang labor, slab, hardware",
+    "required": false,
+    "projectType": "bathroom"
+  },
+  {
+    "key": "drywall_sqft",
+    "category": "derived",
+    "valueType": "formula",
+    "default": null,
+    "options": null,
+    "unit": "sqft",
+    "description": "Drywall area — derived from scope or manual override",
+    "drives": "Drywall labor qty (rule 139)",
+    "required": false,
+    "projectType": "bathroom"
+  },
+  {
     "key": "bathroom.niche_count",
     "category": "count",
     "valueType": "number",

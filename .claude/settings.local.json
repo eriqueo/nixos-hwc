@@ -259,7 +259,8 @@
       "Bash(/nix/store/bvh15gbs9p42cdkq0cf7zxy97ypynirr-sqlite-3.50.4-bin/bin/sqlite3 /var/lib/hwc/n8n/database.sqlite 'SELECT * FROM workflow_statistics WHERE workflowId IN \\('\\\\''DxDOkTqP6UzJgxfG'\\\\'','\\\\''dda8UagTcmkQadzT'\\\\'','\\\\''dS9FFDOrYH7NPsMx'\\\\'','\\\\''DCLJg3Vt5TAfQnrE'\\\\'','\\\\''k2TN787tyntCyY1P'\\\\'','\\\\''mail-health-alert-router'\\\\'','\\\\''n14heZ9wzJ8Uyemo'\\\\'','\\\\''FdR0A5cQU51lggtE'\\\\'','\\\\''zurTtx85debBjvWZ'\\\\'','\\\\''SqHgSYED97MyefJm'\\\\'','\\\\''aGUcFxsZxtcol9ou'\\\\'','\\\\''content-generator-hwc'\\\\'','\\\\''intelligence-pipeline-hwc'\\\\'','\\\\''weekly-content-calendar'\\\\''\\) ORDER BY lastUpdated DESC;')",
       "Bash(/nix/store/bvh15gbs9p42cdkq0cf7zxy97ypynirr-sqlite-3.50.4-bin/bin/sqlite3 /var/lib/hwc/n8n/database.sqlite 'SELECT id, name FROM workflow_entity WHERE nodes LIKE '\\\\''%jR1mdRj1TnY0wN87%'\\\\'' OR nodes LIKE '\\\\''%sys:router:notify%'\\\\'';')",
       "Bash(/nix/store/bvh15gbs9p42cdkq0cf7zxy97ypynirr-sqlite-3.50.4-bin/bin/sqlite3 /var/lib/hwc/n8n/database.sqlite 'SELECT id, name FROM workflow_entity WHERE nodes LIKE '\\\\''%executeWorkflow%'\\\\'' AND deletedAt IS NULL;')",
-      "Bash(/nix/store/bvh15gbs9p42cdkq0cf7zxy97ypynirr-sqlite-3.50.4-bin/bin/sqlite3 /var/lib/hwc/n8n/database.sqlite 'SELECT id, name, nodes FROM workflow_entity WHERE nodes LIKE '\\\\''%executeWorkflow%'\\\\'' AND deletedAt IS NULL;')"
+      "Bash(/nix/store/bvh15gbs9p42cdkq0cf7zxy97ypynirr-sqlite-3.50.4-bin/bin/sqlite3 /var/lib/hwc/n8n/database.sqlite 'SELECT id, name, nodes FROM workflow_entity WHERE nodes LIKE '\\\\''%executeWorkflow%'\\\\'' AND deletedAt IS NULL;')",
+      "Bash(fb-classify:*)"
     ],
     "deny": [],
     "ask": [],

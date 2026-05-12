@@ -12,7 +12,10 @@
       "name": "Webhook: Estimate Push",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "webhookId": "estimate-push"
     },
     {
@@ -23,7 +26,10 @@
       "name": "Validate Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -52,7 +58,10 @@
       "name": "Is New Job?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -67,7 +76,10 @@
       "name": "Create JT Job",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [900, 200]
+      "position": [
+        900,
+        200
+      ]
     },
     {
       "parameters": {
@@ -77,7 +89,10 @@
       "name": "Parse Created Job",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 200]
+      "position": [
+        1120,
+        200
+      ]
     },
     {
       "parameters": {
@@ -87,7 +102,10 @@
       "name": "Use Existing Job",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 400]
+      "position": [
+        900,
+        400
+      ]
     },
     {
       "parameters": {
@@ -97,7 +115,10 @@
       "name": "Merge Job Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {
@@ -107,18 +128,24 @@
       "name": "Additive Budget Push",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300],
+      "position": [
+        1560,
+        300
+      ],
       "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "// Additive Budget Push already returns parsed result — pass through\nreturn { json: $json };"
+        "jsCode": "// Additive Budget Push already returns parsed result \u2014 pass through\nreturn { json: $json };"
       },
       "id": "parse-jt-result",
       "name": "Parse JT Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 300]
+      "position": [
+        1780,
+        300
+      ]
     },
     {
       "parameters": {
@@ -133,7 +160,10 @@
       "name": "Archive to Postgres",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2000, 200],
+      "position": [
+        2000,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -163,7 +193,10 @@
       "name": "JT Push Success?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2000, 400]
+      "position": [
+        2000,
+        400
+      ]
     },
     {
       "parameters": {
@@ -178,7 +211,10 @@
       "name": "Notify Slack (Success)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2220, 340]
+      "position": [
+        2220,
+        340
+      ]
     },
     {
       "parameters": {
@@ -193,7 +229,10 @@
       "name": "Notify Slack (Failure)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [2220, 500]
+      "position": [
+        2220,
+        500
+      ]
     },
     {
       "parameters": {
@@ -204,7 +243,10 @@
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2440, 300]
+      "position": [
+        2440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -218,7 +260,10 @@
       "name": "Respond Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 500]
+      "position": [
+        680,
+        500
+      ]
     },
     {
       "parameters": {
@@ -232,7 +277,10 @@
       "name": "Respond Bad Request",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 620]
+      "position": [
+        680,
+        620
+      ]
     },
     {
       "parameters": {
@@ -261,7 +309,10 @@
       "name": "Is New Customer?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 100]
+      "position": [
+        900,
+        100
+      ]
     },
     {
       "parameters": {
@@ -278,7 +329,10 @@
       "name": "Create JT Account",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1120, 0]
+      "position": [
+        1120,
+        0
+      ]
     },
     {
       "parameters": {
@@ -295,7 +349,10 @@
       "name": "Create JT Location",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1340, 0]
+      "position": [
+        1340,
+        0
+      ]
     },
     {
       "parameters": {
@@ -312,7 +369,10 @@
       "name": "Create Job (New Customer)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1560, 0]
+      "position": [
+        1560,
+        0
+      ]
     },
     {
       "parameters": {
@@ -322,69 +382,260 @@
       "name": "Parse New Customer Job",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 0]
+      "position": [
+        1780,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"embeds\": [{\n    \"title\": \"Estimate Pushed to JobTread\",\n    \"color\": 5763719,\n    \"fields\": [\n      { \"name\": \"Job\", \"value\": \"[{{ $json.jobName }} (#{{ $json.jobNumber }})](https://app.jobtread.com/jobs/{{ $json.jobId }})\", \"inline\": true },\n      { \"name\": \"Customer\", \"value\": \"{{ $json.customerName }}\", \"inline\": true },\n      { \"name\": \"Type\", \"value\": \"{{ $json.projectType }}\", \"inline\": true },\n      { \"name\": \"Items\", \"value\": \"{{ $json.itemsPushed }} line items\", \"inline\": true },\n      { \"name\": \"Labor\", \"value\": \"{{ Math.round($json.totals.laborHrs || 0) }} hours\", \"inline\": true },\n      { \"name\": \"Total\", \"value\": \"${{ Math.round($json.totals.price || 0).toLocaleString() }} ({{ ($json.totals.margin || 0).toFixed(1) }}% margin)\", \"inline\": true }\n    ],\n    \"footer\": { \"text\": \"Pushed via Heartwood Estimator | {{ $json.timestamp }}\" }\n  }]\n}",
+        "options": {}
+      },
+      "id": "notify-discord-success",
+      "name": "Notify Discord (Success)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"embeds\": [{\n    \"title\": \"Estimate Archived (JT Push Failed)\",\n    \"color\": 15548997,\n    \"fields\": [\n      { \"name\": \"Job\", \"value\": \"{{ $json.jobName }} (#{{ $json.jobNumber }})\", \"inline\": true },\n      { \"name\": \"Customer\", \"value\": \"{{ $json.customerName }}\", \"inline\": true },\n      { \"name\": \"Error\", \"value\": \"```{{ $json.jtPushError }}```\" }\n    ],\n    \"footer\": { \"text\": \"Estimate saved to database. Retry JT push manually. | {{ $json.timestamp }}\" }\n  }]\n}",
+        "options": {}
+      },
+      "id": "notify-discord-failure",
+      "name": "Notify Discord (Failure)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2440,
+        500
+      ]
     }
   ],
   "connections": {
     "Webhook: Estimate Push": {
-      "main": [[{ "node": "Validate Request", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate Request": {
-      "main": [[{ "node": "Is New Job?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Is New Job?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Is New Job?": {
       "main": [
-        [{ "node": "Is New Customer?", "type": "main", "index": 0 }],
-        [{ "node": "Use Existing Job", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Is New Customer?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Use Existing Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Is New Customer?": {
       "main": [
-        [{ "node": "Create JT Account", "type": "main", "index": 0 }],
-        [{ "node": "Create JT Job", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Create JT Account",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create JT Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Create JT Account": {
-      "main": [[{ "node": "Create JT Location", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Create JT Location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Create JT Location": {
-      "main": [[{ "node": "Create Job (New Customer)", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Create Job (New Customer)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Create Job (New Customer)": {
-      "main": [[{ "node": "Parse New Customer Job", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse New Customer Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse New Customer Job": {
-      "main": [[{ "node": "Merge Job Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Merge Job Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Create JT Job": {
-      "main": [[{ "node": "Parse Created Job", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse Created Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Created Job": {
-      "main": [[{ "node": "Merge Job Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Merge Job Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Use Existing Job": {
-      "main": [[{ "node": "Merge Job Data", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Merge Job Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Merge Job Data": {
-      "main": [[{ "node": "Additive Budget Push", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Additive Budget Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Additive Budget Push": {
-      "main": [[{ "node": "Parse JT Result", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse JT Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse JT Result": {
-      "main": [[
-        { "node": "Archive to Postgres", "type": "main", "index": 0 },
-        { "node": "JT Push Success?", "type": "main", "index": 0 }
-      ]]
+      "main": [
+        [
+          {
+            "node": "Archive to Postgres",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "JT Push Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "JT Push Success?": {
       "main": [
-        [{ "node": "Notify Slack (Success)", "type": "main", "index": 0 }],
-        [{ "node": "Notify Slack (Failure)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Notify Slack (Success)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Discord (Success)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Slack (Failure)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Discord (Failure)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Archive to Postgres": {
-      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Notify Slack (Success)": {
       "main": []
@@ -399,9 +650,18 @@
   },
   "staticData": null,
   "tags": [
-    { "name": "business", "id": "business-tag" },
-    { "name": "estimator", "id": "estimator-tag" },
-    { "name": "jobtread", "id": "jobtread-tag" }
+    {
+      "name": "business",
+      "id": "business-tag"
+    },
+    {
+      "name": "estimator",
+      "id": "estimator-tag"
+    },
+    {
+      "name": "jobtread",
+      "id": "jobtread-tag"
+    }
   ],
   "triggerCount": 1,
   "updatedAt": "2026-05-06T00:00:00.000Z",

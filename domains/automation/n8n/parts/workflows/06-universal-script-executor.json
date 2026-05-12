@@ -12,7 +12,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "script-executor"
     },
     {
@@ -23,7 +26,10 @@
       "name": "Validate & Sanitize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -33,7 +39,10 @@
       "name": "Audit Log",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [650, 300]
+      "position": [
+        650,
+        300
+      ]
     },
     {
       "parameters": {
@@ -61,7 +70,10 @@
       "name": "Check if Async",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [
+        850,
+        300
+      ]
     },
     {
       "parameters": {
@@ -72,7 +84,10 @@
       "name": "SSH Execute (Sync)",
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
-      "position": [1050, 200],
+      "position": [
+        1050,
+        200
+      ],
       "credentials": {
         "sshPassword": {
           "id": "C8ja9XNtZon7FzlC",
@@ -88,7 +103,10 @@
       "name": "Parse Result (Sync)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1250, 200]
+      "position": [
+        1250,
+        200
+      ]
     },
     {
       "parameters": {
@@ -99,7 +117,10 @@
       "name": "Respond to Webhook (Sync)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1450, 100]
+      "position": [
+        1450,
+        100
+      ]
     },
     {
       "parameters": {
@@ -109,7 +130,10 @@
       "name": "Async Accept",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 450]
+      "position": [
+        1050,
+        450
+      ]
     },
     {
       "parameters": {
@@ -120,7 +144,10 @@
       "name": "Respond to Webhook (Async)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1250, 350]
+      "position": [
+        1250,
+        350
+      ]
     },
     {
       "parameters": {
@@ -131,7 +158,10 @@
       "name": "SSH Execute (Async)",
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
-      "position": [1250, 550],
+      "position": [
+        1250,
+        550
+      ],
       "credentials": {
         "sshPassword": {
           "id": "C8ja9XNtZon7FzlC",
@@ -147,7 +177,10 @@
       "name": "Parse Result (Async)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1450, 550]
+      "position": [
+        1450,
+        550
+      ]
     },
     {
       "parameters": {
@@ -175,7 +208,10 @@
       "name": "Check if Callback URL",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1650, 550]
+      "position": [
+        1650,
+        550
+      ]
     },
     {
       "parameters": {
@@ -190,17 +226,23 @@
       "name": "Send Callback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1850, 500]
+      "position": [
+        1850,
+        500
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Generate notification based on execution result\nconst { scriptName, success, exitCode, stderr, stdout } = $json;\n\nlet title, message, topic, priority;\n\nif (success) {\n  title = `✅ Script Success: ${scriptName}`;\n  message = `Script completed successfully.\\n\\nExit Code: ${exitCode}`;\n  if (stdout && stdout.trim()) {\n    message += `\\n\\nOutput: ${stdout.substring(0, 200)}`;\n  }\n  topic = 'hwc-updates';\n  priority = 1;\n} else {\n  title = `⚠️ Script Failed: ${scriptName}`;\n  message = `Script execution failed.\\n\\nExit Code: ${exitCode}`;\n  if (stderr && stderr.trim()) {\n    message += `\\n\\nError: ${stderr.substring(0, 200)}`;\n  }\n  topic = 'hwc-alerts';\n  priority = 4;\n}\n\nreturn {\n  json: {\n    title,\n    message,\n    topic,\n    priority,\n    tags: `script,${scriptName},execution`\n  }\n};"
+        "jsCode": "// Generate notification based on execution result\nconst { scriptName, success, exitCode, stderr, stdout } = $json;\n\nlet title, message, topic, priority;\n\nif (success) {\n  title = `\u2705 Script Success: ${scriptName}`;\n  message = `Script completed successfully.\\n\\nExit Code: ${exitCode}`;\n  if (stdout && stdout.trim()) {\n    message += `\\n\\nOutput: ${stdout.substring(0, 200)}`;\n  }\n  topic = 'hwc-updates';\n  priority = 1;\n} else {\n  title = `\u26a0\ufe0f Script Failed: ${scriptName}`;\n  message = `Script execution failed.\\n\\nExit Code: ${exitCode}`;\n  if (stderr && stderr.trim()) {\n    message += `\\n\\nError: ${stderr.substring(0, 200)}`;\n  }\n  topic = 'hwc-alerts';\n  priority = 4;\n}\n\nreturn {\n  json: {\n    title,\n    message,\n    topic,\n    priority,\n    tags: `script,${scriptName},execution`\n  }\n};"
       },
       "id": "generate-notification",
       "name": "Generate Notification",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1650, 200]
+      "position": [
+        1650,
+        200
+      ]
     },
     {
       "parameters": {
@@ -238,17 +280,23 @@
       "name": "Send to ntfy",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1850, 200]
+      "position": [
+        1850,
+        200
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Security violation error notification\nconst error = $input.item.json.error || $input.item.json.message || 'Unknown error';\nconst isSecurityViolation = error.includes('Security violation') || error.includes('not whitelisted');\n\nlet title, message, topic, priority, sendToSlack;\n\nif (isSecurityViolation) {\n  title = '🔴 SECURITY VIOLATION: Script Executor';\n  message = `Security violation detected!\\n\\nError: ${error}\\n\\nImmediate investigation required.`;\n  topic = 'hwc-critical';\n  priority = 5;\n  sendToSlack = true;\n} else {\n  title = '⚠️ Script Executor Error';\n  message = `Error in script executor workflow.\\n\\nError: ${error}`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = false;\n}\n\nreturn {\n  json: {\n    title,\n    message,\n    topic,\n    priority,\n    tags: 'error,script-executor,security',\n    sendToSlack\n  }\n};"
+        "jsCode": "// Security violation error notification\nconst error = $input.item.json.error || $input.item.json.message || 'Unknown error';\nconst isSecurityViolation = error.includes('Security violation') || error.includes('not whitelisted');\n\nlet title, message, topic, priority, sendToSlack;\n\nif (isSecurityViolation) {\n  title = '\ud83d\udd34 SECURITY VIOLATION: Script Executor';\n  message = `Security violation detected!\\n\\nError: ${error}\\n\\nImmediate investigation required.`;\n  topic = 'hwc-critical';\n  priority = 5;\n  sendToSlack = true;\n} else {\n  title = '\u26a0\ufe0f Script Executor Error';\n  message = `Error in script executor workflow.\\n\\nError: ${error}`;\n  topic = 'hwc-alerts';\n  priority = 4;\n  sendToSlack = false;\n}\n\nreturn {\n  json: {\n    title,\n    message,\n    topic,\n    priority,\n    tags: 'error,script-executor,security',\n    sendToSlack\n  }\n};"
       },
       "id": "error-notification",
       "name": "Error Notification",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [650, 600]
+      "position": [
+        650,
+        600
+      ]
     },
     {
       "parameters": {
@@ -276,7 +324,10 @@
       "name": "Check if Slack needed",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [850, 600]
+      "position": [
+        850,
+        600
+      ]
     },
     {
       "parameters": {
@@ -314,7 +365,10 @@
       "name": "Send Error to ntfy",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1050, 500]
+      "position": [
+        1050,
+        500
+      ]
     },
     {
       "parameters": {
@@ -329,88 +383,212 @@
       "name": "Send to Slack",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1050, 700]
+      "position": [
+        1050,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"embeds\": [{\n    \"title\": \"{{ $json.title }}\",\n    \"description\": \"{{ $json.message }}\",\n    \"color\": 16776960\n  }]\n}",
+        "options": {}
+      },
+      "id": "send-discord-error",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1050,
+        860
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
       "main": [
-        [{ "node": "Validate & Sanitize", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Validate & Sanitize",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Validate & Sanitize": {
       "main": [
-        [{ "node": "Audit Log", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Audit Log": {
       "main": [
-        [{ "node": "Check if Async", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Check if Async",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Check if Async": {
       "main": [
-        [{ "node": "Async Accept", "type": "main", "index": 0 }],
-        [{ "node": "SSH Execute (Sync)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Async Accept",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SSH Execute (Sync)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "SSH Execute (Sync)": {
       "main": [
-        [{ "node": "Parse Result (Sync)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse Result (Sync)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Parse Result (Sync)": {
       "main": [
         [
-          { "node": "Respond to Webhook (Sync)", "type": "main", "index": 0 },
-          { "node": "Generate Notification", "type": "main", "index": 0 }
+          {
+            "node": "Respond to Webhook (Sync)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Notification",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Async Accept": {
       "main": [
         [
-          { "node": "Respond to Webhook (Async)", "type": "main", "index": 0 },
-          { "node": "SSH Execute (Async)", "type": "main", "index": 0 }
+          {
+            "node": "Respond to Webhook (Async)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SSH Execute (Async)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "SSH Execute (Async)": {
       "main": [
-        [{ "node": "Parse Result (Async)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse Result (Async)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Parse Result (Async)": {
       "main": [
         [
-          { "node": "Check if Callback URL", "type": "main", "index": 0 },
-          { "node": "Generate Notification", "type": "main", "index": 0 }
+          {
+            "node": "Check if Callback URL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Notification",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Check if Callback URL": {
       "main": [
-        [{ "node": "Send Callback", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "Send Callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
         []
       ]
     },
     "Generate Notification": {
       "main": [
-        [{ "node": "Send to ntfy", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Send to ntfy",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Error Notification": {
       "main": [
-        [{ "node": "Check if Slack needed", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Check if Slack needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Check if Slack needed": {
       "main": [
         [
-          { "node": "Send Error to ntfy", "type": "main", "index": 0 },
-          { "node": "Send to Slack", "type": "main", "index": 0 }
+          {
+            "node": "Send Error to ntfy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send to Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send to Discord",
+            "type": "main",
+            "index": 0
+          }
         ],
-        [{ "node": "Send Error to ntfy", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Send Error to ntfy",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -420,9 +598,18 @@
   },
   "staticData": null,
   "tags": [
-    { "name": "automation", "id": "automation-tag" },
-    { "name": "scripts", "id": "scripts-tag" },
-    { "name": "security", "id": "security-tag" }
+    {
+      "name": "automation",
+      "id": "automation-tag"
+    },
+    {
+      "name": "scripts",
+      "id": "scripts-tag"
+    },
+    {
+      "name": "security",
+      "id": "security-tag"
+    }
   ],
   "triggerCount": 1,
   "updatedAt": "2026-03-25T00:00:00.000Z",

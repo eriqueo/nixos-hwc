@@ -31,7 +31,7 @@
   },
   "demo": {
     "wage": 35.0,
-    "burden": 1.0,
+    "burden": 1.35,
     "markup": 2.0
   },
   "doors_windows": {
@@ -112,12 +112,12 @@
   "tile": {
     "wage": 45.0,
     "burden": 1.35,
-    "markup": 1.65
+    "markup": 1.85
   },
   "tiling": {
     "wage": 45.0,
     "burden": 1.35,
-    "markup": 1.65
+    "markup": 1.85
   },
   "trimwork": {
     "wage": 38.0,

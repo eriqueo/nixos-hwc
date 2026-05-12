@@ -31,7 +31,7 @@ CATEGORIES = [
     ("warm_lead",          "🟢", "Leads"),
     ("pain_point",         "🔴", "Pain Points"),
     ("migration_signal",   "🔄", "Migration"),
-    ("competitor_mention", "⚔️",  "Competitors"),
+    ("competitor_mention", "⚔️",  "Competing Tools"),
     ("feature_request",    "💡", "Feature Gaps"),
 ]
 
@@ -147,31 +147,48 @@ def classify_batch(batch, claude_bin, prompt_text):
 
 
 def derive_classification(scores):
-    """Deterministically derive a classification category from numeric scores."""
+    """Derive a label from Claude's scores. Deterministic."""
+    # DataX mentioned by name = always a lead
     if scores.get('datax_mentioned'):
         return 'warm_lead'
+
+    # Active platform migration
     if scores.get('migration'):
         return 'migration_signal'
-    if scores.get('competitor_tool'):
-        return 'competitor_mention'
-    relevance = scores.get('datax_relevance', 0)
-    pain = scores.get('pain_level', 0)
-    action = scores.get('actionability', 0)
-    if relevance >= 2 and action >= 2:
+
+    # High relevance + high actionability = lead
+    if scores.get('datax_relevance', 0) >= 2 and scores.get('actionability', 0) >= 2:
         return 'warm_lead'
-    if pain >= 2:
+
+    # Named tool in DataX's domain
+    if scores.get('extension_tool') and scores.get('datax_relevance', 0) >= 1:
+        return 'competitor_mention'
+
+    # Genuine pain with DataX relevance
+    if scores.get('pain_level', 0) >= 2 and scores.get('datax_relevance', 0) >= 1:
         return 'pain_point'
-    if pain >= 1 and relevance >= 2:
+
+    # Severe pain regardless of relevance
+    if scores.get('pain_level', 0) >= 3:
         return 'pain_point'
-    if relevance >= 1 and action >= 1:
+
+    # Some relevance + some actionability
+    if scores.get('datax_relevance', 0) >= 1 and scores.get('actionability', 0) >= 1:
         return 'feature_request'
+
     return 'general'
 
 
 def should_notify(classification, scores):
-    """Return True if this post warrants a Discord notification."""
-    if classification in ('warm_lead', 'migration_signal', 'competitor_mention'):
+    """Decide whether to send a Discord notification."""
+    if classification == 'warm_lead':
         return True
+    if classification == 'migration_signal':
+        return True
+    # Competitor in DataX's space (not Rendr, LiDAR scanners, etc.)
+    if classification == 'competitor_mention' and scores.get('datax_relevance', 0) >= 2:
+        return True
+    # Pain that DataX specifically addresses
     if classification == 'pain_point' and scores.get('datax_relevance', 0) >= 2:
         return True
     return False
