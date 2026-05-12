@@ -154,18 +154,26 @@ def send_discord(webhook_url, notable):
     if not notable or not webhook_url:
         return False
 
-    lines = [f"**FB Group Classifier — {len(notable)} notable post(s)**\n"]
-    for p in notable[:5]:
-        tag_str = ', '.join(p.get('tags', []))
-        body = (p.get('body') or '')[:200].replace('\n', ' ')
-        lines.append(
-            f"**[{p['classification']}]** {p.get('author') or 'Unknown'}\n"
-            f"> {body}...\n"
-            f"Tags: `{tag_str}`\n"
-            f"_{p.get('summary', '')}_\n"
-        )
+    by_class = {}
+    for p in notable:
+        c = p.get('classification', 'unknown')
+        by_class.setdefault(c, []).append(p)
 
-    payload = json.dumps({'content': '\n'.join(lines)}).encode()
+    lines = [f"**FB Classifier — {len(notable)} notable posts**"]
+    for cls, posts in sorted(by_class.items()):
+        lines.append(f"\n**{cls.upper()} ({len(posts)})**")
+        for p in posts[:3]:
+            summary = (p.get('summary') or '')[:120]
+            author = (p.get('author') or 'Unknown')[:30]
+            lines.append(f"• {author}: {summary}")
+        if len(posts) > 3:
+            lines.append(f"  _…and {len(posts) - 3} more_")
+
+    content = '\n'.join(lines)
+    if len(content) > 1900:
+        content = content[:1900] + '\n…'
+
+    payload = json.dumps({'content': content}).encode()
     req = urllib.request.Request(
         webhook_url,
         data=payload,
