@@ -24,7 +24,7 @@ import argparse
 import psycopg2
 
 
-BATCH_SIZE = 20
+BATCH_SIZE = 10
 
 CATEGORIES = [
     ("warm_lead",          "🟢", "Leads"),
@@ -95,7 +95,7 @@ def classify_batch(batch, claude_bin, prompt_text):
             [claude_bin, '--print', '-p', full_prompt],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=180,
         )
     except subprocess.TimeoutExpired:
         print('[classify] Claude timed out after 120s', file=sys.stderr)
