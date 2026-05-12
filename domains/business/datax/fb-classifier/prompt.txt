@@ -1,32 +1,43 @@
 You are analyzing Facebook group posts from the "JobTread Pros" group.
 JobTread is a construction project management platform used by remodeling contractors.
-DataX is an analytics and reporting add-on for JobTread that gives contractors deeper insight into their business data — things like budget vs actual, job profitability, custom reports, and data exports.
+DataX is a data and analytics platform built on top of JobTread. It helps contractors
+get data OUT of JobTread — custom reports, budget vs actual analysis, job profitability,
+QuickBooks sync, integrations, and business intelligence dashboards.
 
-Classify each post and identify notable findings for the DataX team.
+Classify each post for the DataX business intelligence team. Err on the side of marking
+things notable — the team wants to know about any friction, gap, or workaround contractors
+encounter, not just posts that explicitly mention analytics.
 
 CLASSIFICATIONS (pick exactly one):
-- "lead"         — Someone actively seeking analytics, reporting, or data tools that DataX provides (budget tracking, profitability analysis, custom exports, BI dashboards)
-- "pain_point"   — Contractor describing a reporting, analytics, or data workflow problem that DataX could solve
-- "feature_gap"  — Describing something missing from JobTread's native reporting, analytics, or data export capabilities
-- "competitor"   — Mentions of competing analytics, reporting, BI, or data tools used alongside JobTread (not JobTread itself)
-- "general"      — General JobTread tips, how-to questions, feature questions, testimonials, workflow discussions
-- "noise"        — Off-topic, admin posts, greetings, hiring posts, purely personal, spam
+- "lead"         — Someone actively seeking a tool, integration, or report that DataX provides
+- "pain_point"   — Any workflow friction, workaround, or manual process a contractor describes
+                   (sub invoice handling, QuickBooks issues, data export struggles, etc.)
+- "feature_gap"  — Something missing or broken in JobTread that contractors wish existed
+                   (integrations, reporting fields, export options, automation, etc.)
+- "competitor"   — Mentions of other software used alongside JobTread (Zapier, ConstructConnect,
+                   Buildertrend, CoConstruct, Excel workarounds, etc.)
+- "general"      — Pure how-to questions with no pain expressed, tips, testimonials, celebrations
+- "noise"        — Off-topic, admin announcements, greetings, job listings, purely personal
 
-TAGS (pick all that apply from this list):
+BIAS TOWARD notable: if a post describes ANY friction or workaround, prefer pain_point over
+general. If it mentions any third-party tool or integration need, prefer competitor or
+feature_gap over general. Reserve "general" for posts with zero friction signal.
+
+TAGS (pick all that apply):
 estimating, reporting, analytics, integration, ai_usage, invoicing,
-scheduling, field_ops, lead_management, subcontractors, cash_flow, budget_tracking
+scheduling, field_ops, lead_management, subcontractors, cash_flow, budget_tracking, quickbooks
 
-NOTABLE: Set to true only when classification is "lead", "pain_point", "competitor", or "feature_gap".
+NOTABLE: Set to true when classification is "lead", "pain_point", "competitor", or "feature_gap".
 
-SUMMARY: For notable posts, write one sentence explaining why it matters for DataX.
-For non-notable posts, use an empty string.
+SUMMARY: For notable posts, one sentence on why it matters for DataX.
+For non-notable posts, empty string.
 
-Return ONLY valid JSON — no markdown fences, no explanation, no preamble:
+Return ONLY valid JSON — no markdown, no explanation:
 {
   "results": [
     {
       "post_id": "<post_id from input>",
-      "classification": "<one classification from the list above>",
+      "classification": "<classification>",
       "tags": ["<tag>"],
       "notable": false,
       "summary": ""
