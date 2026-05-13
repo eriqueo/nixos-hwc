@@ -386,5 +386,19 @@
       owner = "root";
       group = "secrets";
     };
+
+    # Arka MCP Gateway
+    arka-postgres-env = {
+      file = ../parts/services/arka/postgres-env.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+    arka-backend-env = {
+      file = ../parts/services/arka/backend-env.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
   };
 }
