@@ -460,6 +460,17 @@ in
   # YOUTUBE & TRANSCRIPT SERVICES - Primary server only by default
   # -------------------------------------------------------------------------
 
+  # -------------------------------------------------------------------------
+  # JOBBER MCP SERVER - Jobber GraphQL API as MCP tools via SSE
+  # -------------------------------------------------------------------------
+  hwc.server.ai.jobberMcp = {
+    enable = lib.mkDefault isPrimary;
+    # port = 8002;               # internal (default)
+    # reverseProxyPort = 17443;  # external Tailscale HTTPS port (default)
+    # projectDir = "/home/eric/projects/jobber-mcp";  # default
+    # envFile = "/home/eric/projects/jobber-mcp/.env"; # default
+  };
+
   # YouTube Transcript API
   hwc.server.transcriptApi = {
     enable = lib.mkDefault isPrimary;
