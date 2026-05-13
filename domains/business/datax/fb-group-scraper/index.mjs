@@ -275,19 +275,21 @@ function pollUntil(predicate, timeoutMs = 10000, intervalMs = 200) {
 async function openPostDialog(page, postId, logFn) {
   // CometSinglePostDialogContentQuery fires as a prefetch ~250ms before navigation.
   // Click, wait briefly, go back if navigated. No page.route() — too slow.
-  const clicked = await clickPostLink(page, postId);
+  let clicked = await clickPostLink(page, postId);
 
   if (!clicked) {
     logFn(`  post ${postId} not in DOM, scanning feed...`);
     await page.evaluate(() => window.scrollTo(0, 0));
     await sleep(800, 1500);
     for (let i = 0; i < 30; i++) {
-      if (await clickPostLink(page, postId)) break;
+      clicked = await clickPostLink(page, postId);
+      if (clicked) break;
       await page.mouse.wheel(0, 400);
       await sleep(400, 800);
     }
-    if (!(await clickPostLink(page, postId))) return false;
   }
+
+  if (!clicked) return false;
 
   await sleep(600, 1000);
   if (page.url().includes('/posts/')) {
