@@ -60,7 +60,7 @@ in
     "${mod} CTRL,8,exec,hyprsome move 8"
 
 # TOGGLE workspace link mode (also clickable via Waybar icon)
-    "${mod} CTRL ALT,L,exec,waybar-workspace-link-toggle"
+    "${mod} CTRL ALT,minus,exec,waybar-workspace-link-toggle"
 
 # SWITCH focus to WORKSPACE (hwc-workspace-switch handles linked-mode sync)
     "${mod} CTRL ALT,1,exec,hwc-workspace-switch 1"
