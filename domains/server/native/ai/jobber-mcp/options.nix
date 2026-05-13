@@ -17,7 +17,7 @@ in
 
     reverseProxyPort = lib.mkOption {
       type = lib.types.port;
-      default = 17443;
+      default = 20443;
       description = "External Tailscale HTTPS port for Caddy reverse proxy";
     };
 

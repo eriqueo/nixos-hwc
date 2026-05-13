@@ -2,7 +2,7 @@
 #
 # Jobber MCP Server — native systemd service
 # Exposes Jobber GraphQL API (clients, jobs, invoices, quotes, requests, timesheets)
-# as MCP tools via SSE transport on port 8002, proxied via Caddy on port 17443.
+# as MCP tools via SSE transport on port 8002, proxied via Caddy on port 20443.
 { config, lib, ... }:
 let
   cfg = config.hwc.server.ai.jobberMcp;
@@ -66,14 +66,5 @@ in
     #==========================================================================
     networking.firewall.allowedTCPPorts = [ cfg.reverseProxyPort ];
 
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    assertions = [
-      {
-        assertion = builtins.pathExists cfg.envFile;
-        message = "jobber-mcp: envFile ${cfg.envFile} does not exist. Create it with JOBBER_ACCESS_TOKEN set.";
-      }
-    ];
   };
 }

@@ -267,7 +267,10 @@
       "Bash(/nix/store/2zqa6kavc8znbgrac1l3pix9lwr3w5nj-playwright-chromium/chrome-linux/chrome --version)",
       "Bash(/nix/store/r5wrvkxmk8nidmb9z8bqrz6mlw4vf5b8-playwright-chromium/chrome-linux/chrome --version)",
       "Bash(PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/nix/store/2zqa6kavc8znbgrac1l3pix9lwr3w5nj-playwright-chromium/chrome-linux/chrome node bin/scrape.mjs https://www.facebook.com/groups/jobtreadpros -n 5 -o ./data/exports/test-run.json)",
-      "Bash(.venv/bin/pip install:*)"
+      "Bash(.venv/bin/pip install:*)",
+      "mcp__jobber__jobber_requests",
+      "mcp__jobber__jobber_timesheets",
+      "mcp__claude_ai_datax__jobtread_accounts"
     ],
     "deny": [],
     "ask": [],
