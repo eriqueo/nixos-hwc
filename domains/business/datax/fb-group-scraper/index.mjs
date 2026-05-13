@@ -192,18 +192,15 @@ async function expandAllComments(page, posts, opts) {
     if (!post.url) { log(opts, `  [skip] no URL — ${post.author}`); continue; }
 
     const batch = [];
-
     const handler = async (res) => {
       if (!res.url().includes('/api/graphql')) return;
       try {
         const op = getOpName(res.request().postData() || '');
         const text = await res.text();
-
         if (op === 'CometSinglePostDialogContentQuery') {
           const responsePostId = findPostIdInResponse(text);
           if (responsePostId === postId) {
-            const comments = extractComments(text);
-            batch.push(...comments);
+            batch.push(...extractComments(text));
             lastExpandedPostId = postId;
           }
         } else if (op.includes('CommentsListPaginationQuery') && lastExpandedPostId === postId) {
@@ -214,10 +211,26 @@ async function expandAllComments(page, posts, opts) {
     page.on('response', handler);
 
     try {
-      await page.goto(post.url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+      const clicked = await openPostDialog(page, postId, (msg) => log(opts, msg));
+      if (!clicked) {
+        log(opts, `  [skip] could not find post in DOM — ${post.author}`);
+        continue;
+      }
+
+      // Wait for handler to signal dialog loaded (CometSinglePostDialogContentQuery fired)
+      // FB headless doesn't add role="dialog" — use handler signal instead
+      const dialogReady = await pollUntil(() => lastExpandedPostId === postId, 10000, 200);
+      if (!dialogReady) {
+        log(opts, `  [skip] dialog query did not fire — ${post.author}`);
+        await tryCloseDialog(page);
+        continue;
+      }
+
       await sleep(2500, 4000);
-      await scrollComments(page);
+      await scrollDialogComments(page);
       await expandReplyThreads(page);
+      await tryCloseDialog(page);
+      await sleep(1000, 2000);
 
       if (batch.length) {
         const added = mergeComments(post, batch);
@@ -225,9 +238,12 @@ async function expandAllComments(page, posts, opts) {
         totalComments += added;
         expanded++;
         log(opts, `  [${expanded}] ${post.author}: ${post.comments.length} comments (+${added} new)`);
+      } else {
+        log(opts, `  [--] ${post.author}: no comments captured`);
       }
     } catch (e) {
       log(opts, `  [error] ${post.author}: ${e.message}`);
+      await tryCloseDialog(page).catch(() => {});
     } finally {
       page.removeListener('response', handler);
     }
@@ -238,15 +254,103 @@ async function expandAllComments(page, posts, opts) {
   log(opts, `Expanded ${expanded}/${posts.size} posts, ${totalComments} comments captured.`);
 }
 
-async function scrollComments(page) {
+function pollUntil(predicate, timeoutMs = 10000, intervalMs = 200) {
+  return new Promise(resolve => {
+    if (predicate()) { resolve(true); return; }
+    const start = Date.now();
+    const id = setInterval(() => {
+      if (predicate()) { clearInterval(id); resolve(true); }
+      else if (Date.now() - start >= timeoutMs) { clearInterval(id); resolve(false); }
+    }, intervalMs);
+  });
+}
+
+async function openPostDialog(page, postId, logFn) {
+  // Block document navigation to post pages — FB fires CometSinglePostDialogContentQuery
+  // as a prefetch on click but also navigates. Abort the navigation, keep the GraphQL.
+  const routeHandler = async (route) => {
+    try {
+      const req = route.request();
+      if (req.resourceType() === 'document' && req.url().includes('/posts/')) {
+        await route.abort('aborted');
+      } else {
+        await route.continue();
+      }
+    } catch { /* page may have been closed */ }
+  };
+  await page.route('**', routeHandler);
+
+  try {
+    const clicked = await clickPostLink(page, postId);
+    if (clicked) return true;
+
+    logFn(`  post ${postId} not in DOM, scanning feed...`);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await sleep(800, 1500);
+    for (let i = 0; i < 30; i++) {
+      const found = await clickPostLink(page, postId);
+      if (found) return true;
+      await page.mouse.wheel(0, 400);
+      await sleep(400, 800);
+    }
+    return false;
+  } finally {
+    await page.unroute('**', routeHandler);
+  }
+}
+
+async function clickPostLink(page, postId) {
+  return page.evaluate(async (postId) => {
+    const all = [...document.querySelectorAll(`a[href*="/posts/${postId}"]`)];
+    if (!all.length) return false;
+    const clean = all.filter(a => !a.href.includes('?'));
+    const target = clean[0] || all[0];
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    await new Promise(r => setTimeout(r, 300));
+    target.click();
+    return true;
+  }, postId);
+}
+
+async function scrollDialogComments(page) {
+  // FB headless: no role="dialog". Find scrollable overlay by overflow style; fall back to page wheel.
   let noNew = 0;
   for (let i = 0; i < 25; i++) {
-    const prevHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-    await page.mouse.wheel(0, 600 + Math.random() * 400);
+    const scrolled = await page.evaluate(() => {
+      const px = 600 + Math.random() * 400;
+      const candidates = [...document.querySelectorAll('*')].filter(el => {
+        if (!el.offsetParent && el !== document.body) return false;
+        const s = window.getComputedStyle(el);
+        return (s.overflowY === 'auto' || s.overflowY === 'scroll') &&
+               el.scrollHeight > el.clientHeight + 50 &&
+               el.clientHeight > 200;
+      });
+      const target = candidates.filter(el => el !== document.body).sort((a, b) => b.clientHeight - a.clientHeight)[0];
+      if (target) {
+        target.scrollBy({ top: px, behavior: 'smooth' });
+        return target.scrollTop + target.clientHeight < target.scrollHeight - 10;
+      }
+      return null;
+    });
+    if (scrolled === null) await page.mouse.wheel(0, 600 + Math.random() * 400);
     await sleep(1000, 2000);
-    const newHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-    if (newHeight <= prevHeight) { noNew++; if (noNew >= 4) break; }
-    else noNew = 0;
+    if (scrolled === false) { noNew++; if (noNew >= 4) break; } else noNew = 0;
+  }
+}
+
+async function tryCloseDialog(page) {
+  await page.keyboard.press('Escape');
+  await sleep(500, 800);
+  const stillOpen = await page.evaluate(() => {
+    return !!(document.querySelector('[role="dialog"]') || document.querySelector('[aria-modal="true"]'));
+  });
+  if (stillOpen) {
+    await page.evaluate(() => {
+      const close = document.querySelector('[aria-label="Close"], [aria-label="close"]') ||
+                    document.querySelector('[aria-modal="true"] [role="button"][tabindex="0"]');
+      close?.click();
+    });
+    await sleep(500, 800);
   }
 }
 
@@ -255,6 +359,7 @@ async function expandReplyThreads(page) {
     /^\d+\s+Repl(?:y|ies)$/i,
     /^View\s+\d+\s+repl(?:y|ies)$/i,
     /^View\s+more\s+repl(?:y|ies)$/i,
+    /replied\s+·\s+\d+\s+Repl(?:y|ies)$/i,
   ];
 
   for (let round = 0; round < 5; round++) {
@@ -263,7 +368,7 @@ async function expandReplyThreads(page) {
       for (const el of document.querySelectorAll('span, div')) {
         const text = el.textContent.trim();
         if (!text) continue;
-        const isReply = patterns.some(p => new RegExp(p).test(text));
+        const isReply = patterns.some(p => new RegExp(p, 'i').test(text));
         if (!isReply) continue;
         if (!el.offsetParent) continue;
         if (el.dataset._fbscraperClicked) continue;
@@ -275,13 +380,11 @@ async function expandReplyThreads(page) {
     }, replyPatterns.map(r => r.source));
 
     const count = await buttons.evaluate(els => els.length);
-    if (count === 0) break;
+    if (count === 0) { await buttons.dispose(); break; }
 
     for (let i = 0; i < count; i++) {
       try {
-        await buttons.evaluate((els, idx) => {
-          els[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, i);
+        await buttons.evaluate((els, idx) => els[idx].scrollIntoView({ behavior: 'smooth', block: 'center' }), i);
         await sleep(400, 800);
         await buttons.evaluate((els, idx) => els[idx].click(), i);
         await sleep(1500, 3000);
