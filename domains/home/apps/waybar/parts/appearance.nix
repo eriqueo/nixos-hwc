@@ -143,6 +143,16 @@ window#waybar {
 /* ws-enter: powerline entry arrow — bar bg color on teal workspace section */
 #custom-ws-enter { color: rgba(50,48,47,0.88); background-color: #576f69; }  /* ▶ bar→teal */
 
+/* Workspace link toggle — grouped visually with workspace section */
+#custom-workspace-link {
+  padding: 8px 10px;
+  background-color: #576f69;
+  color: #32302f;
+  font-size: 14px;
+}
+#custom-workspace-link.linked { color: #a9b665; }       /* green — active link */
+#custom-workspace-link.split  { opacity: 0.55; }
+
 #custom-sep-pre { color: #32302f; background-color: #576f69; }  /* bar → toggle */
 #custom-sep-1   { color: #576f69; background-color: #5d7258; }  /* toggle → conn */
 #custom-sep-2   { color: #5d7258; background-color: #856b43; }  /* conn → health */
@@ -154,7 +164,7 @@ window#waybar {
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
-#hyprland-language:hover {
+#custom-workspace-link:hover, #hyprland-language:hover {
   background-color: #504945;   /* bg3 */
 }
 

@@ -59,15 +59,15 @@ in
     "${mod} CTRL,7,exec,hyprsome move 7"
     "${mod} CTRL,8,exec,hyprsome move 8"
 
-# SWITCH focus to WORKSPACE
-    "${mod} CTRL ALT,1,exec,hyprsome workspace 1"
-    "${mod} CTRL ALT,2,exec,hyprsome workspace 2"
-    "${mod} CTRL ALT,3,exec,hyprsome workspace 3"
-    "${mod} CTRL ALT,4,exec,hyprsome workspace 4"
-    "${mod} CTRL ALT,5,exec,hyprsome workspace 5"
-    "${mod} CTRL ALT,6,exec,hyprsome workspace 6"
-    "${mod} CTRL ALT,7,exec,hyprsome workspace 7"
-    "${mod} CTRL ALT,8,exec,hyprsome workspace 8"
+# SWITCH focus to WORKSPACE (hwc-workspace-switch handles linked-mode sync)
+    "${mod} CTRL ALT,1,exec,hwc-workspace-switch 1"
+    "${mod} CTRL ALT,2,exec,hwc-workspace-switch 2"
+    "${mod} CTRL ALT,3,exec,hwc-workspace-switch 3"
+    "${mod} CTRL ALT,4,exec,hwc-workspace-switch 4"
+    "${mod} CTRL ALT,5,exec,hwc-workspace-switch 5"
+    "${mod} CTRL ALT,6,exec,hwc-workspace-switch 6"
+    "${mod} CTRL ALT,7,exec,hwc-workspace-switch 7"
+    "${mod} CTRL ALT,8,exec,hwc-workspace-switch 8"
 
 
     "${mod} CTRL ALT,right,workspace,e+1"

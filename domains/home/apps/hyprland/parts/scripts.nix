@@ -161,6 +161,41 @@ with pkgs;
   '')
 
   #============================================================================
+  # WORKSPACE SWITCH - Monitor-aware switch with optional linked-mode sync
+  #============================================================================
+  (writeShellScriptBin "hwc-workspace-switch" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    SLOT="''${1:?slot required (1-8)}"
+    STATE_FILE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-workspace-link"
+
+    # Capture focused monitor before any dispatch (hyprsome may shift state)
+    FOCUSED=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[] | select(.focused) | .name')
+
+    # Always switch current monitor normally
+    ${hyprsome}/bin/hyprsome workspace "$SLOT"
+
+    # Linked mode: sync the other monitor to the same slot
+    if [[ -f "$STATE_FILE" ]]; then
+      EXTERNAL=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[] | select(.name | test("^(eDP|LVDS)") | not) | .name' | head -1)
+      if [[ -z "$EXTERNAL" ]]; then
+        exit 0  # Single monitor — nothing to sync
+      fi
+
+      if [[ "$FOCUSED" =~ ^(eDP|LVDS) ]]; then
+        TARGET_WS=$((SLOT + 10))   # Sync external to its corresponding workspace
+      else
+        TARGET_WS=$SLOT            # Sync internal to the base workspace
+      fi
+
+      # Dispatch to other monitor (briefly steals focus), then restore
+      ${hyprland}/bin/hyprctl dispatch workspace "$TARGET_WS"
+      ${hyprland}/bin/hyprctl dispatch focusmonitor "$FOCUSED"
+    fi
+  '')
+
+  #============================================================================
   # KEYBINDS VIEWER - Display all Hyprland keybindings in searchable wofi
   #============================================================================
   (writeShellScriptBin "hyprland-keybinds-viewer" ''

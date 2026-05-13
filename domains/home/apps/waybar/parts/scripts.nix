@@ -452,6 +452,27 @@ in
     fi
   '';
 
+  "workspace-link-status" = sh "waybar-workspace-link-status" ''
+    STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-workspace-link"
+    if [[ -f "$STATE" ]]; then
+      printf '{"text":"Link","class":"linked","tooltip":"Workspaces: Linked\nClick to split"}\n'
+    else
+      printf '{"text":"Split","class":"split","tooltip":"Workspaces: Independent\nClick to link"}\n'
+    fi
+  '';
+
+  "workspace-link-toggle" = sh "waybar-workspace-link-toggle" ''
+    STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-workspace-link"
+    if [[ -f "$STATE" ]]; then
+      rm "$STATE"
+      notify-send "Workspaces" "Mode: Independent" -i desktop -t 2000
+    else
+      touch "$STATE"
+      notify-send "Workspaces" "Mode: Linked" -i desktop -t 2000
+    fi
+    pkill -RTMIN+8 waybar || true
+  '';
+
   "lid-status" = sh "waybar-lid-status" ''
     STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-lid-ignore"
     if [[ -f "$STATE" ]]; then
