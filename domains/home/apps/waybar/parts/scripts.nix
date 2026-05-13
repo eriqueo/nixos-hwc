@@ -455,9 +455,9 @@ in
   "workspace-link-status" = sh "waybar-workspace-link-status" ''
     STATE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-workspace-link"
     if [[ -f "$STATE" ]]; then
-      printf '{"text":"Link","class":"linked","tooltip":"Workspaces: Linked\\nClick to split"}\n'
+      printf '{"text":"--Link--","class":"linked","tooltip":"Workspaces: Linked\\nSUPER+CTRL+ALT+- to split"}\n'
     else
-      printf '{"text":"Split","class":"split","tooltip":"Workspaces: Independent\\nClick to link"}\n'
+      printf '{"text":"--Split--","class":"split","tooltip":"Workspaces: Independent\\nSUPER+CTRL+ALT+- to link"}\n'
     fi
   '';
 
