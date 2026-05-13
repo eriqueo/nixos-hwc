@@ -227,9 +227,16 @@ async function expandAllComments(page, posts, opts) {
       }
 
       await sleep(2500, 4000);
-      await scrollDialogComments(page);
-      await expandReplyThreads(page);
-      await tryCloseDialog(page);
+      // Scroll/expand only when dialog overlay is actually present (headed mode).
+      // In headless FB doesn't render the overlay, so these would operate on the whole feed.
+      const hasDialog = await page.evaluate(() =>
+        !!(document.querySelector('[role="dialog"]') || document.querySelector('[aria-modal="true"]'))
+      );
+      if (hasDialog) {
+        await scrollDialogComments(page);
+        await expandReplyThreads(page);
+        await tryCloseDialog(page);
+      }
       await sleep(1000, 2000);
 
       if (batch.length) {
@@ -266,37 +273,28 @@ function pollUntil(predicate, timeoutMs = 10000, intervalMs = 200) {
 }
 
 async function openPostDialog(page, postId, logFn) {
-  // Block document navigation to post pages — FB fires CometSinglePostDialogContentQuery
-  // as a prefetch on click but also navigates. Abort the navigation, keep the GraphQL.
-  const routeHandler = async (route) => {
-    try {
-      const req = route.request();
-      if (req.resourceType() === 'document' && req.url().includes('/posts/')) {
-        await route.abort('aborted');
-      } else {
-        await route.continue();
-      }
-    } catch { /* page may have been closed */ }
-  };
-  await page.route('**', routeHandler);
+  // CometSinglePostDialogContentQuery fires as a prefetch ~250ms before navigation.
+  // Click, wait briefly, go back if navigated. No page.route() — too slow.
+  const clicked = await clickPostLink(page, postId);
 
-  try {
-    const clicked = await clickPostLink(page, postId);
-    if (clicked) return true;
-
+  if (!clicked) {
     logFn(`  post ${postId} not in DOM, scanning feed...`);
     await page.evaluate(() => window.scrollTo(0, 0));
     await sleep(800, 1500);
     for (let i = 0; i < 30; i++) {
-      const found = await clickPostLink(page, postId);
-      if (found) return true;
+      if (await clickPostLink(page, postId)) break;
       await page.mouse.wheel(0, 400);
       await sleep(400, 800);
     }
-    return false;
-  } finally {
-    await page.unroute('**', routeHandler);
+    if (!(await clickPostLink(page, postId))) return false;
   }
+
+  await sleep(600, 1000);
+  if (page.url().includes('/posts/')) {
+    await page.goBack({ waitUntil: 'domcontentloaded' });
+    await sleep(1500, 2500);
+  }
+  return true;
 }
 
 async function clickPostLink(page, postId) {

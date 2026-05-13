@@ -180,6 +180,20 @@ in
             }
           }
 
+          # Jobber MCP (FastMCP SSE) — proxy to jobber-mcp on :8002
+          @jobber_mcp {
+            path /sse /messages /messages/*
+          }
+          handle @jobber_mcp {
+            reverse_proxy 127.0.0.1:8002 {
+              flush_interval -1
+              transport http {
+                read_timeout 0
+                write_timeout 0
+              }
+            }
+          }
+
           # All subpath routes (sonarr, radarr, navidrome, etc.)
           ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "subpath") routes))}
         }

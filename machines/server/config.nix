@@ -23,6 +23,7 @@
     ../../domains/server/containers/_shared/caddy.nix      # Caddy route abstraction
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/containers/arka/index.nix         # Arka MCP Gateway
+    ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
   ];
 
   assertions = [
@@ -100,6 +101,9 @@
 
   # Server identity (Charter v10.3 multi-server support)
   hwc.server.enable = true;
+
+  # Jobber MCP Server — Jobber GraphQL API as MCP tools via SSE on port 20443
+  hwc.server.ai.jobberMcp.enable = true;
 
   # ZFS support for backup drives
   boot.supportedFilesystems = [ "zfs" ];
