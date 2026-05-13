@@ -178,18 +178,22 @@ with pkgs;
 
     # Linked mode: sync the other monitor to the same slot
     if [[ -f "$STATE_FILE" ]]; then
-      EXTERNAL=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[] | select(.name | test("^(eDP|LVDS)") | not) | .name' | head -1)
+      MONITORS=$(${hyprland}/bin/hyprctl monitors -j)
+      EXTERNAL=$(echo "$MONITORS" | ${jq}/bin/jq -r '.[] | select(.name | test("^(eDP|LVDS)") | not) | .name' | head -1)
       if [[ -z "$EXTERNAL" ]]; then
         exit 0  # Single monitor — nothing to sync
       fi
 
       if [[ "$FOCUSED" =~ ^(eDP|LVDS) ]]; then
-        TARGET_WS=$((SLOT + 10))   # Sync external to its corresponding workspace
+        OTHER="$EXTERNAL"
+        TARGET_WS=$((SLOT + 10))
       else
-        TARGET_WS=$SLOT            # Sync internal to the base workspace
+        OTHER=$(echo "$MONITORS" | ${jq}/bin/jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name' | head -1)
+        TARGET_WS=$SLOT
       fi
 
-      # Dispatch to other monitor (briefly steals focus), then restore
+      # Focus the other monitor first so the workspace dispatch lands there (not here)
+      ${hyprland}/bin/hyprctl dispatch focusmonitor "$OTHER"
       ${hyprland}/bin/hyprctl dispatch workspace "$TARGET_WS"
       ${hyprland}/bin/hyprctl dispatch focusmonitor "$FOCUSED"
     fi
