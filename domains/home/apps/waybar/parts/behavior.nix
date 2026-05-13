@@ -4,7 +4,7 @@ let
   ollamaEnabled = lib.attrByPath [ "hwc" "ai" "ollama" "enable" ] false osConfig;
 
   commonModules = {
-    modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" ];
+    modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
     modules-center = [ "custom/khal" "clock" "custom/weather" ];
     modules-right = [
       "custom/sep-pre"
@@ -107,6 +107,7 @@ let
     "custom/notification" = { format = "󰂚"; tooltip = "Notifications"; on-click = "swaync-client -t -sw"; };
     "custom/power" = { format = "Pwr"; tooltip = "Shutdown"; on-click = "wlogout"; };
     "custom/lid-sleep" = { format = "{}"; exec = "waybar-lid-status"; return-type = "json"; interval = 5; on-click = "waybar-lid-toggle"; };
+    "custom/workspace-link" = { format = "{}"; exec = "waybar-workspace-link-status"; return-type = "json"; interval = "once"; signal = 8; on-click = "waybar-workspace-link-toggle"; };
 
     "custom/khal" = {
       format = "{}";
