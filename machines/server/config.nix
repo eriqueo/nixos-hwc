@@ -19,6 +19,10 @@
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
+    ../../domains/server/containers/_shared/network.nix    # Podman media-network
+    ../../domains/server/containers/_shared/caddy.nix      # Caddy route abstraction
+    ../../domains/server/containers/_shared/directories.nix
+    ../../domains/server/containers/arka/index.nix         # Arka MCP Gateway
   ];
 
   assertions = [
@@ -480,6 +484,7 @@
   hwc.ai.mcp.enable = lib.mkForce false;
   hwc.system.mcp.enable = true;
   hwc.system.mcp.jt.enable = true;
+  hwc.system.mcp.host = "0.0.0.0"; # Arka containers need access via 10.89.1.1
   hwc.business.website.enable = true;
 
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
@@ -866,6 +871,9 @@
 
   # Morning briefing — daily Claude Code agent (6am MT)
   hwc.business.morningBriefing.enable = true;
+
+  # Arka MCP Gateway — unified MCP proxy, access at :17443
+  hwc.server.containers.arka.enable = true;
 
   #============================================================================
   # WEB APPS DOMAIN

@@ -40,6 +40,7 @@
     ./sonarr/index.nix
     ./soularr/index.nix
     ./tdarr/index.nix
+    ./arka/index.nix
   ];
 
   #==========================================================================

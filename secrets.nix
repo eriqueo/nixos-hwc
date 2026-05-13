@@ -139,6 +139,10 @@ in
   "domains/secrets/parts/services/youtube-db-url.age".publicKeys                 = everyone;
   "domains/secrets/parts/services/youtube-videos-db-url.age".publicKeys          = everyone;
 
+  # arka MCP gateway secrets (server + eric only)
+  "domains/secrets/parts/services/arka/postgres-env.age".publicKeys             = [ server eric ];
+  "domains/secrets/parts/services/arka/backend-env.age".publicKeys              = [ server eric ];
+
   # ═══════════════════════════════════════════════════════════════════════════
   # System — authentication, backups, SSH
   # ═══════════════════════════════════════════════════════════════════════════
