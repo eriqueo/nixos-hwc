@@ -313,26 +313,26 @@ async function clickPostLink(page, postId) {
 }
 
 async function scrollDialogComments(page) {
-  // FB headless: no role="dialog". Find scrollable overlay by overflow style; fall back to page wheel.
   let noNew = 0;
   for (let i = 0; i < 25; i++) {
     const scrolled = await page.evaluate(() => {
       const px = 600 + Math.random() * 400;
-      const candidates = [...document.querySelectorAll('*')].filter(el => {
-        if (!el.offsetParent && el !== document.body) return false;
-        const s = window.getComputedStyle(el);
-        return (s.overflowY === 'auto' || s.overflowY === 'scroll') &&
-               el.scrollHeight > el.clientHeight + 50 &&
-               el.clientHeight > 200;
-      });
-      const target = candidates.filter(el => el !== document.body).sort((a, b) => b.clientHeight - a.clientHeight)[0];
-      if (target) {
-        target.scrollBy({ top: px, behavior: 'smooth' });
-        return target.scrollTop + target.clientHeight < target.scrollHeight - 10;
+      const dialog = document.querySelector('[role="dialog"]') ||
+                     document.querySelector('[aria-modal="true"]');
+      if (!dialog) return null;
+      let scroller = null;
+      for (const child of dialog.querySelectorAll('*')) {
+        const s = window.getComputedStyle(child);
+        if ((s.overflowY === 'auto' || s.overflowY === 'scroll') &&
+            child.scrollHeight > child.clientHeight + 50) {
+          scroller = child; break;
+        }
       }
-      return null;
+      if (!scroller) scroller = dialog;
+      scroller.scrollBy({ top: px, behavior: 'smooth' });
+      return scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 10;
     });
-    if (scrolled === null) await page.mouse.wheel(0, 600 + Math.random() * 400);
+    if (scrolled === null) break;
     await sleep(1000, 2000);
     if (scrolled === false) { noNew++; if (noNew >= 4) break; } else noNew = 0;
   }
@@ -365,7 +365,9 @@ async function expandReplyThreads(page) {
   for (let round = 0; round < 5; round++) {
     const buttons = await page.evaluateHandle((patterns) => {
       const found = [];
-      for (const el of document.querySelectorAll('span, div')) {
+      const dialog = document.querySelector('[role="dialog"]') ||
+                     document.querySelector('[aria-modal="true"]') || document;
+      for (const el of dialog.querySelectorAll('span, div')) {
         const text = el.textContent.trim();
         if (!text) continue;
         const isReply = patterns.some(p => new RegExp(p, 'i').test(text));
