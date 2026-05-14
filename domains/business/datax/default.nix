@@ -1,6 +1,15 @@
 # domains/business/datax/default.nix
 #
-# DataX — Facebook group monitoring database and merge pipeline
+# DataX — Facebook group monitoring pipeline
+#
+# Pipeline: scrape (Podman container) → merge (Node.js) → classify (Node.js + LLM)
+#
+# External dependency: market_research project at cfg.projectDir
+#   Source: https://github.com/eriqueo/market_research
+#   One-time setup (on server):
+#     cd $projectDir && npm install
+#     cd $projectDir && podman build -t market_research .
+#     node bin/scrape.mjs --login --headed  (on a machine with display, copy profile to dataDir)
 #
 # NAMESPACE: hwc.business.datax.*
 #
@@ -9,33 +18,18 @@
 #
 # USED BY:
 #   - domains/business/index.nix
-#   - Manual: fb-merge <export.json>
-#   - Manual: fb-scrape <group-url> -n 50
-#   - Automated: systemd timer fb-scrape.timer
 
 { config, lib, pkgs, ... }:
 
 let
   cfg = config.hwc.business.datax;
-
-  pythonEnv = pkgs.python3.withPackages (ps: with ps; [
-    psycopg2
-  ]);
-
-  mergeScript = pkgs.writeShellApplication {
-    name = "fb-merge";
-    runtimeInputs = [ pythonEnv ];
-    text = ''
-      exec python ${./fb-monitor-bak/merge.py} "$@"
-    '';
-  };
+  groupArgs = lib.concatStringsSep " " cfg.fbScraper.groups;
 in
 {
-  imports = [
-    ./database.nix
-  ];
+  imports = [ ./database.nix ];
 
-  # OPTIONS
+  # ── OPTIONS ────────────────────────────────────────────────────────────────
+
   options.hwc.business.datax = {
     enable = lib.mkEnableOption "DataX Facebook group monitoring pipeline";
 
@@ -48,7 +42,18 @@ in
     databaseUser = lib.mkOption {
       type = lib.types.str;
       default = "datax";
-      description = "PostgreSQL user for datax database";
+      description = "PostgreSQL user";
+    };
+
+    projectDir = lib.mkOption {
+      type = lib.types.str;
+      default = "/home/eric/300_tech/320_projects/market_research";
+      description = ''
+        Path to the market_research project directory.
+        Must have npm install already run.
+        Container image must be pre-built:
+          cd $projectDir && podman build -t market_research .
+      '';
     };
 
     fbScraper = {
@@ -63,149 +68,141 @@ in
       postsPerRun = lib.mkOption {
         type = lib.types.int;
         default = 50;
-        description = "Number of posts to collect per scrape run";
+        description = "Posts to collect per scrape run";
       };
 
       depth = lib.mkOption {
         type = lib.types.enum [ "posts" "comments" ];
-        default = "posts";
-        description = "Scrape depth: 'posts' (fast) or 'comments' (full threads)";
+        default = "comments";
+        description = "'posts' = feed only | 'comments' = expand threads";
       };
 
       timerInterval = lib.mkOption {
         type = lib.types.str;
         default = "*-*-* 06,12,18,00:00:00";
-        description = "systemd calendar expression for scrape schedule";
+        description = "systemd OnCalendar expression for scrape schedule";
       };
 
       dataDir = lib.mkOption {
         type = lib.types.str;
         default = "/var/lib/datax/fb-scraper";
-        description = "Persistent data directory (session.json, exports)";
+        description = "Persistent state: browser profile + JSON exports";
       };
 
       containerImage = lib.mkOption {
         type = lib.types.str;
-        default = "localhost/fb-group-scraper:latest";
-        description = "Podman image name for the scraper";
+        default = "localhost/market_research:latest";
+        description = "Podman image. Build: cd \$projectDir && podman build -t market_research .";
       };
     };
 
     fbClassifier = {
-      enable = lib.mkEnableOption "FB post classifier (Claude CLI + Discord notifications)";
+      enable = lib.mkEnableOption "FB post classifier (LLM + Discord notifications)";
 
       claudeBin = lib.mkOption {
         type = lib.types.str;
         default = "/etc/profiles/per-user/eric/bin/claude";
-        description = "Path to Claude Code CLI binary";
+        description = "Path to Claude Code CLI binary (used by the cli adapter)";
       };
 
       limit = lib.mkOption {
         type = lib.types.int;
         default = 100;
-        description = "Max unclassified posts to process per run";
+        description = "Max unclassified posts to process per classify run";
       };
 
       timerInterval = lib.mkOption {
         type = lib.types.str;
         default = "*-*-* 07,13,19,01:00:00";
-        description = "systemd calendar expression for classify schedule (1h after each scrape)";
+        description = "systemd OnCalendar expression (default: 1h after each scrape)";
       };
 
       discordWebhookSecret = lib.mkOption {
         type = lib.types.str;
         default = "datax-discord-webhook";
-        description = "Name of the agenix secret containing the Discord webhook URL";
+        description = "agenix secret name containing the Discord webhook URL";
       };
     };
   };
 
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
+  # ── IMPLEMENTATION ─────────────────────────────────────────────────────────
+
   config = lib.mkIf cfg.enable (
     let
-      fb-classify-script = pkgs.writeShellApplication {
-        name = "fb-classify";
-        runtimeInputs = [ pythonEnv ];
-        text = ''
-          exec python ${./fb-classifier/classify.py} "$@"
-        '';
-      };
+      databaseUrl = "postgresql://${cfg.databaseUser}@localhost/${cfg.databaseName}";
 
-      fb-scrape-script = pkgs.writeShellApplication {
-        name = "fb-scrape";
-        runtimeInputs = [ pkgs.podman ];
-        text = ''
-          exec podman run --rm \
-            --network=host \
-            -v "${cfg.fbScraper.dataDir}:/data:Z" \
-            -e "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright" \
-            ${cfg.fbScraper.containerImage} \
-            --profile /data/browser-profile \
-            "$@"
-        '';
-      };
-
-      groupArgs = lib.concatStringsSep " " cfg.fbScraper.groups;
-
+      # Scrape one or more groups, then merge each export into Postgres.
+      # Runs as eric so rootless Podman + peer DB auth work.
       fb-scrape-run = pkgs.writeShellApplication {
         name = "fb-scrape-run";
-        runtimeInputs = [ pkgs.podman pkgs.findutils mergeScript ];
-        excludeShellChecks = [ "SC2043" ]; # loop intentionally runs once per group URL
+        runtimeInputs = [ pkgs.podman pkgs.nodejs pkgs.findutils ];
+        excludeShellChecks = [ "SC2086" ];  # intentional word split for SELECTORS_MOUNT
         text = ''
           set -euo pipefail
           TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
           EXPORT_DIR="${cfg.fbScraper.dataDir}/exports"
 
           for GROUP_URL in ${groupArgs}; do
-            SLUG=$(echo "$GROUP_URL" | grep -oP 'groups/\K[^/]+')
-            OUTFILE="$EXPORT_DIR/''${SLUG}_''${TIMESTAMP}.json"
+            # Extract slug: "https://www.facebook.com/groups/jobtreadpros" → "jobtreadpros"
+            SLUG=$(echo "''${GROUP_URL}" | sed 's|.*/groups/||; s|/.*||')
+            OUTFILE="''${EXPORT_DIR}/''${SLUG}_''${TIMESTAMP}.json"
 
-            echo "[fb-scrape-run] Scraping $GROUP_URL → $OUTFILE"
+            echo "[fb-scrape-run] Scraping ''${GROUP_URL} → ''${OUTFILE}"
+
+            # Mount calibrated selectors if present (falls back to built-in defaults if not)
+            SELECTORS_MOUNT=""
+            if [ -f "${cfg.projectDir}/config/selectors.json" ]; then
+              SELECTORS_MOUNT="-v ${cfg.projectDir}/config/selectors.json:/app/config/selectors.json:ro"
+            fi
 
             podman run --rm \
               --network=host \
-              -v "${cfg.fbScraper.dataDir}:/data:Z" \
-              -e "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright" \
-              ${cfg.fbScraper.containerImage} \
-              --profile /data/browser-profile \
+              -v "${cfg.fbScraper.dataDir}:/app/data:Z" \
+              $SELECTORS_MOUNT \
+              "${cfg.fbScraper.containerImage}" \
+              "''${GROUP_URL}" \
               -n ${toString cfg.fbScraper.postsPerRun} \
               -d ${cfg.fbScraper.depth} \
-              -o "/data/exports/''${SLUG}_''${TIMESTAMP}.json" \
+              -o "/app/data/exports/''${SLUG}_''${TIMESTAMP}.json" \
               -q \
-              "$GROUP_URL" || {
-                echo "[fb-scrape-run] ERROR: scrape failed for $GROUP_URL" >&2
-                continue
-              }
+              || { echo "[fb-scrape-run] ERROR: scrape failed for ''${GROUP_URL}" >&2; continue; }
 
-            echo "[fb-scrape-run] Merging $OUTFILE → Postgres"
-            fb-merge "$OUTFILE" || echo "[fb-scrape-run] ERROR: merge failed for $OUTFILE" >&2
+            echo "[fb-scrape-run] Merging ''${OUTFILE}"
+            DATABASE_URL="${databaseUrl}" \
+              node ${cfg.projectDir}/bin/merge.mjs "''${OUTFILE}" \
+              || echo "[fb-scrape-run] WARN: merge failed for ''${OUTFILE}" >&2
           done
 
-          # Clean up exports older than 7 days
-          find "$EXPORT_DIR" -name '*.json' -mtime +7 -delete 2>/dev/null || true
-
+          # Prune exports older than 7 days
+          find "''${EXPORT_DIR}" -name '*.json' -mtime +7 -delete 2>/dev/null || true
           echo "[fb-scrape-run] Done."
         '';
       };
+
+      # Classify unclassified posts via LLM adapter, notify Discord for high-signal hits.
+      fb-classify-run = pkgs.writeShellApplication {
+        name = "fb-classify-run";
+        runtimeInputs = [ pkgs.nodejs ];
+        text = ''
+          exec node ${cfg.projectDir}/bin/classify.mjs --limit ${toString cfg.fbClassifier.limit}
+        '';
+      };
     in {
-      # fb-merge always available; scraper/classifier scripts only when enabled
-      environment.systemPackages = [ mergeScript ]
-        ++ lib.optionals cfg.fbScraper.enable [ fb-scrape-script fb-scrape-run ]
-        ++ lib.optionals cfg.fbClassifier.enable [ fb-classify-script ];
 
       systemd.tmpfiles.rules = lib.mkIf cfg.fbScraper.enable [
         "d ${cfg.fbScraper.dataDir} 0755 eric users -"
         "d ${cfg.fbScraper.dataDir}/exports 0755 eric users -"
       ];
 
+      # ── Scrape + merge service ──────────────────────────────────────────────
+
       systemd.services.fb-scrape = lib.mkIf cfg.fbScraper.enable {
-        description = "FB group scraper";
+        description = "FB group scraper + merge";
         after = [ "postgresql.service" "network-online.target" ];
         wants = [ "network-online.target" ];
         serviceConfig = {
           Type = "oneshot";
+          User = "eric";
           ExecStart = "${fb-scrape-run}/bin/fb-scrape-run";
           TimeoutStartSec = "30min";
         };
@@ -221,6 +218,8 @@ in
         };
       };
 
+      # ── Classify service ────────────────────────────────────────────────────
+
       age.secrets = lib.mkIf cfg.fbClassifier.enable {
         ${cfg.fbClassifier.discordWebhookSecret} = {
           file = ../../secrets/parts/services/datax-discord-webhook.age;
@@ -235,14 +234,16 @@ in
         after = [ "postgresql.service" "network-online.target" ];
         wants = [ "network-online.target" ];
         environment = {
-          CLAUDE_BIN = cfg.fbClassifier.claudeBin;
-          PROMPT_FILE = "${./fb-classifier/prompt.txt}";
+          DATABASE_URL      = databaseUrl;
           DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.fbClassifier.discordWebhookSecret}.path;
+          PROMPT_FILE       = "${cfg.projectDir}/prompts/datax-jt-pros.txt";
+          CLASSIFIER_ADAPTER = "cli";
+          LLM_BIN           = cfg.fbClassifier.claudeBin;
         };
         serviceConfig = {
           Type = "oneshot";
           User = "eric";
-          ExecStart = "${fb-classify-script}/bin/fb-classify --limit ${toString cfg.fbClassifier.limit}";
+          ExecStart = "${fb-classify-run}/bin/fb-classify-run";
           TimeoutStartSec = "30min";
         };
       };
