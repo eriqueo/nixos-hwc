@@ -862,7 +862,7 @@
         "https://www.facebook.com/groups/jobtreadpros"
       ];
       postsPerRun = 50;
-      depth = "posts";
+      depth = "comments";
       timerInterval = "*-*-* 06,12,18,00:00:00"; # 4x daily
     };
     fbClassifier = {
