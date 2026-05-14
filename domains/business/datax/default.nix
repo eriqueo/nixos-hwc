@@ -136,7 +136,7 @@ in
       fb-scrape-run = pkgs.writeShellApplication {
         name = "fb-scrape-run";
         runtimeInputs = [ pkgs.podman pkgs.nodejs pkgs.findutils ];
-        excludeShellChecks = [ "SC2086" ];  # intentional word split for SELECTORS_MOUNT
+        excludeShellChecks = [ "SC2086" "SC2043" ];  # SC2086: word split for SELECTORS_MOUNT; SC2043: single-group loop is valid
         text = ''
           set -euo pipefail
           TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
