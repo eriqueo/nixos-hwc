@@ -27,7 +27,7 @@ in
     xdg.desktopEntries.chromium-browser = {
       name = "Chromium";
       genericName = "Web Browser";
-      exec = "chromium --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=desktop --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist %U";
+      exec = "chromium --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=angle --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --enable-webgl --enable-webgl2 %U";
       icon = "chromium";
       type = "Application";
       categories = [ "Network" "WebBrowser" ];
@@ -35,11 +35,11 @@ in
       actions = {
         new-window = {
           name = "New Window";
-          exec = "chromium --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=desktop --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist";
+          exec = "chromium --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=angle --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --enable-webgl --enable-webgl2";
         };
         new-private-window = {
           name = "New Incognito Window";
-          exec = "chromium --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=desktop --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --incognito";
+          exec = "chromium --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --use-gl=angle --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --enable-webgl --enable-webgl2 --incognito";
         };
       };
     };
