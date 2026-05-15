@@ -28,19 +28,17 @@ import psycopg2
 BATCH_SIZE = 10
 
 CATEGORIES = [
-    ("warm_lead",          "🟢", "Leads"),
-    ("pain_point",         "🔴", "Pain Points"),
-    ("migration_signal",   "🔄", "Migration"),
-    ("competitor_mention", "⚔️",  "Competing Tools"),
-    ("feature_request",    "💡", "Feature Gaps"),
+    ("hot_lead",   "🔥", "Hot Leads"),
+    ("warm_lead",  "🟢", "Warm Leads"),
+    ("monitor",    "👀", "Monitor"),
+    ("competitor", "⚔️",  "Competitors"),
 ]
 
 CATEGORY_COLORS = {
-    "warm_lead":          0x57F287,
-    "pain_point":         0xED4245,
-    "migration_signal":   0x3498DB,
-    "competitor_mention": 0xF1C40F,
-    "feature_request":    0xE67E22,
+    "hot_lead":   0xFF4500,
+    "warm_lead":  0x57F287,
+    "monitor":    0x3498DB,
+    "competitor": 0xF1C40F,
 }
 
 SUMMARY_COLOR = 0xCF995F  # Heartwood copper
@@ -148,48 +146,37 @@ def classify_batch(batch, claude_bin, prompt_text):
 
 def derive_classification(scores):
     """Derive a label from Claude's scores. Deterministic."""
-    # DataX mentioned by name = always a lead
-    if scores.get('datax_mentioned'):
+    contractor   = scores.get('contractor_request', False)
+    service_match = scores.get('service_match', 0)
+    urgency      = scores.get('urgency', 0)
+    project_signal = scores.get('project_signal', 0)
+    budget_signal = scores.get('budget_signal', False)
+    sentiment    = scores.get('sentiment', 'other')
+    competitor_name = scores.get('competitor_name')
+
+    if contractor and service_match >= 2 and urgency >= 2:
+        return 'hot_lead'
+
+    if (contractor and service_match >= 1) or \
+       (project_signal >= 2 and service_match >= 2) or \
+       (sentiment == 'frustrated' and service_match >= 2):
         return 'warm_lead'
 
-    # Active platform migration
-    if scores.get('migration'):
-        return 'migration_signal'
+    if competitor_name:
+        return 'competitor'
 
-    # High relevance + high actionability = lead
-    if scores.get('datax_relevance', 0) >= 2 and scores.get('actionability', 0) >= 2:
-        return 'warm_lead'
-
-    # Named tool in DataX's domain
-    if scores.get('extension_tool') and scores.get('datax_relevance', 0) >= 1:
-        return 'competitor_mention'
-
-    # Genuine pain with DataX relevance
-    if scores.get('pain_level', 0) >= 2 and scores.get('datax_relevance', 0) >= 1:
-        return 'pain_point'
-
-    # Severe pain regardless of relevance
-    if scores.get('pain_level', 0) >= 3:
-        return 'pain_point'
-
-    # Some relevance + some actionability
-    if scores.get('datax_relevance', 0) >= 1 and scores.get('actionability', 0) >= 1:
-        return 'feature_request'
+    if (project_signal >= 1 and service_match >= 1) or \
+       (budget_signal and service_match >= 1):
+        return 'monitor'
 
     return 'general'
 
 
 def should_notify(classification, scores):
     """Decide whether to send a Discord notification."""
-    if classification == 'warm_lead':
+    if classification in ('hot_lead', 'warm_lead'):
         return True
-    if classification == 'migration_signal':
-        return True
-    # Competitor in DataX's space (not Rendr, LiDAR scanners, etc.)
-    if classification == 'competitor_mention' and scores.get('datax_relevance', 0) >= 2:
-        return True
-    # Pain that DataX specifically addresses
-    if classification == 'pain_point' and scores.get('datax_relevance', 0) >= 2:
+    if classification == 'competitor' and scores.get('service_match', 0) >= 1:
         return True
     return False
 
@@ -240,9 +227,9 @@ def build_discord_message(notify_posts):
         if n:
             counts.append(f"{n} {label.lower()}")
 
-    summary_title = f"JT Pros — {total} notable post{'s' if total != 1 else ''}"
+    summary_title = f"Heartwood Craft — {total} notable post{'s' if total != 1 else ''}"
     summary_desc = ", ".join(counts)
-    footer_text = f"fb-classifier · JT Pros · {date.today().isoformat()}"
+    footer_text = f"fb-classifier · Bozeman Community · {date.today().isoformat()}"
 
     summary_embed = {
         "title": summary_title,
@@ -393,10 +380,10 @@ def main():
                     tags = ', '.join(r.get('tags', []))
                     summary = (r.get('summary') or '')[:80]
                     notify_flag = '★' if r.get('notify') else ' '
-                    rel = scores.get('datax_relevance', 0)
-                    pain = scores.get('pain_level', 0)
-                    act = scores.get('actionability', 0)
-                    print(f"  {notify_flag} {r.get('post_id')}: [{r.get('classification')}] r={rel} p={pain} a={act} — {summary}")
+                    proj = scores.get('project_signal', 0)
+                    svc  = scores.get('service_match', 0)
+                    urg  = scores.get('urgency', 0)
+                    print(f"  {notify_flag} {r.get('post_id')}: [{r.get('classification')}] proj={proj} svc={svc} urg={urg} — {summary}")
 
         if all_notify and not args.dry_run:
             ok = send_discord(webhook_url, all_notify)

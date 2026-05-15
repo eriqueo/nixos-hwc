@@ -122,6 +122,12 @@ in
         default = "datax-discord-webhook";
         description = "agenix secret name containing the Discord webhook URL";
       };
+
+      promptFile = lib.mkOption {
+        type = lib.types.path;
+        default = ./fb-classifier/hwc-bozeman-prompt.txt;
+        description = "Path to the LLM classification prompt file";
+      };
     };
   };
 
@@ -236,7 +242,7 @@ in
         environment = {
           DATABASE_URL      = databaseUrl;
           DISCORD_WEBHOOK_FILE = config.age.secrets.${cfg.fbClassifier.discordWebhookSecret}.path;
-          PROMPT_FILE       = "${cfg.projectDir}/prompts/datax-jt-pros.txt";
+          PROMPT_FILE       = "${cfg.fbClassifier.promptFile}";
           CLASSIFIER_ADAPTER = "cli";
           LLM_BIN           = cfg.fbClassifier.claudeBin;
         };
