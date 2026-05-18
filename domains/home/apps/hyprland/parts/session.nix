@@ -14,9 +14,6 @@ let
   xcursorName    = xc.name or "Adwaita";
   hyprcursorName = hc.name or xcursorName;
 
-  # Startup script removed from home domain for charter compliance
-  # Script is now provided by co-located sys.nix as system package
-
   hyprcursorSource =
     if (hc ? assetPathRel) then ../../.. + "/${hc.assetPathRel}" else null;
 
@@ -25,18 +22,38 @@ let
   screenshotsPath = lib.attrByPath ["hwc" "paths" "screenshots"] null osConfig;
   screenshotsDir = if screenshotsPath != null then screenshotsPath else "/home/eric/500_media/510_pictures/screenshots";
 
+  #============================================================================
+  # AUTOSTART — apps and services launched once when Hyprland starts.
+  #
+  # To add/remove a startup item, just edit this list.
+  #   - { cmd = "foo"; }                  → background service, no workspace
+  #   - { cmd = "foo"; workspace = N; }   → window pinned to workspace N silently
+  #
+  # Workspace pinning uses Hyprland's native `[workspace N silent]` exec rule,
+  # which is race-free (unlike a startup script that dispatches workspaces).
+  #============================================================================
+  autostart = [
+    # Background / one-shot services
+    { cmd = "xfconfd"; }
+    { cmd = "hyprctl setcursor ${hyprcursorName} ${cursorSize}"; }
+    { cmd = "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill"; }
+
+    # Applications (pinned to workspaces)
+    { cmd = "gpu-launch chromium";                                workspace = 1; }
+    { cmd = "kitty";                                              workspace = 2; }
+    { cmd = "gpu-launch chromium --app=https://app.jobtread.com"; workspace = 4; }
+    { cmd = "proton-mail";                                        workspace = 8; }
+  ];
+
+  mkExec = a:
+    if a ? workspace
+    then "[workspace ${toString a.workspace} silent] ${a.cmd}"
+    else a.cmd;
+
 in
 {
   # FLAT KEYS (NO nested `settings = {}`!)
-  execOnce = [
-    "xfconfd"
-    "hyprctl setcursor ${hyprcursorName} ${cursorSize}"
-    "hyprland-startup"
-    "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill"
-    # Proton apps - start on workspace 8 (windowrules handle placement)
-    "proton-pass"
-    "kitty --start-as=minimized"
-  ];
+  execOnce = map mkExec autostart;
 
   env = [
     "HYPRCURSOR_THEME,${hyprcursorName}"
@@ -47,7 +64,7 @@ in
     "HWC_SCREENSHOTS_DIR,${screenshotsDir}"
   ];
 
-  packages = [ ]; # hyprland-startup script now provided by system packages
+  packages = [ ];
 
   files = lib.mkIf (hyprcursorSource != null) {
     ".local/share/icons/${hyprcursorName}".source = hyprcursorSource;

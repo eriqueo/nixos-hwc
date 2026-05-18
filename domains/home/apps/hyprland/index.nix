@@ -135,7 +135,7 @@ in
         assertion = !cfg.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "hyprland" "enable" ] false osConfig;
         message = ''
           hwc.home.apps.hyprland is enabled but hwc.system.apps.hyprland is not.
-          System dependencies (hyprland-startup script, helper scripts) are required.
+          System dependencies (helper scripts) are required.
           Enable hwc.system.apps.hyprland in machine config.
         '';
       }
