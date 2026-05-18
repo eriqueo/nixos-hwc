@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1d2021">
+<title>DataX Intel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#1d2021;--surface:#282828;--surface2:#32302f;--border:#3c3836;
+    --text:#d5c4a1;--dim:#928374;--faint:#504945;
+    --amber:#cf995f;--green:#a3be8c;--red:#bf616a;--blue:#5e8cb8;--yellow:#d8a657;
+    --existing:#ff6b35;--hot:#2ecc71;--warm:#57f287;--migration:#5e8cb8;
+    --pain:#bf616a;--competitor:#d8a657;--feature:#e67e22;
+    --mono:'JetBrains Mono',monospace;--sans:'Source Sans 3',sans-serif;
+  }
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100dvh;
+    -webkit-font-smoothing:antialiased;font-size:16px;line-height:1.5}
+  .shell{max-width:1400px;margin:0 auto;padding:24px 28px 80px}
+  h1{font-size:1.5rem;font-weight:700;color:var(--amber);letter-spacing:.02em;margin-bottom:4px}
+  .meta{font-size:.8rem;color:var(--dim);font-family:var(--mono);margin-bottom:32px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:32px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+  .stat-val{font-family:var(--mono);font-size:2rem;font-weight:600;line-height:1;margin-bottom:4px}
+  .stat-label{font-size:.75rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+
+  .section{margin-bottom:32px}
+  .section-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);
+    font-family:var(--mono);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+
+  /* Classification bar */
+  .cls-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:.9rem}
+  .cls-bar-wrap{flex:1;background:var(--surface2);border-radius:4px;height:6px;overflow:hidden}
+  .cls-bar{height:100%;border-radius:4px;transition:width .4s ease}
+  .cls-label{width:140px;font-size:.85rem}
+  .cls-count{font-family:var(--mono);font-size:.8rem;color:var(--dim);width:36px;text-align:right}
+
+  /* Post cards */
+  .cards{display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:14px 16px;border-left:3px solid var(--faint)}
+  .card.existing_user   {border-left-color:var(--existing)}
+  .card.hot_lead        {border-left-color:var(--hot)}
+  .card.warm_lead       {border-left-color:var(--warm)}
+  .card.migration_signal{border-left-color:var(--migration)}
+  .card.pain_point      {border-left-color:var(--pain)}
+  .card.competitor_mention{border-left-color:var(--competitor)}
+  .card.unanswered      {border-left-color:var(--red);background:#251f1f}
+  .card-top{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+  .card-author{font-weight:600;font-size:.95rem}
+  .card-cls{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;
+    padding:2px 6px;border-radius:3px;font-family:var(--mono)}
+  .cls-badge.existing_user   {background:#3d1f0a;color:var(--existing)}
+  .cls-badge.hot_lead        {background:#0d2b1a;color:var(--hot)}
+  .cls-badge.warm_lead       {background:#0a2015;color:var(--warm)}
+  .cls-badge.migration_signal{background:#0d1f2d;color:var(--blue)}
+  .card-summary{font-size:.9rem;color:var(--text);margin-bottom:8px;line-height:1.4}
+  .card-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:.75rem;color:var(--dim);font-family:var(--mono)}
+  .card-meta a{color:var(--amber);text-decoration:none}
+  .card-meta a:hover{text-decoration:underline}
+  .heat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .heat-red   {background:var(--red)}
+  .heat-yellow{background:var(--yellow)}
+  .heat-dim   {background:var(--faint)}
+  .warn-tag{font-size:.7rem;color:var(--red);font-family:var(--mono);margin-left:6px}
+  .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .tag{font-size:.68rem;padding:1px 6px;border-radius:3px;background:var(--surface2);
+    color:var(--dim);font-family:var(--mono)}
+
+  /* Trend chart */
+  .trend{display:flex;align-items:flex-end;gap:4px;height:80px;padding:8px 0}
+  .trend-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
+  .trend-bar-bg{width:100%;background:var(--surface2);border-radius:3px 3px 0 0;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
+  .trend-bar-sig{background:var(--amber);border-radius:3px 3px 0 0;width:100%}
+  .trend-bar-rest{background:var(--surface);width:100%}
+  .trend-label{font-size:.55rem;color:var(--faint);font-family:var(--mono);white-space:nowrap;margin-top:3px}
+
+  .empty{color:var(--dim);font-size:.85rem;font-style:italic;padding:12px 0}
+
+  @media(max-width:600px){
+    .shell{padding:16px 14px 60px}
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .cls-label{width:100px}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <h1>DataX Intel · JT Pros</h1>
+  <div class="meta" id="meta">Loading…</div>
+
+  <div class="grid" id="stats"></div>
+
+  <div class="section">
+    <div class="section-title">Classification Breakdown</div>
+    <div id="cls-breakdown"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">14-Day Post Volume</div>
+    <div class="trend" id="trend"></div>
+  </div>
+
+  <div class="section" id="unanswered-section" style="display:none">
+    <div class="section-title">⚠ Unanswered — DataX Mentioned, No Team Reply</div>
+    <div class="cards" id="unanswered"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Recent Signals (7d)</div>
+    <div class="cards" id="recent"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Most-Discussed Posts</div>
+    <div class="cards" id="top-commented"></div>
+  </div>
+</div>
+
+<script>
+const CLS_META = {
+  existing_user:     { label:'Existing User',    color:'var(--existing)' },
+  hot_lead:          { label:'Hot Lead',          color:'var(--hot)' },
+  warm_lead:         { label:'Warm Lead',         color:'var(--warm)' },
+  migration_signal:  { label:'Migration',         color:'var(--migration)' },
+  pain_point:        { label:'Pain Point',        color:'var(--pain)' },
+  competitor_mention:{ label:'Competing Tool',    color:'var(--competitor)' },
+  feature_request:   { label:'Feature Gap',       color:'var(--feature)' },
+  general:           { label:'General',           color:'var(--faint)' },
+};
+
+function heatDot(n) {
+  if (!n) return '';
+  const cls = n >= 10 ? 'heat-red' : n >= 4 ? 'heat-yellow' : 'heat-dim';
+  return `<span class="heat-dot ${cls}"></span>`;
+}
+
+function relTime(iso) {
+  const d = (Date.now() - new Date(iso)) / 1000;
+  if (d < 3600)  return Math.floor(d/60) + 'm ago';
+  if (d < 86400) return Math.floor(d/3600) + 'h ago';
+  return Math.floor(d/86400) + 'd ago';
+}
+
+function renderCard(p, extra = '') {
+  const cls  = p.classification || '';
+  const meta = CLS_META[cls] || {};
+  const tags = (p.tags || []).slice(0, 5).map(t => `<span class="tag">${t}</span>`).join('');
+  const heat = heatDot(p.comment_count);
+  const link = p.url ? `<a href="${p.url}" target="_blank">view post</a>` : '';
+  return `
+    <div class="card ${extra} ${cls}">
+      <div class="card-top">
+        <span class="card-author">${p.author || 'Unknown'}</span>
+        ${cls ? `<span class="card-cls cls-badge ${cls}">${meta.label || cls}</span>` : ''}
+        ${extra === 'unanswered' ? '<span class="warn-tag">⚠ no team reply</span>' : ''}
+      </div>
+      <div class="card-summary">${p.summary || ''}</div>
+      ${tags ? `<div class="tags">${tags}</div>` : ''}
+      <div class="card-meta">
+        ${heat}${p.comment_count ? p.comment_count + ' comments' : 'no comments'}
+        ${p.last_updated ? '· ' + relTime(p.last_updated) : ''}
+        ${link ? '· ' + link : ''}
+      </div>
+    </div>`;
+}
+
+async function load() {
+  const r = await fetch('dashboard.json?' + Date.now());
+  if (!r.ok) { document.getElementById('meta').textContent = 'Failed to load data'; return; }
+  const d = await r.json();
+
+  const gen = new Date(d.generated_at);
+  document.getElementById('meta').textContent =
+    `Updated ${gen.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} at ${gen.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`;
+
+  // Stats
+  const s = d.summary;
+  const stats = [
+    { val: s.total,        label: 'Total Posts' },
+    { val: s.new_24h,      label: 'New (24h)' },
+    { val: s.new_7d,       label: 'New (7d)' },
+    { val: s.classified,   label: 'Classified' },
+    { val: s.unclassified, label: 'Pending' },
+  ];
+  document.getElementById('stats').innerHTML = stats.map(s =>
+    `<div class="stat"><div class="stat-val">${s.val}</div><div class="stat-label">${s.label}</div></div>`
+  ).join('');
+
+  // Classification breakdown
+  const total = d.by_classification.reduce((a, r) => a + parseInt(r.n), 0) || 1;
+  document.getElementById('cls-breakdown').innerHTML = d.by_classification.map(r => {
+    const meta = CLS_META[r.classification] || { label: r.classification, color: 'var(--faint)' };
+    const pct  = Math.round(parseInt(r.n) / total * 100);
+    return `
+      <div class="cls-row">
+        <div class="cls-label">${meta.label}</div>
+        <div class="cls-bar-wrap"><div class="cls-bar" style="width:${pct}%;background:${meta.color}"></div></div>
+        <div class="cls-count">${r.n}</div>
+      </div>`;
+  }).join('');
+
+  // Trend
+  const maxPosts = Math.max(...d.daily_trend.map(r => parseInt(r.posts)), 1);
+  document.getElementById('trend').innerHTML = d.daily_trend.map(r => {
+    const posts   = parseInt(r.posts);
+    const sigs    = parseInt(r.signals);
+    const pct     = Math.round(posts / maxPosts * 100);
+    const sigPct  = Math.round(sigs / maxPosts * 100);
+    const restPct = pct - sigPct;
+    const label   = new Date(r.day).toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+    return `
+      <div class="trend-bar-wrap">
+        <div class="trend-bar-bg" style="height:${pct}%">
+          <div class="trend-bar-rest" style="height:${restPct}%"></div>
+          <div class="trend-bar-sig" style="height:${sigPct}%"></div>
+        </div>
+        <div class="trend-label">${label}</div>
+      </div>`;
+  }).join('');
+
+  // Unanswered
+  if (d.unanswered_datax?.length) {
+    document.getElementById('unanswered-section').style.display = '';
+    document.getElementById('unanswered').innerHTML = d.unanswered_datax.map(p => renderCard(p, 'unanswered')).join('');
+  }
+
+  // Recent signals
+  const recentEl = document.getElementById('recent');
+  if (d.recent_signals?.length) {
+    recentEl.innerHTML = d.recent_signals.map(p => renderCard(p)).join('');
+  } else {
+    recentEl.innerHTML = '<div class="empty">No signals in the last 7 days</div>';
+  }
+
+  // Top commented
+  document.getElementById('top-commented').innerHTML =
+    (d.top_commented || []).map(p => renderCard(p)).join('');
+}
+
+load();
+</script>
+</body>
+</html>
