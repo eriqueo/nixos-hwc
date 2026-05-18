@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-17T06:01:27-06:00",
+  "generated_at": "2026-05-18T06:00:54-06:00",
   "sections": {
     "calendar": {
       "events": [
@@ -94,17 +94,17 @@
   },
   "alerts": [],
   "mail_triage": {
-    "generated_at": "2026-05-17T06:00:00-06:00",
+    "generated_at": "2026-05-18T09:00:00-06:00",
     "query_window_hours": 48,
-    "total_unread": 30,
+    "total_unread": 17,
     "buckets": {
       "urgent": [
         {
           "thread_id": "0000000000004cd6",
           "subject": "Invoice - Reminder: Your payment to Super Dot Storage is due",
           "from_name": "Super Dot Storage",
-          "from_address": "invoices@superdotstorage.com",
-          "date_relative": "Yest. 16:17",
+          "from_address": "billing@superdotstorage.com",
+          "date_relative": "Sat. 16:17",
           "tags": [
             "attachment",
             "finance",
@@ -114,117 +114,18 @@
             "work"
           ],
           "has_attachment": true,
-          "summary": "Storage unit invoice reminder — payment is due and needs to be made.",
+          "summary": "Payment-due reminder with attached invoice from Super Dot Storage, a vendor Heartwood Craft uses, requiring payment action.",
           "suggested_action": "flag_action",
-          "urgency_reason": "Flagged finance invoice with attachment requiring payment action"
-        },
-        {
-          "thread_id": "0000000000004b30",
-          "subject": "Big Sky Sotheby's International Realty",
-          "from_name": "James Christodoulou",
-          "from_address": "james@greydoorpublishing.com",
-          "date_relative": "Fri. 13:45",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Multi-message work thread from James Christodoulou regarding Big Sky Sotheby's — likely a remodeling project inquiry or referral.",
-          "suggested_action": "reply",
-          "urgency_reason": "Real person, flagged work thread with 4 messages requiring response"
-        },
-        {
-          "thread_id": "0000000000004c9d",
-          "subject": "Requested: Residential template and updated cost catalog",
-          "from_name": "Cornelia Hoskin",
-          "from_address": "cornelia@studiobuildboston.com",
-          "date_relative": "Fri. 11:51",
-          "tags": [
-            "datax",
-            "flagged",
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Active work conversation with Cornelia Hoskin and Michael Munson about residential template and cost catalog — 5-message thread needs follow-up.",
-          "suggested_action": "reply",
-          "urgency_reason": "Multi-party work conversation flagged with 5 messages requesting deliverables"
-        },
-        {
-          "thread_id": "0000000000004ca4",
-          "subject": "🗓 Ctrl+Build on May 14, 2026 | Read Meeting Report",
-          "from_name": "Garry Rosselot",
-          "from_address": "garry@read.ai",
-          "date_relative": "Fri. 13:47",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Meeting summary report from Ctrl+Build meeting on May 14 — review notes and any action items.",
-          "suggested_action": "read_only",
-          "urgency_reason": "Flagged meeting report from a real meeting Eric attended — may contain action items"
-        },
-        {
-          "thread_id": "0000000000004c92",
-          "subject": "Weekly updates",
-          "from_name": "Deidre Hodgson",
-          "from_address": "deidre.hodgson@outlook.com",
-          "date_relative": "Fri. 10:20",
-          "tags": [
-            "inbox",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Personal weekly update email from Deidre Hodgson — real person writing directly.",
-          "suggested_action": "reply",
-          "urgency_reason": "Real person sending a direct personal email"
+          "urgency_reason": "Finance-tagged invoice with attachment, flagged, and work tags — real billing obligation with an attached document from an active vendor."
         }
       ],
       "review": [
         {
-          "thread_id": "0000000000004cd3",
-          "subject": "Heartwood Craft, are you open on Memorial Day?",
-          "from_name": "Google Business Profile",
-          "from_address": "noreply@google.com",
-          "date_relative": "Yest. 14:26",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Google Business Profile asking to confirm Heartwood Craft holiday hours for Memorial Day (May 25).",
-          "suggested_action": "flag_action"
-        },
-        {
-          "thread_id": "0000000000004cc9",
-          "subject": "Google Ads: Your bank account will be debited soon",
-          "from_name": "Google Payments",
-          "from_address": "payments-noreply@google.com",
-          "date_relative": "Yest. 08:31",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Google Ads billing notification — bank account debit coming for ad spend.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004cc6",
-          "subject": "New JobTread Referral: RenoVista Construction",
-          "from_name": "JobTread",
-          "from_address": "hello@jobtread.com",
-          "date_relative": "Yest. 04:22",
+          "thread_id": "0000000000004cf4",
+          "subject": "New demo request — Ferguson Brothers Contracting Ltd. (Samuel Ferguson)",
+          "from_name": "support via hello",
+          "from_address": "support@hello.com",
+          "date_relative": "Yest. 16:40",
           "tags": [
             "datax",
             "flagged",
@@ -232,49 +133,31 @@
             "unread"
           ],
           "has_attachment": false,
-          "summary": "JobTread referral notification — RenoVista Construction referred through the platform. Could be a business lead or partnership.",
+          "summary": "Platform notification routed to the DataX account that Ferguson Brothers Contracting requested a demo — could be a lead or partner activity worth tracking.",
+          "suggested_action": "read_only"
+        },
+        {
+          "thread_id": "0000000000004ce0",
+          "subject": "Your services auto-renew soon",
+          "from_name": "Hostinger",
+          "from_address": "billing@hostinger.com",
+          "date_relative": "Yest. 06:45",
+          "tags": [
+            "flagged",
+            "inbox",
+            "unread",
+            "work"
+          ],
+          "has_attachment": false,
+          "summary": "Hostinger web hosting services are coming up for auto-renewal — Eric should confirm the renewal is expected or cancel before the charge processes.",
           "suggested_action": "flag_action"
         },
         {
-          "thread_id": "0000000000004ccd",
-          "subject": "Your Runpod receipt [#1183-0719]",
-          "from_name": "Runpod",
-          "from_address": "hello@runpod.io",
-          "date_relative": "Yest. 10:10",
-          "tags": [
-            "datax",
-            "flagged",
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Payment receipt from Runpod GPU cloud service — record for expenses.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004cba",
-          "subject": "Your Meta ads receipt (Account ID: 1891243818000745)",
-          "from_name": "Meta for Business",
-          "from_address": "noreply@business-updates.facebook.com",
-          "date_relative": "Fri. 18:55",
-          "tags": [
-            "flagged",
-            "inbox",
-            "newsletter",
-            "notification",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Meta/Facebook advertising receipt — record for ad spend expenses.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004cca",
-          "subject": "Don't Miss These Free Webinars",
-          "from_name": "NARI Education",
-          "from_address": "nari@informz.net",
-          "date_relative": "Yest. 08:30",
+          "thread_id": "0000000000004ce2",
+          "subject": "Which customer do you actually want?",
+          "from_name": "Bozeman Local Playbook",
+          "from_address": "hello@bozemanlocalplaybook.com",
+          "date_relative": "Yest. 08:23",
           "tags": [
             "flagged",
             "inbox",
@@ -282,78 +165,15 @@
             "work"
           ],
           "has_attachment": false,
-          "summary": "National Association of Remodeling Industry free webinar announcements — relevant industry education.",
+          "summary": "Local Bozeman business newsletter with content on customer targeting strategy — flagged and work-tagged, suggesting Eric finds it relevant to his business.",
           "suggested_action": "read_only"
         },
         {
-          "thread_id": "0000000000004ccf",
-          "subject": "New in Scribe Pro this Spring",
-          "from_name": "Scribe Team",
-          "from_address": "team@scribehow.com",
-          "date_relative": "Yest. 11:43",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Scribe Pro product update — new features in a documentation tool Eric uses for work.",
-          "suggested_action": "archive"
-        },
-        {
-          "thread_id": "0000000000004cb9",
-          "subject": "May ARTS Marathon Day 11 - Last Chance to Sponsor Us!",
-          "from_name": "Drew Clark",
-          "from_address": "drewclark@gmail.com",
-          "date_relative": "Fri. 18:41",
-          "tags": [
-            "attachment",
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": true,
-          "summary": "Local ARTS Marathon sponsorship request from Drew Clark — community involvement opportunity with attachment.",
-          "suggested_action": "read_only"
-        },
-        {
-          "thread_id": "0000000000004c8a",
-          "subject": "2026 Tournament Sponsorships are Now Available!",
-          "from_name": "Bozeman Area Chamber of Commerce",
-          "from_address": "chamber@e2ma.net",
-          "date_relative": "Fri. 08:00",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Bozeman Chamber of Commerce tournament sponsorship opportunities — local business networking.",
-          "suggested_action": "read_only"
-        },
-        {
-          "thread_id": "0000000000004b56",
-          "subject": "crash report",
-          "from_name": "Michael Orlov",
-          "from_address": "orlov@yandex.ru",
-          "date_relative": "Yest. 09:54",
-          "tags": [
-            "aerc",
-            "archive",
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "New message in aerc email client crash report thread — open source project bug discussion.",
-          "suggested_action": "read_only"
-        },
-        {
-          "thread_id": "0000000000004c8f",
-          "subject": "Weekly digest for Wed, May 6 2026",
-          "from_name": "BlueCollarOS - AI for Trades",
-          "from_address": "digest@skool.com",
-          "date_relative": "Fri. 09:43",
+          "thread_id": "0000000000004cee",
+          "subject": "Jake Van Clief posted \"New Video: We Audited a Vibe Coded Production App. Three Holes Found.\"",
+          "from_name": "Clief Notes",
+          "from_address": "notifications@substack.com",
+          "date_relative": "Yest. 14:38",
           "tags": [
             "inbox",
             "notification",
@@ -361,71 +181,92 @@
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Weekly community digest from BlueCollarOS AI for Trades group on Skool — trade-relevant tech content.",
+          "summary": "Newsletter notification that Jake Van Clief published a new video on security holes in AI-generated production code — tech content Eric subscribes to via personal ProtonMail.",
+          "suggested_action": "read_only"
+        },
+        {
+          "thread_id": "0000000000004cd3",
+          "subject": "Heartwood Craft, are you open on Memorial Day?",
+          "from_name": "Google Business Profile",
+          "from_address": "noreply@google.com",
+          "date_relative": "Sat. 14:26",
+          "tags": [
+            "hwc_google",
+            "inbox",
+            "notification",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Google Business Profile is prompting Eric to confirm Heartwood Craft's Memorial Day hours so customers see accurate information on Search and Maps.",
+          "suggested_action": "flag_action"
+        },
+        {
+          "thread_id": "0000000000004ccd",
+          "subject": "Your Runpod receipt [#1183-0719]",
+          "from_name": "Runpod",
+          "from_address": "receipts@runpod.io",
+          "date_relative": "Sat. 10:10",
+          "tags": [
+            "datax",
+            "flagged",
+            "inbox",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Billing receipt from Runpod GPU cloud service for a recent compute charge — flagged, keep for expense records and verify the amount is expected.",
           "suggested_action": "archive"
         }
       ],
       "noise": [
         {
-          "thread_id": "0000000000004cdf",
-          "subject": "15% OFF? That's Why Everyone's Obsessed With HAVN",
+          "thread_id": "0000000000004cfb",
+          "subject": "Silver, Really? ⛓️",
           "from_name": "HAVN",
-          "from_address": "marketing@klaviyomail.com",
-          "date_relative": "22 mins. ago",
+          "from_address": "hello@havn.co",
+          "date_relative": "Today 01:09",
           "tags": [
             "inbox",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Retail promotional email from HAVN offering 15% discount.",
+          "summary": "HAVN jewelry brand drip marketing email sent via Klaviyo using curiosity subject line — zero relevance to Heartwood Craft.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "0000000000004cde",
-          "subject": "Someone else just made the move you almost did",
-          "from_name": "HAVN",
-          "from_address": "marketing@klaviyomail.com",
-          "date_relative": "Today 01:38",
+          "thread_id": "0000000000004cf9",
+          "subject": "Come back to Kit at half price",
+          "from_name": "'Caitlin at Kit' via hello",
+          "from_address": "caitlin@kit.com",
+          "date_relative": "Yest. 22:12",
           "tags": [
+            "datax",
+            "flagged",
             "inbox",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "HAVN drip campaign follow-up using FOMO tactics.",
+          "summary": "Kit email platform win-back campaign offering 50% off re-subscription — drip automation, not a real person despite the personalized name.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "0000000000004cd9",
-          "subject": "Please provide feedback + $1,000 chance to win",
-          "from_name": "Walmart Customer Experience",
-          "from_address": "survey@medallia.com",
-          "date_relative": "Yest. 20:46",
+          "thread_id": "0000000000004ced",
+          "subject": "Eric, you're invited to a virtual networking event",
+          "from_name": "Char Ferguson via Alignable",
+          "from_address": "notifications@alignable.com",
+          "date_relative": "Yest. 13:44",
           "tags": [
+            "flagged",
             "inbox",
-            "unread"
+            "unread",
+            "work"
           ],
           "has_attachment": false,
-          "summary": "Walmart survey solicitation with sweepstakes hook.",
+          "summary": "Alignable platform networking invite relayed through a member name — alignable.com is a known noise sender regardless of flagged and work tags.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "0000000000004cd4",
-          "subject": "Eversharp Luxury 707 Symphony Fountain Pen 14K Gold Nib is almost yours",
-          "from_name": "eBay",
-          "from_address": "noreply@ebay.com",
-          "date_relative": "Yest. 15:09",
-          "tags": [
-            "inbox",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "eBay cart abandonment reminder for fountain pen listing.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004cd2",
-          "subject": "Win more clients with customized quotes",
+          "thread_id": "0000000000004cec",
+          "subject": "Take your office on the road—download the Jobber app 📱",
           "from_name": "Marisa @ Jobber",
           "from_address": "marisa@getjobber.com",
           "date_relative": "Yest. 13:39",
@@ -435,23 +276,80 @@
             "unread"
           ],
           "has_attachment": false,
-          "summary": "Jobber marketing drip email pushing quote customization features.",
+          "summary": "Jobber product marketing email pushing their mobile app download — feature promotion, not a billing or account state change.",
           "suggested_action": "trash"
         },
         {
-          "thread_id": "0000000000004cd1",
-          "subject": "Ready, set, go! Make summer driving E-Z'er with DriveEzMD.",
-          "from_name": "E-ZPass Maryland",
-          "from_address": "noreply@ezpassmd.com",
-          "date_relative": "Yest. 13:01",
+          "thread_id": "0000000000004ceb",
+          "subject": "Can't-Miss Graduation Deals: 60% Off Premium Cards!",
+          "from_name": "CVS Photo",
+          "from_address": "email@your.cvs.com",
+          "date_relative": "Yest. 13:10",
           "tags": [
             "inbox",
-            "notification",
             "personal_google",
             "unread"
           ],
           "has_attachment": false,
-          "summary": "E-ZPass Maryland summer promotional marketing email.",
+          "summary": "CVS Photo retail promotion for graduation card discounts — known noise sender, no business relevance.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "0000000000004cde",
+          "subject": "Someone else just made the move you almost did",
+          "from_name": "HAVN",
+          "from_address": "hello@havn.co",
+          "date_relative": "Yest. 01:38",
+          "tags": [
+            "inbox",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Second HAVN drip email in the window using social proof pressure tactic — same jewelry brand Klaviyo campaign as the earlier thread.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "0000000000004cd9",
+          "subject": "Please provide feedback + $1,000 chance to win",
+          "from_name": "Walmart Customer Experience",
+          "from_address": "survey@medallia.com",
+          "date_relative": "Sat. 20:46",
+          "tags": [
+            "inbox",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Walmart post-purchase survey with sweepstakes incentive sent via Medallia — retail noise, no action needed.",
+          "suggested_action": "trash"
+        },
+        {
+          "thread_id": "0000000000004cd4",
+          "subject": "Eversharp Luxury 707 Symphony Fountain Pen 14K Gold Nib is almost yours",
+          "from_name": "eBay",
+          "from_address": "ebay@ebay.com",
+          "date_relative": "Sat. 15:09",
+          "tags": [
+            "inbox",
+            "personal_google",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "eBay watchlist or outbid alert for a luxury fountain pen — personal shopping notification, no business relevance.",
+          "suggested_action": "archive"
+        },
+        {
+          "thread_id": "0000000000004cd2",
+          "subject": "Win more clients with customized quotes",
+          "from_name": "Marisa @ Jobber",
+          "from_address": "marisa@getjobber.com",
+          "date_relative": "Sat. 13:39",
+          "tags": [
+            "hwc_google",
+            "inbox",
+            "unread"
+          ],
+          "has_attachment": false,
+          "summary": "Second Jobber marketing email in the window pushing quote customization features — same sender pattern as the other Jobber noise thread.",
           "suggested_action": "trash"
         },
         {
@@ -459,7 +357,7 @@
           "subject": "A past client called out of the blue.",
           "from_name": "Tom Reber",
           "from_address": "tom@thecontractorfight.com",
-          "date_relative": "Yest. 11:04",
+          "date_relative": "Sat. 11:04",
           "tags": [
             "coaching",
             "flagged",
@@ -468,128 +366,15 @@
             "work"
           ],
           "has_attachment": false,
-          "summary": "Contractor Fight coaching drip email — known noise sender despite flagged tag.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004cc4",
-          "subject": "Lower your cost per lead with instant forms",
-          "from_name": "Meta for Business",
-          "from_address": "noreply@facebookmail.com",
-          "date_relative": "Fri. 23:06",
-          "tags": [
-            "flagged",
-            "inbox",
-            "notification",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Meta advertising feature marketing — lead form promotion.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004c8c",
-          "subject": "Discover how partnership ads can grow your reach",
-          "from_name": "Meta for Business",
-          "from_address": "noreply@facebookmail.com",
-          "date_relative": "Fri. 08:52",
-          "tags": [
-            "flagged",
-            "inbox",
-            "notification",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Meta advertising marketing email pushing partnership ad features.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004c83",
-          "subject": "You're invited: The latest AI innovations driving business growth",
-          "from_name": "Meta for Business",
-          "from_address": "noreply@facebookmail.com",
-          "date_relative": "Fri. 07:07",
-          "tags": [
-            "flagged",
-            "inbox",
-            "unread",
-            "work"
-          ],
-          "has_attachment": false,
-          "summary": "Meta marketing webinar invitation about AI features.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004cab",
-          "subject": "sangeeta sajwan, Web Content Writer, is popular in your network",
-          "from_name": "LinkedIn",
-          "from_address": "notifications@linkedin.com",
-          "date_relative": "Fri. 15:35",
-          "tags": [
-            "admin",
-            "inbox",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "LinkedIn network engagement notification — irrelevant connection activity.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004c9c",
-          "subject": "CB4: Movie Riff (rumble)",
-          "from_name": "Revenge Of The Cis",
-          "from_address": "noreply@locals.com",
-          "date_relative": "Fri. 12:46",
-          "tags": [
-            "inbox",
-            "notification",
-            "personal_google",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Content platform notification for podcast/comedy content.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004c91",
-          "subject": "how to fail with style",
-          "from_name": "Richard",
-          "from_address": "richard@mcdlv.net",
-          "date_relative": "Fri. 10:04",
-          "tags": [
-            "inbox",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Marketing newsletter via Mailchimp with clickbait subject line.",
-          "suggested_action": "trash"
-        },
-        {
-          "thread_id": "0000000000004c82",
-          "subject": "Last chance for 50% off membership to WAR MODE",
-          "from_name": "Patreon",
-          "from_address": "noreply@patreon.com",
-          "date_relative": "Fri. 06:32",
-          "tags": [
-            "hwc_google",
-            "inbox",
-            "newsletter",
-            "notification",
-            "unread"
-          ],
-          "has_attachment": false,
-          "summary": "Patreon promotional email pushing discounted podcast membership.",
+          "summary": "Tom Reber drip coaching email from thecontractorfight.com using a story hook — known noise sender despite coaching, flagged, and work tags.",
           "suggested_action": "trash"
         }
       ]
     },
     "stats": {
-      "urgent_count": 5,
-      "review_count": 11,
-      "noise_count": 14
+      "urgent_count": 1,
+      "review_count": 6,
+      "noise_count": 10
     }
   }
 }
