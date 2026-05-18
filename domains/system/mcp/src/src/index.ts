@@ -20,6 +20,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 import { loadConfig } from "./config.js";
 import { log, setLogLevel } from "./log.js";
@@ -29,6 +30,7 @@ import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { BackendManager } from "./backend-manager.js";
 import { StdioBackend } from "./stdio-backend.js";
+import { n8nConsolidation } from "./n8n-consolidation.js";
 
 // ── Server factory ──────────────────────────────────────────────────────
 // Streamable HTTP needs a fresh Server+Transport pair per session.
@@ -110,9 +112,9 @@ function buildBackends(): Array<{ backend: StdioBackend; lazy: boolean }> {
         cwd: jtSrcDir,
         callTimeoutMs: 60_000, // JT API calls can be slow
       }),
-      lazy: true, // JT tools hidden until hwc_connect_jt_mcp is called
+      lazy: false,
     });
-    log.info("Configured jt-mcp backend (lazy)", { srcDir: jtSrcDir });
+    log.info("Configured jt-mcp backend", { srcDir: jtSrcDir });
   } else {
     log.info("jt-mcp backend skipped (HWC_JT_SRC_DIR not set)");
   }
@@ -135,9 +137,9 @@ function buildBackends(): Array<{ backend: StdioBackend; lazy: boolean }> {
         },
         callTimeoutMs: 60_000, // n8n API calls can be slow
       }),
-      lazy: true, // n8n tools hidden until hwc_connect_n8n_mcp is called
+      lazy: false,
     });
-    log.info("Configured n8n-mcp backend (lazy)", { entryPoint: n8nEntryPoint });
+    log.info("Configured n8n-mcp backend", { entryPoint: n8nEntryPoint });
   } else {
     log.info("n8n-mcp backend skipped (HWC_N8N_ENTRY_POINT not set)");
   }
@@ -170,8 +172,12 @@ async function main() {
   manager.registerLocal(registry.getAll());
 
   const backends = buildBackends();
-  for (const { backend, lazy } of backends) {
-    manager.addBackend(backend, { lazy });
+  for (const { backend } of backends) {
+    if (backend.name === "n8n-mcp") {
+      manager.addBackend(backend, { consolidate: n8nConsolidation });
+    } else {
+      manager.addBackend(backend);
+    }
   }
 
   // Start all stdio backends (non-fatal failures — partial startup)
@@ -210,6 +216,9 @@ async function main() {
     const server = createMCPServer(manager, resources);
     await server.connect(transport);
     log.info("Streamable HTTP transport ready (sessionless)");
+
+    // Legacy SSE transport sessions (protocol version 2024-11-05)
+    const sseSessions = new Map<string, SSEServerTransport>();
 
     const httpServer = createServer(async (req, res) => {
       const startMs = Date.now();
@@ -333,6 +342,36 @@ async function main() {
         return;
       }
 
+      // ── Legacy SSE transport (protocol version 2024-11-05) ────────
+      if (url === "/sse" && method === "GET") {
+        log.info("SSE session requested (legacy transport)");
+        const sseTransport = new SSEServerTransport("/messages", res);
+        const sseServer = createMCPServer(manager, resources);
+        sseSessions.set(sseTransport.sessionId, sseTransport);
+
+        res.on("close", () => {
+          log.info("SSE session closed", { sessionId: sseTransport.sessionId });
+          sseSessions.delete(sseTransport.sessionId);
+        });
+
+        await sseServer.connect(sseTransport);
+        return;
+      }
+
+      if (url?.startsWith("/messages") && method === "POST") {
+        const parsedUrl = new URL(url, "http://localhost");
+        const sessionId = parsedUrl.searchParams.get("sessionId");
+        const sseTransport = sessionId ? sseSessions.get(sessionId) : undefined;
+
+        if (sseTransport) {
+          await sseTransport.handlePostMessage(req, res);
+        } else {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "No transport found for sessionId" }));
+        }
+        return;
+      }
+
       // ── OAuth discovery stubs ──────────────────────────────────────
       if (url?.startsWith("/.well-known/")) {
         res.writeHead(404);
@@ -344,7 +383,7 @@ async function main() {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({
         error: "Not found",
-        endpoints: ["/mcp", "/health"],
+        endpoints: ["/mcp", "/sse", "/health"],
       }));
     }
 
@@ -352,6 +391,10 @@ async function main() {
     function gracefulShutdown(signal: string) {
       log.info("Shutting down", { signal });
       transport.close().catch(() => {});
+      for (const [id, sseTransport] of sseSessions) {
+        sseTransport.close().catch(() => {});
+        sseSessions.delete(id);
+      }
       manager.stopAll().then(() => {
         httpServer.close();
       });
@@ -366,6 +409,7 @@ async function main() {
     httpServer.listen(port, host, () => {
       log.info(`HWC Gateway listening on ${host}:${port}`, {
         streamableHttp: "/mcp",
+        legacySse: "/sse",
         health: "/health",
         mode: "sessionless",
       });

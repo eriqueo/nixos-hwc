@@ -1,8 +1,5 @@
 /**
- * hwc_config_* tools — query the declarative NixOS configuration.
- *
- * Most tools parse the filesystem directly for speed and uncommitted-change support.
- * Only hwc_config_get_option uses nix eval (slow, requires committed changes).
+ * hwc_config — consolidated config tool (browse, host_profile, get_option, port_map, list_domains, search_options, flake_metadata).
  */
 
 import { readdir, readFile, stat } from "node:fs/promises";
@@ -15,383 +12,288 @@ const HOSTS = ["hwc-server", "hwc-laptop", "hwc-xps", "hwc-gaming", "hwc-firesti
 
 export function configTools(nixosConfigPath: string, declarativeTtl: number): ToolDef[] {
   return [
-    // ── hwc_config_get_option ───────────────────────────────────────────
     {
-      name: "hwc_config_get_option",
+      name: "hwc_config",
       description:
-        "Evaluate any NixOS option value using nix eval. Slow (5-15s, cached). Only sees committed changes. " +
-        "Examples: 'hwc.media.jellyfin.enable', 'services.caddy.enable'. Specify host to target a specific machine.",
+        "NixOS config inspection. Actions: browse, host_profile, get_option, port_map, list_domains, search_options, flake_metadata.",
       inputSchema: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["browse", "host_profile", "get_option", "port_map", "list_domains", "search_options", "flake_metadata"],
+            description: "Action to perform",
+          },
+          // [browse] params
+          path: {
+            type: "string",
+            description: "[browse] Path relative to repo root (default: root dir)",
+          },
+          offset: {
+            type: "number",
+            description: "[browse] For files: start line (1-based, default 1)",
+          },
+          limit: {
+            type: "number",
+            description: "[browse] For files: max lines (default 200, max 500)",
+          },
+          recursive: {
+            type: "boolean",
+            description: "[browse] For directories: recurse up to 3 levels (default false)",
+          },
+          // [get_option] params
           option_path: {
             type: "string",
-            description: "Dot-separated option path, e.g. 'hwc.media.jellyfin.enable'",
+            description: "[get_option] Dot-separated option path, e.g. 'hwc.media.jellyfin.enable'",
           },
           host: {
             type: "string",
             enum: HOSTS,
-            default: "hwc-server",
-            description: "Which host config to evaluate",
+            description: "[get_option/host_profile] Which host config to evaluate (default: hwc-server)",
           },
-        },
-        required: ["option_path"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const optionPath = args.option_path as string;
-          const host = (args.host as string) || "hwc-server";
-
-          const value = await nixEval(nixosConfigPath, host, optionPath, declarativeTtl);
-          return {
-            status: "ok",
-            message: `${host}: ${optionPath}`,
-            data: { host, path: optionPath, value },
-          };
-        } catch (err) {
-          return catchError("COMMAND_FAILED", "nix eval failed (is the option path correct? are changes committed?)", err, "Option paths must use dots (hwc.media.jellyfin.enable). Only committed changes are visible to nix eval.");
-        }
-      },
-    },
-
-    // ── hwc_config_list_domains ─────────────────────────────────────────
-    {
-      name: "hwc_config_list_domains",
-      description:
-        "List all domains in the nixos-hwc architecture with their subdomains " +
-        "and module files. Parses the filesystem directly (fast, sees uncommitted changes).",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-      handler: async (): Promise<ToolResult> => {
-        try {
-          const domainsDir = join(nixosConfigPath, "domains");
-          const entries = await readdir(domainsDir, { withFileTypes: true });
-          const domains: Array<{
-            domain: string;
-            subdomains: string[];
-            files: string[];
-            hasIndex: boolean;
-          }> = [];
-
-          for (const entry of entries) {
-            if (!entry.isDirectory()) continue;
-            const domainPath = join(domainsDir, entry.name);
-            const subEntries = await readdir(domainPath, { withFileTypes: true });
-
-            const subdomains: string[] = [];
-            const files: string[] = [];
-            let hasIndex = false;
-
-            for (const sub of subEntries) {
-              if (sub.isDirectory()) {
-                subdomains.push(sub.name);
-              } else if (sub.name.endsWith(".nix")) {
-                files.push(sub.name);
-                if (sub.name === "index.nix") hasIndex = true;
-              }
-            }
-
-            domains.push({
-              domain: entry.name,
-              subdomains: subdomains.sort(),
-              files: files.sort(),
-              hasIndex,
-            });
-          }
-
-          domains.sort((a, b) => a.domain.localeCompare(b.domain));
-
-          return {
-            status: "ok",
-            message: `${domains.length} domains found`,
-            data: { domains },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to list domains", err);
-        }
-      },
-    },
-
-    // ── hwc_config_get_port_map ─────────────────────────────────────────
-    {
-      name: "hwc_config_get_port_map",
-      description:
-        "Get the complete port allocation map from routes.nix — internal ports, " +
-        "external Caddy ports, subpath routes. Useful for checking conflicts.",
-      inputSchema: {
-        type: "object",
-        properties: {
+          // [port_map] params
           filter: {
             type: "string",
-            description: "Filter by service name or port number. Omit for full map.",
+            description: "[port_map] Filter by service name or port number",
+          },
+          // [search_options] params
+          query: {
+            type: "string",
+            description: "[search_options] Search term, e.g. 'gpu', 'port', 'enable', 'backup'",
           },
         },
+        required: ["action"],
       },
       handler: async (args): Promise<ToolResult> => {
-        try {
-          const filter = (args.filter as string)?.toLowerCase();
-          const routesPath = join(nixosConfigPath, "domains/networking/routes.nix");
-          const content = await readFile(routesPath, "utf-8");
+        const action = args.action as string;
 
-          const routes = parseRoutes(content);
-          const filtered = filter
-            ? routes.filter(
-                (r) =>
+        // ── get_option ───────────────────────────────────────────
+        if (action === "get_option") {
+          try {
+            const optionPath = args.option_path as string;
+            if (!optionPath) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "option_path is required for action=get_option" });
+            }
+            const host = (args.host as string) || "hwc-server";
+            const value = await nixEval(nixosConfigPath, host, optionPath, declarativeTtl);
+            return { status: "ok", message: `${host}: ${optionPath}`, data: { host, path: optionPath, value } };
+          } catch (err) {
+            return catchError("COMMAND_FAILED", "nix eval failed (is the option path correct? are changes committed?)", err, "Option paths must use dots (hwc.media.jellyfin.enable). Only committed changes are visible to nix eval.");
+          }
+        }
+
+        // ── list_domains ─────────────────────────────────────────
+        if (action === "list_domains") {
+          try {
+            const domainsDir = join(nixosConfigPath, "domains");
+            const entries = await readdir(domainsDir, { withFileTypes: true });
+            const domains: Array<{ domain: string; subdomains: string[]; files: string[]; hasIndex: boolean }> = [];
+
+            for (const entry of entries) {
+              if (!entry.isDirectory()) continue;
+              const domainPath = join(domainsDir, entry.name);
+              const subEntries = await readdir(domainPath, { withFileTypes: true });
+
+              const subdomains: string[] = [];
+              const files: string[] = [];
+              let hasIndex = false;
+
+              for (const sub of subEntries) {
+                if (sub.isDirectory()) {
+                  subdomains.push(sub.name);
+                } else if (sub.name.endsWith(".nix")) {
+                  files.push(sub.name);
+                  if (sub.name === "index.nix") hasIndex = true;
+                }
+              }
+
+              domains.push({ domain: entry.name, subdomains: subdomains.sort(), files: files.sort(), hasIndex });
+            }
+
+            domains.sort((a, b) => a.domain.localeCompare(b.domain));
+            return { status: "ok", message: `${domains.length} domains found`, data: { domains } };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to list domains", err);
+          }
+        }
+
+        // ── port_map ─────────────────────────────────────────────
+        if (action === "port_map") {
+          try {
+            const filter = (args.filter as string)?.toLowerCase();
+            const routesPath = join(nixosConfigPath, "domains/networking/routes.nix");
+            const content = await readFile(routesPath, "utf-8");
+
+            const routes = parseRoutes(content);
+            const filtered = filter
+              ? routes.filter((r) =>
                   r.name.toLowerCase().includes(filter) ||
                   String(r.port || "").includes(filter) ||
                   (r.path || "").toLowerCase().includes(filter) ||
                   (r.upstream || "").includes(filter)
-              )
-            : routes;
+                )
+              : routes;
 
-          return {
-            status: "ok",
-            message: `${filtered.length} routes${filter ? ` matching '${filter}'` : ""}`,
-            data: { routes: filtered, total: routes.length },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to parse port map", err, "Check that domains/networking/routes.nix exists");
+            return { status: "ok", message: `${filtered.length} routes${filter ? ` matching '${filter}'` : ""}`, data: { routes: filtered, total: routes.length } };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to parse port map", err, "Check that domains/networking/routes.nix exists");
+          }
         }
-      },
-    },
 
-    // ── hwc_config_get_host_profile ─────────────────────────────────────
-    {
-      name: "hwc_config_get_host_profile",
-      description:
-        "Get the full profile and domain import list for a host — profiles, " +
-        "domains, channel (stable/unstable), and special config.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          host: {
-            type: "string",
-            enum: HOSTS,
-            description: "Host to query",
-          },
-        },
-        required: ["host"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const host = args.host as string;
-          const machineName = host.replace("hwc-", "");
-          const configPath = join(nixosConfigPath, "machines", machineName, "config.nix");
-
-          let content: string;
+        // ── host_profile ─────────────────────────────────────────
+        if (action === "host_profile") {
           try {
-            content = await readFile(configPath, "utf-8");
-          } catch {
-            return mcpError({
-              type: "NOT_FOUND",
-              message: `Machine config not found: ${configPath}`,
-              suggestion: `Valid hosts: ${HOSTS.join(", ")}`,
-              context: { host, path: configPath },
-            });
-          }
+            const host = args.host as string;
+            if (!host) {
+              return mcpError({ type: "VALIDATION_ERROR", message: "host is required for action=host_profile" });
+            }
+            const machineName = host.replace("hwc-", "");
+            const configPath = join(nixosConfigPath, "machines", machineName, "config.nix");
 
-          // Parse imports
-          const imports = parseImports(content);
-          const profiles = imports.filter((i) => i.includes("profiles/"));
-          const domains = imports.filter((i) => i.includes("domains/"));
+            let content: string;
+            try {
+              content = await readFile(configPath, "utf-8");
+            } catch {
+              return mcpError({ type: "NOT_FOUND", message: `Machine config not found: ${configPath}`, suggestion: `Valid hosts: ${HOSTS.join(", ")}`, context: { host, path: configPath } });
+            }
 
-          // Determine channel from flake.nix
-          const flakePath = join(nixosConfigPath, "flake.nix");
-          const flakeContent = await readFile(flakePath, "utf-8");
-          const isStable = flakeContent.includes(`${host} = nixpkgs-stable`) ||
-                           flakeContent.includes(`${host.replace("hwc-", "")} = nixpkgs-stable`);
+            const imports = parseImports(content);
+            const profiles = imports.filter((i) => i.includes("profiles/"));
+            const domains = imports.filter((i) => i.includes("domains/"));
 
-          // Extract hostname
-          const hostnameMatch = content.match(/hostName\s*=\s*"([^"]+)"/);
-          const stateVersionMatch = content.match(/stateVersion\s*=\s*"([^"]+)"/);
+            const flakePath = join(nixosConfigPath, "flake.nix");
+            const flakeContent = await readFile(flakePath, "utf-8");
+            const isStable = flakeContent.includes(`${host} = nixpkgs-stable`) ||
+                             flakeContent.includes(`${host.replace("hwc-", "")} = nixpkgs-stable`);
 
-          return {
-            status: "ok",
-            message: `Profile for ${host}`,
-            data: {
-              host,
-              hostname: hostnameMatch?.[1] || host,
-              channel: isStable ? "stable (nixos-25.11)" : "unstable",
-              stateVersion: stateVersionMatch?.[1] || "unknown",
-              profiles,
-              domainImports: domains,
-              allImports: imports,
-            },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to get host profile", err);
-        }
-      },
-    },
-
-    // ── hwc_config_search_options ────────────────────────────────────────
-    {
-      name: "hwc_config_search_options",
-      description:
-        "Search for Nix option declarations by keyword. Scans domains/ for " +
-        "mkOption/mkEnableOption patterns matching the query. Fast filesystem scan.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description: "Search term, e.g. 'gpu', 'port', 'enable', 'backup'",
-          },
-        },
-        required: ["query"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          if (!args.query || typeof args.query !== "string") {
-            return mcpError({ type: "VALIDATION_ERROR", message: "query parameter is required", suggestion: "Provide a search term like 'gpu', 'port', 'backup', or 'enable'" });
-          }
-          const query = (args.query as string).toLowerCase();
-          const domainsDir = join(nixosConfigPath, "domains");
-          const results = await searchOptionDeclarations(domainsDir, query);
-
-          // Group by file for compact output
-          const byFile = new Map<string, Array<{ line: number; name: string; type: string; default?: string }>>();
-          for (const r of results) {
-            if (!byFile.has(r.file)) byFile.set(r.file, []);
-            // Extract type and default from snippet
-            const typeMatch = r.snippet.match(/type\s*=\s*(?:types\.|lib\.types\.)?([\w.]+)/);
-            const defaultMatch = r.snippet.match(/default\s*=\s*([^;]{1,60})/);
-            byFile.get(r.file)!.push({
-              line: r.line,
-              name: r.name,
-              type: r.type === "enable" ? "bool" : (typeMatch?.[1] || "unknown"),
-              ...(defaultMatch ? { default: defaultMatch[1].trim() } : {}),
-            });
-          }
-          const grouped = Array.from(byFile.entries()).map(([file, options]) => ({ file, options }));
-
-          return {
-            status: "ok",
-            message: `${results.length} options in ${grouped.length} files matching '${query}'`,
-            data: { files: grouped },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to search options", err);
-        }
-      },
-    },
-
-    // ── hwc_config_browse ──────────────────────────────────────────────
-    {
-      name: "hwc_config_browse",
-      description:
-        "Browse the nixos-hwc repo — read a file or list a directory by relative path. " +
-        "Auto-detects file vs directory. Scoped to repo root.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          path: {
-            type: "string",
-            description: "Path relative to repo root (default: root dir)",
-          },
-          offset: {
-            type: "number",
-            description: "For files: start line (1-based, default 1)",
-          },
-          limit: {
-            type: "number",
-            description: "For files: max lines (default 200, max 500)",
-          },
-          recursive: {
-            type: "boolean",
-            description: "For directories: recurse up to 3 levels (default false)",
-          },
-        },
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const rawPath = (args.path as string) || ".";
-
-          const absPath = resolve(nixosConfigPath, rawPath);
-          const normalRepo = normalize(nixosConfigPath);
-          if (!absPath.startsWith(normalRepo + "/") && absPath !== normalRepo) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes repo root: ${rawPath}`, suggestion: "Paths must be relative to the nixos-hwc repo root" });
-          }
-
-          let pathStat;
-          try {
-            pathStat = await stat(absPath);
-          } catch {
-            return mcpError({ type: "NOT_FOUND", message: `Not found: ${rawPath}` });
-          }
-
-          if (pathStat.isFile()) {
-            const offset = Math.max(1, (args.offset as number) || 1);
-            const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
-            const content = await readFile(absPath, "utf-8");
-            const allLines = content.split("\n");
-            const totalLines = allLines.length;
-            const startIdx = offset - 1;
-            const slice = allLines.slice(startIdx, startIdx + limit);
-            const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} │ ${line}`).join("\n");
+            const hostnameMatch = content.match(/hostName\s*=\s*"([^"]+)"/);
+            const stateVersionMatch = content.match(/stateVersion\s*=\s*"([^"]+)"/);
 
             return {
               status: "ok",
-              message: `${rawPath} (lines ${offset}–${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
-              data: { type: "file", path: rawPath, totalLines, offset, limit, content: numbered },
+              message: `Profile for ${host}`,
+              data: {
+                host,
+                hostname: hostnameMatch?.[1] || host,
+                channel: isStable ? "stable (nixos-25.11)" : "unstable",
+                stateVersion: stateVersionMatch?.[1] || "unknown",
+                profiles,
+                domainImports: domains,
+                allImports: imports,
+              },
             };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to get host profile", err);
           }
-
-          // Directory listing
-          const recursive = (args.recursive as boolean) ?? false;
-          const entries = await listDirEntries(absPath, normalRepo, recursive ? 3 : 0);
-          return {
-            status: "ok",
-            message: `${entries.length} entries in ${rawPath}`,
-            data: { type: "directory", path: rawPath, entries },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to browse path", err);
         }
-      },
-    },
 
-    // ── hwc_config_flake_metadata ───────────────────────────────────────
-    {
-      name: "hwc_config_flake_metadata",
-      description:
-        "Get flake metadata — inputs, their current revisions, when last updated.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-      },
-      handler: async (): Promise<ToolResult> => {
-        try {
-          const meta = await flakeMetadata(nixosConfigPath, declarativeTtl);
-          const locks = (meta.locks as Record<string, unknown>) || {};
-          const nodes = (locks as { nodes?: Record<string, unknown> }).nodes || {};
+        // ── search_options ───────────────────────────────────────
+        if (action === "search_options") {
+          try {
+            const query = args.query as string;
+            if (!query || typeof query !== "string") {
+              return mcpError({ type: "VALIDATION_ERROR", message: "query parameter is required", suggestion: "Provide a search term like 'gpu', 'port', 'backup', or 'enable'" });
+            }
+            const lowerQuery = query.toLowerCase();
+            const domainsDir = join(nixosConfigPath, "domains");
+            const results = await searchOptionDeclarations(domainsDir, lowerQuery);
 
-          const inputs: Array<{ name: string; url?: string; rev?: string; lastModified?: string }> = [];
-          for (const [name, node] of Object.entries(nodes)) {
-            if (name === "root") continue;
-            const locked = (node as Record<string, unknown>).locked as Record<string, unknown> | undefined;
-            if (locked) {
-              inputs.push({
-                name,
-                url: (locked.url as string) || `${locked.owner}/${locked.repo}`,
-                rev: (locked.rev as string)?.slice(0, 12),
-                lastModified: locked.lastModified
-                  ? new Date((locked.lastModified as number) * 1000).toISOString().slice(0, 10)
-                  : undefined,
+            const byFile = new Map<string, Array<{ line: number; name: string; type: string; default?: string }>>();
+            for (const r of results) {
+              if (!byFile.has(r.file)) byFile.set(r.file, []);
+              const typeMatch = r.snippet.match(/type\s*=\s*(?:types\.|lib\.types\.)?([\w.]+)/);
+              const defaultMatch = r.snippet.match(/default\s*=\s*([^;]{1,60})/);
+              byFile.get(r.file)!.push({
+                line: r.line,
+                name: r.name,
+                type: r.type === "enable" ? "bool" : (typeMatch?.[1] || "unknown"),
+                ...(defaultMatch ? { default: defaultMatch[1].trim() } : {}),
               });
             }
-          }
+            const grouped = Array.from(byFile.entries()).map(([file, options]) => ({ file, options }));
 
-          return {
-            status: "ok",
-            message: `${inputs.length} flake inputs`,
-            data: { inputs },
-          };
-        } catch (err) {
-          return catchError("COMMAND_FAILED", "Failed to get flake metadata", err, "Is nix available and the flake.lock valid?");
+            return { status: "ok", message: `${results.length} options in ${grouped.length} files matching '${query}'`, data: { files: grouped } };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to search options", err);
+          }
         }
+
+        // ── browse ───────────────────────────────────────────────
+        if (action === "browse") {
+          try {
+            const rawPath = (args.path as string) || ".";
+            const absPath = resolve(nixosConfigPath, rawPath);
+            const normalRepo = normalize(nixosConfigPath);
+            if (!absPath.startsWith(normalRepo + "/") && absPath !== normalRepo) {
+              return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes repo root: ${rawPath}`, suggestion: "Paths must be relative to the nixos-hwc repo root" });
+            }
+
+            let pathStat;
+            try {
+              pathStat = await stat(absPath);
+            } catch {
+              return mcpError({ type: "NOT_FOUND", message: `Not found: ${rawPath}` });
+            }
+
+            if (pathStat.isFile()) {
+              const off = Math.max(1, (args.offset as number) || 1);
+              const lim = Math.min(500, Math.max(1, (args.limit as number) || 200));
+              const content = await readFile(absPath, "utf-8");
+              const allLines = content.split("\n");
+              const totalLines = allLines.length;
+              const startIdx = off - 1;
+              const slice = allLines.slice(startIdx, startIdx + lim);
+              const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} │ ${line}`).join("\n");
+
+              return {
+                status: "ok",
+                message: `${rawPath} (lines ${off}–${Math.min(off + lim - 1, totalLines)} of ${totalLines})`,
+                data: { type: "file", path: rawPath, totalLines, offset: off, limit: lim, content: numbered },
+              };
+            }
+
+            const recursive = (args.recursive as boolean) ?? false;
+            const entries = await listDirEntries(absPath, normalRepo, recursive ? 3 : 0);
+            return {
+              status: "ok",
+              message: `${entries.length} entries in ${rawPath}`,
+              data: { type: "directory", path: rawPath, entries },
+            };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to browse path", err);
+          }
+        }
+
+        // ── flake_metadata ───────────────────────────────────────
+        if (action === "flake_metadata") {
+          try {
+            const meta = await flakeMetadata(nixosConfigPath, declarativeTtl);
+            const locks = (meta.locks as Record<string, unknown>) || {};
+            const nodes = (locks as { nodes?: Record<string, unknown> }).nodes || {};
+
+            const inputs: Array<{ name: string; url?: string; rev?: string; lastModified?: string }> = [];
+            for (const [name, node] of Object.entries(nodes)) {
+              if (name === "root") continue;
+              const locked = (node as Record<string, unknown>).locked as Record<string, unknown> | undefined;
+              if (locked) {
+                inputs.push({
+                  name,
+                  url: (locked.url as string) || `${locked.owner}/${locked.repo}`,
+                  rev: (locked.rev as string)?.slice(0, 12),
+                  lastModified: locked.lastModified
+                    ? new Date((locked.lastModified as number) * 1000).toISOString().slice(0, 10)
+                    : undefined,
+                });
+              }
+            }
+
+            return { status: "ok", message: `${inputs.length} flake inputs`, data: { inputs } };
+          } catch (err) {
+            return catchError("COMMAND_FAILED", "Failed to get flake metadata", err, "Is nix available and the flake.lock valid?");
+          }
+        }
+
+        return { status: "error", message: `Unknown action: ${action}`, error: `Unknown action: ${action}`, error_type: "VALIDATION_ERROR" };
       },
     },
   ];
@@ -410,13 +312,11 @@ interface Route {
 
 function parseRoutes(content: string): Route[] {
   const routes: Route[] = [];
-  // Match route blocks: { name = "..."; mode = "..."; ... }
   const blockRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
   let match: RegExpExecArray | null;
 
   while ((match = blockRegex.exec(content)) !== null) {
     const block = match[1];
-
     const nameMatch = block.match(/name\s*=\s*"([^"]+)"/);
     const modeMatch = block.match(/mode\s*=\s*"([^"]+)"/);
     const portMatch = block.match(/port\s*=\s*(\d+)/);
@@ -441,7 +341,6 @@ function parseRoutes(content: string): Route[] {
 
 function parseImports(content: string): string[] {
   const imports: string[] = [];
-  // Match import paths: ./path or ../../path or ${something}/path
   const importBlockMatch = content.match(/imports\s*=\s*\[([\s\S]*?)\];/);
   if (!importBlockMatch) return imports;
 
@@ -453,7 +352,6 @@ function parseImports(content: string): string[] {
     imports.push(match[1] || match[2]);
   }
 
-  // Also catch profiles/domains paths in comments or string form
   const stringPaths = block.match(/(?:profiles|domains)\/[^\s;}\]]+/g);
   if (stringPaths) {
     for (const p of stringPaths) {
@@ -505,15 +403,10 @@ async function searchOptionDeclarations(
             (line.toLowerCase().includes(query) ||
              lines.slice(Math.max(0, i - 2), i + 5).join("\n").toLowerCase().includes(query))
           ) {
-            // Extract option name by walking back through the nesting
             const contextBefore = lines.slice(Math.max(0, i - 10), i + 1).join("\n");
-
-            // Try to match full path like "gpu.enable = lib.mkOption" or inline "enable = mkEnableOption"
             const fullPathMatch = contextBefore.match(/([\w.]+)\s*=\s*(?:lib\.)?mk(?:Option|EnableOption)/);
-            // Also try extracting from nesting: look for attribute paths in context
             let optionName = fullPathMatch?.[1] || "unknown";
 
-            // If we only got a leaf name like "enable", try to build path from nesting context
             if (optionName === "enable" || optionName === "unknown") {
               const widerContext = lines.slice(Math.max(0, i - 20), i + 1);
               const pathParts: string[] = [];
@@ -562,7 +455,6 @@ async function listDirEntries(
   const results: DirEntry[] = [];
 
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    // Skip hidden dirs, node_modules, dist, .git
     if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "dist") continue;
 
     const fullPath = join(dir, entry.name);

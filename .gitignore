@@ -52,3 +52,4 @@ __pycache__/
 # n8n workflows - exported/generated files
 domains/server/n8n/parts/workflows/*.json
 n8n-simple.json
+domains/business/datax/dashboard/dashboard.json

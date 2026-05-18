@@ -1,5 +1,5 @@
 /**
- * hwc_network_* tools — Tailscale, Caddy routes, VPN, firewall.
+ * hwc_network — consolidated network tool (caddy, tunnels).
  */
 
 import { readFile } from "node:fs/promises";
@@ -14,241 +14,209 @@ const cache = new TtlCache();
 export function networkTools(runtimeTtl: number, nixosConfigPath?: string): ToolDef[] {
   return [
     {
-      name: "hwc_network_tunnel_status",
-      description:
-        "Get tunnel/VPN status — Tailscale peers and/or Gluetun VPN. " +
-        "Default returns both. Read-only.",
+      name: "hwc_network",
+      description: "Network status. Actions: caddy (Caddy routes), tunnels (tunnel status).",
       inputSchema: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["caddy", "tunnels"],
+            description: "Action to perform",
+          },
+          // [tunnels] params
           tunnel: {
             type: "string",
             enum: ["tailscale", "vpn", "all"],
-            default: "all",
-            description: "Which tunnel to check (default: all)",
+            description: "[tunnels] Which tunnel to check (default: all)",
           },
-        },
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const tunnel = (args.tunnel as string) || "all";
-          const data: Record<string, unknown> = {};
-          const parts: string[] = [];
-
-          if (tunnel === "all" || tunnel === "tailscale") {
-            try {
-              const status = await cache.getOrCompute(
-                "tailscale:status",
-                runtimeTtl,
-                () => getTailscaleStatus()
-              );
-
-              const funnelNodes = status.peers.filter((p) =>
-                p.hostname.startsWith("funnel-ingress-node")
-              );
-              const regularPeers = status.peers.filter((p) =>
-                !p.hostname.startsWith("funnel-ingress-node")
-              );
-              const online = regularPeers.filter((p) => p.online);
-
-              const collapsedPeers = [
-                ...regularPeers,
-                ...(funnelNodes.length > 0
-                  ? [{
-                      hostname: `funnel-ingress-nodes (${funnelNodes.length} total)`,
-                      ip: "",
-                      os: "linux",
-                      online: funnelNodes.some((f) => f.online),
-                      exitNode: false,
-                    }]
-                  : []),
-              ];
-
-              data.tailscale = { ...status, peers: collapsedPeers };
-              parts.push(`Tailscale: ${online.length}/${regularPeers.length} peers`);
-            } catch {
-              data.tailscale = { error: "tailscaled not reachable" };
-              parts.push("Tailscale: down");
-            }
-          }
-
-          if (tunnel === "all" || tunnel === "vpn") {
-            try {
-              const [ipResult, statusResult] = await Promise.allSettled([
-                fetch("http://localhost:8000/v1/publicip/ip", {
-                  signal: AbortSignal.timeout(5000),
-                }).then((r) => r.json()),
-                fetch("http://localhost:8000/v1/openvpn/status", {
-                  signal: AbortSignal.timeout(5000),
-                }).then((r) => r.json()),
-              ]);
-
-              data.vpn = {
-                publicIp: ipResult.status === "fulfilled" ? ipResult.value : "unavailable",
-                vpnStatus: statusResult.status === "fulfilled" ? statusResult.value : "unavailable",
-              };
-              parts.push("VPN: connected");
-            } catch {
-              data.vpn = { error: "Gluetun not reachable" };
-              parts.push("VPN: down");
-            }
-          }
-
-          return {
-            status: "ok",
-            message: parts.join(", "),
-            data,
-          };
-        } catch (err) {
-          return catchError("UNAVAILABLE", "Failed to get tunnel status", err);
-        }
-      },
-    },
-
-    {
-      name: "hwc_network_caddy_routes",
-      description:
-        "Get Caddy reverse proxy configuration. Optionally probes upstream health (slower). Read-only.",
-      inputSchema: {
-        type: "object",
-        properties: {
+          // [caddy] params
           route: {
             type: "string",
-            description: "Route name (e.g. 'jellyfin', 'sonarr') for full details. Omit for compact overview of all routes.",
+            description: "[caddy] Route name (e.g. 'jellyfin') for full details. Omit for compact overview.",
           },
           check_health: {
             type: "boolean",
-            default: false,
-            description: "If true, probe each upstream for health (slower).",
+            description: "[caddy] If true, probe each upstream for health (slower, default: false)",
           },
         },
+        required: ["action"],
       },
       handler: async (args): Promise<ToolResult> => {
-        try {
-          const routeFilter = args.route as string | undefined;
-          const checkHealth = args.check_health === true;
+        const action = args.action as string;
 
-          // Try Caddy admin API first
+        // ── tunnels ──────────────────────────────────────────────
+        if (action === "tunnels") {
           try {
-            const response = await fetch("http://localhost:2019/config/", {
-              headers: {
-                "Content-Type": "application/json",
-                Origin: "http://localhost",
-              },
-              signal: AbortSignal.timeout(5000),
-            });
+            const tunnel = (args.tunnel as string) || "all";
+            const data: Record<string, unknown> = {};
+            const parts: string[] = [];
 
-            if (response.ok) {
-              const config = await response.json() as Record<string, unknown>;
-              const apps = config.apps as Record<string, unknown> | undefined;
-              const httpApp = apps?.http as Record<string, unknown> | undefined;
-              const servers = httpApp?.servers as Record<string, unknown> | undefined;
+            if (tunnel === "all" || tunnel === "tailscale") {
+              try {
+                const status = await cache.getOrCompute(
+                  "tailscale:status",
+                  runtimeTtl,
+                  () => getTailscaleStatus()
+                );
 
-              const routes: Array<Record<string, unknown>> = [];
-              if (servers) {
-                for (const [serverName, server] of Object.entries(servers)) {
-                  const srv = server as Record<string, unknown>;
-                  const srvRoutes = (srv.routes || []) as Array<Record<string, unknown>>;
-                  const listen = (srv.listen || []) as string[];
+                const funnelNodes = status.peers.filter((p) =>
+                  p.hostname.startsWith("funnel-ingress-node")
+                );
+                const regularPeers = status.peers.filter((p) =>
+                  !p.hostname.startsWith("funnel-ingress-node")
+                );
+                const online = regularPeers.filter((p) => p.online);
 
-                  for (const route of srvRoutes) {
-                    routes.push({
-                      server: serverName,
-                      listen,
-                      match: route.match,
-                      handle: summarizeHandlers(route.handle as Array<Record<string, unknown>>),
-                    });
-                  }
-                }
+                const collapsedPeers = [
+                  ...regularPeers,
+                  ...(funnelNodes.length > 0
+                    ? [{
+                        hostname: `funnel-ingress-nodes (${funnelNodes.length} total)`,
+                        ip: "",
+                        os: "linux",
+                        online: funnelNodes.some((f) => f.online),
+                        exitNode: false,
+                      }]
+                    : []),
+                ];
+
+                data.tailscale = { ...status, peers: collapsedPeers };
+                parts.push(`Tailscale: ${online.length}/${regularPeers.length} peers`);
+              } catch {
+                data.tailscale = { error: "tailscaled not reachable" };
+                parts.push("Tailscale: down");
               }
-
-              // Admin API returns raw Caddy config — pass through as-is
-              // (routeFilter not applicable to live admin API format)
-              return {
-                status: "ok",
-                message: `${routes.length} routes across ${Object.keys(servers || {}).length} servers (live)`,
-                data: { source: "admin-api", routes, serverCount: Object.keys(servers || {}).length },
-              };
             }
 
-            // If admin API returned non-ok, fall through to config parsing
-          } catch {
-            // Admin API not reachable, fall through to config parsing
-          }
+            if (tunnel === "all" || tunnel === "vpn") {
+              try {
+                const [ipResult, statusResult] = await Promise.allSettled([
+                  fetch("http://localhost:8000/v1/publicip/ip", {
+                    signal: AbortSignal.timeout(5000),
+                  }).then((r) => r.json()),
+                  fetch("http://localhost:8000/v1/openvpn/status", {
+                    signal: AbortSignal.timeout(5000),
+                  }).then((r) => r.json()),
+                ]);
 
-          // Fallback: parse routes.nix from the declarative config
-          if (nixosConfigPath) {
-            const routesPath = join(nixosConfigPath, "domains/networking/routes.nix");
-            try {
-              const content = await readFile(routesPath, "utf-8");
-              const routes = parseCaddyRoutes(content);
-
-              // Optionally health-check upstreams
-              if (checkHealth) {
-                await Promise.all(
-                  routes.map(async (r) => {
-                    if (r.upstream) {
-                      try {
-                        const resp = await fetch(`http://${r.upstream}/`, {
-                          signal: AbortSignal.timeout(3000),
-                        });
-                        r.healthy = resp.ok || resp.status < 500;
-                      } catch {
-                        r.healthy = false;
-                      }
-                    }
-                  })
-                );
-              }
-
-              // Single route detail
-              if (routeFilter) {
-                const match = routes.find((r) => r.name === routeFilter);
-                if (!match) {
-                  return mcpError({
-                    type: "NOT_FOUND",
-                    message: `Route not found: ${routeFilter}`,
-                    suggestion: "Call without 'route' param to list all route names",
-                    context: { available: routes.map((r) => r.name) },
-                  });
-                }
-                return {
-                  status: "ok",
-                  message: `Route: ${match.name}`,
-                  data: { source: "routes.nix", route: match },
+                data.vpn = {
+                  publicIp: ipResult.status === "fulfilled" ? ipResult.value : "unavailable",
+                  vpnStatus: statusResult.status === "fulfilled" ? statusResult.value : "unavailable",
                 };
+                parts.push("VPN: connected");
+              } catch {
+                data.vpn = { error: "Gluetun not reachable" };
+                parts.push("VPN: down");
               }
+            }
 
-              // Compact overview — drop upstream (internal plumbing)
-              const compact = routes.map((r) => {
-                const entry: Record<string, unknown> = { name: r.name, mode: r.mode };
-                if (r.port) entry.port = r.port;
-                if (r.path) entry.path = r.path;
-                if (r.healthy !== undefined) entry.healthy = r.healthy;
-                return entry;
+            return { status: "ok", message: parts.join(", "), data };
+          } catch (err) {
+            return catchError("UNAVAILABLE", "Failed to get tunnel status", err);
+          }
+        }
+
+        // ── caddy ────────────────────────────────────────────────
+        if (action === "caddy") {
+          try {
+            const routeFilter = args.route as string | undefined;
+            const checkHealth = args.check_health === true;
+
+            // Try Caddy admin API first
+            try {
+              const response = await fetch("http://localhost:2019/config/", {
+                headers: { "Content-Type": "application/json", Origin: "http://localhost" },
+                signal: AbortSignal.timeout(5000),
               });
 
-              return {
-                status: "ok",
-                message: `${routes.length} routes from routes.nix`,
-                data: { source: "routes.nix", routes: compact },
-              };
-            } catch {
-              // routes.nix not readable
-            }
-          }
+              if (response.ok) {
+                const config = await response.json() as Record<string, unknown>;
+                const apps = config.apps as Record<string, unknown> | undefined;
+                const httpApp = apps?.http as Record<string, unknown> | undefined;
+                const servers = httpApp?.servers as Record<string, unknown> | undefined;
 
-          return mcpError({
-            type: "UNAVAILABLE",
-            message: "Caddy admin API returned 403 and routes.nix fallback unavailable",
-            suggestion: "Caddy admin API may need 'admin { origins localhost }'. Check Caddy is running.",
-          });
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to query Caddy config", err);
+                const routes: Array<Record<string, unknown>> = [];
+                if (servers) {
+                  for (const [serverName, server] of Object.entries(servers)) {
+                    const srv = server as Record<string, unknown>;
+                    const srvRoutes = (srv.routes || []) as Array<Record<string, unknown>>;
+                    const listen = (srv.listen || []) as string[];
+
+                    for (const route of srvRoutes) {
+                      routes.push({
+                        server: serverName,
+                        listen,
+                        match: route.match,
+                        handle: summarizeHandlers(route.handle as Array<Record<string, unknown>>),
+                      });
+                    }
+                  }
+                }
+
+                return {
+                  status: "ok",
+                  message: `${routes.length} routes across ${Object.keys(servers || {}).length} servers (live)`,
+                  data: { source: "admin-api", routes, serverCount: Object.keys(servers || {}).length },
+                };
+              }
+            } catch {
+              // Admin API not reachable, fall through to config parsing
+            }
+
+            // Fallback: parse routes.nix
+            if (nixosConfigPath) {
+              const routesPath = join(nixosConfigPath, "domains/networking/routes.nix");
+              try {
+                const content = await readFile(routesPath, "utf-8");
+                const routes = parseCaddyRoutes(content);
+
+                if (checkHealth) {
+                  await Promise.all(
+                    routes.map(async (r) => {
+                      if (r.upstream) {
+                        try {
+                          const resp = await fetch(`http://${r.upstream}/`, { signal: AbortSignal.timeout(3000) });
+                          r.healthy = resp.ok || resp.status < 500;
+                        } catch {
+                          r.healthy = false;
+                        }
+                      }
+                    })
+                  );
+                }
+
+                if (routeFilter) {
+                  const match = routes.find((r) => r.name === routeFilter);
+                  if (!match) {
+                    return mcpError({ type: "NOT_FOUND", message: `Route not found: ${routeFilter}`, suggestion: "Call without 'route' param to list all route names", context: { available: routes.map((r) => r.name) } });
+                  }
+                  return { status: "ok", message: `Route: ${match.name}`, data: { source: "routes.nix", route: match } };
+                }
+
+                const compact = routes.map((r) => {
+                  const entry: Record<string, unknown> = { name: r.name, mode: r.mode };
+                  if (r.port) entry.port = r.port;
+                  if (r.path) entry.path = r.path;
+                  if (r.healthy !== undefined) entry.healthy = r.healthy;
+                  return entry;
+                });
+
+                return { status: "ok", message: `${routes.length} routes from routes.nix`, data: { source: "routes.nix", routes: compact } };
+              } catch {
+                // routes.nix not readable
+              }
+            }
+
+            return mcpError({ type: "UNAVAILABLE", message: "Caddy admin API returned 403 and routes.nix fallback unavailable", suggestion: "Caddy admin API may need 'admin { origins localhost }'. Check Caddy is running." });
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to query Caddy config", err);
+          }
         }
+
+        return { status: "error", message: `Unknown action: ${action}`, error: `Unknown action: ${action}`, error_type: "VALIDATION_ERROR" };
       },
     },
-
   ];
 }
 

@@ -203,14 +203,6 @@ in
       };
     }
 
-    # Gotify notification server - port mode (subpath not well supported)
-    {
-      name = "gotify";
-      mode = "port";
-      port = 2586;
-      upstream = "http://127.0.0.1:2587";
-    }
-
     # Tdarr - port mode (WebSocket intensive, subpath issues)
     {
       name = "tdarr";
@@ -323,6 +315,22 @@ in
       mode = "static";
       port = 16443;
       root = "/home/eric/.nixos/domains/business/morning-briefing/dashboard";
+    }
+
+    # lead_scout — intelligence pipeline dashboard (Vite dev)
+    {
+      name = "lead-scout";
+      mode = "port";
+      port = 21443;
+      upstream = "http://127.0.0.1:5175";
+    }
+
+    # lead_scout API — MCP + REST backend
+    {
+      name = "lead-scout-api";
+      mode = "port";
+      port = 22443;
+      upstream = "http://127.0.0.1:8420";
     }
 
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [

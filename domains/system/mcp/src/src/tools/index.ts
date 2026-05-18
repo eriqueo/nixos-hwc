@@ -1,5 +1,5 @@
 /**
- * Tool aggregator — collects all tool modules into a single array.
+ * Tool aggregator — collects all consolidated tool modules into a single array.
  */
 
 import type { ToolDef, ServerConfig } from "../types.js";
@@ -16,13 +16,15 @@ import { calendarTools } from "./calendar.js";
 import { websiteTools } from "./website.js";
 import { cmsTools } from "./cms.js";
 import { estimatorTools } from "./estimator.js";
+import { morningStatusTool } from "./morning-status.js";
 
 
 export function allTools(config: ServerConfig): ToolDef[] {
   return [
+    // Consolidated multi-action tools
     ...servicesTools(config.cacheTtl.runtime, config.nixosConfigPath),
     ...buildTools(config.nixosConfigPath, config.cacheTtl.runtime),
-    ...monitoringTools(config.workspace, config.cacheTtl.runtime),
+    ...monitoringTools(),
     ...configTools(config.nixosConfigPath, config.cacheTtl.declarative),
     ...secretsTools(config.nixosConfigPath),
     ...storageTools(),
@@ -36,5 +38,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
       { name: "calculator", path: `${config.nixosConfigPath}/domains/business/website/calculator/app`, description: "Cost calculator app (Vite + React)" },
     ]),
     ...estimatorTools(config.nixosConfigPath),
+    // Composite tool
+    morningStatusTool(),
   ];
 }

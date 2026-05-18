@@ -5,14 +5,14 @@
  * Routes callTool requests to the correct backend by tool name.
  * Detects name collisions at startup.
  *
- * Lazy loading: backends can be marked as "lazy". Their tools are hidden
- * from ListTools until a connect meta-tool is called. This reduces token
- * overhead for Claude.ai sessions that don't need all backends.
+ * Supports optional consolidation functions per backend: a ConsolidateFn
+ * receives the discovered tools + a call proxy, returns a set of new
+ * consolidated ToolDef[] and a list of original tool names to hide.
  */
 
 import { log } from "./log.js";
 import type { ToolDef } from "./types.js";
-import { StdioBackend, type BackendStatus } from "./stdio-backend.js";
+import { StdioBackend, type BackendStatus, type DiscoveredTool } from "./stdio-backend.js";
 import { transformN8nResponse } from "./transforms/n8n.js";
 
 interface AggregatedTool {
@@ -22,24 +22,63 @@ interface AggregatedTool {
   source: string; // "local" or backend name
 }
 
+/** Call proxy handed to consolidation functions */
+export type BackendCallFn = (
+  name: string,
+  args: Record<string, unknown>,
+) => Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }>;
+
+/** Result returned by a consolidation function */
+export interface ConsolidationResult {
+  /** New consolidated tools to expose in place of (some) backend tools */
+  tools: ToolDef[];
+  /** Original backend tool names to hide from the tool list */
+  hidden: string[];
+}
+
+/** Function that consolidates raw backend tools into fewer wrapped tools */
+export type ConsolidateFn = (
+  tools: DiscoveredTool[],
+  call: BackendCallFn,
+) => ConsolidationResult;
+
+/**
+ * Parse a raw MCP content response from a backend tool call into a
+ * structured result. Used inside consolidation handlers.
+ */
+export function parseBackendResult(r: {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+}): { status: "ok" | "error"; data?: unknown; message?: string } {
+  const text = r.content[0]?.text ?? "";
+  try {
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    return r.isError
+      ? { status: "error", message: String(parsed?.error ?? parsed?.message ?? text) }
+      : { status: "ok", data: parsed };
+  } catch {
+    return r.isError ? { status: "error", message: text } : { status: "ok", data: text };
+  }
+}
+
 export class BackendManager {
   private localTools: ToolDef[] = [];
   private backends: StdioBackend[] = [];
   private toolMap = new Map<string, { source: string; backend?: StdioBackend; local?: ToolDef }>();
 
-  /** Backends marked lazy start hidden — their tools only appear after connect. */
-  private lazyBackends = new Set<string>();
-  /** Activated backends have been "connected" — their tools appear in allTools(). */
-  private activatedBackends = new Set<string>();
+  /** Consolidation functions keyed by backend name */
+  private consolidationFns = new Map<string, ConsolidateFn>();
+  /** Consolidated tool lists keyed by backend name */
+  private consolidatedTools = new Map<string, ConsolidationResult>();
 
   registerLocal(tools: ToolDef[]): void {
     this.localTools = tools;
   }
 
-  addBackend(backend: StdioBackend, options?: { lazy?: boolean }): void {
+  addBackend(backend: StdioBackend, options?: { consolidate?: ConsolidateFn }): void {
     this.backends.push(backend);
-    if (options?.lazy) {
-      this.lazyBackends.add(backend.name);
+    if (options?.consolidate) {
+      this.consolidationFns.set(backend.name, options.consolidate);
     }
   }
 
@@ -58,14 +97,31 @@ export class BackendManager {
       }
     }
 
+    // Build consolidated tools for backends that have a consolidation fn
+    for (const backend of this.backends) {
+      const consolidate = this.consolidationFns.get(backend.name);
+      if (consolidate && backend.status === "ready") {
+        const callFn: BackendCallFn = (name, args) => backend.callTool(name, args);
+        const result = consolidate(backend.tools, callFn);
+        this.consolidatedTools.set(backend.name, result);
+        log.info(
+          `Backend "${backend.name}" consolidated: ${backend.toolCount} raw → ${result.tools.length} consolidated (${result.hidden.length} hidden)`,
+        );
+      }
+    }
+
     // Build tool map and check for collisions
     this.rebuildToolMap();
 
     // Log summary
     const localCount = this.localTools.length;
     const backendSummary = this.backends.map((b) => {
-      const lazy = this.lazyBackends.has(b.name) ? " (lazy)" : "";
-      return `${b.name}: ${b.toolCount}${lazy}`;
+      const cons = this.consolidatedTools.get(b.name);
+      if (cons) {
+        const passThrough = b.toolCount - cons.hidden.length;
+        return `${b.name}: ${cons.tools.length} consolidated + ${passThrough} pass-through`;
+      }
+      return `${b.name}: ${b.toolCount}`;
     }).join(", ");
     const total = this.toolMap.size;
     log.info(`Gateway ready: ${total} tools (hwc-sys: ${localCount}, ${backendSummary})`);
@@ -79,10 +135,30 @@ export class BackendManager {
       this.toolMap.set(tool.name, { source: "hwc-sys", local: tool });
     }
 
-    // Register backend tools — check for collisions
+    // Register consolidated tools as local entries (they have handler functions)
+    for (const [backendName, result] of this.consolidatedTools) {
+      for (const tool of result.tools) {
+        const existing = this.toolMap.get(tool.name);
+        if (existing) {
+          throw new Error(
+            `Tool name collision: "${tool.name}" exists in both "${existing.source}" and "${backendName}" (consolidated). ` +
+            `Rename one of them to resolve.`,
+          );
+        }
+        this.toolMap.set(tool.name, { source: backendName, local: tool });
+      }
+    }
+
+    // Register backend tools — check for collisions, skip hidden tools
     for (const backend of this.backends) {
       if (backend.status !== "ready") continue;
+      const consolidation = this.consolidatedTools.get(backend.name);
+      const hiddenSet = consolidation ? new Set(consolidation.hidden) : null;
+
       for (const tool of backend.tools) {
+        // Skip tools hidden by consolidation
+        if (hiddenSet && hiddenSet.has(tool.name)) continue;
+
         const existing = this.toolMap.get(tool.name);
         if (existing) {
           // Hard failure — tool name collision
@@ -94,56 +170,6 @@ export class BackendManager {
         this.toolMap.set(tool.name, { source: backend.name, backend });
       }
     }
-
-    // Register connect meta-tools for lazy backends
-    for (const backend of this.backends) {
-      if (!this.lazyBackends.has(backend.name)) continue;
-      if (backend.status !== "ready") continue;
-      const metaName = `hwc_connect_${backend.name.replace(/-/g, "_")}`;
-      this.toolMap.set(metaName, {
-        source: "hwc-sys",
-        local: {
-          name: metaName,
-          description: `Activate ${backend.name} tools (${backend.toolCount} tools). ` +
-            `Call this first to access ${backend.name} capabilities.`,
-          inputSchema: { type: "object", properties: {} },
-          handler: async () => this.activateBackend(backend.name),
-        },
-      });
-    }
-  }
-
-  /**
-   * Activate a lazy backend — its tools will appear in allTools() after this.
-   * Returns a summary of the activated tools.
-   */
-  private async activateBackend(backendName: string): Promise<{
-    status: "ok" | "error" | "partial";
-    message: string;
-    data?: unknown;
-  }> {
-    const backend = this.backends.find((b) => b.name === backendName);
-    if (!backend) {
-      return { status: "error", message: `Backend not found: ${backendName}` };
-    }
-    if (backend.status !== "ready") {
-      return { status: "error", message: `Backend ${backendName} is not ready (status: ${backend.status})` };
-    }
-
-    this.activatedBackends.add(backendName);
-    log.info(`Backend "${backendName}" activated — ${backend.toolCount} tools now visible`);
-
-    // Return tool catalog so Claude knows what's available without another ListTools round-trip
-    const toolSummary = backend.tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-    }));
-
-    return {
-      status: "ok",
-      message: `Activated ${backend.toolCount} ${backendName} tools. They are now available for use.`,
-      data: { tools: toolSummary },
-    };
   }
 
   allTools(): AggregatedTool[] {
@@ -158,29 +184,27 @@ export class BackendManager {
       });
     }
 
+    // Consolidated tools (exposed as local entries)
+    for (const [backendName, result] of this.consolidatedTools) {
+      for (const t of result.tools) {
+        tools.push({
+          name: t.name,
+          description: t.description,
+          inputSchema: t.inputSchema,
+          source: backendName,
+        });
+      }
+    }
+
     for (const backend of this.backends) {
       if (backend.status !== "ready" && backend.status !== "restarting") continue;
+      const consolidation = this.consolidatedTools.get(backend.name);
+      const hiddenSet = consolidation ? new Set(consolidation.hidden) : null;
 
-      const isLazy = this.lazyBackends.has(backend.name);
-      const isActivated = this.activatedBackends.has(backend.name);
-
-      if (isLazy && !isActivated) {
-        // Lazy and not activated: only show the connect meta-tool
-        const metaName = `hwc_connect_${backend.name.replace(/-/g, "_")}`;
-        const metaEntry = this.toolMap.get(metaName);
-        if (metaEntry?.local) {
-          tools.push({
-            name: metaEntry.local.name,
-            description: metaEntry.local.description,
-            inputSchema: metaEntry.local.inputSchema,
-            source: "hwc-sys",
-          });
-        }
-        continue;
-      }
-
-      // Non-lazy or activated: include all tools
       for (const t of backend.tools) {
+        // Skip tools hidden by consolidation
+        if (hiddenSet && hiddenSet.has(t.name)) continue;
+
         tools.push({
           name: t.name,
           description: t.description,
@@ -211,7 +235,7 @@ export class BackendManager {
       };
     }
 
-    // Local tool (including connect meta-tools)
+    // Local tool (including consolidated tools and connect meta-tools)
     if (entry.local) {
       const startMs = Date.now();
       try {
@@ -236,18 +260,11 @@ export class BackendManager {
       }
     }
 
-    // Backend tool — works even if backend is lazy (tools are in toolMap from startup)
     if (entry.backend) {
-      // Auto-activate lazy backends on first tool call
-      if (this.lazyBackends.has(entry.backend.name) && !this.activatedBackends.has(entry.backend.name)) {
-        this.activatedBackends.add(entry.backend.name);
-        log.info(`Backend "${entry.backend.name}" auto-activated via direct tool call: ${name}`);
-      }
-
       const result = await entry.backend.callTool(name, args);
 
       // Apply n8n response transforms
-      if (name.startsWith("n8n_") || name === "validate_workflow" || name === "validate_node") {
+      if (name.startsWith("n8n_") || name === "validate_workflow" || name === "validate_node" || name === "search_nodes" || name === "search_templates") {
         try {
           for (const item of result.content) {
             if (item.type === "text" && item.text) {
@@ -269,17 +286,13 @@ export class BackendManager {
     };
   }
 
-  healthReport(): Record<string, { status: BackendStatus; toolCount: number; lastSeen: number; lazy?: boolean; activated?: boolean }> {
-    const report: Record<string, { status: BackendStatus; toolCount: number; lastSeen: number; lazy?: boolean; activated?: boolean }> = {};
+  healthReport(): Record<string, { status: BackendStatus; toolCount: number; lastSeen: number }> {
+    const report: Record<string, { status: BackendStatus; toolCount: number; lastSeen: number }> = {};
     for (const backend of this.backends) {
       report[backend.name] = {
         status: backend.status,
         toolCount: backend.toolCount,
         lastSeen: backend.lastSeen,
-        ...(this.lazyBackends.has(backend.name) ? {
-          lazy: true,
-          activated: this.activatedBackends.has(backend.name),
-        } : {}),
       };
     }
     return report;

@@ -1,10 +1,5 @@
 /**
- * hwc_cms_* tools — read/write files in Heartwood business app directories.
- *
- * Supports multiple scoped roots (CMS app, calculator, etc.).
- * Each tool takes a `scope` param to select which root to operate in.
- * Same security model as hwc_config_read_file (resolve + normalize + startsWith).
- * Write uses atomic tmp + rename.
+ * hwc_cms — consolidated CMS tool (browse, write, delete).
  */
 
 import { readdir, readFile, writeFile, rename, mkdir, stat, unlink } from "node:fs/promises";
@@ -18,7 +13,6 @@ export interface CmsScope {
   description: string;
 }
 
-/** Resolve a relative path and verify it stays within the root. */
 function safePath(root: string, rawPath: string): string | null {
   const abs = resolve(root, rawPath);
   const normalRoot = normalize(root);
@@ -27,7 +21,7 @@ function safePath(root: string, rawPath: string): string | null {
 }
 
 function resolveScope(scopes: CmsScope[], scopeName: string | undefined): CmsScope | null {
-  if (!scopeName) return scopes[0]; // default to first
+  if (!scopeName) return scopes[0];
   return scopes.find((s) => s.name === scopeName) || null;
 }
 
@@ -78,244 +72,205 @@ export function cmsTools(scopes: CmsScope[]): ToolDef[] {
   const scopeDescriptions = scopes.map((s) => `'${s.name}' — ${s.description}`).join("; ");
 
   return [
-    // ── hwc_cms_browse ─────────────────────────────────────────────────
     {
-      name: "hwc_cms_browse",
+      name: "hwc_cms",
       description:
-        "Browse a Heartwood business app — read a file or list a directory. " +
-        `Scopes: ${scopeDescriptions}. ` +
-        "Auto-detects file vs directory. Scoped — cannot escape the selected root.",
+        `Heartwood CMS file management. Scopes: ${scopeDescriptions}. Actions: browse, write, delete.`,
       inputSchema: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["browse", "write", "delete"],
+            description: "Action to perform",
+          },
           scope: {
             type: "string",
             enum: scopeNames,
             description: `App scope to operate in (default: '${scopeNames[0]}')`,
           },
+          // [browse] params
           path: {
             type: "string",
-            description: "Path relative to scope root (default: root dir)",
+            description: "[browse/write/delete] Path relative to scope root (default: root dir for browse)",
           },
           offset: {
             type: "number",
-            description: "For files: start line (1-based, default 1)",
+            description: "[browse] For files: start line (1-based, default 1)",
           },
           limit: {
             type: "number",
-            description: "For files: max lines (default 200, max 500)",
+            description: "[browse] For files: max lines (default 200, max 500)",
           },
           recursive: {
             type: "boolean",
-            description: "For directories: recurse up to 3 levels (default false)",
+            description: "[browse] For directories: recurse up to 3 levels (default false)",
+          },
+          // [write] params
+          content: {
+            type: "string",
+            description: "[write] Full file content to write",
           },
         },
+        required: ["action"],
       },
       handler: async (args): Promise<ToolResult> => {
-        try {
-          const scope = resolveScope(scopes, args.scope as string | undefined);
-          if (!scope) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
-          }
+        const action = args.action as string;
 
-          const root = normalize(scope.path);
-          const rawPath = (args.path as string) || ".";
-
-          const abs = safePath(root, rawPath);
-          if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
-          }
-
-          let pathStat;
+        // ── browse ───────────────────────────────────────────────
+        if (action === "browse") {
           try {
-            pathStat = await stat(abs);
-          } catch {
-            return mcpError({ type: "NOT_FOUND", message: `Not found: ${rawPath}` });
-          }
+            const scope = resolveScope(scopes, args.scope as string | undefined);
+            if (!scope) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
+            }
 
-          if (pathStat.isFile()) {
-            const offset = Math.max(1, (args.offset as number) || 1);
-            const limit = Math.min(500, Math.max(1, (args.limit as number) || 200));
-            const content = await readFile(abs, "utf-8");
-            const allLines = content.split("\n");
-            const totalLines = allLines.length;
-            const startIdx = offset - 1;
-            const slice = allLines.slice(startIdx, startIdx + limit);
-            const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} | ${line}`).join("\n");
+            const root = normalize(scope.path);
+            const rawPath = (args.path as string) || ".";
+
+            const abs = safePath(root, rawPath);
+            if (!abs) {
+              return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
+            }
+
+            let pathStat;
+            try {
+              pathStat = await stat(abs);
+            } catch {
+              return mcpError({ type: "NOT_FOUND", message: `Not found: ${rawPath}` });
+            }
+
+            if (pathStat.isFile()) {
+              const off = Math.max(1, (args.offset as number) || 1);
+              const lim = Math.min(500, Math.max(1, (args.limit as number) || 200));
+              const content = await readFile(abs, "utf-8");
+              const allLines = content.split("\n");
+              const totalLines = allLines.length;
+              const startIdx = off - 1;
+              const slice = allLines.slice(startIdx, startIdx + lim);
+              const numbered = slice.map((line, i) => `${String(startIdx + i + 1).padStart(5)} | ${line}`).join("\n");
+
+              return {
+                status: "ok",
+                message: `[${scope.name}] ${rawPath} (lines ${off}-${Math.min(off + lim - 1, totalLines)} of ${totalLines})`,
+                data: { type: "file", scope: scope.name, path: rawPath, totalLines, offset: off, limit: lim, content: numbered },
+              };
+            }
+
+            const recursive = (args.recursive as boolean) ?? false;
+            let entries: DirEntry[];
+            try {
+              entries = await listDirEntries(abs, recursive ? 3 : 0);
+            } catch {
+              return mcpError({ type: "NOT_FOUND", message: `Directory not readable: ${rawPath}` });
+            }
 
             return {
               status: "ok",
-              message: `[${scope.name}] ${rawPath} (lines ${offset}-${Math.min(offset + limit - 1, totalLines)} of ${totalLines})`,
-              data: { type: "file", scope: scope.name, path: rawPath, totalLines, offset, limit, content: numbered },
+              message: `[${scope.name}] ${entries.length} entries in ${rawPath}`,
+              data: { type: "directory", scope: scope.name, path: rawPath, entries },
             };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to browse path", err);
           }
-
-          // Directory listing
-          const recursive = (args.recursive as boolean) ?? false;
-          let entries: DirEntry[];
-          try {
-            entries = await listDirEntries(abs, recursive ? 3 : 0);
-          } catch {
-            return mcpError({ type: "NOT_FOUND", message: `Directory not readable: ${rawPath}` });
-          }
-
-          return {
-            status: "ok",
-            message: `[${scope.name}] ${entries.length} entries in ${rawPath}`,
-            data: { type: "directory", scope: scope.name, path: rawPath, entries },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to browse path", err);
         }
-      },
-    },
 
-    // ── hwc_cms_write_file ───────────────────────────────────────────────
-    {
-      name: "hwc_cms_write_file",
-      description:
-        "Write or create a file in a Heartwood business app. " +
-        "Same scopes as hwc_cms_list_dir. " +
-        "Creates parent directories if needed. Atomic write.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          scope: {
-            type: "string",
-            enum: scopeNames,
-            description: `App scope to operate in (default: '${scopeNames[0]}')`,
-          },
-          path: {
-            type: "string",
-            description: "File path relative to scope root, e.g. 'lib/content.js', 'src/main.jsx'",
-          },
-          content: {
-            type: "string",
-            description: "Full file content to write",
-          },
-        },
-        required: ["path", "content"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const scope = resolveScope(scopes, args.scope as string | undefined);
-          if (!scope) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
-          }
-
-          const root = normalize(scope.path);
-          const rawPath = args.path as string;
-          const content = args.content as string;
-
-          const abs = safePath(root, rawPath);
-          if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
-          }
-
-          // Block writing to certain sensitive paths
-          const relPath = relative(root, abs);
-          if (relPath === "package-lock.json" || relPath === "node_modules" || relPath.startsWith("node_modules/")) {
-            return mcpError({
-              type: "PERMISSION_DENIED",
-              message: `Cannot write to ${relPath}`,
-              suggestion: "Use npm to manage dependencies, not direct file writes",
-            });
-          }
-
-          // Create parent dirs if needed
-          await mkdir(dirname(abs), { recursive: true });
-
-          // Check if update or create
-          let action: "created" | "updated";
+        // ── write ────────────────────────────────────────────────
+        if (action === "write") {
           try {
-            await stat(abs);
-            action = "updated";
-          } catch {
-            action = "created";
+            const scope = resolveScope(scopes, args.scope as string | undefined);
+            if (!scope) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
+            }
+
+            const root = normalize(scope.path);
+            const rawPath = args.path as string;
+            const content = args.content as string;
+
+            if (!rawPath) return mcpError({ type: "VALIDATION_ERROR", message: "path is required for action=write" });
+            if (content === undefined) return mcpError({ type: "VALIDATION_ERROR", message: "content is required for action=write" });
+
+            const abs = safePath(root, rawPath);
+            if (!abs) {
+              return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
+            }
+
+            const relPath = relative(root, abs);
+            if (relPath === "package-lock.json" || relPath === "node_modules" || relPath.startsWith("node_modules/")) {
+              return mcpError({ type: "PERMISSION_DENIED", message: `Cannot write to ${relPath}`, suggestion: "Use npm to manage dependencies, not direct file writes" });
+            }
+
+            await mkdir(dirname(abs), { recursive: true });
+
+            let writeAction: "created" | "updated";
+            try {
+              await stat(abs);
+              writeAction = "updated";
+            } catch {
+              writeAction = "created";
+            }
+
+            const tmpPath = abs + ".tmp";
+            await writeFile(tmpPath, content, "utf-8");
+            await rename(tmpPath, abs);
+
+            return {
+              status: "ok",
+              message: `[${scope.name}] ${writeAction === "created" ? "Created" : "Updated"} ${rawPath}`,
+              data: { scope: scope.name, path: rawPath, action: writeAction, bytes: content.length },
+            };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to write file", err);
           }
-
-          // Atomic write
-          const tmpPath = abs + ".tmp";
-          await writeFile(tmpPath, content, "utf-8");
-          await rename(tmpPath, abs);
-
-          return {
-            status: "ok",
-            message: `[${scope.name}] ${action === "created" ? "Created" : "Updated"} ${rawPath}`,
-            data: { scope: scope.name, path: rawPath, action, bytes: content.length },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to write file", err);
         }
-      },
-    },
 
-    // ── hwc_cms_delete_file ──────────────────────────────────────────────
-    {
-      name: "hwc_cms_delete_file",
-      description:
-        "Delete a file in a Heartwood business app. Permanent deletion (no trash). " +
-        "Same scopes as hwc_cms_list_dir. Cannot delete directories.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          scope: {
-            type: "string",
-            enum: scopeNames,
-            description: `App scope to operate in (default: '${scopeNames[0]}')`,
-          },
-          path: {
-            type: "string",
-            description: "File path relative to scope root to delete",
-          },
-        },
-        required: ["path"],
-      },
-      handler: async (args): Promise<ToolResult> => {
-        try {
-          const scope = resolveScope(scopes, args.scope as string | undefined);
-          if (!scope) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
-          }
-
-          const root = normalize(scope.path);
-          const rawPath = args.path as string;
-
-          const abs = safePath(root, rawPath);
-          if (!abs) {
-            return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
-          }
-
-          const relPath = relative(root, abs);
-          if (relPath === "package.json" || relPath === "package-lock.json" || relPath === "server.js") {
-            return mcpError({
-              type: "PERMISSION_DENIED",
-              message: `Cannot delete critical file: ${relPath}`,
-              suggestion: "Edit this file instead of deleting it",
-            });
-          }
-
-          let fileStat;
+        // ── delete ───────────────────────────────────────────────
+        if (action === "delete") {
           try {
-            fileStat = await stat(abs);
-          } catch {
-            return mcpError({ type: "NOT_FOUND", message: `File not found: ${rawPath}` });
+            const scope = resolveScope(scopes, args.scope as string | undefined);
+            if (!scope) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Invalid scope: ${args.scope}`, suggestion: `Valid scopes: ${scopeNames.join(", ")}` });
+            }
+
+            const root = normalize(scope.path);
+            const rawPath = args.path as string;
+
+            if (!rawPath) return mcpError({ type: "VALIDATION_ERROR", message: "path is required for action=delete" });
+
+            const abs = safePath(root, rawPath);
+            if (!abs) {
+              return mcpError({ type: "PERMISSION_DENIED", message: `Path escapes ${scope.name} root: ${rawPath}` });
+            }
+
+            const relPath = relative(root, abs);
+            if (relPath === "package.json" || relPath === "package-lock.json" || relPath === "server.js") {
+              return mcpError({ type: "PERMISSION_DENIED", message: `Cannot delete critical file: ${relPath}`, suggestion: "Edit this file instead of deleting it" });
+            }
+
+            let fileStat;
+            try {
+              fileStat = await stat(abs);
+            } catch {
+              return mcpError({ type: "NOT_FOUND", message: `File not found: ${rawPath}` });
+            }
+
+            if (!fileStat.isFile()) {
+              return mcpError({ type: "VALIDATION_ERROR", message: `Not a file: ${rawPath}`, suggestion: "This tool only deletes files, not directories" });
+            }
+
+            await unlink(abs);
+
+            return {
+              status: "ok",
+              message: `[${scope.name}] Deleted ${rawPath}`,
+              data: { scope: scope.name, path: rawPath, action: "deleted" },
+            };
+          } catch (err) {
+            return catchError("INTERNAL_ERROR", "Failed to delete file", err);
           }
-
-          if (!fileStat.isFile()) {
-            return mcpError({ type: "VALIDATION_ERROR", message: `Not a file: ${rawPath}`, suggestion: "This tool only deletes files, not directories" });
-          }
-
-          await unlink(abs);
-
-          return {
-            status: "ok",
-            message: `[${scope.name}] Deleted ${rawPath}`,
-            data: { scope: scope.name, path: rawPath, action: "deleted" },
-          };
-        } catch (err) {
-          return catchError("INTERNAL_ERROR", "Failed to delete file", err);
         }
+
+        return { status: "error", message: `Unknown action: ${action}`, error: `Unknown action: ${action}`, error_type: "VALIDATION_ERROR" };
       },
     },
   ];
