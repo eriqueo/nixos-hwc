@@ -458,6 +458,7 @@
     "/var/lib/flatpak/exports/share"
     "$HOME/.local/share/flatpak/exports/share"
   ];
+  environment.sessionVariables.NIXOS_OZONE_WL = "1";
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [
     glib glibc gtk3 pango cairo gdk-pixbuf atk
