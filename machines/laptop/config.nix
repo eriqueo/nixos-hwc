@@ -142,8 +142,16 @@
   # TODO: Enable Borg on laptop when backup drive is mounted
   hwc.data.backup.enable = false;
 
-  # Enable the declarative VPN service using the official CLI.
-  hwc.networking.vpn.protonvpn.enable = true;
+  # Declarative ProtonVPN via WireGuard.
+  # Peer values come from a config downloaded at account.protonvpn.com/downloads.
+  # Private key lives in agenix secret `vpn-wireguard-private-key`.
+  hwc.networking.vpn.enable = true;
+  hwc.networking.vpn.protonvpn = {
+    enable = true;
+    address = [ "10.2.0.2/32" ];          # FILL IN: [Interface] Address from .conf
+    peer.publicKey = "";                    # FILL IN: [Peer] PublicKey from .conf
+    peer.endpoint  = "";                    # FILL IN: [Peer] Endpoint from .conf, e.g. "198.51.100.42:51820"
+  };
 
   # Proton Mail Bridge managed by Home Manager user service (NOT system service)
   # hwc.home.mail.bridge.system.enable = false;  # Disabled in profile
@@ -199,6 +207,7 @@
       "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-server" ]; };
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
+      "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-server" ]; };
     };
   };
 

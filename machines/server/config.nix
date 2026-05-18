@@ -248,6 +248,7 @@
       "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-laptop" ]; };
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
+      "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
     };
   };
 
