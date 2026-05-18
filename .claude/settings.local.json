@@ -296,7 +296,11 @@
       "Bash(tsc --noEmit --project /home/eric/lead_scout/tsconfig.json)",
       "Bash(caddy list-modules:*)",
       "Bash(dig +short:*)",
-      "WebFetch(domain:spec.modelcontextprotocol.io)"
+      "WebFetch(domain:spec.modelcontextprotocol.io)",
+      "Bash(tailscale funnel:*)",
+      "Bash(tailscale serve:*)",
+      "Bash(wait)",
+      "Bash(mount)"
     ],
     "deny": [],
     "ask": [],

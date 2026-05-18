@@ -723,8 +723,13 @@
   #        then encrypt credentials JSON with agenix and set tunnelId below
   hwc.networking.cloudflared = {
     enable = true;  # Enable after: tunnel created + credentials encrypted + DNS CNAME set
-    tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";  # Replace with UUID from `cloudflared tunnel create hwc-server`
+    tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
     credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
+    extraIngress = {
+      "mcp.heartwoodcraft.me" = "http://localhost:6200";
+      "jobber.heartwoodcraft.me" = "http://localhost:8002";
+      "leads.heartwoodcraft.me" = "http://localhost:8420";
+    };
   };
 
   #============================================================================

@@ -1,16 +1,17 @@
 /**
  * HWC Infrastructure MCP Gateway — unified entry point.
  *
- * Single Streamable HTTP transport serving tools from:
+ * Per-session Streamable HTTP transport serving tools from:
  *   - hwc-sys (local, in-process): NixOS config + runtime tools
- *   - jt-mcp (stdio backend): 56 JobTread PAVE tools
+ *   - jt-mcp (stdio backend): JobTread PAVE tools
  *   - n8n-mcp (stdio backend): workflow automation tools
  *
  * Transports:
  *   - stdio  (Claude Code, local)
- *   - Streamable HTTP (Claude.ai, remote — MCP spec 2025-06-18)
+ *   - Streamable HTTP (Claude.ai, remote — MCP spec 2025-11-25)
  */
 
+import { randomUUID } from "node:crypto";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -32,15 +33,44 @@ import { BackendManager } from "./backend-manager.js";
 import { StdioBackend } from "./stdio-backend.js";
 import { n8nConsolidation } from "./n8n-consolidation.js";
 
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+function readBody(req: import("node:http").IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString()));
+    req.on("error", reject);
+  });
+}
+
+function isInitializeRequest(body: unknown): boolean {
+  if (Array.isArray(body)) {
+    return body.some((msg) => msg?.method === "initialize");
+  }
+  return (body as any)?.method === "initialize";
+}
+
+// ── Session tracking ────────────────────────────────────────────────────
+
+interface ManagedSession {
+  transport: StreamableHTTPServerTransport;
+  server: Server;
+  createdAt: number;
+  lastActivity: number;
+}
+
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const REAPER_INTERVAL_MS = 60 * 1000;  // sweep every minute
+
 // ── Server factory ──────────────────────────────────────────────────────
-// Streamable HTTP needs a fresh Server+Transport pair per session.
 
 function createMCPServer(
   backendManager: BackendManager,
   resources: ResourceDef[],
 ): Server {
   const server = new Server(
-    { name: "hwc-sys-mcp", version: "0.2.0" },
+    { name: "hwc-sys-mcp", version: "0.3.0" },
     { capabilities: { tools: {}, resources: {} } },
   );
 
@@ -201,24 +231,36 @@ async function main() {
   }
 
   // ── HTTP transport (Streamable HTTP) ────────────────────────────────
-  // Sessionless — one long-lived Server+Transport, no session tracking.
-  // sessionIdGenerator: undefined prevents SDK session map accumulation
-  // that caused the RangeError stack overflow crash.
+  // Per-session Server+Transport — claude.ai requires Mcp-Session-Id.
+  // Each initialize creates a fresh pair; stale sessions reaped at 30min.
   if (config.transport === "sse" || config.transport === "both") {
     const { createServer } = await import("node:http");
     const port = config.port;
     const host = config.host;
 
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-      enableJsonResponse: true,
-    });
-    const server = createMCPServer(manager, resources);
-    await server.connect(transport);
-    log.info("Streamable HTTP transport ready (sessionless)");
+    // Session map: sessionId → { transport, server, timestamps }
+    const sessions = new Map<string, ManagedSession>();
 
     // Legacy SSE transport sessions (protocol version 2024-11-05)
     const sseSessions = new Map<string, SSEServerTransport>();
+
+    // ── Session reaper — sweep stale sessions every minute ──────────
+    const reaperInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [id, session] of sessions) {
+        if (now - session.lastActivity > SESSION_TTL_MS) {
+          log.info("Reaping stale session", { sessionId: id, ageMin: Math.round((now - session.createdAt) / 60_000) });
+          session.transport.close().catch(() => {});
+          sessions.delete(id);
+        }
+      }
+    }, REAPER_INTERVAL_MS);
+    reaperInterval.unref();
+
+    log.info("Streamable HTTP transport ready (per-session)", {
+      sessionTtlMin: SESSION_TTL_MS / 60_000,
+      reaperIntervalSec: REAPER_INTERVAL_MS / 1_000,
+    });
 
     const httpServer = createServer(async (req, res) => {
       const startMs = Date.now();
@@ -260,28 +302,13 @@ async function main() {
       // CORS
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, HEAD, DELETE, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Mcp-Session-Id, Last-Event-ID");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Mcp-Session-Id, Last-Event-ID, Mcp-Protocol-Version");
       res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
       if (method === "OPTIONS") {
         res.writeHead(204);
         res.end();
         return;
-      }
-
-      // Fix Accept header — SDK requires both application/json AND text/event-stream
-      if (url === "/mcp" || url === "/") {
-        const accept = req.headers.accept || "";
-        if (!accept.includes("application/json") || !accept.includes("text/event-stream")) {
-          const fixed = "application/json, text/event-stream";
-          req.headers.accept = fixed;
-          const idx = req.rawHeaders.findIndex(h => h.toLowerCase() === "accept");
-          if (idx >= 0) {
-            req.rawHeaders[idx + 1] = fixed;
-          } else {
-            req.rawHeaders.push("Accept", fixed);
-          }
-        }
       }
 
       try {
@@ -325,20 +352,104 @@ async function main() {
           resources: resources.length,
           backends: backendHealth,
           uptime: process.uptime(),
-          mode: "sessionless",
+          mode: "per-session",
+          activeSessions: sessions.size,
         }));
         return;
       }
 
-      // ── Streamable HTTP (sessionless — shared transport) ──
+      // ── Streamable HTTP (per-session) ─────────────────────────────
       if (url === "/mcp" || url === "/") {
-        if (method === "POST" || method === "GET" || method === "DELETE") {
-          await transport.handleRequest(req, res);
+        if (method !== "POST" && method !== "GET" && method !== "DELETE") {
+          res.writeHead(405, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Method not allowed" }));
           return;
         }
 
-        res.writeHead(405, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Method not allowed" }));
+        const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+        // Existing session — route to its transport
+        if (sessionId && sessions.has(sessionId)) {
+          const session = sessions.get(sessionId)!;
+          session.lastActivity = Date.now();
+
+          if (method === "DELETE") {
+            log.info("Session closed by client", { sessionId });
+            await session.transport.handleRequest(req, res);
+            session.transport.close().catch(() => {});
+            sessions.delete(sessionId);
+            return;
+          }
+
+          await session.transport.handleRequest(req, res);
+          return;
+        }
+
+        // Unknown session ID → 404 per MCP spec (client must re-initialize)
+        if (sessionId && !sessions.has(sessionId)) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Session not found. Client should start a new session." },
+            id: null,
+          }));
+          return;
+        }
+
+        // No session ID + POST → check if initialize, create new session
+        if (method === "POST" && !sessionId) {
+          // Read body to check if it's an initialize request (matches datax pattern)
+          const body = await readBody(req);
+          const parsed = JSON.parse(body);
+
+          if (!isInitializeRequest(parsed)) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Bad request: missing session ID or not an initialize request" },
+              id: null,
+            }));
+            return;
+          }
+
+          const now = Date.now();
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            onsessioninitialized: (newSessionId: string) => {
+              sessions.set(newSessionId, {
+                transport,
+                server,
+                createdAt: now,
+                lastActivity: now,
+              });
+              log.info("New session initialized", {
+                sessionId: newSessionId,
+                activeSessions: sessions.size,
+              });
+            },
+          });
+
+          transport.onclose = () => {
+            const sid = transport.sessionId;
+            if (sid) {
+              sessions.delete(sid);
+              log.info("Transport closed", { sessionId: sid });
+            }
+          };
+
+          const server = createMCPServer(manager, resources);
+          await server.connect(transport);
+          await transport.handleRequest(req, res, parsed);
+          return;
+        }
+
+        // GET/DELETE without session ID → bad request
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Bad request: missing session ID" },
+          id: null,
+        }));
         return;
       }
 
@@ -389,8 +500,12 @@ async function main() {
 
     // Graceful shutdown
     function gracefulShutdown(signal: string) {
-      log.info("Shutting down", { signal });
-      transport.close().catch(() => {});
+      log.info("Shutting down", { signal, activeSessions: sessions.size });
+      clearInterval(reaperInterval);
+      for (const [id, session] of sessions) {
+        session.transport.close().catch(() => {});
+        sessions.delete(id);
+      }
       for (const [id, sseTransport] of sseSessions) {
         sseTransport.close().catch(() => {});
         sseSessions.delete(id);
@@ -411,7 +526,7 @@ async function main() {
         streamableHttp: "/mcp",
         legacySse: "/sse",
         health: "/health",
-        mode: "sessionless",
+        mode: "per-session",
       });
     });
   }
