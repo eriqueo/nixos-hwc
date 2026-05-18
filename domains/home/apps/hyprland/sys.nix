@@ -16,16 +16,13 @@ let
 
   # Import helper scripts from parts/
   hyprlandScripts = import ./parts/scripts.nix { inherit pkgs lib; };
-
-  # Hyprland startup script - imported from parts/ (pure derivation)
-  hyprlandStartupScript = import ./parts/startup.nix { inherit pkgs; };
 in
 {
   #============================================================================
   # OPTIONS - System-lane API
   #============================================================================
   options.hwc.system.apps.hyprland = {
-    enable = lib.mkEnableOption "Hyprland system dependencies (startup script, helper scripts)";
+    enable = lib.mkEnableOption "Hyprland system dependencies (helper scripts)";
   };
 
   #============================================================================
@@ -44,8 +41,8 @@ in
       #========================================================================
       # SYSTEM PACKAGES
       #========================================================================
-      # Provide the startup script and helper scripts as system packages
-      environment.systemPackages = [ hyprlandStartupScript ] ++ hyprlandScripts;
+      # Provide helper scripts as system packages
+      environment.systemPackages = hyprlandScripts;
     })
 
     # Note: Cross-lane validation happens in the home module (index.nix)
