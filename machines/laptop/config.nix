@@ -147,7 +147,7 @@
   # Private key lives in agenix secret `vpn-wireguard-private-key`.
   hwc.networking.vpn.enable = true;
   hwc.networking.vpn.protonvpn = {
-    enable = true;
+    enable = false;                         # TEMP: re-enable after filling in WG values below
     address = [ "10.2.0.2/32" ];          # FILL IN: [Interface] Address from .conf
     peer.publicKey = "";                    # FILL IN: [Peer] PublicKey from .conf
     peer.endpoint  = "";                    # FILL IN: [Peer] Endpoint from .conf, e.g. "198.51.100.42:51820"
