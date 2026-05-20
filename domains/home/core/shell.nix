@@ -6,7 +6,7 @@
 # USED BY: profiles/session.nix
 # USAGE: hwc.home.shell.enable = true;
 
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, osConfig ? {}, nixosApiVersion ? "unstable", ... }:
 
 let
   cfg = config.hwc.home.shell;
@@ -64,6 +64,7 @@ in
         "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
         "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";
         "cdn" = "cd ~/.nixos";
+        "cdd" = "cd ~/700_datax/datax"; "cdj" = "cd ~/700_datax/jt-mcp";
         "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
         "screenshots" = "cd ~/500_media/510_pictures/screenshots";
         "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
@@ -221,34 +222,57 @@ in
       };
     };
 
-    # SSH configuration — migrated from deprecated `matchBlocks` to `settings`
-    # (HM ≥ 26.05). User-facing DSL `cfg.ssh.matchBlocks` is unchanged; we
-    # translate it here into upstream OpenSSH directive names.
-    programs.ssh = lib.mkIf cfg.ssh.enable {
-      enable = true;
-      enableDefaultConfig = false;
-      settings = lib.mkMerge [
-        {
-          "Host *" = {
-            ForwardAgent = false;
-            AddKeysToAgent = "no";
-            Compression = false;
-            ServerAliveInterval = 0;
-            ServerAliveCountMax = 3;
-            HashKnownHosts = false;
-            UserKnownHostsFile = "~/.ssh/known_hosts";
-            ControlMaster = "no";
-            ControlPath = "~/.ssh/master-%r@%n:%p";
-            ControlPersist = "no";
+    # SSH configuration — API differs between HM 25.11 (stable) and 26.05+ (unstable).
+    # Stable uses `matchBlocks` with HM camelCase attrs (hostname/user/forwardAgent...);
+    # unstable uses `settings` with literal "Host *" keys and OpenSSH directive names.
+    # User-facing DSL `cfg.ssh.matchBlocks` is unchanged; we translate it per API.
+    programs.ssh = lib.mkIf cfg.ssh.enable (
+      if nixosApiVersion == "stable" then {
+        enable = true;
+        matchBlocks = {
+          "*" = {
+            forwardAgent = false;
+            addKeysToAgent = "no";
+            compression = false;
+            serverAliveInterval = 0;
+            serverAliveCountMax = 3;
+            hashKnownHosts = false;
+            userKnownHostsFile = "~/.ssh/known_hosts";
+            controlMaster = "no";
+            controlPath = "~/.ssh/master-%r@%n:%p";
+            controlPersist = "no";
           };
-        }
-        (lib.mapAttrs' (name: host: lib.nameValuePair "Host ${name}" {
-          HostName     = host.hostname;
-          User         = host.user;
-          ForwardAgent = host.forwardAgent;
-        }) cfg.ssh.matchBlocks)
-      ];
-    };
+        } // (lib.mapAttrs (name: host: {
+          hostname     = host.hostname;
+          user         = host.user;
+          forwardAgent = host.forwardAgent;
+        }) cfg.ssh.matchBlocks);
+      } else {
+        enable = true;
+        enableDefaultConfig = false;
+        settings = lib.mkMerge [
+          {
+            "Host *" = {
+              ForwardAgent = false;
+              AddKeysToAgent = "no";
+              Compression = false;
+              ServerAliveInterval = 0;
+              ServerAliveCountMax = 3;
+              HashKnownHosts = false;
+              UserKnownHostsFile = "~/.ssh/known_hosts";
+              ControlMaster = "no";
+              ControlPath = "~/.ssh/master-%r@%n:%p";
+              ControlPersist = "no";
+            };
+          }
+          (lib.mapAttrs' (name: host: lib.nameValuePair "Host ${name}" {
+            HostName     = host.hostname;
+            User         = host.user;
+            ForwardAgent = host.forwardAgent;
+          }) cfg.ssh.matchBlocks)
+        ];
+      }
+    );
 
     # Zsh configuration
     programs.zsh = lib.mkIf cfg.zsh.enable {
@@ -262,14 +286,15 @@ in
       shellAliases = cfg.aliases;
       initContent = ''
         # NixOS rebuild shortcuts (dynamic hostname)
+        # -H resets $HOME to root's so Nix doesn't warn about /home/eric not being owned by root.
         snix() {
-          sudo nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+          sudo -H nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
         }
         tnix() {
-          sudo nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+          sudo -H nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
         }
         bnix() {
-          sudo nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+          sudo -H nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
         }
 
         # Fuzzy finding function

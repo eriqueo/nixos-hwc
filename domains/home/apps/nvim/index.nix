@@ -47,7 +47,6 @@ in
         prettier
         ruff
       ];
-      # Load the lua configuration
       initLua = ''
         require("core")
       '';
