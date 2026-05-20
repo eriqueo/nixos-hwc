@@ -68,7 +68,8 @@ in
   };
 
   dwindle = {
-    pseudotile = true;
+    # `pseudotile` was removed from `dwindle` in Hyprland 0.55.x; use the
+    # `pseudo` dispatcher to toggle per-window instead.
     preserve_split = true;
     smart_split = false;
     smart_resizing = true;

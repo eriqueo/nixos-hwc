@@ -42,7 +42,7 @@
       "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
     ];
   };
-  # Blender 3D modeling with GPU rendering support (configured in profiles/home.nix)
+  # Blender 3D modeling with GPU rendering support (configured in profiles/home-session.nix)
   # External presets stored in ~/500_media/540_blender
 
   #============================================================================
@@ -282,7 +282,7 @@
   virtualisation.docker.enable = lib.mkForce false;
 
   #============================================================================
-  # === [profiles/home.nix] Orchestration =====================================
+  # === [profiles/home-session.nix] Orchestration =============================
   #============================================================================
   # System-lane dependencies for home apps (co-located sys.nix files)
   # These are enabled separately because system evaluates before Home Manager
@@ -424,10 +424,14 @@
   # Intel NPU support (permissions, firmware, Level Zero loader)
   hardware.cpu.intel.npu.enable = true;
 
-  # Add Level Zero and OpenCL runtime for NPU backend
+  # Add Level Zero and OpenCL runtime for NPU backend, plus Intel iGPU
+  # VA-API stack (machine-local: this laptop has both Intel iGPU and NVIDIA
+  # dGPU, and the Wayland compositor + chromium render on the iGPU).
   hardware.graphics.extraPackages = with pkgs; [
     level-zero
     intel-compute-runtime
+    intel-media-driver   # iHD VA-API driver for Meteor Lake / Arc iGPU
+    libvdpau-va-gl       # VDPAU<->VAAPI bridge
   ];
 
   # Performance mode wrappers for CPU-intensive tasks

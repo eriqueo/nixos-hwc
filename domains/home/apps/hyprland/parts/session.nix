@@ -39,9 +39,9 @@ let
     { cmd = "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill"; }
 
     # Applications (pinned to workspaces)
-    { cmd = "gpu-launch chromium";                                workspace = 1; }
-    { cmd = "kitty";                                              workspace = 2; }
-    { cmd = "gpu-launch chromium --app=https://app.jobtread.com"; workspace = 4; }
+    { cmd = "gpu-launch chromium-hwc";                                workspace = 1; }
+    { cmd = "kitty";                                                  workspace = 2; }
+    { cmd = "gpu-launch chromium-hwc --app=https://app.jobtread.com"; workspace = 4; }
     { cmd = "proton-mail";                                        workspace = 8; }
   ];
 

@@ -1,11 +1,28 @@
 # nixos-hwc
 
-NixOS flake managing two machines via domain-driven architecture. Charter v11.1.
+NixOS flake managing two machines via domain-driven architecture. Charter v11.2.
 
 ## Machines
 - **hwc-laptop** — NixOS desktop (Hyprland, dev tools, GPU)
 - **hwc-server** — headless (Podman containers, Caddy, monitoring, media)
 Always run `hostname` before nixos-rebuild. Hooks enforce this.
+
+## Home Manager workflows
+Home Manager is wired **two ways from the same source** (`profiles/home-session.nix`
++ `machines/<host>/home.nix`):
+
+- **HM-as-module** — runs inside `nixos-rebuild switch --flake .#hwc-<host>`.
+  This is what activates on boot. Use for **system or mixed** changes.
+- **HM-as-flake** — `homeConfigurations."eric@hwc-<host>"` in `flake.nix`.
+  Run with `home-manager switch --flake ~/.nixos#eric@$(hostname)` (alias `hms`).
+  Use for **HM-only** changes (anything under `domains/home/`, `profiles/home-session.nix`,
+  `machines/<host>/home.nix`). Fast (~5–10s), no sudo.
+
+**Rule**: HM-only edits → `hms`. System or mixed edits → `nixos-rebuild`.
+Don't alternate on the same machine without thinking — each path keeps its own
+HM profile generation, so files placed by one will trip "existing file in the way"
+errors when the other tries to claim them. The module path sets
+`backupFileExtension = "backup"`; the standalone path has no such cushion.
 
 ## Repo Map
 ```

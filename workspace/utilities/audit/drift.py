@@ -162,8 +162,8 @@ class DriftAnalyzer:
         profiles_path = self.search_path / "profiles"
         if profiles_path.exists():
             for nix_file in profiles_path.glob("*.nix"):
-                # Skip profiles/home.nix exception
-                if nix_file.name == "home.nix":
+                # Skip profiles/home-session.nix exception (HM defaults profile)
+                if nix_file.name == "home-session.nix":
                     continue
 
                 content = nix_file.read_text()

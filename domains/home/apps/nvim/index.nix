@@ -41,9 +41,14 @@ in
         wl-clipboard
         stylua
         luajitPackages.jsregexp
+        gcc
+        gnumake
+        alejandra
+        prettier
+        ruff
       ];
       # Load the lua configuration
-      extraLuaConfig = ''
+      initLua = ''
         require("core")
       '';
 
