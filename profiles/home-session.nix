@@ -39,6 +39,7 @@
 
     # Development Environment
     development.enable = lib.mkDefault true;
+    development.languages.javascript = lib.mkDefault true;
 
     # Desktop Applications
     apps = {

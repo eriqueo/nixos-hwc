@@ -46,6 +46,17 @@ workspace/home/
 ```
 
 ## Usage
-- Import `domains/home/index.nix` from the Home Manager profile and toggle modules via `hwc.home.*` options.
+- Toggle modules via `hwc.home.*` options. Defaults live in `profiles/home-session.nix`; per-machine adjustments go in `machines/<host>/home.nix`.
+- `domains/home/index.nix` is imported by `profiles/home-session.nix`, which feeds **both** activation paths from one source.
 - Keep system-lane imports (`sys.nix` files) in system profiles only; the home lane must stay evaluatable on non-NixOS hosts (`osConfig` guarded).
 - Follow Charter Laws: no hardcoded paths (use `config.hwc.paths.*`), namespace fidelity, and guarded assertions for cross-lane references.
+
+## Activation paths
+Two ways to apply the same configuration:
+
+| Path | Command | When to use |
+|------|---------|-------------|
+| HM-as-module | `sudo nixos-rebuild switch --flake .#hwc-<host>` | System or mixed changes; what runs on boot |
+| HM-as-flake  | `home-manager switch --flake ~/.nixos#eric@$(hostname)` (alias `hms`) | HM-only changes (fast, ~5–10s, no sudo) |
+
+Both paths import `profiles/home-session.nix` + `machines/<host>/home.nix`, so options can't drift between them. They do **not** share a HM profile generation, however — alternating runs can produce "existing file in the way" errors as each side tries to claim the same dotfiles. The module path sets `backupFileExtension = "backup"`; the standalone path does not.

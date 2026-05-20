@@ -1130,7 +1130,7 @@ add_to_home_profile() {
     local dir_name="$2"
     local package_attr="$3"
     local package_description="$4"
-    local home_profile="$REPO_ROOT/profiles/home.nix"
+    local home_profile="$REPO_ROOT/profiles/home-session.nix"
 
     if [[ ! -f "$home_profile" ]]; then
         error "Home profile not found at $home_profile"
@@ -1218,7 +1218,7 @@ add_to_home_profile() {
         return 1
     fi
 
-    success "Added to profiles/home.nix (category: $category)"
+    success "Added to profiles/home-session.nix (category: $category)"
     echo "$backup_file"
     return 0
 }
@@ -1296,8 +1296,8 @@ perform_rollback() {
             PROFILE_BACKUP:*)
                 local backup_file="${line#PROFILE_BACKUP:}"
                 if [[ -f "$backup_file" ]]; then
-                    cp "$backup_file" "$REPO_ROOT/profiles/home.nix"
-                    log "Restored: profiles/home.nix"
+                    cp "$backup_file" "$REPO_ROOT/profiles/home-session.nix"
+                    log "Restored: profiles/home-session.nix"
                 fi
                 ;;
         esac
@@ -1330,7 +1330,7 @@ commit_changes() {
         return 0
     fi
 
-    if ! git add "domains/home/apps/$dir_name/" "profiles/home.nix"; then
+    if ! git add "domains/home/apps/$dir_name/" "profiles/home-session.nix"; then
         error "Failed to stage files for commit"
         return 1
     fi
@@ -1340,7 +1340,7 @@ commit_changes() {
 - Create domains/home/apps/$dir_name following HWC Charter
 - Add options.nix with hwc.home.apps.$option_name namespace
 - Add index.nix with proper VALIDATION section
-- Enable in profiles/home.nix
+- Enable in profiles/home-session.nix
 
 Package: $package_attr ($package_version)
 Description: $package_description

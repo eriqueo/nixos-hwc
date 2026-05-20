@@ -241,6 +241,16 @@ in
       };
     };
 
+    # xdg-document-portal fuse mount lingers across restarts (HM activation
+    # restarts the service, the prior fuse mount stays, and the next start
+    # fails with "Permission denied" trying to remount on top). Lazy unmount
+    # on stop so the path is free when the service restarts.
+    systemd.user.services.xdg-document-portal = lib.mkIf cfg.audio.enable {
+      serviceConfig.ExecStopPost = lib.mkAfter [
+        "-${pkgs.fuse3}/bin/fusermount3 -uz %t/doc"
+      ];
+    };
+
     # Optional: keyring commonly used by desktop apps
     # DISABLED: Using pass for credential management instead of gnome-keyring
     # services.gnome.gnome-keyring.enable = lib.mkIf cfg.audio.enable true;
@@ -286,6 +296,20 @@ in
     };
 
     services.blueman.enable = lib.mkIf cfg.bluetooth.enable true;
+
+    # Upstream blueman-applet.service ships with ExecStart= AND nixpkgs's
+    # services.blueman writes its own ExecStart= into the generated drop-in.
+    # systemd refuses two ExecStart= on a non-oneshot unit. Fix: force the
+    # drop-in's ExecStart to be a list whose first element is empty, which
+    # NixOS emits as `ExecStart=\nExecStart=<cmd>` — systemd's reset+set
+    # pattern. This keeps everything inside the NixOS-generated overrides.conf
+    # so we don't collide with the etc-builder symlink at .service.d/.
+    systemd.user.services.blueman-applet = lib.mkIf cfg.bluetooth.enable {
+      serviceConfig.ExecStart = lib.mkForce [
+        ""
+        "${pkgs.blueman}/bin/blueman-applet"
+      ];
+    };
 
     #==========================================================================
     # CO-LOCATED HARDWARE & UTILITY PACKAGES

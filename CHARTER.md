@@ -1,10 +1,10 @@
-# HWC Architecture Charter v11.1
+# HWC Architecture Charter v11.2
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
 **Goal**: Deterministic, maintainable, scalable, reproducible NixOS configuration via strict domain separation, explicit APIs, and user-centric organization.
 **Philosophy**: This document defines **enforceable architectural laws**. Implementation details, patterns, and domain-specific guidance live in domain READMEs (per Law 12).
-**Current Date**: March 12, 2026
+**Current Date**: May 20, 2026
 
 ## 0. Preserve-First Doctrine
 
@@ -310,6 +310,7 @@ Domain READMEs contain implementation details, patterns, and known limitations.
   Boundary: User-space configs, DE/WM, apps, dotfiles
   Never contains: systemd.services, environment.systemPackages, users.users
   Unique: sys.nix co-location for system-lane support (Law 7)
+  Activation: dual-path — HM-as-module (via `nixos-rebuild switch`) and HM-as-flake (via `homeConfigurations` / `hms`). Both consume `profiles/home-session.nix` + `machines/<host>/home.nix`; no option drift between paths.
 
 - **domains/system/** — Core OS, Hardware & Services
   Boundary: Accounts, networking, security, system packages, GPU, storage tiers, virtualization, peripherals
@@ -452,6 +453,7 @@ Exceptions require:
 - Version bump on normative change
 
 **Version History** (excerpt):
+- **v11.2 (2026-05-20)**: Documented dual Home Manager activation paths in §2 `domains/home/` (HM-as-module via `nixos-rebuild` and HM-as-flake via `homeConfigurations`/`hms`). Both paths consume `profiles/home-session.nix` + `machines/<host>/home.nix`. Removed orphaned `profiles/home.nix` and stale `meta/CLAUDE.md`; retargeted `add-home-app.sh` and `drift.py` accordingly.
 - **v11.1 (2026-03-12)**: Incremental updates reflecting post-v11.0 structural changes:
   - **domains/ai/**: Updated boundary description to include NanoClaw agent orchestrator (`domains/ai/nanoclaw/`) and AI CLI tools (`domains/ai/tools/`), including the `readme-butler` tool for automated Law 12 changelog updates
   - **Law 12**: Added `readme-butler` as a third enforcement mechanism alongside pre-commit hook and `/commit` skill

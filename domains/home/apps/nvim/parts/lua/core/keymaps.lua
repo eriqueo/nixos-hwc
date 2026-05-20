@@ -8,6 +8,10 @@ map("n", "<C-j>", "<C-w>j", { desc = "Go to lower window" })
 map("n", "<C-k>", "<C-w>k", { desc = "Go to upper window" })
 map("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
 
+-- CLAUDE PANE (Alt = Claude movement, distinct mental model)
+map("n", "<M-l>", "<C-w>l", { desc = "Claude: enter pane (right window)" })
+map("t", "<M-h>", [[<C-\><C-n><C-w>h]], { desc = "Claude: leave pane (back to editor)" })
+
 map("v", "<", "<gv")
 map("v", ">", ">gv")
 map("v", "J", ":m '>+1<CR>gv=gv")
@@ -106,7 +110,7 @@ map("n", "O", "O<esc>", { desc = "Open: new line above" })
 map("n", "<leader>S", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], { desc = "Replace: word under cursor" })
 
 -- SELECT ALL
-map("n", "<leader>a", "ggVG", { silent = true, desc = "Select all" })
+map("n", "<leader>va", "ggVG", { silent = true, desc = "Select: all" })
 
 -- SUDO WRITE
 vim.api.nvim_create_user_command("W", function()

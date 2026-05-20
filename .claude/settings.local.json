@@ -300,7 +300,15 @@
       "Bash(tailscale funnel:*)",
       "Bash(tailscale serve:*)",
       "Bash(wait)",
-      "Bash(mount)"
+      "Bash(mount)",
+      "WebFetch(domain:wiki.archlinux.org)",
+      "WebFetch(domain:bbs.archlinux.org)",
+      "Bash(xargs -I{} cat {}/bin/chromium-hwc)",
+      "Read(//run/user/1000/doc/**)",
+      "Bash(mountpoint /run/user/1000/doc)",
+      "Read(//dev/**)",
+      "Read(//run/wrappers/wrappers.0XuyBCBhRv/**)",
+      "Bash(fusermount3 -u /run/user/1000/doc)"
     ],
     "deny": [],
     "ask": [],

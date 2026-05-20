@@ -11,7 +11,7 @@ in
     "${mod},SPACE,exec,wofi --show drun"
     "${mod} SHIFT,R,exec,hyprctl reload"
     "${mod} SHIFT,Q,exit"
-    "${mod},B,exec,gpu-launch chromium"
+    "${mod},B,exec,gpu-launch chromium-hwc"
     "${mod} SHIFT,B,exec,gpu-launch librewolf"
     "${mod},M,exec,kitty -e btop"
     "${mod},O,exec,gpu-launch obsidian"

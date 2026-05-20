@@ -77,26 +77,76 @@ require("lazy").setup({
   -- Fuzzy finder
   {
     "nvim-telescope/telescope.nvim",
-    tag = "0.1.2",
-    dependencies = { "nvim-lua/plenary.nvim" },
+    branch = "0.1.x",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+    },
     config = function()
       require("plugins.telescope")
+      pcall(require("telescope").load_extension, "fzf")
     end,
   },
 
-  -- Formatting and linting
+  -- Formatting (replaces none-ls)
   {
-    "nvimtools/none-ls.nvim",
-    dependencies = { "nvim-lua/plenary.nvim" },
+    "stevearc/conform.nvim",
+    event = { "BufWritePre" },
+    cmd = { "ConformInfo" },
     config = function()
-      local null_ls = require("null-ls")
-      null_ls.setup({
-        sources = {
-          null_ls.builtins.formatting.stylua,
+      require("conform").setup({
+        formatters_by_ft = {
+          lua = { "stylua" },
+          nix = { "alejandra" },
+          python = { "ruff_format" },
+          javascript = { "prettier" },
+          typescript = { "prettier" },
+          json = { "prettier" },
+          yaml = { "prettier" },
+          markdown = { "prettier" },
+        },
+        format_on_save = {
+          timeout_ms = 3000,
+          lsp_format = "fallback",
         },
       })
-      vim.keymap.set("n", "<leader>gf", vim.lsp.buf.format, { desc = "Format file" })
+      vim.keymap.set({ "n", "v" }, "<leader>gf", function()
+        require("conform").format({ async = true, lsp_format = "fallback" })
+      end, { desc = "Format file" })
     end,
+  },
+
+  -- Diagnostics list (workspace-wide problems panel)
+  {
+    "folke/trouble.nvim",
+    dependencies = { "echasnovski/mini.icons" },
+    cmd = "Trouble",
+    config = function()
+      require("trouble").setup()
+    end,
+    keys = {
+      { "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", desc = "Diagnostics (Trouble)" },
+      { "<leader>xX", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Buffer diagnostics (Trouble)" },
+      { "<leader>xs", "<cmd>Trouble symbols toggle focus=false<cr>", desc = "Symbols (Trouble)" },
+      { "<leader>xr", "<cmd>Trouble lsp toggle focus=false win.position=right<cr>", desc = "LSP references (Trouble)" },
+      { "<leader>xl", "<cmd>Trouble loclist toggle<cr>", desc = "Location list (Trouble)" },
+      { "<leader>xq", "<cmd>Trouble qflist toggle<cr>", desc = "Quickfix list (Trouble)" },
+    },
+  },
+
+  -- Highlight and search TODO/FIXME/HACK comments
+  {
+    "folke/todo-comments.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    event = "VeryLazy",
+    config = function()
+      require("todo-comments").setup()
+    end,
+    keys = {
+      { "<leader>ft", "<cmd>TodoTelescope<cr>", desc = "Find: TODOs" },
+      { "]t", function() require("todo-comments").jump_next() end, desc = "Next TODO" },
+      { "[t", function() require("todo-comments").jump_prev() end, desc = "Previous TODO" },
+    },
   },
 
   -- Harpoon
@@ -143,6 +193,43 @@ require("lazy").setup({
           vim.cmd("TSInstall " .. lang)
         end
       end, {})
+    end,
+  },
+
+  -- Treesitter text objects (select/move by function, class, etc.)
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    event = "VeryLazy",
+    config = function()
+      require("nvim-treesitter.configs").setup({
+        textobjects = {
+          select = {
+            enable = true,
+            lookahead = true,
+            keymaps = {
+              ["af"] = "@function.outer",
+              ["if"] = "@function.inner",
+              ["ac"] = "@class.outer",
+              ["ic"] = "@class.inner",
+              ["aa"] = "@parameter.outer",
+              ["ia"] = "@parameter.inner",
+            },
+          },
+          move = {
+            enable = true,
+            set_jumps = true,
+            goto_next_start = {
+              ["]m"] = "@function.outer",
+              ["]]"] = "@class.outer",
+            },
+            goto_previous_start = {
+              ["[m"] = "@function.outer",
+              ["[["] = "@class.outer",
+            },
+          },
+        },
+      })
     end,
   },
 
@@ -225,7 +312,25 @@ require("lazy").setup({
   {
     "lewis6991/gitsigns.nvim",
     config = function()
-      require("gitsigns").setup()
+      require("gitsigns").setup({
+        current_line_blame = false, -- toggle with keymap
+        on_attach = function(bufnr)
+          local gs = package.loaded.gitsigns
+          local map = vim.keymap.set
+          local opts = { buffer = bufnr }
+
+          map("n", "]h", gs.next_hunk, vim.tbl_extend("force", opts, { desc = "Next hunk" }))
+          map("n", "[h", gs.prev_hunk, vim.tbl_extend("force", opts, { desc = "Previous hunk" }))
+          map("n", "<leader>hp", gs.preview_hunk, vim.tbl_extend("force", opts, { desc = "Preview hunk" }))
+          map("n", "<leader>hs", gs.stage_hunk, vim.tbl_extend("force", opts, { desc = "Stage hunk" }))
+          map("n", "<leader>hr", gs.reset_hunk, vim.tbl_extend("force", opts, { desc = "Reset hunk" }))
+          map("n", "<leader>hu", gs.undo_stage_hunk, vim.tbl_extend("force", opts, { desc = "Undo stage hunk" }))
+          map("n", "<leader>hb", gs.blame_line, vim.tbl_extend("force", opts, { desc = "Blame line" }))
+          map("n", "<leader>hB", function() gs.blame_line({ full = true }) end, vim.tbl_extend("force", opts, { desc = "Blame line (full)" }))
+          map("n", "<leader>tb", gs.toggle_current_line_blame, vim.tbl_extend("force", opts, { desc = "Toggle: blame" }))
+          map("n", "<leader>hd", gs.diffthis, vim.tbl_extend("force", opts, { desc = "Diff this" }))
+        end,
+      })
     end,
   },
 
@@ -290,6 +395,22 @@ require("lazy").setup({
     config = function()
       require("nvim-surround").setup()
     end,
+  },
+
+  -- Claude Code CLI integration (VS Code-like)
+  {
+    "coder/claudecode.nvim",
+    dependencies = { "folke/snacks.nvim" },
+    config = true,
+    keys = {
+      { "<leader>cc", "<cmd>ClaudeCode<cr>", desc = "Claude: toggle" },
+      { "<leader>cf", "<cmd>ClaudeCodeFocus<cr>", desc = "Claude: focus" },
+      { "<leader>cr", "<cmd>ClaudeCode --resume<cr>", desc = "Claude: resume" },
+      { "<leader>cb", "<cmd>ClaudeCodeAdd %<cr>", desc = "Claude: add buffer" },
+      { "<leader>cs", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Claude: send selection" },
+      { "<leader>ca", "<cmd>ClaudeCodeDiffAccept<cr>", desc = "Claude: accept diff" },
+      { "<leader>cd", "<cmd>ClaudeCodeDiffDeny<cr>", desc = "Claude: deny diff" },
+    },
   },
 }, {
   rocks = {

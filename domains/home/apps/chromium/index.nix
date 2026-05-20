@@ -3,6 +3,7 @@
 let
   cfg = config.hwc.home.apps.chromium;
   isNixOSHost = osConfig ? hwc;
+  launcher = import ./parts/launcher.nix { inherit lib pkgs; };
 in
 {
   #==========================================================================
@@ -16,18 +17,21 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    # Use regular chromium with proprietary codecs enabled for video playback
+    # Use regular chromium with proprietary codecs enabled for video playback.
+    # chromium-hwc is a wrapper that picks Intel (ANGLE-GL) vs NVIDIA
+    # (ANGLE-Vulkan + PRIME) flags based on /tmp/gpu-mode (see gpu-toggle).
     home.packages = [
       (pkgs.chromium.override {
         enableWideVine = true;  # Includes H.264/AAC codecs + WideVine DRM
       })
-    ];
+    ] ++ launcher.packages;
 
-    # Custom desktop entry with GPU acceleration and hardware video decode
+    # Desktop entry calls the wrapper so GPU mode flips automatically pick
+    # the right flag set on the next launch.
     xdg.desktopEntries.chromium-browser = {
       name = "Chromium";
       genericName = "Web Browser";
-      exec = "chromium --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE,WaylandWindowDecorations --use-gl=angle --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --enable-webgl --enable-webgl2 %U";
+      exec = "chromium-hwc %U";
       icon = "chromium";
       type = "Application";
       categories = [ "Network" "WebBrowser" ];
@@ -35,19 +39,14 @@ in
       actions = {
         new-window = {
           name = "New Window";
-          exec = "chromium --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE,WaylandWindowDecorations --use-gl=angle --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --enable-webgl --enable-webgl2";
+          exec = "chromium-hwc";
         };
         new-private-window = {
           name = "New Incognito Window";
-          exec = "chromium --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,Vulkan,DefaultANGLEVulkan,VulkanFromANGLE,WaylandWindowDecorations --use-gl=angle --disable-features=UseChromeOSDirectVideoDecoder --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --enable-webgl --enable-webgl2 --incognito";
+          exec = "chromium-hwc --incognito";
         };
       };
     };
-
-    # Future: Add universal domain parts
-    # behavior = import ./parts/behavior.nix { inherit lib pkgs config; };
-    # session = import ./parts/session.nix { inherit lib pkgs config; };
-    # appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
 
     #==========================================================================
     # VALIDATION

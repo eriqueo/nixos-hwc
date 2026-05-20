@@ -221,26 +221,32 @@ in
       };
     };
 
-    # SSH configuration
+    # SSH configuration — migrated from deprecated `matchBlocks` to `settings`
+    # (HM ≥ 26.05). User-facing DSL `cfg.ssh.matchBlocks` is unchanged; we
+    # translate it here into upstream OpenSSH directive names.
     programs.ssh = lib.mkIf cfg.ssh.enable {
       enable = true;
       enableDefaultConfig = false;
-      matchBlocks = lib.mkMerge [
+      settings = lib.mkMerge [
         {
-          "*" = {
-            forwardAgent = false;
-            addKeysToAgent = "no";
-            compression = false;
-            serverAliveInterval = 0;
-            serverAliveCountMax = 3;
-            hashKnownHosts = false;
-            userKnownHostsFile = "~/.ssh/known_hosts";
-            controlMaster = "no";
-            controlPath = "~/.ssh/master-%r@%n:%p";
-            controlPersist = "no";
+          "Host *" = {
+            ForwardAgent = false;
+            AddKeysToAgent = "no";
+            Compression = false;
+            ServerAliveInterval = 0;
+            ServerAliveCountMax = 3;
+            HashKnownHosts = false;
+            UserKnownHostsFile = "~/.ssh/known_hosts";
+            ControlMaster = "no";
+            ControlPath = "~/.ssh/master-%r@%n:%p";
+            ControlPersist = "no";
           };
         }
-        cfg.ssh.matchBlocks
+        (lib.mapAttrs' (name: host: lib.nameValuePair "Host ${name}" {
+          HostName     = host.hostname;
+          User         = host.user;
+          ForwardAgent = host.forwardAgent;
+        }) cfg.ssh.matchBlocks)
       ];
     };
 
