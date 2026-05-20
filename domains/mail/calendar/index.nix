@@ -6,10 +6,14 @@ let
   isNixOSHost = osConfig ? hwc;
   osCfg = if isNixOSHost then osConfig else {};
 
+  # Use osConfig.age.secrets path when HM evaluates as a NixOS module
+  # (sudo nixos-rebuild). Fall back to the canonical agenix runtime path
+  # so standalone HM (`hms`) doesn't rewrite the config with /dev/null
+  # — the secret file exists at this path regardless of HM eval mode.
   hasApplePw = (osCfg ? age) && (osCfg.age.secrets ? apple-app-pw);
   applePwPath = if hasApplePw
     then osCfg.age.secrets.apple-app-pw.path
-    else "/dev/null";
+    else "/run/agenix/apple-app-pw";
 
   vdirsyncer = import ./parts/vdirsyncer.nix {
     inherit lib pkgs cfg applePwPath;
