@@ -4,7 +4,7 @@
 # Shared between NixOS module (nixos-rebuild) and standalone (home-manager switch).
 # Machine-specific overrides go in machines/*/home.nix.
 
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   imports = [
@@ -13,6 +13,12 @@
   ];
 
   home.stateVersion = "24.05";
+
+  # HM 26.05 changed defaults for these options; pinning to legacy values
+  # preserves current behavior and silences eval warnings.
+  gtk.gtk4.theme = config.gtk.theme;
+  wayland.windowManager.hyprland.configType = "hyprlang";
+  xdg.userDirs.setSessionVariables = true;
 
   #======================================================================
   # GUI WORKSTATION DEFAULTS
