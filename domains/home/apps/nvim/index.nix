@@ -8,7 +8,7 @@
 # USED BY (Downstream):
 #   - User configuration via hwc.home.apps.nvim.enable
 #
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, osConfig ? {}, nixosApiVersion ? "unstable", ... }:
 
 let
   cfg = config.hwc.home.apps.nvim;
@@ -17,6 +17,17 @@ let
 
   # Lua configuration directory structure
   luaDir = ./parts/lua;
+
+  # HM 26.05+ (unstable) renamed `extraLuaConfig` → `initLua`.
+  # Stable HM 25.11 still exposes only `extraLuaConfig`. Pick per API to stay
+  # warning-free on unstable AND functional on stable.
+  luaInit = ''
+    require("core")
+  '';
+  initLuaAttr =
+    if nixosApiVersion == "stable"
+    then { extraLuaConfig = luaInit; }
+    else { initLua = luaInit; };
 
 in
 {
@@ -47,11 +58,7 @@ in
         prettier
         ruff
       ];
-      initLua = ''
-        require("core")
-      '';
-
-    };
+    } // initLuaAttr;
 
     # Deploy lua configuration declaratively via xdg.configFile
     # This mirrors the yazi pattern for managing config files
