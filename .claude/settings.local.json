@@ -309,6 +309,8 @@
       "Read(//dev/**)",
       "Read(//run/wrappers/wrappers.0XuyBCBhRv/**)",
       "Bash(fusermount3 -u /run/user/1000/doc)"
+      "Bash(nixos-version)",
+      "Read(//nix/var/nix/profiles/**)"
     ],
     "deny": [],
     "ask": [],
