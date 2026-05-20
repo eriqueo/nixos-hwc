@@ -237,11 +237,11 @@
     "legacy-config": {
       "flake": false,
       "locked": {
-        "lastModified": 1775670176,
-        "narHash": "sha256-Djkyen+fYHw1S5EUwqpPEZ+WV0AUXOoWgjT9BuP1L5M=",
+        "lastModified": 1779128803,
+        "narHash": "sha256-FfWEtRsI29OypVT0de7BOrLbhcWhexRH0xMYRu+Jae4=",
         "owner": "eriqueo",
         "repo": "nixos-hwc",
-        "rev": "640798f030a076905119b781c584d7e0699014e6",
+        "rev": "58321f1655e7b557be0df2ac4eb1c363774397d1",
         "type": "github"
       },
       "original": {
