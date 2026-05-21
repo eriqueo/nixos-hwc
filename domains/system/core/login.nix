@@ -97,13 +97,22 @@ in
             export XDG_CURRENT_DESKTOP=Hyprland
             export WLR_RENDERER=vulkan
             export WLR_NO_HARDWARE_CURSORS=1
-
-            # NVIDIA PRIME offload hints (ignored if not applicable)
-            export __NV_PRIME_RENDER_OFFLOAD=1
-            export __VK_LAYER_NV_optimus=NVIDIA_only
-            export __GLX_VENDOR_LIBRARY_NAME=nvidia
-            export LIBVA_DRIVER_NAME=nvidia
             export HYPRLAND_LOG_WLR=1
+
+            # NVIDIA PRIME env (__NV_PRIME_RENDER_OFFLOAD, __GLX_VENDOR_LIBRARY_NAME,
+            # __VK_LAYER_NV_optimus, LIBVA_DRIVER_NAME=nvidia) is intentionally NOT
+            # exported here. These vars are not "ignored if not applicable" — they
+            # actively route libglvnd/libva onto the NVIDIA EGL/VA-API vendors
+            # regardless of which GPU is rendering. On a hybrid laptop (Intel
+            # iGPU primary, NVIDIA via PRIME offload), exporting them at session
+            # start poisons Hyprland and every child process with mixed Mesa/
+            # NVIDIA EGL state, causing the compositor to crash on cross-vendor
+            # DMA-BUF imports (WebGL contexts, GL-accelerated clients).
+            #
+            # NVIDIA offload is per-process. Use one of:
+            #   gpu-launch <app>      — mode-aware (reads /tmp/gpu-mode)
+            #   blender-offload       — Blender-specific NVIDIA dGPU launcher
+            # Both in domains/system/gpu.nix.
 
             exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/start-hyprland
           '';
