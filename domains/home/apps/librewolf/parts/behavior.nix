@@ -73,4 +73,45 @@ in
   "dom.event.clipboardevents.enabled" = true;
   "dom.events.asyncClipboard.read" = true;
   "dom.events.asyncClipboard.clipboardItem" = true;
+
+  #==========================================================================
+  # Step 4/4 — session persistence. LibreWolf's librewolf.cfg defaults wipe
+  # cookies+cache on shutdown AND treat all cookies as session-only, which
+  # logs you out of every site (claude.ai, JobTread, etc.) on every browser
+  # restart. These prefs flip that behavior off. Privacy posture preserved:
+  # fingerprintingProtection on, GPC on, tracker blocking on — you're just
+  # deciding to KEEP the cookies sites legitimately set so logins survive.
+  #==========================================================================
+
+  # Don't wipe anything on shutdown. LibreWolf defaults this whole branch
+  # to true; the master sanitize toggle alone isn't enough because the
+  # granular .cookies / .sessions / .cache toggles get evaluated too.
+  # Both v1 keys (legacy) and v2 keys (Firefox 122+ migration) are set
+  # for forward-compat — LibreWolf still reads both depending on version.
+  "privacy.sanitize.sanitizeOnShutdown" = false;
+  "privacy.clearOnShutdown.cookies" = false;
+  "privacy.clearOnShutdown.cache" = false;
+  "privacy.clearOnShutdown.sessions" = false;
+  "privacy.clearOnShutdown.offlineApps" = false;
+  "privacy.clearOnShutdown.history" = false;
+  "privacy.clearOnShutdown.downloads" = false;
+  "privacy.clearOnShutdown_v2.cookiesAndStorage" = false;
+  "privacy.clearOnShutdown_v2.cache" = false;
+  "privacy.clearOnShutdown_v2.historyFormDataAndDownloads" = false;
+  "privacy.clearOnShutdown_v2.siteSettings" = false;
+
+  # Cookie lifetime: 0 = honor the site's own Expires/Max-Age header
+  # (Firefox default). LibreWolf overrides to 2 = session-only, which
+  # makes EVERY login cookie die on browser close regardless of the
+  # site's intent. This is the single biggest reason logins don't stick.
+  "network.cookie.lifetimePolicy" = 0;
+
+  # Restore previous session on startup. Side benefit relevant to
+  # session-only cookies that sites (JobTread, some auth flows) emit:
+  # when "restore previous session" is on, the browser treats the
+  # restart as a continuation rather than a new session, so those
+  # session-only cookies survive too.
+  "browser.startup.page" = 3;
+  "browser.sessionstore.resume_from_crash" = true;
+  "browser.sessionstore.privacy_level" = 0;
 }
