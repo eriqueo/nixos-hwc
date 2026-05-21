@@ -29,7 +29,6 @@ in
   ] ++ [
     "${mod} SHIFT,M,exec,hyprland-monitor-toggle"
     "${mod},TAB,exec,hyprland-workspace-overview"
-    "${mod} SHIFT,T,togglefloating"
     "${mod} SHIFT,H,exec,hyprland-system-health-checker"
     "${mod},comma,exec,hyprland-keybinds-viewer"
     "${mod},A,exec,proton-authenticator-toggle"

@@ -50,8 +50,8 @@
       };
       toggleBind = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
-        default = "SUPER CTRL,T";
-        example = "SUPER CTRL,T";
+        default = "SUPER SHIFT,T";
+        example = "SUPER SHIFT,T";
         description = ''
           Hyprland modifier+key spec for `dt toggle` (click-free clock in/out).
           Set to null to disable. Format: "<MODS>,<KEY>" — see hyprland bind syntax.
