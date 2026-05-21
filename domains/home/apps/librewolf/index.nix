@@ -3,6 +3,7 @@
 let
   cfg = config.hwc.home.apps.librewolf;
   theme = import ./parts/theme.nix { inherit lib config; };
+  launcher = import ./parts/launcher.nix { inherit lib pkgs; };
 
   hasProfiles = builtins.hasAttr "profiles" (config.programs.librewolf or {});
 
@@ -46,6 +47,8 @@ in
         (import ./parts/appearance.nix { inherit lib pkgs config; })
       ];
     };
+
+    home.packages = launcher.packages;
 
     home.sessionVariables = {
       MOZ_ENABLE_WAYLAND = "1";
