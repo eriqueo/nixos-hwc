@@ -30,27 +30,10 @@ domains/server/
 │   ├── sonarr/ sonarr/parts
 │   ├── soularr/ soularr/parts
 │   └── tdarr/ tdarr/parts
-├── native/       # Native service stack (aggregates all subdomains below)
-│   ├── ai/
-│   ├── backup/
-│   ├── beets-native/
-│   ├── business/
-│   ├── couchdb/
-│   ├── downloaders/
-│   ├── fabric-api/
-│   ├── frigate/
-│   ├── immich/
-│   ├── jellyfin/
-│   ├── media/
-│   ├── monitoring/
-│   ├── n8n/
-│   ├── navidrome/
-│   ├── networking/
-│   ├── orchestration/
-│   └── storage/
+├── native/
+│   └── ai/jobber-mcp/   # Jobber MCP server (only live native service)
 ├── media/        # Media profile toggle wiring
-├── n8n/          # Workflow/profile pieces for n8n
-└── routes.nix    # HTTP routing map for container + native services
+└── n8n/          # Workflow/profile pieces for n8n
 ```
 
 ## Container Services (complete list)
@@ -59,15 +42,12 @@ Enabled via `hwc.server.containers.<name>.enable`:
 - organizr, pihole, prowlarr, qbittorrent, radarr, recyclarr, sabnzbd
 - slskd, sonarr, soularr, tdarr
 
-## Native Services & Nesting
-- `native/` is the single aggregator imported by `domains/server/index.nix`; each subdirectory exposes `hwc.server.native.<service>.*` options.
-- Categories: AI (ollama/open-webui/MCP), backup jobs, beets-native, business APIs, CouchDB, downloader orchestration, Frigate, Immich, Jellyfin, media glue, monitoring stack (Prometheus/Grafana/exporters), n8n workflows, Navidrome, networking helpers, orchestration utilities, and storage management.
-
-## Container vs Native Duplication
-- Some services exist in both lanes (e.g., Immich, Jellyfin, Beets, downloader stack) to support host-by-host choices and migrations.
-- Pick one lane per service per host; options mirror the service name in the respective namespace (`hwc.server.containers.*` vs `hwc.server.native.*`).
-- Shared policy: mkContainer for OCI, `config.hwc.paths.*` for mounts, and the unified PUID=1000/PGID=100 permission model.
+## Native Services
+- Only `native/ai/jobber-mcp/` remains live, imported directly by `machines/server/config.nix`. The historical aggregator (`native/index.nix`) and all other native subdirs were dead parallel implementations and have been removed.
 
 ## Routing & Composition
-- `routes.nix` defines Caddy routing for both container and native services; container-specific defaults live under `containers/_shared/caddy.nix`.
-- `media/` and `n8n/` provide profile-level toggles that pull together the required container/native pieces for those stacks.
+- Caddy routes live in `domains/networking/routes.nix`; container-specific defaults are in `containers/_shared/caddy.nix`.
+- `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
+
+## Changelog
+- 2026-05-21: removed dead `native/` tree (everything except `ai/jobber-mcp/`). Held parallel implementations of services that now live in their respective top-level domains (`domains/data/`, `domains/media/`, `domains/networking/`, `domains/monitoring/`, etc.) plus the dead `native/ai/{ai-bible,local-workflows,mcp,ollama,open-webui}/` subdirs. None were imported by any live `nixosConfiguration` or `homeConfiguration`. Verified via `rg -ln "domains/server/native/<subdir>"` (zero `.nix` imports) and full eval of all four targets (drv hashes unchanged from baseline).
