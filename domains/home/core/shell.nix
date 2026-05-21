@@ -291,8 +291,10 @@ in
         # profile under ~/.nix-profile during activation, which invalidates any
         # absolute paths zsh already cached from there (e.g. starship). hash -r
         # is in-process and effectively free.
+        # NB: add-zsh-hook requires a function NAME, not a command — wrap hash -r.
         autoload -Uz add-zsh-hook
-        add-zsh-hook precmd hash -r
+        _hwc_hash_refresh() { hash -r; }
+        add-zsh-hook precmd _hwc_hash_refresh
 
         # NixOS rebuild shortcuts (dynamic hostname)
         # -H resets $HOME to root's so Nix doesn't warn about /home/eric not being owned by root.
