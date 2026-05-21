@@ -214,8 +214,8 @@ in
 
     screenshots = mkOption {
       type = types.nullOr types.path;
-      default = if isLaptop then "${laptopPhotos}/screenshots" else null;
-      description = "Screenshot save location - laptop only";
+      default = if isLaptop then "${laptopInbox}/screenshots" else null;
+      description = "Screenshot save location - laptop only (under 000_inbox so it rides the existing Syncthing share to hwc-server)";
     };
 
     # -------------------------------------------------------------------------
