@@ -285,6 +285,15 @@ in
       };
       shellAliases = cfg.aliases;
       initContent = ''
+        # Refresh zsh's command hash table before every prompt. Required because
+        # this host runs BOTH HM-as-module (via nixos-rebuild, useUserPackages=true)
+        # and HM-as-flake (via `hms`). HM-as-module wipes the legacy nix-env user
+        # profile under ~/.nix-profile during activation, which invalidates any
+        # absolute paths zsh already cached from there (e.g. starship). hash -r
+        # is in-process and effectively free.
+        autoload -Uz add-zsh-hook
+        add-zsh-hook precmd hash -r
+
         # NixOS rebuild shortcuts (dynamic hostname)
         # -H resets $HOME to root's so Nix doesn't warn about /home/eric not being owned by root.
         snix() {
