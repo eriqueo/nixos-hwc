@@ -35,6 +35,25 @@ in
 
       # No environment.systemPackages - HM provides the chromium binary
       # GPU acceleration via gpu-launch command (from infrastructure.hardware.gpu)
+
+      #========================================================================
+      # MANAGED POLICY — session persistence
+      #========================================================================
+      # Chromium reads any *.json under /etc/chromium/policies/managed/ at
+      # startup. RestoreOnStartup=1 makes Chromium restore the previous
+      # session on launch, which also preserves session-only cookies across
+      # the restart (Chromium treats it as a session continuation, not a
+      # new session). That's the win for JobTread and other self-hosted
+      # apps that emit session-only auth cookies — without this, those
+      # cookies die on browser close and you have to sign in again.
+      #
+      # Using environment.etc directly instead of programs.chromium.enable
+      # because programs.chromium installs chromium system-wide; we already
+      # install it via HM (with the proprietary-codec override).
+      environment.etc."chromium/policies/managed/hwc.json".text =
+        builtins.toJSON {
+          RestoreOnStartup = 1;  # 1 = restore last session
+        };
     })
     {}
   ];
