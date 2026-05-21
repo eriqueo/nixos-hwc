@@ -109,8 +109,14 @@ in
       prime = {
         enable = lib.mkOption {
           type = t.bool;
-          default = true;
-          description = "Enable PRIME offload (hybrid graphics).";
+          default = false;
+          description = ''
+            Enable PRIME offload (hybrid graphics — Intel iGPU primary, NVIDIA
+            dGPU on-demand). Set true ONLY on hybrid laptops. On NVIDIA-only
+            hosts (server) leave it false — otherwise PRIME offload config is
+            written for non-existent Intel bus IDs, and LIBVA_DRIVER_NAME is
+            forced to iHD (wrong on a system with no Intel iGPU).
+          '';
         };
         nvidiaBusId = lib.mkOption {
           type = t.str;
@@ -249,11 +255,28 @@ in
       '';
 
       # Runtime environment
+      #
+      # PRIME-offload hybrids (laptop): Intel iGPU is the primary renderer for
+      # the compositor, browsers, everything graphical. NVIDIA is reserved for
+      # explicit per-process opt-in via `gpu-launch` / `blender-offload`.
+      # Setting LIBVA_DRIVER_NAME=nvidia globally on a hybrid forces every
+      # VA-API client (mpv, ffmpeg, browser HW decode) onto the dGPU which
+      # the apps then can't reach because their EGL context is Intel — and
+      # poisons the compositor with NVIDIA libs loaded into its process,
+      # which is what was crashing Hyprland on WebGL use.
+      #
+      # Pure-NVIDIA hosts (server, prime.enable=false): nvidia is correct.
       environment.sessionVariables = {
-        CUDA_CACHE_PATH   = "${paths.cache}/cuda";
+        CUDA_CACHE_PATH = "${paths.cache}/cuda";
+      } // (if cfg.nvidia.prime.enable then {
+        LIBVA_DRIVER_NAME = "iHD";  # Intel iGPU does VA-API on hybrids
+        # VDPAU intentionally unset — VDPAU is X11/NVIDIA-era; Wayland
+        # clients use VA-API. Leaving it unset prevents libvdpau-nvidia
+        # from being loaded into Intel-context processes.
+      } else {
         LIBVA_DRIVER_NAME = "nvidia";
         VDPAU_DRIVER      = "nvidia";
-      };
+      });
 
       # Useful tools
       environment.systemPackages = with pkgs; [
