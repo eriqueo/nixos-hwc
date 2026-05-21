@@ -54,6 +54,43 @@ in
       MOZ_ENABLE_WAYLAND = "1";
     };
 
+    # Override the upstream librewolf.desktop so wofi/rofi/any XDG launcher
+    # routes through librewolf-hwc (Intel-pinned, VA-API-iHD wrapper) instead
+    # of bare librewolf. User dir (~/.local/share/applications/librewolf.desktop)
+    # wins over the package-installed entry under /etc/profiles/.../applications/
+    # because XDG_DATA_HOME has higher priority in XDG_DATA_DIRS.
+    xdg.desktopEntries.librewolf = {
+      name = "LibreWolf";
+      genericName = "Web Browser";
+      exec = "librewolf-hwc %U";
+      icon = "librewolf";
+      type = "Application";
+      terminal = false;
+      startupNotify = true;
+      categories = [ "Network" "WebBrowser" ];
+      mimeType = [
+        "text/html"
+        "text/xml"
+        "application/xhtml+xml"
+        "application/vnd.mozilla.xul+xml"
+        "x-scheme-handler/http"
+        "x-scheme-handler/https"
+      ];
+      settings = {
+        StartupWMClass = "librewolf";
+      };
+      actions = {
+        new-window = {
+          name = "New Window";
+          exec = "librewolf-hwc --new-window %U";
+        };
+        new-private-window = {
+          name = "New Private Window";
+          exec = "librewolf-hwc --private-window %U";
+        };
+      };
+    };
+
     #==========================================================================
     # VALIDATION
     #==========================================================================
