@@ -1,14 +1,19 @@
-{ lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   ollamaEnabled = lib.attrByPath [ "hwc" "ai" "ollama" "enable" ] false osConfig;
+
+  dtCfg = config.hwc.home.apps.dt or { enable = false; waybar.enable = false; settings.waybarPollSeconds = 30; };
+  dtEnabled = (dtCfg.enable or false) && (dtCfg.waybar.enable or false);
 
   commonModules = {
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
     modules-center = [ "custom/khal" "clock" "custom/weather" ];
     modules-right = [
       "custom/sep-pre"
-    ] ++ lib.optionals ollamaEnabled [ "custom/ollama" ] ++ [
+    ] ++ lib.optionals ollamaEnabled [ "custom/ollama" ]
+      ++ lib.optionals dtEnabled [ "custom/dt" ]
+      ++ [
       "custom/gpu" "idle_inhibitor" "custom/lid-sleep"
       "custom/sep-1"
       "pulseaudio" "bluetooth" "custom/network"
@@ -58,7 +63,18 @@ let
     "custom/ollama" = { format = "{}"; exec = "waybar-ollama-status"; return-type = "json"; interval = 5; on-click = "waybar-ollama-toggle"; };
   };
 
-  commonWidgetsBase = ollamaWidget // {
+  dtWidget = lib.optionalAttrs dtEnabled {
+    "custom/dt" = {
+      format = "{}";
+      exec = "dt status --waybar";
+      return-type = "json";
+      interval = dtCfg.settings.waybarPollSeconds or 30;
+      on-click = "kitty --class dt-tui -e dt tui";
+      tooltip = true;
+    };
+  };
+
+  commonWidgetsBase = ollamaWidget // dtWidget // {
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";

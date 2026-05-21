@@ -90,7 +90,7 @@ window#waybar {
 
 /* === BASE MODULE STYLE === */
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
-#custom-battery, #custom-gpu, #custom-ollama, #idle_inhibitor, #mpd, #tray,
+#custom-battery, #custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
 #custom-lid-sleep, #custom-proton-auth, #hyprland-language {
   padding: 8px 6px;
@@ -107,9 +107,14 @@ window#waybar {
 /* === COLOR GROUPS — opaque computed (50% blend over #32302f, required for powerline) === */
 
 /* Toggles — teal #576f69 */
-#custom-gpu, #custom-ollama, #idle_inhibitor, #custom-lid-sleep {
+#custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-lid-sleep {
   background-color: #576f69;
 }
+
+/* dt status-classes (driven by `dt status --waybar` JSON `class` field) */
+#custom-dt.active { color: #a9b665; font-weight: bold; }   /* green — clocked in */
+#custom-dt.idle   { color: #d4be98; }                       /* fg0 — clocked out (visible) */
+#custom-dt.stale  { color: #ea6962; font-weight: bold; }    /* red — session > maxSessionHours */
 
 /* Connectivity — sage green #5d7258 */
 #pulseaudio, #bluetooth, #custom-network {
@@ -160,7 +165,7 @@ window#waybar {
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
-#custom-battery:hover, #clock:hover, #custom-gpu:hover, #custom-ollama:hover,
+#custom-battery:hover, #clock:hover, #custom-gpu:hover, #custom-ollama:hover, #custom-dt:hover,
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,

@@ -50,6 +50,28 @@ in
       default = {};
       description = "Apple Calendar accounts to sync via CalDAV";
     };
+
+    localCalendars = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          path = lib.mkOption {
+            type = lib.types.str;
+            description = "Filesystem path to a directory of .ics files (one event per file).";
+          };
+          color = lib.mkOption {
+            type = lib.types.str;
+            default = "dark cyan";
+            description = "khal display color for this calendar.";
+          };
+        };
+      });
+      default = {};
+      description = ''
+        Extra read-only calendars to expose to khal/ikhal/calcure beyond the
+        CalDAV-synced accounts. Other modules (e.g. dt) set this to surface
+        their .ics output in the user's calendar tools.
+      '';
+    };
   };
 
   # IMPLEMENTATION

@@ -1,0 +1,8 @@
+# DataX Time Tracker configuration
+# Copy to ~/.config/dt/config.toml
+
+name = "Eric O'Keefe"
+rate = 40                  # $/hr
+max_session_hours = 10     # stale session threshold
+waybar_poll_seconds = 30
+# default_category = "support"  # uncomment to skip category prompt on clock-in
