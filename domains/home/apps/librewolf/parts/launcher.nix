@@ -21,7 +21,16 @@ let
     unset __NV_PRIME_RENDER_OFFLOAD
     unset __GLX_VENDOR_LIBRARY_NAME
     unset __VK_LAYER_NV_optimus
-    unset __EGL_VENDOR_LIBRARY_FILENAMES
+
+    # Pin the EGL ICD to Mesa-only. Previously this var was UNSET, which
+    # falls back to libglvnd's default enumeration of /run/opengl-driver/
+    # share/glvnd/egl_vendor.d/ — that dir has 10_nvidia.json (priority 10)
+    # outranking 50_mesa.json (priority 50), so libglvnd would dlopen
+    # libEGL_nvidia.so into LibreWolf's process even on this Intel Wayland
+    # session, breaking WebGL context creation. Setting explicitly here
+    # matches the session-level pin in greetd's hyprStart (defense in depth
+    # in case the env is ever disrupted between greetd and this wrapper).
+    export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/50_mesa.json
 
     # Wayland + dbus remote (helps portal integration and single-instance).
     export MOZ_ENABLE_WAYLAND=1
