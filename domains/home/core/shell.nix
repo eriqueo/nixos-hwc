@@ -56,7 +56,7 @@ in
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
         "web-speed" = "${ws}/tools/web-speed.sh";
         "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";
-        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d"; "hms" = "$(nix build --no-link --print-out-paths ~/.nixos#homeConfigurations.\\\"eric@$(hostname)\\\".activationPackage)/activate";
+        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d";
         "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
         "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
         "server" = "ssh eric@100.114.232.124"; "xps" = "ssh eric@100.126.80.42";
@@ -304,6 +304,24 @@ in
         }
         bnix() {
           sudo -H nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+        }
+
+        # Home Manager standalone activation (HM-as-flake path).
+        # Auto-reloads Hyprland after activation when running inside a
+        # Hyprland session, because HM activation writes ~/.config/hypr/
+        # hyprland.conf but does not signal the compositor. Reload is a
+        # no-op if the new generation didn't change hyprland config.
+        # Extra args (e.g. --show-trace, --refresh) are forwarded to nix build.
+        hms() {
+          local activator
+          activator=$(nix build --no-link --print-out-paths \
+            "$HWC_NIXOS_DIR#homeConfigurations.\"eric@$(hostname)\".activationPackage" \
+            "$@") || return $?
+          "$activator/activate" || return $?
+          hash -r
+          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+            hyprctl reload >/dev/null
+          fi
         }
 
         # Fuzzy finding function
