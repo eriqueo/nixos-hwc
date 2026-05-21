@@ -296,11 +296,23 @@ in
 
         # NixOS rebuild shortcuts (dynamic hostname)
         # -H resets $HOME to root's so Nix doesn't warn about /home/eric not being owned by root.
+        # snix/tnix auto-reload Hyprland when run inside a Hyprland session because they
+        # activate the HM-as-module config (via home-manager-eric.service, oneshot, so
+        # ~/.config/hypr/hyprland.conf is on disk by the time the command returns).
+        # bnix is pure build, no activation, so no reload.
         snix() {
-          sudo -H nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+          sudo -H nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
+          hash -r
+          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+            hyprctl reload >/dev/null
+          fi
         }
         tnix() {
-          sudo -H nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+          sudo -H nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
+          hash -r
+          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+            hyprctl reload >/dev/null
+          fi
         }
         bnix() {
           sudo -H nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
