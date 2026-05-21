@@ -23,7 +23,6 @@ domains/system/
 │   ├── ntfy/             # ntfy relay service
 │   ├── protonmail-bridge/        # Proton Bridge service lane
 │   ├── protonmail-bridge-cert/   # Certificate helper for Proton Bridge
-│   ├── session/          # Display/login/session policies
 │   ├── shell/            # System shell defaults
 │   └── vpn/              # VPN client/service wiring
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
@@ -36,7 +35,7 @@ domains/system/
 
 ## Subdomain Notes
 - **filesystem.nix** – Creates tmpfiles scaffolding from `hwc.paths.*` plus extra dirs (`hwc.filesystem.structure.dirs` alias).
-- **services/** – Backup, monitoring, networking, polkit, ntfy, VPN, Proton Bridge, session, shell, and hardware behavior live here. Each subdirectory exposes its own options under `hwc.system.services.<name>.*` (or Charter-approved short names).
+- **services/** – Backup, monitoring, networking, polkit, ntfy, VPN, Proton Bridge, shell, and hardware behavior live here. Each subdirectory exposes its own options under `hwc.system.services.<name>.*` (or Charter-approved short names). Display/login/session policies are in `core/login.nix` under `hwc.system.core.session` (not in services/).
 - **storage/** – Houses storage policy modules (tiers, cleanup/retention timers) to satisfy the data retention contract.
 - **packages.nix** – Core package bundles (base/server/security) under `hwc.system.core.packages.*`.
 - **users/** – System-level accounts required by other domains.
@@ -48,3 +47,4 @@ domains/system/
 
 ## Changelog
 - 2026-05-21: `gpu.nix` — fix day-1 hybrid-laptop bug. `nvidia.prime.enable` default changed from `true` to `false` (was forcing PRIME-offload config onto non-existent Intel bus IDs on the server). `environment.sessionVariables` now sets `LIBVA_DRIVER_NAME=iHD` (Intel) and omits `VDPAU_DRIVER` when `prime.enable=true`; pure-NVIDIA hosts (server) still get `LIBVA_DRIVER_NAME=nvidia + VDPAU_DRIVER=nvidia`. Stops poisoning hybrid sessions with NVIDIA VA-API/VDPAU drivers when Intel is the actual renderer
+- 2026-05-21: removed `services/session/` (dead since the session lane moved into `core/login.nix` under `hwc.system.core.session`). Was unimported and held a stale copy of the greetd hyprStart script with the same NVIDIA env exports that login.nix had — a real footgun if anyone ever wired it back up
