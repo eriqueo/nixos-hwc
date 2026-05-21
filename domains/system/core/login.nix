@@ -99,20 +99,36 @@ in
             export WLR_NO_HARDWARE_CURSORS=1
             export HYPRLAND_LOG_WLR=1
 
+            # Force libglvnd to use ONLY the Mesa EGL ICD for this session.
+            # Without this, libglvnd enumerates /run/opengl-driver/share/glvnd/
+            # egl_vendor.d/ and finds 10_nvidia.json (priority 10) outranking
+            # 50_mesa.json (priority 50). NVIDIA EGL gets dlopen'd into every
+            # process even when it isn't selected for dispatch — observable as
+            # libEGL_nvidia.so + nvidia-egl-* in /proc/<pid>/maps for Hyprland,
+            # browsers, etc. That cross-vendor state has caused two distinct
+            # failure modes on this hybrid laptop:
+            #   1. Hyprland eglCreateSyncKHR crashing on Mesa-allocated DMA-BUFs
+            #      (compositor restart, prior journalctl trace)
+            #   2. Browser WebGL context creation failing — libglvnd tries
+            #      NVIDIA ICD first, NVIDIA can't handle the Intel Wayland
+            #      display, browser treats failure as "WebGL unavailable"
+            # Pinning Mesa-only here means Intel renders cleanly and NVIDIA
+            # libs are never loaded into the compositor or any child process.
+            #
+            # NVIDIA offload remains available per-process via `gpu-launch`,
+            # which UNSETS __EGL_VENDOR_LIBRARY_FILENAMES (along with setting
+            # the GLX/PRIME env) to restore full ICD enumeration so NVIDIA-
+            # targeted apps (blender, games) can use NVIDIA EGL.
+            #
+            # See also: domains/system/gpu.nix gpu-launch script.
+            export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/50_mesa.json
+
             # NVIDIA PRIME env (__NV_PRIME_RENDER_OFFLOAD, __GLX_VENDOR_LIBRARY_NAME,
             # __VK_LAYER_NV_optimus, LIBVA_DRIVER_NAME=nvidia) is intentionally NOT
-            # exported here. These vars are not "ignored if not applicable" — they
-            # actively route libglvnd/libva onto the NVIDIA EGL/VA-API vendors
-            # regardless of which GPU is rendering. On a hybrid laptop (Intel
-            # iGPU primary, NVIDIA via PRIME offload), exporting them at session
-            # start poisons Hyprland and every child process with mixed Mesa/
-            # NVIDIA EGL state, causing the compositor to crash on cross-vendor
-            # DMA-BUF imports (WebGL contexts, GL-accelerated clients).
-            #
-            # NVIDIA offload is per-process. Use one of:
-            #   gpu-launch <app>      — mode-aware (reads /tmp/gpu-mode)
-            #   blender-offload       — Blender-specific NVIDIA dGPU launcher
-            # Both in domains/system/gpu.nix.
+            # exported here. Same reasoning as the EGL ICD pin above — these
+            # vars actively route libglvnd/libva onto the NVIDIA vendor for
+            # every child process. NVIDIA offload is per-process via gpu-launch
+            # or blender-offload (both in domains/system/gpu.nix).
 
             exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/start-hyprland
           '';
