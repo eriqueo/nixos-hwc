@@ -29,3 +29,4 @@ apps/
 - 2026-03-14: Added calcurse and calcure TUI calendar apps with Nord theme
 - 2026-03-15: Added tmux terminal multiplexer with vi keys, C-a prefix, Gruvbox status bar
 - 2026-04-22: Added markitdown file-to-Markdown converter (PDF, DOCX, XLSX, images, audio)
+- 2026-05-21: librewolf — added `librewolf-hwc` GPU launcher wrapper (mirrors chromium-hwc: strips NVIDIA PRIME env, pins VA-API to iHD on Intel iGPU) — step 1/4 of connectivity refit
