@@ -21,3 +21,4 @@ core/
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-05-21: shell.nix — add `hash -r` zsh precmd hook to refresh command hash table after every prompt. Fixes the recurring `zsh: no such file or directory: ~/.nix-profile/bin/<tool>` issue triggered by HM-as-module activation wiping the legacy nix-env user profile (this host runs both HM-as-module via `snix` and HM-as-flake via `hms`)
 - 2026-05-21: shell.nix — promoted `hms` from alias to shell function. Now forwards extra args to `nix build`, runs `hash -r` after activation, and auto-runs `hyprctl reload` when invoked inside a Hyprland session so HM-touched hyprland.conf takes effect without a manual second step
+- 2026-05-21: shell.nix — extended the same `hash -r` + `hyprctl reload` tail to `snix` and `tnix` (both activate HM-as-module via home-manager-eric.service, oneshot so the config is on disk by the time the command returns). `bnix` left alone — it only builds, no activation
