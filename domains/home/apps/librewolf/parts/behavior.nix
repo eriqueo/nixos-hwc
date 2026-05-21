@@ -55,9 +55,15 @@ in
   # Overrides LibreWolf's media.peerconnection.enabled = false.
   # ice.default_address_only=true keeps the leak surface to the default
   # route IP instead of every interface (VPNs, tunnel adapters, etc.).
+  # ice.no_host=false re-enables LAN-host ICE candidates — was set true
+  # in a previous browser session (about:config toggle, persisted to
+  # prefs.js); leaving it true silently breaks any LAN-local WebRTC
+  # (some screen-sharing tools, local-network video chat) while Zoom/
+  # Meet over the public internet still work via STUN/TURN.
   "media.peerconnection.enabled" = true;
   "media.peerconnection.ice.default_address_only" = true;
   "media.peerconnection.ice.proxy_only_if_behind_proxy" = true;
+  "media.peerconnection.ice.no_host" = false;
 
   # EME / Widevine DRM — needed for Netflix HD, Disney+, Spotify web.
   # Overrides LibreWolf's media.eme.enabled = false. Without
