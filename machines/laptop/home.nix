@@ -19,6 +19,7 @@
     claude-desktop.enable = true;
     scraper.enable = true;
     markitdown.enable = true;
+    dt.enable = true;
   };
 
   # Calendar: Apple iCloud sync via khal + vdirsyncer (CalDAV)

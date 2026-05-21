@@ -1,7 +1,10 @@
 # modules/home/apps/hyprland/parts/behavior.nix
-{ lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 let
   mod = "SUPER";
+  dtCfg = config.hwc.home.apps.dt or { enable = false; hyprland = { enable = false; toggleBind = null; }; };
+  dtBindEnabled = (dtCfg.enable or false) && (dtCfg.hyprland.enable or false);
+  dtToggleBind  = dtCfg.hyprland.toggleBind or null;
 in
 {
   # Top-level keys only — Hyprland expects these directly.
@@ -19,6 +22,11 @@ in
     "${mod},N,exec,kitty -e nvim"
     "${mod},Y,exec,kitty -e yazi"
     "${mod},G,exec,gpu-toggle"
+  ] ++ lib.optionals dtBindEnabled [
+    "${mod},T,exec,kitty --class dt-tui -e dt tui"
+  ] ++ lib.optionals (dtBindEnabled && dtToggleBind != null) [
+    "${dtToggleBind},exec,dt toggle"
+  ] ++ [
     "${mod} SHIFT,M,exec,hyprland-monitor-toggle"
     "${mod},TAB,exec,hyprland-workspace-overview"
     "${mod} SHIFT,T,togglefloating"
@@ -121,6 +129,9 @@ in
     # Opacity
     "match:class ^(kitty)$, opacity 0.95"
     "match:class ^(yazi)$, opacity 0.90"
+
+    # dt TUI — float, fixed size, centered (opened via SUPER+T)
+    "match:class ^(dt-tui)$, float on, size 800 500, center 1"
 
     # Proton Authenticator - tile on workspace 8, suppress fullscreen
     "match:class ^(Proton-authenticator)$, tile on, workspace 8 silent, size 400 600, suppress_event fullscreen"

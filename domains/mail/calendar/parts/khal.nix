@@ -9,7 +9,17 @@ let
     type = discover
   '';
 
-  calendars = lib.concatStringsSep "\n" (lib.mapAttrsToList mkCalendar cfg.accounts);
+  mkLocalCalendar = name: local: ''
+    [[${name}]]
+    path = ${local.path}
+    color = ${local.color}
+    type = discover
+  '';
+
+  calendars = lib.concatStringsSep "\n" (
+    (lib.mapAttrsToList mkCalendar cfg.accounts)
+    ++ (lib.mapAttrsToList mkLocalCalendar (cfg.localCalendars or {}))
+  );
 in
 {
   config = ''

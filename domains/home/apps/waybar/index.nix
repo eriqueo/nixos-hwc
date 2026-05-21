@@ -17,7 +17,7 @@ let
   scriptPathBin = lib.makeBinPath scriptPkgs;
 
   theme     = import ./parts/theme.nix     { inherit config lib; };
-  behavior  = import ./parts/behavior.nix  { inherit lib pkgs; };
+  behavior  = import ./parts/behavior.nix  { inherit config lib pkgs; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
   scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
