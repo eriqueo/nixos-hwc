@@ -19,7 +19,6 @@ domains/system/
 │   ├── backup/           # Backup timers/services
 │   ├── hardware/         # Input/audio/system behavior
 │   ├── monitoring/       # Prometheus/node-exporter/etc. hooks
-│   ├── networking/       # Network stack helpers (per Charter exception: hwc.networking)
 │   ├── ntfy/             # ntfy relay service
 │   ├── protonmail-bridge/        # Proton Bridge service lane
 │   ├── protonmail-bridge-cert/   # Certificate helper for Proton Bridge
@@ -46,6 +45,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-05-21: removed `networking/` subdir (orphan; live config is the flat `networking.nix`). Held `samba.nix` which referenced the dead `hwc.infrastructure.samba` namespace plus an unimported `index.nix`/`options.nix` pair. Verified via `nix eval .#nixosConfigurations.{hwc-laptop,hwc-server}.config.system.build.toplevel.drvPath` (drv hashes unchanged from baseline).
 - 2026-05-21: `gpu.nix` — fix day-1 hybrid-laptop bug. `nvidia.prime.enable` default changed from `true` to `false` (was forcing PRIME-offload config onto non-existent Intel bus IDs on the server). `environment.sessionVariables` now sets `LIBVA_DRIVER_NAME=iHD` (Intel) and omits `VDPAU_DRIVER` when `prime.enable=true`; pure-NVIDIA hosts (server) still get `LIBVA_DRIVER_NAME=nvidia + VDPAU_DRIVER=nvidia`. Stops poisoning hybrid sessions with NVIDIA VA-API/VDPAU drivers when Intel is the actual renderer
 - 2026-05-21: removed `services/session/` (dead since the session lane moved into `core/login.nix` under `hwc.system.core.session`). Was unimported and held a stale copy of the greetd hyprStart script with the same NVIDIA env exports that login.nix had — a real footgun if anyone ever wired it back up
 - 2026-05-21: `gpu.nix` — `gpu-launch` and `blender-offload` now `unset __EGL_VENDOR_LIBRARY_FILENAMES` when injecting NVIDIA env. Pairs with the matching `login.nix` change that pins Mesa-only EGL at session start; this lets per-process NVIDIA offload restore full ICD enumeration so blender/games can still use the NVIDIA EGL ICD
