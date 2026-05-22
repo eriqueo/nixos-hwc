@@ -43,15 +43,6 @@ in
         example = [ "--operator=eric" "--advertise-exit-node" ];
         description = "Extra flags for `tailscale up`.";
       };
-      funnel = {
-        enable = lib.mkEnableOption "Enable Tailscale Funnel for public access.";
-        ports = lib.mkOption {
-          type = types.listOf types.port;
-          default = [];
-          example = [ 443 2443 ];
-          description = "Ports to expose publicly via Tailscale Funnel.";
-        };
-      };
     };
 
     # ---- NFS ----
@@ -156,24 +147,6 @@ in
       enable = true;
       authKeyFile = cfg.tailscale.authKeyFile;
       extraUpFlags = cfg.tailscale.extraUpFlags;
-    };
-
-    # Tailscale Funnel - expose MCP servers publicly via Caddy gateway
-    # Caddy on :18080 routes: default → hwc-infra MCP, /n8n/* → n8n-mcp bridge
-    # Funnel terminates TLS and proxies to this local HTTP origin
-    systemd.services.tailscale-funnel = lib.mkIf (cfg.tailscale.enable && cfg.tailscale.funnel.enable) {
-      description = "Tailscale Funnel - MCP gateway (port 443)";
-      after = [ "tailscaled.service" "network-online.target" "caddy.service" ];
-      wants = [ "network-online.target" ];
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        Type = "simple";
-        Restart = "on-failure";
-        RestartSec = "10s";
-        # Run in foreground - tailscale funnel doesn't support --bg reliably in systemd
-        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --https=443 http://127.0.0.1:18080";
-        ExecStopPost = "${pkgs.tailscale}/bin/tailscale funnel reset || true";
-      };
     };
 
     # =========================

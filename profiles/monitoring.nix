@@ -70,8 +70,6 @@
     dataDir = "/var/lib/hwc/n8n";
     webhookUrl = "https://hwc.ocelot-wahoo.ts.net:2443";
     owner.passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
-    # Funnel disabled - using Caddy on port 2443 instead (avoids conflict with slskd on 8443)
-    funnel.enable = false;
     # Workflow secrets (loaded from agenix)
     secrets = {
       estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;

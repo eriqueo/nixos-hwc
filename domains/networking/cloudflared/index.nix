@@ -1,6 +1,6 @@
 # domains/networking/cloudflared/index.nix
 #
-# Cloudflare Tunnel — publicly resolvable ingress for webhook endpoints.
+# Cloudflare Tunnel — publicly resolvable ingress for external-facing services.
 # Wraps the built-in NixOS services.cloudflared module.
 #
 # NAMESPACE: hwc.networking.cloudflared.*
@@ -12,7 +12,8 @@
 #   1. cloudflared tunnel login            → ~/.cloudflared/cert.pem
 #   2. cloudflared tunnel create hwc-server → ~/.cloudflared/<TUNNEL_ID>.json
 #   3. Encrypt credentials JSON with agenix
-#   4. Create DNS CNAME: webhooks.heartwoodcraft.me → <TUNNEL_ID>.cfargotunnel.com
+#   4. Create DNS CNAMEs: {service}.heartwoodcraft.me → <TUNNEL_ID>.cfargotunnel.com
+#      Active: n8n, mcp, jobber, leads
 #   5. Set tunnelId below and rebuild
 
 { config, lib, pkgs, ... }:
@@ -40,8 +41,8 @@ in
 
     domain = lib.mkOption {
       type = lib.types.str;
-      default = "webhooks.heartwoodcraft.me";
-      description = "Public hostname for webhook ingress";
+      default = "n8n.heartwoodcraft.me";
+      description = "Primary public hostname (default: n8n ingress)";
     };
 
     n8nPort = lib.mkOption {

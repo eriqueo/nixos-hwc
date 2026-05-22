@@ -129,16 +129,6 @@ in
       };
     };
 
-    funnel = {
-      enable = lib.mkEnableOption "Expose full n8n publicly via Tailscale Funnel (for Manus AI, etc.)";
-
-      port = lib.mkOption {
-        type = lib.types.port;
-        default = 8443;
-        description = "Public HTTPS port for full n8n access via Tailscale Funnel. Must be 443, 8443, or 10000 (Funnel limitation).";
-      };
-    };
-
     owner = {
       email = lib.mkOption {
         type = lib.types.str;
@@ -182,39 +172,6 @@ in
     networking.firewall.interfaces."lo".allowedTCPPorts = [ cfg.port ];
     networking.firewall.interfaces."tailscale0".allowedTCPPorts =
       lib.optional (config.networking.interfaces ? "tailscale0") cfg.port;
-
-    # Tailscale Funnel service - expose n8n publicly on port 10000
-    # Full access enabled for external automation tools (Manus AI, etc.)
-    systemd.services.tailscale-funnel-n8n = {
-      description = "Tailscale Funnel for n8n (public access on port 10000)";
-      after = [ "network.target" "tailscaled.service" "podman-n8n.service" ];
-      wants = [ "tailscaled.service" "podman-n8n.service" ];
-      wantedBy = [ "multi-user.target" ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";
-        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --bg --https=10000 http://127.0.0.1:${toString cfg.port}";
-        ExecStop = "${pkgs.tailscale}/bin/tailscale funnel --https=10000 off";
-      };
-    };
-
-    # Tailscale Funnel - expose FULL n8n publicly (for Manus AI, external integrations)
-    systemd.services.tailscale-funnel-n8n-full = lib.mkIf cfg.funnel.enable {
-      description = "Tailscale Funnel for full n8n access (Manus AI, etc.)";
-      after = [ "network.target" "tailscaled.service" "podman-n8n.service" ];
-      wants = [ "tailscaled.service" "podman-n8n.service" ];
-      wantedBy = [ "multi-user.target" ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";
-        ExecStart = "${pkgs.tailscale}/bin/tailscale funnel --bg --https=${toString cfg.funnel.port} http://127.0.0.1:${toString cfg.port}";
-        ExecStop = "${pkgs.tailscale}/bin/tailscale funnel --https=${toString cfg.funnel.port} off";
-      };
-    };
 
     #========================================================================
     # VALIDATION
