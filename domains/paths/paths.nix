@@ -372,6 +372,89 @@ in
     };
 
     # -------------------------------------------------------------------------
+    # BRAIN KNOWLEDGE VAULT (Phase 1 - charter-declared canonical paths)
+    # -------------------------------------------------------------------------
+
+    brain = {
+      vault = mkOption {
+        type = types.nullOr types.path;
+        default = if isLaptop then "/home/eric/900_vaults/brain" else null;
+        description = "Canonical unified brain vault (laptop-primary)";
+      };
+
+      server-replica = mkOption {
+        type = types.nullOr types.path;
+        default = if isServer then "/mnt/vaults/brain" else null;
+        description = "Server-side Syncthing replica of the unified brain (Phase 3)";
+      };
+
+      inbox-mobile = mkOption {
+        type = types.nullOr types.path;
+        default = if isServer then "/mnt/vaults/inbox-mobile" else null;
+        description = "Mobile capture inbox - Mobius Sync phone capture to server (Phase 9)";
+      };
+
+      backups = mkOption {
+        type = types.nullOr types.path;
+        default = if isServer then "/var/lib/vault-backups" else null;
+        description = "Vault backup tarballs and bare Git mirrors, created in Phase 0";
+      };
+
+      sources = {
+        hwc-main = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/100_hwc" else null;
+          description = "V1 main HWC vault (MERGE-CORE) - read-only source during migration";
+        };
+        tech = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/00_tech" else null;
+          description = "V3 tech reference notes (MERGE)";
+        };
+        hwc-legacy = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/01_hwc" else null;
+          description = "V2 older HWC vault (INVESTIGATE)";
+        };
+        personal = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/02_personal" else null;
+          description = "V4 personal notes (STAY SEPARATE)";
+        };
+        nixos = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/03_nixos" else null;
+          description = "V5 NixOS knowledge (MERGE)";
+        };
+        transcripts = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/04-transcripts" else null;
+          description = "V6 meeting transcripts (MERGE-RAW)";
+        };
+        website = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/05-website" else null;
+          description = "V7 website project (MERGE or STAY SEPARATE)";
+        };
+        contractor = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/06-contractor" else null;
+          description = "V8 contractor work (MERGE-OR-ARCHIVE)";
+        };
+        jobtread = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/07_jobtread" else null;
+          description = "V9 JobTread notes (MERGE)";
+        };
+        datax = mkOption {
+          type = types.nullOr types.path;
+          default = if isLaptop then "/home/eric/900_vaults/datax" else null;
+          description = "V10 DataX brain (STAY SEPARATE - backed by Supabase)";
+        };
+      };
+    };
+
+    # -------------------------------------------------------------------------
     # SECURITY (Universal)
     # -------------------------------------------------------------------------
 
@@ -483,6 +566,10 @@ in
 
     # Security (HWC_SECRETS_DIR exported by secrets domain, not here)
     HWC_SOPS_AGE_KEY = cfg.security.sopsAgeKey;
+    HWC_BRAIN_VAULT = cfg.brain.vault;
+    HWC_BRAIN_SERVER_REPLICA = cfg.brain.server-replica;
+    HWC_BRAIN_INBOX_MOBILE = cfg.brain.inbox-mobile;
+    HWC_BRAIN_BACKUPS = cfg.brain.backups;
   };
 
   #============================================================================
