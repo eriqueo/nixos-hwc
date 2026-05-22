@@ -11,16 +11,19 @@ domains/home/
 ├── apps/              # Application modules (HM lane, optional sys.nix per app)
 ├── core/              # Cross-cutting home defaults (e.g., XDG dirs)
 ├── environment/       # Shell + shared scripts for the user environment
-├── mail/              # End-to-end mail stack (accounts, sync, delivery, search)
 └── theme/             # Fonts, palettes, templates for UI theming
 ```
+
+> The mail stack lives at the top level under `domains/mail/` (namespace `hwc.mail.*`).
 
 ## Subdomains
 - **apps/** – Toggle per-app modules via `hwc.home.apps.<name>.enable`. Some provide paired system-lane integrations under the same folder (`sys.nix`).
 - **environment/** – User shell and helper scripts (`environment/shell`, `environment/parts`, `environment/scripts`). Options are under `hwc.home.environment.*`.
-- **mail/** – Proton Bridge, mbsync/imap, SMTP, notmuch, address book (`hwc.home.mail.*`). Mail-specific docs live here for migrations and debugging.
 - **theme/** – Palettes, font sets, and templated assets for consistent look-and-feel (`hwc.home.theme.*`).
 - **core/** – Minimal plumbing for shared defaults (e.g., XDG directories) consumed by other home modules.
+
+## Changelog
+- 2026-05-21: removed dead `mail/` subtree (abook, accounts, aerc, afew, bridge, mbsync, msmtp, notmuch, parts, `index.nix`/`options.nix`). The live mail stack lives at `domains/mail/` (namespace `hwc.mail.*`); `domains/home/index.nix` listed only `core/theme/apps` in `wantedDirs`, so the home/mail tree was never imported. Verified via `rg -ln 'domains/home/mail|\\./home/mail' -t nix .` (zero real imports — only stale path-header comments and docs) and full eval (drv hashes unchanged from post-revert baseline).
 
 ## Applications (current modules)
 Options live under `hwc.home.apps.<name>.*`; enable from the HM profile. Current set (36 modules):
