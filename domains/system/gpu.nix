@@ -431,9 +431,6 @@ in
               export __NV_PRIME_RENDER_OFFLOAD=1
               export __GLX_VENDOR_LIBRARY_NAME=nvidia
               export __VK_LAYER_NV_optimus=NVIDIA_only
-              # Restore full ICD enumeration so NVIDIA EGL is visible
-              # (hyprStart pins to Mesa-only; we undo that for NVIDIA apps)
-              unset __EGL_VENDOR_LIBRARY_FILENAMES
             fi
             exec "$@"
           fi
@@ -447,8 +444,6 @@ in
                     export __NV_PRIME_RENDER_OFFLOAD=1
                     export __GLX_VENDOR_LIBRARY_NAME=nvidia
                     export __VK_LAYER_NV_optimus=NVIDIA_only
-                    # Restore full ICD enumeration (see gpu-next branch above)
-                    unset __EGL_VENDOR_LIBRARY_FILENAMES
                   fi
                   exec "$@"
                   ;;
@@ -472,9 +467,6 @@ in
           export __NV_PRIME_RENDER_OFFLOAD=1
           export __GLX_VENDOR_LIBRARY_NAME=nvidia
           export __VK_LAYER_NV_optimus=NVIDIA_only
-          # Restore full ICD enumeration so NVIDIA EGL is visible
-          # (hyprStart pins to Mesa-only; we undo for the NVIDIA path)
-          unset __EGL_VENDOR_LIBRARY_FILENAMES
           exec blender "$@"
         '')
 
