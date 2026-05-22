@@ -34,6 +34,7 @@ in
         BRAIN_MCP_KEY_FILE = cfg.apiKeyFile;
         DENO_DIR = "/var/cache/brain-mcp/deno";
         HOME = "/home/${cfg.user}";
+        PATH = "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
       };
 
       serviceConfig = {
