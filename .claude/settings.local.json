@@ -328,7 +328,9 @@
       "Bash(/nix/store/gcid5ia3yhs9l9p471q6fy4dhk5sxddi-home-manager-generation/activate)",
       "Bash(/nix/store/w4x9xhif3jm1lyc2l0j9nb4n5c6k8ipf-home-manager-generation/activate)",
       "Bash(/nix/store/ih4fyb97gnl30pkv5jjd955qsabai42n-home-manager-generation/activate)",
-      "Bash(/run/current-system/sw/bin/ls -ld ~/Downloads)"
+      "Bash(/run/current-system/sw/bin/ls -ld ~/Downloads)",
+      "Bash(python3 /tmp/closure.py)",
+      "Bash(ssh *)"
     ],
     "deny": [],
     "ask": [],
