@@ -330,7 +330,9 @@
       "Bash(/nix/store/ih4fyb97gnl30pkv5jjd955qsabai42n-home-manager-generation/activate)",
       "Bash(/run/current-system/sw/bin/ls -ld ~/Downloads)",
       "Bash(python3 /tmp/closure.py)",
-      "Bash(ssh *)"
+      "Bash(ssh *)",
+      "Bash(nixos-version)",
+      "Read(//nix/var/nix/profiles/**)"
     ],
     "deny": [],
     "ask": [],
