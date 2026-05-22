@@ -401,20 +401,16 @@ in
       };
 
       sources = {
-        hwc-main = mkOption {
-          type = types.nullOr types.path;
-          default = if isLaptop then "/home/eric/100_hwc" else null;
-          description = "V1 main HWC vault (MERGE-CORE) - read-only source during migration";
-        };
+        # V1 100_hwc removed 2026-05-21 — confirmed NOT a vault, just a home folder.
         tech = mkOption {
           type = types.nullOr types.path;
           default = if isLaptop then "/home/eric/900_vaults/00_tech" else null;
           description = "V3 tech reference notes (MERGE)";
         };
-        hwc-legacy = mkOption {
+        hwc-main = mkOption {
           type = types.nullOr types.path;
           default = if isLaptop then "/home/eric/900_vaults/01_hwc" else null;
-          description = "V2 older HWC vault (INVESTIGATE)";
+          description = "V2 main HWC vault (MERGE-CORE) - read-only source during migration";
         };
         personal = mkOption {
           type = types.nullOr types.path;
