@@ -6,6 +6,14 @@
 {
   # Server domain secrets - application credentials
   age.secrets = {
+    # Brain MCP Server API key
+    brain-mcp-api-key = {
+      file = ../parts/services/brain-mcp-api-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     # ARR stack API keys
     estimator-api-key = {
       file = ../parts/services/estimator-api-key.age;

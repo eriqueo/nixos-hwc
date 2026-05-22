@@ -25,6 +25,7 @@
     ../../domains/server/containers/arka/index.nix         # Arka MCP Gateway
     ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
+    ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
   ];
 
   assertions = [
@@ -108,6 +109,9 @@
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
+
+  # Brain MCP Server — vault filesystem tools (read/write/search/lint) on port 9876
+  hwc.server.ai.brainMcp.enable = true;
 
   # ZFS support for backup drives
   boot.supportedFilesystems = [ "zfs" ];
