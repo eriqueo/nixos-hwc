@@ -19,16 +19,16 @@ domains/system/
 │   ├── index.nix         # NixOS module, systemd service, Caddy route
 │   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
 │   └── src/              # TypeScript source (Node.js, MCP SDK)
-├── storage/              # Storage-tier policies and retention helpers
-└── users/                # Account and group management
+└── (storage/ and users/ subdirs removed; live config uses flat users.nix
+   and mounts.nix at the top level)
 ```
 
 ## Subdomain Notes
 - **filesystem.nix** – Creates tmpfiles scaffolding from `hwc.paths.*` plus extra dirs (`hwc.filesystem.structure.dirs` alias).
 - **Services** – Backup lives in `domains/data/`, monitoring in `domains/monitoring/`, ntfy/notifications in `domains/notifications/`, networking in `domains/networking/`. Display/login/session policies are in `core/login.nix` under `hwc.system.core.session`.
-- **storage/** – Houses storage policy modules (tiers, cleanup/retention timers) to satisfy the data retention contract.
-- **packages.nix** – Core package bundles (base/server/security) under `hwc.system.core.packages.*`.
-- **users/** – System-level accounts required by other domains.
+- **packages.nix** – Core package bundles (base/server/security) under `hwc.system.core.packages.*` (declared in `core/index.nix`, implemented in `core/packages.nix`).
+- **users.nix** – Top-level flat file; declares `hwc.system.users.*` and `hwc.system.core.identity.*`.
+- **mounts.nix** – Top-level flat file; declares storage-tier mounts (`hwc.system.mounts.*`).
 - **mcp/** – HWC Infrastructure MCP Server exposing system/container/network/config state as MCP tools. See `domains/system/mcp/README.md`.
 
 ## Usage
@@ -36,6 +36,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-05-21: removed orphan dir-style modules superseded by flat top-level files: `core/filesystem.nix`, `core/thermal.nix`, `core/validation.nix`, `core/options.nix`, `core/identity/` (live identity is in `users.nix`), `users/` (live is `users.nix`), `storage/` (no live consumer of `hwc.system.storage.*`), `packages/` (live is `core/packages.nix`). Verified via `rg -n "options\.hwc\.system\.<ns>" -t nix .` (no live consumers outside removed dirs) and full eval (drv hashes unchanged).
 - 2026-05-21: removed dead `services/` subtree (backup, hardware, monitoring, ntfy, polkit, protonmail-bridge, protonmail-bridge-cert, shell, vpn + `index.nix`/`options.nix` aggregators). Functionality was migrated to top-level domains (`domains/data/backup/`, `domains/monitoring/`, `domains/notifications/`, etc.) and the system-domain aggregator (`system/index.nix`) no longer imports anything under `services/`. Verified via `rg -ln "domains/system/services|\.\./services|\./services/" -t nix .` (only stale path-header comments remained) and full eval (drv hashes unchanged).
 - 2026-05-21: removed `networking/` subdir (orphan; live config is the flat `networking.nix`). Held `samba.nix` which referenced the dead `hwc.infrastructure.samba` namespace plus an unimported `index.nix`/`options.nix` pair. Verified via `nix eval .#nixosConfigurations.{hwc-laptop,hwc-server}.config.system.build.toplevel.drvPath` (drv hashes unchanged from baseline).
 - 2026-05-21: `gpu.nix` — fix day-1 hybrid-laptop bug. `nvidia.prime.enable` default changed from `true` to `false` (was forcing PRIME-offload config onto non-existent Intel bus IDs on the server). `environment.sessionVariables` now sets `LIBVA_DRIVER_NAME=iHD` (Intel) and omits `VDPAU_DRIVER` when `prime.enable=true`; pure-NVIDIA hosts (server) still get `LIBVA_DRIVER_NAME=nvidia + VDPAU_DRIVER=nvidia`. Stops poisoning hybrid sessions with NVIDIA VA-API/VDPAU drivers when Intel is the actual renderer
