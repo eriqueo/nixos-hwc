@@ -741,6 +741,7 @@
       "mcp.heartwoodcraft.me" = "http://localhost:6200";
       "jobber.heartwoodcraft.me" = "http://localhost:8002";
       "leads.heartwoodcraft.me" = "http://localhost:8420";
+      "brain.heartwoodcraft.me" = "http://localhost:9876";
     };
   };
 
