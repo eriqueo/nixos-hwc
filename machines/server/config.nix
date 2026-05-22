@@ -26,6 +26,7 @@
     ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
+    ../../domains/server/services/inbox-processor/index.nix  # Phone capture processor (Whisper + Tesseract)
   ];
 
   assertions = [
@@ -112,6 +113,17 @@
 
   # Brain MCP Server — vault filesystem tools (read/write/search/lint) on port 9876
   hwc.server.ai.brainMcp.enable = true;
+
+  # Phone Capture Processor (Phase 10: Whisper STT + Tesseract OCR)
+  # Watches inbox-mobile/{audio,screenshots} and writes markdown to brain/inbox/
+  hwc.server.services.inboxProcessor = {
+    enable = true;
+    audioInboxPath       = "${config.hwc.paths.brain."inbox-mobile"}/audio";
+    screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
+    brainInboxPath       = "${config.hwc.paths.brain."server-replica"}/inbox";
+    processedPath        = "${config.hwc.paths.brain."inbox-mobile"}/processed";
+    whisperModel         = "base.en";
+  };
 
   # ZFS support for backup drives
   boot.supportedFilesystems = [ "zfs" ];
