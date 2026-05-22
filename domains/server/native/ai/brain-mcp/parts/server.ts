@@ -278,10 +278,18 @@ Deno.serve({ port: PORT, hostname: HOST }, async (req: Request): Promise<Respons
     return Response.json({ status: "ok", service: "brain-mcp", vault: VAULT_ROOT, port: PORT });
   }
 
-  // Auth: handled by Cloudflare Access at brain.heartwoodcraft.me (service token).
-  // Internal Tailscale access (e.g. http://server:9876/mcp) is intentionally open —
-  // protected only by the Tailscale identity layer (this server bound to 0.0.0.0).
-  // Removed app-level Bearer check 2026-05-22 to match lead-scout / hwc-mcp pattern.
+  // Auth: Cloudflare Access Managed OAuth at the network boundary.
+  //   - Public URL: https://brain.heartwoodcraft.me/mcp
+  //   - Managed OAuth toggle ON in the Cloudflare Access self-hosted app makes
+  //     Access an RFC 8414 / RFC 9728-compliant OAuth 2.1 authorization server
+  //     with Dynamic Client Registration (DCR) + PKCE.
+  //   - claude.ai discovers it via the WWW-Authenticate / .well-known endpoints,
+  //     registers dynamically, then sends a Bearer access token Cloudflare validates.
+  //   - Cloudflare strips the Bearer (Access JWT) before forwarding here, so this
+  //     process sees an authenticated request with no Authorization header to check.
+  //   - Internal Tailscale path (http://server:9876/mcp) bypasses Cloudflare and is
+  //     intentionally open; protected only by the Tailscale identity layer.
+  //   - App-level Bearer check removed 2026-05-22 — Access is the sole gate.
 
   if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
     if (req.method !== "POST") {
