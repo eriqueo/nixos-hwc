@@ -354,7 +354,12 @@
   # Local development PostgreSQL — vanilla, listens on localhost only.
   # No Podman networking, no vchord/pgvector (server-only for Immich).
   # Data dir: /var/lib/hwc/postgresql (fresh cluster on first boot).
-  hwc.data.databases.postgresql.enable = true;
+  # Laptop runs v17 (server is pinned to v15 by its existing cluster).
+  hwc.data.databases.postgresql = {
+    enable = true;
+    version = "17";
+    package = pkgs.postgresql_17;
+  };
 
   # Static hosts for local services (remains unchanged).
   networking.hosts = {

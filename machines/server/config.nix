@@ -975,6 +975,7 @@
   hwc.data.databases.postgresql = {
     enable = lib.mkDefault true;
     version = "15";
+    package = pkgs.postgresql_15;  # Cluster on-disk format is v15 — do not bump without pg_upgrade
 
     # Server-only: Immich vector search + Podman media-network integration
     containerNetwork.enable = true;
