@@ -50,14 +50,7 @@ let
     unset __NV_PRIME_RENDER_OFFLOAD
     unset __GLX_VENDOR_LIBRARY_NAME
     unset __VK_LAYER_NV_optimus
-
-    # Pin the EGL ICD to Mesa-only. The prior `unset` here meant libglvnd
-    # fell back to enumerating /run/opengl-driver/share/glvnd/egl_vendor.d/
-    # which has 10_nvidia.json (priority 10) outranking 50_mesa.json
-    # (priority 50) — so libEGL_nvidia.so was getting dlopen'd into
-    # Chromium's process on this Intel Wayland session. Explicit pin
-    # matches greetd's hyprStart; defense-in-depth against env disruption.
-    export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/50_mesa.json
+    unset __EGL_VENDOR_LIBRARY_FILENAMES
 
     # If an Intel iGPU is present AND the iHD VA-API driver is installed,
     # force chromium's libva to use it. Without this, a system-wide
