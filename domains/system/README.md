@@ -15,15 +15,6 @@ domains/system/
 │   ├── polkit.nix (moved to services/polkit)
 │   ├── thermal.nix
 │   └── validation.nix    # Domain-wide assertions
-├── services/
-│   ├── backup/           # Backup timers/services
-│   ├── hardware/         # Input/audio/system behavior
-│   ├── monitoring/       # Prometheus/node-exporter/etc. hooks
-│   ├── ntfy/             # ntfy relay service
-│   ├── protonmail-bridge/        # Proton Bridge service lane
-│   ├── protonmail-bridge-cert/   # Certificate helper for Proton Bridge
-│   ├── shell/            # System shell defaults
-│   └── vpn/              # VPN client/service wiring
 ├── mcp/                  # HWC Infrastructure MCP Server (25 tools, 5 resources)
 │   ├── index.nix         # NixOS module, systemd service, Caddy route
 │   ├── parts/caddy.nix   # Reverse-proxy route (port 6243 → 6200)
@@ -34,7 +25,7 @@ domains/system/
 
 ## Subdomain Notes
 - **filesystem.nix** – Creates tmpfiles scaffolding from `hwc.paths.*` plus extra dirs (`hwc.filesystem.structure.dirs` alias).
-- **services/** – Backup, monitoring, networking, polkit, ntfy, VPN, Proton Bridge, shell, and hardware behavior live here. Each subdirectory exposes its own options under `hwc.system.services.<name>.*` (or Charter-approved short names). Display/login/session policies are in `core/login.nix` under `hwc.system.core.session` (not in services/).
+- **Services** – Backup lives in `domains/data/`, monitoring in `domains/monitoring/`, ntfy/notifications in `domains/notifications/`, networking in `domains/networking/`. Display/login/session policies are in `core/login.nix` under `hwc.system.core.session`.
 - **storage/** – Houses storage policy modules (tiers, cleanup/retention timers) to satisfy the data retention contract.
 - **packages.nix** – Core package bundles (base/server/security) under `hwc.system.core.packages.*`.
 - **users/** – System-level accounts required by other domains.
@@ -45,6 +36,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-05-21: removed dead `services/` subtree (backup, hardware, monitoring, ntfy, polkit, protonmail-bridge, protonmail-bridge-cert, shell, vpn + `index.nix`/`options.nix` aggregators). Functionality was migrated to top-level domains (`domains/data/backup/`, `domains/monitoring/`, `domains/notifications/`, etc.) and the system-domain aggregator (`system/index.nix`) no longer imports anything under `services/`. Verified via `rg -ln "domains/system/services|\.\./services|\./services/" -t nix .` (only stale path-header comments remained) and full eval (drv hashes unchanged).
 - 2026-05-21: removed `networking/` subdir (orphan; live config is the flat `networking.nix`). Held `samba.nix` which referenced the dead `hwc.infrastructure.samba` namespace plus an unimported `index.nix`/`options.nix` pair. Verified via `nix eval .#nixosConfigurations.{hwc-laptop,hwc-server}.config.system.build.toplevel.drvPath` (drv hashes unchanged from baseline).
 - 2026-05-21: `gpu.nix` — fix day-1 hybrid-laptop bug. `nvidia.prime.enable` default changed from `true` to `false` (was forcing PRIME-offload config onto non-existent Intel bus IDs on the server). `environment.sessionVariables` now sets `LIBVA_DRIVER_NAME=iHD` (Intel) and omits `VDPAU_DRIVER` when `prime.enable=true`; pure-NVIDIA hosts (server) still get `LIBVA_DRIVER_NAME=nvidia + VDPAU_DRIVER=nvidia`. Stops poisoning hybrid sessions with NVIDIA VA-API/VDPAU drivers when Intel is the actual renderer
 - 2026-05-21: removed `services/session/` (dead since the session lane moved into `core/login.nix` under `hwc.system.core.session`). Was unimported and held a stale copy of the greetd hyprStart script with the same NVIDIA env exports that login.nix had — a real footgun if anyone ever wired it back up
