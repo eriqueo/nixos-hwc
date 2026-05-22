@@ -348,6 +348,14 @@
     local-workflows.enable = false;
   };
 
+  #============================================================================
+  # === [domains/data/databases] Orchestration ================================
+  #============================================================================
+  # Local development PostgreSQL — vanilla, listens on localhost only.
+  # No Podman networking, no vchord/pgvector (server-only for Immich).
+  # Data dir: /var/lib/hwc/postgresql (fresh cluster on first boot).
+  hwc.data.databases.postgresql.enable = true;
+
   # Static hosts for local services (remains unchanged).
   networking.hosts = {
     "100.114.232.124" = [
