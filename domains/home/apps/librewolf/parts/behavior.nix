@@ -16,7 +16,13 @@ in
   # Privacy: Switch from RFP to FPP to allow site-level Dark Mode
   "privacy.resistFingerprinting" = false; 
   "privacy.fingerprintingProtection" = true;
-  "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme";
+  # WebGLRenderCapability is excluded because +AllTargets includes a target
+  # that blocks WebGL context creation at the content-process level even when
+  # webgl.disabled=false (LibreWolf upstream issue, Codeberg #2381). Without
+  # this exclusion every WebGL page hits "WebGL supported but disabled or
+  # unavailable". Firefox is unaffected because it doesn't ship the FPP+
+  # webgl-render override LibreWolf does.
+  "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme,-WebGLRenderCapability";
   
   # Force Dark Logic into the browser engine
   "ui.systemUsesDarkTheme" = 1; 
