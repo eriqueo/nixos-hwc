@@ -149,24 +149,17 @@ in
     services.caddy = {
       enable = true;
       extraConfig = ''
-        # Loopback-only access to subpath routes.
-        # Explicit bind prevents Caddy's default *:443 wildcard, which would
-        # race with tailscaled for the Tailscale IP on :443.
-        localhost {
-          bind 127.0.0.1
-          tls internal
-          encode zstd gzip
-          ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "subpath") routes))}
-        }
-
-        # Tailscale serve backend — plain HTTP, no TLS.
-        # tailscaled terminates TLS for both tailnet and Funnel traffic on :443,
-        # then proxies here. Handles MCP routes + all subpath routes so that
-        # tailnet clients keep accessing hwc.ocelot-wahoo.ts.net/sonarr etc.
-        :18080 {
+        # Primary HTTPS listener — serves subpath routes + MCP over tailnet.
+        # Caddy owns :443 with a Tailscale-provisioned LE cert.
+        ${rootHost} {
+          tls {
+            get_certificate tailscale
+            protocols tls1.2 tls1.3
+            alpn h2 http/1.1
+          }
           encode zstd gzip
 
-          # MCP routes — proxy to hwc-infra Express server (priority over subpath routes)
+          # MCP routes — proxy to hwc-sys Express server (priority over subpath routes)
           @mcp_routes {
             path /mcp /mcp/* /health /.well-known/*
           }
@@ -201,27 +194,6 @@ in
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "port") routes))}
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "static") routes))}
-
-        # Public MCP gateway — Tailscale Funnel on :10000 terminates TLS,
-        # forwards to this HTTP-only listener. Only MCP, OAuth, and webhook
-        # paths are allowed; everything else gets 403.
-        :10080 {
-          @mcp_allowed {
-            path /mcp /mcp/* /mcp-server /mcp-server/* /mcp-oauth /mcp-oauth/* /.well-known/* /rest/oauth2-credential/* /webhook/* /webhook-test/*
-          }
-
-          handle @mcp_allowed {
-            reverse_proxy 127.0.0.1:5678 {
-              header_up X-Forwarded-Proto https
-              header_up X-Forwarded-Host ${rootHost}:10000
-              flush_interval -1
-            }
-          }
-
-          handle {
-            respond 403
-          }
-        }
       '';
     };
 

@@ -4,7 +4,7 @@
 
 Provides network infrastructure that other domains depend on:
 - Caddy reverse proxy with route aggregation (subpath + port modes)
-- Cloudflare Tunnel for public webhook ingress
+- Cloudflare Tunnel for public ingress (MCPs, n8n, webhooks)
 - Podman media-network creation
 - Gluetun VPN container for download stack
 - Pi-hole DNS container
@@ -12,7 +12,7 @@ Provides network infrastructure that other domains depend on:
 
 ## Boundaries
 
-- Owns: reverse proxy config, Cloudflare Tunnel, VPN, DNS, podman networking
+- Owns: reverse proxy config, Cloudflare Tunnel (public ingress), VPN, DNS, podman networking
 - Does NOT own: individual service containers (those live in their own domains)
 - Route definitions: currently centralized in `routes.nix`, will be distributed to individual domains as they migrate
 
@@ -41,6 +41,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-05-22: Migrate all public ingress from Tailscale Funnel to Cloudflare Tunnel. Add n8n.heartwoodcraft.me route. Remove Funnel-era Caddy listeners (:18080, :10080). Caddy reclaims :443 with tailscale cert for direct tailnet access.
 - 2026-04-29: Add Cloudflare Tunnel module (hwc.networking.cloudflared) for public webhook ingress via webhooks.heartwoodcraft.me
 - 2026-04-04: Update gluetun gotify ref from `hwc.automation.gotify` to `hwc.notifications.send.gotify` (domain redistribution)
 - 2026-03-18: Add CloudBeaver web-based database manager routing configuration with port mode and subpath-hostile handling.

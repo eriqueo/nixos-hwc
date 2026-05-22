@@ -186,7 +186,6 @@
 
     ssh.enable = true;
     tailscale.enable = true;
-    tailscale.funnel.enable = false;  # Disabled - using n8n-specific funnel on port 10000
     tailscale.extraUpFlags = [ "--advertise-tags=tag:server" "--accept-routes" ];
     nfs.server = {
       enable = true;
@@ -255,6 +254,8 @@
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
       "brain"        = { path = "/mnt/vaults/brain";       devices = [ "hwc-laptop" ]; };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
+      # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
+      "inbox-mobile" = { path = "/mnt/vaults/inbox-mobile"; devices = []; };
     };
   };
 
@@ -730,12 +731,17 @@
     enable = true;  # Enable after: tunnel created + credentials encrypted + DNS CNAME set
     tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
     credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
+    # n8n.heartwoodcraft.me handled by `domain` option default → localhost:n8nPort
     extraIngress = {
       "mcp.heartwoodcraft.me" = "http://localhost:6200";
       "jobber.heartwoodcraft.me" = "http://localhost:8002";
       "leads.heartwoodcraft.me" = "http://localhost:8420";
     };
   };
+
+  # n8n webhook URL points at the public Cloudflare Tunnel hostname so
+  # external integrations (Quo, Slack, etc.) reach n8n via cloudflared.
+  hwc.automation.n8n.webhookUrl = "https://n8n.heartwoodcraft.me";
 
   #============================================================================
   # REVERSE PROXY
