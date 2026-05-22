@@ -278,14 +278,10 @@ Deno.serve({ port: PORT, hostname: HOST }, async (req: Request): Promise<Respons
     return Response.json({ status: "ok", service: "brain-mcp", vault: VAULT_ROOT, port: PORT });
   }
 
-  // Bearer token auth for all /mcp routes
-  const authHeader = req.headers.get("authorization") ?? "";
-  if (authHeader !== `Bearer ${API_KEY}`) {
-    return new Response("Unauthorized", {
-      status: 401,
-      headers: { "WWW-Authenticate": "Bearer" },
-    });
-  }
+  // Auth: handled by Cloudflare Access at brain.heartwoodcraft.me (service token).
+  // Internal Tailscale access (e.g. http://server:9876/mcp) is intentionally open —
+  // protected only by the Tailscale identity layer (this server bound to 0.0.0.0).
+  // Removed app-level Bearer check 2026-05-22 to match lead-scout / hwc-mcp pattern.
 
   if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
     if (req.method !== "POST") {
