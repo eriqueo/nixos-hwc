@@ -27,7 +27,28 @@ in
       version = lib.mkOption {
         type = lib.types.str;
         default = "15";
-        description = "PostgreSQL version";
+        description = ''
+          Expected PostgreSQL major version. Used by the version-drift
+          assertion to detect accidental package changes (data directory
+          format is not upward-compatible — pg_upgrade required).
+
+          Must match the major version of `package`.
+        '';
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.postgresql_15;
+        defaultText = lib.literalExpression "pkgs.postgresql_15";
+        example = lib.literalExpression "pkgs.postgresql_17";
+        description = ''
+          PostgreSQL package. Default pins to 15 because the server's
+          cluster is initialized in 15 format and changing it would
+          require pg_upgrade.
+
+          Override per machine when the cluster is fresh (or has been
+          migrated): e.g. laptop sets `pkgs.postgresql_17`.
+        '';
       };
 
       dataDir = lib.mkOption {
@@ -160,9 +181,9 @@ in
     (lib.mkIf cfg.postgresql.enable {
       services.postgresql = {
         enable = true;
-        # CHARTER v9.0: Explicitly pin PostgreSQL 15 to prevent data format breakage
-        # Data directory initialized with PostgreSQL 15 - upgrading requires migration
-        package = pkgs.postgresql_15;
+        # Version drift is caught by the assertion below: cluster's on-disk
+        # format must match cfg.postgresql.version (server is locked to 15).
+        package = cfg.postgresql.package;
         extensions = cfg.postgresql.extensions;
         dataDir = cfg.postgresql.dataDir;
 
@@ -317,22 +338,27 @@ in
       assertions = [
         {
           assertion =
-            builtins.match "15\\..*" config.services.postgresql.package.version != null;
+            builtins.match "${cfg.postgresql.version}\\..*"
+              cfg.postgresql.package.version
+            != null;
           message = ''
             ============================================================
-            POSTGRESQL VERSION CHANGE DETECTED
+            POSTGRESQL VERSION DRIFT DETECTED
             ============================================================
-            Current: ${config.services.postgresql.package.version}
-            Expected: 15.x
+            Expected major version: ${cfg.postgresql.version}
+            Actual package version: ${cfg.postgresql.package.version}
 
-            PostgreSQL data directory is PostgreSQL 15 format.
-            Upgrading requires data migration:
+            `hwc.data.databases.postgresql.version` and `.package` must
+            agree. The data directory is initialized in the package's
+            on-disk format — switching majors requires pg_upgrade or
+            dump+restore.
 
-            1. Backup: pg_dumpall -f /backup/postgresql-pre-upgrade.sql
-            2. Stop PostgreSQL: systemctl stop postgresql
-            3. Migrate data: pg_upgrade or pg_dumpall/restore
-            4. Update pin in domains/server/databases/index.nix
-            5. Test thoroughly before applying
+            To intentionally upgrade:
+              1. Backup: pg_dumpall -f /backup/postgresql-pre-upgrade.sql
+              2. Stop PostgreSQL: systemctl stop postgresql
+              3. Migrate data: pg_upgrade or pg_dumpall/restore
+              4. Update both `version` and `package` together
+              5. Test thoroughly before applying
 
             See CHARTER.md section "Flake Update Strategy"
             ============================================================
