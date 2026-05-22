@@ -183,6 +183,16 @@ in
     '';
 
     #==========================================================================
+    # REQUIRED DIRECTORIES (pre-created so ReadWritePaths does not fail)
+    #==========================================================================
+    systemd.tmpfiles.rules = [
+      "d ${cfg.audioInboxPath}       0755 eric users -"
+      "d ${cfg.screenshotsInboxPath} 0755 eric users -"
+      "d ${cfg.brainInboxPath}       0755 eric users -"
+      "d ${cfg.processedPath}        0755 eric users -"
+    ];
+
+    #==========================================================================
     # SYSTEMD PATH UNITS (inotify watchers)
     #==========================================================================
     systemd.paths = {
