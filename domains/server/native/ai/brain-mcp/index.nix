@@ -67,5 +67,10 @@ in
       };
     };
 
+    #==========================================================================
+    # FIREWALL — open port for Tailscale clients (Phase 12 adds HTTPS via tailscale serve)
+    #==========================================================================
+    networking.firewall.allowedTCPPorts = [ cfg.port ];
+
   };
 }
