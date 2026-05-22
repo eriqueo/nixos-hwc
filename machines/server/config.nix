@@ -24,6 +24,7 @@
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/containers/arka/index.nix         # Arka MCP Gateway
     ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
+    ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
   ];
 
   assertions = [
@@ -104,6 +105,9 @@
 
   # Jobber MCP Server — Jobber GraphQL API as MCP tools via SSE on port 20443
   hwc.server.ai.jobberMcp.enable = true;
+
+  # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
+  hwc.server.ai.leadScout.enable = true;
 
   # ZFS support for backup drives
   boot.supportedFilesystems = [ "zfs" ];
