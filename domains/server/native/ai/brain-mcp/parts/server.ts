@@ -13,6 +13,7 @@ import { walk, exists } from "jsr:@std/fs@1";
 // ── Configuration ────────────────────────────────────────────────────────────
 const VAULT_ROOT = resolve(Deno.env.get("BRAIN_VAULT_ROOT") ?? "/mnt/vaults/brain");
 const PORT = parseInt(Deno.env.get("BRAIN_MCP_PORT") ?? "9876");
+const HOST = Deno.env.get("BRAIN_MCP_HOST") ?? "0.0.0.0";
 const KEY_FILE = Deno.env.get("BRAIN_MCP_KEY_FILE") ?? "/run/agenix/brain-mcp-api-key";
 
 let API_KEY: string;
@@ -269,7 +270,7 @@ async function handleRpc(req: RpcReq): Promise<RpcResp | null> {
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
-Deno.serve({ port: PORT, hostname: "127.0.0.1" }, async (req: Request): Promise<Response> => {
+Deno.serve({ port: PORT, hostname: HOST }, async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
 
   // Health check — no auth required
@@ -313,4 +314,4 @@ Deno.serve({ port: PORT, hostname: "127.0.0.1" }, async (req: Request): Promise<
   return new Response("Not Found", { status: 404 });
 });
 
-console.log(`[brain-mcp] Listening on 127.0.0.1:${PORT} — vault: ${VAULT_ROOT}`);
+console.log(`[brain-mcp] Listening on ${HOST}:${PORT} — vault: ${VAULT_ROOT}`);

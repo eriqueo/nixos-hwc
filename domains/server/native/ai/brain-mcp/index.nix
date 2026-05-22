@@ -39,7 +39,7 @@ in
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${deno} run --allow-read --allow-write=${cfg.vaultPath} --allow-net=127.0.0.1:${toString cfg.port} --allow-run=rg --allow-env ${server}";
+        ExecStart = "${deno} run --allow-read --allow-write=${cfg.vaultPath} --allow-net=0.0.0.0:${toString cfg.port} --allow-run=rg --allow-env ${server}";
         WorkingDirectory = cfg.vaultPath;
         User = lib.mkForce cfg.user;
         Group = "users";
