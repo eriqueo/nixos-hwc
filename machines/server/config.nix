@@ -250,16 +250,17 @@
   hwc.data.syncthing = {
     enable = true;
     devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
+    devices."hwc-phone".id = "ROLZBPO-HN33OQP-E4DV5PD-34ZVSIP-I5USNNW-NHHOPKC-APNQNSH-BX7OMQN";
     folders = {
       "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-laptop" ]; };
       "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-laptop" ]; };
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
-      "brain"        = { path = "/mnt/vaults/brain";       devices = [ "hwc-laptop" ]; };
+      "brain"        = { path = "/mnt/vaults/brain";       devices = [ "hwc-laptop" "hwc-phone" ]; };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
-      "inbox-mobile" = { path = "/mnt/vaults/inbox-mobile"; devices = []; };
+      "inbox-mobile" = { path = "/mnt/vaults/inbox-mobile"; devices = [ "hwc-phone" ]; };
     };
   };
 
