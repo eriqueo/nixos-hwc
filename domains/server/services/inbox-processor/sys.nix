@@ -227,10 +227,8 @@ in
           Group = "users";
           ExecStart = processAudioScript;
           StateDirectory = "inbox-processor";
-          # Security hardening
+          # Security hardening (minimal — whisper-cpp needs full tmp access)
           NoNewPrivileges = true;
-          PrivateTmp = true;
-          ProtectSystem = "strict";
           ReadWritePaths = [
             cfg.audioInboxPath
             cfg.brainInboxPath
@@ -249,10 +247,8 @@ in
           Group = "users";
           ExecStart = processScreenshotScript;
           StateDirectory = "inbox-processor";
-          # Security hardening
+          # Security hardening (minimal — tesseract needs standard tmp access)
           NoNewPrivileges = true;
-          PrivateTmp = true;
-          ProtectSystem = "strict";
           ReadWritePaths = [
             cfg.screenshotsInboxPath
             cfg.brainInboxPath
