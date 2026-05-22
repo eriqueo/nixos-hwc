@@ -78,6 +78,7 @@ in
   # Services — application API keys, passwords, tokens
   # ═══════════════════════════════════════════════════════════════════════════
 
+  "domains/secrets/parts/services/brain-mcp-api-key.age".publicKeys             = everyone;
   "domains/secrets/parts/services/audiobookshelf-api-key.age".publicKeys         = everyone;
   "domains/secrets/parts/services/authentik-db-password.age".publicKeys           = everyone;
   "domains/secrets/parts/services/authentik-secret-key.age".publicKeys            = everyone;
