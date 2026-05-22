@@ -19,7 +19,7 @@ automation/
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
 └── n8n/         # n8n workflow automation
-    ├── index.nix     # Options + Tailscale funnel services
+    ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
     ├── mcp-bridge.nix # n8n-mcp HTTP bridge
     └── parts/
@@ -41,6 +41,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-05-22: Remove Tailscale Funnel from n8n — public access migrated to Cloudflare Tunnel (`n8n.heartwoodcraft.me`). Delete `funnel` options and `tailscale-funnel-n8n*` systemd services. Funnel was poisoning MagicDNS for tailnet clients (every Caddy port unreachable from laptop).
 - 2026-04-04: Removed gotify/ — moved to `domains/notifications/send/gotify.nix` (domain redistribution)
 - 2026-03-29: Migrated from ntfy to gotify — replaced ntfy/ directory with gotify/, new CLI tool hwc-gotify-send with JSON API + per-app tokens
 - 2026-03-26: Add work_calculator_lead n8n workflow (Heartwood MCP /call → JT + Postgres + Slack); migration 002-calculator-leads.sql
