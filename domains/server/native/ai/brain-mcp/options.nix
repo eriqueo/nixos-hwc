@@ -33,7 +33,7 @@
 
     reverseProxyPort = lib.mkOption {
       type = lib.types.port;
-      default = 13443;
+      default = 23443;
       description = "External Caddy HTTPS port for brain-mcp access via Tailscale (Phase 12)";
     };
   };
