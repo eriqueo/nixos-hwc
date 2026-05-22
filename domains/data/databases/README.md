@@ -26,6 +26,14 @@ hwc.data.databases = {
     version = "15";
     databases = [ "immich" "paperless" "n8n" ];
 
+    # Extensions (default: none). Server enables pgvector + vectorchord for Immich.
+    extensions = ps: [ ps.pgvector ps.vectorchord ];
+    sharedPreloadLibraries = [ "vchord" ];
+
+    # Podman media-network integration: 10.89.0.1 listener, container auth,
+    # init-media-network ordering. Leave disabled on machines without Podman.
+    containerNetwork.enable = true;
+
     # Full database dump (pg_dumpall)
     backup.enable = true;
     backup.schedule = "daily";
@@ -58,8 +66,8 @@ hwc.data.databases = {
 ## PostgreSQL Notes
 
 - **Version pinned to 15.x** - Data directory format requires migration for upgrades
-- **Extensions**: pgvector (vector search), vectorchord (Immich compatibility)
-- **Network access**: localhost + container gateway (10.89.0.1)
+- **Extensions** (opt-in via `extensions`): server uses pgvector + vectorchord for Immich
+- **Network access**: localhost only by default; `containerNetwork.enable = true` adds 10.89.0.1 + 10.89.0.0/16 auth
 
 ## Backup Services
 
@@ -78,5 +86,6 @@ hwc.data.databases = {
 
 ## Changelog
 
+- 2026-05-22: Gated Podman-specific behavior behind `containerNetwork.enable`; promoted `extensions` and `sharedPreloadLibraries` to options so non-Podman hosts (laptop) can run a vanilla local dev DB.
 - 2026-03-23: Added `backup.perDatabase` for compressed per-database backups with retention
 - 2026-02-27: Migrated from server/native/networking/ per Law 2 namespace compliance

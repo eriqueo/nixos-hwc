@@ -42,6 +42,30 @@ in
         description = "Databases to create";
       };
 
+      extensions = lib.mkOption {
+        type = lib.types.functionTo (lib.types.listOf lib.types.package);
+        default = _ps: [];
+        defaultText = lib.literalExpression "ps: []";
+        example = lib.literalExpression "ps: [ ps.pgvector ps.vectorchord ]";
+        description = "PostgreSQL extensions to install (function over postgresqlPackages).";
+      };
+
+      sharedPreloadLibraries = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [];
+        example = [ "vchord" ];
+        description = "Libraries to add to shared_preload_libraries.";
+      };
+
+      containerNetwork = {
+        enable = lib.mkEnableOption ''
+          Podman media-network integration:
+            - bind 10.89.0.1 in addition to localhost
+            - add 10.89.0.0/16 host-based auth rule
+            - order postgresql after init-media-network.service
+        '';
+      };
+
       backup = {
         enable = lib.mkEnableOption "Automatic pg_dumpall backups (all databases)";
 
@@ -138,30 +162,38 @@ in
         enable = true;
         # CHARTER v9.0: Explicitly pin PostgreSQL 15 to prevent data format breakage
         # Data directory initialized with PostgreSQL 15 - upgrading requires migration
-        # Include pgvector and vectorchord for Immich vector search support
         package = pkgs.postgresql_15;
-        extensions = ps: [ ps.pgvector ps.vectorchord ];
+        extensions = cfg.postgresql.extensions;
         dataDir = cfg.postgresql.dataDir;
 
         ensureDatabases = cfg.postgresql.databases;
 
-        # Listen on localhost and container network gateway
-        settings.listen_addresses = lib.mkForce "localhost,10.89.0.1";
-
-        # vectorchord requires shared preload
-        settings.shared_preload_libraries = "vchord";
+        settings = lib.mkMerge [
+          {
+            listen_addresses = lib.mkForce (
+              if cfg.postgresql.containerNetwork.enable
+              then "localhost,10.89.0.1"
+              else "localhost"
+            );
+          }
+          (lib.mkIf (cfg.postgresql.sharedPreloadLibraries != []) {
+            shared_preload_libraries =
+              lib.concatStringsSep "," cfg.postgresql.sharedPreloadLibraries;
+          })
+        ];
 
         authentication = ''
           local all all trust
           host all all 127.0.0.1/32 trust
           host all all ::1/128 trust
+        '' + lib.optionalString cfg.postgresql.containerNetwork.enable ''
           # Allow connections from Podman media-network (10.89.0.0/16)
           host all all 10.89.0.0/16 trust
         '';
       };
 
       # PostgreSQL listens on 10.89.0.1 (Podman network gateway) — wait for it
-      systemd.services.postgresql = {
+      systemd.services.postgresql = lib.mkIf cfg.postgresql.containerNetwork.enable {
         after = [ "init-media-network.service" ];
         wants = [ "init-media-network.service" ];
       };

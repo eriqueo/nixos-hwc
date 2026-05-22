@@ -975,6 +975,12 @@
   hwc.data.databases.postgresql = {
     enable = lib.mkDefault true;
     version = "15";
+
+    # Server-only: Immich vector search + Podman media-network integration
+    containerNetwork.enable = true;
+    extensions = ps: [ ps.pgvector ps.vectorchord ];
+    sharedPreloadLibraries = [ "vchord" ];
+
     backup.perDatabase = {
       enable = true;
       # Per-database list managed by consumer modules (e.g. hwc.business.databases)
