@@ -53,3 +53,8 @@ __pycache__/
 domains/server/n8n/parts/workflows/*.json
 n8n-simple.json
 domains/business/datax/dashboard/dashboard.json
+
+# morning-briefing - generated runtime artifacts
+domains/business/morning-briefing/logs/*.log
+domains/business/morning-briefing/output/*.json
+domains/business/morning-briefing/dashboard/briefing.json
