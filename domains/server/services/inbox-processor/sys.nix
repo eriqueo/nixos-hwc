@@ -53,6 +53,7 @@ let
         tmpdir=$("$COREUTILS/mktemp" -d)
         # whisper-cli flags: -m model, -f file, -otxt output-txt, -of output-file-prefix, -np no-prints
         "$WHISPER_CLI" \
+          --no-gpu \
           -m "$MODEL_FILE" \
           -f "$f" \
           -otxt \
