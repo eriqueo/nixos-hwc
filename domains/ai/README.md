@@ -24,6 +24,8 @@ domains/ai/
 └── tools/              # AI CLI tools (charter-search, ai-doc, ai-commit)
 ```
 
+Boundaries: this listing reflects what `ai/index.nix` actually imports. Any other directory you see in the tree (e.g. `anything-llm/`, `open-webui/`, `router/`) used to live here and has been removed as dead code.
+
 ## CLI Tools
 
 - `ai-doc` - Generate documentation with AI
@@ -39,6 +41,7 @@ Auto-detects and configures based on available hardware:
 
 ## Changelog
 
+- 2026-05-21: removed remaining dead trees `anything-llm/`, `open-webui/`, `router/` (re-introduced at some point after the April cleanup but still unimported by `ai/index.nix`), the orphan `mcp/heartwood/` subdir (live MCP wiring moved to `domains/business/mcp/`, but that itself is also dead — separate commit), `local-workflows/parts/journaling.nix` (the restart-loop module the April note flagged), and orphan `options.nix` files in `ai/`, `agent/`, `cloud/`, `local-workflows/`, `mcp/`, `ollama/`, `profiles/`, `tools/` (legacy split files; options now declared inline in each `index.nix`). Verified via per-subdir `rg -ln "<name>" -t nix .` (zero external refs) and full eval (drv hashes unchanged).
 - 2026-04-12: Major cleanup — removed dead modules: ai-bible (abandoned), anything-llm (unused), open-webui (zero traffic), router (skeleton), local-workflows API (unintegrated), journaling (restart-loop bug). Fixed nanoclaw path bug. -5,473 lines.
 - 2026-03-25: Added Heartwood MCP Server to mcp/ subdomain (Phase 1: 63 JT tools via PAVE API)
 - 2026-03-04: Moved ai-bible from domains/server/native/ai/ into domain; removed dead native/ai/ sub-modules
