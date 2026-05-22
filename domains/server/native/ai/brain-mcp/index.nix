@@ -66,14 +66,5 @@ in
       };
     };
 
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    assertions = [
-      {
-        assertion = config.hwc.server.ai.brainMcp.enable -> builtins.pathExists cfg.vaultPath;
-        message = "brain-mcp: vault path ${cfg.vaultPath} must exist before enabling the service";
-      }
-    ];
   };
 }
