@@ -198,6 +198,14 @@ in
         wants = [ "init-media-network.service" ];
       };
 
+      # NixOS's postgresql module uses systemd namespace sandboxing with
+      # ReadWritePaths=dataDir but only sets StateDirectory for the default
+      # /var/lib/postgresql. For custom dataDir, the path must exist before
+      # unit start or namespace setup fails (status=226/NAMESPACE).
+      systemd.tmpfiles.rules = [
+        "d ${cfg.postgresql.dataDir} 0700 postgres postgres - -"
+      ];
+
       # Backup service
       systemd.services.postgresql-backup = lib.mkIf cfg.postgresql.backup.enable {
         description = "PostgreSQL backup";
