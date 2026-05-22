@@ -30,5 +30,11 @@
       default = "eric";
       description = "User to run the Brain MCP service as";
     };
+
+    reverseProxyPort = lib.mkOption {
+      type = lib.types.port;
+      default = 13443;
+      description = "External Caddy HTTPS port for brain-mcp access via Tailscale (Phase 12)";
+    };
   };
 }

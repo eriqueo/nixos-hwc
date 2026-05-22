@@ -68,7 +68,20 @@ in
     };
 
     #==========================================================================
-    # FIREWALL — open port for Tailscale clients (Phase 12 adds HTTPS via tailscale serve)
+    # CADDY REVERSE PROXY — port mode on :13443 (Phase 12)
+    # Deviation: tailscale serve --https=8443 not viable (port 8443 owned by slskd/Caddy).
+    # Creates https://hwc.ocelot-wahoo.ts.net:13443 via Caddy with Tailscale cert.
+    #==========================================================================
+    hwc.networking.shared.routes = [{
+      name = "brain-mcp";
+      mode = "port";
+      port = cfg.reverseProxyPort;
+      upstream = "http://127.0.0.1:${toString cfg.port}";
+    }];
+
+    #==========================================================================
+    # FIREWALL — port 9876 for direct Tailscale IP access from laptop (Claude Code MCP).
+    # Port 13443 opened automatically by reverseProxy.nix for port-mode routes.
     #==========================================================================
     networking.firewall.allowedTCPPorts = [ cfg.port ];
 
