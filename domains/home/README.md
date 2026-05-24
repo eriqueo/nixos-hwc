@@ -23,18 +23,19 @@ domains/home/
 - **core/** – Minimal plumbing for shared defaults (e.g., XDG directories) consumed by other home modules.
 
 ## Changelog
+- 2026-05-23: added `apps/herdr/` — herdr v0.6.2 terminal agent multiplexer ("tmux for AI agents"). Foundation-tier HM app (peer of `kitty`, `tmux`, `yazi`). Installed from upstream `herdr-linux-x86_64` release binary via fetchurl + autoPatchelfHook (mirrors `codex` pattern; avoids pulling Rust+zig source toolchain). Enabled by default on laptop via `profiles/home-session.nix` and explicitly on server via `machines/server/home.nix`.
 - 2026-05-21: removed dead `options.nix` files inside `apps/`, `apps/<each>/`, `core/`, `theme/` and `theme/fonts/`. These were legacy "split" files from before options were inlined into the corresponding `index.nix`; nothing imported them. Also removed orphan `apps/hyprland/parts/system.nix`, `apps/obsidian/parts/theme.nix`, `apps/yazi/parts/{plugins,theme}.nix` (the consumer index.nix files reference these only in stale "Inline the former *.nix content here" comments). Verified via per-file `rg "options\.nix" <sibling-index.nix>` (zero real imports) and full eval (drv hashes unchanged).
 - 2026-05-21: removed dead `mail/` subtree (abook, accounts, aerc, afew, bridge, mbsync, msmtp, notmuch, parts, `index.nix`/`options.nix`). The live mail stack lives at `domains/mail/` (namespace `hwc.mail.*`); `domains/home/index.nix` listed only `core/theme/apps` in `wantedDirs`, so the home/mail tree was never imported. Verified via `rg -ln 'domains/home/mail|\\./home/mail' -t nix .` (zero real imports — only stale path-header comments and docs) and full eval (drv hashes unchanged from post-revert baseline).
 
 ## Applications (current modules)
-Options live under `hwc.home.apps.<name>.*`; enable from the HM profile. Current set (36 modules):
+Options live under `hwc.home.apps.<name>.*`; enable from the HM profile. Current set (37 modules):
 ```
 aerc, betterbird, blender, bottles-unwrapped, chromium, codex, freecad,
-gemini-cli, google-cloud-sdk, gpg, hyprland, ipcalc, jellyfin-media-player,
-kitty, librewolf, localsend, mpv, n8n, neomutt, obsidian,
-onlyoffice-desktopeditors, opencode, proton-authenticator, proton-mail,
-proton-pass, qbittorrent, qutebrowser, slack, slack-cli, swaync,
-thunar, thunderbird, wasistlos, waybar, wayvnc, yazi
+gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, ipcalc,
+jellyfin-media-player, kitty, librewolf, localsend, mpv, n8n, neomutt,
+obsidian, onlyoffice-desktopeditors, opencode, proton-authenticator,
+proton-mail, proton-pass, qbittorrent, qutebrowser, slack, slack-cli,
+swaync, thunar, thunderbird, wasistlos, waybar, wayvnc, yazi
 ```
 Update this list whenever `domains/home/apps/` gains a new module so the count stays accurate.
 

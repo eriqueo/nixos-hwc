@@ -78,6 +78,7 @@
       aider.enable = true;
       gemini-cli.enable = true;
       yazi.enable = true;
+      herdr.enable = true;
     };
   };
 

@@ -87,6 +87,7 @@
 
       # Terminal Multiplexer
       tmux.enable = lib.mkDefault true;
+      herdr.enable = lib.mkDefault true;
 
       # Development & Automation
       n8n.enable = lib.mkDefault false;
