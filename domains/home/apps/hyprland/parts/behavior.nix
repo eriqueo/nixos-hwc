@@ -33,6 +33,7 @@ in
     "${mod},comma,exec,hyprland-keybinds-viewer"
     "${mod},A,exec,proton-authenticator-toggle"
     "${mod},C,exec, kitty -e fend"
+    "${mod},V,exec,cliphist list | wofi --dmenu | cliphist decode | wl-copy"
 
 ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
 
