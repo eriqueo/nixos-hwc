@@ -37,6 +37,7 @@ let
     { cmd = "xfconfd"; }
     { cmd = "hyprctl setcursor ${hyprcursorName} ${cursorSize}"; }
     { cmd = "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill"; }
+    { cmd = "wl-paste --watch cliphist store"; }
 
     # Applications (pinned to workspaces)
     { cmd = "gpu-launch chromium-hwc";                                workspace = 1; }
