@@ -319,10 +319,12 @@ in
 
     # lead_scout — intelligence pipeline dashboard (Vite dev)
     {
+      # Tailnet frontend — Caddy with tailscale cert proxies to the unified
+      # lead-scout server on :8420 (serves SPA + REST API + chat + /mcp).
       name = "lead-scout";
       mode = "port";
       port = 21443;
-      upstream = "http://127.0.0.1:5175";
+      upstream = "http://127.0.0.1:8420";
     }
 
     # lead_scout API — MCP + REST backend
