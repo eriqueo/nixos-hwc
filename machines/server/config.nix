@@ -888,23 +888,14 @@
   # Business database layer (hwc PostgreSQL database)
   hwc.business.databases.enable = lib.mkDefault true;
 
-  # DataX — Facebook group monitoring pipeline
-  hwc.business.datax = {
-    enable = true;
-    fbScraper = {
-      enable = true;
-      groups = [
-        "https://www.facebook.com/groups/jobtreadpros"
-      ];
-      postsPerRun = 50;
-      depth = "comments";
-      timerInterval = "*-*-* 06,12,18,00:00:00"; # 4x daily
-    };
-    fbClassifier = {
-      enable = true; # TODO: set true after creating the Discord webhook secret
-      # timerInterval defaults to 1h after each scrape: 07,13,19,01:00
-    };
-  };
+  # DataX — legacy postgres role + db that lead_scout connects to.
+  # (FB scrape/classify pipeline migrated to hwc.server.ai.leadScout in 2026-05.)
+  hwc.business.datax.enable = true;
+
+  # Lead Scout — periodic FB scrape + classify + Discord notifications.
+  # Long-running HTTP/MCP server is enabled separately (hwc.server.ai.leadScout.enable).
+  hwc.server.ai.leadScout.fbScraper.enable = true;
+  hwc.server.ai.leadScout.fbClassifier.enable = true;
 
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
