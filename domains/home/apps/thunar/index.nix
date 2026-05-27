@@ -8,6 +8,21 @@ let
   thunarMediaTagsPkg = if pkgs ? thunar-media-tags-plugin then pkgs.thunar-media-tags-plugin else pkgs.xfce.thunar-media-tags-plugin;
   tumblerPkg = if pkgs ? tumbler then pkgs.tumbler else pkgs.xfce.tumbler;
   xfconfPkg = if pkgs ? xfconf then pkgs.xfconf else pkgs.xfce.xfconf;
+
+  # Seeded once into ~/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml.
+  # After first activation, Thunar/xfconfd own the file at runtime — HM
+  # never touches it again, so column-width tweaks etc. survive.
+  thunarDefaultsXml = pkgs.writeText "thunar-defaults.xml" ''
+    <?xml version="1.0" encoding="UTF-8"?>
+
+    <channel name="thunar" version="1.0">
+      <property name="default-view" type="string" value="ThunarDetailsView"/>
+      <property name="last-view" type="string" value="ThunarDetailsView"/>
+      <property name="last-sort-column" type="string" value="THUNAR_COLUMN_DATE_CREATED"/>
+      <property name="last-sort-order" type="string" value="GTK_SORT_DESCENDING"/>
+      <property name="misc-folders-first" type="bool" value="true"/>
+    </channel>
+  '';
 in
 {
   #==========================================================================
@@ -86,18 +101,14 @@ in
       '';
     };
 
-    xdg.configFile."xfce4/xfconf/xfce-perchannel-xml/thunar.xml" = lib.mkIf cfg.enable {
-      text = ''
-        <?xml version="1.0" encoding="UTF-8"?>
-
-        <channel name="thunar" version="1.0">
-          <property name="default-view" type="string" value="ThunarDetailsView"/>
-          <property name="last-view" type="string" value="ThunarDetailsView"/>
-          <property name="last-sort-column" type="string" value="THUNAR_COLUMN_DATE_CREATED"/>
-          <property name="last-sort-order" type="string" value="GTK_SORT_DESCENDING"/>
-          <property name="misc-folders-first" type="bool" value="true"/>
-        </channel>
-      '';
-    };
+    home.activation.thunarDefaults = lib.mkIf cfg.enable (
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        thunar_xml="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml"
+        if [ ! -f "$thunar_xml" ]; then
+          run mkdir -p "$(dirname "$thunar_xml")"
+          run install -m 0644 ${thunarDefaultsXml} "$thunar_xml"
+        fi
+      ''
+    );
   };
 }
