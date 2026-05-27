@@ -7,6 +7,7 @@ let
   thunarArchivePkg = if pkgs ? thunar-archive-plugin then pkgs.thunar-archive-plugin else pkgs.xfce.thunar-archive-plugin;
   thunarMediaTagsPkg = if pkgs ? thunar-media-tags-plugin then pkgs.thunar-media-tags-plugin else pkgs.xfce.thunar-media-tags-plugin;
   tumblerPkg = if pkgs ? tumbler then pkgs.tumbler else pkgs.xfce.tumbler;
+  xfconfPkg = if pkgs ? xfconf then pkgs.xfconf else pkgs.xfce.xfconf;
 in
 {
   #==========================================================================
@@ -42,6 +43,7 @@ in
       thunarVolmanPkg
       thunarArchivePkg
       thunarMediaTagsPkg
+      xfconfPkg
       gvfs
       udisks2
       shared-mime-info
@@ -81,6 +83,20 @@ in
     xdg.configFile."xfce4/helpers.rc" = lib.mkIf cfg.enable {
       text = ''
         TerminalEmulator=kitty
+      '';
+    };
+
+    xdg.configFile."xfce4/xfconf/xfce-perchannel-xml/thunar.xml" = lib.mkIf cfg.enable {
+      text = ''
+        <?xml version="1.0" encoding="UTF-8"?>
+
+        <channel name="thunar" version="1.0">
+          <property name="default-view" type="string" value="ThunarDetailsView"/>
+          <property name="last-view" type="string" value="ThunarDetailsView"/>
+          <property name="last-sort-column" type="string" value="THUNAR_COLUMN_DATE_CREATED"/>
+          <property name="last-sort-order" type="string" value="GTK_SORT_DESCENDING"/>
+          <property name="misc-folders-first" type="bool" value="true"/>
+        </channel>
       '';
     };
   };
