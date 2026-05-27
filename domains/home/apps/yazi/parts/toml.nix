@@ -2,7 +2,8 @@
   "yazi/yazi.toml" = {
     text = ''
       [mgr]
-      sort_by = "natural"
+      sort_by = "btime"
+      sort_reverse = true
       sort_dir_first = true
       mouse_events = [ "click", "scroll" ]
       show_hidden = false
