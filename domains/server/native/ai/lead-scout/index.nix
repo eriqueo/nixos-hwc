@@ -121,7 +121,17 @@ in
           DATABASE_URL  = cfg.databaseUrl;
           LOG_LEVEL     = "info";
           NODE_ENV      = "production";
+          # Playwright defaults to its bundled chromium under
+          # ~/.cache/ms-playwright, which is a generic-Linux dynamic binary
+          # NixOS can't load. Point it at the Nix-built chromium (matches
+          # the systemd-timer wrapper).
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumBin;
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
         };
+
+        # Needed so detached subprocesses spawned by /api/pipeline tool
+        # handlers (mcp/tools.ts) can resolve bare `node` via $PATH.
+        path = [ pkgs.nodejs ];
 
         serviceConfig = {
           Type             = "simple";
