@@ -85,8 +85,13 @@ let
       sudo systemctl restart lead-scout
 
       sleep 3
-      systemctl is-active --quiet lead-scout && echo "[deploy] ✅ lead-scout active" \
-        || { echo "[deploy] ❌ lead-scout failed to restart" >&2; systemctl status lead-scout --no-pager | head -15; exit 1; }
+      if systemctl is-active --quiet lead-scout; then
+        echo "[deploy] OK -- lead-scout active"
+      else
+        echo "[deploy] FAILED -- lead-scout did not restart cleanly" >&2
+        systemctl status lead-scout --no-pager | head -15 >&2
+        exit 1
+      fi
     '';
   };
 in
