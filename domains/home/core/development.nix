@@ -51,6 +51,7 @@ in
     home.packages = with pkgs; [
       git-lfs
       gh
+      doctl
       wireguard-tools
       bun            # runtime for claude-code's Discord channel MCP server (.mcp.json: `command: "bun"`)
 
