@@ -1,26 +1,34 @@
 # modules/home/apps/hyprland/parts/session.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
-
-let
+{
+  config,
+  lib,
+  pkgs,
+  osConfig ? {},
+  ...
+}: let
   cur = config.hwc.home.theme.cursor or {};
-  xc  = cur.xcursor or {};
-  hc  = cur.hyprcursor or {};
+  xc = cur.xcursor or {};
+  hc = cur.hyprcursor or {};
   cursorSize = toString (cur.size or 24);
 
   pkgByName = name:
-    if lib.hasAttr name pkgs then builtins.getAttr name pkgs else pkgs.adwaita-icon-theme;
+    if lib.hasAttr name pkgs
+    then builtins.getAttr name pkgs
+    else pkgs.adwaita-icon-theme;
   xcPkg = pkgByName (xc.package or "adwaita-icon-theme");
 
-  xcursorName    = xc.name or "Adwaita";
+  xcursorName = xc.name or "Adwaita";
   hyprcursorName = hc.name or xcursorName;
 
   hyprcursorSource =
-    if (hc ? assetPathRel) then ../../.. + "/${hc.assetPathRel}" else null;
+    if (hc ? assetPathRel)
+    then ../../.. + "/${hc.assetPathRel}"
+    else null;
 
   # Get screenshots path from osConfig if available, fallback to default
   # Note: attrByPath returns the value even if null, so we need explicit null handling
-  screenshotsPath = lib.attrByPath ["hwc" "paths" "screenshots"] null osConfig;
-  screenshotsDir = if screenshotsPath != null then screenshotsPath else "/home/eric/500_media/510_pictures/screenshots";
+  # screenshotsPath = lib.attrByPath ["hwc" "paths" "screenshots"] null osConfig;
+  # screenshotsDir = if screenshotsPath != null then screenshotsPath else "/home/eric/500_media/510_pictures/screenshots";
 
   #============================================================================
   # AUTOSTART — apps and services launched once when Hyprland starts.
@@ -34,25 +42,35 @@ let
   #============================================================================
   autostart = [
     # Background / one-shot services
-    { cmd = "xfconfd"; }
-    { cmd = "hyprctl setcursor ${hyprcursorName} ${cursorSize}"; }
-    { cmd = "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill"; }
-    { cmd = "wl-paste --watch cliphist store"; }
+    {cmd = "xfconfd";}
+    {cmd = "hyprctl setcursor ${hyprcursorName} ${cursorSize}";}
+    {cmd = "swaybg -i ${../../../theme/nord-mountains.jpg} -m fill";}
+    {cmd = "wl-paste --watch cliphist store";}
 
     # Applications (pinned to workspaces)
-    { cmd = "gpu-launch chromium-hwc";                                workspace = 1; }
-    { cmd = "kitty";                                                  workspace = 2; }
-    { cmd = "gpu-launch chromium-hwc --app=https://app.jobtread.com"; workspace = 4; }
-    { cmd = "proton-mail";                                        workspace = 8; }
+    {
+      cmd = "gpu-launch chromium-hwc";
+      workspace = 1;
+    }
+    {
+      cmd = "kitty";
+      workspace = 2;
+    }
+    {
+      cmd = "gpu-launch chromium-hwc --app=https://app.jobtread.com";
+      workspace = 4;
+    }
+    {
+      cmd = "proton-mail";
+      workspace = 8;
+    }
   ];
 
   mkExec = a:
     if a ? workspace
     then "[workspace ${toString a.workspace} silent] ${a.cmd}"
     else a.cmd;
-
-in
-{
+in {
   # FLAT KEYS (NO nested `settings = {}`!)
   execOnce = map mkExec autostart;
 
@@ -62,10 +80,10 @@ in
     "XCURSOR_THEME,${xcursorName}"
     "XCURSOR_SIZE,${cursorSize}"
     "XCURSOR_PATH,${xcPkg}/share/icons"
-    "HWC_SCREENSHOTS_DIR,${screenshotsDir}"
+    # "HWC_SCREENSHOTS_DIR,${screenshotsDir}"
   ];
 
-  packages = [ ];
+  packages = [];
 
   files = lib.mkIf (hyprcursorSource != null) {
     ".local/share/icons/${hyprcursorName}".source = hyprcursorSource;
