@@ -56,6 +56,39 @@ let
       echo "[lead_scout] Classify complete."
     '';
   };
+
+  # One-shot deploy: pull, install deps, build frontend, restart service.
+  # Available as `lead-scout-deploy` in PATH on the server.
+  lead-scout-deploy = pkgs.writeShellApplication {
+    name = "lead-scout-deploy";
+    runtimeInputs = [ pkgs.nodejs pkgs.bash pkgs.git pkgs.coreutils pkgs.systemd pkgs.sudo ];
+    text = ''
+      set -euo pipefail
+      PROJECT_DIR="${cfg.projectDir}"
+
+      echo "[deploy] cd ''${PROJECT_DIR}"
+      cd "''${PROJECT_DIR}"
+
+      echo "[deploy] git pull --ff-only"
+      git pull --ff-only
+
+      echo "[deploy] backend: npm install"
+      npm install --silent
+
+      echo "[deploy] frontend: npm install && npm run build"
+      pushd frontend >/dev/null
+      npm install --silent
+      npm run build
+      popd >/dev/null
+
+      echo "[deploy] sudo systemctl restart lead-scout"
+      sudo systemctl restart lead-scout
+
+      sleep 3
+      systemctl is-active --quiet lead-scout && echo "[deploy] ✅ lead-scout active" \
+        || { echo "[deploy] ❌ lead-scout failed to restart" >&2; systemctl status lead-scout --no-pager | head -15; exit 1; }
+    '';
+  };
 in
 {
   #============================================================================
@@ -70,6 +103,9 @@ in
 
     # ── Long-running HTTP/MCP service ─────────────────────────────────────────
     (lib.mkIf cfg.enable {
+      # `lead-scout-deploy` ergonomics wrapper — git pull, npm install, build, restart.
+      environment.systemPackages = [ lead-scout-deploy ];
+
       systemd.services.lead-scout = {
         description = "Lead Scout MCP + HTTP Server";
         after = [ "network-online.target" "postgresql.service" ];
