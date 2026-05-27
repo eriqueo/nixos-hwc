@@ -18,7 +18,7 @@
 
     projectDir = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/lead_scout";
+      default = "/home/eric/apps/lead_scout";
       description = "Path to the lead_scout project directory";
     };
 
