@@ -24,3 +24,4 @@ core/
 - 2026-05-21: shell.nix — extended the same `hash -r` + `hyprctl reload` tail to `snix` and `tnix` (both activate HM-as-module via home-manager-eric.service, oneshot so the config is on disk by the time the command returns). `bnix` left alone — it only builds, no activation
 - 2026-05-21: shell.nix — fix broken `add-zsh-hook precmd hash -r` line (printed `Usage: add-zsh-hook hook function` every new shell). add-zsh-hook needs a function name, not a command. Wrapped `hash -r` in `_hwc_hash_refresh()` and registered that instead
 - 2026-06-02: development.nix — add `bun` to the shared dev package set. It's the runtime for claude-code's Discord channel MCP server (`.mcp.json`: `command: "bun"`); relocated here from `apps/claude-code/index.nix` so it's a general toolchain rather than coupled to the claude-code app module
+- 2026-05-27: development.nix — add `doctl` (DigitalOcean CLI) to base home.packages alongside `gh` for cloud CLI tooling
