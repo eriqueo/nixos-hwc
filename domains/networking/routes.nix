@@ -335,6 +335,16 @@ in
       upstream = "http://127.0.0.1:8420";
     }
 
+    # SR Board — local Kanban for DataX support-request triage
+    # Standalone Podman container at ~/apps/sr-board (NOT a NixOS module).
+    # Host 8788 → container 8787 (8787 is taken by Readarr).
+    {
+      name = "sr-board";
+      mode = "port";
+      port = 24443;
+      upstream = "http://127.0.0.1:8788";
+    }
+
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
     # Vaultwarden - self-hosted password manager (port mode)
     {
