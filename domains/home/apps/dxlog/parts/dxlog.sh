@@ -335,16 +335,20 @@ parse_trace_entry() {
   local json_payload
   json_payload=$(echo "$log_str" | sed 's/.*\({"iteration\)/\1/' 2>/dev/null || echo "{}")
 
+  # `head -n1` guards against jq returning multiple values (e.g. when .iteration
+  # also appears inside nested messages[]); without it the entry becomes
+  # multi-line and breaks downstream arithmetic.
   local iteration msg_count tool_count total_chars
-  iteration=$(echo "$json_payload" | jq -r '.iteration // "?"' 2>/dev/null || echo "?")
-  msg_count=$(echo "$json_payload" | jq -r '.messageCount // "?"' 2>/dev/null || echo "?")
-  tool_count=$(echo "$json_payload" | jq -r '.toolCount // "?"' 2>/dev/null || echo "?")
-  total_chars=$(echo "$json_payload" | jq -r '.totalChars // "?"' 2>/dev/null || echo "?")
+  iteration=$(echo  "$json_payload" | jq -r '.iteration // "?"'    2>/dev/null | head -n1 || echo "?")
+  msg_count=$(echo  "$json_payload" | jq -r '.messageCount // "?"' 2>/dev/null | head -n1 || echo "?")
+  tool_count=$(echo "$json_payload" | jq -r '.toolCount // "?"'    2>/dev/null | head -n1 || echo "?")
+  total_chars=$(echo "$json_payload" | jq -r '.totalChars // "?"'  2>/dev/null | head -n1 || echo "?")
 
-  # Count occurrences, not lines (#2)
   local error_count loop_count
-  error_count=$(echo "$json_payload" | grep -oE "Error in|isError" 2>/dev/null | wc -l || echo "0")
-  loop_count=$(echo "$json_payload" | grep -oE "LOOP WARNING|ERROR LOOP WARNING" 2>/dev/null | wc -l || echo "0")
+  error_count=$(echo "$json_payload" | grep -oE "Error in|isError"             2>/dev/null | wc -l | tr -d ' \n')
+  loop_count=$(echo  "$json_payload" | grep -oE "LOOP WARNING|ERROR LOOP WARNING" 2>/dev/null | wc -l | tr -d ' \n')
+  : "${error_count:=0}"
+  : "${loop_count:=0}"
 
   echo "${timestamp}|${user_id}|${chat_id}|${agent_id}|${iteration}|${msg_count}|${tool_count}|${total_chars}|${error_count}|${loop_count}"
 }
