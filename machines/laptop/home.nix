@@ -20,6 +20,7 @@
     scraper.enable = true;
     markitdown.enable = true;
     dt.enable = true;
+    dxlog.enable = true;
   };
 
   # Calendar: Apple iCloud sync via khal + vdirsyncer (CalDAV)
