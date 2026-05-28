@@ -83,9 +83,19 @@ load_doctl_config() {
 }
 
 # -----------------------------------------------------------------------------
-# Init config
+# Init config — idempotent against an existing file AND populated env vars
+# (so the Nix wrapper's exports don't get clobbered by a stub config)
 # -----------------------------------------------------------------------------
 cmd_init() {
+  if [[ -n "${DXLOG_OPENSEARCH_HOST:-}" \
+     && -n "${DXLOG_OPENSEARCH_USER:-}" \
+     && -n "${DXLOG_OPENSEARCH_PASS:-}" ]]; then
+    ok "dxlog is already configured via environment variables. Nothing to do."
+    info "  HOST/USER/PASS are present in the environment (likely from a Nix wrapper"
+    info "  or shell rc). A stub config file would only get in the way."
+    return
+  fi
+
   mkdir -p "$CONFIG_DIR"
   if [[ -f "$CONFIG_FILE" ]]; then
     warn "Config already exists at ${CONFIG_FILE}"
@@ -746,6 +756,171 @@ cmd_indices() {
 }
 
 # -----------------------------------------------------------------------------
+# Interactive wizard — runs on `dxlog` (no args) or `dxlog wizard`
+# Walks: action → identifier (if needed) → time period → limit → format → output
+# Re-execs the script with the constructed args; env vars are inherited.
+# -----------------------------------------------------------------------------
+prompt_choice() {
+  local prompt="$1"; shift
+  local default="$1"; shift
+  local choices=("$@")
+  local i=1 reply
+
+  echo "" >&2
+  echo "${prompt}" >&2
+  for c in "${choices[@]}"; do
+    echo "  ${i}) ${c}" >&2
+    ((i++))
+  done
+  read -rp "> [${default}] " reply
+  reply="${reply:-$default}"
+  if [[ ! "$reply" =~ ^[0-9]+$ ]] || (( reply < 1 || reply > ${#choices[@]} )); then
+    err "Invalid choice: ${reply}"
+    exit 1
+  fi
+  echo "$reply"
+}
+
+prompt_text() {
+  local prompt="$1"
+  local default="${2:-}"
+  local reply
+  if [[ -n "$default" ]]; then
+    read -rp "${prompt} [${default}]: " reply
+    echo "${reply:-$default}"
+  else
+    read -rp "${prompt}: " reply
+    while [[ -z "$reply" ]]; do
+      err "Value required."
+      read -rp "${prompt}: " reply
+    done
+    echo "$reply"
+  fi
+}
+
+# Convert a free-form string into a filename-safe slug
+slugify() {
+  echo "$1" | tr -c 'A-Za-z0-9_.-' '_' | sed 's/__*/_/g; s/^_//; s/_$//'
+}
+
+cmd_wizard() {
+  echo "" >&2
+  echo "─── dxlog wizard ───" >&2
+
+  local action
+  action=$(prompt_choice "What do you want to look up?" "1" \
+    "Trace by agentId" \
+    "Trace by userId" \
+    "Trace by chatId" \
+    "Search all logs for a term" \
+    "Find error traces" \
+    "Find loop warnings" \
+    "Tail recent traces (last N minutes)" \
+    "Live tail via doctl" \
+    "List available indices")
+
+  local cmd args=() slug id_val term mins
+  case "$action" in
+    9)
+      info "Running: dxlog indices"
+      exec "$0" indices
+      ;;
+    8)
+      local filter
+      filter=$(prompt_choice "Filter live tail?" "1" \
+        "No filter (all traces)" \
+        "By userId" \
+        "By agentId")
+      case "$filter" in
+        2) id_val=$(prompt_text "userId");  args=(--user  "$id_val") ;;
+        3) id_val=$(prompt_text "agentId"); args=(--agent "$id_val") ;;
+      esac
+      info "Running: dxlog live ${args[*]}"
+      exec "$0" live "${args[@]}"
+      ;;
+    1) cmd="trace"; id_val=$(prompt_text "agentId"); args=(--agent "$id_val"); slug="trace-agent-$(slugify "$id_val")" ;;
+    2) cmd="trace"; id_val=$(prompt_text "userId");  args=(--user  "$id_val"); slug="trace-user-$(slugify "$id_val")"  ;;
+    3) cmd="trace"; id_val=$(prompt_text "chatId");  args=(--chat  "$id_val"); slug="trace-chat-$(slugify "$id_val")"  ;;
+    4) cmd="search"; term=$(prompt_text "Search term"); args=("$term"); slug="search-$(slugify "$term")" ;;
+    5) cmd="errors"; slug="errors" ;;
+    6) cmd="loops";  slug="loops"  ;;
+    7)
+      cmd="tail"
+      mins=$(prompt_text "Minutes" "30")
+      args=("$mins")
+      slug="tail-${mins}min"
+      ;;
+  esac
+
+  # Time window — skipped for `tail` (which uses the minutes arg instead)
+  if [[ "$cmd" != "tail" ]]; then
+    local tchoice
+    tchoice=$(prompt_choice "Time period:" "2" \
+      "Last 1 hour" \
+      "Last 24 hours" \
+      "Last 7 days" \
+      "Last 30 days" \
+      "Custom (specify from/to)")
+    case "$tchoice" in
+      1) args+=(--from "$(date -u -d '1 hour ago'  '+%Y-%m-%dT%H:%M:%SZ')") ;;
+      2) ;;  # 24h is the script default
+      3) args+=(--from "$(date -u -d '7 days ago'  '+%Y-%m-%dT%H:%M:%SZ')") ;;
+      4) args+=(--from "$(date -u -d '30 days ago' '+%Y-%m-%dT%H:%M:%SZ')") ;;
+      5)
+        local fd td
+        fd=$(prompt_text "From (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)")
+        td=$(prompt_text "To   (blank = now)" "$(default_to)")
+        args+=(--from "$fd" --to "$td")
+        ;;
+    esac
+  fi
+
+  # Result limit
+  local limit
+  limit=$(prompt_text "Max results" "50")
+  args+=(--limit "$limit")
+
+  # Output format
+  local fmt
+  fmt=$(prompt_choice "Output format:" "1" \
+    "Markdown report" \
+    "Raw JSON")
+  local ext="md"
+  if [[ "$fmt" == "2" ]]; then
+    args+=(--json)
+    ext="json"
+  fi
+
+  # Destination
+  local dest out_path
+  dest=$(prompt_choice "Output destination:" "2" \
+    "Print to terminal" \
+    "Save to ~/dxlog-reports/ (auto-named)" \
+    "Custom path")
+  case "$dest" in
+    1) ;;
+    2)
+      mkdir -p "${HOME}/dxlog-reports"
+      out_path="${HOME}/dxlog-reports/${slug}-$(date -u '+%Y%m%d-%H%M%SZ').${ext}"
+      args+=(-o "$out_path")
+      ;;
+    3)
+      out_path=$(prompt_text "Output path")
+      args+=(-o "$out_path")
+      ;;
+  esac
+
+  echo "" >&2
+  info "Running: dxlog ${cmd} ${args[*]}"
+  echo "" >&2
+
+  # Re-exec via this script directly. The wrapper-exported env vars are
+  # inherited; load_os_config / load_doctl_config still runs in the new
+  # process to validate.
+  exec "$0" "$cmd" "${args[@]}"
+}
+
+# -----------------------------------------------------------------------------
 # Help — per-command (#10)
 # -----------------------------------------------------------------------------
 show_trace_help() {
@@ -792,8 +967,11 @@ show_help() {
   cat <<'HELP'
 dxlog — DataX OpenSearch Log Diagnostic Tool
 
+Running `dxlog` with no arguments launches an interactive wizard.
+
 COMMANDS:
-  init                      Create config template at ~/.config/dxlog/env
+  wizard                    Interactive prompt (same as running `dxlog` with no args)
+  init                      Create config template at ~/.config/dxlog/env (no-op if env vars are set)
   trace                     Query chat-req-trace logs (requires --agent, --user, or --chat)
   search <term>             Search all logs for a term
   errors                    Find trace entries with errors or loop warnings
@@ -833,9 +1011,10 @@ HELP
 # Main
 # -----------------------------------------------------------------------------
 main() {
+  # No args → wizard
   if [[ $# -eq 0 ]]; then
-    show_help
-    exit 0
+    cmd_wizard
+    return
   fi
 
   local cmd="$1"; shift
@@ -852,6 +1031,7 @@ main() {
   done
 
   case "$cmd" in
+    wizard)   cmd_wizard ;;
     init)     cmd_init ;;
     trace)    load_os_config; cmd_trace "$@" ;;
     search)   load_os_config; cmd_search "$@" ;;
