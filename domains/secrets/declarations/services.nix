@@ -92,6 +92,34 @@
       group = "secrets";
     };
 
+    opensearch-app-id = {
+      file = ../parts/services/opensearch-app-id.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    opensearch-host = {
+      file = ../parts/services/opensearch-host.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    opensearch-pw = {
+      file = ../parts/services/opensearch-pw.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    opensearch-user = {
+      file = ../parts/services/opensearch-user.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     radarr-api-key = {
       file = ../parts/services/radarr-api-key.age;
       mode = "0440";
