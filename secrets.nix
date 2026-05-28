@@ -120,6 +120,10 @@ in
   "domains/secrets/parts/services/navidrome-admin-password.age".publicKeys       = everyone;
   "domains/secrets/parts/services/ninjacentral-api-key.age".publicKeys           = everyone;
   "domains/secrets/parts/services/ntfy-user.age".publicKeys                      = everyone;
+  "domains/secrets/parts/services/opensearch-host.age".publicKeys                = everyone;
+  "domains/secrets/parts/services/opensearch-user.age".publicKeys                = everyone;
+  "domains/secrets/parts/services/opensearch-pw.age".publicKeys                  = everyone;
+  "domains/secrets/parts/services/opensearch-app-id.age".publicKeys              = everyone;
   "domains/secrets/parts/services/paperless-admin-password.age".publicKeys       = everyone;
   "domains/secrets/parts/services/paperless-secret-key.age".publicKeys           = everyone;
   "domains/secrets/parts/services/prowlarr-api-key.age".publicKeys               = everyone;
