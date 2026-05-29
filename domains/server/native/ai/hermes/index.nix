@@ -31,6 +31,20 @@ let
   # between cli.ts → ./adapters.ts → ./types.ts.
   hermes-bootstrap-src = lib.sources.sourceFilesBySuffices ./parts/bootstrap [ ".ts" ];
 
+  # `hermes` shim on system PATH. The upstream binary lives at
+  # ${cfg.homeDir}/.local/bin/hermes; the installer normally adds that dir to
+  # the user's PATH via ~/.zshrc, but our $HOME is /var/lib/hwc/hermes so those
+  # edits land in the wrong shell rc. This shim is the explicit, declarative
+  # bridge: any user with /run/current-system/sw/bin in PATH gets `hermes`.
+  hermes-shim = pkgs.writeShellApplication {
+    name = "hermes";
+    runtimeInputs = [ ];
+    text = ''
+      export HOME="${cfg.homeDir}"
+      exec ${hermesBin} "$@"
+    '';
+  };
+
   hermes-deploy = pkgs.writeShellApplication {
     name = "hermes-deploy";
     runtimeInputs = [ pkgs.nodejs_22 pkgs.systemd ];
@@ -90,8 +104,8 @@ in
 
     # ── Common (when enabled) ──────────────────────────────────────────────
     (lib.mkIf cfg.enable {
-      # hermes-deploy on PATH for manual ops
-      environment.systemPackages = [ hermes-deploy ];
+      # hermes (shim) + hermes-deploy on PATH for manual ops
+      environment.systemPackages = [ hermes-shim hermes-deploy ];
 
       # nix-ld lets the upstream installer's uv-downloaded CPython run on NixOS.
       # Without this, /var/lib/hwc/hermes/.local/share/uv/python/cpython-*/bin/python3.11
