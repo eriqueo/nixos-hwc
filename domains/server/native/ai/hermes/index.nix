@@ -56,8 +56,10 @@ let
       mkdir -p "$HOME/.hermes" "$HOME/.local/bin"
 
       echo "[hermes-install] running upstream installer"
+      # --skip-setup: skip the interactive `hermes setup` wizard
+      # --skip-browser: skip Playwright/Chromium (P1000 GPU + headless box)
       curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \
-        | bash -s -- --yes --skip-browser
+        | bash -s -- --skip-setup --skip-browser
 
       echo "[hermes-install] configuring model provider: ${cfg.model.provider}"
       "${hermesBin}" config set model.provider "${cfg.model.provider}" || true
