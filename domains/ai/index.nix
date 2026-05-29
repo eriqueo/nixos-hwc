@@ -12,7 +12,9 @@
     ./mcp               # Model Context Protocol servers
     ./cloud             # Cloud AI API integration
     ./agent             # HTTP tool agent
-    ./nanoclaw          # NanoClaw AI agent orchestrator
+    # ./nanoclaw — disabled 2026-05-29; superseded by hwc.server.ai.hermes
+    # (Hermes Agent is the upstream successor to OpenClaw/NanoClaw).
+    # Module moved to .nanoclaw-disabled/. Remove fully in a later cleanup pass.
   ];
 
   #==========================================================================

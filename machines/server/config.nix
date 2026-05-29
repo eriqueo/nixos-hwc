@@ -26,6 +26,7 @@
     ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
+    ../../domains/server/native/ai/hermes/index.nix         # Hermes Agent (Nous Research)
     ../../domains/server/services/inbox-processor/index.nix  # Phone capture processor (Whisper + Tesseract)
   ];
 
@@ -528,9 +529,20 @@
 
   # NanoClaw AI agent orchestrator
   # Connects to Slack via Socket Mode, spawns agents in containers
-  hwc.ai.nanoclaw = {
-    enable = false;
-    slack.enable = false;
+  # NanoClaw — disabled 2026-05-29; superseded by hwc.server.ai.hermes (below).
+  # Module moved to domains/ai/.nanoclaw-disabled/; secret declarations remain
+  # (nanoclaw-anthropic-key.age is reused by Hermes via re-named logical secret).
+  # hwc.ai.nanoclaw = { enable = false; slack.enable = false; };
+
+  # Hermes Agent — Nous Research's self-improving AI agent (OpenClaw successor)
+  # Phase 1: install + dashboard route only. Discord gateway off until Eric
+  # creates the bot at https://discord.com/developers/applications and encrypts
+  # the token to domains/secrets/parts/services/hermes-discord-bot-token.age.
+  hwc.server.ai.hermes = {
+    enable = true;
+    gateway.enable = true;
+    gateway.discord.enable = false;   # flip after bot token is encrypted
+    model.provider = "anthropic";     # uses existing nanoclaw-anthropic-key.age
   };
 
   # CouchDB for Obsidian LiveSync
