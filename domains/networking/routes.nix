@@ -345,6 +345,22 @@ in
       upstream = "http://127.0.0.1:8788";
     }
 
+    # llama.cpp GPU server — LFM2-2.6B Q4 on the Quadro P1000
+    {
+      name = "llama-gpu";
+      mode = "port";
+      port = 17443;
+      upstream = "http://127.0.0.1:11500";
+    }
+
+    # llama.cpp CPU server — LFM2-24B-A2B Q4 in host RAM
+    {
+      name = "llama-cpu";
+      mode = "port";
+      port = 19443;
+      upstream = "http://127.0.0.1:11501";
+    }
+
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
     # Vaultwarden - self-hosted password manager (port mode)
     {
