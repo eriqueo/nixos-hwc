@@ -33,6 +33,21 @@ in
       '';
     };
 
+    cudaCapabilities = lib.mkOption {
+      type = lib.types.nullOr (lib.types.listOf lib.types.str);
+      default = null;
+      example = [ "6.1" ];
+      description = ''
+        Override CMAKE_CUDA_ARCHITECTURES for the GPU build. null = use the
+        nixpkgs default (currently 75;80;86;89;90;100;120 — modern data-center
+        cards only). Set to [ "6.1" ] for Pascal (Quadro P1000, GTX 10xx),
+        [ "7.5" ] for Turing (RTX 20xx, Quadro RTX), etc.
+
+        Setting this forces a local rebuild — the binary cache only ships
+        the default arch list. Build time on an i7-8700K is ~15-25 minutes.
+      '';
+    };
+
     gpu = {
       enable = lib.mkEnableOption "GPU-accelerated llama-server (CUDA)";
 
