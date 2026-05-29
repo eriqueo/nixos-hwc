@@ -540,11 +540,11 @@
   # CPU:  LFM2-24B-A2B Q4 (~14 GB) on  27443 -> 127.0.0.1:11501
   hwc.server.ai.llamaCpp = {
     enable = true;
-    # GPU service disabled until llama-cpp is rebuilt with sm_61 — the cached
-    # CUDA binary at cache.nixos-cuda.org targets sm_75+ only, so Pascal
-    # (Quadro P1000, compute 6.1) hits "no kernel image is available for
-    # execution on the device". Tracking in domains/server/native/ai/llama-cpp/.
-    gpu.enable = false;
+    # Local llama-cpp rebuild with sm_61 added — required because the cached
+    # CUDA binary at cache.nixos-cuda.org targets sm_75+ only and aborts on
+    # the Quadro P1000 (compute 6.1) with "no kernel image is available".
+    cudaCapabilities = [ "6.1" ];
+    gpu.enable = true;
     cpu = {
       enable = true;
       threads = 6;  # one per physical core on i7-8700K; HT rarely helps memory-bound inference
