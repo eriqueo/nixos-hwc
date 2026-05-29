@@ -38,8 +38,12 @@ in
 
     reverseProxyPort = lib.mkOption {
       type = lib.types.port;
-      default = 19443;
-      description = "External Caddy HTTPS port for the Hermes dashboard (hermes.holthome.net).";
+      default = 25443;
+      description = ''
+        External Caddy HTTPS port for the Hermes dashboard.
+        Verified free against the active Caddy config (highest in-use: 22443;
+        brain-mcp reserves 23443 via default; sr-board reserves 24443).
+      '';
     };
 
     model = {
