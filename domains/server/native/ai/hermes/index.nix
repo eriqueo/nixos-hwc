@@ -243,8 +243,14 @@ in
 
         environment = {
           HOME = cfg.homeDir;
-          PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
+          # nodejs_22 first so the dashboard's one-time `npm run build` can find
+          # node/npm. After the initial build the dist persists in
+          # ${cfg.homeDir}/.hermes/hermes-agent/hermes_cli/web_dist and Hermes
+          # skips the build step on subsequent starts automatically.
+          PATH = lib.mkForce "${pkgs.nodejs_22}/bin:/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
         };
+
+        path = [ pkgs.nodejs_22 ];
 
         serviceConfig = {
           Type = "simple";
@@ -258,8 +264,10 @@ in
             "--host" "127.0.0.1"
             "--port" (toString cfg.dashboardPort)
             "--no-open"
-            "--skip-build"  # serve pre-built dist; avoids npm on every start
           ] ++ lib.optional cfg.dashboard.tui "--tui");
+          # First start may take ~60s while it npm-installs and builds the
+          # SvelteKit dashboard dist. Don't let systemd time it out.
+          TimeoutStartSec = "5min";
           Restart = "on-failure";
           RestartSec = "10s";
 
