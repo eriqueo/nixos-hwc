@@ -24,6 +24,13 @@ let
 
   # TypeScript deploy CLI — runs directly via Node 22's --experimental-strip-types.
   # No npm install, no build step: source lives in parts/bootstrap/, runs in-place.
+  #
+  # Use sourceFilesBySuffices so cli.ts, core.ts, adapters.ts, types.ts land in
+  # the SAME Nix store path. Individual `${./parts/bootstrap/cli.ts}` references
+  # would put each .ts file in its own store path, breaking the relative imports
+  # between cli.ts → ./adapters.ts → ./types.ts.
+  hermes-bootstrap-src = lib.sources.sourceFilesBySuffices ./parts/bootstrap [ ".ts" ];
+
   hermes-deploy = pkgs.writeShellApplication {
     name = "hermes-deploy";
     runtimeInputs = [ pkgs.nodejs_22 pkgs.systemd ];
@@ -36,7 +43,7 @@ let
       exec ${pkgs.nodejs_22}/bin/node \
         --experimental-strip-types \
         --no-warnings \
-        ${./parts/bootstrap/cli.ts} "$@"
+        ${hermes-bootstrap-src}/cli.ts "$@"
     '';
   };
 
