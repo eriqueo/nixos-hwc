@@ -44,18 +44,24 @@ export interface Ports {
   readonly secrets: SecretsPort;
 }
 
+// Parameter-property shorthand (`public readonly code: ...`) is unsupported by
+// Node 22's --experimental-strip-types (it only strips type annotations; it
+// won't synthesize the field assignments). Declare fields explicitly.
+export type HermesDeployErrorCode =
+  | 'CONFIG_INVALID'
+  | 'INSTALLER_FAILED'
+  | 'SECRET_UNREADABLE'
+  | 'UPGRADE_FAILED'
+  | 'UNIT_NOT_FOUND';
+
 export class HermesDeployError extends Error {
-  constructor(
-    public readonly code:
-      | 'CONFIG_INVALID'
-      | 'INSTALLER_FAILED'
-      | 'SECRET_UNREADABLE'
-      | 'UPGRADE_FAILED'
-      | 'UNIT_NOT_FOUND',
-    message: string,
-    public readonly detail?: unknown,
-  ) {
+  readonly code: HermesDeployErrorCode;
+  readonly detail: unknown;
+
+  constructor(code: HermesDeployErrorCode, message: string, detail?: unknown) {
     super(message);
+    this.code = code;
+    this.detail = detail;
     this.name = 'HermesDeployError';
   }
 }
