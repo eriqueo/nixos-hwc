@@ -1,0 +1,11 @@
+{
+  "name": "hermes-deploy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Type-only metadata for hermes-deploy. Runtime uses Node 22 --experimental-strip-types; no install needed for execution.",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
