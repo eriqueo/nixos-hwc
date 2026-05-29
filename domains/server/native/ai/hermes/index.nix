@@ -84,7 +84,6 @@ let
 
       echo "[hermes-install] configuring model provider: ${cfg.model.provider}"
       "${hermesBin}" config set model.provider "${cfg.model.provider}" || true
-      "${hermesBin}" config set model.api_key_file "/run/agenix/${cfg.model.keyFileSecret}" || true
       # Override the upstream-default base_url. Hermes ships with
       # model.base_url = https://openrouter.ai/api/v1 (its multi-provider
       # routing default). When we explicitly choose provider = anthropic
@@ -96,6 +95,18 @@ let
         else if cfg.model.provider == "nous-portal" then "https://portal.nousresearch.com/api/v1"
         else "https://openrouter.ai/api/v1"
       }" || true
+      # For anthropic provider we DON'T set model.api_key_file. Eric's
+      # nanoclaw-anthropic-key.age is a Claude Max subscription-tier API
+      # key, but the live auth path is the symlinked Claude Code
+      # credentials JSON (see tmpfiles below) which Hermes auto-detects
+      # with Bearer auth + token refresh. Setting api_key_file would
+      # short-circuit to x-api-key mode and fail with HTTP 401.
+      # Also clear any stale ANTHROPIC_API_KEY left in .env by a previous
+      # `hermes setup` or manual paste — it's checked first in the
+      # lookup chain (ANTHROPIC_API_KEY -> ANTHROPIC_TOKEN ->
+      # CLAUDE_CODE_OAUTH_TOKEN) and would override the symlink path.
+      "${hermesBin}" config set ANTHROPIC_API_KEY "" || true
+      "${hermesBin}" config set ANTHROPIC_TOKEN "" || true
 
       touch "${installSentinel}"
       echo "[hermes-install] done — sentinel written"
@@ -117,6 +128,20 @@ in
     (lib.mkIf cfg.enable {
       # hermes (shim) + hermes-deploy on PATH for manual ops
       environment.systemPackages = [ hermes-shim hermes-deploy ];
+
+      # Symlink Eric's real Claude Code credentials into Hermes's $HOME so the
+      # Anthropic adapter's auto-detector finds them. Hermes reads
+      # `${HOME}/.claude/.credentials.json` (Path.home() respects HOME env),
+      # extracts claudeAiOauth.{accessToken,refreshToken,expiresAt}, and uses
+      # Bearer auth. Refreshes write back through the symlink so the personal
+      # `claude` CLI sees the same fresh token.
+      #
+      # The symlink is owned by eric:users; the target file is mode 0600
+      # owned by eric, so only the eric service user can read it.
+      systemd.tmpfiles.rules = [
+        "d ${cfg.homeDir}/.claude 0700 ${cfg.user} users - -"
+        "L+ ${cfg.homeDir}/.claude/.credentials.json - - - - /home/${cfg.user}/.claude/.credentials.json"
+      ];
 
       # nix-ld lets the upstream installer's uv-downloaded CPython run on NixOS.
       # Without this, /var/lib/hwc/hermes/.local/share/uv/python/cpython-*/bin/python3.11
