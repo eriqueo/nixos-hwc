@@ -85,6 +85,17 @@ let
       echo "[hermes-install] configuring model provider: ${cfg.model.provider}"
       "${hermesBin}" config set model.provider "${cfg.model.provider}" || true
       "${hermesBin}" config set model.api_key_file "/run/agenix/${cfg.model.keyFileSecret}" || true
+      # Override the upstream-default base_url. Hermes ships with
+      # model.base_url = https://openrouter.ai/api/v1 (its multi-provider
+      # routing default). When we explicitly choose provider = anthropic
+      # the URL must match, or Anthropic-style model IDs get sent to
+      # OpenRouter and 404 because OR uses different model name formats.
+      "${hermesBin}" config set model.base_url "${
+        if cfg.model.provider == "anthropic" then "https://api.anthropic.com"
+        else if cfg.model.provider == "openai" then "https://api.openai.com/v1"
+        else if cfg.model.provider == "nous-portal" then "https://portal.nousresearch.com/api/v1"
+        else "https://openrouter.ai/api/v1"
+      }" || true
 
       touch "${installSentinel}"
       echo "[hermes-install] done — sentinel written"
