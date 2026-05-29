@@ -86,6 +86,20 @@ in
       # hermes-deploy on PATH for manual ops
       environment.systemPackages = [ hermes-deploy ];
 
+      # nix-ld lets the upstream installer's uv-downloaded CPython run on NixOS.
+      # Without this, /var/lib/hwc/hermes/.local/share/uv/python/cpython-*/bin/python3.11
+      # fails with "Could not start dynamically linked executable" (no /lib64/ld-linux).
+      # Library set is the Python-runtime baseline; Hermes's Python deps are pure-Python
+      # or wheels that link against standard libs already covered here.
+      programs.nix-ld.enable = true;
+      programs.nix-ld.libraries = with pkgs; [
+        stdenv.cc.cc.lib    # libstdc++
+        zlib openssl libffi bzip2 xz
+        sqlite              # FTS5 conversation index
+        ncurses readline    # TUI
+        glib
+      ];
+
       # Reuse the existing nanoclaw-anthropic-key.age file under a hermes-* logical name.
       # Avoids re-encrypting. Same precedent as datax-discord-webhook in lead-scout.
       age.secrets = lib.mkMerge [
