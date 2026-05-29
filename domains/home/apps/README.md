@@ -20,6 +20,7 @@ apps/
 ├── librewolf/      # Privacy browser
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
+├── xournalpp/      # PDF annotator / handwritten notes
 ├── waybar/         # Status bar
 └── ... (30+ apps)
 ```
@@ -40,3 +41,4 @@ apps/
 - 2026-05-21: librewolf-hwc + chromium-hwc launchers — reverted EGL ICD pinning (back to `unset __EGL_VENDOR_LIBRARY_FILENAMES`). The pin was added to fix LibreWolf WebGL, but the real cause was the FPP `WebGLRenderCapability` target (see previous entry). Confirmed by testing with `nix-shell -p firefox` — Firefox using the same Intel-Mesa EGL stack worked fine. The EGL pin was unnecessary defense-in-depth against a misdiagnosed problem
 - 2026-05-28: Added dxlog — DataX OpenSearch log diagnostic CLI (trace/search/errors/loops/live commands). Bash script wrapped via `writeShellScriptBin` from `parts/dxlog.sh`; runtime deps curl/jq/doctl pulled in via home.packages. Replaces ad-hoc copy at `~/000_inbox/downloads/dxlog.sh`
 - 2026-05-28: dxlog — added interactive wizard (launches on `dxlog` with no args) walking action → identifier → time period → limit → format → output destination; auto-saves to `~/dxlog-reports/<slug>-<timestamp>.<ext>` by default. Also made `cmd_init` no-op when env vars are already populated (prevents the user from accidentally clobbering the Nix wrapper's exports by running `dxlog init`)
+- 2026-05-29: Added xournalpp — PDF annotator / handwritten notes. Use case: signing PDFs (draw signature or drop in a PNG image of one, export back to PDF preserving the original)

@@ -86,6 +86,7 @@
       # Productivity & Office
       obsidian.enable = lib.mkDefault true;
       onlyoffice-desktopeditors.enable = lib.mkDefault true;
+      xournalpp.enable = lib.mkDefault true;
 
       # Creative & Media
       blender.enable = lib.mkDefault true;
