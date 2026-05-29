@@ -220,12 +220,18 @@ in
     })
 
     # ── Caddy reverse proxy (port-mode) ────────────────────────────────────
+    # Host header rewrite is mandatory: Hermes dashboard has an explicit
+    # DNS-rebinding defense (GHSA-ppp5-vxwm-4cf7) that 400s any request
+    # whose Host header doesn't match the bound interface. Forcing
+    # Host: 127.0.0.1 satisfies the check while keeping Caddy on a
+    # public-facing hostname.
     (lib.mkIf cfg.enable {
       hwc.networking.shared.routes = [{
         name = "hermes";
         mode = "port";
         port = cfg.reverseProxyPort;
         upstream = "http://127.0.0.1:${toString cfg.dashboardPort}";
+        headers = { Host = "127.0.0.1"; };
       }];
     })
 
