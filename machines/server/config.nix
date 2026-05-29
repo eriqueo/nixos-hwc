@@ -27,6 +27,7 @@
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
     ../../domains/server/native/ai/hermes/index.nix         # Hermes Agent (Nous Research)
+    ../../domains/server/native/ai/llama-cpp/index.nix      # llama.cpp inference (GPU + CPU)
     ../../domains/server/services/inbox-processor/index.nix  # Phone capture processor (Whisper + Tesseract)
   ];
 
@@ -533,6 +534,18 @@
   # Module moved to domains/ai/.nanoclaw-disabled/; secret declarations remain
   # (nanoclaw-anthropic-key.age is reused by Hermes via re-named logical secret).
   # hwc.ai.nanoclaw = { enable = false; slack.enable = false; };
+
+  # llama.cpp inference — small dense model on the Quadro P1000, big MoE on CPU
+  # GPU:  LFM2-2.6B Q4 (~1.5 GB)  on  17443 -> 127.0.0.1:11500
+  # CPU:  LFM2-24B-A2B Q4 (~14 GB) on  19443 -> 127.0.0.1:11501
+  hwc.server.ai.llamaCpp = {
+    enable = true;
+    gpu.enable = true;
+    cpu = {
+      enable = true;
+      threads = 6;  # one per physical core on i7-8700K; HT rarely helps memory-bound inference
+    };
+  };
 
   # Hermes Agent — Nous Research's self-improving AI agent (OpenClaw successor)
   # Phase 1: install + dashboard route only. Discord gateway off until Eric
