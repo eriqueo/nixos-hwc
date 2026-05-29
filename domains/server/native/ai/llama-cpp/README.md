@@ -35,6 +35,22 @@ README.md     # (this file)
 Both expose the standard llama.cpp OpenAI-compatible server API
 (`/v1/chat/completions`, `/v1/completions`, `/health`, `/props`).
 
+## CUDA capabilities (Pascal note)
+
+The cache.nixos-cuda.org binary targets `sm_75;80;86;89;90;100;120` —
+modern data-center cards only. Pascal (Quadro P1000, GTX 10xx; compute
+6.1) is NOT in that list and llama-server aborts with "no kernel image
+is available for execution on the device" on startup.
+
+Set `hwc.server.ai.llamaCpp.cudaCapabilities = [ "6.1" ]` to force a
+local rebuild that targets just sm_61. ~15-25 min compile on the i7-8700K
+(first time only; subsequent rebuilds hit the local store cache).
+
+Tradeoff: leaving the option `null` keeps the cache hit but breaks GPU
+on Pascal. Setting it forces a rebuild but the binary is smaller and
+boots clean. Pick `null` for Ampere+ (RTX 30xx/A100/H100) and the
+explicit list for anything older.
+
 ## Model storage
 
 GGUF files live under `${hwc.paths.ai.models}/llama-cpp/` (default
@@ -44,4 +60,6 @@ download via `ExecStartPre`; subsequent starts are no-ops.
 
 ## Changelog
 
-- 2026-05-29: Initial module. LFM2-2.6B on GPU + LFM2-24B-A2B on CPU.
+- 2026-05-29: Initial module. LFM2-2.6B on GPU + LFM2-24B-A2B on CPU. Added
+  `cudaCapabilities` option for Pascal/older GPU support (default `null`
+  keeps cache hit, `[ "6.1" ]` rebuilds for Quadro P1000).

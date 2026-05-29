@@ -18,13 +18,19 @@ let
   # Per-architecture CUDA override. The cached llama-cpp binary targets
   # sm_75+ only; Pascal (sm_61) needs a local rebuild. We swap the existing
   # -DCMAKE_CUDA_ARCHITECTURES flag rather than appending so CMake doesn't
-  # see two definitions.
+  # see two definitions. CMake wants integers (61), not version strings
+  # (6.1), so strip dots from user-supplied capabilities.
+  cmakeArchList =
+    if cfg.cudaCapabilities == null then null
+    else lib.concatStringsSep ";"
+      (map (c: lib.replaceStrings [ "." ] [ "" ] c) cfg.cudaCapabilities);
+
   llamaCppPkg =
     if cfg.cudaCapabilities == null then pkgs.llama-cpp
     else pkgs.llama-cpp.overrideAttrs (old: {
       cmakeFlags = map (f:
         if lib.hasPrefix "-DCMAKE_CUDA_ARCHITECTURES" f
-        then "-DCMAKE_CUDA_ARCHITECTURES:STRING=${lib.concatStringsSep ";" cfg.cudaCapabilities}"
+        then "-DCMAKE_CUDA_ARCHITECTURES:STRING=${cmakeArchList}"
         else f
       ) (old.cmakeFlags or []);
     });
