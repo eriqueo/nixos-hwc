@@ -346,10 +346,11 @@ in
     }
 
     # llama.cpp GPU server — LFM2-2.6B Q4 on the Quadro P1000
+    # 17443 is taken by homepage, 19443 by Arka, so we use 26443/27443.
     {
       name = "llama-gpu";
       mode = "port";
-      port = 17443;
+      port = 26443;
       upstream = "http://127.0.0.1:11500";
     }
 
@@ -357,7 +358,7 @@ in
     {
       name = "llama-cpu";
       mode = "port";
-      port = 19443;
+      port = 27443;
       upstream = "http://127.0.0.1:11501";
     }
 

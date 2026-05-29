@@ -536,11 +536,15 @@
   # hwc.ai.nanoclaw = { enable = false; slack.enable = false; };
 
   # llama.cpp inference — small dense model on the Quadro P1000, big MoE on CPU
-  # GPU:  LFM2-2.6B Q4 (~1.5 GB)  on  17443 -> 127.0.0.1:11500
-  # CPU:  LFM2-24B-A2B Q4 (~14 GB) on  19443 -> 127.0.0.1:11501
+  # GPU:  LFM2-2.6B Q4 (~1.5 GB)  on  26443 -> 127.0.0.1:11500
+  # CPU:  LFM2-24B-A2B Q4 (~14 GB) on  27443 -> 127.0.0.1:11501
   hwc.server.ai.llamaCpp = {
     enable = true;
-    gpu.enable = true;
+    # GPU service disabled until llama-cpp is rebuilt with sm_61 — the cached
+    # CUDA binary at cache.nixos-cuda.org targets sm_75+ only, so Pascal
+    # (Quadro P1000, compute 6.1) hits "no kernel image is available for
+    # execution on the device". Tracking in domains/server/native/ai/llama-cpp/.
+    gpu.enable = false;
     cpu = {
       enable = true;
       threads = 6;  # one per physical core on i7-8700K; HT rarely helps memory-bound inference

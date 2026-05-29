@@ -29,8 +29,8 @@ README.md     # (this file)
 
 | Service | External (Caddy) | Internal | Model |
 |---------|------------------|----------|-------|
-| llama-gpu | `https://hwc.…ts.net:17443` | `127.0.0.1:11500` | LFM2-2.6B Q4_K_M |
-| llama-cpu | `https://hwc.…ts.net:19443` | `127.0.0.1:11501` | LFM2-24B-A2B Q4_K_M |
+| llama-gpu | `https://hwc.…ts.net:26443` | `127.0.0.1:11500` | LFM2-2.6B Q4_K_M |
+| llama-cpu | `https://hwc.…ts.net:27443` | `127.0.0.1:11501` | LFM2-24B-A2B Q4_K_M |
 
 Both expose the standard llama.cpp OpenAI-compatible server API
 (`/v1/chat/completions`, `/v1/completions`, `/health`, `/props`).
