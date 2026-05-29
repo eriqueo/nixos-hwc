@@ -32,8 +32,30 @@ in
 
     dashboardPort = lib.mkOption {
       type = lib.types.port;
-      default = 8765;
-      description = "Loopback port the Hermes web dashboard listens on (POSIX PTY chat pane).";
+      default = 9119;
+      description = ''
+        Loopback port the `hermes dashboard` daemon listens on.
+        9119 is the upstream default (see `hermes dashboard --help`).
+      '';
+    };
+
+    dashboard = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Run `hermes dashboard` as a long-lived systemd service so the
+          web UI is always reachable via the Caddy reverse-proxy route.
+          The dashboard exposes config, sessions, skills, cron, and a
+          browser-based chat pane (via PTY+WebSocket when --tui is on).
+        '';
+      };
+
+      tui = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Expose the in-browser Chat tab (embedded `hermes --tui` over PTY/WebSocket).";
+      };
     };
 
     reverseProxyPort = lib.mkOption {

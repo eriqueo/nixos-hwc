@@ -229,6 +229,51 @@ in
       }];
     })
 
+    # ── Dashboard daemon (long-lived) ──────────────────────────────────────
+    # `hermes dashboard` is a separate process from `hermes chat`. Without
+    # this service the Caddy upstream at :9119 has nothing to forward to,
+    # producing 502 Bad Gateway on hermes.holthome.net.
+    (lib.mkIf (cfg.enable && cfg.dashboard.enable) {
+      systemd.services.hermes-dashboard = {
+        description = "Hermes Agent web dashboard";
+        after = [ "network-online.target" "hermes-install.service" ];
+        wants = [ "network-online.target" ];
+        requires = [ "hermes-install.service" ];
+        wantedBy = [ "multi-user.target" ];
+
+        environment = {
+          HOME = cfg.homeDir;
+          PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
+        };
+
+        serviceConfig = {
+          Type = "simple";
+          User = lib.mkForce cfg.user;
+          Group = "users";
+          StateDirectory = "hwc/hermes";
+          StateDirectoryMode = "0750";
+          WorkingDirectory = cfg.homeDir;
+          ExecStart = lib.concatStringsSep " " ([
+            hermesBin "dashboard"
+            "--host" "127.0.0.1"
+            "--port" (toString cfg.dashboardPort)
+            "--no-open"
+            "--skip-build"  # serve pre-built dist; avoids npm on every start
+          ] ++ lib.optional cfg.dashboard.tui "--tui");
+          Restart = "on-failure";
+          RestartSec = "10s";
+
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectKernelTunables = true;
+          ProtectKernelModules = true;
+          ProtectControlGroups = true;
+          RestrictSUIDSGID = true;
+          LockPersonality = true;
+        };
+      };
+    })
+
     # ── VALIDATION ─────────────────────────────────────────────────────────
     {
       assertions = [
