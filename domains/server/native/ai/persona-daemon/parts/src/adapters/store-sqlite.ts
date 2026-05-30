@@ -8,11 +8,8 @@ import { PersonaDaemonError } from "../core/errors.ts";
 const SCHEMA_VERSION = 1;
 
 const MIGRATIONS = [
-  // v1 — Commit 2 baseline
+  // v0 → v1 — Commit 2 baseline
   `
-    CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);
-    INSERT OR IGNORE INTO schema_version (version) VALUES (0);
-
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
       persona_id TEXT NOT NULL,
@@ -48,17 +45,18 @@ export function openDatabase(path: string): Database {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA foreign_keys = ON;");
 
-  // Run pending migrations
+  // Bootstrap the schema_version table itself before reading it.
+  db.exec(
+    "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY)",
+  );
+  db.exec("INSERT OR IGNORE INTO schema_version (version) VALUES (0)");
+
   const current = db.prepare("SELECT version FROM schema_version LIMIT 1")
     .get<{ version: number }>()?.version ?? 0;
 
   for (let v = current; v < SCHEMA_VERSION; v++) {
     db.exec(MIGRATIONS[v]);
     db.prepare("UPDATE schema_version SET version = ?").run(v + 1);
-  }
-  // First-run case: schema_version was created with 0, migrations brought it forward.
-  if (current === 0 && SCHEMA_VERSION > 0) {
-    // (migrations loop above already executed migration 0 → 1)
   }
 
   return db;
