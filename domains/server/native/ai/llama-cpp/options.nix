@@ -168,11 +168,10 @@ in
             # Batch / micro-batch sized to fit several chunks comfortably.
             "--ubatch-size" "4096"
             "--batch-size" "4096"
-            # Force single slot. --parallel 1 alone is silently overridden
-            # by kv_unified default (log: "setting n_parallel = 4 and
-            # kv_unified = true"). --no-kv-unified lets --parallel 1 stick.
-            "--parallel" "1"
-            "--no-kv-unified"
+            # --parallel 1 gets silently overridden to 4 by kv_unified, and
+            # the build doesn't accept --no-kv-unified. Accept 4 slots; the
+            # daemon-side chunk cap keeps each chunk well under per-slot
+            # context (2048 / 4 = 512 with unified, full 2048 otherwise).
           ];
         };
       };
