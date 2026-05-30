@@ -11,6 +11,8 @@ import { PersonaDaemonError } from "./errors.ts";
 import { buildSystemPrompt } from "./prompt-envelope.ts";
 import { placeholderSummary } from "./summarization.ts";
 
+import type { MetricsWriter } from "./metrics.ts";
+
 export interface OrchestratorDeps {
   personas: PersonaManifest;
   chat: ChatPort;
@@ -21,6 +23,7 @@ export interface OrchestratorDeps {
   // Optional RAG deps — when present, useKnowledge personas get retrieval.
   embed?: EmbedPort;
   vectorStore?: VectorStore;
+  metrics?: MetricsWriter;
 }
 
 /**
@@ -33,7 +36,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
   const {
     personas, chat, store, log,
     maxRecentTurns, keepRecentTurns,
-    embed, vectorStore,
+    embed, vectorStore, metrics,
   } = deps;
 
   return async function orchestrate(req: ChatRequest): Promise<ChatResponse> {
@@ -113,6 +116,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
     if (ragEnabled && topK > 0) {
       try {
         const [queryVec] = await embed!.embed([lastUser.content]);
+        metrics?.recordEmbed("ok");
         const top = await vectorStore!.topK(queryVec, topK);
         retrievedChunks = top.map((t) => ({
           notePath: t.notePath,
@@ -128,6 +132,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       } catch (e) {
         ragDegraded = true;
         retrievedChunks = undefined;
+        metrics?.recordEmbed("error");
         log.warn("retrieval.degraded", {
           persona: persona.name,
           err: e instanceof Error ? e.message : String(e),
@@ -181,6 +186,14 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       ragEnabled,
       ragDegraded,
       retrievedChunks: retrievedChunks?.length ?? 0,
+    });
+
+    metrics?.recordChat({
+      persona: persona.name,
+      backend: persona.model,
+      status: "ok",
+      durationMs: elapsedMs,
+      retrievalChunks: retrievedChunks?.length ?? 0,
     });
 
     // Persist both sides if memory is on.

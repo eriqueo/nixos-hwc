@@ -109,5 +109,37 @@ in
       default = "info";
       description = "Minimum severity for structured JSON log output.";
     };
+
+    # Brain-MCP integration (used by inbox_capture MCP tool)
+    brainMcp = {
+      url = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:${toString (config.hwc.server.ai.brainMcp.port or 9876)}";
+        description = ''
+          Base URL of brain-mcp (Deno). Used by the daemon's inbox_capture
+          tool — single-writer principle, daemon does not write the vault
+          directly.
+        '';
+      };
+      apiKeyFile = lib.mkOption {
+        type = lib.types.path;
+        default = "/run/agenix/brain-mcp-api-key";
+        description = ''
+          Path to brain-mcp's bearer-token secret. The daemon reads it once
+          at startup. Same agenix secret brain-mcp itself uses, so eric needs
+          read access (already granted via the secrets group).
+        '';
+      };
+    };
+
+    # External-facing reverse proxy (Caddy)
+    reverseProxyPort = lib.mkOption {
+      type = lib.types.port;
+      default = 28443;
+      description = ''
+        External Caddy port for tailnet access. Loopback daemon is on
+        `bindAddr:port`; Caddy fronts it on this port using the tailnet cert.
+      '';
+    };
   };
 }
