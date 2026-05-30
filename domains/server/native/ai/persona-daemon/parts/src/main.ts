@@ -14,10 +14,13 @@ import {
   openDatabase,
 } from "./adapters/store-sqlite.ts";
 import { createNotesFs } from "./adapters/notes-fs.ts";
+import { createBrainMcpVaultWriter } from "./adapters/vault-writer-brain-mcp.ts";
 import { createOrchestrator } from "./core/chat.ts";
 import { createIndexer } from "./core/indexer.ts";
+import { createMetrics, startBackendProber } from "./core/metrics.ts";
 import { createOpenAiShell } from "./shells/http-openai.ts";
 import { createInternalShell } from "./shells/http-internal.ts";
+import { createMcpHttpShell } from "./shells/mcp-http.ts";
 
 interface RuntimeConfig {
   bindAddr: string;
@@ -28,6 +31,8 @@ interface RuntimeConfig {
   cpuUrl: string;
   embedUrl: string;
   vaultPath: string;
+  brainMcpUrl: string;
+  brainMcpKeyFile: string;
   maxRecent: number;
   keepRecent: number;
   logLevel: "debug" | "info" | "warn" | "error";
@@ -57,7 +62,9 @@ function readConfig(): RuntimeConfig {
     gpuUrl: need("PERSONA_DAEMON_GPU_URL"),
     cpuUrl: need("PERSONA_DAEMON_CPU_URL"),
     embedUrl: need("PERSONA_DAEMON_EMBED_URL"),
-    vaultPath: opt("PERSONA_DAEMON_VAULT_PATH", ""),  // empty = RAG disabled
+    vaultPath: opt("PERSONA_DAEMON_VAULT_PATH", ""),
+    brainMcpUrl: opt("PERSONA_DAEMON_BRAIN_MCP_URL", ""),
+    brainMcpKeyFile: opt("PERSONA_DAEMON_BRAIN_MCP_KEY_FILE", ""),
     maxRecent: num("PERSONA_DAEMON_MAX_RECENT"),
     keepRecent: num("PERSONA_DAEMON_KEEP_RECENT"),
     logLevel: lvl as RuntimeConfig["logLevel"],
@@ -87,6 +94,7 @@ async function main() {
     dbPath: cfg.dbPath,
     manifestPath: cfg.manifestPath,
     vaultPath: cfg.vaultPath || "(disabled)",
+    brainMcp: cfg.brainMcpUrl || "(disabled)",
   });
 
   const personas = await loadManifest(cfg.manifestPath);
@@ -101,14 +109,12 @@ async function main() {
   const chat = createChatHttp({ gpuUrl: cfg.gpuUrl, cpuUrl: cfg.cpuUrl });
   const embed = createEmbedHttp({ embedUrl: cfg.embedUrl });
 
-  // RAG wiring is conditional on vaultPath being set. If empty, the
-  // orchestrator falls back to no-RAG mode regardless of persona flag.
+  // RAG wiring (vaultPath set → enable)
   let vectorStore: ReturnType<typeof createVectorStoreSqlite> | undefined;
   let indexer: ReturnType<typeof createIndexer> | undefined;
   let ragEnabled = false;
 
   if (cfg.vaultPath) {
-    // Probe embed dim once at startup; mirror validates each existing chunk.
     let dim: number | null = null;
     try {
       dim = await embed.dim();
@@ -129,6 +135,35 @@ async function main() {
     });
   }
 
+  // Brain-MCP wiring (writeback for inbox_capture)
+  let vaultWriter: ReturnType<typeof createBrainMcpVaultWriter> | undefined;
+  if (cfg.brainMcpUrl && cfg.brainMcpKeyFile) {
+    try {
+      const apiKey = (await Deno.readTextFile(cfg.brainMcpKeyFile)).trim();
+      vaultWriter = createBrainMcpVaultWriter({
+        baseUrl: cfg.brainMcpUrl,
+        apiKey,
+      });
+      log.info("vault_writer.enabled", { brainMcp: cfg.brainMcpUrl });
+    } catch (e) {
+      log.warn("vault_writer.unavailable", {
+        err: e instanceof Error ? e.message : String(e),
+        note: "inbox_capture MCP tool will return VAULT_WRITER_UNAVAILABLE",
+      });
+    }
+  }
+
+  // Metrics — instrument the orchestrator + spin up a backend prober
+  const metricsBundle = createMetrics({
+    store,
+    vectorStore,
+    backendUrls: { gpu: cfg.gpuUrl, cpu: cfg.cpuUrl, embed: cfg.embedUrl },
+  });
+  startBackendProber({
+    urls: { gpu: cfg.gpuUrl, cpu: cfg.cpuUrl, embed: cfg.embedUrl },
+    writer: metricsBundle.writer,
+  });
+
   const orchestrate = createOrchestrator({
     personas,
     chat,
@@ -138,7 +173,17 @@ async function main() {
     keepRecentTurns: cfg.keepRecent,
     embed: ragEnabled ? embed : undefined,
     vectorStore,
+    metrics: metricsBundle.writer,
   });
+
+  // Wrap indexer.run so we surface last-success to metrics.
+  const reindexWrapped = indexer
+    ? async (opts?: { full?: boolean; notePath?: string }) => {
+        const result = await indexer!.run(opts);
+        metricsBundle.writer.lastReindexSuccess(indexer!.lastSuccess());
+        return result;
+      }
+    : undefined;
 
   const startedAt = Date.now();
   const openai = createOpenAiShell({ orchestrate, personas, log });
@@ -147,12 +192,18 @@ async function main() {
     vectorStore,
     personas,
     startedAt,
-    reindex: indexer?.run,
+    reindex: reindexWrapped,
     reindexLastSuccess: indexer?.lastSuccess,
+    metrics: metricsBundle.snapshot,
+  });
+  const mcp = createMcpHttpShell({
+    orchestrate, personas, store, vectorStore,
+    embed: ragEnabled ? embed : undefined,
+    vaultWriter, log,
   });
 
   const handler = async (req: Request): Promise<Response> => {
-    const r = (await internal(req)) ?? (await openai(req));
+    const r = (await internal(req)) ?? (await mcp(req)) ?? (await openai(req));
     if (r) return r;
     return new Response(JSON.stringify({
       error: { code: "INVALID_REQUEST", message: "route not found" },

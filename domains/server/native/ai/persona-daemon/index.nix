@@ -47,6 +47,8 @@ in
         PERSONA_DAEMON_CPU_URL      = cfg.chatBackends.cpu.url;
         PERSONA_DAEMON_EMBED_URL    = cfg.chatBackends.embed.url;
         PERSONA_DAEMON_VAULT_PATH   = toString (cfg.vaultPath or "");
+        PERSONA_DAEMON_BRAIN_MCP_URL = cfg.brainMcp.url;
+        PERSONA_DAEMON_BRAIN_MCP_KEY_FILE = toString cfg.brainMcp.apiKeyFile;
         PERSONA_DAEMON_MAX_RECENT   = toString cfg.maxRecentTurns;
         PERSONA_DAEMON_KEEP_RECENT  = toString cfg.keepRecentTurns;
         PERSONA_DAEMON_LOG_LEVEL    = cfg.logLevel;
@@ -133,6 +135,26 @@ in
         Group = "users";
       };
     };
+
+    #========================================================================
+    # CADDY REVERSE PROXY — port mode on :28443 over tailnet
+    #========================================================================
+    hwc.networking.shared.routes = [{
+      name = "persona-daemon";
+      mode = "port";
+      port = cfg.reverseProxyPort;
+      upstream = "http://${cfg.bindAddr}:${toString cfg.port}";
+    }];
+
+    #========================================================================
+    # PROMETHEUS SCRAPE — register with the monitoring stack
+    #========================================================================
+    hwc.monitoring.prometheus.scrapeConfigs = [{
+      job_name = "persona-daemon";
+      static_configs = [{ targets = [ "${cfg.bindAddr}:${toString cfg.port}" ]; }];
+      metrics_path = "/metrics";
+      scrape_interval = "30s";
+    }];
 
     #========================================================================
     # CLI — persona-admin reindex [--full|--note <path>]

@@ -301,6 +301,40 @@
             description = "Network RX rate is {{ $value | humanize }} bytes/s (threshold: > 100MB/s)";
           };
         }
+
+        # persona-daemon - vault reindex hasn't succeeded in over an hour
+        # Indexer failures silently degrade RAG; this surfaces them.
+        {
+          alert = "PersonaDaemonReindexStale";
+          expr = ''
+            time() - persona_daemon_reindex_last_success_timestamp > 3600
+            and persona_daemon_reindex_last_success_timestamp > 0
+          '';
+          for = "10m";
+          labels = {
+            severity = "P4";
+            category = "persona-daemon";
+          };
+          annotations = {
+            summary = "persona-daemon reindex hasn't succeeded in over an hour";
+            description = "Last successful reindex was {{ $value | humanizeDuration }} ago. RAG over /mnt/vaults/brain may be returning stale chunks.";
+          };
+        }
+
+        # persona-daemon - chat/embed backend down
+        {
+          alert = "PersonaDaemonBackendDown";
+          expr = "persona_daemon_backend_up == 0";
+          for = "5m";
+          labels = {
+            severity = "P4";
+            category = "persona-daemon";
+          };
+          annotations = {
+            summary = "persona-daemon backend {{ $labels.backend }} is down";
+            description = "llama-{{ $labels.backend }} hasn't responded to /health probes for 5+ minutes.";
+          };
+        }
       ];
     }
   ];
