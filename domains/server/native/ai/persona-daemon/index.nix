@@ -16,15 +16,10 @@ let
   # between modules resolve. Same trick hermes uses for its bootstrap CLI.
   src = lib.sources.sourceFilesBySuffices ./parts/src [ ".ts" ".jsonc" ".json" ];
 
-  # Deno's --allow-net wants comma-separated host:port pairs. Listening +
-  # outbound to chat backends + embed backend (latter unused in Commit 2
-  # but pre-declared so we don't have to touch hardening for Commit 3).
-  allowedNet = lib.concatStringsSep "," [
-    "${cfg.bindAddr}:${toString cfg.port}"
-    (lib.removePrefix "http://" cfg.chatBackends.gpu.url)
-    (lib.removePrefix "http://" cfg.chatBackends.cpu.url)
-    (lib.removePrefix "http://" cfg.chatBackends.embed.url)
-  ];
+  # Deno also uses --allow-net to gate MODULE FETCHING from jsr.io / npm,
+  # not just runtime sockets. Restricting to specific hosts would block
+  # `import "jsr:@db/sqlite"` on a cold cache. Wide --allow-net mirrors
+  # brain-mcp's pattern; defense-in-depth is bindAddr (loopback-only).
 in
 {
   imports = [ ./options.nix ];
@@ -65,7 +60,7 @@ in
           deno "run"
           "--allow-read"
           "--allow-write=${cfg.statePath},/var/cache/persona-daemon"
-          "--allow-net=${allowedNet}"
+          "--allow-net"
           "--allow-env"
           "${src}/main.ts"
         ];
