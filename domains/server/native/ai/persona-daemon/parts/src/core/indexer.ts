@@ -23,7 +23,10 @@ export interface IndexerStats {
 }
 
 export function createIndexer(deps: IndexerDeps) {
-  const batchSize = deps.embedBatchSize ?? 32;
+  // Each chunk can be up to ~1024 tokens; we keep batches small enough that
+  // total tokens stay under llama-server's --ubatch-size (8192). 4 chunks ≈
+  // 4096 tokens worst case; in practice most chunks are short.
+  const batchSize = deps.embedBatchSize ?? 4;
   let inFlight = false;
   let lastSuccessTs: number | null = null;
 

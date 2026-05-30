@@ -161,7 +161,19 @@ in
           contextSize = 8192;
           gpuLayers = 999;
           threads = null;
-          extraArgs = [ "--embeddings" "--pooling" "mean" ];
+          extraArgs = [
+            "--embeddings" "--pooling" "mean"
+            # Embedding workloads batch many inputs per request. The default
+            # n_ubatch=512 aborts (GGML_ASSERT) when a request's total tokens
+            # exceed it. Raise to 8192 (= contextSize); the model fits and the
+            # GPU has headroom.
+            "--ubatch-size" "8192"
+            "--batch-size" "8192"
+            # Single slot so the daemon's per-request batches process serially
+            # within llama-server (parallel slots split a batch across them and
+            # we hit the n_ubatch limit again).
+            "--parallel" "1"
+          ];
         };
       };
       default = {};
