@@ -27,7 +27,8 @@
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
     ../../domains/server/native/ai/hermes/index.nix         # Hermes Agent (Nous Research)
-    ../../domains/server/native/ai/llama-cpp/index.nix      # llama.cpp inference (GPU + CPU)
+    ../../domains/server/native/ai/llama-cpp/index.nix      # llama.cpp inference (GPU + CPU + embed)
+    ../../domains/server/native/ai/persona-daemon/index.nix # Persona-aware HTTP daemon + SQLite memory
     ../../domains/server/services/inbox-processor/index.nix  # Phone capture processor (Whisper + Tesseract)
   ];
 
@@ -554,10 +555,15 @@
     embed.enable = true;  # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
   };
 
-  # hwc-llm — persona CLI that wraps the two llama-server endpoints with a
-  # curated system-prompt library. Phase 1: stateless. See
-  # domains/ai/personas/README.md for the roadmap.
+  # hwc-llm — persona CLI that wraps the llama-server endpoints with a
+  # curated system-prompt library. Stateless by default; --conversation
+  # routes through persona-daemon below. See domains/ai/personas/README.md.
   hwc.ai.personas.enable = true;
+
+  # persona-daemon (Deno) — OpenAI-compatible HTTP on 127.0.0.1:11550 plus
+  # SQLite conversation memory. Commit 2 ships conversations only;
+  # RAG over /mnt/vaults/brain arrives in Commit 3. Caddy + MCP in Commit 4.
+  hwc.server.ai.personaDaemon.enable = true;
 
   # Hermes Agent — Nous Research's self-improving AI agent (OpenClaw successor)
   # Phase 1: install + dashboard route only. Discord gateway off until Eric
