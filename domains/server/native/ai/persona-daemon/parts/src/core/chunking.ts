@@ -186,18 +186,57 @@ function packSection(args: {
 
   for (const span of spans) {
     if (span.kind === "code") {
-      // Atomic: emit current buffer, then emit code as its own chunk.
+      // Atomic for short fences, line-split for long ones. Embedding a
+      // chunk that overflows the model's training context aborts the
+      // server (GGML_ASSERT in slot mgmt), so we split — even if that
+      // means embedding multiple half-fences.
       flush();
-      chunks.push({
-        notePath,
-        sectionTitle: section.title,
-        parentSection: section.parent,
-        kind: "code",
-        charStart: bodyStart + section.charStart + span.charStart,
-        charEnd: bodyStart + section.charStart + span.charEnd,
-        body: span.text,
-        mtime,
-      });
+      if (span.text.length <= SOFT_CAP_CHARS) {
+        chunks.push({
+          notePath,
+          sectionTitle: section.title,
+          parentSection: section.parent,
+          kind: "code",
+          charStart: bodyStart + section.charStart + span.charStart,
+          charEnd: bodyStart + section.charStart + span.charEnd,
+          body: span.text,
+          mtime,
+        });
+      } else {
+        const lines = span.text.split("\n");
+        let acc = "";
+        let segStart = span.charStart;
+        for (let li = 0; li < lines.length; li++) {
+          const lineWithNl = lines[li] + (li < lines.length - 1 ? "\n" : "");
+          if (acc.length + lineWithNl.length > SOFT_CAP_CHARS && acc.length > 0) {
+            chunks.push({
+              notePath,
+              sectionTitle: section.title,
+              parentSection: section.parent,
+              kind: "code",
+              charStart: bodyStart + section.charStart + segStart,
+              charEnd: bodyStart + section.charStart + segStart + acc.length,
+              body: acc,
+              mtime,
+            });
+            segStart += acc.length;
+            acc = "";
+          }
+          acc += lineWithNl;
+        }
+        if (acc.length > 0) {
+          chunks.push({
+            notePath,
+            sectionTitle: section.title,
+            parentSection: section.parent,
+            kind: "code",
+            charStart: bodyStart + section.charStart + segStart,
+            charEnd: bodyStart + section.charStart + segStart + acc.length,
+            body: acc,
+            mtime,
+          });
+        }
+      }
       bufferStart = span.charEnd;
       continue;
     }
