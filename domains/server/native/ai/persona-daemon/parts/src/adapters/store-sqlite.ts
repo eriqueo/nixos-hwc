@@ -65,18 +65,25 @@ export function openDatabase(path: string): Database {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA foreign_keys = ON;");
 
-  // Bootstrap the schema_version table itself before reading it.
+  // Bootstrap: schema_version is a single-row table. Idempotent on cold and
+  // hot starts — INSERT OR IGNORE on a PK-only schema lets stale rows pile
+  // up, so we read MAX(version) and rewrite as one row per migration step.
   db.exec(
     "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY)",
   );
-  db.exec("INSERT OR IGNORE INTO schema_version (version) VALUES (0)");
+  const rowCount = db.prepare("SELECT COUNT(*) AS n FROM schema_version")
+    .get<{ n: number }>()?.n ?? 0;
+  if (rowCount === 0) {
+    db.exec("INSERT INTO schema_version (version) VALUES (0)");
+  }
 
-  const current = db.prepare("SELECT version FROM schema_version LIMIT 1")
-    .get<{ version: number }>()?.version ?? 0;
+  const current = db.prepare("SELECT MAX(version) AS v FROM schema_version")
+    .get<{ v: number | null }>()?.v ?? 0;
 
   for (let v = current; v < SCHEMA_VERSION; v++) {
     db.exec(MIGRATIONS[v]);
-    db.prepare("UPDATE schema_version SET version = ?").run(v + 1);
+    db.exec("DELETE FROM schema_version");
+    db.prepare("INSERT INTO schema_version (version) VALUES (?)").run(v + 1);
   }
 
   return db;
