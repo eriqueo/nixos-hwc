@@ -3,16 +3,81 @@
 # llama.cpp inference services — native systemd, runs as eric:users.
 # Namespace: hwc.server.ai.llamaCpp (matches folder; `native/` is folder-only).
 #
-# Two services share one binary (pkgs.llama-cpp, CUDA-built via
-# nixpkgs.config.cudaSupport):
-#   - gpu: small dense model on the local NVIDIA card (-ngl 999)
-#   - cpu: big MoE model in RAM, GPU disabled (-ngl 0)
+# Three services share one binary (pkgs.llama-cpp, CUDA-built):
+#   - gpu:   small dense model on the local NVIDIA card (-ngl 999)
+#   - cpu:   big MoE model in RAM, GPU disabled (-ngl 0)
+#   - embed: small embedding model on the GPU (-ngl 999, --embeddings)
 #
-# Both listen on 127.0.0.1; Caddy fronts them on the public tailnet.
+# All three are instances of one submodule type (`mkLlamaService`) — adding
+# a fourth (e.g., a vision backend, an alt-quant) is a one-liner here.
+#
+# All listen on 127.0.0.1; Caddy fronts them on the public tailnet.
 { lib, config, ... }:
 let
   paths = config.hwc.paths;
-  hfBase = "https://huggingface.co/LiquidAI";
+  liquidBase = "https://huggingface.co/LiquidAI";
+  nomicBase  = "https://huggingface.co/nomic-ai";
+
+  # One submodule type, parametrised by per-service defaults. Lets gpu/cpu/embed
+  # share the same shape so the implementation in index.nix can iterate over
+  # `[ "gpu" "cpu" "embed" ]` without three near-identical option trees.
+  mkLlamaService = { defaults }: lib.types.submodule {
+    options = {
+      enable = lib.mkEnableOption "this llama-server instance";
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = defaults.port;
+        description = "Loopback port for this llama-server instance.";
+      };
+
+      modelFile = lib.mkOption {
+        type = lib.types.str;
+        default = defaults.modelFile;
+        description = "GGUF filename under hwc.server.ai.llamaCpp.modelsDir.";
+      };
+
+      modelUrl = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = defaults.modelUrl or null;
+        description = ''
+          Source URL for one-time model download via ExecStartPre.
+          Set to null to disable auto-download (assumes file exists).
+        '';
+      };
+
+      contextSize = lib.mkOption {
+        type = lib.types.int;
+        default = defaults.contextSize or 8192;
+        description = "Context window in tokens (-c).";
+      };
+
+      gpuLayers = lib.mkOption {
+        type = lib.types.int;
+        default = defaults.gpuLayers or 0;
+        description = ''
+          Layers to offload to GPU (-ngl). 999 = all, 0 = CPU-only.
+          For embedding models on the Quadro P1000, 999 is safe (sub-1GB VRAM).
+        '';
+      };
+
+      threads = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = defaults.threads or null;
+        description = ''
+          CPU threads (-t). null = let llama.cpp pick. On i7-8700K
+          (6c/12t), 6 is usually optimal for CPU inference (one thread
+          per physical core; HT rarely helps memory-bound workloads).
+        '';
+      };
+
+      extraArgs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = defaults.extraArgs or [];
+        description = "Extra llama-server arguments appended verbatim.";
+      };
+    };
+  };
 in
 {
   options.hwc.server.ai.llamaCpp = {
@@ -48,94 +113,68 @@ in
       '';
     };
 
-    gpu = {
-      enable = lib.mkEnableOption "GPU-accelerated llama-server (CUDA)";
-
-      port = lib.mkOption {
-        type = lib.types.port;
-        default = 11500;
-        description = "Loopback port for the GPU llama-server.";
+    gpu = lib.mkOption {
+      type = mkLlamaService {
+        defaults = {
+          port = 11500;
+          modelFile = "LFM2-2.6B-Q4_K_M.gguf";
+          modelUrl = "${liquidBase}/LFM2-2.6B-GGUF/resolve/main/LFM2-2.6B-Q4_K_M.gguf";
+          contextSize = 8192;
+          gpuLayers = 999;
+          threads = null;
+          extraArgs = [];
+        };
       };
-
-      modelFile = lib.mkOption {
-        type = lib.types.str;
-        default = "LFM2-2.6B-Q4_K_M.gguf";
-        description = "GGUF filename under modelsDir.";
-      };
-
-      modelUrl = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = "${hfBase}/LFM2-2.6B-GGUF/resolve/main/LFM2-2.6B-Q4_K_M.gguf";
-        description = ''
-          Source URL for one-time model download via ExecStartPre.
-          Set to null to disable auto-download (assumes file exists).
-        '';
-      };
-
-      contextSize = lib.mkOption {
-        type = lib.types.int;
-        default = 8192;
-        description = "Context window in tokens (-c).";
-      };
-
-      gpuLayers = lib.mkOption {
-        type = lib.types.int;
-        default = 999;
-        description = "Layers to offload to GPU (-ngl). 999 = all.";
-      };
-
-      extraArgs = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [];
-        description = "Extra llama-server arguments appended verbatim.";
-      };
+      default = {};
+      description = ''
+        GPU-accelerated chat service. Default: LFM2-2.6B Q4 (~1.5 GB) fully
+        offloaded to the local NVIDIA card. Sized for the Quadro P1000.
+      '';
     };
 
-    cpu = {
-      enable = lib.mkEnableOption "CPU-only llama-server (large MoE in RAM)";
-
-      port = lib.mkOption {
-        type = lib.types.port;
-        default = 11501;
-        description = "Loopback port for the CPU llama-server.";
+    cpu = lib.mkOption {
+      type = mkLlamaService {
+        defaults = {
+          port = 11501;
+          modelFile = "LFM2-24B-A2B-Q4_K_M.gguf";
+          modelUrl = "${liquidBase}/LFM2-24B-A2B-GGUF/resolve/main/LFM2-24B-A2B-Q4_K_M.gguf";
+          contextSize = 8192;
+          gpuLayers = 0;
+          threads = null;
+          extraArgs = [];
+        };
       };
+      default = {};
+      description = ''
+        CPU-only chat service. Default: LFM2-24B-A2B Q4 (~14 GB) loaded in
+        host RAM. Memory-bandwidth bound; ~6 tok/s on i7-8700K because only
+        ~2 B parameters are active per token (MoE sparsity).
+      '';
+    };
 
-      modelFile = lib.mkOption {
-        type = lib.types.str;
-        default = "LFM2-24B-A2B-Q4_K_M.gguf";
-        description = "GGUF filename under modelsDir.";
+    embed = lib.mkOption {
+      type = mkLlamaService {
+        defaults = {
+          port = 11502;
+          modelFile = "nomic-embed-text-v1.5.Q5_K_M.gguf";
+          modelUrl = "${nomicBase}/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q5_K_M.gguf";
+          contextSize = 8192;
+          gpuLayers = 999;
+          threads = null;
+          extraArgs = [ "--embeddings" "--pooling" "mean" ];
+        };
       };
+      default = {};
+      description = ''
+        Embeddings service. Default: nomic-embed-text-v1.5 Q5 (~270 MB,
+        768-dim vectors) on the GPU. Powers RAG retrieval over the brain
+        vault (consumed by persona-daemon).
 
-      modelUrl = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = "${hfBase}/LFM2-24B-A2B-GGUF/resolve/main/LFM2-24B-A2B-Q4_K_M.gguf";
-        description = ''
-          Source URL for one-time model download. ~14 GB; first boot
-          will block on the download (TimeoutStartSec is set high).
-        '';
-      };
-
-      contextSize = lib.mkOption {
-        type = lib.types.int;
-        default = 8192;
-        description = "Context window in tokens.";
-      };
-
-      threads = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-        description = ''
-          CPU threads (-t). null = let llama.cpp pick. On i7-8700K
-          (6c/12t), 6 is usually optimal for inference (one thread per
-          physical core; HT rarely helps memory-bound workloads).
-        '';
-      };
-
-      extraArgs = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [];
-        description = "Extra llama-server arguments appended verbatim.";
-      };
+        Note: llama.cpp's flag is `--embeddings` (with the 's'); the
+        OpenAI-compat endpoint is `/v1/embeddings`. extraArgs already
+        includes both that flag and `--pooling mean` for sentence-level
+        vectors.
+      '';
     };
   };
 }

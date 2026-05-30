@@ -3,9 +3,8 @@
 # Implementation for hwc.server.ai.llamaCpp.
 #
 # Architecture: one nixpkgs llama-cpp binary (CUDA-built via global
-# cudaSupport) drives two systemd services. The GPU service offloads
-# all layers to the Quadro P1000; the CPU service runs the 24B MoE in
-# host RAM with -ngl 0 so cuBLAS is loaded but unused.
+# cudaSupport) drives N systemd services, all instances of the same
+# `mkService` helper. Currently: llama-gpu, llama-cpu, llama-embed.
 #
 # Model files are downloaded lazily via ExecStartPre into modelsDir.
 # Files persist across reboots; the download script is idempotent.
@@ -59,18 +58,20 @@ let
     '';
   };
 
-  mkServerArgs = svcCfg: gpuLayers: extraThreads:
+  # All llama-server CLI arguments derived purely from the submodule shape.
+  # Adding a new sub-service requires no changes here.
+  mkServerArgs = svcCfg:
     [
       "--model" "${cfg.modelsDir}/${svcCfg.modelFile}"
       "--host" "127.0.0.1"
       "--port" (toString svcCfg.port)
       "-c" (toString svcCfg.contextSize)
-      "-ngl" (toString gpuLayers)
+      "-ngl" (toString svcCfg.gpuLayers)
     ]
-    ++ lib.optionals (extraThreads != null) [ "-t" (toString extraThreads) ]
+    ++ lib.optionals (svcCfg.threads != null) [ "-t" (toString svcCfg.threads) ]
     ++ svcCfg.extraArgs;
 
-  mkService = { name, svcCfg, gpuLayers, threads, hardening }: {
+  mkService = { name, svcCfg, hardening }: {
     description = "llama.cpp inference server (${name})";
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" ];
@@ -90,7 +91,7 @@ let
       ];
 
       ExecStart = lib.concatStringsSep " " ([ llamaBin ]
-        ++ mkServerArgs svcCfg gpuLayers threads);
+        ++ mkServerArgs svcCfg);
 
       Restart = "on-failure";
       RestartSec = 10;
@@ -98,8 +99,8 @@ let
     } // hardening;
   };
 
+  # GPU services need /dev/nvidia*; do not lock device access.
   gpuHardening = {
-    # GPU service needs /dev/nvidia*; do not lock device access.
     PrivateTmp = true;
     ProtectSystem = "strict";
     ProtectHome = true;
@@ -107,17 +108,23 @@ let
     ReadWritePaths = [ cfg.modelsDir ];
   };
 
-  cpuHardening = {
-    PrivateTmp = true;
-    ProtectSystem = "strict";
-    ProtectHome = true;
-    NoNewPrivileges = true;
-    PrivateDevices = true;        # CPU service: no device access needed
+  # CPU service has no device-access need; tighten further.
+  cpuHardening = gpuHardening // {
+    PrivateDevices = true;
     ProtectKernelTunables = true;
     ProtectKernelModules = true;
     ProtectControlGroups = true;
-    ReadWritePaths = [ cfg.modelsDir ];
   };
+
+  # All declared sub-services with their hardening profile.
+  # Adding a new instance (e.g., a vision backend) = one entry here.
+  subServices = [
+    { name = "gpu";   svcCfg = cfg.gpu;   hardening = gpuHardening; }
+    { name = "cpu";   svcCfg = cfg.cpu;   hardening = cpuHardening; }
+    { name = "embed"; svcCfg = cfg.embed; hardening = gpuHardening; }
+  ];
+
+  enabledServices = lib.filter (s: s.svcCfg.enable) subServices;
 
 in
 {
@@ -133,42 +140,41 @@ in
     ];
 
     #========================================================================
-    # GPU service: LFM2-2.6B Q4 on Quadro P1000
+    # Systemd services — one per enabled sub-service
     #========================================================================
-    systemd.services.llama-gpu = lib.mkIf cfg.gpu.enable (mkService {
-      name = "gpu";
-      svcCfg = cfg.gpu;
-      gpuLayers = cfg.gpu.gpuLayers;
-      threads = null;
-      hardening = gpuHardening;
-    });
-
-    #========================================================================
-    # CPU service: LFM2-24B-A2B Q4 in RAM
-    #========================================================================
-    systemd.services.llama-cpu = lib.mkIf cfg.cpu.enable (mkService {
-      name = "cpu";
-      svcCfg = cfg.cpu;
-      gpuLayers = 0;
-      threads = cfg.cpu.threads;
-      hardening = cpuHardening;
-    });
+    systemd.services = lib.listToAttrs (map (s: {
+      name = "llama-${s.name}";
+      value = mkService s;
+    }) enabledServices);
 
     #========================================================================
     # VALIDATION
     #========================================================================
     assertions = [
       {
-        assertion = cfg.enable -> (cfg.gpu.enable || cfg.cpu.enable);
-        message = "hwc.server.ai.llamaCpp.enable is true but no sub-service is enabled. Set gpu.enable and/or cpu.enable.";
+        assertion = cfg.enable -> enabledServices != [];
+        message = ''
+          hwc.server.ai.llamaCpp.enable is true but no sub-service is enabled.
+          Set at least one of gpu.enable / cpu.enable / embed.enable.
+        '';
       }
       {
-        assertion = !(cfg.gpu.enable && cfg.cpu.enable) || cfg.gpu.port != cfg.cpu.port;
-        message = "hwc.server.ai.llamaCpp gpu.port and cpu.port must differ.";
+        assertion = let
+          ports = map (s: s.svcCfg.port) enabledServices;
+        in lib.length ports == lib.length (lib.unique ports);
+        message = ''
+          hwc.server.ai.llamaCpp: all enabled sub-services must use distinct
+          ports. Enabled: ${lib.concatMapStringsSep ", "
+            (s: "${s.name}=${toString s.svcCfg.port}") enabledServices}.
+        '';
       }
       {
-        assertion = cfg.gpu.enable -> (config.hwc.system.hardware.gpu.type or "none") == "nvidia";
-        message = "hwc.server.ai.llamaCpp.gpu requires hwc.system.hardware.gpu.type = \"nvidia\".";
+        assertion = (cfg.gpu.enable || cfg.embed.enable) ->
+          (config.hwc.system.hardware.gpu.type or "none") == "nvidia";
+        message = ''
+          hwc.server.ai.llamaCpp gpu/embed services require
+          hwc.system.hardware.gpu.type = "nvidia".
+        '';
       }
       {
         assertion = cfg.modelsDir != null && lib.hasPrefix "/" cfg.modelsDir;
