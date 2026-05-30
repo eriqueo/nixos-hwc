@@ -62,6 +62,10 @@ in
           "--allow-write=${cfg.statePath},/var/cache/persona-daemon"
           "--allow-net"
           "--allow-env"
+          # Deno tries to write deno.lock next to main.ts; main.ts lives in
+          # the Nix store (read-only). Deps are version-pinned in deno.jsonc
+          # so the lockfile is redundant.
+          "--no-lock"
           "${src}/main.ts"
         ];
         User = lib.mkForce cfg.user;
