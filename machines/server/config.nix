@@ -271,6 +271,7 @@
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
+      "apps"         = { path = "/home/eric/apps";         devices = [ "hwc-laptop" ]; };
       "brain"        = { path = "/mnt/vaults/brain";       devices = [ "hwc-laptop" "hwc-phone" ]; };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
@@ -925,11 +926,6 @@
   # DataX — legacy postgres role + db that lead_scout connects to.
   # (FB scrape/classify pipeline migrated to hwc.server.ai.leadScout in 2026-05.)
   hwc.business.datax.enable = true;
-
-  # Lead Scout — periodic FB scrape + classify + Discord notifications.
-  # Long-running HTTP/MCP server is enabled separately (hwc.server.ai.leadScout.enable).
-  hwc.server.ai.leadScout.fbScraper.enable = true;
-  hwc.server.ai.leadScout.fbClassifier.enable = true;
 
   # Paperless-NGX document management
   hwc.business.paperless.enable = lib.mkDefault true;
