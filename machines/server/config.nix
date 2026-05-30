@@ -536,9 +536,10 @@
   # (nanoclaw-anthropic-key.age is reused by Hermes via re-named logical secret).
   # hwc.ai.nanoclaw = { enable = false; slack.enable = false; };
 
-  # llama.cpp inference — small dense model on the Quadro P1000, big MoE on CPU
-  # GPU:  LFM2-2.6B Q4 (~1.5 GB)  on  26443 -> 127.0.0.1:11500
-  # CPU:  LFM2-24B-A2B Q4 (~14 GB) on  27443 -> 127.0.0.1:11501
+  # llama.cpp inference — three services share one binary
+  # GPU:   LFM2-2.6B Q4 (~1.5 GB)  on  26443 -> 127.0.0.1:11500
+  # CPU:   LFM2-24B-A2B Q4 (~14 GB) on  27443 -> 127.0.0.1:11501
+  # Embed: nomic-embed-text-v1.5 Q5 (~270 MB)        127.0.0.1:11502
   hwc.server.ai.llamaCpp = {
     enable = true;
     # Local llama-cpp rebuild with sm_61 added — required because the cached
@@ -550,6 +551,7 @@
       enable = true;
       threads = 6;  # one per physical core on i7-8700K; HT rarely helps memory-bound inference
     };
+    embed.enable = true;  # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
   };
 
   # hwc-llm — persona CLI that wraps the two llama-server endpoints with a
