@@ -1,5 +1,5 @@
-import type { ChatPort } from "../ports/llm.ts";
-import type { ConversationStore } from "../ports/store.ts";
+import type { ChatPort, EmbedPort } from "../ports/llm.ts";
+import type { ConversationStore, VectorStore } from "../ports/store.ts";
 import type { LogPort } from "../ports/log.ts";
 import type {
   ChatMessage,
@@ -18,6 +18,9 @@ export interface OrchestratorDeps {
   log: LogPort;
   maxRecentTurns: number;
   keepRecentTurns: number;
+  // Optional RAG deps — when present, useKnowledge personas get retrieval.
+  embed?: EmbedPort;
+  vectorStore?: VectorStore;
 }
 
 /**
@@ -30,6 +33,7 @@ export function createOrchestrator(deps: OrchestratorDeps) {
   const {
     personas, chat, store, log,
     maxRecentTurns, keepRecentTurns,
+    embed, vectorStore,
   } = deps;
 
   return async function orchestrate(req: ChatRequest): Promise<ChatResponse> {
@@ -92,10 +96,49 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       }
     }
 
+    // RAG retrieval — only if persona opts in AND embed/vectorStore wired.
+    // Per-request use_knowledge override wins over persona default.
+    const ragEnabled = (req.use_knowledge ?? persona.useKnowledge)
+      && !!embed && !!vectorStore;
+    const topK = req.knowledge_top_k ?? persona.knowledgeTopK;
+
+    let retrievedChunks: ReadonlyArray<{
+      notePath: string;
+      sectionTitle: string;
+      score: number;
+      body: string;
+    }> | undefined;
+    let ragDegraded = false;
+
+    if (ragEnabled && topK > 0) {
+      try {
+        const [queryVec] = await embed!.embed([lastUser.content]);
+        const top = await vectorStore!.topK(queryVec, topK);
+        retrievedChunks = top.map((t) => ({
+          notePath: t.notePath,
+          sectionTitle: t.sectionTitle,
+          score: t.score,
+          body: t.body,
+        }));
+        log.debug("retrieval.complete", {
+          persona: persona.name,
+          topK,
+          returned: retrievedChunks.length,
+        });
+      } catch (e) {
+        ragDegraded = true;
+        retrievedChunks = undefined;
+        log.warn("retrieval.degraded", {
+          persona: persona.name,
+          err: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
     const systemPrompt = buildSystemPrompt({
       persona,
       summary: conversationId ? await store.getSummary(conversationId) : null,
-      // retrievedChunks intentionally omitted in Commit 2
+      retrievedChunks,
     });
 
     const systemMsg: ChatMessage = { role: "system", content: systemPrompt };
@@ -135,6 +178,9 @@ export function createOrchestrator(deps: OrchestratorDeps) {
       elapsedMs,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
+      ragEnabled,
+      ragDegraded,
+      retrievedChunks: retrievedChunks?.length ?? 0,
     });
 
     // Persist both sides if memory is on.

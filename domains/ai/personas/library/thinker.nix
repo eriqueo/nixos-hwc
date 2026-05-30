@@ -4,4 +4,6 @@ import ./_defaults.nix // {
   maxTokens = 1024;
   description = "Multi-step reasoning via the 24B MoE on CPU — slower, deeper";
   useMemory = true;
+  useKnowledge = true;
+  knowledgeTopK = 10;     # MoE benefits from more context
 }
