@@ -25,9 +25,13 @@ export interface Chunk {
   mtime: number;
 }
 
+// Embedding model (nomic-embed-text) is trained at 2048 tokens. The
+// chars-per-token estimate is wobbly for code/structured content (can be
+// 2x off), so we target ~400 tokens = ~1600 chars per chunk to keep even
+// worst-case under the model's training context with headroom.
 const CHARS_PER_TOKEN = 4;
-const SOFT_CAP_TOKENS = 1024;
-const OVERLAP_TOKENS = 128;
+const SOFT_CAP_TOKENS = 400;
+const OVERLAP_TOKENS = 64;
 const SOFT_CAP_CHARS = SOFT_CAP_TOKENS * CHARS_PER_TOKEN;
 const OVERLAP_CHARS = OVERLAP_TOKENS * CHARS_PER_TOKEN;
 
