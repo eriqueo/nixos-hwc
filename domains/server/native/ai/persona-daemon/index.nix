@@ -62,9 +62,11 @@ in
           "--allow-write=${cfg.statePath},/var/cache/persona-daemon"
           "--allow-net"
           "--allow-env"
-          # @db/sqlite ships native SQLite as a .so fetched once into the
-          # cache. FFI is scoped to that cache dir.
-          "--allow-ffi=/var/cache/persona-daemon"
+          # @db/sqlite ships native SQLite via FFI. Path-scoping --allow-ffi
+          # gates dlopen but not subsequent function calls; unscoped is
+          # required. Mitigated by --allow-write being narrowly scoped, so
+          # the daemon can't drop a malicious .so into the cache dir.
+          "--allow-ffi"
           # Deno tries to write deno.lock next to main.ts; main.ts lives in
           # the Nix store (read-only). Deps are version-pinned in deno.jsonc
           # so the lockfile is redundant.
