@@ -551,6 +551,11 @@
     };
   };
 
+  # hwc-llm — persona CLI that wraps the two llama-server endpoints with a
+  # curated system-prompt library. Phase 1: stateless. See
+  # domains/ai/personas/README.md for the roadmap.
+  hwc.ai.personas.enable = true;
+
   # Hermes Agent — Nous Research's self-improving AI agent (OpenClaw successor)
   # Phase 1: install + dashboard route only. Discord gateway off until Eric
   # creates the bot at https://discord.com/developers/applications and encrypts
