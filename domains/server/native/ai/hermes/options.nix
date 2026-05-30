@@ -64,7 +64,7 @@ in
       description = ''
         External Caddy HTTPS port for the Hermes dashboard.
         Verified free against the active Caddy config (highest in-use: 22443;
-        brain-mcp reserves 23443 via default; sr-board reserves 24443).
+        brain-mcp reserves 23443 via default; sr_analyzer reserves 24443).
       '';
     };
 
