@@ -1,11 +1,14 @@
 import { Database } from "@db/sqlite";
 import { v1 as uuidv1 } from "@std/uuid";
-import type { ConversationStore } from "../ports/store.ts";
+import type { ConversationStore, VectorStore } from "../ports/store.ts";
 import type { ChatRole, ConversationMeta, Turn } from "../core/types.ts";
 import type { ClockPort } from "../ports/clock.ts";
+import type { Chunk } from "../core/chunking.ts";
+import type { ScoredChunk } from "../core/retrieval.ts";
+import { cosine } from "../core/retrieval.ts";
 import { PersonaDaemonError } from "../core/errors.ts";
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const MIGRATIONS = [
   // v0 → v1 — Commit 2 baseline
@@ -33,6 +36,23 @@ const MIGRATIONS = [
     );
     CREATE INDEX IF NOT EXISTS idx_turns_conv
       ON turns(conversation_id, created_at ASC);
+  `,
+
+  // v1 → v2 — Commit 3: vault chunks for RAG
+  `
+    CREATE TABLE IF NOT EXISTS chunks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      note_path TEXT NOT NULL,
+      section_title TEXT NOT NULL,
+      parent_section TEXT NOT NULL,
+      kind TEXT NOT NULL,            -- 'text' | 'code' | 'frontmatter' | 'moc'
+      char_start INTEGER NOT NULL,
+      char_end INTEGER NOT NULL,
+      body TEXT NOT NULL,
+      embedding BLOB NOT NULL,       -- Float32Array bytes; dim asserted by adapter
+      mtime INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(note_path);
   `,
 ];
 
@@ -235,4 +255,175 @@ interface TurnRow {
   content: string;
   token_count: number | null;
   created_at: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// VectorStore — chunks table + in-memory Float32Array[] mirror
+// ─────────────────────────────────────────────────────────────────────────
+
+interface ChunkRow {
+  id: number;
+  note_path: string;
+  section_title: string;
+  parent_section: string;
+  kind: string;
+  char_start: number;
+  char_end: number;
+  body: string;
+  embedding: Uint8Array;
+  mtime: number;
+}
+
+interface MirrorEntry {
+  chunk: Chunk;
+  vec: Float32Array;
+}
+
+function bytesToFloat32(bytes: Uint8Array): Float32Array {
+  // Copy to avoid alignment issues with the BLOB's underlying buffer.
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return new Float32Array(copy.buffer);
+}
+
+function float32ToBytes(vec: Float32Array): Uint8Array {
+  return new Uint8Array(vec.buffer, vec.byteOffset, vec.byteLength);
+}
+
+function rowToChunk(row: ChunkRow): Chunk {
+  return {
+    notePath: row.note_path,
+    sectionTitle: row.section_title,
+    parentSection: row.parent_section,
+    kind: row.kind as Chunk["kind"],
+    charStart: row.char_start,
+    charEnd: row.char_end,
+    body: row.body,
+    mtime: row.mtime,
+  };
+}
+
+export function createVectorStoreSqlite(args: {
+  db: Database;
+  expectedDim: number | null;       // null = don't enforce at startup
+}): VectorStore & { entries(): IterableIterator<MirrorEntry> } {
+  const { db, expectedDim } = args;
+  const mirror: MirrorEntry[] = [];
+
+  function withBusyRetry<T>(fn: () => T): T {
+    try {
+      return fn();
+    } catch (e) {
+      if (e instanceof Error && /SQLITE_BUSY|database is locked/i.test(e.message)) {
+        return fn();
+      }
+      throw e;
+    }
+  }
+
+  function rebuildMirrorSync(): void {
+    mirror.length = 0;
+    const rows = db.prepare(
+      `SELECT id, note_path, section_title, parent_section, kind,
+              char_start, char_end, body, embedding, mtime
+       FROM chunks`,
+    ).all<ChunkRow>();
+    for (const row of rows) {
+      const vec = bytesToFloat32(row.embedding);
+      if (expectedDim !== null && vec.length !== expectedDim) {
+        throw new PersonaDaemonError(
+          "CONFIG_INVALID",
+          `chunk ${row.id} has ${vec.length}-dim embedding but expectedDim=${expectedDim}`,
+          { notePath: row.note_path },
+        );
+      }
+      mirror.push({ chunk: rowToChunk(row), vec });
+    }
+  }
+
+  // Initial load.
+  rebuildMirrorSync();
+
+  return {
+    upsertNoteChunks(notePath, chunks, embeddings, mtime) {
+      if (chunks.length !== embeddings.length) {
+        throw new PersonaDaemonError(
+          "CONFIG_INVALID",
+          "upsertNoteChunks: chunks and embeddings length mismatch",
+          { notePath, chunks: chunks.length, embeddings: embeddings.length },
+        );
+      }
+      return Promise.resolve(withBusyRetry(() => {
+        const tx = db.transaction((_: null) => {
+          db.prepare("DELETE FROM chunks WHERE note_path = ?").run(notePath);
+          const insert = db.prepare(
+            `INSERT INTO chunks
+               (note_path, section_title, parent_section, kind,
+                char_start, char_end, body, embedding, mtime)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          );
+          for (let i = 0; i < chunks.length; i++) {
+            const c = chunks[i];
+            insert.run(
+              c.notePath, c.sectionTitle, c.parentSection, c.kind,
+              c.charStart, c.charEnd, c.body,
+              float32ToBytes(embeddings[i]), mtime,
+            );
+          }
+        });
+        tx(null);
+
+        // Update in-memory mirror to reflect this note's new chunks.
+        for (let i = mirror.length - 1; i >= 0; i--) {
+          if (mirror[i].chunk.notePath === notePath) mirror.splice(i, 1);
+        }
+        for (let i = 0; i < chunks.length; i++) {
+          mirror.push({ chunk: chunks[i], vec: embeddings[i] });
+        }
+      }));
+    },
+
+    deleteNote(notePath) {
+      return Promise.resolve(withBusyRetry(() => {
+        db.prepare("DELETE FROM chunks WHERE note_path = ?").run(notePath);
+        for (let i = mirror.length - 1; i >= 0; i--) {
+          if (mirror[i].chunk.notePath === notePath) mirror.splice(i, 1);
+        }
+      }));
+    },
+
+    topK(queryVec, k) {
+      const scored: ScoredChunk[] = [];
+      for (const { chunk, vec } of mirror) {
+        let s = cosine(queryVec, vec);
+        if (chunk.kind === "frontmatter") s *= 0.5;
+        scored.push({ ...chunk, score: s });
+      }
+      scored.sort((a, b) => b.score - a.score);
+      return Promise.resolve(scored.slice(0, k));
+    },
+
+    allMtimes() {
+      const rows = db.prepare(
+        "SELECT note_path, MIN(mtime) AS mtime FROM chunks GROUP BY note_path",
+      ).all<{ note_path: string; mtime: number }>();
+      const m = new Map<string, number>();
+      for (const r of rows) m.set(r.note_path, r.mtime);
+      return Promise.resolve(m);
+    },
+
+    chunkCount() {
+      const row = db.prepare("SELECT COUNT(*) AS n FROM chunks").get<{ n: number }>();
+      return Promise.resolve(row?.n ?? 0);
+    },
+
+    reloadMirror() {
+      rebuildMirrorSync();
+      return Promise.resolve();
+    },
+
+    entries() {
+      return mirror[Symbol.iterator]();
+    },
+  };
 }

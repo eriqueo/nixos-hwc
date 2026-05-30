@@ -54,6 +54,17 @@ in
       '';
     };
 
+    vaultPath = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = paths.brain.server-replica or null;
+      description = ''
+        Path to the brain vault for RAG indexing. Defaults to
+        hwc.paths.brain.server-replica (= /mnt/vaults/brain on hwc-server).
+        Set to null to disable RAG entirely; useKnowledge personas then
+        receive no retrieval context (chat still works).
+      '';
+    };
+
     chatBackends = {
       gpu.url = lib.mkOption {
         type = lib.types.str;

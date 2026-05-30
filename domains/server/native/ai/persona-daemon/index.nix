@@ -46,6 +46,7 @@ in
         PERSONA_DAEMON_GPU_URL      = cfg.chatBackends.gpu.url;
         PERSONA_DAEMON_CPU_URL      = cfg.chatBackends.cpu.url;
         PERSONA_DAEMON_EMBED_URL    = cfg.chatBackends.embed.url;
+        PERSONA_DAEMON_VAULT_PATH   = toString (cfg.vaultPath or "");
         PERSONA_DAEMON_MAX_RECENT   = toString cfg.maxRecentTurns;
         PERSONA_DAEMON_KEEP_RECENT  = toString cfg.keepRecentTurns;
         PERSONA_DAEMON_LOG_LEVEL    = cfg.logLevel;
@@ -104,6 +105,86 @@ in
         ];
       };
     };
+
+    #========================================================================
+    # SYSTEMD PATH UNIT — debounced reindex trigger on vault changes
+    # PathChanged fires when any file under cfg.vaultPath is modified;
+    # TriggerLimitIntervalSec collapses bursts of edits into one
+    # reindex call per minute.
+    #========================================================================
+    systemd.paths = lib.mkIf (cfg.vaultPath != null) {
+      persona-daemon-reindex = {
+        description = "Trigger persona-daemon reindex on vault changes";
+        wantedBy = [ "multi-user.target" ];
+        pathConfig = {
+          PathChanged = toString cfg.vaultPath;
+          TriggerLimitIntervalSec = "60s";
+          TriggerLimitBurst = 1;
+        };
+      };
+    };
+
+    systemd.services.persona-daemon-reindex = lib.mkIf (cfg.vaultPath != null) {
+      description = "POST /_internal/reindex to persona-daemon";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.curl}/bin/curl -fsS -X POST -H 'content-type: application/json' -d '{}' http://${cfg.bindAddr}:${toString cfg.port}/_internal/reindex";
+        User = lib.mkForce cfg.user;
+        Group = "users";
+      };
+    };
+
+    #========================================================================
+    # CLI — persona-admin reindex [--full|--note <path>]
+    #========================================================================
+    environment.systemPackages = [
+      (pkgs.writeShellApplication {
+        name = "persona-admin";
+        runtimeInputs = [ pkgs.curl pkgs.jq ];
+        text = ''
+          base="http://${cfg.bindAddr}:${toString cfg.port}"
+          case "''${1:-}" in
+            reindex)
+              shift
+              full="false"
+              note=""
+              while [ $# -gt 0 ]; do
+                case "$1" in
+                  --full) full="true"; shift ;;
+                  --note) note="$2"; shift 2 ;;
+                  *) echo "unknown flag: $1" >&2; exit 2 ;;
+                esac
+              done
+              body=$(jq -n --argjson full "$full" --arg note "$note" \
+                '{full: $full} | if ($note | length) > 0 then . + {notePath: $note} else . end')
+              curl -fsS -X POST -H 'content-type: application/json' -d "$body" \
+                "$base/_internal/reindex" | jq
+              ;;
+            health|status)
+              curl -fsS "$base/_internal/health" | jq
+              ;;
+            conversations)
+              shift
+              persona="''${1:-}"
+              if [ -n "$persona" ]; then
+                curl -fsS "$base/_internal/conversations?persona=$persona&limit=50" | jq
+              else
+                curl -fsS "$base/_internal/conversations?limit=50" | jq
+              fi
+              ;;
+            *)
+              cat >&2 <<'EOF'
+usage:
+  persona-admin reindex [--full] [--note <vault-relative-path>]
+  persona-admin health
+  persona-admin conversations [<persona>]
+EOF
+              exit 2
+              ;;
+          esac
+        '';
+      })
+    ];
 
     #========================================================================
     # VALIDATION

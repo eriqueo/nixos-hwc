@@ -1,10 +1,10 @@
 import type { ChatRole, ConversationMeta, Turn } from "../core/types.ts";
+import type { Chunk } from "../core/chunking.ts";
+import type { ScoredChunk } from "../core/retrieval.ts";
 
 export interface ConversationStore {
-  /** Create a new conversation row; returns its uuid. */
   create(personaId: string, title?: string): Promise<string>;
 
-  /** Append a turn (no summarization logic — pure persistence). */
   appendTurn(args: {
     conversationId: string;
     role: ChatRole;
@@ -12,25 +12,39 @@ export interface ConversationStore {
     tokenCount: number | null;
   }): Promise<Turn>;
 
-  /** Return the N most-recent turns in ascending creation order. */
   getRecent(conversationId: string, n: number): Promise<Turn[]>;
-
-  /** Return the conversation summary, if any was set. */
   getSummary(conversationId: string): Promise<string | null>;
-
-  /** Set the summary and mark the given turn ids as superseded. */
   setSummary(
     conversationId: string,
     summary: string,
     droppedTurnIds: string[],
   ): Promise<void>;
-
-  /** Whether the conversation row exists. */
   exists(conversationId: string): Promise<boolean>;
-
-  /** Return conversation metadata; null if not found. */
   getMeta(conversationId: string): Promise<ConversationMeta | null>;
-
-  /** Newest-first list (optionally filtered by persona). */
   list(opts: { personaId?: string; limit: number }): Promise<ConversationMeta[]>;
+}
+
+export interface VectorStore {
+  /** Replace all chunks for a note (delete + insert in a transaction). */
+  upsertNoteChunks(
+    notePath: string,
+    chunks: Chunk[],
+    embeddings: Float32Array[],
+    mtime: number,
+  ): Promise<void>;
+
+  /** Delete every chunk for the given note path. */
+  deleteNote(notePath: string): Promise<void>;
+
+  /** Top-K cosine over all live chunks (with frontmatter de-weighting). */
+  topK(queryVec: Float32Array, k: number): Promise<ScoredChunk[]>;
+
+  /** path → mtime map; used by the indexer to decide what changed. */
+  allMtimes(): Promise<Map<string, number>>;
+
+  /** Total chunk count — useful for /metrics and quick smoke tests. */
+  chunkCount(): Promise<number>;
+
+  /** Force a full re-load of the in-memory vector mirror from SQLite. */
+  reloadMirror(): Promise<void>;
 }
