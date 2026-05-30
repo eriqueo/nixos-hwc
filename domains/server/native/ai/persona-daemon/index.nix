@@ -62,6 +62,9 @@ in
           "--allow-write=${cfg.statePath},/var/cache/persona-daemon"
           "--allow-net"
           "--allow-env"
+          # @db/sqlite ships native SQLite as a .so fetched once into the
+          # cache. FFI is scoped to that cache dir.
+          "--allow-ffi=/var/cache/persona-daemon"
           # Deno tries to write deno.lock next to main.ts; main.ts lives in
           # the Nix store (read-only). Deps are version-pinned in deno.jsonc
           # so the lockfile is redundant.
