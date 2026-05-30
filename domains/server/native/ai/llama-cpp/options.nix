@@ -158,21 +158,21 @@ in
           port = 11502;
           modelFile = "nomic-embed-text-v1.5.Q5_K_M.gguf";
           modelUrl = "${nomicBase}/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q5_K_M.gguf";
-          contextSize = 8192;
+          # nomic-embed-text was trained at 2048 tokens; exceeding causes
+          # GGML_ASSERT crashes in slot mgmt. Keep n_ctx == training context.
+          contextSize = 2048;
           gpuLayers = 999;
           threads = null;
           extraArgs = [
             "--embeddings" "--pooling" "mean"
-            # Embedding workloads batch many inputs per request. The default
-            # n_ubatch=512 aborts (GGML_ASSERT) when a request's total tokens
-            # exceed it. Raise to 8192 (= contextSize); the model fits and the
-            # GPU has headroom.
-            "--ubatch-size" "8192"
-            "--batch-size" "8192"
-            # Single slot so the daemon's per-request batches process serially
-            # within llama-server (parallel slots split a batch across them and
-            # we hit the n_ubatch limit again).
+            # Batch / micro-batch sized to fit several chunks comfortably.
+            "--ubatch-size" "4096"
+            "--batch-size" "4096"
+            # Force single slot. --parallel 1 alone is silently overridden
+            # by kv_unified default (log: "setting n_parallel = 4 and
+            # kv_unified = true"). --no-kv-unified lets --parallel 1 stick.
             "--parallel" "1"
+            "--no-kv-unified"
           ];
         };
       };
