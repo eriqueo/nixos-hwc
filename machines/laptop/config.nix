@@ -208,6 +208,7 @@
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-server" ]; };
+      "apps"         = { path = "/home/eric/apps";         devices = [ "hwc-server" ]; };
       "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-server" ]; };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-server" ]; };
     };
