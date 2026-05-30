@@ -109,15 +109,35 @@ deno task dev
 
 ## Roadmap
 
-- ✅ **Commit 2** (this) — conversations only. `useMemory`-aware persistence.
-- ⏳ **Commit 3** — `VectorStore`, vault indexer, `useKnowledge`-aware RAG;
+- ✅ **Commit 2** — conversations only. `useMemory`-aware persistence.
+- ✅ **Commit 3** — `VectorStore`, vault indexer, `useKnowledge`-aware RAG;
   `POST /_internal/reindex` + systemd path unit; `persona-admin reindex` CLI.
-- ⏳ **Commit 4** — MCP shells (stdio + HTTP at `/mcp`), Caddy route 28443,
-  Prometheus `/metrics` + scrape + `PersonaDaemonReindexStale` alert,
-  vault writeback via brain-mcp's new `inbox_capture` tool.
+- ✅ **Commit 4** — MCP shell (HTTP at `/mcp`), Caddy route 28443,
+  Prometheus `/metrics` + scrape + `PersonaDaemonReindexStale` /
+  `PersonaDaemonBackendDown` alerts, vault writeback via brain-mcp's
+  new `inbox_capture` tool.
+- 🔭 **Later** — real conversation summarization (currently a truncation
+  marker), MCP stdio shell for Hermes skill provider integration, ramp
+  `knowledgeTopK` per-persona based on actual retrieval quality, optional
+  reranker over the top 50 cosine candidates.
 
 ## Changelog
 
+- 2026-05-30: Commit 4 — MCP HTTP shell at `/mcp` (5 tools: chat, recall,
+  list_personas, list_conversations, inbox_capture). Prometheus `/metrics`
+  endpoint + scrape registration. Caddy route 28443 → 127.0.0.1:11550.
+  Background backend prober (30s) populates `persona_daemon_backend_up`.
+  brain-mcp gained 7th tool `inbox_capture`; daemon's `vault-writer-brain-mcp`
+  adapter is the single writer to `_llm-inbox/<YYYY-MM-DD>/<HHMMSS>-<slug>.md`
+  via bearer-auth JSON-RPC to brain-mcp (charter single-writer principle).
+- 2026-05-29: Commit 3 — RAG over the brain vault. `VectorStore` (Float32
+  BLOBs + WAL + in-memory mirror loaded at startup), markdown chunker
+  (H2 boundaries / 400-token soft cap / frontmatter+code+MOC edge cases),
+  notes-fs adapter (skips .obsidian/.trash/etc), brute-force cosine with
+  frontmatter de-weighting. systemd.paths watches the vault (60s debounce)
+  → POST /_internal/reindex. `persona-admin reindex [--full|--note]` CLI.
+  Embed batch tuned for llama.cpp's slot mgmt (chunks well under model's
+  2048 training context after several iterations).
 - 2026-05-29: Commit 2 — initial module. Deno HTTP daemon (`/v1/chat/completions`,
   `/v1/models`, `/healthz`, `/_internal/conversations`). SQLite WAL store
   for conversations. Persona schema extended with `useMemory`/`useKnowledge`/
