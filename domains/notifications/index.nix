@@ -151,6 +151,7 @@ in
     ./gotify/igotify.nix             # iOS push notification relay
     ./send/gotify.nix                # hwc-gotify-send CLI tool
     ./health.nix                     # webhook health check timer
+    ./notify/index.nix               # hwc-notify (Phase 0 scaffold, Phase 1 impl)
   ];
 
   #==========================================================================
