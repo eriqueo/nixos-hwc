@@ -305,11 +305,19 @@
     enable = true;
     send.cli.enable = true;  # CLI tool for manual alerts
 
-    # hwc-notify — hexagonal TS dispatcher (Phase 1, in progress).
-    # Phase 1.1: minimal /health server. Coexists with the existing gotify
-    # path during cutover. See ~/.claude/plans/hashed-snacking-crab.md.
+    # hwc-notify — hexagonal TS dispatcher (Phase 1 complete 2026-05-31).
+    # Primary alert / lead notification path. Replaces the n8n
+    # home:admin:alert-manager workflow. See README.md in
+    # domains/notifications/notify and the architecture note in
+    # wiki/nixos/hwc-notify-architecture.md.
     notify.enable = true;
   };
+
+  # Unified lead pipeline (Phase 2, in progress 2026-05-31).
+  # Phase 2.1: minimal /health server while subsequent chunks land
+  # POST /leads, JT graph creation, Postgres write, hwc-notify ping,
+  # customer email, HMAC auth, MCP tool.
+  hwc.business.leads.enable = true;
 
   # Alert sources — what to monitor (thresholds, triggers)
   hwc.monitoring.alerts = {
