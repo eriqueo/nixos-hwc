@@ -45,23 +45,21 @@
   # Uptime Kuma - Uptime monitoring
   hwc.monitoring.uptime-kuma.enable = lib.mkDefault true;
 
-  # Alertmanager — alert routing to multiple sinks (n8n being retired)
+  # Alertmanager — alert routing to:
+  #   hwc-notify     : hexagonal dispatcher (Discord + SMTP + future channels)
+  #   gotify-bridge  : iOS push relay (kept independent so Bridge outages
+  #                    don't lose phone alerts)
+  #
+  # The n8n `home:admin:alert-manager` workflow was deactivated
+  # 2026-05-31 after Phase 1.6 cutover. The workflow row is preserved in
+  # n8n's DB as the rollback path (re-activate + re-add the receiver
+  # entry below to restore the old path). Don't delete it.
   hwc.monitoring.alertmanager = {
     enable = lib.mkDefault true;
     webhookReceivers = [
-      # New hexagonal dispatcher (Phase 1.6 cutover target).
-      # Added 2026-05-31 as a parallel sink alongside the existing two.
-      # Once verified via real Prometheus firings, n8n-webhook below
-      # will be removed and the n8n home:admin:alert-manager workflow
-      # deactivated.
       {
         name = "hwc-notify";
         url = "http://localhost:11600/webhook/alertmanager";
-        sendResolved = true;
-      }
-      {
-        name = "n8n-webhook";
-        url = "https://hwc.ocelot-wahoo.ts.net:2443/webhook/alertmanager";
         sendResolved = true;
       }
       {
