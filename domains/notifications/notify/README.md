@@ -42,13 +42,60 @@ notify/
 └── src/               # Phase 1: TypeScript service (core / adapters / shells)
 ```
 
+## Runtime
+
+Node 22 with `--experimental-strip-types`. No `npm install` or build step at deploy time. TS source is bundled into the Nix store via `lib.sources.sourceFilesBySuffices` and Node strips type annotations at parse. `package.json` + the on-disk `node_modules/` exist only as type-only metadata for IDE typechecking and are ignored at runtime.
+
+Same pattern as `domains/server/native/ai/hermes/parts/bootstrap`.
+
+## Editing the source
+
+After editing any `.ts` file:
+
+```bash
+cd domains/notifications/notify/parts/src
+npx tsc --noEmit            # typecheck; no output = clean
+sudo systemctl restart hwc-notify
+```
+
+`nixos-rebuild switch` picks up `.ts` changes automatically because the module bundles the source via `sourceFilesBySuffices`. The restart is needed because the systemd unit's `ExecStart` references a specific Nix store path that only changes on rebuild.
+
 ## Status
 
 | Phase | State | What lands |
 |-------|-------|------------|
-| 0 | ✅ scaffolded | This module evaluates clean when disabled; enabling it asserts until Phase 1 lands. |
-| 1 | ⬜ planned | TS core, Discord + SMTP adapters, HTTP/CLI/MCP shells, audit log, cutover from `alert-manager` workflow. |
+| 0 | ✅ scaffolded | Charter module + namespace + empty src/ tree. |
+| 1.1 | ✅ deployed | Node HTTP server, `GET /health`, structured stderr logging, systemd unit with hardening, Caddy port-mode route. |
+| 1.2 | ⬜ planned | `POST /notify` + Zod schema + Discord adapter wired to `/run/agenix/discord-webhook-hwc-alerts`. |
+| 1.3 | ⬜ planned | Routes + channels as data (`parts/routes.nix`, `parts/channels.nix`). |
+| 1.4 | ⬜ planned | SMTP adapter via Proton Bridge. |
+| 1.5 | ⬜ planned | Audit log (SQLite) + circuit breaker per channel. |
+| 1.6 | ⬜ planned | `POST /webhook/alertmanager` + Alertmanager cutover. |
+| 1.7 | ⬜ planned | `hwc-notify` CLI shim + MCP tool registration. |
+
+## File layout
+
+```
+notify/
+├── README.md
+├── index.nix                # Charter Law 6 module + systemd unit + Caddy route
+├── options.nix              # hwc.notifications.notify.* schema
+└── parts/
+    └── src/                 # IDE typecheck workspace; runtime reads from Nix store
+        ├── package.json     # type-only devDeps
+        ├── tsconfig.json    # noEmit, allowImportingTsExtensions
+        └── src/
+            ├── main.ts      # Entry point — HTTP server
+            ├── config.ts    # Late-binding env loader
+            ├── core/
+            │   └── errors.ts
+            ├── ports/
+            │   └── log.ts
+            └── adapters/
+                └── log-stderr.ts
+```
 
 ## Changelog
 
-- **2026-05-31**: Phase 0 scaffold. Module structure + enable option only; no implementation yet.
+- **2026-05-31** (Phase 1.1): Wired the real Node runtime. Minimal HTTP server (`GET /health` only), structured JSON logging to stderr, systemd unit with full Charter hardening (NoNewPrivileges, ProtectSystem strict, etc.), Caddy port-mode route on 29443. Internal port 11600. Service evaluates clean both enabled and disabled.
+- **2026-05-31** (Phase 0): Initial scaffold. Module structure + enable option only; no implementation.
