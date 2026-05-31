@@ -79,7 +79,8 @@
 
     ssh.enable = true;
     tailscale.enable = true;
-    tailscale.funnel.enable = false;
+    # tailscale.funnel.* options removed when Funnel was retired in favor of
+    # Cloudflare Tunnel (2026-05-22). Default = disabled; no setting needed.
     firewall.level = lib.mkForce "server";
     firewall.extraTcpPorts = [ 8096 7359 2283 4533 ];
     firewall.extraUdpPorts = [ 7359 ];
