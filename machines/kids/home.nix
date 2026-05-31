@@ -10,7 +10,11 @@
     useGlobalPkgs = true;
     useUserPackages = true;
 
-    users.eric = {
+    # users.eric is declared as a function so the inner block gets HM's
+    # extended lib (with lib.hm.dag.entryAfter, etc.) instead of capturing
+    # the system-scope lib from the outer module. Fixes `lib.hm missing` on
+    # the exodosFlatpaks activation below.
+    users.eric = { lib, pkgs, ... }: {
       imports = [
         ../../domains/home/index.nix
       ];
@@ -24,11 +28,17 @@
           kitty.enable = true;
           yazi.enable = true;
           hyprland.enable = true;
-          firefox.enable = true;
+          # Browser: was firefox.enable = true (copy-paste from prior gaming
+          # config). domains/home/apps/firefox/ never landed in this repo —
+          # the codebase uses LibreWolf as the daily Firefox-engine browser.
+          # Swapped 2026-05-31 to a module that actually exists.
+          librewolf.enable = true;
         };
       };
 
-      hwc.mail.enable = false;
+      # Kids machine doesn't import domains/mail, so hwc.mail.* options are
+      # not declared in scope. Previous `hwc.mail.enable = false;` was a
+      # no-op intent that errors at module merge — removed 2026-05-31.
 
       # RetroArch with a curated core set for common retro systems
       home.packages = [
