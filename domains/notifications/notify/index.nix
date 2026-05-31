@@ -2,16 +2,12 @@
 #
 # hwc-notify — hexagonal notification dispatcher.
 #
-# Phase 1.1: minimal HTTP server with /health only. Subsequent chunks
-# add channel adapters, routing, /notify endpoint, audit log, CLI, MCP.
-#
-# Deployment shape: pkgs.buildNpmPackage builds a hermetic derivation
-# from parts/src/ — every nixos-rebuild produces an identical store
-# path containing dist/*.js + a fully populated node_modules/. No
-# `npm install` at deploy time, no network, no developer manual-build
-# step. Reproducibility is enforced by `npmDepsHash` being content-
-# pinned against package-lock.json — changing deps means regenerating
-# the hash (see README for the workflow).
+# Phase 1.3: data-driven channels + routes. Channel registry and routing
+# table live in parts/channels.nix and parts/routes.nix as plain Nix
+# data; the module resolves agenix `secretRef`s into `secretFile` paths,
+# serialises the whole thing to JSON, and passes the path to the runtime
+# via HWC_NOTIFY_RUNTIME_CONFIG_FILE. Adding a channel or routing rule
+# is now a Nix-only change.
 #
 # See ~/.claude/plans/hashed-snacking-crab.md for the full design.
 
@@ -20,20 +16,53 @@
 let
   cfg = config.hwc.notifications.notify;
 
-  # Hermetic Nix-built package. Reads parts/src/{package.json,package-lock.json}
-  # to fetch deps offline (against npmDepsHash) and runs `npm run build` →
-  # produces dist/*.js. Output lives at:
-  #   ${hwc-notify-pkg}/lib/node_modules/hwc-notify/
-  #     ├── dist/         (compiled JS + sourcemaps)
-  #     ├── node_modules/ (runtime deps; zod, etc.)
-  #     └── package.json
+  # ────────────────────────────────────────────────────────────────────
+  # Resolve channel rows into the runtime-facing shape.
+  # secretRef (an agenix secret name) becomes secretFile (the absolute
+  # /run/agenix/<name> path). The TS service never sees the ref name.
+  # ────────────────────────────────────────────────────────────────────
+  resolveChannel = ch:
+    let
+      base = {
+        inherit (ch) id name adapter;
+      };
+      discordParams = {
+        # username/timeoutMs may or may not be set; the Zod schema in
+        # runtime-config.ts has sensible defaults for both.
+        username  = ch.params.username  or "HWC Notify";
+        timeoutMs = ch.params.timeoutMs or 5000;
+        secretFile = config.age.secrets.${ch.secretRef}.path;
+      };
+    in
+      if ch.adapter == "discord" then
+        base // { params = discordParams; }
+      else
+        # log-only: no secret, no params (Zod defaults to {})
+        base // { params = {}; };
+
+  resolvedChannels = map resolveChannel cfg.channels;
+
+  # ────────────────────────────────────────────────────────────────────
+  # Build the runtime-config JSON and stick it in the Nix store. The
+  # path lives in the store, is immutable, and rotates on every rebuild
+  # — exactly the right shape for a config file the service reads once
+  # at startup.
+  # ────────────────────────────────────────────────────────────────────
+  runtimeConfigJson = builtins.toJSON {
+    channels        = resolvedChannels;
+    routes          = cfg.routes;
+    defaultChannels = cfg.defaultChannels;
+  };
+
+  runtimeConfigFile = pkgs.writeText "hwc-notify-runtime-config.json" runtimeConfigJson;
+
+  # ────────────────────────────────────────────────────────────────────
+  # Hermetic Nix-built TS service.
+  # ────────────────────────────────────────────────────────────────────
   hwc-notify-pkg = pkgs.buildNpmPackage {
     pname = "hwc-notify";
     version = "0.1.0";
 
-    # Bundle only the files buildNpmPackage needs. node_modules + dist
-    # are excluded from the dev tree by .gitignore and would just be
-    # rebuilt anyway.
     src = lib.cleanSourceWith {
       src = ./parts/src;
       filter = path: type:
@@ -41,35 +70,17 @@ let
         in base != "node_modules" && base != "dist" && base != ".gitignore";
     };
 
-    # First-time setup: leave as lib.fakeHash, run nixos-rebuild, copy the
-    # "got: sha256-…" line from the error into here, rebuild succeeds.
-    # Subsequent dep updates require the same dance (a hash mismatch is
-    # the build telling you the lockfile changed).
     npmDepsHash = "sha256-w76KLDIujl5jpChGB5hE1mgKLg1hGQeijtMA0ke0/GQ=";
-
-    # npm run build → tsc → dist/. Default `npmBuildScript = "build"`,
-    # so this is the existing behavior — declared explicitly for clarity.
     npmBuildScript = "build";
-
-    # Disable npm version-tag checking. We don't publish to npm, so the
-    # name@version aren't expected to be reachable on the registry.
     dontNpmPrune = false;
   };
 
   mainJs = "${hwc-notify-pkg}/lib/node_modules/hwc-notify/dist/main.js";
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # hwc-notify-deps-update — automate the npmDepsHash dance
-  #
-  # `buildNpmPackage` content-pins package-lock.json via npmDepsHash. Any
-  # `npm install/update` makes the hash stale and the next nixos-rebuild
-  # fails. This CLI runs prefetch-npm-deps on the current lockfile, patches
-  # the hash in this index.nix, and stages the touched files for commit.
-  #
-  # Anchored on config.hwc.paths.nixos (Charter Law 3 — no hardcoded paths
-  # outside domains/paths/). When hwc-leads or another service needs the
-  # same flow, lift the body into a parameterised helper.
-  # ──────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────
+  # Wrapper CLI — automates the npmDepsHash dance after npm install.
+  # See wiki/nixos/nixos-buildnpmpackage-hash-workflow.md for the why.
+  # ────────────────────────────────────────────────────────────────────
   notify-deps-update = pkgs.writeShellApplication {
     name = "hwc-notify-deps-update";
     runtimeInputs = [
@@ -88,7 +99,6 @@ let
       pkg_json="$service_dir/parts/src/package.json"
       index_nix="$service_dir/index.nix"
 
-      # ── preconditions ──
       [ -f "$lockfile" ]  || { echo "error: lockfile missing: $lockfile" >&2; exit 1; }
       [ -f "$pkg_json" ]  || { echo "error: package.json missing: $pkg_json" >&2; exit 1; }
       [ -f "$index_nix" ] || { echo "error: index.nix missing: $index_nix" >&2; exit 1; }
@@ -98,18 +108,12 @@ let
         exit 1
       fi
 
-      # ── compute new hash ──
       echo "[deps-update] reading $lockfile"
       new_hash=$(prefetch-npm-deps "$lockfile")
       echo "[deps-update] new npmDepsHash: $new_hash"
 
-      # ── patch index.nix in-place ──
-      # base64 hashes contain + / = which are sed metacharacters; using |
-      # as delim sidesteps slash collisions, and the rest are inert in
-      # the replacement RHS.
       sed -i "s|npmDepsHash = \"sha256-[A-Za-z0-9+/=]*\"|npmDepsHash = \"$new_hash\"|" "$index_nix"
 
-      # ── stage for commit ──
       git -C "$nixos_root" add \
         "$service_rel/index.nix" \
         "$service_rel/parts/src/package.json" \
@@ -127,12 +131,21 @@ Next:
 MSG
     '';
   };
+
+  # Channel IDs declared in cfg.channels — used for cross-ref assertions.
+  declaredChannelIds = map (c: c.id) cfg.channels;
+
+  # Channel IDs referenced anywhere a route/default points.
+  referencedChannelIds =
+    cfg.defaultChannels
+    ++ lib.concatMap (r: r.channels) cfg.routes;
+
+  unknownReferencedIds =
+    lib.subtractLists declaredChannelIds referencedChannelIds;
 in
 {
-  # OPTIONS
   imports = [ ./options.nix ];
 
-  # IMPLEMENTATION
   config = lib.mkIf cfg.enable {
 
     #========================================================================
@@ -145,21 +158,13 @@ in
       wantedBy = [ "multi-user.target" ];
 
       environment = {
-        HWC_NOTIFY_BIND_ADDR  = cfg.bindAddr;
-        HWC_NOTIFY_PORT       = toString cfg.port;
-        HWC_NOTIFY_STATE_DIR  = cfg.statePath;
-        HWC_NOTIFY_LOG_LEVEL  = cfg.logLevel;
+        HWC_NOTIFY_BIND_ADDR           = cfg.bindAddr;
+        HWC_NOTIFY_PORT                = toString cfg.port;
+        HWC_NOTIFY_STATE_DIR           = cfg.statePath;
+        HWC_NOTIFY_LOG_LEVEL           = cfg.logLevel;
+        HWC_NOTIFY_RUNTIME_CONFIG_FILE = "${runtimeConfigFile}";
 
-        # Channel secret file paths (resolved through agenix). When the
-        # option is null the env var is omitted and the runtime falls back
-        # to log-only for that channel — visible warning at startup.
-      } // lib.optionalAttrs (cfg.channels.discordAlerts.secretRef != null) {
-        HWC_NOTIFY_DISCORD_ALERTS_FILE =
-          config.age.secrets.${cfg.channels.discordAlerts.secretRef}.path;
-      } // {
         PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
-        # NODE_ENV=production silences the Node performance hint and gives
-        # well-behaved libs their fast paths.
         NODE_ENV = "production";
       };
 
@@ -174,7 +179,7 @@ in
         StateDirectory = "hwc/notify";
         StateDirectoryMode = "0750";
 
-        # Hardening — same set as persona-daemon / brain-mcp.
+        # Hardening — mirrors persona-daemon / brain-mcp.
         NoNewPrivileges = true;
         PrivateTmp = true;
         PrivateDevices = true;
@@ -219,18 +224,30 @@ in
         message = "hwc.notifications.notify.port and reverseProxyPort must differ.";
       }
       {
-        # If a secretRef is configured, the secret declaration must exist —
-        # otherwise the systemd unit env eval crashes with a confusing
-        # "attribute missing" trace.
+        # Every Discord channel needs a secretRef AND the named agenix
+        # secret must exist. Catch typos at eval time, not at runtime.
         assertion =
-          cfg.channels.discordAlerts.secretRef == null
-          || (config.age.secrets ? ${cfg.channels.discordAlerts.secretRef});
+          lib.all
+            (ch:
+              ch.adapter != "discord"
+              || (ch.secretRef != null
+                  && (config.age.secrets ? ${ch.secretRef})))
+            cfg.channels;
         message = ''
-          hwc.notifications.notify.channels.discordAlerts.secretRef =
-          "${toString cfg.channels.discordAlerts.secretRef}" but no
-          matching agenix secret is declared in
-          domains/secrets/declarations/services.nix. Either declare the
-          secret or set the secretRef to null to disable the channel.
+          One or more discord channels in hwc.notifications.notify.channels
+          is missing a valid secretRef. Each row with adapter = "discord"
+          must have secretRef set to an agenix secret name declared in
+          domains/secrets/declarations/services.nix.
+        '';
+      }
+      {
+        # Every channel id referenced in routes/defaultChannels must be
+        # declared in cfg.channels. Cross-ref check at eval time.
+        assertion = unknownReferencedIds == [];
+        message = ''
+          hwc.notifications.notify.routes / .defaultChannels reference
+          channel id(s) not declared in .channels: ${toString unknownReferencedIds}
+          Declare them in cfg.channels or remove the references.
         '';
       }
     ];

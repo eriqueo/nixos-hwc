@@ -1,22 +1,18 @@
 /**
  * hwc-notify — entry point.
  *
- * Phase 1.2:
- *   GET  /health                — liveness probe
- *   POST /notify                — schema-validated dispatch
+ * Phase 1.3 wiring:
+ *   1. loadConfig()            — env + runtime-config.json
+ *   2. buildChannels()         — channel instances from the data table
+ *   3. mounted shells:
+ *        GET  /health          — liveness, with channel + route summary
+ *        POST /notify          — schema-validated, routed dispatch
  *
- * Hexagonal wiring at startup:
- *   1. loadConfig()             — env + secret files
- *   2. build adapters            — Discord + LogOnly today
- *   3. build the channel list   — for now, hand-wired; routing data
- *                                  arrives in Phase 1.3
- *   4. listen
- *
- * Phase 1.3 will introduce a router that picks a per-notification
- * channel subset from declarative routing rules; for now /notify
- * sends to every configured channel.
+ * Adding a channel or routing rule is now a Nix-only change: append to
+ * parts/channels.nix or parts/routes.nix, `nixos-rebuild switch`, done.
  */
 
+import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { loadConfig, type ServiceConfig } from "./config.js";
 import { makeStderrLogger } from "./adapters/log-stderr.js";
@@ -24,10 +20,11 @@ import { makeDiscordChannel } from "./adapters/channel-discord.js";
 import { makeLogOnlyChannel } from "./adapters/channel-logonly.js";
 import { safeParseNotificationInput } from "./schemas/notification.js";
 import { dispatch } from "./core/dispatch.js";
+import { route } from "./core/router.js";
 import type { Channel } from "./ports/channel.js";
 import type { Logger } from "./ports/log.js";
+import type { ChannelConfig } from "./schemas/runtime-config.js";
 
-/** Body cap on POST /notify — generous but bounded. */
 const MAX_BODY_BYTES = 32 * 1024;
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -68,38 +65,68 @@ function writeJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(payload);
 }
 
-/** Pick HTTP status from the dispatch result. */
 function statusFromDispatch(attempted: number, succeeded: number): number {
-  if (attempted === 0) return 202; // accepted, nowhere to send (config issue, not a client error)
+  if (attempted === 0) return 202;
   if (succeeded === attempted) return 200;
   if (succeeded === 0) return 502;
-  return 207; // multi-status: partial success
+  return 207;
 }
 
-function buildChannels(config: ServiceConfig, log: Logger): Channel[] {
-  const channels: Channel[] = [];
+/** Read the secret file for a discord channel; trim trailing whitespace. */
+function loadSecret(filepath: string): string {
+  return readFileSync(filepath, "utf8").replace(/\s+$/u, "");
+}
 
-  if (config.discordAlertsWebhookUrl) {
-    channels.push(
-      makeDiscordChannel({
-        id: "discord-hwc-alerts",
-        name: "#hwc-alerts (Discord)",
-        username: "HWC Alerts",
-        webhookUrl: config.discordAlertsWebhookUrl,
-      }),
-    );
-  } else {
-    log.warn("discord-hwc-alerts not wired (HWC_NOTIFY_DISCORD_ALERTS_FILE missing); falling back to log-only");
-    channels.push(
-      makeLogOnlyChannel({
-        id: "discord-hwc-alerts",
-        name: "#hwc-alerts (DISABLED — log-only)",
-        log: log.child({ channel: "discord-hwc-alerts" }),
-      }),
-    );
+/** Materialize one ChannelConfig into a Channel instance. */
+function buildChannel(cfg: ChannelConfig, log: Logger): Channel {
+  if (cfg.adapter === "discord") {
+    const webhookUrl = loadSecret(cfg.params.secretFile);
+    return makeDiscordChannel({
+      id: cfg.id,
+      name: cfg.name,
+      webhookUrl,
+      username: cfg.params.username,
+      timeoutMs: cfg.params.timeoutMs,
+    });
   }
+  // log-only
+  return makeLogOnlyChannel({
+    id: cfg.id,
+    name: cfg.name,
+    log: log.child({ channel: cfg.id }),
+  });
+}
 
-  return channels;
+/** Build all channels and return them keyed by id for routing lookup. */
+function buildChannelMap(
+  config: ServiceConfig,
+  log: Logger,
+): Map<string, Channel> {
+  const map = new Map<string, Channel>();
+  for (const cfg of config.runtimeConfig.channels) {
+    try {
+      map.set(cfg.id, buildChannel(cfg, log));
+    } catch (err) {
+      // A channel that won't construct (e.g., secret file unreadable)
+      // shouldn't crash the whole service — fall back to log-only so
+      // routes referencing this id still succeed at the contract level.
+      const reason = err instanceof Error ? err.message : String(err);
+      log.error("channel build failed; substituting log-only", {
+        channelId: cfg.id,
+        adapter: cfg.adapter,
+        err: reason,
+      });
+      map.set(
+        cfg.id,
+        makeLogOnlyChannel({
+          id: cfg.id,
+          name: `${cfg.name} (FAILED INIT — log-only)`,
+          log: log.child({ channel: cfg.id, degraded: true }),
+        }),
+      );
+    }
+  }
+  return map;
 }
 
 function main(): void {
@@ -109,10 +136,12 @@ function main(): void {
     serviceName: config.serviceName,
   });
 
-  const channels = buildChannels(config, log);
-  log.info("channels wired", {
-    count: channels.length,
-    channels: channels.map((c) => ({ id: c.id, adapter: c.adapter })),
+  const channelMap = buildChannelMap(config, log);
+  log.info("runtime config loaded", {
+    runtimeConfigFile: config.runtimeConfigFile,
+    channels: [...channelMap.values()].map((c) => ({ id: c.id, adapter: c.adapter })),
+    routes: config.runtimeConfig.routes.length,
+    defaultChannels: config.runtimeConfig.defaultChannels,
   });
 
   const startedAt = new Date();
@@ -129,7 +158,13 @@ function main(): void {
         service: config.serviceName,
         version: config.version,
         uptimeSeconds: Math.round((Date.now() - startedAt.getTime()) / 1000),
-        channels: channels.map((c) => ({ id: c.id, adapter: c.adapter })),
+        channels: [...channelMap.values()].map((c) => ({
+          id: c.id,
+          name: c.name,
+          adapter: c.adapter,
+        })),
+        routes: config.runtimeConfig.routes.length,
+        defaultChannels: config.runtimeConfig.defaultChannels,
       });
       return;
     }
@@ -161,14 +196,25 @@ function main(): void {
         }
 
         const notif = parsed.value;
+        const decision = route(
+          notif,
+          config.runtimeConfig.routes,
+          config.runtimeConfig.defaultChannels,
+        );
+        const targets = decision.channelIds
+          .map((id) => channelMap.get(id))
+          .filter((c): c is Channel => c !== undefined);
+
         reqLog.info("dispatching notification", {
           notificationId: notif.id,
           topic: notif.topic,
           priority: notif.priority,
           source: notif.source,
+          matchedRule: decision.matchedRule,
+          channelIds: targets.map((c) => c.id),
         });
 
-        const result = await dispatch(notif, channels);
+        const result = await dispatch(notif, targets);
         reqLog.info("dispatch complete", {
           notificationId: notif.id,
           attempted: result.attempted,
@@ -176,7 +222,10 @@ function main(): void {
           failed: result.failed,
         });
 
-        writeJson(res, statusFromDispatch(result.attempted, result.succeeded), result);
+        writeJson(res, statusFromDispatch(result.attempted, result.succeeded), {
+          ...result,
+          matchedRule: decision.matchedRule,
+        });
       })();
       return;
     }
@@ -202,7 +251,6 @@ function main(): void {
     });
   });
 
-  // SIGTERM from systemd: stop accepting, drain in-flight, exit.
   const shutdown = (signal: string): void => {
     log.info("shutdown signal received", { signal });
     server.close((err) => {
