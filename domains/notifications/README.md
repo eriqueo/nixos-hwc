@@ -43,4 +43,5 @@ notifications/
 
 ## Changelog
 
+- **2026-05-31**: Added `notify/` subdomain — `hwc.notifications.notify.*` (Phase 0 scaffold of the hexagonal hwc-notify dispatcher; Phase 1 will implement). See `~/.claude/plans/hashed-snacking-crab.md`.
 - **2026-04-04**: Created from alerts + automation/gotify domain redistribution

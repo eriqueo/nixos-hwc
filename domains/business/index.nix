@@ -22,5 +22,6 @@
     ./paperless/index.nix
     ./website/index.nix
     ./morning-briefing/index.nix
+    ./leads/index.nix          # hwc-leads (Phase 0 scaffold, Phase 2 impl)
   ];
 }
