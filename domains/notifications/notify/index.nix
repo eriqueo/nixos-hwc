@@ -168,6 +168,20 @@ in
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
+      # Restart the service when any channel's source .age file content
+      # changes — i.e., when an agenix secret rotates. Without this,
+      # nixos-rebuild switch re-mounts /run/agenix/<name> but doesn't
+      # restart hwc-notify (the unit definition didn't change), and the
+      # in-memory cached password keeps failing auth.
+      # See ~/.claude/projects/-home-eric--nixos/memory/reference_agenix_rotate_needs_restart.md
+      restartTriggers = builtins.filter (x: x != null) (
+        map (ch:
+          if ch.secretRef != null
+          then config.age.secrets.${ch.secretRef}.file
+          else null
+        ) cfg.channels
+      );
+
       environment = {
         HWC_NOTIFY_BIND_ADDR           = cfg.bindAddr;
         HWC_NOTIFY_PORT                = toString cfg.port;
