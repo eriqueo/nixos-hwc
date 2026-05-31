@@ -194,6 +194,32 @@
       group = "secrets";
     };
 
+    # Discord webhooks for the hwc-notify service (Phase 1).
+    # alerts → #hwc-alerts channel (Prometheus / system / monitoring)
+    # leads  → #hwc-leads channel (calculator + contact form submits)
+    discord-webhook-hwc-alerts = {
+      file = ../parts/services/discord-webhook-hwc-alerts.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
+    discord-webhook-hwc-leads = {
+      file = ../parts/services/discord-webhook-hwc-leads.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
+    # HMAC signing secret shared between the calc app / contact form and
+    # hwc-leads for POST /leads authentication (Phase 2).
+    hwc-leads-hmac-secret = {
+      file = ../parts/services/hwc-leads-hmac-secret.age;
+      mode = "0440";
+      owner = "eric";
+      group = "secrets";
+    };
+
     slack-webhook-url = {
       file = ../parts/services/slack-webhook-url.age;
       mode = "0440";

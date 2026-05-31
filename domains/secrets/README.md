@@ -47,4 +47,5 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-05-31: Added 3 secrets for the upcoming hwc-notify + hwc-leads services — `discord-webhook-hwc-alerts`, `discord-webhook-hwc-leads`, `hwc-leads-hmac-secret`. Standard `eric:secrets / 0440` pattern; recipients = everyone.
 - 2026-03-26: Added Vaultwarden self-hosted password manager module
