@@ -15,10 +15,12 @@ import type { Notification } from "./types.js";
 import type { RoutingRule } from "../schemas/runtime-config.js";
 
 function ruleMatches(rule: RoutingRule, notif: Notification): boolean {
+  // `!= null` matches both null and undefined; the Nix submodule emits
+  // `null` for unset fields, while a hand-crafted JSON might omit them.
   const m = rule.match;
-  if (m.topic !== undefined && m.topic !== notif.topic) return false;
-  if (m.source !== undefined && m.source !== notif.source) return false;
-  if (m.priority !== undefined && m.priority !== notif.priority) return false;
+  if (m.topic != null && m.topic !== notif.topic) return false;
+  if (m.source != null && m.source !== notif.source) return false;
+  if (m.priority != null && m.priority !== notif.priority) return false;
   return true;
 }
 
