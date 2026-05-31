@@ -65,5 +65,22 @@ in
       default = "info";
       description = "Minimum severity for structured JSON log output.";
     };
+
+    # ── Channel secret references ─────────────────────────────────────────
+    # Phase 1.2: only the alerts channel has live wiring. leads channel
+    # follows when Phase 2 needs it. Both reference the agenix secret IDs
+    # declared in domains/secrets/declarations/services.nix.
+    channels = {
+      discordAlerts.secretRef = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = "discord-webhook-hwc-alerts";
+        description = ''
+          agenix secret name (not file path) holding the Discord webhook URL
+          for the #hwc-alerts channel. Resolved at module-eval to
+          `config.age.secrets.<ref>.path`. Set to null to disable the
+          channel (falls back to log-only at runtime).
+        '';
+      };
+    };
   };
 }
