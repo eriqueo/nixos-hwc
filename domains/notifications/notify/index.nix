@@ -143,6 +143,91 @@ MSG
     '';
   };
 
+  # ────────────────────────────────────────────────────────────────────
+  # hwc-notify CLI — thin shell wrapper over the local HTTP service.
+  #
+  # Subcommands:
+  #   hwc-notify send <topic> <title> [body] [--priority N] [--source S] [--tags t1,t2]
+  #   hwc-notify recent [--limit N] [--topic X] [--source Y] [--status ok|failed]
+  #   hwc-notify status        # circuit-breaker state
+  #   hwc-notify health
+  # ────────────────────────────────────────────────────────────────────
+  notify-cli = pkgs.writeShellApplication {
+    name = "hwc-notify";
+    runtimeInputs = [ pkgs.curl pkgs.jq pkgs.coreutils ];
+    text = ''
+      set -euo pipefail
+      base="http://${cfg.bindAddr}:${toString cfg.port}"
+
+      usage() {
+        cat >&2 <<EOF
+Usage:
+  hwc-notify send <topic> <title> [body] [--priority N] [--source S] [--tags t1,t2]
+  hwc-notify recent [--limit N] [--topic X] [--source Y] [--status ok|failed]
+  hwc-notify status
+  hwc-notify health
+EOF
+        exit 2
+      }
+
+      [ $# -lt 1 ] && usage
+      subcmd="$1"; shift
+
+      case "$subcmd" in
+        send)
+          [ $# -lt 2 ] && usage
+          topic="$1"; shift
+          title="$1"; shift
+          body=""
+          priority=3
+          source="cli"
+          tags="[]"
+          if [ $# -gt 0 ] && [[ "$1" != --* ]]; then
+            body="$1"; shift
+          fi
+          while [ $# -gt 0 ]; do
+            case "$1" in
+              --priority) priority="$2"; shift 2 ;;
+              --source) source="$2"; shift 2 ;;
+              --tags)
+                # Comma-separated -> JSON array
+                tags=$(echo "$2" | jq -R -s 'split(",") | map(gsub("^\\s+|\\s+$"; ""))')
+                shift 2 ;;
+              *) echo "unknown flag: $1" >&2; usage ;;
+            esac
+          done
+          payload=$(jq -nc \
+            --arg topic "$topic" --arg title "$title" --arg body "$body" \
+            --arg source "$source" --argjson priority "$priority" --argjson tags "$tags" \
+            '{topic: $topic, title: $title, body: $body, priority: $priority, source: $source, tags: $tags}')
+          curl -fsS -X POST -H 'content-type: application/json' -d "$payload" "$base/notify" | jq
+          ;;
+        recent)
+          limit=50
+          q=""
+          while [ $# -gt 0 ]; do
+            case "$1" in
+              --limit) limit="$2"; shift 2 ;;
+              --topic) q+="&topic=$(jq -rn --arg v "$2" '$v|@uri')"; shift 2 ;;
+              --source) q+="&source=$(jq -rn --arg v "$2" '$v|@uri')"; shift 2 ;;
+              --status) q+="&status=$2"; shift 2 ;;
+              *) echo "unknown flag: $1" >&2; usage ;;
+            esac
+          done
+          curl -fsS "$base/audit/recent?limit=$limit$q" | jq
+          ;;
+        status)
+          curl -fsS "$base/circuit/status" | jq
+          ;;
+        health)
+          curl -fsS "$base/health" | jq
+          ;;
+        --help|-h|help) usage ;;
+        *) echo "unknown subcommand: $subcmd" >&2; usage ;;
+      esac
+    '';
+  };
+
   # Channel IDs declared in cfg.channels — used for cross-ref assertions.
   declaredChannelIds = map (c: c.id) cfg.channels;
 
@@ -226,8 +311,8 @@ in
       };
     };
 
-    # Expose the deps-update CLI on the system PATH.
-    environment.systemPackages = [ notify-deps-update ];
+    # Expose the deps-update + user CLIs on the system PATH.
+    environment.systemPackages = [ notify-deps-update notify-cli ];
 
     #========================================================================
     # CADDY REVERSE PROXY — port mode over tailnet

@@ -17,6 +17,7 @@ import { websiteTools } from "./website.js";
 import { cmsTools } from "./cms.js";
 import { estimatorTools } from "./estimator.js";
 import { morningStatusTool } from "./morning-status.js";
+import { notifyTools } from "./notify.js";
 
 
 export function allTools(config: ServerConfig): ToolDef[] {
@@ -38,6 +39,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
       { name: "calculator", path: `${config.nixosConfigPath}/domains/business/website/calculator/app`, description: "Cost calculator app (Vite + React)" },
     ]),
     ...estimatorTools(config.nixosConfigPath),
+    ...notifyTools(),
     // Composite tool
     morningStatusTool(),
   ];
