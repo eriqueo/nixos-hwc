@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, options, pkgs, ... }:
 
 let
   cfg = config.hwc.ai.personas;
@@ -196,7 +196,7 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (lib.mkMerge [
+  config = lib.mkIf cfg.enable (lib.mkMerge ([
     {
       environment.systemPackages = [ hwc-llm ];
 
@@ -208,11 +208,18 @@ in
         }
       ];
     }
-
-    # Hand the JSON manifest to persona-daemon when both are enabled.
-    # This keeps the daemon agnostic to the personas module's file layout.
-    (lib.mkIf (config.hwc.server.ai.personaDaemon.enable or false) {
+  ]
+  # Hand the JSON manifest to persona-daemon when both are enabled.
+  # This keeps the daemon agnostic to the personas module's file layout.
+  #
+  # Gated on the option declaration being in scope (not just enabled) so
+  # this domain stays evaluable on hosts that don't import persona-daemon
+  # (hwc-laptop, hwc-xps). `lib.mkIf` alone is insufficient — even when
+  # false, the SET would still register against an undeclared option and
+  # fail module merge.
+  ++ lib.optional (lib.hasAttrByPath [ "hwc" "server" "ai" "personaDaemon" ] options) (
+    lib.mkIf (config.hwc.server.ai.personaDaemon.enable or false) {
       hwc.server.ai.personaDaemon.personaManifestFile = manifestFile;
-    })
-  ]);
+    }
+  )));
 }

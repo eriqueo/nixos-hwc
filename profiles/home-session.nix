@@ -14,11 +14,13 @@
 
   home.stateVersion = "24.05";
 
-  # HM 26.05 changed defaults for these options; pinning to legacy values
-  # preserves current behavior and silences eval warnings.
+  # HM 26.05 forward-compat shims (added 2026-05-20). Most of these have been
+  # retired from HM after their deprecation window — sets to removed options
+  # error at eval time. Removed 2026-05-31:
+  #   - wayland.windowManager.hyprland.configType (option deleted upstream)
+  #   - xdg.userDirs.setSessionVariables (option deleted upstream)
+  # gtk.gtk4.theme is still a valid option in current HM and is left in place.
   gtk.gtk4.theme = config.gtk.theme;
-  wayland.windowManager.hyprland.configType = "hyprlang";
-  xdg.userDirs.setSessionVariables = true;
 
   #======================================================================
   # GUI WORKSTATION DEFAULTS
