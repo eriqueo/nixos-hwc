@@ -18,6 +18,7 @@ import { loadConfig, type ServiceConfig } from "./config.js";
 import { makeStderrLogger } from "./adapters/log-stderr.js";
 import { makeDiscordChannel } from "./adapters/channel-discord.js";
 import { makeLogOnlyChannel } from "./adapters/channel-logonly.js";
+import { makeSmtpChannel } from "./adapters/channel-smtp.js";
 import { safeParseNotificationInput } from "./schemas/notification.js";
 import { dispatch } from "./core/dispatch.js";
 import { route } from "./core/router.js";
@@ -79,22 +80,30 @@ function loadSecret(filepath: string): string {
 
 /** Materialize one ChannelConfig into a Channel instance. */
 function buildChannel(cfg: ChannelConfig, log: Logger): Channel {
-  if (cfg.adapter === "discord") {
-    const webhookUrl = loadSecret(cfg.params.secretFile);
-    return makeDiscordChannel({
-      id: cfg.id,
-      name: cfg.name,
-      webhookUrl,
-      username: cfg.params.username,
-      timeoutMs: cfg.params.timeoutMs,
-    });
+  switch (cfg.adapter) {
+    case "discord": {
+      const webhookUrl = loadSecret(cfg.params.secretFile);
+      return makeDiscordChannel({
+        id: cfg.id,
+        name: cfg.name,
+        webhookUrl,
+        username: cfg.params.username,
+        timeoutMs: cfg.params.timeoutMs,
+      });
+    }
+    case "smtp":
+      return makeSmtpChannel({
+        id: cfg.id,
+        name: cfg.name,
+        params: cfg.params,
+      });
+    case "log-only":
+      return makeLogOnlyChannel({
+        id: cfg.id,
+        name: cfg.name,
+        log: log.child({ channel: cfg.id }),
+      });
   }
-  // log-only
-  return makeLogOnlyChannel({
-    id: cfg.id,
-    name: cfg.name,
-    log: log.child({ channel: cfg.id }),
-  });
 }
 
 /** Build all channels and return them keyed by id for routing lookup. */

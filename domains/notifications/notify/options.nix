@@ -25,7 +25,7 @@ let
         description = "Human label for logs and the /health response.";
       };
       adapter = lib.mkOption {
-        type = lib.types.enum [ "discord" "log-only" ];
+        type = lib.types.enum [ "discord" "smtp" "log-only" ];
         description = "Adapter type. Must match a builder in main.ts.";
       };
       secretRef = lib.mkOption {

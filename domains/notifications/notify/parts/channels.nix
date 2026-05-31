@@ -37,4 +37,23 @@
       timeoutMs = 5000;
     };
   }
+
+  # SMTP via Proton Bridge on loopback. Bridge listens on 127.0.0.1:1025
+  # without TLS for local clients (per the existing msmtp config); auth
+  # is PLAIN with the proton-bridge-password agenix secret.
+  {
+    id        = "smtp-eric";
+    name      = "email → eric@iheartwoodcraft.com (SMTP / Proton Bridge)";
+    adapter   = "smtp";
+    secretRef = "proton-bridge-password";
+    params = {
+      host       = "127.0.0.1";
+      port       = 1025;
+      requireTls = false;
+      login      = "eric@iheartwoodcraft.com";
+      from       = "eric@iheartwoodcraft.com";
+      to         = "eric@iheartwoodcraft.com";
+      timeoutMs  = 10000;
+    };
+  }
 ]

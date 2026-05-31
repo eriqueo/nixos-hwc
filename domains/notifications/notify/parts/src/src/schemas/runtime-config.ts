@@ -22,6 +22,7 @@ import { PrioritySchema } from "./notification.js";
 /** Adapter tag. New adapters must be added here + handled in main.ts. */
 export const AdapterSchema = z.union([
   z.literal("discord"),
+  z.literal("smtp"),
   z.literal("log-only"),
 ]);
 
@@ -35,6 +36,24 @@ const DiscordParamsSchema = z.object({
   timeoutMs: z.number().int().positive().max(60_000).default(5_000),
 });
 
+/** SMTP-specific channel params. Designed for Proton Bridge on loopback. */
+const SmtpParamsSchema = z.object({
+  host: z.string().min(1),
+  port: z.number().int().positive().max(65535),
+  /** STARTTLS upgrade after EHLO. For Proton Bridge on 127.0.0.1: false. */
+  requireTls: z.boolean().default(false),
+  /** SMTP AUTH username (typically the from address). */
+  login: z.string().min(1),
+  /** Absolute path to a file containing the SMTP password. */
+  passwordFile: z.string().min(1),
+  /** From header (must be a Bridge-recognized identity). */
+  from: z.string().email(),
+  /** Single recipient. Multi-recipient lands when a real case needs it. */
+  to: z.string().email(),
+  /** Per-attempt socket timeout. */
+  timeoutMs: z.number().int().positive().max(60_000).default(10_000),
+});
+
 const LogOnlyParamsSchema = z.object({});
 
 /** Discriminated by `adapter`. */
@@ -44,6 +63,12 @@ export const ChannelConfigSchema = z.discriminatedUnion("adapter", [
     name: z.string().min(1).max(120),
     adapter: z.literal("discord"),
     params: DiscordParamsSchema,
+  }),
+  z.object({
+    id: z.string().min(1).max(64),
+    name: z.string().min(1).max(120),
+    adapter: z.literal("smtp"),
+    params: SmtpParamsSchema,
   }),
   z.object({
     id: z.string().min(1).max(64),

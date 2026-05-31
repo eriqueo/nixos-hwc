@@ -23,22 +23,33 @@ let
   # ────────────────────────────────────────────────────────────────────
   resolveChannel = ch:
     let
-      base = {
-        inherit (ch) id name adapter;
-      };
+      base = { inherit (ch) id name adapter; };
+
       discordParams = {
-        # username/timeoutMs may or may not be set; the Zod schema in
-        # runtime-config.ts has sensible defaults for both.
+        # username/timeoutMs default in Zod (runtime-config.ts) when absent.
         username  = ch.params.username  or "HWC Notify";
         timeoutMs = ch.params.timeoutMs or 5000;
         secretFile = config.age.secrets.${ch.secretRef}.path;
       };
+
+      # SMTP params must include host/port/login/from/to. secretRef →
+      # passwordFile path; the rest pass through to Zod (defaults applied
+      # there). All passthrough fields are required — channels.nix is the
+      # source of truth and must be explicit.
+      smtpParams = {
+        host         = ch.params.host;
+        port         = ch.params.port;
+        requireTls   = ch.params.requireTls or false;
+        login        = ch.params.login;
+        from         = ch.params.from;
+        to           = ch.params.to;
+        timeoutMs    = ch.params.timeoutMs or 10000;
+        passwordFile = config.age.secrets.${ch.secretRef}.path;
+      };
     in
-      if ch.adapter == "discord" then
-        base // { params = discordParams; }
-      else
-        # log-only: no secret, no params (Zod defaults to {})
-        base // { params = {}; };
+      if ch.adapter == "discord" then base // { params = discordParams; }
+      else if ch.adapter == "smtp" then base // { params = smtpParams; }
+      else base // { params = {}; }; # log-only
 
   resolvedChannels = map resolveChannel cfg.channels;
 
@@ -70,7 +81,7 @@ let
         in base != "node_modules" && base != "dist" && base != ".gitignore";
     };
 
-    npmDepsHash = "sha256-w76KLDIujl5jpChGB5hE1mgKLg1hGQeijtMA0ke0/GQ=";
+    npmDepsHash = "sha256-aHTyFXqcdaOZHHwdyriSJqXFvrlFHVKZXPt4z0JvQ54=";
     npmBuildScript = "build";
     dontNpmPrune = false;
   };
@@ -224,20 +235,22 @@ in
         message = "hwc.notifications.notify.port and reverseProxyPort must differ.";
       }
       {
-        # Every Discord channel needs a secretRef AND the named agenix
-        # secret must exist. Catch typos at eval time, not at runtime.
+        # Every Discord/SMTP channel needs a secretRef AND the named
+        # agenix secret must exist. Catch typos at eval time, not at
+        # runtime.
         assertion =
           lib.all
             (ch:
-              ch.adapter != "discord"
+              (ch.adapter != "discord" && ch.adapter != "smtp")
               || (ch.secretRef != null
                   && (config.age.secrets ? ${ch.secretRef})))
             cfg.channels;
         message = ''
-          One or more discord channels in hwc.notifications.notify.channels
-          is missing a valid secretRef. Each row with adapter = "discord"
-          must have secretRef set to an agenix secret name declared in
-          domains/secrets/declarations/services.nix.
+          One or more discord/smtp channels in
+          hwc.notifications.notify.channels is missing a valid secretRef.
+          Each row with adapter = "discord" or "smtp" must have secretRef
+          set to an agenix secret name declared in
+          domains/secrets/declarations/.
         '';
       }
       {
