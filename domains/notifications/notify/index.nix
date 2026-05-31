@@ -149,6 +149,14 @@ in
         HWC_NOTIFY_PORT       = toString cfg.port;
         HWC_NOTIFY_STATE_DIR  = cfg.statePath;
         HWC_NOTIFY_LOG_LEVEL  = cfg.logLevel;
+
+        # Channel secret file paths (resolved through agenix). When the
+        # option is null the env var is omitted and the runtime falls back
+        # to log-only for that channel — visible warning at startup.
+      } // lib.optionalAttrs (cfg.channels.discordAlerts.secretRef != null) {
+        HWC_NOTIFY_DISCORD_ALERTS_FILE =
+          config.age.secrets.${cfg.channels.discordAlerts.secretRef}.path;
+      } // {
         PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
         # NODE_ENV=production silences the Node performance hint and gives
         # well-behaved libs their fast paths.
@@ -209,6 +217,21 @@ in
       {
         assertion = cfg.port != cfg.reverseProxyPort;
         message = "hwc.notifications.notify.port and reverseProxyPort must differ.";
+      }
+      {
+        # If a secretRef is configured, the secret declaration must exist —
+        # otherwise the systemd unit env eval crashes with a confusing
+        # "attribute missing" trace.
+        assertion =
+          cfg.channels.discordAlerts.secretRef == null
+          || (config.age.secrets ? ${cfg.channels.discordAlerts.secretRef});
+        message = ''
+          hwc.notifications.notify.channels.discordAlerts.secretRef =
+          "${toString cfg.channels.discordAlerts.secretRef}" but no
+          matching agenix secret is declared in
+          domains/secrets/declarations/services.nix. Either declare the
+          secret or set the secretRef to null to disable the channel.
+        '';
       }
     ];
   };
