@@ -34,7 +34,7 @@ let
 
     # First-time setup: lib.fakeHash → nixos-rebuild fails with real hash
     # → paste here → rebuild succeeds. Future updates: `hwc-leads-deps-update`.
-    npmDepsHash = "sha256-GjrGVBtYd24ujcgwXqlXuAE7neTVaX9TTCuHEULvKbQ=";
+    npmDepsHash = "sha256-dYIkJUt5UbGyYUYyuzFE/+Rtls8AQPLnCAmynZWzDFQ=";
 
     npmBuildScript = "build";
     dontNpmPrune = false;
@@ -79,6 +79,7 @@ in
         HWC_LEADS_STATE_DIR           = cfg.statePath;
         HWC_LEADS_LOG_LEVEL           = cfg.logLevel;
         HWC_LEADS_NOTIFY_URL          = cfg.notifyServiceUrl;
+        HWC_LEADS_PG_DSN              = cfg.postgresDsn;
       } // lib.optionalAttrs (cfg.hmacSecretRef != null) {
         HWC_LEADS_HMAC_FILE = config.age.secrets.${cfg.hmacSecretRef}.path;
       } // lib.optionalAttrs (cfg.jtGrantKeyRef != null) {

@@ -65,6 +65,21 @@ in
       description = "Minimum severity for structured JSON log output.";
     };
 
+    # ── Postgres ─────────────────────────────────────────────────────────
+    # Canonical Lead records land in hwc.calculator_leads (extended by
+    # parts/migrations/001-canonical-lead-extensions.sql). Default DSN
+    # uses Unix-socket peer auth as the service user — no password file
+    # needed.
+    postgresDsn = lib.mkOption {
+      type = lib.types.str;
+      default = "postgresql:///hwc";
+      description = ''
+        libpq connection string for the heartwood_business database.
+        Default: socket peer auth as the service user (eric). Override
+        per machine if Postgres moves off the local socket.
+      '';
+    };
+
     # ── Downstream service refs ──────────────────────────────────────────
     # hwc-leads calls hwc-notify for the new-lead pings. Loopback today;
     # would change if hwc-notify ever moves off-host.
