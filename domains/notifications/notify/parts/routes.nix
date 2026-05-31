@@ -30,10 +30,11 @@
 
   {
     name     = "p1-fanout";
-    # Critical alerts go everywhere — leads channel doubles as a "phone
-    # might actually buzz" surface for late-night pages.
+    # Critical alerts go everywhere — both Discord channels for fast eyes
+    # plus email so the alert survives Discord outages and ends up in the
+    # mail archive for postmortems.
     match    = { priority = 1; };
-    channels = [ "discord-hwc-alerts" "discord-hwc-leads" ];
+    channels = [ "discord-hwc-alerts" "discord-hwc-leads" "smtp-eric" ];
   }
 
   {
