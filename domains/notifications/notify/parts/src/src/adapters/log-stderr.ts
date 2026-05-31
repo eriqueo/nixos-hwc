@@ -23,10 +23,16 @@ interface LogRecord {
 }
 
 class StderrLogger implements Logger {
-  constructor(
-    private readonly opts: LoggerFactoryOpts,
-    private readonly boundFields: Record<string, unknown>,
-  ) {}
+  // Explicit properties (not constructor parameter properties) — Node's
+  // --experimental-strip-types is strip-only and doesn't transform the
+  // TS `private readonly x: T` constructor-arg shorthand.
+  readonly opts: LoggerFactoryOpts;
+  readonly boundFields: Record<string, unknown>;
+
+  constructor(opts: LoggerFactoryOpts, boundFields: Record<string, unknown>) {
+    this.opts = opts;
+    this.boundFields = boundFields;
+  }
 
   private emit(level: LogLevel, msg: string, fields?: Record<string, unknown>): void {
     if (LEVEL_ORDER[level] < LEVEL_ORDER[this.opts.minLevel]) return;
