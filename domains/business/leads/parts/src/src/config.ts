@@ -7,6 +7,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import type { JtMappings } from "./core/jt-graph.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -23,8 +24,10 @@ export interface ServiceConfig {
   readonly hmacSecret: string | undefined;
   /** Trimmed contents of the JT grant key file, or undefined when disabled. */
   readonly jtGrantKey: string | undefined;
-  /** Postgres DSN for hwc.calculator_leads. */
+  /** Postgres DSN for hwc.leads. */
   readonly postgresDsn: string;
+  /** JT mappings loaded from the Nix-generated JSON file. */
+  readonly jtMappings: JtMappings;
 }
 
 function readStr(name: string, fallback?: string): string {
@@ -51,6 +54,19 @@ function readLogLevel(name: string, fallback: LogLevel): LogLevel {
   throw new Error(`env: ${name} must be debug|info|warn|error, got: ${v}`);
 }
 
+function loadJtMappings(filepath: string): JtMappings {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(filepath, "utf8"));
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`jt mappings file at ${filepath} unreadable: ${reason}`);
+  }
+  // Trust the Nix-generated file structurally; a malformed object would
+  // be a build-time mistake. Cast once.
+  return raw as JtMappings;
+}
+
 function readSecretFile(name: string): string | undefined {
   const filepath = process.env[name];
   if (!filepath || filepath.length === 0) return undefined;
@@ -74,5 +90,6 @@ export function loadConfig(): ServiceConfig {
     hmacSecret: readSecretFile("HWC_LEADS_HMAC_FILE"),
     jtGrantKey: readSecretFile("HWC_LEADS_JT_GRANT_FILE"),
     postgresDsn: readStr("HWC_LEADS_PG_DSN", "postgresql:///hwc"),
+    jtMappings: loadJtMappings(readStr("HWC_LEADS_JT_MAPPINGS_FILE")),
   };
 }

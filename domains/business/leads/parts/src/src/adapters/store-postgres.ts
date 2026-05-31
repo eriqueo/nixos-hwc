@@ -22,6 +22,7 @@ import type {
   LeadStore,
   SaveResult,
   RecentQuery,
+  JtIdUpdate,
 } from "../ports/store.js";
 import type {
   Lead,
@@ -144,6 +145,26 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
       `;
       const result = await pool.query<LeadRow>(sql, params);
       return result.rows.map(rowToLead);
+    },
+
+    async updateJtIds(leadId: string, ids: JtIdUpdate, status: LeadStatus): Promise<void> {
+      // Build dynamic SET clause from the non-undefined keys. status +
+      // jt_synced_at always written; jt_* only when present so a
+      // partial-completion call doesn't clobber a later success.
+      const sets: string[] = ["status = $2", "jt_synced_at = now()"];
+      const params: Array<string | null> = [leadId, status];
+      const push = (col: string, val: string | undefined): void => {
+        if (val === undefined) return;
+        params.push(val);
+        sets.push(`${col} = $${params.length}`);
+      };
+      push("jt_account_id",  ids.accountId);
+      push("jt_location_id", ids.locationId);
+      push("jt_contact_id",  ids.contactId);
+      push("jt_job_id",      ids.jobId);
+
+      const sql = `UPDATE hwc.leads SET ${sets.join(", ")} WHERE id = $1::uuid`;
+      await pool.query(sql, params);
     },
 
     async close(): Promise<void> {

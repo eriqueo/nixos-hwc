@@ -42,6 +42,12 @@ let
 
   mainJs = "${hwc-leads-pkg}/lib/node_modules/hwc-leads/dist/main.js";
 
+  # JT mappings — pure data file with HWC's JT organization ID, custom
+  # field IDs, default location. Serialised to JSON via pkgs.writeText
+  # and exposed to the runtime as HWC_LEADS_JT_MAPPINGS_FILE.
+  jtMappingsJson = builtins.toJSON (import ./parts/jt-mappings.nix);
+  jtMappingsFile = pkgs.writeText "hwc-leads-jt-mappings.json" jtMappingsJson;
+
   # Shared deps-update wrapper, parameterised for this service.
   leads-deps-update = (import ../../lib/deps-update.nix { inherit pkgs config; }) {
     serviceName = "hwc-leads";
@@ -80,6 +86,7 @@ in
         HWC_LEADS_LOG_LEVEL           = cfg.logLevel;
         HWC_LEADS_NOTIFY_URL          = cfg.notifyServiceUrl;
         HWC_LEADS_PG_DSN              = cfg.postgresDsn;
+        HWC_LEADS_JT_MAPPINGS_FILE    = "${jtMappingsFile}";
       } // lib.optionalAttrs (cfg.hmacSecretRef != null) {
         HWC_LEADS_HMAC_FILE = config.age.secrets.${cfg.hmacSecretRef}.path;
       } // lib.optionalAttrs (cfg.jtGrantKeyRef != null) {

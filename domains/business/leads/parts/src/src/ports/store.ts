@@ -24,6 +24,13 @@ export interface RecentQuery {
   readonly status?: LeadStatus;
 }
 
+export interface JtIdUpdate {
+  readonly accountId?: string;
+  readonly locationId?: string;
+  readonly contactId?: string;
+  readonly jobId?: string;
+}
+
 export interface LeadStore {
   /** Idempotent insert. ON CONFLICT (lead_id) DO NOTHING. */
   save(lead: Lead): Promise<SaveResult>;
@@ -31,6 +38,8 @@ export interface LeadStore {
   byId(leadId: string): Promise<Lead | undefined>;
   /** Most-recent-first paged view, with optional source/status filters. */
   recent(query: RecentQuery): Promise<readonly Lead[]>;
+  /** Set JT IDs + jt_synced_at. Only non-null fields are written. */
+  updateJtIds(leadId: string, ids: JtIdUpdate, status: LeadStatus): Promise<void>;
   /** Release pooled connections. */
   close(): Promise<void>;
 }
