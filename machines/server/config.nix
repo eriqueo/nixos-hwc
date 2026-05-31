@@ -304,6 +304,11 @@
   hwc.notifications = {
     enable = true;
     send.cli.enable = true;  # CLI tool for manual alerts
+
+    # hwc-notify — hexagonal TS dispatcher (Phase 1, in progress).
+    # Phase 1.1: minimal /health server. Coexists with the existing gotify
+    # path during cutover. See ~/.claude/plans/hashed-snacking-crab.md.
+    notify.enable = true;
   };
 
   # Alert sources — what to monitor (thresholds, triggers)
