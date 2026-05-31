@@ -1,18 +1,38 @@
 /**
  * hwc-leads — entry point.
  *
- * Phase 2.1 wiring:
- *   GET  /health     — liveness + downstream service refs
- *   POST /leads      — returns 501 Not Implemented (Phase 2.2 lands the real
- *                      Lead schema + JT/Postgres/Notify dispatch path)
- *
- * Same shape as hwc-notify's main.ts: loadConfig → build adapters → mount
- * shells → listen. Subsequent chunks add the lead pipeline incrementally.
+ * Phase 2.2 wiring:
+ *   GET  /health     — liveness + downstream wiring check
+ *   POST /leads      — HMAC-verified, schema-validated. Returns 202 +
+ *                      Lead id. Downstream calls (JT, Postgres, notify,
+ *                      email) land in Phase 2.3+.
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { loadConfig } from "./config.js";
 import { makeStderrLogger } from "./adapters/log-stderr.js";
+import { safeParseLeadInput, buildLead } from "./schemas/lead.js";
+import { verifyHmac } from "./core/hmac.js";
+
+const MAX_BODY_BYTES = 64 * 1024;
+
+function readRawBody(req: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    req.on("data", (chunk: Buffer) => {
+      total += chunk.length;
+      if (total > MAX_BODY_BYTES) {
+        reject(new Error(`request body exceeded ${MAX_BODY_BYTES} bytes`));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
 
 function writeJson(res: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
@@ -30,8 +50,6 @@ function main(): void {
     serviceName: config.serviceName,
   });
 
-  // Visible at startup: which downstream creds are wired, without
-  // ever logging the secret values themselves.
   log.info("hwc-leads starting", {
     bindAddr: config.bindAddr,
     port: config.port,
@@ -46,14 +64,15 @@ function main(): void {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const url = req.url ?? "/";
     const method = req.method ?? "GET";
+    const reqLog = log.child({ method, url });
 
+    // ── GET /health ────────────────────────────────────────────────────
     if (method === "GET" && url === "/health") {
       writeJson(res, 200, {
         status: "ok",
         service: config.serviceName,
         version: config.version,
         uptimeSeconds: Math.round((Date.now() - startedAt.getTime()) / 1000),
-        // Surface the downstream config so /health doubles as a wiring check.
         downstream: {
           notifyServiceUrl: config.notifyServiceUrl,
           hmacWired: config.hmacSecret !== undefined,
@@ -63,13 +82,89 @@ function main(): void {
       return;
     }
 
+    // ── POST /leads ────────────────────────────────────────────────────
     if (method === "POST" && url === "/leads") {
-      writeJson(res, 501, {
-        code: "NOT_IMPLEMENTED",
-        message:
-          "POST /leads ships in Phase 2.2 — Zod schema, HMAC verify, " +
-          "JT graph creation, Postgres write, hwc-notify ping, customer email.",
-      });
+      void (async () => {
+        let raw: Buffer;
+        try {
+          raw = await readRawBody(req);
+        } catch (err) {
+          reqLog.warn("body read error", {
+            err: err instanceof Error ? err.message : String(err),
+          });
+          writeJson(res, 400, {
+            code: "VALIDATION_ERROR",
+            message: err instanceof Error ? err.message : "invalid request body",
+          });
+          return;
+        }
+
+        // ── 1. HMAC verification (raw bytes) ──
+        if (config.hmacSecret !== undefined) {
+          const sigHeader = req.headers["x-hwc-signature"];
+          const sig = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
+          const verification = verifyHmac(config.hmacSecret, raw, sig);
+          if (!verification.ok) {
+            reqLog.warn("hmac verification failed", { reason: verification.reason });
+            writeJson(res, 401, {
+              code: "HMAC_MISMATCH",
+              message: `signature ${verification.reason}`,
+            });
+            return;
+          }
+        } else {
+          // hmacSecret unset means HMAC explicitly disabled in config —
+          // a dev-only mode. Log a warning EVERY request so it's loud.
+          reqLog.warn("HMAC verification skipped (hmacSecret unset — DEV ONLY)");
+        }
+
+        // ── 2. JSON parse ──
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw.toString("utf8"));
+        } catch (err) {
+          reqLog.warn("json parse error", {
+            err: err instanceof Error ? err.message : String(err),
+          });
+          writeJson(res, 400, {
+            code: "VALIDATION_ERROR",
+            message: "invalid JSON body",
+          });
+          return;
+        }
+
+        // ── 3. Schema validation ──
+        const result = safeParseLeadInput(parsed);
+        if (!result.ok) {
+          reqLog.warn("lead schema validation failed", { issues: result.issues });
+          writeJson(res, 400, {
+            code: "VALIDATION_ERROR",
+            message: "Lead input schema validation failed",
+            issues: result.issues,
+          });
+          return;
+        }
+
+        // ── 4. Build canonical Lead ──
+        const lead = buildLead(result.value);
+
+        reqLog.info("lead accepted", {
+          leadId: lead.id,
+          source: lead.payload.source,
+          contactEmail: lead.payload.contact.email,
+        });
+
+        // Phase 2.3+ will fan this out to JT / Postgres / hwc-notify /
+        // customer email. For now we ack and forward-point.
+        writeJson(res, 202, {
+          leadId: lead.id,
+          source: lead.payload.source,
+          status: lead.status,
+          receivedAt: lead.receivedAt,
+          message:
+            "lead accepted; downstream JT + Postgres + notify dispatch land in Phase 2.3+.",
+        });
+      })();
       return;
     }
 
