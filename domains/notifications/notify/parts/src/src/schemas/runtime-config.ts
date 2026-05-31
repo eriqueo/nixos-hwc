@@ -60,11 +60,15 @@ export type ChannelConfig = z.infer<typeof ChannelConfigSchema>;
 /**
  * Routing match predicate. Every set field is an exact match against the
  * notification field of the same name. An empty `match` is the catch-all.
+ *
+ * Nix submodules with `nullOr T; default = null;` serialise unset fields
+ * as `null`, not `undefined`. `.nullable().optional()` accepts both so
+ * the JSON round-trip works; the router treats `== null` as "unset".
  */
 export const RouteMatchSchema = z.object({
-  topic: z.string().min(1).optional(),
-  source: z.string().min(1).optional(),
-  priority: PrioritySchema.optional(),
+  topic: z.string().min(1).nullable().optional(),
+  source: z.string().min(1).nullable().optional(),
+  priority: PrioritySchema.nullable().optional(),
 });
 
 export const RoutingRuleSchema = z.object({
