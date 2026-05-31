@@ -23,6 +23,8 @@ export interface ServiceConfig {
   readonly hmacSecret: string | undefined;
   /** Trimmed contents of the JT grant key file, or undefined when disabled. */
   readonly jtGrantKey: string | undefined;
+  /** Postgres DSN for hwc.calculator_leads. */
+  readonly postgresDsn: string;
 }
 
 function readStr(name: string, fallback?: string): string {
@@ -71,5 +73,6 @@ export function loadConfig(): ServiceConfig {
     notifyServiceUrl: readStr("HWC_LEADS_NOTIFY_URL", "http://127.0.0.1:11600"),
     hmacSecret: readSecretFile("HWC_LEADS_HMAC_FILE"),
     jtGrantKey: readSecretFile("HWC_LEADS_JT_GRANT_FILE"),
+    postgresDsn: readStr("HWC_LEADS_PG_DSN", "postgresql:///hwc"),
   };
 }

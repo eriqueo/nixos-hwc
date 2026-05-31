@@ -13,6 +13,8 @@ import { loadConfig } from "./config.js";
 import { makeStderrLogger } from "./adapters/log-stderr.js";
 import { safeParseLeadInput, buildLead } from "./schemas/lead.js";
 import { verifyHmac } from "./core/hmac.js";
+import { makePostgresLeadStore } from "./adapters/store-postgres.js";
+import type { LeadStore } from "./ports/store.js";
 
 const MAX_BODY_BYTES = 64 * 1024;
 
@@ -57,6 +59,12 @@ function main(): void {
     notifyServiceUrl: config.notifyServiceUrl,
     hmacWired: config.hmacSecret !== undefined,
     jtGrantWired: config.jtGrantKey !== undefined,
+    postgresDsn: config.postgresDsn,
+  });
+
+  const store: LeadStore = makePostgresLeadStore({
+    dsn: config.postgresDsn,
+    log: log.child({ component: "postgres" }),
   });
 
   const startedAt = new Date();
@@ -154,16 +162,63 @@ function main(): void {
           contactEmail: lead.payload.contact.email,
         });
 
-        // Phase 2.3+ will fan this out to JT / Postgres / hwc-notify /
-        // customer email. For now we ack and forward-point.
-        writeJson(res, 202, {
-          leadId: lead.id,
-          source: lead.payload.source,
-          status: lead.status,
-          receivedAt: lead.receivedAt,
-          message:
-            "lead accepted; downstream JT + Postgres + notify dispatch land in Phase 2.3+.",
-        });
+        // ── 5. Persist (Phase 2.3) ──
+        // Postgres write is the first downstream side-effect. JT graph
+        // creation + hwc-notify ping + customer email land next.
+        try {
+          const saveResult = await store.save(lead);
+          reqLog.info("lead persisted", {
+            leadId: lead.id,
+            inserted: saveResult.inserted,
+            ...(saveResult.rowId !== undefined ? { rowId: saveResult.rowId } : {}),
+          });
+          writeJson(res, 202, {
+            leadId: lead.id,
+            source: lead.payload.source,
+            status: lead.status,
+            receivedAt: lead.receivedAt,
+            persisted: {
+              inserted: saveResult.inserted,
+              ...(saveResult.rowId !== undefined ? { rowId: saveResult.rowId } : {}),
+            },
+            message:
+              "lead persisted; JT graph creation + hwc-notify ping + customer email land in Phase 2.4+.",
+          });
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          reqLog.error("postgres save failed", { leadId: lead.id, err: reason });
+          writeJson(res, 500, {
+            code: "POSTGRES_ERROR",
+            message: "lead validated but persistence failed; retry safe",
+            leadId: lead.id,
+          });
+        }
+      })();
+      return;
+    }
+
+    // ── GET /leads/recent ──────────────────────────────────────────────
+    if (method === "GET" && url.startsWith("/leads/recent")) {
+      void (async () => {
+        try {
+          const u = new URL(url, `http://${config.bindAddr}`);
+          const limit = Math.min(500, Math.max(1, parseInt(u.searchParams.get("limit") ?? "50", 10) || 50));
+          const sourceParam = u.searchParams.get("source");
+          const statusParam = u.searchParams.get("status");
+          const validSources = ["contact", "calculator", "appointment"] as const;
+          const validStatuses = ["received", "validated", "pending_jt", "complete", "failed"] as const;
+          const source = validSources.find((s) => s === sourceParam);
+          const status = validStatuses.find((s) => s === statusParam);
+          const rows = await store.recent({
+            limit,
+            ...(source ? { source } : {}),
+            ...(status ? { status } : {}),
+          });
+          writeJson(res, 200, { count: rows.length, rows });
+        } catch (err) {
+          reqLog.error("recent query failed", { err: err instanceof Error ? err.message : String(err) });
+          writeJson(res, 500, { code: "POSTGRES_ERROR", message: "recent query failed" });
+        }
       })();
       return;
     }
@@ -189,8 +244,9 @@ function main(): void {
 
   const shutdown = (signal: string): void => {
     log.info("shutdown signal received", { signal });
-    server.close((err) => {
+    server.close(async (err) => {
       if (err) log.error("server close error", { err: String(err) });
+      try { await store.close(); } catch { /* ignore */ }
       process.exit(0);
     });
     setTimeout(() => {
