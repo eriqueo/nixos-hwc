@@ -476,6 +476,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-05-31**: Bugfix — `n8n_workflows` action `get` / `update` / `update_partial` / `delete` / `autofix` and the `n8n_workflow_status` sub-call were passing `workflowId` to the upstream n8n-mcp tools, which expect `id`. `update_partial` was also passing `updates`, which the upstream expects as `operations`. Net effect: any attempt to fetch or modify a workflow through the consolidation wrapper failed with `Missing required parameters: id` (and for partial updates `id, operations`). Fixed in `src/n8n-consolidation.ts` by renaming at the call site. Discovered while wiring Discord into the `home:admin:alert-manager` workflow; verified out-of-band via direct REST PUT to n8n.
+
 - **2026-04-12**: v0.3.2 — Tool consolidation, lazy loading, rename:
   - **hwc-sys tools 56→44**: Merged calendar today/week/list→`hwc_calendar_list` (range param), mail search+count→`hwc_mail_search` (count_only flag), mail tag+actions→`hwc_mail_tag` (action enum), storage→`hwc_storage_status`, secrets→`hwc_secrets_info`, network ts+vpn→`hwc_network_tunnel_status`, config read+list→`hwc_config_browse`, CMS read+list→`hwc_cms_browse`, website read/write pairs merged (source param), media→`hwc_media_status`. Trimmed verbose descriptions.
   - **jt-mcp tools 71→56**: Merged static lookups→`jt_get_lookups`, templates→`jt_get_templates`, delete pair→`jt_delete_budget_item`. Absorbed 5 detail tools into parent search tools. Absorbed summary tools into time entries/daily logs (summary flag). Merged org users+orgs→`jt_org_info`. Removed broken `jt_get_cost_group_templates`.

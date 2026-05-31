@@ -145,7 +145,7 @@ function buildN8nWorkflows(call: BackendCallFn): ToolDef {
           const workflowId = String(args.workflowId ?? "");
           if (!workflowId) return { status: "error", message: "workflowId is required for action=get." };
           const detail = String(args.detail ?? "summary");
-          const r = parseBackend(await call("n8n_get_workflow", { workflowId }));
+          const r = parseBackend(await call("n8n_get_workflow", { id: workflowId }));
           if (!r.ok) return { status: "error", message: `n8n_get_workflow failed: ${r.rawText}` };
           const inner = unwrap(r.data) as Record<string, unknown>;
           if (detail === "full" || fmt === "json") {
@@ -166,7 +166,7 @@ function buildN8nWorkflows(call: BackendCallFn): ToolDef {
         case "update": {
           if (!args.workflowId) return { status: "error", message: "workflowId is required for action=update." };
           if (!args.workflow) return { status: "error", message: "workflow object is required for action=update." };
-          const r = parseBackend(await call("n8n_update_full_workflow", { workflowId: args.workflowId, workflow: args.workflow }));
+          const r = parseBackend(await call("n8n_update_full_workflow", { id: args.workflowId, workflow: args.workflow }));
           if (!r.ok) return { status: "error", message: `n8n_update_full_workflow failed: ${r.rawText}` };
           return { status: "ok", message: "Workflow updated.", data: unwrap(r.data) };
         }
@@ -174,21 +174,21 @@ function buildN8nWorkflows(call: BackendCallFn): ToolDef {
         case "update_partial": {
           if (!args.workflowId) return { status: "error", message: "workflowId is required for action=update_partial." };
           if (!args.updates) return { status: "error", message: "updates object is required for action=update_partial." };
-          const r = parseBackend(await call("n8n_update_partial_workflow", { workflowId: args.workflowId, updates: args.updates }));
+          const r = parseBackend(await call("n8n_update_partial_workflow", { id: args.workflowId, operations: (args.updates as { operations?: unknown })?.operations ?? args.updates }));
           if (!r.ok) return { status: "error", message: `n8n_update_partial_workflow failed: ${r.rawText}` };
           return { status: "ok", message: "Workflow partially updated.", data: unwrap(r.data) };
         }
 
         case "delete": {
           if (!args.workflowId) return { status: "error", message: "workflowId is required for action=delete." };
-          const r = parseBackend(await call("n8n_delete_workflow", { workflowId: args.workflowId }));
+          const r = parseBackend(await call("n8n_delete_workflow", { id: args.workflowId }));
           if (!r.ok) return { status: "error", message: `n8n_delete_workflow failed: ${r.rawText}` };
           return { status: "ok", message: `Workflow ${String(args.workflowId)} deleted.` };
         }
 
         case "autofix": {
           if (!args.workflowId) return { status: "error", message: "workflowId is required for action=autofix." };
-          const r = parseBackend(await call("n8n_autofix_workflow", { workflowId: args.workflowId }));
+          const r = parseBackend(await call("n8n_autofix_workflow", { id: args.workflowId }));
           if (!r.ok) return { status: "error", message: `n8n_autofix_workflow failed: ${r.rawText}` };
           return { status: "ok", message: "Workflow autofix applied.", data: unwrap(r.data) };
         }
@@ -345,7 +345,7 @@ function buildN8nWorkflowStatus(call: BackendCallFn): ToolDef {
 
       // Fire all three sub-calls concurrently
       const [wfResult, exResult, verResult] = await Promise.allSettled([
-        call("n8n_get_workflow", { workflowId }),
+        call("n8n_get_workflow", { id: workflowId }),
         call("n8n_executions", { workflowId, limit: 5 }),
         call("n8n_workflow_versions", { workflowId }),
       ]);
