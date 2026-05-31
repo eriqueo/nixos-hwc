@@ -63,52 +63,31 @@ sudo nixos-rebuild switch --flake .#hwc-server
 
 ## Adding / upgrading npm deps
 
-`npm install <pkg>` (or `npm update`) modifies `package-lock.json`. The Nix build content-pins the lock file via `npmDepsHash` — when the lock changes, the hash changes, and Nix refuses to build with the stale hash.
+`npm install <pkg>` (or `npm update`) modifies `package-lock.json`. The Nix build content-pins the lock file via `npmDepsHash` — when the lock changes, the hash changes, and Nix refuses to build with the stale hash. **This is enforced; do not bypass.** The hash is the proof that what's on disk matches what built.
 
-Workflow:
+### Workflow
 
 ```bash
-cd domains/notifications/notify/parts/src
-npm install <pkg>           # updates package.json + package-lock.json
-git add package.json package-lock.json
+cd ~/.nixos/domains/notifications/notify/parts/src
+npm install <pkg>                                          # updates package.json + package-lock.json
+hwc-notify-deps-update                                     # patches index.nix's npmDepsHash + stages all 3 files
+git -C ~/.nixos diff --cached                              # review
+git -C ~/.nixos commit                                     # commit before rebuild
+sudo nixos-rebuild switch --flake ~/.nixos#hwc-server
 ```
 
-Then edit `index.nix` and set `npmDepsHash = lib.fakeHash;`. Run `sudo nixos-rebuild build --flake .#hwc-server` — it will fail with:
+`hwc-notify-deps-update` is shipped with this module (`pkgs.writeShellApplication`, on the system PATH). Under the hood it runs `nixpkgs#prefetch-npm-deps` to compute the hash from the lockfile, in-place patches the `npmDepsHash = "sha256-…"` line in `index.nix`, and `git add`s the touched files. Anchored on `config.hwc.paths.nixos` per Charter Law 3.
 
-```
-error: hash mismatch in fixed-output derivation '…hwc-notify-…-npm-deps.drv':
-       specified: sha256-AAAAAAAA…  (= lib.fakeHash)
-          got:    sha256-w76KLDIu…  ← the real one
-```
+### If the CLI is not available
 
-Copy the `got:` value into `npmDepsHash` and rebuild. The hash is the proof that what's on disk matches what built — that's the value it provides. The annoyance is only in HOW you obtain the new value (force a build failure to print it), not in having it.
+Either you're on a non-server machine without the module installed, or something broke. Fall back to either:
 
-### Doing the hash update better
+1. **`nix run nixpkgs#prefetch-npm-deps -- ./package-lock.json`** — computes the hash directly, then hand-edit `index.nix`.
+2. **Deliberate failure**: set `npmDepsHash = lib.fakeHash;`, `nixos-rebuild build` fails with the real hash in the error, copy it in, rebuild. The base case; works anywhere.
 
-The "edit fakeHash → rebuild → copy `got:` → paste → rebuild again" cycle is the manual form. Cleaner options exist:
+### When this CLI needs to be lifted
 
-1. **`nix-prefetch-npm-deps`** (in nixpkgs) computes the hash from a lockfile without doing a real build. One command:
-
-   ```bash
-   nix run nixpkgs#prefetch-npm-deps -- ./parts/src/package-lock.json
-   # → sha256-w76KLDIu…
-   ```
-
-   Then paste into `index.nix`. Removes the rebuild-fail step but you still hand-edit `npmDepsHash`.
-
-2. **A wrapper CLI** (TODO — `hwc-notify-deps-update` as a `pkgs.writeShellApplication`) that does the whole flow in one shot:
-
-   ```bash
-   cd domains/notifications/notify/parts/src
-   npm install <pkg>           # or `npm update`
-   hwc-notify-deps-update      # runs prefetch + patches index.nix + stages changes
-   git diff --stat             # review
-   sudo nixos-rebuild switch --flake .#hwc-server
-   ```
-
-   This is the right "fix it properly" answer for a single-developer repo. The wrapper is ~15 lines of bash. Not built yet — see [[../../../README.md]] backlog or open an issue when this starts to grate.
-
-3. **Alternative npm-to-nix translators** (`napalm`, `node2nix`, `yarn2nix`) skip the hash entirely by reading `package-lock.json` directly inside the Nix evaluator. They have their own tradeoffs (evaluation cost, lockfile-format coverage, opinionated about scripts). Worth evaluating only if option 2 isn't enough.
+When `hwc-leads` (Phase 2) or another `buildNpmPackage`-built service appears, the right move is to lift the body of `notify-deps-update` into a parameterised helper (e.g., `hwc-deps-update <service-namespace>`) rather than copy-paste. Single-call-site abstractions are wrong; two known call sites is the right time to factor.
 
 ## Local dev-loop without rebuilding NixOS
 
