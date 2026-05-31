@@ -3,9 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Type-only metadata for hwc-notify. Runtime uses Node 22 --experimental-strip-types; no install needed for execution.",
+  "description": "hwc-notify — hexagonal notification dispatcher (Node 22).",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

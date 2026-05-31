@@ -9,8 +9,8 @@
  */
 
 import { createServer } from "node:http";
-import { loadConfig } from "./config.ts";
-import { makeStderrLogger } from "./adapters/log-stderr.ts";
+import { loadConfig } from "./config.js";
+import { makeStderrLogger } from "./adapters/log-stderr.js";
 
 function main(): void {
   const config = loadConfig();

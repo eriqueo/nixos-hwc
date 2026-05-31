@@ -4,8 +4,8 @@
  * without any external collector.
  */
 
-import type { Logger, LoggerFactoryOpts } from "../ports/log.ts";
-import type { LogLevel } from "../config.ts";
+import type { Logger, LoggerFactoryOpts } from "../ports/log.js";
+import type { LogLevel } from "../config.js";
 
 const LEVEL_ORDER: Record<LogLevel, number> = {
   debug: 10,

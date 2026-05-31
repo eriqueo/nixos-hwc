@@ -44,21 +44,56 @@ notify/
 
 ## Runtime
 
-Node 22 with `--experimental-strip-types`. No `npm install` or build step at deploy time. TS source is bundled into the Nix store via `lib.sources.sourceFilesBySuffices` and Node strips type annotations at parse. `package.json` + the on-disk `node_modules/` exist only as type-only metadata for IDE typechecking and are ignored at runtime.
+Hermetic Nix-built derivation via `pkgs.buildNpmPackage`. `nixos-rebuild` runs `npm ci` offline against a hash-pinned `package-lock.json`, then `npm run build` (tsc → `dist/`). The output is a single Nix store path containing the compiled JS + a populated `node_modules/`. No `npm install` at deploy time, no network at switch, no developer manual-build step. The systemd unit's `ExecStart` is `node ${pkg}/lib/node_modules/hwc-notify/dist/main.js`.
 
-Same pattern as `domains/server/native/ai/hermes/parts/bootstrap`.
+This is the canonical Nix pattern (not the lighter strip-types approach used by `domains/server/native/ai/hermes/parts/bootstrap` — that one is right for zero-dep deploy CLIs; ours has real runtime deps).
 
 ## Editing the source
 
-After editing any `.ts` file:
+For pure source changes (no new deps):
 
 ```bash
 cd domains/notifications/notify/parts/src
-npx tsc --noEmit            # typecheck; no output = clean
-sudo systemctl restart hwc-notify
+npx tsc --noEmit            # local typecheck; no output = clean
+git commit                  # commit before rebuild — Nix reads the git store
+sudo nixos-rebuild switch --flake .#hwc-server
 ```
 
-`nixos-rebuild switch` picks up `.ts` changes automatically because the module bundles the source via `sourceFilesBySuffices`. The restart is needed because the systemd unit's `ExecStart` references a specific Nix store path that only changes on rebuild.
+`buildNpmPackage` rebuilds whenever the source content changes; the new derivation gets a new store path; systemd restarts to the new path.
+
+## Adding / upgrading npm deps
+
+`npm install <pkg>` (or `npm update`) modifies `package-lock.json`. The Nix build content-pins the lock file via `npmDepsHash` — when the lock changes, the hash changes, and Nix refuses to build with the stale hash.
+
+Workflow:
+
+```bash
+cd domains/notifications/notify/parts/src
+npm install <pkg>           # updates package.json + package-lock.json
+git add package.json package-lock.json
+```
+
+Then edit `index.nix` and set `npmDepsHash = lib.fakeHash;`. Run `sudo nixos-rebuild build --flake .#hwc-server` — it will fail with:
+
+```
+error: hash mismatch in fixed-output derivation '…hwc-notify-…-npm-deps.drv':
+       specified: sha256-AAAAAAAA…  (= lib.fakeHash)
+          got:    sha256-w76KLDIu…  ← the real one
+```
+
+Copy the `got:` value into `npmDepsHash` and rebuild. This is annoying-but-deliberate: the hash is the proof that what's on disk matches what built. Don't dodge it.
+
+## Local dev-loop without rebuilding NixOS
+
+For tight iteration (no need to wait for `nixos-rebuild switch` per edit):
+
+```bash
+cd domains/notifications/notify/parts/src
+npm install                 # one-time, populates node_modules/
+npm run build && npm start  # run the same dist/main.js the systemd unit runs
+```
+
+This uses the local `node_modules/` (gitignored). The systemd-deployed service still runs from the Nix store path — local runs and the deployed service are independent processes.
 
 ## Status
 
