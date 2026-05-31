@@ -50,7 +50,10 @@
       host       = "127.0.0.1";
       port       = 1025;
       requireTls = false;
-      login      = "eric@iheartwoodcraft.com";
+      # Bridge auths against the Proton account name ("eriqueo"), NOT the
+      # send address. The `from` field is the visible identity (must be
+      # one Bridge knows). See domains/mail/PROTON_BRIDGE_DEBUG_HISTORY.md.
+      login      = "eriqueo";
       from       = "eric@iheartwoodcraft.com";
       to         = "eric@iheartwoodcraft.com";
       timeoutMs  = 10000;
