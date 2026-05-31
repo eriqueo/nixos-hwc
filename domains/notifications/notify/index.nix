@@ -88,59 +88,12 @@ let
 
   mainJs = "${hwc-notify-pkg}/lib/node_modules/hwc-notify/dist/main.js";
 
-  # ────────────────────────────────────────────────────────────────────
-  # Wrapper CLI — automates the npmDepsHash dance after npm install.
-  # See wiki/nixos/nixos-buildnpmpackage-hash-workflow.md for the why.
-  # ────────────────────────────────────────────────────────────────────
-  notify-deps-update = pkgs.writeShellApplication {
-    name = "hwc-notify-deps-update";
-    runtimeInputs = [
-      pkgs.prefetch-npm-deps
-      pkgs.gnused
-      pkgs.git
-      pkgs.coreutils
-    ];
-    text = ''
-      set -euo pipefail
-
-      nixos_root="${config.hwc.paths.nixos}"
-      service_rel="domains/notifications/notify"
-      service_dir="$nixos_root/$service_rel"
-      lockfile="$service_dir/parts/src/package-lock.json"
-      pkg_json="$service_dir/parts/src/package.json"
-      index_nix="$service_dir/index.nix"
-
-      [ -f "$lockfile" ]  || { echo "error: lockfile missing: $lockfile" >&2; exit 1; }
-      [ -f "$pkg_json" ]  || { echo "error: package.json missing: $pkg_json" >&2; exit 1; }
-      [ -f "$index_nix" ] || { echo "error: index.nix missing: $index_nix" >&2; exit 1; }
-
-      if ! grep -q 'npmDepsHash = "sha256-' "$index_nix"; then
-        echo "error: no 'npmDepsHash = \"sha256-...\"' line found in $index_nix" >&2
-        exit 1
-      fi
-
-      echo "[deps-update] reading $lockfile"
-      new_hash=$(prefetch-npm-deps "$lockfile")
-      echo "[deps-update] new npmDepsHash: $new_hash"
-
-      sed -i "s|npmDepsHash = \"sha256-[A-Za-z0-9+/=]*\"|npmDepsHash = \"$new_hash\"|" "$index_nix"
-
-      git -C "$nixos_root" add \
-        "$service_rel/index.nix" \
-        "$service_rel/parts/src/package.json" \
-        "$service_rel/parts/src/package-lock.json"
-
-      cat <<MSG
-[deps-update] patched and staged:
-  $service_rel/index.nix
-  $service_rel/parts/src/package.json
-  $service_rel/parts/src/package-lock.json
-
-Next:
-  git -C "$nixos_root" diff --cached
-  sudo nixos-rebuild switch --flake "$nixos_root#hwc-server"
-MSG
-    '';
+  # hwc-notify-deps-update CLI — produced by the shared
+  # domains/lib/deps-update.nix helper. Same shape for any other
+  # buildNpmPackage-built service (e.g. hwc-leads in Phase 2.1).
+  notify-deps-update = (import ../../lib/deps-update.nix { inherit pkgs config; }) {
+    serviceName = "hwc-notify";
+    serviceRel  = "domains/notifications/notify";
   };
 
   # ────────────────────────────────────────────────────────────────────
