@@ -5,7 +5,7 @@
 # Database: ~/.local/share/dt/dt.sqlite
 # Invoices: ~/Documents/datax-time/
 # Calendar: ~/.local/share/dt/calendar/dt-<id>.ics (per completed session)
-{ config, lib, pkgs, ... }:
+{ config, lib, options, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.dt;
 
@@ -113,15 +113,22 @@ in
     }
 
     # khal integration — add the dt sessions dir as a calendar so it shows up
-    # alongside iCloud events in ikhal/calcure. Gated on both enables.
+    # alongside iCloud events in ikhal/calcure. Gated on both enables AND on
+    # the hwc.mail.calendar option being declared in scope — on hosts that
+    # don't import the mail domain (e.g. kids) the option isn't declared,
+    # and `lib.mkIf` alone isn't enough (the SET would still register against
+    # an undeclared option). `lib.optionalAttrs` returns {} when the option
+    # is out of scope, which mkMerge happily absorbs.
     (lib.mkIf (cfg.calendar.enable
                && cfg.calendar.integrateKhal
-               && (config.hwc.mail.calendar.enable or false)) {
-      hwc.mail.calendar.localCalendars."dt-sessions" = {
-        path = "${config.home.homeDirectory}/.local/share/dt/calendar";
-        color = cfg.calendar.khalColor;
-      };
-    })
+               && (config.hwc.mail.calendar.enable or false))
+      (lib.optionalAttrs (lib.hasAttrByPath [ "hwc" "mail" "calendar" ] options) {
+        hwc.mail.calendar.localCalendars."dt-sessions" = {
+          path = "${config.home.homeDirectory}/.local/share/dt/calendar";
+          color = cfg.calendar.khalColor;
+        };
+      }))
+
 
     #========================================================================
     # VALIDATION

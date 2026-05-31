@@ -14,12 +14,16 @@
 
   home.stateVersion = "24.05";
 
-  # HM 26.05 forward-compat shims (added 2026-05-20). Most of these have been
-  # retired from HM after their deprecation window — sets to removed options
-  # error at eval time. Removed 2026-05-31:
-  #   - wayland.windowManager.hyprland.configType (option deleted upstream)
-  #   - xdg.userDirs.setSessionVariables (option deleted upstream)
-  # gtk.gtk4.theme is still a valid option in current HM and is left in place.
+  # HM 26.05 changed defaults for these options; pinning to legacy values
+  # preserves current behavior and silences eval warnings — for the options
+  # that still exist in the HM revision being used here.
+  #
+  # `wayland.windowManager.hyprland.configType` and
+  # `xdg.userDirs.setSessionVariables` were dropped from the HM-as-module
+  # wiring path (still exist on the HM-as-flake / standalone path, where
+  # they now just emit a deprecation warning). Setting them under
+  # home-manager.users.eric.* errors at module-merge — removed 2026-05-31.
+  # If they come back to module-mode in a future HM bump, re-add here.
   gtk.gtk4.theme = config.gtk.theme;
 
   #======================================================================
