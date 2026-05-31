@@ -19,12 +19,16 @@ import { makeStderrLogger } from "./adapters/log-stderr.js";
 import { makeDiscordChannel } from "./adapters/channel-discord.js";
 import { makeLogOnlyChannel } from "./adapters/channel-logonly.js";
 import { makeSmtpChannel } from "./adapters/channel-smtp.js";
+import { makeSqliteAuditLog } from "./adapters/audit-sqlite.js";
 import { safeParseNotificationInput } from "./schemas/notification.js";
 import { AlertmanagerWebhookSchema } from "./schemas/alertmanager.js";
 import { dispatch } from "./core/dispatch.js";
 import { route } from "./core/router.js";
+import { CircuitBreaker } from "./core/circuit.js";
 import { webhookToNotifications } from "./core/from-alertmanager.js";
 import type { Notification } from "./core/types.js";
+import type { AuditLog } from "./ports/audit.js";
+import { join as pathJoin } from "node:path";
 import type { Channel } from "./ports/channel.js";
 import type { Logger } from "./ports/log.js";
 import type { ChannelConfig } from "./schemas/runtime-config.js";
@@ -149,11 +153,21 @@ function main(): void {
   });
 
   const channelMap = buildChannelMap(config, log);
+  const auditLog: AuditLog = makeSqliteAuditLog({
+    dbPath: pathJoin(config.stateDir, "audit.sqlite"),
+    log: log.child({ component: "audit" }),
+  });
+  // 5 consecutive failures opens the circuit; 60s cool-down before
+  // a single half-open probe. Tuning lands in options.nix later if
+  // the defaults don't fit.
+  const breaker = new CircuitBreaker({ failureThreshold: 5, cooldownMs: 60_000 });
+
   log.info("runtime config loaded", {
     runtimeConfigFile: config.runtimeConfigFile,
     channels: [...channelMap.values()].map((c) => ({ id: c.id, adapter: c.adapter })),
     routes: config.runtimeConfig.routes.length,
     defaultChannels: config.runtimeConfig.defaultChannels,
+    auditDb: pathJoin(config.stateDir, "audit.sqlite"),
   });
 
   const startedAt = new Date();
@@ -226,12 +240,20 @@ function main(): void {
           channelIds: targets.map((c) => c.id),
         });
 
-        const result = await dispatch(notif, targets);
+        const receivedAt = new Date().toISOString();
+        const result = await dispatch(notif, targets, { breaker });
         reqLog.info("dispatch complete", {
           notificationId: notif.id,
           attempted: result.attempted,
           succeeded: result.succeeded,
           failed: result.failed,
+        });
+
+        auditLog.record({
+          notification: notif,
+          matchedRule: decision.matchedRule,
+          receivedAt,
+          results: result.results,
         });
 
         writeJson(res, statusFromDispatch(result.attempted, result.succeeded), {
@@ -278,8 +300,8 @@ function main(): void {
         });
 
         // Dispatch each alert as its own notification, in parallel.
-        // We collect per-notification results into a single response so
-        // Alertmanager can see the aggregate outcome.
+        // Each one gets its own audit row so the trail is per-alert,
+        // not per-batch.
         const perAlert = await Promise.all(
           notifs.map(async (notif) => {
             const decision = route(
@@ -290,9 +312,14 @@ function main(): void {
             const targets = decision.channelIds
               .map((id) => channelMap.get(id))
               .filter((c): c is NonNullable<typeof c> => c !== undefined);
-            const result = await dispatch(notif, targets);
-            // result already contains notificationId; we add the
-            // alert-friendly summary fields alongside it.
+            const receivedAt = new Date().toISOString();
+            const result = await dispatch(notif, targets, { breaker });
+            auditLog.record({
+              notification: notif,
+              matchedRule: decision.matchedRule,
+              receivedAt,
+              results: result.results,
+            });
             return {
               ...result,
               title: notif.title,
@@ -324,6 +351,44 @@ function main(): void {
       return;
     }
 
+    // ── GET /circuit/status ─────────────────────────────────────────────
+    if (method === "GET" && url === "/circuit/status") {
+      writeJson(res, 200, {
+        breakers: breaker.status(),
+        now: Date.now(),
+      });
+      return;
+    }
+
+    // ── GET /audit/recent ──────────────────────────────────────────────
+    //   ?limit=N  (default 50, max 500)
+    //   ?topic=<slug>
+    //   ?source=<slug>
+    //   ?status=ok|failed
+    if (method === "GET" && url.startsWith("/audit/recent")) {
+      try {
+        const u = new URL(url, `http://${config.bindAddr}`);
+        const limitStr = u.searchParams.get("limit");
+        const limit = limitStr ? Math.max(1, Math.min(500, parseInt(limitStr, 10) || 50)) : 50;
+        const rows = auditLog.recent({
+          limit,
+          topic: u.searchParams.get("topic") ?? undefined,
+          source: u.searchParams.get("source") ?? undefined,
+          status: (u.searchParams.get("status") as "ok" | "failed" | null) ?? undefined,
+        });
+        writeJson(res, 200, { count: rows.length, rows });
+      } catch (err) {
+        reqLog.error("audit recent query failed", {
+          err: err instanceof Error ? err.message : String(err),
+        });
+        writeJson(res, 500, {
+          code: "INTERNAL_ERROR",
+          message: "audit query failed",
+        });
+      }
+      return;
+    }
+
     // ── 404 ────────────────────────────────────────────────────────────
     writeJson(res, 404, {
       code: "NOT_FOUND",
@@ -349,10 +414,12 @@ function main(): void {
     log.info("shutdown signal received", { signal });
     server.close((err) => {
       if (err) log.error("server close error", { err: String(err) });
+      try { auditLog.close(); } catch { /* ignore */ }
       process.exit(0);
     });
     setTimeout(() => {
       log.warn("forced exit after drain timeout");
+      try { auditLog.close(); } catch { /* ignore */ }
       process.exit(1);
     }, 10_000).unref();
   };

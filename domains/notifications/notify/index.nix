@@ -195,7 +195,10 @@ in
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${pkgs.nodejs_22}/bin/node ${mainJs}";
+        # --experimental-sqlite enables node:sqlite (Node 22.5+).
+        # --no-warnings silences the "experimental feature" notice;
+        # we'll drop both flags when sqlite goes stable.
+        ExecStart = "${pkgs.nodejs_22}/bin/node --experimental-sqlite --no-warnings ${mainJs}";
         User = lib.mkForce cfg.user;
         Group = "users";
         Restart = "on-failure";

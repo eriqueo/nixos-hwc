@@ -12,12 +12,21 @@
  * 207 if mixed, 502 if all failed).
  */
 
-import type { Notification, DispatchResult } from "./types.js";
+import type { Notification, DispatchResult, DeliveryResult } from "./types.js";
 import type { Channel } from "../ports/channel.js";
+import { CircuitBreaker, CIRCUIT_OPEN_MESSAGE } from "./circuit.js";
+
+export interface DispatchOpts {
+  /** Optional breaker. When omitted, every channel is attempted. */
+  readonly breaker?: CircuitBreaker;
+  /** Time source — injected so tests don't have to wait wall-clock. */
+  readonly now?: () => number;
+}
 
 export async function dispatch(
   notification: Notification,
   channels: readonly Channel[],
+  opts: DispatchOpts = {},
 ): Promise<DispatchResult> {
   if (channels.length === 0) {
     return {
@@ -29,14 +38,30 @@ export async function dispatch(
     };
   }
 
-  // Promise.all is safe because Channel.send is documented never to
-  // reject; we double-belt it with a defensive .catch just in case
-  // an adapter breaks the contract.
+  const now = opts.now ?? Date.now;
+  const breaker = opts.breaker;
+
   const results = await Promise.all(
-    channels.map(async (ch) => {
+    channels.map(async (ch): Promise<DeliveryResult> => {
+      // Circuit breaker check — skip the channel without calling send().
+      if (breaker && !breaker.shouldAttempt(ch.id, now())) {
+        return {
+          channelId: ch.id,
+          ok: false,
+          message: CIRCUIT_OPEN_MESSAGE,
+          durationMs: 0,
+        };
+      }
+
       try {
-        return await ch.send(notification);
+        const result = await ch.send(notification);
+        if (breaker) {
+          if (result.ok) breaker.recordSuccess(ch.id, now());
+          else breaker.recordFailure(ch.id, now());
+        }
+        return result;
       } catch (err) {
+        if (breaker) breaker.recordFailure(ch.id, now());
         const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
         return {
           channelId: ch.id,
