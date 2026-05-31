@@ -20,8 +20,11 @@ import { makeDiscordChannel } from "./adapters/channel-discord.js";
 import { makeLogOnlyChannel } from "./adapters/channel-logonly.js";
 import { makeSmtpChannel } from "./adapters/channel-smtp.js";
 import { safeParseNotificationInput } from "./schemas/notification.js";
+import { AlertmanagerWebhookSchema } from "./schemas/alertmanager.js";
 import { dispatch } from "./core/dispatch.js";
 import { route } from "./core/router.js";
+import { webhookToNotifications } from "./core/from-alertmanager.js";
+import type { Notification } from "./core/types.js";
 import type { Channel } from "./ports/channel.js";
 import type { Logger } from "./ports/log.js";
 import type { ChannelConfig } from "./schemas/runtime-config.js";
@@ -234,6 +237,88 @@ function main(): void {
         writeJson(res, statusFromDispatch(result.attempted, result.succeeded), {
           ...result,
           matchedRule: decision.matchedRule,
+        });
+      })();
+      return;
+    }
+
+    // ── POST /webhook/alertmanager ─────────────────────────────────────
+    if (method === "POST" && url === "/webhook/alertmanager") {
+      void (async () => {
+        let raw: unknown;
+        try {
+          raw = await readJsonBody(req);
+        } catch (err) {
+          reqLog.warn("alertmanager body parse error", {
+            err: err instanceof Error ? err.message : String(err),
+          });
+          writeJson(res, 400, {
+            code: "VALIDATION_ERROR",
+            message: err instanceof Error ? err.message : "invalid request body",
+          });
+          return;
+        }
+
+        const parsed = AlertmanagerWebhookSchema.safeParse(raw);
+        if (!parsed.success) {
+          reqLog.warn("alertmanager schema validation failed", { issues: parsed.error.issues });
+          writeJson(res, 400, {
+            code: "VALIDATION_ERROR",
+            message: "Alertmanager webhook schema validation failed",
+            issues: parsed.error.issues,
+          });
+          return;
+        }
+
+        const notifs: Notification[] = webhookToNotifications(parsed.data);
+        reqLog.info("alertmanager batch received", {
+          alertCount: parsed.data.alerts.length,
+          batchStatus: parsed.data.status,
+          receiver: parsed.data.receiver,
+        });
+
+        // Dispatch each alert as its own notification, in parallel.
+        // We collect per-notification results into a single response so
+        // Alertmanager can see the aggregate outcome.
+        const perAlert = await Promise.all(
+          notifs.map(async (notif) => {
+            const decision = route(
+              notif,
+              config.runtimeConfig.routes,
+              config.runtimeConfig.defaultChannels,
+            );
+            const targets = decision.channelIds
+              .map((id) => channelMap.get(id))
+              .filter((c): c is NonNullable<typeof c> => c !== undefined);
+            const result = await dispatch(notif, targets);
+            // result already contains notificationId; we add the
+            // alert-friendly summary fields alongside it.
+            return {
+              ...result,
+              title: notif.title,
+              priority: notif.priority,
+              matchedRule: decision.matchedRule,
+            };
+          }),
+        );
+
+        const totalAttempted = perAlert.reduce((s, p) => s + p.attempted, 0);
+        const totalSucceeded = perAlert.reduce((s, p) => s + p.succeeded, 0);
+        const totalFailed = totalAttempted - totalSucceeded;
+
+        reqLog.info("alertmanager batch dispatch complete", {
+          alerts: notifs.length,
+          totalAttempted,
+          totalSucceeded,
+          totalFailed,
+        });
+
+        writeJson(res, statusFromDispatch(totalAttempted, totalSucceeded), {
+          alerts: notifs.length,
+          totalAttempted,
+          totalSucceeded,
+          totalFailed,
+          perAlert,
         });
       })();
       return;
