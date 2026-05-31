@@ -58,27 +58,45 @@ async function paveCall(
       body: JSON.stringify({ query }),
       signal: ac.signal,
     });
+    // Read the body as TEXT first — Pave returns text/plain for
+    // validation errors (e.g. "Name cannot be more than 30 characters")
+    // and application/json for success and structured GraphQL errors.
+    // Trying res.json() blindly would discard the actual error text.
+    const bodyText = await res.text().catch(() => "");
+
     if (res.status >= 500) {
-      const body = await res.text().catch(() => "");
       return {
         retryable: true,
-        message: `Pave ${step} HTTP ${res.status}: ${body.slice(0, 200)}`,
+        message: `Pave ${step} HTTP ${res.status}: ${bodyText.slice(0, 200)}`,
       };
     }
-    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    if (res.status >= 400) {
+      // 4xx is terminal — bad input; retry won't help. Surface the
+      // body text verbatim (already-readable for text/plain validation
+      // errors; JSON-stringified for structured errors handled below).
+      return {
+        retryable: false,
+        message: `Pave ${step} HTTP ${res.status}: ${bodyText.slice(0, 200)}`,
+      };
+    }
+    // 2xx: parse as JSON. If parse fails on a 2xx, that's an upstream
+    // protocol violation — terminal.
+    let json: Record<string, unknown> | null = null;
+    try {
+      json = bodyText.length > 0 ? (JSON.parse(bodyText) as Record<string, unknown>) : null;
+    } catch {
+      return {
+        retryable: false,
+        message: `Pave ${step}: 2xx with non-JSON body: ${bodyText.slice(0, 200)}`,
+      };
+    }
     if (json === null) {
-      return { retryable: false, message: `Pave ${step}: non-JSON response` };
+      return { retryable: false, message: `Pave ${step}: empty 2xx body` };
     }
     if ("error" in json && json["error"]) {
       return {
         retryable: false,
         message: `Pave ${step} error: ${JSON.stringify(json["error"]).slice(0, 200)}`,
-      };
-    }
-    if (res.status >= 400) {
-      return {
-        retryable: false,
-        message: `Pave ${step} HTTP ${res.status}: ${JSON.stringify(json).slice(0, 200)}`,
       };
     }
     log.debug("pave call ok", { step, status: res.status });

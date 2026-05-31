@@ -44,17 +44,30 @@ function contactChannels(lead: Lead): { email: string; phoneE164: string | null 
   };
 }
 
-/** Build a label for the new JT job. Calculator leads get the calc label. */
+/** JT's hard limit on job.name. Names longer than this are 400'd by Pave. */
+const JT_NAME_MAX = 30;
+
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : s.slice(0, max);
+}
+
+/**
+ * Build a label for the new JT job — capped at the JT name limit.
+ * Strategy: keep the contact name verbatim; truncate the trailing
+ * "'s <calc> Project" / "— ..." suffix as the budget shrinks. If the
+ * name alone busts the budget, just hard-cut it.
+ */
 export function buildJobName(lead: Lead): string {
+  const name = contactName(lead);
   if (lead.payload.source === "calculator") {
     const calc = lead.payload.calc.calculator;
     const calcLabel = calc.charAt(0).toUpperCase() + calc.slice(1);
-    return `${contactName(lead)}'s ${calcLabel} Project`;
+    return truncate(`${name}'s ${calcLabel} Project`, JT_NAME_MAX);
   }
   if (lead.payload.source === "appointment") {
-    return `${contactName(lead)} — appointment request`;
+    return truncate(`${name} — appt`, JT_NAME_MAX);
   }
-  return `${contactName(lead)} — contact form`;
+  return truncate(`${name} — contact`, JT_NAME_MAX);
 }
 
 /** Long-form description shown on the job + as the source comment body. */
