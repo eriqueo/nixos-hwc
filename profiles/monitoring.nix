@@ -45,11 +45,20 @@
   # Uptime Kuma - Uptime monitoring
   hwc.monitoring.uptime-kuma.enable = lib.mkDefault true;
 
-  # Alertmanager - Alert routing to n8n webhooks
+  # Alertmanager — alert routing to multiple sinks (n8n being retired)
   hwc.monitoring.alertmanager = {
     enable = lib.mkDefault true;
-    # Webhook receivers route alerts to n8n for processing
     webhookReceivers = [
+      # New hexagonal dispatcher (Phase 1.6 cutover target).
+      # Added 2026-05-31 as a parallel sink alongside the existing two.
+      # Once verified via real Prometheus firings, n8n-webhook below
+      # will be removed and the n8n home:admin:alert-manager workflow
+      # deactivated.
+      {
+        name = "hwc-notify";
+        url = "http://localhost:11600/webhook/alertmanager";
+        sendResolved = true;
+      }
       {
         name = "n8n-webhook";
         url = "https://hwc.ocelot-wahoo.ts.net:2443/webhook/alertmanager";
