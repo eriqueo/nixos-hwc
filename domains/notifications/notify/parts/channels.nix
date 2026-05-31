@@ -49,11 +49,14 @@
     params = {
       host       = "127.0.0.1";
       port       = 1025;
-      requireTls = false;
-      # Bridge auths against the Proton account name ("eriqueo"), NOT the
-      # send address. The `from` field is the visible identity (must be
-      # one Bridge knows). See domains/mail/PROTON_BRIDGE_DEBUG_HISTORY.md.
-      login      = "eriqueo";
+      # Bridge requires STARTTLS even on loopback per the rendered
+      # ~/.config/msmtp/config (`tls on; tls_starttls on; tls_certcheck off`).
+      # The cert is self-signed; our adapter sets `rejectUnauthorized: false`
+      # which is the nodemailer equivalent of msmtp's tls_certcheck off.
+      requireTls = true;
+      # Bridge auths against the *send address*, not the Proton account
+      # name. Confirmed against the working msmtp account `proton-hwc`.
+      login      = "eric@iheartwoodcraft.com";
       from       = "eric@iheartwoodcraft.com";
       to         = "eric@iheartwoodcraft.com";
       timeoutMs  = 10000;
