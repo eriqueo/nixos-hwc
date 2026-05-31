@@ -57,6 +57,76 @@ let
   };
 
   mainJs = "${hwc-notify-pkg}/lib/node_modules/hwc-notify/dist/main.js";
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # hwc-notify-deps-update — automate the npmDepsHash dance
+  #
+  # `buildNpmPackage` content-pins package-lock.json via npmDepsHash. Any
+  # `npm install/update` makes the hash stale and the next nixos-rebuild
+  # fails. This CLI runs prefetch-npm-deps on the current lockfile, patches
+  # the hash in this index.nix, and stages the touched files for commit.
+  #
+  # Anchored on config.hwc.paths.nixos (Charter Law 3 — no hardcoded paths
+  # outside domains/paths/). When hwc-leads or another service needs the
+  # same flow, lift the body into a parameterised helper.
+  # ──────────────────────────────────────────────────────────────────────────
+  notify-deps-update = pkgs.writeShellApplication {
+    name = "hwc-notify-deps-update";
+    runtimeInputs = [
+      pkgs.prefetch-npm-deps
+      pkgs.gnused
+      pkgs.git
+      pkgs.coreutils
+    ];
+    text = ''
+      set -euo pipefail
+
+      nixos_root="${config.hwc.paths.nixos}"
+      service_rel="domains/notifications/notify"
+      service_dir="$nixos_root/$service_rel"
+      lockfile="$service_dir/parts/src/package-lock.json"
+      pkg_json="$service_dir/parts/src/package.json"
+      index_nix="$service_dir/index.nix"
+
+      # ── preconditions ──
+      [ -f "$lockfile" ]  || { echo "error: lockfile missing: $lockfile" >&2; exit 1; }
+      [ -f "$pkg_json" ]  || { echo "error: package.json missing: $pkg_json" >&2; exit 1; }
+      [ -f "$index_nix" ] || { echo "error: index.nix missing: $index_nix" >&2; exit 1; }
+
+      if ! grep -q 'npmDepsHash = "sha256-' "$index_nix"; then
+        echo "error: no 'npmDepsHash = \"sha256-...\"' line found in $index_nix" >&2
+        exit 1
+      fi
+
+      # ── compute new hash ──
+      echo "[deps-update] reading $lockfile"
+      new_hash=$(prefetch-npm-deps "$lockfile")
+      echo "[deps-update] new npmDepsHash: $new_hash"
+
+      # ── patch index.nix in-place ──
+      # base64 hashes contain + / = which are sed metacharacters; using |
+      # as delim sidesteps slash collisions, and the rest are inert in
+      # the replacement RHS.
+      sed -i "s|npmDepsHash = \"sha256-[A-Za-z0-9+/=]*\"|npmDepsHash = \"$new_hash\"|" "$index_nix"
+
+      # ── stage for commit ──
+      git -C "$nixos_root" add \
+        "$service_rel/index.nix" \
+        "$service_rel/parts/src/package.json" \
+        "$service_rel/parts/src/package-lock.json"
+
+      cat <<MSG
+[deps-update] patched and staged:
+  $service_rel/index.nix
+  $service_rel/parts/src/package.json
+  $service_rel/parts/src/package-lock.json
+
+Next:
+  git -C "$nixos_root" diff --cached
+  sudo nixos-rebuild switch --flake "$nixos_root#hwc-server"
+MSG
+    '';
+  };
 in
 {
   # OPTIONS
@@ -114,6 +184,9 @@ in
         ReadWritePaths = [ cfg.statePath ];
       };
     };
+
+    # Expose the deps-update CLI on the system PATH.
+    environment.systemPackages = [ notify-deps-update ];
 
     #========================================================================
     # CADDY REVERSE PROXY — port mode over tailnet
