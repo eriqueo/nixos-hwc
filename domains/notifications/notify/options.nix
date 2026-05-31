@@ -9,16 +9,92 @@
 
 let
   paths = config.hwc.paths;
+
+  # Submodule type for a single channel row. Mirrors the ChannelConfig
+  # discriminated union in parts/src/src/schemas/runtime-config.ts —
+  # both shapes must stay in sync (the runtime-config.json roundtrip
+  # validates at startup, so a drift will fail fast).
+  channelType = lib.types.submodule {
+    options = {
+      id = lib.mkOption {
+        type = lib.types.str;
+        description = "Stable channel id, used in routing rules + audit log.";
+      };
+      name = lib.mkOption {
+        type = lib.types.str;
+        description = "Human label for logs and the /health response.";
+      };
+      adapter = lib.mkOption {
+        type = lib.types.enum [ "discord" "log-only" ];
+        description = "Adapter type. Must match a builder in main.ts.";
+      };
+      secretRef = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          agenix secret name (NOT a path). Resolved at module-eval to
+          `config.age.secrets.<ref>.path` and surfaced to the runtime as
+          `params.secretFile`. Required for adapter = "discord".
+        '';
+      };
+      params = lib.mkOption {
+        type = lib.types.attrs;
+        default = {};
+        description = ''
+          Adapter-specific parameters. For "discord": optional
+          `username` (string) and `timeoutMs` (int). For "log-only":
+          empty.
+        '';
+      };
+    };
+  };
+
+  routeMatchType = lib.types.submodule {
+    options = {
+      topic = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Exact-match notification.topic when set.";
+      };
+      source = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Exact-match notification.source when set.";
+      };
+      priority = lib.mkOption {
+        type = lib.types.nullOr (lib.types.ints.between 1 5);
+        default = null;
+        description = "Exact-match notification.priority when set.";
+      };
+    };
+  };
+
+  routeType = lib.types.submodule {
+    options = {
+      name = lib.mkOption {
+        type = lib.types.str;
+        description = "Human label; appears in logs and POST /notify responses.";
+      };
+      match = lib.mkOption {
+        type = routeMatchType;
+        default = {};
+        description = "Predicate. Empty = catchall.";
+      };
+      channels = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        description = "Channel ids to dispatch to when this rule matches.";
+      };
+    };
+  };
 in
 {
   options.hwc.notifications.notify = {
     enable = lib.mkEnableOption ''
       hwc-notify — hexagonal notification dispatcher.
       Routes Notifications to Discord + SMTP via pluggable adapters,
-      with circuit breakers per channel and an audit log of every
-      delivery attempt. Replaces the n8n alert-manager workflow and
-      the per-script CLI senders (hwc-gotify-send, hwc-webhook-send).
-      See ~/.claude/plans/hashed-snacking-crab.md.
+      with declarative channel + routing tables. Replaces the n8n
+      alert-manager workflow and the per-script CLI senders. See
+      ~/.claude/plans/hashed-snacking-crab.md.
     '';
 
     user = lib.mkOption {
@@ -66,21 +142,39 @@ in
       description = "Minimum severity for structured JSON log output.";
     };
 
-    # ── Channel secret references ─────────────────────────────────────────
-    # Phase 1.2: only the alerts channel has live wiring. leads channel
-    # follows when Phase 2 needs it. Both reference the agenix secret IDs
-    # declared in domains/secrets/declarations/services.nix.
-    channels = {
-      discordAlerts.secretRef = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = "discord-webhook-hwc-alerts";
-        description = ''
-          agenix secret name (not file path) holding the Discord webhook URL
-          for the #hwc-alerts channel. Resolved at module-eval to
-          `config.age.secrets.<ref>.path`. Set to null to disable the
-          channel (falls back to log-only at runtime).
-        '';
-      };
+    # ── Channel registry + routing (data-driven) ────────────────────────
+    # Defaults live in parts/channels.nix + parts/routes.nix; override or
+    # append per-machine by setting these in the host's config.
+
+    channels = lib.mkOption {
+      type = lib.types.listOf channelType;
+      default = import ./parts/channels.nix;
+      description = ''
+        Channel registry. The runtime-config.json passed to the service
+        is built from this list with `secretRef` rewritten to its
+        agenix-mounted path. Override or append per-machine to wire new
+        channels without touching TS.
+      '';
+    };
+
+    routes = lib.mkOption {
+      type = lib.types.listOf routeType;
+      default = import ./parts/routes.nix;
+      description = ''
+        Routing rules — first match wins. Each rule's match block is
+        ANDed across set fields (empty match = catchall); channels lists
+        the ids to dispatch to. Reference only channel ids declared in
+        `channels` above (a startup cross-ref check fails loud otherwise).
+      '';
+    };
+
+    defaultChannels = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "discord-hwc-alerts" ];
+      description = ''
+        Channels to dispatch to when no routing rule matches. Empty list
+        means "drop on the floor" (audit log still records the receipt).
+      '';
     };
   };
 }

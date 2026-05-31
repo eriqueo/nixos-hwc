@@ -11,6 +11,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { parseRuntimeConfig, type RuntimeConfig } from "./schemas/runtime-config.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -21,8 +22,10 @@ export interface ServiceConfig {
   readonly logLevel: LogLevel;
   readonly serviceName: string;
   readonly version: string;
-  /** Discord webhook URL for the #hwc-alerts channel, read from agenix. */
-  readonly discordAlertsWebhookUrl: string | undefined;
+  /** Path to the Nix-generated runtime-config JSON (channels + routes). */
+  readonly runtimeConfigFile: string;
+  /** Parsed + cross-referenced channels and routes from runtimeConfigFile. */
+  readonly runtimeConfig: RuntimeConfig;
 }
 
 function readStr(name: string, fallback?: string): string {
@@ -49,24 +52,21 @@ function readLogLevel(name: string, fallback: LogLevel): LogLevel {
   throw new Error(`env: ${name} must be debug|info|warn|error, got: ${v}`);
 }
 
-/**
- * Read a secret from an agenix-mounted file path. Trims trailing newlines.
- * Returns undefined if the env var pointing at the file isn't set — that
- * makes secrets optional at this layer; the caller decides whether
- * absence is fatal (e.g., HTTP shell skips a channel) or fine.
- */
-function readSecretFile(name: string): string | undefined {
-  const filepath = process.env[name];
-  if (!filepath || filepath.length === 0) return undefined;
+/** Read + parse the runtime-config JSON written by the NixOS module. */
+function loadRuntimeConfig(filepath: string): RuntimeConfig {
+  let raw: unknown;
   try {
-    return readFileSync(filepath, "utf8").replace(/\s+$/u, "");
+    const text = readFileSync(filepath, "utf8");
+    raw = JSON.parse(text);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    throw new Error(`secret file at ${name}=${filepath} unreadable: ${reason}`);
+    throw new Error(`runtime-config: cannot read or parse ${filepath}: ${reason}`);
   }
+  return parseRuntimeConfig(raw);
 }
 
 export function loadConfig(): ServiceConfig {
+  const runtimeConfigFile = readStr("HWC_NOTIFY_RUNTIME_CONFIG_FILE");
   return {
     bindAddr: readStr("HWC_NOTIFY_BIND_ADDR", "127.0.0.1"),
     port: readPort("HWC_NOTIFY_PORT", 11600),
@@ -74,6 +74,7 @@ export function loadConfig(): ServiceConfig {
     logLevel: readLogLevel("HWC_NOTIFY_LOG_LEVEL", "info"),
     serviceName: "hwc-notify",
     version: "0.1.0",
-    discordAlertsWebhookUrl: readSecretFile("HWC_NOTIFY_DISCORD_ALERTS_FILE"),
+    runtimeConfigFile,
+    runtimeConfig: loadRuntimeConfig(runtimeConfigFile),
   };
 }
