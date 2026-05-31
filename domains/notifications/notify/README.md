@@ -81,7 +81,34 @@ error: hash mismatch in fixed-output derivation '…hwc-notify-…-npm-deps.drv'
           got:    sha256-w76KLDIu…  ← the real one
 ```
 
-Copy the `got:` value into `npmDepsHash` and rebuild. This is annoying-but-deliberate: the hash is the proof that what's on disk matches what built. Don't dodge it.
+Copy the `got:` value into `npmDepsHash` and rebuild. The hash is the proof that what's on disk matches what built — that's the value it provides. The annoyance is only in HOW you obtain the new value (force a build failure to print it), not in having it.
+
+### Doing the hash update better
+
+The "edit fakeHash → rebuild → copy `got:` → paste → rebuild again" cycle is the manual form. Cleaner options exist:
+
+1. **`nix-prefetch-npm-deps`** (in nixpkgs) computes the hash from a lockfile without doing a real build. One command:
+
+   ```bash
+   nix run nixpkgs#prefetch-npm-deps -- ./parts/src/package-lock.json
+   # → sha256-w76KLDIu…
+   ```
+
+   Then paste into `index.nix`. Removes the rebuild-fail step but you still hand-edit `npmDepsHash`.
+
+2. **A wrapper CLI** (TODO — `hwc-notify-deps-update` as a `pkgs.writeShellApplication`) that does the whole flow in one shot:
+
+   ```bash
+   cd domains/notifications/notify/parts/src
+   npm install <pkg>           # or `npm update`
+   hwc-notify-deps-update      # runs prefetch + patches index.nix + stages changes
+   git diff --stat             # review
+   sudo nixos-rebuild switch --flake .#hwc-server
+   ```
+
+   This is the right "fix it properly" answer for a single-developer repo. The wrapper is ~15 lines of bash. Not built yet — see [[../../../README.md]] backlog or open an issue when this starts to grate.
+
+3. **Alternative npm-to-nix translators** (`napalm`, `node2nix`, `yarn2nix`) skip the hash entirely by reading `package-lock.json` directly inside the Nix evaluator. They have their own tradeoffs (evaluation cost, lockfile-format coverage, opinionated about scripts). Worth evaluating only if option 2 isn't enough.
 
 ## Local dev-loop without rebuilding NixOS
 
