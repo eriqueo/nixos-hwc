@@ -1,15 +1,17 @@
 # domains/notifications/notify/index.nix
 #
-# hwc-notify — hexagonal notification dispatcher (Node 22, --experimental-strip-types).
+# hwc-notify — hexagonal notification dispatcher.
 #
 # Phase 1.1: minimal HTTP server with /health only. Subsequent chunks
 # add channel adapters, routing, /notify endpoint, audit log, CLI, MCP.
 #
-# Runtime pattern mirrors domains/server/native/ai/hermes: TS source
-# bundled into the Nix store via sourceFilesBySuffices; Node 22 strips
-# types at parse time. No npm install, no build step, no node_modules
-# at runtime. package.json + node_modules in the working tree are
-# type-only metadata for IDE typechecking.
+# Deployment shape: pkgs.buildNpmPackage builds a hermetic derivation
+# from parts/src/ — every nixos-rebuild produces an identical store
+# path containing dist/*.js + a fully populated node_modules/. No
+# `npm install` at deploy time, no network, no developer manual-build
+# step. Reproducibility is enforced by `npmDepsHash` being content-
+# pinned against package-lock.json — changing deps means regenerating
+# the hash (see README for the workflow).
 #
 # See ~/.claude/plans/hashed-snacking-crab.md for the full design.
 
@@ -18,13 +20,43 @@
 let
   cfg = config.hwc.notifications.notify;
 
-  # Bundle all .ts files under parts/src/src into ONE Nix store path so
-  # relative imports between modules resolve. Individual file references
-  # would put each .ts in its own store path and break ./adapters/log-stderr.ts
-  # → ../ports/log.ts.
-  src = lib.sources.sourceFilesBySuffices ./parts/src/src [ ".ts" ];
+  # Hermetic Nix-built package. Reads parts/src/{package.json,package-lock.json}
+  # to fetch deps offline (against npmDepsHash) and runs `npm run build` →
+  # produces dist/*.js. Output lives at:
+  #   ${hwc-notify-pkg}/lib/node_modules/hwc-notify/
+  #     ├── dist/         (compiled JS + sourcemaps)
+  #     ├── node_modules/ (runtime deps; zod, etc.)
+  #     └── package.json
+  hwc-notify-pkg = pkgs.buildNpmPackage {
+    pname = "hwc-notify";
+    version = "0.1.0";
 
-  node = "${pkgs.nodejs_22}/bin/node";
+    # Bundle only the files buildNpmPackage needs. node_modules + dist
+    # are excluded from the dev tree by .gitignore and would just be
+    # rebuilt anyway.
+    src = lib.cleanSourceWith {
+      src = ./parts/src;
+      filter = path: type:
+        let base = baseNameOf path;
+        in base != "node_modules" && base != "dist" && base != ".gitignore";
+    };
+
+    # First-time setup: leave as lib.fakeHash, run nixos-rebuild, copy the
+    # "got: sha256-…" line from the error into here, rebuild succeeds.
+    # Subsequent dep updates require the same dance (a hash mismatch is
+    # the build telling you the lockfile changed).
+    npmDepsHash = "sha256-w76KLDIujl5jpChGB5hE1mgKLg1hGQeijtMA0ke0/GQ=";
+
+    # npm run build → tsc → dist/. Default `npmBuildScript = "build"`,
+    # so this is the existing behavior — declared explicitly for clarity.
+    npmBuildScript = "build";
+
+    # Disable npm version-tag checking. We don't publish to npm, so the
+    # name@version aren't expected to be reachable on the registry.
+    dontNpmPrune = false;
+  };
+
+  mainJs = "${hwc-notify-pkg}/lib/node_modules/hwc-notify/dist/main.js";
 in
 {
   # OPTIONS
@@ -48,16 +80,14 @@ in
         HWC_NOTIFY_STATE_DIR  = cfg.statePath;
         HWC_NOTIFY_LOG_LEVEL  = cfg.logLevel;
         PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
+        # NODE_ENV=production silences the Node performance hint and gives
+        # well-behaved libs their fast paths.
+        NODE_ENV = "production";
       };
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = lib.concatStringsSep " " [
-          node
-          "--experimental-strip-types"
-          "--no-warnings"
-          "${src}/main.ts"
-        ];
+        ExecStart = "${pkgs.nodejs_22}/bin/node ${mainJs}";
         User = lib.mkForce cfg.user;
         Group = "users";
         Restart = "on-failure";
