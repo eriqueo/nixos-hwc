@@ -14,7 +14,9 @@ import { makeStderrLogger } from "./adapters/log-stderr.js";
 import { safeParseLeadInput, buildLead } from "./schemas/lead.js";
 import { verifyHmac } from "./core/hmac.js";
 import { makePostgresLeadStore } from "./adapters/store-postgres.js";
+import { makeJtJobtreadAdapter } from "./adapters/jt-jobtread.js";
 import type { LeadStore } from "./ports/store.js";
+import type { JtClient } from "./ports/jt.js";
 
 const MAX_BODY_BYTES = 64 * 1024;
 
@@ -66,6 +68,18 @@ function main(): void {
     dsn: config.postgresDsn,
     log: log.child({ component: "postgres" }),
   });
+
+  const jt: JtClient | undefined = config.jtGrantKey
+    ? makeJtJobtreadAdapter({
+        grantKey: config.jtGrantKey,
+        mappings: config.jtMappings,
+        log: log.child({ component: "jt" }),
+      })
+    : undefined;
+
+  if (!jt) {
+    log.warn("JT graph creation disabled (jtGrantKey unwired) — leads will save with empty jt:{}");
+  }
 
   const startedAt = new Date();
 
@@ -162,28 +176,10 @@ function main(): void {
           contactEmail: lead.payload.contact.email,
         });
 
-        // ── 5. Persist (Phase 2.3) ──
-        // Postgres write is the first downstream side-effect. JT graph
-        // creation + hwc-notify ping + customer email land next.
+        // ── 5. Persist ──
         try {
-          const saveResult = await store.save(lead);
-          reqLog.info("lead persisted", {
-            leadId: lead.id,
-            inserted: saveResult.inserted,
-            ...(saveResult.rowId !== undefined ? { rowId: saveResult.rowId } : {}),
-          });
-          writeJson(res, 202, {
-            leadId: lead.id,
-            source: lead.payload.source,
-            status: lead.status,
-            receivedAt: lead.receivedAt,
-            persisted: {
-              inserted: saveResult.inserted,
-              ...(saveResult.rowId !== undefined ? { rowId: saveResult.rowId } : {}),
-            },
-            message:
-              "lead persisted; JT graph creation + hwc-notify ping + customer email land in Phase 2.4+.",
-          });
+          await store.save(lead);
+          reqLog.info("lead persisted", { leadId: lead.id });
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           reqLog.error("postgres save failed", { leadId: lead.id, err: reason });
@@ -192,7 +188,62 @@ function main(): void {
             message: "lead validated but persistence failed; retry safe",
             leadId: lead.id,
           });
+          return;
         }
+
+        // ── 6. JT graph creation (Phase 2.4) ──
+        // Idempotent on the row's existing JT IDs; saves whatever was
+        // created back to the DB even on partial failure so a future
+        // replay can pick up where this attempt left off.
+        let jtIds: { accountId?: string; locationId?: string; contactId?: string; jobId?: string } = {};
+        let jtError: string | undefined;
+        let jtRetryable: boolean | undefined;
+        let nextStatus: "complete" | "pending_jt" | "validated" = "validated";
+
+        if (jt) {
+          const result = await jt.createGraph(lead, {});
+          jtIds = {
+            ...(result.ids.accountId  ? { accountId:  result.ids.accountId  } : {}),
+            ...(result.ids.locationId ? { locationId: result.ids.locationId } : {}),
+            ...(result.ids.contactId  ? { contactId:  result.ids.contactId  } : {}),
+            ...(result.ids.jobId      ? { jobId:      result.ids.jobId      } : {}),
+          };
+          nextStatus = result.complete ? "complete" : "pending_jt";
+          if (!result.complete) {
+            jtError = result.error;
+            jtRetryable = result.retryable;
+            reqLog.warn("jt graph partial", {
+              leadId: lead.id,
+              failedAt: result.failedAt,
+              retryable: result.retryable,
+              ids: jtIds,
+            });
+          }
+
+          // Persist whatever happened.
+          try {
+            await store.updateJtIds(lead.id, jtIds, nextStatus);
+          } catch (err) {
+            reqLog.error("jt id update failed", {
+              leadId: lead.id,
+              err: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+
+        writeJson(res, 202, {
+          leadId: lead.id,
+          source: lead.payload.source,
+          status: nextStatus,
+          receivedAt: lead.receivedAt,
+          jt: jtIds,
+          ...(jtError ? { jtError, jtRetryable } : {}),
+          message: jt
+            ? (nextStatus === "complete"
+                ? "lead persisted + JT graph created; hwc-notify + customer email land in Phase 2.5."
+                : "lead persisted; JT graph PARTIAL (see jt + jtError); replay endpoint lands in Phase 2.7.")
+            : "lead persisted; JT disabled (no grant key wired).",
+        });
       })();
       return;
     }
