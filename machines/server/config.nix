@@ -797,24 +797,44 @@
   #============================================================================
   # CLOUDFLARE TUNNEL (public webhook ingress)
   #============================================================================
-  # Exposes webhooks.heartwoodcraft.me → n8n for external services (Quo, etc.)
+  # Exposes webhooks.heartwoodcraft.me → n8n for external services (Quo, etc.).
+  # Parallel *.api.iheartwoodcraft.com hostnames are configured below for the
+  # Phase 4.6 backend-ingress migration; they activate when DNS is provisioned.
   # Setup: cloudflared tunnel login → cloudflared tunnel create hwc-server
   #        then encrypt credentials JSON with agenix and set tunnelId below
   hwc.networking.cloudflared = {
     enable = true;  # Enable after: tunnel created + credentials encrypted + DNS CNAME set
     tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
     credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
-    # n8n.heartwoodcraft.me handled by `domain` option default → localhost:n8nPort
+    # n8n.heartwoodcraft.me handled by `domain` option default → localhost:n8nPort.
+    #
+    # Phase 4.6 migration in progress (2026-06-01): the *.api.iheartwoodcraft.com
+    # hostnames are added in parallel so a flip to the production domain is
+    # one option-default change away. They will receive traffic the moment
+    # the operator (a) delegates `api.iheartwoodcraft.com` from Hostinger
+    # (where the apex zone lives) to Cloudflare via NS records and (b)
+    # creates the per-host CNAMEs against the existing tunnel. Until DNS
+    # is provisioned, these mappings are inert — the tunnel accepts
+    # connections only for hostnames the public DNS actually points at it.
+    # See wiki/nixos/iheartwoodcraft-com-backend-migration.md.
     extraIngress = {
-      "mcp.heartwoodcraft.me" = "http://localhost:6200";
+      "mcp.heartwoodcraft.me"    = "http://localhost:6200";
       "jobber.heartwoodcraft.me" = "http://localhost:8002";
-      "leads.heartwoodcraft.me" = "http://localhost:8420";
-      "brain.heartwoodcraft.me" = "http://localhost:9876";
+      "leads.heartwoodcraft.me"  = "http://localhost:8420";
+      "brain.heartwoodcraft.me"  = "http://localhost:9876";
+
+      "n8n.api.iheartwoodcraft.com"    = "http://localhost:5678";
+      "mcp.api.iheartwoodcraft.com"    = "http://localhost:6200";
+      "jobber.api.iheartwoodcraft.com" = "http://localhost:8002";
+      "leads.api.iheartwoodcraft.com"  = "http://localhost:8420";
+      "brain.api.iheartwoodcraft.com"  = "http://localhost:9876";
     };
   };
 
-  # n8n webhook URL points at the public Cloudflare Tunnel hostname so
-  # external integrations (Quo, Slack, etc.) reach n8n via cloudflared.
+  # n8n webhook URL still points at the .me hostname because that's where
+  # callers expect to reach it. Flip to n8n.api.iheartwoodcraft.com after
+  # DNS is provisioned and any external integrations (Quo, Slack, etc.)
+  # are updated.
   hwc.automation.n8n.webhookUrl = "https://n8n.heartwoodcraft.me";
 
   #============================================================================
