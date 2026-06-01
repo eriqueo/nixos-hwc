@@ -37,6 +37,7 @@
     ./packages.nix
     ../../paths/paths.nix
     ./login.nix
+    ./coredump.nix
     ./authentik/index.nix
   ];
 

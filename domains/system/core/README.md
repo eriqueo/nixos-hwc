@@ -15,6 +15,7 @@ core/
 │   └── parts/
 │       └── config.nix
 ├── identity/        # User identity options (puid, pgid, user, group) - inlined
+├── coredump.nix    # systemd-coredump retention caps
 ├── filesystem.nix   # Filesystem structure via tmpfiles
 ├── index.nix        # Core aggregator
 ├── packages.nix     # Base system packages
@@ -29,3 +30,4 @@ core/
 - 2026-05-21: `login.nix` — strip NVIDIA PRIME env exports (`__NV_PRIME_RENDER_OFFLOAD`, `__GLX_VENDOR_LIBRARY_NAME`, `__VK_LAYER_NV_optimus`, `LIBVA_DRIVER_NAME=nvidia`) from greetd's `hyprStart`. Comment claimed "ignored if not applicable" — false: they actively route libglvnd/libva to NVIDIA on every child process, poisoning Hyprland's EGL state and crashing the compositor on WebGL DMA-BUF imports. NVIDIA offload is per-process via `gpu-launch` / `blender-offload` (companion to the system/gpu.nix fix the same day)
 - 2026-05-21: `login.nix` — additionally pin `__EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/50_mesa.json` in `hyprStart`. Without this, libglvnd enumerated both Mesa (priority 50) and NVIDIA (priority 10) ICDs, loading `libEGL_nvidia.so` + `nvidia-egl-*.so` into every process — visibly broke browser WebGL even after the prior env-strip commit (page-level "WebGL supported but disabled or unavailable" error). gpu-launch / blender-offload unset this var per-process to restore enumeration when NVIDIA EGL is actually wanted
 - 2026-05-21: `login.nix` — reverted the `__EGL_VENDOR_LIBRARY_FILENAMES` pin from `hyprStart`. The "WebGL disabled in LibreWolf" symptom was actually a LibreWolf-specific FPP override (`privacy.fingerprintingProtection.overrides` including `WebGLRenderCapability` via `+AllTargets`), not an EGL ICD enumeration problem — confirmed by `nix-shell -p firefox` working on the same Mesa/NVIDIA setup. The earlier NVIDIA PRIME env strip in `hyprStart` (commit 5c30ef8d) stays — that fix was correct and unrelated
+- 2026-06-01: `coredump.nix` — cap `/var/lib/systemd/coredump` at `MaxUse=500M` / `KeepFree=2G`. A llama-server crash loop on 2026-05-29 dropped 29 × ~146MB cores (~4GB) into the dir with no rotation; nothing reaped them and they sat for 2+ days until manual purge. systemd-coredump's defaults do not cap disk use.
