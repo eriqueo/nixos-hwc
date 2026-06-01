@@ -50,6 +50,31 @@ in
       default = "eric";
       description = "User to run the service as";
     };
+
+    # Late-binding endpoints for the calculator/contact-form Vite build.
+    # Inject as VITE_LEADS_WEBHOOK_URL / VITE_LEADS_WEBHOOK_APPT_URL so the
+    # CalculatorRuntime prefers env over the JSON fallback. Single source
+    # of truth for "where do leads go" — change here, rebuild + redeploy.
+    leadsWebhookUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead";
+      description = ''
+        URL the calculator app POSTs lead submissions to. Today this hits
+        the n8n thin-shell workflow (work_calculator_lead) which HMAC-signs
+        + forwards to hwc-leads. A future direct-POST cutover would point
+        this at the public Caddy hwc-leads route.
+      '';
+    };
+    leadsAppointmentWebhookUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-appointment";
+      description = ''
+        URL the calculator's "schedule a call" flow POSTs to. Note: the
+        work_calculator_appointment n8n workflow was archived during
+        Phase 0; submissions to this URL currently 404 (caught silently
+        by the calc). Replace with a real route during Move B or beyond.
+      '';
+    };
   };
 
   #==========================================================================
@@ -64,6 +89,13 @@ in
       description = "Heartwood CMS Dashboard";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
+
+      # Inject the leads endpoints so the `vite build` step (kicked off
+      # by the CMS deploy action) bakes them into the calc bundle.
+      environment = {
+        VITE_LEADS_WEBHOOK_URL = cfg.leadsWebhookUrl;
+        VITE_LEADS_WEBHOOK_APPT_URL = cfg.leadsAppointmentWebhookUrl;
+      };
 
       serviceConfig = {
         Type = "simple";
