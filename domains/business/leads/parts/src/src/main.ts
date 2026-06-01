@@ -475,12 +475,18 @@ function main(): void {
     // Permissive id charset: alnum + dash to allow the 8-char [a-z0-9]
     // ids the calc generates plus future longer slugs without a
     // migration.
+    //
+    // CORS: the customer's browser is on https://iheartwoodcraft.com
+    // (Hostinger) and this service is on the tailnet/Caddy host. Allow
+    // the production origin so the report.njk fetch lands.
     {
       const m = /^\/api\/reports\/([A-Za-z0-9-]{4,64})$/.exec(url);
       if (method === "GET" && m && m[1]) {
         const reportId = m[1];
         void (async () => {
           try {
+            res.setHeader("access-control-allow-origin", "https://iheartwoodcraft.com");
+            res.setHeader("vary", "origin");
             const report = await reportStore.byId(reportId);
             if (!report) {
               writeJson(res, 404, { code: "NOT_FOUND", message: `no report with id ${reportId}` });
