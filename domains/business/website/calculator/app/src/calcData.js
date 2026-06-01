@@ -1,7 +1,8 @@
 // ─── Shared calculator runtime ─────────────────────────────────────────────
-// Consumed by bathroomData.js and deckData.js. Holds the two pricing engines
-// (bathroom + deck) and the step-transformation logic that resolves image
-// paths from the JSON's imageBase and per-option image filename.
+// Consumed by CalculatorRuntime + EstimateSidebar. Holds the three pricing
+// engines (assembly + bathroom + deck) and the step-transformation logic
+// that resolves image paths from the JSON's imageBase and per-option image
+// filename.
 
 // Resolve an option's image to a full URL: imageBase + "/" + filename
 function resolveImage(imageBase, filename) {

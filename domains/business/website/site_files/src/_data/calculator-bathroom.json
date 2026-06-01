@@ -6,6 +6,34 @@
   "webhook": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead",
   "webhookAppointment": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-appointment",
   "imageBase": "/img/calculator/bathroom",
+  "copy": {
+    "gateEstimateLabel": "Your bathroom remodel estimate",
+    "resultsEstimateLabel": "Your bathroom remodel estimate",
+    "footerCopy": "Based on real Heartwood Craft projects in Bozeman \u2014 not national averages."
+  },
+  "results": {
+    "summaryFields": [
+      { "label": "Project",  "id": "project_type" },
+      { "label": "Size",     "id": "bathroom_size" },
+      { "label": "Layout",   "id": "shower_tub" },
+      { "label": "Tile",     "id": "tile_level" },
+      { "label": "Fixtures", "id": "fixtures" },
+      { "label": "Timeline", "id": "timeline" }
+    ]
+  },
+  "sidebar": {
+    "contentKey": "bathroom",
+    "stepOrder": ["project_type", "bathroom_size", "shower_tub", "tile_level", "fixtures", "features", "timeline"],
+    "labelMap": {
+      "project_type": "Project",
+      "bathroom_size": "Size",
+      "shower_tub": "Layout",
+      "tile_level": "Tile",
+      "fixtures": "Fixtures",
+      "features": "Extras",
+      "timeline": "Timeline"
+    }
+  },
   "steps": [
     {
       "id": "project_type",

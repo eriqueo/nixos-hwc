@@ -5,6 +5,34 @@
   "webhook": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead",
   "webhookAppointment": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-appointment",
   "imageBase": "/img/calculator/deck",
+  "copy": {
+    "gateEstimateLabel": "Your deck project estimate",
+    "resultsEstimateLabel": "Your Bozeman deck estimate",
+    "footerCopy": "Based on real Heartwood Craft deck projects in the Gallatin Valley \u2014 not national averages."
+  },
+  "results": {
+    "summaryFields": [
+      { "label": "Project",  "id": "project_type" },
+      { "label": "Size",     "id": "deck_size" },
+      { "label": "Height",   "id": "deck_height" },
+      { "label": "Material", "id": "material" },
+      { "label": "Railing",  "id": "railing" },
+      { "label": "Timeline", "id": "timeline" }
+    ]
+  },
+  "sidebar": {
+    "contentKey": "deck",
+    "stepOrder": ["project_type", "deck_size", "deck_height", "material", "railing", "features", "timeline"],
+    "labelMap": {
+      "project_type": "Project",
+      "deck_size": "Size",
+      "deck_height": "Height",
+      "material": "Material",
+      "railing": "Railing",
+      "features": "Extras",
+      "timeline": "Timeline"
+    }
+  },
   "steps": [
     {
       "id": "project_type",

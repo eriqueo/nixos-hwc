@@ -1,6 +1,6 @@
 // ─── Heartwood Craft Design Tokens ─────────────────────────────────────────
 // Matches the site's warm cream/copper palette instead of dark Gruvbox.
-// Used by both BathroomCalculator and DeckCalculator.
+// Used by CalculatorRuntime + EstimateSidebar.
 
 export const T = {
   // Brand
