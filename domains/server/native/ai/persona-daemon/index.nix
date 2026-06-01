@@ -109,10 +109,13 @@ in
     };
 
     #========================================================================
-    # SYSTEMD PATH UNIT — debounced reindex trigger on vault changes
-    # PathChanged fires when any file under cfg.vaultPath is modified;
-    # TriggerLimitIntervalSec collapses bursts of edits into one
-    # reindex call per minute.
+    # SYSTEMD PATH UNIT — fast-path reindex trigger on top-level vault changes
+    # systemd.path PathChanged= does NOT recurse: inotify on a directory only
+    # fires for its immediate entries, not subdirectories. So this catches
+    # edits to files directly in cfg.vaultPath (e.g. MEMORY.md, .gitignore)
+    # but misses the common case (writes under wiki/, _llm-inbox/, etc.).
+    # The periodic timer below is what actually keeps the index fresh.
+    # TriggerLimitIntervalSec collapses bursts of edits into one call/min.
     #========================================================================
     systemd.paths = lib.mkIf (cfg.vaultPath != null) {
       persona-daemon-reindex = {
@@ -122,6 +125,24 @@ in
           PathChanged = toString cfg.vaultPath;
           TriggerLimitIntervalSec = "60s";
           TriggerLimitBurst = 1;
+        };
+      };
+    };
+
+    #========================================================================
+    # SYSTEMD TIMER — periodic reindex covering subdirectory edits
+    # Reindex is incremental: the daemon stats files and only re-embeds
+    # those whose mtime changed since the last run. A no-op pass is cheap.
+    # 5 minutes is the staleness budget for RAG over the brain vault.
+    #========================================================================
+    systemd.timers = lib.mkIf (cfg.vaultPath != null) {
+      persona-daemon-reindex = {
+        description = "Periodic persona-daemon reindex (covers subdir edits PathChanged misses)";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "2min";
+          OnUnitActiveSec = "5min";
+          Persistent = false;
         };
       };
     };

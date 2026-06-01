@@ -123,6 +123,13 @@ deno task dev
 
 ## Changelog
 
+- 2026-06-01: Add 5-min periodic reindex timer alongside the path unit.
+  `systemd.path` `PathChanged=` only watches the directory's immediate
+  entries — edits under `wiki/`, `_llm-inbox/`, etc. never fire the
+  trigger, so the index drifted stale between service restarts. The
+  timer covers subdirectory edits; the path unit stays as the fast
+  path for top-level writes. Reindex is incremental, so no-op passes
+  are cheap. Fixes `PersonaDaemonReindexStale` firing without cause.
 - 2026-05-30: Commit 4 — MCP HTTP shell at `/mcp` (5 tools: chat, recall,
   list_personas, list_conversations, inbox_capture). Prometheus `/metrics`
   endpoint + scrape registration. Caddy route 28443 → 127.0.0.1:11550.
