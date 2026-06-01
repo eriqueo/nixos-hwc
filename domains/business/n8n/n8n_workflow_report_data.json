@@ -118,7 +118,7 @@
           "responseCode": 200,
           "responseHeaders": {
             "entries": [
-              { "name": "Access-Control-Allow-Origin", "value": "https://heartwoodcraft.me" },
+              { "name": "Access-Control-Allow-Origin", "value": "https://iheartwoodcraft.com" },
               { "name": "Access-Control-Allow-Methods", "value": "GET" },
               { "name": "Cache-Control", "value": "public, max-age=3600" }
             ]
@@ -139,7 +139,7 @@
           "responseCode": 404,
           "responseHeaders": {
             "entries": [
-              { "name": "Access-Control-Allow-Origin", "value": "https://heartwoodcraft.me" }
+              { "name": "Access-Control-Allow-Origin", "value": "https://iheartwoodcraft.com" }
             ]
           }
         }
@@ -158,7 +158,7 @@
           "responseCode": 400,
           "responseHeaders": {
             "entries": [
-              { "name": "Access-Control-Allow-Origin", "value": "https://heartwoodcraft.me" }
+              { "name": "Access-Control-Allow-Origin", "value": "https://iheartwoodcraft.com" }
             ]
           }
         }

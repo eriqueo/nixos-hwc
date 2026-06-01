@@ -1,6 +1,6 @@
 # domains/business/website/index.nix
 #
-# Heartwood CMS Dashboard — content management for heartwoodcraft.me
+# Heartwood CMS Dashboard — content management for iheartwoodcraft.com
 # Node.js REST API + vanilla JS frontend, manages 11ty site content
 #
 # NAMESPACE: hwc.business.website.*
@@ -25,7 +25,7 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.business.website = {
-    enable = lib.mkEnableOption "Heartwood CMS Dashboard (content management for heartwoodcraft.me)";
+    enable = lib.mkEnableOption "Heartwood CMS Dashboard (content management for iheartwoodcraft.com)";
 
     port = lib.mkOption {
       type = lib.types.port;

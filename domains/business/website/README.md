@@ -1,7 +1,7 @@
 # Heartwood CMS
 
 ## Purpose
-Content management dashboard for heartwoodcraft.me. Node.js REST API that reads/writes markdown files and JSON in the site_files 11ty repo, processes images via ImageMagick, builds the site, and deploys to Hostinger via SFTP. Vanilla JS frontend served as static files.
+Content management dashboard for the customer-facing site at iheartwoodcraft.com. Node.js REST API that reads/writes markdown files and JSON in the site_files 11ty repo, processes images via ImageMagick, builds the site, and deploys to Hostinger via SFTP. Vanilla JS frontend served as static files.
 
 ## Boundaries
 - Manages: systemd service for the CMS API server (port 8095)
