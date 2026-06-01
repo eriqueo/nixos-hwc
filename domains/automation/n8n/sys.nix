@@ -39,6 +39,10 @@ let
       echo "ANTHROPIC_API_KEY=$(cat ${cfg.secrets.anthropicApiKeyFile})" >> ${secretsEnvFile}
     ''}
 
+    ${lib.optionalString (cfg.secrets.hwcLeadsHmacFile != null) ''
+      echo "HWC_LEADS_HMAC_SECRET=$(cat ${cfg.secrets.hwcLeadsHmacFile})" >> ${secretsEnvFile}
+    ''}
+
     ${lib.concatStringsSep "\n" (lib.mapAttrsToList (key: path:
       let envName = "GOTIFY_TOKEN_" + lib.toUpper (builtins.replaceStrings ["-"] ["_"] key);
       in ''echo "${envName}=$(cat ${path})" >> ${secretsEnvFile}''
@@ -51,6 +55,7 @@ let
             || cfg.secrets.slackWebhookUrlFile != null
             || cfg.secrets.discordWebhookUrlFile != null
             || cfg.secrets.anthropicApiKeyFile != null
+            || cfg.secrets.hwcLeadsHmacFile != null
             || cfg.secrets.gotifyTokenFiles != {};
 in
 {
@@ -86,6 +91,9 @@ in
         N8N_RESTRICT_FILE_ACCESS_TO = "/home/node/.n8n-files;/data";
         # Allow access to environment variables in code nodes (required for $env.JOBTREAD_GRANT_KEY etc.)
         N8N_BLOCK_ENV_ACCESS_IN_NODE = "false";
+        # Allow `require("crypto")` in Code nodes — needed by the
+        # work_calculator_lead thin shell to HMAC-sign POST /leads.
+        NODE_FUNCTION_ALLOW_BUILTIN = "crypto";
       } // cfg.extraEnv;
       environmentFiles =
         (lib.optional (cfg.encryption.keyFile != null) cfg.encryption.keyFile)
