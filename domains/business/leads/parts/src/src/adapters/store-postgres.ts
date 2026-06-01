@@ -42,6 +42,10 @@ interface LeadRow {
   status: string;
   payload: unknown;
   received_at: string;
+  jt_account_id?: string | null;
+  jt_location_id?: string | null;
+  jt_contact_id?: string | null;
+  jt_job_id?: string | null;
 }
 
 function asLeadStatus(s: string): LeadStatus {
@@ -59,12 +63,17 @@ function asLeadStatus(s: string): LeadStatus {
 
 function rowToLead(row: LeadRow): Lead {
   const payload = row.payload as LeadPayload;
+  const jt: { -readonly [K in keyof Lead["jt"]]: Lead["jt"][K] } = {};
+  if (row.jt_account_id)  jt.accountId  = row.jt_account_id;
+  if (row.jt_location_id) jt.locationId = row.jt_location_id;
+  if (row.jt_contact_id)  jt.contactId  = row.jt_contact_id;
+  if (row.jt_job_id)      jt.jobId      = row.jt_job_id;
   return {
     id: row.id,
     payload,
     receivedAt: row.received_at,
     status: asLeadStatus(row.status),
-    jt: {},
+    jt,
   };
 }
 
@@ -81,7 +90,8 @@ const INSERT_SQL = `
 `;
 
 const SELECT_BY_ID_SQL = `
-  SELECT id::text AS id, source, status, payload, received_at::text AS received_at
+  SELECT id::text AS id, source, status, payload, received_at::text AS received_at,
+         jt_account_id, jt_location_id, jt_contact_id, jt_job_id
   FROM hwc.leads
   WHERE id = $1::uuid
 `;
@@ -137,7 +147,8 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
       const limitParam = `$${params.length}`;
       const whereClause = conds.length > 0 ? `WHERE ${conds.join(" AND ")}` : "";
       const sql = `
-        SELECT id::text AS id, source, status, payload, received_at::text AS received_at
+        SELECT id::text AS id, source, status, payload, received_at::text AS received_at,
+         jt_account_id, jt_location_id, jt_contact_id, jt_job_id
         FROM hwc.leads
         ${whereClause}
         ORDER BY received_at DESC

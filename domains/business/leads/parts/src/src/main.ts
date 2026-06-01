@@ -315,6 +315,98 @@ function main(): void {
       return;
     }
 
+    // ── GET /leads/:id ─────────────────────────────────────────────────
+    {
+      const m = /^\/leads\/([0-9a-f-]{36})$/.exec(url);
+      if (method === "GET" && m && m[1]) {
+        const leadId = m[1];
+        void (async () => {
+          try {
+            const lead = await store.byId(leadId);
+            if (!lead) {
+              writeJson(res, 404, { code: "NOT_FOUND", message: `no lead with id ${leadId}` });
+              return;
+            }
+            writeJson(res, 200, lead);
+          } catch (err) {
+            reqLog.error("byId query failed", {
+              leadId,
+              err: err instanceof Error ? err.message : String(err),
+            });
+            writeJson(res, 500, { code: "POSTGRES_ERROR", message: "lookup failed" });
+          }
+        })();
+        return;
+      }
+    }
+
+    // ── POST /leads/:id/replay ─────────────────────────────────────────
+    // Resume the JT graph creation for a row whose previous attempt
+    // landed at status=pending_jt. Idempotent: any step whose target
+    // id is already set in the DB is skipped. Updates the row with
+    // whatever NEW ids get created; status flips to "complete" once
+    // every step is in place.
+    {
+      const m = /^\/leads\/([0-9a-f-]{36})\/replay$/.exec(url);
+      if (method === "POST" && m && m[1]) {
+        const leadId = m[1];
+        void (async () => {
+          try {
+            const lead = await store.byId(leadId);
+            if (!lead) {
+              writeJson(res, 404, { code: "NOT_FOUND", message: `no lead with id ${leadId}` });
+              return;
+            }
+            if (!jt) {
+              writeJson(res, 503, {
+                code: "JT_DISABLED",
+                message: "jtGrantKey unwired — cannot replay",
+              });
+              return;
+            }
+            const existingIds = {
+              ...(lead.jt.accountId  ? { accountId:  lead.jt.accountId  } : {}),
+              ...(lead.jt.locationId ? { locationId: lead.jt.locationId } : {}),
+              ...(lead.jt.contactId  ? { contactId:  lead.jt.contactId  } : {}),
+              ...(lead.jt.jobId      ? { jobId:      lead.jt.jobId      } : {}),
+            };
+            const result = await jt.createGraph(lead, existingIds);
+            const nextStatus = result.complete ? "complete" : "pending_jt";
+            const newIds = {
+              ...(result.ids.accountId  ? { accountId:  result.ids.accountId  } : {}),
+              ...(result.ids.locationId ? { locationId: result.ids.locationId } : {}),
+              ...(result.ids.contactId  ? { contactId:  result.ids.contactId  } : {}),
+              ...(result.ids.jobId      ? { jobId:      result.ids.jobId      } : {}),
+            };
+            await store.updateJtIds(leadId, newIds, nextStatus);
+            reqLog.info("lead replay", {
+              leadId,
+              previousStatus: lead.status,
+              nextStatus,
+              complete: result.complete,
+            });
+            writeJson(res, 200, {
+              leadId,
+              previousStatus: lead.status,
+              status: nextStatus,
+              jt: newIds,
+              ...(result.complete ? {} : { failedAt: result.failedAt, jtError: result.error }),
+            });
+          } catch (err) {
+            reqLog.error("replay failed", {
+              leadId,
+              err: err instanceof Error ? err.message : String(err),
+            });
+            writeJson(res, 500, {
+              code: "REPLAY_ERROR",
+              message: err instanceof Error ? err.message : String(err),
+            });
+          }
+        })();
+        return;
+      }
+    }
+
     // ── GET /leads/recent ──────────────────────────────────────────────
     if (method === "GET" && url.startsWith("/leads/recent")) {
       void (async () => {
