@@ -1,7 +1,7 @@
 # Heartwood CMS — Architecture Overview
 
 ## What This Is
-Content management system for **heartwoodcraft.me** (Heartwood Craft remodeling business, Bozeman MT). Node.js REST API + vanilla JS frontend that manages an 11ty static site, processes images, and deploys via SFTP to Hostinger.
+Content management system for **iheartwoodcraft.com** (Heartwood Craft remodeling business, Bozeman MT). Node.js REST API + vanilla JS frontend that manages an 11ty static site, processes images, and deploys via SFTP to Hostinger. (The legacy `heartwoodcraft.me` is dev/staging — never the customer-facing site.)
 
 ## Two Repos, One System
 
