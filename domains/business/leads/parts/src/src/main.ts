@@ -18,9 +18,12 @@ import { makePostgresLeadStore } from "./adapters/store-postgres.js";
 import { makeJtJobtreadAdapter } from "./adapters/jt-jobtread.js";
 import { makeNotifyHttpClient } from "./adapters/notify-http.js";
 import { makeBridgeEmailClient } from "./adapters/email-bridge.js";
+import { makePostgresReportStore } from "./adapters/store-reports-postgres.js";
 import { buildNotificationInput } from "./core/notify-payload.js";
 import { renderCustomerEmail } from "./core/customer-email.js";
+import { buildReportFromLead } from "./core/build-report.js";
 import type { LeadStore } from "./ports/store.js";
+import type { ReportStore } from "./ports/reports.js";
 import type { JtClient } from "./ports/jt.js";
 import type { NotifyClient } from "./ports/notify.js";
 import type { CustomerEmailClient } from "./ports/customer-email.js";
@@ -92,6 +95,11 @@ function main(): void {
   const store: LeadStore = makePostgresLeadStore({
     dsn: config.postgresDsn,
     log: log.child({ component: "postgres" }),
+  });
+
+  const reportStore: ReportStore = makePostgresReportStore({
+    dsn: config.postgresDsn,
+    log: log.child({ component: "reports-store" }),
   });
 
   const jt: JtClient | undefined = config.jtGrantKey
@@ -242,10 +250,17 @@ function main(): void {
           contactEmail: lead.payload.contact.email,
         });
 
-        // ── 5. Persist ──
+        // ── 5. Persist (Lead + Report in same tx when applicable) ──
+        // buildReportFromLead returns undefined unless this is a
+        // calculator submission with a reportId — only calculator leads
+        // have a customer-facing report URL.
+        const report = buildReportFromLead(lead);
         try {
-          await store.save(lead);
-          reqLog.info("lead persisted", { leadId: lead.id });
+          await store.save(lead, report);
+          reqLog.info("lead persisted", {
+            leadId: lead.id,
+            reportId: report?.id,
+          });
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           reqLog.error("postgres save failed", { leadId: lead.id, err: reason });
@@ -452,6 +467,60 @@ function main(): void {
       }
     }
 
+    // ── GET /api/reports/:id ───────────────────────────────────────────
+    // Public-facing report viewer fetches this. Returns the sanitised
+    // ReportPayload + templateId. 410 Gone when revoked. The site at
+    // /report/<id> renders client-side from this response.
+    //
+    // Permissive id charset: alnum + dash to allow the 8-char [a-z0-9]
+    // ids the calc generates plus future longer slugs without a
+    // migration.
+    {
+      const m = /^\/api\/reports\/([A-Za-z0-9-]{4,64})$/.exec(url);
+      if (method === "GET" && m && m[1]) {
+        const reportId = m[1];
+        void (async () => {
+          try {
+            const report = await reportStore.byId(reportId);
+            if (!report) {
+              writeJson(res, 404, { code: "NOT_FOUND", message: `no report with id ${reportId}` });
+              return;
+            }
+            if (report.revokedAt) {
+              writeJson(res, 410, {
+                code: "REPORT_REVOKED",
+                message: "this report has been revoked",
+                revokedAt: report.revokedAt,
+              });
+              return;
+            }
+            // Fire-and-forget view tracking — don't block the response
+            // on a single UPDATE. If it fails the report is still
+            // served and the next view re-attempts.
+            void reportStore.recordView(reportId).catch((err) => {
+              reqLog.warn("[reports] recordView failed", {
+                reportId,
+                err: err instanceof Error ? err.message : String(err),
+              });
+            });
+            writeJson(res, 200, {
+              reportId: report.id,
+              templateId: report.templateId,
+              payload: report.payload,
+              createdAt: report.createdAt,
+            });
+          } catch (err) {
+            reqLog.error("[reports] byId query failed", {
+              reportId,
+              err: err instanceof Error ? err.message : String(err),
+            });
+            writeJson(res, 500, { code: "POSTGRES_ERROR", message: "report lookup failed" });
+          }
+        })();
+        return;
+      }
+    }
+
     // ── GET /leads/recent ──────────────────────────────────────────────
     if (method === "GET" && url.startsWith("/leads/recent")) {
       void (async () => {
@@ -502,6 +571,7 @@ function main(): void {
     server.close(async (err) => {
       if (err) log.error("server close error", { err: String(err) });
       try { await store.close(); } catch { /* ignore */ }
+      try { await reportStore.close(); } catch { /* ignore */ }
       process.exit(0);
     });
     setTimeout(() => {
