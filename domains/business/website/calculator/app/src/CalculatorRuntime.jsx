@@ -1,13 +1,17 @@
-// ─── DeckCalculator v2.3 ───────────────────────────────────────────────────
-// Two-column desktop, single-column mobile with sticky estimate bar.
-// Warm cream/copper theme. Compact cards only (no photos).
-// v2.2: email gate between quiz and results
-// v2.3: scaled up for full-page calculator experience
+// ─── CalculatorRuntime v1 ──────────────────────────────────────────────────
+// Single data-driven calculator shell. Replaces Bathroom/DeckCalculator.jsx
+// (which were 90% duplicated). Per-calc copy, results-table fields, sidebar
+// step order — all read from the JSON config now lives in the calc
+// data file (calculator-<kind>.json).
+//
+// The runtime is unchanged from the previous per-calc components:
+// 4 phases (quiz / gate / results / submitted), 3 input types
+// (image-cards / cards / multi), gate→appointment funnel, dataLayer
+// analytics fired on the same hooks the GA tagging already expects.
 
 import { useState } from "react";
 import { T, fonts } from "./theme";
-import { STEPS, calculateRange, getLabel, getAttribution, fireEvent, fmt, WEBHOOK, WEBHOOK_APPT } from "./deckData";
-import DeckEstimateSidebar from "./DeckEstimateSidebar";
+import { buildSteps, makeCalculator, makeHelpers } from "./calcData";
 import CalculatorLayout from "./CalculatorLayout";
 
 // ─── Shared styles ─────────────────────────────────────────────────────────
@@ -32,7 +36,6 @@ const blurStyle = {
 };
 
 // ─── Image Card v2 ────────────────────────────────────────────────────────
-// SVGs: contained on warm bg. Photos: full-bleed cover. Missing: placeholder.
 function ImageCard({ option, selected, onClick }) {
   const [imgError, setImgError] = useState(false);
   const isSvg = typeof option.image === "string" && option.image.toLowerCase().endsWith(".svg");
@@ -118,7 +121,7 @@ function ImageCard({ option, selected, onClick }) {
   );
 }
 
-// ─── CompactCard ───────────────────────────────────────────────────────────
+// ─── Compact Card ──────────────────────────────────────────────────────────
 function CompactCard({ option, selected, onClick }) {
   return (
     <button onClick={onClick} style={{
@@ -179,7 +182,20 @@ function WhyToggle({ text }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
-export default function DeckCalculator() {
+export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
+  // Derived once at module-load equivalent — the data prop is stable across renders.
+  const STEPS = buildSteps(data);
+  const calculateRange = makeCalculator(data);
+  const { getLabel, getAttribution, fireEvent, fmt } = makeHelpers(data);
+  const calculatorId = data.calculator;
+  const webhookUrl = data.webhook;
+  const webhookApptUrl = data.webhookAppointment;
+  const sizeStateKey = data.sidebar?.stepOrder?.[1] ?? "size";
+  const summaryFields = data.results?.summaryFields ?? [];
+  const gateEstimateLabel = data.copy?.gateEstimateLabel ?? "Your estimate";
+  const resultsEstimateLabel = data.copy?.resultsEstimateLabel ?? "Your estimate";
+  const footerCopy = data.copy?.footerCopy ?? "Based on real Heartwood Craft projects in Bozeman — not national averages.";
+
   const [step, setStep] = useState(0);
   const [state, setState] = useState({});
   const [contact, setContact] = useState({ name: "", email: "", phone: "", notes: "", preferred_date: "", preferred_time: "" });
@@ -201,19 +217,24 @@ export default function DeckCalculator() {
     fireEvent("calculator_step", { step_number: step + 1, step_id: cur?.id });
     if (n >= STEPS.length) {
       setPhase("gate");
-      fireEvent("calculator_complete", { estimate_low: lo, estimate_high: hi, project_type: state.project_type, deck_size: state.deck_size, material: state.material });
+      fireEvent("calculator_complete", {
+        estimate_low: lo,
+        estimate_high: hi,
+        project_type: state.project_type,
+        [sizeStateKey]: state[sizeStateKey],
+      });
       fireEvent("gate_viewed", {
         estimate_low: lo,
         estimate_high: hi,
         project_type: state.project_type,
-        deck_size: state.deck_size
+        [sizeStateKey]: state[sizeStateKey],
       });
     }
   });
   const goBack = () => { if (step > 0) fade(() => setStep((s) => s - 1)); };
   const pick = (id, v) => {
     if (step === 0 && Object.keys(state).length === 0) {
-      fireEvent("calculator_started", { calculator_type: "deck" });
+      fireEvent("calculator_started", { calculator_type: calculatorId });
     }
     setState((p) => ({ ...p, [id]: v }));
     setTimeout(goNext, 200);
@@ -227,7 +248,7 @@ export default function DeckCalculator() {
       estimate_low: lo,
       estimate_high: hi,
       project_type: state.project_type,
-      deck_size: state.deck_size
+      [sizeStateKey]: state[sizeStateKey],
     });
     const payload = {
       action: "calculator_gate_submit",
@@ -236,15 +257,15 @@ export default function DeckCalculator() {
       estimate: { low: lo, high: hi },
       timestamp: new Date().toISOString(),
       source: "website_calculator",
-      calculator: "deck",
+      calculator: calculatorId,
       source_page: window.location.pathname,
       ...getAttribution()
     };
     try {
-      const res = await fetch(WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const data = await res.json();
-      setReportUrl(data.reportUrl || null);
-      setReportId(data.reportId || null);
+      const res = await fetch(webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const respData = await res.json();
+      setReportUrl(respData.reportUrl || null);
+      setReportId(respData.reportId || null);
     } catch {
       setReportUrl(null);
     }
@@ -255,7 +276,7 @@ export default function DeckCalculator() {
     if (!hasPhone) return;
     setSubmitting(true);
     fireEvent("calculator_appointment_request", {
-      calculator_type: "deck",
+      calculator_type: calculatorId,
       estimate_low: lo,
       estimate_high: hi,
     });
@@ -263,14 +284,14 @@ export default function DeckCalculator() {
       action: "calculator_appointment_request",
       report_id: reportId,
       contact: { name: contact.name, email: contact.email, phone: contact.phone, preferred_date: contact.preferred_date, preferred_time: contact.preferred_time },
-      calculator: "deck",
+      calculator: calculatorId,
       estimate: { low: lo, high: hi },
       timestamp: new Date().toISOString(),
       source: "website_calculator",
       source_page: window.location.pathname,
       ...getAttribution()
     };
-    try { await fetch(WEBHOOK_APPT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch {}
+    try { await fetch(webhookApptUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch {}
     setSubmitting(false);
     fade(() => setPhase("submitted"));
   };
@@ -278,7 +299,8 @@ export default function DeckCalculator() {
   const progress = Math.min((step / STEPS.length) * 100, 100);
 
   return (
-    <CalculatorLayout sidebar={<DeckEstimateSidebar state={state} step={step} phase={phase} />} lo={lo} hi={hi} step={step} totalSteps={STEPS.length} fmt={fmt} phase={phase} title="Deck Cost Calculator">
+    <CalculatorLayout sidebar={<SidebarComponent data={data} state={state} step={step} phase={phase} />} lo={lo} hi={hi} step={step} totalSteps={STEPS.length} fmt={fmt} phase={phase} title={data.title}>
+      {/* Progress bar */}
       {phase === "quiz" && (
         <div style={{ height: 3, background: T.border, borderRadius: 2, margin: "0 0 2rem", overflow: "hidden" }}>
           <div style={{ height: "100%", background: T.copper, borderRadius: 2, width: `${progress}%`, transition: "width 0.4s ease" }} />
@@ -327,12 +349,12 @@ export default function DeckCalculator() {
         {phase === "gate" && (
           <div style={{ maxWidth: 480, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 32 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: T.textMuted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Your deck project estimate</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.textMuted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>{gateEstimateLabel}</div>
               <div style={blurStyle}>
                 <div style={{ fontFamily: fonts.serif, fontSize: 52, fontWeight: 700, color: T.heading, lineHeight: 1 }}>{fmt(lo)} – {fmt(hi)}</div>
               </div>
               <div style={{ fontSize: 13, color: T.textLight, marginTop: 12, lineHeight: 1.5 }}>
-                Based on real Heartwood Craft deck projects in the Gallatin Valley — not national averages.
+                {footerCopy}
               </div>
             </div>
 
@@ -352,10 +374,10 @@ export default function DeckCalculator() {
         {phase === "results" && (
           <div>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 8, fontWeight: 500 }}>Your Bozeman deck estimate</div>
+              <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 8, fontWeight: 500 }}>{resultsEstimateLabel}</div>
               <div style={{ fontFamily: fonts.serif, fontSize: 44, fontWeight: 700, color: T.heading, lineHeight: 1 }}>{fmt(lo)} – {fmt(hi)}</div>
               <div style={{ fontSize: 12, color: T.textLight, marginTop: 10, maxWidth: 440, margin: "10px auto 0", lineHeight: 1.5 }}>
-                Based on real Heartwood Craft deck projects in the Gallatin Valley — not national averages.
+                {footerCopy}
               </div>
             </div>
 
@@ -364,7 +386,7 @@ export default function DeckCalculator() {
                 <div style={{ fontFamily: fonts.serif, fontSize: 14, fontWeight: 600, color: T.copper }}>Heartwood Craft</div>
                 <div style={{ fontSize: 11, color: T.textLight }}>{new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
               </div>
-              {[["Project", "project_type"], ["Size", "deck_size"], ["Height", "deck_height"], ["Material", "material"], ["Railing", "railing"], ["Timeline", "timeline"]].map(([label, id]) => (
+              {summaryFields.map(({ label, id }) => (
                 <div key={id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", fontSize: 13, borderBottom: `1px solid ${T.border}` }}>
                   <span style={{ color: T.textMuted }}>{label}</span>
                   <span style={{ color: T.text, fontWeight: 500 }}>{getLabel(id, state[id])}</span>

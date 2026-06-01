@@ -1,12 +1,20 @@
-// ─── EstimateSidebar v3 ───────────────────────────────────────────────────
+// ─── EstimateSidebar v4 ───────────────────────────────────────────────────
+// Unified, data-driven. Replaces the two per-calc sidebars (Bathroom +
+// Deck) which differed only in step order + label map + content table.
+//
 // During quiz: contextual educational content matched to the current step.
 // During gate: project summary (no dollars).
 // During results/submitted: project summary with revealed estimate.
 
 import { useState, useEffect, useRef } from "react";
 import { T, fonts } from "./theme";
-import { STEPS, getLabel, calculateRange } from "./bathroomData";
-import { bathroomSidebarContent } from "./sidebarContent";
+import { buildSteps, makeCalculator, makeHelpers } from "./calcData";
+import { bathroomSidebarContent, deckSidebarContent } from "./sidebarContent";
+
+const sidebarContentRegistry = {
+  bathroom: bathroomSidebarContent,
+  deck: deckSidebarContent,
+};
 
 function AnimatedNumber({ value, duration = 600 }) {
   const [display, setDisplay] = useState(value);
@@ -33,21 +41,15 @@ function AnimatedNumber({ value, duration = 600 }) {
   return <>{display.toLocaleString()}</>;
 }
 
-function SelectionsSummary({ state }) {
-  const stepOrder = ["project_type", "bathroom_size", "shower_tub", "tile_level", "fixtures", "features", "timeline"];
-  const labelMap = {
-    project_type: "Project", bathroom_size: "Size", shower_tub: "Layout",
-    tile_level: "Tile", fixtures: "Fixtures", features: "Extras", timeline: "Timeline",
-  };
-
+function SelectionsSummary({ state, stepOrder, labelMap, getLabel }) {
   const selections = [];
   stepOrder.forEach((id) => {
     if (id === "features") {
       if (state.features && state.features.length > 0) {
-        selections.push({ label: "Extras", value: state.features.length + " selected" });
+        selections.push({ label: labelMap.features || "Extras", value: state.features.length + " selected" });
       }
     } else if (state[id]) {
-      selections.push({ label: labelMap[id], value: getLabel(id, state[id]) });
+      selections.push({ label: labelMap[id] || id, value: getLabel(id, state[id]) });
     }
   });
 
@@ -69,8 +71,8 @@ function SelectionsSummary({ state }) {
   );
 }
 
-function EducationalPanel({ stepId, fading }) {
-  const content = bathroomSidebarContent[stepId];
+function EducationalPanel({ contentTable, stepId, fading }) {
+  const content = contentTable?.[stepId];
   if (!content) return null;
 
   return (
@@ -101,7 +103,14 @@ function EducationalPanel({ stepId, fading }) {
   );
 }
 
-export default function EstimateSidebar({ state, step, phase }) {
+export default function EstimateSidebar({ data, state, step, phase }) {
+  const STEPS = buildSteps(data);
+  const calculateRange = makeCalculator(data);
+  const { getLabel } = makeHelpers(data);
+  const stepOrder = data.sidebar?.stepOrder ?? [];
+  const labelMap = data.sidebar?.labelMap ?? {};
+  const contentTable = sidebarContentRegistry[data.sidebar?.contentKey] ?? {};
+
   const hasSelections = Object.keys(state).filter((k) => k !== "features" || (state.features && state.features.length > 0)).length > 0;
   const [lo, hi] = hasSelections ? calculateRange(state) : [0, 0];
   const [contentFading, setContentFading] = useState(false);
@@ -158,8 +167,8 @@ export default function EstimateSidebar({ state, step, phase }) {
       <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "0 0 20px" }} />
 
       {isQuiz
-        ? <EducationalPanel stepId={currentStepId} fading={contentFading} />
-        : <SelectionsSummary state={state} />
+        ? <EducationalPanel contentTable={contentTable} stepId={currentStepId} fading={contentFading} />
+        : <SelectionsSummary state={state} stepOrder={stepOrder} labelMap={labelMap} getLabel={getLabel} />
       }
 
       {/* Step progress dots */}

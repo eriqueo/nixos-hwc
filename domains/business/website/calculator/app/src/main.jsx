@@ -1,24 +1,23 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import BathroomCalculator from './BathroomCalculator'
-import DeckCalculator from './DeckCalculator'
+import CalculatorRuntime from './CalculatorRuntime'
+import EstimateSidebar from './EstimateSidebar'
+import bathroomData from '../../../site_files/src/_data/calculator-bathroom.json'
+import deckData from '../../../site_files/src/_data/calculator-deck.json'
 
-// Mount bathroom calculator if its root exists
-const bathroomRoot = document.getElementById('calculator-root');
-if (bathroomRoot) {
-  ReactDOM.createRoot(bathroomRoot).render(
-    <React.StrictMode>
-      <BathroomCalculator />
-    </React.StrictMode>,
-  );
-}
+// Mount-point → JSON config. Two known calculators today; a third is one
+// JSON file + one entry here.
+const MOUNTS = [
+  { rootId: 'calculator-root',      data: bathroomData },
+  { rootId: 'deck-calculator-root', data: deckData },
+]
 
-// Mount deck calculator if its root exists
-const deckRoot = document.getElementById('deck-calculator-root');
-if (deckRoot) {
-  ReactDOM.createRoot(deckRoot).render(
+for (const { rootId, data } of MOUNTS) {
+  const el = document.getElementById(rootId)
+  if (!el) continue
+  ReactDOM.createRoot(el).render(
     <React.StrictMode>
-      <DeckCalculator />
+      <CalculatorRuntime data={data} sidebar={EstimateSidebar} />
     </React.StrictMode>,
-  );
+  )
 }
