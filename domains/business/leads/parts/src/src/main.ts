@@ -12,7 +12,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { loadConfig } from "./config.js";
 import { makeStderrLogger } from "./adapters/log-stderr.js";
 import { safeParseLeadInput, buildLead } from "./schemas/lead.js";
-import { verifyHmac } from "./core/hmac.js";
+import { verifyHmac, selfTestHmac } from "./core/hmac.js";
 import { makePostgresLeadStore } from "./adapters/store-postgres.js";
 import { makeJtJobtreadAdapter } from "./adapters/jt-jobtread.js";
 import { makeNotifyHttpClient } from "./adapters/notify-http.js";
@@ -59,6 +59,24 @@ function main(): void {
     minLevel: config.logLevel,
     serviceName: config.serviceName,
   });
+
+  // ── HMAC startup self-test ──
+  // Fails loud (exit 1 → systemd unit failed) when the shared signing
+  // secret is missing/short/broken. Catches half-rotations where n8n
+  // and hwc-leads end up holding different bytes — that mode silently
+  // 401s every lead until someone notices the empty dashboard.
+  if (config.hmacSecret !== undefined) {
+    const t = selfTestHmac(config.hmacSecret);
+    if (!t.ok) {
+      log.error(`[startup] FATAL: HMAC secret validation failed — lead submissions will 401`, {
+        reason: t.reason,
+      });
+      process.exit(1);
+    }
+    log.info("[startup] HMAC secret self-test ok");
+  } else {
+    log.warn("[startup] HMAC secret unset — skipping self-test (DEV ONLY)");
+  }
 
   log.info("hwc-leads starting", {
     bindAddr: config.bindAddr,

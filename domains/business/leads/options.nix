@@ -105,6 +105,19 @@ in
         /leads. Resolved at module-eval to
         config.age.secrets.<ref>.path. Set to null to disable HMAC
         verification (DEV ONLY — always set in prod).
+
+        SHARED SECRET — the same agenix entry is also read by the n8n
+        container (see hwc.automation.n8n.secrets.hwcLeadsHmacFile and
+        the calculator_lead thin-shell workflow). Rotating it requires
+        BOTH services to restart with the new bytes:
+          - hwc-leads picks up the new value on next start; the
+            restartTriggers below trigger that on `nixos-rebuild
+            switch`.
+          - n8n needs an explicit `systemctl restart podman-n8n.service`
+            after rotation because the container's secrets env-file is
+            populated at unit-start, not on age secret remount.
+        Half-rotations silently 401 every lead submission until the
+        startup self-test catches it on the next restart.
       '';
     };
 
