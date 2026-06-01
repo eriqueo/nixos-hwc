@@ -24,6 +24,10 @@
 
 BEGIN;
 
+-- NOTE: contact form submissions bypass this table until Move B.
+-- See wiki/nixos/move-b-coverage-gap.md — until form-contact.njk is
+-- migrated off the JT Web Form embed, source='contact' rows will not
+-- appear here and any funnel metric derived from hwc.leads undercounts.
 CREATE TABLE IF NOT EXISTS hwc.leads (
   -- Server-generated UUID. ON CONFLICT (id) for idempotent retries.
   id              UUID PRIMARY KEY,
