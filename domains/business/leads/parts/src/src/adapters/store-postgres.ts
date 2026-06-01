@@ -29,6 +29,7 @@ import type {
   LeadStatus,
   LeadPayload,
 } from "../core/types.js";
+import type { Report } from "../core/report.js";
 import type { Logger } from "../ports/log.js";
 
 export interface PostgresLeadStoreOpts {
@@ -89,6 +90,12 @@ const INSERT_SQL = `
   RETURNING id
 `;
 
+const INSERT_REPORT_SQL = `
+  INSERT INTO hwc.reports (report_id, lead_id, payload, template_id)
+  VALUES ($1, $2::uuid, $3::jsonb, $4)
+  ON CONFLICT (report_id) DO NOTHING
+`;
+
 const SELECT_BY_ID_SQL = `
   SELECT id::text AS id, source, status, payload, received_at::text AS received_at,
          jt_account_id, jt_location_id, jt_contact_id, jt_job_id
@@ -104,9 +111,9 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
   });
 
   return {
-    async save(lead: Lead): Promise<SaveResult> {
+    async save(lead: Lead, report?: Report): Promise<SaveResult> {
       const contact = lead.payload.contact;
-      const result = await pool.query<{ id: string }>(INSERT_SQL, [
+      const leadParams = [
         lead.id,                          // $1  id
         lead.payload.source,              // $2  source
         lead.status,                      // $3  status
@@ -116,11 +123,34 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
         contact.email,                    // $7  contact_email
         contact.phone ?? null,            // $8  contact_phone
         contact.notes ?? null,            // $9  contact_notes
-      ]);
-      if (result.rowCount === 0) {
-        return { inserted: false };
+      ];
+
+      // Fast path: no report → single statement, no tx ceremony.
+      if (!report) {
+        const result = await pool.query<{ id: string }>(INSERT_SQL, leadParams);
+        return { inserted: result.rowCount !== 0 };
       }
-      return { inserted: true };
+
+      // Slow path: lead + report in one transaction. Both succeed or
+      // both roll back; no orphan reports possible from a partial crash.
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const leadRes = await client.query<{ id: string }>(INSERT_SQL, leadParams);
+        await client.query(INSERT_REPORT_SQL, [
+          report.id,                        // $1  report_id
+          report.leadId,                    // $2  lead_id
+          JSON.stringify(report.payload),   // $3  payload
+          report.templateId,                // $4  template_id
+        ]);
+        await client.query("COMMIT");
+        return { inserted: leadRes.rowCount !== 0 };
+      } catch (err) {
+        try { await client.query("ROLLBACK"); } catch { /* swallowed — primary error is what matters */ }
+        throw err;
+      } finally {
+        client.release();
+      }
     },
 
     async byId(leadId: string): Promise<Lead | undefined> {

@@ -10,6 +10,7 @@
  */
 
 import type { Lead, LeadStatus } from "../core/types.js";
+import type { Report } from "../core/report.js";
 
 export interface SaveResult {
   /** True when a NEW row was written; false when the lead_id already existed. */
@@ -32,8 +33,16 @@ export interface JtIdUpdate {
 }
 
 export interface LeadStore {
-  /** Idempotent insert. ON CONFLICT (lead_id) DO NOTHING. */
-  save(lead: Lead): Promise<SaveResult>;
+  /**
+   * Idempotent insert. ON CONFLICT (lead_id) DO NOTHING.
+   *
+   * When `report` is provided, both rows are written in a single
+   * transaction — Lead + Report succeed together or roll back together.
+   * No orphan reports (a report with a non-existent lead) or orphan
+   * "calculator submissions with no report row" can result from a
+   * partial-write crash.
+   */
+  save(lead: Lead, report?: Report): Promise<SaveResult>;
   /** Look up by Lead.id (UUID). */
   byId(leadId: string): Promise<Lead | undefined>;
   /** Most-recent-first paged view, with optional source/status filters. */
