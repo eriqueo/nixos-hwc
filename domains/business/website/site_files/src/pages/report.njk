@@ -711,21 +711,57 @@ eleventyExcludeFromCollections: true
   // ────────────────────────────────────────────────────────────────────────
   // FETCH AND RENDER
   // ────────────────────────────────────────────────────────────────────────
-  var params = new URLSearchParams(window.location.search);
-  var reportId = params.get('id');
+  // Path-style URL (/report/<id>) is the new canonical form, served via
+  // an .htaccess RewriteRule that internally rewrites to /report/?id=<id>.
+  // The query-string remains supported for any in-flight customer emails
+  // sent before the cutover. Prefer path; fall back to query.
+  var pathMatch = window.location.pathname.match(/^\/report\/([A-Za-z0-9-]{4,64})\/?$/);
+  var queryId = new URLSearchParams(window.location.search).get('id');
+  var reportId = (pathMatch && pathMatch[1]) || queryId;
 
   if (!reportId) {
     showError("No report ID found. If you just completed a calculator, check your email for the correct link.");
     return;
   }
 
-  fetch("https://hwc.ocelot-wahoo.ts.net/webhook/report-data?id=" + encodeURIComponent(reportId))
+  // hwc-leads GET /api/reports/<id> on the tailnet Caddy port.
+  // Returns sanitised payload: calculator, firstName, projectState,
+  // estimate. No email / phone / full name / attribution.
+  var REPORT_API = "https://hwc.ocelot-wahoo.ts.net:30443/api/reports/" + encodeURIComponent(reportId);
+
+  fetch(REPORT_API)
     .then(function(res) {
+      if (res.status === 410) throw new Error("REVOKED");
       if (!res.ok) throw new Error("Not found");
       return res.json();
     })
-    .then(function(data) { render(data); })
-    .catch(function() {
+    .then(function(resp) {
+      // Adapt new sanitised shape → the field names render() expects.
+      // The page used to receive {calculator, project_state, contact_name,
+      // contact_email, estimate_low, estimate_high, report_id}. Map both
+      // shapes so a future server-side rename doesn't ripple here.
+      if (resp.payload) {
+        var p = resp.payload;
+        render({
+          calculator:    p.calculator,
+          project_state: p.projectState || {},
+          contact_name:  p.firstName || '',     // first-name only — used for greeting
+          contact_email: '',                    // intentionally absent post-sanitisation
+          estimate_low:  (p.estimate || {}).low  || 0,
+          estimate_high: (p.estimate || {}).high || 0,
+          report_id:     resp.reportId,
+        });
+      } else {
+        // Defensive: legacy n8n webhook shape (in case caching/CDN
+        // returns an old response during cutover).
+        render(resp);
+      }
+    })
+    .catch(function(err) {
+      if (err && err.message === "REVOKED") {
+        showError("This report link has been revoked. Call 406-551-5061 and I'll walk you through your numbers in person.");
+        return;
+      }
       showError("Couldn't load this report. The link may have expired or been entered incorrectly. Call 406-551-5061 and I'll walk you through the numbers.");
     });
 
@@ -919,7 +955,12 @@ eleventyExcludeFromCollections: true
   }
 
   function cta(ctaCopy, email) {
-    var subhead = ctaCopy.subhead.replace('{email}', '<strong>' + esc(email) + '</strong>');
+    // Sanitised report payloads don't carry email. Drop the
+    // "on its way to {email}" phrase entirely when missing, so the
+    // sentence still reads cleanly.
+    var subhead = email
+      ? ctaCopy.subhead.replace('{email}', '<strong>' + esc(email) + '</strong>')
+      : ctaCopy.subhead.replace(' to {email}', '');
     var html = '<section class="hwc-section hwc-section--cta">' +
       '<div class="hwc-cta">' +
         '<div class="hwc-eyebrow">Next step</div>' +

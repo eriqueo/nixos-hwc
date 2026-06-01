@@ -22,6 +22,13 @@ RewriteRule ^bathroom/renovation/?$ /bathroom/remodeling/ [R=301,L]
 RewriteRule ^basement/?$ /basement/remodeling/ [R=301,L]
 RewriteRule ^basement/renovation/?$ /basement/remodeling/ [R=301,L]
 
+# Report viewer — path-style URLs from the calculator and confirmation
+# emails are internally rewritten to the static /report/?id=<id> page,
+# which then fetches the report data from hwc-leads. Customers see the
+# clean path-style URL in the address bar; the rewrite is server-side
+# only (no R= flag, no browser redirect).
+RewriteRule ^report/([A-Za-z0-9-]{4,64})/?$ /report/?id=$1 [L]
+
 # Blog posts moved under /blog/ prefix
 RewriteRule ^3d-design-previews-see-your-remodel-before-we-build-it/?$ /blog/3d-design-previews-see-your-remodel-before-we-build-it/ [R=301,L]
 RewriteRule ^are-bathroom-renovations-tax-deductible/?$ /blog/are-bathroom-renovations-tax-deductible/ [R=301,L]
