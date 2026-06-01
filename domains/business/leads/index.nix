@@ -95,6 +95,8 @@ in
         HWC_LEADS_SMTP_REQUIRE_TLS    = if cfg.smtp.requireTls then "1" else "0";
         HWC_LEADS_SMTP_LOGIN          = cfg.smtp.login;
         HWC_LEADS_SMTP_FROM           = cfg.smtp.from;
+        HWC_LEADS_RATE_LIMIT_MAX_PER_WINDOW = toString cfg.rateLimit.maxPerWindow;
+        HWC_LEADS_RATE_LIMIT_WINDOW_SECONDS = toString cfg.rateLimit.windowSeconds;
       } // lib.optionalAttrs (cfg.hmacSecretRef != null) {
         HWC_LEADS_HMAC_FILE = config.age.secrets.${cfg.hmacSecretRef}.path;
       } // lib.optionalAttrs (cfg.jtGrantKeyRef != null) {

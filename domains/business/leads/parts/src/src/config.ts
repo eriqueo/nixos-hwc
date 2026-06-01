@@ -30,6 +30,8 @@ export interface ServiceConfig {
   readonly jtMappings: JtMappings;
   /** SMTP config for the customer-email path. undefined when disabled. */
   readonly smtp: SmtpConfig | undefined;
+  /** Transport-layer rate limit on POST /leads, keyed by lead source. */
+  readonly rateLimit: { readonly maxPerWindow: number; readonly windowSeconds: number };
 }
 
 export interface SmtpConfig {
@@ -54,6 +56,16 @@ function readPort(name: string, fallback: number): number {
   const n = Number(v);
   if (!Number.isInteger(n) || n < 1 || n > 65535) {
     throw new Error(`env: ${name} must be a TCP port (1-65535), got: ${v}`);
+  }
+  return n;
+}
+
+function readPositiveInt(name: string, fallback: number): number {
+  const v = process.env[name];
+  if (!v) return fallback;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(`env: ${name} must be a positive integer, got: ${v}`);
   }
   return n;
 }
@@ -103,6 +115,10 @@ export function loadConfig(): ServiceConfig {
     postgresDsn: readStr("HWC_LEADS_PG_DSN", "postgresql:///hwc"),
     jtMappings: loadJtMappings(readStr("HWC_LEADS_JT_MAPPINGS_FILE")),
     smtp: loadSmtpConfig(),
+    rateLimit: {
+      maxPerWindow: readPositiveInt("HWC_LEADS_RATE_LIMIT_MAX_PER_WINDOW", 10),
+      windowSeconds: readPositiveInt("HWC_LEADS_RATE_LIMIT_WINDOW_SECONDS", 60),
+    },
   };
 }
 
