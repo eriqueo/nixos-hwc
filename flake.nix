@@ -124,12 +124,17 @@
     # Claude Code overlay - backport from unstable to stable
     claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; };
 
+    # Cloudflared overlay - backport from unstable to stable
+    # Stable 25.11 lags upstream cloudflared releases; the daemon needs to track
+    # current Cloudflare edge protocol to keep the tunnel healthy.
+    cloudflaredOverlay = import ./overlays/cloudflared.nix { nixpkgs-unstable = nixpkgs; };
+
     # Pkgs helper with optional overlays (server uses this)
     # CUDA enabled - using cache.nixos-cuda.org for pre-built binaries
     mkPkgsWithOverlays = system: nixpkgsInput: extraOverlays:
       import nixpkgsInput {
         inherit system;
-        overlays = [ silenceDeprecatedAliases claudeCodeOverlay ] ++ extraOverlays;
+        overlays = [ silenceDeprecatedAliases claudeCodeOverlay cloudflaredOverlay ] ++ extraOverlays;
         config = {
           allowUnfree = true;
           nvidia.acceptLicense = true;
