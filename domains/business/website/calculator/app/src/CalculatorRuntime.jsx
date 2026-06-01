@@ -188,8 +188,11 @@ export default function CalculatorRuntime({ data, sidebar: SidebarComponent }) {
   const calculateRange = makeCalculator(data);
   const { getLabel, getAttribution, fireEvent, fmt } = makeHelpers(data);
   const calculatorId = data.calculator;
-  const webhookUrl = data.webhook;
-  const webhookApptUrl = data.webhookAppointment;
+  // Late-binding endpoints — prefer NixOS-injected env (via hwc.business.
+  // website.leadsWebhookUrl) over the JSON fallback. The fallback only
+  // covers `npm run dev` outside the NixOS service path.
+  const webhookUrl = import.meta.env.VITE_LEADS_WEBHOOK_URL || data.webhook;
+  const webhookApptUrl = import.meta.env.VITE_LEADS_WEBHOOK_APPT_URL || data.webhookAppointment;
   const sizeStateKey = data.sidebar?.stepOrder?.[1] ?? "size";
   const summaryFields = data.results?.summaryFields ?? [];
   const gateEstimateLabel = data.copy?.gateEstimateLabel ?? "Your estimate";
