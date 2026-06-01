@@ -9,6 +9,9 @@
 
 export type LeadSource = "contact" | "calculator" | "appointment";
 
+/** 1=critical, 5=low. Same scheme hwc-notify uses. */
+export type Priority = 1 | 2 | 3 | 4 | 5;
+
 /** Customer contact fields — present on every Lead regardless of source. */
 export interface Contact {
   readonly name: string;

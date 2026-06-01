@@ -34,7 +34,7 @@ let
 
     # First-time setup: lib.fakeHash → nixos-rebuild fails with real hash
     # → paste here → rebuild succeeds. Future updates: `hwc-leads-deps-update`.
-    npmDepsHash = "sha256-dYIkJUt5UbGyYUYyuzFE/+Rtls8AQPLnCAmynZWzDFQ=";
+    npmDepsHash = "sha256-Kc7OXCtRHWTM63Lddbss51Wd+VVKHcSczolh8v3JkeY=";
 
     npmBuildScript = "build";
     dontNpmPrune = false;
@@ -77,6 +77,9 @@ in
         (if cfg.jtGrantKeyRef != null
          then config.age.secrets.${cfg.jtGrantKeyRef}.file
          else null)
+        (if cfg.smtp.passwordSecretRef != null
+         then config.age.secrets.${cfg.smtp.passwordSecretRef}.file
+         else null)
       ];
 
       environment = {
@@ -87,10 +90,17 @@ in
         HWC_LEADS_NOTIFY_URL          = cfg.notifyServiceUrl;
         HWC_LEADS_PG_DSN              = cfg.postgresDsn;
         HWC_LEADS_JT_MAPPINGS_FILE    = "${jtMappingsFile}";
+        HWC_LEADS_SMTP_HOST           = cfg.smtp.host;
+        HWC_LEADS_SMTP_PORT           = toString cfg.smtp.port;
+        HWC_LEADS_SMTP_REQUIRE_TLS    = if cfg.smtp.requireTls then "1" else "0";
+        HWC_LEADS_SMTP_LOGIN          = cfg.smtp.login;
+        HWC_LEADS_SMTP_FROM           = cfg.smtp.from;
       } // lib.optionalAttrs (cfg.hmacSecretRef != null) {
         HWC_LEADS_HMAC_FILE = config.age.secrets.${cfg.hmacSecretRef}.path;
       } // lib.optionalAttrs (cfg.jtGrantKeyRef != null) {
         HWC_LEADS_JT_GRANT_FILE = config.age.secrets.${cfg.jtGrantKeyRef}.path;
+      } // lib.optionalAttrs (cfg.smtp.passwordSecretRef != null) {
+        HWC_LEADS_SMTP_PASSWORD_FILE = config.age.secrets.${cfg.smtp.passwordSecretRef}.path;
       } // {
         PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
         NODE_ENV = "production";
@@ -175,6 +185,18 @@ in
           hwc.business.leads.jtGrantKeyRef = "${toString cfg.jtGrantKeyRef}"
           but no matching agenix secret is declared. Either declare or
           set to null (the service will refuse JT-creation calls).
+        '';
+      }
+      {
+        # SMTP password — same shape.
+        assertion =
+          cfg.smtp.passwordSecretRef == null
+          || (config.age.secrets ? ${cfg.smtp.passwordSecretRef});
+        message = ''
+          hwc.business.leads.smtp.passwordSecretRef =
+          "${toString cfg.smtp.passwordSecretRef}" but no matching
+          agenix secret is declared. Set to null to disable customer
+          email entirely.
         '';
       }
     ];

@@ -11,11 +11,13 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "nodemailer": "^6.10.1",
     "pg": "^8.21.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/nodemailer": "^6.4.23",
     "@types/pg": "^8.20.0",
     "typescript": "^5.7.0"
   },

@@ -117,5 +117,46 @@ in
         it at startup for the JT GraphQL Pave client.
       '';
     };
+
+    # ── Customer email (Phase 2.5) ───────────────────────────────────────
+    # Outbound email to the lead's address ("thanks for your inquiry").
+    # Routed via Proton Bridge on loopback — same path hwc-notify uses
+    # for its smtp-eric channel. The agenix secret is shared.
+    smtp = {
+      host = lib.mkOption {
+        type = lib.types.str;
+        default = "127.0.0.1";
+        description = "SMTP host. Default = Proton Bridge on loopback.";
+      };
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 1025;
+        description = "SMTP port.";
+      };
+      requireTls = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Require STARTTLS. Bridge requires it even on loopback.";
+      };
+      login = lib.mkOption {
+        type = lib.types.str;
+        default = "eric@iheartwoodcraft.com";
+        description = "SMTP AUTH login. Bridge auths on the send address.";
+      };
+      from = lib.mkOption {
+        type = lib.types.str;
+        default = "eric@iheartwoodcraft.com";
+        description = "From header for the customer-confirmation email.";
+      };
+      passwordSecretRef = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = "proton-bridge-password";
+        description = ''
+          agenix secret name for the SMTP password. Defaults to the
+          same Bridge password hwc-notify's smtp-eric channel uses.
+          Set to null to disable customer-email entirely.
+        '';
+      };
+    };
   };
 }

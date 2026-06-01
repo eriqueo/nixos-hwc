@@ -40,6 +40,10 @@ export interface LeadStore {
   recent(query: RecentQuery): Promise<readonly Lead[]>;
   /** Set JT IDs + jt_synced_at. Only non-null fields are written. */
   updateJtIds(leadId: string, ids: JtIdUpdate, status: LeadStatus): Promise<void>;
+  /** Stamp notify_sent_at = now(). */
+  markNotified(leadId: string): Promise<void>;
+  /** Stamp email_sent_at = now(). */
+  markEmailSent(leadId: string): Promise<void>;
   /** Release pooled connections. */
   close(): Promise<void>;
 }
