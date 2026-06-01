@@ -13,6 +13,7 @@ import { loadConfig } from "./config.js";
 import { makeStderrLogger } from "./adapters/log-stderr.js";
 import { safeParseLeadInput, buildLead } from "./schemas/lead.js";
 import { verifyHmac, selfTestHmac } from "./core/hmac.js";
+import { RateLimiter } from "./rate-limit.js";
 import { makePostgresLeadStore } from "./adapters/store-postgres.js";
 import { makeJtJobtreadAdapter } from "./adapters/jt-jobtread.js";
 import { makeNotifyHttpClient } from "./adapters/notify-http.js";
@@ -120,6 +121,16 @@ function main(): void {
     log.warn("customer email disabled (smtp config not wired)");
   }
 
+  // Transport-layer rate limiter — POST /leads only, keyed by source.
+  const rateLimiter = new RateLimiter({
+    maxPerWindow: config.rateLimit.maxPerWindow,
+    windowSeconds: config.rateLimit.windowSeconds,
+  });
+  log.info("[http] rate limit configured", {
+    maxPerWindow: config.rateLimit.maxPerWindow,
+    windowSeconds: config.rateLimit.windowSeconds,
+  });
+
   const startedAt = new Date();
 
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -208,6 +219,22 @@ function main(): void {
 
         // ── 4. Build canonical Lead ──
         const lead = buildLead(result.value);
+
+        // ── 4a. Rate limit by source ──
+        // Keyed on the validated LeadInput source so a misconfigured
+        // calculator retry storm can't drag down contact submissions.
+        const rl = rateLimiter.check(lead.payload.source);
+        if (!rl.ok) {
+          reqLog.warn(`[http] Rate limit exceeded for source=${lead.payload.source}, count=${rl.count}`);
+          res.setHeader("retry-after", String(rl.retryAfterSeconds));
+          writeJson(res, 429, {
+            code: "RATE_LIMITED",
+            error: "rate_limited",
+            retryAfterSeconds: rl.retryAfterSeconds,
+            message: `too many requests for source=${lead.payload.source}; retry in ${rl.retryAfterSeconds}s`,
+          });
+          return;
+        }
 
         reqLog.info("lead accepted", {
           leadId: lead.id,

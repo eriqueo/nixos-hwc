@@ -131,6 +131,31 @@ in
       '';
     };
 
+    # ── Ingress rate limit ──────────────────────────────────────────────
+    # In-memory sliding window keyed on the validated LeadInput source
+    # ("calculator" / "contact" / "appointment"). Absorbs misconfigured
+    # n8n retry loops + webhook replay storms at the HTTP boundary.
+    # Per-process state — resets on service restart.
+    rateLimit = {
+      maxPerWindow = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 10;
+        description = ''
+          Maximum POST /leads requests per source per window before the
+          429 cap kicks in. Applies independently to each source value.
+        '';
+      };
+      windowSeconds = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 60;
+        description = ''
+          Sliding-window length in seconds. Default is 60 — together
+          with maxPerWindow=10 this means up to ten lead submissions
+          per minute per source.
+        '';
+      };
+    };
+
     # ── Customer email (Phase 2.5) ───────────────────────────────────────
     # Outbound email to the lead's address ("thanks for your inquiry").
     # Routed via Proton Bridge on loopback — same path hwc-notify uses
