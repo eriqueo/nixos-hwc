@@ -20,7 +20,7 @@ let
       <MaxMuxingQueueSize>2048</MaxMuxingQueueSize>
       <EnableThrottling>false</EnableThrottling>
       <ThrottleDelaySeconds>180</ThrottleDelaySeconds>
-      <EnableSegmentDeletion>false</EnableSegmentDeletion>
+      <EnableSegmentDeletion>true</EnableSegmentDeletion>
       <SegmentKeepSeconds>720</SegmentKeepSeconds>
       <HardwareAccelerationType>nvenc</HardwareAccelerationType>
       <VaapiDevice>/dev/dri/renderD128</VaapiDevice>
