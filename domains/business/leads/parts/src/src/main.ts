@@ -15,8 +15,14 @@ import { safeParseLeadInput, buildLead } from "./schemas/lead.js";
 import { verifyHmac } from "./core/hmac.js";
 import { makePostgresLeadStore } from "./adapters/store-postgres.js";
 import { makeJtJobtreadAdapter } from "./adapters/jt-jobtread.js";
+import { makeNotifyHttpClient } from "./adapters/notify-http.js";
+import { makeBridgeEmailClient } from "./adapters/email-bridge.js";
+import { buildNotificationInput } from "./core/notify-payload.js";
+import { renderCustomerEmail } from "./core/customer-email.js";
 import type { LeadStore } from "./ports/store.js";
 import type { JtClient } from "./ports/jt.js";
+import type { NotifyClient } from "./ports/notify.js";
+import type { CustomerEmailClient } from "./ports/customer-email.js";
 
 const MAX_BODY_BYTES = 64 * 1024;
 
@@ -79,6 +85,21 @@ function main(): void {
 
   if (!jt) {
     log.warn("JT graph creation disabled (jtGrantKey unwired) — leads will save with empty jt:{}");
+  }
+
+  const notifyClient: NotifyClient = makeNotifyHttpClient({
+    baseUrl: config.notifyServiceUrl,
+  });
+
+  const emailClient: CustomerEmailClient | undefined = config.smtp
+    ? makeBridgeEmailClient({
+        smtp: config.smtp,
+        log: log.child({ component: "customer-email" }),
+      })
+    : undefined;
+
+  if (!emailClient) {
+    log.warn("customer email disabled (smtp config not wired)");
   }
 
   const startedAt = new Date();
@@ -231,6 +252,51 @@ function main(): void {
           }
         }
 
+        // ── 7. hwc-notify ping ──
+        // Pass the lead with its newly minted JT IDs so the
+        // notification body can include the JT job deep-link.
+        const leadWithJt = { ...lead, jt: jtIds };
+        let notifyOk = false;
+        let notifyMsg: string | undefined;
+        try {
+          const notifInput = buildNotificationInput(leadWithJt, undefined);
+          const r = await notifyClient.send(notifInput);
+          notifyOk = r.ok;
+          notifyMsg = r.ok ? undefined : r.message;
+          if (r.ok) {
+            try { await store.markNotified(lead.id); } catch { /* logged separately */ }
+            reqLog.info("hwc-notify ping ok", { leadId: lead.id, notificationId: r.notificationId });
+          } else {
+            reqLog.warn("hwc-notify ping failed", { leadId: lead.id, err: r.message });
+          }
+        } catch (err) {
+          notifyOk = false;
+          notifyMsg = err instanceof Error ? err.message : String(err);
+          reqLog.warn("hwc-notify ping threw", { leadId: lead.id, err: notifyMsg });
+        }
+
+        // ── 8. Customer email ──
+        let emailOk = false;
+        let emailMsg: string | undefined;
+        if (emailClient) {
+          try {
+            const rendered = renderCustomerEmail(leadWithJt);
+            const r = await emailClient.send(rendered);
+            emailOk = r.ok;
+            emailMsg = r.ok ? undefined : r.message;
+            if (r.ok) {
+              try { await store.markEmailSent(lead.id); } catch { /* logged separately */ }
+              reqLog.info("customer email sent", { leadId: lead.id, messageId: r.messageId });
+            } else {
+              reqLog.warn("customer email failed", { leadId: lead.id, err: r.message });
+            }
+          } catch (err) {
+            emailOk = false;
+            emailMsg = err instanceof Error ? err.message : String(err);
+            reqLog.warn("customer email threw", { leadId: lead.id, err: emailMsg });
+          }
+        }
+
         writeJson(res, 202, {
           leadId: lead.id,
           source: lead.payload.source,
@@ -238,11 +304,12 @@ function main(): void {
           receivedAt: lead.receivedAt,
           jt: jtIds,
           ...(jtError ? { jtError, jtRetryable } : {}),
-          message: jt
-            ? (nextStatus === "complete"
-                ? "lead persisted + JT graph created; hwc-notify + customer email land in Phase 2.5."
-                : "lead persisted; JT graph PARTIAL (see jt + jtError); replay endpoint lands in Phase 2.7.")
-            : "lead persisted; JT disabled (no grant key wired).",
+          notify: { ok: notifyOk, ...(notifyMsg ? { message: notifyMsg } : {}) },
+          email: emailClient
+            ? { ok: emailOk, ...(emailMsg ? { message: emailMsg } : {}) }
+            : { ok: false, message: "disabled" },
+          message:
+            "lead processed; partial-failure recovery via Phase 2.7 replay endpoint.",
         });
       })();
       return;

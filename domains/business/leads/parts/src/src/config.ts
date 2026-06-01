@@ -28,6 +28,17 @@ export interface ServiceConfig {
   readonly postgresDsn: string;
   /** JT mappings loaded from the Nix-generated JSON file. */
   readonly jtMappings: JtMappings;
+  /** SMTP config for the customer-email path. undefined when disabled. */
+  readonly smtp: SmtpConfig | undefined;
+}
+
+export interface SmtpConfig {
+  readonly host: string;
+  readonly port: number;
+  readonly requireTls: boolean;
+  readonly login: string;
+  readonly from: string;
+  readonly password: string;
 }
 
 function readStr(name: string, fallback?: string): string {
@@ -91,5 +102,19 @@ export function loadConfig(): ServiceConfig {
     jtGrantKey: readSecretFile("HWC_LEADS_JT_GRANT_FILE"),
     postgresDsn: readStr("HWC_LEADS_PG_DSN", "postgresql:///hwc"),
     jtMappings: loadJtMappings(readStr("HWC_LEADS_JT_MAPPINGS_FILE")),
+    smtp: loadSmtpConfig(),
+  };
+}
+
+function loadSmtpConfig(): SmtpConfig | undefined {
+  const password = readSecretFile("HWC_LEADS_SMTP_PASSWORD_FILE");
+  if (password === undefined) return undefined;
+  return {
+    host: readStr("HWC_LEADS_SMTP_HOST", "127.0.0.1"),
+    port: readPort("HWC_LEADS_SMTP_PORT", 1025),
+    requireTls: process.env["HWC_LEADS_SMTP_REQUIRE_TLS"] !== "0",
+    login: readStr("HWC_LEADS_SMTP_LOGIN"),
+    from: readStr("HWC_LEADS_SMTP_FROM"),
+    password,
   };
 }

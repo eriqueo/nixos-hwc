@@ -167,6 +167,14 @@ export function makePostgresLeadStore(opts: PostgresLeadStoreOpts): LeadStore {
       await pool.query(sql, params);
     },
 
+    async markNotified(leadId: string): Promise<void> {
+      await pool.query(`UPDATE hwc.leads SET notify_sent_at = now() WHERE id = $1::uuid`, [leadId]);
+    },
+
+    async markEmailSent(leadId: string): Promise<void> {
+      await pool.query(`UPDATE hwc.leads SET email_sent_at = now() WHERE id = $1::uuid`, [leadId]);
+    },
+
     async close(): Promise<void> {
       await pool.end();
     },
