@@ -12,9 +12,15 @@
 #   1. cloudflared tunnel login            → ~/.cloudflared/cert.pem
 #   2. cloudflared tunnel create hwc-server → ~/.cloudflared/<TUNNEL_ID>.json
 #   3. Encrypt credentials JSON with agenix
-#   4. Create DNS CNAMEs: {service}.heartwoodcraft.me → <TUNNEL_ID>.cfargotunnel.com
-#      Active: n8n, mcp, jobber, leads
+#   4. Create DNS CNAMEs in Cloudflare for each ingress hostname:
+#        {service}.heartwoodcraft.me → <TUNNEL_ID>.cfargotunnel.com   (active)
+#        {service}.api.iheartwoodcraft.com → <TUNNEL_ID>.cfargotunnel.com
+#        (Phase 4.6 in progress; needs api.iheartwoodcraft.com
+#         delegated from Hostinger to Cloudflare first — NS record at
+#         the apex zone pointing `api` to the Cloudflare nameservers.)
 #   5. Set tunnelId below and rebuild
+# See wiki/nixos/iheartwoodcraft-com-backend-migration.md for the
+# operator runbook covering the api.iheartwoodcraft.com migration.
 
 { config, lib, pkgs, ... }:
 
