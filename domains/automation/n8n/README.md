@@ -149,6 +149,7 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-05-31: Add `hwcLeadsHmacFile` secret option + `NODE_FUNCTION_ALLOW_BUILTIN=crypto` container env so the thin-shell `work_calculator_lead` workflow can HMAC-sign POST /leads at the n8n boundary. Phase 2.6 Move A cutover — calculator-lead workflow shrunk from 23 nodes to 4 (Webhook → Build LeadInput → POST /leads → Respond). v2 fat workflow archived at `domains/business/leads/parts/workflows/work_calculator_lead-v2-fat-archive-2026-05-31.json` as rollback.
 - 2026-05-22: Remove Tailscale Funnel — public access migrated to Cloudflare Tunnel (n8n.heartwoodcraft.me). Remove funnel options and systemd services. Caddy :18080/:10080 listeners removed.
 - 2026-04-03: Rename `n8n-mcp-bridge.service` → `hwc-n8n-mcp.service`, `n8n-mcp-bridge-env` → `hwc-n8n-mcp-env` (consistent MCP naming)
 - 2026-04-03: Funnel moved to :443 — Caddy :18080 backend routes `/n8n/*` to Express :6200, which proxies to bridge :6201. URLs updated from `:8443` to no port suffix.

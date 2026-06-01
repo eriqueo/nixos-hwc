@@ -1,0 +1,92 @@
+{
+  "name": "work_calculator_lead",
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "id": "3a438f8f-9d2d-4fb6-99b4-a50434693b25",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "10c75450-2b55-4da9-a6a2-3695b38119b8",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "calculator-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000aaaa",
+      "name": "Build LeadInput",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\n// Calc app may post the payload at .body (webhook framing) or at root.\nconst raw = $input.first().json.body || $input.first().json;\nconst contact = raw.contact || {};\n\n// Generate or preserve reportId for the customer-facing URL.\nconst chars = 'abcdefghijklmnopqrstuvwxyz0123456789';\nlet reportId = raw.report_id || raw.reportId || '';\nif (!reportId) {\n  for (let i = 0; i < 8; i++) reportId += chars[Math.floor(Math.random() * chars.length)];\n}\nconst reportUrl = `https://iheartwoodcraft.com/report/${reportId}`;\n\n// Coerce legacy contact_* keys into nested contact{} per LeadInput schema.\nconst payloadContact = {\n  name:  contact.name  || raw.contact_name  || '',\n  email: contact.email || raw.contact_email || '',\n};\nconst phone = contact.phone || raw.contact_phone;\nif (phone) payloadContact.phone = phone;\nconst notes = contact.notes || raw.contact_notes;\nif (notes) payloadContact.notes = notes;\n\n// Build the canonical LeadInput hwc-leads expects.\nconst leadPayload = {\n  source: 'calculator',\n  contact: payloadContact,\n  calculator: raw.calculator || raw.calc_label || 'bathroom',\n  projectState: raw.projectState || raw.project_state || {},\n  reportId,\n};\nif (raw.estimate && typeof raw.estimate === 'object') {\n  leadPayload.estimate = { low: raw.estimate.low, high: raw.estimate.high };\n}\n\n// Attribution — fold UTMs/GCLID/referrer into the schema's shape.\nconst attribution = {};\nif (raw.utm_source)    attribution.utmSource   = raw.utm_source;\nif (raw.utm_medium)    attribution.utmMedium   = raw.utm_medium;\nif (raw.utm_campaign)  attribution.utmCampaign = raw.utm_campaign;\nif (raw.gclid)         attribution.gclid       = raw.gclid;\nif (raw.referrer)      attribution.referrer    = raw.referrer;\nif (raw.landing_page)  attribution.landingPage = raw.landing_page;\nif (typeof raw.pages_viewed === 'number') attribution.pagesViewed = raw.pages_viewed;\nif (Object.keys(attribution).length > 0) leadPayload.attribution = attribution;\n\n// Serialise once — HMAC signs these exact bytes; HTTP sends them.\nconst bodyJson = JSON.stringify(leadPayload);\n\nconst secret = $env.HWC_LEADS_HMAC_SECRET;\nif (!secret) throw new Error('HWC_LEADS_HMAC_SECRET missing in env');\nconst sig = crypto.createHmac('sha256', secret).update(bodyJson).digest('hex');\n\nreturn [{\n  json: {\n    bodyJson,\n    sig,\n    reportId,\n    reportUrl,\n  }\n}];"
+      }
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000bbbb",
+      "name": "POST /leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://hwc.ocelot-wahoo.ts.net:30443/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "content-type", "value": "application/json" },
+            { "name": "x-hwc-signature", "value": "=sha256={{ $json.sig }}" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.bodyJson }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000cccc",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 0],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reportUrl: $('Build LeadInput').first().json.reportUrl, reportId: $('Build LeadInput').first().json.reportId, leadId: ($json.body || {}).leadId, status: ($json.body || {}).status, upstreamHttp: $json.statusCode }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Build LeadInput", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build LeadInput": {
+      "main": [
+        [{ "node": "POST /leads", "type": "main", "index": 0 }]
+      ]
+    },
+    "POST /leads": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

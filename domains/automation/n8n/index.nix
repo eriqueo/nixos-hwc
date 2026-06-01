@@ -117,6 +117,17 @@ in
         description = "Path to file containing ANTHROPIC_API_KEY for Claude workflows (via agenix)";
       };
 
+      hwcLeadsHmacFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to file containing HWC_LEADS_HMAC_SECRET (via agenix).
+          Used by the calculator-lead thin-shell workflow to sign the
+          forwarded POST /leads request to hwc-leads. Pair with the same
+          agenix secret hwc-leads consumes (`hwc-leads-hmac-secret`).
+        '';
+      };
+
       gotifyTokenFiles = lib.mkOption {
         type = lib.types.attrsOf lib.types.path;
         default = {};

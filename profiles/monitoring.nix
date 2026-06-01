@@ -83,6 +83,7 @@
       slackWebhookUrlFile = config.age.secrets.slack-webhook-url.path;
       discordWebhookUrlFile = config.age.secrets.discord-webhook-url.path;
       anthropicApiKeyFile = config.age.secrets.nanoclaw-anthropic-key.path;
+      hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;
       # Taxonomy-aligned Gotify tokens → env vars GOTIFY_TOKEN_{HWC_OPS, HWC_FINANCIAL, ...}
       gotifyTokenFiles = let api = config.hwc.secrets.api; in
         lib.filterAttrs (_: v: v != null) {
