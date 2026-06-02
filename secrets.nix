@@ -104,6 +104,7 @@ in
   "domains/secrets/parts/services/gotify-token-mail.age".publicKeys              = everyone;
   "domains/secrets/parts/services/gotify-token-monitoring.age".publicKeys        = everyone;
   "domains/secrets/parts/services/grafana-admin-password.age".publicKeys         = everyone;
+  "domains/secrets/parts/services/hermes-discord-bot-token.age".publicKeys       = everyone;
   "domains/secrets/parts/services/hostinger-sftp.age".publicKeys                 = everyone;
   "domains/secrets/parts/services/immich-api-key.age".publicKeys                 = everyone;
   "domains/secrets/parts/services/jellyfin-api-key.age".publicKeys               = everyone;
