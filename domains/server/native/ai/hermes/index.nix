@@ -310,6 +310,10 @@ in
           # First start may take ~60s while it npm-installs and builds the
           # SvelteKit dashboard dist. Don't let systemd time it out.
           TimeoutStartSec = "5min";
+          # Must be >= agent.restart_drain_timeout (180s) + safety margin,
+          # else systemd SIGKILLs the gateway mid-drain. Hermes warns
+          # "TimeoutStopSec=90s but drain_timeout=180s (expected >=210s)".
+          TimeoutStopSec = "240s";
           Restart = "on-failure";
           RestartSec = "10s";
 

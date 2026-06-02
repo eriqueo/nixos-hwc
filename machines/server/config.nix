@@ -585,7 +585,7 @@
   hwc.server.ai.hermes = {
     enable = true;
     gateway.enable = true;
-    gateway.discord.enable = false;   # flip after bot token is encrypted
+    gateway.discord.enable = true;
     model.provider = "anthropic";     # uses existing nanoclaw-anthropic-key.age
   };
 
