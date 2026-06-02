@@ -41,4 +41,14 @@
 
   # dconf required for GTK applications
   programs.dconf.enable = true;
+
+  # nix-ld GUI libs (extends core.nix base set for graphical machines)
+  programs.nix-ld.libraries = with pkgs; [
+    gtk3 pango cairo gdk-pixbuf atk
+    libdrm mesa alsa-lib cups libpulseaudio
+    libX11 libXcomposite libXcursor libXdamage libXext libXfixes
+    libXi libXrandr libXrender libXtst libxcb libxscrnsaver
+    at-spi2-atk at-spi2-core
+    libgbm libxkbcommon
+  ];
 }

@@ -25,15 +25,5 @@
     "$HOME/.local/share/flatpak/exports/share"
   ];
 
-  # nix-ld: allows pre-compiled binaries (exogui Electron frontend)
-  programs.nix-ld.enable = true;
-  programs.nix-ld.libraries = with pkgs; [
-    glib glibc gtk3 pango cairo gdk-pixbuf atk
-    nss nspr dbus expat libdrm mesa
-    alsa-lib cups libpulseaudio
-    libX11 libXcomposite libXcursor libXdamage libXext libXfixes
-    libXi libXrandr libXrender libXtst libxcb libxscrnsaver
-    at-spi2-atk at-spi2-core
-    libgbm libxkbcommon
-  ];
+  # nix-ld: enabled in profiles/core.nix (all machines)
 }
