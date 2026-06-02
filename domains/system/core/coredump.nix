@@ -7,10 +7,20 @@
 #
 # MaxUse caps the directory; systemd-coredump rotates oldest-first.
 # We keep a generous window so post-mortem analysis is still possible.
-{ ... }:
+{ nixosApiVersion ? "unstable", ... }:
 {
-  systemd.coredump.extraConfig = ''
-    MaxUse=500M
-    KeepFree=2G
-  '';
+  # nixos-25.11 stable uses systemd.coredump.extraConfig; unstable removed it
+  # (mkRemovedOptionModule) in favor of systemd.coredump.settings.Coredump.
+  systemd.coredump =
+    if nixosApiVersion == "stable" then {
+      extraConfig = ''
+        MaxUse=500M
+        KeepFree=2G
+      '';
+    } else {
+      settings.Coredump = {
+        MaxUse = "500M";
+        KeepFree = "2G";
+      };
+    };
 }
