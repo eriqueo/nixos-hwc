@@ -597,8 +597,9 @@
     # Claude Code and route Hermes through the local MoE. The claude-code
     # SKILL still lets Hermes delegate coding tasks to the local `claude`
     # CLI — that path stays on the subscription.
-    model.provider  = "openai";  # OpenAI-compat client; the URL/model
-                                 # below select WHICH server it talks to.
+    # Canonical Hermes id is "openai-api" (see PROVIDER_REGISTRY in
+    # hermes_cli/auth.py). "openai" alone is rejected as Unknown provider.
+    model.provider  = "openai-api";
     model.baseUrl   = "http://127.0.0.1:11501/v1";
     model.modelName = "lfm2-24b";
   };
