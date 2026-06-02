@@ -16,6 +16,18 @@ interface EmbedHttpConfig {
 const DEFAULT_CHAT_TIMEOUT = 120_000;
 const DEFAULT_EMBED_TIMEOUT = 30_000;
 
+// The chunker slices note bodies by UTF-16 code unit, so a chunk boundary can
+// land between the halves of a surrogate pair (an emoji / astral-plane char),
+// leaving a lone surrogate. JSON.stringify emits that as an invalid \uDC.. escape
+// and llama.cpp's JSON parser rejects the whole request (400/500), so the note
+// never embeds and retries forever. Replace any unpaired surrogate with U+FFFD
+// before the request — the stored chunk keeps the original text for retrieval.
+function stripLoneSurrogates(s: string): string {
+  return s
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "�")
+    .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "�");
+}
+
 async function fetchWithTimeout(
   url: string,
   init: RequestInit,
@@ -114,7 +126,7 @@ export function createEmbedHttp(cfg: EmbedHttpConfig): EmbedPort {
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ input: texts, model: "embed" }),
+          body: JSON.stringify({ input: texts.map(stripLoneSurrogates), model: "embed" }),
         },
         timeout,
       );
