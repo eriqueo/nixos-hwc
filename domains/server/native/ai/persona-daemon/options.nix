@@ -59,7 +59,7 @@ in
       default = paths.brain.server-replica or null;
       description = ''
         Path to the brain vault for RAG indexing. Defaults to
-        hwc.paths.brain.server-replica (= /mnt/vaults/brain on hwc-server).
+        hwc.paths.brain.server-replica (= /home/eric/900_vaults/brain on hwc-server).
         Set to null to disable RAG entirely; useKnowledge personas then
         receive no retrieval context (chat still works).
       '';

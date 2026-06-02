@@ -123,6 +123,11 @@ deno task dev
 
 ## Changelog
 
+- 2026-06-02: vault path follows the move from `/mnt/vaults/brain` to
+  `/home/eric/900_vaults/brain`. Only the `vaultPath` option's doc/default
+  reference changed — the value is inherited from
+  `hwc.paths.brain.server-replica`, so this is a default+doc sync, not a
+  behavior change. The old path no longer exists on hwc-server.
 - 2026-06-01: Add 5-min periodic reindex timer alongside the path unit.
   `systemd.path` `PathChanged=` only watches the directory's immediate
   entries — edits under `wiki/`, `_llm-inbox/`, etc. never fire the

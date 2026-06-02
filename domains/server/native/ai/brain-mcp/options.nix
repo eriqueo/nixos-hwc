@@ -1,6 +1,6 @@
 # domains/server/native/ai/brain-mcp/options.nix
 #
-# Brain MCP Server options — exposes brain vault at /mnt/vaults/brain as MCP tools
+# Brain MCP Server options — exposes brain vault at /home/eric/900_vaults/brain as MCP tools
 # Namespace: hwc.server.ai.brainMcp (matches folder: domains/server/native/ai/brain-mcp/)
 { lib, ... }:
 {
@@ -15,7 +15,7 @@
 
     vaultPath = lib.mkOption {
       type = lib.types.path;
-      default = "/mnt/vaults/brain";
+      default = "/home/eric/900_vaults/brain";
       description = "Path to the brain vault replica on the server";
     };
 

@@ -384,8 +384,8 @@ in
 
       server-replica = mkOption {
         type = types.nullOr types.path;
-        default = if isServer then "/mnt/vaults/brain" else null;
-        description = "Server-side Syncthing replica of the unified brain (Phase 3)";
+        default = if isServer then "/home/eric/900_vaults/brain" else null;
+        description = "Server-side Syncthing replica of the unified brain (path harmonized with laptop)";
       };
 
       inbox-mobile = mkOption {

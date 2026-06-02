@@ -59,6 +59,7 @@ in {
 
 ## Changelog
 
+- 2026-06-02: `hwc.paths.brain.server-replica` default changed from `/mnt/vaults/brain` to `/home/eric/900_vaults/brain`. The vault was physically moved on hwc-server (`/mnt/vaults/brain` no longer exists) so the server replica now lives under the user home, matching the laptop-primary path. Downstream consumers (brain-mcp `vaultPath`, persona-daemon RAG, prometheus alert text) inherit via this option.
 - 2026-05-21: Added `hwc.paths.brain.*` namespace (Phase 1 of brain knowledge vault migration). Declares canonical paths for the unified brain vault (laptop-primary, server replica), the mobile capture inbox, vault backups, and the 10 V1–V10 legacy source vaults being merged. Exports matching `HWC_BRAIN_*` env vars. All defaults are conditional (`isLaptop`/`isServer`) so non-matching hosts get `null` and the env vars drop out.
 - 2026-02-26: Created README per Law 12
 - 2026-02-20: Refactored path detection logic
