@@ -8,7 +8,7 @@ import type { ScoredChunk } from "../core/retrieval.ts";
 import { cosine } from "../core/retrieval.ts";
 import { PersonaDaemonError } from "../core/errors.ts";
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const MIGRATIONS = [
   // v0 → v1 — Commit 2 baseline
@@ -53,6 +53,19 @@ const MIGRATIONS = [
       mtime INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(note_path);
+  `,
+
+  // v2 → v3 — content-addressed change detection.
+  // The indexer decides what to re-embed by comparing sha256(note body) against
+  // content_hash here — NOT by file mtime. The vault is Syncthing-replicated and
+  // mtimes churn on every sync without the bytes changing; hashing makes a sync
+  // touch a no-op instead of a full-vault re-embed.
+  `
+    CREATE TABLE IF NOT EXISTS note_index (
+      note_path TEXT PRIMARY KEY,
+      content_hash TEXT NOT NULL,
+      indexed_at INTEGER NOT NULL
+    );
   `,
 ];
 
@@ -352,7 +365,7 @@ export function createVectorStoreSqlite(args: {
   rebuildMirrorSync();
 
   return {
-    upsertNoteChunks(notePath, chunks, embeddings, mtime) {
+    upsertNoteChunks(notePath, chunks, embeddings, mtime, contentHash) {
       if (chunks.length !== embeddings.length) {
         throw new PersonaDaemonError(
           "CONFIG_INVALID",
@@ -377,6 +390,15 @@ export function createVectorStoreSqlite(args: {
               float32ToBytes(embeddings[i]), mtime,
             );
           }
+          // Record the content hash so the next scan skips this note unless
+          // its bytes change. Same transaction as the chunks → never diverges.
+          db.prepare(
+            `INSERT INTO note_index (note_path, content_hash, indexed_at)
+             VALUES (?, ?, ?)
+             ON CONFLICT(note_path) DO UPDATE SET
+               content_hash = excluded.content_hash,
+               indexed_at   = excluded.indexed_at`,
+          ).run(notePath, contentHash, mtime);
         });
         tx(null);
 
@@ -393,6 +415,7 @@ export function createVectorStoreSqlite(args: {
     deleteNote(notePath) {
       return Promise.resolve(withBusyRetry(() => {
         db.prepare("DELETE FROM chunks WHERE note_path = ?").run(notePath);
+        db.prepare("DELETE FROM note_index WHERE note_path = ?").run(notePath);
         for (let i = mirror.length - 1; i >= 0; i--) {
           if (mirror[i].chunk.notePath === notePath) mirror.splice(i, 1);
         }
@@ -410,12 +433,12 @@ export function createVectorStoreSqlite(args: {
       return Promise.resolve(scored.slice(0, k));
     },
 
-    allMtimes() {
+    allNoteHashes() {
       const rows = db.prepare(
-        "SELECT note_path, MIN(mtime) AS mtime FROM chunks GROUP BY note_path",
-      ).all<{ note_path: string; mtime: number }>();
-      const m = new Map<string, number>();
-      for (const r of rows) m.set(r.note_path, r.mtime);
+        "SELECT note_path, content_hash FROM note_index",
+      ).all<{ note_path: string; content_hash: string }>();
+      const m = new Map<string, string>();
+      for (const r of rows) m.set(r.note_path, r.content_hash);
       return Promise.resolve(m);
     },
 
