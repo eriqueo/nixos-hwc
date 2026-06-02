@@ -61,55 +61,59 @@ let
     '';
   };
 
-  # Idempotent installer: skips if sentinel present.
+  # Effective base URL — explicit override wins; otherwise pick the
+  # provider's canonical endpoint. Used both to set model.base_url at
+  # install/reconfig time and to detect "local endpoint" mode below.
+  effectiveBaseUrl =
+    if cfg.model.baseUrl != null then cfg.model.baseUrl
+    else if cfg.model.provider == "anthropic" then "https://api.anthropic.com"
+    else if cfg.model.provider == "openai" then "https://api.openai.com/v1"
+    else if cfg.model.provider == "nous-portal" then "https://portal.nousresearch.com/api/v1"
+    else "https://openrouter.ai/api/v1";
+
+  # When baseUrl is set, we assume the endpoint is local (Ollama,
+  # llama.cpp, vLLM). These don't authenticate, but the openai SDK
+  # still sends an Authorization header — so we supply a placeholder.
+  isLocalEndpoint = cfg.model.baseUrl != null;
+
+  # Installer is split: the sentinel only gates the heavy
+  # curl|bash download. The config-set commands run unconditionally so
+  # provider/baseUrl/modelName changes in the NixOS config take effect
+  # on the next rebuild without needing to delete the sentinel.
   hermes-installer = pkgs.writeShellApplication {
     name = "hermes-installer";
     runtimeInputs = [ pkgs.curl pkgs.bash pkgs.coreutils pkgs.gnused ];
     text = ''
       set -euo pipefail
 
-      if [ -f "${installSentinel}" ]; then
-        echo "[hermes-install] sentinel present at ${installSentinel} — skipping installer"
-        exit 0
-      fi
-
       export HOME="${cfg.homeDir}"
       mkdir -p "$HOME/.hermes" "$HOME/.local/bin"
 
-      echo "[hermes-install] running upstream installer"
-      # --skip-setup: skip the interactive `hermes setup` wizard
-      # --skip-browser: skip Playwright/Chromium (P1000 GPU + headless box)
-      curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \
-        | bash -s -- --skip-setup --skip-browser
+      if [ ! -f "${installSentinel}" ]; then
+        echo "[hermes-install] running upstream installer"
+        # --skip-setup: skip the interactive `hermes setup` wizard
+        # --skip-browser: skip Playwright/Chromium (P1000 GPU + headless box)
+        curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \
+          | bash -s -- --skip-setup --skip-browser
+        touch "${installSentinel}"
+        echo "[hermes-install] upstream installer done — sentinel written"
+      else
+        echo "[hermes-install] sentinel present — skipping upstream installer"
+      fi
 
-      echo "[hermes-install] configuring model provider: ${cfg.model.provider}"
+      echo "[hermes-install] applying model config (provider=${cfg.model.provider} base_url=${effectiveBaseUrl})"
       "${hermesBin}" config set model.provider "${cfg.model.provider}" || true
-      # Override the upstream-default base_url. Hermes ships with
-      # model.base_url = https://openrouter.ai/api/v1 (its multi-provider
-      # routing default). When we explicitly choose provider = anthropic
-      # the URL must match, or Anthropic-style model IDs get sent to
-      # OpenRouter and 404 because OR uses different model name formats.
-      "${hermesBin}" config set model.base_url "${
-        if cfg.model.provider == "anthropic" then "https://api.anthropic.com"
-        else if cfg.model.provider == "openai" then "https://api.openai.com/v1"
-        else if cfg.model.provider == "nous-portal" then "https://portal.nousresearch.com/api/v1"
-        else "https://openrouter.ai/api/v1"
-      }" || true
-      # For anthropic provider we DON'T set model.api_key_file. Eric's
-      # nanoclaw-anthropic-key.age is a Claude Max subscription-tier API
-      # key, but the live auth path is the symlinked Claude Code
-      # credentials JSON (see tmpfiles below) which Hermes auto-detects
-      # with Bearer auth + token refresh. Setting api_key_file would
-      # short-circuit to x-api-key mode and fail with HTTP 401.
-      # Also clear any stale ANTHROPIC_API_KEY left in .env by a previous
-      # `hermes setup` or manual paste — it's checked first in the
-      # lookup chain (ANTHROPIC_API_KEY -> ANTHROPIC_TOKEN ->
-      # CLAUDE_CODE_OAUTH_TOKEN) and would override the symlink path.
+      "${hermesBin}" config set model.base_url "${effectiveBaseUrl}" || true
+      ${lib.optionalString (cfg.model.modelName != null) ''
+        "${hermesBin}" config set model.default "${cfg.model.modelName}" || true
+      ''}
+      # For anthropic provider we DON'T set model.api_key_file: the live
+      # auth path is the symlinked Claude Code credentials JSON (see
+      # tmpfiles below) which Hermes auto-detects with Bearer auth + token
+      # refresh. Setting api_key_file would short-circuit to x-api-key mode.
+      # Clear any stale ANTHROPIC_* values that would override the symlink.
       "${hermesBin}" config set ANTHROPIC_API_KEY "" || true
       "${hermesBin}" config set ANTHROPIC_TOKEN "" || true
-
-      touch "${installSentinel}"
-      echo "[hermes-install] done — sentinel written"
     '';
   };
 in
@@ -229,6 +233,12 @@ in
           # security.pki maintains.
           SSL_CERT_FILE = "/etc/ssl/certs/ca-bundle.crt";
           SSL_CERT_DIR = "/etc/ssl/certs";
+        } // lib.optionalAttrs isLocalEndpoint {
+          # Local OpenAI-compat endpoints (llama.cpp/Ollama/vLLM) don't
+          # authenticate, but the openai SDK still emits an Authorization
+          # header. Supply a stable placeholder so the request doesn't 401
+          # on missing-key validation in the client.
+          OPENAI_API_KEY = "sk-local-noauth";
         };
 
         serviceConfig = {
