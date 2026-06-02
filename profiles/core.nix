@@ -73,6 +73,15 @@ in
   boot.loader.systemd-boot.configurationLimit = 10;
 
   #==========================================================================
+  # NIX-LD — Run pre-compiled binaries (Claude Code, Electron apps, etc.)
+  # Core libs here; GUI machines add X11/Wayland libs in their config.
+  #==========================================================================
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    glibc glib nss nspr dbus expat
+  ];
+
+  #==========================================================================
   # SYSTEM PACKAGES — Universal CLI tools
   #==========================================================================
   environment.systemPackages = [
