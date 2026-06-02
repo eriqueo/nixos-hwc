@@ -70,7 +70,7 @@ in
     #==========================================================================
     # CADDY REVERSE PROXY — port mode on :13443 (Phase 12)
     # Deviation: tailscale serve --https=8443 not viable (port 8443 owned by slskd/Caddy).
-    # Creates https://hwc.ocelot-wahoo.ts.net:13443 via Caddy with Tailscale cert.
+    # Creates https://hwc-server.ocelot-wahoo.ts.net:13443 via Caddy with Tailscale cert.
     #==========================================================================
     hwc.networking.shared.routes = [{
       name = "brain-mcp";

@@ -158,7 +158,7 @@ chmod +x /home/eric/.local/bin/{run-claude-skill,n8n-beets-import,n8n-jellyfin-s
 - **Response Mode:** Immediately
 - **Authentication:** None
 
-**Test URL:** `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr`
+**Test URL:** `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr`
 
 ---
 
@@ -198,7 +198,7 @@ chmod +x /home/eric/.local/bin/{run-claude-skill,n8n-beets-import,n8n-jellyfin-s
 #### Node 5a: Call Beets Import (Music Branch)
 - **Type:** HTTP Request
 - **Method:** POST
-- **URL:** `https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor`
+- **URL:** `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor`
 - **Body:**
   ```json
   {
@@ -314,7 +314,7 @@ chmod +x /home/eric/.local/bin/{run-claude-skill,n8n-beets-import,n8n-jellyfin-s
 #### Node 10: Send to ntfy
 - **Type:** HTTP Request
 - **Method:** POST
-- **URL:** `https://hwc.ocelot-wahoo.ts.net/{{ $json.topic }}`
+- **URL:** `https://hwc-server.ocelot-wahoo.ts.net/{{ $json.topic }}`
 - **Headers:**
   ```
   Title: {{ $json.title }}
@@ -334,7 +334,7 @@ chmod +x /home/eric/.local/bin/{run-claude-skill,n8n-beets-import,n8n-jellyfin-s
 #### Test 1: Radarr Movie Download
 
 ```bash
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr" \
   -H "Content-Type: application/json" \
   -d '{
     "eventType": "Download",
@@ -375,7 +375,7 @@ curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source
 #### Test 2: Sonarr TV Episode
 
 ```bash
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr" \
   -H "Content-Type: application/json" \
   -d '{
     "eventType": "Download",
@@ -405,7 +405,7 @@ curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source
 #### Test 3: Lidarr Music Album
 
 ```bash
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr" \
   -H "Content-Type: application/json" \
   -d '{
     "eventType": "Download",
@@ -495,7 +495,7 @@ sudo systemctl show n8n | grep JELLYFIN_API_KEY
 **Diagnosis:**
 ```bash
 # Test ntfy directly
-curl -X POST "https://hwc.ocelot-wahoo.ts.net/hwc-media" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net/hwc-media" \
   -H "Title: Test" \
   -H "Priority: 3" \
   -d "Test message"
@@ -503,7 +503,7 @@ curl -X POST "https://hwc.ocelot-wahoo.ts.net/hwc-media" \
 
 **Fix:**
 1. Check ntfy service: `systemctl status ntfy`
-2. Verify ntfy URL in workflow: `https://hwc.ocelot-wahoo.ts.net/{{ $json.topic }}`
+2. Verify ntfy URL in workflow: `https://hwc-server.ocelot-wahoo.ts.net/{{ $json.topic }}`
 3. Ensure topic name matches subscription in mobile app
 
 ---
@@ -512,12 +512,12 @@ curl -X POST "https://hwc.ocelot-wahoo.ts.net/hwc-media" \
 
 #### Radarr
 
-1. Open Radarr UI: `https://hwc.ocelot-wahoo.ts.net/radarr`
+1. Open Radarr UI: `https://hwc-server.ocelot-wahoo.ts.net/radarr`
 2. Go to: **Settings → Connect**
 3. Click: **+ Add Connection → Webhook**
 4. Configure:
    - **Name:** n8n Media Pipeline
-   - **Webhook URL:** `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr`
+   - **Webhook URL:** `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr`
    - **Method:** POST
    - **Triggers:** ✅ On Download, ✅ On Upgrade, ✅ On Rename
 5. Click: **Test** → should see green checkmark
@@ -526,12 +526,12 @@ curl -X POST "https://hwc.ocelot-wahoo.ts.net/hwc-media" \
 #### Sonarr
 
 Same steps, but use:
-- **Webhook URL:** `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr`
+- **Webhook URL:** `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr`
 
 #### Lidarr
 
 Same steps, but use:
-- **Webhook URL:** `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr`
+- **Webhook URL:** `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr`
 
 ---
 

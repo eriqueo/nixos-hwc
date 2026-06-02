@@ -106,7 +106,7 @@
 
   hwc.notifications.send.gotify = {
     enable = false;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";
+    serverUrl = "https://hwc-server.ocelot-wahoo.ts.net:2586";
     defaultPriority = 7;
     hostTag = true;
   };

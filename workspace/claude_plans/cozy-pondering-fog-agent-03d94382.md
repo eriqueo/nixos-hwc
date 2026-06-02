@@ -4,7 +4,7 @@
 
 ### Existing Services
 - **n8n**: Port 5678 (localhost), exposed via Caddy on port 2443
-- **ntfy**: Self-hosted notification server at https://hwc.ocelot-wahoo.ts.net/notify/<topic>
+- **ntfy**: Self-hosted notification server at https://hwc-server.ocelot-wahoo.ts.net/notify/<topic>
 - **Alertmanager**: Port 9093, can send webhooks to n8n
 - **Prometheus**: Port 9090, provides metrics API
 - **Media Stack**: Radarr (7878), Sonarr (8989), Lidarr (8686), qBittorrent (8080), SABnzbd (8081)
@@ -47,9 +47,9 @@
 **Error Handling**: Retry failed API calls 3x, alert on persistent failures
 
 **Implementation Notes**:
-- Radarr webhook: POST to https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr
-- Sonarr webhook: POST to https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr
-- Lidarr webhook: POST to https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr
+- Radarr webhook: POST to https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr
+- Sonarr webhook: POST to https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr
+- Lidarr webhook: POST to https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr
 - Beets import: Execute via script trigger (Workflow 6)
 - Jellyfin scan: POST to http://127.0.0.1:8096/Library/Refresh?api_key=SECRET
 - Navidrome scan: POST to http://127.0.0.1:4533/api/scan
@@ -85,7 +85,7 @@
 **Error Handling**: Queue failed notifications, retry with exponential backoff
 
 **Implementation Notes**:
-- Frigate webhook: POST to https://hwc.ocelot-wahoo.ts.net:2443/webhook/frigate-events
+- Frigate webhook: POST to https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/frigate-events
 - Configure in Frigate config.yml: `notifications.webhook.url`
 - Frigate API: GET http://127.0.0.1:5000/api/events/{event_id}/snapshot.jpg
 - Prometheus query: `frigate_camera_fps{camera="cobra_cam_1"}`
@@ -120,9 +120,9 @@
 **Error Handling**: Always deliver critical alerts (P5) even if enrichment fails
 
 **Implementation Notes**:
-- Alertmanager config: webhook_configs.url = "https://hwc.ocelot-wahoo.ts.net:2443/webhook/alertmanager"
+- Alertmanager config: webhook_configs.url = "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/alertmanager"
 - Prometheus API: GET http://127.0.0.1:9090/api/v1/query?query=<expr>
-- Grafana links: https://hwc.ocelot-wahoo.ts.net:4443/d/<dashboard_uid>
+- Grafana links: https://hwc-server.ocelot-wahoo.ts.net:4443/d/<dashboard_uid>
 - ntfy with tags: `-H "Tags: alert,host-hwc-server,severity-p5"`
 
 ---
@@ -193,7 +193,7 @@
 **Error Handling**: Never auto-restart critical services (Caddy, SSH) without user confirmation
 
 **Implementation Notes**:
-- Health check URLs: https://hwc.ocelot-wahoo.ts.net:<port>/health or /api/ping
+- Health check URLs: https://hwc-server.ocelot-wahoo.ts.net:<port>/health or /api/ping
 - Prometheus query: `up{job="node-exporter"}`
 - Podman API: `curl --unix-socket /run/podman/podman.sock http://localhost/v4.0.0/libpod/containers/json`
 - Systemctl via script: Execute Workflow 6 with script_name="service-restart", args=["jellyfin"]
@@ -208,7 +208,7 @@
 **Steps**:
 
 **Request Validation**:
-1. Receive POST to https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor
+1. Receive POST to https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor
 2. Parse JSON: `{ "script_name": "...", "args": [...], "async": true/false, "callback_url": "..." }`
 3. Validate script_name against whitelist
 4. Sanitize arguments (prevent injection)
@@ -272,7 +272,7 @@
 - Scripts location: /home/eric/.local/bin/ or /run/current-system/sw/bin/
 - Claude skills wrapper: `/home/eric/.local/bin/run-claude-skill <skill-name> [args]`
 - Async execution: Use n8n's Execute Command node with background mode
-- Status endpoint: GET https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-status/<execution_id>
+- Status endpoint: GET https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-status/<execution_id>
 
 **Example Payloads**:
 ```json
@@ -280,7 +280,7 @@
   "script_name": "beets-import",
   "args": ["/mnt/hot/music/new"],
   "async": true,
-  "callback_url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/beets-import-complete"
+  "callback_url": "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/beets-import-complete"
 }
 
 {

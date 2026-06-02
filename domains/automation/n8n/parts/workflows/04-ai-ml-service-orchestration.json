@@ -245,7 +245,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -293,7 +293,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

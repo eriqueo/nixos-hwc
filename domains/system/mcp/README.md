@@ -30,7 +30,7 @@ In stdio mode, Claude Code spawns the gateway directly. All 129 tools appear as 
 
 ### Claude.ai (Streamable HTTP over Tailscale Funnel)
 
-**URL**: `https://hwc.ocelot-wahoo.ts.net/mcp`
+**URL**: `https://hwc-server.ocelot-wahoo.ts.net/mcp`
 
 All 129 tools (hwc-sys + JT + n8n) are served from this single endpoint. There are no separate `/jt/mcp` or `/n8n/mcp` paths — the unified gateway routes `tools/call` to the correct backend by tool name.
 
@@ -46,23 +46,23 @@ hwc.system.mcp.enable = true;
 
 ```bash
 # Health check (no MCP handshake needed)
-curl https://hwc.ocelot-wahoo.ts.net/health | jq .
+curl https://hwc-server.ocelot-wahoo.ts.net/health | jq .
 
 # Initialize
-curl -s -X POST https://hwc.ocelot-wahoo.ts.net/mcp \
+curl -s -X POST https://hwc-server.ocelot-wahoo.ts.net/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 
 # List tools (no session ID needed — sessionless mode)
-curl -s -X POST https://hwc.ocelot-wahoo.ts.net/mcp \
+curl -s -X POST https://hwc-server.ocelot-wahoo.ts.net/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":2,"params":{}}' | jq '.result.tools | length'
 # → 129
 
 # Call a tool
-curl -s -X POST https://hwc.ocelot-wahoo.ts.net/mcp \
+curl -s -X POST https://hwc-server.ocelot-wahoo.ts.net/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"tools/call","id":3,"params":{"name":"hwc_monitoring_health_check","arguments":{}}}'
@@ -189,8 +189,8 @@ Check the chain in order:
 2. **Gateway healthy?** `curl http://127.0.0.1:6200/health`
 3. **Caddy up?** `systemctl status caddy`
 4. **Funnel running?** `sudo tailscale serve status` — should show `:443 (Funnel on)` → `http://127.0.0.1:18080`
-5. **Public reachable?** `curl https://hwc.ocelot-wahoo.ts.net/health`
-6. **Tools enumerate?** `curl -X POST https://hwc.ocelot-wahoo.ts.net/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","method":"tools/list","id":1,"params":{}}'`
+5. **Public reachable?** `curl https://hwc-server.ocelot-wahoo.ts.net/health`
+6. **Tools enumerate?** `curl -X POST https://hwc-server.ocelot-wahoo.ts.net/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","method":"tools/list","id":1,"params":{}}'`
 
 ### Claude.ai connects but tools don't load
 

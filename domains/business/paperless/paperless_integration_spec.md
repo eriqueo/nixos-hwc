@@ -111,7 +111,7 @@ Add this to your Paperless NixOS config. The script fires after every document i
 # Fires after OCR + indexing complete
 # Posts document metadata to n8n for processing
 
-WEBHOOK_URL="https://hwc.ocelot-wahoo.ts.net/webhook/paperless-consumed"
+WEBHOOK_URL="https://hwc-server.ocelot-wahoo.ts.net/webhook/paperless-consumed"
 API_KEY="${PAPERLESS_N8N_API_KEY}"
 
 curl -s -X POST "${WEBHOOK_URL}" \

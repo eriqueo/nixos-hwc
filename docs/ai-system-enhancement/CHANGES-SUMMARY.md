@@ -171,7 +171,7 @@ sudo nixos-rebuild switch
 ### Access
 
 - **CLI:** `ai-chat`
-- **Web:** https://hwc.ocelot-wahoo.ts.net/ai
+- **Web:** https://hwc-server.ocelot-wahoo.ts.net/ai
 
 ---
 
@@ -183,7 +183,7 @@ After deployment, verify:
 - [ ] AI has server context (ask "what services are running?")
 - [ ] Conversation history persists across sessions
 - [ ] Open WebUI container is running (`sudo podman ps`)
-- [ ] Web UI accessible at https://hwc.ocelot-wahoo.ts.net/ai
+- [ ] Web UI accessible at https://hwc-server.ocelot-wahoo.ts.net/ai
 - [ ] Can create account in Web UI (if auth enabled)
 - [ ] Can switch models in both CLI and Web UI
 - [ ] Can export conversations

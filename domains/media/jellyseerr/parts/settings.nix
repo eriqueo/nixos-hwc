@@ -18,7 +18,7 @@ let
       "main": {
         "initialized": true,
         "trustProxy": true,
-        "applicationUrl": "https://hwc.ocelot-wahoo.ts.net:5543",
+        "applicationUrl": "https://hwc-server.ocelot-wahoo.ts.net:5543",
         "mediaServerType": 2,
         "mediaServerLogin": true,
         "localLogin": false,

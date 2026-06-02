@@ -47,7 +47,7 @@ sudo chown -R 1000:1000 /mnt/media/test-transcode
 ```
 
 **Step 2**: Configure Tdarr to ONLY scan test directory
-1. Go to https://hwc.ocelot-wahoo.ts.net:8265
+1. Go to https://hwc-server.ocelot-wahoo.ts.net:8265
 2. Libraries → Add Library
 3. Name: "Test Library"
 4. Source: `/media/test-transcode`
@@ -152,7 +152,7 @@ sudo mv "$TRANSCODED" "$ORIGINAL_LOCATION"
 tdarr-safety-check
 
 # Check Tdarr statistics
-# Go to https://hwc.ocelot-wahoo.ts.net:8265
+# Go to https://hwc-server.ocelot-wahoo.ts.net:8265
 # View: Statistics → Success rate should be >95%
 ```
 
@@ -317,7 +317,7 @@ Stage 4: (DISABLED INITIALLY)
 tdarr-safety-check
 
 # 2. Check transcode progress
-# Go to: https://hwc.ocelot-wahoo.ts.net:8265
+# Go to: https://hwc-server.ocelot-wahoo.ts.net:8265
 # View: Statistics tab
 
 # 3. Manually review 2-3 transcoded files

@@ -464,8 +464,8 @@ curl http://hwc-server.YOUR-TAILNET.ts.net:9090/
 
 ```bash
 # From hwc-xps, test access to hwc-server services
-curl https://hwc.ocelot-wahoo.ts.net:6443  # hwc-server Jellyfin
-curl https://hwc.ocelot-wahoo.ts.net:4443  # hwc-server Grafana
+curl https://hwc-server.ocelot-wahoo.ts.net:6443  # hwc-server Jellyfin
+curl https://hwc-server.ocelot-wahoo.ts.net:4443  # hwc-server Grafana
 
 # From hwc-server, test access to hwc-xps services (update domain)
 curl https://hwc-xps.YOUR-TAILNET.ts.net:6443  # hwc-xps Jellyfin
@@ -474,12 +474,12 @@ curl https://hwc-xps.YOUR-TAILNET.ts.net:4443  # hwc-xps Grafana
 
 ### 8.4 Update Reverse Proxy Domains
 
-**In `machines/xps/config.nix`**, search for `hwc.ocelot-wahoo.ts.net` and update to your actual Tailscale domain:
+**In `machines/xps/config.nix`**, search for `hwc-server.ocelot-wahoo.ts.net` and update to your actual Tailscale domain:
 
 ```bash
 # Find all references
 cd ~/.nixos
-rg "hwc.ocelot-wahoo.ts.net" machines/xps/
+rg "hwc-server.ocelot-wahoo.ts.net" machines/xps/
 
 # Update with your actual Tailscale domain
 # Then rebuild:

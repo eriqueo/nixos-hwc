@@ -12,7 +12,7 @@ This guide provides step-by-step instructions for building the 6 n8n automation 
 ✅ Slack webhook secret added to agenix declarations
 ✅ Script wrappers created in `/home/eric/.local/bin/`
 ✅ Frigate config updated with n8n webhook URL
-✅ n8n running on `https://hwc.ocelot-wahoo.ts.net:2443`
+✅ n8n running on `https://hwc-server.ocelot-wahoo.ts.net:2443`
 ✅ **All 6 workflow JSON files created in `/home/eric/.nixos/domains/server/n8n/parts/workflows/`**
 
 ---
@@ -35,7 +35,7 @@ ls -la /home/eric/.nixos/domains/server/n8n/parts/workflows/
 
 ### How to Import Workflows into n8n:
 
-1. **Access n8n UI:** `https://hwc.ocelot-wahoo.ts.net:2443`
+1. **Access n8n UI:** `https://hwc-server.ocelot-wahoo.ts.net:2443`
 
 2. **Import each workflow:**
    - Click "**Add workflow**" → "**Import from File**"
@@ -105,11 +105,11 @@ sudo nixos-rebuild switch --flake /home/eric/.nixos#hwc-server
 
 For each *arr service, add webhook connections:
 
-1. Open the service web UI (e.g., `https://hwc.ocelot-wahoo.ts.net/radarr`)
+1. Open the service web UI (e.g., `https://hwc-server.ocelot-wahoo.ts.net/radarr`)
 2. Go to: **Settings → Connect → Add Connection → Webhook**
 3. Configure:
    - **Name:** n8n Media Pipeline
-   - **Webhook URL:** `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr` (change radarr to sonarr/lidarr as appropriate)
+   - **Webhook URL:** `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr` (change radarr to sonarr/lidarr as appropriate)
    - **Method:** POST
    - **Triggers:** Enable "On Download", "On Upgrade", "On Rename"
 4. Click "Test" to verify, then "Save"
@@ -120,7 +120,7 @@ Repeat for Sonarr and Lidarr with their respective source parameters.
 
 ## Building Workflows in n8n UI
 
-Access n8n at: `https://hwc.ocelot-wahoo.ts.net:2443`
+Access n8n at: `https://hwc-server.ocelot-wahoo.ts.net:2443`
 
 ### General Workflow Creation Process
 
@@ -179,7 +179,7 @@ Access n8n at: `https://hwc.ocelot-wahoo.ts.net:2443`
 
 6. **HTTP Request** (Script Executor - Music branch)
    - Method: POST
-   - URL: `https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor`
+   - URL: `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor`
    - Body:
      ```json
      {
@@ -213,7 +213,7 @@ Access n8n at: `https://hwc.ocelot-wahoo.ts.net:2443`
 
 8. **HTTP Request** (Send to ntfy)
    - Method: POST
-   - URL: `https://hwc.ocelot-wahoo.ts.net/notify/{{ $json.topic }}`
+   - URL: `https://hwc-server.ocelot-wahoo.ts.net/notify/{{ $json.topic }}`
    - Headers:
      - `Title`: `{{ $json.title }}`
      - `Tags`: `{{ $json.tags }}`
@@ -509,22 +509,22 @@ Use these curl commands to test each workflow:
 
 ```bash
 # Test Media Pipeline
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr" \
   -H "Content-Type: application/json" \
   -d '{"movie":{"title":"Test Movie"},"movieFile":{"quality":"1080p","path":"/test"}}'
 
 # Test Frigate Events
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/frigate-events" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/frigate-events" \
   -H "Content-Type: application/json" \
   -d '{"type":"new","after":{"id":"test","camera":"cobra_cam_1","label":"person","top_score":0.9}}'
 
 # Test Script Executor
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor" \
   -H "Content-Type: application/json" \
   -d '{"script_name":"service-status","args":["jellyfin"],"async":false}'
 
 # Test Alertmanager Router (simulate alert)
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/alertmanager" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/alertmanager" \
   -H "Content-Type: application/json" \
   -d '{"alerts":[{"status":"firing","labels":{"alertname":"TestAlert","severity":"P4"},"annotations":{"summary":"Test alert"}}]}'
 ```
@@ -589,7 +589,7 @@ After building all workflows:
 ## Troubleshooting
 
 **Webhook not triggering:**
-- Check n8n is accessible: `curl https://hwc.ocelot-wahoo.ts.net:2443`
+- Check n8n is accessible: `curl https://hwc-server.ocelot-wahoo.ts.net:2443`
 - Verify firewall allows Tailscale connections
 - Check webhook URL is correct in service config
 
@@ -613,7 +613,7 @@ After building all workflows:
 ## Reference
 
 - **Full Plan:** `/home/eric/.claude/plans/cozy-pondering-fog.md`
-- **n8n Access:** `https://hwc.ocelot-wahoo.ts.net:2443`
+- **n8n Access:** `https://hwc-server.ocelot-wahoo.ts.net:2443`
 - **Script Wrappers:** `/home/eric/.local/bin/`
 - **Secrets:** `/home/eric/.nixos/domains/secrets/`
 - **Frigate Config:** `/home/eric/.nixos/domains/server/frigate/config/config.yml`
@@ -651,7 +651,7 @@ All workflow JSON files are stored in version control:
 1. **Import all 6 workflows into n8n:**
    ```bash
    # Access n8n
-   open https://hwc.ocelot-wahoo.ts.net:2443
+   open https://hwc-server.ocelot-wahoo.ts.net:2443
 
    # Import each workflow from:
    # /home/eric/.nixos/domains/server/n8n/parts/workflows/*.json

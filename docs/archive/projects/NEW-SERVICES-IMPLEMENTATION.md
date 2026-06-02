@@ -63,9 +63,9 @@ The Recyclarr config will generate placeholder API keys that you'll need to upda
 
 **To get your API keys:**
 
-1. **Sonarr**: Go to http://hwc.ocelot-wahoo.ts.net/sonarr → Settings → General → API Key
-2. **Radarr**: Go to http://hwc.ocelot-wahoo.ts.net/radarr → Settings → General → API Key
-3. **Lidarr**: Go to http://hwc.ocelot-wahoo.ts.net/lidarr → Settings → General → API Key
+1. **Sonarr**: Go to http://hwc-server.ocelot-wahoo.ts.net/sonarr → Settings → General → API Key
+2. **Radarr**: Go to http://hwc-server.ocelot-wahoo.ts.net/radarr → Settings → General → API Key
+3. **Lidarr**: Go to http://hwc-server.ocelot-wahoo.ts.net/lidarr → Settings → General → API Key
 
 **After deployment, you'll manually edit:**
 ```bash
@@ -163,7 +163,7 @@ sudo journalctl -u recyclarr-sync -n 50
 
 ### **Tdarr** - GPU Transcoding
 
-**Access**: https://hwc.ocelot-wahoo.ts.net:8265
+**Access**: https://hwc-server.ocelot-wahoo.ts.net:8265
 
 **⚠️ IMPORTANT**: Read `TDARR-SAFETY-GUIDE.md` before configuring!
 - Quick version: `TDARR-SAFETY-TLDR.md`
@@ -275,12 +275,12 @@ sudo journalctl -u recyclarr-sync -n 50
 
 ### **Organizr** - Unified Dashboard
 
-**Access**: https://hwc.ocelot-wahoo.ts.net/ (root path)
+**Access**: https://hwc-server.ocelot-wahoo.ts.net/ (root path)
 
 **Initial Setup**:
 
 1. **First Login**:
-   - Navigate to https://hwc.ocelot-wahoo.ts.net/
+   - Navigate to https://hwc-server.ocelot-wahoo.ts.net/
    - Click "Setup Organizr"
    - Choose admin username/password
    - Database: SQLite (default)
@@ -294,18 +294,18 @@ sudo journalctl -u recyclarr-sync -n 50
 
    | Tab Name | Category | URL |
    |----------|----------|-----|
-   | Jellyfin | Media | `https://hwc.ocelot-wahoo.ts.net/media` |
-   | Jellyseerr | Requests | `https://hwc.ocelot-wahoo.ts.net:5543` |
-   | Sonarr | Downloads | `https://hwc.ocelot-wahoo.ts.net/sonarr` |
-   | Radarr | Downloads | `https://hwc.ocelot-wahoo.ts.net/radarr` |
-   | Lidarr | Downloads | `https://hwc.ocelot-wahoo.ts.net/lidarr` |
-   | Prowlarr | Downloads | `https://hwc.ocelot-wahoo.ts.net/prowlarr` |
-   | qBittorrent | Downloads | `https://hwc.ocelot-wahoo.ts.net/qbt` |
-   | SABnzbd | Downloads | `https://hwc.ocelot-wahoo.ts.net/sab` |
-   | Tdarr | Management | `https://hwc.ocelot-wahoo.ts.net:8265` |
-   | Navidrome | Media | `https://hwc.ocelot-wahoo.ts.net/music` |
-   | Immich | Media | `https://hwc.ocelot-wahoo.ts.net:7443` |
-   | Frigate | Monitoring | `https://hwc.ocelot-wahoo.ts.net:5443` |
+   | Jellyfin | Media | `https://hwc-server.ocelot-wahoo.ts.net/media` |
+   | Jellyseerr | Requests | `https://hwc-server.ocelot-wahoo.ts.net:5543` |
+   | Sonarr | Downloads | `https://hwc-server.ocelot-wahoo.ts.net/sonarr` |
+   | Radarr | Downloads | `https://hwc-server.ocelot-wahoo.ts.net/radarr` |
+   | Lidarr | Downloads | `https://hwc-server.ocelot-wahoo.ts.net/lidarr` |
+   | Prowlarr | Downloads | `https://hwc-server.ocelot-wahoo.ts.net/prowlarr` |
+   | qBittorrent | Downloads | `https://hwc-server.ocelot-wahoo.ts.net/qbt` |
+   | SABnzbd | Downloads | `https://hwc-server.ocelot-wahoo.ts.net/sab` |
+   | Tdarr | Management | `https://hwc-server.ocelot-wahoo.ts.net:8265` |
+   | Navidrome | Media | `https://hwc-server.ocelot-wahoo.ts.net/music` |
+   | Immich | Media | `https://hwc-server.ocelot-wahoo.ts.net:7443` |
+   | Frigate | Monitoring | `https://hwc-server.ocelot-wahoo.ts.net:5443` |
 
 3. **Configure Tab Settings**:
    - For each tab, enable "iFrame embed"
@@ -411,7 +411,7 @@ For blocked services, Organizr will show "Open in New Tab" button.
 
 ### Organizr: Can't Access at Root Path
 
-**Symptom**: Organizr not accessible at `https://hwc.ocelot-wahoo.ts.net/`
+**Symptom**: Organizr not accessible at `https://hwc-server.ocelot-wahoo.ts.net/`
 
 **Check Caddy routing**:
 ```bash
@@ -577,8 +577,8 @@ Recyclarr: No web UI (systemd timer)
 3. ✅ **Organizr**: Single dashboard for all 15+ services
 
 **URLs**:
-- Tdarr: `https://hwc.ocelot-wahoo.ts.net:8265`
-- Organizr: `https://hwc.ocelot-wahoo.ts.net/` (homepage)
+- Tdarr: `https://hwc-server.ocelot-wahoo.ts.net:8265`
+- Organizr: `https://hwc-server.ocelot-wahoo.ts.net/` (homepage)
 - Recyclarr: (no UI - check `systemctl status recyclarr-sync.timer`)
 
 **All following HWC Charter v6.0 architecture** ✨

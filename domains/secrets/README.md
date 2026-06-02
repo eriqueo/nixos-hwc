@@ -47,5 +47,6 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-06-02: Reissued the server Caddy TLS cert for the new tailnet name. Renamed `caddy/hwc.ocelot-wahoo.ts.net.{crt,key}.age` → `caddy/hwc-server.ocelot-wahoo.ts.net.{crt,key}.age` (recipients = everyone) and updated `parts/caddy.nix` to select them. New cert generated via `tailscale cert hwc-server.ocelot-wahoo.ts.net` (CN/SAN = `hwc-server.ocelot-wahoo.ts.net`); the old `hwc.*` cert was dropped. `hwc-xps.*` certs are unchanged.
 - 2026-05-31: Added 3 secrets for the upcoming hwc-notify + hwc-leads services — `discord-webhook-hwc-alerts`, `discord-webhook-hwc-leads`, `hwc-leads-hmac-secret`. Standard `eric:secrets / 0440` pattern; recipients = everyone.
 - 2026-03-26: Added Vaultwarden self-hosted password manager module

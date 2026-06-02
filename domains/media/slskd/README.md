@@ -2,7 +2,7 @@
 
 **Container Service**: Soulseek P2P file sharing client (music focus)
 
-**Access**: https://hwc.ocelot-wahoo.ts.net:8443/ (port mode)
+**Access**: https://hwc-server.ocelot-wahoo.ts.net:8443/ (port mode)
 
 ---
 

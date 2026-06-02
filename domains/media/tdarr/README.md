@@ -48,7 +48,7 @@ sudo cp /mnt/media/tv/Show/Episode.mkv /mnt/media/test-transcode/
 ```
 
 **Step 3**: Configure Tdarr
-- Go to: https://hwc.ocelot-wahoo.ts.net:8265
+- Go to: https://hwc-server.ocelot-wahoo.ts.net:8265
 - Add Library → Source: `/media/test-transcode`
 - **CRITICAL**: Set "Replace Original" to **OFF**
 - Output: `/temp/transcoded/`

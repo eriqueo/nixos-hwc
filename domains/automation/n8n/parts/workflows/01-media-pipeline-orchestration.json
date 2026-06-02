@@ -135,7 +135,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [

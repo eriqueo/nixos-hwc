@@ -152,7 +152,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Generate rich notification with enriched context\nconst { name, severity, summary, description, category, instance } = $json;\n\n// Severity emoji mapping\nconst emoji = {\n  P5: '\ud83d\udd34',\n  P4: '\u26a0\ufe0f',\n  P3: '\u2139\ufe0f',\n  P2: '\ud83d\udcca',\n  P1: '\u2705'\n}[severity] || '\u26a0\ufe0f';\n\n// Determine topic based on severity\nlet topic;\nif (severity === 'P5' || severity === 'critical') {\n  topic = 'hwc-critical';\n} else if (severity === 'P4' || severity === 'warning') {\n  topic = 'hwc-alerts';\n} else {\n  topic = 'hwc-monitoring';\n}\n\n// Normalize severity to P1-P5\nconst normalizedSeverity = severity.startsWith('P') ? severity : \n  (severity === 'critical' ? 'P5' : (severity === 'warning' ? 'P4' : 'P3'));\n\nconst priority = parseInt(normalizedSeverity.replace('P', ''));\n\n// Build enriched message\nlet enrichedMessage = summary;\nif (description) {\n  enrichedMessage += `\\n\\n${description}`;\n}\n\n// Add context from enrichment (if available)\nif ($json.enrichment) {\n  enrichedMessage += `\\n\\nContext: ${$json.enrichment}`;\n}\n\nenrichedMessage += `\\n\\nInstance: ${instance}`;\nenrichedMessage += `\\nCategory: ${category}`;\nenrichedMessage += `\\n\\nGrafana: https://hwc.ocelot-wahoo.ts.net/grafana`;\n\nconst title = `${emoji} [${normalizedSeverity}] ${name}`;\n\nreturn {\n  json: {\n    title: title,\n    message: enrichedMessage,\n    topic: topic,\n    priority: priority,\n    tags: `alert,${category},${normalizedSeverity},${name}`,\n    sendToSlack: normalizedSeverity === 'P5'\n  }\n};"
+        "jsCode": "// Generate rich notification with enriched context\nconst { name, severity, summary, description, category, instance } = $json;\n\n// Severity emoji mapping\nconst emoji = {\n  P5: '\ud83d\udd34',\n  P4: '\u26a0\ufe0f',\n  P3: '\u2139\ufe0f',\n  P2: '\ud83d\udcca',\n  P1: '\u2705'\n}[severity] || '\u26a0\ufe0f';\n\n// Determine topic based on severity\nlet topic;\nif (severity === 'P5' || severity === 'critical') {\n  topic = 'hwc-critical';\n} else if (severity === 'P4' || severity === 'warning') {\n  topic = 'hwc-alerts';\n} else {\n  topic = 'hwc-monitoring';\n}\n\n// Normalize severity to P1-P5\nconst normalizedSeverity = severity.startsWith('P') ? severity : \n  (severity === 'critical' ? 'P5' : (severity === 'warning' ? 'P4' : 'P3'));\n\nconst priority = parseInt(normalizedSeverity.replace('P', ''));\n\n// Build enriched message\nlet enrichedMessage = summary;\nif (description) {\n  enrichedMessage += `\\n\\n${description}`;\n}\n\n// Add context from enrichment (if available)\nif ($json.enrichment) {\n  enrichedMessage += `\\n\\nContext: ${$json.enrichment}`;\n}\n\nenrichedMessage += `\\n\\nInstance: ${instance}`;\nenrichedMessage += `\\nCategory: ${category}`;\nenrichedMessage += `\\n\\nGrafana: https://hwc-server.ocelot-wahoo.ts.net/grafana`;\n\nconst title = `${emoji} [${normalizedSeverity}] ${name}`;\n\nreturn {\n  json: {\n    title: title,\n    message: enrichedMessage,\n    topic: topic,\n    priority: priority,\n    tags: `alert,${category},${normalizedSeverity},${name}`,\n    sendToSlack: normalizedSeverity === 'P5'\n  }\n};"
       },
       "id": "generate-notification",
       "name": "Generate Rich Notification",
@@ -186,7 +186,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -258,7 +258,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

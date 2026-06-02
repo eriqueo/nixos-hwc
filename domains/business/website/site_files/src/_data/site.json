@@ -4,8 +4,8 @@
   "phoneLink": "tel:4065515061",
   "email": "eric@iheartwoodcraft.com",
   "url": "https://iheartwoodcraft.com",
-  "webhookContact": "https://hwc.ocelot-wahoo.ts.net/webhook/new-lead",
-  "webhookCalculator": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead",
+  "webhookContact": "https://hwc-server.ocelot-wahoo.ts.net/webhook/new-lead",
+  "webhookCalculator": "https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-lead",
   "address": "Bozeman, Montana",
   "tagline": "Craftsmanship is our Process. Quality is our Habit.",
   "description": "Custom remodeling and deck building for homeowners across the Gallatin Valley. See your project before we build with 3D design previews."

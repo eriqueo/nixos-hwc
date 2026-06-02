@@ -57,7 +57,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"script_name\": \"beets-import\",\n  \"args\": [\"{{ $json.path }}\"],\n  \"async\": true,\n  \"requester\": \"workflow-1-media-pipeline\"\n}",
@@ -184,7 +184,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://hwc.ocelot-wahoo.ts.net/{{ $json.topic }}",
+        "url": "=https://hwc-server.ocelot-wahoo.ts.net/{{ $json.topic }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

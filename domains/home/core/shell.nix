@@ -129,7 +129,7 @@ in
         };
         url = lib.mkOption {
           type = lib.types.str;
-          default = "https://hwc.ocelot-wahoo.ts.net:2443/mcp-server/http";
+          default = "https://hwc-server.ocelot-wahoo.ts.net:2443/mcp-server/http";
           description = "n8n MCP server HTTP endpoint URL";
         };
         accessToken = lib.mkOption {

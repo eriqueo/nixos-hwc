@@ -266,7 +266,7 @@ machines/server/config.nix
 - [ ] Ollama container running: `podman ps | grep ollama`
 - [ ] Open WebUI container running: `podman ps | grep open-webui`
 - [ ] Ollama API responding: `curl http://127.0.0.1:11434/api/tags`
-- [ ] Open WebUI accessible: https://hwc.ocelot-wahoo.ts.net:3443
+- [ ] Open WebUI accessible: https://hwc-server.ocelot-wahoo.ts.net:3443
 - [ ] Open WebUI connects to Ollama successfully
 - [ ] Chat functionality works in Open WebUI
 - [ ] AI agent service running: `systemctl status hwc-ai-agent`

@@ -25,12 +25,12 @@
 
 **Current:**
 ```
-URL: https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}
+URL: https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}
 ```
 
 **Should be:**
 ```
-URL: https://hwc.ocelot-wahoo.ts.net/={{ $json.topic }}
+URL: https://hwc-server.ocelot-wahoo.ts.net/={{ $json.topic }}
 ```
 
 **Impact:** Notifications are likely being sent to wrong endpoint (404 or incorrect topic)
@@ -58,7 +58,7 @@ URL: https://hwc.ocelot-wahoo.ts.net/={{ $json.topic }}
   "name": "Send to ntfy",
   "parameters": {
     "method": "POST",
-    "url": "=https://hwc.ocelot-wahoo.ts.net/{{ $json.topic }}",
+    "url": "=https://hwc-server.ocelot-wahoo.ts.net/{{ $json.topic }}",
     "sendHeaders": true,
     "headerParameters": {
       "parameters": [
@@ -88,7 +88,7 @@ URL: https://hwc.ocelot-wahoo.ts.net/={{ $json.topic }}
 
 ```bash
 # Test correct endpoint
-curl -X POST "https://hwc.ocelot-wahoo.ts.net/hwc-monitoring" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net/hwc-monitoring" \
   -H "Title: Health Monitor Test" \
   -H "Tags: test,health" \
   -H "Priority: 3" \

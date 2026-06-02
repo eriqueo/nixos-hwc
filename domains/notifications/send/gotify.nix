@@ -161,7 +161,7 @@ in
     #==========================================================================
     serverUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://hwc.ocelot-wahoo.ts.net:2586";
+      default = "https://hwc-server.ocelot-wahoo.ts.net:2586";
       description = "Gotify server URL";
     };
 

@@ -159,7 +159,7 @@ in
     #=========================================================================
     services.caddy.extraConfig = ''
       # Arka MCP Gateway — port ${toString cfg.ports.caddy}
-      hwc.ocelot-wahoo.ts.net:${toString cfg.ports.caddy} {
+      hwc-server.ocelot-wahoo.ts.net:${toString cfg.ports.caddy} {
         tls {
           get_certificate tailscale
           protocols tls1.2 tls1.3

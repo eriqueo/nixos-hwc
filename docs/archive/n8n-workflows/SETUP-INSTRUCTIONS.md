@@ -54,7 +54,7 @@ Navigate to **Slash Commands** → **Create New Command**
 
 Create each command with this Request URL:
 ```
-https://hwc.ocelot-wahoo.ts.net:10000/webhook/slack-commands
+https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/slack-commands
 ```
 
 | Command | Short Description |
@@ -76,7 +76,7 @@ Navigate to **Interactivity & Shortcuts** → Enable **Interactivity**
 
 Set Request URL:
 ```
-https://hwc.ocelot-wahoo.ts.net:10000/webhook/slack-interactivity
+https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/slack-interactivity
 ```
 
 ### Step 6: Reinstall App
@@ -93,7 +93,7 @@ After changing scopes, you need to reinstall:
 
 ### Step 1: Access n8n
 
-1. Open [https://hwc.ocelot-wahoo.ts.net:2443/](https://hwc.ocelot-wahoo.ts.net:2443/)
+1. Open [https://hwc-server.ocelot-wahoo.ts.net:2443/](https://hwc-server.ocelot-wahoo.ts.net:2443/)
 2. Login with `eric@iheartwoodcraft.com`
 
 ### Step 2: Import Each Workflow
@@ -145,7 +145,7 @@ sudo systemctl show n8n -p Environment | tr ' ' '\n' | grep -E "SLACK|SONARR|RAD
 ### Test 1: Notification Router
 
 ```bash
-curl -X POST https://hwc.ocelot-wahoo.ts.net/webhook/notify \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net/webhook/notify \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Test Notification",
@@ -161,7 +161,7 @@ Expected: Message appears in `#hwc-system`
 ### Test 2: Health Check
 
 ```bash
-curl -X POST https://hwc.ocelot-wahoo.ts.net/webhook/health-check
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net/webhook/health-check
 ```
 
 Expected: JSON response with service health. If any services are down, message appears in `#hwc-alerts`
@@ -238,8 +238,8 @@ Or use **Settings** → **Error Workflow** and select "HWC Error Handler"
 | Slack Commands | `POST /webhook/slack-commands` | Slash command entry point |
 
 All webhooks available at:
-- Internal: `https://hwc.ocelot-wahoo.ts.net/webhook/*`
-- Public (Funnel): `https://hwc.ocelot-wahoo.ts.net:10000/webhook/*`
+- Internal: `https://hwc-server.ocelot-wahoo.ts.net/webhook/*`
+- Public (Funnel): `https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/*`
 - n8n Direct: `http://127.0.0.1:5678/webhook/*`
 
 ---

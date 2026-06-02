@@ -62,7 +62,7 @@ This analysis evaluates all 18 container services in the nixos-hwc infrastructur
 ## Networking Architecture Analysis
 
 ### Layer 1: External Access (Tailscale)
-- **Domain**: `hwc.ocelot-wahoo.ts.net`
+- **Domain**: `hwc-server.ocelot-wahoo.ts.net`
 - **Server IP**: `100.115.126.41/32`
 - **Purpose**: Secure remote access point
 - **TLS**: Automatic via Tailscale certificates

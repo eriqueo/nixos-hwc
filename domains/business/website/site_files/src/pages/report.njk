@@ -727,7 +727,7 @@ eleventyExcludeFromCollections: true
   // hwc-leads GET /api/reports/<id> on the tailnet Caddy port.
   // Returns sanitised payload: calculator, firstName, projectState,
   // estimate. No email / phone / full name / attribution.
-  var REPORT_API = "https://hwc.ocelot-wahoo.ts.net:30443/api/reports/" + encodeURIComponent(reportId);
+  var REPORT_API = "https://hwc-server.ocelot-wahoo.ts.net:30443/api/reports/" + encodeURIComponent(reportId);
 
   fetch(REPORT_API)
     .then(function(res) {

@@ -58,12 +58,12 @@ in
     urls = {
       frontend = mkOption {
         type = types.str;
-        default = "https://hwc.ocelot-wahoo.ts.net:19443";
+        default = "https://hwc-server.ocelot-wahoo.ts.net:19443";
         description = "Public URL of the Arka frontend";
       };
       backend = mkOption {
         type = types.str;
-        default = "https://hwc.ocelot-wahoo.ts.net:19443";
+        default = "https://hwc-server.ocelot-wahoo.ts.net:19443";
         description = "Public URL of the Arka backend (same host, nginx proxies /api/)";
       };
     };

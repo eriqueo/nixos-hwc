@@ -483,10 +483,10 @@ ls -la /var/log/hwc/alerts/
 ### n8n Webhook Endpoints
 
 The alerts domain expects these n8n webhook endpoints:
-- `https://hwc.ocelot-wahoo.ts.net:2443/webhook/system-alerts`
-- `https://hwc.ocelot-wahoo.ts.net:2443/webhook/backup-alerts`
-- `https://hwc.ocelot-wahoo.ts.net:2443/webhook/disk-alerts`
-- `https://hwc.ocelot-wahoo.ts.net:2443/webhook/service-alerts`
+- `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/system-alerts`
+- `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/backup-alerts`
+- `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/disk-alerts`
+- `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/service-alerts`
 
 Configure these in n8n to route to Slack.
 

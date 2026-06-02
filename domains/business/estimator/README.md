@@ -96,7 +96,7 @@ domains/business/estimator/
 hwc.business.estimator = {
   enable     = true;
   port       = 13443;
-  webhookUrl = "https://hwc.ocelot-wahoo.ts.net/webhook/estimate-push";
+  webhookUrl = "https://hwc-server.ocelot-wahoo.ts.net/webhook/estimate-push";
   apiKeyFile = config.age.secrets.estimator-api-key.path;
 };
 ```
@@ -139,7 +139,7 @@ sudo ln -sfn /var/lib/estimator/builds/dist-$TIMESTAMP /var/lib/estimator/dist
 
 ## Access
 
-`https://hwc.ocelot-wahoo.ts.net:13443`
+`https://hwc-server.ocelot-wahoo.ts.net:13443`
 
 ## Changelog
 

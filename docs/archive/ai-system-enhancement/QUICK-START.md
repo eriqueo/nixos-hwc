@@ -43,7 +43,7 @@ ai-chat
 ```
 
 **Web UI:**
-- Tailscale: https://hwc.ocelot-wahoo.ts.net/ai
+- Tailscale: https://hwc-server.ocelot-wahoo.ts.net/ai
 - (Subpath mode via centralized routing)
 
 ## First Use
@@ -66,7 +66,7 @@ ai-chat
 ```
 
 ### Web UI
-1. Open https://hwc.ocelot-wahoo.ts.net/ai
+1. Open https://hwc-server.ocelot-wahoo.ts.net/ai
 2. Create account (if auth enabled)
 3. Select model
 4. Start chatting!
@@ -137,7 +137,7 @@ Open WebUI integrates with your centralized routing system:
 ```
 User Request
     ↓
-https://hwc.ocelot-wahoo.ts.net/ai
+https://hwc-server.ocelot-wahoo.ts.net/ai
     ↓
 Caddy (centralized routing via routes.nix)
     ↓

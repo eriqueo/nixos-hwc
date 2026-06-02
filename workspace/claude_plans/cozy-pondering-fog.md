@@ -14,7 +14,7 @@ Design and implement 6 comprehensive n8n workflows for hwc-server that automate 
 - Notifications: ntfy (working), Slack (needs webhook URL)
 - Automation: n8n (port 5678 localhost, exposed via Caddy on port 2443)
 
-**n8n Access:** `https://hwc.ocelot-wahoo.ts.net:2443` (Tailscale-only, no auth required)
+**n8n Access:** `https://hwc-server.ocelot-wahoo.ts.net:2443` (Tailscale-only, no auth required)
 
 ---
 
@@ -41,9 +41,9 @@ Design and implement 6 comprehensive n8n workflows for hwc-server that automate 
 - Failure: ntfy + Slack (hwc-alerts, P4)
 
 **Service Configuration Required:**
-- Radarr: Settings → Connect → Webhook → `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr`
-- Sonarr: Settings → Connect → Webhook → `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr`
-- Lidarr: Settings → Connect → Webhook → `https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr`
+- Radarr: Settings → Connect → Webhook → `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr`
+- Sonarr: Settings → Connect → Webhook → `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=sonarr`
+- Lidarr: Settings → Connect → Webhook → `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=lidarr`
 
 ---
 
@@ -83,7 +83,7 @@ Design and implement 6 comprehensive n8n workflows for hwc-server that automate 
   ```yaml
   notifications:
     webhook:
-      url: "https://hwc.ocelot-wahoo.ts.net:2443/webhook/frigate-events"
+      url: "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/frigate-events"
       enabled: true
   ```
 
@@ -210,7 +210,7 @@ Design and implement 6 comprehensive n8n workflows for hwc-server that automate 
   "script_name": "beets-import",
   "args": ["/mnt/hot/music/new-album"],
   "async": true,
-  "callback_url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/callback",
+  "callback_url": "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/callback",
   "requester": "workflow-1"
 }
 ```
@@ -285,7 +285,7 @@ Design and implement 6 comprehensive n8n workflows for hwc-server that automate 
 
 **ntfy API Format:**
 ```bash
-POST https://hwc.ocelot-wahoo.ts.net/notify/<topic>
+POST https://hwc-server.ocelot-wahoo.ts.net/notify/<topic>
 Headers:
   Title: <notification title>
   Tags: <comma-separated tags>
@@ -350,7 +350,7 @@ Make executable: `chmod +x /home/eric/.local/bin/{run-claude-skill,n8n-*}`
 
 ### 3. Build Workflows in n8n
 
-Access n8n at `https://hwc.ocelot-wahoo.ts.net:2443`
+Access n8n at `https://hwc-server.ocelot-wahoo.ts.net:2443`
 
 For each workflow:
 1. Create new workflow with name from plan
@@ -397,17 +397,17 @@ Add credentials in n8n UI:
 **Test Commands:**
 ```bash
 # Test Media Pipeline
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline?source=radarr" \
   -H "Content-Type: application/json" \
   -d '{"eventType":"Download","title":"Test Movie","quality":"1080p","path":"/mnt/media/movies/Test"}'
 
 # Test Script Executor
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor" \
   -H "Content-Type: application/json" \
   -d '{"script_name":"service-status","args":["jellyfin"],"async":false}'
 
 # Test Frigate Events (simulate detection)
-curl -X POST "https://hwc.ocelot-wahoo.ts.net:2443/webhook/frigate-events" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/frigate-events" \
   -H "Content-Type: application/json" \
   -d '{"type":"new","after":{"id":"test","camera":"cobra_cam_1","label":"person","top_score":0.9}}'
 ```

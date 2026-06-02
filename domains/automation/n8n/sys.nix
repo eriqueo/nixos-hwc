@@ -74,14 +74,14 @@ in
       environment = {
         N8N_PORT = toString cfg.port;
         N8N_PROTOCOL = "https";
-        N8N_HOST = "hwc.ocelot-wahoo.ts.net";
+        N8N_HOST = "hwc-server.ocelot-wahoo.ts.net";
         GENERIC_TIMEZONE = cfg.timezone;
         N8N_PERSONALIZATION_ENABLED = "false";
         N8N_VERSION_NOTIFICATIONS_ENABLED = "false";
         N8N_DIAGNOSTICS_ENABLED = "false";
         N8N_HIRING_BANNER_ENABLED = "false";
-        N8N_EDITOR_BASE_URL = "https://hwc.ocelot-wahoo.ts.net:10000/";
-        WEBHOOK_URL = "https://hwc.ocelot-wahoo.ts.net:10000/";
+        N8N_EDITOR_BASE_URL = "https://hwc-server.ocelot-wahoo.ts.net:10000/";
+        WEBHOOK_URL = "https://hwc-server.ocelot-wahoo.ts.net:10000/";
         N8N_PROXY_HOPS = "1";
         N8N_ENDPOINT_WEBHOOK = "webhook";
         N8N_ENDPOINT_REST = "rest";

@@ -58,7 +58,7 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 |---------------|-----|
 | Local | http://localhost:5000 |
 | Server | http://hwc-server:5000 |
-| Tailscale | http://hwc.ocelot-wahoo.ts.net:5000 |
+| Tailscale | http://hwc-server.ocelot-wahoo.ts.net:5000 |
 
 ### Quick Health Check
 
@@ -477,7 +477,7 @@ curl -s http://localhost:5000/api/stats | jq '{
 ### Web UI Access
 
 - **Local**: http://localhost:5000
-- **Tailscale**: http://hwc.ocelot-wahoo.ts.net:5000
+- **Tailscale**: http://hwc-server.ocelot-wahoo.ts.net:5000
 
 ---
 

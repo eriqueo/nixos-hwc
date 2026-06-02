@@ -57,7 +57,7 @@ in
     # of truth for "where do leads go" — change here, rebuild + redeploy.
     leadsWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead";
+      default = "https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-lead";
       description = ''
         URL the calculator app POSTs lead submissions to. Today this hits
         the n8n thin-shell workflow (work_calculator_lead) which HMAC-signs
@@ -67,7 +67,7 @@ in
     };
     leadsAppointmentWebhookUrl = lib.mkOption {
       type = lib.types.str;
-      default = "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-appointment";
+      default = "https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-appointment";
       description = ''
         URL the calculator's "schedule a call" flow POSTs to. Note: the
         work_calculator_appointment n8n workflow was archived during

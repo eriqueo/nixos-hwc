@@ -35,7 +35,7 @@ sudo nixos-rebuild switch --flake .#hwc-server
 ```
 
 ### 2. Configure Credentials in n8n UI
-Access: https://hwc.ocelot-wahoo.ts.net:2443
+Access: https://hwc-server.ocelot-wahoo.ts.net:2443
 
 **JobTread API Credential:**
 1. Settings → Credentials → Add Credential
@@ -62,14 +62,14 @@ Access: https://hwc.ocelot-wahoo.ts.net:2443
 ```bash
 # Test customers endpoint
 curl -H "x-api-key: T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=" \
-  https://hwc.ocelot-wahoo.ts.net:2443/webhook/jt-customers
+  https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/jt-customers
 
 # Test jobs endpoint
 curl -H "x-api-key: T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=" \
-  "https://hwc.ocelot-wahoo.ts.net:2443/webhook/jt-jobs?customerId={uuid}"
+  "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/jt-jobs?customerId={uuid}"
 
 # Test estimate push
-curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
   -H "Content-Type: application/json" \
   -H "x-api-key: T8SLQ1N8wxg9tlwRa8FG1p17ZDUj3w1NwBKVVwQVxWQ=" \
   -d '{"action":"push_estimate","mode":"existing","jobId":"xxx","jtPayload":[],"totals":{}}'

@@ -3,8 +3,8 @@
   "engine": "assembly",
   "title": "Bathroom Remodel Cost Calculator",
   "subtitle": "7 questions, real numbers from Bozeman bathroom projects. Not national averages \u2014 actual Gallatin Valley material and labor costs.",
-  "webhook": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead",
-  "webhookAppointment": "https://hwc.ocelot-wahoo.ts.net/webhook/calculator-appointment",
+  "webhook": "https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-lead",
+  "webhookAppointment": "https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-appointment",
   "imageBase": "/img/calculator/bathroom",
   "copy": {
     "gateEstimateLabel": "Your bathroom remodel estimate",

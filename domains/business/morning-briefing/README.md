@@ -2,7 +2,7 @@
 
 Daily automated briefing for Heartwood Craft ops. Runs as a systemd timer at 6am MT, compiles data from MCP servers and mail into a single JSON file served by Caddy.
 
-Dashboard: `https://hwc.ocelot-wahoo.ts.net:16443`
+Dashboard: `https://hwc-server.ocelot-wahoo.ts.net:16443`
 
 ## Structure
 

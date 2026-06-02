@@ -100,7 +100,7 @@ readonly REPO_ROOT="$(git rev-parse --show-toplevel)"
   ```
 - **Line 51:** Hard-coded notification URL
   ```bash
-  https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts  # 🟡 HIGH
+  https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-alerts  # 🟡 HIGH
   ```
 
 **Standard Violated:** 1.2 Environment Variable Usage
@@ -114,7 +114,7 @@ HOSTNAME="${NIXOS_HOSTNAME:-$(hostname)}"
 sudo nixos-rebuild test --flake ".#${HOSTNAME}"
 
 # Use environment variable for notification URL
-NOTIFY_URL="${HWC_NOTIFY_URL:-https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts}"
+NOTIFY_URL="${HWC_NOTIFY_URL:-https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-alerts}"
 curl -s -H "Title: Alert" -d "Message" "$NOTIFY_URL"
 ```
 

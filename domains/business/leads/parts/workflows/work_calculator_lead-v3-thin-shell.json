@@ -36,7 +36,7 @@
       "position": [480, 0],
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net:30443/leads",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net:30443/leads",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
