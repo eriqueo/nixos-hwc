@@ -52,6 +52,7 @@ in
       git-lfs
       gh
       wireguard-tools
+      bun            # runtime for claude-code's Discord channel MCP server (.mcp.json: `command: "bun"`)
 
     ] ++ lib.optionals cfg.editors.micro [
       micro
