@@ -273,7 +273,7 @@
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
       "apps"         = { path = "/home/eric/apps";         devices = [ "hwc-laptop" ]; };
-      "brain"        = { path = "/mnt/vaults/brain";       devices = [ "hwc-laptop" "hwc-phone" ]; };
+      "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-laptop" "hwc-phone" ]; };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
       "inbox-mobile" = { path = "/mnt/vaults/inbox-mobile"; devices = [ "hwc-phone" ]; };
@@ -594,7 +594,13 @@
   # creates the bot at https://discord.com/developers/applications and encrypts
   # the token to domains/secrets/parts/services/hermes-discord-bot-token.age.
   hwc.server.ai.hermes = {
-    enable = true;
+    # Disabled 2026-06-02: 4 GB VRAM (Quadro P1000) can't host a model
+    # large enough for reliable 29-tool dispatch, and CPU-only LFM2-24B
+    # took ~33 min just to prefill Hermes' standard prompt. Anthropic
+    # also locked third-party API access behind extra-usage billing,
+    # which removed the cheap-cloud option. Re-enable when hardware or
+    # policy changes — module/secrets stay declared for fast revival.
+    enable = false;
     gateway.enable = true;
     gateway.discord.enable = true;
     # Local chat brain — LFM2-24B-A2B served by llama-cpu @ 11501.
