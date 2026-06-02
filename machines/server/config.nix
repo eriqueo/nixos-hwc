@@ -589,6 +589,13 @@
     model.provider = "anthropic";     # uses existing nanoclaw-anthropic-key.age
   };
 
+  # Hermes Discord allowlist — without this the gateway logs
+  # "No user allowlists configured. All unauthorized users will be denied."
+  # User ID is Eric's Discord snowflake (User Settings → Advanced →
+  # Developer Mode → right-click name → Copy User ID).
+  systemd.services.hermes-gateway.environment.DISCORD_ALLOWED_USERS =
+    "1501391621521150075";
+
   # CouchDB for Obsidian LiveSync
   hwc.data.couchdb = {
     enable = true;
