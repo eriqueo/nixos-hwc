@@ -88,6 +88,30 @@ in
           re-named logical secret (see secrets/declarations/services.nix).
         '';
       };
+
+      baseUrl = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "http://127.0.0.1:11501/v1";
+        description = ''
+          Override the model API base URL. null = use the provider's canonical
+          URL (api.anthropic.com, api.openai.com/v1, etc.). Set this to point
+          at a local llama.cpp / Ollama / vLLM OpenAI-compat endpoint so
+          Hermes' chat brain runs against on-host inference.
+        '';
+      };
+
+      modelName = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "lfm2-24b";
+        description = ''
+          Override the default model name (config.yaml `model.default`).
+          null = leave whatever upstream's setup wizard picked. Required
+          when pointing at a local endpoint: llama.cpp expects the value
+          set via `--alias`; Ollama expects the tag name (e.g. "llama3.2:3b").
+        '';
+      };
     };
 
     gateway = {

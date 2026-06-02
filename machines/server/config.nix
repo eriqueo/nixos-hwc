@@ -591,7 +591,16 @@
     enable = true;
     gateway.enable = true;
     gateway.discord.enable = true;
-    model.provider = "anthropic";     # uses existing nanoclaw-anthropic-key.age
+    # Local chat brain — LFM2-24B-A2B served by llama-cpu @ 11501.
+    # Anthropic API is gated behind paid extra-usage now (third-party apps
+    # don't draw from the Max plan), so we keep $200/mo on first-party
+    # Claude Code and route Hermes through the local MoE. The claude-code
+    # SKILL still lets Hermes delegate coding tasks to the local `claude`
+    # CLI — that path stays on the subscription.
+    model.provider  = "openai";  # OpenAI-compat client; the URL/model
+                                 # below select WHICH server it talks to.
+    model.baseUrl   = "http://127.0.0.1:11501/v1";
+    model.modelName = "lfm2-24b";
   };
 
   # Hermes Discord allowlist — without this the gateway logs
