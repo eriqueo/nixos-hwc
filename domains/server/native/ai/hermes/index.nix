@@ -221,7 +221,6 @@ in
 
         environment = {
           HOME = cfg.homeDir;
-          HERMES_DISCORD_BOT_TOKEN_FILE = "/run/agenix/${cfg.gateway.discord.tokenSecret}";
           PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
         };
 
@@ -229,10 +228,21 @@ in
           Type = "simple";
           User = lib.mkForce cfg.user;
           Group = "users";
+          SupplementaryGroups = [ "secrets" ];
           StateDirectory = "hwc/hermes";
           StateDirectoryMode = "0750";
           WorkingDirectory = cfg.homeDir;
-          ExecStart = "${hermesBin} gateway --discord";
+          # Hermes reads DISCORD_BOT_TOKEN directly from env (see upstream
+          # gateway/config.py — `os.getenv("DISCORD_BOT_TOKEN")`), so we
+          # source the secret file into the env right before exec. The
+          # `gateway run --replace` form replaces any orphan gateway
+          # instance left from a prior `hermes gateway restart`.
+          ExecStart = pkgs.writeShellScript "hermes-gateway-start" ''
+            set -eu
+            DISCORD_BOT_TOKEN="$(cat /run/agenix/${cfg.gateway.discord.tokenSecret})"
+            export DISCORD_BOT_TOKEN
+            exec ${hermesBin} gateway run --replace
+          '';
           Restart = "on-failure";
           RestartSec = "10s";
 
