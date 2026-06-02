@@ -70,12 +70,18 @@ in
 
     model = {
       provider = lib.mkOption {
-        type = lib.types.enum [ "anthropic" "openai" "nous-portal" "openrouter" ];
+        # Subset of Hermes' upstream PROVIDER_REGISTRY (see
+        # hermes_cli/auth.py). Add new entries here only after verifying
+        # the canonical id matches what Hermes' config.yaml accepts.
+        type = lib.types.enum [ "anthropic" "openai-api" "lmstudio" "nous" "openrouter" ];
         default = "anthropic";
         description = ''
-          LLM provider Hermes drives by default. "anthropic" reuses the existing
-          nanoclaw-anthropic-key.age secret. The Claude Code CLI subscription
-          CANNOT be used here — Hermes only speaks OpenAI-style HTTP APIs.
+          LLM provider Hermes drives. `anthropic` reuses the existing
+          nanoclaw-anthropic-key.age secret (subject to Anthropic's
+          third-party-app extra-usage billing). `openai-api` is the generic
+          OpenAI-compatible client — combine with `baseUrl` to point at a
+          local llama.cpp/Ollama/vLLM endpoint. `lmstudio` is identical in
+          behaviour but the registry default URL is loopback :1234.
         '';
       };
 

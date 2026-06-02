@@ -67,8 +67,9 @@ let
   effectiveBaseUrl =
     if cfg.model.baseUrl != null then cfg.model.baseUrl
     else if cfg.model.provider == "anthropic" then "https://api.anthropic.com"
-    else if cfg.model.provider == "openai" then "https://api.openai.com/v1"
-    else if cfg.model.provider == "nous-portal" then "https://portal.nousresearch.com/api/v1"
+    else if cfg.model.provider == "openai-api" then "https://api.openai.com/v1"
+    else if cfg.model.provider == "lmstudio" then "http://127.0.0.1:1234/v1"
+    else if cfg.model.provider == "nous" then "https://portal.nousresearch.com/api/v1"
     else "https://openrouter.ai/api/v1";
 
   # When baseUrl is set, we assume the endpoint is local (Ollama,
