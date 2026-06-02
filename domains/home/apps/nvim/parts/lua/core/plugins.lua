@@ -197,39 +197,46 @@ require("lazy").setup({
   },
 
   -- Treesitter text objects (select/move by function, class, etc.)
+  -- Uses the new `main`-branch API (the legacy `nvim-treesitter.configs.setup`
+  -- entry point was removed in the v1.0 rewrite).
   {
     "nvim-treesitter/nvim-treesitter-textobjects",
+    branch = "main",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     event = "VeryLazy",
+    init = function()
+      -- Required by the new branch to prevent built-in ftplugin mapping clashes.
+      vim.g.no_plugin_maps = true
+    end,
     config = function()
-      require("nvim-treesitter.configs").setup({
-        textobjects = {
-          select = {
-            enable = true,
-            lookahead = true,
-            keymaps = {
-              ["af"] = "@function.outer",
-              ["if"] = "@function.inner",
-              ["ac"] = "@class.outer",
-              ["ic"] = "@class.inner",
-              ["aa"] = "@parameter.outer",
-              ["ia"] = "@parameter.inner",
-            },
-          },
-          move = {
-            enable = true,
-            set_jumps = true,
-            goto_next_start = {
-              ["]m"] = "@function.outer",
-              ["]]"] = "@class.outer",
-            },
-            goto_previous_start = {
-              ["[m"] = "@function.outer",
-              ["[["] = "@class.outer",
-            },
-          },
-        },
+      require("nvim-treesitter-textobjects").setup({
+        select = { lookahead = true },
+        move = { set_jumps = true },
       })
+
+      local select = function(query) return function()
+        require("nvim-treesitter-textobjects.select").select_textobject(query, "textobjects")
+      end end
+      local move_next = function(query) return function()
+        require("nvim-treesitter-textobjects.move").goto_next_start(query, "textobjects")
+      end end
+      local move_prev = function(query) return function()
+        require("nvim-treesitter-textobjects.move").goto_previous_start(query, "textobjects")
+      end end
+
+      local sel_modes = { "x", "o" }
+      vim.keymap.set(sel_modes, "af", select("@function.outer"),  { desc = "ts: a function" })
+      vim.keymap.set(sel_modes, "if", select("@function.inner"),  { desc = "ts: inner function" })
+      vim.keymap.set(sel_modes, "ac", select("@class.outer"),     { desc = "ts: a class" })
+      vim.keymap.set(sel_modes, "ic", select("@class.inner"),     { desc = "ts: inner class" })
+      vim.keymap.set(sel_modes, "aa", select("@parameter.outer"), { desc = "ts: a parameter" })
+      vim.keymap.set(sel_modes, "ia", select("@parameter.inner"), { desc = "ts: inner parameter" })
+
+      local mv_modes = { "n", "x", "o" }
+      vim.keymap.set(mv_modes, "]m", move_next("@function.outer"), { desc = "ts: next function" })
+      vim.keymap.set(mv_modes, "]]", move_next("@class.outer"),    { desc = "ts: next class" })
+      vim.keymap.set(mv_modes, "[m", move_prev("@function.outer"), { desc = "ts: prev function" })
+      vim.keymap.set(mv_modes, "[[", move_prev("@class.outer"),    { desc = "ts: prev class" })
     end,
   },
 

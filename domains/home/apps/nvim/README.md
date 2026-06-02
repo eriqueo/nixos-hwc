@@ -56,3 +56,4 @@ nvim/
 ## Changelog
 
 - 2026-03-12: Initial domain creation, migrated from ~/.config/nvim
+- 2026-06-02: Migrate `nvim-treesitter-textobjects` block to the new `main`-branch API (`require("nvim-treesitter-textobjects").setup` + explicit keymaps). Fixes "module 'nvim-treesitter.configs' not found" startup error caused by the v1.0 rewrite removing the legacy entry point.
