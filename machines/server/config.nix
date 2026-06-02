@@ -564,6 +564,12 @@
     cpu = {
       enable = true;
       threads = 6;  # one per physical core on i7-8700K; HT rarely helps memory-bound inference
+      # Hermes Agent rejects models with n_ctx < 64K with a ValueError
+      # ("below the minimum 64,000 required"). LFM2-24B-A2B's n_ctx_train
+      # is 128K (per the GGUF metadata), and its hybrid attention keeps
+      # KV cache near-constant: at 8K context the KV buffer was 161 MB,
+      # so 64K only adds ~1.3 GB — well within the 38 GB free here.
+      contextSize = 65536;
       # --jinja enables OpenAI-compatible tool/function calling (llama.cpp
       # returns 500 "tools param requires --jinja flag" without it). --alias
       # gives the endpoint a stable model name instead of the raw GGUF path,
