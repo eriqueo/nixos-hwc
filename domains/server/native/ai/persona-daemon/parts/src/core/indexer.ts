@@ -30,8 +30,26 @@ export function createIndexer(deps: IndexerDeps) {
   let inFlight = false;
   let lastSuccessTs: number | null = null;
 
-  async function indexOne(path: string, mtime: number): Promise<number> {
-    const body = await deps.notes.read(path);
+  async function sha256Hex(text: string): Promise<string> {
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(text),
+    );
+    const bytes = new Uint8Array(digest);
+    let hex = "";
+    for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+    return hex;
+  }
+
+  // Embed + persist one note's chunks. The caller has already read the body and
+  // confirmed (via content hash) that it changed; `contentHash` is stored so the
+  // next scan can skip an unchanged note without re-embedding it.
+  async function indexBody(
+    path: string,
+    body: string,
+    mtime: number,
+    contentHash: string,
+  ): Promise<number> {
     const chunks = chunkNote({ notePath: path, body, mtime });
     if (chunks.length === 0) {
       // Empty / non-text note — purge any prior chunks.
@@ -44,7 +62,7 @@ export function createIndexer(deps: IndexerDeps) {
       const vecs = await deps.embed.embed(batch);
       embeddings.push(...vecs);
     }
-    await deps.vectorStore.upsertNoteChunks(path, chunks, embeddings, mtime);
+    await deps.vectorStore.upsertNoteChunks(path, chunks, embeddings, mtime, contentHash);
     return chunks.length;
   }
 
@@ -65,22 +83,26 @@ export function createIndexer(deps: IndexerDeps) {
     };
 
     try {
-      const existing = await deps.vectorStore.allMtimes();
+      const existing = await deps.vectorStore.allNoteHashes();
 
-      // Single-note reindex (called by file watchers / admin CLI with --note).
-      // opts.notePath is the vault-relative path; we treat now() as the
-      // synthetic mtime — full mtime resolution comes through the full-scan
-      // path which uses NoteSource.list (which yields fresh stats).
+      // Single-note reindex (admin CLI with --note). Hash-gated like the full
+      // scan: a trigger on a note whose bytes are unchanged does no embedding.
       if (opts?.notePath) {
+        const path = opts.notePath;
         try {
           stats.scanned = 1;
-          const mtime = Date.now();
-          stats.chunksWritten = await indexOne(opts.notePath, mtime);
-          stats.reindexed = 1;
+          const body = await deps.notes.read(path);
+          const hash = await sha256Hex(body);
+          if (!opts.full && existing.get(path) === hash) {
+            stats.unchanged = 1;
+          } else {
+            stats.chunksWritten = await indexBody(path, body, Date.now(), hash);
+            stats.reindexed = 1;
+          }
         } catch (e) {
-          await deps.vectorStore.deleteNote(opts.notePath);
+          await deps.vectorStore.deleteNote(path);
           stats.deleted = 1;
-          deps.log.warn("reindex.note_missing", { notePath: opts.notePath, err: String(e) });
+          deps.log.warn("reindex.note_missing", { notePath: path, err: String(e) });
         }
         stats.durationMs = Math.round(performance.now() - t0);
         lastSuccessTs = Date.now();
@@ -88,18 +110,31 @@ export function createIndexer(deps: IndexerDeps) {
         return stats;
       }
 
-      // Full / incremental scan
+      // Full / incremental scan — re-embed only notes whose CONTENT changed.
+      // mtime is deliberately ignored for the decision (the vault is Syncthing-
+      // replicated; mtimes change on every sync without the bytes changing). It
+      // is still passed through to chunk storage as informational metadata.
       const seen = new Set<string>();
       for await (const { path, mtime } of deps.notes.list()) {
         stats.scanned++;
         seen.add(path);
-        const prior = existing.get(path);
-        if (!opts?.full && prior !== undefined && prior >= mtime) {
+        let body: string;
+        try {
+          body = await deps.notes.read(path);
+        } catch (e) {
+          deps.log.error("reindex.note_failed", {
+            notePath: path,
+            err: e instanceof Error ? e.message : String(e),
+          });
+          continue;
+        }
+        const hash = await sha256Hex(body);
+        if (!opts?.full && existing.get(path) === hash) {
           stats.unchanged++;
           continue;
         }
         try {
-          const written = await indexOne(path, mtime);
+          const written = await indexBody(path, body, mtime, hash);
           stats.reindexed++;
           stats.chunksWritten += written;
         } catch (e) {

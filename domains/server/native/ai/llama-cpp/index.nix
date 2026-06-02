@@ -71,7 +71,7 @@ let
     ++ lib.optionals (svcCfg.threads != null) [ "-t" (toString svcCfg.threads) ]
     ++ svcCfg.extraArgs;
 
-  mkService = { name, svcCfg, hardening }: {
+  mkService = { name, svcCfg, hardening, resources ? {} }: {
     description = "llama.cpp inference server (${name})";
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" ];
@@ -96,7 +96,7 @@ let
       Restart = "on-failure";
       RestartSec = 10;
       TimeoutStartSec = "2h";  # first-boot model download can be huge
-    } // hardening;
+    } // hardening // resources;
   };
 
   # GPU services need /dev/nvidia*; do not lock device access.
@@ -121,7 +121,14 @@ let
   subServices = [
     { name = "gpu";   svcCfg = cfg.gpu;   hardening = gpuHardening; }
     { name = "cpu";   svcCfg = cfg.cpu;   hardening = cpuHardening; }
-    { name = "embed"; svcCfg = cfg.embed; hardening = gpuHardening; }
+    # embed is GPU-resident (-ngl 999) but can silently fall back to CPU when the
+    # 4GB card is full (the chat model + its KV cache can fill it). The resource
+    # caps ensure that fallback de-prioritises against the camera/NVR stack
+    # (frigate) instead of starving it — defence-in-depth behind the daemon's
+    # content-hash dedup, which is what actually keeps embed request volume near
+    # zero when the vault is quiet.
+    { name = "embed"; svcCfg = cfg.embed; hardening = gpuHardening;
+      resources = { CPUWeight = 20; Nice = 10; }; }
   ];
 
   enabledServices = lib.filter (s: s.svcCfg.enable) subServices;

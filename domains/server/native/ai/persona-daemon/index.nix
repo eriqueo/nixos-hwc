@@ -109,39 +109,26 @@ in
     };
 
     #========================================================================
-    # SYSTEMD PATH UNIT — fast-path reindex trigger on top-level vault changes
-    # systemd.path PathChanged= does NOT recurse: inotify on a directory only
-    # fires for its immediate entries, not subdirectories. So this catches
-    # edits to files directly in cfg.vaultPath (e.g. MEMORY.md, .gitignore)
-    # but misses the common case (writes under wiki/, _llm-inbox/, etc.).
-    # The periodic timer below is what actually keeps the index fresh.
-    # TriggerLimitIntervalSec collapses bursts of edits into one call/min.
-    #========================================================================
-    systemd.paths = lib.mkIf (cfg.vaultPath != null) {
-      persona-daemon-reindex = {
-        description = "Trigger persona-daemon reindex on vault changes";
-        wantedBy = [ "multi-user.target" ];
-        pathConfig = {
-          PathChanged = toString cfg.vaultPath;
-          TriggerLimitIntervalSec = "60s";
-          TriggerLimitBurst = 1;
-        };
-      };
-    };
-
-    #========================================================================
-    # SYSTEMD TIMER — periodic reindex covering subdirectory edits
-    # Reindex is incremental: the daemon stats files and only re-embeds
-    # those whose mtime changed since the last run. A no-op pass is cheap.
-    # 5 minutes is the staleness budget for RAG over the brain vault.
+    # SYSTEMD TIMER — slow reconcile backstop
+    # The daemon itself watches the vault recursively (in-process inotify) and
+    # reconciles on every burst of edits, plus once on startup — that is the
+    # primary freshness mechanism. Reindex is content-addressed: it re-embeds
+    # only notes whose bytes changed (sha256), so a no-op pass is genuinely
+    # cheap (stat + read + hash, no embedding). This timer exists ONLY as a
+    # backstop for the rare event the watcher misses (a dropped inotify event,
+    # or the watch being re-established mid-change). 6h is ample.
+    #
+    # NOTE: there is deliberately no systemd.path unit — systemd PathChanged=
+    # does not recurse into subdirectories, which is exactly the case the
+    # in-process recursive watcher now handles.
     #========================================================================
     systemd.timers = lib.mkIf (cfg.vaultPath != null) {
       persona-daemon-reindex = {
-        description = "Periodic persona-daemon reindex (covers subdir edits PathChanged misses)";
+        description = "Slow reconcile backstop for persona-daemon (in-process watcher is primary)";
         wantedBy = [ "timers.target" ];
         timerConfig = {
-          OnBootSec = "2min";
-          OnUnitActiveSec = "5min";
+          OnBootSec = "15min";
+          OnUnitActiveSec = "6h";
           Persistent = false;
         };
       };

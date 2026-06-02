@@ -25,12 +25,15 @@ export interface ConversationStore {
 }
 
 export interface VectorStore {
-  /** Replace all chunks for a note (delete + insert in a transaction). */
+  /** Replace all chunks for a note (delete + insert in a transaction).
+   *  `contentHash` is persisted alongside so the indexer can skip the note
+   *  on the next scan unless its bytes change. */
   upsertNoteChunks(
     notePath: string,
     chunks: Chunk[],
     embeddings: Float32Array[],
     mtime: number,
+    contentHash: string,
   ): Promise<void>;
 
   /** Delete every chunk for the given note path. */
@@ -39,8 +42,10 @@ export interface VectorStore {
   /** Top-K cosine over all live chunks (with frontmatter de-weighting). */
   topK(queryVec: Float32Array, k: number): Promise<ScoredChunk[]>;
 
-  /** path → mtime map; used by the indexer to decide what changed. */
-  allMtimes(): Promise<Map<string, number>>;
+  /** path → content-hash map; the indexer compares sha256(body) against this
+   *  to decide what changed. Content-addressed so Syncthing mtime churn is a
+   *  no-op. */
+  allNoteHashes(): Promise<Map<string, string>>;
 
   /** Total chunk count — useful for /metrics and quick smoke tests. */
   chunkCount(): Promise<number>;

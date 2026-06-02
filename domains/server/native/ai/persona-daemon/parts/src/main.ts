@@ -14,6 +14,7 @@ import {
   openDatabase,
 } from "./adapters/store-sqlite.ts";
 import { createNotesFs } from "./adapters/notes-fs.ts";
+import { startVaultWatcher } from "./adapters/vault-watcher.ts";
 import { createBrainMcpVaultWriter } from "./adapters/vault-writer-brain-mcp.ts";
 import { createOrchestrator } from "./core/chat.ts";
 import { createIndexer } from "./core/indexer.ts";
@@ -184,6 +185,27 @@ async function main() {
         return result;
       }
     : undefined;
+
+  // Event-driven indexing: watch the vault and run one debounced content-hash
+  // reconcile per burst of edits. Plus an immediate reconcile on startup to
+  // catch anything that changed while the daemon was down. The systemd timer
+  // that remains is only a slow backstop for inotify gaps.
+  if (indexer && reindexWrapped && cfg.vaultPath) {
+    startVaultWatcher({
+      vaultPath: cfg.vaultPath,
+      log,
+      onChange: () => {
+        reindexWrapped({}).catch((e) =>
+          log.error("vault_watcher.reindex_failed", {
+            err: e instanceof Error ? e.message : String(e),
+          }));
+      },
+    });
+    reindexWrapped({}).catch((e) =>
+      log.error("startup.reindex_failed", {
+        err: e instanceof Error ? e.message : String(e),
+      }));
+  }
 
   const startedAt = Date.now();
   const openai = createOpenAiShell({ orchestrate, personas, log });
