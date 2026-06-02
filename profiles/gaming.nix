@@ -49,8 +49,8 @@
   programs.nix-ld.libraries = with pkgs; [
     gtk3 pango cairo gdk-pixbuf atk
     libdrm mesa alsa-lib cups libpulseaudio
-    libX11 libXcomposite libXcursor libXdamage libXext libXfixes
-    libXi libXrandr libXrender libXtst libxcb libxscrnsaver
+    xorg.libX11 xorg.libXcomposite xorg.libXcursor xorg.libXdamage xorg.libXext xorg.libXfixes
+    xorg.libXi xorg.libXrandr xorg.libXrender xorg.libXtst libxcb libxscrnsaver
     at-spi2-atk at-spi2-core
     libgbm libxkbcommon
   ];
