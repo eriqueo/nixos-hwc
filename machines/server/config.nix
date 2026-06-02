@@ -564,6 +564,11 @@
     cpu = {
       enable = true;
       threads = 6;  # one per physical core on i7-8700K; HT rarely helps memory-bound inference
+      # --jinja enables OpenAI-compatible tool/function calling (llama.cpp
+      # returns 500 "tools param requires --jinja flag" without it). --alias
+      # gives the endpoint a stable model name instead of the raw GGUF path,
+      # so Hermes' chat completions request can use model="lfm2-24b".
+      extraArgs = [ "--jinja" "--alias" "lfm2-24b" ];
     };
     embed.enable = true;  # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
   };
