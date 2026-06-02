@@ -245,6 +245,10 @@ in
           '';
           Restart = "on-failure";
           RestartSec = "10s";
+          # Must be >= agent.restart_drain_timeout (180s) + safety margin,
+          # or systemd SIGKILLs the gateway mid-drain. Hermes warns
+          # "TimeoutStopSec=90s but drain_timeout=180s (expected >=210s)".
+          TimeoutStopSec = "240s";
 
           # Hardening
           NoNewPrivileges = true;
