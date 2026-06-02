@@ -222,6 +222,13 @@ in
         environment = {
           HOME = cfg.homeDir;
           PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
+          # The uv-installed CPython doesn't know about NixOS's CA bundle
+          # layout. Without this, aiohttp fails Discord's TLS handshake
+          # with SSLCertVerificationError ("unable to get local issuer
+          # certificate"). Point it at the system bundle that
+          # security.pki maintains.
+          SSL_CERT_FILE = "/etc/ssl/certs/ca-bundle.crt";
+          SSL_CERT_DIR = "/etc/ssl/certs";
         };
 
         serviceConfig = {
