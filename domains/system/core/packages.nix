@@ -31,6 +31,9 @@ in
         # CLI improvements
         bat eza fzf ripgrep fd zoxide which less diffutils jq yq
 
+        # SQLite CLI — puts sqlite3 on PATH for all machines (e.g. brain unit metrics over audit DBs)
+        sqlite
+
         # System utilities
         htop btop tree ncdu fastfetch usbutils pciutils dmidecode
 
