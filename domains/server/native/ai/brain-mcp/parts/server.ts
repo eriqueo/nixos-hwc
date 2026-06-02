@@ -11,7 +11,7 @@ import { join, resolve, relative, dirname } from "jsr:@std/path@1";
 import { walk, exists } from "jsr:@std/fs@1";
 
 // ── Configuration ────────────────────────────────────────────────────────────
-const VAULT_ROOT = resolve(Deno.env.get("BRAIN_VAULT_ROOT") ?? "/mnt/vaults/brain");
+const VAULT_ROOT = resolve(Deno.env.get("BRAIN_VAULT_ROOT") ?? "/home/eric/900_vaults/brain");
 const PORT = parseInt(Deno.env.get("BRAIN_MCP_PORT") ?? "9876");
 const HOST = Deno.env.get("BRAIN_MCP_HOST") ?? "0.0.0.0";
 const KEY_FILE = Deno.env.get("BRAIN_MCP_KEY_FILE") ?? "/run/agenix/brain-mcp-api-key";

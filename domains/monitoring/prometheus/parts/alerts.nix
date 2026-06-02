@@ -317,7 +317,7 @@
           };
           annotations = {
             summary = "persona-daemon reindex hasn't succeeded in over an hour";
-            description = "Last successful reindex was {{ $value | humanizeDuration }} ago. RAG over /mnt/vaults/brain may be returning stale chunks.";
+            description = "Last successful reindex was {{ $value | humanizeDuration }} ago. RAG over /home/eric/900_vaults/brain may be returning stale chunks.";
           };
         }
 
