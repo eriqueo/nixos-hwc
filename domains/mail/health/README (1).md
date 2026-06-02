@@ -46,7 +46,7 @@ Cooldown prevents spam: same failure fingerprint won't re-alert within 60 minute
 hwc.mail.health = {
   enable = true;
   ntfy.topic = "hwc-mail";                    # Uses hwc-ntfy-send (system ntfy config)
-  webhook.url = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+  webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
   syncMaxAgeMin = 30;
   freshnessHours = 6;
   alertCooldownMin = 60;

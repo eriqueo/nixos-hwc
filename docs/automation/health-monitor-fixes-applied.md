@@ -12,12 +12,12 @@
 
 **Before:**
 ```
-https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}
+https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}
 ```
 
 **After:**
 ```
-https://hwc.ocelot-wahoo.ts.net/={{ $json.topic }}
+https://hwc-server.ocelot-wahoo.ts.net/={{ $json.topic }}
 ```
 
 **Impact:** Notifications will now correctly reach ntfy topics (hwc-critical, hwc-alerts, hwc-monitoring)
@@ -70,7 +70,7 @@ Generate Notification → [Send to ntfy, Send to Slack]
 
 ### Manual ntfy Test ✅
 ```bash
-curl -X POST "https://hwc.ocelot-wahoo.ts.net/hwc-monitoring" \
+curl -X POST "https://hwc-server.ocelot-wahoo.ts.net/hwc-monitoring" \
   -H "Title: ✅ Health Monitor Fixed!" \
   -H "Tags: test,health,fixed" \
   -H "Priority: 3" \
@@ -158,7 +158,7 @@ curl -X POST "https://hwc.ocelot-wahoo.ts.net/hwc-monitoring" \
 ```bash
 # Check recent executions
 curl -H "X-N8N-API-KEY: <key>" \
-  "https://hwc.ocelot-wahoo.ts.net:2443/api/v1/executions?workflowId=KaGqsviVtFGp5d7l&limit=5"
+  "https://hwc-server.ocelot-wahoo.ts.net:2443/api/v1/executions?workflowId=KaGqsviVtFGp5d7l&limit=5"
 ```
 
 ---
@@ -173,7 +173,7 @@ If notifications are too noisy or causing issues:
 
 2. **Revert ntfy URL:**
    - Edit "Send to ntfy" node
-   - Change URL back to: `https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}`
+   - Change URL back to: `https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}`
 
 3. **Disable workflow:**
    - Toggle "Active" off in n8n UI

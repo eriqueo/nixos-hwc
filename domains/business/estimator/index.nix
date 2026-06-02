@@ -9,7 +9,7 @@
 # Rebuild:   estimator-build   (shell alias for systemctl start)
 # Rollback:  ls /var/lib/estimator/builds/  then  ln -sfn <dir> /var/lib/estimator/dist
 #
-# Access: https://hwc.ocelot-wahoo.ts.net:13443
+# Access: https://hwc-server.ocelot-wahoo.ts.net:13443
 #
 { config, lib, pkgs, ... }:
 let

@@ -31,7 +31,7 @@ Eric already has a Granola shortcut. The addition is an automation that:
 The iOS Shortcut actions:
 ```
 1. Get clipboard / share sheet text (the Granola transcript)
-2. POST to https://hwc.ocelot-wahoo.ts.net/webhook/daily-log
+2. POST to https://hwc-server.ocelot-wahoo.ts.net/webhook/daily-log
    Headers: x-api-key: {your key}
    Body: { "transcript": "{transcript text}", "date": "{current date}", "source": "granola" }
 3. Show notification: "Daily log submitted ✓"

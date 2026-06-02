@@ -71,7 +71,7 @@ async def discovery():
                 "http_proxy": {
                     "enabled": True,
                     "url": "http://127.0.0.1:6001/sse",
-                    "public_url": "https://hwc.ocelot-wahoo.ts.net/mcp",
+                    "public_url": "https://hwc-server.ocelot-wahoo.ts.net/mcp",
                     "protocol": "SSE"
                 },
                 "allowed_directories": [
@@ -96,13 +96,13 @@ async def discovery():
             "open_webui": {
                 "enabled": True,
                 "url": "http://127.0.0.1:3001",
-                "public_url": "https://hwc.ocelot-wahoo.ts.net:3443"
+                "public_url": "https://hwc-server.ocelot-wahoo.ts.net:3443"
             },
             "local_workflows": {
                 "api": {
                     "enabled": True,
                     "url": "http://127.0.0.1:6021",
-                    "public_url": "https://hwc.ocelot-wahoo.ts.net/workflows",
+                    "public_url": "https://hwc-server.ocelot-wahoo.ts.net/workflows",
                     "endpoints": {
                         "chat": "/api/workflows/chat",
                         "cleanup": "/api/workflows/cleanup",

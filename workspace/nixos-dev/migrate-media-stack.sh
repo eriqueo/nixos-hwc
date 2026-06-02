@@ -189,7 +189,7 @@ health_checks() {
     
     for service in "${\!services[@]}"; do
         local port="${services[$service]}"
-        local url="https://hwc.ocelot-wahoo.ts.net/${service}/"
+        local url="https://hwc-server.ocelot-wahoo.ts.net/${service}/"
         
         log "Checking $service at $url..."
         
@@ -205,7 +205,7 @@ health_checks() {
     if [[ ${#failed_services[@]} -eq 0 ]]; then
         log "🎉 All services passed health checks\!"
         log "Media stack migration completed successfully"
-        log "Access your services at: https://hwc.ocelot-wahoo.ts.net/SERVICE/"
+        log "Access your services at: https://hwc-server.ocelot-wahoo.ts.net/SERVICE/"
     else
         warn "❌ Failed services: ${failed_services[*]}"
         warn "Troubleshooting steps:"

@@ -194,7 +194,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/script-executor",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/script-executor",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"script_name\": \"service-restart\",\n  \"args\": [\"{{ $json.service || $json.name.toLowerCase() }}\"],\n  \"async\": true,\n  \"requester\": \"workflow-5-health-monitor\"\n}",
@@ -272,7 +272,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hwc.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
+        "url": "https://hwc-server.ocelot-wahoo.ts.net/notify/={{ $json.topic }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

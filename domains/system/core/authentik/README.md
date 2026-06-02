@@ -34,7 +34,7 @@ authentik/
 | `network.mode` | `"media"` | Podman network mode |
 
 ## Access
-- URL: `https://hwc.ocelot-wahoo.ts.net:15543`
+- URL: `https://hwc-server.ocelot-wahoo.ts.net:15543`
 - Admin: log in as `akadmin` (use recovery key if locked out: `sudo podman exec authentik-server ak create_recovery_key 10 akadmin`)
 
 ## Architecture Notes

@@ -294,7 +294,7 @@
   # Per-app tokens: each service gets its own gotify application token
   hwc.notifications.send.gotify = {
     enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted via Tailscale HTTPS
+    serverUrl = "https://hwc-server.ocelot-wahoo.ts.net:2586";  # Self-hosted via Tailscale HTTPS
     defaultTokenFile = config.hwc.secrets.api."gotify-token-alerts" or null;
     defaultPriority = 7;  # Higher priority for server alerts
     hostTag = true;       # Prepends "[host: hwc-server]" to messages
@@ -684,7 +684,7 @@
   };
 
   # Frigate NVR (Config-First Pattern with GPU Acceleration)
-  # Access: https://hwc.ocelot-wahoo.ts.net:5443 (via Caddy)
+  # Access: https://hwc-server.ocelot-wahoo.ts.net:5443 (via Caddy)
   # Charter v7.0 Section 19 compliant - TensorRT CUDA support
   hwc.media.frigate = {
     enable = true;
@@ -876,7 +876,7 @@
   #============================================================================
   hwc.networking.reverseProxy = {
     enable = lib.mkDefault true;
-    domain = "hwc.ocelot-wahoo.ts.net";
+    domain = "hwc-server.ocelot-wahoo.ts.net";
   };
 
   #============================================================================
@@ -984,10 +984,10 @@
     };
   };
 
-  # Vaultwarden password manager — https://hwc.ocelot-wahoo.ts.net:15443
+  # Vaultwarden password manager — https://hwc-server.ocelot-wahoo.ts.net:15443
   hwc.secrets.vaultwarden.enable = lib.mkDefault true;
 
-  # Authentik SSO/Identity Provider — https://hwc.ocelot-wahoo.ts.net:15543
+  # Authentik SSO/Identity Provider — https://hwc-server.ocelot-wahoo.ts.net:15543
   hwc.system.core.authentik.enable = lib.mkDefault true;
 
   # Firefly III personal finance
@@ -1022,12 +1022,12 @@
   # Heartwood Estimate Assembler — React PWA
   # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
   # the estimator is a first-class named app, not an ad-hoc published slot).
-  # Access: https://hwc.ocelot-wahoo.ts.net:13443
+  # Access: https://hwc-server.ocelot-wahoo.ts.net:13443
   # Build:  sudo systemctl start estimator-build  (or: estimator-build alias)
   hwc.business.estimator = {
     enable     = true;
     port       = 13443;
-    webhookUrl = "https://hwc.ocelot-wahoo.ts.net/webhook/estimate-push";
+    webhookUrl = "https://hwc-server.ocelot-wahoo.ts.net/webhook/estimate-push";
     apiKeyFile = config.age.secrets.estimator-api-key.path;
   };
 

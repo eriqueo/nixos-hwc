@@ -166,7 +166,7 @@ These services correctly bind to localhost and are only accessible via Caddy rev
 ## 3. REVERSE PROXY (CADDY) CONFIGURATION
 
 ### 3.1 Tailscale Domain
-**Domain**: `hwc.ocelot-wahoo.ts.net` (Tailscale MagicDNS)
+**Domain**: `hwc-server.ocelot-wahoo.ts.net` (Tailscale MagicDNS)
 **TLS Source**: Tailscale certificates (`get_certificate tailscale`)
 **Config Location**: domains/server/containers/_shared/caddy.nix
 
@@ -188,18 +188,18 @@ Route Configuration Format:
 
 | Service | External Port | Internal Upstream | Access URL | Config Line |
 |---------|--------------|-------------------|------------|-------------|
-| Jellyseerr | 5543 | http://127.0.0.1:5055 | https://hwc.ocelot-wahoo.ts.net:5543 | routes.nix:15-20 |
-| Immich | 7443 | http://127.0.0.1:2283 | https://hwc.ocelot-wahoo.ts.net:7443 | routes.nix:43-47 |
-| Frigate | 5443 | http://127.0.0.1:5000 | https://hwc.ocelot-wahoo.ts.net:5443 | routes.nix:51-56 |
-| SLSKD | 8443 | http://127.0.0.1:5031 | https://hwc.ocelot-wahoo.ts.net:8443 | routes.nix:78-84 |
-| Tdarr | 8267 | http://127.0.0.1:8265 | https://hwc.ocelot-wahoo.ts.net:8267 | routes.nix:136-141 |
-| Organizr | 9443 | http://127.0.0.1:9983 | https://hwc.ocelot-wahoo.ts.net:9443 | routes.nix:144-149 |
+| Jellyseerr | 5543 | http://127.0.0.1:5055 | https://hwc-server.ocelot-wahoo.ts.net:5543 | routes.nix:15-20 |
+| Immich | 7443 | http://127.0.0.1:2283 | https://hwc-server.ocelot-wahoo.ts.net:7443 | routes.nix:43-47 |
+| Frigate | 5443 | http://127.0.0.1:5000 | https://hwc-server.ocelot-wahoo.ts.net:5443 | routes.nix:51-56 |
+| SLSKD | 8443 | http://127.0.0.1:5031 | https://hwc-server.ocelot-wahoo.ts.net:8443 | routes.nix:78-84 |
+| Tdarr | 8267 | http://127.0.0.1:8265 | https://hwc-server.ocelot-wahoo.ts.net:8267 | routes.nix:136-141 |
+| Organizr | 9443 | http://127.0.0.1:9983 | https://hwc-server.ocelot-wahoo.ts.net:9443 | routes.nix:144-149 |
 
 **Firewall Impact**: Caddy automatically opens these ports on the firewall (domains/server/containers/_shared/caddy.nix:139-141).
 
 ### 3.3 Subpath Routes
 
-Services accessible via `https://hwc.ocelot-wahoo.ts.net/path`:
+Services accessible via `https://hwc-server.ocelot-wahoo.ts.net/path`:
 
 | Subpath | Internal Upstream | URL Base Handling | Config Line |
 |---------|------------------|-------------------|-------------|
@@ -557,7 +557,7 @@ curl http://hwc-server.local:8080
 # Connection refused
 
 # From Tailscale network (should work):
-curl https://hwc.ocelot-wahoo.ts.net/qbt
+curl https://hwc-server.ocelot-wahoo.ts.net/qbt
 # qBittorrent WebUI via Caddy (Tailscale authenticated)
 ```
 
@@ -979,9 +979,9 @@ curl http://192.168.1.50:8081  # Should fail (connection refused)
 curl http://192.168.1.50:5031  # Should fail (connection refused)
 
 # Verify ports ARE accessible via Tailscale + Caddy
-curl https://hwc.ocelot-wahoo.ts.net/qbt  # Should work
-curl https://hwc.ocelot-wahoo.ts.net/sab  # Should work
-curl https://hwc.ocelot-wahoo.ts.net:8443 # Should work (SLSKD)
+curl https://hwc-server.ocelot-wahoo.ts.net/qbt  # Should work
+curl https://hwc-server.ocelot-wahoo.ts.net/sab  # Should work
+curl https://hwc-server.ocelot-wahoo.ts.net:8443 # Should work (SLSKD)
 ```
 
 ---
@@ -1480,9 +1480,9 @@ curl http://hwc-server.local:8081
 curl http://hwc-server.local:5031
 
 # From Tailscale network (should work):
-curl https://hwc.ocelot-wahoo.ts.net/qbt
-curl https://hwc.ocelot-wahoo.ts.net/sab
-curl https://hwc.ocelot-wahoo.ts.net:8443
+curl https://hwc-server.ocelot-wahoo.ts.net/qbt
+curl https://hwc-server.ocelot-wahoo.ts.net/sab
+curl https://hwc-server.ocelot-wahoo.ts.net:8443
 ```
 
 ### 10.2 Automated Security Scanning

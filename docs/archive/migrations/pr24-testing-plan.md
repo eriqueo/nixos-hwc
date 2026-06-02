@@ -173,7 +173,7 @@ systemctl status ntfy 2>&1 | head -5
 
 # Reverse Proxy (Caddy)
 systemctl status caddy 2>&1 | head -5
-curl -I https://hwc.ocelot-wahoo.ts.net 2>&1 | head -5
+curl -I https://hwc-server.ocelot-wahoo.ts.net 2>&1 | head -5
 
 # Transcript API
 systemctl status transcript-api 2>&1 | head -5

@@ -101,7 +101,7 @@ in
     ];
 
     # Expose gotify via Tailscale HTTPS (persists across reboots)
-    # iGotify app connects to https://hwc.ocelot-wahoo.ts.net:2586
+    # iGotify app connects to https://hwc-server.ocelot-wahoo.ts.net:2586
     systemd.services.tailscale-serve-gotify = {
       description = "Tailscale HTTPS serve for gotify";
       after = [ "tailscaled.service" "podman-gotify.service" "network-online.target" ];

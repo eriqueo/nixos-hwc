@@ -95,7 +95,7 @@ jq '.containers.sabnzbd.volumes' new-system.json
 ./config-differ.sh current-system.json new-system.json --section=networking
 
 # Verify reverse proxy routes
-curl -I https://hwc.ocelot-wahoo.ts.net/sonarr
+curl -I https://hwc-server.ocelot-wahoo.ts.net/sonarr
 ```
 
 ## Expected Differences (OK to ignore)

@@ -4,7 +4,7 @@ Your NixOS MCP filesystem server is now running and accessible!
 
 ## Endpoint Information
 
-- **Server URL**: `https://hwc.ocelot-wahoo.ts.net/mcp/sse`
+- **Server URL**: `https://hwc-server.ocelot-wahoo.ts.net/mcp/sse`
 - **Access**: Tailscale network only (secure, no public internet exposure)
 - **Transport**: MCP over HTTP (Server-Sent Events)
 - **Scope**:
@@ -25,7 +25,7 @@ Add to your Claude Desktop configuration file:
 {
   "mcpServers": {
     "nixos-filesystem": {
-      "url": "https://hwc.ocelot-wahoo.ts.net/mcp/sse",
+      "url": "https://hwc-server.ocelot-wahoo.ts.net/mcp/sse",
       "transport": {
         "type": "sse"
       }
@@ -43,7 +43,7 @@ import httpx
 
 async with httpx.AsyncClient() as http_client:
     async with sse_client(
-        "https://hwc.ocelot-wahoo.ts.net/mcp/sse",
+        "https://hwc-server.ocelot-wahoo.ts.net/mcp/sse",
         http_client
     ) as (read, write):
         async with ClientSession(read, write) as session:
@@ -66,7 +66,7 @@ async with httpx.AsyncClient() as http_client:
 For any MCP-compatible client:
 
 - **Protocol**: MCP over HTTP (SSE transport)
-- **Endpoint**: `https://hwc.ocelot-wahoo.ts.net/mcp/sse`
+- **Endpoint**: `https://hwc-server.ocelot-wahoo.ts.net/mcp/sse`
 - **Authentication**: None (secured by Tailscale network boundary)
 - **Available Operations**:
   - `read_file` - Read file contents
@@ -82,7 +82,7 @@ For any MCP-compatible client:
 
 ```bash
 # Test basic connectivity
-curl -I https://hwc.ocelot-wahoo.ts.net/mcp/sse
+curl -I https://hwc-server.ocelot-wahoo.ts.net/mcp/sse
 
 # You should see:
 # HTTP/2 200
@@ -93,7 +93,7 @@ curl -I https://hwc.ocelot-wahoo.ts.net/mcp/sse
 
 1. Ensure your mobile device is connected to Tailscale
 2. Configure your MCP-capable mobile app with:
-   - URL: `https://hwc.ocelot-wahoo.ts.net/mcp/sse`
+   - URL: `https://hwc-server.ocelot-wahoo.ts.net/mcp/sse`
    - Transport: SSE (Server-Sent Events)
 
 ## Security Notes
@@ -131,7 +131,7 @@ ss -tlnp | grep 6001
 1. Verify Tailscale is connected: `tailscale status`
 2. Check MCP proxy is running: `systemctl status mcp-proxy`
 3. Check Caddy is running: `systemctl status caddy`
-4. Test endpoint: `curl -I https://hwc.ocelot-wahoo.ts.net/mcp/sse`
+4. Test endpoint: `curl -I https://hwc-server.ocelot-wahoo.ts.net/mcp/sse`
 
 ### MCP server not responding
 

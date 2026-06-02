@@ -136,7 +136,7 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 | Endpoint | URL |
 |----------|-----|
 | n8n UI (internal) | `http://127.0.0.1:5678` |
-| n8n UI (tailnet) | `https://hwc.ocelot-wahoo.ts.net:2443` (Caddy port route) |
+| n8n UI (tailnet) | `https://hwc-server.ocelot-wahoo.ts.net:2443` (Caddy port route) |
 | n8n webhook (public) | `https://n8n.heartwoodcraft.me/webhook/...` |
 | n8n MCP (Claude.ai) | `https://mcp.heartwoodcraft.me/n8n/mcp` |
 | n8n MCP (internal) | `http://127.0.0.1:6201/mcp` |

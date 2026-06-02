@@ -11,9 +11,9 @@ This plan defines n8n workflows to enable Slack-based monitoring, control, and n
 
 | Type | URL | Purpose |
 |------|-----|---------|
-| Internal | `https://hwc.ocelot-wahoo.ts.net/webhook/*` | Service-to-service communication |
-| Public (Funnel) | `https://hwc.ocelot-wahoo.ts.net:10000/webhook/*` | Slack interactivity, external integrations |
-| n8n Direct | `https://hwc.ocelot-wahoo.ts.net:2443/webhook/*` | Alertmanager, internal triggers |
+| Internal | `https://hwc-server.ocelot-wahoo.ts.net/webhook/*` | Service-to-service communication |
+| Public (Funnel) | `https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/*` | Slack interactivity, external integrations |
+| n8n Direct | `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/*` | Alertmanager, internal triggers |
 
 ## Slack Bot Architecture
 
@@ -313,7 +313,7 @@ groups:read
 ### Slash Commands to Register
 | Command | Request URL | Description |
 |---------|-------------|-------------|
-| `/hwc` | `https://hwc.ocelot-wahoo.ts.net:10000/webhook/slack-commands` | Main HWC command router |
+| `/hwc` | `https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/slack-commands` | Main HWC command router |
 | `/media` | (same) | Media services |
 | `/arr` | (same) | Arr stack |
 | `/dl` | (same) | Downloads |
@@ -325,7 +325,7 @@ groups:read
 | `/books` | (same) | Books |
 
 ### Interactivity URL
-`https://hwc.ocelot-wahoo.ts.net:10000/webhook/slack-interactivity`
+`https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/slack-interactivity`
 
 ---
 

@@ -132,7 +132,7 @@
   # Per-app tokens: each service gets its own gotify application token
   hwc.notifications.send.gotify = {
     enable = true;
-    serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";  # Self-hosted gotify via Tailscale HTTPS
+    serverUrl = "https://hwc-server.ocelot-wahoo.ts.net:2586";  # Self-hosted gotify via Tailscale HTTPS
     defaultTokenFile = config.hwc.secrets.api."gotify-token-laptop" or null;
     defaultPriority = 5;  # Normal priority for laptop
     hostTag = true;       # Prepends "[host: hwc-laptop]" to messages

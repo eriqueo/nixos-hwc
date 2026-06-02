@@ -383,7 +383,7 @@ in
 
 ### Phase 6: n8n Workflow Configuration (Post-deployment)
 
-**Access**: `http://hwc.ocelot-wahoo.ts.net:5678`
+**Access**: `http://hwc-server.ocelot-wahoo.ts.net:5678`
 
 **Workflow steps**:
 1. **Webhook Trigger**: Path `/alertmanager-webhook`, Method POST
@@ -412,7 +412,7 @@ hwc.server.monitoring.prometheus = {
 
 hwc.server.monitoring.grafana = {
   enable = true;
-  domain = "hwc.ocelot-wahoo.ts.net";
+  domain = "hwc-server.ocelot-wahoo.ts.net";
   adminPasswordFile = config.age.secrets.grafana-admin-password.path;
 };
 
@@ -457,7 +457,7 @@ curl http://localhost:9093/api/v2/status
 curl http://localhost:5678/healthz
 
 # Grafana (via Caddy)
-curl https://hwc.ocelot-wahoo.ts.net:4443/api/health
+curl https://hwc-server.ocelot-wahoo.ts.net:4443/api/health
 ```
 
 **Alert flow test**:
@@ -475,7 +475,7 @@ sudo systemctl start podman-frigate.service
 ```
 
 **Dashboard test**:
-- Open https://hwc.ocelot-wahoo.ts.net:4443
+- Open https://hwc-server.ocelot-wahoo.ts.net:4443
 - Login with admin + generated password
 - Verify Prometheus datasource connected
 - Check dashboards appear in sidebar
@@ -538,7 +538,7 @@ sudo systemctl start podman-frigate.service
 ## Expected Outcomes
 
 1. **Monitoring**: Prometheus scraping all targets (Frigate, Immich, node, containers)
-2. **Visualization**: Grafana dashboards accessible at https://hwc.ocelot-wahoo.ts.net:4443
+2. **Visualization**: Grafana dashboards accessible at https://hwc-server.ocelot-wahoo.ts.net:4443
 3. **Alerting**: Alerts fire based on thresholds → Alertmanager → n8n → Slack
 4. **Security**: Admin password via agenix, Caddy reverse proxy with SSL
 5. **Maintainability**: Charter-compliant, well-documented, easy to extend
@@ -555,8 +555,8 @@ sudo systemctl start podman-frigate.service
 
 ## Notes
 
-- **n8n workflow editing**: Access UI at http://hwc.ocelot-wahoo.ts.net:5678 (Tailscale only)
-- **Grafana access**: https://hwc.ocelot-wahoo.ts.net:4443 (SSL via Caddy)
+- **n8n workflow editing**: Access UI at http://hwc-server.ocelot-wahoo.ts.net:5678 (Tailscale only)
+- **Grafana access**: https://hwc-server.ocelot-wahoo.ts.net:4443 (SSL via Caddy)
 - **Prometheus/Alertmanager**: Localhost only, no external access needed
 - **Dashboard development**: Edit JSON files, Grafana reloads every 30s
 - **Alert testing**: Use Alertmanager UI to send test alerts before production use

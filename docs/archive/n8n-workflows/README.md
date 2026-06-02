@@ -13,9 +13,9 @@ Declarative workflow definitions for the HWC Server automation system.
 
 ## Webhook URLs
 
-- **Internal**: `https://hwc.ocelot-wahoo.ts.net/webhook/<path>`
-- **Public (Funnel)**: `https://hwc.ocelot-wahoo.ts.net:10000/webhook/<path>`
-- **n8n Direct**: `https://hwc.ocelot-wahoo.ts.net:2443/webhook/<path>`
+- **Internal**: `https://hwc-server.ocelot-wahoo.ts.net/webhook/<path>`
+- **Public (Funnel)**: `https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/<path>`
+- **n8n Direct**: `https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/<path>`
 
 ## Slack Integration
 
@@ -26,7 +26,7 @@ Declarative workflow definitions for the HWC Server automation system.
 
 ### Slash Commands
 Configure in Slack App → Slash Commands with Request URL:
-`https://hwc.ocelot-wahoo.ts.net:10000/webhook/slack-commands`
+`https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/slack-commands`
 
 | Command | Description |
 |---------|-------------|
@@ -52,7 +52,7 @@ N8N_USER_FOLDER=/var/lib/hwc/n8n \
 
 ```bash
 # Example: Send notification via curl
-curl -X POST https://hwc.ocelot-wahoo.ts.net/webhook/notify \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net/webhook/notify \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Test Notification",

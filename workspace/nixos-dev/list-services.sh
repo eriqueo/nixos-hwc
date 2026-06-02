@@ -38,7 +38,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Get Tailscale domain from routes.nix or use default
-DOMAIN="hwc.ocelot-wahoo.ts.net"
+DOMAIN="hwc-server.ocelot-wahoo.ts.net"
 
 echo -e "${CYAN}=== HWC Server Services ===${NC}\n"
 

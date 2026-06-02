@@ -52,7 +52,7 @@ case "$DETECTED_HOSTNAME" in
 esac
 
 # Configuration (can be overridden by environment variables)
-readonly DEFAULT_NOTIFY_URL="https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts"
+readonly DEFAULT_NOTIFY_URL="https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-alerts"
 readonly DEFAULT_AI_DOCS_SERVICE="post-rebuild-ai-docs"
 
 # Script state

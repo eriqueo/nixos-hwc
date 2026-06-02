@@ -1,6 +1,6 @@
 # ntfy Notification Class System
 
-**Infrastructure**: Self-hosted ntfy at `https://hwc.ocelot-wahoo.ts.net/notify`
+**Infrastructure**: Self-hosted ntfy at `https://hwc-server.ocelot-wahoo.ts.net/notify`
 
 ---
 
@@ -257,7 +257,7 @@ hwc-ntfy-send --priority 5 \
   hwc-critical \
   "Service Failed" \
   "Jellyfin crashed. Click to view logs." \
-  --click "https://hwc.ocelot-wahoo.ts.net/jellyfin"
+  --click "https://hwc-server.ocelot-wahoo.ts.net/jellyfin"
 ```
 
 ### Bi-directional Communication

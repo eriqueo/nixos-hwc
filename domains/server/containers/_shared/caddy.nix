@@ -93,7 +93,7 @@ in
     enable = mkEnableOption "Reverse proxy service (Caddy)";
     domain = mkOption {
       type = types.str;
-      default = "hwc.ocelot-wahoo.ts.net";
+      default = "hwc-server.ocelot-wahoo.ts.net";
       description = "Domain for reverse proxy services";
     };
   };
@@ -101,12 +101,12 @@ in
   options.hwc.server.shared = {
     tailscaleDomain = mkOption {
       type = types.str;
-      default = "hwc.ocelot-wahoo.ts.net";
+      default = "hwc-server.ocelot-wahoo.ts.net";
       description = "Tailscale domain for the server.";
     };
     rootHost = mkOption {
       type = types.str;
-      default = "hwc.ocelot-wahoo.ts.net";
+      default = "hwc-server.ocelot-wahoo.ts.net";
       description = "Root host for subpath and port-based services.";
     };
     routes = mkOption {

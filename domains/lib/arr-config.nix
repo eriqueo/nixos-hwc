@@ -74,7 +74,7 @@ INITEOF
 
   # Enforce n8n media-pipeline webhook in arr database
   # Usage: mkArrWebhookScript { name = "radarr"; configPath = "/path/to/config"; source = "radarr"; }
-  mkArrWebhookScript = { name, configPath, source, webhookUrl ? "https://hwc.ocelot-wahoo.ts.net:2443/webhook/media-pipeline" }:
+  mkArrWebhookScript = { name, configPath, source, webhookUrl ? "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/media-pipeline" }:
     let
       sqlite = "${pkgs.sqlite}/bin/sqlite3";
       fullUrl = "${webhookUrl}?source=${source}";

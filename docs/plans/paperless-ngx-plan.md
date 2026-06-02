@@ -26,7 +26,7 @@ Deploy **Paperless-NGX** as a Charter-compliant containerized document managemen
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Caddy Reverse Proxy                         │
-│              https://hwc.ocelot-wahoo.ts.net/docs               │
+│              https://hwc-server.ocelot-wahoo.ts.net/docs               │
 └───────────────────────────────┬─────────────────────────────────┘
                                 │
                     ┌───────────▼───────────────┐
@@ -164,7 +164,7 @@ echo "your-secure-password" | \
 }
 ```
 
-**Access URL**: `https://hwc.ocelot-wahoo.ts.net/docs`
+**Access URL**: `https://hwc-server.ocelot-wahoo.ts.net/docs`
 
 ---
 

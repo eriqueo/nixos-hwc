@@ -456,7 +456,7 @@ mkContainer {
   ports = [ "127.0.0.1:8085:8080" ];
   volumes = [ "${fireflyUpload}:/var/www/html/storage/upload:rw" ];
   environment = {
-    APP_URL = "https://hwc.ocelot-wahoo.ts.net:10443";
+    APP_URL = "https://hwc-server.ocelot-wahoo.ts.net:10443";
     DB_CONNECTION = "pgsql";
     DB_HOST = "10.89.0.1";   # media-network gateway — NEVER "localhost" from containers
     DB_PORT = "5432";
@@ -513,7 +513,7 @@ in {
 Source: `/home/eric/.nixos/domains/networking/routes.nix`
 
 All external ports use Tailscale TLS (Caddy + `get_certificate tailscale`).
-Domain: `hwc.ocelot-wahoo.ts.net`
+Domain: `hwc-server.ocelot-wahoo.ts.net`
 
 ### Dedicated Port Mode (HTTPS on separate port)
 
@@ -600,12 +600,12 @@ The Caddy config is **fully generated** from the `hwc.networking.shared.routes` 
 ```nix
 options.hwc.networking.reverseProxy = {
   enable = mkEnableOption "Reverse proxy service (Caddy)";
-  domain = mkOption { type = types.str; default = "hwc.ocelot-wahoo.ts.net"; };
+  domain = mkOption { type = types.str; default = "hwc-server.ocelot-wahoo.ts.net"; };
 };
 
 options.hwc.networking.shared = {
-  tailscaleDomain = mkOption { type = types.str; default = "hwc.ocelot-wahoo.ts.net"; };
-  rootHost        = mkOption { type = types.str; default = "hwc.ocelot-wahoo.ts.net"; };
+  tailscaleDomain = mkOption { type = types.str; default = "hwc-server.ocelot-wahoo.ts.net"; };
+  rootHost        = mkOption { type = types.str; default = "hwc-server.ocelot-wahoo.ts.net"; };
   routes = mkOption {
     type = types.listOf (types.attrsOf types.anything);
     default = [];
@@ -649,7 +649,7 @@ localhost {
 }
 
 # Dedicated TLS port per service (port mode)
-hwc.ocelot-wahoo.ts.net:6443 {
+hwc-server.ocelot-wahoo.ts.net:6443 {
   tls { get_certificate tailscale; protocols tls1.2 tls1.3; alpn h2 http/1.1 }
   encode zstd gzip
   reverse_proxy http://127.0.0.1:8096 {
@@ -663,7 +663,7 @@ hwc.ocelot-wahoo.ts.net:6443 {
 }
 
 # Static file servers (static mode)
-hwc.ocelot-wahoo.ts.net:14443 {
+hwc-server.ocelot-wahoo.ts.net:14443 {
   tls { get_certificate tailscale; ... }
   encode zstd gzip
   header Access-Control-Allow-Origin "*"
@@ -937,7 +937,7 @@ systemd.services."podman-<name>".after = [ "init-media-network.service" ];
 
 | Domain | Type | Used for |
 |--------|------|----------|
-| `hwc.ocelot-wahoo.ts.net` | Tailscale HTTPS | All services (port + subpath mode) |
+| `hwc-server.ocelot-wahoo.ts.net` | Tailscale HTTPS | All services (port + subpath mode) |
 | `webhooks.heartwoodcraft.me` | Cloudflare tunnel | External webhook ingress → n8n |
 | `heartwoodcraft.me` | Hostinger hosting | Public business site |
 
@@ -957,7 +957,7 @@ The `services.tailscale.permitCertUid = "caddy"` in machine config gives Caddy p
 
 ### Tailscale Network Architecture
 
-- Tailscale domain: `hwc.ocelot-wahoo.ts.net`
+- Tailscale domain: `hwc-server.ocelot-wahoo.ts.net`
 - CGNAT range: `100.64.0.0/10` (used for trusted proxies in apps like Immich)
 - Services listen on `127.0.0.1:<port>` — Caddy proxies from Tailscale IP
 
@@ -1497,7 +1497,7 @@ podman logs <name>
 
 ```bash
 podman ps | grep <name>
-curl -I https://hwc.ocelot-wahoo.ts.net:<PORT>/
+curl -I https://hwc-server.ocelot-wahoo.ts.net:<PORT>/
 journalctl -u podman-<name> -n 50
 ```
 

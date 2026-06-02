@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TS_DOMAIN="${TS_DOMAIN:-hwc.ocelot-wahoo.ts.net}"
+TS_DOMAIN="${TS_DOMAIN:-hwc-server.ocelot-wahoo.ts.net}"
 TIMEOUT="${TIMEOUT:-6}"
 INSECURE="${INSECURE:-0}"
 

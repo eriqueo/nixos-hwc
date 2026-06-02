@@ -31,8 +31,8 @@ in
   # ═══════════════════════════════════════════════════════════════════════════
 
   # Server-scoped Caddy certs — all hosts
-  "domains/secrets/parts/caddy/hwc.ocelot-wahoo.ts.net.crt.age".publicKeys       = everyone;
-  "domains/secrets/parts/caddy/hwc.ocelot-wahoo.ts.net.key.age".publicKeys       = everyone;
+  "domains/secrets/parts/caddy/hwc-server.ocelot-wahoo.ts.net.crt.age".publicKeys       = everyone;
+  "domains/secrets/parts/caddy/hwc-server.ocelot-wahoo.ts.net.key.age".publicKeys       = everyone;
 
   # XPS-scoped Caddy certs — xps + eric only (machine-specific TLS)
   "domains/secrets/parts/caddy/hwc-xps.ocelot-wahoo.ts.net.crt.age".publicKeys   = [ xps eric ];

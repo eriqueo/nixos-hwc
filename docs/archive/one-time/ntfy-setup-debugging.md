@@ -20,11 +20,11 @@
 **Current Settings**:
 ```nix
 # Server
-serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";
+serverUrl = "https://hwc-server.ocelot-wahoo.ts.net/notify";
 defaultTopic = "hwc-server-events";
 
 # Laptop
-serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";
+serverUrl = "https://hwc-server.ocelot-wahoo.ts.net/notify";
 defaultTopic = "hwc-laptop-events";
 ```
 
@@ -74,7 +74,7 @@ virtualisation.oci-containers.containers.ntfy = {
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Phone App                                                    │
-│  Tries: https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts   │
+│  Tries: https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-alerts   │
 └─────────────────────────┬─────────────────────────────────────┘
                           │
                           ▼
@@ -106,7 +106,7 @@ virtualisation.oci-containers.containers.ntfy = {
 ```nix
 hwc.system.services.ntfy = {
   enable = true;
-  serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";
+  serverUrl = "https://hwc-server.ocelot-wahoo.ts.net/notify";
   defaultTopic = "hwc-server-events";
   defaultTags = [ "hwc" "server" "production" ];
   defaultPriority = 4;
@@ -119,7 +119,7 @@ hwc.system.services.ntfy = {
 ```nix
 hwc.system.services.ntfy = {
   enable = true;
-  serverUrl = "https://hwc.ocelot-wahoo.ts.net/notify";
+  serverUrl = "https://hwc-server.ocelot-wahoo.ts.net/notify";
   defaultTopic = "hwc-laptop-events";
   defaultTags = [ "hwc" "laptop" ];
   defaultPriority = 3;
@@ -182,19 +182,19 @@ options.hwc.services.ntfy = {
 
 **Your Configuration Attempts**:
 
-1. **Server**: `https://hwc.ocelot-wahoo.ts.net/notify`
+1. **Server**: `https://hwc-server.ocelot-wahoo.ts.net/notify`
    - **Topic**: `hwc-alerts`
-   - **Expected URL**: `https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts`
+   - **Expected URL**: `https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-alerts`
    - **Result**: ❌ "Unexpected response from server"
 
-2. **Server**: `https://hwc.ocelot-wahoo.ts.net`
+2. **Server**: `https://hwc-server.ocelot-wahoo.ts.net`
    - **Topic**: `hwc-alerts`
-   - **Expected URL**: `https://hwc.ocelot-wahoo.ts.net/hwc-alerts`
+   - **Expected URL**: `https://hwc-server.ocelot-wahoo.ts.net/hwc-alerts`
    - **Result**: ❌ Same error
 
 **Why it's failing**:
 - Caddy doesn't have a route configured for `/notify/*`
-- When the phone tries to connect to `https://hwc.ocelot-wahoo.ts.net/notify/hwc-alerts`, Caddy returns 404 or default page
+- When the phone tries to connect to `https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-alerts`, Caddy returns 404 or default page
 - The ntfy container is running on `localhost:8080` but is NOT exposed via Caddy
 
 ---
@@ -203,11 +203,11 @@ options.hwc.services.ntfy = {
 
 ```bash
 # Test 1: Root path
-curl -v https://hwc.ocelot-wahoo.ts.net/test-topic
+curl -v https://hwc-server.ocelot-wahoo.ts.net/test-topic
 # Result: HTTP 200 (probably Caddy default response or another service)
 
 # Test 2: /notify path
-curl -v https://hwc.ocelot-wahoo.ts.net/notify/test-topic
+curl -v https://hwc-server.ocelot-wahoo.ts.net/notify/test-topic
 # Result: HTTP 200 (same - NOT actually reaching ntfy!)
 ```
 
@@ -283,10 +283,10 @@ sudo nixos-rebuild switch --flake .#hwc-server
 curl http://localhost:8080
 
 # Test via Caddy
-curl https://hwc.ocelot-wahoo.ts.net/notify
+curl https://hwc-server.ocelot-wahoo.ts.net/notify
 
 # Send test notification
-curl -d "Test message" https://hwc.ocelot-wahoo.ts.net/notify/test-topic
+curl -d "Test message" https://hwc-server.ocelot-wahoo.ts.net/notify/test-topic
 
 # Or use CLI tool
 hwc-ntfy-send test-topic "Test" "This is a test"
@@ -294,7 +294,7 @@ hwc-ntfy-send test-topic "Test" "This is a test"
 
 ### Step 5: Phone Configuration (After Fix)
 
-**Server**: `https://hwc.ocelot-wahoo.ts.net/notify`
+**Server**: `https://hwc-server.ocelot-wahoo.ts.net/notify`
 **Topics**:
 - `hwc-critical`
 - `hwc-alerts`
@@ -331,7 +331,7 @@ sudo cat /etc/caddy/Caddyfile | grep -A 10 notify
 curl http://localhost:8080
 
 # Test through Caddy
-curl https://hwc.ocelot-wahoo.ts.net/notify
+curl https://hwc-server.ocelot-wahoo.ts.net/notify
 ```
 
 ---
@@ -340,7 +340,7 @@ curl https://hwc.ocelot-wahoo.ts.net/notify
 
 1. Open ntfy app
 2. Tap "+" to add subscription
-3. **Server**: `https://hwc.ocelot-wahoo.ts.net/notify`
+3. **Server**: `https://hwc-server.ocelot-wahoo.ts.net/notify`
 4. **Topic**: `hwc-alerts` (or any topic)
 5. Tap "Subscribe"
 6. Should connect successfully

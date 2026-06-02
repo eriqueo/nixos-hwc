@@ -32,7 +32,7 @@ in
     settings = {
       appUrl = lib.mkOption {
         type = lib.types.str;
-        default = "https://hwc.ocelot-wahoo.ts.net:10443";
+        default = "https://hwc-server.ocelot-wahoo.ts.net:10443";
         description = "External URL for Firefly III (used for OAuth and redirects)";
       };
 
@@ -64,7 +64,7 @@ in
 
       appUrl = lib.mkOption {
         type = lib.types.str;
-        default = "https://hwc.ocelot-wahoo.ts.net:11443";
+        default = "https://hwc-server.ocelot-wahoo.ts.net:11443";
         description = "External URL for Firefly-Pico";
       };
 

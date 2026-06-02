@@ -42,7 +42,7 @@ in
       ports = [ "127.0.0.1:${toString cfg.port}:80" ];
       volumes = [ "${dataDir}:/data:rw" ];
       environment = {
-        DOMAIN = "https://hwc.ocelot-wahoo.ts.net:${toString cfg.reverseProxy.port}";
+        DOMAIN = "https://hwc-server.ocelot-wahoo.ts.net:${toString cfg.reverseProxy.port}";
         SIGNUPS_ALLOWED = "true";
         INVITATIONS_ALLOWED = "true";
         SHOW_PASSWORD_HINT = "false";

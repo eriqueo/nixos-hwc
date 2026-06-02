@@ -147,7 +147,7 @@ ls -la /var/lib/hwc/alertmanager  # Should be proper directory owned by eric:use
 
 ### Problem
 Health check shows ntfy returning 502 on both:
-- Caddy proxy: `https://hwc.ocelot-wahoo.ts.net/notify` → 502
+- Caddy proxy: `https://hwc-server.ocelot-wahoo.ts.net/notify` → 502
 - Direct access: `http://127.0.0.1:2586` → Connection refused
 
 ### Root Cause
@@ -260,7 +260,7 @@ health  # Should show all services green except tdarr (intentionally disabled)
 
 # 6. Test ntfy
 curl http://127.0.0.1:2586  # Should return ntfy web interface
-curl -d "Test notification" https://hwc.ocelot-wahoo.ts.net/notify/test  # Should send notification
+curl -d "Test notification" https://hwc-server.ocelot-wahoo.ts.net/notify/test  # Should send notification
 ```
 
 ---

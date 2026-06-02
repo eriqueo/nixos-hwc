@@ -111,7 +111,7 @@ This directory contains production-ready n8n workflow JSON files that can be imp
   "script_name": "beets-import",
   "args": ["/mnt/hot/music/new-album"],
   "async": true,
-  "callback_url": "https://hwc.ocelot-wahoo.ts.net:2443/webhook/callback",
+  "callback_url": "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/callback",
   "requester": "workflow-1"
 }
 ```
@@ -195,7 +195,7 @@ This directory contains production-ready n8n workflow JSON files that can be imp
 **Test Commands:**
 ```bash
 # Extract YouTube transcript
-curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/transcript-extract \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/transcript-extract \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
@@ -203,7 +203,7 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/transcript-extract \
   }'
 
 # Format existing file
-curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/transcript-format \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/transcript-format \
   -H "Content-Type: application/json" \
   -d '{
     "file_path": "/mnt/media/transcripts/video.md",
@@ -332,7 +332,7 @@ x-api-key: {ESTIMATOR_API_KEY}
 
 **Test Command:**
 ```bash
-curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/estimate-push \
   -H "Content-Type: application/json" \
   -H "x-api-key: {secret}" \
   -d '{
@@ -434,7 +434,7 @@ Webhook → Extract Lead (validate) → JT: Create Account → JT: Update Accoun
 
 **Test Command:**
 ```bash
-curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/calculator-lead \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/calculator-lead \
   -H "Content-Type: application/json" \
   -d '{
     "contact": {"name": "Test Lead", "email": "test@example.com", "phone": "406-555-1234"},
@@ -468,7 +468,7 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/calculator-lead \
 - Immediate notification during business hours
 - Scheduled notification at 8am next business day for after-hours leads
 - 2-hour follow-up reminder if no response
-- Push notifications via **self-hosted ntfy** (`https://hwc.ocelot-wahoo.ts.net/notify/hwc-leads`)
+- Push notifications via **self-hosted ntfy** (`https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-leads`)
 - Slack notifications to #leads channel
 - Postgres logging for all leads and errors
 
@@ -484,14 +484,14 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/calculator-lead \
 **ntfy Node Configuration:**
 ```
 - Method: POST
-- URL: https://hwc.ocelot-wahoo.ts.net/notify/hwc-leads
+- URL: https://hwc-server.ocelot-wahoo.ts.net/notify/hwc-leads
 - Body Type: raw (NOT "string")
 - Headers: Content-Type: text/plain, Title, Priority, Tags
 ```
 
 **Test Command:**
 ```bash
-curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/new-lead \
+curl -X POST https://hwc-server.ocelot-wahoo.ts.net:2443/webhook/new-lead \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test Lead",
@@ -501,13 +501,13 @@ curl -X POST https://hwc.ocelot-wahoo.ts.net:2443/webhook/new-lead \
   }'
 ```
 
-**Phone Subscription:** Subscribe to `hwc-leads` on `https://hwc.ocelot-wahoo.ts.net/notify` in ntfy app
+**Phone Subscription:** Subscribe to `hwc-leads` on `https://hwc-server.ocelot-wahoo.ts.net/notify` in ntfy app
 
 ---
 
 ## Import Instructions
 
-1. Access n8n: `https://hwc.ocelot-wahoo.ts.net:2443`
+1. Access n8n: `https://hwc-server.ocelot-wahoo.ts.net:2443`
 2. Click "Add workflow" → "Import from File"
 3. Select workflow JSON file from this directory
 4. Activate workflow after import

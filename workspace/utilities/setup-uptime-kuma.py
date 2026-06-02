@@ -61,7 +61,7 @@ def get_monitors():
             {"name": "CloudBeaver", "type": MonitorType.HTTP, "url": f"http://{H}:8978/", "interval": 300},
             {"name": "Transcript API", "type": MonitorType.HTTP, "url": f"http://{H}:8099/health", "interval": 120},
             {"name": "Heartwood MCP", "type": MonitorType.PORT, "hostname": H, "port": 6100, "interval": 300},
-            {"name": "Estimator", "type": MonitorType.HTTP, "url": "https://hwc.ocelot-wahoo.ts.net:13443", "interval": 300},
+            {"name": "Estimator", "type": MonitorType.HTTP, "url": "https://hwc-server.ocelot-wahoo.ts.net:13443", "interval": 300},
         ],
         "media": [
             {"name": "Jellyfin", "type": MonitorType.HTTP, "url": f"http://{H}:8096/health", "interval": 120,

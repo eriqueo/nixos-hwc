@@ -24,8 +24,8 @@ vaultwarden/
 | `network.mode` | `"media"` | Podman network mode |
 
 ## Access
-- URL: `https://hwc.ocelot-wahoo.ts.net:15443`
-- Admin panel: `https://hwc.ocelot-wahoo.ts.net:15443/admin` (uses `vaultwarden-admin-token` secret)
+- URL: `https://hwc-server.ocelot-wahoo.ts.net:15443`
+- Admin panel: `https://hwc-server.ocelot-wahoo.ts.net:15443/admin` (uses `vaultwarden-admin-token` secret)
 
 ## Dependencies
 - agenix secret: `vaultwarden-admin-token`

@@ -8,7 +8,7 @@
 #   - Single FastAPI process
 #   - youtube-transcript-api for captions, yt-dlp for metadata only
 #   - No LLM, no spaCy, no PostgreSQL
-#   - Caddy reverse proxy at hwc.ocelot-wahoo.ts.net:3443
+#   - Caddy reverse proxy at hwc-server.ocelot-wahoo.ts.net:3443
 
 { config, lib, pkgs, ... }:
 

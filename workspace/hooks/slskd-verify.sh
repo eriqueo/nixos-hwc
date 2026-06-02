@@ -14,16 +14,16 @@ if ! curl -sSf http://127.0.0.1:5031/slskd/ >/dev/null; then
 fi
 
 echo "🌐 Testing external slskd access..."
-if ! curl -sSf https://hwc.ocelot-wahoo.ts.net/slskd/ >/dev/null; then
+if ! curl -sSf https://hwc-server.ocelot-wahoo.ts.net/slskd/ >/dev/null; then
     echo "❌ External slskd access failed"
     exit 1
 fi
 
 echo "📦 Testing static assets..."
 for asset in static/js/main static/css/main; do
-    asset_url=$(curl -s https://hwc.ocelot-wahoo.ts.net/slskd/ | rg -o "${asset}\.[a-f0-9]+\.(js|css)" | head -1)
+    asset_url=$(curl -s https://hwc-server.ocelot-wahoo.ts.net/slskd/ | rg -o "${asset}\.[a-f0-9]+\.(js|css)" | head -1)
     if [ -n "$asset_url" ]; then
-        if ! curl -sSf "https://hwc.ocelot-wahoo.ts.net/slskd/$asset_url" >/dev/null; then
+        if ! curl -sSf "https://hwc-server.ocelot-wahoo.ts.net/slskd/$asset_url" >/dev/null; then
             echo "❌ Asset $asset_url failed to load"
             exit 1
         fi

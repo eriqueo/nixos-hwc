@@ -50,7 +50,7 @@ The `domains/ai` structure will exist but won't be used yet. No action needed un
    ```
 
 6. **Test Open WebUI**:
-   - Access: https://hwc.ocelot-wahoo.ts.net:3443
+   - Access: https://hwc-server.ocelot-wahoo.ts.net:3443
    - Verify it can connect to Ollama
    - Test a chat interaction
 

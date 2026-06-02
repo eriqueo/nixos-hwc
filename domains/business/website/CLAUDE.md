@@ -52,8 +52,8 @@ src/
 - **Template engine**: Nunjucks (`.njk`), markdown rendered through Nunjucks
 
 ### Webhooks (n8n)
-- Contact form: `https://hwc.ocelot-wahoo.ts.net/webhook/new-lead` (workflow #10)
-- Calculator: `https://hwc.ocelot-wahoo.ts.net/webhook/calculator-lead`
+- Contact form: `https://hwc-server.ocelot-wahoo.ts.net/webhook/new-lead` (workflow #10)
+- Calculator: `https://hwc-server.ocelot-wahoo.ts.net/webhook/calculator-lead`
 - Configured in `src/_data/site.json`, referenced via `{{ site.webhookContact }}`
 
 ## NixOS Service

@@ -86,7 +86,7 @@ hwc.services.ntfy = {
 **File:** `/var/lib/hwc/ntfy/etc/server.yml`
 
 ```yaml
-base-url: "https://hwc.ocelot-wahoo.ts.net:2586"
+base-url: "https://hwc-server.ocelot-wahoo.ts.net:2586"
 listen-http: ":80"
 cache-duration: "12h"
 upstream-base-url: "https://ntfy.sh"
@@ -116,7 +116,7 @@ log-level: debug
 ```nix
 hwc.system.services.ntfy = {
   enable = true;
-  serverUrl = "https://hwc.ocelot-wahoo.ts.net:2586";
+  serverUrl = "https://hwc-server.ocelot-wahoo.ts.net:2586";
   defaultTopic = "hwc-server-events";
 };
 ```
@@ -149,7 +149,7 @@ hwc.system.services.ntfy = {
 ## iOS Setup
 
 1. Install ntfy app
-2. Add server: `https://hwc.ocelot-wahoo.ts.net:2586`
+2. Add server: `https://hwc-server.ocelot-wahoo.ts.net:2586`
 3. Subscribe to: hwc-critical, hwc-alerts, hwc-updates
 4. Enable iOS notifications
 5. Connect Tailscale VPN
@@ -180,7 +180,7 @@ sudo podman port ntfy  # Should show 9999
 curl -s http://127.0.0.1:9999/hwc-critical/json?poll=1
 
 # Test external
-curl -k -s https://hwc.ocelot-wahoo.ts.net:2586/hwc-critical/json?poll=1
+curl -k -s https://hwc-server.ocelot-wahoo.ts.net:2586/hwc-critical/json?poll=1
 ```
 
 **Solutions:**

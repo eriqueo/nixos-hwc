@@ -36,7 +36,7 @@ hwc.business.firefly = {
   };
 
   settings = {
-    appUrl = "https://hwc.ocelot-wahoo.ts.net:10443";
+    appUrl = "https://hwc-server.ocelot-wahoo.ts.net:10443";
     timezone = "America/Denver";
     locale = "en_US";
     trustedProxies = "**";          # Safe behind Tailscale
@@ -44,7 +44,7 @@ hwc.business.firefly = {
 
   pico = {
     enable = true;                  # Enabled by default
-    appUrl = "https://hwc.ocelot-wahoo.ts.net:11443";
+    appUrl = "https://hwc-server.ocelot-wahoo.ts.net:11443";
     fireflyUrl = "http://firefly:8080";  # Container-internal
   };
 
@@ -85,8 +85,8 @@ hwc.business.firefly = {
 
 | Service | URL | Internal Port |
 |---------|-----|---------------|
-| Firefly III | `https://hwc.ocelot-wahoo.ts.net:10443` | 8085 |
-| Firefly-Pico | `https://hwc.ocelot-wahoo.ts.net:11443` | 8086 |
+| Firefly III | `https://hwc-server.ocelot-wahoo.ts.net:10443` | 8085 |
+| Firefly-Pico | `https://hwc-server.ocelot-wahoo.ts.net:11443` | 8086 |
 
 Firewall rules auto-open internal ports on `tailscale0` interface.
 

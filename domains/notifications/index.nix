@@ -40,7 +40,7 @@ in
     webhook = {
       baseUrl = lib.mkOption {
         type = lib.types.str;
-        default = "https://hwc.ocelot-wahoo.ts.net:2443/webhook";
+        default = "https://hwc-server.ocelot-wahoo.ts.net:2443/webhook";
         description = "Base URL for n8n webhook endpoints";
       };
 

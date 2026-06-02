@@ -355,7 +355,7 @@ in
         type = lib.types.str;
         default = "";
         description = "n8n webhook URL for Slack-routed warnings";
-        example = "https://hwc.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+        example = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
       };
     };
 

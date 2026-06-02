@@ -3,8 +3,8 @@
 ## Heartwood Craft — All Automation Workflows
 
 **Last updated:** March 25, 2026
-**n8n instance:** `https://hwc.ocelot-wahoo.ts.net` (port 5678, proxied on 2443)
-**Webhook base:** `https://hwc.ocelot-wahoo.ts.net/webhook/`
+**n8n instance:** `https://hwc-server.ocelot-wahoo.ts.net` (port 5678, proxied on 2443)
+**Webhook base:** `https://hwc-server.ocelot-wahoo.ts.net/webhook/`
 
 **Last reconciled with live n8n instance:** March 25, 2026
 
