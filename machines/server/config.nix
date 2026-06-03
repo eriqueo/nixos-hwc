@@ -293,7 +293,7 @@
   # Per-app tokens: each service gets its own gotify application token
   hwc.notifications.send.gotify = {
     enable = true;
-    serverUrl = "https://hwc-server.ocelot-wahoo.ts.net:2586";  # Self-hosted via Tailscale HTTPS
+    serverUrl = config.hwc.networking.hosts.url { server = "main"; port = 2586; };  # Self-hosted via Tailscale HTTPS
     defaultTokenFile = config.hwc.secrets.api."gotify-token-alerts" or null;
     defaultPriority = 7;  # Higher priority for server alerts
     hostTag = true;       # Prepends "[host: hwc-server]" to messages
@@ -589,30 +589,28 @@
   hwc.server.ai.personaDaemon.enable = true;
 
   # Hermes Agent — Nous Research's self-improving AI agent (OpenClaw successor)
-  # Phase 1: install + dashboard route only. Discord gateway off until Eric
-  # creates the bot at https://discord.com/developers/applications and encrypts
-  # the token to domains/secrets/parts/services/hermes-discord-bot-token.age.
   hwc.server.ai.hermes = {
-    # Disabled 2026-06-02: 4 GB VRAM (Quadro P1000) can't host a model
-    # large enough for reliable 29-tool dispatch, and CPU-only LFM2-24B
-    # took ~33 min just to prefill Hermes' standard prompt. Anthropic
-    # also locked third-party API access behind extra-usage billing,
-    # which removed the cheap-cloud option. Re-enable when hardware or
-    # policy changes — module/secrets stay declared for fast revival.
-    enable = false;
+    # Reanimated 2026-06-03 on DeepSeek V4. The local-model path (LFM2-24B on
+    # a 4 GB Quadro P1000) couldn't drive Hermes' 29-tool dispatch — CPU-only
+    # prefill took ~33 min — and Anthropic's third-party billing removed the
+    # cheap-cloud option. DeepSeek's OpenAI-compatible API is a strong, cheap
+    # remote brain that handles tool use, so Hermes runs against it directly.
+    enable = true;
     gateway.enable = true;
     gateway.discord.enable = true;
-    # Local chat brain — LFM2-24B-A2B served by llama-cpu @ 11501.
-    # Anthropic API is gated behind paid extra-usage now (third-party apps
-    # don't draw from the Max plan), so we keep $200/mo on first-party
-    # Claude Code and route Hermes through the local MoE. The claude-code
-    # SKILL still lets Hermes delegate coding tasks to the local `claude`
-    # CLI — that path stays on the subscription.
-    # Canonical Hermes id is "openai-api" (see PROVIDER_REGISTRY in
-    # hermes_cli/auth.py). "openai" alone is rejected as Unknown provider.
-    model.provider  = "openai-api";
-    model.baseUrl   = "http://127.0.0.1:11501/v1";
-    model.modelName = "lfm2-24b";
+
+    # DeepSeek V4 via the generic OpenAI-compatible client. Canonical Hermes
+    # provider id is "openai-api" (see PROVIDER_REGISTRY in hermes_cli/auth.py);
+    # "openai" alone is rejected as Unknown provider. useApiKey flips this from
+    # a local no-auth endpoint to a remote authenticated one, so the real key
+    # (hermes-deepseek-key.age) is injected as OPENAI_API_KEY rather than the
+    # sk-local-noauth placeholder. The claude-code SKILL still lets Hermes
+    # delegate coding tasks to the local `claude` CLI on the Max subscription.
+    model.provider     = "openai-api";
+    model.baseUrl      = "https://api.deepseek.com/v1";
+    model.modelName    = "deepseek-v4-pro";
+    model.useApiKey    = true;
+    model.keyFileSecret = "hermes-deepseek-key";
   };
 
   # Hermes Discord allowlist — without this the gateway logs
@@ -875,7 +873,8 @@
   #============================================================================
   hwc.networking.reverseProxy = {
     enable = lib.mkDefault true;
-    domain = "hwc-server.ocelot-wahoo.ts.net";
+    # domain defaults to this host's own tailnet FQDN (networking.hostName +
+    # hwc.networking.hosts.tailnetSuffix) — no override needed.
   };
 
   #============================================================================
@@ -1023,7 +1022,7 @@
   hwc.business.estimator = {
     enable     = true;
     port       = 13443;
-    webhookUrl = "https://hwc-server.ocelot-wahoo.ts.net/webhook/estimate-push";
+    webhookUrl = config.hwc.networking.hosts.url { server = "main"; path = "/webhook/estimate-push"; };
     apiKeyFile = config.age.secrets.estimator-api-key.path;
   };
 

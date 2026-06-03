@@ -72,10 +72,12 @@ let
     else if cfg.model.provider == "nous" then "https://portal.nousresearch.com/api/v1"
     else "https://openrouter.ai/api/v1";
 
-  # When baseUrl is set, we assume the endpoint is local (Ollama,
-  # llama.cpp, vLLM). These don't authenticate, but the openai SDK
+  # When baseUrl is set WITHOUT useApiKey, we assume the endpoint is local
+  # (Ollama, llama.cpp, vLLM). These don't authenticate, but the openai SDK
   # still sends an Authorization header — so we supply a placeholder.
-  isLocalEndpoint = cfg.model.baseUrl != null;
+  # A remote authenticated OpenAI-compat API (DeepSeek, OpenAI, OpenRouter)
+  # also sets baseUrl but flips useApiKey, so it gets the real key instead.
+  isLocalEndpoint = cfg.model.baseUrl != null && !cfg.model.useApiKey;
 
   # Installer is split: the sentinel only gates the heavy
   # curl|bash download. The config-set commands run unconditionally so
@@ -173,6 +175,17 @@ in
             group = "secrets";
           };
         })
+        # Remote OpenAI-compat API key (DeepSeek/OpenAI/OpenRouter). Backed by
+        # hermes-deepseek-key.age; the logical name follows cfg.model.keyFileSecret
+        # so the gateway/dashboard read it from /run/agenix/<name>.
+        (lib.mkIf cfg.model.useApiKey {
+          "${cfg.model.keyFileSecret}" = {
+            file = ../../../../secrets/parts/services/hermes-deepseek-key.age;
+            mode = "0440";
+            owner = "root";
+            group = "secrets";
+          };
+        })
         (lib.mkIf cfg.gateway.discord.enable {
           "${cfg.gateway.discord.tokenSecret}" = {
             file = ../../../../secrets/parts/services/hermes-discord-bot-token.age;
@@ -259,6 +272,12 @@ in
             set -eu
             DISCORD_BOT_TOKEN="$(cat /run/agenix/${cfg.gateway.discord.tokenSecret})"
             export DISCORD_BOT_TOKEN
+            ${lib.optionalString cfg.model.useApiKey ''
+              # Remote OpenAI-compat key (DeepSeek). $(cat) strips any trailing
+              # newline so the Authorization header stays well-formed.
+              OPENAI_API_KEY="$(cat /run/agenix/${cfg.model.keyFileSecret})"
+              export OPENAI_API_KEY
+            ''}
             exec ${hermesBin} gateway run --replace
           '';
           Restart = "on-failure";
@@ -330,15 +349,28 @@ in
           Type = "simple";
           User = lib.mkForce cfg.user;
           Group = "users";
+          # The dashboard's chat pane talks to the same model as the gateway,
+          # so it needs the remote API key when useApiKey is set.
+          SupplementaryGroups = lib.optionals cfg.model.useApiKey [ "secrets" ];
           StateDirectory = "hwc/hermes";
           StateDirectoryMode = "0750";
           WorkingDirectory = cfg.homeDir;
-          ExecStart = lib.concatStringsSep " " ([
-            hermesBin "dashboard"
-            "--host" "127.0.0.1"
-            "--port" (toString cfg.dashboardPort)
-            "--no-open"
-          ] ++ lib.optional cfg.dashboard.tui "--tui");
+          # Wrapper so the remote OpenAI-compat key (DeepSeek) can be sourced
+          # from /run/agenix into OPENAI_API_KEY before the dashboard starts.
+          # $(cat) strips any trailing newline.
+          ExecStart = pkgs.writeShellScript "hermes-dashboard-start" ''
+            set -eu
+            ${lib.optionalString cfg.model.useApiKey ''
+              OPENAI_API_KEY="$(cat /run/agenix/${cfg.model.keyFileSecret})"
+              export OPENAI_API_KEY
+            ''}
+            exec ${lib.concatStringsSep " " ([
+              hermesBin "dashboard"
+              "--host" "127.0.0.1"
+              "--port" (toString cfg.dashboardPort)
+              "--no-open"
+            ] ++ lib.optional cfg.dashboard.tui "--tui")}
+          '';
           # First start may take ~60s while it npm-installs and builds the
           # SvelteKit dashboard dist. Don't let systemd time it out.
           TimeoutStartSec = "5min";
@@ -370,6 +402,24 @@ in
         {
           assertion = cfg.enable -> cfg.user != "root";
           message = "Hermes Agent must run as a non-root user (default: eric).";
+        }
+        {
+          # Remote API key .age file must exist on disk when useApiKey is set
+          assertion = !cfg.model.useApiKey
+            || builtins.pathExists ../../../../secrets/parts/services/hermes-deepseek-key.age;
+          message = ''
+            hwc.server.ai.hermes.model.useApiKey = true but
+            domains/secrets/parts/services/hermes-deepseek-key.age is missing.
+
+            Encrypt your DeepSeek API key (see secrets.nix recipient rule):
+
+              read -rs DEEPSEEK_KEY && printf '%s' "$DEEPSEEK_KEY" \
+                | age -R <(cat machines/hwc-server/AGE_PUBLIC_KEY.txt \
+                              machines/hwc-xps/AGE_PUBLIC_KEY.txt \
+                              machines/hwc-laptop/AGE_PUBLIC_KEY.txt) \
+                -o domains/secrets/parts/services/hermes-deepseek-key.age \
+              && unset DEEPSEEK_KEY
+          '';
         }
         {
           # Discord bot token .age file must exist on disk when gateway is enabled

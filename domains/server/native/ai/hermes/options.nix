@@ -95,6 +95,26 @@ in
         '';
       };
 
+      useApiKey = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Whether this endpoint is a REMOTE OpenAI-compatible API that
+          authenticates with a real key (DeepSeek, OpenAI, OpenRouter), as
+          opposed to a LOCAL no-auth endpoint (llama.cpp/Ollama/vLLM).
+
+          When true: the `keyFileSecret` agenix secret is declared and its
+          contents are injected as OPENAI_API_KEY into the gateway and
+          dashboard services at start. When false with a `baseUrl` set, the
+          endpoint is treated as local and gets the `sk-local-noauth`
+          placeholder instead (the openai SDK still emits an Authorization
+          header even when the local server ignores it).
+
+          Has no effect for `provider = "anthropic"`, which uses the symlinked
+          Claude Code credentials path rather than an API key file.
+        '';
+      };
+
       baseUrl = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
