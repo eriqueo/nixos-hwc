@@ -588,37 +588,20 @@
   # RAG over /mnt/vaults/brain arrives in Commit 3. Caddy + MCP in Commit 4.
   hwc.server.ai.personaDaemon.enable = true;
 
-  # Hermes Agent — Nous Research's self-improving AI agent (OpenClaw successor)
+  # Hermes Agent — official nousresearch/hermes-agent Podman container.
+  # Re-architected 2026-06-03 from a bespoke native multi-unit deployment to
+  # the supported container: gateway + dashboard supervised together by s6 in
+  # one writable /opt/data, so the in-app controls (chat tab, restart) work as
+  # designed. Model is DeepSeek V4 via OPENAI_BASE_URL/HERMES_MODEL; the API
+  # key + Discord token are injected from agenix at container start.
   hwc.server.ai.hermes = {
-    # Reanimated 2026-06-03 on DeepSeek V4. The local-model path (LFM2-24B on
-    # a 4 GB Quadro P1000) couldn't drive Hermes' 29-tool dispatch — CPU-only
-    # prefill took ~33 min — and Anthropic's third-party billing removed the
-    # cheap-cloud option. DeepSeek's OpenAI-compatible API is a strong, cheap
-    # remote brain that handles tool use, so Hermes runs against it directly.
     enable = true;
     gateway.enable = true;
     gateway.discord.enable = true;
-
-    # DeepSeek V4 via the generic OpenAI-compatible client. Canonical Hermes
-    # provider id is "openai-api" (see PROVIDER_REGISTRY in hermes_cli/auth.py);
-    # "openai" alone is rejected as Unknown provider. useApiKey flips this from
-    # a local no-auth endpoint to a remote authenticated one, so the real key
-    # (hermes-deepseek-key.age) is injected as OPENAI_API_KEY rather than the
-    # sk-local-noauth placeholder. The claude-code SKILL still lets Hermes
-    # delegate coding tasks to the local `claude` CLI on the Max subscription.
-    model.provider     = "openai-api";
-    model.baseUrl      = "https://api.deepseek.com/v1";
-    model.modelName    = "deepseek-v4-pro";
-    model.useApiKey    = true;
-    model.keyFileSecret = "hermes-deepseek-key";
+    gateway.discord.allowedUsers = "1501391621521150075";  # Eric's Discord snowflake
+    model.baseUrl   = "https://api.deepseek.com/v1";
+    model.modelName = "deepseek-v4-pro";
   };
-
-  # Hermes Discord allowlist — without this the gateway logs
-  # "No user allowlists configured. All unauthorized users will be denied."
-  # User ID is Eric's Discord snowflake (User Settings → Advanced →
-  # Developer Mode → right-click name → Copy User ID).
-  systemd.services.hermes-gateway.environment.DISCORD_ALLOWED_USERS =
-    "1501391621521150075";
 
   # CouchDB for Obsidian LiveSync
   hwc.data.couchdb = {
