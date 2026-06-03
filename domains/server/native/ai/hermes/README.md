@@ -47,11 +47,26 @@ layout lands inside that state dir cleanly — no symlink trickery needed.
 | `/var/lib/hwc/hermes/.local/bin/hermes` | Upstream CLI binary |
 | `/var/lib/hwc/hermes/.hermes/.installed` | Sentinel — gates the install oneshot |
 
+## Model provider
+
+Hermes drives **DeepSeek V4** (`deepseek-v4-pro`) via the generic `openai-api`
+provider against `https://api.deepseek.com/v1`. Because that's a *remote
+authenticated* OpenAI-compatible endpoint (not a local llama.cpp/Ollama box),
+`model.useApiKey = true` is set: this declares the `hermes-deepseek-key` secret
+and injects its contents as `OPENAI_API_KEY` into the gateway and dashboard
+ExecStart wrappers, instead of the `sk-local-noauth` placeholder used for local
+endpoints. The `claude-code` skill still delegates coding tasks to the local
+`claude` CLI on the Max subscription.
+
 ## Secrets
 
+- **`hermes-deepseek-key`** — DeepSeek V4 API key, backed by
+  `hermes-deepseek-key.age`. Declared only when `model.useApiKey = true`. The
+  VALIDATION block fails the build if the .age file is missing.
 - **`hermes-anthropic-key`** — reuses existing `nanoclaw-anthropic-key.age` file
-  via a re-named logical secret. No re-encryption. Mirrors lead-scout's reuse
-  of `datax-discord-webhook.age`.
+  via a re-named logical secret. No re-encryption. Only declared when
+  `model.provider = "anthropic"`. Mirrors lead-scout's reuse of
+  `datax-discord-webhook.age`.
 - **`hermes-discord-bot-token`** — must be created before flipping
   `gateway.discord.enable = true`. The module's VALIDATION block fails the
   build if the .age file is missing.
@@ -75,6 +90,15 @@ hermes-deploy upgrade                    # hermes update + restart gateway
 
 ## Changelog
 
+- **2026-06-03** — Reanimated on DeepSeek V4. Added `model.useApiKey` option to
+  distinguish a remote authenticated OpenAI-compat endpoint from a local no-auth
+  one: when set, the `keyFileSecret` (`hermes-deepseek-key`) is declared and
+  injected as `OPENAI_API_KEY` into both the gateway and dashboard ExecStart
+  wrappers (dashboard gains `SupplementaryGroups = [ "secrets" ]`). Server config
+  flips `enable = true`, `provider = "openai-api"`,
+  `baseUrl = https://api.deepseek.com/v1`, `modelName = "deepseek-v4-pro"`.
+  Replaces the disabled local LFM2-24B path — a cloud model strong enough for
+  29-tool dispatch, at low cost.
 - **2026-05-29** — Initial Phase 1 scaffold. Native systemd, install + gateway
   units, TypeScript hermes-deploy CLI (hexagonal-lite, Node 22
   --experimental-strip-types). `gateway.discord.enable` defaults `false`
