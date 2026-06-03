@@ -2,7 +2,11 @@
 /**
  * brain-mcp/parts/server.ts
  *
- * MCP server exposing the brain vault as 6 tools via Streamable HTTP transport.
+ * MCP server exposing the brain vault as filesystem + refactoring tools via
+ * Streamable HTTP transport. Read/capture: read_note, write_note, list_notes,
+ * search_notes, lint_wiki, append_to_inbox, inbox_capture. Refactoring (git-
+ * checkpointed): delete_note, move_note, replace_in_notes, update_frontmatter,
+ * commit_vault.
  * Protocol: JSON-RPC 2.0 over HTTP POST (MCP spec 2024-11-05).
  * Auth: Bearer token read from BRAIN_MCP_KEY_FILE at startup.
  */
@@ -31,6 +35,167 @@ function safePath(rel: string): string {
     throw new Error(`Path traversal attempt blocked: ${rel}`);
   }
   return normalized;
+}
+
+// ── Walk skip set (shared by all vault scans) ─────────────────────────────────
+// Excludes Syncthing version-history (.stversions), trash, git internals, and
+// machine-local tooling dirs so link scans/rewrites never touch non-canonical
+// copies (which would corrupt rewrites and produce false basename collisions).
+const WALK_SKIP = [
+  /\/\.obsidian\//, /\/\.git\//, /\/\.trash\//,
+  /\/\.stversions\//, /\/\.brain\//, /\/\.claude\//,
+];
+
+function noteBasename(p: string): string {
+  return p.replace(/.*\//, "").replace(/\.md$/, "");
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// ── Wikilink parsing/rewriting (shared by delete_note + move_note) ─────────────
+// One definition of "what counts as a link target" so the two tools can't drift.
+// Target = substring before the first '#' or '|' inside [[ ... ]].
+// Handles [[x]], [[x|alias]], [[x#heading]], [[x#^block]], [[x#h|alias]], ![[x]].
+type WikiLink = { full: string; target: string };
+
+function parseWikilinks(text: string): WikiLink[] {
+  const out: WikiLink[] = [];
+  for (const m of text.matchAll(/\[\[([^\[\]]+?)\]\]/g)) {
+    const target = m[1].split(/[#|]/)[0].trim();
+    out.push({ full: m[0], target });
+  }
+  return out;
+}
+
+// Rewrite every [[oldBase...]] → [[newBase...]], preserving #heading/^block/|alias
+// tails. Exact-token match (target === oldBase) so [[api]] never touches [[api-v2]].
+function rewriteLinks(content: string, oldBase: string, newBase: string): { content: string; count: number } {
+  let count = 0;
+  const out = content.replace(/\[\[([^\[\]]+?)\]\]/g, (full, inner: string) => {
+    const sep = inner.search(/[#|]/);
+    const target = (sep === -1 ? inner : inner.slice(0, sep)).trim();
+    const rest = sep === -1 ? "" : inner.slice(sep);
+    if (target === oldBase) {
+      count++;
+      return `[[${newBase}${rest}]]`;
+    }
+    return full;
+  });
+  return { content: out, count };
+}
+
+// ── Vault scans ───────────────────────────────────────────────────────────────
+type LinkHit = { file: string; line: number; text: string };
+
+// Inbound [[basename]] links across the vault (used by delete_note's refusal
+// check; move_note rewrites via the same parser so the two cannot disagree).
+async function scanInboundLinks(basename: string, excludeFull?: string): Promise<LinkHit[]> {
+  const hits: LinkHit[] = [];
+  for await (const entry of walk(VAULT_ROOT, { exts: [".md"], skip: WALK_SKIP, includeDirs: false })) {
+    if (excludeFull && entry.path === excludeFull) continue;
+    const content = await Deno.readTextFile(entry.path);
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      for (const link of parseWikilinks(lines[i])) {
+        if (link.target === basename) {
+          hits.push({ file: relative(VAULT_ROOT, entry.path), line: i + 1, text: lines[i].trim() });
+          break;
+        }
+      }
+    }
+  }
+  return hits;
+}
+
+// First note (other than excludeFull) whose basename equals `basename`, or null.
+async function findBasenameOwner(basename: string, excludeFull?: string): Promise<string | null> {
+  for await (const entry of walk(VAULT_ROOT, { exts: [".md"], skip: WALK_SKIP, includeDirs: false })) {
+    if (excludeFull && entry.path === excludeFull) continue;
+    if (noteBasename(entry.path) === basename) return relative(VAULT_ROOT, entry.path);
+  }
+  return null;
+}
+
+// Raw vault-relative path-string mentions of `relPath` (reported, never edited —
+// historical/superseded notes intentionally preserve old paths).
+async function scanPathMentions(relPath: string, excludeFull?: string): Promise<LinkHit[]> {
+  const hits: LinkHit[] = [];
+  for await (const entry of walk(VAULT_ROOT, { exts: [".md"], skip: WALK_SKIP, includeDirs: false })) {
+    if (excludeFull && entry.path === excludeFull) continue;
+    const content = await Deno.readTextFile(entry.path);
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes(relPath)) {
+        hits.push({ file: relative(VAULT_ROOT, entry.path), line: i + 1, text: lines[i].trim() });
+      }
+    }
+  }
+  return hits;
+}
+
+// ── Frontmatter ───────────────────────────────────────────────────────────────
+// Set/replace a single key in the leading --- block without touching the body.
+function setFrontmatterKey(content: string, key: string, value: string): string {
+  const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  const line = `${key}: ${value}`;
+  if (!fm) return `---\n${line}\n---\n\n${content}`;
+  const block = fm[1];
+  const keyRe = new RegExp(`^${escapeRegExp(key)}:.*$`, "m");
+  const newBlock = keyRe.test(block) ? block.replace(keyRe, line) : `${block}\n${line}`;
+  return content.replace(fm[0], `---\n${newBlock}\n---\n`);
+}
+
+// ── Git safety substrate ──────────────────────────────────────────────────────
+// Every mutating tool brackets its change with git commits so any refactor is
+// reversible. Tool commits are prefixed "brain-mcp:" so they stay greppable and
+// distinct from human/Syncthing commits. Commits are LOCAL ONLY — never pushed.
+const COMMIT_PREFIX = "brain-mcp";
+
+async function git(gitArgs: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
+  const cmd = new Deno.Command("git", { args: gitArgs, cwd: VAULT_ROOT, stdout: "piped", stderr: "piped" });
+  const { code, stdout, stderr } = await cmd.output();
+  return { code, stdout: new TextDecoder().decode(stdout), stderr: new TextDecoder().decode(stderr) };
+}
+
+async function ensureGitRepo(): Promise<void> {
+  if (await exists(join(VAULT_ROOT, ".git"))) return;
+  await git(["init", "-b", "main"]);
+  await git(["config", "user.name", "brain-mcp"]);
+  await git(["config", "user.email", "brain-mcp@heartwoodcraft.me"]);
+}
+
+// Commit any pending vault state under a prefixed message. No-op if tree is clean.
+async function gitCheckpoint(label: string): Promise<{ committed: boolean; hash: string | null }> {
+  await ensureGitRepo();
+  await git(["add", "-A"]);
+  const staged = await git(["diff", "--cached", "--quiet"]);
+  if (staged.code === 0) return { committed: false, hash: null }; // nothing staged
+  const res = await git(["commit", "-m", `${COMMIT_PREFIX}: ${label}`]);
+  if (res.code !== 0) throw new Error(`git commit failed: ${res.stderr || res.stdout}`);
+  const hash = (await git(["rev-parse", "--short", "HEAD"])).stdout.trim();
+  return { committed: true, hash };
+}
+
+// Atomic mutation bracket: snapshot pre-state, run fn, commit the result as one
+// commit. On ANY error, hard-reset to the pre-state snapshot so a partial
+// mutation (e.g. file moved but links half-rewritten) is fully rolled back —
+// the operation is all-or-nothing and a single `git revert` undoes a success.
+async function withCheckpoint<T>(
+  label: string,
+  fn: () => Promise<T>,
+): Promise<{ result: T; commit: { committed: boolean; hash: string | null } }> {
+  await gitCheckpoint(`checkpoint before ${label}`);
+  try {
+    const result = await fn();
+    const commit = await gitCheckpoint(label);
+    return { result, commit };
+  } catch (e) {
+    await git(["reset", "--hard", "HEAD"]);
+    await git(["clean", "-fd"]);
+    throw e;
+  }
 }
 
 // ── MCP tool definitions ─────────────────────────────────────────────────────
@@ -112,6 +277,69 @@ const TOOL_DEFS = [
         tags: { type: "array", items: { type: "string" }, description: "Optional tags to add to frontmatter" }
       },
       required: ["content", "source"]
+    }
+  },
+  {
+    name: "delete_note",
+    description: "Hard-delete a note from the vault. Refuses if other notes link to it ([[basename]]) unless force=true, to avoid silently creating dangling links. Commits a git checkpoint before deleting (reversible via git).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Path relative to vault root (e.g. wiki/datax/foo.md)" },
+        force: { type: "boolean", description: "Delete even if inbound [[wikilinks]] exist (default false)" }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "move_note",
+    description: "Move/rename a note within the vault. When update_links is true (default), rewrites every inbound [[wikilink]] form ([[x]], [[x|alias]], [[x#heading]], [[x#^block]]) across the vault to the new basename. Refuses if the destination basename already exists elsewhere (Obsidian resolves links by basename). Reports — but does not edit — raw path-string mentions of the old path. The entire operation is one atomic git commit.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "Current path relative to vault root" },
+        to: { type: "string", description: "Destination path relative to vault root" },
+        update_links: { type: "boolean", description: "Rewrite inbound wikilinks to the new basename (default true)" }
+      },
+      required: ["from", "to"]
+    }
+  },
+  {
+    name: "replace_in_notes",
+    description: "Bulk find/replace across vault notes, optionally scoped to a folder. dry_run (default true) returns the would-change matches with file+line context and changes nothing; dry_run=false applies and commits a git checkpoint. Set regex=true to treat pattern as a JS regular expression (replacement may use $1 backrefs).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        pattern: { type: "string", description: "Text or regex to find" },
+        replacement: { type: "string", description: "Replacement text" },
+        folder: { type: "string", description: "Optional subfolder to scope the operation" },
+        regex: { type: "boolean", description: "Treat pattern as a regular expression (default false = literal)" },
+        dry_run: { type: "boolean", description: "Preview only; change nothing (default true)" }
+      },
+      required: ["pattern", "replacement"]
+    }
+  },
+  {
+    name: "update_frontmatter",
+    description: "Set or replace a single YAML frontmatter field on a note without rewriting the body. Adds a frontmatter block if none exists. Commits a git checkpoint.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Path relative to vault root" },
+        key: { type: "string", description: "Frontmatter key to set (e.g. status, tags)" },
+        value: { type: "string", description: "Value to assign (written verbatim after 'key: ')" }
+      },
+      required: ["path", "key", "value"]
+    }
+  },
+  {
+    name: "commit_vault",
+    description: "Commit the current vault state as an explicit git checkpoint (prefixed 'brain-mcp:'). No-op if the working tree is clean. Use for manual rollback points mid-refactor.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        message: { type: "string", description: "Commit message (prefixed with 'brain-mcp:')" }
+      }
     }
   }
 ];
@@ -288,6 +516,147 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
           text: `Saved: ${rel} (${full_content.length} bytes)`,
         }],
       };
+    }
+
+    case "delete_note": {
+      const path = String(args.path);
+      const force = args.force === true;
+      const full = safePath(path);
+      if (!await exists(full)) throw new Error(`Not found: ${path}`);
+      if ((await Deno.stat(full)).isDirectory) {
+        throw new Error(`Refusing to delete a directory: ${path}`);
+      }
+      const base = noteBasename(full);
+      const inbound = await scanInboundLinks(base, full);
+      if (inbound.length > 0 && !force) {
+        const list = inbound.map((h) => `- ${h.file}:${h.line}  ${h.text}`).join("\n");
+        return { content: [{ type: "text", text:
+          `Refused: ${inbound.length} inbound [[${base}]] link(s) would dangle.\nPass force=true to delete anyway.\n\n${list}` }] };
+      }
+      const { commit } = await withCheckpoint(`delete_note ${path}`, async () => {
+        await Deno.remove(full);
+      });
+      const warn = inbound.length > 0
+        ? `\nWARNING: ${inbound.length} now-dangling [[${base}]] link(s) remain (forced).` : "";
+      return { content: [{ type: "text", text:
+        `Deleted: ${path}${commit.hash ? ` (commit ${commit.hash})` : ""}${warn}` }] };
+    }
+
+    case "move_note": {
+      const from = String(args.from);
+      const to = String(args.to);
+      const updateLinks = args.update_links !== false;
+      const fromFull = safePath(from);
+      const toFull = safePath(to);
+      if (!await exists(fromFull)) throw new Error(`Source not found: ${from}`);
+      if (await exists(toFull)) throw new Error(`Destination already exists: ${to}`);
+      const oldBase = noteBasename(fromFull);
+      const newBase = noteBasename(toFull);
+      if (newBase !== oldBase) {
+        const owner = await findBasenameOwner(newBase, fromFull);
+        if (owner) {
+          throw new Error(
+            `Basename collision: "${newBase}" already exists at ${owner}. ` +
+            `Obsidian resolves links by basename — refusing to create a duplicate.`,
+          );
+        }
+      }
+      const rewritten: string[] = [];
+      const { commit } = await withCheckpoint(`move_note ${from} -> ${to}`, async () => {
+        await Deno.mkdir(dirname(toFull), { recursive: true });
+        await Deno.rename(fromFull, toFull);
+        if (updateLinks && newBase !== oldBase) {
+          for await (const entry of walk(VAULT_ROOT, { exts: [".md"], skip: WALK_SKIP, includeDirs: false })) {
+            const content = await Deno.readTextFile(entry.path);
+            const { content: out, count } = rewriteLinks(content, oldBase, newBase);
+            if (count > 0) {
+              await Deno.writeTextFile(entry.path, out);
+              rewritten.push(`${relative(VAULT_ROOT, entry.path)} (${count})`);
+            }
+          }
+        }
+      });
+      const mentions = await scanPathMentions(from, toFull);
+      const parts = [`Moved: ${from} → ${to}${commit.hash ? ` (commit ${commit.hash})` : ""}`];
+      parts.push(`\nLinks rewritten in ${rewritten.length} file(s):`);
+      parts.push(rewritten.length ? rewritten.map((r) => `- ${r}`).join("\n") : "- (none)");
+      if (mentions.length) {
+        parts.push(`\nRaw path-string mentions of "${from}" (NOT edited — review manually):`);
+        parts.push(mentions.map((m) => `- ${m.file}:${m.line}  ${m.text}`).join("\n"));
+      }
+      return { content: [{ type: "text", text: parts.join("\n") }] };
+    }
+
+    case "replace_in_notes": {
+      const pattern = String(args.pattern);
+      const replacement = String(args.replacement ?? "");
+      const folder = args.folder ? String(args.folder) : undefined;
+      const useRegex = args.regex === true;
+      const dryRun = args.dry_run !== false;
+      const dir = folder ? safePath(folder) : VAULT_ROOT;
+      const buildRe = () => new RegExp(useRegex ? pattern : escapeRegExp(pattern), "g");
+
+      type FileChange = { file: string; full: string; hits: Array<{ line: number; before: string; after: string }> };
+      const changes: FileChange[] = [];
+      for await (const entry of walk(dir, { exts: [".md"], skip: WALK_SKIP, includeDirs: false })) {
+        const content = await Deno.readTextFile(entry.path);
+        const lines = content.split("\n");
+        const hits: Array<{ line: number; before: string; after: string }> = [];
+        for (let i = 0; i < lines.length; i++) {
+          if (buildRe().test(lines[i])) {
+            hits.push({ line: i + 1, before: lines[i], after: lines[i].replace(buildRe(), replacement) });
+          }
+        }
+        if (hits.length) changes.push({ file: relative(VAULT_ROOT, entry.path), full: entry.path, hits });
+      }
+
+      const totalHits = changes.reduce((s, c) => s + c.hits.length, 0);
+      const header = `${dryRun ? "[DRY RUN] " : ""}${useRegex ? `/${pattern}/` : JSON.stringify(pattern)}` +
+        ` → ${JSON.stringify(replacement)}${folder ? ` in ${folder}/` : ""}\n` +
+        `${totalHits} match(es) across ${changes.length} file(s)`;
+
+      if (totalHits === 0) return { content: [{ type: "text", text: `${header}\n(no matches)` }] };
+
+      const preview = changes.map((c) =>
+        `\n## ${c.file}\n` + c.hits.map((h) => `  ${h.line}: - ${h.before}\n  ${h.line}: + ${h.after}`).join("\n")
+      ).join("\n");
+
+      if (dryRun) {
+        return { content: [{ type: "text", text:
+          `${header}\nRun again with dry_run=false to apply.\n${preview}` }] };
+      }
+
+      const label = `replace_in_notes ${useRegex ? `/${pattern}/` : JSON.stringify(pattern)}` +
+        ` -> ${JSON.stringify(replacement)}${folder ? ` in ${folder}` : ""}`;
+      const { commit } = await withCheckpoint(label, async () => {
+        for (const c of changes) {
+          const content = await Deno.readTextFile(c.full);
+          await Deno.writeTextFile(c.full, content.replace(buildRe(), replacement));
+        }
+      });
+      return { content: [{ type: "text", text:
+        `${header}${commit.hash ? ` (commit ${commit.hash})` : ""}\nApplied.\n${preview}` }] };
+    }
+
+    case "update_frontmatter": {
+      const path = String(args.path);
+      const key = String(args.key);
+      const value = String(args.value);
+      const full = safePath(path);
+      if (!await exists(full)) throw new Error(`Not found: ${path}`);
+      const { commit } = await withCheckpoint(`update_frontmatter ${path} ${key}=${value}`, async () => {
+        const content = await Deno.readTextFile(full);
+        await Deno.writeTextFile(full, setFrontmatterKey(content, key, value));
+      });
+      return { content: [{ type: "text", text:
+        `Set ${key}: ${value} in ${path}${commit.hash ? ` (commit ${commit.hash})` : ""}` }] };
+    }
+
+    case "commit_vault": {
+      const message = String(args.message ?? "manual checkpoint");
+      const cp = await gitCheckpoint(message);
+      return { content: [{ type: "text", text:
+        cp.committed ? `Committed ${cp.hash}: ${COMMIT_PREFIX}: ${message}` : "Nothing to commit (working tree clean)." }] };
     }
 
     default:
