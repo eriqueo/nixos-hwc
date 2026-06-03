@@ -1,124 +1,56 @@
 # domains/server/native/ai/hermes/index.nix
 #
-# Hermes Agent — native systemd deployment of Nous Research's self-improving
-# AI agent (https://github.com/NousResearch/hermes-agent).
+# Hermes Agent — official `nousresearch/hermes-agent` Podman container.
 #
-# - Two systemd units:
-#     hermes-install.service  (oneshot, sentinel-gated) — runs the upstream
-#         curl|bash installer once into $HOME and configures the model provider.
-#     hermes-gateway.service  (long-lived) — runs `hermes gateway --discord`
-#         when gateway.enable + gateway.discord.enable are both true.
+# One container, `gateway run`, with HERMES_DASHBOARD=1 so s6-overlay supervises
+# the gateway AND the dashboard together in one writable $HOME (/opt/data). The
+# model (DeepSeek V4) and Discord are wired purely through environment:
+#   - OPENAI_BASE_URL / HERMES_MODEL  (non-secret) → container `environment`
+#   - OPENAI_API_KEY / DISCORD_BOT_TOKEN (secret)  → runtime-generated env file
+#     composed from /run/agenix in the <name>-setup preStart (never the Nix store)
 #
-# - $HOME is set to homeDir (default /var/lib/hwc/hermes) via systemd
-#   StateDirectory so the installer's hardcoded $HOME/.hermes layout lands
-#   inside a state dir owned by the service user.
-#
-# - The `hermes-deploy` CLI (TypeScript, hexagonal — see parts/bootstrap/) is
-#   the human entry point for manual install/upgrade/status/doctor.
+# Secrets pattern mirrors domains/networking/pihole (mkInfraContainer +
+# preStartScript + preStartDeps = [ "agenix.service" ]).
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.server.ai.hermes;
 
-  hermesBin = "${cfg.homeDir}/.local/bin/hermes";
-  installSentinel = "${cfg.homeDir}/.hermes/.installed";
+  infra = import ../../../../lib/mkInfraContainer.nix { inherit lib pkgs; };
 
-  # TypeScript deploy CLI — runs directly via Node 22's --experimental-strip-types.
-  # No npm install, no build step: source lives in parts/bootstrap/, runs in-place.
-  #
-  # Use sourceFilesBySuffices so cli.ts, core.ts, adapters.ts, types.ts land in
-  # the SAME Nix store path. Individual `${./parts/bootstrap/cli.ts}` references
-  # would put each .ts file in its own store path, breaking the relative imports
-  # between cli.ts → ./adapters.ts → ./types.ts.
-  hermes-bootstrap-src = lib.sources.sourceFilesBySuffices ./parts/bootstrap [ ".ts" ];
+  envFile = "${cfg.dataDir}/.env";
 
-  # `hermes` shim on system PATH. The upstream binary lives at
-  # ${cfg.homeDir}/.local/bin/hermes; the installer normally adds that dir to
-  # the user's PATH via ~/.zshrc, but our $HOME is /var/lib/hwc/hermes so those
-  # edits land in the wrong shell rc. This shim is the explicit, declarative
-  # bridge: any user with /run/current-system/sw/bin in PATH gets `hermes`.
-  hermes-shim = pkgs.writeShellApplication {
-    name = "hermes";
-    runtimeInputs = [ ];
-    text = ''
-      export HOME="${cfg.homeDir}"
-      exec ${hermesBin} "$@"
-    '';
+  # Non-secret environment. Secrets are added at runtime via envFile.
+  containerEnv = {
+    HERMES_DASHBOARD = "1";
+    HERMES_DASHBOARD_HOST = "0.0.0.0";
+    HERMES_DASHBOARD_PORT = "9119";
+    PUID = "1000";
+    PGID = "100";
+    HERMES_UID = "1000";
+    HERMES_GID = "100";
+    TZ = "America/Denver";
+    OPENAI_BASE_URL = cfg.model.baseUrl;
+    HERMES_MODEL = cfg.model.modelName;
+  }
+  // lib.optionalAttrs cfg.dashboard.tui { HERMES_DASHBOARD_TUI = "1"; }
+  // lib.optionalAttrs cfg.dashboard.insecure { HERMES_DASHBOARD_INSECURE = "1"; }
+  // lib.optionalAttrs (cfg.gateway.discord.enable && cfg.gateway.discord.allowedUsers != "") {
+    DISCORD_ALLOWED_USERS = cfg.gateway.discord.allowedUsers;
   };
 
-  hermes-deploy = pkgs.writeShellApplication {
-    name = "hermes-deploy";
-    runtimeInputs = [ pkgs.nodejs_22 pkgs.systemd ];
-    text = ''
-      export HERMES_HOME_DIR="${cfg.homeDir}"
-      export HERMES_BIN="${hermesBin}"
-      export HERMES_INSTALL_SENTINEL="${installSentinel}"
-      export HERMES_MODEL_PROVIDER="${cfg.model.provider}"
-      export HERMES_MODEL_KEY_FILE="/run/agenix/${cfg.model.keyFileSecret}"
-      exec ${pkgs.nodejs_22}/bin/node \
-        --experimental-strip-types \
-        --no-warnings \
-        ${hermes-bootstrap-src}/cli.ts "$@"
-    '';
-  };
-
-  # Effective base URL — explicit override wins; otherwise pick the
-  # provider's canonical endpoint. Used both to set model.base_url at
-  # install/reconfig time and to detect "local endpoint" mode below.
-  effectiveBaseUrl =
-    if cfg.model.baseUrl != null then cfg.model.baseUrl
-    else if cfg.model.provider == "anthropic" then "https://api.anthropic.com"
-    else if cfg.model.provider == "openai-api" then "https://api.openai.com/v1"
-    else if cfg.model.provider == "lmstudio" then "http://127.0.0.1:1234/v1"
-    else if cfg.model.provider == "nous" then "https://portal.nousresearch.com/api/v1"
-    else "https://openrouter.ai/api/v1";
-
-  # When baseUrl is set WITHOUT useApiKey, we assume the endpoint is local
-  # (Ollama, llama.cpp, vLLM). These don't authenticate, but the openai SDK
-  # still sends an Authorization header — so we supply a placeholder.
-  # A remote authenticated OpenAI-compat API (DeepSeek, OpenAI, OpenRouter)
-  # also sets baseUrl but flips useApiKey, so it gets the real key instead.
-  isLocalEndpoint = cfg.model.baseUrl != null && !cfg.model.useApiKey;
-
-  # Installer is split: the sentinel only gates the heavy
-  # curl|bash download. The config-set commands run unconditionally so
-  # provider/baseUrl/modelName changes in the NixOS config take effect
-  # on the next rebuild without needing to delete the sentinel.
-  hermes-installer = pkgs.writeShellApplication {
-    name = "hermes-installer";
-    runtimeInputs = [ pkgs.curl pkgs.bash pkgs.coreutils pkgs.gnused ];
-    text = ''
-      set -euo pipefail
-
-      export HOME="${cfg.homeDir}"
-      mkdir -p "$HOME/.hermes" "$HOME/.local/bin"
-
-      if [ ! -f "${installSentinel}" ]; then
-        echo "[hermes-install] running upstream installer"
-        # --skip-setup: skip the interactive `hermes setup` wizard
-        # --skip-browser: skip Playwright/Chromium (P1000 GPU + headless box)
-        curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \
-          | bash -s -- --skip-setup --skip-browser
-        touch "${installSentinel}"
-        echo "[hermes-install] upstream installer done — sentinel written"
-      else
-        echo "[hermes-install] sentinel present — skipping upstream installer"
-      fi
-
-      echo "[hermes-install] applying model config (provider=${cfg.model.provider} base_url=${effectiveBaseUrl})"
-      "${hermesBin}" config set model.provider "${cfg.model.provider}" || true
-      "${hermesBin}" config set model.base_url "${effectiveBaseUrl}" || true
-      ${lib.optionalString (cfg.model.modelName != null) ''
-        "${hermesBin}" config set model.default "${cfg.model.modelName}" || true
+  # Compose the secret env file from agenix-decrypted secrets. $(cat) strips any
+  # trailing newline so the values stay header-clean.
+  preStartScript = ''
+    mkdir -p ${cfg.dataDir}
+    umask 077
+    {
+      echo "OPENAI_API_KEY=$(cat /run/agenix/${cfg.model.keyFileSecret})"
+      ${lib.optionalString cfg.gateway.discord.enable ''
+        echo "DISCORD_BOT_TOKEN=$(cat /run/agenix/${cfg.gateway.discord.tokenSecret})"
       ''}
-      # For anthropic provider we DON'T set model.api_key_file: the live
-      # auth path is the symlinked Claude Code credentials JSON (see
-      # tmpfiles below) which Hermes auto-detects with Bearer auth + token
-      # refresh. Setting api_key_file would short-circuit to x-api-key mode.
-      # Clear any stale ANTHROPIC_* values that would override the symlink.
-      "${hermesBin}" config set ANTHROPIC_API_KEY "" || true
-      "${hermesBin}" config set ANTHROPIC_TOKEN "" || true
-    '';
-  };
+    } > ${envFile}
+    chmod 600 ${envFile}
+  '';
 in
 {
   #============================================================================
@@ -129,63 +61,44 @@ in
   #============================================================================
   # IMPLEMENTATION
   #============================================================================
-  config = lib.mkMerge [
+  config = lib.mkIf cfg.enable (lib.mkMerge [
 
-    # ── Common (when enabled) ──────────────────────────────────────────────
-    (lib.mkIf cfg.enable {
-      # hermes (shim) + hermes-deploy on PATH for manual ops
-      environment.systemPackages = [ hermes-shim hermes-deploy ];
+    # ── The Hermes container (gateway + supervised dashboard) ───────────────
+    (infra.mkInfraContainer {
+      name = "hermes";
+      image = cfg.image;
+      networkMode = "media-network";
 
-      # Symlink Eric's real Claude Code credentials into Hermes's $HOME so the
-      # Anthropic adapter's auto-detector finds them. Hermes reads
-      # `${HOME}/.claude/.credentials.json` (Path.home() respects HOME env),
-      # extracts claudeAiOauth.{accessToken,refreshToken,expiresAt}, and uses
-      # Bearer auth. Refreshes write back through the symlink so the personal
-      # `claude` CLI sees the same fresh token.
-      #
-      # The symlink is owned by eric:users; the target file is mode 0600
-      # owned by eric, so only the eric service user can read it.
-      systemd.tmpfiles.rules = [
-        "d ${cfg.homeDir}/.claude 0700 ${cfg.user} users - -"
-        "L+ ${cfg.homeDir}/.claude/.credentials.json - - - - /home/${cfg.user}/.claude/.credentials.json"
-      ];
+      cmd = [ "gateway" "run" ];
 
-      # nix-ld lets the upstream installer's uv-downloaded CPython run on NixOS.
-      # Without this, /var/lib/hwc/hermes/.local/share/uv/python/cpython-*/bin/python3.11
-      # fails with "Could not start dynamically linked executable" (no /lib64/ld-linux).
-      # Library set is the Python-runtime baseline; Hermes's Python deps are pure-Python
-      # or wheels that link against standard libs already covered here.
-      programs.nix-ld.enable = true;
-      programs.nix-ld.libraries = with pkgs; [
-        stdenv.cc.cc.lib    # libstdc++
-        zlib openssl libffi bzip2 xz
-        sqlite              # FTS5 conversation index
-        ncurses readline    # TUI
-        glib
-      ];
+      # Dashboard published to host loopback only; Caddy fronts it.
+      ports = [ "127.0.0.1:${toString cfg.dashboardPort}:9119" ];
 
-      # Reuse the existing nanoclaw-anthropic-key.age file under a hermes-* logical name.
-      # Avoids re-encrypting. Same precedent as datax-discord-webhook in lead-scout.
+      volumes = [ "${cfg.dataDir}:/opt/data" ];
+
+      environment = containerEnv;
+      environmentFiles = [ envFile ];
+
+      # Image bundles Playwright/Chromium; give it headroom.
+      memory = "4g";
+      cpus = "2.0";
+      memorySwap = "6g";
+
+      preStartScript = preStartScript;
+      preStartDeps = [ "agenix.service" ];
+    })
+
+    # ── agenix secrets ──────────────────────────────────────────────────────
+    {
       age.secrets = lib.mkMerge [
-        (lib.mkIf (cfg.model.provider == "anthropic") {
-          "${cfg.model.keyFileSecret}" = {
-            file = ../../../../secrets/parts/services/nanoclaw-anthropic-key.age;
-            mode = "0440";
-            owner = "root";
-            group = "secrets";
-          };
-        })
-        # Remote OpenAI-compat API key (DeepSeek/OpenAI/OpenRouter). Backed by
-        # hermes-deepseek-key.age; the logical name follows cfg.model.keyFileSecret
-        # so the gateway/dashboard read it from /run/agenix/<name>.
-        (lib.mkIf cfg.model.useApiKey {
+        {
           "${cfg.model.keyFileSecret}" = {
             file = ../../../../secrets/parts/services/hermes-deepseek-key.age;
             mode = "0440";
             owner = "root";
             group = "secrets";
           };
-        })
+        }
         (lib.mkIf cfg.gateway.discord.enable {
           "${cfg.gateway.discord.tokenSecret}" = {
             file = ../../../../secrets/parts/services/hermes-discord-bot-token.age;
@@ -196,123 +109,16 @@ in
         })
       ];
 
-      # One-shot install service
-      systemd.services.hermes-install = {
-        description = "Hermes Agent installer (oneshot, sentinel-gated)";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
-        wantedBy = [ "multi-user.target" ];
+      # State dir for the /opt/data volume, owned by eric:users (PUID/PGID).
+      systemd.tmpfiles.rules = [
+        "d ${cfg.dataDir} 0750 eric users - -"
+      ];
+    }
 
-        environment = {
-          HOME = cfg.homeDir;
-          PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
-        };
-
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          User = lib.mkForce cfg.user;
-          Group = "users";
-          StateDirectory = "hwc/hermes";
-          StateDirectoryMode = "0750";
-          ExecStart = "${hermes-installer}/bin/hermes-installer";
-
-          # Hardening
-          NoNewPrivileges = true;
-          ProtectKernelTunables = true;
-          ProtectKernelModules = true;
-          ProtectControlGroups = true;
-          RestrictSUIDSGID = true;
-          LockPersonality = true;
-        };
-      };
-    })
-
-    # ── Gateway daemon ─────────────────────────────────────────────────────
-    (lib.mkIf (cfg.enable && cfg.gateway.enable && cfg.gateway.discord.enable) {
-      systemd.services.hermes-gateway = {
-        description = "Hermes Agent Gateway (Discord)";
-        after = [ "network-online.target" "hermes-install.service" ];
-        wants = [ "network-online.target" ];
-        requires = [ "hermes-install.service" ];
-        wantedBy = [ "multi-user.target" ];
-
-        environment = {
-          HOME = cfg.homeDir;
-          PATH = lib.mkForce "/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
-          # The uv-installed CPython doesn't know about NixOS's CA bundle
-          # layout. Without this, aiohttp fails Discord's TLS handshake
-          # with SSLCertVerificationError ("unable to get local issuer
-          # certificate"). Point it at the system bundle that
-          # security.pki maintains.
-          SSL_CERT_FILE = "/etc/ssl/certs/ca-bundle.crt";
-          SSL_CERT_DIR = "/etc/ssl/certs";
-        } // lib.optionalAttrs isLocalEndpoint {
-          # Local OpenAI-compat endpoints (llama.cpp/Ollama/vLLM) don't
-          # authenticate, but the openai SDK still emits an Authorization
-          # header. Supply a stable placeholder so the request doesn't 401
-          # on missing-key validation in the client.
-          OPENAI_API_KEY = "sk-local-noauth";
-        };
-
-        serviceConfig = {
-          Type = "simple";
-          User = lib.mkForce cfg.user;
-          Group = "users";
-          SupplementaryGroups = [ "secrets" ];
-          StateDirectory = "hwc/hermes";
-          StateDirectoryMode = "0750";
-          WorkingDirectory = cfg.homeDir;
-          # Hermes reads DISCORD_BOT_TOKEN directly from env (see upstream
-          # gateway/config.py — `os.getenv("DISCORD_BOT_TOKEN")`), so we
-          # source the secret file into the env right before exec. The
-          # `gateway run --replace` form replaces any orphan gateway
-          # instance left from a prior `hermes gateway restart`.
-          ExecStart = pkgs.writeShellScript "hermes-gateway-start" ''
-            set -eu
-            DISCORD_BOT_TOKEN="$(cat /run/agenix/${cfg.gateway.discord.tokenSecret})"
-            export DISCORD_BOT_TOKEN
-            ${lib.optionalString cfg.model.useApiKey ''
-              # Remote OpenAI-compat key (DeepSeek). $(cat) strips any trailing
-              # newline so the Authorization header stays well-formed.
-              OPENAI_API_KEY="$(cat /run/agenix/${cfg.model.keyFileSecret})"
-              export OPENAI_API_KEY
-            ''}
-            exec ${hermesBin} gateway run --replace
-          '';
-          Restart = "on-failure";
-          RestartSec = "10s";
-          # Must be >= agent.restart_drain_timeout (180s) + safety margin,
-          # or systemd SIGKILLs the gateway mid-drain. Hermes warns
-          # "TimeoutStopSec=90s but drain_timeout=180s (expected >=210s)".
-          TimeoutStopSec = "240s";
-
-          # Hardening
-          NoNewPrivileges = true;
-          PrivateTmp = true;
-          ProtectSystem = "strict";
-          ProtectHome = "read-only";
-          ProtectKernelTunables = true;
-          ProtectKernelModules = true;
-          ProtectControlGroups = true;
-          SystemCallArchitectures = "native";
-          RestrictNamespaces = true;
-          RestrictRealtime = true;
-          RestrictSUIDSGID = true;
-          LockPersonality = true;
-
-          ReadWritePaths = [ cfg.homeDir "/tmp" ];
-        };
-      };
-    })
-
-    # ── Caddy reverse proxy (port-mode) ────────────────────────────────────
-    # Host header rewrite is mandatory: Hermes dashboard has an explicit
-    # DNS-rebinding defense (GHSA-ppp5-vxwm-4cf7) that 400s any request
-    # whose Host header doesn't match the bound interface. Forcing
-    # Host: 127.0.0.1 satisfies the check while keeping Caddy on a
-    # public-facing hostname.
-    (lib.mkIf cfg.enable {
+    # ── Caddy reverse proxy (port-mode) ──────────────────────────────────────
+    # Host header rewrite to 127.0.0.1 satisfies the dashboard's DNS-rebinding
+    # defense (GHSA-ppp5-vxwm-4cf7) while Caddy stays on the public hostname.
+    {
       hwc.networking.shared.routes = [{
         name = "hermes";
         mode = "port";
@@ -320,124 +126,25 @@ in
         upstream = "http://127.0.0.1:${toString cfg.dashboardPort}";
         headers = { Host = "127.0.0.1"; };
       }];
-    })
+    }
 
-    # ── Dashboard daemon (long-lived) ──────────────────────────────────────
-    # `hermes dashboard` is a separate process from `hermes chat`. Without
-    # this service the Caddy upstream at :9119 has nothing to forward to,
-    # producing 502 Bad Gateway on hermes.holthome.net.
-    (lib.mkIf (cfg.enable && cfg.dashboard.enable) {
-      systemd.services.hermes-dashboard = {
-        description = "Hermes Agent web dashboard";
-        after = [ "network-online.target" "hermes-install.service" ];
-        wants = [ "network-online.target" ];
-        requires = [ "hermes-install.service" ];
-        wantedBy = [ "multi-user.target" ];
-
-        environment = {
-          HOME = cfg.homeDir;
-          # nodejs_22 first so the dashboard's one-time `npm run build` can find
-          # node/npm. After the initial build the dist persists in
-          # ${cfg.homeDir}/.hermes/hermes-agent/hermes_cli/web_dist and Hermes
-          # skips the build step on subsequent starts automatically.
-          PATH = lib.mkForce "${pkgs.nodejs_22}/bin:/run/current-system/sw/bin:/etc/profiles/per-user/${cfg.user}/bin";
-        };
-
-        path = [ pkgs.nodejs_22 ];
-
-        serviceConfig = {
-          Type = "simple";
-          User = lib.mkForce cfg.user;
-          Group = "users";
-          # The dashboard's chat pane talks to the same model as the gateway,
-          # so it needs the remote API key when useApiKey is set.
-          SupplementaryGroups = lib.optionals cfg.model.useApiKey [ "secrets" ];
-          StateDirectory = "hwc/hermes";
-          StateDirectoryMode = "0750";
-          WorkingDirectory = cfg.homeDir;
-          # Wrapper so the remote OpenAI-compat key (DeepSeek) can be sourced
-          # from /run/agenix into OPENAI_API_KEY before the dashboard starts.
-          # $(cat) strips any trailing newline.
-          ExecStart = pkgs.writeShellScript "hermes-dashboard-start" ''
-            set -eu
-            ${lib.optionalString cfg.model.useApiKey ''
-              OPENAI_API_KEY="$(cat /run/agenix/${cfg.model.keyFileSecret})"
-              export OPENAI_API_KEY
-            ''}
-            exec ${lib.concatStringsSep " " ([
-              hermesBin "dashboard"
-              "--host" "127.0.0.1"
-              "--port" (toString cfg.dashboardPort)
-              "--no-open"
-            ] ++ lib.optional cfg.dashboard.tui "--tui")}
-          '';
-          # First start may take ~60s while it npm-installs and builds the
-          # SvelteKit dashboard dist. Don't let systemd time it out.
-          TimeoutStartSec = "5min";
-          # Must be >= agent.restart_drain_timeout (180s) + safety margin,
-          # else systemd SIGKILLs the gateway mid-drain. Hermes warns
-          # "TimeoutStopSec=90s but drain_timeout=180s (expected >=210s)".
-          TimeoutStopSec = "240s";
-          Restart = "on-failure";
-          RestartSec = "10s";
-
-          NoNewPrivileges = true;
-          PrivateTmp = true;
-          ProtectKernelTunables = true;
-          ProtectKernelModules = true;
-          ProtectControlGroups = true;
-          RestrictSUIDSGID = true;
-          LockPersonality = true;
-        };
-      };
-    })
-
-    # ── VALIDATION ─────────────────────────────────────────────────────────
+    # ── VALIDATION ────────────────────────────────────────────────────────────
     {
       assertions = [
         {
-          assertion = cfg.gateway.discord.enable -> cfg.gateway.enable;
-          message = "hwc.server.ai.hermes.gateway.discord.enable requires hwc.server.ai.hermes.gateway.enable.";
+          assertion = config.virtualisation.oci-containers.backend == "podman";
+          message = "Hermes Agent requires Podman as the OCI container backend.";
         }
         {
-          assertion = cfg.enable -> cfg.user != "root";
-          message = "Hermes Agent must run as a non-root user (default: eric).";
+          assertion = builtins.pathExists ../../../../secrets/parts/services/hermes-deepseek-key.age;
+          message = "hwc.server.ai.hermes: domains/secrets/parts/services/hermes-deepseek-key.age is missing.";
         }
         {
-          # Remote API key .age file must exist on disk when useApiKey is set
-          assertion = !cfg.model.useApiKey
-            || builtins.pathExists ../../../../secrets/parts/services/hermes-deepseek-key.age;
-          message = ''
-            hwc.server.ai.hermes.model.useApiKey = true but
-            domains/secrets/parts/services/hermes-deepseek-key.age is missing.
-
-            Encrypt your DeepSeek API key (see secrets.nix recipient rule):
-
-              read -rs DEEPSEEK_KEY && printf '%s' "$DEEPSEEK_KEY" \
-                | age -R <(cat machines/hwc-server/AGE_PUBLIC_KEY.txt \
-                              machines/hwc-xps/AGE_PUBLIC_KEY.txt \
-                              machines/hwc-laptop/AGE_PUBLIC_KEY.txt) \
-                -o domains/secrets/parts/services/hermes-deepseek-key.age \
-              && unset DEEPSEEK_KEY
-          '';
-        }
-        {
-          # Discord bot token .age file must exist on disk when gateway is enabled
           assertion = !cfg.gateway.discord.enable
             || builtins.pathExists ../../../../secrets/parts/services/hermes-discord-bot-token.age;
-          message = ''
-            hwc.server.ai.hermes.gateway.discord.enable = true but
-            domains/secrets/parts/services/hermes-discord-bot-token.age is missing.
-
-            Create the Discord bot at https://discord.com/developers/applications
-            (enable MESSAGE CONTENT INTENT + SERVER MEMBERS INTENT) and encrypt
-            the token:
-
-              echo "$BOT_TOKEN" | age -e -r <server-pubkey> \
-                > domains/secrets/parts/services/hermes-discord-bot-token.age
-          '';
+          message = "hwc.server.ai.hermes.gateway.discord.enable = true but hermes-discord-bot-token.age is missing.";
         }
       ];
     }
-  ];
+  ]);
 }
