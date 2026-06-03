@@ -19,8 +19,6 @@ let
 
   envFile = "${cfg.dataDir}/.env";
 
-  # Provider-prefixed model id written to config.yaml model.default.
-  modelDefault = "${cfg.model.provider}/${cfg.model.modelName}";
 
   # Non-secret environment. Secrets are added at runtime via envFile.
   containerEnv = {
@@ -55,16 +53,18 @@ let
   '';
 
   # The image's first-boot `setup` writes config.yaml with a default model
-  # (anthropic/claude-opus-4.6) and provider=auto, which HERMES_MODEL env does
-  # NOT override. Pin the provider + model in the persistent config.yaml once
-  # the CLI is reachable. Idempotent — safe to run on every (re)start.
+  # (anthropic/claude-opus-4.6), provider=auto, AND base_url=openrouter.ai —
+  # the last of which forces all inference through OpenRouter regardless of
+  # provider. None of these is overridable by env, so pin all three in the
+  # persistent config.yaml once the CLI is reachable. Idempotent.
   postStartScript = ''
     for _ in $(seq 1 30); do
       ${pkgs.podman}/bin/podman exec hermes hermes config get model.default >/dev/null 2>&1 && break
       sleep 2
     done
     ${pkgs.podman}/bin/podman exec hermes hermes config set model.provider ${cfg.model.provider} || true
-    ${pkgs.podman}/bin/podman exec hermes hermes config set model.default ${modelDefault} || true
+    ${pkgs.podman}/bin/podman exec hermes hermes config set model.default ${cfg.model.modelName} || true
+    ${pkgs.podman}/bin/podman exec hermes hermes config set model.base_url ${cfg.model.baseUrl} || true
   '';
 in
 {

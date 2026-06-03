@@ -83,9 +83,17 @@ in
       modelName = lib.mkOption {
         type = lib.types.str;
         default = "deepseek-v4-pro";
+        description = "Bare model id written to config.yaml `model.default`.";
+      };
+
+      baseUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://api.deepseek.com/v1";
         description = ''
-          Bare model id. Combined with provider into the provider-prefixed
-          config.yaml `model.default` (e.g. `deepseek/deepseek-v4-pro`).
+          Inference base URL written to config.yaml `model.base_url`. The
+          image's first-boot setup hard-codes this to OpenRouter, which forces
+          ALL inference through OpenRouter regardless of provider — so we must
+          override it to the provider's real endpoint.
         '';
       };
 
