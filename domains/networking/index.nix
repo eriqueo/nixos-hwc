@@ -3,12 +3,16 @@
 # Networking domain — reverse proxy, VPN, DNS, podman network infrastructure.
 # Provides the backbone that other domains depend on for service routing.
 #
-# Namespace: hwc.networking.{reverseProxy,gluetun,pihole,vpn}.*
+# Namespace: hwc.networking.{hosts,reverseProxy,gluetun,pihole,vpn}.*
 
 { lib, config, ... }:
 
 {
   imports = [
+    # Host registry — single source of truth for tailnet identities.
+    # Declares hwc.networking.hosts.{tailnetSuffix,servers,primary,fqdn,url}.
+    ./hosts.nix
+
     # Reverse proxy (Caddy NixOS service + route rendering)
     # Also declares hwc.networking.shared.{routes,tailscaleDomain,rootHost}
     ./reverseProxy.nix
