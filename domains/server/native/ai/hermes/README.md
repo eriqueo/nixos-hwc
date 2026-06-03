@@ -55,17 +55,24 @@ owned `eric:users` 0750, bind-mounted to the container's `/opt/data`:
 
 ## Model provider
 
-DeepSeek V4 (`deepseek-v4-pro`) via the OpenAI-compatible API, wired through
-environment: `OPENAI_BASE_URL=https://api.deepseek.com/v1` and
-`HERMES_MODEL=deepseek-v4-pro` (non-secret, in the container `environment`); the
-`OPENAI_API_KEY` is injected from agenix at container start.
+DeepSeek is a **first-class Hermes provider** (`provider: deepseek` in
+hermes_cli/auth.py) with its base URL built in; it reads the key from
+`DEEPSEEK_API_KEY`. So configuration is two parts:
+
+1. **Key** — `DEEPSEEK_API_KEY` injected from agenix into `/opt/data/.env`.
+2. **Model selection** — the image's first-boot `setup` writes
+   `config.yaml` with `model.default: anthropic/claude-opus-4.6` and
+   `provider: auto`, which the `HERMES_MODEL` env does NOT override. So the
+   container `postStart` pins `model.provider = deepseek` and
+   `model.default = deepseek/deepseek-v4-pro` in the persistent config.yaml
+   (idempotent, runs every start).
 
 ## Secrets
 
 Composed into `/opt/data/.env` by the `hermes-setup` preStart oneshot (gated on
 `agenix.service`) — never the Nix store, mirroring the pihole pattern:
 
-- **`hermes-deepseek-key`** → `OPENAI_API_KEY`. Backed by `hermes-deepseek-key.age`.
+- **`hermes-deepseek-key`** → `DEEPSEEK_API_KEY`. Backed by `hermes-deepseek-key.age`.
 - **`hermes-discord-bot-token`** → `DISCORD_BOT_TOKEN`. Only when
   `gateway.discord.enable = true`.
 

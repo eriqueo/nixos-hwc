@@ -70,24 +70,37 @@ in
     };
 
     model = {
-      baseUrl = lib.mkOption {
+      provider = lib.mkOption {
         type = lib.types.str;
-        default = "https://api.deepseek.com/v1";
-        description = "OpenAI-compatible API base URL (OPENAI_BASE_URL).";
+        default = "deepseek";
+        description = ''
+          Hermes inference provider id (see PROVIDER_REGISTRY in
+          hermes_cli/auth.py). `deepseek` has its base URL built in and reads
+          the key from DEEPSEEK_API_KEY. Written to config.yaml `model.provider`.
+        '';
       };
 
       modelName = lib.mkOption {
         type = lib.types.str;
         default = "deepseek-v4-pro";
-        description = "Model identifier (HERMES_MODEL).";
+        description = ''
+          Bare model id. Combined with provider into the provider-prefixed
+          config.yaml `model.default` (e.g. `deepseek/deepseek-v4-pro`).
+        '';
+      };
+
+      keyEnvVar = lib.mkOption {
+        type = lib.types.str;
+        default = "DEEPSEEK_API_KEY";
+        description = "Env var name the provider reads its API key from.";
       };
 
       keyFileSecret = lib.mkOption {
         type = lib.types.str;
         default = "hermes-deepseek-key";
         description = ''
-          agenix secret NAME holding the model API key. Injected as
-          OPENAI_API_KEY via a runtime-generated env file (never the Nix store).
+          agenix secret NAME holding the model API key. Injected under
+          `keyEnvVar` via a runtime-generated env file (never the Nix store).
         '';
       };
     };
