@@ -61,11 +61,13 @@ hermes_cli/auth.py) with its base URL built in; it reads the key from
 
 1. **Key** — `DEEPSEEK_API_KEY` injected from agenix into `/opt/data/.env`.
 2. **Model selection** — the image's first-boot `setup` writes
-   `config.yaml` with `model.default: anthropic/claude-opus-4.6` and
-   `provider: auto`, which the `HERMES_MODEL` env does NOT override. So the
-   container `postStart` pins `model.provider = deepseek` and
-   `model.default = deepseek/deepseek-v4-pro` in the persistent config.yaml
-   (idempotent, runs every start).
+   `config.yaml` with `model.default: anthropic/claude-opus-4.6`,
+   `provider: auto`, AND `model.base_url: https://openrouter.ai/api/v1` — the
+   last of which forces ALL inference through OpenRouter regardless of provider
+   (yielding a 401 since no OpenRouter key is set). None is overridable by env,
+   so the container `postStart` pins all three in the persistent config.yaml
+   (idempotent, every start): `model.provider = deepseek`,
+   `model.default = deepseek-v4-pro`, `model.base_url = https://api.deepseek.com/v1`.
 
 ## Secrets
 
