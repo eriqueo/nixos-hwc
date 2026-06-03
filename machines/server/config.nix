@@ -22,7 +22,6 @@
     ../../domains/server/containers/_shared/network.nix    # Podman media-network
     ../../domains/server/containers/_shared/caddy.nix      # Caddy route abstraction
     ../../domains/server/containers/_shared/directories.nix
-    ../../domains/server/containers/arka/index.nix         # Arka MCP Gateway
     ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
@@ -1007,9 +1006,6 @@
 
   # Morning briefing — daily Claude Code agent (6am MT)
   hwc.business.morningBriefing.enable = true;
-
-  # Arka MCP Gateway — unified MCP proxy, access at :17443
-  hwc.server.containers.arka.enable = true;
 
   #============================================================================
   # WEB APPS DOMAIN
