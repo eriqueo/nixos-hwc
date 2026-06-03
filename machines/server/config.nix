@@ -599,7 +599,7 @@
     gateway.enable = true;
     gateway.discord.enable = true;
     gateway.discord.allowedUsers = "1501391621521150075";  # Eric's Discord snowflake
-    model.baseUrl   = "https://api.deepseek.com/v1";
+    model.provider  = "deepseek";   # native Hermes provider; base URL built in
     model.modelName = "deepseek-v4-pro";
   };
 

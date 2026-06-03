@@ -19,6 +19,9 @@ let
 
   envFile = "${cfg.dataDir}/.env";
 
+  # Provider-prefixed model id written to config.yaml model.default.
+  modelDefault = "${cfg.model.provider}/${cfg.model.modelName}";
+
   # Non-secret environment. Secrets are added at runtime via envFile.
   containerEnv = {
     HERMES_DASHBOARD = "1";
@@ -29,8 +32,6 @@ let
     HERMES_UID = "1000";
     HERMES_GID = "100";
     TZ = "America/Denver";
-    OPENAI_BASE_URL = cfg.model.baseUrl;
-    HERMES_MODEL = cfg.model.modelName;
   }
   // lib.optionalAttrs cfg.dashboard.tui { HERMES_DASHBOARD_TUI = "1"; }
   // lib.optionalAttrs cfg.dashboard.insecure { HERMES_DASHBOARD_INSECURE = "1"; }
@@ -39,17 +40,31 @@ let
   };
 
   # Compose the secret env file from agenix-decrypted secrets. $(cat) strips any
-  # trailing newline so the values stay header-clean.
+  # trailing newline so the values stay header-clean. The DeepSeek provider
+  # reads its key from DEEPSEEK_API_KEY (cfg.model.keyEnvVar).
   preStartScript = ''
     mkdir -p ${cfg.dataDir}
     umask 077
     {
-      echo "OPENAI_API_KEY=$(cat /run/agenix/${cfg.model.keyFileSecret})"
+      echo "${cfg.model.keyEnvVar}=$(cat /run/agenix/${cfg.model.keyFileSecret})"
       ${lib.optionalString cfg.gateway.discord.enable ''
         echo "DISCORD_BOT_TOKEN=$(cat /run/agenix/${cfg.gateway.discord.tokenSecret})"
       ''}
     } > ${envFile}
     chmod 600 ${envFile}
+  '';
+
+  # The image's first-boot `setup` writes config.yaml with a default model
+  # (anthropic/claude-opus-4.6) and provider=auto, which HERMES_MODEL env does
+  # NOT override. Pin the provider + model in the persistent config.yaml once
+  # the CLI is reachable. Idempotent — safe to run on every (re)start.
+  postStartScript = ''
+    for _ in $(seq 1 30); do
+      ${pkgs.podman}/bin/podman exec hermes hermes config get model.default >/dev/null 2>&1 && break
+      sleep 2
+    done
+    ${pkgs.podman}/bin/podman exec hermes hermes config set model.provider ${cfg.model.provider} || true
+    ${pkgs.podman}/bin/podman exec hermes hermes config set model.default ${modelDefault} || true
   '';
 in
 {
@@ -86,6 +101,7 @@ in
 
       preStartScript = preStartScript;
       preStartDeps = [ "agenix.service" ];
+      postStartScript = postStartScript;
     })
 
     # ── agenix secrets ──────────────────────────────────────────────────────
