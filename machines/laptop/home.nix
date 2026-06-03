@@ -21,6 +21,11 @@
     markitdown.enable = true;
     dt.enable = true;
     dxlog.enable = true;
+    whisper-cpp = {
+      enable = true;
+      cuda = true;
+      models = [ "medium.en" "large-v3" ];
+    };
   };
 
   # Calendar: Apple iCloud sync via khal + vdirsyncer (CalDAV)

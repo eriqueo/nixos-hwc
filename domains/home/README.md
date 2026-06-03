@@ -27,6 +27,7 @@ domains/home/
 - 2026-06-09: Law 3 finish — claude-code NODE_EXTRA_CA_CERTS derives from `config.home.homeDirectory` (HM-native). HM drv hash unchanged.
 - 2026-06-09: Law 10 migration — inlined the 9 remaining separate `options.nix` files (aerc, betterbird, dt, herdr, nvim, obsidian, scraper, thunderbird, yazi) into their `index.nix` under `# OPTIONS` banners. Pure relocation; verified by laptop + standalone-HM eval.
 - 2026-06-09: Removed `apps/.wayvnc-disabled/` (renamed-off duplicate of the live `apps/wayvnc/`, imported nowhere; flagged in audit `docs/audit/2026-06-09-server-audit.md` §2.1, recoverable from git history).
+- 2026-06-03: added `apps/whisper-cpp/` — owns the `whisper-cpp` (CUDA) package and declaratively places GGML model weights into `~/models/whisper/`. Models are fetched via hash-pinned `fetchurl` from huggingface and symlinked via `home.file`; a known-hashes attrset (`medium.en`, `large-v3`) gates the `models` enum. Removed the duplicate `whisper-cpp` package from `core/shell.nix` — single source of truth now lives in the new module. Enabled on `machines/laptop/home.nix` with both models; the pre-existing imperative copies were pre-seeded into the store via `nix store add-file` so first activation does not re-download 4.5 GB.
 - 2026-05-27: `apps/thunar/index.nix` — replaced `xdg.configFile` management of `xfce4/xfconf/xfce-perchannel-xml/thunar.xml` (a runtime state file Thunar/xfconfd rewrites on column resize / view changes) with a seed-once `home.activation` script. The static-file approach caused recurring `.hm-bak` clobber errors because HM saw runtime mutations and tried to back them up against an existing backup slot. New mechanism: XML lives in the nix store via `pkgs.writeText`; activation copies it to `~/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml` only if absent. After first activation HM never touches it, so column-width tweaks and any user changes persist. Defaults still apply on fresh installs.
 - 2026-05-25: wired clipboard history in `apps/hyprland/` — added `wl-paste --watch cliphist store` to session autostart and `${mod},V` keybind invoking `cliphist list | wofi --dmenu | cliphist decode | wl-copy`. `cliphist` and `wl-clipboard` were already in `basePkgs`; only the watcher daemon and the picker keybind were missing.
 - 2026-05-23: added `apps/herdr/` — herdr v0.6.2 terminal agent multiplexer ("tmux for AI agents"). Foundation-tier HM app (peer of `kitty`, `tmux`, `yazi`). Installed from upstream `herdr-linux-x86_64` release binary via fetchurl + autoPatchelfHook (mirrors `codex` pattern; avoids pulling Rust+zig source toolchain). Enabled by default on laptop via `profiles/home-session.nix` and explicitly on server via `machines/server/home.nix`.
@@ -34,14 +35,14 @@ domains/home/
 - 2026-05-21: removed dead `mail/` subtree (abook, accounts, aerc, afew, bridge, mbsync, msmtp, notmuch, parts, `index.nix`/`options.nix`). The live mail stack lives at `domains/mail/` (namespace `hwc.mail.*`); `domains/home/index.nix` listed only `core/theme/apps` in `wantedDirs`, so the home/mail tree was never imported. Verified via `rg -ln 'domains/home/mail|\\./home/mail' -t nix .` (zero real imports — only stale path-header comments and docs) and full eval (drv hashes unchanged from post-revert baseline).
 
 ## Applications (current modules)
-Options live under `hwc.home.apps.<name>.*`; enable from the HM profile. Current set (37 modules):
+Options live under `hwc.home.apps.<name>.*`; enable from the HM profile. Current set (38 modules):
 ```
 aerc, betterbird, blender, bottles-unwrapped, chromium, codex, freecad,
 gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, ipcalc,
 jellyfin-media-player, kitty, librewolf, localsend, mpv, n8n, neomutt,
 obsidian, onlyoffice-desktopeditors, opencode, proton-authenticator,
 proton-mail, proton-pass, qbittorrent, qutebrowser, slack, slack-cli,
-swaync, thunar, thunderbird, wasistlos, waybar, wayvnc, yazi
+swaync, thunar, thunderbird, wasistlos, waybar, wayvnc, whisper-cpp, yazi
 ```
 Update this list whenever `domains/home/apps/` gains a new module so the count stays accurate.
 
