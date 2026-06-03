@@ -106,7 +106,9 @@
 
   hwc.notifications.send.gotify = {
     enable = false;
-    serverUrl = "https://hwc-server.ocelot-wahoo.ts.net:2586";
+    # Cross-host reference to the primary server — named explicitly via the
+    # registry, NOT derived from this box's hostname.
+    serverUrl = config.hwc.networking.hosts.url { server = "main"; port = 2586; };
     defaultPriority = 7;
     hostTag = true;
   };
@@ -153,10 +155,9 @@
     port = 6020;
   };
 
-  hwc.networking.shared = {
-    tailscaleDomain = "hwc-xps.ocelot-wahoo.ts.net";
-    rootHost = "hwc-xps.ocelot-wahoo.ts.net";
-  };
+  # Self serving-domain (rootHost/tailscaleDomain) now derives from
+  # networking.hostName ("hwc-xps") + the shared tailnetSuffix — no override
+  # needed. See domains/networking/{hosts,reverseProxy}.nix.
 
   hwc.data.backup.enable = true;
 

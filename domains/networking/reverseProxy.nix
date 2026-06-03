@@ -6,6 +6,11 @@ let
   rootHost        = config.hwc.networking.shared.rootHost;
   routes          = config.hwc.networking.shared.routes;
 
+  # This host's own tailnet FQDN, derived from its hostname + the one shared
+  # tailnet suffix (see domains/networking/hosts.nix). A server's serving domain
+  # always follows its own hostname, so a rename auto-propagates to every route.
+  selfDomain = "${config.networking.hostName}.${config.hwc.networking.hosts.tailnetSuffix}";
+
   # Render a route -> Caddy snippet
   renderRoute = r:
     let
@@ -118,21 +123,24 @@ in
     enable = mkEnableOption "Reverse proxy service (Caddy)";
     domain = mkOption {
       type = types.str;
-      default = "hwc-server.ocelot-wahoo.ts.net";
-      description = "Domain for reverse proxy services";
+      default = selfDomain;
+      defaultText = "\${config.networking.hostName}.\${config.hwc.networking.hosts.tailnetSuffix}";
+      description = "Domain for reverse proxy services (defaults to this host's own tailnet FQDN).";
     };
   };
 
   options.hwc.networking.shared = {
     tailscaleDomain = mkOption {
       type = types.str;
-      default = "hwc-server.ocelot-wahoo.ts.net";
-      description = "Tailscale domain for the server.";
+      default = selfDomain;
+      defaultText = "\${config.networking.hostName}.\${config.hwc.networking.hosts.tailnetSuffix}";
+      description = "This host's own Tailscale (MagicDNS) FQDN.";
     };
     rootHost = mkOption {
       type = types.str;
-      default = "hwc-server.ocelot-wahoo.ts.net";
-      description = "Root host for subpath and port-based services.";
+      default = selfDomain;
+      defaultText = "\${config.networking.hostName}.\${config.hwc.networking.hosts.tailnetSuffix}";
+      description = "Root host for subpath and port-based services (this host's own tailnet FQDN).";
     };
     routes = mkOption {
       # New schema keys supported per route:

@@ -22,6 +22,7 @@ Provides network infrastructure that other domains depend on:
 networking/
 ├── index.nix           # Domain aggregator
 ├── README.md           # This file
+├── hosts.nix           # Host registry: tailnetSuffix + servers + derived fqdn/url helper
 ├── reverseProxy.nix    # Caddy NixOS service + route rendering
 ├── routes-lib.nix      # Route accumulator option + mkRoute helper
 ├── routes.nix          # Centralized service route definitions
@@ -41,6 +42,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-06-03: Add `hosts.nix` host registry — single source of truth for tailnet identities. `hwc.networking.hosts` declares one `tailnetSuffix` (`ocelot-wahoo.ts.net`), a `servers` alias→hostname map (`main`/`xps`, `work` reserved), derived `fqdn.<alias>`, and a `url { server?, scheme?, port?, path? }` helper. Two concepts now separated: **self serving domain** (`shared.{rootHost,tailscaleDomain}` + `reverseProxy.domain`) defaults derive from `${networking.hostName}.${tailnetSuffix}` (a server can only ever advertise its own name; xps's manual override dropped); **named cross-host references** use `hosts.url`/`fqdn.*` (migrated: server gotify `serverUrl`, estimator `webhookUrl`, xps gotify `serverUrl`). Port/subpath stay at the call site. Renaming the tailnet = one `tailnetSuffix` edit; renaming a box = its `servers` entry + `networking.hostName`.
 - 2026-06-02: Server tailnet name changed `hwc` → `hwc-server`. Updated `reverseProxy.nix` option defaults (`domain`, `shared.tailscaleDomain`, `shared.rootHost`) and the `routes.nix` n8n Origin header from `hwc.ocelot-wahoo.ts.net` to `hwc-server.ocelot-wahoo.ts.net`. Part of a tree-wide rename; the Caddy TLS cert was reissued (see secrets domain). The old name no longer resolves, which had been failing `hwc-webhook-health` and breaking TLS SNI on :2443.
 - 2026-05-26: Add sr_analyzer reverse-proxy route on :24443 → 127.0.0.1:8788 (standalone Podman container at ~/apps/sr_analyzer, host 8788 chosen because 8787 is Readarr's).
 - 2026-05-22: Migrate all public ingress from Tailscale Funnel to Cloudflare Tunnel. Add n8n.heartwoodcraft.me route. Remove Funnel-era Caddy listeners (:18080, :10080). Caddy reclaims :443 with tailscale cert for direct tailnet access.
