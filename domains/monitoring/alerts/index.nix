@@ -20,14 +20,6 @@ let
   # Get notification scripts from the notifications domain
   notifInternal = config.hwc.notifications._internal;
 
-  # Convert frequency to OnCalendar format
-  frequencyToCalendar = freq:
-    if freq == "hourly" then "*-*-* *:00:00"
-    else if freq == "daily" then "*-*-* 06:00:00"
-    else if freq == "every-6h" then "*-*-* 00/6:00:00"
-    else if freq == "every-12h" then "*-*-* 00/12:00:00"
-    else "*-*-* *:00:00";  # default to hourly
-
   # List of critical services to auto-detect (when services list is empty)
   # NOTE: We don't check if services exist at build time to avoid infinite recursion
   # systemd will gracefully handle OnFailure= for non-existent services
@@ -90,36 +82,10 @@ in
         };
       };
 
-      diskSpace = {
-        enable = lib.mkEnableOption "Disk space monitoring alerts";
-
-        criticalThreshold = lib.mkOption {
-          type = lib.types.int;
-          default = 95;
-          description = "Critical threshold percentage (P5 alert)";
-        };
-
-        warningThreshold = lib.mkOption {
-          type = lib.types.int;
-          default = 80;
-          description = "Warning threshold percentage (P4 alert)";
-        };
-
-        filesystems = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = let paths = config.hwc.paths or {}; in
-            [ "/" "/home" ]
-            ++ lib.optional ((paths.media or {}).root or null != null) (toString (paths.media or {}).root)
-            ++ lib.optional ((paths.hot or {}).root or null != null) (toString (paths.hot or {}).root);
-          description = "Filesystems to monitor for disk space";
-        };
-
-        frequency = lib.mkOption {
-          type = lib.types.enum [ "hourly" "daily" "every-6h" "every-12h" ];
-          default = "hourly";
-          description = "How often to check disk space";
-        };
-      };
+      # NOTE: Disk-space monitoring is owned by Prometheus alerts
+      # (domains/monitoring/prometheus/parts/alerts.nix: Moderate/Elevated/High
+      # DiskUsage → Alertmanager → hwc-notify). The legacy script-based
+      # hwc-disk-space-check source was retired 2026-06-04 (n8n webhook path).
 
       serviceFailures = {
         enable = lib.mkEnableOption "Service failure monitoring alerts";
@@ -194,25 +160,6 @@ in
     # SYSTEMD SERVICES
     # =======================================================================
     systemd.services = lib.mkMerge [
-      # Disk space monitoring service
-      (lib.mkIf cfg.sources.diskSpace.enable {
-        hwc-disk-space-monitor = {
-          description = "HWC disk space monitoring";
-          after = [ "network-online.target" ];
-          wants = [ "network-online.target" ];
-
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = "${notifInternal.diskSpaceCheck}/bin/hwc-disk-space-check";
-            User = "root";
-
-            # Security hardening
-            PrivateTmp = true;
-            NoNewPrivileges = true;
-          };
-        };
-      })
-
       # Service failure notifier (template service using %I for instance name)
       (lib.mkIf cfg.sources.serviceFailures.enable {
         "hwc-service-failure-notifier@" = {
@@ -247,25 +194,6 @@ in
       ))
     ];
 
-    # =======================================================================
-    # SYSTEMD TIMERS
-    # =======================================================================
-    systemd.timers = lib.mkMerge [
-      # Disk space monitoring timer
-      (lib.mkIf cfg.sources.diskSpace.enable {
-        hwc-disk-space-monitor = {
-          description = "HWC disk space monitoring timer";
-          wantedBy = [ "timers.target" ];
-
-          timerConfig = {
-            OnCalendar = frequencyToCalendar cfg.sources.diskSpace.frequency;
-            Persistent = true;
-            RandomizedDelaySec = "5min";
-          };
-        };
-      })
-    ];
-
     #==========================================================================
     # VALIDATION
     #==========================================================================
@@ -280,14 +208,6 @@ in
       {
         assertion = !cfg.sources.smartd.enable || (config.services.smartd.enable or false);
         message = "hwc.monitoring.alerts.sources.smartd requires services.smartd.enable = true";
-      }
-      {
-        assertion = cfg.sources.diskSpace.criticalThreshold >= cfg.sources.diskSpace.warningThreshold;
-        message = "hwc.monitoring.alerts.sources.diskSpace.criticalThreshold must be >= warningThreshold";
-      }
-      {
-        assertion = cfg.sources.diskSpace.criticalThreshold <= 100 && cfg.sources.diskSpace.criticalThreshold > 0;
-        message = "hwc.monitoring.alerts.sources.diskSpace.criticalThreshold must be between 1 and 100";
       }
     ];
 
