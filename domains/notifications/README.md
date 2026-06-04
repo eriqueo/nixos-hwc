@@ -43,6 +43,7 @@ notifications/
 
 ## Changelog
 
+- **2026-06-04**: Disk-space alerts are now edge-triggered. `hwc-disk-space-check` (in `send/slack-webhook.nix`) tracks per-filesystem severity in `/var/log/hwc/notifications/disk-state/` and only notifies on a state change (info→warn→crit, escalation, or recovery) instead of re-alerting every hourly run. Fixes Discord spam from a persistently-full filesystem sending 24 identical messages/day.
 - **2026-05-31** (Phase 1 complete): `notify/` is in production. Replaces the broken n8n `home:admin:alert-manager` workflow. Alertmanager fans out to `hwc-notify` (Discord + SMTP) and `gotify-bridge` (iOS push, kept independent); n8n receiver removed, workflow deactivated. SQLite audit log, per-channel circuit breaker, `hwc-notify` CLI and `hwc_notify` MCP tool all live. Full design + ops in `notify/README.md`.
 - **2026-05-31**: Added `notify/` subdomain — `hwc.notifications.notify.*` (Phase 0 scaffold).
 - **2026-04-04**: Created from alerts + automation/gotify domain redistribution

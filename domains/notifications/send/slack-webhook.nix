@@ -318,7 +318,10 @@ let
 
     LOG_DIR="${logDir}"
     LOG_FILE="$LOG_DIR/disk-space.log"
-    ${pkgs.coreutils}/bin/mkdir -p "$LOG_DIR"
+    # Persistent per-filesystem severity state so alerts are edge-triggered
+    # (fire on a state CHANGE) instead of level-triggered (fire every run).
+    STATE_DIR="$LOG_DIR/disk-state"
+    ${pkgs.coreutils}/bin/mkdir -p "$LOG_DIR" "$STATE_DIR"
 
     log() {
       echo "[$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')] $1" | ${pkgs.coreutils}/bin/tee -a "$LOG_FILE"
@@ -351,7 +354,7 @@ let
 
       log "  $FS: $USAGE%"
 
-      # Determine severity
+      # Determine current severity
       SEVERITY="info"
       if [ "$USAGE" -ge "$CRITICAL_THRESHOLD" ]; then
         SEVERITY="critical"
@@ -359,38 +362,67 @@ let
         SEVERITY="warning"
       fi
 
-      # Only send alerts for warning or critical
-      if [ "$SEVERITY" != "info" ]; then
-        # Get more details
-        AVAILABLE=$(${pkgs.coreutils}/bin/df -h "$FS" 2>/dev/null | ${pkgs.gawk}/bin/awk 'NR==2 {print $4}')
-        TOTAL=$(${pkgs.coreutils}/bin/df -h "$FS" 2>/dev/null | ${pkgs.gawk}/bin/awk 'NR==2 {print $2}')
+      # Edge-triggered: only notify when severity CHANGES vs. the previous run.
+      # A persistently-full filesystem must NOT re-alert every hour.
+      STATE_FILE="$STATE_DIR/$(echo "$FS" | ${pkgs.coreutils}/bin/tr '/' '_')"
+      PREV_SEVERITY="info"
+      if [ -f "$STATE_FILE" ]; then
+        PREV_SEVERITY=$(${pkgs.coreutils}/bin/cat "$STATE_FILE" 2>/dev/null || echo info)
+      fi
 
-        log "    ALERT: $FS at $USAGE% ($AVAILABLE available of $TOTAL)"
+      if [ "$SEVERITY" = "$PREV_SEVERITY" ]; then
+        log "  $FS: $USAGE% ($SEVERITY, unchanged — no alert)"
+        continue
+      fi
 
-        EXTRA=$(${pkgs.jq}/bin/jq -n \
-          --arg filesystem "$FS" \
-          --arg usage "$USAGE" \
-          --arg available "$AVAILABLE" \
-          --arg total "$TOTAL" \
-          '{
-            filesystem: $filesystem,
-            usage_percent: $usage,
-            available: $available,
-            total: $total,
-            source: "disk-monitor"
-          }')
+      # Severity changed — persist new state before notifying.
+      echo "$SEVERITY" > "$STATE_FILE"
 
+      AVAILABLE=$(${pkgs.coreutils}/bin/df -h "$FS" 2>/dev/null | ${pkgs.gawk}/bin/awk 'NR==2 {print $4}')
+      TOTAL=$(${pkgs.coreutils}/bin/df -h "$FS" 2>/dev/null | ${pkgs.gawk}/bin/awk 'NR==2 {print $2}')
+
+      EXTRA=$(${pkgs.jq}/bin/jq -n \
+        --arg filesystem "$FS" \
+        --arg usage "$USAGE" \
+        --arg available "$AVAILABLE" \
+        --arg total "$TOTAL" \
+        '{
+          filesystem: $filesystem,
+          usage_percent: $usage,
+          available: $available,
+          total: $total,
+          source: "disk-monitor"
+        }')
+
+      if [ "$SEVERITY" = "info" ]; then
+        # Recovered back under the warning threshold — send one recovery note.
+        log "    RECOVERED: $FS back to $USAGE% (was $PREV_SEVERITY)"
         if ${webhookSender}/bin/hwc-webhook-send \
           smartd \
-          "Disk Space ''${SEVERITY^}: $FS at $USAGE%" \
-          "Filesystem $FS is at $USAGE% capacity ($AVAILABLE available of $TOTAL)" \
-          "$SEVERITY" \
+          "Disk Space Recovered: $FS at $USAGE%" \
+          "Filesystem $FS dropped back to $USAGE% ($AVAILABLE available of $TOTAL)" \
+          info \
           "$EXTRA"; then
           ALERTS_SENT=$((ALERTS_SENT + 1))
         else
-          log "    WARNING: Failed to send alert for $FS"
+          log "    WARNING: Failed to send recovery notice for $FS"
           ERRORS=$((ERRORS + 1))
         fi
+        continue
+      fi
+
+      # New warning/critical state (or escalation/de-escalation between them).
+      log "    ALERT: $FS at $USAGE% ($AVAILABLE available of $TOTAL) [$PREV_SEVERITY -> $SEVERITY]"
+      if ${webhookSender}/bin/hwc-webhook-send \
+        smartd \
+        "Disk Space ''${SEVERITY^}: $FS at $USAGE%" \
+        "Filesystem $FS is at $USAGE% capacity ($AVAILABLE available of $TOTAL)" \
+        "$SEVERITY" \
+        "$EXTRA"; then
+        ALERTS_SENT=$((ALERTS_SENT + 1))
+      else
+        log "    WARNING: Failed to send alert for $FS"
+        ERRORS=$((ERRORS + 1))
       fi
     done
 
