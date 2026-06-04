@@ -239,10 +239,14 @@
       name = "info_alerts";
       rules = [
         # System - Moderate disk usage
+        # Threshold is 82%, NOT 75%: root (/) baselines ~77% (its normal used
+        # state), so a 75% threshold fired permanently and re-sent to Discord
+        # every repeat_interval (4h) with no actionable signal. 82% sits above
+        # the baseline and below the Elevated (85%) tier.
         {
           alert = "ModerateDiskUsage";
           expr = ''
-            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 75
+            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 82
           '';
           for = "1h";
           labels = {
@@ -251,7 +255,7 @@
           };
           annotations = {
             summary = "Moderate disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }}";
-            description = "Disk usage is {{ $value | humanize }}% (threshold: 75%)";
+            description = "Disk usage is {{ $value | humanize }}% (threshold: 82%)";
           };
         }
 
