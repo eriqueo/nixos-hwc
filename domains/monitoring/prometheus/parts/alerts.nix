@@ -302,12 +302,16 @@
           };
         }
 
-        # persona-daemon - vault reindex hasn't succeeded in over an hour
+        # persona-daemon - vault reindex hasn't succeeded in over 7 hours
         # Indexer failures silently degrade RAG; this surfaces them.
+        # Threshold MUST exceed the daemon's slow-reconcile backstop interval
+        # (OnUnitActiveSec = 6h in persona-daemon/index.nix). A quiet vault only
+        # reindexes on that backstop, so anything <6h is a guaranteed false
+        # positive. 7h = 6h backstop + 1h margin.
         {
           alert = "PersonaDaemonReindexStale";
           expr = ''
-            time() - persona_daemon_reindex_last_success_timestamp > 3600
+            time() - persona_daemon_reindex_last_success_timestamp > 25200
             and persona_daemon_reindex_last_success_timestamp > 0
           '';
           for = "10m";
@@ -316,8 +320,8 @@
             category = "persona-daemon";
           };
           annotations = {
-            summary = "persona-daemon reindex hasn't succeeded in over an hour";
-            description = "Last successful reindex was {{ $value | humanizeDuration }} ago. RAG over /home/eric/900_vaults/brain may be returning stale chunks.";
+            summary = "persona-daemon reindex hasn't succeeded in over 7 hours";
+            description = "Last successful reindex was {{ $value | humanizeDuration }} ago (expected ≤6h via the backstop reconcile). RAG over /home/eric/900_vaults/brain may be returning stale chunks.";
           };
         }
 
