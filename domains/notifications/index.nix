@@ -122,13 +122,6 @@ in
         description = "Internal: service failure notification script package";
       };
 
-      diskSpaceCheck = lib.mkOption {
-        type = lib.types.nullOr lib.types.package;
-        default = null;
-        internal = true;
-        description = "Internal: disk space check script package";
-      };
-
       backupNotify = lib.mkOption {
         type = lib.types.nullOr lib.types.package;
         default = null;
@@ -164,7 +157,6 @@ in
       cliScript = cliTool;
       smartdNotify = webhookScripts.smartdNotify;
       serviceFailureNotify = webhookScripts.serviceFailureNotify;
-      diskSpaceCheck = webhookScripts.diskSpaceCheck;
       backupNotify = webhookScripts.backupNotify;
       webhookHealthCheck = webhookScripts.webhookHealthCheck;
     };
@@ -175,7 +167,6 @@ in
       webhookScripts.webhookHealthCheck
       webhookScripts.smartdNotify
       webhookScripts.serviceFailureNotify
-      webhookScripts.diskSpaceCheck
       webhookScripts.backupNotify
     ] ++ lib.optional cfg.send.cli.enable cliTool;
 

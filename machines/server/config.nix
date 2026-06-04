@@ -322,14 +322,9 @@
   hwc.monitoring.alerts = {
     enable = true;
 
-    # Disk space monitoring
-    sources.diskSpace = {
-      enable = true;
-      frequency = "hourly";
-      filesystems = [ "/" "/home" "/mnt/media" "/mnt/hot" ];
-      warningThreshold = 80;
-      criticalThreshold = 95;
-    };
+    # Disk-space monitoring is owned by Prometheus alerts
+    # (domains/monitoring/prometheus/parts/alerts.nix). The legacy script-based
+    # diskSpace source was retired 2026-06-04.
 
     # Service failure notifications (auto-detect critical services)
     sources.serviceFailures = {

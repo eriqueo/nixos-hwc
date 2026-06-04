@@ -8,7 +8,6 @@
 let
   webhookCfg = config.hwc.notifications.webhook;
   severityCfg = config.hwc.monitoring.alerts.severity;
-  diskSpaceCfg = config.hwc.monitoring.alerts.sources.diskSpace;
 
   # Build webhook URL for a given endpoint
   mkWebhookUrl = endpoint: "${webhookCfg.baseUrl}/${webhookCfg.endpoints.${endpoint}}";
@@ -311,129 +310,6 @@ let
       }
   '';
 
-  # Disk space check script
-  diskSpaceCheck = pkgs.writeScriptBin "hwc-disk-space-check" ''
-    #!${pkgs.bash}/bin/bash
-    set -euo pipefail
-
-    LOG_DIR="${logDir}"
-    LOG_FILE="$LOG_DIR/disk-space.log"
-    # Persistent per-filesystem severity state so alerts are edge-triggered
-    # (fire on a state CHANGE) instead of level-triggered (fire every run).
-    STATE_DIR="$LOG_DIR/disk-state"
-    ${pkgs.coreutils}/bin/mkdir -p "$LOG_DIR" "$STATE_DIR"
-
-    log() {
-      echo "[$(${pkgs.coreutils}/bin/date '+%Y-%m-%d %H:%M:%S')] $1" | ${pkgs.coreutils}/bin/tee -a "$LOG_FILE"
-    }
-
-    CRITICAL_THRESHOLD="${toString diskSpaceCfg.criticalThreshold}"
-    WARNING_THRESHOLD="${toString diskSpaceCfg.warningThreshold}"
-    FILESYSTEMS="${lib.concatStringsSep " " diskSpaceCfg.filesystems}"
-
-    log "Starting disk space check (warn: $WARNING_THRESHOLD%, crit: $CRITICAL_THRESHOLD%)"
-
-    ALERTS_SENT=0
-    ERRORS=0
-
-    for FS in $FILESYSTEMS; do
-      # Check if filesystem is mounted (with timeout for network mounts)
-      if ! ${pkgs.coreutils}/bin/timeout 5 ${pkgs.util-linux}/bin/mountpoint -q "$FS" 2>/dev/null; then
-        log "  Skipping $FS (not mounted or timeout)"
-        continue
-      fi
-
-      # Get usage percentage (remove % sign)
-      USAGE=$(${pkgs.coreutils}/bin/df -P "$FS" 2>/dev/null | ${pkgs.gawk}/bin/awk 'NR==2 {print $5}' | tr -d '%')
-
-      if [ -z "$USAGE" ]; then
-        log "  ERROR: Could not get usage for $FS"
-        ERRORS=$((ERRORS + 1))
-        continue
-      fi
-
-      log "  $FS: $USAGE%"
-
-      # Determine current severity
-      SEVERITY="info"
-      if [ "$USAGE" -ge "$CRITICAL_THRESHOLD" ]; then
-        SEVERITY="critical"
-      elif [ "$USAGE" -ge "$WARNING_THRESHOLD" ]; then
-        SEVERITY="warning"
-      fi
-
-      # Edge-triggered: only notify when severity CHANGES vs. the previous run.
-      # A persistently-full filesystem must NOT re-alert every hour.
-      STATE_FILE="$STATE_DIR/$(echo "$FS" | ${pkgs.coreutils}/bin/tr '/' '_')"
-      PREV_SEVERITY="info"
-      if [ -f "$STATE_FILE" ]; then
-        PREV_SEVERITY=$(${pkgs.coreutils}/bin/cat "$STATE_FILE" 2>/dev/null || echo info)
-      fi
-
-      if [ "$SEVERITY" = "$PREV_SEVERITY" ]; then
-        log "  $FS: $USAGE% ($SEVERITY, unchanged — no alert)"
-        continue
-      fi
-
-      # Severity changed — persist new state before notifying.
-      echo "$SEVERITY" > "$STATE_FILE"
-
-      AVAILABLE=$(${pkgs.coreutils}/bin/df -h "$FS" 2>/dev/null | ${pkgs.gawk}/bin/awk 'NR==2 {print $4}')
-      TOTAL=$(${pkgs.coreutils}/bin/df -h "$FS" 2>/dev/null | ${pkgs.gawk}/bin/awk 'NR==2 {print $2}')
-
-      EXTRA=$(${pkgs.jq}/bin/jq -n \
-        --arg filesystem "$FS" \
-        --arg usage "$USAGE" \
-        --arg available "$AVAILABLE" \
-        --arg total "$TOTAL" \
-        '{
-          filesystem: $filesystem,
-          usage_percent: $usage,
-          available: $available,
-          total: $total,
-          source: "disk-monitor"
-        }')
-
-      if [ "$SEVERITY" = "info" ]; then
-        # Recovered back under the warning threshold — send one recovery note.
-        log "    RECOVERED: $FS back to $USAGE% (was $PREV_SEVERITY)"
-        if ${webhookSender}/bin/hwc-webhook-send \
-          smartd \
-          "Disk Space Recovered: $FS at $USAGE%" \
-          "Filesystem $FS dropped back to $USAGE% ($AVAILABLE available of $TOTAL)" \
-          info \
-          "$EXTRA"; then
-          ALERTS_SENT=$((ALERTS_SENT + 1))
-        else
-          log "    WARNING: Failed to send recovery notice for $FS"
-          ERRORS=$((ERRORS + 1))
-        fi
-        continue
-      fi
-
-      # New warning/critical state (or escalation/de-escalation between them).
-      log "    ALERT: $FS at $USAGE% ($AVAILABLE available of $TOTAL) [$PREV_SEVERITY -> $SEVERITY]"
-      if ${webhookSender}/bin/hwc-webhook-send \
-        smartd \
-        "Disk Space ''${SEVERITY^}: $FS at $USAGE%" \
-        "Filesystem $FS is at $USAGE% capacity ($AVAILABLE available of $TOTAL)" \
-        "$SEVERITY" \
-        "$EXTRA"; then
-        ALERTS_SENT=$((ALERTS_SENT + 1))
-      else
-        log "    WARNING: Failed to send alert for $FS"
-        ERRORS=$((ERRORS + 1))
-      fi
-    done
-
-    log "Disk space check complete: $ALERTS_SENT alerts sent, $ERRORS errors"
-
-    # Exit with error if any errors occurred (for systemd to track)
-    if [ "$ERRORS" -gt 0 ]; then
-      exit 1
-    fi
-  '';
-
   # Backup notification script (to be called by backup-scheduler)
   backupNotify = pkgs.writeScriptBin "hwc-backup-notify" ''
     #!${pkgs.bash}/bin/bash
@@ -492,5 +368,5 @@ let
 
 in
 {
-  inherit webhookSender webhookHealthCheck smartdNotify serviceFailureNotify diskSpaceCheck backupNotify;
+  inherit webhookSender webhookHealthCheck smartdNotify serviceFailureNotify backupNotify;
 }

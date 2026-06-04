@@ -48,10 +48,15 @@
         }
 
         # System - Critical disk space
+        # Covers root AND data volumes (/mnt/*). A full /mnt/media or /mnt/hot
+        # is genuinely critical (media + downloads break), so the P5 tier uses
+        # the same regex as Moderate/Elevated rather than root-only. (Salvaged
+        # from the retired hwc-disk-space-check script, which alerted critical
+        # at 95% on every monitored filesystem.)
         {
           alert = "HighDiskUsage";
           expr = ''
-            100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / node_filesystem_size_bytes{mountpoint="/"}) > 95
+            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 95
           '';
           for = "15m";
           labels = {
@@ -59,7 +64,7 @@
             category = "system";
           };
           annotations = {
-            summary = "Critical disk usage on {{ $labels.instance }}";
+            summary = "Critical disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }}";
             description = "Disk usage is {{ $value | humanize }}% (threshold: 95%)";
           };
         }
