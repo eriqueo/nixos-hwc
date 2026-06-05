@@ -141,5 +141,36 @@ in
         };
       };
     };
+
+    marketDashboard = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Static read-only dashboard for the paper-trading trials: Caddy
+          file_server over a directory holding index.html + a data.json that a
+          host timer regenerates from each book's ledger. Independent of the
+          agent — it only views the engine's state.
+        '';
+      };
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 25444;
+        description = "External Caddy HTTPS port for the market-trials dashboard.";
+      };
+
+      dir = lib.mkOption {
+        type = lib.types.path;
+        default = "${paths.state}/market-dashboard";
+        description = "Directory Caddy serves (index.html + generated data.json).";
+      };
+
+      refresh = lib.mkOption {
+        type = lib.types.str;
+        default = "*:0/15";
+        description = "systemd OnCalendar for the data.json refresh aggregator.";
+      };
+    };
   };
 }
