@@ -25,6 +25,8 @@ index.nix     # OPTIONS / IMPLEMENTATION / VALIDATION
               # - mkInfraContainer "hermes" (cmd: gateway run)
               # - hermes-setup oneshot composes /opt/data/.env from agenix
               # - Caddy port-mode route :25443 -> 127.0.0.1:9119
+              # - Caddy static route :25444 -> market-dashboard dir
+              # - hwc-market-dashboard timer (host) refreshes data.json
               # - age.secrets (deepseek key, discord token)
 parts/
   bootstrap/  # LEGACY: hermes-deploy TS CLI from the native deployment.
@@ -97,8 +99,33 @@ sudo systemctl restart podman-hermes          # restart the whole stack
 
 Upgrade = pull a new image tag (bump `hwc.server.ai.hermes.image`, rebuild).
 
+## Market-trials dashboard
+
+Two autonomous paper-trading trials run inside the container via Hermes cron
+(`market-daily`/`agg-daily` agents + `*-stops`/`*-weekly` watchdogs), each with
+its own ledger under `/opt/data/market-trial` ($10k conservative) and
+`/opt/data/market-aggressive` ($5k aggressive). A deterministic engine
+(`scripts/market_engine.py`) owns the books and enforces every risk rule; the
+LLM only proposes orders.
+
+`hwc.server.ai.hermes.marketDashboard` serves a **read-only** visual dashboard:
+- `scripts/dashboard_build.py` (run by the `hwc-market-dashboard` host timer)
+  reads both ledgers, marks to live Stooq quotes, derives metrics, and writes
+  `data.json` into `marketDashboard.dir`.
+- A Caddy `static` route (`:25444`) serves that dir; `index.html` is a
+  data-driven SPA. URL: `https://hwc-server.ocelot-wahoo.ts.net:25444`.
+
+NOTE (Phase B): `scripts/*` and `index.html` currently live in the mutable
+`/opt/data` volume, NOT the Nix store — a fresh volume loses them. Folding them
+into this module is pending.
+
 ## Changelog
 
+- **2026-06-04** — Added two paper-trading trials + a static dashboard.
+  `marketDashboard` option: Caddy `static` route `:25444` over a host dir, plus
+  the `hwc-market-dashboard` oneshot+timer (runs `dashboard_build.py` as `eric`
+  every 15 min) that regenerates `data.json` from both ledgers. Engine +
+  aggregator + SPA live in the container volume (Phase B: fold into Nix).
 - **2026-06-03 (pm)** — **Re-architected to the official Podman container.**
   Replaced the native 3-unit systemd deployment (install/gateway/dashboard) with
   `nousresearch/hermes-agent` running `gateway run` + `HERMES_DASHBOARD=1` under

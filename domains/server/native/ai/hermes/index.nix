@@ -144,6 +144,49 @@ in
       }];
     }
 
+    # ── Market-trials dashboard (static file_server + host refresh timer) ────
+    # Read-only view: a host timer regenerates data.json from each book's ledger
+    # (marking to live quotes); Caddy serves the directory over the tailnet.
+    # Independent of the Hermes container — it never writes to the books.
+    (lib.mkIf cfg.marketDashboard.enable {
+      hwc.networking.shared.routes = [{
+        name = "market-dashboard";
+        mode = "static";
+        port = cfg.marketDashboard.port;
+        root = cfg.marketDashboard.dir;
+      }];
+
+      systemd.tmpfiles.rules = [
+        "d ${cfg.marketDashboard.dir} 0755 eric users - -"
+      ];
+
+      systemd.services.hwc-market-dashboard = {
+        description = "Build market-trials dashboard data.json from the ledgers";
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = lib.mkForce "eric";
+          Group = "users";
+          ExecStart = "${pkgs.python3}/bin/python3 ${cfg.dataDir}/scripts/dashboard_build.py";
+          Environment = [
+            "HERMES_BASE=${cfg.dataDir}"
+            "DASHBOARD_OUT=${cfg.marketDashboard.dir}/data.json"
+          ];
+        };
+      };
+
+      systemd.timers.hwc-market-dashboard = {
+        description = "Refresh market-trials dashboard data";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "2min";
+          OnCalendar = cfg.marketDashboard.refresh;
+          Persistent = true;
+        };
+      };
+    })
+
     # ── VALIDATION ────────────────────────────────────────────────────────────
     {
       assertions = [
