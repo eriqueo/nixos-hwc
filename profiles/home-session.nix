@@ -96,6 +96,9 @@
       tmux.enable = lib.mkDefault true;
       herdr.enable = lib.mkDefault true;
 
+      # Task management
+      tuxedo.enable = lib.mkDefault true;
+
       # Development & Automation
       n8n.enable = lib.mkDefault false;
       gemini-cli.enable = lib.mkDefault true;
