@@ -92,6 +92,13 @@
       group = "secrets";
     };
 
+    market-intelligence-alphavantage-key = {
+      file = ../parts/services/market-intelligence-alphavantage-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     market-intelligence-fmp-key = {
       file = ../parts/services/market-intelligence-fmp-key.age;
       mode = "0440";

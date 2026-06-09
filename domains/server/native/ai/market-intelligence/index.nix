@@ -17,7 +17,7 @@ let
   runScript = subcommand: pkgs.writeShellScript "market-intelligence-${subcommand}" ''
     set -euo pipefail
     export DEEPSEEK_API_KEY="$(cat /run/agenix/${cfg.deepseekKeySecret})"
-    export MARKET_INTEL_FMP_KEY="$(cat /run/agenix/${cfg.fmpKeySecret})"
+    export MARKET_INTEL_ALPHAVANTAGE_KEY="$(cat /run/agenix/${cfg.alphavantageKeySecret})"
     export MARKET_INTEL_FRED_KEY="$(cat /run/agenix/${cfg.fredKeySecret})"
     ${lib.optionalString (cfg.discordWebhookSecret != "") ''
       export MARKET_INTEL_DISCORD_WEBHOOK="$(cat /run/agenix/${cfg.discordWebhookSecret})"
@@ -121,8 +121,8 @@ in
           message = "market-intelligence-fred-key.age is missing — run: cd ~/.nixos && sudo agenix -e domains/secrets/parts/services/market-intelligence-fred-key.age";
         }
         {
-          assertion = builtins.pathExists ../../../../secrets/parts/services/market-intelligence-fmp-key.age;
-          message = "market-intelligence-fmp-key.age is missing — run: cd ~/.nixos && sudo agenix -e domains/secrets/parts/services/market-intelligence-fmp-key.age";
+          assertion = builtins.pathExists ../../../../secrets/parts/services/market-intelligence-alphavantage-key.age;
+          message = "market-intelligence-alphavantage-key.age is missing — add it via the `secret` TUI (category: services).";
         }
       ];
     }
