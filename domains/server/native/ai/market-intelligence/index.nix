@@ -28,9 +28,11 @@ let
 
   mkJobService = subcommand: description: {
     inherit description;
-    after = [ "network-online.target" "agenix.service" ];
+    # agenix runs as an activation script (no agenix.service unit), so secrets
+    # in /run/agenix are already present by the time these timer-driven units
+    # fire — no ordering dependency needed beyond the network.
+    after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
-    requires = [ "agenix.service" ];
     serviceConfig = {
       Type = "oneshot";
       User = "eric";
