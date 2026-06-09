@@ -22,6 +22,7 @@ apps/
 ├── obsidian/       # Note-taking
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── waybar/         # Status bar
+├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
 └── ... (30+ apps)
 ```
 
@@ -42,3 +43,4 @@ apps/
 - 2026-05-28: Added dxlog — DataX OpenSearch log diagnostic CLI (trace/search/errors/loops/live commands). Bash script wrapped via `writeShellScriptBin` from `parts/dxlog.sh`; runtime deps curl/jq/doctl pulled in via home.packages. Replaces ad-hoc copy at `~/000_inbox/downloads/dxlog.sh`
 - 2026-05-28: dxlog — added interactive wizard (launches on `dxlog` with no args) walking action → identifier → time period → limit → format → output destination; auto-saves to `~/dxlog-reports/<slug>-<timestamp>.<ext>` by default. Also made `cmd_init` no-op when env vars are already populated (prevents the user from accidentally clobbering the Nix wrapper's exports by running `dxlog init`)
 - 2026-05-29: Added xournalpp — PDF annotator / handwritten notes. Use case: signing PDFs (draw signature or drop in a PNG image of one, export back to PDF preserving the original)
+- 2026-06-09: Added tuxedo — keyboard-driven todo.txt TUI (webstonehq/tuxedo). Namespace `hwc.home.apps.tuxedo`; sets TODO_DIR/TODO_FILE/DONE_FILE env (default `~/000_inbox/todo`); seeds a writable config.toml via home.activation (tuxedo self-manages the file at runtime, so it is intentionally NOT an xdg.configFile store symlink). Package overridable via `.package` in case the nixpkgs attr differs from `tuxedo`
