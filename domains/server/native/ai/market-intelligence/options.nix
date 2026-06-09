@@ -53,10 +53,10 @@ in
       description = "agenix secret NAME for the FRED API key (-> MARKET_INTEL_FRED_KEY).";
     };
 
-    fmpKeySecret = lib.mkOption {
+    alphavantageKeySecret = lib.mkOption {
       type = lib.types.str;
-      default = "market-intelligence-fmp-key";
-      description = "agenix secret NAME for the FMP API key (-> MARKET_INTEL_FMP_KEY).";
+      default = "market-intelligence-alphavantage-key";
+      description = "agenix secret NAME for the Alpha Vantage API key (-> MARKET_INTEL_ALPHAVANTAGE_KEY). Source of earnings transcripts + beat/miss.";
     };
 
     deepseekKeySecret = lib.mkOption {
