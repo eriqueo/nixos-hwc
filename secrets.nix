@@ -38,6 +38,10 @@ in
   "domains/secrets/parts/caddy/hwc-xps.ocelot-wahoo.ts.net.crt.age".publicKeys   = [ xps eric ];
   "domains/secrets/parts/caddy/hwc-xps.ocelot-wahoo.ts.net.key.age".publicKeys   = [ xps eric ];
 
+  # deSEC API token for Caddy ACME DNS-01 (*.hwc.iheartwoodcraft.com wildcard).
+  # Scoped to the hwc subzone only — cannot touch the apex zone or ProtonMail MX.
+  "domains/secrets/parts/services/caddy-desec-token.age".publicKeys              = [ server eric ];
+
   # ═══════════════════════════════════════════════════════════════════════════
   # Home — email, API keys, personal credentials
   # ═══════════════════════════════════════════════════════════════════════════

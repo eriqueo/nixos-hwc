@@ -139,8 +139,15 @@ let
   vhostBlock = lib.optionalString (vhostRoutes != [ ]) ''
     *.${vhostDomain} {
       tls {
-        dns desec {env.DESEC_TOKEN}
+        dns desec {
+          token {env.DESEC_TOKEN}
+        }
         resolvers 1.1.1.1
+        # deSEC publishes zone changes on a ~60s batch cycle and Let's Encrypt
+        # does multi-perspective (secondary) validation — wait for the TXT to
+        # land on all deSEC nameservers before asking LE to validate.
+        propagation_delay 120s
+        propagation_timeout 600s
       }
       encode zstd gzip
       ${concatStringsSep "\n" (map renderVhostRoute vhostRoutes)}
@@ -264,6 +271,8 @@ in
         # Disable security restrictions so eric can access directories
         PrivateUsers = lib.mkForce false;
         ProtectHome = lib.mkForce false;
+        # deSEC API token (DESEC_TOKEN=...) for the *.vhostDomain DNS-01 wildcard.
+        EnvironmentFile = config.age.secrets.caddy-desec-token.path;
       };
     };
 

@@ -319,11 +319,11 @@ in
 
     # lead_scout — intelligence pipeline dashboard (Vite dev)
     {
-      # Tailnet frontend — Caddy with tailscale cert proxies to the unified
-      # lead-scout server on :8420 (serves SPA + REST API + chat + /mcp).
+      # CANARY for name-based vhosts: served as lead-scout.hwc.iheartwoodcraft.com
+      # on :443 (wildcard cert via DNS-01), no dedicated port. Proxies to the
+      # unified lead-scout server on :8420 (serves SPA + REST API + chat + /mcp).
       name = "lead-scout";
-      mode = "port";
-      port = 21443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:8420";
     }
 

@@ -14,6 +14,15 @@
       group = "secrets";
     };
 
+    # deSEC API token for Caddy ACME DNS-01 (*.hwc.iheartwoodcraft.com wildcard).
+    # Consumed as the Caddy unit's EnvironmentFile (DESEC_TOKEN=...).
+    caddy-desec-token = {
+      file = ../parts/services/caddy-desec-token.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     # ARR stack API keys
     estimator-api-key = {
       file = ../parts/services/estimator-api-key.age;
