@@ -42,7 +42,7 @@
         container: authentik-server
     - Grafana:
         icon: grafana
-        href: https://hwc-server.ocelot-wahoo.ts.net:4443
+        href: https://grafana.hwc.iheartwoodcraft.com
         description: Metrics dashboards
     - Prometheus:
         icon: prometheus
@@ -50,19 +50,19 @@
         description: Metrics collection
     - Vaultwarden:
         icon: vaultwarden
-        href: https://hwc-server.ocelot-wahoo.ts.net:15443
+        href: https://vaultwarden.hwc.iheartwoodcraft.com
         description: Password manager
         server: localhost
         container: vaultwarden
     - Firefly III:
         icon: firefly-iii
-        href: https://hwc-server.ocelot-wahoo.ts.net:10443
+        href: https://firefly.hwc.iheartwoodcraft.com
         description: Finance
         server: localhost
         container: firefly
     - CloudBeaver:
         icon: mdi-database
-        href: https://hwc-server.ocelot-wahoo.ts.net:12443
+        href: https://cloudbeaver.hwc.iheartwoodcraft.com
         description: DB management
         server: localhost
         container: cloudbeaver
@@ -70,11 +70,11 @@
 - Media:
     - Jellyfin:
         icon: jellyfin
-        href: https://hwc-server.ocelot-wahoo.ts.net:6443
+        href: https://jellyfin.hwc.iheartwoodcraft.com
         description: Media server
     - Jellyseerr:
         icon: jellyseerr
-        href: https://hwc-server.ocelot-wahoo.ts.net:5543
+        href: https://jellyseerr.hwc.iheartwoodcraft.com
         description: Media requests
         server: localhost
         container: jellyseerr
@@ -122,7 +122,7 @@
         container: audiobookshelf
     - Pinchflat:
         icon: mdi-youtube
-        href: https://hwc-server.ocelot-wahoo.ts.net:8943
+        href: https://pinchflat.hwc.iheartwoodcraft.com
         description: YouTube archiver
         server: localhost
         container: pinchflat
@@ -130,13 +130,39 @@
 - Home:
     - Frigate:
         icon: frigate
-        href: https://hwc-server.ocelot-wahoo.ts.net:5443
+        href: https://frigate.hwc.iheartwoodcraft.com
         description: NVR / cameras
         server: localhost
         container: frigate
     - Immich:
         icon: immich
-        href: https://hwc-server.ocelot-wahoo.ts.net:7443
+        href: https://immich.hwc.iheartwoodcraft.com
         description: Photos
         server: localhost
         container: immich-server
+
+- Apps & Tools:
+    - Uptime Kuma:
+        icon: uptime-kuma
+        href: https://uptime-kuma.hwc.iheartwoodcraft.com
+        description: Status monitoring
+    - Lead Scout:
+        icon: mdi-radar
+        href: https://lead-scout.hwc.iheartwoodcraft.com
+        description: Lead intelligence
+    - Hermes:
+        icon: mdi-chart-line
+        href: https://hermes.hwc.iheartwoodcraft.com
+        description: Market trials
+    - SR Analyzer:
+        icon: mdi-clipboard-list
+        href: https://sr_analyzer.hwc.iheartwoodcraft.com
+        description: DataX SR triage
+    - Heartwood CMS:
+        icon: mdi-pencil
+        href: https://heartwood-cms.hwc.iheartwoodcraft.com
+        description: Content management
+    - Calibre:
+        icon: calibre
+        href: https://calibre.hwc.iheartwoodcraft.com
+        description: E-book library
