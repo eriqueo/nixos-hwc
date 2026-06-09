@@ -284,8 +284,7 @@ in
     # CORS enabled for cross-origin embedding on WordPress
     {
       name = "calculator";
-      mode = "static";
-      port = 14443;
+      mode = "vhost";
       root = "/home/eric/.nixos/domains/business/website/calculator/app/dist";
     }
     # Heartwood CMS — name-based vhost (content management dashboard)
@@ -298,8 +297,7 @@ in
     # Morning Briefing — daily dashboard for Heartwood Craft ops
     {
       name = "briefing";
-      mode = "static";
-      port = 16443;
+      mode = "vhost";
       root = "/home/eric/.nixos/domains/business/morning-briefing/dashboard";
     }
 

@@ -150,8 +150,7 @@ in
     (lib.mkIf cfg.marketDashboard.enable {
       hwc.networking.shared.routes = [{
         name = "market-dashboard";
-        mode = "static";
-        port = cfg.marketDashboard.port;
+        mode = "vhost";
         root = cfg.marketDashboard.dir;
       }];
 

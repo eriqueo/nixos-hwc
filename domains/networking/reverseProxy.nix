@@ -127,12 +127,30 @@ let
   # hole — served behind a single wildcard cert (*.<vhostDomain>) via ACME DNS-01.
   vhostRoutes = lib.filter (r: (r.mode or "") == "vhost") routes;
 
-  renderVhostRoute = r: ''
-    @${r.name} host ${r.name}.${vhostDomain}
-    handle @${r.name} {
-      ${mkProxyBlock r}
-    }
-  '';
+  renderVhostRoute = r:
+    let
+      # A vhost route is either a reverse proxy (has `upstream`) or a static
+      # file server (has `root`), served under its own host matcher on :443.
+      body =
+        if r ? root then ''
+          # Static file server (CORS-enabled for cross-origin embedding).
+          # Only hashed build assets are cached immutably; the SPA/PWA shell and
+          # generated data files revalidate so updates are picked up.
+          header Access-Control-Allow-Origin "*"
+          header Access-Control-Allow-Methods "GET, OPTIONS"
+          header Access-Control-Allow-Headers "Content-Type"
+          header /assets/* Cache-Control "public, max-age=31536000, immutable"
+          root * ${r.root}
+          try_files {path} /index.html
+          file_server
+        ''
+        else mkProxyBlock r;
+    in ''
+      @${r.name} host ${r.name}.${vhostDomain}
+      handle @${r.name} {
+        ${body}
+      }
+    '';
 
   # Single wildcard site block; emitted only when at least one vhost route
   # exists (so the config is byte-for-byte unchanged until the first migration).
