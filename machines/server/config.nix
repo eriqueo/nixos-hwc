@@ -405,7 +405,8 @@
 
       echo "Dumping PostgreSQL databases..."
       if systemctl is-active --quiet postgresql; then
-        /run/wrappers/bin/su - postgres -s /bin/sh -c "/run/current-system/sw/bin/pg_dumpall" > "$DUMP_DIR/postgresql-$DATE.sql" 2>/dev/null || echo "PostgreSQL dump failed"
+        # --rsyncable keeps borg dedup effective across daily compressed dumps
+        /run/wrappers/bin/su - postgres -s /bin/sh -c "/run/current-system/sw/bin/pg_dumpall 2>/dev/null" | /run/current-system/sw/bin/gzip --rsyncable > "$DUMP_DIR/postgresql-$DATE.sql.gz" || echo "PostgreSQL dump failed"
       fi
 
       echo "Dumping CouchDB databases..."
@@ -421,7 +422,9 @@
       fi
 
       # Cleanup old dumps (keep 14 days - Borg handles long-term retention)
+      # *.sql matches legacy uncompressed dumps until they age out
       find "$DUMP_DIR" -name "*.sql" -mtime +14 -delete 2>/dev/null || true
+      find "$DUMP_DIR" -name "*.sql.gz" -mtime +14 -delete 2>/dev/null || true
       find "$DUMP_DIR" -name "*.json" -mtime +14 -delete 2>/dev/null || true
       echo "Database dumps complete"
     '';
@@ -765,6 +768,13 @@
       enable = true;
       dockerCompat = true;
       defaultNetwork.settings.dns_enabled = true;
+      # Old :latest pulls accumulate ~1GB/week without this (2026-06-09 audit
+      # found 19GB unused); --all removes any image no container references
+      autoPrune = {
+        enable = true;
+        flags = [ "--all" ];
+        dates = "weekly";
+      };
     };
     oci-containers.backend = "podman";
   };

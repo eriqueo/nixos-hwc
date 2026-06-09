@@ -234,22 +234,6 @@
         "type": "github"
       }
     },
-    "legacy-config": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1779128803,
-        "narHash": "sha256-FfWEtRsI29OypVT0de7BOrLbhcWhexRH0xMYRu+Jae4=",
-        "owner": "eriqueo",
-        "repo": "nixos-hwc",
-        "rev": "58321f1655e7b557be0df2ac4eb1c363774397d1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "eriqueo",
-        "repo": "nixos-hwc",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1778869304,
@@ -341,7 +325,6 @@
         "codex": "codex",
         "home-manager": "home-manager_3",
         "home-manager-stable": "home-manager-stable",
-        "legacy-config": "legacy-config",
         "nixpkgs": "nixpkgs",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixpkgs-tailscale": "nixpkgs-tailscale",
