@@ -107,8 +107,7 @@ in
     hwc.networking.shared.routes = [
       {
         name = "homepage";
-        mode = "port";
-        port = cfg.caddyPort;
+        mode = "vhost";
         upstream = "http://127.0.0.1:${toString cfg.port}";
       }
     ];

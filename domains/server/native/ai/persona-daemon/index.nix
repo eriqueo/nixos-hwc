@@ -149,8 +149,7 @@ in
     #========================================================================
     hwc.networking.shared.routes = [{
       name = "persona-daemon";
-      mode = "port";
-      port = cfg.reverseProxyPort;
+      mode = "vhost";
       upstream = "http://${cfg.bindAddr}:${toString cfg.port}";
     }];
 

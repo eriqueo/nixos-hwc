@@ -137,8 +137,7 @@ in
     {
       hwc.networking.shared.routes = [{
         name = "hermes";
-        mode = "port";
-        port = cfg.reverseProxyPort;
+        mode = "vhost";
         upstream = "http://127.0.0.1:${toString cfg.dashboardPort}";
         headers = { Host = "127.0.0.1"; };
       }];

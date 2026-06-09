@@ -4,19 +4,17 @@ let
 in
 {
   hwc.networking.shared.routes = [
-    # Jellyfin - port mode (reliable, no base URL config needed)
+    # Jellyfin - name-based vhost (jellyfin.hwc.iheartwoodcraft.com)
     {
       name = "jellyfin";
-      mode = "port";
-      port = 6443;  # Dedicated port for Jellyfin
+      mode = "vhost";
       upstream = "http://127.0.0.1:8096";
     }
 
-    # Jellyseerr - port mode (doesn't work well with subpaths)
+    # Jellyseerr - name-based vhost (applicationUrl updated in jellyseerr settings)
     {
       name = "jellyseerr";
-      mode = "port";
-      port = 5543;  # Dedicated port for Jellyseerr
+      mode = "vhost";
       upstream = "http://127.0.0.1:5055";
     }
 
@@ -40,27 +38,24 @@ in
       headers = { "X-Forwarded-Prefix" = "/music"; };
     }
 
-    # Immich - port mode (subpath-hostile)
+    # Immich - name-based vhost (subpath-hostile; host derived from request)
     {
       name = "immich";
-      mode = "port";
-      port = 7443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:2283";
     }
 
-    # Frigate - port mode (subpath-hostile, GPU-accelerated with TensorRT)
+    # Frigate - name-based vhost (subpath-hostile, GPU-accelerated with TensorRT)
     {
       name = "frigate";
-      mode = "port";
-      port = 5443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:5000";  # GPU-accelerated with CUDA/TensorRT support
     }
 
-    # Grafana - port mode (monitoring dashboards)
+    # Grafana - name-based vhost (root_url updated in grafana module)
     {
       name = "grafana";
-      mode = "port";
-      port = 4443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:3000";
     }
 
@@ -84,11 +79,10 @@ in
       headers = { "X-Forwarded-Prefix" = "/qbt"; };
     }
 
-    # slskd - port mode with corrected upstream
+    # slskd - name-based vhost
     {
       name = "slskd";
-      mode = "port";
-      port = 8443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:5031";
     }
 
@@ -163,19 +157,16 @@ in
     }
 
     # Mousehole - MAM seedbox IP updater (runs through Gluetun VPN)
-    # Port mode because app redirects to /web without base path support
     {
       name = "mousehole";
-      mode = "port";
-      port = 5043;
+      mode = "vhost";
       upstream = "http://127.0.0.1:5010";
     }
 
-    # Calibre - port mode for desktop interface (KasmVNC)
+    # Calibre - name-based vhost (desktop interface, KasmVNC)
     {
       name = "calibre";
-      mode = "port";
-      port = 1443;  # Dedicated port for Calibre desktop
+      mode = "vhost";
       upstream = "http://127.0.0.1:8083";
     }
 
@@ -203,40 +194,39 @@ in
       };
     }
 
-    # Tdarr - port mode (WebSocket intensive, subpath issues)
+    # Tdarr - name-based vhost (WebSocket intensive, subpath issues)
     {
       name = "tdarr";
-      mode = "port";
-      port = 8267;  # Use 8267 externally, forward to internal 8265
+      mode = "vhost";
       upstream = "http://127.0.0.1:8265";
     }
 
-    # Organizr - Root dashboard on dedicated port
+    # Organizr - name-based vhost (root dashboard)
     {
       name = "organizr";
-      mode = "port";
-      port = 9443;  # Dedicated port for Organizr dashboard
+      mode = "vhost";
       upstream = "http://127.0.0.1:9983";
     }
 
-    # Pinchflat - YouTube subscription manager (port mode - subpath-hostile)
+    # Pinchflat - YouTube subscription manager (subpath-hostile)
     {
       name = "pinchflat";
-      mode = "port";
-      port = 8943;  # Dedicated port for Pinchflat
+      mode = "vhost";
       upstream = "http://127.0.0.1:8945";
     }
 
     # YouTube Transcripts API - FastAPI transcript extraction service
+    # (n8n calls this via loopback :8100, not the public URL)
     {
       name = "yt-transcripts-api";
-      mode = "port";
-      port = 3443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:8100";
     }
 
-    # n8n - Workflow automation platform (port mode - subpath not properly supported)
-    # Used for Alertmanager webhook handling and Slack notifications
+    # n8n - Workflow automation platform — HELD on port mode.
+    # Host-sensitive: N8N_EDITOR_BASE_URL/WEBHOOK_URL + the public Cloudflare
+    # tunnel + webhook URLs referenced across notifications/arr/mail modules.
+    # Migrating needs a coordinated cutover of all of those — separate change.
     {
       name = "n8n";
       mode = "port";
@@ -246,22 +236,20 @@ in
       headers = { Origin = "https://hwc-server.ocelot-wahoo.ts.net"; };
     }
 
-    # Firefly III - personal finance manager (port mode - Laravel subpath-hostile)
+    # Firefly III - name-based vhost (APP_URL updated in firefly module).
+    # On :443 the external port is standard https, so the X-Forwarded-Port
+    # override is no longer needed.
     {
       name = "firefly";
-      mode = "port";
-      port = 10443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:8085";
-      headers = { "X-Forwarded-Port" = "10443"; };
     }
 
-    # Firefly-Pico - mobile companion (port mode - Nuxt.js subpath issues)
+    # Firefly-Pico - name-based vhost (appUrl updated in firefly module)
     {
       name = "firefly-pico";
-      mode = "port";
-      port = 11443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:8086";
-      headers = { "X-Forwarded-Port" = "11443"; };
     }
 
     # Paperless-NGX - document management (preserve path)
@@ -285,11 +273,10 @@ in
       headers = { "X-Forwarded-Prefix" = "/webhook"; };
     }
 
-    # CloudBeaver - web-based database manager (port mode - subpath-hostile)
+    # CloudBeaver - name-based vhost (subpath-hostile)
     {
       name = "cloudbeaver";
-      mode = "port";
-      port = 12443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:8978";
     }
 
@@ -301,11 +288,10 @@ in
       port = 14443;
       root = "/home/eric/.nixos/domains/business/website/calculator/app/dist";
     }
-    # Heartwood CMS — content management dashboard for heartwoodcraft.me
+    # Heartwood CMS — name-based vhost (content management dashboard)
     {
       name = "heartwood-cms";
-      mode = "port";
-      port = 18095;
+      mode = "vhost";
       upstream = "http://127.0.0.1:8095";
     }
 
@@ -317,17 +303,18 @@ in
       root = "/home/eric/.nixos/domains/business/morning-briefing/dashboard";
     }
 
-    # lead_scout — intelligence pipeline dashboard (Vite dev)
+    # lead_scout — intelligence pipeline dashboard, name-based vhost
+    # (lead-scout.hwc.iheartwoodcraft.com). Proxies to the unified lead-scout
+    # server on :8420 (serves SPA + REST API + chat + /mcp).
     {
-      # CANARY for name-based vhosts: served as lead-scout.hwc.iheartwoodcraft.com
-      # on :443 (wildcard cert via DNS-01), no dedicated port. Proxies to the
-      # unified lead-scout server on :8420 (serves SPA + REST API + chat + /mcp).
       name = "lead-scout";
       mode = "vhost";
       upstream = "http://127.0.0.1:8420";
     }
 
-    # lead_scout API — MCP + REST backend
+    # lead_scout API — MCP + REST backend — HELD on port mode.
+    # Same :8420 backend as lead-scout; the laptop's Claude MCP config may pin
+    # this URL, so migrate it together with the other MCP endpoints.
     {
       name = "lead-scout-api";
       mode = "port";
@@ -335,39 +322,33 @@ in
       upstream = "http://127.0.0.1:8420";
     }
 
-    # sr_analyzer — local Kanban for DataX support-request triage
+    # sr_analyzer — name-based vhost (local Kanban for DataX SR triage).
     # Standalone Podman container at ~/apps/sr_analyzer (NOT a NixOS module).
-    # Host 8788 → container 8787 (8787 is taken by Readarr).
     {
       name = "sr_analyzer";
-      mode = "port";
-      port = 24443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:8788";
     }
 
-    # llama.cpp GPU server — LFM2-2.6B Q4 on the Quadro P1000
-    # 17443 is taken by homepage, 19443 by Arka, so we use 26443/27443.
+    # llama.cpp GPU server — LFM2-2.6B Q4 on the Quadro P1000 (loopback clients)
     {
       name = "llama-gpu";
-      mode = "port";
-      port = 26443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:11500";
     }
 
-    # llama.cpp CPU server — LFM2-24B-A2B Q4 in host RAM
+    # llama.cpp CPU server — LFM2-24B-A2B Q4 in host RAM (loopback clients)
     {
       name = "llama-cpu";
-      mode = "port";
-      port = 27443;
+      mode = "vhost";
       upstream = "http://127.0.0.1:11501";
     }
 
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
-    # Vaultwarden - self-hosted password manager (port mode)
+    # Vaultwarden - name-based vhost (DOMAIN updated in vaultwarden module)
     {
       name = "vaultwarden";
-      mode = "port";
-      port = config.hwc.secrets.vaultwarden.reverseProxy.port;
+      mode = "vhost";
       upstream = "http://127.0.0.1:${toString config.hwc.secrets.vaultwarden.port}";
     }
   ] ++ lib.optionals mcpCfg.reverseProxy.enable [
