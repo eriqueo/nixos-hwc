@@ -9,12 +9,13 @@
 ```
 domains/secrets/
 ├── index.nix            # Aggregator (imports declarations, API, emergency, hardening)
-├── lib.nix              # Pure generator: walks parts/**.age → recipients + mounts
 ├── declarations/        # Generated age.secrets declarations
 │   ├── index.nix        # Aggregates caddy + generated
 │   ├── caddy.nix        # caddy-cert/caddy-key OPTIONS
 │   └── generated.nix    # ALL non-caddy mounts, generated from parts/**.age
-├── parts/               # Encrypted .age files organized by domain
+├── parts/               # Encrypted .age files organized by domain (+ helpers)
+│   ├── lib.nix          # Pure generator: walks parts/**.age → recipients + mounts
+│   ├── caddy.nix        # caddy-cert/caddy-key MOUNTS (runtime hostname selection)
 │   ├── caddy/           # TLS certificates
 │   ├── home/            # Email, OAuth, scraper credentials
 │   ├── infrastructure/  # Database, VPN, camera credentials

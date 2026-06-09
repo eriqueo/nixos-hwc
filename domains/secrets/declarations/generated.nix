@@ -7,14 +7,14 @@
 # source of truth: every secret (excluding the runtime-selected caddy/ certs,
 # which domains/secrets/parts/caddy.nix still mounts by hand) is mounted with
 # the default permission set, overridden per-name only where it historically
-# differed. See domains/secrets/lib.nix for the walk + name derivation.
+# differed. See domains/secrets/parts/lib.nix for the walk + name derivation.
 #
 # Adding a secret = drop a .age into parts/<category>/ and add a recipient via
 # the agenix workflow; no edits to this file are required unless the new secret
 # needs non-default ownership/mode.
 { config, lib, ... }:
 let
-  gen      = import ../lib.nix { };
+  gen      = import ../parts/lib.nix { };
   partsDir = ../parts;
 
   defaultMount = { mode = "0440"; owner = "root"; group = "secrets"; };
@@ -62,7 +62,7 @@ in
         let names = map (e: e.name) entries;
         in builtins.length names == builtins.length (lib.unique names);
       message = "secrets generator: two .age files derive the same secret name "
-              + "(see domains/secrets/lib.nix deriveName)";
+              + "(see domains/secrets/parts/lib.nix deriveName)";
     }];
   };
 }

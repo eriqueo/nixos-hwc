@@ -128,6 +128,16 @@ age.secrets.<name> = {
 
 **Violation**: PGID=1000 (should be 100), hardcoded UID/GID/user/group when identity options are available, missing `secrets` group membership, secrets without 0440 mode.
 
+**Generated declarations (secrets domain)**: As of 2026-06-09, `domains/secrets/`
+does **not** hand-write `age.secrets` mounts or `secrets.nix` recipient rules.
+`domains/secrets/parts/lib.nix` (a pure `builtins`-only generator) walks
+`parts/**.age` and emits both — the standard pattern above is the generator's
+*default* mount, with per-name exceptions in `declarations/generated.nix`
+(`mountOverrides`). Default recipients are `everyone` (all hosts + eric). Add a
+secret by dropping `<name>.age` into `parts/<category>/` then `sudo agenix -r`;
+**do not re-introduce per-secret declaration files**. The four `caddy/` certs
+stay hand-written (runtime hostname selection). See `domains/secrets/README.md`.
+
 ### Law 5: Container Standard (mkContainer)
 
 All OCI containers **must** use the `mkContainer` pure helper unless explicitly justified.
