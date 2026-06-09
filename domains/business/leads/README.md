@@ -142,5 +142,6 @@ Hardening: same set as hwc-notify (`NoNewPrivileges`, `ProtectSystem=strict`, `P
 
 ## Changelog
 
+- **2026-06-09** — `hwc-leads` Caddy route migrated from port-mode `:30443` to name-based vhost `hwc-leads.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert, no firewall port). The `lead-scout-api` MCP endpoint is intentionally **held on its dedicated port** — the laptop's Claude `.claude.json` pins that URL and is off-host (`~/.claude` isn't synced). See `domains/networking/README.md`.
 - **2026-05-31** (Phase 2.1): Node HTTP skeleton + `/health` + hexagonal layout + Charter hardening + Caddy port-mode route on `:30443`. `--experimental-sqlite` flag pre-set for the upcoming audit log. Shipped via shared `domains/lib/deps-update.nix` (same helper that powers `hwc-notify-deps-update`).
 - **2026-05-31** (Phase 0): Charter scaffold. Module + options + `enable = false` default with an assertion that fired when enabled. Agenix secret `hwc-leads-hmac-secret` (256-bit) pre-encrypted.

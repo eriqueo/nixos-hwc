@@ -139,10 +139,11 @@ sudo ln -sfn /var/lib/estimator/builds/dist-$TIMESTAMP /var/lib/estimator/dist
 
 ## Access
 
-`https://hwc-server.ocelot-wahoo.ts.net:13443`
+`https://estimator.hwc.iheartwoodcraft.com`
 
 ## Changelog
 
+- 2026-06-09: Access moved from the bespoke `services.caddy.extraConfig` PWA block on tailnet port `:13443` to a `vhost` route `estimator.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert. PWA cache behaviour preserved by the vhost renderer's assets-only-immutable policy. See `domains/networking/README.md`.
 - 2026-05-01: Bottom-up pricing engine — Job #306 rates, Craftsman production rates, 8 new scope items, deck assembler, templates, MCP tools, DB export pipeline
 - 2026-04-22: NixOS-managed build service with baked-in secrets, versioned deploys
 - 2026-03-25: Created README per Law 12

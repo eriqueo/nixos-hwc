@@ -4,8 +4,8 @@
 llama-cpp services with persona resolution, conversation memory (SQLite),
 and (in Commit 3) RAG over the brain vault.
 
-Listens on `127.0.0.1:11550`. External access via Caddy `:28443` arrives
-in Commit 4.
+Listens on `127.0.0.1:11550`. External access via Caddy name-based vhost
+`persona-daemon.hwc.iheartwoodcraft.com` (was port `:28443`).
 
 ## Endpoints
 
@@ -123,6 +123,7 @@ deno task dev
 
 ## Changelog
 
+- 2026-06-09: Caddy route migrated from port-mode `:28443` to name-based vhost `persona-daemon.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert, no firewall port). See `domains/networking/README.md`.
 - 2026-06-02: vault path follows the move from `/mnt/vaults/brain` to
   `/home/eric/900_vaults/brain`. Only the `vaultPath` option's doc/default
   reference changed — the value is inherited from

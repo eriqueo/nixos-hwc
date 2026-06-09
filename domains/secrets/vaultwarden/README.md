@@ -24,8 +24,8 @@ vaultwarden/
 | `network.mode` | `"media"` | Podman network mode |
 
 ## Access
-- URL: `https://hwc-server.ocelot-wahoo.ts.net:15443`
-- Admin panel: `https://hwc-server.ocelot-wahoo.ts.net:15443/admin` (uses `vaultwarden-admin-token` secret)
+- URL: `https://vaultwarden.hwc.iheartwoodcraft.com`
+- Admin panel: `https://vaultwarden.hwc.iheartwoodcraft.com/admin` (uses `vaultwarden-admin-token` secret)
 
 ## Dependencies
 - agenix secret: `vaultwarden-admin-token`
@@ -33,4 +33,5 @@ vaultwarden/
 - Caddy reverse proxy via `networking/routes.nix`
 
 ## Changelog
+- 2026-06-09: Access moved from tailnet port `:15443` to name-based vhost `vaultwarden.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert). Container `DOMAIN` env updated to the new origin — Vaultwarden pins WebAuthn/passkeys to `DOMAIN`, so it must equal the browser URL. `reverseProxy.port` is now vestigial (vhost opens only :443). See `domains/networking/README.md`.
 - 2026-03-26: Initial scaffolding — container, env file, reverse proxy, secret integration

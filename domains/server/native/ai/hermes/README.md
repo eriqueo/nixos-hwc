@@ -24,8 +24,8 @@ options.nix   # hwc.server.ai.hermes.* schema (container deployment)
 index.nix     # OPTIONS / IMPLEMENTATION / VALIDATION
               # - mkInfraContainer "hermes" (cmd: gateway run)
               # - hermes-setup oneshot composes /opt/data/.env from agenix
-              # - Caddy port-mode route :25443 -> 127.0.0.1:9119
-              # - Caddy static route :25444 -> market-dashboard dir
+              # - Caddy vhost route hermes.* -> 127.0.0.1:9119
+              # - Caddy static vhost route market-dashboard.* -> dashboard dir
               # - hwc-market-dashboard timer (host) refreshes data.json
               # (deepseek key + discord token mounted by the generated secrets
               #  layer — domains/secrets/, not inline here)
@@ -87,10 +87,10 @@ secrets layer (`domains/secrets/`) — this module no longer declares them inlin
 
 ## Reverse proxy
 
-`hwc.networking.shared.routes` registers `hermes` on port **25443** forwarding to
-the container's dashboard at `127.0.0.1:9119`, with a `Host: 127.0.0.1` rewrite
-to satisfy the dashboard's DNS-rebinding defense. URL:
-`https://hwc-server.ocelot-wahoo.ts.net:25443`.
+`hwc.networking.shared.routes` registers `hermes` as a name-based `vhost`
+forwarding to the container's dashboard at `127.0.0.1:9119`, with a
+`Host: 127.0.0.1` rewrite to satisfy the dashboard's DNS-rebinding defense. URL:
+`https://hermes.hwc.iheartwoodcraft.com` (was port `:25443`).
 
 ## Manual ops
 
@@ -117,8 +117,9 @@ LLM only proposes orders.
 - `scripts/dashboard_build.py` (run by the `hwc-market-dashboard` host timer)
   reads both ledgers, marks to live Stooq quotes, derives metrics, and writes
   `data.json` into `marketDashboard.dir`.
-- A Caddy `static` route (`:25444`) serves that dir; `index.html` is a
-  data-driven SPA. URL: `https://hwc-server.ocelot-wahoo.ts.net:25444`.
+- A Caddy `static` vhost route serves that dir; `index.html` is a
+  data-driven SPA. URL: `https://market-dashboard.hwc.iheartwoodcraft.com`
+  (was port `:25444`; hashed `/assets/*` cached immutably, shell revalidated).
 
 NOTE (Phase B): `scripts/*` and `index.html` currently live in the mutable
 `/opt/data` volume, NOT the Nix store — a fresh volume loses them. Folding them
@@ -126,9 +127,15 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
+  `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
+  (was `:25443`) and the market-trials dashboard at
+  `market-dashboard.hwc.iheartwoodcraft.com` (was static `:25444`). The `static`
+  route now renders through the vhost renderer (assets-only-immutable cache).
+  Both dedicated ports closed. See `domains/networking/README.md`.
 - **2026-06-09** — Removed the inline `age.secrets` block (`hermes-deepseek-key`
   + `hermes-discord-bot-token`). Both are now mounted by the generated secrets
-  layer (`domains/secrets/lib.nix` walks `parts/services/*.age`); this module
+  layer (`domains/secrets/parts/lib.nix` walks `parts/services/*.age`); this module
   only consumes `config.age.secrets.<name>.path`. No runtime change.
 - **2026-06-04** — Added two paper-trading trials + a static dashboard.
   `marketDashboard` option: Caddy `static` route `:25444` over a host dir, plus

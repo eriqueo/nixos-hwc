@@ -8,8 +8,9 @@ agent and the market-trials dashboard, but reuses the hermes DeepSeek key.
 - **Namespace:** `hwc.server.ai.marketIntelligence`
 - **App code / state:** `/var/lib/hwc/market-intelligence` (Python package tree,
   SQLite DB, dashboard) — managed outside nix, like `hermes-agent/scripts`.
-- **Dashboard:** Caddy static file_server on **:25445** over the tailnet
-  (market-trials is :25444).
+- **Dashboard:** Caddy static `vhost` file_server at
+  `https://market-intelligence.hwc.iheartwoodcraft.com` over the tailnet
+  (was port `:25445`; market-trials is `market-dashboard.hwc.iheartwoodcraft.com`).
 - **Runtime:** `pkgs.python3.withPackages [ yfinance ]`; everything else stdlib.
 
 ## Schedule (systemd timers, America/Denver)
@@ -47,3 +48,7 @@ nix shell nixpkgs#python3.withPackages --impure --expr \
 
 Adding the FRED/FMP secrets (one-time): add the two `publicKeys` rules to
 `secrets.nix`, then `sudo agenix -e domains/secrets/parts/services/market-intelligence-{fred,fmp}-key.age`.
+
+## Changelog
+
+- 2026-06-09: Dashboard access moved from static tailnet port `:25445` to name-based vhost `market-intelligence.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert (rendered through the vhost `static` renderer; assets cached immutably). See `domains/networking/README.md`.

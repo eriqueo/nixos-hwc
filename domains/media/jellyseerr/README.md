@@ -55,5 +55,6 @@ Seerr depends on:
 
 ## Changelog
 
+- 2026-06-09: Access moved from tailnet port `:5543` to name-based vhost `jellyseerr.hwc.iheartwoodcraft.com` (shared `*.hwc.iheartwoodcraft.com` wildcard cert). `applicationUrl` in settings updated to match. See `domains/networking/README.md`.
 - 2026-03-07: Upgraded from Jellyseerr to Seerr (ghcr.io/seerr-team/seerr:latest), added --init flag
 - 2026-03-07: Fixed Radarr/Sonarr connectivity by using container hostnames instead of gateway IP
