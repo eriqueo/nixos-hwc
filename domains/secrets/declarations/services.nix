@@ -92,6 +92,20 @@
       group = "secrets";
     };
 
+    market-intelligence-fmp-key = {
+      file = ../parts/services/market-intelligence-fmp-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
+    market-intelligence-fred-key = {
+      file = ../parts/services/market-intelligence-fred-key.age;
+      mode = "0440";
+      owner = "root";
+      group = "secrets";
+    };
+
     opensearch-app-id = {
       file = ../parts/services/opensearch-app-id.age;
       mode = "0440";

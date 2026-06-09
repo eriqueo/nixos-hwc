@@ -113,6 +113,8 @@ in
   "domains/secrets/parts/services/jellyfin/eric-password.age".publicKeys         = everyone;
   "domains/secrets/parts/services/jobtread-grant-key.age".publicKeys             = everyone;
   "domains/secrets/parts/services/lidarr-api-key.age".publicKeys                 = everyone;
+  "domains/secrets/parts/services/market-intelligence-fred-key.age".publicKeys   = everyone;
+  "domains/secrets/parts/services/market-intelligence-fmp-key.age".publicKeys    = everyone;
   "domains/secrets/parts/services/n8n-api-key.age".publicKeys                    = everyone;
   "domains/secrets/parts/services/n8n-owner-password-hash.age".publicKeys        = everyone;
   "domains/secrets/parts/services/nanoclaw-anthropic-key.age".publicKeys         = everyone;
