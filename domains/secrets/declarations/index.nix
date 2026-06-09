@@ -14,11 +14,8 @@
   };
 
   imports = [
-    ./caddy.nix
-    ../parts/caddy.nix
-    ./home.nix
-    ./system.nix
-    ./services.nix
-    ./infrastructure.nix
+    ./caddy.nix          # caddy-cert/caddy-key OPTIONS
+    ../parts/caddy.nix   # caddy-cert/caddy-key MOUNTS (runtime hostname selection)
+    ./generated.nix      # all other age.secrets, generated from parts/**.age
   ];
 }

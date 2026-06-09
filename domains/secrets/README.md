@@ -9,13 +9,11 @@
 ```
 domains/secrets/
 ├── index.nix            # Aggregator (imports declarations, API, emergency, hardening)
-├── declarations/        # Data-only age.secrets declarations
-│   ├── index.nix        # Aggregates all declaration files
-│   ├── caddy.nix
-│   ├── home.nix
-│   ├── infrastructure.nix
-│   ├── services.nix     # Service credentials (ARR stack, APIs, etc.)
-│   └── system.nix
+├── lib.nix              # Pure generator: walks parts/**.age → recipients + mounts
+├── declarations/        # Generated age.secrets declarations
+│   ├── index.nix        # Aggregates caddy + generated
+│   ├── caddy.nix        # caddy-cert/caddy-key OPTIONS
+│   └── generated.nix    # ALL non-caddy mounts, generated from parts/**.age
 ├── parts/               # Encrypted .age files organized by domain
 │   ├── caddy/           # TLS certificates
 │   ├── home/            # Email, OAuth, scraper credentials
@@ -30,15 +28,16 @@ domains/secrets/
 ```
 
 ## How It Fits Together
-1. **Declarations** (`declarations/*.nix`): define `age.secrets.<name>` entries grouped by domain (home, system, services, infrastructure, caddy). No logic beyond declarations.
-2. **Parts**: shared snippets imported by declaration files to avoid duplication.
-3. **API Facade** (`secrets-api.nix`): maps decrypted paths to `config.hwc.secrets.api.*` so consumers never touch `age.secrets.*` directly.
-4. **Emergency** (`emergency.nix`): opt-in recovery credentials and wiring for lockout scenarios.
-5. **Hardening** (`hardening.nix`): opt-in firewall/SSH/audit/fail2ban settings; guarded by `hwc.secrets.hardening.*` options.
+1. **Generator** (`lib.nix`): a pure, `builtins`-only function that `readDir`-walks `parts/**` for `*.age` (excluding `caddy/`) and emits BOTH the recipient rules (for `secrets.nix`) and the `age.secrets` mounts (for `declarations/generated.nix`). The directory tree of `.age` files is the single source of truth. Secret name = the path under the category dir with subdir segments prefixed, joined by `-`, base name truncated at the first `.`, and `_`→`-` (e.g. `jellyfin/admin-password.age` → `jellyfin-admin-password`).
+2. **Declarations** (`declarations/generated.nix`): mounts every secret with `mode=0440 owner=root group=secrets` by default, overridden per-name only for the handful that differ (the `mountOverrides` map). `caddy.nix` + `parts/caddy.nix` stay hand-written because the caddy certs are selected by hostname at runtime.
+3. **Recipients** (`secrets.nix`): generated via `lib.nix`'s `mkRecipients`; everything is readable by `everyone` (all hosts + eric). Only the four caddy rules are hand-written.
+4. **API Facade** (`index.nix`): maps decrypted paths to `config.hwc.secrets.api.*` so consumers never touch `age.secrets.*` directly.
+5. **Emergency** (`emergency.nix`): opt-in recovery credentials and wiring for lockout scenarios.
+6. **Hardening** (`hardening.nix`): opt-in firewall/SSH/audit/fail2ban settings; guarded by `hwc.secrets.hardening.*` options.
 
 ## Managing Secrets
-- Add a secret by encrypting the value (age) and referencing it from the correct `declarations/<domain>.nix` file.
-- Expose the path through `secrets-api.nix` (or reuse an existing entry) so modules consume `config.hwc.secrets.api.<name>` instead of `age.secrets.*`.
+- **Add a secret**: drop the encrypted `<name>.age` into `parts/<category>/`, then run `sudo agenix -r -i /etc/age/keys.txt` from the repo root. The generator auto-recipients and auto-mounts it — no edits to `secrets.nix` or any declaration file. (Non-default ownership/mode → add one line to `mountOverrides` in `generated.nix`.)
+- **Verify consistency**: `bash workspace/system/secrets-parity.sh` asserts every `.age` has a rule + mount and counts match.
 - Keep host identity paths configured via `age.identityPaths` (set in `index.nix`) so decryption works at build time.
 
 ## Consumer Guidance
@@ -47,6 +46,7 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-06-08: **Generation refactor.** Replaced the hand-maintained `secrets.nix` (107 rules) and the four `declarations/{services,home,infrastructure,system}.nix` files (~91 mounts) with a single filesystem-driven generator (`lib.nix`). `secrets.nix` 166→52 lines; declarations → `generated.nix` (16-entry `mountOverrides`). Migrated the inline `age.secrets` from hermes + lead-scout into the generated layer. Deleted 26 orphan `.age` (the dead `parts/server/` duplicate tree, `borg-remote-ssh-key`, and 3 mount-less `services/{ntfy-user,youtube-db-url,youtube-videos-db-url}`). Fixed the 2 `hwc-xps` caddy certs from `[xps eric]`→`everyone`, and rekeyed the 6 remaining single-recipient blobs (opensearch-*, market-intelligence-*, jobtread-grant-key) so every host can decrypt everything. Parity proven byte-for-byte (hwc-server unchanged; laptop/xps gain only hermes/datax mounts). Added `workspace/system/secrets-parity.sh`.
 - 2026-06-02: Reissued the server Caddy TLS cert for the new tailnet name. Renamed `caddy/hwc.ocelot-wahoo.ts.net.{crt,key}.age` → `caddy/hwc-server.ocelot-wahoo.ts.net.{crt,key}.age` (recipients = everyone) and updated `parts/caddy.nix` to select them. New cert generated via `tailscale cert hwc-server.ocelot-wahoo.ts.net` (CN/SAN = `hwc-server.ocelot-wahoo.ts.net`); the old `hwc.*` cert was dropped. `hwc-xps.*` certs are unchanged.
 - 2026-05-31: Added 3 secrets for the upcoming hwc-notify + hwc-leads services — `discord-webhook-hwc-alerts`, `discord-webhook-hwc-leads`, `hwc-leads-hmac-secret`. Standard `eric:secrets / 0440` pattern; recipients = everyone.
 - 2026-03-26: Added Vaultwarden self-hosted password manager module

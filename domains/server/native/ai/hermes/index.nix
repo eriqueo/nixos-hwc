@@ -104,27 +104,11 @@ in
       postStartScript = postStartScript;
     })
 
-    # ── agenix secrets ──────────────────────────────────────────────────────
+    # ── runtime state dir ────────────────────────────────────────────────────
+    # The hermes-deepseek-key + hermes-discord-bot-token secrets are now mounted
+    # by the generated secrets layer (domains/secrets/declarations/generated.nix)
+    # from parts/services/*.age — no inline age.secrets here.
     {
-      age.secrets = lib.mkMerge [
-        {
-          "${cfg.model.keyFileSecret}" = {
-            file = ../../../../secrets/parts/services/hermes-deepseek-key.age;
-            mode = "0440";
-            owner = "root";
-            group = "secrets";
-          };
-        }
-        (lib.mkIf cfg.gateway.discord.enable {
-          "${cfg.gateway.discord.tokenSecret}" = {
-            file = ../../../../secrets/parts/services/hermes-discord-bot-token.age;
-            mode = "0440";
-            owner = "root";
-            group = "secrets";
-          };
-        })
-      ];
-
       # State dir for the /opt/data volume, owned by eric:users (PUID/PGID).
       systemd.tmpfiles.rules = [
         "d ${cfg.dataDir} 0750 eric users - -"

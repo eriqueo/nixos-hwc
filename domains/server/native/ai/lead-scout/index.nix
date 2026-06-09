@@ -68,14 +68,10 @@ in
     # shell can find it; the service itself uses PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
     environment.systemPackages = [ lead-scout-deploy pkgs.chromium ];
 
-    # Discord webhook secret consumed by the in-process classifier when it
-    # decides a post is notify-worthy (src/notifications/discord.ts).
-    age.secrets.${cfg.discordWebhookSecret} = {
-      file = ../../../../secrets/parts/services/datax-discord-webhook.age;
-      mode = "0440";
-      owner = "root";
-      group = "secrets";
-    };
+    # Discord webhook secret (cfg.discordWebhookSecret = "datax-discord-webhook")
+    # consumed by the in-process classifier (src/notifications/discord.ts). It is
+    # now mounted by the generated secrets layer from
+    # parts/services/datax-discord-webhook.age — no inline age.secrets here.
 
     systemd.services.lead-scout = {
       description = "Lead Scout MCP + HTTP Server";
