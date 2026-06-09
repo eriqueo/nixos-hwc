@@ -57,8 +57,7 @@ in
     {
       hwc.networking.shared.routes = [{
         name = "market-intelligence";
-        mode = "static";
-        port = cfg.dashboardPort;
+        mode = "vhost";
         root = "${cfg.dataDir}/dashboard";
       }];
 

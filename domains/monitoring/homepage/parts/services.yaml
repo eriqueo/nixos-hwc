@@ -166,3 +166,27 @@
         icon: calibre
         href: https://calibre.hwc.iheartwoodcraft.com
         description: E-book library
+    - Estimator:
+        icon: mdi-calculator-variant
+        href: https://estimator.hwc.iheartwoodcraft.com
+        description: Remodel pricing PWA
+    - Bathroom Calculator:
+        icon: mdi-calculator
+        href: https://calculator.hwc.iheartwoodcraft.com
+        description: Bathroom estimate widget
+    - Morning Briefing:
+        icon: mdi-sunny
+        href: https://briefing.hwc.iheartwoodcraft.com
+        description: Daily ops dashboard
+    - Market Trials:
+        icon: mdi-finance
+        href: https://market-dashboard.hwc.iheartwoodcraft.com
+        description: Paper-trading dashboard
+    - Market Intelligence:
+        icon: mdi-chart-box
+        href: https://market-intelligence.hwc.iheartwoodcraft.com
+        description: Earnings signals
+    - YT Transcripts:
+        icon: mdi-youtube
+        href: https://yt-transcripts-api.hwc.iheartwoodcraft.com/docs
+        description: Transcript API

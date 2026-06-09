@@ -9,7 +9,7 @@
 # Rebuild:   estimator-build   (shell alias for systemctl start)
 # Rollback:  ls /var/lib/estimator/builds/  then  ln -sfn <dir> /var/lib/estimator/dist
 #
-# Access: https://hwc-server.ocelot-wahoo.ts.net:13443
+# Access: https://estimator.hwc.iheartwoodcraft.com
 #
 { config, lib, pkgs, ... }:
 let
@@ -138,33 +138,14 @@ in {
 
   # ── IMPLEMENTATION ────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable {
-    # Caddy virtual host: serve static files via symlink
-    services.caddy.extraConfig = lib.mkAfter ''
-
-      # Heartwood Estimate Assembler — PWA
-      ${root}:${toString cfg.port} {
-        tls {
-          get_certificate tailscale
-          protocols tls1.2 tls1.3
-        }
-        encode zstd gzip
-
-        root * /var/lib/estimator/dist
-        file_server
-
-        # SPA fallback — all unknown paths serve index.html
-        try_files {path} /index.html
-
-        # PWA / cache headers
-        @immutable path /assets/*
-        header @immutable Cache-Control "public, max-age=31536000, immutable"
-
-        @nocache path /sw.js /index.html /registerSW.js /manifest.json
-        header @nocache Cache-Control "no-cache, no-store, must-revalidate"
-
-        header / Cache-Control "no-cache, no-store, must-revalidate"
-      }
-    '';
+    # Caddy name-based vhost: estimator.<vhostDomain> serves the PWA from the
+    # build symlink, under the shared wildcard cert. The vhost static renderer
+    # caches hashed /assets/* immutably and revalidates the PWA shell.
+    hwc.networking.shared.routes = [{
+      name = "estimator";
+      mode = "vhost";
+      root = "/var/lib/estimator/dist";
+    }];
 
     # Open the port in the firewall (Tailscale interface only)
     networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ cfg.port ];
