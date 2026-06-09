@@ -8,7 +8,6 @@
 #   - nixpkgs (nixos-unstable), nixpkgs-stable (25.11)
 #   - home-manager (follows nixpkgs)
 #   - agenix (follows nixpkgs)
-#   - legacy-config (non-flake, for migration reference)
 #
 # USED BY (Downstream):
 #   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
@@ -42,6 +41,8 @@
     # global ts.net split-DNS rule -> NXDOMAIN for *.ocelot-wahoo.ts.net).
     # Fixed upstream in 1.98.2. Scoped to one package via overlay to avoid
     # a wide nixpkgs jump (8-day delta OOMed the laptop on rebuild).
+    # REMOVE WHEN: locked `nixpkgs` has tailscale >= 1.98.2 (check at each
+    # `nix flake update`: nix eval .#nixosConfigurations.hwc-laptop.pkgs.tailscale.version)
     nixpkgs-tailscale.url = "github:NixOS/nixpkgs/64c08a7ca051951c8eae34e3e3cb1e202fe36786";
 
     nixvirt = {
@@ -64,6 +65,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # NOT a duplicate of `agenix`: same source, but follows nixpkgs-stable so
+    # the server's agenix CLI/module deps stay on the stable channel.
     agenix-stable = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs-stable";
@@ -78,19 +81,13 @@
       url = "github:aaddrick/claude-desktop-debian";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # Reference repo during migration (non-flake)
-    legacy-config = {
-      url = "github:eriqueo/nixos-hwc";
-      flake = false;
-    };
   };
 
   #============================================================================
   # OUTPUTS - Define systems; delegate implementation to machine configs
   #============================================================================
 
-  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, home-manager-stable, agenix, agenix-stable, legacy-config, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, home-manager, home-manager-stable, agenix, agenix-stable, ... }@inputs:
   let
     system = "x86_64-linux";
 
