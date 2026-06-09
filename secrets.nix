@@ -1,7 +1,7 @@
 # secrets.nix — agenix recipient rules for nixos-hwc
 #
 # Recipient rules are GENERATED from the tree of *.age files under
-# domains/secrets/parts/ (see domains/secrets/lib.nix). Every secret is
+# domains/secrets/parts/ (see domains/secrets/parts/lib.nix). Every secret is
 # readable by `everyone` (all hosts + eric); the only hand-written rules are
 # the caddy/ certs, kept explicit because their mounts use runtime hostname
 # selection. Adding a secret = drop a .age into parts/<category>/ and rekey.
@@ -30,7 +30,7 @@ let
   allUsers = [ eric ];
   everyone = allHosts ++ allUsers;
 
-  gen = import ./domains/secrets/lib.nix { };
+  gen = import ./domains/secrets/parts/lib.nix { };
 
   # Caddy TLS certs stay explicit: their mounts (parts/caddy.nix) select per
   # host at runtime. All four are readable by everyone (every host decrypts
