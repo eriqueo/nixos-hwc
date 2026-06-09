@@ -5,11 +5,31 @@ let
   tailscaleDomain = config.hwc.networking.shared.tailscaleDomain;
   rootHost        = config.hwc.networking.shared.rootHost;
   routes          = config.hwc.networking.shared.routes;
+  vhostDomain     = config.hwc.networking.shared.vhostDomain;
 
   # This host's own tailnet FQDN, derived from its hostname + the one shared
   # tailnet suffix (see domains/networking/hosts.nix). A server's serving domain
   # always follows its own hostname, so a rename auto-propagates to every route.
   selfDomain = "${config.networking.hostName}.${config.hwc.networking.hosts.tailnetSuffix}";
+
+  # Common reverse_proxy block, shared by the subpath/port and vhost renderers.
+  # (No invalid transport stanza.)
+  mkProxyBlock = r:
+    let
+      ws = r.ws or true;  # websocket support by default
+      renderHeaders = concatStringsSep "\n"
+        (lib.mapAttrsToList (name: value: "header_up ${name} ${value}") (r.headers or {}));
+    in ''
+      reverse_proxy ${r.upstream} {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+        ${renderHeaders}
+        ${lib.optionalString ws "flush_interval -1"}
+      }
+    '';
 
   # Render a route -> Caddy snippet
   renderRoute = r:
@@ -17,27 +37,12 @@ let
       # schema defaults
       assetGlobs    = r.assetGlobs or [ "/css/*" "/js/*" "/assets/*" "/images/*" "/static/*" "/fonts/*" "/webfonts/*" "/favicon.ico" ];
       assetStrategy = r.assetStrategy or "none";
-      headers       = r.headers or {};
       needsUrlBase  = r.needsUrlBase or false;      # NEW: drives preserve vs strip
       stripPrefix   = r.stripPrefix or false;       # deprecated; ignored when needsUrlBase = true
-      ws            = r.ws or true;                 # enable websocket support by default
       timeouts      = r.timeouts or { try = "10s"; fail = "5s"; };
 
-      # header_up block from r.headers
-      renderHeaders = concatStringsSep "\n" (lib.mapAttrsToList (name: value: "header_up ${name} ${value}") headers);
-
-      # common reverse_proxy block (no invalid transport stanza)
-      proxyBlock = ''
-        reverse_proxy ${r.upstream} {
-          header_up Host {host}
-          header_up X-Real-IP {remote}
-          header_up X-Forwarded-For {remote}
-          header_up X-Forwarded-Proto {scheme}
-          header_up X-Forwarded-Host {host}
-          ${renderHeaders}
-          ${lib.optionalString ws "flush_interval -1"}
-        }
-      '';
+      # common reverse_proxy block (shared helper)
+      proxyBlock = mkProxyBlock r;
 
       # legacy/optional asset handlers (default is none)
       assetHandlers = {
@@ -117,6 +122,31 @@ let
       else if r.mode == "static" then staticBlock
       else "";
 
+  # Name-based virtual hosts under the wildcard subzone (mode = "vhost").
+  # Each app gets a clean root path on :443 — no dedicated port, no firewall
+  # hole — served behind a single wildcard cert (*.<vhostDomain>) via ACME DNS-01.
+  vhostRoutes = lib.filter (r: (r.mode or "") == "vhost") routes;
+
+  renderVhostRoute = r: ''
+    @${r.name} host ${r.name}.${vhostDomain}
+    handle @${r.name} {
+      ${mkProxyBlock r}
+    }
+  '';
+
+  # Single wildcard site block; emitted only when at least one vhost route
+  # exists (so the config is byte-for-byte unchanged until the first migration).
+  vhostBlock = lib.optionalString (vhostRoutes != [ ]) ''
+    *.${vhostDomain} {
+      tls {
+        dns desec {env.DESEC_TOKEN}
+        resolvers 1.1.1.1
+      }
+      encode zstd gzip
+      ${concatStringsSep "\n" (map renderVhostRoute vhostRoutes)}
+    }
+  '';
+
 in
 {
   options.hwc.networking.reverseProxy = {
@@ -144,18 +174,36 @@ in
     };
     routes = mkOption {
       # New schema keys supported per route:
-      # name, mode=("subpath"|"port"), path, port, upstream,
-      # needsUrlBase=bool, stripPrefix=bool (deprecated),
+      # name, mode=("subpath"|"port"|"static"|"vhost"), path, port, upstream,
+      # root (static), needsUrlBase=bool, stripPrefix=bool (deprecated),
       # headers=attrs, assetGlobs, assetStrategy, ws=bool, timeouts={try,fail}
+      # mode="vhost": served as <name>.<vhostDomain> on :443 (no port field).
       type = types.listOf (types.attrsOf types.anything);
       default = [];
       description = "Aggregated reverse proxy routes for all services.";
+    };
+    vhostDomain = mkOption {
+      type = types.str;
+      default = "hwc.iheartwoodcraft.com";
+      description = ''
+        Wildcard subzone for name-based vhost routes (mode = "vhost").
+        Each such route is served at <name>.<vhostDomain> on :443 behind a single
+        *.<vhostDomain> cert obtained via ACME DNS-01 (deSEC). The subzone is
+        NS-delegated to a separate DNS account so the DNS-01 token on this host
+        cannot touch the apex zone or its MX records.
+      '';
     };
   };
 
   config = mkIf config.hwc.networking.reverseProxy.enable {
     services.caddy = {
       enable = true;
+      # Caddy with the deSEC DNS provider compiled in, for ACME DNS-01 issuance
+      # of the *.<vhostDomain> wildcard cert used by mode = "vhost" routes.
+      package = pkgs.caddy.withPlugins {
+        plugins = [ "github.com/caddy-dns/desec@v1.1.0" ];
+        hash = "sha256-+HNd7cR6/psjZATMw80QxDjSisasyxTwOCYB6OnlfKM=";
+      };
       extraConfig = ''
         # Primary HTTPS listener — serves subpath routes + MCP over tailnet.
         # Caddy owns :443 with a Tailscale-provisioned LE cert.
@@ -202,6 +250,9 @@ in
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "port") routes))}
 
         ${concatStringsSep "\n" (map renderRoute (lib.filter (r: r.mode == "static") routes))}
+
+        # Name-based wildcard vhosts (mode = "vhost"); empty until first migration.
+        ${vhostBlock}
       '';
     };
 
