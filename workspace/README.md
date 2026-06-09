@@ -65,6 +65,11 @@ Health check scripts: disk, GPU, journal errors, caddy, frigate, immich, media a
 - **diagnostics/** — troubleshooting tools, network diagnostics, config validation, GPU checks
 - **setup/** — one-time deployment scripts (age keys, monitoring, permissions)
 - System utilities: couchdb migration, secret manager, ZFS snapshots, container validation
+  - `secret-manager.sh` (the `secret` alias) — add/edit/lookup agenix secrets; encrypts
+    **multi-recipient** to `everyone` and no longer edits declarations (the generated
+    secrets layer auto-mounts every `parts/**.age`).
+  - `secrets-parity.sh` — asserts every `.age` has a recipient rule + a mount and the
+    counts line up (run after adding/removing a secret).
 
 ---
 
@@ -86,5 +91,8 @@ Tightly coupled to specific services — not promoted to workspace.
 
 ## Changelog
 
+- 2026-06-09: `secret-manager.sh` now encrypts multi-recipient (`age -R` to all host
+  pubkeys + eric) and drops the auto-declaration step; added `secrets-parity.sh`
+  (generator consistency check). See `domains/secrets/README.md`.
 - 2026-03-25: Restructured to mirror domains/ hierarchy, consolidated duplicates, eliminated stale folders
 - 2025-12-10: Reorganized from arbitrary categories to purpose-driven structure

@@ -27,7 +27,8 @@ index.nix     # OPTIONS / IMPLEMENTATION / VALIDATION
               # - Caddy port-mode route :25443 -> 127.0.0.1:9119
               # - Caddy static route :25444 -> market-dashboard dir
               # - hwc-market-dashboard timer (host) refreshes data.json
-              # - age.secrets (deepseek key, discord token)
+              # (deepseek key + discord token mounted by the generated secrets
+              #  layer — domains/secrets/, not inline here)
 parts/
   bootstrap/  # LEGACY: hermes-deploy TS CLI from the native deployment.
               # Unused by the container module; kept pending cleanup.
@@ -77,8 +78,12 @@ Composed into `/opt/data/.env` by the `hermes-setup` preStart oneshot (gated on
 `agenix.service`) — never the Nix store, mirroring the pihole pattern:
 
 - **`hermes-deepseek-key`** → `DEEPSEEK_API_KEY`. Backed by `hermes-deepseek-key.age`.
-- **`hermes-discord-bot-token`** → `DISCORD_BOT_TOKEN`. Only when
+- **`hermes-discord-bot-token`** → `DISCORD_BOT_TOKEN`. Only consumed when
   `gateway.discord.enable = true`.
+
+Both `age.secrets` mounts are **generated** from `parts/services/*.age` by the
+secrets layer (`domains/secrets/`) — this module no longer declares them inline
+(removed 2026-06-09). It only reads `config.age.secrets.<name>.path` at preStart.
 
 ## Reverse proxy
 
@@ -121,6 +126,10 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-06-09** — Removed the inline `age.secrets` block (`hermes-deepseek-key`
+  + `hermes-discord-bot-token`). Both are now mounted by the generated secrets
+  layer (`domains/secrets/lib.nix` walks `parts/services/*.age`); this module
+  only consumes `config.age.secrets.<name>.path`. No runtime change.
 - **2026-06-04** — Added two paper-trading trials + a static dashboard.
   `marketDashboard` option: Caddy `static` route `:25444` over a host dir, plus
   the `hwc-market-dashboard` oneshot+timer (runs `dashboard_build.py` as `eric`
