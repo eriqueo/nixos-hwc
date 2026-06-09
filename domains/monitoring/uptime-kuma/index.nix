@@ -84,8 +84,7 @@ in
     hwc.networking.shared.routes = [
       {
         name = "uptime-kuma";
-        mode = "port";
-        port = cfg.caddyPort;
+        mode = "vhost";
         upstream = "http://127.0.0.1:${toString cfg.port}";
       }
     ];

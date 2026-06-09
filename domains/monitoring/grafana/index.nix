@@ -67,7 +67,7 @@ in
         server = {
           http_port = cfg.port;
           domain = cfg.domain;
-          root_url = "https://${config.hwc.networking.shared.rootHost}:4443";  # Via Caddy reverse proxy
+          root_url = "https://grafana.${config.hwc.networking.shared.vhostDomain}";  # Via Caddy name-based vhost
         };
 
         paths = {
