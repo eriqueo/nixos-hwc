@@ -41,7 +41,7 @@ in
 
     siteDir = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/.nixos/domains/business/website/site_files";
+      default = "${paths.nixos}/domains/business/website/site_files";
       description = "Path to the 11ty site repo (content source)";
     };
 

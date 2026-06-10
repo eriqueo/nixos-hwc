@@ -23,6 +23,7 @@ domains/home/
 - **core/** – Minimal plumbing for shared defaults (e.g., XDG directories) consumed by other home modules.
 
 ## Changelog
+- 2026-06-09: Law 3 finish — claude-code NODE_EXTRA_CA_CERTS derives from `config.home.homeDirectory` (HM-native). HM drv hash unchanged.
 - 2026-06-09: Law 10 migration — inlined the 9 remaining separate `options.nix` files (aerc, betterbird, dt, herdr, nvim, obsidian, scraper, thunderbird, yazi) into their `index.nix` under `# OPTIONS` banners. Pure relocation; verified by laptop + standalone-HM eval.
 - 2026-06-09: Removed `apps/.wayvnc-disabled/` (renamed-off duplicate of the live `apps/wayvnc/`, imported nowhere; flagged in audit `docs/audit/2026-06-09-server-audit.md` §2.1, recoverable from git history).
 - 2026-05-27: `apps/thunar/index.nix` — replaced `xdg.configFile` management of `xfce4/xfconf/xfce-perchannel-xml/thunar.xml` (a runtime state file Thunar/xfconfd rewrites on column resize / view changes) with a seed-once `home.activation` script. The static-file approach caused recurring `.hm-bak` clobber errors because HM saw runtime mutations and tried to back them up against an existing backup slot. New mechanism: XML lives in the nix store via `pkgs.writeText`; activation copies it to `~/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml` only if absent. After first activation HM never touches it, so column-width tweaks and any user changes persist. Defaults still apply on fresh installs.

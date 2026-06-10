@@ -109,7 +109,7 @@ in
 
           outputDir = lib.mkOption {
             type = lib.types.path;
-            default = "/home/eric/backups/postgres";
+            default = "${paths.user.home}/backups/postgres";
             description = "Directory for per-database backups";
           };
 

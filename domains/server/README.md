@@ -33,6 +33,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-09: Law 3 finish — brain-mcp (server.ts path + vaultPath default), lead-scout (projectDir), jobber-mcp (projectDir/envFile) now derive from `hwc.paths` with value-preserving fallbacks. Server drv hash unchanged.
 - 2026-06-09: Removed `native/.immich-native-reference/` (4,100-line unimported reference module; live Immich is the container in `domains/media/`). Recoverable from git history.
 - 2026-06-09: Law 10 migration — inlined `options.nix` into `index.nix` for all 7 `native/ai/*` modules and `services/inbox-processor`. Pure relocation; server toplevel drv hash unchanged.
 - 2026-06-09: Removed stale `_shared/` legacy files: `caddy.nix` (dormant `hwc.server.reverseProxy` — superseded by `domains/networking/reverseProxy.nix`, which is the live Caddy), `network.nix` (byte-identical duplicate of `domains/networking/podman-network.nix`; both were imported, silently doubling the init-media-network script), and orphans `lib.nix`, `pure.nix`, `arr-config.nix` (superseded by `domains/lib/`; only referenced by dead `routes-lib.nix`). `directories.nix` remains the only live `_shared` file. Verified by full eval.

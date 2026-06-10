@@ -2,7 +2,8 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.business.morningBriefing;
-  agentDir = "/home/eric/.nixos/domains/business/morning-briefing";
+  paths = config.hwc.paths;
+  agentDir = "${paths.nixos}/domains/business/morning-briefing";
 in
 {
   options.hwc.business.morningBriefing = {
@@ -19,7 +20,7 @@ in
       description = "Morning Briefing — Claude Code CLI data gathering agent";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      environment.HOME = "/home/eric";
+      environment.HOME = paths.user.home;
       path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.nodejs_22 pkgs.notmuch ];
       serviceConfig = {
         Type = "oneshot";
@@ -39,7 +40,7 @@ in
           "${agentDir}/output"
           "${agentDir}/logs"
           "${agentDir}/dashboard"
-          "/home/eric/.claude"
+          paths.user.claude
           "/tmp"
         ];
       };
