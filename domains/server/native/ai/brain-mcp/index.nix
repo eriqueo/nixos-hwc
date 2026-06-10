@@ -6,8 +6,9 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.server.ai.brainMcp;
+  paths = config.hwc.paths;
   deno = "${pkgs.deno}/bin/deno";
-  server = "/home/eric/.nixos/domains/server/native/ai/brain-mcp/parts/server.ts";
+  server = "${paths.nixos}/domains/server/native/ai/brain-mcp/parts/server.ts";
 in
 {
   #==========================================================================
@@ -24,7 +25,10 @@ in
 
     vaultPath = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/900_vaults/brain";
+      # hwc.paths.brain.vault is laptop-only (null here); fall back to the
+      # same vault path under the server's user home (Syncthing replica)
+      default = if paths.brain.vault != null then paths.brain.vault
+                else "${paths.user.home}/900_vaults/brain";
       description = "Path to the brain vault replica on the server";
     };
 

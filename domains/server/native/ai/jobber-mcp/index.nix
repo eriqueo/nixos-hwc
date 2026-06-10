@@ -31,13 +31,13 @@ in
 
     projectDir = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/300_tech/320_projects/jobber-mcp";
+      default = "${paths.user.home}/300_tech/320_projects/jobber-mcp";
       description = "Path to the jobber-mcp Python project";
     };
 
     envFile = lib.mkOption {
       type = lib.types.path;
-      default = "/home/eric/300_tech/320_projects/jobber-mcp/.env";
+      default = "${paths.user.home}/300_tech/320_projects/jobber-mcp/.env";
       description = "Path to .env file containing JOBBER_ACCESS_TOKEN and OAuth credentials";
     };
 

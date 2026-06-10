@@ -22,7 +22,8 @@
       };
       outputDirectory = lib.mkOption {
         type = lib.types.path;
-        default = "/mnt/media/transcripts";
+        # media.root is server-only (null elsewhere); fall back to its default
+        default = "${if config.hwc.paths.media.root != null then config.hwc.paths.media.root else "/mnt/media"}/transcripts";
         description = "Directory for transcript output files";
       };
       defaultFormat = lib.mkOption {
@@ -39,7 +40,7 @@
     legacyApi = {
       enable = lib.mkEnableOption "Legacy YouTube transcript API";
       port = lib.mkOption { type = lib.types.port; default = 5000; };
-      dataDir = lib.mkOption { type = lib.types.path; default = "/home/eric/01-documents/01-vaults/04-transcripts"; };
+      dataDir = lib.mkOption { type = lib.types.path; default = "${config.hwc.paths.user.home}/01-documents/01-vaults/04-transcripts"; };
       apiKeys = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
     };
   };
