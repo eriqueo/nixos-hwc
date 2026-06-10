@@ -12,9 +12,11 @@
 let
   cfg = config.hwc.automation.n8n;
   bridge = cfg.mcpBridge;
+  paths = config.hwc.paths;
 
-  # Stable install location for n8n-mcp
-  installDir = "/opt/n8n-mcp";
+  # Stable install location for n8n-mcp (Law 3: derive from hwc.paths;
+  # apps.root is server-only/nullable, fall back to its canonical default)
+  installDir = "${if paths.apps.root != null then paths.apps.root else "/opt"}/n8n-mcp";
   n8nMcpVersion = "2.40.5";
   entryPoint = "${installDir}/node_modules/n8n-mcp/dist/mcp/index.js";
 

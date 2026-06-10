@@ -1,6 +1,7 @@
 { lib, config, ... }:
 let
   mcpCfg = config.hwc.ai.mcp;
+  nixosDir = config.hwc.paths.nixos;
 in
 {
   hwc.networking.shared.routes = [
@@ -285,7 +286,7 @@ in
     {
       name = "calculator";
       mode = "vhost";
-      root = "/home/eric/.nixos/domains/business/website/calculator/app/dist";
+      root = "${nixosDir}/domains/business/website/calculator/app/dist";
     }
     # Heartwood CMS — name-based vhost (content management dashboard)
     {
@@ -298,7 +299,7 @@ in
     {
       name = "briefing";
       mode = "vhost";
-      root = "/home/eric/.nixos/domains/business/morning-briefing/dashboard";
+      root = "${nixosDir}/domains/business/morning-briefing/dashboard";
     }
 
     # lead_scout — intelligence pipeline dashboard, name-based vhost
