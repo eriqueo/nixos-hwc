@@ -5,9 +5,11 @@ let
 in
 {
   #==========================================================================
-  # OPTIONS 
+  # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.thunderbird = {
+    enable = lib.mkEnableOption "Full-featured e-mail client";
+  };
 
   #==========================================================================
   # IMPLEMENTATION

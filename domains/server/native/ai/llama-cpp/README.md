@@ -21,7 +21,6 @@ Charter v11.1 native-systemd pattern; mirrors
 ## Structure
 
 ```
-options.nix   # hwc.server.ai.llamaCpp.* schema
               # - top-level: enable, user, modelsDir, cudaCapabilities
               # - per-service submodule via mkLlamaService { defaults = ...; }
               # - instances: gpu, cpu, embed (each {enable,port,modelFile,

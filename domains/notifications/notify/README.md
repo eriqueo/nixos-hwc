@@ -48,7 +48,6 @@ Inbound (**shells**) translate external requests into the canonical `Notificatio
 notify/
 ├── README.md                # This file.
 ├── index.nix                # Charter Law 6 module (OPTIONS / IMPL / VALIDATION).
-├── options.nix              # hwc.notifications.notify.* schema.
 └── parts/
     ├── channels.nix         # Default channel registry (data).
     ├── routes.nix           # Default routing rules (data).
@@ -237,7 +236,7 @@ sudo sqlite3 /var/lib/hwc/notify/audit.sqlite "SELECT id, title, topic, priority
 
 ## Circuit breaker
 
-In-memory per-channel state: closed → open after 5 consecutive failures → half-open after 60s → close on success / re-open on failure. Defaults are hardcoded in `main.ts`; move into `options.nix` when there's a reason to tune per-host.
+In-memory per-channel state: closed → open after 5 consecutive failures → half-open after 60s → close on success / re-open on failure. Defaults are hardcoded in `main.ts`; move into the `# OPTIONS` section of `index.nix` when there's a reason to tune per-host.
 
 When a channel's circuit is open, dispatch skips the channel and records `{ok: false, message: "circuit_open"}` in the audit log. Operators see the open state via `hwc-notify status`.
 

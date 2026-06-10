@@ -23,7 +23,6 @@ Provides a complete Neovim setup with:
 ```
 nvim/
 ├── index.nix           # Main aggregator, deploys lua via xdg.configFile
-├── options.nix         # hwc.home.apps.nvim.enable
 ├── README.md           # This file
 └── parts/
     └── lua/

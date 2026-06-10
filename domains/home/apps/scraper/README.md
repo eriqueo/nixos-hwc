@@ -11,7 +11,6 @@ Social media scraper and comment analysis tools using Playwright for browser aut
 ```
 scraper/
 ├── index.nix    # Wrapper scripts + Playwright setup
-├── options.nix  # hwc.home.apps.scraper.* options
 └── README.md    # This file
 ```
 
