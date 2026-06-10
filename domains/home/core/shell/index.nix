@@ -1,4 +1,4 @@
-# domains/home/core/shell.nix
+# domains/home/core/shell/index.nix
 #
 # Complete shell and CLI configuration
 #
@@ -50,7 +50,7 @@ in
         "cd" = "z"; "cdi" = "zi"; "cz" = "z"; "czz" = "zi";
         ".." = "cd .."; "..." = "cd ../.."; "...." = "cd ../../..";
         "df" = "df -h"; "du" = "du -h"; "free" = "free -h";
-        "aliases" = "cd ~/.nixos && nvim domains/home/core/shell.nix";
+        "aliases" = "cd ~/.nixos && nvim domains/home/core/shell/index.nix";
         "web-build" = "cd /home/eric/.nixos/domains/business/website/site_files && npx @11ty/eleventy";
         "htop" = "btop"; "open" = "xdg-open";
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";

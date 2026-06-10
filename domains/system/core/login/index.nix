@@ -112,7 +112,7 @@ in
             # NVIDIA offload is per-process. Use one of:
             #   gpu-launch <app>      — mode-aware (reads /tmp/gpu-mode)
             #   blender-offload       — Blender-specific NVIDIA dGPU launcher
-            # Both in domains/system/gpu.nix.
+            # Both in domains/system/gpu/index.nix.
 
             exec ${pkgs.dbus}/bin/dbus-run-session ${pkgs.hyprland}/bin/start-hyprland
           '';

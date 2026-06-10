@@ -4,7 +4,7 @@
   # OPTIONS
   #==========================================================================
   imports = [
-    ./media-orchestrator.nix
+    ./media-orchestrator/index.nix
     ./audiobook-copier/index.nix
   ];
 

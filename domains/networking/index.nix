@@ -11,11 +11,11 @@
   imports = [
     # Host registry — single source of truth for tailnet identities.
     # Declares hwc.networking.hosts.{tailnetSuffix,servers,primary,fqdn,url}.
-    ./hosts.nix
+    ./hosts/index.nix
 
     # Reverse proxy (Caddy NixOS service + route rendering)
     # Also declares hwc.networking.shared.{routes,tailscaleDomain,rootHost}
-    ./reverseProxy.nix
+    ./reverseProxy/index.nix
 
     # NOTE: routes-lib.nix NOT imported — was dead code in _shared/lib.nix
     # The routes option is already declared in reverseProxy.nix.

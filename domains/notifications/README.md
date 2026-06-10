@@ -43,6 +43,7 @@ notifications/
 
 ## Changelog
 
+- 2026-06-09: Law 9/10 — `gotify/{igotify,bridge,server}.nix` and `send/gotify.nix` each converted to `<name>/index.nix` directory modules (pure relocation).
 - 2026-06-09: Law 10 migration — inlined `notify/options.nix` into `notify/index.nix` (schema types moved into the index `let`).
 - **2026-06-04**: Retired the legacy script-based disk-space alerter (`hwc-disk-space-check` in `send/slack-webhook.nix`, the `hwc-disk-space-monitor` timer, and the `sources.diskSpace` option). It routed through the deprecated n8n webhook path and duplicated the Prometheus disk alerts. Disk-space monitoring is now solely owned by Prometheus (`monitoring/prometheus/parts/alerts.nix`) → Alertmanager → `hwc-notify`. Its 95%-critical-on-data-volumes coverage was salvaged into `HighDiskUsage` before removal.
 - **2026-05-31** (Phase 1 complete): `notify/` is in production. Replaces the broken n8n `home:admin:alert-manager` workflow. Alertmanager fans out to `hwc-notify` (Discord + SMTP) and `gotify-bridge` (iOS push, kept independent); n8n receiver removed, workflow deactivated. SQLite audit log, per-channel circuit breaker, `hwc-notify` CLI and `hwc_notify` MCP tool all live. Full design + ops in `notify/README.md`.

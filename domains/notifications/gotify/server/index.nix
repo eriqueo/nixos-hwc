@@ -1,4 +1,4 @@
-# domains/notifications/gotify/server.nix
+# domains/notifications/gotify/server/index.nix
 #
 # Gotify notification server container
 #

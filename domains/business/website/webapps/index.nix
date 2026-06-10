@@ -1,4 +1,4 @@
-# domains/business/website/webapps.nix
+# domains/business/website/webapps/index.nix
 #
 # Web Apps Hosting — static web app publishing system
 # NAMESPACE: hwc.business.website.webapps.*

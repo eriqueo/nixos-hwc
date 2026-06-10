@@ -1,4 +1,4 @@
-# domains/notifications/gotify/bridge.nix
+# domains/notifications/gotify/bridge/index.nix
 #
 # Alertmanager → gotify bridge service
 #

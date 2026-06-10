@@ -1,4 +1,4 @@
-# domains/system/users.nix
+# domains/system/users/index.nix
 #
 # User accounts, identity constants, and SSH configuration
 #

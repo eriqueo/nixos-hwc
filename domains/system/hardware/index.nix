@@ -1,4 +1,4 @@
-# domains/system/services/hardware/index.nix
+# domains/system/hardware/index.nix
 #
 # HARDWARE - System services for hardware interaction.
 # Covers audio (PipeWire), input devices (keyd), monitoring tools,

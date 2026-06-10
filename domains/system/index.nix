@@ -3,12 +3,12 @@
 {
   imports = [
     ./core/index.nix           # packages, login, authentik
-    ./gpu.nix                  # NVIDIA/AMD/Intel GPU acceleration
-    ./hardware.nix             # audio, keyboard, bluetooth, monitoring
-    ./networking.nix           # SSH, Tailscale, Samba, firewall
-    ./mounts.nix               # storage tiers
-    ./usb-automount.nix        # USB drive auto-mount + NTFS fixperms
-    ./users.nix                # accounts, identity, SSH
+    ./gpu/index.nix            # NVIDIA/AMD/Intel GPU acceleration
+    ./hardware/index.nix       # audio, keyboard, bluetooth, monitoring
+    ./networking/index.nix     # SSH, Tailscale, Samba, firewall
+    ./mounts/index.nix         # storage tiers
+    ./usb-automount/index.nix  # USB drive auto-mount + NTFS fixperms
+    ./users/index.nix          # accounts, identity, SSH
     ./mcp/index.nix            # Infrastructure MCP server
   ];
 

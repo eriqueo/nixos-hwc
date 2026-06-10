@@ -1,4 +1,4 @@
-# domains/system/hardware/gpu/index.nix
+# domains/system/gpu/index.nix
 #
 # GPU Hardware Acceleration Management
 # Provides NVIDIA, Intel, AMD GPU support with hardware acceleration for services.
