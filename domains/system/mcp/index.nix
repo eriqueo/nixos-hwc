@@ -23,11 +23,19 @@ let
   # JT config (options from parts/jt.nix)
   jtCfg = config.hwc.system.mcp.jt;
 
+  # Law 3: derive from hwc.paths. apps/business/mail roots are nullable
+  # (machine-scoped options), so fall back to their canonical defaults to
+  # keep evaluation safe on machines where they are null.
+  appsRoot = if paths.apps.root != null then paths.apps.root else "/opt";
+  businessRoot = if paths.business.root != null then paths.business.root else "/opt/business";
+  mailRoot = if paths.user.mail != null then paths.user.mail else "${paths.user.home}/400_mail";
+  cmsAppPath = "${businessRoot}/heartwood-cms";
+
   # n8n config
   n8nCfg = lib.attrByPath ["hwc" "automation" "n8n"] {} config;
   n8nPort = n8nCfg.port or 5678;
   n8nMcpVersion = "2.40.5";
-  n8nMcpInstallDir = "/opt/n8n-mcp";
+  n8nMcpInstallDir = "${appsRoot}/n8n-mcp";
 
   # n8n-mcp npm install script — ensures the stdio backend package is available
   installN8nMcp = pkgs.writeShellScript "hwc-sys-mcp-install-n8n" ''
@@ -203,7 +211,7 @@ in
         HWC_HOSTNAME = config.networking.hostName;
 
         # CMS app path for hwc_cms_* tools
-        HWC_CMS_APP_PATH = "/opt/business/heartwood-cms";
+        HWC_CMS_APP_PATH = cmsAppPath;
 
         # stdio backend: jt-mcp (JT tools)
         HWC_JT_SRC_DIR = jtCfg.srcDir;
@@ -212,7 +220,7 @@ in
         JT_API_URL = jtCfg.jt.apiUrl;
 
         # stdio backend: n8n-mcp
-        HWC_N8N_ENTRY_POINT = "/opt/n8n-mcp/node_modules/n8n-mcp/dist/mcp/index.js";
+        HWC_N8N_ENTRY_POINT = "${n8nMcpInstallDir}/node_modules/n8n-mcp/dist/mcp/index.js";
         N8N_API_URL = "http://localhost:${toString n8nPort}";
 
         # Node.js path for spawning child processes
@@ -239,20 +247,20 @@ in
             "/tmp"
             "/run/hwc-sys-mcp"
             # Mail tools need write access: notmuch tag (Xapian DB), sync-mail (mbsync marker + lock)
-            "/home/eric/400_mail/Maildir"
-            "/home/eric/.cache"
+            "${mailRoot}/Maildir"
+            "${paths.user.home}/.cache"
             # GPG needs write for lock files and random_seed during pass decrypt
-            "/home/eric/.gnupg"
+            "${paths.user.home}/.gnupg"
             # msmtp logs here
-            "/home/eric/.config/msmtp"
+            "${paths.user.home}/.config/msmtp"
             # Calendar tools: khal writes .ics files, vdirsyncer syncs to iCloud
-            "/home/eric/.local/share/vdirsyncer"
-            "/home/eric/.local/share/khal"
+            "${paths.user.home}/.local/share/vdirsyncer"
+            "${paths.user.home}/.local/share/khal"
             # Website content editing via hwc_website_* tools
             "${paths.nixos}/domains/business/website/site_files/src"
             "${paths.nixos}/domains/business/website/site_files/.trash"
             # CMS app editing via hwc_cms_* tools (scope: cms)
-            "/opt/business/heartwood-cms"
+            cmsAppPath
             # Calculator app editing via hwc_cms_* tools (scope: calculator)
             "${paths.nixos}/domains/business/website/calculator"
           ];
@@ -269,7 +277,7 @@ in
             # jt-mcp source (stdio backend reads dist/)
             jtCfg.srcDir
             # n8n-mcp npm package
-            "/opt/n8n-mcp"
+            n8nMcpInstallDir
           ];
           ProtectKernelTunables = true;
           ProtectKernelModules = true;
