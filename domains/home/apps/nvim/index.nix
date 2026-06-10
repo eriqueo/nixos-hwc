@@ -34,7 +34,9 @@ in
   #==========================================================================
   # OPTIONS
   #==========================================================================
-  imports = [ ./options.nix ];
+  options.hwc.home.apps.nvim = {
+    enable = lib.mkEnableOption "Neovim editor with full lua configuration";
+  };
 
   #==========================================================================
   # IMPLEMENTATION

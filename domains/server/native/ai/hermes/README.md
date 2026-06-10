@@ -20,7 +20,6 @@ together** in one writable `/opt/data`, exactly the environment the app expects.
 ## Structure
 
 ```
-options.nix   # hwc.server.ai.hermes.* schema (container deployment)
 index.nix     # OPTIONS / IMPLEMENTATION / VALIDATION
               # - mkInfraContainer "hermes" (cmd: gateway run)
               # - hermes-setup oneshot composes /opt/data/.env from agenix

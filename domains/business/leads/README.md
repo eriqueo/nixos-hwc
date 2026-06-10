@@ -39,7 +39,6 @@ Inbound: one HTTP endpoint (Phase 2.2). Core: Lead entity + per-source validatio
 leads/
 ├── README.md                                # This file.
 ├── index.nix                                # Charter Law 6 module.
-├── options.nix                              # hwc.business.leads.* schema.
 └── parts/
     └── src/                                 # TypeScript service.
         ├── package.json                     # type=module, zod runtime dep.

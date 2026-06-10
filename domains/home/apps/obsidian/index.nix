@@ -4,7 +4,12 @@ let
   cfg = config.hwc.home.apps.obsidian;
 in
 {
-  imports = [ ./options.nix ];
+  #==========================================================================
+  # OPTIONS
+  #==========================================================================
+  options.hwc.home.apps.obsidian = {
+    enable = lib.mkEnableOption "Obsidian note-taking app";
+  };
 
   #==========================================================================
   # IMPLEMENTATION

@@ -20,7 +20,10 @@ let
 
 in
 {
-  imports = [ ./options.nix ];
+  # OPTIONS
+  options.hwc.home.apps.yazi = {
+    enable = lib.mkEnableOption "Blazing fast terminal file manager written in Rust, based on async I/O";
+  };
 
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
