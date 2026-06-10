@@ -42,6 +42,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-06-09: Law 9/10 — `reverseProxy.nix` → `reverseProxy/index.nix`, `hosts.nix` → `hosts/index.nix` (pure relocation).
 - 2026-06-09: Law 3 sweep — `routes.nix` static-site roots (calculator, briefing) derive from `hwc.paths.nixos` instead of hardcoding `/home/eric/.nixos`.
 - 2026-06-09: Deleted `routes-lib.nix` (dead code — `index.nix` documented it as not imported; its only references were to the also-removed `_shared/{pure,arr-config}.nix`).
 - 2026-06-09: Extend `vhost` mode to serve **static** sites (a route with `root` instead of `upstream` emits a `file_server` handle under its host matcher; hashed `/assets/*` cached immutably, shell revalidated). Migrated the static dashboards to clean names: calculator, briefing (routes.nix), market-dashboard (hermes), market-intelligence, and estimator — the last converted from its bespoke `services.caddy.extraConfig` block in `domains/business/estimator` into a `vhost` route (now under the shared wildcard cert; its PWA cache behaviour preserved by the assets-only-immutable policy). 4 more static ports closed.

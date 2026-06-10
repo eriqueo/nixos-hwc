@@ -36,7 +36,7 @@
   imports = [
     ./packages.nix
     ../../paths/paths.nix
-    ./login.nix
+    ./login/index.nix
     ./coredump.nix
     ./authentik/index.nix
   ];

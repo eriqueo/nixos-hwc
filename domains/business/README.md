@@ -22,6 +22,7 @@ mcp/
 - The old `workspace/projects/jt-mcp/` was removed during the 2026-03-26 workspace restructure
 
 ## Changelog
+- 2026-06-09: Law 9/10 — `datax/default.nix` → `datax/index.nix`; `website/webapps.nix` → `website/webapps/index.nix` (pure relocations).
 - 2026-06-09: Law 3 finish — morning-briefing (agentDir, HOME, sandbox claude path) and website (siteDir default) derive from `hwc.paths`. Drv hash unchanged.
 - 2026-06-09: Removed orphaned `n8n/` (workflow JSON exports — live workflows are in the n8n DB; live module is `domains/automation/n8n/`) and `receipts/` (pre-Heartwood-API Python project, README dated 2025-03). Both recoverable from git history.
 - 2026-06-09: Law 10 migration — inlined `leads/options.nix` into `leads/index.nix`.

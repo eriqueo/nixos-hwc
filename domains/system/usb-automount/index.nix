@@ -1,4 +1,4 @@
-# domains/system/usb-automount.nix
+# domains/system/usb-automount/index.nix
 #
 # USB drive auto-mount with user-accessible permissions.
 # Handles NTFS, exFAT, FAT32. Skips drives in /etc/fstab.

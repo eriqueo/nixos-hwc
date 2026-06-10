@@ -1,4 +1,4 @@
-# domains/system/mounts.nix — filesystem mount and storage tier management
+# domains/system/mounts/index.nix — filesystem mount and storage tier management
 #
 # Provides hot/media/backup storage tier management with filesystem mounts,
 # directory structure creation, and external drive auto-mounting.

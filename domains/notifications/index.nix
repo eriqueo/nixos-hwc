@@ -139,10 +139,10 @@ in
   };
 
   imports = [
-    ./gotify/server.nix              # gotify notification server
-    ./gotify/bridge.nix              # Alertmanager → gotify bridge
-    ./gotify/igotify.nix             # iOS push notification relay
-    ./send/gotify.nix                # hwc-gotify-send CLI tool
+    ./gotify/server/index.nix        # gotify notification server
+    ./gotify/bridge/index.nix        # Alertmanager → gotify bridge
+    ./gotify/igotify/index.nix       # iOS push notification relay
+    ./send/gotify/index.nix          # hwc-gotify-send CLI tool
     ./health.nix                     # webhook health check timer
     ./notify/index.nix               # hwc-notify (Phase 0 scaffold, Phase 1 impl)
   ];

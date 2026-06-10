@@ -23,6 +23,7 @@ domains/home/
 - **core/** – Minimal plumbing for shared defaults (e.g., XDG directories) consumed by other home modules.
 
 ## Changelog
+- 2026-06-09: Law 9/10 — `core/development.nix` → `core/development/index.nix`, `core/shell.nix` → `core/shell/index.nix` (pure relocation; the `aliases` shell alias retargeted to the new path).
 - 2026-06-09: Law 3 finish — claude-code NODE_EXTRA_CA_CERTS derives from `config.home.homeDirectory` (HM-native). HM drv hash unchanged.
 - 2026-06-09: Law 10 migration — inlined the 9 remaining separate `options.nix` files (aerc, betterbird, dt, herdr, nvim, obsidian, scraper, thunderbird, yazi) into their `index.nix` under `# OPTIONS` banners. Pure relocation; verified by laptop + standalone-HM eval.
 - 2026-06-09: Removed `apps/.wayvnc-disabled/` (renamed-off duplicate of the live `apps/wayvnc/`, imported nowhere; flagged in audit `docs/audit/2026-06-09-server-audit.md` §2.1, recoverable from git history).

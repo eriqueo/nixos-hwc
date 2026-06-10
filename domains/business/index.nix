@@ -16,7 +16,7 @@
 {
   imports = [
     ./databases/index.nix
-    ./datax/default.nix
+    ./datax/index.nix
     ./estimator/index.nix
     ./firefly/index.nix
     ./paperless/index.nix

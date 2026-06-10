@@ -1,4 +1,4 @@
-# domains/home/core/development.nix
+# domains/home/core/development/index.nix
 #
 # Development environment — languages, editors, container tools
 #

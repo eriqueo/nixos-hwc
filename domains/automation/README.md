@@ -41,6 +41,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-09: Law 9/10 — `n8n/mcp-bridge.nix` → `n8n/mcp-bridge/index.nix` (pure relocation).
 - 2026-06-09: Law 3 sweep — `n8n/mcp-bridge.nix` derives its install dir from `hwc.paths.apps.root` instead of hardcoding `/opt/n8n-mcp`.
 - 2026-05-22: Remove Tailscale Funnel from n8n — public access migrated to Cloudflare Tunnel (`n8n.heartwoodcraft.me`). Delete `funnel` options and `tailscale-funnel-n8n*` systemd services. Funnel was poisoning MagicDNS for tailnet clients (every Caddy port unreachable from laptop).
 - 2026-04-04: Removed gotify/ — moved to `domains/notifications/send/gotify.nix` (domain redistribution)

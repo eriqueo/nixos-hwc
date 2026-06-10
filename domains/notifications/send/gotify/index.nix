@@ -1,4 +1,4 @@
-# domains/notifications/send/gotify.nix
+# domains/notifications/send/gotify/index.nix
 #
 # Gotify — Centralized notification system for cross-machine and cross-service alerts.
 # Provides a reusable CLI tool (hwc-gotify-send) that can be called from backup scripts,

@@ -1,4 +1,4 @@
-# domains/notifications/gotify/igotify.nix
+# domains/notifications/gotify/igotify/index.nix
 #
 # iGotify Notification Assistant — bridges Gotify to Apple Push Notifications
 #
