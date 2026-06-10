@@ -19,8 +19,6 @@
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
-    ../../domains/server/containers/_shared/network.nix    # Podman media-network
-    ../../domains/server/containers/_shared/caddy.nix      # Caddy route abstraction
     ../../domains/server/containers/_shared/directories.nix
     ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
