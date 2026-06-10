@@ -1,6 +1,6 @@
 # nixos-hwc
 
-NixOS flake managing two machines via domain-driven architecture. Charter v11.2.
+NixOS flake managing two machines via domain-driven architecture. Charter v12.0.
 
 ## Machines
 - **hwc-laptop** — NixOS desktop (Hyprland, dev tools, GPU)
