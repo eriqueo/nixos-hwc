@@ -1,22 +1,15 @@
+# profiles/gaming/sys.nix — gaming role, NixOS lane
+#
+# Retro gaming station: auto-login console UX, audio/bluetooth, fast boot.
+# Base role is supplied by the machine's role list — this role does NOT
+# import it (roles never import roles).
+#
+# REPLACES: profiles/gaming.nix
+# USED BY: kids (role list in flake.nix machines table)
+
 { config, lib, pkgs, ... }:
 
 {
-  imports = [
-    ./core.nix
-  ];
-
-  #==========================================================================
-  # BASE - Critical for gaming functionality
-  #==========================================================================
-
-  # NOTE: Gaming app module imports (retroarch, 86box, mpv) will be added
-  # once those modules are integrated from nixos-kids repo
-  # imports = [
-  #   ../domains/home/apps/retroarch
-  #   ../domains/home/apps/86box
-  #   ../domains/home/apps/mpv
-  # ];
-
   # Auto-login for console-like UX
   hwc.system.core.session = {
     enable = true;
@@ -45,7 +38,7 @@
   boot.kernelParams = [ "quiet" "splash" "loglevel=3" ];
   systemd.services.NetworkManager-wait-online.enable = lib.mkDefault false;
 
-  # nix-ld GUI libs (extends core.nix base set for graphical machines)
+  # nix-ld GUI libs (extends base role set for graphical machines)
   programs.nix-ld.libraries = with pkgs; [
     gtk3 pango cairo gdk-pixbuf atk
     libdrm mesa alsa-lib cups libpulseaudio

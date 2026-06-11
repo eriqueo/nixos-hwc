@@ -1,18 +1,20 @@
-# profiles/monitoring.nix
+# profiles/monitoring/sys.nix — monitoring role, NixOS lane
 #
-# Monitoring profile — imports monitoring domain and enables all services.
+# Observability bundle — imports monitoring domain and enables all services.
+# (The n8n/automation block moves to the business role in Phase C.)
 #
 # WARNING: References age secrets (grafana-admin-password, n8n-owner-password-hash).
-# All machines importing this profile MUST have their host key as a recipient
+# All machines using this role MUST have their host key as a recipient
 # in the corresponding .age files. n8n-owner-password-hash.age currently has
-# only 1 recipient — re-encrypt to include XPS key if XPS uses this profile.
+# only 1 recipient — re-encrypt to include XPS key if XPS uses this role.
 #
-# TODO Phase 10: machines should import domains/monitoring directly and set their own values.
+# REPLACES: profiles/monitoring.nix
+# USED BY: server, xps (role list in flake.nix machines table)
 { lib, config, ... }:
 {
   imports = [
-    ../domains/monitoring/index.nix
-    ../domains/automation/index.nix
+    ../../domains/monitoring/index.nix
+    ../../domains/automation/index.nix
   ];
 
   #==========================================================================

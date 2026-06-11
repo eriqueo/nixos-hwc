@@ -9,7 +9,14 @@
   imports = [
     ./hardware.nix
     ./home.nix
-    ../../profiles/gaming.nix
+    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
+    # the flake.nix machines-table resolver. base supplies what gaming.nix
+    # previously pulled in via its core.nix import.
+    # NOTE: gaming listed before base to preserve the old list-merge order
+    # (a module's own definitions merge before its imports', so gaming.nix's
+    # nix-ld libs historically preceded core.nix's). Phase B normalizes this.
+    ../../profiles/gaming/sys.nix
+    ../../profiles/base/sys.nix
   ];
 
   networking.hostName = "hwc-kids";

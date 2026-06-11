@@ -1,24 +1,22 @@
-# profiles/session.nix — Human-facing workstation profile
+# profiles/desktop/sys.nix — desktop role, NixOS lane
 #
-# Cross-domain bundle: home (GUI) + audio + display + theme
+# Cross-domain bundle: system-level GUI support (audio, display, session).
 # For machines with a screen and human interaction.
 #
-# REPLACES: home.nix
-# USED BY: laptop, xps (full workstations)
-# NOT USED BY: server (headless), firestick/gaming (custom HM in machine config)
+# REPLACES: profiles/session.nix
+# USED BY: laptop, xps (role list in flake.nix machines table)
 
 { config, pkgs, lib, ... }:
 
 {
   #==========================================================================
-  # HOME MANAGER — Full GUI workstation setup
+  # HOME MANAGER — TRANSITIONAL (Phase B moves this bootstrap to flake glue)
   #==========================================================================
-  # HM config extracted to profiles/home-session.nix (shared with standalone homeConfigurations)
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = lib.mkDefault "hm-bak";
-    users.eric = import ./home-session.nix;
+    users.eric.imports = [ ../base/home.nix ./home.nix ];
   };
 
   #==========================================================================
@@ -42,7 +40,7 @@
   # dconf required for GTK applications
   programs.dconf.enable = true;
 
-  # nix-ld GUI libs (extends core.nix base set for graphical machines)
+  # nix-ld GUI libs (extends base role set for graphical machines)
   programs.nix-ld.libraries = with pkgs; [
     gtk3 pango cairo gdk-pixbuf atk
     libdrm mesa alsa-lib cups libpulseaudio

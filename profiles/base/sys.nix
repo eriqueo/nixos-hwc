@@ -1,10 +1,10 @@
-# profiles/core.nix — Universal base profile for every machine
+# profiles/base/sys.nix — base role, NixOS lane (every machine)
 #
 # Cross-domain bundle: system + paths + secrets
 # Preserves gatherSys pattern (Charter Law 7)
 #
-# REPLACES: system.nix, base.nix, security.nix
-# USED BY: Every machine
+# REPLACES: profiles/core.nix
+# USED BY: every machine (role list in flake.nix machines table)
 
 { config, lib, pkgs, ... }:
 let
@@ -26,15 +26,15 @@ in
   #==========================================================================
   imports = [
     # System domain (includes paths via domains/system/core/index.nix)
-    ../domains/system/index.nix
+    ../../domains/system/index.nix
 
     # Secrets domain (absorbed from profiles/security.nix)
-    ../domains/secrets/index.nix
+    ../../domains/secrets/index.nix
 
     # Data domain (required for backup defaults below)
-    ../domains/data/index.nix
-  ] ++ (gatherSys ../domains/home/apps)
-    ++ (gatherSys ../domains/mail);
+    ../../domains/data/index.nix
+  ] ++ (gatherSys ../../domains/home/apps)
+    ++ (gatherSys ../../domains/mail);
 
   #==========================================================================
   # BASE NIXOS SETTINGS

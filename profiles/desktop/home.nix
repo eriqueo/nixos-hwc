@@ -1,18 +1,17 @@
-# profiles/home-session.nix
+# profiles/desktop/home.nix — desktop role, Home Manager lane
 #
-# GUI workstation Home Manager defaults.
-# Shared between NixOS module (nixos-rebuild) and standalone (home-manager switch).
-# Machine-specific overrides go in machines/*/home.nix.
+# GUI workstation HM defaults (apps with a screen, mail clients, fonts).
+# All set with mkDefault — machines can override any option.
+#
+# REPLACES: the GUI portion of profiles/home-session.nix
+# USED BY: laptop, xps (role list in flake.nix machines table)
 
 { config, lib, pkgs, ... }:
 
 {
   imports = [
-    ../domains/home/index.nix
-    ../domains/mail/index.nix
+    ../../domains/mail/index.nix
   ];
-
-  home.stateVersion = "24.05";
 
   # HM 26.05 changed defaults for these options; pinning to legacy values
   # preserves current behavior and silences eval warnings.
@@ -28,29 +27,13 @@
 
   #======================================================================
   # GUI WORKSTATION DEFAULTS
-  # All set with mkDefault — machines can override any option.
   #======================================================================
 
   hwc.home = {
-    # Theme & Fonts
-    theme.palette = lib.mkDefault "hwc";
+    # Fonts (GUI machines)
     theme.fonts.enable = lib.mkDefault true;
 
-    # Shell Environment
-    shell = {
-      enable = lib.mkDefault true;
-      modernUnix = lib.mkDefault true;
-      git.enable = lib.mkDefault true;
-      zsh = {
-        enable = lib.mkDefault true;
-        starship = lib.mkDefault true;
-        autosuggestions = lib.mkDefault true;
-        syntaxHighlighting = lib.mkDefault true;
-      };
-    };
-
-    # Development Environment
-    development.enable = lib.mkDefault true;
+    # Development extras
     development.languages.javascript = lib.mkDefault true;
 
     # Desktop Applications
@@ -63,7 +46,6 @@
 
       # File Management
       thunar.enable = lib.mkDefault true;
-      yazi.enable = lib.mkDefault true;
       analysis.enable = lib.mkDefault true;
 
       # Web Browsers
@@ -73,9 +55,6 @@
       # Mail Clients
       neomutt.enable = lib.mkDefault false;
       proton-mail.enable = lib.mkDefault true;
-
-      # Security
-      gpg.enable = lib.mkDefault true;
 
       # Proton Suite
       proton-authenticator.enable = lib.mkDefault true;
@@ -94,16 +73,12 @@
 
       # Terminal Multiplexer
       tmux.enable = lib.mkDefault true;
-      herdr.enable = lib.mkDefault true;
 
       # Task management
       tuxedo.enable = lib.mkDefault true;
 
       # Development & Automation
       n8n.enable = lib.mkDefault false;
-      gemini-cli.enable = lib.mkDefault true;
-      codex.enable = lib.mkDefault true;
-      aider.enable = lib.mkDefault true;
       codex.package = lib.mkDefault (pkgs.stdenv.mkDerivation {
         pname = "codex";
         version = "0.101.0";
