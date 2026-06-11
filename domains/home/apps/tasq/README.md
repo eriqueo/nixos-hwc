@@ -49,8 +49,9 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
 | `[` / `]` | toggle sidebar / detail panel                         |
 | Tab       | focus sidebar (LISTS/PROJECTS/CONTEXTS; Enter filters, re-select clears) |
 | `j`/`k` `g`/`G` | cursor move / top / bottom                      |
+| `w`       | toggle 7-day week strip (◆ khal events · ☐ tasks due · overdue in red) |
 | `r`       | reload from disk (after a sync pulled phone changes)  |
-| `R`       | run `vdirsyncer sync tasks` in a worker, then reload  |
+| `R`       | sync (`vdirsyncer sync <pairs>`) in a worker, then reload |
 | `C`       | suspend into `khal interactive` (calendar view)       |
 | `?` / `q` | help / quit                                           |
 
@@ -67,8 +68,11 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
 ## Env contract
 | Var          | Default                                       | Meaning |
 |--------------|-----------------------------------------------|---------|
-| `TASQ_PATH`  | `~/.local/share/vdirsyncer/tasks/*`           | glob of vdir list dirs |
+| `TASQ_PATH`  | `~/.local/share/vdirsyncer/tasks/*`           | glob(s) of vdir list dirs, ":"-separated; the module appends the Radicale glob when `hwc.mail.tasks.radicale.enable` |
 | `TASQ_CACHE` | `~/.cache/tasq/cache.sqlite3`                 | tasq's own cache — deliberately separate from todoman CLI's (`~/.cache/todoman/`); sharing would collide on integer todo ids |
+| `TASQ_PALETTE` | (unset → hwc fallback)                      | JSON of `hwc.home.theme.colors`, exported by the module |
+| `TASQ_SYNC_PAIRS` | `tasks`                                  | vdirsyncer pairs the `R` key syncs (`tasks tasks_radicale` with Radicale) |
+| `TASQ_NEW_LIST_ROOT` / `TASQ_NEW_LIST_PAIR` | (unset)        | where `N` creates lists + the pair to discover/sync after; set to the Radicale storage when enabled — lists then genuinely sync |
 
 ## Changelog
 - 2026-06-11: Phase B initial. Textual TUI (textual 8.2.5) over todoman 4.7.0
@@ -92,3 +96,10 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
   walk-and-apply the sidebar from the table (aerc-style); `[`/`]` toggle
   sidebar/detail panes. Fixed: todoman cache returns last_modified as epoch
   float — detail panel converts before formatting.
+- 2026-06-11: Week strip (`w`): 7-day grid across the bottom — khal events
+  (◆, via `khal list --json`, recurrence expanded) merged with tasks due
+  (☐, priority-colored), overdue tasks leading today's column in red;
+  refreshes on r/R/sync. Radicale backend support: TASQ_PATH gains the
+  tasks-radicale glob, R syncs both pairs, and `N` creates lists in the
+  Radicale root + discover/sync pushes them server-side (genuinely synced
+  lists). All driven off hwc.mail.tasks.radicale.enable — no tasq config.
