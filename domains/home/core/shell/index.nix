@@ -11,6 +11,9 @@
 let
   cfg = config.hwc.home.shell;
   ws = "$HWC_WORKSPACE_ROOT";
+  # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
+  # literal fallback so the module evaluates with osConfig = {}.
+  nixosPath = lib.attrByPath [ "hwc" "paths" "nixos" ] "/home/eric/.nixos" osConfig;
 in
 {
   #============================================================================
@@ -51,7 +54,7 @@ in
         ".." = "cd .."; "..." = "cd ../.."; "...." = "cd ../../..";
         "df" = "df -h"; "du" = "du -h"; "free" = "free -h";
         "aliases" = "cd ~/.nixos && nvim domains/home/core/shell/index.nix";
-        "web-build" = "cd /home/eric/.nixos/domains/business/website/site_files && npx @11ty/eleventy";
+        "web-build" = "cd ${nixosPath}/domains/business/website/site_files && npx @11ty/eleventy";
         "htop" = "btop"; "open" = "xdg-open";
         "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
         "web-speed" = "${ws}/tools/web-speed.sh";

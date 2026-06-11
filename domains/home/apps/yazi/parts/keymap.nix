@@ -1,4 +1,5 @@
 # domains/home/apps/yazi/parts/keymap.nix
+{ mediaRoot ? "/mnt/media" }:
 {
   # Keymap configuration for Yazi - Neovim-style bindings
   "yazi/keymap.toml" = {
@@ -44,7 +45,7 @@
 
       # <Space>g - Alternative go commands (via plugin for extensibility)
       { on = [ "<Space>", "g", "g" ], run = "plugin bookmarks", desc = "Go: show all bookmarks" },
-      { on = [ "<Space>", "g", "m" ], run = "cd /mnt/media", desc = "Go: media mount" },
+      { on = [ "<Space>", "g", "m" ], run = "cd ${mediaRoot}", desc = "Go: media mount" },
 
       # <Space>f - Find/Search
       { on = [ "<Space>", "f" ], run = "filter --smart", desc = "Filter" },
