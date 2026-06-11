@@ -2,14 +2,14 @@
 #
 # Complete shell and CLI configuration
 #
-# NAMESPACE: hwc.home.shell.*
-# USED BY: profiles/session.nix
-# USAGE: hwc.home.shell.enable = true;
+# NAMESPACE: hwc.home.core.shell.*
+# USED BY: profiles/base/home.nix
+# USAGE: hwc.home.core.shell.enable = true;
 
 { config, lib, pkgs, osConfig ? {}, nixosApiVersion ? "unstable", ... }:
 
 let
-  cfg = config.hwc.home.shell;
+  cfg = config.hwc.home.core.shell;
   ws = "$HWC_WORKSPACE_ROOT";
   # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
   # literal fallback so the module evaluates with osConfig = {}.
@@ -24,7 +24,7 @@ in
   #============================================================================
   # OPTIONS
   #============================================================================
-  options.hwc.home.shell = {
+  options.hwc.home.core.shell = {
     enable = lib.mkEnableOption "Complete shell + CLI environment";
 
     modernUnix = lib.mkEnableOption "modern Unix replacements (eza, bat, etc.)";

@@ -6,7 +6,7 @@
 echo "=== Checking namespace usage manually ==="
 echo
 
-echo "1. Checking options.hwc.home.shell:"
+echo "1. Checking options.hwc.home.core.shell:"
 echo "Definitions:"
 grep -r "options\.hwc\.home\.shell" . --include="*.nix" | head -3
 echo "Usage:"
@@ -20,7 +20,7 @@ echo "Usage:"
 grep -r "config\.hwc\.home\.productivity" . --include="*.nix" | head -3
 echo
 
-echo "3. Checking options.hwc.home.development:"
+echo "3. Checking options.hwc.home.core.development:"
 echo "Definitions:"
 grep -r "options\.hwc\.home\.development" . --include="*.nix" | head -3
 echo "Usage:"

@@ -22,7 +22,7 @@
     theme.fonts.enable = lib.mkDefault true;
 
     # Development extras
-    development.languages.javascript = lib.mkDefault true;
+    core.development.languages.javascript = lib.mkDefault true;
 
     # Desktop Applications
     apps = {
