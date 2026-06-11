@@ -74,6 +74,9 @@ in
           ".npm"
           ".cargo/registry"
           ".cargo/git"
+          ".mozilla/firefox/*/storage/default"
+          "Downloads/*.iso"
+          "Downloads/*.img"
         ];
         description = "Patterns to exclude from backup";
       };

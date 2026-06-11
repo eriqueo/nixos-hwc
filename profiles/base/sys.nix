@@ -100,60 +100,14 @@ in
   hwc.system.hardware.enable = true;
   hwc.system.hardware.monitoring.enable = true;
 
-  # Backup — defaults off, machines enable per-need
+  # Backup — defaults off, machines enable per-need.
+  # Value defaults (retention, sources, excludes, schedule, paths) live as
+  # option defaults in domains/data/backup/index.nix; this role only flips
+  # behavior.
   hwc.data.backup = {
     enable = lib.mkDefault false;
-
-    local = {
-      enable = lib.mkDefault false;
-      mountPoint = lib.mkDefault (config.hwc.paths.backup or "/mnt/backup");
-      useRsync = true;
-      keepDaily = lib.mkDefault 5;
-      keepWeekly = lib.mkDefault 2;
-      keepMonthly = lib.mkDefault 3;
-      minSpaceGB = lib.mkDefault 10;
-      sources = [ "/home" "/etc/nixos" ];
-      excludePatterns = [
-        ".cache" "*.tmp" "*.temp" ".local/share/Trash"
-        "node_modules" "__pycache__" ".npm"
-        ".cargo/registry" ".cargo/git"
-        ".mozilla/firefox/*/storage/default"
-        "Downloads/*.iso" "Downloads/*.img"
-      ];
-    };
-
-    cloud = {
-      enable = lib.mkDefault false;
-      provider = "proton-drive";
-      remotePath = "Backups";
-      syncMode = "sync";
-      bandwidthLimit = null;
-    };
-
-    protonDrive = {
-      enable = lib.mkDefault false;
-      secretName = "rclone-proton-config";
-    };
-
-    schedule = {
-      enable = lib.mkDefault false;
-      frequency = "daily";
-      timeOfDay = "02:00";
-      randomDelay = "1h";
-      onlyOnAC = true;
-    };
-
-    notifications = {
-      enable = lib.mkDefault true;
-      onSuccess = false;
-      onFailure = true;
-    };
-
-    monitoring = {
-      enable = true;
-      logPath = "/var/log/backup";
-      healthCheckInterval = "weekly";
-    };
+    notifications.enable = lib.mkDefault true;
+    monitoring.enable = true;
   };
 
   # Networking — universal base
