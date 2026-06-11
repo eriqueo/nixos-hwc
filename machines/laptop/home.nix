@@ -46,6 +46,12 @@
       };
     };
   };
+
+  # Tasks: Apple Reminders (VTODO) sync via todoman, riding the calendar
+  # vdirsyncer config + timer above. The laptop wires mail per-machine (no mail
+  # role), so tasks is enabled here rather than in profiles/mail/home.nix.
+  hwc.mail.tasks.enable = true;
+
   hwc.mail.mbsync.enable = false;
 
   hwc.mail.health = {
