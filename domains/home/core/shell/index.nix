@@ -297,27 +297,29 @@ in
         add-zsh-hook precmd _hwc_hash_refresh
 
         # NixOS rebuild shortcuts (dynamic hostname)
-        # -H resets $HOME to root's so Nix doesn't warn about /home/eric not being owned by root.
+        # `env HOME=~root` stops Nix warning that /home/eric isn't owned by root.
+        # (sudo -H / -i don't work here: this system's sudo preserves the caller's
+        # environment and HOME survives both flags — verified 2026-06-10.)
         # snix/tnix auto-reload Hyprland when run inside a Hyprland session because they
         # activate the HM-as-module config (via home-manager-eric.service, oneshot, so
         # ~/.config/hypr/hyprland.conf is on disk by the time the command returns).
         # bnix is pure build, no activation, so no reload.
         snix() {
-          sudo -H nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
+          sudo env HOME=~root nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
           hash -r
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
         }
         tnix() {
-          sudo -H nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
+          sudo env HOME=~root nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
           hash -r
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
         }
         bnix() {
-          sudo -H nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+          sudo env HOME=~root nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
         }
 
         # Home Manager standalone activation (HM-as-flake path).
