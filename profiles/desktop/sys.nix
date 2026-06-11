@@ -4,7 +4,7 @@
 # For machines with a screen and human interaction.
 #
 # REPLACES: profiles/session.nix
-# USED BY: laptop, xps (role list in flake.nix machines table)
+# USED BY: see the machines table in flake.nix
 
 { config, pkgs, lib, ... }:
 

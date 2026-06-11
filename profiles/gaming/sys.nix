@@ -5,7 +5,7 @@
 # import it (roles never import roles).
 #
 # REPLACES: profiles/gaming.nix
-# USED BY: kids (role list in flake.nix machines table)
+# USED BY: see the machines table in flake.nix
 
 { config, lib, pkgs, ... }:
 

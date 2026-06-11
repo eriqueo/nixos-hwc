@@ -1,11 +1,11 @@
 # profiles/server/sys.nix — server role, NixOS lane
 #
-# Infra-serving bundle: the server∩xps overlap set (containers, CouchDB,
+# Infra-serving bundle shared by all serving machines (containers, CouchDB,
 # gotify server, ZFS hygiene, passwordless service management, server
 # firewall posture). Anything one machine diverges on is overridden in its
 # machine file (role values use mkDefault where override is expected).
 #
-# USED BY: server, xps (role list in flake.nix machines table)
+# USED BY: see the machines table in flake.nix
 
 { config, lib, ... }:
 

@@ -1,4 +1,4 @@
-# HWC Architecture Charter v12.0
+# HWC Architecture Charter v12.1
 
 **Owner**: Eric
 **Scope**: `nixos-hwc/` — all machines, domains, profiles, Home Manager, and supporting files
@@ -206,6 +206,29 @@ State that grows must have a declared bound, in Nix:
 
 **Violation**: unbounded growth surfaces; duplicate backup writers; floating image tags without justification.
 
+### Law 16: Layer Purity (profiles & machines) (new in v12.1)
+
+The repo has three layers: **domains** (capabilities), **profiles** (roles),
+**machines** (instances). Profiles and machines now have a contract too:
+
+- `profiles/<role>/` contains exactly `sys.nix` (NixOS lane) and/or
+  `home.nix` (HM lane). A half with nothing to say does not exist. Halves
+  contain ONLY option assignments (`mkDefault` for anything a machine may
+  override) and domain imports. Forbidden: `mkDerivation`, `fetchurl`,
+  `writeShellScript*`, inline `systemd.services` bodies, option
+  *declarations*, machine hostnames/names.
+- `profiles/*/home.nix` obeys Law 1 (evaluates with `osConfig = {}`).
+- Roles never import roles. Machine membership lives only in the
+  `flake.nix` machines table — the single source of truth for the fleet
+  (channel, role list, per-machine pkgs).
+- `machines/<m>/` contains `hardware.nix` + one-off `config.nix`/`home.nix`.
+  A machine-file line that a second machine of the same kind would copy
+  verbatim belongs in a role or domain.
+
+**Violation**: derivations/option declarations in profiles, role-to-role
+imports, machine names inside profiles, role membership wired anywhere but
+the flake machines table.
+
 ---
 
 ## 2. Domain Map (authoritative — must match `ls domains/`)
@@ -232,6 +255,11 @@ State that grows must have a declared bound, in Nix:
 Boundary rule of thumb: **monitoring decides *when* to alert; notifications decides *how* it reaches you.**
 
 Changes to this table (add/remove/rename a domain) are normative charter changes: version bump + README.
+
+Layer note (v12.1): `domains/` is the capability layer; `profiles/` is the
+**role layer** (one folder per role, `sys.nix`/`home.nix` lane halves);
+`machines/` is the **instance layer** (hardware + genuine one-offs). Both
+are governed by Law 16; membership lives in the `flake.nix` machines table.
 
 ---
 
@@ -272,6 +300,12 @@ git ls-files | xargs -I{} du -k "{}" 2>/dev/null | awk '$1>2048' | rg -v '\.age|
 
 # Law 14 — flake self-reference / duplicate inputs
 rg 'github:eriqueo/nixos-hwc' flake.nix
+
+# Law 16 — layer purity (profiles & machines)
+rg 'mkDerivation|fetchurl|writeShellScript' profiles/
+rg -i '\b(laptop|xps|kids|firestick|hwc-server)\b' profiles/ --glob '!README.md'
+rg 'import.*profiles/' profiles/
+rg 'mkOption|mkEnableOption' profiles/
 
 # Cross-module: duplicate systemd service definitions
 rg -o 'systemd\.services\.[a-zA-Z0-9_-]+' domains -r '$0' --no-filename | sort | uniq -d
@@ -320,6 +354,7 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - A version entry may claim a migration complete **only after its lint passes** (Doctrine §0.4).
 
 **Version History** (excerpt):
+- **v12.1 (2026-06-11)**: Roles architecture. profiles/ restructured into role folders (base, desktop, server, business, monitoring, gaming, appliance, mail) with sys/home lane halves; machine membership moved to a machines registry in flake.nix (channel + roles + pkgs per machine); HM bootstrap moved from profiles into flake glue; standalone homeConfigurations generated for every machine. Added Law 16 (Layer Purity: profiles & machines) with lints in §3.1 and a layer note in the domain map. Backup value-defaults absorbed into domains/data option defaults; hwc.home.{shell,development} renamed under hwc.home.core.* (Law 2).
 - **v12.0 (2026-06-09)**: Full coherence pass from the 2026-06-09 audit. Fixed v11.2/v11.0 header/footer mismatch and duplicate "Section 5" numbering. Domain map rewritten to match disk (16 domains: added mail, notifications, server; removed phantom alerts). Law 2 self-contradiction fixed (`hwc.networking` is valid; the law is the mapping, not a list). Law 3 corrected to reference `paths.nix` (not `index.nix`). Law 4 de-fictionalized (`identity.nix` never existed; literals are the standard) and now documents the secrets generator. Law 7 extended to forbid orphaned `sys.nix`. Removed all references to the never-built `readme-butler`. Added Law 13 (Repo Hygiene), Law 14 (Flake Input Discipline), Law 15 (Runtime Hygiene). Added duplicate-systemd-service lint. Declared `nix flake check` as the target enforcement gate.
 - **v11.2 (2026-05-20)**: documented dual HM activation paths; removed orphaned `profiles/home.nix`.
 - **v11.1 (2026-03-12)**: post-v11.0 incremental updates; `options.nix` → `index.nix` migration (completed in intent; 16 stragglers remained until flagged 2026-06-09).
@@ -327,4 +362,4 @@ Every exception requires: in-code annotation, removal condition when temporary, 
 - **v10.x (2026-01/02)**: paths domain added, Law 2 strictness, Laws 9–12, infrastructure→system migration.
 - **v9.x (2026-01-10)**: laws + mechanical validation focus.
 
-**End of Charter v12.0**
+**End of Charter v12.1**

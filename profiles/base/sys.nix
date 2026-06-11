@@ -4,7 +4,7 @@
 # Preserves gatherSys pattern (Charter Law 7)
 #
 # REPLACES: profiles/core.nix
-# USED BY: every machine (role list in flake.nix machines table)
+# USED BY: every machine (see the machines table in flake.nix)
 
 { config, lib, pkgs, ... }:
 let

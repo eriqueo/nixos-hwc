@@ -5,7 +5,7 @@
 # NOTE: expects domains/networking on the same machine (estimator webhook
 # URL derives from hwc.networking.hosts.url).
 #
-# USED BY: server (role list in flake.nix machines table)
+# USED BY: see the machines table in flake.nix
 
 { config, lib, ... }:
 
@@ -48,7 +48,7 @@
   # Heartwood Estimate Assembler — React PWA
   # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
   # the estimator is a first-class named app, not an ad-hoc published slot).
-  # Access: https://hwc-server.ocelot-wahoo.ts.net:13443
+  # Access: https://<host>.ocelot-wahoo.ts.net:13443
   # Build:  sudo systemctl start estimator-build  (or: estimator-build alias)
   hwc.business.estimator = {
     enable     = true;

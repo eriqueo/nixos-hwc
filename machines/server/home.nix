@@ -7,6 +7,10 @@
 { lib, ... }:
 
 {
+  # Mail-health webhook endpoint — names this machine (Law 16 keeps
+  # hostnames out of roles; the rest of the mail menu is in the mail role).
+  hwc.mail.health.webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+
   # Headless: no font deployment (overrides nothing today — the desktop
   # role is what turns fonts on — but states the intent explicitly).
   hwc.home.theme.fonts.enable = false;
