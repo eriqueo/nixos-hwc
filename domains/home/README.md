@@ -24,6 +24,8 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: Inline apps/tuxedo/options.nix into its index.nix under
+  # OPTIONS (Law 10 regression from 82e3792b).
 - 2026-06-11: Delete apps/aerc/ — dead duplicate of domains/mail/aerc/
   with a latent eval crash (unguarded read of an undeclared namespace at
   index.nix:46); enabled nowhere. Also removed the stale untracked
