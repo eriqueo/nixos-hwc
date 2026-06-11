@@ -11,6 +11,10 @@
 #
 # Keybind: hyprland/parts/behavior.nix adds SHIFT+PRINT → gsr-toggle
 # when this module is enabled (same pattern as the dt toggle bind).
+# Waybar: waybar/parts/behavior.nix adds a custom/recording widget driven
+# by gsr-status (click = gsr-toggle, red while recording). gsr-toggle
+# signals waybar with RTMIN+9 for instant refresh; the widget also polls
+# as a fallback in case the recorder dies without a toggle.
 
 { lib, config, pkgs, osConfig ? {}, ... }:
 let
@@ -36,6 +40,7 @@ let
         sleep 0.2
       done
       ${pkgs.libnotify}/bin/notify-send -t 4000 "⏹ Recording saved" "$DIR"
+      ${pkgs.procps}/bin/pkill -RTMIN+9 waybar || true
       exit 0
     fi
 
@@ -54,6 +59,17 @@ let
       -a ${lib.escapeShellArg cfg.audio} -o "$OUT" >/dev/null 2>&1 &
     disown
     ${pkgs.libnotify}/bin/notify-send -t 4000 "⏺ Recording $MONITOR" "$OUT"
+    ${pkgs.procps}/bin/pkill -RTMIN+9 waybar || true
+  '';
+
+  # Waybar JSON status (class drives the red-while-recording CSS)
+  gsrStatus = pkgs.writeShellScriptBin "gsr-status" ''
+    set -euo pipefail
+    if ${pkgs.procps}/bin/pgrep -f 'gpu-screen-recorder -w' >/dev/null; then
+      printf '{"text":"Rec","class":"recording","tooltip":"Screen recording: RECORDING\\nSHIFT+PRINT or click to stop"}\n'
+    else
+      printf '{"text":"Rec","class":"off","tooltip":"Screen recording: off\\nSHIFT+PRINT or click to start"}\n'
+    fi
   '';
 in
 {
@@ -80,6 +96,6 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = [ gsrToggle ];
+    home.packages = [ gsrToggle gsrStatus ];
   };
 }

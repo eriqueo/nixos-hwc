@@ -96,7 +96,7 @@ window#waybar {
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
 #custom-battery, #custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,
 #custom-notification, #custom-power, #custom-disk-space, #backlight, #bluetooth,
-#custom-lid-sleep, #custom-proton-auth, #hyprland-language {
+#custom-lid-sleep, #custom-proton-auth, #custom-recording, #hyprland-language {
   padding: 8px 6px;
   min-height: 0;
   margin: 0px 0px;
@@ -111,9 +111,13 @@ window#waybar {
 /* === COLOR GROUPS — opaque computed (50% blend over #32302f, required for powerline) === */
 
 /* Toggles — teal #576f69 */
-#custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-lid-sleep {
+#custom-gpu, #custom-ollama, #custom-dt, #idle_inhibitor, #custom-lid-sleep, #custom-recording {
   background-color: #576f69;
 }
+
+/* recording status-classes (driven by `gsr-status` JSON `class` field) */
+#custom-recording.recording { color: #ea6962; font-weight: bold; }  /* red — recording live */
+#custom-recording.off       { opacity: 0.55; }                      /* dimmed — idle */
 
 /* dt status-classes (driven by `dt status --waybar` JSON `class` field) */
 #custom-dt.active { color: #a9b665; font-weight: bold; }   /* green — clocked in */
@@ -173,7 +177,7 @@ window#waybar {
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-lid-sleep:hover, #custom-proton-auth:hover,
-#custom-workspace-link:hover, #hyprland-language:hover {
+#custom-workspace-link:hover, #custom-recording:hover, #hyprland-language:hover {
   background-color: #504945;   /* bg3 */
 }
 
