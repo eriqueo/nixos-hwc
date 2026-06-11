@@ -153,8 +153,8 @@
   # exportarr disabled — no *arr services on this machine
   hwc.monitoring.exportarr.enable = lib.mkForce false;
 
-  # n8n disabled — secrets not encrypted for XPS
-  hwc.automation.n8n.enable = lib.mkForce false;
+  # n8n: the automation stack moved to the business role (server-only), so
+  # nothing to disable here anymore — xps no longer imports domains/automation.
 
   services.openssh.settings = {
     X11Forwarding = lib.mkForce true;

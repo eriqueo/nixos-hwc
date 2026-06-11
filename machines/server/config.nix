@@ -15,7 +15,6 @@
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
     ../../domains/media/index.nix
-    ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
     ../../domains/server/containers/_shared/directories.nix
@@ -263,15 +262,7 @@
     };
   };
 
-  # MQTT broker for event-driven automation (Frigate -> n8n)
-  hwc.automation.mqtt = {
-    enable = true;
-    webhookBridge = {
-      enable = true;
-      topic = "frigate/events";
-      webhookUrl = "http://127.0.0.1:5678/webhook/frigate-events";
-    };
-  };
+  # MQTT broker (Frigate -> n8n bridge) comes from the business role.
 
   # Gotify notification system CLI client for server alerts
   # Per-app tokens: each service gets its own gotify application token
@@ -296,11 +287,7 @@
     notify.enable = true;
   };
 
-  # Unified lead pipeline (Phase 2, in progress 2026-05-31).
-  # Phase 2.1: minimal /health server while subsequent chunks land
-  # POST /leads, JT graph creation, Postgres write, hwc-notify ping,
-  # customer email, HMAC auth, MCP tool.
-  hwc.business.leads.enable = true;
+  # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)
   hwc.monitoring.alerts = {
@@ -512,7 +499,6 @@
   hwc.system.mcp.enable = true;
   hwc.system.mcp.jt.enable = true;
   hwc.system.mcp.host = "0.0.0.0"; # Arka containers need access via 10.89.1.1
-  hwc.business.website.enable = true;
 
   # Note: Backup is configured above (hwc.data.backup block at line ~304)
   # NixOS config excluded - it's in git. Databases handled by preBackupScript.
@@ -920,43 +906,8 @@
   # Authentik SSO/Identity Provider — https://hwc-server.ocelot-wahoo.ts.net:15543
   hwc.system.core.authentik.enable = lib.mkDefault true;
 
-  # Firefly III personal finance
-  hwc.business.firefly = {
-    enable = lib.mkDefault true;
-  };
-
-  # Business database layer (hwc PostgreSQL database)
-  hwc.business.databases.enable = lib.mkDefault true;
-
-  # DataX — legacy postgres role + db that lead_scout connects to.
-  # (FB scrape/classify pipeline migrated to hwc.server.ai.leadScout in 2026-05.)
-  hwc.business.datax.enable = true;
-
-  # Paperless-NGX document management
-  hwc.business.paperless.enable = lib.mkDefault true;
-
-  # Morning briefing — daily Claude Code agent (6am MT)
-  hwc.business.morningBriefing.enable = true;
-
-  #============================================================================
-  # WEB APPS DOMAIN
-  #============================================================================
-  # hwc-publish: deploy static apps instantly, no rebuild needed.
-  # Reserved range: 14000–14099 (on tailscale0)
-  # Usage: hwc-publish <name> <dist/> [--port N]
-  hwc.business.website.webapps.enable = true;
-
-  # Heartwood Estimate Assembler — React PWA
-  # Port 13443 is pre-allocated outside the hwc-publish range (intentional —
-  # the estimator is a first-class named app, not an ad-hoc published slot).
-  # Access: https://hwc-server.ocelot-wahoo.ts.net:13443
-  # Build:  sudo systemctl start estimator-build  (or: estimator-build alias)
-  hwc.business.estimator = {
-    enable     = true;
-    port       = 13443;
-    webhookUrl = config.hwc.networking.hosts.url { server = "main"; path = "/webhook/estimate-push"; };
-    apiKeyFile = config.age.secrets.estimator-api-key.path;
-  };
+  # Business subdomains (firefly, databases, datax, paperless, morning
+  # briefing, webapps, estimator, leads, website) come from the business role.
 
   # Immich photo management (container-based)
   hwc.media.immich = {
