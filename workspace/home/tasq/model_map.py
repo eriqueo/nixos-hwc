@@ -1,0 +1,90 @@
+"""Parse/render the one-line todo.txt-style task dialect.
+
+    "Buy lumber +shop @errand (A) due:2026-06-20"
+      -> summary="Buy lumber", categories=["+shop", "@errand"],
+         priority=1, due=date(2026, 6, 20)
+
+Categories keep their +/@ sigils so they round-trip through iCloud and read
+well as tags in Apple Reminders (CATEGORIES survives the round-trip —
+verified Phase A). Priority letters map (A)->1 ... (I)->9 (todoman: 1 is
+highest, 0 is none). Rendering a Todo back produces the same one-line form;
+a datetime due renders as its date (editing downgrades it to all-day).
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import date, datetime, timedelta
+
+PRI_LETTERS = "ABCDEFGHI"
+
+_PRI_RE = re.compile(r"^\(([A-Za-z])\)$")
+_DUE_RE = re.compile(r"^due:(.+)$", re.IGNORECASE)
+
+
+def parse(line: str) -> dict:
+    """Parse a task line into {summary, categories, priority, due}."""
+    summary_words: list[str] = []
+    categories: list[str] = []
+    priority = 0
+    due: date | None = None
+
+    for tok in line.split():
+        m = _PRI_RE.match(tok)
+        if m:
+            priority = min(ord(m.group(1).upper()) - ord("A") + 1, 9)
+            continue
+        m = _DUE_RE.match(tok)
+        if m:
+            parsed = _parse_due(m.group(1))
+            if parsed is not None:
+                due = parsed
+                continue
+        if len(tok) > 1 and tok[0] in "+@":
+            categories.append(tok)
+            continue
+        summary_words.append(tok)
+
+    return {
+        "summary": " ".join(summary_words),
+        "categories": categories,
+        "priority": priority,
+        "due": due,
+    }
+
+
+def _parse_due(raw: str) -> date | None:
+    raw = raw.strip().lower()
+    if raw == "today":
+        return date.today()
+    if raw in ("tomorrow", "tom"):
+        return date.today() + timedelta(days=1)
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+def priority_letter(priority: int) -> str:
+    if 1 <= priority <= 9:
+        return PRI_LETTERS[priority - 1]
+    return ""
+
+
+def due_str(due) -> str:
+    if due is None:
+        return ""
+    if isinstance(due, datetime):
+        return due.astimezone().date().isoformat()
+    return due.isoformat()
+
+
+def render(todo) -> str:
+    """Render a todoman Todo back to the one-line dialect (parse() inverse)."""
+    parts = [todo.summary] if todo.summary else []
+    parts.extend(todo.categories or [])
+    if todo.priority:
+        parts.append(f"({priority_letter(todo.priority)})")
+    if todo.due:
+        parts.append(f"due:{due_str(todo.due)}")
+    return " ".join(parts)

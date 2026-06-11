@@ -1,0 +1,101 @@
+/* tasq — gruvbox dark (matches the laptop terminal palette) */
+
+Screen {
+    background: #282828;
+    color: #ebdbb2;
+}
+
+#sidebar {
+    width: 22;
+    background: #1d2021;
+    border-right: solid #3c3836;
+    padding: 1 0;
+}
+
+#sidebar > .option-list--option-highlighted {
+    background: #504945;
+    color: #fabd2f;
+    text-style: bold;
+}
+
+#sidebar:focus > .option-list--option-highlighted {
+    background: #665c54;
+}
+
+#main {
+    background: #282828;
+}
+
+#table {
+    height: 1fr;
+    background: #282828;
+    color: #ebdbb2;
+}
+
+#table > .datatable--header {
+    background: #3c3836;
+    color: #d79921;
+    text-style: bold;
+}
+
+#table > .datatable--cursor {
+    background: #504945;
+}
+
+#table > .datatable--odd-row {
+    background: #282828;
+}
+
+#table > .datatable--even-row {
+    background: #2c2c2c;
+}
+
+#status {
+    height: 1;
+    background: #3c3836;
+    color: #a89984;
+    padding: 0 1;
+}
+
+Footer {
+    background: #1d2021;
+}
+
+/* modals */
+
+LineModal, ConfirmModal, HelpModal {
+    align: center middle;
+    background: rgba(29, 32, 33, 0.6);
+}
+
+.modal-box {
+    width: 72;
+    height: auto;
+    background: #3c3836;
+    border: thick #d79921;
+    padding: 1 2;
+}
+
+.help-box {
+    width: 80;
+}
+
+.modal-title {
+    color: #fabd2f;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.modal-hint {
+    color: #928374;
+}
+
+.modal-box Input {
+    background: #282828;
+    color: #ebdbb2;
+    border: tall #665c54;
+}
+
+.modal-box Input:focus {
+    border: tall #d79921;
+}
