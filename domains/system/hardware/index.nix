@@ -30,6 +30,7 @@ in
     bluetooth.enable = lib.mkEnableOption "Enable Bluetooth support";
     monitoring.enable = lib.mkEnableOption "Enable hardware monitoring tools (sensors, smartctl, etc.)";
     mouse.enable = lib.mkEnableOption "Enable mouse-specific tools (Solaar for Logitech, etc.)";
+    powerScripts.enable = lib.mkEnableOption "perf-mode/balanced-mode CPU governor toggle scripts";
 
     fanControl = {
       enable = lib.mkEnableOption "Enable ThinkPad fan control via thinkfan";
@@ -336,6 +337,26 @@ in
       ++ (lib.optionals cfg.peripherals.guiTools [
         pkgs.cups                    # CUPS command line tools
         pkgs.system-config-printer   # GUI printer configuration
+      ])
+      ++ (lib.optionals cfg.powerScripts.enable [
+        # Temporary CPU governor toggles for CPU-intensive tasks
+        (pkgs.writeShellScriptBin "perf-mode" ''
+          #!/usr/bin/env bash
+          # Temporarily switch to maximum CPU performance
+          echo "⚡ Switching to Performance Mode..."
+          echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+          ${pkgs.libnotify}/bin/notify-send "Performance Mode" "CPU governors set to maximum performance" -i cpu -u normal
+          echo "CPU governors set to 'performance'"
+          echo "Use 'balanced-mode' to restore power-efficient operation"
+        '')
+        (pkgs.writeShellScriptBin "balanced-mode" ''
+          #!/usr/bin/env bash
+          # Restore balanced power-efficient mode
+          echo "🔋 Restoring Balanced Mode..."
+          echo powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
+          ${pkgs.libnotify}/bin/notify-send "Balanced Mode" "CPU governors restored to power-efficient mode" -i cpu -u normal
+          echo "CPU governors set to 'powersave' (dynamic scaling)"
+        '')
       ]);
 
     # Logitech device support (udev rules for Solaar)

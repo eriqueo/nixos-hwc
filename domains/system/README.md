@@ -36,6 +36,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-06-11: `hardware/` — new `powerScripts.enable` flag carries the perf-mode/balanced-mode CPU-governor toggle scripts (moved from machines/laptop/config.nix, closing its TODO). Laptop delta is order-only (sorted systemPackages set identical); other machines byte-identical.
 - 2026-06-11: `core/` — new `hwc.system.core.nixld.guiLibs.enable` flag carries the X11/GTK/audio nix-ld library set; desktop and gaming roles flip it instead of duplicating the 22-package list. All 5 toplevels byte-identical (proven no-op).
 - 2026-06-11: `gpu/` — CUDA binary cache (cache.nixos-cuda.org substituter + key) moved here from machines/{laptop,server}/config.nix duplication; applies to any machine with `gpu.type = "nvidia"`. nix-diff: delta is nix.conf only (substituter sets unchanged per machine).
 - 2026-06-11: `users/` — removed the broken `user.ssh.useSecrets` lane: it did `builtins.readFile` on the `/run/agenix/user-ssh-public-key` runtime path, which can never work in pure eval (agenix decrypts at activation, after evaluation), so `ssh.enable` was unusable. `fallbackKey` renamed to `keys` (public keys are not secrets; they live in the repo). Base role now sets `ssh.enable = true` fleet-wide.
