@@ -19,6 +19,7 @@ import { estimatorTools } from "./estimator.js";
 import { morningStatusTool } from "./morning-status.js";
 import { notifyTools } from "./notify.js";
 import { leadsTools } from "./leads.js";
+import { tasksTools } from "./tasks.js";
 
 
 export function allTools(config: ServerConfig): ToolDef[] {
@@ -34,6 +35,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...mailTools(),
     ...mediaTools(),
     ...calendarTools(),
+    ...tasksTools(),
     ...websiteTools(config.nixosConfigPath),
     ...cmsTools([
       { name: "cms", path: config.cmsAppPath, description: "Heartwood CMS app (Express backend + vanilla JS frontend)" },
