@@ -6,6 +6,9 @@ let
   dtCfg = config.hwc.home.apps.dt or { enable = false; waybar.enable = false; settings.waybarPollSeconds = 30; };
   dtEnabled = (dtCfg.enable or false) && (dtCfg.waybar.enable or false);
 
+  gsrCfg = config.hwc.home.apps.gpu-screen-recorder or { enable = false; };
+  gsrEnabled = gsrCfg.enable or false;
+
   commonModules = {
     modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
     modules-center = [ "custom/khal" "clock" "custom/weather" ];
@@ -15,6 +18,8 @@ let
       ++ lib.optionals dtEnabled [ "custom/dt" ]
       ++ [
       "custom/gpu" "idle_inhibitor" "custom/lid-sleep"
+    ] ++ lib.optionals gsrEnabled [ "custom/recording" ]
+      ++ [
       "custom/sep-1"
       "pulseaudio" "bluetooth" "custom/network"
       "custom/sep-2"
@@ -74,7 +79,21 @@ let
     };
   };
 
-  commonWidgetsBase = ollamaWidget // dtWidget // {
+  # Screen recording toggle — instant refresh via RTMIN+9 from gsr-toggle;
+  # interval poll is the fallback if the recorder dies without a toggle.
+  gsrWidget = lib.optionalAttrs gsrEnabled {
+    "custom/recording" = {
+      format = "{}";
+      exec = "gsr-status";
+      return-type = "json";
+      interval = 5;
+      signal = 9;
+      on-click = "gsr-toggle";
+      tooltip = true;
+    };
+  };
+
+  commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // {
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
