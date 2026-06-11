@@ -84,7 +84,5 @@ in
       };
       Install.WantedBy = [ "graphical-session.target" ];
     };
-
-    systemd.user.startServices = "sd-switch";
   };
 }

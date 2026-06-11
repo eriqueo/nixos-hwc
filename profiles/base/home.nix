@@ -15,6 +15,11 @@
 
   home.stateVersion = "24.05";
 
+  # Restart changed user units on switch (sd-switch diffs the unit set).
+  # DELIBERATE: this reaches every machine — user units, including the
+  # server's mail timers, restart when their definitions change.
+  systemd.user.startServices = "sd-switch";
+
   hwc.home = {
     # Theme — palette applies headless too (shell/CLI colors)
     theme.palette = lib.mkDefault "hwc";

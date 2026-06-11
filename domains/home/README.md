@@ -24,6 +24,9 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: systemd.user.startServices = "sd-switch" now set fleet-wide
+  in profiles/base/home.nix; removed the per-module stray copy
+  (transcript-formatter) and the waybar restartWaybar activation hack.
 - 2026-06-11: Law 3 paths — web-build alias (core/shell), WATCH_FOLDER
   (apps/transcript-formatter) and the yazi media keybinding now derive from
   hwc.paths.{nixos,media.root} via guarded osConfig reads with the previous
