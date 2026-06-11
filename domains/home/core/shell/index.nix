@@ -304,22 +304,43 @@ in
         # activate the HM-as-module config (via home-manager-eric.service, oneshot, so
         # ~/.config/hypr/hyprland.conf is on disk by the time the command returns).
         # bnix is pure build, no activation, so no reload.
+        # _hwc_rebuild tees output to a temp log and re-prints warning lines at the
+        # end so deprecation warnings can't scroll away unnoticed (zero-warning baseline).
+        _hwc_rebuild() {
+          local log rc warns
+          log=$(mktemp -t nixos-rebuild-log.XXXXXX)
+          sudo env HOME=~root nixos-rebuild "$@" --flake "$HWC_NIXOS_DIR#$(hostname)" 2>&1 | tee "$log"
+          rc=''${pipestatus[1]}
+          warns=$(grep -E '^(evaluation warning|warning|trace):' "$log" | sort -u)
+          rm -f "$log"
+          if [ -n "$warns" ]; then
+            print -P "\n%F{yellow}── warnings (deduped) ──%f"
+            print -r -- "$warns"
+          fi
+          return $rc
+        }
         snix() {
-          sudo env HOME=~root nixos-rebuild switch --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
+          if [ -n "$(git -C "$HWC_NIXOS_DIR" status --porcelain 2>/dev/null)" ]; then
+            print -P "%F{yellow}dirty git tree%f — doctrine: commit before rebuild"
+            git -C "$HWC_NIXOS_DIR" status --short
+            read -q "?continue anyway? [y/N] " || { print; return 1; }
+            print
+          fi
+          _hwc_rebuild switch "$@" || return $?
           hash -r
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
         }
         tnix() {
-          sudo env HOME=~root nixos-rebuild test --flake "$HWC_NIXOS_DIR#$(hostname)" "$@" || return $?
+          _hwc_rebuild test "$@" || return $?
           hash -r
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
         }
         bnix() {
-          sudo env HOME=~root nixos-rebuild build --flake "$HWC_NIXOS_DIR#$(hostname)" "$@"
+          _hwc_rebuild build "$@"
         }
 
         # Home Manager standalone activation (HM-as-flake path).
