@@ -39,6 +39,7 @@ let
 
   tasksPair = import ./parts/vdirsyncer-pair.nix {
     inherit email applePwPath dataDir;
+    collections = cfg.collections;
   };
 
   todomanConfig = import ./parts/todoman-config.nix {
@@ -68,6 +69,22 @@ in
         todoman default_list for `todo new` when -l is omitted. Must match a
         collection directory created by `vdirsyncer discover tasks`; correct it
         and re-run `hms` if the discovered list name differs.
+      '';
+    };
+
+    collections = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "from a" "from b" ];
+      example = [ "36BB690C-8948-4AB5-A0CB-C0596887C4E5" ];
+      description = ''
+        vdirsyncer `collections` for the tasks pair. Defaults to auto-discovery
+        ("from a"/"from b"), but iCloud advertises VEVENT calendars alongside
+        VTODO reminder lists and vdirsyncer cannot filter discovery by component
+        type — auto-discovery therefore pulls calendars in and breaks todoman on
+        duplicate display names. Pin this to the VTODO collection IDs (the Apple
+        Reminders lists). Find them with `vdirsyncer discover tasks` and a
+        `supported-calendar-component-set` PROPFIND. This is account-specific, so
+        set it in the machine one-off, not here.
       '';
     };
   };
