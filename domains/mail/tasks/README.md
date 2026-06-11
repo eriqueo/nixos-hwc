@@ -40,7 +40,16 @@ from `hwc.mail.calendar.accounts.<hwc.mail.tasks.account>` (default `icloud`).
 3. `systemctl --user list-timers | grep vdirsyncer` → exactly one timer.
 4. `vdirsyncer discover tasks` lists ≥1 VTODO/Reminders collection. Zero ⇒ no-go
    (fall back to self-hosted Radicale). If empty, try the per-dsid principal URL
-   instead of bare `https://caldav.icloud.com/`.
+   instead of bare `https://caldav.icloud.com/`. **Gotcha:** discovery returns
+   ALL CalDAV collections — VEVENT calendars too — because vdirsyncer has no
+   component filter for discovery (`item_types` only filters items at sync). If
+   two collections share a display name (e.g. a "Family" calendar AND a "Family"
+   reminders list), todoman aborts with *"More than one list has the same
+   identity"*. Pin `hwc.mail.tasks.collections` to the VTODO collection IDs.
+   Identify them with a `supported-calendar-component-set` PROPFIND per collection
+   (look for `<comp name='VTODO'/>`); set the IDs in the machine one-off, then
+   delete any stale VEVENT dirs left under `~/.local/share/vdirsyncer/tasks/` and
+   reset `status/tasks.collections` before re-discovering.
 5. `vdirsyncer sync tasks`, then
    `find ~/.local/share/vdirsyncer/tasks -name '*.ics' | xargs grep -l VTODO`.
 6. Round-trip: `todo new -l <list> "vdir test from laptop"` → `vdirsyncer sync
@@ -56,10 +65,23 @@ from `hwc.mail.calendar.accounts.<hwc.mail.tasks.account>` (default `icloud`).
 **GO** only if discover lists a VTODO collection AND todoman→Reminders AND
 Reminders→local all work.
 
-### Go/no-go result
-- (to be filled in after running on the laptop)
-- CATEGORIES round-trip: _unknown_
+### Go/no-go result (verified on hwc-laptop, 2026-06-11) — **GO**
+- `vdirsyncer discover` exposed 2 VTODO collections: `36BB690C…` ("Reminders")
+  and `D788714B…` ("Family"); the other 4 discovered collections are VEVENT and
+  are excluded via `hwc.mail.tasks.collections`.
+- Sync down pulled a real reminder ("Ryan's bday"); `todo list` reads it.
+- Write: `todo new` → `vdirsyncer sync` uploaded the VTODO to iCloud (visible in
+  Apple Reminders). Delete propagated too.
+- **CATEGORIES round-trip: PRESERVED.** Apple stored `CATEGORIES:work,urgent` and
+  `PRIORITY:1` intact through the round-trip → Phase B (`tasq`) maps
+  `+project/@context` to `Todo.categories` (no inline-summary fallback needed).
 
 ## Changelog
+- 2026-06-11: Phase A verified GO on hwc-laptop. Added `hwc.mail.tasks.collections`
+  to pin the pair to VTODO collections (vdirsyncer over-discovers VEVENT calendars,
+  which broke todoman on a duplicate "Family" name); pinned the laptop to its two
+  Reminders lists in `machines/laptop/home.nix`. Enabled tasks on the laptop there
+  (it wires mail per-machine, not via the mail role). CATEGORIES confirmed to
+  survive iCloud round-trip.
 - 2026-06-11: Initial Phase A — vdirsyncer VTODO pair (contributed to the shared
   calendar config/timer) + todoman CLI and config. TUI (`tasq`) deferred to Phase B.
