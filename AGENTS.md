@@ -1,6 +1,7 @@
 # nixos-hwc
 
-NixOS flake managing two machines via domain-driven architecture. Charter v12.0.
+NixOS flake managing the HWC fleet via domain-driven architecture. Charter v12.1
+(roles architecture: domains = capabilities, profiles = roles, machines = instances).
 
 ## Machines
 - **hwc-laptop** — NixOS desktop (Hyprland, dev tools, GPU)
@@ -8,14 +9,16 @@ NixOS flake managing two machines via domain-driven architecture. Charter v12.0.
 Always run `hostname` before nixos-rebuild. Hooks enforce this.
 
 ## Home Manager workflows
-Home Manager is wired **two ways from the same source** (`profiles/home-session.nix`
-+ `machines/<host>/home.nix`):
+Home Manager is wired **two ways from the same source** (the role home halves
+`profiles/<role>/home.nix` + `machines/<host>/home.nix`, resolved by the
+flake glue from the machines table):
 
 - **HM-as-module** — runs inside `nixos-rebuild switch --flake .#hwc-<host>`.
   This is what activates on boot. Use for **system or mixed** changes.
-- **HM-as-flake** — `homeConfigurations."eric@hwc-<host>"` in `flake.nix`.
-  Run with `home-manager switch --flake ~/.nixos#eric@$(hostname)` (alias `hms`).
-  Use for **HM-only** changes (anything under `domains/home/`, `profiles/home-session.nix`,
+- **HM-as-flake** — `homeConfigurations."eric@hwc-<host>"` generated for every
+  machine in flake.nix. Run with `home-manager switch --flake
+  ~/.nixos#eric@$(hostname)` (alias `hms`). Use for **HM-only** changes
+  (anything under `domains/home/`, `profiles/*/home.nix`,
   `machines/<host>/home.nix`). Fast (~5–10s), no sudo.
 
 **Rule**: HM-only edits → `hms`. System or mixed edits → `nixos-rebuild`.
@@ -26,9 +29,10 @@ errors when the other tries to claim them. The module path sets
 
 ## Repo Map
 ```
-flake.nix                          # Entry point (orchestration only)
-machines/{laptop,server}/          # Hardware + profile imports
-profiles/                          # Domain menus (system, home, server, media, etc.)
+flake.nix                          # Entry point: machines registry (channel+roles) + glue
+machines/<m>/                      # hardware.nix + one-off config.nix/home.nix ONLY
+profiles/<role>/{sys,home}.nix     # Role layer (base, desktop, server, business,
+                                   #   monitoring, gaming, appliance, mail) — Law 16
 domains/
   home/apps/                       # Home Manager apps (waybar, hyprland, aerc, kitty, etc.)
   home/environment/shell/          # Shell config, scripts, env vars
@@ -52,6 +56,9 @@ domains/
 - **Assertions**: go INSIDE `config = lib.mkIf ...` block, not separate
 - **Native services**: need `User = lib.mkForce "eric"` (mkForce is critical)
 - **PGID=100** (users group), NOT 1000
+- **Layer purity (Law 16)**: roles = option flips + domain imports only; no
+  derivations/option declarations/machine names in profiles/; membership
+  lives only in the flake.nix machines table; roles never import roles
 
 ## Recurring Mistakes (from git history)
 - Port conflicts in routes.nix — always check existing assignments first
