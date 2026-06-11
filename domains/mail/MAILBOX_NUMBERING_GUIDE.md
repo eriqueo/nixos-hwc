@@ -171,7 +171,7 @@ Visual differentiation in the unified inbox:
 | `work`            | Blue          | Any work domain email      |
 | `personal`        | Purple        | Any personal domain email  |
 
-Configuration in `domains/home/apps/aerc/parts/theme.nix`:
+Configuration in `domains/mail/aerc/parts/theme.nix`:
 ```nix
 "*.hwc-email" = token "#5DA0DE" "default" false;       # Light blue
 "*.gmail-work" = token "#2563EB" "default" false;      # Dark blue

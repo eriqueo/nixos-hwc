@@ -3,7 +3,6 @@
 let
   dir = builtins.readDir ./.;
 
-  # add "mail" here
   wantedDirs = [ "core" "theme" "apps" ];
 
   subIndex =
