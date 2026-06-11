@@ -27,25 +27,11 @@
   networking.hostName = "hwc-xps";
   networking.hostId = "a7c3d821";
 
-  hwc.server.enable = true;
-
-  # ZFS support for DAS media pool
+  # ZFS support for DAS media pool (scrub/trim hygiene from the server role)
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
   boot.zfs.extraPools = [ "media-pool" ];
-
-  # ZFS configuration
-  services.zfs = {
-    autoScrub = {
-      enable = true;
-      interval = "monthly";
-    };
-    trim = {
-      enable = true;
-      interval = "weekly";
-    };
-  };
 
   # Make ZFS import non-blocking — don't hang boot if DAS is disconnected
   systemd.services."zfs-import-media-pool" = {
@@ -60,8 +46,7 @@
     backup.enable = false;
   };
 
-  # Swap file for laptop (16GB recommended)
-  swapDevices = [ { device = "/var/swapfile"; size = 16384; } ];
+  # Swap file is defined in hardware.nix (was duplicated here — same entry).
 
   time.timeZone = "America/Denver";
 
@@ -80,7 +65,7 @@
     tailscale.enable = true;
     # tailscale.funnel.* options removed when Funnel was retired in favor of
     # Cloudflare Tunnel (2026-05-22). Default = disabled; no setting needed.
-    firewall.level = lib.mkForce "server";
+    # firewall.level = "server" comes from the server role
     firewall.extraTcpPorts = [ 8096 7359 2283 4533 ];
     firewall.extraUdpPorts = [ 7359 ];
   };
@@ -163,25 +148,7 @@
   # Reverse proxy for local services
   hwc.networking.reverseProxy.enable = true;
 
-  # CouchDB for Obsidian LiveSync
-  hwc.data.couchdb = {
-    enable = true;
-    settings = {
-      port = 5984;
-      bindAddress = "127.0.0.1";
-    };
-    monitoring.enableHealthCheck = true;
-    reverseProxy = {
-      enable = true;
-      path = "/sync";
-    };
-  };
-
-  hwc.notifications.gotify = {
-    enable = true;
-    port = 2586;
-    dataDir = "/var/lib/hwc/gotify";
-  };
+  # CouchDB for Obsidian LiveSync + gotify server come from the server role.
 
   # exportarr disabled — no *arr services on this machine
   hwc.monitoring.exportarr.enable = lib.mkForce false;
@@ -194,20 +161,8 @@
     PasswordAuthentication = lib.mkForce true;  # Temporary — remove after SSH key update
   };
 
-  hwc.system.core.session.sudo.extraRules = [
-    {
-      users = [ "eric" ];
-      commands = [
-        { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl"; options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/journalctl"; options = [ "NOPASSWD" ]; }
-      ];
-    }
-  ];
-
-  services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
-
-  hwc.system.core.packages.server.enable = true;
+  # sudo NOPASSWD rules, permitCertUid, and the server package set come
+  # from the server role.
 
   system.stateVersion = "24.05";
 }
