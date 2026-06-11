@@ -24,6 +24,13 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: Structural cleanups — core/shell split into parts/ (aliases,
+  ssh, zsh-init, prompt, fzf); 13 one-package app modules collapsed onto
+  domains/lib/mkSimpleApp.nix; cross-lane boilerplate centralized in
+  domains/lib/hm.nix (isNixOSHost/osCfgOr/sysLaneAssert, 7 modules);
+  stale scaffolding removed (hyprland-new/-bak filters, 3 empty placeholder
+  sys.nix, nvim .luarc.json, machines/laptop/home.bak, modules/home/
+  headers, qutebrowser TODO).
 - 2026-06-11: Law 2 namespace fix — hwc.home.shell.* -> hwc.home.core.shell.*
   and hwc.home.development.* -> hwc.home.core.development.* (namespace =
   folder, no exceptions). All setters/readers updated in one commit.

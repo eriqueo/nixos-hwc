@@ -1,20 +1,7 @@
 # domains/home/apps/imv/index.nix
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.hwc.home.apps.imv;
-in
-{
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.home.apps.imv = {
-    enable = lib.mkEnableOption "imv image viewer";
-  };
-
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.imv ];
-  };
+# One-package app module via domains/lib/mkSimpleApp.nix (Law 2: name = folder).
+import ../../../lib/mkSimpleApp.nix {
+  name = "imv";
+  description = "imv image viewer";
+  package = pkgs: pkgs.imv;
 }

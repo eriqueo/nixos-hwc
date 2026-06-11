@@ -2,7 +2,8 @@
 { config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.apps.hyprland;
-  isNixOSHost = osConfig ? hwc;
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  isNixOSHost = hmLib.isNixOSHost osConfig;
 
   theme      = import ./parts/theme.nix      { inherit config lib pkgs; };
   behavior   = import ./parts/behavior.nix   { inherit config lib pkgs; };
@@ -131,14 +132,7 @@ in
       # Cross-lane consistency: check if system-lane is also enabled (NixOS only)
       # Feature Detection: Only enforce on NixOS hosts where system config is available
       # On non-NixOS hosts, user is responsible for system-lane dependencies
-      {
-        assertion = !cfg.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "hyprland" "enable" ] false osConfig;
-        message = ''
-          hwc.home.apps.hyprland is enabled but hwc.system.apps.hyprland is not.
-          System dependencies (helper scripts) are required.
-          Enable hwc.system.apps.hyprland in machine config.
-        '';
-      }
+      (hmLib.sysLaneAssert { inherit osConfig; enabled = cfg.enable; app = "hyprland"; })
 
       # Home-lane dependencies
       {

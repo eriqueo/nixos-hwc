@@ -3,8 +3,9 @@
 let
   cfg = config.hwc.home.apps.gemini-cli;
 
-  isNixOSHost = osConfig ? hwc;
-  osCfg = if isNixOSHost then osConfig else {};
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  isNixOSHost = hmLib.isNixOSHost osConfig;
+  osCfg = hmLib.osCfgOr osConfig;
   hasGeminiSecret = (osCfg ? age) && (osCfg.age.secrets ? gemini-api-key);
 in
 {

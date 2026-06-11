@@ -31,8 +31,9 @@ let
   '';
   cfg = config.hwc.home.apps.freecad;
 
-  isNixOSHost = osConfig ? hwc;
-  osCfg = if isNixOSHost then osConfig else {};
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  isNixOSHost = hmLib.isNixOSHost osConfig;
+  osCfg = hmLib.osCfgOr osConfig;
   gpuCfg = lib.attrByPath [ "hwc" "system" "hardware" "gpu" ] { type = "none"; enable = false; } osCfg;
 
   freecadPkg = pkgs.freecad.overrideAttrs (old: {

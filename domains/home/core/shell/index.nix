@@ -53,40 +53,7 @@ in
 
     aliases = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
-      default = {
-        "ll" = "eza -l"; "la" = "eza -lh"; "lt" = "eza --tree --level=2";
-        "cd" = "z"; "cdi" = "zi"; "cz" = "z"; "czz" = "zi";
-        ".." = "cd .."; "..." = "cd ../.."; "...." = "cd ../../..";
-        "df" = "df -h"; "du" = "du -h"; "free" = "free -h";
-        "aliases" = "cd ~/.nixos && nvim domains/home/core/shell/index.nix";
-        "web-build" = "cd ${nixosPath}/domains/business/website/site_files && npx @11ty/eleventy";
-        "htop" = "btop"; "open" = "xdg-open";
-        "web-deploy" = "curl -s -X POST -H 'x-api-key: '$(cat /run/agenix/cms-api-key) http://localhost:8095/api/deploy | jq .";
-        "web-speed" = "${ws}/tools/web-speed.sh";
-        "gs" = "git status -sb"; "ga" = "git add ."; "gc" = "git commit -m"; "gp" = "git push"; "gpl" = "git pull";
-        "nixsearch" = "nix search nixpkgs"; "nixclean" = "nix-collect-garbage -d";
-        "checkup" = "$HWC_NIXOS_DIR/scripts/system-checkup.sh"; "speedtest" = "speedtest-cli";
-        "myip" = "curl -s ifconfig.me"; "reload" = "source ~/.zshrc";
-        "server" = "ssh eric@100.114.232.124"; "xps" = "ssh eric@100.126.80.42";
-        "vpnon" = "sudo systemctl start wg-quick-protonvpn"; "vpnoff" = "sudo systemctl stop wg-quick-protonvpn";
-        "vpnstatus" = "sudo wg show protonvpn 2>/dev/null || echo 'VPN disconnected'";
-        "website" = "ssh -i ~/.ssh/hostinger_deploy -p 65002 u930853409@194.195.84.13";
-        "cdn" = "cd ~/.nixos";
-        "cdd" = "cd ~/700_datax/datax"; "cdj" = "cd ~/700_datax/jt-mcp";
-        "downloads" = "cd ~/000_inbox/downloads"; "hwc" = "cd ~/100_hwc"; "inbox" = "cd ~/000_inbox";
-        "screenshots" = "cd ~/500_media/510_pictures/screenshots";
-        "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
-        "ls" = "eza"; "vpn" = "vpnstatus"; "which-command" = "whence"; "run-help" = "man";
-        # Workspace script aliases
-        "errors" = "${ws}/monitoring/journal-errors.sh";
-        "errors-hour" = "${ws}/monitoring/journal-errors.sh '1 hour ago'";
-        "errors-today" = "${ws}/monitoring/journal-errors.sh 'today'";
-        "errors-tdarr" = "${ws}/monitoring/journal-errors.sh '10 minutes ago' podman-tdarr";
-        "services" = "${ws}/nixos-dev/list-services.sh";
-        "rebuild" = "${ws}/nixos-dev/grebuild.sh"; "lint" = "${ws}/nixos-dev/charter-lint.sh";
-        "caddy" = "${ws}/monitoring/caddy-health-check.sh"; "health" = "${ws}/monitoring/caddy-health-check.sh";
-        "secret" = "${ws}/system/secret-manager.sh";
-      };
+      default = import ./parts/aliases.nix { inherit ws nixosPath; };
       description = "Shell aliases for zsh";
     };
 
@@ -183,19 +150,7 @@ in
       };
     };
 
-    programs.fzf = {
-      enable = true;
-      enableZshIntegration = true;
-      defaultCommand = "fd --type f --hidden --follow --exclude .git";
-      fileWidgetCommand = "fd --type f --hidden --follow --exclude .git";
-      historyWidgetOptions = [ "--exact" ];
-      defaultOptions = [
-        "--height 40%" "--reverse" "--border"
-        "--color=bg+:#${col "bg3" "32373c"},bg:#${col "bg" "282828"},spinner:#${col "success" "a3be8c"},hl:#${col "info" "5e81ac"}"
-        "--color=fg:#${col "fg" "d5c4a1"},header:#${col "info" "5e81ac"},info:#${col "warn" "cf995f"},pointer:#${col "success" "a3be8c"}"
-        "--color=marker:#${col "success" "a3be8c"},fg+:#${col "fg" "d5c4a1"},prompt:#${col "warn" "cf995f"},hl+:#${col "success" "a3be8c"}"
-      ];
-    };
+    programs.fzf = import ./parts/fzf.nix { inherit col; };
 
     programs.zoxide = lib.mkIf cfg.modernUnix {
       enable = true;
@@ -225,57 +180,8 @@ in
       };
     };
 
-    # SSH configuration — API differs between HM 25.11 (stable) and 26.05+ (unstable).
-    # Stable uses `matchBlocks` with HM camelCase attrs (hostname/user/forwardAgent...);
-    # unstable uses `settings` with literal "Host *" keys and OpenSSH directive names.
-    # User-facing DSL `cfg.ssh.matchBlocks` is unchanged; we translate it per API.
-    programs.ssh = lib.mkIf cfg.ssh.enable (
-      if nixosApiVersion == "stable" then {
-        enable = true;
-        matchBlocks = {
-          "*" = {
-            forwardAgent = false;
-            addKeysToAgent = "no";
-            compression = false;
-            serverAliveInterval = 0;
-            serverAliveCountMax = 3;
-            hashKnownHosts = false;
-            userKnownHostsFile = "~/.ssh/known_hosts";
-            controlMaster = "no";
-            controlPath = "~/.ssh/master-%r@%n:%p";
-            controlPersist = "no";
-          };
-        } // (lib.mapAttrs (name: host: {
-          hostname     = host.hostname;
-          user         = host.user;
-          forwardAgent = host.forwardAgent;
-        }) cfg.ssh.matchBlocks);
-      } else {
-        enable = true;
-        enableDefaultConfig = false;
-        settings = lib.mkMerge [
-          {
-            "Host *" = {
-              ForwardAgent = false;
-              AddKeysToAgent = "no";
-              Compression = false;
-              ServerAliveInterval = 0;
-              ServerAliveCountMax = 3;
-              HashKnownHosts = false;
-              UserKnownHostsFile = "~/.ssh/known_hosts";
-              ControlMaster = "no";
-              ControlPath = "~/.ssh/master-%r@%n:%p";
-              ControlPersist = "no";
-            };
-          }
-          (lib.mapAttrs' (name: host: lib.nameValuePair "Host ${name}" {
-            HostName     = host.hostname;
-            User         = host.user;
-            ForwardAgent = host.forwardAgent;
-          }) cfg.ssh.matchBlocks)
-        ];
-      }
-    );
+    # SSH configuration (per-API translation) — see parts/ssh.nix
+    programs.ssh = lib.mkIf cfg.ssh.enable (import ./parts/ssh.nix { inherit lib cfg nixosApiVersion; });
 
     # Zsh configuration
     programs.zsh = lib.mkIf cfg.zsh.enable {
@@ -287,181 +193,7 @@ in
         save = 5000;
       };
       shellAliases = cfg.aliases;
-      initContent = ''
-        # Refresh zsh's command hash table before every prompt. Required because
-        # this host runs BOTH HM-as-module (via nixos-rebuild, useUserPackages=true)
-        # and HM-as-flake (via `hms`). HM-as-module wipes the legacy nix-env user
-        # profile under ~/.nix-profile during activation, which invalidates any
-        # absolute paths zsh already cached from there (e.g. starship). hash -r
-        # is in-process and effectively free.
-        # NB: add-zsh-hook requires a function NAME, not a command — wrap hash -r.
-        autoload -Uz add-zsh-hook
-        _hwc_hash_refresh() { hash -r; }
-        add-zsh-hook precmd _hwc_hash_refresh
-
-        # NixOS rebuild shortcuts (dynamic hostname)
-        # `env HOME=~root` stops Nix warning that /home/eric isn't owned by root.
-        # (sudo -H / -i don't work here: this system's sudo preserves the caller's
-        # environment and HOME survives both flags — verified 2026-06-10.)
-        # snix/tnix auto-reload Hyprland when run inside a Hyprland session because they
-        # activate the HM-as-module config (via home-manager-eric.service, oneshot, so
-        # ~/.config/hypr/hyprland.conf is on disk by the time the command returns).
-        # bnix is pure build, no activation, so no reload.
-        # _hwc_rebuild tees output to a temp log and re-prints warning lines at the
-        # end so deprecation warnings can't scroll away unnoticed (zero-warning baseline).
-        _hwc_rebuild() {
-          local log rc warns
-          log=$(mktemp -t nixos-rebuild-log.XXXXXX)
-          sudo env HOME=~root nixos-rebuild "$@" --flake "$HWC_NIXOS_DIR#$(hostname)" 2>&1 | tee "$log"
-          rc=''${pipestatus[1]}
-          warns=$(grep -E '^(evaluation warning|warning|trace):' "$log" | sort -u)
-          rm -f "$log"
-          if [ -n "$warns" ]; then
-            print -P "\n%F{yellow}── warnings (deduped) ──%f"
-            print -r -- "$warns"
-          fi
-          return $rc
-        }
-        snix() {
-          if [ -n "$(git -C "$HWC_NIXOS_DIR" status --porcelain 2>/dev/null)" ]; then
-            print -P "%F{yellow}dirty git tree%f — doctrine: commit before rebuild"
-            git -C "$HWC_NIXOS_DIR" status --short
-            read -q "?continue anyway? [y/N] " || { print; return 1; }
-            print
-          fi
-          _hwc_rebuild switch "$@" || return $?
-          hash -r
-          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-            hyprctl reload >/dev/null
-          fi
-        }
-        tnix() {
-          _hwc_rebuild test "$@" || return $?
-          hash -r
-          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-            hyprctl reload >/dev/null
-          fi
-        }
-        bnix() {
-          _hwc_rebuild build "$@"
-        }
-
-        # Home Manager standalone activation (HM-as-flake path).
-        # Auto-reloads Hyprland after activation when running inside a
-        # Hyprland session, because HM activation writes ~/.config/hypr/
-        # hyprland.conf but does not signal the compositor. Reload is a
-        # no-op if the new generation didn't change hyprland config.
-        # Extra args (e.g. --show-trace, --refresh) are forwarded to nix build.
-        hms() {
-          local activator
-          activator=$(nix build --no-link --print-out-paths \
-            "$HWC_NIXOS_DIR#homeConfigurations.\"eric@$(hostname)\".activationPackage" \
-            "$@") || return $?
-          "$activator/activate" || return $?
-          hash -r
-          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-            hyprctl reload >/dev/null
-          fi
-        }
-
-        # Fuzzy finding function
-        ff() {
-          fd -t f . ~ | fzf --query="$*" --preview 'head -20 {}'
-        }
-
-        # Quick system status check
-        status() {
-          echo "System Status Overview"
-          echo "=========================="
-          echo "Memory: $(free -h | awk 'NR==2{printf "%.1f%%", $3*100/$2 }')"
-          echo "Disk: $(df -h / | awk 'NR==2{print $5}')"
-          echo "Load: $(uptime | awk -F'load average:' '{print $2}')"
-        }
-
-        # add-app shell function
-        add-app() {
-          ${config.home.homeDirectory}/.nixos/workspace/nixos-dev/add-home-app.sh "$@"
-        }
-
-        # Interactive graph function for hwc-graph tool
-        graph() {
-          local graph_script="${config.home.homeDirectory}/.nixos/workspace/nixos-dev/graph/hwc_graph.py"
-
-          # If arguments provided, pass directly to script
-          if [ $# -gt 0 ]; then
-            python3 "$graph_script" "$@"
-            return
-          fi
-
-          # Interactive mode
-          echo "HWC Dependency Graph Analyzer"
-          echo "================================"
-          echo ""
-
-          PS3=$'\n'"Choose a command (1-6): "
-          select cmd in "List all modules" "Show module details" "Impact analysis" "Requirements analysis" "Graph statistics" "Export to JSON" "Exit"; do
-            case $REPLY in
-              1)
-                python3 "$graph_script" list
-                break
-                ;;
-              2)
-                echo ""
-                echo -n "Enter module name (supports partial match): "
-                read module_name
-                if [ -n "$module_name" ]; then
-                  python3 "$graph_script" show "$module_name"
-                else
-                  echo "Module name required"
-                fi
-                break
-                ;;
-              3)
-                echo ""
-                echo -n "Enter module name to analyze impact: "
-                read module_name
-                if [ -n "$module_name" ]; then
-                  python3 "$graph_script" impact "$module_name"
-                else
-                  echo "Module name required"
-                fi
-                break
-                ;;
-              4)
-                echo ""
-                echo -n "Enter module name to analyze requirements: "
-                read module_name
-                if [ -n "$module_name" ]; then
-                  python3 "$graph_script" requirements "$module_name"
-                else
-                  echo "Module name required"
-                fi
-                break
-                ;;
-              5)
-                python3 "$graph_script" stats
-                break
-                ;;
-              6)
-                echo ""
-                echo -n "Output file (default: graph.json): "
-                read output_file
-                output_file=''${output_file:-graph.json}
-                python3 "$graph_script" export --format=json > "$output_file"
-                echo "Exported to $output_file"
-                break
-                ;;
-              7)
-                echo "Goodbye!"
-                break
-                ;;
-              *)
-                echo "Invalid option. Please choose 1-7."
-                ;;
-            esac
-          done
-        }
-      '';
+      initContent = import ./parts/zsh-init.nix { inherit config; };
     };
 
     # Global fd ignore
@@ -475,59 +207,10 @@ in
       .nix-defexpr/
     '';
 
-    # Starship prompt — powerline style, colors from the active palette
+    # Starship prompt — powerline style, palette colors (parts/prompt.nix)
     programs.starship = lib.mkIf cfg.zsh.starship {
       enable = true;
-      settings = {
-        scan_timeout = 100;
-        command_timeout = 1000;
-        add_newline = false;
-
-        format = lib.concatStrings [
-          "[](fg:#${col "bg" "282828"} bg:#${col "sectionA" "856b43"})"
-          "$directory"
-          "$git_branch"
-          "$git_status"
-          "[](fg:#${col "sectionB" "576f69"} bg:#${col "bg" "282828"}) "
-          "$character"
-        ];
-
-        directory = {
-          format = "[ $path ](bg:#${col "sectionA" "856b43"} fg:#${col "fg" "d5c4a1"})";
-          truncation_length = 3;
-          truncation_symbol = ".../";
-          style = "bg:#${col "sectionA" "856b43"} fg:#${col "fg" "d5c4a1"}";
-        };
-
-        git_branch = {
-          format = "[](fg:#${col "sectionA" "856b43"} bg:#${col "sectionB" "576f69"})[ $symbol$branch ](bg:#${col "sectionB" "576f69"} fg:#${col "fg" "d5c4a1"})";
-          symbol = " ";
-          style = "bg:#${col "sectionB" "576f69"} fg:#${col "fg" "d5c4a1"}";
-        };
-
-        git_status = {
-          format = "[$all_status$ahead_behind ](bg:#${col "sectionB" "576f69"} fg:#${col "warn" "cf995f"})";
-          style = "bg:#${col "sectionB" "576f69"} fg:#${col "warn" "cf995f"}";
-          conflicted = "!";
-          ahead = "⇡\${count}";
-          behind = "⇣\${count}";
-          diverged = "⇕";
-          untracked = "?";
-          modified = "~";
-          staged = "+";
-          deleted = "✘";
-        };
-
-        python  = { disabled = true; };
-        nodejs  = { disabled = true; };
-        rust    = { disabled = true; };
-        golang  = { disabled = true; };
-
-        character = {
-          success_symbol = "[❯](bold fg:#${col "success" "a3be8c"})";
-          error_symbol   = "[❯](bold fg:#${col "error" "bf616a"})";
-        };
-      };
+      settings = import ./parts/prompt.nix { inherit lib col; };
     };
 
     # Direnv for development environments

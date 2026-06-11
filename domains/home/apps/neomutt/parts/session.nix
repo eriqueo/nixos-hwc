@@ -1,4 +1,4 @@
-# modules/home/apps/neomutt/parts/session.nix
+# domains/home/apps/neomutt/parts/session.nix
 # NeoMutt • Session part (packages/env/services only)
 { lib, pkgs, config, osConfig ? {}, ... }:
 

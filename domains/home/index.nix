@@ -15,7 +15,6 @@ let
     t == "regular"
     && lib.hasSuffix ".nix" n
     && n != "index.nix"
-    && !(lib.hasSuffix ".bak.nix" n)
   ) dir;
 
   filePaths = lib.mapAttrsToList (n: _: ./. + "/${n}") files;

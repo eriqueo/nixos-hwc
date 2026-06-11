@@ -1,20 +1,7 @@
 # domains/home/apps/localsend/index.nix
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.hwc.home.apps.localsend;
-in
-{
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.home.apps.localsend = {
-    enable = lib.mkEnableOption "LocalSend file sharing";
-  };
-
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.localsend ];
-  };
+# One-package app module via domains/lib/mkSimpleApp.nix (Law 2: name = folder).
+import ../../../lib/mkSimpleApp.nix {
+  name = "localsend";
+  description = "LocalSend file sharing";
+  package = pkgs: pkgs.localsend;
 }

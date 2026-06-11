@@ -2,7 +2,8 @@
 { config, lib, pkgs, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.apps.waybar;
-  isNixOSHost = osConfig ? hwc;
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  isNixOSHost = hmLib.isNixOSHost osConfig;
 
   scriptPkgs = with pkgs; [
     coreutils gnugrep gawk gnused procps util-linux
@@ -92,14 +93,7 @@ in
       # Cross-lane consistency: check if system-lane is also enabled (NixOS only)
       # Feature Detection: Only enforce on NixOS hosts where system config is available
       # On non-NixOS hosts, user is responsible for system-lane dependencies
-      {
-        assertion = !cfg.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "waybar" "enable" ] false osConfig;
-        message = ''
-          hwc.home.apps.waybar is enabled but hwc.system.apps.waybar is not.
-          System-lane validation checks are required for waybar dependencies.
-          Enable hwc.system.apps.waybar in machine config.
-        '';
-      }
+      (hmLib.sysLaneAssert { inherit osConfig; enabled = cfg.enable; app = "waybar"; })
 
       # Home-lane dependencies
       {
