@@ -40,7 +40,24 @@ cannot reappear.
    registry entry for that service. The violation is a *consumer*
    re-typing `8096`/`localhost:8096` instead of reading the option (or
    routes.nix for proxy-side ports).
-5. Verification per commit: `nix eval` drvPath for affected machines; if
+5. **Distributed wiring, derivable truth** (Eric, 2026-06-11): prefer
+   simplicity under the hood over a single hand-maintained source-of-truth
+   file. Route wiring self-registers from service modules against a pure
+   allocation table; the assembled catalog is DERIVED on demand (nix eval
+   dump / MCP tool), never hand-curated. Uniqueness asserted at eval.
+6. **Model all three addressing schemes; don't migrate between them.**
+   The fleet now has: (a) tailnet `*.ocelot-wahoo.ts.net` (+ public-port
+   scheme), (b) public app subdomains `*.hwc.iheartwoodcraft.com`
+   (Cloudflare → Caddy host-matchers — live on the server, laptop configs
+   lag), (c) webhook ingress `*.heartwoodcraft.me` / `*.api.iheartwoodcraft.com`
+   (cloudflared). The registry names all three; each consumer declares
+   WHICH scheme it uses. Rule of thumb: machine-to-machine/infra traffic
+   stays tailnet (no Cloudflare in the loop — laptop→server gotify pushes
+   must not depend on an external CDN being up); public subdomains are for
+   humans, browsers, and external callers. This plan moves literals into
+   the registry; switching a consumer between schemes is a separate,
+   deliberate, per-consumer decision.
+7. Verification per commit: `nix eval` drvPath for affected machines; if
    hashes move, `nix-diff` + set-equality check; standalone HM lanes must
    stay byte-identical wherever only fallback plumbing changed.
 
@@ -117,9 +134,17 @@ Six sites, three risk tiers:
   fallback constants. The mail-health webhook URL currently lives in
   machines/server/home.nix per Law 16 — deriving it from the helper
   removes the hostname from the machine file too.
-- Acceptance test for the whole phase: change `tailnetSuffix` to a dummy
-  value, eval all 5 toplevels, confirm zero remaining references to the
-  old suffix outside the registry + hm.nix fallbacks (then revert).
+- **Scheme awareness (execution-time)**: the registry gains
+  `appDomain = "hwc.iheartwoodcraft.com"` (and the webhook ingress domains)
+  alongside `tailnetSuffix`, with URL helpers per scheme. For every
+  consumer migrated, record which scheme it ACTUALLY uses on the server
+  today (the server moved to subdomains ahead of the laptop) and encode
+  that found truth — do not "upgrade" infra consumers to Cloudflare URLs
+  while moving the literal (decision 6).
+- Acceptance test for the whole phase: change `tailnetSuffix` AND
+  `appDomain` to dummy values, eval all 5 toplevels, confirm zero
+  remaining references to the old values outside the registry + hm.nix
+  fallbacks (then revert).
 - Lint: `rg -n 'ocelot-wahoo' --type nix . --glob '!domains/networking/hosts/**' --glob '!domains/lib/hm.nix'` → empty.
 
 ## 5. Phase R3 — port cross-references (1 audit commit + n fix commits)
@@ -151,6 +176,31 @@ Six sites, three risk tiers:
   `.local` names are vestigial (check shell history/configs for usage
   before deleting — blast radius).
 
+## 6.5 Phase R4.5 — service catalog: allocation table + route self-registration
+
+Direction locked per decision 5. Sequenced after R3 (consumers already
+read producer options) — R3 is the prerequisite.
+
+- **Allocation table**: shrink routes.nix toward pure data —
+  `hwc.networking.allocations.<service> = <publicPort>` for the tailnet
+  port scheme. Eval-time assertion: no duplicate values. Note: with the
+  subdomain scheme, host-based routing makes the public-port namespace a
+  tailnet-only legacy detail; the table documents it but new services may
+  be subdomain-only.
+- **Self-registration**: each service module declares its own
+  `hwc.networking.reverseProxy.routes.<name> = { publicPort?; hostName?;
+  upstream = cfg.port-derived; path?; }` inside its `mkIf cfg.enable` —
+  route exists iff service enabled, no number typed twice. Caddy module
+  aggregates the merged attrset. Migrate routes.nix entries incrementally
+  (one service per commit, hash/Caddyfile-set verification).
+- **Derived catalog views** (the payoff, one consumer per commit):
+  server firewall extraTcpPorts (45-line machine-file registry — backlog
+  item) derives from the catalog; then homepage dashboard entries; then
+  evaluate prometheus scrape targets / uptime-kuma monitors. A
+  `nix eval`-based dump script (workspace/nixos/) renders the assembled
+  catalog on demand — the at-a-glance ledger becomes generated, so it
+  cannot lie.
+
 ## 7. Phase R5 — lints + charter v12.2 (1 commit)
 
 - Add the R0/R2/R3 lints to CHARTER.md §3.1 under a new "Law 17:
@@ -175,7 +225,7 @@ Six sites, three risk tiers:
 
 ## 9. Execution order + effort
 
-R0 (contract) → R1a/b/c → R2 → R3 → R4 → R5. Each phase independently
+R0 (contract) → R1a/b/c → R2 → R3 → R4 → R4.5 → R5. Each phase independently
 shippable; stop-points after any phase leave the repo consistent. Rough
 size: R0–R1 one session; R2 one session (15 files, mechanical with the
 acceptance test); R3–R5 one session. Server rebuild required at the end
