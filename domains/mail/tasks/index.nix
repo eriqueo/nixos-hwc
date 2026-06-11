@@ -68,6 +68,19 @@ in
   options.hwc.mail.tasks = {
     enable = lib.mkEnableOption "VTODO/Reminders task sync via vdirsyncer + todoman";
 
+    icloud.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        The iCloud CalDAV tasks pair. HISTORICAL NOTE: Apple's Reminders
+        "upgrade" (triggered phone-side 2026-06-11) permanently removed
+        CalDAV access to iCloud reminders — upgraded lists serve only
+        placeholder items ("The creator of this list has upgraded these
+        reminders."). Once upgraded there is no way back; disable this and
+        use the Radicale backend instead.
+      '';
+    };
+
     account = lib.mkOption {
       type = lib.types.str;
       default = "icloud";
@@ -134,7 +147,8 @@ in
 
     # Contribute the tasks pair(s) to the shared (calendar) vdirsyncer config.
     hwc.mail.calendar.extraVdirsyncerPairs =
-      [ tasksPair ] ++ lib.optional cfg.radicale.enable radicalePair;
+      lib.optional cfg.icloud.enable tasksPair
+      ++ lib.optional cfg.radicale.enable radicalePair;
 
     # Read-only config.py (todoman does not rewrite it → store symlink is fine).
     xdg.configFile."todoman/config.py".text = todomanConfig;

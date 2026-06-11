@@ -28,6 +28,7 @@
     markitdown.enable = true;
     dt.enable = true;
     dxlog.enable = true;
+    gpu-screen-recorder.enable = true;  # gsr-toggle / SHIFT+PRINT call recording
     whisper-cpp = {
       enable = true;
       cuda = true;
@@ -47,22 +48,22 @@
     };
   };
 
-  # Tasks: Apple Reminders (VTODO) sync via todoman, riding the calendar
-  # vdirsyncer config + timer above. The laptop wires mail per-machine (no mail
-  # role), so tasks is enabled here rather than in profiles/mail/home.nix.
+  # Tasks: VTODO sync via todoman/tasq, riding the calendar vdirsyncer
+  # config + timer above. The laptop wires mail per-machine (no mail role),
+  # so tasks is enabled here rather than in profiles/mail/home.nix.
   hwc.mail.tasks = {
     enable = true;
-    # The two VTODO (Reminders) collections in this iCloud account. The other
-    # discovered collections are VEVENT calendars (Home/Calendar/Work/Family-cal)
-    # and must be excluded or todoman breaks on the duplicate "Family" name.
-    # Verified via supported-calendar-component-set PROPFIND (2026-06-11):
-    collections = [
-      "36BB690C-8948-4AB5-A0CB-C0596887C4E5"  # "Reminders"
-      "D788714B-EA8C-44D1-A16F-ECF1A88ADCC6"  # "Family"
-    ];
-    # Phase C second backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com)
-    # with two-way list creation (tasq `N`). Server deployed + secret provisioned
-    # 2026-06-11; runbook in domains/server/services/radicale/README.md.
+    # iCloud pair DEAD as of 2026-06-11: Apple's Reminders "upgrade" was
+    # triggered phone-side and permanently removed CalDAV access to iCloud
+    # reminders (collections now serve only "The creator of this list has
+    # upgraded these reminders." placeholders; old pinned collections were
+    # deleted server-side). Irreversible — do not re-enable. Local task data
+    # was migrated to Radicale; old vdir archived at
+    # ~/.local/share/vdirsyncer/tasks-icloud-final-2026-06-11/.
+    icloud.enable = false;
+    # Primary backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com)
+    # with two-way list creation (tasq `N`). Server deployed + secret
+    # provisioned 2026-06-11; runbook in domains/server/services/radicale/README.md.
     radicale.enable = true;
   };
 
