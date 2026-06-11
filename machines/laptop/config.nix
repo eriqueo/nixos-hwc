@@ -21,12 +21,8 @@
     ./hardware.nix
     "${modulesPath}/hardware/cpu/intel-npu.nix"
 
-    # Roles — base (system/paths/secrets) + desktop (GUI/audio/HM)
-    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
-    # the flake.nix machines-table resolver.
-    ../../profiles/base/sys.nix
-    ../../profiles/desktop/sys.nix
-    # Machine-specific HM overrides imported via home-manager.users.eric below
+    # Roles (base, desktop) are supplied by the flake.nix machines table —
+    # membership lives there, not here.
 
     # Domains — laptop-specific capabilities
     ../../domains/ai/index.nix
@@ -309,8 +305,8 @@
   hwc.paths.hot.root = "/home/eric/500_media/hot";     # Override: laptop uses hot for active work
   hwc.paths.cold = "/home/eric/500_media/archive";     # Override: laptop archives locally
 
-  # Machine-specific Home Manager overrides (HM-format, shared with standalone HM)
-  home-manager.users.eric = { imports = [ ./home.nix ]; };
+  # Machine-specific Home Manager overrides live in ./home.nix (HM lane),
+  # wired by the flake glue for both nixos-rebuild and standalone hms.
 
   #============================================================================
   # AI DOMAIN CONFIGURATION (Laptop)

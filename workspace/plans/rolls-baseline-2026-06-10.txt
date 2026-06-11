@@ -18,3 +18,23 @@ Post-fix reference hash (new comparison point for later phases):
 /nix/store/0vcjl8q2km35i95plvyqyl48hnvw6r5j-home-manager-generation.drv
 === eric@hwc-laptop activationPackage ===
 /nix/store/pv2qqg5hsxdvas2axz6fxg2fj7hsq1cy-home-manager-generation.drv
+
+=== Post-Phase-B reference hashes (2026-06-11) ===
+Phase B (flake machines table + role resolver) moved role halves from
+nested machine imports to top-level flake modules. This reorders list-option
+merges; nix-diff verified for every machine that the delta is ORDER-ONLY:
+identical package/rule/route sets in system-path, nix.conf substituters,
+udev rules, tmpfiles.d, Caddyfile host blocks (+cascaded restart triggers).
+Zero additions/removals. HM activationPackages for server/laptop byte-equal
+to baseline; firestick toplevel byte-equal.
+
+hwc-server:    /nix/store/r2imc2lrnmxkqm30shcb2kl3d6ly01sd-nixos-system-hwc-server-25.11.20260514.d7a713c.drv
+hwc-laptop:    /nix/store/ml8k3cig4jia7bvv6m7w4pbl6j7pbbin-nixos-system-hwc-laptop-26.05.20260515.d233902.drv
+hwc-xps:       /nix/store/l90b2y6jh59yddi4f9z31b9013rm34a5-nixos-system-hwc-xps-25.11.20260514.d7a713c.drv
+hwc-kids:      /nix/store/2jq4rqgs838k54s957bmqf0cv7i3cqjw-nixos-system-hwc-kids-26.05.20260515.d233902.drv
+hwc-firestick: /nix/store/3dscxlj3931xf4d50hb4q86lflmv8415-nixos-system-hwc-firestick-26.05.20260515.d233902.drv (unchanged)
+HM server:     /nix/store/0vcjl8q2km35i95plvyqyl48hnvw6r5j-home-manager-generation.drv (unchanged)
+HM laptop:     /nix/store/pv2qqg5hsxdvas2axz6fxg2fj7hsq1cy-home-manager-generation.drv (unchanged)
+HM xps:        /nix/store/ly6j3r73lid6n5jp3yhafazkw2z6s5q6-home-manager-generation.drv (new output)
+HM kids:       /nix/store/4rk0y1aj1g5sbzcxg5jrjlz0qlxvjv9j-home-manager-generation.drv (new output)
+HM firestick:  /nix/store/h536kz46nlq1gjnq4g9y89kb80n4pl3r-home-manager-generation.drv (new output)

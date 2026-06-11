@@ -8,16 +8,13 @@
   imports = [
     ./hardware.nix
 
-    # Base role — system/paths/secrets (NO desktop role — headless server)
-    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
-    # the flake.nix machines-table resolver.
-    ../../profiles/base/sys.nix
+    # Roles (base, server, business, monitoring, mail) are supplied by the
+    # flake.nix machines table — membership lives there, not here.
 
     ../../domains/ai/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
     ../../domains/media/index.nix
-    ../../profiles/monitoring/sys.nix
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
@@ -1111,13 +1108,8 @@
     };
   };
 
-  # Headless server — minimal Home Manager (CLI only, no GUI)
-  # HM config extracted to ./home.nix (shared with standalone homeConfigurations)
-  home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
-    users.eric = import ./home.nix;
-  };
+  # Home Manager (CLI only, no GUI) — ./home.nix is wired by the flake glue
+  # for both nixos-rebuild and standalone hms.
 
   system.stateVersion = "24.05";
 }

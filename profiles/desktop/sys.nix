@@ -10,17 +10,8 @@
 
 {
   #==========================================================================
-  # HOME MANAGER — TRANSITIONAL (Phase B moves this bootstrap to flake glue)
-  #==========================================================================
-  home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
-    backupFileExtension = lib.mkDefault "hm-bak";
-    users.eric.imports = [ ../base/home.nix ./home.nix ];
-  };
-
-  #==========================================================================
   # SYSTEM-LEVEL GUI SUPPORT — Audio, Display, Session
+  # (HM wiring is flake-glue machinery, not menu — see mkNixos in flake.nix)
   #==========================================================================
 
   # Hardware services — audio, keyboard, bluetooth for interactive use
