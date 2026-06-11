@@ -18,11 +18,19 @@ let
   # Handshake protocol for standalone compatibility
   nixosPath = lib.attrByPath [ "hwc" "paths" "nixos" ] "/home/eric/.nixos" osConfig;
 
-  # Follow the Radicale backend (same HM eval as hwc.mail.tasks): when its
-  # pair is enabled, tasq reads both vdirs, syncs both pairs, and `N` creates
-  # lists in the Radicale root (where they genuinely sync server-side).
+  # Follow the enabled backends (same HM eval as hwc.mail.tasks): tasq reads
+  # the matching vdirs, syncs the matching pairs, and `N` creates lists in
+  # the Radicale root (where they genuinely sync server-side). iCloud died
+  # 2026-06-11 (Apple Reminders "upgrade" removed CalDAV access).
   radicaleOn = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "enable" ] false config;
+  icloudOn = lib.attrByPath [ "hwc" "mail" "tasks" "icloud" "enable" ] true config;
   vdirRoot = "${config.home.homeDirectory}/.local/share/vdirsyncer";
+
+  backendGlobs =
+    lib.optional icloudOn "${vdirRoot}/tasks/*"
+    ++ lib.optional radicaleOn "${vdirRoot}/tasks-radicale/*";
+  syncPairs =
+    lib.optional icloudOn "tasks" ++ lib.optional radicaleOn "tasks_radicale";
 
   # toPythonModule is the trick: nixpkgs only ships todoman as a top-level
   # application (no python3Packages.todoman), but its lib (todoman.model) is
@@ -44,8 +52,10 @@ let
     export TASQ_PATH="''${TASQ_PATH:-${cfg.tasksGlob}}"
     export TASQ_CACHE="''${TASQ_CACHE:-${cfg.cachePath}}"
     export TASQ_PALETTE=${lib.escapeShellArg paletteJson}
+    ${lib.optionalString (syncPairs != []) ''
+      export TASQ_SYNC_PAIRS="${lib.concatStringsSep " " syncPairs}"
+    ''}
     ${lib.optionalString radicaleOn ''
-      export TASQ_SYNC_PAIRS="tasks tasks_radicale"
       export TASQ_NEW_LIST_ROOT="${vdirRoot}/tasks-radicale"
       export TASQ_NEW_LIST_PAIR="tasks_radicale"
     ''}
@@ -61,11 +71,12 @@ in
 
     tasksGlob = lib.mkOption {
       type = lib.types.str;
-      default = "${vdirRoot}/tasks/*"
-        + lib.optionalString radicaleOn ":${vdirRoot}/tasks-radicale/*";
+      default =
+        if backendGlobs == [] then "${vdirRoot}/tasks/*"
+        else lib.concatStringsSep ":" backendGlobs;
       description = ''
-        Glob(s) to the VTODO vdir list dirs, ":"-separated (matches the Phase A
-        tasks sync; the Radicale glob is appended when that backend is enabled).
+        Glob(s) to the VTODO vdir list dirs, ":"-separated — derived from the
+        enabled hwc.mail.tasks backends (icloud and/or radicale).
       '';
     };
 
