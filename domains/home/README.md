@@ -20,7 +20,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ```
 domains/home/
-├── apps/    # 53 app modules, auto-imported via readDir (index.nix per app,
+├── apps/    # 50 app modules, auto-imported via readDir (index.nix per app,
 │            # optional sys.nix system half, parts/ for split config)
 ├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
@@ -45,6 +45,15 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-11: Dormant-app cleanup (Eric's call on the fresh-eyes review
+  §2.9): apps/thunderbird, apps/betterbird, apps/transcript-formatter
+  deleted (never enabled anywhere). transcript-formatter's assets moved
+  out of the repo to ~/apps/transcript-formatter (with a RUN.md); its
+  workspace/media/youtube-services/transcript-formatter source dir is
+  gone — only the DISABLED legacyApi referenced it at runtime (the live
+  yt-transcripts-api v2 runs api.py from the parent dir, unaffected).
+  apps/jellyfin-media-player KEPT — the review wrongly called it dormant;
+  hwc-firestick enables it (autoStart) as its Jellyfin client.
 - 2026-06-11: New apps/exodos/ — eXoDOS flatpak auto-install + exogui
   launcher, extracted from verbatim-identical blocks in
   machines/{laptop,kids}/home.nix. Collection path is the `root` option
