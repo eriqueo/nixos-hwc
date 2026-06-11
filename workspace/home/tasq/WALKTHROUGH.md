@@ -11,27 +11,55 @@ to iCloud and back. The `todo` CLI works on the exact same files.
 tasq
 ```
 
-The screen has three areas:
-
 ```
-┌──────────┬──────────────────────────────────────────────────┐
-│ All      │   P  Summary                Due        Tags  List │
-│ Family   │ ☐ A  Order hinges           2026-06-13 +shop ...  │
-│ Reminders│ ☐    Ryan's bday            2024-09-24            │
-│          │                                                   │
-│ sidebar  │                 task table                        │
-├──────────┴──────────────────────────────────────────────────┤
-│ Reminders · sort:priority · showing:active · 2 tasks         │  ← status bar
-│ a Add  e Edit  x Done  d Del  / Filter  s Sort  ...           │  ← key hints
+  tasq · Reminders · 5 tasks · sort:priority              ← header bar
+┌──────────────┬───────────────────────────────────────────────┐
+│ LISTS        │   P  Summary                Due        Tags   │
+│  All       5 │ ☐ A  Order hinges           2026-06-13 +shop  │
+│  Family    0 │ ☐    Ryan's bday            2024-09-24        │
+│  Reminders 5 │                                               │
+│              │                                               │
+│ PROJECTS     │                                               │
+│  +hwc      1 │                                               │
+│  +finance  1 │                                               │
+│              │                                               │
+│ CONTEXTS     │                                               │
+│  @errand   1 │                                               │
+│  @shop     1 │                                               │
+├──────────────┴───────────────────────────────────────────────┤
+│ a Add  e Edit  x Done  d Del  / Filter  s Sort  C Cal  ...    │
 └───────────────────────────────────────────────────────────────┘
 ```
 
 The cursor starts in the task table. `j`/`k` (or arrows) move, `g`/`G` jump to
-top/bottom. `?` shows the full keymap any time; `q` quits.
+top/bottom. `Tab` moves focus to the sidebar (Enter selects), `?` shows the
+full keymap any time, `q` quits.
+
+## The sidebar: lists, projects, contexts
+
+Three sections, each with live task counts:
+
+- **LISTS** — your Apple Reminders lists (Reminders, Family). These are real
+  containers: a task lives in exactly one list, and lists sync to the phone.
+  Select one (or All) to scope the table; `l`/`L` cycle without leaving the
+  table.
+- **PROJECTS** (`+name`) — *what outcome is this task part of?* A project is
+  a multi-task goal: `+baxter-kitchen`, `+hwc-website`, `+shop-buildout`.
+  When it's finished, the tag retires.
+- **CONTEXTS** (`@name`) — *where/when/with-what can I do this?* A context is
+  a situation, and it never finishes: `@shop`, `@errand`, `@phone`,
+  `@computer`, `@home`.
+
+The split is from GTD: projects answer "what am I trying to move forward?"
+(planning view), contexts answer "what can I do right now, given where I am?"
+(doing view). `Call the glass supplier +baxter-kitchen @phone` shows up both
+when you review the Baxter job and when you're knocking out phone calls.
+
+Selecting a project or context filters the table; selecting it again (or
+`esc`) clears the filter. Both are stored as VTODO `CATEGORIES`, so they show
+up as tags on the phone.
 
 ## The task line (used by add and edit)
-
-One line describes the whole task:
 
 ```
 summary words +project @context (A) due:YYYY-MM-DD
@@ -55,69 +83,66 @@ Press `a`, type the line, Enter:
 
 ```
 Order soft-close hinges +hardware @shop (A) due:tomorrow
-```
-
-→ "Order soft-close hinges", tagged `+hardware` `@shop`, top priority, due
-tomorrow. It lands in whichever list you're viewing (or **Reminders** when
-viewing All).
-
-More capture examples:
-
-```
-Call client about countertop reveal +jobsite-baxter (B)
+Call client about countertop reveal +jobsite-baxter @phone (B)
 Pick up dog food @errand
 Sharpen planer blades +shop-maintenance due:2026-06-15
-Sketch built-in layout for the Hendersons +design
 ```
 
-Want it in **Family** instead? Press `l` until the status bar shows Family
-(or click/Enter it in the sidebar), then `a`.
+Tasks land in whichever list you're viewing (**Reminders** when viewing All).
+Want one in **Family**? Press `l` until the header shows Family, then `a`.
 
 ### 2. Work the list — `x`, `e`, `p`, `d`
 
 - `x` (or space) — toggle the selected task done. Done tasks disappear from
-  the active view; press `c` to show/hide completed ones. `x` on a completed
-  task reopens it.
-- `e` — edit. The task comes back as the same one-line form; change anything:
-
-  ```
-  Order soft-close hinges +hardware @shop (A) due:tomorrow
-  →
-  Order soft-close hinges and drawer slides +hardware @shop (B) due:2026-06-16
-  ```
-
-- `p` — cycle priority on the spot: none → (A) → (B) → (C) → none.
+  the active view; `c` shows/hides completed. `x` on a completed task reopens it.
+- `e` — edit: the task comes back as its one-line form; change anything.
+- `p` — cycle priority in place: none → (A) → (B) → (C) → none.
 - `d` — delete, with a y/n confirm.
 
-### 3. Narrow the view — `/`, `+`, `@`, `s`, `l`
+### 3. Narrow the view
 
-- `/` — grep summaries. Type `hinge` → only tasks mentioning hinges.
-- `+` — filter by project. Type `hardware` (sigil added for you) → only
-  `+hardware` tasks.
-- `@` — same for contexts: `@shop`, `@errand`…
-- Empty input clears that filter; `esc` clears all filters at once.
-- `s` — cycle sort: **priority** (A first) → **due** (soonest first) →
-  **created** (newest first). Completed tasks always sink to the bottom.
-- `l` / `L` — cycle lists: All → Family → Reminders. The status bar always
-  shows where you are.
+- Select a project/context in the sidebar — or `+` / `@` to type one.
+- `/` — grep summaries (`hinge` → only hinge tasks).
+- Empty input clears that filter; `esc` clears everything.
+- `s` — cycle sort: **priority** → **due** → **created**. Completed sink.
+- Heading to town? Select `@errand` in the sidebar — that's your errand run.
 
-Example: heading to town? `@` then `errand` — that's your errand run, sorted
-by priority.
+### 4. See it on a calendar — `C`
 
-### 4. Sync with the phone — `R` and `r`
+`C` suspends tasq and opens **khal interactive** — your iCloud calendars plus
+dated items in month view. Quit khal (`q`) and you're back in tasq exactly
+where you were.
 
-Two directions, two keys:
+### 5. Sync with the phone — `R` and `r`
 
 - **`R` — push/pull now.** Runs `vdirsyncer sync tasks` in the background and
   reloads. Use after a capture session so tasks hit your phone before you
-  leave the shop. (Otherwise the timer does it within 15 minutes anyway.)
+  leave the shop. (The timer does it within 15 minutes anyway.)
 - **`r` — reload from disk.** Cheap, local. Use when a sync already happened
-  (timer, or you ran it elsewhere) and you want tasq to pick up phone-side
-  changes.
+  and you want tasq to pick up phone-side changes.
 
-Typical phone round-trip: add a reminder on the phone → wait for the timer
-(or press `R`) → press `r` → it's in the table. Complete it with `x` → `R` →
-it shows completed on the phone.
+Phone round-trip: add a reminder on the phone → `R` (or wait) → `r` → it's in
+the table. Complete it with `x` → `R` → completed on the phone.
+
+## Adding lists — `N` (read this first)
+
+`N` prompts for a name and creates a new **local** list (a new vdir
+collection). tasq and the `todo` CLI can use it immediately — but it will
+**never reach the phone**: the sync pair is pinned to the iCloud collection
+IDs in `machines/laptop/home.nix`, and iCloud is the authority on which
+Reminders lists exist.
+
+To add a **phone-synced** list:
+
+1. Create the list in Apple Reminders (Add List).
+2. Find its collection ID:
+   `vdirsyncer discover tasks` (it prints all collections; the new UID is the
+   unfamiliar one — confirm VTODO support per `domains/mail/tasks/README.md`).
+3. Add the ID to `hwc.mail.tasks.collections` in
+   `~/.nixos/machines/laptop/home.nix`, commit, run `hms`.
+4. `vdirsyncer discover tasks` then `vdirsyncer sync tasks` → press `r`.
+
+Use `N` for scratch/local-only lists; use the phone for lists that matter.
 
 ## Full keymap
 
@@ -127,28 +152,29 @@ it shows completed on the phone.
 | `x` / space | toggle done |
 | `d` | delete (y/n confirm) |
 | `p` | cycle priority none → A → B → C → none |
+| `N` | new list (local-only — see above) |
 | `/` | filter: grep summary (empty clears) |
 | `+` / `@` | filter: project / context (empty clears) |
 | `esc` | clear all filters |
 | `s` | cycle sort: priority → due → created |
 | `c` | show/hide completed |
 | `l` / `L` | next / previous list |
+| `Tab` | focus sidebar (Enter selects; re-select clears a filter) |
 | `j` `k` / `g` `G` | move cursor / jump top, bottom |
 | `r` | reload from disk |
 | `R` | sync with iCloud now, then reload |
-| `?` | help |
-| `q` | quit |
+| `C` | open khal interactive (calendar view) |
+| `?` / `q` | help / quit |
 
 ## Good to know
 
-- **The `todo` CLI is interchangeable.** `todo list`, `todo new` etc. operate
-  on the same files; use whichever is at hand.
+- **The `todo` CLI is interchangeable.** Same files, either tool.
 - **Tags keep their sigils** (`+shop`, `@errand`) so they read the same in
-  Reminders and survive the round-trip.
+  Reminders and survive the round-trip. Tags created on the phone without a
+  sigil appear in a separate TAGS sidebar section.
 - **Recurring tasks** (like a yearly birthday): completing one automatically
   creates the next occurrence.
-- **Editing a task that has a due *time*** keeps only the date (tasq's dialect
-  is all-day).
-- **Overdue dues show red, today shows yellow** in the table.
+- **Editing a task that has a due *time*** keeps only the date.
+- **Overdue dues show red, today shows yellow.**
 - The app source is live at `~/.nixos/workspace/home/tasq/` — tweaks to the
   Python or theme take effect on next launch, no rebuild.

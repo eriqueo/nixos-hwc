@@ -1,4 +1,4 @@
-"""tasq widgets: sidebar, task table, status bar, and the modal screens."""
+"""tasq widgets: filter sidebar, task table, and the modal screens."""
 
 from __future__ import annotations
 
@@ -9,8 +9,13 @@ from textual.screen import ModalScreen
 from textual.widgets import DataTable, Input, Label, OptionList, Static
 
 
-class ListSidebar(OptionList):
-    """Left pane: task lists (Reminders, Family, ...) plus an All entry."""
+class FilterSidebar(OptionList):
+    """Left pane: LISTS / PROJECTS / CONTEXTS sections with task counts.
+
+    The app rebuilds its options on every data refresh and keeps a parallel
+    payload list mapping option index -> ("list", name) | ("cat", name).
+    Section headers are disabled options (navigation skips them).
+    """
 
 
 class TaskTable(DataTable):
@@ -20,12 +25,8 @@ class TaskTable(DataTable):
     ]
 
 
-class StatusBar(Static):
-    """Bottom line: current list · sort · filters · count."""
-
-
 class LineModal(ModalScreen):
-    """Single-line input modal (add/edit task, filter prompts).
+    """Single-line input modal (add/edit task, filter prompts, new list).
 
     Dismisses with the entered string (may be empty = clear), or None on
     escape/cancel.
@@ -85,24 +86,34 @@ class ConfirmModal(ModalScreen):
 HELP_TEXT = """\
  tasq — VTODO task TUI                       (q or esc closes this help)
 
+ SIDEBAR
+  LISTS     Reminders lists — these sync to the phone.
+  PROJECTS  +name tags: the outcome you're working toward (+baxter-kitchen).
+  CONTEXTS  @name tags: where/when you can do it (@shop, @errand, @phone).
+  Select a project/context to filter; select it again (or esc) to clear.
+
+ EDITING
   a        add task           "summary +project @context (A) due:YYYY-MM-DD"
   e        edit selected task (same one-line form)
   x/space  toggle done
   d        delete (confirm)
   p        cycle priority     none → (A) → (B) → (C) → none
+  N        new list           (local-only — see WALKTHROUGH for phone sync)
 
+ VIEW
   /        filter: grep summary        (empty input clears)
   +        filter: project category    (empty input clears)
   @        filter: context category    (empty input clears)
   esc      clear all filters
   s        cycle sort         priority → due → created
   c        show/hide completed tasks
-
-  l / L    next / previous list (All → Reminders → Family → ...)
+  l / L    next / previous list
   j/k g/G  move cursor / jump top/bottom
 
+ SYSTEM
   r        reload from disk (after a sync pulled phone changes)
   R        run `vdirsyncer sync tasks` now, then reload
+  C        open khal interactive (calendar view) — q returns to tasq
 
  Changes write standard VTODO .ics into the vdir; the 15-min vdirsyncer
  timer (or R) carries them to iCloud → Apple Reminders, and back.\

@@ -1,101 +1,104 @@
-/* tasq — gruvbox dark (matches the laptop terminal palette) */
+/* tasq — tuxedo-style palette (tomorrow-night-ish: steel blue headers,
+   orange accents, dark blue-gray surfaces) */
 
 Screen {
-    background: #282828;
-    color: #ebdbb2;
+    background: #16191f;
+    color: #c5c8c6;
+}
+
+#header {
+    dock: top;
+    height: 1;
+    background: #121519;
+    color: #6b7480;
+}
+
+#body {
+    background: #16191f;
 }
 
 #sidebar {
-    width: 22;
-    background: #1d2021;
-    border-right: solid #3c3836;
+    width: 26;
+    background: #121519;
+    border-right: solid #2a3039;
     padding: 1 0;
 }
 
 #sidebar > .option-list--option-highlighted {
-    background: #504945;
-    color: #fabd2f;
-    text-style: bold;
+    background: #2a3039;
 }
 
 #sidebar:focus > .option-list--option-highlighted {
-    background: #665c54;
-}
-
-#main {
-    background: #282828;
+    background: #343b48;
 }
 
 #table {
-    height: 1fr;
-    background: #282828;
-    color: #ebdbb2;
+    background: #16191f;
+    color: #c5c8c6;
 }
 
 #table > .datatable--header {
-    background: #3c3836;
-    color: #d79921;
+    background: #16191f;
+    color: #81a2be;
     text-style: bold;
 }
 
 #table > .datatable--cursor {
-    background: #504945;
-}
-
-#table > .datatable--odd-row {
-    background: #282828;
-}
-
-#table > .datatable--even-row {
-    background: #2c2c2c;
-}
-
-#status {
-    height: 1;
-    background: #3c3836;
-    color: #a89984;
-    padding: 0 1;
+    background: #2a3039;
 }
 
 Footer {
-    background: #1d2021;
+    background: #121519;
+}
+
+FooterKey {
+    background: #121519;
+    color: #c5c8c6;
+}
+
+FooterKey .footer-key--key {
+    color: #de935f;
+}
+
+FooterKey .footer-key--description {
+    color: #6b7480;
 }
 
 /* modals */
 
 LineModal, ConfirmModal, HelpModal {
     align: center middle;
-    background: rgba(29, 32, 33, 0.6);
+    background: rgba(10, 12, 15, 0.6);
 }
 
 .modal-box {
     width: 72;
     height: auto;
-    background: #3c3836;
-    border: thick #d79921;
+    background: #1d2128;
+    border: round #3a4250;
     padding: 1 2;
 }
 
 .help-box {
-    width: 80;
+    width: 84;
 }
 
 .modal-title {
-    color: #fabd2f;
+    color: #81a2be;
     text-style: bold;
     margin-bottom: 1;
 }
 
 .modal-hint {
-    color: #928374;
+    color: #6b7480;
 }
 
 .modal-box Input {
-    background: #282828;
-    color: #ebdbb2;
-    border: tall #665c54;
+    background: #16191f;
+    color: #c5c8c6;
+    border: tall #3a4250;
 }
 
 .modal-box Input:focus {
-    border: tall #d79921;
+    border: tall #de935f;
 }
