@@ -102,9 +102,6 @@
   networking.hostName = "hwc-server";
   networking.hostId = "8425e349";
 
-  # Server identity (Charter v10.3 multi-server support)
-  hwc.server.enable = true;
-
   # Jobber MCP Server — Jobber GraphQL API as MCP tools via SSE on port 20443
   hwc.server.ai.jobberMcp.enable = true;
 
@@ -132,19 +129,8 @@
 
   # Note: boot.initrd.systemd.fido2 doesn't exist in stable 24.05 (added in later versions)
 
-  # ZFS configuration
+  # ZFS configuration (scrub/trim hygiene comes from the server role)
   boot.zfs.extraPools = [ "backup-pool" ];  # Auto-import backup pool on boot
-
-  services.zfs = {
-    autoScrub = {
-      enable = true;
-      interval = "monthly";  # Monthly scrub for data integrity
-    };
-    trim = {
-      enable = true;
-      interval = "weekly";  # Weekly TRIM for performance
-    };
-  };
 
   # Charter v10.1 path configuration (hostname-based defaults)
   # Server hostname detection provides all correct defaults:
@@ -209,7 +195,7 @@
         ${config.hwc.paths.user.shared} 100.64.0.0/10(rw,sync,no_subtree_check)
       '';
     };
-    firewall.level = lib.mkForce "server";
+    # firewall.level = "server" comes from the server role
     firewall.extraTcpPorts = [
       22000  # Syncthing sync
       # Media services
@@ -607,19 +593,7 @@
     enable = true;
   };
 
-  # CouchDB for Obsidian LiveSync
-  hwc.data.couchdb = {
-    enable = true;
-    settings = {
-      port = 5984;
-      bindAddress = "127.0.0.1";  # Localhost only for security
-    };
-    monitoring.enableHealthCheck = true;
-    reverseProxy = {
-      enable = true;  # Expose via Caddy for remote access
-      path = "/sync";  # Match Obsidian's expected path
-    };
-  };
+  # CouchDB for Obsidian LiveSync comes from the server role.
 
   # Gotify notification server (notifications domain)
   # Self-hosted for privacy - lead data stays on our infrastructure
@@ -628,10 +602,9 @@
   # (e.g. gotify-hwc-ops, gotify-home-admin) is automatically mapped to the
   # "universe:domain" key in hwc.notifications.gotify.tokens. No edits needed here
   # when adding new Gotify apps — just create the agenix secret.
+  # enable/port/dataDir come from the server role; this machine adds the
+  # admin credential and token auto-discovery.
   hwc.notifications.gotify = {
-    enable = true;
-    port = 2586;
-    dataDir = "/var/lib/hwc/gotify";
     adminPasswordFile = config.hwc.secrets.api."gotify-admin-password" or null;
     tokens =
       let
@@ -715,31 +688,14 @@
     PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
   };
 
-  # Session config for headless server (no login manager, just sudo)
+  # Session/sudo/permitCertUid come from the server role. This machine only
+  # enables lingering so rootless podman containers run when not logged in.
   hwc.system.core.session = {
-    enable = true;
-    sudo.enable = true;
-    sudo.wheelNeedsPassword = false;  # Passwordless sudo for wheel group
-    sudo.extraRules = [
-      {
-        users = [ "eric" ];
-        commands = [
-          { command = "/run/current-system/sw/bin/podman"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/systemctl"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/journalctl"; options = [ "NOPASSWD" ]; }
-        ];
-      }
-    ];
-    # Enable lingering so rootless podman containers run when not logged in
     linger.enable = true;
     linger.users = [ "eric" ];
   };
-  services.tailscale.permitCertUid = lib.mkIf config.services.caddy.enable "caddy";
   # X11 services disabled for headless server
   # services.xserver.enable = true;
-
-  # Server-specific packages
-  hwc.system.core.packages.server.enable = true;
 
   #============================================================================
   # SHARED DIRECTORY (NFS export for laptop access over Tailscale)
@@ -756,25 +712,7 @@
     media.root = "/mnt/media";  # HDD media storage
   };
 
-  #============================================================================
-  # CONTAINER RUNTIME
-  #============================================================================
-  virtualisation = {
-    docker.enable = lib.mkForce false;
-    podman = {
-      enable = true;
-      dockerCompat = true;
-      defaultNetwork.settings.dns_enabled = true;
-      # Old :latest pulls accumulate ~1GB/week without this (2026-06-09 audit
-      # found 19GB unused); --all removes any image no container references
-      autoPrune = {
-        enable = true;
-        flags = [ "--all" ];
-        dates = "weekly";
-      };
-    };
-    oci-containers.backend = "podman";
-  };
+  # Container runtime (podman + autoPrune) comes from the server role.
 
   #============================================================================
   # PERFORMANCE TUNING
