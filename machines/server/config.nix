@@ -840,8 +840,11 @@
       upstream = "localhost:8096";
     };
     gpu.enable = true;
-    apiKey = "26d513d02f27467aa94d70e4b43688f8";
-    users.eric.maxActiveSessions = 0;
+    # apiKey + users policy removed 2026-06-11: the only consumer
+    # (jellyfin-apply-policies) enforced MaxActiveSessions=0, which is the
+    # Jellyfin default. Key was plaintext in git history — rotate it in the
+    # Jellyfin UI. If policy management is wanted later, convert the module
+    # option to an agenix apiKeyFile first.
   };
 
   # RetroArch emulation with Sunshine game streaming
