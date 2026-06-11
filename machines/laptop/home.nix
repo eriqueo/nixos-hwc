@@ -59,7 +59,8 @@
     # upgraded these reminders." placeholders; old pinned collections were
     # deleted server-side). Irreversible — do not re-enable. Local task data
     # was migrated to Radicale; old vdir archived at
-    # ~/.local/share/vdirsyncer/tasks-icloud-final-2026-06-11/.
+    # ~/.local/share/vdirsyncer/archive-icloud-tasks-2026-06-11/ (named to
+    # stay outside todoman's tasks*/* glob).
     icloud.enable = false;
     # Primary backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com)
     # with two-way list creation (tasq `N`). Server deployed + secret
