@@ -6,24 +6,12 @@
 # REPLACES: the GUI portion of profiles/home-session.nix
 # USED BY: laptop, xps (role list in flake.nix machines table)
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
 {
   imports = [
     ../../domains/mail/index.nix
   ];
-
-  # HM 26.05 changed defaults for these options; pinning to legacy values
-  # preserves current behavior and silences eval warnings.
-  #
-  # History: `configType` and `setSessionVariables` were briefly absent from
-  # the HM-as-module wiring path (setting them errored at module-merge —
-  # removed 2026-05-31). The 2026-05 nixpkgs/HM bump restored them to module
-  # mode (their default-change warnings appear in snix output again), so
-  # they are pinned here once more — re-added 2026-06-10.
-  gtk.gtk4.theme = config.gtk.theme;
-  wayland.windowManager.hyprland.configType = "hyprlang";
-  xdg.userDirs.setSessionVariables = true;
 
   #======================================================================
   # GUI WORKSTATION DEFAULTS
@@ -137,4 +125,19 @@
       };
     };
   };
+}
+# HM 26.05 changed defaults for these options; pinning to legacy values
+# preserves current behavior and silences eval warnings on the unstable
+# lane. The options do not exist in HM stable 25.11, so the block is
+# guarded on nixosApiVersion — unguarded it breaks eval for stable-lane
+# machines (hwc-xps regression from commit fce96f45).
+#
+# History: `configType` and `setSessionVariables` were briefly absent from
+# the HM-as-module wiring path (setting them errored at module-merge —
+# removed 2026-05-31). The 2026-05 nixpkgs/HM bump restored them to module
+# mode, so they are pinned here once more — re-added 2026-06-10.
+// lib.optionalAttrs (nixosApiVersion == "unstable") {
+  gtk.gtk4.theme = config.gtk.theme;
+  wayland.windowManager.hyprland.configType = "hyprlang";
+  xdg.userDirs.setSessionVariables = true;
 }
