@@ -1,29 +1,23 @@
 # nixos-hwc/flake.nix
 #
-# Flake: HWC NixOS Configuration (Modular Architecture)
-# Orchestrates systems; delegates implementation to modules/profiles.
-# No hardware driver logic or service details here (Charter v3).
+# Flake: HWC NixOS Configuration (Roles Architecture)
+# Single source of truth for the fleet: the `machines` registry maps each
+# machine to a channel + role list. Glue resolves roles to
+# profiles/<role>/{sys,home}.nix halves; machines/<m>/ holds hardware +
+# genuine one-offs only.
 #
 # DEPENDENCIES (Upstream):
 #   - nixpkgs (nixos-unstable), nixpkgs-stable (25.11)
-#   - home-manager (follows nixpkgs)
-#   - agenix (follows nixpkgs)
+#   - home-manager / home-manager-stable (follow their nixpkgs)
+#   - agenix / agenix-stable (follow their nixpkgs)
 #
-# USED BY (Downstream):
-#   - nixosConfigurations.hwc-laptop -> ./machines/laptop/config.nix
-#   - nixosConfigurations.hwc-server -> ./machines/server/config.nix
-#   - nixosConfigurations.hwc-xps -> ./machines/xps/config.nix
-#   - nixosConfigurations.hwc-kids -> ./machines/kids/config.nix
-#   - nixosConfigurations.hwc-firestick -> ./machines/firestick/config.nix
-#
-# IMPORTS REQUIRED IN:
-#   - machines/*/config.nix import profiles/* and modules/*
+# OUTPUTS (generated from the machines registry):
+#   - nixosConfigurations.hwc-<m>        (all machines)
+#   - homeConfigurations."eric@hwc-<m>"  (all machines, standalone HM lane)
 #
 # USAGE:
-#   nixos-rebuild switch --flake .#hwc-laptop
-#   nixos-rebuild switch --flake .#hwc-server
-#   nixos-rebuild switch --flake .#hwc-xps
-#   nixos-rebuild switch --flake .#hwc-kids
+#   sudo nixos-rebuild switch --flake .#hwc-<machine>
+#   home-manager switch --flake .#eric@hwc-<machine>   (alias: hms)
 
 {
   #============================================================================
@@ -169,8 +163,131 @@
 
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
     pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay ];
-    
+
+    # Firestick is the one aarch64 machine
+    pkgs-firestick = mkPkgs "aarch64-linux" nixpkgs;
+
     lib = nixpkgs.lib;
+
+    #========================================================================
+    # MACHINE REGISTRY — single source of truth for the fleet
+    #========================================================================
+    # channel picks the nixpkgs/home-manager/agenix flavor; roles resolve to
+    # profiles/<role>/{sys,home}.nix lane halves (a half that does not exist
+    # is silently skipped). The pkgs fields name the EXISTING per-machine
+    # package sets defined above — the overlay story stays explicit here
+    # rather than being derived from `channel`.
+    machines = {
+      server = {
+        channel   = "stable";
+        roles     = [ "base" "server" "business" "monitoring" "mail" ];
+        nixosPkgs = pkgs-stable-cuda;  # CUDA overlay (Immich ML / llama.cpp)
+        hmPkgs    = pkgs-stable;       # standalone HM lane stays plain stable
+      };
+      laptop = {
+        channel   = "unstable";
+        roles     = [ "base" "desktop" ];
+        nixosPkgs = pkgs-laptop;       # unstable + tailscale 1.98.2 overlay
+        hmPkgs    = pkgs-laptop;
+        hmBackupExt  = "hm-bak";
+        extraModules = [ inputs.nixvirt.nixosModules.default ];
+      };
+      xps = {
+        channel   = "stable";
+        roles     = [ "base" "desktop" "server" "monitoring" ];
+        nixosPkgs = pkgs-stable;
+        hmPkgs    = pkgs-stable;
+      };
+      kids = {
+        channel   = "unstable";
+        roles     = [ "base" "gaming" ];
+        nixosPkgs = pkgs;
+        hmPkgs    = pkgs;
+      };
+      firestick = {
+        system    = "aarch64-linux";
+        channel   = "unstable";
+        roles     = [ "base" "appliance" ];
+        nixosPkgs = pkgs-firestick;
+        hmPkgs    = pkgs-firestick;
+      };
+    };
+
+    # channel → toolchain flavor
+    channels = {
+      stable = {
+        nixosSystem = nixpkgs-stable.lib.nixosSystem;
+        hm          = home-manager-stable;
+        agenix      = agenix-stable;
+        apiVersion  = "stable";
+      };
+      unstable = {
+        nixosSystem = nixpkgs.lib.nixosSystem;
+        hm          = home-manager;
+        agenix      = agenix;
+        apiVersion  = "unstable";
+      };
+    };
+
+    # Role → lane halves. Missing halves are skipped (e.g. roles with no HM
+    # content have no home.nix; appliance/mail-style roles have one half).
+    roleHalves = lane: roles:
+      builtins.filter builtins.pathExists
+        (map (r: ./profiles + "/${r}/${lane}") roles);
+
+    # NixOS lane: framework modules + role sys halves + machine one-offs +
+    # HM-as-module wiring (home halves + machine home.nix as users.eric).
+    mkNixos = name: m:
+      let
+        ch     = channels.${m.channel};
+        sysArch = m.system or system;
+      in ch.nixosSystem {
+        pkgs = m.nixosPkgs;
+        specialArgs = {
+          inherit inputs;
+          nixosApiVersion = ch.apiVersion;
+        };
+        modules = [
+          { nixpkgs.hostPlatform = sysArch; }
+          ch.agenix.nixosModules.default
+        ] ++ (m.extraModules or [ ]) ++ [
+          ch.hm.nixosModules.home-manager
+        ] ++ roleHalves "sys.nix" m.roles ++ [
+          (./machines + "/${name}/config.nix")
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              backupFileExtension = m.hmBackupExt or "backup";
+              users.eric.imports =
+                roleHalves "home.nix" m.roles
+                ++ [ (./machines + "/${name}/home.nix") ];
+              extraSpecialArgs = {
+                inherit inputs;
+                nixosApiVersion = ch.apiVersion;
+              };
+            };
+          }
+        ];
+      };
+
+    # HM lane (standalone, `hms`): same home halves + machine home.nix,
+    # built directly so user-level rebuilds skip the system eval (~5-10s).
+    mkHome = name: m:
+      let ch = channels.${m.channel}; in
+      ch.hm.lib.homeManagerConfiguration {
+        pkgs = m.hmPkgs;
+        extraSpecialArgs = {
+          inherit inputs;
+          nixosApiVersion = ch.apiVersion;
+        };
+        modules =
+          roleHalves "home.nix" m.roles
+          ++ [
+            (./machines + "/${name}/home.nix")
+            { home.username = "eric"; home.homeDirectory = "/home/eric"; }
+          ];
+      };
 
     # Helper: hwc-graph package
     hwc-graph-pkg = pkgs.writeScriptBin "hwc-graph" ''
@@ -209,147 +326,17 @@
     };
 
     #========================================================================
-    # STANDALONE HOME MANAGER — fast user-level rebuilds (~5-10s)
-    # Usage: home-manager switch --flake ~/.nixos#eric@$(hostname)
+    # GENERATED OUTPUTS — one nixosConfiguration + one standalone
+    # homeConfiguration per machine in the registry.
+    # Standalone HM usage: home-manager switch --flake ~/.nixos#eric@$(hostname)
     # Alias: hms
     #========================================================================
-    homeConfigurations = {
-      "eric@hwc-server" = home-manager-stable.lib.homeManagerConfiguration {
-        pkgs = pkgs-stable;
-        extraSpecialArgs = {
-          inherit inputs;
-          nixosApiVersion = "stable";
-        };
-        modules = [
-          ./machines/server/home.nix
-          { home.username = "eric"; home.homeDirectory = "/home/eric"; }
-        ];
-      };
-      "eric@hwc-laptop" = home-manager.lib.homeManagerConfiguration {
-        pkgs = pkgs-laptop;
-        extraSpecialArgs = {
-          inherit inputs;
-          nixosApiVersion = "unstable";
-        };
-        modules = [
-          ./profiles/base/home.nix
-          ./profiles/desktop/home.nix
-          ./machines/laptop/home.nix
-          { home.username = "eric"; home.homeDirectory = "/home/eric"; }
-        ];
-      };
-    };
+    homeConfigurations = lib.mapAttrs' (name: m:
+      lib.nameValuePair "eric@hwc-${name}" (mkHome name m)
+    ) machines;
 
-    nixosConfigurations = {
-      # CHARTER v9.0: Server uses stable nixpkgs (packages AND NixOS modules)
-      # Uses CUDA-enabled overlay for Immich ML GPU acceleration
-      hwc-server = nixpkgs-stable.lib.nixosSystem {
-        pkgs = pkgs-stable-cuda;  # Use nixpkgs-stable with CUDA overlay for GPU ML
-        specialArgs = {
-          inherit inputs;
-          nixosApiVersion = "stable";  # Stable API (nixos-25.11)
-        };
-        modules = [
-          { nixpkgs.hostPlatform = system; }
-          agenix-stable.nixosModules.default  # Use stable agenix for stable nixpkgs
-          home-manager-stable.nixosModules.home-manager  # Use stable HM for stable nixpkgs
-          ./machines/server/config.nix
-          {
-            # Disable Home Manager on server - it's enabled somewhere in domains
-            home-manager.users.eric.home.stateVersion = "24.05";
-            home-manager.backupFileExtension = "backup";
-            # Pass inputs and nixosApiVersion to Home Manager modules
-            home-manager.extraSpecialArgs = {
-              inherit inputs;
-              nixosApiVersion = "stable";
-            };
-          }
-        ];
-      };
-      hwc-xps = nixpkgs-stable.lib.nixosSystem {
-        pkgs = pkgs-stable;
-        specialArgs = {
-          inherit inputs;
-          nixosApiVersion = "stable";
-        };
-        modules = [
-          { nixpkgs.hostPlatform = system; }
-          agenix-stable.nixosModules.default
-          home-manager-stable.nixosModules.home-manager
-          ./machines/xps/config.nix
-          {
-            home-manager.users.eric.home.stateVersion = "24.05";
-            home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = {
-              inherit inputs;
-              nixosApiVersion = "stable";
-            };
-          }
-        ];
-      };
-      hwc-laptop = lib.nixosSystem {
-        pkgs = pkgs-laptop;
-        specialArgs = {
-          inherit inputs;
-          nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
-        };
-        modules = [
-          { nixpkgs.hostPlatform = system; }
-          agenix.nixosModules.default
-          inputs.nixvirt.nixosModules.default
-          home-manager.nixosModules.home-manager
-          ./machines/laptop/config.nix
-          {
-            # Pass nixosApiVersion to Home Manager modules
-            home-manager.extraSpecialArgs = {
-              inherit inputs;
-              nixosApiVersion = "unstable";
-            };
-          }
-        ];
-      };
-      hwc-kids = lib.nixosSystem {
-        inherit pkgs;
-        specialArgs = {
-          inherit inputs;
-          nixosApiVersion = "unstable";
-        };
-        modules = [
-          { nixpkgs.hostPlatform = system; }
-          agenix.nixosModules.default
-          home-manager.nixosModules.home-manager
-          ./machines/kids/config.nix
-          {
-            home-manager.users.eric.home.stateVersion = "24.05";
-            home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = {
-              inherit inputs;
-              nixosApiVersion = "unstable";
-            };
-          }
-        ];
-      };
-      hwc-firestick = lib.nixosSystem {
-        pkgs = mkPkgs "aarch64-linux" nixpkgs;
-        specialArgs = {
-          inherit inputs;
-          nixosApiVersion = "unstable";  # Track NixOS API version for compatibility
-        };
-        modules = [
-          { nixpkgs.hostPlatform = "aarch64-linux"; }
-          agenix.nixosModules.default
-          home-manager.nixosModules.home-manager
-          ./machines/firestick/config.nix
-          {
-            home-manager.users.eric.home.stateVersion = "24.05";
-            home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = {
-              inherit inputs;
-              nixosApiVersion = "unstable";
-            };
-          }
-        ];
-      };
-    };
+    nixosConfigurations = lib.mapAttrs' (name: m:
+      lib.nameValuePair "hwc-${name}" (mkNixos name m)
+    ) machines;
   };
 }

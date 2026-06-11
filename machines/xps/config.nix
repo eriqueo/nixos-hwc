@@ -9,19 +9,16 @@
   imports = [
     ./hardware.nix
 
-    # Roles — base (system/paths/secrets) + desktop (GUI/audio/HM)
-    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
-    # the flake.nix machines-table resolver.
-    ../../profiles/base/sys.nix
-    ../../profiles/desktop/sys.nix
-    ./home.nix  # Machine-specific HM overrides
+    # Roles (base, desktop, server, monitoring) are supplied by the
+    # flake.nix machines table — membership lives there, not here.
+    # Machine-specific HM overrides live in ./home.nix (HM lane), wired by
+    # the flake glue.
 
     # Domains — xps-specific capabilities
     ../../domains/ai/index.nix
     ../../domains/notifications/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
-    ../../profiles/monitoring/sys.nix
     # ../../domains/media/index.nix    # Enable when storage is mounted
     # ../../domains/business/index.nix # Enable when business services are needed
   ];
