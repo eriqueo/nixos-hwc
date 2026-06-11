@@ -5,9 +5,14 @@
 # this file adjusts only what is unique to this machine.
 # Shared between NixOS module (nixos-rebuild) and standalone (home-manager switch).
 
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
+  # Codex pinned to the upstream release binary (faster-moving than the
+  # unstable channel). Server intentionally stays on stock pkgs.codex.
+  hwc.home.apps.codex.package =
+    pkgs.callPackage ../../domains/home/apps/codex/parts/package.nix { };
+
   # Apps enabled on this machine specifically
   hwc.home.apps = {
     calcurse.enable = true;

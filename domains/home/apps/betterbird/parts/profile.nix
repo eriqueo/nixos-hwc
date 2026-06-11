@@ -407,6 +407,13 @@ in {
     ".betterbird/profiles/default/user.js".source = userJs;
     ".betterbird/profiles/default/chrome/userChrome.css".source = userChromeCss;
 
+    # HWC-WARNING (2026-06-10 audit 7h): prefs.js is rewritten by Betterbird
+    # at runtime, but here it is a read-only store symlink under home.file —
+    # Betterbird either fails to persist runtime pref changes or replaces the
+    # symlink, after which HM switch fights it. Module is enabled nowhere;
+    # if it is ever reactivated, move these three blocks into user.js (the
+    # supported channel, already used above) or migrate to
+    # programs.thunderbird. Logged as backlog — do not enable as-is.
     ".betterbird/profiles/default/prefs.js".text = ''
       # Mozilla User Preferences
       ${accountPrefs}

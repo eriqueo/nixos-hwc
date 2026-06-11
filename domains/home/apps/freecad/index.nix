@@ -1,6 +1,34 @@
 # domains/home/apps/freecad/index.nix
 { config, lib, pkgs, osConfig ? {}, ... }:
 let
+  # Seed config for first run (copied, not symlinked — FreeCAD writes to it)
+  freecadInitialCfg = pkgs.writeText "freecad-user.cfg" ''
+<?xml version="1.0" encoding="UTF-8"?>
+<FCParameters>
+  <FCParamGroup Name="Root">
+    <FCParamGroup Name="BaseApp">
+      <FCParamGroup Name="Preferences">
+        <FCParamGroup Name="View">
+          <!-- Enable VBO (Vertex Buffer Objects) for better GPU performance -->
+          <FCBool Name="UseVBO" Value="1"/>
+
+          <!-- Enable modern OpenGL (Core Profile) -->
+          <FCBool Name="UseOpenGLCoreProfile" Value="1"/>
+
+          <!-- Disable software OpenGL fallback (use hardware acceleration) -->
+          <FCBool Name="UseSoftwareOpenGL" Value="0"/>
+
+          <!-- Anti-aliasing for smoother rendering (0=off, 1=line, 2=MSAA) -->
+          <FCInt Name="AntiAliasing" Value="2"/>
+
+          <!-- Enable hardware-accelerated selection -->
+          <FCBool Name="UseSelectionRoot" Value="1"/>
+        </FCParamGroup>
+      </FCParamGroup>
+    </FCParamGroup>
+  </FCParamGroup>
+</FCParameters>
+  '';
   cfg = config.hwc.home.apps.freecad;
 
   isNixOSHost = osConfig ? hwc;
@@ -85,37 +113,12 @@ in
       lib.hm.dag.entryAfter ["writeBoundary"] ''
         FREECAD_CONFIG="$HOME/.config/FreeCAD/user.cfg"
 
-        # Only create initial config if it doesn't exist (preserve user changes)
+        # Only create initial config if it doesn't exist (preserve user changes).
+        # writeText + run install (thunar seed-once pattern) — the old
+        # heredoc redirect escaped $DRY_RUN_CMD and wrote during dry runs.
         if [ ! -f "$FREECAD_CONFIG" ]; then
-          $DRY_RUN_CMD mkdir -p "$HOME/.config/FreeCAD"
-          $DRY_RUN_CMD cat > "$FREECAD_CONFIG" <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<FCParameters>
-  <FCParamGroup Name="Root">
-    <FCParamGroup Name="BaseApp">
-      <FCParamGroup Name="Preferences">
-        <FCParamGroup Name="View">
-          <!-- Enable VBO (Vertex Buffer Objects) for better GPU performance -->
-          <FCBool Name="UseVBO" Value="1"/>
-
-          <!-- Enable modern OpenGL (Core Profile) -->
-          <FCBool Name="UseOpenGLCoreProfile" Value="1"/>
-
-          <!-- Disable software OpenGL fallback (use hardware acceleration) -->
-          <FCBool Name="UseSoftwareOpenGL" Value="0"/>
-
-          <!-- Anti-aliasing for smoother rendering (0=off, 1=line, 2=MSAA) -->
-          <FCInt Name="AntiAliasing" Value="2"/>
-
-          <!-- Enable hardware-accelerated selection -->
-          <FCBool Name="UseSelectionRoot" Value="1"/>
-        </FCParamGroup>
-      </FCParamGroup>
-    </FCParamGroup>
-  </FCParamGroup>
-</FCParameters>
-EOF
-          $DRY_RUN_CMD chmod 644 "$FREECAD_CONFIG"
+          run mkdir -p "$HOME/.config/FreeCAD"
+          run install -m 0644 ${freecadInitialCfg} "$FREECAD_CONFIG"
         fi
       ''
     );

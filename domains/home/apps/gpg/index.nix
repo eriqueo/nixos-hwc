@@ -31,8 +31,14 @@ in
     # Make pass the default password store (used by bridge CLI)
     home.sessionVariables = {
       PASSWORD_STORE_DIR = "${config.home.homeDirectory}/.password-store";
-      GPG_TTY = "$(tty)";
     };
+
+    # GPG_TTY must be evaluated per-shell — as a session variable the
+    # literal "$(tty)" was exported unevaluated (sessionVariables are
+    # sourced once, not interpreted by every tty).
+    programs.zsh.initContent = ''
+      export GPG_TTY=$(tty)
+    '';
 
     # Ensure pass + gnupg tools exist
     home.packages = [ pkgs.pass pkgs.gnupg ];

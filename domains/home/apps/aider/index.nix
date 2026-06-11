@@ -114,10 +114,8 @@ in
       ${shellInit}
     '';
 
-    programs.bash.initExtra = ''
-      # Aider local model endpoint + optional API key secrets.
-      ${shellInit}
-    '';
+    # (bash branch removed 2026-06-11 — bash is never enabled, the
+    # secret sourcing there was silently dead; zsh covers all hosts.)
 
     #======================================================================
     # VALIDATION

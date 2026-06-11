@@ -24,6 +24,15 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: HM correctness fixes — freecad seed config dry-run safe
+  (writeText + run install); unguarded activation commands get the `run`
+  prefix (xdg-dirs, tuxedo, dt); codex release-binary derivation moved to
+  apps/codex/parts/package.nix (laptop one-off pins it; server stays on
+  stock pkgs.codex); duplicate hwc.home.shell.tmux surface removed in
+  favor of apps/tmux; dead bash secret-sourcing branches dropped (aider,
+  gemini-cli); GPG_TTY exported per-shell from zsh; librewolf registered
+  as default browser via xdg.mimeApps; invalid thunar mime globs removed;
+  betterbird prefs.js hazard flagged with HWC-WARNING + dead guard deleted.
 - 2026-06-11: Theme honesty pass — declare the formerly-phantom
   hwc.home.theme.{cursor,icons,gtkTheme,typography} options and wire the
   palette cursor block through (xcursor only; hyprcursor assets are gone —

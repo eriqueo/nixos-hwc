@@ -44,7 +44,7 @@ in {
 
     # Ensure all domain folders exist on activation
     home.activation.ensureHwcDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      mkdir -p \
+      run mkdir -p \
         ${inbox} \
         ${inbox}/downloads \
         ${inbox}/documents \

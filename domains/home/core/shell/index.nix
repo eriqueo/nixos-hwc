@@ -103,11 +103,6 @@ in
       syntaxHighlighting = lib.mkEnableOption "zsh-syntax-highlighting";
     };
 
-    tmux = {
-      enable = lib.mkEnableOption "tmux via Home-Manager";
-      extraConfig = lib.mkOption { type = lib.types.lines; default = ""; description = "Additional tmux configuration"; };
-    };
-
     ssh = {
       enable = lib.mkOption { type = lib.types.bool; default = true; description = "Enable SSH client configuration"; };
       matchBlocks = lib.mkOption {
@@ -541,14 +536,8 @@ in
       nix-direnv.enable = true;
     };
 
-    # Tmux configuration
-    programs.tmux = lib.mkIf cfg.tmux.enable {
-      enable = true;
-      clock24 = true;
-      keyMode = "vi";
-      mouse = true;
-      extraConfig = cfg.tmux.extraConfig;
-    };
+    # tmux is owned by domains/home/apps/tmux (hwc.home.apps.tmux) —
+    # the duplicate hwc.home.shell.tmux surface was removed 2026-06-11.
 
     # MCP (Model Context Protocol) configuration for Claude Desktop
     home.file.".mcp.json" = lib.mkIf cfg.mcp.enable {
