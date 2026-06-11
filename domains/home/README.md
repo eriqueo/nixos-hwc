@@ -24,6 +24,10 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: Law 3 paths — web-build alias (core/shell), WATCH_FOLDER
+  (apps/transcript-formatter) and the yazi media keybinding now derive from
+  hwc.paths.{nixos,media.root} via guarded osConfig reads with the previous
+  literals as Law-1 fallbacks.
 - 2026-06-11: Inline apps/tuxedo/options.nix into its index.nix under
   # OPTIONS (Law 10 regression from 82e3792b).
 - 2026-06-11: Delete apps/aerc/ — dead duplicate of domains/mail/aerc/

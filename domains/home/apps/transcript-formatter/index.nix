@@ -17,6 +17,10 @@ let
   appDir   = "${config.home.homeDirectory}/.local/share/transcript-formatter";
   extraPath = lib.makeBinPath [ pkgs.curl pkgs.libnotify ];
 
+  # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
+  # literal fallback so the module evaluates with osConfig = {}.
+  mediaRoot = lib.attrByPath [ "hwc" "paths" "media" "root" ] "/mnt/media" osConfig;
+
   runner = pkgs.writeShellScriptBin "transcript-formatter" ''
     set -euo pipefail
     cd ${appDir}
@@ -73,7 +77,7 @@ in
         '';
         Restart          = "no";
         Environment = [
-          "WATCH_FOLDER=/mnt/media/transcripts"
+          "WATCH_FOLDER=${mediaRoot}/transcripts"
           "PROMPT_FILE=${appDir}/formatting_prompt.txt"
           "PATH=${extraPath}:/run/current-system/sw/bin"
         ];
