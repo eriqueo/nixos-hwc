@@ -1,16 +1,12 @@
 { lib, config, osConfig ? {}, ...}:
 
 let
-  # Determine palette
-  paletteName =
-    let chosen = lib.attrByPath [ "hwc" "home" "theme" "palette" ] null config;
-    in if chosen != null then chosen else "deep-nord";
-
-  palettePath = ../../../theme/palettes/${paletteName}.nix;
-
-  palette = if builtins.pathExists palettePath
-    then import palettePath {}
-    else import ../../../theme/palettes/deep-nord.nix {};
+  # Guarded theme read (Law 1): theme.colors is the materialized palette;
+  # fall back to deep-nord tokens when evaluated without the theme module.
+  palette =
+    let colors = (lib.attrByPath [ "hwc" "home" "theme" ] {} config).colors or {};
+    in if colors != {} then colors
+       else import ../../../theme/palettes/deep-nord.nix {};
 
   # Helper functions
   hex = colour: if builtins.substring 0 1 colour == "#" then colour else "#" + colour;

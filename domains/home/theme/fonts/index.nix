@@ -1,4 +1,4 @@
-# modules/home/fonts/index.nix
+# domains/home/theme/fonts/index.nix
 # Font management for user environment
 
 { config, lib, pkgs, osConfig ? {}, ... }:
@@ -11,6 +11,18 @@ in {
   #==========================================================================
   options.hwc.home.theme.fonts = {
     enable = lib.mkEnableOption "Enable HWC font management for user environment";
+
+    mono = lib.mkOption {
+      type = lib.types.str;
+      default = "CaskaydiaCove Nerd Font";
+      description = "Monospace font family token (installed below). Consumed by kitty.";
+    };
+
+    ui = lib.mkOption {
+      type = lib.types.str;
+      default = "Hack Nerd Font";
+      description = "UI font family token (installed below). Consumed by waybar/swaync.";
+    };
   };
 
   #==========================================================================

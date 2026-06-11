@@ -7,7 +7,11 @@ let
   tomlConfig   = import ./parts/toml.nix;
   # Law 3 + Law 1: media root derives from system paths when hosted on
   # NixOS, with a literal fallback so the module evaluates with osConfig = {}.
-  mediaRoot    = lib.attrByPath [ "hwc" "paths" "media" "root" ] "/mnt/media" osConfig;
+  # attrByPath returns the stored value even when it is null, so handle
+  # null explicitly (machines without media storage declare root = null).
+  mediaRoot =
+    let v = lib.attrByPath [ "hwc" "paths" "media" "root" ] null osConfig;
+    in if v == null then "/mnt/media" else v;
   keymapConfig = import ./parts/keymap.nix { inherit mediaRoot; };
   colors       = (config.hwc.home.theme or {}).colors or {};
   appearance   = import ./parts/appearance.nix { inherit lib colors; };

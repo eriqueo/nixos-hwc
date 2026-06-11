@@ -6,7 +6,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hwc.home.apps.tmux;
-  c = config.hwc.home.theme.colors;
+  c = (config.hwc.home.theme or {}).colors or {};
 in
 {
   #==========================================================================

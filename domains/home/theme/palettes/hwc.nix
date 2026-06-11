@@ -99,6 +99,14 @@
   surface     = "f0f0f1"; # Light surface — reversed sections, print white areas
   border-light = "c3c4c7"; # Borders on light surfaces
 
+  # --- Powerline section colors (waybar/starship segmented bars) ---
+  # Curated Gruvbox-Material blends (opaque, computed over bg) — kept as
+  # explicit tokens so segmented UIs read the palette, not literals.
+  sectionA = "856b43";  # amber  — system health / directory
+  sectionB = "576f69";  # teal   — toggles / git
+  sectionC = "5d7258";  # sage   — connectivity
+  sectionD = "504945";  # actions / neutral
+
   # --- ANSI 16 (terminal adapters — Kitty, WezTerm, etc.) ---
   # Canonical gruvbox dark — verbatim from the official palette.
   # HWC brand accents live in UI tokens above. ANSI slots are for terminal

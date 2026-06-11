@@ -2,7 +2,10 @@
 { config, lib, pkgs, osConfig ? {}, ... }:
 
 let
-  colors = config.hwc.home.theme.colors;
+  theme  = config.hwc.home.theme or {};
+  colors = theme.colors or {};
+  # JetBrainsMono was never installed — use the theme's UI font token.
+  uiFont = (theme.fonts or {}).ui or "Hack Nerd Font";
 in
 {
   settings = {
@@ -57,7 +60,7 @@ in
   style = ''
     * {
       all: unset;
-      font-family: "JetBrainsMono Nerd Font";
+      font-family: "${uiFont}";
       font-size: 14px;
     }
 

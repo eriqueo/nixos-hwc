@@ -19,7 +19,11 @@ let
 
   # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
   # literal fallback so the module evaluates with osConfig = {}.
-  mediaRoot = lib.attrByPath [ "hwc" "paths" "media" "root" ] "/mnt/media" osConfig;
+  # attrByPath returns the stored value even when it is null, so handle
+  # null explicitly (machines without media storage declare root = null).
+  mediaRoot =
+    let v = lib.attrByPath [ "hwc" "paths" "media" "root" ] null osConfig;
+    in if v == null then "/mnt/media" else v;
 
   runner = pkgs.writeShellScriptBin "transcript-formatter" ''
     set -euo pipefail

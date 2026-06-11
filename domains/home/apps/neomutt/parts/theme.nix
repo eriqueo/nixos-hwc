@@ -9,7 +9,7 @@ let
   paletteName =
     if (cfg ? theme && cfg.theme ? palette && cfg.theme.palette != null)
     then cfg.theme.palette
-    else (config.hwc.home.theme.name or "deep-nord");
+    else ((config.hwc.home.theme or {}).palette or "hwc");
 
   palettesBase = ../../.. + "/theme/palettes";
   palettePath  = palettesBase + ("/" + paletteName + ".nix");

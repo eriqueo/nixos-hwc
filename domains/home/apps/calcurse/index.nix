@@ -3,7 +3,7 @@
 # calcurse — TUI calendar and scheduling application
 # Config: ~/.config/calcurse/conf (XDG, supported since calcurse 3.0)
 # Theme: terminal color names mapped to Nord palette via kitty's ANSI assignments
-#   "blue"    → terminal color4 → Nord primary accent #88c0d0
+#   "blue"    → terminal color4 (palette ansi.blue via the terminal theme)
 #   "default" → transparent (preserves Nord bg from terminal)
 { config, lib, pkgs, ... }:
 let

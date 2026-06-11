@@ -24,6 +24,16 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: Theme honesty pass — declare the formerly-phantom
+  hwc.home.theme.{cursor,icons,gtkTheme,typography} options and wire the
+  palette cursor block through (xcursor only; hyprcursor assets are gone —
+  backlog); neomutt keys off theme.palette; waybar's unused parts/theme.nix
+  deleted (CSS de-hardcode logged as backlog; palettes gain sectionA-D
+  tokens for it); fzf/starship colors derive from theme.colors; calcure/
+  calcurse comments de-Norded (they use terminal ANSI slots); guarded
+  theme reads standardized (tmux, swaync, waybar, hyprland, librewolf,
+  kitty); theme.fonts.{mono,ui} tokens added — swaync's never-installed
+  JetBrainsMono replaced by the ui token; qt follows GTK dark.
 - 2026-06-11: systemd.user.startServices = "sd-switch" now set fleet-wide
   in profiles/base/home.nix; removed the per-module stray copy
   (transcript-formatter) and the waybar restartWaybar activation hack.
