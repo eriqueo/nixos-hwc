@@ -732,17 +732,6 @@
     MaxRetentionSec=1month
   '';
 
-  # Log rotation for container logs
-  services.logrotate.settings.docker = {
-    files = [ "/var/lib/docker/containers/*/*.log" ];
-    frequency = "daily";
-    rotate = 7;
-    compress = true;
-    missingok = true;
-    notifempty = true;
-    sharedscripts = true;
-  };
-
   #============================================================================
   # CLOUDFLARE TUNNEL (public webhook ingress)
   #============================================================================
