@@ -1,7 +1,11 @@
 { config, lib, pkgs, osConfig ? {}, ...}:
 let
-  # Use the active theme from central configuration
-  palette = config.hwc.home.theme.colors;
+  # Guarded theme read (Law 1). NOTE: the CSS below is a curated
+  # Gruvbox-Material design with hand-blended section colors — feeding it
+  # from palette tokens is a redesign, logged as backlog (2026-06-10 audit
+  # 6c). The palette's section tokens (sectionA-D) now exist for that work.
+  theme = config.hwc.home.theme or {};
+  uiFont = (theme.fonts or {}).ui or "Hack Nerd Font";
 in
 ''
 /* HWC Waybar — Gruvbox Material Dark (official hex values) */
@@ -16,7 +20,7 @@ in
 window#waybar {
   background-color: rgba(50, 48, 47, 0.88);  /* bg0 @ 88% */
   color: #d4be98;                             /* fg0 */
-  font-family: "Hack Nerd Font";
+  font-family: "${uiFont}";
   font-weight: bold;
   font-size: 16px;
   border-radius: 0px;

@@ -1,6 +1,7 @@
 # domains/home/apps/kitty/index.nix
 { config, lib, pkgs, ... }:
 let
+  monoFont = ((config.hwc.home.theme or {}).fonts or {}).mono or "CaskaydiaCove Nerd Font";
   cfg = config.hwc.home.apps.kitty;
   colors = (config.hwc.home.theme or {}).colors or {};
   appearance = import ./parts/appearance.nix { inherit lib colors; };
@@ -23,7 +24,7 @@ in
 
       settings = {
         # Font
-        font_family = "CaskaydiaCove Nerd Font";
+        font_family = monoFont;
         font_size = 16;
         disable_ligatures = "cursor";
 

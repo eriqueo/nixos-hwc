@@ -14,6 +14,11 @@ let
   # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
   # literal fallback so the module evaluates with osConfig = {}.
   nixosPath = lib.attrByPath [ "hwc" "paths" "nixos" ] "/home/eric/.nixos" osConfig;
+
+  # Theme tokens (guarded read — Law 1). Fallbacks are the palette's own
+  # values so the module renders identically without the theme module.
+  themeColors = (config.hwc.home.theme or {}).colors or {};
+  col = name: fallback: themeColors.${name} or fallback;
 in
 {
   #============================================================================
@@ -191,9 +196,9 @@ in
       historyWidgetOptions = [ "--exact" ];
       defaultOptions = [
         "--height 40%" "--reverse" "--border"
-        "--color=bg+:#32302f,bg:#282828,spinner:#89b482,hl:#7daea3"
-        "--color=fg:#d4be98,header:#7daea3,info:#d8a657,pointer:#89b482"
-        "--color=marker:#89b482,fg+:#d4be98,prompt:#d8a657,hl+:#89b482"
+        "--color=bg+:#${col "bg3" "32373c"},bg:#${col "bg" "282828"},spinner:#${col "success" "a3be8c"},hl:#${col "info" "5e81ac"}"
+        "--color=fg:#${col "fg" "d5c4a1"},header:#${col "info" "5e81ac"},info:#${col "warn" "cf995f"},pointer:#${col "success" "a3be8c"}"
+        "--color=marker:#${col "success" "a3be8c"},fg+:#${col "fg" "d5c4a1"},prompt:#${col "warn" "cf995f"},hl+:#${col "success" "a3be8c"}"
       ];
     };
 
@@ -475,7 +480,7 @@ in
       .nix-defexpr/
     '';
 
-    # Starship prompt — powerline style, Gruvbox Material Dark colors
+    # Starship prompt — powerline style, colors from the active palette
     programs.starship = lib.mkIf cfg.zsh.starship {
       enable = true;
       settings = {
@@ -484,30 +489,30 @@ in
         add_newline = false;
 
         format = lib.concatStrings [
-          "[](fg:#32302f bg:#856b43)"
+          "[](fg:#${col "bg" "282828"} bg:#${col "sectionA" "856b43"})"
           "$directory"
           "$git_branch"
           "$git_status"
-          "[](fg:#576f69 bg:#32302f) "
+          "[](fg:#${col "sectionB" "576f69"} bg:#${col "bg" "282828"}) "
           "$character"
         ];
 
         directory = {
-          format = "[ $path ](bg:#856b43 fg:#d4be98)";
+          format = "[ $path ](bg:#${col "sectionA" "856b43"} fg:#${col "fg" "d5c4a1"})";
           truncation_length = 3;
           truncation_symbol = ".../";
-          style = "bg:#856b43 fg:#d4be98";
+          style = "bg:#${col "sectionA" "856b43"} fg:#${col "fg" "d5c4a1"}";
         };
 
         git_branch = {
-          format = "[](fg:#856b43 bg:#576f69)[ $symbol$branch ](bg:#576f69 fg:#d4be98)";
+          format = "[](fg:#${col "sectionA" "856b43"} bg:#${col "sectionB" "576f69"})[ $symbol$branch ](bg:#${col "sectionB" "576f69"} fg:#${col "fg" "d5c4a1"})";
           symbol = " ";
-          style = "bg:#576f69 fg:#d4be98";
+          style = "bg:#${col "sectionB" "576f69"} fg:#${col "fg" "d5c4a1"}";
         };
 
         git_status = {
-          format = "[$all_status$ahead_behind ](bg:#576f69 fg:#d8a657)";
-          style = "bg:#576f69 fg:#d8a657";
+          format = "[$all_status$ahead_behind ](bg:#${col "sectionB" "576f69"} fg:#${col "warn" "cf995f"})";
+          style = "bg:#${col "sectionB" "576f69"} fg:#${col "warn" "cf995f"}";
           conflicted = "!";
           ahead = "⇡\${count}";
           behind = "⇣\${count}";
@@ -524,8 +529,8 @@ in
         golang  = { disabled = true; };
 
         character = {
-          success_symbol = "[❯](bold fg:#a9b665)";
-          error_symbol   = "[❯](bold fg:#ea6962)";
+          success_symbol = "[❯](bold fg:#${col "success" "a3be8c"})";
+          error_symbol   = "[❯](bold fg:#${col "error" "bf616a"})";
         };
       };
     };

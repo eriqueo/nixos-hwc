@@ -78,6 +78,12 @@
   progress    = "88c0d0"; # Progress bar fill
   progressBg  = "3b4252"; # Progress bar background
 
+  # --- Powerline section colors (waybar/starship segmented bars) ---
+  sectionA = "5e81ac";  # blue   — system health / directory
+  sectionB = "434c5e";  # slate  — toggles / git
+  sectionC = "4c566a";  # grey   — connectivity
+  sectionD = "3b4252";  # actions / neutral
+
   # --- ANSI 16 (term adapters like Kitty/Alacritty/WezTerm) ---
   ansi = {
     black   = "45403d";

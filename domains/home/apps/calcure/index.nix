@@ -5,13 +5,13 @@
 # Theme: terminal color indices mapped to Nord palette via kitty's ANSI assignments
 #
 # Nord → terminal color index mapping (from kitty config):
-#   1 = red     → #BF616A  (error/crit)
-#   2 = green   → #A3BE8C  (success/done)
-#   3 = yellow  → #EBCB8B  (warning)
-#   4 = blue    → #88c0d0  (primary accent — Nord teal)
-#   5 = magenta → #d3869b  (accent alt)
-#   6 = cyan    → #81a1c1  (secondary accent — Nord blue)
-#   7 = white   → #ECEFF4  (foreground)
+#   1 = terminal red     (error/crit)
+#   2 = terminal green   (success/done)
+#   3 = terminal yellow  (warning)
+#   4 = terminal blue    (primary accent)
+#   5 = terminal magenta (accent alt)
+#   6 = terminal cyan    (secondary accent)
+#   7 = terminal white   (foreground)
 #  -1 = transparent (preserves terminal background)
 { config, lib, pkgs, ... }:
 let
@@ -60,19 +60,19 @@ in
       minimal_today = no
 
       [colors]
-      # Today highlight → Nord primary accent (teal #88c0d0)
+      # Today highlight → terminal blue (slot 4 — palette ansi.blue via kitty)
       color_today = 4
-      # General text → Nord fg (#ECEFF4)
+      # General text → terminal white (palette ansi.white via kitty)
       color_events = 7
       color_days = 7
       color_time = 7
       color_hints = 7
-      # Day names / calendar header → Nord secondary accent (#81a1c1)
+      # Day names / calendar header → terminal cyan
       color_day_names = 6
       color_calendar_header = 6
       color_separator = 6
       color_calendar_border = 6
-      # Weekends → Nord yellow (#EBCB8B) — notable but not alarming
+      # Weekends → terminal yellow — notable but not alarming
       color_weekends = 3
       color_weekend_names = 3
       # Prompts and confirmations → primary accent / red
@@ -85,7 +85,7 @@ in
       # Tasks
       color_todo = 7
       color_done = 2
-      # Title → Nord primary accent
+      # Title → terminal blue
       color_title = 4
       # Status/priority
       color_important = 1
@@ -93,9 +93,9 @@ in
       # Timer
       color_timer = 2
       color_timer_paused = 7
-      # Active pane border → Nord primary accent
+      # Active pane border → terminal blue
       color_active_pane = 4
-      # Transparent background (inherits Nord bg from terminal)
+      # Transparent background (inherits the terminal theme bg)
       color_background = -1
     '';
 

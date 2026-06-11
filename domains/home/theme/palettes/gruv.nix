@@ -87,6 +87,14 @@
   fileOrphan   = "cc241d"; # Dark red: broken links
   fileDir      = "7daea3"; # Teal: directories
 
+  # --- Powerline section colors (waybar/starship segmented bars) ---
+  # Curated Gruvbox-Material blends (opaque, computed over bg) — kept as
+  # explicit tokens so segmented UIs read the palette, not literals.
+  sectionA = "856b43";  # amber  — system health / directory
+  sectionB = "576f69";  # teal   — toggles / git
+  sectionC = "5d7258";  # sage   — connectivity
+  sectionD = "504945";  # actions / neutral
+
   # --- ANSI 16 (term adapters like Kitty/Alacritty/WezTerm) ---
   ansi = {
     black   = "32302F";

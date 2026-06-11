@@ -1,6 +1,6 @@
 { config, lib, pkgs, osConfig ? {}, ...}:
 let
-  c = config.hwc.home.theme.colors;
+  c = (config.hwc.home.theme or {}).colors or {};
 
   toHypr = colorStr:
     let
