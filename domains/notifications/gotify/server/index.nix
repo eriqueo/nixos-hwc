@@ -59,18 +59,34 @@ in
     };
 
     # TAXONOMY v1.0 — map of "universe:domain" → token file path
-    # Auto-populated in server/config.nix by scanning config.age.secrets for
-    # secrets named "gotify-{universe}-{domain}" (e.g. gotify-hwc-ops).
-    # Adding a new Gotify app only requires creating the agenix secret — no
-    # further edits to this file or secrets-api.nix.
+    # Default auto-discovers agenix secrets named "gotify-{universe}-{domain}"
+    # (e.g. gotify-hwc-ops → "hwc:ops"). Adding a new Gotify app only
+    # requires creating the agenix secret — no nix edits anywhere.
+    # Excludes "gotify-admin-password" and the legacy "gotify-token-*" format.
     tokens = lib.mkOption {
       type    = lib.types.attrsOf (lib.types.nullOr lib.types.path);
-      default = {};
+      default =
+        let
+          isGotifyToken = name:
+            lib.hasPrefix "gotify-" name
+            && name != "gotify-admin-password"
+            && !(lib.hasPrefix "gotify-token-" name);
+          # "gotify-hwc-ops" → "hwc:ops"
+          toAppKey = name:
+            let
+              suffix = lib.removePrefix "gotify-" name;
+              parts  = lib.splitString "-" suffix;
+            in
+            "${lib.head parts}:${lib.concatStringsSep "-" (lib.tail parts)}";
+        in
+        lib.mapAttrs' (name: secret:
+          lib.nameValuePair (toAppKey name) secret.path
+        ) (lib.filterAttrs (name: _: isGotifyToken name) config.age.secrets);
+      defaultText = lib.literalMD "auto-discovered from agenix secrets named `gotify-{universe}-{domain}`";
       example = { "hwc:ops" = "/run/agenix/gotify-hwc-ops"; "home:admin" = "/run/agenix/gotify-home-admin"; };
       description = ''
         Map of Gotify app key to decrypted token file path.
         Key format: "{universe}:{domain}"  (e.g. "hwc:ops", "home:admin")
-        Populated automatically from agenix secrets named gotify-{universe}-{domain}.
       '';
     };
   };
