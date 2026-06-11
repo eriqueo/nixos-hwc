@@ -87,6 +87,11 @@ hwc.data.backup = {
 
 ## Changelog
 
+- 2026-06-10: Absorb the value defaults formerly set by profiles/core.nix
+  (retention counts, sources, excludePatterns incl. firefox-storage/ISO
+  entries, cloud/schedule values) as option defaults in index.nix. The base
+  role now flips only `enable`/`notifications.enable`/`monitoring.enable`.
+
 - 2026-04-04: Update notification refs: `hwc.alerts.*` to `hwc.monitoring.alerts.*`, `hwc.automation.gotify.*` to `hwc.notifications.send.gotify.*` (domain redistribution)
 
 - 2026-03-25: Created README per Law 12
