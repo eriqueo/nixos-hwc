@@ -15,16 +15,16 @@
   home.stateVersion = "24.05";
 
   # HM 26.05 changed defaults for these options; pinning to legacy values
-  # preserves current behavior and silences eval warnings — for the options
-  # that still exist in the HM revision being used here.
+  # preserves current behavior and silences eval warnings.
   #
-  # `wayland.windowManager.hyprland.configType` and
-  # `xdg.userDirs.setSessionVariables` were dropped from the HM-as-module
-  # wiring path (still exist on the HM-as-flake / standalone path, where
-  # they now just emit a deprecation warning). Setting them under
-  # home-manager.users.eric.* errors at module-merge — removed 2026-05-31.
-  # If they come back to module-mode in a future HM bump, re-add here.
+  # History: `configType` and `setSessionVariables` were briefly absent from
+  # the HM-as-module wiring path (setting them errored at module-merge —
+  # removed 2026-05-31). The 2026-05 nixpkgs/HM bump restored them to module
+  # mode (their default-change warnings appear in snix output again), so
+  # they are pinned here once more — re-added 2026-06-10.
   gtk.gtk4.theme = config.gtk.theme;
+  wayland.windowManager.hyprland.configType = "hyprlang";
+  xdg.userDirs.setSessionVariables = true;
 
   #======================================================================
   # GUI WORKSTATION DEFAULTS
