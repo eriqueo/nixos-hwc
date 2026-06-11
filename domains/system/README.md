@@ -36,6 +36,7 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-06-11: `gpu/` — CUDA binary cache (cache.nixos-cuda.org substituter + key) moved here from machines/{laptop,server}/config.nix duplication; applies to any machine with `gpu.type = "nvidia"`. nix-diff: delta is nix.conf only (substituter sets unchanged per machine).
 - 2026-06-11: `users/` — removed the broken `user.ssh.useSecrets` lane: it did `builtins.readFile` on the `/run/agenix/user-ssh-public-key` runtime path, which can never work in pure eval (agenix decrypts at activation, after evaluation), so `ssh.enable` was unusable. `fallbackKey` renamed to `keys` (public keys are not secrets; they live in the repo). Base role now sets `ssh.enable = true` fleet-wide.
 - 2026-06-09: Law 9/10 — converted option-declaring leaf files to directory modules: `mounts/`, `networking/`, `hardware/`, `gpu/`, `usb-automount/`, `users/`, `core/login/` (each `X.nix` → `X/index.nix`, pure git-mv relocation). `mcp/parts/jt.nix` options moved into `mcp/index.nix` (parts/ stays pure). Parity verified via nix-diff (zero behavioral delta).
 - 2026-06-09: Law 3 sweep — `mcp/index.nix` no longer hardcodes `/opt/n8n-mcp`, `/opt/business/heartwood-cms`, or `/home/eric/*` sandbox paths; all derive from `hwc.paths.{apps.root,business.root,user.mail,user.home}` with null-safe fallbacks to their prior literals. Server drv hash unchanged (pure refactor).

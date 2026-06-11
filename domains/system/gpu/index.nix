@@ -209,6 +209,14 @@ in
 
     # --- NVIDIA ---------------------------------------------------------------
     (lib.mkIf (cfg.type == "nvidia" && cfg.nvidia.enable) {
+      # Official NixOS CUDA binary cache (moved from cachix Nov 2025)
+      # https://wiki.nixos.org/wiki/CUDA — every nvidia machine wants this,
+      # so it lives here instead of being duplicated per machine file.
+      nix.settings = {
+        substituters = [ "https://cache.nixos-cuda.org" ];
+        trusted-public-keys = [ "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M=" ];
+      };
+
       # Desktop stack driver selection
       services.xserver.videoDrivers = [ "nvidia" ];
 
