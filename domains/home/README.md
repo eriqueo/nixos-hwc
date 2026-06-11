@@ -23,6 +23,10 @@ domains/home/
 - **core/** – Minimal plumbing for shared defaults (e.g., XDG directories) consumed by other home modules.
 
 ## Changelog
+
+- 2026-06-11: Delete apps/n8n/parts/n8n-workflows/ — 82 MB / 824 tracked
+  files of vendored third-party repo (plus untracked .venv/db artifacts),
+  referenced by nothing (Law 13). apps/n8n/index.nix retained.
 - 2026-06-09: Law 9/10 — `core/development.nix` → `core/development/index.nix`, `core/shell.nix` → `core/shell/index.nix` (pure relocation; the `aliases` shell alias retargeted to the new path).
 - 2026-06-09: Law 3 finish — claude-code NODE_EXTRA_CA_CERTS derives from `config.home.homeDirectory` (HM-native). HM drv hash unchanged.
 - 2026-06-09: Law 10 migration — inlined the 9 remaining separate `options.nix` files (aerc, betterbird, dt, herdr, nvim, obsidian, scraper, thunderbird, yazi) into their `index.nix` under `# OPTIONS` banners. Pure relocation; verified by laptop + standalone-HM eval.
