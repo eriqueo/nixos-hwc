@@ -42,9 +42,9 @@ log_step() { echo -e "\n${BOLD}$*${NC}"; }
 # to all of them so every host can decrypt — consistent with the generated layer
 # (a single-host `age -r` blob could not be decrypted off the host that made it).
 get_recipients() {
-  cat "${NIXOS_DIR}/machines/hwc-server/AGE_PUBLIC_KEY.txt" \
-      "${NIXOS_DIR}/machines/hwc-laptop/AGE_PUBLIC_KEY.txt" \
-      "${NIXOS_DIR}/machines/hwc-xps/AGE_PUBLIC_KEY.txt"
+  cat "${NIXOS_DIR}/machines/server/AGE_PUBLIC_KEY.txt" \
+      "${NIXOS_DIR}/machines/laptop/AGE_PUBLIC_KEY.txt" \
+      "${NIXOS_DIR}/machines/xps/AGE_PUBLIC_KEY.txt"
   # eric's user key — parsed from secrets.nix so there is one source of truth
   grep -oE 'ssh-ed25519 [A-Za-z0-9+/]+ eriqueo@homeserver' "${NIXOS_DIR}/secrets.nix" | head -1
 }

@@ -18,9 +18,9 @@ let
   readKey = f: builtins.replaceStrings [ "\n" "\r" ] [ "" "" ] (builtins.readFile f);
 
   # ── machine host keys (age public keys matching /etc/age/keys.txt on each host) ──
-  laptop = readKey ./machines/hwc-laptop/AGE_PUBLIC_KEY.txt;
-  server = readKey ./machines/hwc-server/AGE_PUBLIC_KEY.txt;
-  xps    = readKey ./machines/hwc-xps/AGE_PUBLIC_KEY.txt;
+  laptop = readKey ./machines/laptop/AGE_PUBLIC_KEY.txt;
+  server = readKey ./machines/server/AGE_PUBLIC_KEY.txt;
+  xps    = readKey ./machines/xps/AGE_PUBLIC_KEY.txt;
 
   # ── user keys ──
   eric = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPpGuiR4JKb0EyK8z+QmWo7qayRC01IHqUYspUbxgVgB eriqueo@homeserver";
