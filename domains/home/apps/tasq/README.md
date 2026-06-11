@@ -28,7 +28,8 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
 ├── store.py        # Hexagonal port over todoman.model.Database (ALL vdir I/O)
 ├── model_map.py    # "text +proj @ctx (A) due:YYYY-MM-DD" ↔ Todo fields
 ├── widgets.py      # ListSidebar, TaskTable, StatusBar, modals, help
-└── theme.tcss      # gruvbox dark
+├── theme.tcss      # gruvbox dark
+└── WALKTHROUGH.md  # user guide: keymap, task-line dialect, usage examples
 ```
 
 ## Keymap
@@ -69,3 +70,5 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
   as a library (`toPythonModule pkgs.todoman` — no python3Packages.todoman
   exists). Verified end-to-end: pilot-tested add/edit/toggle/filter/delete,
   phone round-trip via vdirsyncer/iCloud. Enabled for the desktop role.
+- 2026-06-11: Added workspace/home/tasq/WALKTHROUGH.md — user-facing guide
+  (keymap, task-line dialect, day-of-use examples, sync workflow).
