@@ -33,6 +33,17 @@ in
       enable = lib.mkEnableOption "auto-import .ics files dropped in ~/000_inbox/downloads into khal";
     };
 
+    extraVdirsyncerPairs = lib.mkOption {
+      type = with lib.types; listOf str;
+      default = [];
+      description = ''
+        Extra [pair …]/[storage …] blocks contributed by sibling modules
+        (e.g. domains/mail/tasks for VTODO/Reminders sync), appended verbatim
+        to the single generated vdirsyncer config so there is one config file
+        and one sync timer. Each entry is a complete config fragment.
+      '';
+    };
+
     accounts = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
