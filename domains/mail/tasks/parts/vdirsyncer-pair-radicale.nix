@@ -18,6 +18,10 @@
   b = "tasks_radicale_local"
   collections = ["from a", "from b"]
   metadata = ["displayname", "color"]
+  # Local wins: Radicale auto-names a collection at MKCALENDAR, which would
+  # otherwise MetaSyncConflict against the real name on the first metasync
+  # (and tasq/local is the authoring side for list names anyway).
+  conflict_resolution = "b wins"
 
   [storage tasks_radicale_remote]
   type = "caldav"
