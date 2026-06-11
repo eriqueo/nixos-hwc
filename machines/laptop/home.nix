@@ -87,7 +87,7 @@
   };
 
   # Shell: MCP configured for laptop context
-  hwc.home.shell = {
+  hwc.home.core.shell = {
     enable = true;
     mcp = {
       enable = true;

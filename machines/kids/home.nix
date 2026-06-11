@@ -10,13 +10,13 @@
 
 {
   hwc.home = {
-    shell.enable = true;
+    core.shell.enable = true;
     # base/home.nix turns these on by default — kids stays lean
-    shell.modernUnix = false;
-    shell.zsh.starship = false;
-    shell.zsh.autosuggestions = false;
-    shell.zsh.syntaxHighlighting = false;
-    development.enable = false;
+    core.shell.modernUnix = false;
+    core.shell.zsh.starship = false;
+    core.shell.zsh.autosuggestions = false;
+    core.shell.zsh.syntaxHighlighting = false;
+    core.development.enable = false;
 
     apps = {
       kitty.enable = true;

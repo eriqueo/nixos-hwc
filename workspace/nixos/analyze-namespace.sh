@@ -181,9 +181,9 @@ main() {
   
   # Analyze each proposed namespace change
   local -A namespace_changes=(
-    ["options.hwc.home.shell"]="options.hwc.home.environment.shell"
+    ["options.hwc.home.shell"]="options.hwc.home.core.shell"
     ["options.hwc.home.productivity"]="options.hwc.home.environment.productivity"
-    ["options.hwc.home.development"]="options.hwc.home.environment.development"
+    ["options.hwc.home.development"]="options.hwc.home.core.development"
     ["options.hwc.home.fonts"]="options.hwc.home.theme.fonts"
     ["options.hwc.home.apps.protonAuthenticator"]="options.hwc.home.apps.proton-authenticator"
     ["options.hwc.home.apps.protonMail"]="options.hwc.home.apps.proton-mail"

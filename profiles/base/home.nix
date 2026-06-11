@@ -25,7 +25,7 @@
     theme.palette = lib.mkDefault "hwc";
 
     # Shell Environment
-    shell = {
+    core.shell = {
       enable = lib.mkDefault true;
       modernUnix = lib.mkDefault true;
       git.enable = lib.mkDefault true;
@@ -38,7 +38,7 @@
     };
 
     # Development Environment
-    development.enable = lib.mkDefault true;
+    core.development.enable = lib.mkDefault true;
 
     # CLI apps
     apps = {

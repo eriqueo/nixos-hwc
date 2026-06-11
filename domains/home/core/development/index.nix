@@ -2,21 +2,21 @@
 #
 # Development environment — languages, editors, container tools
 #
-# NAMESPACE: hwc.home.development.*
+# NAMESPACE: hwc.home.core.development.*
 # USED BY: profiles/session.nix, machines/server/config.nix
-# USAGE: hwc.home.development.enable = true;
+# USAGE: hwc.home.core.development.enable = true;
 
 { config, lib, pkgs, osConfig ? {}, ... }:
 
 let
-  cfg = config.hwc.home.development;
+  cfg = config.hwc.home.core.development;
   t = lib.types;
 in
 {
   #============================================================================
   # OPTIONS
   #============================================================================
-  options.hwc.home.development = {
+  options.hwc.home.core.development = {
     enable = lib.mkEnableOption "Development tools and environment";
 
     editors = {

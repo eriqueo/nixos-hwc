@@ -24,6 +24,9 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: Law 2 namespace fix — hwc.home.shell.* -> hwc.home.core.shell.*
+  and hwc.home.development.* -> hwc.home.core.development.* (namespace =
+  folder, no exceptions). All setters/readers updated in one commit.
 - 2026-06-11: HM correctness fixes — freecad seed config dry-run safe
   (writeText + run install); unguarded activation commands get the `run`
   prefix (xdg-dirs, tuxedo, dt); codex release-binary derivation moved to
