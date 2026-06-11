@@ -53,8 +53,8 @@ in
 
     aliases = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
-      default = import ./parts/aliases.nix { inherit ws nixosPath; };
-      description = "Shell aliases for zsh";
+      default = { };
+      description = "Extra shell aliases, merged over the base set from parts/aliases.nix (same-name entries win).";
     };
 
     git = {
@@ -192,7 +192,7 @@ in
         size = 5000;
         save = 5000;
       };
-      shellAliases = cfg.aliases;
+      shellAliases = (import ./parts/aliases.nix { inherit ws nixosPath; }) // cfg.aliases;
       initContent = import ./parts/zsh-init.nix { inherit config; };
     };
 

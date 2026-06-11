@@ -4,11 +4,12 @@
 # executable Python with module-level variables (read from todoman 4.7.0).
 # A read-only store symlink is fine — todoman does not rewrite this file.
 
-{ defaultList }:
+{ defaultList, pathGlob ? "tasks/*" }:
 
 ''
-  # Glob over vdirsyncer's tasks vdir: one subdir per remote Reminders list.
-  path = "~/.local/share/vdirsyncer/tasks/*"
+  # Glob over vdirsyncer's tasks vdir(s): one subdir per remote list.
+  # "tasks*/*" also covers tasks-radicale/ when that backend is enabled.
+  path = "~/.local/share/vdirsyncer/${pathGlob}"
 
   # Default list for `todo new` when -l is omitted. NOTE: this must match a
   # collection directory name created by `vdirsyncer discover tasks`. If the

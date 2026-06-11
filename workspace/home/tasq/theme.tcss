@@ -17,6 +17,15 @@ Screen {
 
 #body {
     background: $tq-bg;
+    height: 1fr;
+}
+
+#week {
+    height: auto;
+    max-height: 10;
+    background: $tq-bg-panel;
+    border-top: solid $tq-border;
+    padding: 0 1;
 }
 
 #sidebar {

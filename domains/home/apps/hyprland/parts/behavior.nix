@@ -18,7 +18,7 @@ in
     "${mod} SHIFT,B,exec,gpu-launch librewolf-hwc"
     "${mod},M,exec,kitty -e btop"
     "${mod},O,exec,gpu-launch obsidian"
-    "${mod},E,exec,kitty -e ssh -t hwc aerc"
+    "${mod},E,exec,kitty -e ssh -t server aerc"
     "${mod},N,exec,kitty -e nvim"
     "${mod},Y,exec,kitty -e yazi"
     "${mod},G,exec,gpu-toggle"

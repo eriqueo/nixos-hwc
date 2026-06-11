@@ -45,6 +45,15 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-11: Fix SUPER+E mail keybind: `ssh -t hwc aerc` referenced a
+  nonexistent SSH host alias (only `server` exists), so the kitty window
+  died instantly — now `ssh -t server aerc` (hyprland/parts/behavior.nix).
+  core/shell `aliases` option semantics changed: default is now `{}` and
+  definitions merge OVER the base set from parts/aliases.nix instead of
+  replacing it (previously any per-machine alias definition would have
+  silently clobbered all defaults). machines/laptop/home.nix uses this to
+  alias `aerc` → `ssh -t server aerc` (laptop mbsync is disabled; mail
+  lives on the server).
 - 2026-06-11: Dormant-app cleanup (Eric's call on the fresh-eyes review
   §2.9): apps/thunderbird, apps/betterbird, apps/transcript-formatter
   deleted (never enabled anywhere). transcript-formatter's assets moved

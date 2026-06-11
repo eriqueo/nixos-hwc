@@ -19,9 +19,11 @@ import os
 import shutil
 import subprocess
 import sys
-from collections import Counter
-from datetime import date, datetime
+from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta
 
+from rich import box as rich_box
+from rich.table import Table as RichTable
 from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -39,6 +41,7 @@ from widgets import (
     HelpModal,
     LineModal,
     TaskTable,
+    WeekStrip,
 )
 
 DEFAULT_GLOB = "~/.local/share/vdirsyncer/tasks/*"
@@ -170,6 +173,7 @@ class TasqApp(App):
         Binding("K", "sidebar_prev", "Sidebar ↑", show=False),
         Binding("left_square_bracket", "toggle_sidebar", "Sidebar", show=False),
         Binding("right_square_bracket", "toggle_detail", "Detail", show=False),
+        Binding("w", "toggle_week", "Week"),
         Binding("g", "go_top", "Top", show=False),
         Binding("G", "go_bottom", "Bottom", show=False),
         Binding("r", "reload", "Reload"),
@@ -190,6 +194,7 @@ class TasqApp(App):
         self._rows = []  # Todos parallel to table rows
         self._sidebar_payloads = []  # parallel to sidebar options
         self._sidebar_pos: int | None = None  # explicit J/K position
+        self._week_events: list[list[dict]] | None = None  # khal, today..+6
 
     def get_css_variables(self) -> dict[str, str]:
         css_vars = super().get_css_variables()
@@ -206,6 +211,7 @@ class TasqApp(App):
             yield FilterSidebar(id="sidebar")
             yield TaskTable(id="table")
             yield DetailPanel(id="detail")
+        yield WeekStrip(id="week")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -214,6 +220,7 @@ class TasqApp(App):
         table.zebra_stripes = False
         table.add_columns(" ", "P", "Summary", "Due", "Tags", "List")
         self.refresh_tasks()
+        self._fetch_week_events()
         table.focus()
 
     # -- data → widgets ---------------------------------------------------------
@@ -341,6 +348,7 @@ class TasqApp(App):
         self._refresh_sidebar()
         self._update_header()
         self._update_detail()
+        self._update_week()
 
     def _update_header(self) -> None:
         parts = [
@@ -405,6 +413,101 @@ class TasqApp(App):
             text.append("\n NOTES\n\n", style=f"bold {ROLE['blue']}")
             text.append(f" {todo.description}\n", style=ROLE["fg_dim"])
         panel.update(text)
+
+    # -- week strip -----------------------------------------------------------
+
+    def _fetch_week_events(self) -> None:
+        if self.query_one(WeekStrip).display:
+            self._khal_worker()
+
+    @work(thread=True, exclusive=True, group="khal")
+    def _khal_worker(self) -> None:
+        events = self.store.week_events(days=7)
+        self.call_from_thread(self._set_week_events, events)
+
+    def _set_week_events(self, events: list[list[dict]] | None) -> None:
+        self._week_events = events
+        self._update_week()
+
+    def _update_week(self) -> None:
+        strip = self.query_one(WeekStrip)
+        if not strip.display:
+            return
+        today = date.today()
+        days = [today + timedelta(days=i) for i in range(7)]
+        events = self._week_events or [[] for _ in days]
+
+        overdue = []
+        tasks_by_day: dict[date, list] = defaultdict(list)
+        for t in self.store.todos(show_completed=False):
+            if not t.due:
+                continue
+            d = t.due.astimezone().date() if isinstance(t.due, datetime) else t.due
+            if d < today:
+                overdue.append((d, t))
+            elif d <= days[-1]:
+                tasks_by_day[d].append(t)
+
+        grid = RichTable(
+            box=rich_box.SIMPLE_HEAD,
+            expand=True,
+            padding=(0, 1),
+            pad_edge=False,
+            show_edge=False,
+        )
+        for d in days:
+            style = f"bold {ROLE['accent']}" if d == today else f"bold {ROLE['blue']}"
+            grid.add_column(
+                Text(d.strftime("%a %d"), style=style),
+                ratio=1, no_wrap=True, overflow="ellipsis",
+            )
+
+        cols: list[list[Text]] = []
+        for i, d in enumerate(days):
+            lines: list[Text] = []
+            if i == 0:
+                for od, t in sorted(overdue):
+                    lines.append(Text(
+                        f"! {t.summary} ({od.strftime('%m-%d')})",
+                        style=f"bold {ROLE['red']}",
+                    ))
+            for ev in events[i] if i < len(events) else []:
+                title = ev.get("title", "")
+                if ev.get("all-day") == "True":
+                    lines.append(Text(f"◆ {title}", style=ROLE["blue"]))
+                else:
+                    start = ev.get("start", "")
+                    hhmm = start[-5:] if ":" in start[-5:] else ""
+                    lines.append(Text(f"◆ {hhmm} {title}".strip(), style=ROLE["blue"]))
+            def _pri(t):
+                return (t.priority or 10, t.summary.lower())
+            for t in sorted(tasks_by_day.get(d, []), key=_pri):
+                lines.append(Text(
+                    f"☐ {t.summary}",
+                    style=_PRI_STYLE.get(t.priority, ROLE["fg"]),
+                ))
+            cols.append(lines)
+
+        height = min(max((len(c) for c in cols), default=0), 6)
+        height = max(height, 1)
+        for r in range(height):
+            row = []
+            for c in cols:
+                if r == height - 1 and len(c) > height:
+                    row.append(Text(f"+{len(c) - height + 1} more", style=ROLE["muted"]))
+                elif r < len(c):
+                    row.append(c[r])
+                else:
+                    row.append(Text(""))
+            grid.add_row(*row)
+        strip.update(grid)
+
+    def action_toggle_week(self) -> None:
+        strip = self.query_one(WeekStrip)
+        strip.display = not strip.display
+        if strip.display:
+            self._update_week()
+            self._khal_worker()
 
     def _selected(self):
         table = self.query_one(TaskTable)
@@ -564,6 +667,12 @@ class TasqApp(App):
         self.refresh_tasks()
 
     def action_new_list(self) -> None:
+        # With a Radicale backend, new lists land in its storage and the
+        # next discover+sync creates them server-side. Without it, lists
+        # are local-only (iCloud pair is pinned to collection IDs).
+        new_root = os.environ.get("TASQ_NEW_LIST_ROOT") or None
+        radicale_pair = os.environ.get("TASQ_NEW_LIST_PAIR") or None
+
         def done(name: str | None) -> None:
             if not name or not name.strip():
                 return
@@ -571,20 +680,29 @@ class TasqApp(App):
             if self.store.list_named(name):
                 self.notify(f"list '{name}' already exists", severity="warning")
                 return
-            self.store.create_list(name)
+            self.store.create_list(name, root=new_root)
             self.store.reload()
             self.refresh_tasks()
-            self.notify(
-                f"list '{name}' created — LOCAL-ONLY. To get a phone-synced "
-                "list, create it in Apple Reminders instead (see walkthrough).",
-                timeout=10,
-            )
+            if radicale_pair:
+                self.notify(f"list '{name}' created — pushing to Radicale…")
+                self._new_list_worker(radicale_pair)
+            else:
+                self.notify(
+                    f"list '{name}' created — LOCAL-ONLY. To get a phone-synced "
+                    "list, create it in Apple Reminders instead (see walkthrough).",
+                    timeout=10,
+                )
 
-        self.push_screen(
-            LineModal("New list (local-only — phone lists: create in Reminders)",
-                      placeholder="list name"),
-            done,
+        title = (
+            "New list (synced via Radicale)" if radicale_pair
+            else "New list (local-only — phone lists: create in Reminders)"
         )
+        self.push_screen(LineModal(title, placeholder="list name"), done)
+
+    @work(thread=True, exclusive=True, group="sync")
+    def _new_list_worker(self, pair: str) -> None:
+        code, out = self.store.discover_and_sync(pair)
+        self.call_from_thread(self._sync_done, code, out)
 
     # -- filters / sort / view -----------------------------------------------------
 
@@ -676,6 +794,7 @@ class TasqApp(App):
     def action_reload(self) -> None:
         self.store.reload()
         self.refresh_tasks()
+        self._fetch_week_events()
         self.notify("reloaded from vdir")
 
     def action_sync(self) -> None:
@@ -691,6 +810,7 @@ class TasqApp(App):
         if code == 0:
             self.store.reload()
             self.refresh_tasks()
+            self._fetch_week_events()
             self.notify("sync ok ✓")
         else:
             self.notify(f"sync failed ({code}): {out[-300:]}", severity="error", timeout=10)
@@ -713,10 +833,14 @@ class TasqApp(App):
 
 
 def main() -> None:
-    glob_path = os.environ.get("TASQ_PATH", DEFAULT_GLOB)
+    # TASQ_PATH may hold several globs (":"-separated) — e.g. the iCloud
+    # tasks vdir plus the Radicale one.
+    globs = [
+        g for g in os.environ.get("TASQ_PATH", DEFAULT_GLOB).split(":") if g
+    ]
     cache_path = os.environ.get("TASQ_CACHE", DEFAULT_CACHE)
     try:
-        store = Store([glob_path], cache_path)
+        store = Store(globs, cache_path)
     except Exception as exc:
         print(f"tasq: {exc}", file=sys.stderr)
         raise SystemExit(1)

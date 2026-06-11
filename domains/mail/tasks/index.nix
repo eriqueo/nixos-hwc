@@ -32,6 +32,12 @@ let
     then osCfg.age.secrets.apple-app-pw.path
     else "/run/agenix/apple-app-pw";
 
+  # Same handshake for the Radicale credential (htpasswd "user:password").
+  hasRadicalePw = (osCfg ? age) && (osCfg.age.secrets ? radicale-htpasswd);
+  radicalePwPath = if hasRadicalePw
+    then osCfg.age.secrets.radicale-htpasswd.path
+    else "/run/agenix/radicale-htpasswd";
+
   # Reuse the calendar account's email — same Apple ID, same secret.
   calAccounts = config.hwc.mail.calendar.accounts;
   hasAccount = calAccounts ? ${cfg.account};
@@ -42,8 +48,17 @@ let
     collections = cfg.collections;
   };
 
+  radicalePair = import ./parts/vdirsyncer-pair-radicale.nix {
+    inherit dataDir;
+    url = cfg.radicale.url;
+    username = cfg.radicale.username;
+    secretPath = radicalePwPath;
+  };
+
   todomanConfig = import ./parts/todoman-config.nix {
     defaultList = cfg.defaultList;
+    # "tasks*/*" also matches tasks-radicale/ when that backend is on.
+    pathGlob = if cfg.radicale.enable then "tasks*/*" else "tasks/*";
   };
 in
 {
@@ -87,6 +102,28 @@ in
         set it in the machine one-off, not here.
       '';
     };
+
+    radicale = {
+      enable = lib.mkEnableOption ''
+        second tasks pair against the self-hosted Radicale server
+        (tasks.hwc.iheartwoodcraft.com). Auto-discovers collections both ways,
+        so lists created locally (tasq N) sync to the server and the phone
+        (via its CalDAV account). Requires the radicale-htpasswd secret and
+        the server's hwc.server.services.radicale to be deployed
+      '';
+
+      url = lib.mkOption {
+        type = lib.types.str;
+        default = "https://tasks.hwc.iheartwoodcraft.com/";
+        description = "Radicale CalDAV base URL (the Caddy vhost).";
+      };
+
+      username = lib.mkOption {
+        type = lib.types.str;
+        default = "eric";
+        description = "Radicale username (first field of the htpasswd secret).";
+      };
+    };
   };
 
   #============================================================================
@@ -95,8 +132,9 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.todoman ];
 
-    # Contribute the tasks pair to the shared (calendar) vdirsyncer config.
-    hwc.mail.calendar.extraVdirsyncerPairs = [ tasksPair ];
+    # Contribute the tasks pair(s) to the shared (calendar) vdirsyncer config.
+    hwc.mail.calendar.extraVdirsyncerPairs =
+      [ tasksPair ] ++ lib.optional cfg.radicale.enable radicalePair;
 
     # Read-only config.py (todoman does not rewrite it → store symlink is fine).
     xdg.configFile."todoman/config.py".text = todomanConfig;
@@ -104,6 +142,8 @@ in
     # Ensure the local vdir + cache dirs exist (mirrors calendar's calendarDirs).
     home.activation.tasksDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       run mkdir -p ~/.local/share/vdirsyncer/tasks ~/.cache/todoman
+      ${lib.optionalString cfg.radicale.enable
+        "run mkdir -p ~/.local/share/vdirsyncer/tasks-radicale"}
     '';
 
     #==========================================================================
