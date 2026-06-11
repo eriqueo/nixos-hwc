@@ -1,4 +1,4 @@
-# modules/home/apps/hyprland/parts/session.nix
+# domains/home/apps/hyprland/parts/session.nix
 {
   config,
   lib,

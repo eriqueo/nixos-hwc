@@ -1,20 +1,7 @@
 # domains/home/apps/bottles-unwrapped/index.nix
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.hwc.home.apps.bottles-unwrapped;
-in
-{
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.home.apps.bottles-unwrapped = {
-    enable = lib.mkEnableOption "Bottles Wine manager (unwrapped)";
-  };
-
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.bottles-unwrapped ];
-  };
+# One-package app module via domains/lib/mkSimpleApp.nix (Law 2: name = folder).
+import ../../../lib/mkSimpleApp.nix {
+  name = "bottles-unwrapped";
+  description = "Bottles Wine manager (unwrapped)";
+  package = pkgs: pkgs.bottles-unwrapped;
 }

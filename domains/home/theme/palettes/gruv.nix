@@ -1,4 +1,4 @@
-# modules/home/theme/palettes/gruv.nix
+# domains/home/theme/palettes/gruv.nix
 # Gruvbox Material Dark - Expanded tokens for rich UI theming
 { osConfig ? {} }:
 {

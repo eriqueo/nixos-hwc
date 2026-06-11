@@ -1,20 +1,7 @@
 # domains/home/apps/obsidian/index.nix
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.hwc.home.apps.obsidian;
-in
-{
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.home.apps.obsidian = {
-    enable = lib.mkEnableOption "Obsidian note-taking app";
-  };
-
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.obsidian ];
-  };
+# One-package app module via domains/lib/mkSimpleApp.nix (Law 2: name = folder).
+import ../../../lib/mkSimpleApp.nix {
+  name = "obsidian";
+  description = "Obsidian note-taking app";
+  package = pkgs: pkgs.obsidian;
 }

@@ -1,4 +1,4 @@
-# modules/home/apps/waybar/parts/scripts.nix
+# domains/home/apps/waybar/parts/scripts.nix
 { pkgs, lib, pathBin, osConfig ? {} }:
 let
   sh = name: text: pkgs.writeShellScriptBin name ''

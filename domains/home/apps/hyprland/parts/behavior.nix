@@ -1,4 +1,4 @@
-# modules/home/apps/hyprland/parts/behavior.nix
+# domains/home/apps/hyprland/parts/behavior.nix
 { config, lib, pkgs, osConfig ? {}, ... }:
 let
   mod = "SUPER";

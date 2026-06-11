@@ -1,4 +1,4 @@
-# modules/home/apps/neomutt/parts/theme.nix
+# domains/home/apps/neomutt/parts/theme.nix
 # Adapter: palette → NeoMutt color tokens (names only; fixed style)
 { config, lib, osConfig ? {}, ... }:
 

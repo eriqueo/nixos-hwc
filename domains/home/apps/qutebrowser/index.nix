@@ -30,7 +30,8 @@ in
   config = lib.mkIf cfg.enable {
     home.packages = [ package ] ++ cfg.extraPackages;
 
-    # TODO: Add application-specific configuration
+    # Minimal scaffold by design — qutebrowser ships with stock config;
+    # add app-specific settings here if the module is ever fleshed out.
     # Examples:
     # - xdg.configFile for config files
     # - xdg.desktopEntries for custom launchers

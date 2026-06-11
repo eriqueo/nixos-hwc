@@ -2,7 +2,8 @@
 { lib, pkgs, config, osConfig ? {}, ... }:
 let
   cfg = config.hwc.home.apps.chromium;
-  isNixOSHost = osConfig ? hwc;
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  isNixOSHost = hmLib.isNixOSHost osConfig;
   launcher = import ./parts/launcher.nix { inherit lib pkgs; };
 in
 {
@@ -55,14 +56,7 @@ in
       # Cross-lane consistency: check if system-lane is also enabled (NixOS only)
       # Feature Detection: Only enforce on NixOS hosts where system config is available
       # On non-NixOS hosts, user is responsible for system-lane dependencies
-      {
-        assertion = !cfg.enable || !isNixOSHost || lib.attrByPath [ "hwc" "system" "apps" "chromium" "enable" ] false osConfig;
-        message = ''
-          hwc.home.apps.chromium is enabled but hwc.system.apps.chromium is not.
-          System integration (dconf, dbus) is required for chromium.
-          Enable hwc.system.apps.chromium in machine config.
-        '';
-      }
+      (hmLib.sysLaneAssert { inherit osConfig; enabled = cfg.enable; app = "chromium"; })
     ];
   };
 }

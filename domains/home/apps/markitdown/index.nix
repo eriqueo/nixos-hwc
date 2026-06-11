@@ -1,20 +1,7 @@
 # domains/home/apps/markitdown/index.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
-let
-  cfg = config.hwc.home.apps.markitdown;
-in
-{
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.home.apps.markitdown = {
-    enable = lib.mkEnableOption "markitdown — convert PDF/DOCX/XLSX/images/audio to Markdown";
-  };
-
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.python3Packages.markitdown ];
-  };
+# One-package app module via domains/lib/mkSimpleApp.nix (Law 2: name = folder).
+import ../../../lib/mkSimpleApp.nix {
+  name = "markitdown";
+  description = "markitdown — convert PDF/DOCX/XLSX/images/audio to Markdown";
+  package = pkgs: pkgs.python3Packages.markitdown;
 }

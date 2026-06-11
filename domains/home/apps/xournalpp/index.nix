@@ -1,20 +1,7 @@
 # domains/home/apps/xournalpp/index.nix
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.hwc.home.apps.xournalpp;
-in
-{
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.home.apps.xournalpp = {
-    enable = lib.mkEnableOption "xournalpp PDF annotator and note-taker";
-  };
-
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.xournalpp ];
-  };
+# One-package app module via domains/lib/mkSimpleApp.nix (Law 2: name = folder).
+import ../../../lib/mkSimpleApp.nix {
+  name = "xournalpp";
+  description = "xournalpp PDF annotator and note-taker";
+  package = pkgs: pkgs.xournalpp;
 }

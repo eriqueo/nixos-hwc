@@ -48,4 +48,7 @@ re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
 
+- 2026-06-11: Add mkSimpleApp.nix (one-package HM app modules) and hm.nix
+  (cross-lane helpers: isNixOSHost, osCfgOr, sysLaneAssert).
+
 - 2026-03-04: Extracted from `domains/server/containers/_shared/` (Phase 2 of DDD migration)

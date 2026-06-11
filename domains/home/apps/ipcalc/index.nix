@@ -1,20 +1,7 @@
 # domains/home/apps/ipcalc/index.nix
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.hwc.home.apps.ipcalc;
-in
-{
-  #==========================================================================
-  # OPTIONS
-  #==========================================================================
-  options.hwc.home.apps.ipcalc = {
-    enable = lib.mkEnableOption "ipcalc IP calculator";
-  };
-
-  #==========================================================================
-  # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.ipcalc ];
-  };
+# One-package app module via domains/lib/mkSimpleApp.nix (Law 2: name = folder).
+import ../../../lib/mkSimpleApp.nix {
+  name = "ipcalc";
+  description = "ipcalc IP calculator";
+  package = pkgs: pkgs.ipcalc;
 }

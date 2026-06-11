@@ -3,8 +3,9 @@
 let
   cfg = config.hwc.home.apps.aider;
 
-  isNixOSHost = osConfig ? hwc;
-  osCfg = if isNixOSHost then osConfig else {};
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  isNixOSHost = hmLib.isNixOSHost osConfig;
+  osCfg = hmLib.osCfgOr osConfig;
 
   openaiSecretPath = lib.attrByPath [ "age" "secrets" "openai-api-key" "path" ] null osCfg;
   anthropicSecretPath = lib.attrByPath [ "age" "secrets" "anthropic-api-key" "path" ] null osCfg;
