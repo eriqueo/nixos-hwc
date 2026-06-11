@@ -20,7 +20,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ```
 domains/home/
-├── apps/    # 52 app modules, auto-imported via readDir (index.nix per app,
+├── apps/    # 53 app modules, auto-imported via readDir (index.nix per app,
 │            # optional sys.nix system half, parts/ for split config)
 ├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
 └── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
@@ -45,6 +45,11 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-11: New apps/exodos/ — eXoDOS flatpak auto-install + exogui
+  launcher, extracted from verbatim-identical blocks in
+  machines/{laptop,kids}/home.nix. Collection path is the `root` option
+  (defaults to ~/eXoDOS via home.homeDirectory — removes the hardcoded
+  /home/eric literals).
 - 2026-06-11: Structural cleanups — core/shell split into parts/ (aliases,
   ssh, zsh-init, prompt, fzf); 13 one-package app modules collapsed onto
   domains/lib/mkSimpleApp.nix; cross-lane boilerplate centralized in
