@@ -24,6 +24,10 @@ domains/home/
 
 ## Changelog
 
+- 2026-06-11: Delete apps/aerc/ — dead duplicate of domains/mail/aerc/
+  with a latent eval crash (unguarded read of an undeclared namespace at
+  index.nix:46); enabled nowhere. Also removed the stale untracked
+  domains/home/mail/ .bak tree and the "add mail here" comment in index.nix.
 - 2026-06-11: Delete apps/n8n/parts/n8n-workflows/ — 82 MB / 824 tracked
   files of vendored third-party repo (plus untracked .venv/db artifacts),
   referenced by nothing (Law 13). apps/n8n/index.nix retained.
