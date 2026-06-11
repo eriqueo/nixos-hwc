@@ -35,8 +35,8 @@ profiles/<role>/{sys,home}.nix     # Role layer (base, desktop, server, business
                                    #   monitoring, gaming, appliance, mail) — Law 16
 domains/
   home/apps/                       # Home Manager apps (waybar, hyprland, aerc, kitty, etc.)
-  home/environment/shell/          # Shell config, scripts, env vars
-  home/theme/                      # Gruvbox Material Dark palette + adapters
+  home/core/shell/                 # CLI env (zsh, aliases, fzf, starship) — hwc.home.core.*
+  home/theme/                      # Palettes (hwc/gruv/deep-nord) + gtk template + fonts
   networking/routes.nix            # ALL Caddy reverse proxy routes (ports 1443-18095)
   server/containers/               # Podman containers (immich, frigate, arr stack, etc.)
   secrets/declarations/            # agenix secret declarations
