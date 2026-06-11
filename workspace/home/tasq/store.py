@@ -238,15 +238,23 @@ class Store:
         return proc.returncode, out
 
     def sync(self) -> tuple[int, str]:
-        """Run `vdirsyncer sync <pairs>`. Call from a worker, never the UI thread."""
-        return self._run_vdirsyncer(["sync", *self.sync_pairs])
+        """Run `vdirsyncer sync <pairs>` (+ metasync so list names/colors
+        propagate). Call from a worker, never the UI thread."""
+        code, out = self._run_vdirsyncer(["sync", *self.sync_pairs])
+        if code == 0:
+            self._run_vdirsyncer(["metasync", *self.sync_pairs])
+        return code, out
 
     def discover_and_sync(self, pair: str) -> tuple[int, str]:
         """Re-run collection discovery for one pair (answering yes to
         creation prompts), then sync it. Needed after creating a new list
-        locally so vdirsyncer creates the collection server-side. Call from
-        a worker."""
+        locally so vdirsyncer creates the collection server-side. metasync
+        carries the displayname so the phone shows the list's real name.
+        Call from a worker."""
         code, out = self._run_vdirsyncer(["discover", pair], input_text="y\n" * 20)
         if code != 0:
             return code, out
-        return self._run_vdirsyncer(["sync", pair])
+        code, out = self._run_vdirsyncer(["sync", pair])
+        if code == 0:
+            self._run_vdirsyncer(["metasync", pair])
+        return code, out
