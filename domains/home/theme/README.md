@@ -1,49 +1,43 @@
-# Meta-Summary: How Domains Interconnect
-## Core Idea -
-**Single Source of Truth**:
-      - All colors and theme tokens come from palettes/ (e.g. deep-nord.nix). -
-**Adapters**: 
-      - Translate palette → per-app or per-system config format (GTK, Waybar CSS, Hyprland, etc). - 
-**Apps**: 
-      - Import adapters (or palette directly if no adapter exists).  
-**System Tools**: 
-      - For Hyprland and Waybar, provide helper scripts that integrate with system services. - 
-**Profiles**: 
-      - User selects imports in profiles/workstation.nix → toggles which apps/tools are active. --- 
-**Flow of Control**  
-### 1. Palette → Adapters  
-      - Palettes live in domains/home/theme/palettes/.  
-      - Each adapter (gtk.nix, waybar-css.nix, hyprland.nix) pulls tokens from the palette. - 
-      - Output = config snippets (GTK configs, CSS variables, Hyprland options). 
-### 2. Adapters → Applications 
-      - Apps like **Thunar**: import GTK adapter for theming. 
-      - Apps like **Kitty**: import palette directly and map tokens → color0–15. 
-      - Browsers (Firefox/Chromium/LibreWolf): need dedicated adapters (CSS/userChrome injection). 
-      - Betterbird: planned to use Thunderbird module + custom CSS adapter. 
-### 3. Home Manager vs System Integration - 
-**Home Manager scope**: 
-      - Programs configured per-user (programs.kitty, programs.waybar). 
-      - XDG configs like ~/.config/gtk-3.0/gtk.css or ~/.config/waybar/style.css. 
-**System scope**: 
-      - Packages and scripts exposed via environment.systemPackages. 
-      - Examples: Waybar GPU scripts, Hyprland monitor toggle. 
-      - Convention: both live inside the same app folder (apps/waybar/, hyprland/parts/), split into default.nix (home) and system.nix. 
-### 4. Profiles (Entry Point) 
-      - profiles/workstation.nix imports all relevant modules: 
-      - domains/home/apps/kitty.nix 
-      - domains/home/apps/thunar.nix 
-      - domains/home/apps/waybar/default.nix 
-      - domains/home/hyprland/default.nix 
-      - Profiles decide which domains are active for a given machine. --- 
-## Theming Workflow 
-      1. User sets palette in domains/home/theme/palettes/. 
-        - Future: config.hwc.home.theme.palette = "deep-nord"; 
-      2. Adapters translate into system-specific formats. 
-      3. Apps read from adapters (or palette directly). 
-      4. To **switch theme**: 
-        - Change palette import (or palette option). 
-        - Rebuild system (nixos-rebuild switch). 
-        - All apps update together.
-## Goal State - **1 Palette → Many Adapters → All Apps**. 
-      - One edit (palette hex values) changes entire system look. 
-      - Apps grouped logically, each folder contains everything (Home Manager + system tools).
+# Home Theme
+
+## Purpose
+Single source of truth for look-and-feel: color palettes materialized as
+token sets, GTK/Qt theming, fonts, and pointer cursor.
+
+## Boundaries
+- Manages: `hwc.home.theme.*` (palette, colors, cursor, icons, gtkTheme,
+  typography, fonts.{enable,mono,ui}), GTK 2/3/4 + Qt platform theming.
+- Does NOT manage: per-app color consumption — apps read the guarded
+  token set themselves (see canonical accessor below).
+
+## Structure
+```
+theme/
+├── index.nix        # Options + palette materialization + qt platform theme
+├── palettes/        # deep-nord.nix, gruv.nix, hwc.nix (token sets incl.
+│                    #   ansi, sectionA-D powerline tokens, cursor block)
+├── templates/
+│   └── gtk.nix      # palette -> GTK 2/3/4 settings, CSS bridge, pointerCursor
+├── fonts/index.nix  # font packages + mono/ui font-name tokens
+└── nord-mountains.jpg
+```
+
+## How it works
+1. `hwc.home.theme.palette` selects a palette (default `hwc`).
+2. `index.nix` materializes it as `hwc.home.theme.colors` and wires the
+   palette's cursor block into `hwc.home.theme.cursor` (xcursor only —
+   hyprcursor assets are not in the repo; backlog).
+3. Apps consume tokens via the guarded read:
+   `(config.hwc.home.theme or {}).colors or {}` — never by importing
+   palette files directly.
+4. `templates/gtk.nix` (auto-imported) applies GTK/Qt/cursor/icon theming
+   for every HM host; `fonts/index.nix` is gated on `theme.fonts.enable`.
+
+There is no separate "adapters" layer — that design was never built; the
+former README describing it was aspirational.
+
+## Changelog
+- 2026-06-11: Rewritten to describe the real architecture (options +
+  materialized tokens + gtk template), replacing the phantom-adapters
+  meta-summary. cursor/icons/gtkTheme/typography options are now declared;
+  sectionA-D and fonts.mono/ui tokens added.
