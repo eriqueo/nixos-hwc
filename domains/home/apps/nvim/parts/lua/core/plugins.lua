@@ -149,6 +149,25 @@ require("lazy").setup({
     },
   },
 
+  -- tuxedo.nvim — floating todo.txt popup (IogaMaster/tuxedo.nvim).
+  -- Companion to the tuxedo CLI (hwc.home.apps.tuxedo). Lazy-loaded on the
+  -- :Tuxedo command / <leader>td. Intended to edit the same todo.txt the CLI
+  -- uses (TODO_FILE is set in the session env) — verify after first launch.
+  {
+    "IogaMaster/tuxedo.nvim",
+    cmd = "Tuxedo",
+    keys = {
+      { "<leader>td", "<cmd>Tuxedo<cr>", desc = "Tuxedo: todo.txt popup" },
+    },
+    config = function()
+      require("tuxedo").setup({
+        create_todo_file = true,
+        width_ratio = 0.95,
+        height_ratio = 0.80,
+      })
+    end,
+  },
+
   -- Harpoon
   {
     "ThePrimeagen/harpoon",
