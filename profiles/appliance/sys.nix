@@ -1,11 +1,15 @@
+# profiles/appliance/sys.nix — appliance role, NixOS lane
+#
+# Lean travel-TV stack: strip extras from the base role defaults.
+# Base role is supplied by the machine's role list — this role does NOT
+# import it (roles never import roles).
+#
+# REPLACES: profiles/firestick.nix
+# USED BY: firestick (role list in flake.nix machines table)
+
 { lib, ... }:
 
 {
-  # Lean travel-TV stack: reuse core profile defaults, then strip extras.
-  imports = [
-    ./core.nix
-  ];
-
   # No backups or Samba on the stick.
   hwc.data.backup.enable = lib.mkForce false;
   hwc.system.networking.samba.enable = lib.mkForce false;

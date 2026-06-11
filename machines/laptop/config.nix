@@ -21,9 +21,11 @@
     ./hardware.nix
     "${modulesPath}/hardware/cpu/intel-npu.nix"
 
-    # Profiles — core (system/paths/secrets) + session (GUI/audio/HM)
-    ../../profiles/core.nix
-    ../../profiles/session.nix
+    # Roles — base (system/paths/secrets) + desktop (GUI/audio/HM)
+    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
+    # the flake.nix machines-table resolver.
+    ../../profiles/base/sys.nix
+    ../../profiles/desktop/sys.nix
     # Machine-specific HM overrides imported via home-manager.users.eric below
 
     # Domains — laptop-specific capabilities

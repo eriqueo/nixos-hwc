@@ -232,7 +232,8 @@
           nixosApiVersion = "unstable";
         };
         modules = [
-          ./profiles/home-session.nix
+          ./profiles/base/home.nix
+          ./profiles/desktop/home.nix
           ./machines/laptop/home.nix
           { home.username = "eric"; home.homeDirectory = "/home/eric"; }
         ];

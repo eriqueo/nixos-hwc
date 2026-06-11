@@ -8,14 +8,16 @@
   imports = [
     ./hardware.nix
 
-    # Core profile — system/paths/secrets (NO session.nix — headless server)
-    ../../profiles/core.nix
+    # Base role — system/paths/secrets (NO desktop role — headless server)
+    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
+    # the flake.nix machines-table resolver.
+    ../../profiles/base/sys.nix
 
     ../../domains/ai/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
     ../../domains/media/index.nix
-    ../../profiles/monitoring.nix
+    ../../profiles/monitoring/sys.nix
     ../../domains/business/index.nix  # Direct domain import (no profile wrapper)
     ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync

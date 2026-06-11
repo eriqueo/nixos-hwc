@@ -4,7 +4,11 @@
   imports = [
     ./hardware.nix
     ./home.nix
-    ../../profiles/firestick.nix
+    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
+    # the flake.nix machines-table resolver. base supplies what firestick.nix
+    # previously pulled in via its core.nix import.
+    ../../profiles/base/sys.nix
+    ../../profiles/appliance/sys.nix
   ];
 
   networking.hostName = "hwc-firestick";

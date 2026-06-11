@@ -9,9 +9,11 @@
   imports = [
     ./hardware.nix
 
-    # Profiles — core (system/paths/secrets) + session (GUI/audio/HM)
-    ../../profiles/core.nix
-    ../../profiles/session.nix
+    # Roles — base (system/paths/secrets) + desktop (GUI/audio/HM)
+    # TRANSITIONAL: explicit role-half imports; Phase B replaces these with
+    # the flake.nix machines-table resolver.
+    ../../profiles/base/sys.nix
+    ../../profiles/desktop/sys.nix
     ./home.nix  # Machine-specific HM overrides
 
     # Domains — xps-specific capabilities
@@ -19,7 +21,7 @@
     ../../domains/notifications/index.nix
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
-    ../../profiles/monitoring.nix
+    ../../profiles/monitoring/sys.nix
     # ../../domains/media/index.nix    # Enable when storage is mounted
     # ../../domains/business/index.nix # Enable when business services are needed
   ];
