@@ -156,20 +156,8 @@
   # Time zone (from production)
   time.timeZone = "America/Denver";
 
-  # Production system settings
-  nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
-    # Official NixOS CUDA binary cache (moved from cachix Nov 2025)
-    # https://wiki.nixos.org/wiki/CUDA
-    substituters = [
-      "https://cache.nixos.org"
-      "https://cache.nixos-cuda.org"
-    ];
-    trusted-public-keys = [
-      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-      "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
-    ];
-  };
+  # CUDA binary cache comes from the gpu module (nvidia machines only);
+  # experimental-features and cache.nixos.org come from the base role.
   # allowUnfree set in flake.nix
 
   # --- Networking Configuration (Server: DO wait for network) ---
