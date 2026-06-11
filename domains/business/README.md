@@ -1,32 +1,32 @@
-# AI MCP
+# Business Domain
 
 ## Purpose
-Model Context Protocol servers for AI tool integration.
+Heartwood Craft operations: lead pipeline, estimator, document management,
+finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Boundaries
-- Manages: MCP server configurations, tool definitions
-- Does NOT manage: LLM inference → `ollama/`, UI → `open-webui/`
+- Manages: `hwc.business.*` services and their PostgreSQL schemas.
+- Does NOT manage: workflow automation (n8n/MQTT → `domains/automation/`),
+  AI inference (`domains/ai/`, `domains/server/native/ai/`), reverse-proxy
+  routes (`domains/networking/routes.nix`).
+- Enabled as a bundle by the business role (`profiles/business/sys.nix`,
+  server-only).
 
 ## Structure
 ```
-mcp/
-├── default.nix    # Import wrapper
-├── index.nix      # MCP infrastructure (mkMcpService, proxy, filesystem server)
-└── heartwood/     # JT MCP Server — unified business system interface
-    ├── index.nix  # NixOS module (systemd service, options, validation)
-    └── README.md  # Heartwood-specific docs
+business/
+├── index.nix          # Domain aggregator
+├── databases/         # hwc.business.databases — business PostgreSQL layer
+├── datax/             # hwc.business.datax — legacy postgres role/db (lead_scout)
+├── estimator/         # hwc.business.estimator — React PWA on :13443
+├── firefly/           # hwc.business.firefly — Firefly III finance
+├── leads/             # hwc.business.leads — unified lead pipeline
+├── morning-briefing/  # hwc.business.morningBriefing — 6am Claude agent
+├── paperless/         # hwc.business.paperless — Paperless-NGX documents
+└── website/           # hwc.business.website — Heartwood CMS + 11ty + webapps
 ```
 
-## Notes
-- JT MCP source code is deployed to `/opt/business/jt-mcp` at runtime (not in workspace)
-- The old `workspace/projects/jt-mcp/` was removed during the 2026-03-26 workspace restructure
-
 ## Changelog
-- 2026-06-09: Law 9/10 — `datax/default.nix` → `datax/index.nix`; `website/webapps.nix` → `website/webapps/index.nix` (pure relocations).
-- 2026-06-09: Law 3 finish — morning-briefing (agentDir, HOME, sandbox claude path) and website (siteDir default) derive from `hwc.paths`. Drv hash unchanged.
-- 2026-06-09: Removed orphaned `n8n/` (workflow JSON exports — live workflows are in the n8n DB; live module is `domains/automation/n8n/`) and `receipts/` (pre-Heartwood-API Python project, README dated 2025-03). Both recoverable from git history.
-- 2026-06-09: Law 10 migration — inlined `leads/options.nix` into `leads/index.nix`.
-- 2026-05-31: Added `leads/` subdomain — `hwc.business.leads.*` (Phase 0 scaffold of the unified lead pipeline; Phase 2 will implement). See `~/.claude/plans/hashed-snacking-crab.md`.
-- 2026-03-26: jt-mcp decoupled from parent hwc.ai.mcp.enable — now standalone; enabled directly in server config
-- 2026-03-25: Added heartwood/ subdomain — JT MCP Server (Phase 1: 63 JT tools)
-- 2026-02-28: Added README for Charter Law 12 compliance
+- 2026-06-11: README rewritten — this file previously contained the AI-MCP
+  domain readme by mistake. Business enables now come from the business
+  role rather than machines/server/config.nix.

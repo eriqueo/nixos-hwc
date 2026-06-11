@@ -1,26 +1,47 @@
 # Home Domain
 
-## Scope & Boundary
-- Home Manager lane only: user applications, dotfiles, theming, and personal workflows.
-- Namespaces follow folder paths per Charter Law 2 (`hwc.home.*`, `hwc.home.apps.<name>.*`).
-- System lane helpers live beside some apps as `sys.nix`, imported only from system profiles.
+## Purpose
 
-## Layout
+Home Manager lane: user applications, dotfiles, theming, and personal
+workflows. This domain is OS-agnostic by design — every module evaluates
+with `osConfig = {}` (Law 1) so the same configuration runs under
+HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
+
+## Boundaries
+
+- Manages: HM app modules (`hwc.home.apps.*`), the CLI core
+  (`hwc.home.core.{shell,development}.*`), theming (`hwc.home.theme.*`).
+- Does NOT manage: mail (top-level `domains/mail/`, namespace `hwc.mail.*`),
+  system-lane services, machine membership (flake.nix machines table).
+- System-lane halves live beside apps as `sys.nix`, gathered by
+  `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
+
+## Structure
+
 ```
 domains/home/
-├── apps/              # Application modules (HM lane, optional sys.nix per app)
-├── core/              # Cross-cutting home defaults (e.g., XDG dirs)
-├── environment/       # Shell + shared scripts for the user environment
-└── theme/             # Fonts, palettes, templates for UI theming
+├── apps/    # 52 app modules, auto-imported via readDir (index.nix per app,
+│            # optional sys.nix system half, parts/ for split config)
+├── core/    # shell/ (CLI env, zsh, aliases — parts/), development/, xdg-dirs.nix
+└── theme/   # palettes/ (deep-nord, gruv, hwc), templates/gtk.nix, fonts/
 ```
 
-> The mail stack lives at the top level under `domains/mail/` (namespace `hwc.mail.*`).
+One-package apps use `domains/lib/mkSimpleApp.nix`; cross-lane helpers
+(`isNixOSHost`, `osCfgOr`, `sysLaneAssert`) live in `domains/lib/hm.nix`.
 
-## Subdomains
-- **apps/** – Toggle per-app modules via `hwc.home.apps.<name>.enable`. Some provide paired system-lane integrations under the same folder (`sys.nix`).
-- **environment/** – User shell and helper scripts (`environment/shell`, `environment/parts`, `environment/scripts`). Options are under `hwc.home.environment.*`.
-- **theme/** – Palettes, font sets, and templated assets for consistent look-and-feel (`hwc.home.theme.*`).
-- **core/** – Minimal plumbing for shared defaults (e.g., XDG directories) consumed by other home modules.
+## Theme access (canonical)
+
+Modules read theme tokens with the guarded form, never by importing
+palette files directly:
+
+```nix
+colors = (config.hwc.home.theme or {}).colors or {};
+uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
+```
+
+`hwc.home.theme.colors` is the materialized palette;
+`hwc.home.theme.{cursor,icons,gtkTheme,typography}` carry look-and-feel
+tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
@@ -81,38 +102,35 @@ domains/home/
 - 2026-05-21: removed dead `mail/` subtree (abook, accounts, aerc, afew, bridge, mbsync, msmtp, notmuch, parts, `index.nix`/`options.nix`). The live mail stack lives at `domains/mail/` (namespace `hwc.mail.*`); `domains/home/index.nix` listed only `core/theme/apps` in `wantedDirs`, so the home/mail tree was never imported. Verified via `rg -ln 'domains/home/mail|\\./home/mail' -t nix .` (zero real imports — only stale path-header comments and docs) and full eval (drv hashes unchanged from post-revert baseline).
 
 ## Applications (current modules)
-Options live under `hwc.home.apps.<name>.*`; enable from the HM profile. Current set (38 modules):
+Options live under `hwc.home.apps.<name>.*`; defaults come from the role
+home halves (`profiles/base/home.nix`, `profiles/desktop/home.nix`);
+per-machine adjustments go in `machines/<host>/home.nix`. Current set
+(52 modules):
 ```
-aerc, betterbird, blender, bottles-unwrapped, chromium, codex, freecad,
-gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, ipcalc,
-jellyfin-media-player, kitty, librewolf, localsend, mpv, n8n, neomutt,
-obsidian, onlyoffice-desktopeditors, opencode, proton-authenticator,
-proton-mail, proton-pass, qbittorrent, qutebrowser, slack, slack-cli,
-swaync, thunar, thunderbird, wasistlos, waybar, wayvnc, whisper-cpp, yazi
+aider, analysis, betterbird, blender, bottles-unwrapped, calcure,
+calcurse, chromium, claude-code, claude-desktop, codex, dt, dxlog,
+freecad, gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, imv,
+ipcalc, jellyfin-media-player, kitty, librewolf, localsend, markitdown,
+mpv, n8n, neomutt, nvim, obsidian, onlyoffice-desktopeditors, opencode,
+proton-authenticator, proton-mail, proton-pass, qbittorrent, qutebrowser,
+scraper, slack, slack-cli, swaync, thunar, thunderbird, tmux, transcript-formatter,
+tuxedo, wasistlos, waybar, whisper-cpp, xournalpp, yazi
 ```
-Update this list whenever `domains/home/apps/` gains a new module so the count stays accurate.
+Update this list whenever `domains/home/apps/` gains or loses a module.
 
 ### Workspace Support (`workspace/home/`)
 
 ```
 workspace/home/
+├── mail/                 # Mail support scripts
 ├── scraper/              # Social media scraper (referenced by apps/scraper/index.nix)
 ├── website_seo_scraper/  # SEO analysis tool
 └── photo-dedup/          # Duplicate photo finder (referenced by shell alias)
 ```
 
 ## Usage
-- Toggle modules via `hwc.home.*` options. Defaults live in `profiles/home-session.nix`; per-machine adjustments go in `machines/<host>/home.nix`.
-- `domains/home/index.nix` is imported by `profiles/home-session.nix`, which feeds **both** activation paths from one source.
-- Keep system-lane imports (`sys.nix` files) in system profiles only; the home lane must stay evaluatable on non-NixOS hosts (`osConfig` guarded).
-- Follow Charter Laws: no hardcoded paths (use `config.hwc.paths.*`), namespace fidelity, and guarded assertions for cross-lane references.
-
-## Activation paths
-Two ways to apply the same configuration:
-
-| Path | Command | When to use |
-|------|---------|-------------|
-| HM-as-module | `sudo nixos-rebuild switch --flake .#hwc-<host>` | System or mixed changes; what runs on boot |
-| HM-as-flake  | `home-manager switch --flake ~/.nixos#eric@$(hostname)` (alias `hms`) | HM-only changes (fast, ~5–10s, no sudo) |
-
-Both paths import `profiles/home-session.nix` + `machines/<host>/home.nix`, so options can't drift between them. They do **not** share a HM profile generation, however — alternating runs can produce "existing file in the way" errors as each side tries to claim the same dotfiles. The module path sets `backupFileExtension = "backup"`; the standalone path does not.
+- Toggle modules via `hwc.home.*` options. Defaults live in the role home
+  halves; machine one-offs in `machines/<host>/home.nix`.
+- `domains/home/index.nix` reaches every machine through
+  `profiles/base/home.nix`, which feeds **both** activation paths
+  (HM-as-module and `hms`) from one source via the flake glue.
