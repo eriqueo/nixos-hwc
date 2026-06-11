@@ -438,28 +438,8 @@
     libvdpau-va-gl       # VDPAU<->VAAPI bridge
   ];
 
-  # Performance mode wrappers for CPU-intensive tasks
-  # TODO: Consider moving to domains/system/services/performance/ module
-  environment.systemPackages = with pkgs; [
-    (writeShellScriptBin "perf-mode" ''
-      #!/usr/bin/env bash
-      # Temporarily switch to maximum CPU performance
-      echo "⚡ Switching to Performance Mode..."
-      echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
-      ${pkgs.libnotify}/bin/notify-send "Performance Mode" "CPU governors set to maximum performance" -i cpu -u normal
-      echo "CPU governors set to 'performance'"
-      echo "Use 'balanced-mode' to restore power-efficient operation"
-    '')
-
-    (writeShellScriptBin "balanced-mode" ''
-      #!/usr/bin/env bash
-      # Restore balanced power-efficient mode
-      echo "🔋 Restoring Balanced Mode..."
-      echo powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor >/dev/null
-      ${pkgs.libnotify}/bin/notify-send "Balanced Mode" "CPU governors restored to power-efficient mode" -i cpu -u normal
-      echo "CPU governors set to 'powersave' (dynamic scaling)"
-    '')
-  ];
+  # Performance mode wrappers (perf-mode/balanced-mode) — system hardware domain
+  hwc.system.hardware.powerScripts.enable = true;
 
   programs.dconf.enable = true;
   services.flatpak.enable = true;
