@@ -71,8 +71,9 @@ through Phases A–C; firestick toplevel byte-identical through Phase C.
 
 ## Activation state
 
-- **hwc-laptop**: `sudo nixos-rebuild switch --flake .#hwc-laptop` — see
-  final session log.
+- **hwc-laptop**: SWITCHED LIVE 2026-06-11
+  (/nix/store/60sgkd17aa153yik7vkz4hlx659ndpkz-…); home-manager-eric,
+  waybar, swaync all active post-switch.
 - **hwc-server**: REBUILD REQUIRED (theme pass: cursor + fzf/starship
   colors in HM; roles are hash-neutral). Run on the server:
   `sudo nixos-rebuild switch --flake ~/.nixos#hwc-server`.
