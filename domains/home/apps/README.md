@@ -15,6 +15,7 @@ apps/
 ├── blender/        # 3D modeling
 ├── chromium/       # Browser
 ├── freecad/        # CAD software
+├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
 ├── librewolf/      # Privacy browser
@@ -45,4 +46,5 @@ apps/
 - 2026-05-28: dxlog — added interactive wizard (launches on `dxlog` with no args) walking action → identifier → time period → limit → format → output destination; auto-saves to `~/dxlog-reports/<slug>-<timestamp>.<ext>` by default. Also made `cmd_init` no-op when env vars are already populated (prevents the user from accidentally clobbering the Nix wrapper's exports by running `dxlog init`)
 - 2026-05-29: Added xournalpp — PDF annotator / handwritten notes. Use case: signing PDFs (draw signature or drop in a PNG image of one, export back to PDF preserving the original)
 - 2026-06-09: Added tuxedo — keyboard-driven todo.txt TUI (webstonehq/tuxedo). Namespace `hwc.home.apps.tuxedo`; sets TODO_DIR/TODO_FILE/DONE_FILE env (default `~/000_inbox/todo`); seeds a writable config.toml via home.activation (tuxedo self-manages the file at runtime, so it is intentionally NOT an xdg.configFile store symlink). Package overridable via `.package` in case the nixpkgs attr differs from `tuxedo`
+- 2026-06-11: Added gpu-screen-recorder — call/screen recording for Zoom/Meet. HM half (`hwc.home.apps.gpu-screen-recorder`) ships only the `gsr-toggle` start/stop script (focused monitor, merged call-audio+mic via `-a "default_output|default_input"`, saves to `$HWC_RECORDINGS_DIR`); the binary itself comes from the co-located sys.nix (`hwc.system.apps.gpu-screen-recorder` → nixpkgs `programs.gpu-screen-recorder`) because the setcap `gsr-kms-server` wrapperDir override only exists on the system lane — an HM-installed copy would shadow it and break promptless Wayland capture. Hyprland behavior.nix adds SHIFT+PRINT → `gsr-toggle` (dt-bind precedent). Enabled on hwc-laptop (both lanes)
 - 2026-06-11: Added tasq — VTODO-native keyboard task TUI (Textual) over the Phase A Reminders sync vdir (`domains/mail/tasks/`). Namespace `hwc.home.apps.tasq`; python env packages todoman as a library via `toPythonModule pkgs.todoman` (no `python3Packages.todoman` exists); runner execs git-tracked source at `workspace/home/tasq/` live (scraper precedent — .py edits need no rebuild); own sqlite cache at `~/.cache/tasq/` separate from todoman CLI's. Enabled for the desktop role
