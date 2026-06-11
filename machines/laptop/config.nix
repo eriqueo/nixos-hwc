@@ -478,7 +478,4 @@
   ];
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
   # nix-ld: enabled in profiles/core.nix (all machines)
-
-  # Allow password auth for SSH (same as server)
-  services.openssh.settings.PasswordAuthentication = lib.mkForce true;
 }

@@ -158,7 +158,6 @@
 
   services.openssh.settings = {
     X11Forwarding = lib.mkForce true;
-    PasswordAuthentication = lib.mkForce true;  # Temporary — remove after SSH key update
   };
 
   # sudo NOPASSWD rules, permitCertUid, and the server package set come

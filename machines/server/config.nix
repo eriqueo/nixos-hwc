@@ -667,7 +667,6 @@
   # Enhanced SSH configuration for server
   services.openssh.settings = {
     X11Forwarding = lib.mkForce false;  # Headless server doesn't need X11 forwarding
-    PasswordAuthentication = lib.mkForce true;  # Temporary - for SSH key update
   };
 
   # Session/sudo/permitCertUid come from the server role. This machine only

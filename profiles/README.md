@@ -34,6 +34,12 @@ mail/        home.nix             # server — hwc.mail menu (Phase C)
 
 ## Changelog
 
+- 2026-06-11: base/sys.nix — `hwc.system.users.user.ssh.enable = true`:
+  every machine provisions eric's authorized keys declaratively, so the
+  base hardening `passwordAuthentication = false` now wins fleet-wide
+  (the three machine-level `mkForce true` bootstrap overrides were
+  removed). New-machine bootstrap no longer needs password SSH — the key
+  lands with the first nixos-install/nixos-rebuild.
 - 2026-06-11: Phase B — machine membership moved to the flake.nix machines
   registry; HM bootstrap moved from desktop/sys.nix into flake glue.
 - 2026-06-10: Phase A — profiles restructured from flat files
