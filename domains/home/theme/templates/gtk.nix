@@ -48,6 +48,10 @@ let
   iconThemeName = icons.name or "Papirus-Dark";
   xcurName      = xcur.name or "Adwaita";
 
+  # Headless machines (theme.graphical = false) skip the GUI-only XCursor
+  # theme (~846 MB) — nothing renders a pointer there.
+  graphical     = (config.hwc.home.theme or {}).graphical or true;
+
   # ----------------------------
   # Derived colors for CSS
   # ----------------------------
@@ -111,14 +115,14 @@ let
 in
 {
   # Install assets — do NOT read config.home.packages here (avoids recursion).
+  # The XCursor theme is GUI-only; headless machines omit it.
   home.packages = [
     gtkPkg
     iconPkg
-    xcurPkg
-  ];
+  ] ++ lib.optional graphical xcurPkg;
 
   # Pointer cursor for GTK/Qt (XCursor); Hyprcursor is handled in Hyprland/session.
-  home.pointerCursor = {
+  home.pointerCursor = lib.mkIf graphical {
     name = xcurName;
     package = xcurPkg;
     size = cursSize;
@@ -139,7 +143,7 @@ in
       package = iconPkg;
     };
 
-    cursorTheme = {
+    cursorTheme = lib.mkIf graphical {
       name = xcurName;
       package = xcurPkg;
       size = cursSize;

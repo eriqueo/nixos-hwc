@@ -36,6 +36,19 @@ in
       description = "Active theme palette (single source of truth).";
     };
 
+    graphical = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Whether this machine has a graphical session. When false (headless),
+        the GUI-only XCursor theme (~846 MB) is not installed and the GTK
+        pointer-cursor wiring is skipped. Palette colors still apply for
+        shell/CLI. Graphical machines keep the default (true); headless
+        machines set false in their machine home one-off (cf.
+        theme.fonts.enable).
+      '';
+    };
+
     colors = lib.mkOption {
       type = lib.types.attrs;
       default = {};

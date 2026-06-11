@@ -15,6 +15,10 @@
   # role is what turns fonts on — but states the intent explicitly).
   hwc.home.theme.fonts.enable = false;
 
+  # Headless: skip the GUI-only XCursor theme (~846 MB) — nothing renders
+  # a pointer on this box. Graphical machines keep the default (true).
+  hwc.home.theme.graphical = false;
+
   # Disable desktop services
   targets.genericLinux.enable = false;
   dconf.enable = lib.mkForce false;

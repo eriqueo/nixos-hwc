@@ -37,6 +37,10 @@ There is no separate "adapters" layer — that design was never built; the
 former README describing it was aspirational.
 
 ## Changelog
+- 2026-06-11: Add `theme.graphical` option (default true). When false, the
+  gtk template skips the GUI-only XCursor theme (~846 MB) and pointer-cursor
+  wiring — headless machines (hwc-server) set it false in their machine home
+  one-off, mirroring `theme.fonts.enable`. Graphical machines unchanged.
 - 2026-06-11: Rewritten to describe the real architecture (options +
   materialized tokens + gtk template), replacing the phantom-adapters
   meta-summary. cursor/icons/gtkTheme/typography options are now declared;
