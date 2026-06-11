@@ -25,6 +25,10 @@ class TaskTable(DataTable):
     ]
 
 
+class DetailPanel(Static):
+    """Right pane: full detail of the selected task (tuxedo-style)."""
+
+
 class LineModal(ModalScreen):
     """Single-line input modal (add/edit task, filter prompts, new list).
 
@@ -108,6 +112,7 @@ HELP_TEXT = """\
   s        cycle sort         priority → due → created
   c        show/hide completed tasks
   l / L    next / previous list
+  [ / ]    toggle sidebar / detail panel
   j/k g/G  move cursor / jump top/bottom
 
  SYSTEM

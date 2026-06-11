@@ -2,14 +2,19 @@
 """tasq — keyboard-driven VTODO task TUI over the Phase A vdir.
 
 Layout (tuxedo-style): top header bar (list · count · sort · filters),
-FilterSidebar (LISTS / PROJECTS / CONTEXTS with counts) | TaskTable, Footer.
-All data access goes through Store (store.py); the one-line task dialect
-lives in model_map.py. Run via the HM `tasq` wrapper (sets TASQ_PATH /
-TASQ_CACHE), or directly — the defaults below match the Phase A backend.
+FilterSidebar (LISTS / PROJECTS / CONTEXTS with counts) | TaskTable |
+DetailPanel, Footer. All data access goes through Store (store.py); the
+one-line task dialect lives in model_map.py.
+
+Colors come from the system theme: the HM module exports the materialized
+hwc.home.theme.colors palette as TASQ_PALETTE (JSON); roles are derived
+below and exposed to theme.tcss as $tq-* CSS variables. No hex literals
+live in the stylesheet — switching the system palette restyles tasq.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -29,6 +34,7 @@ import model_map
 from store import SORT_MODES, Store
 from widgets import (
     ConfirmModal,
+    DetailPanel,
     FilterSidebar,
     HelpModal,
     LineModal,
@@ -41,25 +47,79 @@ DEFAULT_LIST = "Reminders"
 
 ALL_LISTS = "All"
 
-# tuxedo palette (tomorrow-night-ish; matches theme.tcss)
-C_FG = "#c5c8c6"
-C_GRAY = "#6b7480"
-C_BLUE = "#81a2be"
-C_ORANGE = "#de935f"
-C_YELLOW = "#f0c674"
-C_GREEN = "#b5bd68"
-C_RED = "#cc6666"
-C_AQUA = "#8abeb7"
+# Fallback = the hwc palette (domains/home/theme/palettes/hwc.nix), so the
+# app still looks right when run outside the HM wrapper.
+_FALLBACK_PALETTE = {
+    "bg0": "1d2021", "bg1": "282828", "bg2": "2c3338", "bg3": "32373c",
+    "fg0": "ebdbb2", "fg1": "d5c4a1", "fg2": "a7aaad", "fg3": "50626f",
+    "accent": "d08770", "info": "5e81ac",
+    "success": "a3be8c", "successDim": "8aab78",
+    "warning": "cf995f", "warningBright": "fcbb74",
+    "error": "bf616a",
+    "selection": "434c5e", "selectionFg": "ebdbb2",
+    "border": "32373c", "borderDim": "2c3338", "borderBright": "cf995f",
+}
+
+
+def _load_palette() -> dict[str, str]:
+    pal = dict(_FALLBACK_PALETTE)
+    raw = os.environ.get("TASQ_PALETTE")
+    if raw:
+        try:
+            pal.update(
+                {k: v for k, v in json.loads(raw).items() if isinstance(v, str)}
+            )
+        except (ValueError, AttributeError):
+            pass
+    return {k: v if v.startswith("#") else f"#{v}" for k, v in pal.items()}
+
+
+PAL = _load_palette()
+
+# Semantic roles used by cell rendering and (as $tq-*) by theme.tcss.
+ROLE = {
+    "bg": PAL["bg1"],
+    "bg_dark": PAL["bg0"],
+    "bg_panel": PAL["bg2"],
+    "bg_hi": PAL["bg3"],
+    "fg": PAL["fg1"],
+    "fg_bright": PAL["fg0"],
+    "fg_dim": PAL["fg2"],
+    "muted": PAL["fg3"],
+    "accent": PAL["accent"],
+    "blue": PAL["info"],
+    "green": PAL["success"],
+    "aqua": PAL["successDim"],
+    "orange": PAL["warning"],
+    "orange_bright": PAL["warningBright"],
+    "red": PAL["error"],
+    "selection": PAL["selection"],
+    "selection_fg": PAL["selectionFg"],
+    "border": PAL["border"],
+    "border_dim": PAL["borderDim"],
+    "border_bright": PAL["borderBright"],
+}
 
 SIDEBAR_LABEL_W = 17
 
 
 def _cat_style(cat: str) -> str:
     if cat.startswith("+"):
-        return C_GREEN
+        return ROLE["green"]
     if cat.startswith("@"):
-        return C_ORANGE
-    return C_AQUA
+        return ROLE["orange"]
+    return ROLE["aqua"]
+
+
+def _date_str(d) -> str:
+    if d is None:
+        return ""
+    # todoman's cache hands last_modified back as a raw epoch float
+    if isinstance(d, (int, float)):
+        d = datetime.fromtimestamp(d)
+    if isinstance(d, datetime):
+        return d.astimezone().strftime("%Y-%m-%d")
+    return d.isoformat()
 
 
 def _due_text(todo) -> Text:
@@ -70,16 +130,20 @@ def _due_text(todo) -> Text:
         d = d.astimezone().date()
     label = model_map.due_str(todo.due)
     if todo.is_completed:
-        return Text(label, style=C_GRAY)
+        return Text(label, style=ROLE["muted"])
     today = date.today()
     if d < today:
-        return Text(label, style=f"bold {C_RED}")
+        return Text(label, style=f"bold {ROLE['red']}")
     if d == today:
-        return Text(label, style=C_YELLOW)
-    return Text(label, style=C_AQUA)
+        return Text(label, style=ROLE["orange"])
+    return Text(label, style=ROLE["fg_dim"])
 
 
-_PRI_STYLE = {1: f"bold {C_RED}", 2: f"bold {C_ORANGE}", 3: f"bold {C_YELLOW}"}
+_PRI_STYLE = {
+    1: f"bold {ROLE['red']}",
+    2: f"bold {ROLE['orange']}",
+    3: f"bold {ROLE['orange_bright']}",
+}
 
 
 class TasqApp(App):
@@ -102,6 +166,10 @@ class TasqApp(App):
         Binding("c", "toggle_completed", "±Done", show=False),
         Binding("l", "next_list", "List"),
         Binding("L", "prev_list", "Prev list", show=False),
+        Binding("J", "sidebar_next", "Sidebar ↓", show=False),
+        Binding("K", "sidebar_prev", "Sidebar ↑", show=False),
+        Binding("left_square_bracket", "toggle_sidebar", "Sidebar", show=False),
+        Binding("right_square_bracket", "toggle_detail", "Detail", show=False),
         Binding("g", "go_top", "Top", show=False),
         Binding("G", "go_bottom", "Bottom", show=False),
         Binding("r", "reload", "Reload"),
@@ -121,6 +189,14 @@ class TasqApp(App):
         self.show_completed = False
         self._rows = []  # Todos parallel to table rows
         self._sidebar_payloads = []  # parallel to sidebar options
+        self._sidebar_pos: int | None = None  # explicit J/K position
+
+    def get_css_variables(self) -> dict[str, str]:
+        css_vars = super().get_css_variables()
+        css_vars.update(
+            {f"tq-{name.replace('_', '-')}": color for name, color in ROLE.items()}
+        )
+        return css_vars
 
     # -- layout ---------------------------------------------------------------
 
@@ -129,6 +205,7 @@ class TasqApp(App):
         with Horizontal(id="body"):
             yield FilterSidebar(id="sidebar")
             yield TaskTable(id="table")
+            yield DetailPanel(id="detail")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -178,58 +255,65 @@ class TasqApp(App):
             text = Text()
             text.append(f"  {label[:SIDEBAR_LABEL_W]:<{SIDEBAR_LABEL_W}}",
                         style=f"bold {color}" if selected else color)
-            text.append(f"{count:>4}", style=C_GRAY)
+            text.append(f"{count:>4}", style=ROLE["muted"])
             options.append(Option(text))
             payloads.append(payload)
 
-        header("LISTS", C_BLUE)
-        entry(ALL_LISTS, sum(list_counts.values()), C_FG, ("list", None))
+        header("LISTS", ROLE["blue"])
+        entry(ALL_LISTS, sum(list_counts.values()), ROLE["fg"], ("list", None))
         for name in self._list_names():
-            entry(name, list_counts.get(name, 0), C_FG, ("list", name))
+            entry(name, list_counts.get(name, 0), ROLE["fg"], ("list", name))
         if projects:
             gap()
-            header("PROJECTS", C_GREEN)
+            header("PROJECTS", ROLE["green"])
             for name, n in sorted(projects.items()):
-                entry(name, n, C_GREEN, ("cat", name))
+                entry(name, n, ROLE["green"], ("cat", name))
         if contexts:
             gap()
-            header("CONTEXTS", C_ORANGE)
+            header("CONTEXTS", ROLE["orange"])
             for name, n in sorted(contexts.items()):
-                entry(name, n, C_ORANGE, ("cat", name))
+                entry(name, n, ROLE["orange"], ("cat", name))
         if other:
             gap()
-            header("TAGS", C_AQUA)
+            header("TAGS", ROLE["aqua"])
             for name, n in sorted(other.items()):
-                entry(name, n, C_AQUA, ("cat", name))
+                entry(name, n, ROLE["aqua"], ("cat", name))
 
         sidebar.clear_options()
         sidebar.add_options(options)
         self._sidebar_payloads = payloads
 
-        target = ("cat", self.category) if self.category else ("list", self.current_list)
-        if target in payloads:
-            sidebar.highlighted = payloads.index(target)
+        if (
+            self._sidebar_pos is not None
+            and 0 <= self._sidebar_pos < len(payloads)
+            and payloads[self._sidebar_pos] is not None
+        ):
+            sidebar.highlighted = self._sidebar_pos
+        else:
+            target = ("cat", self.category) if self.category else ("list", self.current_list)
+            if target in payloads:
+                sidebar.highlighted = payloads.index(target)
 
     def _cells(self, todo) -> tuple:
         done = (
-            Text("☑", style=C_GREEN)
+            Text("☑", style=ROLE["green"])
             if todo.is_completed
-            else Text("☐", style=C_GRAY)
+            else Text("☐", style=ROLE["muted"])
         )
         pri = Text(
             model_map.priority_letter(todo.priority),
-            style=_PRI_STYLE.get(todo.priority, C_GRAY),
+            style=_PRI_STYLE.get(todo.priority, ROLE["muted"]),
         )
         summary = Text(
             todo.summary,
-            style=f"strike {C_GRAY}" if todo.is_completed else C_FG,
+            style=f"strike {ROLE['muted']}" if todo.is_completed else ROLE["fg"],
         )
         tags = Text()
         for i, cat in enumerate(todo.categories or []):
             if i:
                 tags.append(" ")
             tags.append(cat, style=_cat_style(cat))
-        list_name = Text(todo.list.name if todo.list else "", style=C_GRAY)
+        list_name = Text(todo.list.name if todo.list else "", style=ROLE["muted"])
         return (done, pri, summary, _due_text(todo), tags, list_name)
 
     def refresh_tasks(self, keep_cursor: bool = True) -> None:
@@ -256,23 +340,71 @@ class TasqApp(App):
                     break
         self._refresh_sidebar()
         self._update_header()
+        self._update_detail()
 
     def _update_header(self) -> None:
         parts = [
-            f"[bold {C_BLUE}]tasq[/]",
-            f"[{C_ORANGE}]{self.current_list or ALL_LISTS}[/]",
-            f"[{C_FG}]{len(self._rows)} task{'s' if len(self._rows) != 1 else ''}[/]",
-            f"[{C_GRAY}]sort:{self.sort_mode}[/]",
+            f"[bold {ROLE['blue']}]tasq[/]",
+            f"[{ROLE['accent']}]{self.current_list or ALL_LISTS}[/]",
+            f"[{ROLE['fg']}]{len(self._rows)} task{'s' if len(self._rows) != 1 else ''}[/]",
+            f"[{ROLE['muted']}]sort:{self.sort_mode}[/]",
         ]
         if self.show_completed:
-            parts.append(f"[{C_GRAY}]showing:all[/]")
+            parts.append(f"[{ROLE['muted']}]showing:all[/]")
         if self.grep:
-            parts.append(f"[{C_YELLOW}]/{self.grep}[/]")
+            parts.append(f"[{ROLE['orange_bright']}]/{self.grep}[/]")
         if self.category:
             parts.append(f"[{_cat_style(self.category)}]{self.category}[/]")
         self.query_one("#header", Static).update(
-            "  " + f" [{C_GRAY}]·[/] ".join(parts)
+            "  " + f" [{ROLE['muted']}]·[/] ".join(parts)
         )
+
+    def _update_detail(self) -> None:
+        panel = self.query_one(DetailPanel)
+        todo = self._selected()
+        if todo is None:
+            panel.update(Text(" no task selected", style=ROLE["muted"]))
+            return
+
+        text = Text()
+        text.append(" DETAIL\n\n", style=f"bold {ROLE['blue']}")
+
+        def row(label: str, value, style: str = ROLE["fg"]) -> None:
+            text.append(f" {label:<10}", style=ROLE["muted"])
+            if isinstance(value, Text):
+                text.append_text(value)
+            else:
+                text.append(str(value), style=style)
+            text.append("\n")
+
+        letter = model_map.priority_letter(todo.priority)
+        row("priority", f"({letter})" if letter else "—",
+            _PRI_STYLE.get(todo.priority, ROLE["fg"]))
+        row("status", todo.status,
+            ROLE["green"] if todo.is_completed else ROLE["fg"])
+        row("due", _date_str(todo.due) or "—",
+            _due_text(todo).style if todo.due else ROLE["fg"])
+        row("created", _date_str(todo.created_at) or "—")
+        row("modified", _date_str(todo.last_modified) or "—")
+        row("list", todo.list.name if todo.list else "—", ROLE["accent"])
+        if todo.rrule:
+            row("repeats", todo.rrule.lower(), ROLE["aqua"])
+
+        cats = todo.categories or []
+        projects = [c for c in cats if c.startswith("+")]
+        contexts = [c for c in cats if c.startswith("@")]
+        tags = [c for c in cats if not c.startswith(("+", "@"))]
+        row("projects", " ".join(projects) or "—", ROLE["green"])
+        row("contexts", " ".join(contexts) or "—", ROLE["orange"])
+        if tags:
+            row("tags", " ".join(tags), ROLE["aqua"])
+
+        text.append("\n RAW\n\n", style=f"bold {ROLE['blue']}")
+        text.append(f" {model_map.render(todo)}\n", style=ROLE["fg_dim"])
+        if todo.description:
+            text.append("\n NOTES\n\n", style=f"bold {ROLE['blue']}")
+            text.append(f" {todo.description}\n", style=ROLE["fg_dim"])
+        panel.update(text)
 
     def _selected(self):
         table = self.query_one(TaskTable)
@@ -288,7 +420,7 @@ class TasqApp(App):
             tl = lists[0] if lists else None
         return tl
 
-    # -- sidebar events ----------------------------------------------------------
+    # -- events -------------------------------------------------------------------
 
     @on(FilterSidebar.OptionSelected)
     def _sidebar_selected(self, event: FilterSidebar.OptionSelected) -> None:
@@ -297,6 +429,7 @@ class TasqApp(App):
         payload = self._sidebar_payloads[event.option_index]
         if payload is None:
             return
+        self._sidebar_pos = event.option_index
         kind, value = payload
         if kind == "list":
             self.current_list = value
@@ -304,6 +437,45 @@ class TasqApp(App):
             self.category = None if self.category == value else value
         self.refresh_tasks(keep_cursor=False)
         self.query_one(TaskTable).focus()
+
+    def _sidebar_step(self, step: int) -> None:
+        """J/K: move the sidebar selection and activate it (aerc-style),
+        without leaving the task table."""
+        selectable = [
+            i for i, p in enumerate(self._sidebar_payloads) if p is not None
+        ]
+        if not selectable:
+            return
+        cur = self._sidebar_pos
+        if cur not in selectable:
+            target = (
+                ("cat", self.category) if self.category
+                else ("list", self.current_list)
+            )
+            cur = (
+                self._sidebar_payloads.index(target)
+                if target in self._sidebar_payloads
+                else selectable[0]
+            )
+        nxt = selectable[(selectable.index(cur) + step) % len(selectable)]
+        self._sidebar_pos = nxt
+        kind, value = self._sidebar_payloads[nxt]
+        if kind == "list":
+            self.current_list = value
+            self.category = None
+        else:
+            self.category = value
+        self.refresh_tasks(keep_cursor=False)
+
+    def action_sidebar_next(self) -> None:
+        self._sidebar_step(1)
+
+    def action_sidebar_prev(self) -> None:
+        self._sidebar_step(-1)
+
+    @on(TaskTable.RowHighlighted)
+    def _row_highlighted(self, _event: TaskTable.RowHighlighted) -> None:
+        self._update_detail()
 
     # -- task actions -------------------------------------------------------------
 
@@ -454,6 +626,7 @@ class TasqApp(App):
         if self.grep or self.category:
             self.grep = None
             self.category = None
+            self._sidebar_pos = None
             self.refresh_tasks(keep_cursor=False)
 
     def action_cycle_sort(self) -> None:
@@ -465,12 +638,21 @@ class TasqApp(App):
         self.show_completed = not self.show_completed
         self.refresh_tasks(keep_cursor=False)
 
+    def action_toggle_sidebar(self) -> None:
+        sidebar = self.query_one(FilterSidebar)
+        sidebar.display = not sidebar.display
+
+    def action_toggle_detail(self) -> None:
+        panel = self.query_one(DetailPanel)
+        panel.display = not panel.display
+
     # -- lists ------------------------------------------------------------------
 
     def _cycle_list(self, step: int) -> None:
         names: list[str | None] = [None, *self._list_names()]
         idx = names.index(self.current_list) if self.current_list in names else 0
         self.current_list = names[(idx + step) % len(names)]
+        self._sidebar_pos = None
         self.refresh_tasks(keep_cursor=False)
 
     def action_next_list(self) -> None:

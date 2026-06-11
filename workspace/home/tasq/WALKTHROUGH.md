@@ -12,28 +12,34 @@ tasq
 ```
 
 ```
-  tasq · Reminders · 5 tasks · sort:priority              ← header bar
-┌──────────────┬───────────────────────────────────────────────┐
-│ LISTS        │   P  Summary                Due        Tags   │
-│  All       5 │ ☐ A  Order hinges           2026-06-13 +shop  │
-│  Family    0 │ ☐    Ryan's bday            2024-09-24        │
-│  Reminders 5 │                                               │
-│              │                                               │
-│ PROJECTS     │                                               │
-│  +hwc      1 │                                               │
-│  +finance  1 │                                               │
-│              │                                               │
-│ CONTEXTS     │                                               │
-│  @errand   1 │                                               │
-│  @shop     1 │                                               │
-├──────────────┴───────────────────────────────────────────────┤
+  tasq · Reminders · 5 tasks · sort:priority                   ← header bar
+┌──────────────┬─────────────────────────────────┬─────────────┐
+│ LISTS        │   P  Summary           Due  Tags│ DETAIL      │
+│  All       5 │ ☐ A  Order hinges      06-13 +sh│ priority (A)│
+│  Family    0 │ ☐    Ryan's bday       09-24    │ status   …  │
+│  Reminders 5 │                                 │ due      …  │
+│              │                                 │ created  …  │
+│ PROJECTS     │                                 │ list     …  │
+│  +hwc      1 │                                 │ projects …  │
+│  +finance  1 │                                 │ contexts …  │
+│              │                                 │             │
+│ CONTEXTS     │                                 │ RAW         │
+│  @errand   1 │                                 │ Order hinges│
+│  @shop     1 │                                 │ +hardware … │
+├──────────────┴─────────────────────────────────┴─────────────┤
 │ a Add  e Edit  x Done  d Del  / Filter  s Sort  C Cal  ...    │
 └───────────────────────────────────────────────────────────────┘
 ```
 
 The cursor starts in the task table. `j`/`k` (or arrows) move, `g`/`G` jump to
-top/bottom. `Tab` moves focus to the sidebar (Enter selects), `?` shows the
-full keymap any time, `q` quits.
+top/bottom. The right DETAIL panel always shows the selected task in full.
+`[` hides the sidebar, `]` hides the detail panel (more room for the table).
+`Tab` moves focus to the sidebar (Enter selects) — or stay in the table and
+drive the sidebar with `J`/`K` (aerc-style: each press moves the sidebar
+selection and applies it). `?` shows the full keymap any time, `q` quits.
+
+Colors come from the system theme (`hwc.home.theme.palette`) — tasq reads the
+materialized palette, so switching the system palette restyles it.
 
 ## The sidebar: lists, projects, contexts
 
@@ -159,6 +165,8 @@ Use `N` for scratch/local-only lists; use the phone for lists that matter.
 | `s` | cycle sort: priority → due → created |
 | `c` | show/hide completed |
 | `l` / `L` | next / previous list |
+| `J` / `K` | walk the sidebar down/up and apply (lists → projects → contexts) |
+| `[` / `]` | toggle sidebar / detail panel |
 | `Tab` | focus sidebar (Enter selects; re-select clears a filter) |
 | `j` `k` / `g` `G` | move cursor / jump top, bottom |
 | `r` | reload from disk |

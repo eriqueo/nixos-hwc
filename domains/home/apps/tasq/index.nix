@@ -27,9 +27,17 @@ let
     (ps.toPythonModule pkgs.todoman)
   ]);
 
+  # Active system palette (domains/home/theme), flattened to its string
+  # tokens and handed to the app as JSON. tasq derives all its colors from
+  # this — switching hwc.home.theme.palette restyles tasq on next rebuild.
+  paletteJson = builtins.toJSON
+    (lib.filterAttrs (_: v: builtins.isString v)
+      (((config.hwc.home.theme or {}).colors or {})));
+
   runner = pkgs.writeShellScriptBin "tasq" ''
     export TASQ_PATH="''${TASQ_PATH:-${cfg.tasksGlob}}"
     export TASQ_CACHE="''${TASQ_CACHE:-${cfg.cachePath}}"
+    export TASQ_PALETTE=${lib.escapeShellArg paletteJson}
     exec ${pythonEnv}/bin/python ${nixosPath}/workspace/home/tasq/app.py "$@"
   '';
 in

@@ -45,6 +45,8 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
 | `s`       | cycle sort: priority → due → created                  |
 | `c`       | show/hide completed                                   |
 | `l` / `L` | next / previous list (All → Reminders → Family)       |
+| `J` / `K` | walk sidebar down/up and apply (aerc-style)           |
+| `[` / `]` | toggle sidebar / detail panel                         |
 | Tab       | focus sidebar (LISTS/PROJECTS/CONTEXTS; Enter filters, re-select clears) |
 | `j`/`k` `g`/`G` | cursor move / top / bottom                      |
 | `r`       | reload from disk (after a sync pulled phone changes)  |
@@ -81,3 +83,12 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
   New keys: `C` suspends into `khal interactive`; `N` creates a local-only
   list (sync pair is pinned to iCloud collection IDs — synced lists must be
   created in Apple Reminders and pinned in machines/laptop/home.nix).
+- 2026-06-11: UI v3. Colors now come from the SYSTEM palette: the module
+  exports hwc.home.theme.colors as TASQ_PALETTE (JSON); the app maps tokens
+  to $tq-* Textual CSS variables — theme.tcss has zero hex literals, and
+  switching hwc.home.theme.palette restyles tasq (hardcoded tuxedo palette
+  reverted). Added tuxedo-style right DETAIL panel (priority/status/dates/
+  list/projects/contexts/RAW/notes, follows the cursor). New keys: `J`/`K`
+  walk-and-apply the sidebar from the table (aerc-style); `[`/`]` toggle
+  sidebar/detail panes. Fixed: todoman cache returns last_modified as epoch
+  float — detail panel converts before formatting.
