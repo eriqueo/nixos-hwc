@@ -113,11 +113,17 @@ Want one in **Family**? Press `l` until the header shows Family, then `a`.
 - `s` — cycle sort: **priority** → **due** → **created**. Completed sink.
 - Heading to town? Select `@errand` in the sidebar — that's your errand run.
 
-### 4. See it on a calendar — `C`
+### 4. See the week — `w` (and the month — `C`)
 
-`C` suspends tasq and opens **khal interactive** — your iCloud calendars plus
-dated items in month view. Quit khal (`q`) and you're back in tasq exactly
-where you were.
+`w` toggles the **week strip**: a 7-day grid across the bottom showing each
+day's khal events (`◆ 14:00 Ctrl+Build`, in blue) and tasks due (`☐ Pay
+bills`, priority-colored) — events and tasks differently formatted, like
+Google Calendar's tasks overlay. Overdue tasks lead today's column in red
+with their original date. It refreshes on `r`/`R`.
+
+`C` suspends tasq and opens **khal interactive** — your iCloud calendars in
+full month view. Quit khal (`q`) and you're back in tasq exactly where you
+were.
 
 ### 5. Sync with the phone — `R` and `r`
 
@@ -130,25 +136,22 @@ where you were.
 Phone round-trip: add a reminder on the phone → `R` (or wait) → `r` → it's in
 the table. Complete it with `x` → `R` → completed on the phone.
 
-## Adding lists — `N` (read this first)
+## Adding lists — `N`
 
-`N` prompts for a name and creates a new **local** list (a new vdir
-collection). tasq and the `todo` CLI can use it immediately — but it will
-**never reach the phone**: the sync pair is pinned to the iCloud collection
-IDs in `machines/laptop/home.nix`, and iCloud is the authority on which
-Reminders lists exist.
+**With the Radicale backend enabled** (`hwc.mail.tasks.radicale.enable`,
+Phase C): `N` creates a fully synced list — it lands in the Radicale vdir,
+tasq pushes it to the server (discover + sync run automatically), and the
+phone sees it through its CalDAV account. This is the whole point of
+self-hosting: two-way everything, including list creation.
 
-To add a **phone-synced** list:
+**Without Radicale** (iCloud only): `N` creates a **local-only** list — the
+iCloud pair is pinned to collection IDs, and iCloud is the authority on which
+Reminders lists exist. For a phone-synced iCloud list: create it in Apple
+Reminders, find its UID with `vdirsyncer discover tasks`, add it to
+`hwc.mail.tasks.collections` in `machines/laptop/home.nix`, `hms`, discover,
+sync.
 
-1. Create the list in Apple Reminders (Add List).
-2. Find its collection ID:
-   `vdirsyncer discover tasks` (it prints all collections; the new UID is the
-   unfamiliar one — confirm VTODO support per `domains/mail/tasks/README.md`).
-3. Add the ID to `hwc.mail.tasks.collections` in
-   `~/.nixos/machines/laptop/home.nix`, commit, run `hms`.
-4. `vdirsyncer discover tasks` then `vdirsyncer sync tasks` → press `r`.
-
-Use `N` for scratch/local-only lists; use the phone for lists that matter.
+Deploy runbook for Radicale: `domains/server/services/radicale/README.md`.
 
 ## Full keymap
 
@@ -169,8 +172,9 @@ Use `N` for scratch/local-only lists; use the phone for lists that matter.
 | `[` / `]` | toggle sidebar / detail panel |
 | `Tab` | focus sidebar (Enter selects; re-select clears a filter) |
 | `j` `k` / `g` `G` | move cursor / jump top, bottom |
+| `w` | toggle the 7-day week strip (events + tasks due) |
 | `r` | reload from disk |
-| `R` | sync with iCloud now, then reload |
+| `R` | sync now (all task pairs), then reload |
 | `C` | open khal interactive (calendar view) |
 | `?` / `q` | help / quit |
 

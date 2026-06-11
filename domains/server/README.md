@@ -18,6 +18,9 @@ domains/server/
 │       ├── jobber-mcp/    # Jobber MCP server
 │       ├── lead-scout/    # Lead Scout MCP + HTTP
 │       └── llama-cpp/     # llama.cpp inference (GPU + CPU)
+├── services/
+│   ├── inbox-processor/  # Phone capture processor (Whisper + Tesseract)
+│   └── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
 ├── media/        # Media profile toggle wiring
 └── n8n/          # Workflow/profile pieces for n8n
 ```
@@ -33,6 +36,11 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-11: Added `services/radicale/` — self-hosted CalDAV server
+  (localhost:5232, Caddy vhost `tasks`) for two-way task sync with list
+  creation (companion to `domains/mail/tasks` radicale pair + tasq `N`).
+  htpasswd auth from the `radicale-htpasswd` agenix secret. Enabled in
+  machines/server/config.nix; see its README for the deploy runbook.
 - 2026-06-09: Law 3 finish — brain-mcp (server.ts path + vaultPath default), lead-scout (projectDir), jobber-mcp (projectDir/envFile) now derive from `hwc.paths` with value-preserving fallbacks. Server drv hash unchanged.
 - 2026-06-09: Removed `native/.immich-native-reference/` (4,100-line unimported reference module; live Immich is the container in `domains/media/`). Recoverable from git history.
 - 2026-06-09: Law 10 migration — inlined `options.nix` into `index.nix` for all 7 `native/ai/*` modules and `services/inbox-processor`. Pure relocation; server toplevel drv hash unchanged.

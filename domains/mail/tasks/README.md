@@ -22,8 +22,10 @@ tasks/
 ├── index.nix                   # Module: options hwc.mail.tasks.*, todoman pkg,
 │                               #   config.py, dir activation, pair contribution
 └── parts/
-    ├── vdirsyncer-pair.nix     # [pair tasks] fragment (item_types = ["VTODO"])
-    └── todoman-config.nix      # ~/.config/todoman/config.py text
+    ├── vdirsyncer-pair.nix          # [pair tasks] fragment (item_types = ["VTODO"])
+    ├── vdirsyncer-pair-radicale.nix # [pair tasks_radicale] — self-hosted backend,
+    │                                #   "from a"/"from b" discovery (list creation works)
+    └── todoman-config.nix           # ~/.config/todoman/config.py text
 ```
 
 ## Secret + account
@@ -76,7 +78,20 @@ Reminders→local all work.
   `PRIORITY:1` intact through the round-trip → Phase B (`tasq`) maps
   `+project/@context` to `Todo.categories` (no inline-summary fallback needed).
 
+## Radicale backend (Phase C, optional)
+`hwc.mail.tasks.radicale.enable` adds a second pair (`tasks_radicale`) against
+the self-hosted Radicale server (`domains/server/services/radicale/`, Caddy
+vhost tasks.hwc.iheartwoodcraft.com). Unlike iCloud it auto-discovers
+collections both ways, so locally created lists (tasq `N`) are created
+server-side. Local vdir: `~/.local/share/vdirsyncer/tasks-radicale/`;
+credential: the shared `radicale-htpasswd` agenix secret (password =
+`cut -d: -f2-`). todoman's path glob widens to `tasks*/*` so both backends
+stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
+
 ## Changelog
+- 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
+  vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
+  the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).
 - 2026-06-11: Phase A verified GO on hwc-laptop. Added `hwc.mail.tasks.collections`
   to pin the pair to VTODO collections (vdirsyncer over-discovers VEVENT calendars,
   which broke todoman on a duplicate "Family" name); pinned the laptop to its two
