@@ -125,6 +125,13 @@ in
     user = {
       enable = true;
       name = "eric";
+      # Declarative authorized keys (hwc.system.users.user.ssh.keys).
+      # Every machine boots with key auth provisioned, so SSH password auth
+      # is never needed — including new-machine bootstrap (the key lands
+      # with the first nixos-install/nixos-rebuild; nixos-anywhere covers
+      # remote installs). Emergency console login (hwc.secrets.emergency)
+      # is unaffected by SSH policy.
+      ssh.enable = true;
       groups = {
         basic = true;
         media = true;
