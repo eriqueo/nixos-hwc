@@ -43,6 +43,7 @@ Auto-detects and configures based on available hardware:
 
 ## Changelog
 
+- 2026-06-10: profiles/index.nix — removed the informational "AI Profile: …" `warnings` entry. It printed on every eval of every host and drowned out real warnings; detection itself is unchanged and still exported via `_module.args.aiProfile` / `aiProfileName`.
 - 2026-06-09: Removed `.nanoclaw-disabled/` (decommissioned 2026-05-29, superseded by Hermes; flagged in audit `docs/audit/2026-06-09-server-audit.md` §2.1, recoverable from git history).
 - 2026-05-30: Persona-daemon Phase 2 + 2.5 landed (see `domains/server/native/ai/persona-daemon/`). `hwc-llm` gained `--new-conversation` / `--conversation <id>` / `--print-id` flags that route through the daemon for memory-backed multi-turn chats. `assistant`, `coder`, `thinker` personas now `useKnowledge=true` (top-K=6/6/10 respectively) — RAG over `/mnt/vaults/brain` via embeddings against `llama-embed`. `library/_defaults.nix` introduced for schema-merge pattern.
 - 2026-05-29: Added `personas/` — persona library + `hwc-llm` CLI wrapping the two new llama.cpp endpoints (GPU LFM2-2.6B on :11500, CPU LFM2-24B-A2B on :11501). Phase 1 is stateless; SQLite-backed memory + HTTP daemon planned for Phases 2/3. See `domains/ai/personas/README.md`.

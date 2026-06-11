@@ -42,11 +42,6 @@ in
     # Export profile info for other modules via _module.args
     _module.args.aiProfile = profiles.activeProfile;
     _module.args.aiProfileName = profiles.detectedProfile;
-
-    # Make detection visible via warnings (not assertions)
-    warnings = [
-      "AI Profile: ${profiles.detectedProfile} (GPU: ${profiles.hardware.gpuType}, RAM: ${toString profiles.hardware.totalRAM_GB}GB)"
-    ];
   };
 
   #==========================================================================
