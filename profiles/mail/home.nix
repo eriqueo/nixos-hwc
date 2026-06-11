@@ -3,7 +3,7 @@
 # Full mail menu: bridge, aerc, notmuch, calendar sync, mail health.
 # Identity data lives here because only the mail role consumes it.
 #
-# USED BY: server (role list in flake.nix machines table)
+# USED BY: see the machines table in flake.nix
 
 { lib, ... }:
 
@@ -28,7 +28,8 @@
 
     health = {
       enable = true;
-      webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
+      # webhook.url names a concrete host — it lives in the machine one-off
+      # (machines/<m>/home.nix), per Law 16.
       freshnessHours = 12;
     };
 

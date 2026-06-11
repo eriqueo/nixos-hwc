@@ -4,8 +4,8 @@
 # Base role is supplied by the machine's role list — this role does NOT
 # import it (roles never import roles).
 #
-# REPLACES: profiles/firestick.nix
-# USED BY: firestick (role list in flake.nix machines table)
+# REPLACES: the old travel-stick profile
+# USED BY: see the machines table in flake.nix
 
 { lib, ... }:
 

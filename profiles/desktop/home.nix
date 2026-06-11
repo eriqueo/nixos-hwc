@@ -4,7 +4,7 @@
 # All set with mkDefault — machines can override any option.
 #
 # REPLACES: the GUI portion of profiles/home-session.nix
-# USED BY: laptop, xps (role list in flake.nix machines table)
+# USED BY: see the machines table in flake.nix
 
 { config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
 
@@ -68,7 +68,7 @@
       # Development & Automation
       n8n.enable = lib.mkDefault false;
       # codex release-binary pin moved to domains/home/apps/codex/parts/
-      # package.nix; the laptop one-off applies it (server/xps use stock).
+      # package.nix; machine one-offs apply it (headless machines use stock).
 
       # Utilities
       ipcalc.enable = lib.mkDefault true;
@@ -109,7 +109,7 @@
 # preserves current behavior and silences eval warnings on the unstable
 # lane. The options do not exist in HM stable 25.11, so the block is
 # guarded on nixosApiVersion — unguarded it breaks eval for stable-lane
-# machines (hwc-xps regression from commit fce96f45).
+# machines (stable-lane eval regression from commit fce96f45).
 #
 # History: `configType` and `setSessionVariables` were briefly absent from
 # the HM-as-module wiring path (setting them errored at module-merge —

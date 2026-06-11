@@ -4,7 +4,7 @@
 # All set with mkDefault — machines can override any option.
 #
 # REPLACES: the CLI-shared portion of profiles/home-session.nix
-# USED BY: every machine (role list in flake.nix machines table)
+# USED BY: every machine (see the machines table in flake.nix)
 
 { config, lib, pkgs, ... }:
 

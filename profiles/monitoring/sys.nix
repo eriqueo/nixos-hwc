@@ -9,7 +9,7 @@
 # corresponding .age files.
 #
 # REPLACES: profiles/monitoring.nix
-# USED BY: server, xps (role list in flake.nix machines table)
+# USED BY: see the machines table in flake.nix
 { lib, config, ... }:
 {
   imports = [
