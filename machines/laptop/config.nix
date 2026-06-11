@@ -280,6 +280,7 @@
   hwc.system.apps.hyprland.enable = true;   # Startup script, helper scripts
   hwc.system.apps.waybar.enable = true;     # System dependency validation
   hwc.system.apps.chromium.enable = true;   # System integration (dconf, dbus)
+  hwc.system.apps.gpu-screen-recorder.enable = true;  # setcap gsr-kms-server (Wayland capture)
 
   #============================================================================
   # === [profiles/security.nix] Orchestration =================================

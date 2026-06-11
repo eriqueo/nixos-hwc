@@ -218,6 +218,12 @@ in
       description = "Screenshot save location - laptop only (under 000_inbox so it rides the existing Syncthing share to hwc-server)";
     };
 
+    recordings = mkOption {
+      type = types.nullOr types.path;
+      default = if isLaptop then "${laptopMedia}/530_videos/recordings" else null;
+      description = "Screen recording save location - laptop only (under 500_media, NOT the Syncthing inbox: hour-long call videos are too large to replicate)";
+    };
+
     # -------------------------------------------------------------------------
     # PARA STRUCTURE (Laptop only)
     # -------------------------------------------------------------------------
@@ -542,6 +548,7 @@ in
     HWC_BACKUP_STORAGE = cfg.backup;
     HWC_PHOTOS_STORAGE = cfg.photos;
     HWC_SCREENSHOTS_DIR = cfg.screenshots;
+    HWC_RECORDINGS_DIR = cfg.recordings;
 
     # PARA structure
     HWC_INBOX_DIR = cfg.user.inbox;

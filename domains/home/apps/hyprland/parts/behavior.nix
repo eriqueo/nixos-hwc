@@ -5,6 +5,7 @@ let
   dtCfg = config.hwc.home.apps.dt or { enable = false; hyprland = { enable = false; toggleBind = null; }; };
   dtBindEnabled = (dtCfg.enable or false) && (dtCfg.hyprland.enable or false);
   dtToggleBind  = dtCfg.hyprland.toggleBind or null;
+  gsrCfg = config.hwc.home.apps.gpu-screen-recorder or { enable = false; };
 in
 {
   # Top-level keys only — Hyprland expects these directly.
@@ -36,6 +37,10 @@ in
     "${mod},V,exec,cliphist list | wofi --dmenu | cliphist decode | wl-copy"
 
 ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
+  ] ++ lib.optionals (gsrCfg.enable or false) [
+    # Screen recording toggle (calls) — PRINT=screenshot, SHIFT+PRINT=record
+    "SHIFT,PRINT,exec,gsr-toggle"
+  ] ++ [
 
 # move FOCUS in workspace (h=left, j=down, k=up, l=right)
     "${mod},h,movefocus,l"
