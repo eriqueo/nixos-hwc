@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """tasq — keyboard-driven VTODO task TUI over the Phase A vdir.
 
-Layout (calcurse-style): ListSidebar | TaskTable / StatusBar, Footer.
+Layout (tuxedo-style): top header bar (list · count · sort · filters),
+FilterSidebar (LISTS / PROJECTS / CONTEXTS with counts) | TaskTable, Footer.
 All data access goes through Store (store.py); the one-line task dialect
 lives in model_map.py. Run via the HM `tasq` wrapper (sets TASQ_PATH /
 TASQ_CACHE), or directly — the defaults below match the Phase A backend.
@@ -10,24 +11,27 @@ TASQ_CACHE), or directly — the defaults below match the Phase A backend.
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import sys
+from collections import Counter
 from datetime import date, datetime
 
 from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Footer
+from textual.containers import Horizontal
+from textual.widgets import Footer, Static
+from textual.widgets.option_list import Option
 
 import model_map
 from store import SORT_MODES, Store
 from widgets import (
     ConfirmModal,
+    FilterSidebar,
     HelpModal,
     LineModal,
-    ListSidebar,
-    StatusBar,
     TaskTable,
 )
 
@@ -37,13 +41,25 @@ DEFAULT_LIST = "Reminders"
 
 ALL_LISTS = "All"
 
-# gruvbox accents for cell rendering (matches theme.tcss)
-C_RED = "#fb4934"
-C_ORANGE = "#fe8019"
-C_YELLOW = "#fabd2f"
-C_GREEN = "#b8bb26"
-C_AQUA = "#8ec07c"
-C_GRAY = "#928374"
+# tuxedo palette (tomorrow-night-ish; matches theme.tcss)
+C_FG = "#c5c8c6"
+C_GRAY = "#6b7480"
+C_BLUE = "#81a2be"
+C_ORANGE = "#de935f"
+C_YELLOW = "#f0c674"
+C_GREEN = "#b5bd68"
+C_RED = "#cc6666"
+C_AQUA = "#8abeb7"
+
+SIDEBAR_LABEL_W = 17
+
+
+def _cat_style(cat: str) -> str:
+    if cat.startswith("+"):
+        return C_GREEN
+    if cat.startswith("@"):
+        return C_ORANGE
+    return C_AQUA
 
 
 def _due_text(todo) -> Text:
@@ -60,7 +76,7 @@ def _due_text(todo) -> Text:
         return Text(label, style=f"bold {C_RED}")
     if d == today:
         return Text(label, style=C_YELLOW)
-    return Text(label)
+    return Text(label, style=C_AQUA)
 
 
 _PRI_STYLE = {1: f"bold {C_RED}", 2: f"bold {C_ORANGE}", 3: f"bold {C_YELLOW}"}
@@ -77,6 +93,7 @@ class TasqApp(App):
         Binding("space", "toggle_done", "Done", show=False),
         Binding("d", "delete", "Del"),
         Binding("p", "cycle_priority", "Pri", show=False),
+        Binding("N", "new_list", "New list", show=False),
         Binding("slash", "filter_grep", "Filter"),
         Binding("plus", "filter_project", "+proj", show=False),
         Binding("at", "filter_context", "@ctx", show=False),
@@ -89,6 +106,7 @@ class TasqApp(App):
         Binding("G", "go_bottom", "Bottom", show=False),
         Binding("r", "reload", "Reload"),
         Binding("R", "sync", "Sync"),
+        Binding("C", "calendar", "Cal"),
         Binding("question_mark", "help", "Help"),
         Binding("q", "quit", "Quit"),
     ]
@@ -102,23 +120,22 @@ class TasqApp(App):
         self.sort_mode: str = SORT_MODES[0]
         self.show_completed = False
         self._rows = []  # Todos parallel to table rows
+        self._sidebar_payloads = []  # parallel to sidebar options
 
     # -- layout ---------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        with Horizontal():
-            yield ListSidebar(id="sidebar")
-            with Vertical(id="main"):
-                yield TaskTable(id="table")
-                yield StatusBar(id="status")
+        yield Static(id="header")
+        with Horizontal(id="body"):
+            yield FilterSidebar(id="sidebar")
+            yield TaskTable(id="table")
         yield Footer()
 
     def on_mount(self) -> None:
         table = self.query_one(TaskTable)
         table.cursor_type = "row"
-        table.zebra_stripes = True
+        table.zebra_stripes = False
         table.add_columns(" ", "P", "Summary", "Due", "Tags", "List")
-        self._refresh_sidebar()
         self.refresh_tasks()
         table.focus()
 
@@ -128,12 +145,70 @@ class TasqApp(App):
         return [tl.name for tl in self.store.lists()]
 
     def _refresh_sidebar(self) -> None:
-        sidebar = self.query_one(ListSidebar)
+        sidebar = self.query_one(FilterSidebar)
+        active = self.store.todos(show_completed=False)
+        list_counts = Counter(t.list.name for t in active)
+        projects: Counter = Counter()
+        contexts: Counter = Counter()
+        other: Counter = Counter()
+        for t in active:
+            for cat in t.categories or []:
+                if cat.startswith("+"):
+                    projects[cat] += 1
+                elif cat.startswith("@"):
+                    contexts[cat] += 1
+                else:
+                    other[cat] += 1
+
+        options: list[Option] = []
+        payloads: list[tuple | None] = []
+
+        def header(label: str, color: str) -> None:
+            options.append(Option(Text(f" {label}", style=f"bold {color}"), disabled=True))
+            payloads.append(None)
+
+        def gap() -> None:
+            options.append(Option(" ", disabled=True))
+            payloads.append(None)
+
+        def entry(label: str, count: int, color: str, payload: tuple) -> None:
+            selected = payload == (
+                ("cat", self.category) if self.category else ("list", self.current_list)
+            )
+            text = Text()
+            text.append(f"  {label[:SIDEBAR_LABEL_W]:<{SIDEBAR_LABEL_W}}",
+                        style=f"bold {color}" if selected else color)
+            text.append(f"{count:>4}", style=C_GRAY)
+            options.append(Option(text))
+            payloads.append(payload)
+
+        header("LISTS", C_BLUE)
+        entry(ALL_LISTS, sum(list_counts.values()), C_FG, ("list", None))
+        for name in self._list_names():
+            entry(name, list_counts.get(name, 0), C_FG, ("list", name))
+        if projects:
+            gap()
+            header("PROJECTS", C_GREEN)
+            for name, n in sorted(projects.items()):
+                entry(name, n, C_GREEN, ("cat", name))
+        if contexts:
+            gap()
+            header("CONTEXTS", C_ORANGE)
+            for name, n in sorted(contexts.items()):
+                entry(name, n, C_ORANGE, ("cat", name))
+        if other:
+            gap()
+            header("TAGS", C_AQUA)
+            for name, n in sorted(other.items()):
+                entry(name, n, C_AQUA, ("cat", name))
+
         sidebar.clear_options()
-        names = [ALL_LISTS, *self._list_names()]
-        sidebar.add_options(names)
-        target = self.current_list if self.current_list in names else ALL_LISTS
-        sidebar.highlighted = names.index(target)
+        sidebar.add_options(options)
+        self._sidebar_payloads = payloads
+
+        target = ("cat", self.category) if self.category else ("list", self.current_list)
+        if target in payloads:
+            sidebar.highlighted = payloads.index(target)
 
     def _cells(self, todo) -> tuple:
         done = (
@@ -147,9 +222,13 @@ class TasqApp(App):
         )
         summary = Text(
             todo.summary,
-            style=f"strike {C_GRAY}" if todo.is_completed else "",
+            style=f"strike {C_GRAY}" if todo.is_completed else C_FG,
         )
-        tags = Text(" ".join(todo.categories or []), style=C_AQUA)
+        tags = Text()
+        for i, cat in enumerate(todo.categories or []):
+            if i:
+                tags.append(" ")
+            tags.append(cat, style=_cat_style(cat))
         list_name = Text(todo.list.name if todo.list else "", style=C_GRAY)
         return (done, pri, summary, _due_text(todo), tags, list_name)
 
@@ -175,20 +254,25 @@ class TasqApp(App):
                 if todo.uid == cur_uid:
                     table.move_cursor(row=i)
                     break
-        self._update_status()
+        self._refresh_sidebar()
+        self._update_header()
 
-    def _update_status(self) -> None:
+    def _update_header(self) -> None:
         parts = [
-            f"[{C_YELLOW}]{self.current_list or ALL_LISTS}[/]",
-            f"sort:{self.sort_mode}",
-            "showing:all" if self.show_completed else "showing:active",
+            f"[bold {C_BLUE}]tasq[/]",
+            f"[{C_ORANGE}]{self.current_list or ALL_LISTS}[/]",
+            f"[{C_FG}]{len(self._rows)} task{'s' if len(self._rows) != 1 else ''}[/]",
+            f"[{C_GRAY}]sort:{self.sort_mode}[/]",
         ]
+        if self.show_completed:
+            parts.append(f"[{C_GRAY}]showing:all[/]")
         if self.grep:
-            parts.append(f"/{self.grep}")
+            parts.append(f"[{C_YELLOW}]/{self.grep}[/]")
         if self.category:
-            parts.append(f"cat:{self.category}")
-        parts.append(f"{len(self._rows)} task{'s' if len(self._rows) != 1 else ''}")
-        self.query_one(StatusBar).update(" · ".join(parts))
+            parts.append(f"[{_cat_style(self.category)}]{self.category}[/]")
+        self.query_one("#header", Static).update(
+            "  " + f" [{C_GRAY}]·[/] ".join(parts)
+        )
 
     def _selected(self):
         table = self.query_one(TaskTable)
@@ -206,10 +290,18 @@ class TasqApp(App):
 
     # -- sidebar events ----------------------------------------------------------
 
-    @on(ListSidebar.OptionSelected)
-    def _list_selected(self, event: ListSidebar.OptionSelected) -> None:
-        name = str(event.option.prompt)
-        self.current_list = None if name == ALL_LISTS else name
+    @on(FilterSidebar.OptionSelected)
+    def _sidebar_selected(self, event: FilterSidebar.OptionSelected) -> None:
+        if not (0 <= event.option_index < len(self._sidebar_payloads)):
+            return
+        payload = self._sidebar_payloads[event.option_index]
+        if payload is None:
+            return
+        kind, value = payload
+        if kind == "list":
+            self.current_list = value
+        else:  # category filter; selecting it again clears
+            self.category = None if self.category == value else value
         self.refresh_tasks(keep_cursor=False)
         self.query_one(TaskTable).focus()
 
@@ -299,6 +391,29 @@ class TasqApp(App):
         self.store.edit(todo, priority=nxt)
         self.refresh_tasks()
 
+    def action_new_list(self) -> None:
+        def done(name: str | None) -> None:
+            if not name or not name.strip():
+                return
+            name = name.strip()
+            if self.store.list_named(name):
+                self.notify(f"list '{name}' already exists", severity="warning")
+                return
+            self.store.create_list(name)
+            self.store.reload()
+            self.refresh_tasks()
+            self.notify(
+                f"list '{name}' created — LOCAL-ONLY. To get a phone-synced "
+                "list, create it in Apple Reminders instead (see walkthrough).",
+                timeout=10,
+            )
+
+        self.push_screen(
+            LineModal("New list (local-only — phone lists: create in Reminders)",
+                      placeholder="list name"),
+            done,
+        )
+
     # -- filters / sort / view -----------------------------------------------------
 
     def action_filter_grep(self) -> None:
@@ -356,7 +471,6 @@ class TasqApp(App):
         names: list[str | None] = [None, *self._list_names()]
         idx = names.index(self.current_list) if self.current_list in names else 0
         self.current_list = names[(idx + step) % len(names)]
-        self._refresh_sidebar()
         self.refresh_tasks(keep_cursor=False)
 
     def action_next_list(self) -> None:
@@ -375,11 +489,10 @@ class TasqApp(App):
         if table.row_count:
             table.move_cursor(row=table.row_count - 1)
 
-    # -- reload / sync ---------------------------------------------------------------
+    # -- reload / sync / calendar ------------------------------------------------------
 
     def action_reload(self) -> None:
         self.store.reload()
-        self._refresh_sidebar()
         self.refresh_tasks()
         self.notify("reloaded from vdir")
 
@@ -395,11 +508,23 @@ class TasqApp(App):
     def _sync_done(self, code: int, out: str) -> None:
         if code == 0:
             self.store.reload()
-            self._refresh_sidebar()
             self.refresh_tasks()
             self.notify("sync ok ✓")
         else:
             self.notify(f"sync failed ({code}): {out[-300:]}", severity="error", timeout=10)
+
+    def action_calendar(self) -> None:
+        """Suspend the TUI and run khal interactive; resume on quit."""
+        if shutil.which("khal") is None:
+            self.notify("khal not found on PATH", severity="error")
+            return
+        try:
+            with self.suspend():
+                subprocess.call(["khal", "interactive"])
+        except Exception as exc:
+            self.notify(f"could not suspend for khal: {exc}", severity="error")
+            return
+        self.refresh_tasks()
 
     def action_help(self) -> None:
         self.push_screen(HelpModal())

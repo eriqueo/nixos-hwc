@@ -17,6 +17,7 @@ import glob as globlib
 import os
 import subprocess
 from datetime import datetime, time, timezone
+from uuid import uuid4
 
 from todoman.model import Database, Todo, TodoList
 
@@ -153,6 +154,21 @@ class Store:
         else:
             todo.complete()  # recurring: spawns next instance into .related
         self.db.save(todo)
+
+    def create_list(self, name: str) -> str:
+        """Create a new vdir list dir (uuid dirname + displayname file).
+
+        LOCAL-ONLY: the vdirsyncer tasks pair is pinned to specific iCloud
+        collection IDs, so a locally created list never reaches the phone.
+        Synced lists must be created in Apple Reminders first, then pinned
+        (see WALKTHROUGH.md). Call reload() afterwards to pick it up.
+        """
+        root = os.path.dirname(self._globs[0])
+        path = os.path.join(root, uuid4().hex.upper())
+        os.makedirs(path)
+        with open(os.path.join(path, "displayname"), "w") as f:
+            f.write(name + "\n")
+        return path
 
     def delete(self, todo: Todo) -> None:
         path = todo.path

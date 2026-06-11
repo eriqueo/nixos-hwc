@@ -39,14 +39,17 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
 | `x`/space | toggle done (reopen clears COMPLETED)                 |
 | `d`       | delete (y/n confirm)                                  |
 | `p`       | cycle priority none → A → B → C → none                |
+| `N`       | new list (LOCAL-ONLY — synced lists must be created in Reminders + pinned; see WALKTHROUGH) |
 | `/` `+` `@` | filter: grep summary / project / context (empty clears) |
 | `esc`     | clear all filters                                     |
 | `s`       | cycle sort: priority → due → created                  |
 | `c`       | show/hide completed                                   |
 | `l` / `L` | next / previous list (All → Reminders → Family)       |
+| Tab       | focus sidebar (LISTS/PROJECTS/CONTEXTS; Enter filters, re-select clears) |
 | `j`/`k` `g`/`G` | cursor move / top / bottom                      |
 | `r`       | reload from disk (after a sync pulled phone changes)  |
 | `R`       | run `vdirsyncer sync tasks` in a worker, then reload  |
+| `C`       | suspend into `khal interactive` (calendar view)       |
 | `?` / `q` | help / quit                                           |
 
 ## Task line dialect ↔ VTODO mapping
@@ -72,3 +75,9 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
   phone round-trip via vdirsyncer/iCloud. Enabled for the desktop role.
 - 2026-06-11: Added workspace/home/tasq/WALKTHROUGH.md — user-facing guide
   (keymap, task-line dialect, day-of-use examples, sync workflow).
+- 2026-06-11: UI v2, tuxedo-style. Tomorrow-night palette, top header bar
+  (list · count · sort · filters), sidebar reworked into LISTS / PROJECTS /
+  CONTEXTS sections with live counts (select to filter, re-select to clear).
+  New keys: `C` suspends into `khal interactive`; `N` creates a local-only
+  list (sync pair is pinned to iCloud collection IDs — synced lists must be
+  created in Apple Reminders and pinned in machines/laptop/home.nix).
