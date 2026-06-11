@@ -1,12 +1,12 @@
 # profiles/monitoring/sys.nix — monitoring role, NixOS lane
 #
-# Observability bundle — imports monitoring domain and enables all services.
-# (The n8n/automation block moves to the business role in Phase C.)
+# Pure observability: prometheus, blackbox, cadvisor, grafana, homepage,
+# uptime-kuma, alertmanager + receivers. (The n8n/automation stack lives
+# in the business role.)
 #
-# WARNING: References age secrets (grafana-admin-password, n8n-owner-password-hash).
-# All machines using this role MUST have their host key as a recipient
-# in the corresponding .age files. n8n-owner-password-hash.age currently has
-# only 1 recipient — re-encrypt to include XPS key if XPS uses this role.
+# WARNING: References age secrets (grafana-admin-password). All machines
+# using this role MUST have their host key as a recipient in the
+# corresponding .age files.
 #
 # REPLACES: profiles/monitoring.nix
 # USED BY: server, xps (role list in flake.nix machines table)
@@ -14,7 +14,6 @@
 {
   imports = [
     ../../domains/monitoring/index.nix
-    ../../domains/automation/index.nix
   ];
 
   #==========================================================================
@@ -71,46 +70,4 @@
       }
     ];
   };
-
-  # n8n - Workflow automation for alert routing
-  hwc.automation.n8n = {
-    enable = lib.mkDefault true;
-    port = 5678;
-    dataDir = "/var/lib/hwc/n8n";
-    owner.passwordHashFile = config.age.secrets.n8n-owner-password-hash.path;
-    # Workflow secrets (loaded from agenix)
-    secrets = {
-      estimatorApiKeyFile = config.age.secrets.estimator-api-key.path;
-      jobtreadGrantKeyFile = config.age.secrets.jobtread-grant-key.path;
-      slackWebhookUrlFile = config.age.secrets.slack-webhook-url.path;
-      discordWebhookUrlFile = config.age.secrets.discord-webhook-url.path;
-      anthropicApiKeyFile = config.age.secrets.nanoclaw-anthropic-key.path;
-      hwcLeadsHmacFile = config.age.secrets.hwc-leads-hmac-secret.path;
-      # Taxonomy-aligned Gotify tokens → env vars GOTIFY_TOKEN_{HWC_OPS, HWC_FINANCIAL, ...}
-      gotifyTokenFiles = let api = config.hwc.secrets.api; in
-        lib.filterAttrs (_: v: v != null) {
-          "hwc-ops"       = api."gotify-hwc-ops" or null;
-          "hwc-financial"  = api."gotify-hwc-financial" or null;
-          "hwc-dev"        = api."gotify-hwc-dev" or null;
-          "hwc-admin"      = api."gotify-hwc-admin" or null;
-          "home-security"  = api."gotify-home-security" or null;
-          "home-media"     = api."gotify-home-media" or null;
-          "home-social"    = api."gotify-home-social" or null;
-          "home-admin"     = api."gotify-home-admin" or null;
-        };
-    };
-    # MCP bridge — disabled: n8n-mcp is now a stdio backend of the unified gateway (hwc-sys-mcp)
-    mcpBridge.enable = false;
-    # Non-secret workflow configuration
-    extraEnv = {
-      # work_lead_response: Twilio sender number
-      TWILIO_PHONE_NUMBER = "+14064378700";
-      # work_estimate_router: PostgREST endpoint (has fallback)
-      POSTGRES_REST_URL = "http://localhost:3000";
-      # work_content_calendar: Google Drive folder for calendar content
-      DRIVE_CALENDAR_FOLDER_ID = "1xkrYYSbZzX16Gjo7VbGazgLMkS12u06I";
-    };
-  };
-
-  # Morning Briefing — enabled in domains/business/morning-briefing (hwc-server only)
 }
