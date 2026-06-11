@@ -61,11 +61,9 @@
       "D788714B-EA8C-44D1-A16F-ECF1A88ADCC6"  # "Family"
     ];
     # Phase C second backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com)
-    # with two-way list creation. Flip to true AFTER the server is deployed and
-    # the radicale-htpasswd secret exists — runbook in
-    # domains/server/services/radicale/README.md. Until then the pair would
-    # error on every 15-min sync.
-    radicale.enable = false;
+    # with two-way list creation (tasq `N`). Server deployed + secret provisioned
+    # 2026-06-11; runbook in domains/server/services/radicale/README.md.
+    radicale.enable = true;
   };
 
   hwc.mail.mbsync.enable = false;
