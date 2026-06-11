@@ -213,6 +213,14 @@ read producer options) — R3 is the prerequisite.
   HWC-EXCEPTION required anywhere else."
 - Version bump + version-history entry + profiles/CLAUDE/AGENTS touch-ups.
 
+## 7.5 Note: gotify is slated for decommission (2026-06-11)
+
+Eric no longer uses gotify. The gotify examples in R2/R3 remain accurate
+until the decommission lands (see
+workspace/plans/2026-06-11-gotify-decommission.md) — if decommission runs
+FIRST, those consumers disappear instead of being registry-ized. Check
+before migrating them.
+
 ## 8. Explicitly out of scope
 
 - Personal identity strings (emails, git userName) — Law 4's v12 note
