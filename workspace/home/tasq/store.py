@@ -14,7 +14,9 @@ collide on integer todo ids.
 from __future__ import annotations
 
 import glob as globlib
+import json
 import os
+import shutil
 import subprocess
 from datetime import datetime, time, timezone
 from uuid import uuid4
@@ -155,15 +157,17 @@ class Store:
             todo.complete()  # recurring: spawns next instance into .related
         self.db.save(todo)
 
-    def create_list(self, name: str) -> str:
+    def create_list(self, name: str, root: str | None = None) -> str:
         """Create a new vdir list dir (uuid dirname + displayname file).
 
-        LOCAL-ONLY: the vdirsyncer tasks pair is pinned to specific iCloud
-        collection IDs, so a locally created list never reaches the phone.
-        Synced lists must be created in Apple Reminders first, then pinned
-        (see WALKTHROUGH.md). Call reload() afterwards to pick it up.
+        With the Radicale backend (TASQ_NEW_LIST_ROOT pointing at its local
+        storage), the next discover+sync creates the collection server-side —
+        a genuinely synced list. Under the iCloud-only setup the pair is
+        pinned to specific collection IDs, so a locally created list stays
+        LOCAL-ONLY (synced iCloud lists must be created in Apple Reminders;
+        see WALKTHROUGH.md). Call reload() afterwards to pick it up.
         """
-        root = os.path.dirname(self._globs[0])
+        root = os.path.expanduser(root) if root else os.path.dirname(self._globs[0])
         path = os.path.join(root, uuid4().hex.upper())
         os.makedirs(path)
         with open(os.path.join(path, "displayname"), "w") as f:
@@ -178,16 +182,53 @@ class Store:
         self.db.cache.expire_file(path)
         self.db.cache.save_to_disk()
 
+    # -- calendar events (khal is the port for VEVENTs) -----------------------
+
+    def week_events(self, days: int = 7) -> list[list[dict]] | None:
+        """Events for today..today+days-1 via `khal list --json` (khal expands
+        recurrence). One list per day, in order. None if khal is unavailable
+        or errors. Call from a worker, never the UI thread."""
+        if shutil.which("khal") is None:
+            return None
+        cmd = ["khal", "list"]
+        for field in ("title", "start", "end", "all-day"):
+            cmd += ["--json", field]
+        cmd += ["today", f"{days}d"]
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if proc.returncode != 0:
+            return None
+        out: list[list[dict]] = []
+        for line in proc.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                day = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(day, list):
+                out.append(day)
+        while len(out) < days:
+            out.append([])
+        return out[:days]
+
     # -- sync ----------------------------------------------------------------
 
-    def sync(self) -> tuple[int, str]:
-        """Run `vdirsyncer sync tasks`. Call from a worker, never the UI thread."""
+    # Pairs to sync; the HM module appends "tasks_radicale" when that backend
+    # is enabled (TASQ_SYNC_PAIRS).
+    sync_pairs = tuple(os.environ.get("TASQ_SYNC_PAIRS", "tasks").split())
+
+    def _run_vdirsyncer(self, args: list[str], input_text: str | None = None) -> tuple[int, str]:
         try:
             proc = subprocess.run(
-                ["vdirsyncer", "sync", "tasks"],
+                ["vdirsyncer", *args],
                 capture_output=True,
                 text=True,
                 timeout=120,
+                input=input_text,
             )
         except FileNotFoundError:
             return 127, "vdirsyncer not found on PATH"
@@ -195,3 +236,17 @@ class Store:
             return 124, "vdirsyncer timed out after 120s"
         out = (proc.stdout + proc.stderr).strip()
         return proc.returncode, out
+
+    def sync(self) -> tuple[int, str]:
+        """Run `vdirsyncer sync <pairs>`. Call from a worker, never the UI thread."""
+        return self._run_vdirsyncer(["sync", *self.sync_pairs])
+
+    def discover_and_sync(self, pair: str) -> tuple[int, str]:
+        """Re-run collection discovery for one pair (answering yes to
+        creation prompts), then sync it. Needed after creating a new list
+        locally so vdirsyncer creates the collection server-side. Call from
+        a worker."""
+        code, out = self._run_vdirsyncer(["discover", pair], input_text="y\n" * 20)
+        if code != 0:
+            return code, out
+        return self._run_vdirsyncer(["sync", pair])

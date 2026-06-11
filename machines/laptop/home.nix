@@ -60,6 +60,12 @@
       "36BB690C-8948-4AB5-A0CB-C0596887C4E5"  # "Reminders"
       "D788714B-EA8C-44D1-A16F-ECF1A88ADCC6"  # "Family"
     ];
+    # Phase C second backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com)
+    # with two-way list creation. Flip to true AFTER the server is deployed and
+    # the radicale-htpasswd secret exists — runbook in
+    # domains/server/services/radicale/README.md. Until then the pair would
+    # error on every 15-min sync.
+    radicale.enable = false;
   };
 
   hwc.mail.mbsync.enable = false;
@@ -74,6 +80,9 @@
   # Shell: MCP configured for laptop context
   hwc.home.core.shell = {
     enable = true;
+    # Mail lives on the server (laptop mbsync is disabled); run aerc there.
+    # `command aerc` still reaches the local binary if ever needed.
+    aliases.aerc = "ssh -t server aerc";
     mcp = {
       enable = true;
       includeConfigDir = false;   # don't expose ~/.config to Claude

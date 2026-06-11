@@ -25,6 +25,7 @@
     ../../domains/server/native/ai/llama-cpp/index.nix      # llama.cpp inference (GPU + CPU + embed)
     ../../domains/server/native/ai/persona-daemon/index.nix # Persona-aware HTTP daemon + SQLite memory
     ../../domains/server/services/inbox-processor/index.nix  # Phone capture processor (Whisper + Tesseract)
+    ../../domains/server/services/radicale/index.nix  # Self-hosted CalDAV (tasks.hwc.*)
   ];
 
   assertions = [
@@ -115,6 +116,14 @@
     brainInboxPath       = "${config.hwc.paths.brain."server-replica"}/inbox";
     processedPath        = "${config.hwc.paths.brain."inbox-mobile"}/processed";
     whisperModel         = "base.en";
+  };
+
+  # Radicale — self-hosted CalDAV for two-way task sync with list creation
+  # (tasq N key). Behind Caddy at tasks.hwc.iheartwoodcraft.com. Requires the
+  # radicale-htpasswd agenix secret (domains/secrets/parts/services/).
+  hwc.server.services.radicale = {
+    enable = true;
+    reverseProxy.enable = true;
   };
 
   # ZFS support for backup drives

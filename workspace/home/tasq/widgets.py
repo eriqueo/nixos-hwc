@@ -29,6 +29,15 @@ class DetailPanel(Static):
     """Right pane: full detail of the selected task (tuxedo-style)."""
 
 
+class WeekStrip(Static):
+    """Bottom strip: 7-day calendar of khal events + tasks due this week.
+
+    The app renders a rich Table into it (one column per day, today first);
+    events are ◆-prefixed in the info color, tasks ☐-prefixed in priority
+    colors, overdue tasks lead today's column in red. Toggled with `w`.
+    """
+
+
 class LineModal(ModalScreen):
     """Single-line input modal (add/edit task, filter prompts, new list).
 
@@ -113,6 +122,7 @@ HELP_TEXT = """\
   c        show/hide completed tasks
   l / L    next / previous list
   [ / ]    toggle sidebar / detail panel
+  w        toggle the 7-day week strip (◆ khal events · ☐ tasks due)
   j/k g/G  move cursor / jump top/bottom
 
  SYSTEM
