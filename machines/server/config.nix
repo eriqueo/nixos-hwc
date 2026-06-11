@@ -567,37 +567,11 @@
 
   # Gotify notification server (notifications domain)
   # Self-hosted for privacy - lead data stays on our infrastructure
-  #
-  # Token auto-discovery: any agenix secret named "gotify-{universe}-{domain}"
-  # (e.g. gotify-hwc-ops, gotify-home-admin) is automatically mapped to the
-  # "universe:domain" key in hwc.notifications.gotify.tokens. No edits needed here
-  # when adding new Gotify apps — just create the agenix secret.
-  # enable/port/dataDir come from the server role; this machine adds the
-  # admin credential and token auto-discovery.
-  hwc.notifications.gotify = {
-    adminPasswordFile = config.hwc.secrets.api."gotify-admin-password" or null;
-    tokens =
-      let
-        # Match secrets named "gotify-{universe}-{domain}"
-        # Excludes "gotify-admin-password" and legacy "gotify-token-*" format
-        isGotifyToken = name:
-          lib.hasPrefix "gotify-" name
-          && name != "gotify-admin-password"
-          && !(lib.hasPrefix "gotify-token-" name);
-
-        # "gotify-hwc-ops"    → "hwc:ops"
-        # "gotify-home-admin" → "home:admin"
-        toAppKey = name:
-          let
-            suffix = lib.removePrefix "gotify-" name;
-            parts  = lib.splitString "-" suffix;
-          in
-          "${lib.head parts}:${lib.concatStringsSep "-" (lib.tail parts)}";
-      in
-      lib.mapAttrs' (name: secret:
-        lib.nameValuePair (toAppKey name) secret.path
-      ) (lib.filterAttrs (name: _: isGotifyToken name) config.age.secrets);
-  };
+  # enable/port/dataDir come from the server role; token auto-discovery
+  # (agenix "gotify-{universe}-{domain}" → tokens) is the module's default.
+  # This machine only adds the admin credential.
+  hwc.notifications.gotify.adminPasswordFile =
+    config.hwc.secrets.api."gotify-admin-password" or null;
 
   # iGotify Notification Assistant (bridges Gotify → APNs for iOS push notifications)
   hwc.notifications.gotify.igotify.enable = true;

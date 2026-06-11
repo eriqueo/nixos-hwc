@@ -43,6 +43,7 @@ notifications/
 
 ## Changelog
 
+- 2026-06-11: `gotify/server/` — token auto-discovery (agenix secrets named `gotify-{universe}-{domain}` → `tokens."universe:domain"`) moved from machines/server/config.nix into the `tokens` option default; still overridable per machine. All 5 toplevels byte-identical (proven no-op).
 - 2026-06-09: Law 9/10 — `gotify/{igotify,bridge,server}.nix` and `send/gotify.nix` each converted to `<name>/index.nix` directory modules (pure relocation).
 - 2026-06-09: Law 10 migration — inlined `notify/options.nix` into `notify/index.nix` (schema types moved into the index `let`).
 - **2026-06-04**: Retired the legacy script-based disk-space alerter (`hwc-disk-space-check` in `send/slack-webhook.nix`, the `hwc-disk-space-monitor` timer, and the `sources.diskSpace` option). It routed through the deprecated n8n webhook path and duplicated the Prometheus disk alerts. Disk-space monitoring is now solely owned by Prometheus (`monitoring/prometheus/parts/alerts.nix`) → Alertmanager → `hwc-notify`. Its 95%-critical-on-data-volumes coverage was salvaged into `HighDiskUsage` before removal.
