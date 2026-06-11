@@ -81,8 +81,9 @@ in
         "application/x-xz-compressed-tar" = [ "file-roller.desktop" ];
         "application/x-7z-compressed" = [ "file-roller.desktop" ];
         "application/x-rar" = [ "file-roller.desktop" ];
-        "text/*" = [ "micro.desktop" ];
-        "application/x-*" = [ "micro.desktop" ];
+        # ("text/*" / "application/x-*" globs removed — the XDG mime spec
+        # has no glob matching in defaults; they were silently ignored.)
+        "text/plain" = [ "micro.desktop" ];
         "application/json" = [ "micro.desktop" ];
         "application/xml" = [ "micro.desktop" ];
         "application/yaml" = [ "micro.desktop" ];

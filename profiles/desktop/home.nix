@@ -67,29 +67,8 @@
 
       # Development & Automation
       n8n.enable = lib.mkDefault false;
-      codex.package = lib.mkDefault (pkgs.stdenv.mkDerivation {
-        pname = "codex";
-        version = "0.101.0";
-        nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-        buildInputs = [
-          pkgs.libcap
-          pkgs.openssl
-          pkgs.zlib
-          pkgs.stdenv.cc.cc.lib
-          pkgs.glibc
-        ];
-        src = pkgs.fetchurl {
-          url = "https://github.com/openai/codex/releases/download/rust-v0.101.0/codex-x86_64-unknown-linux-gnu.tar.gz";
-          sha256 = "sha256-6XMt47hw32o5zkukRplhDvWBhDlneTRX+O8R86WlgjY=";
-        };
-        dontUnpack = true;
-        installPhase = ''
-          install -d "$out/bin"
-          ${pkgs.gnutar}/bin/tar -xf "$src" -C "$out/bin"
-          mv "$out/bin/codex-x86_64-unknown-linux-gnu" "$out/bin/codex"
-          chmod 755 "$out/bin/codex"
-        '';
-      });
+      # codex release-binary pin moved to domains/home/apps/codex/parts/
+      # package.nix; the laptop one-off applies it (server/xps use stock).
 
       # Utilities
       ipcalc.enable = lib.mkDefault true;

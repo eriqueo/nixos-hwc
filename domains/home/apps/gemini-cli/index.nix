@@ -27,10 +27,7 @@ in
       fi
     '');
 
-    programs.bash.initExtra = lib.mkIf hasGeminiSecret ''
-      if [ -f "${osCfg.age.secrets.gemini-api-key.path}" ]; then
-        source "${osCfg.age.secrets.gemini-api-key.path}"
-      fi
-    '';
+    # (bash branch removed 2026-06-11 — bash is never enabled, the
+    # secret sourcing there was silently dead; zsh covers all hosts.)
   };
 }

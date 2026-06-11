@@ -54,6 +54,17 @@ in
       MOZ_ENABLE_WAYLAND = "1";
     };
 
+    # Default browser registration — wofi/portals/xdg-open resolve http(s)
+    # and html to LibreWolf.
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "x-scheme-handler/http" = [ "librewolf.desktop" ];
+        "x-scheme-handler/https" = [ "librewolf.desktop" ];
+        "text/html" = [ "librewolf.desktop" ];
+      };
+    };
+
     # Override the upstream librewolf.desktop so wofi/rofi/any XDG launcher
     # routes through librewolf-hwc (Intel-pinned, VA-API-iHD wrapper) instead
     # of bare librewolf. User dir (~/.local/share/applications/librewolf.desktop)

@@ -64,10 +64,6 @@ in
       ];
     }
 
-    # Home activation scripts from profile
-    (lib.mkIf (profile ? activation) {
-      home.activation = profile.activation;
-    })
   ]);
 }
 

@@ -22,6 +22,8 @@ let
   doneFile  = "${cfg.todoDir}/done.txt";
 
   seedConfig = import ./parts/config.nix { };
+  # Seed file installed copy-once (tuxedo rewrites config.toml at runtime)
+  seedConfigFile = pkgs.writeText "tuxedo-config.toml" seedConfig;
 in
 {
   #============================================================================
@@ -70,13 +72,13 @@ in
     # at runtime — a store symlink would break the app's own writes. This path
     # also works under both HM-as-module and HM-as-flake (mirrors mail/calendar).
     home.activation.tuxedoSetup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      mkdir -p ${lib.escapeShellArg cfg.todoDir}
-      touch ${lib.escapeShellArg todoFile} ${lib.escapeShellArg doneFile}
+      run mkdir -p ${lib.escapeShellArg cfg.todoDir}
+      run touch ${lib.escapeShellArg todoFile} ${lib.escapeShellArg doneFile}
 
       cfgDir=${lib.escapeShellArg "${config.xdg.configHome}/tuxedo"}
-      mkdir -p "$cfgDir"
+      run mkdir -p "$cfgDir"
       if [ ! -e "$cfgDir/config.toml" ]; then
-        printf '%s' ${lib.escapeShellArg seedConfig} > "$cfgDir/config.toml"
+        run install -m 0644 ${seedConfigFile} "$cfgDir/config.toml"
       fi
     '';
 

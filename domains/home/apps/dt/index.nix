@@ -210,7 +210,7 @@ in
       # Ensure calendar dir exists on activation so first clock-out doesn't race.
       home.activation.dtCalendarDir = lib.mkIf cfg.calendar.enable
         (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          mkdir -p $HOME/.local/share/dt/calendar
+          run mkdir -p $HOME/.local/share/dt/calendar
         '');
     }
 
