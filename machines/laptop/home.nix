@@ -50,7 +50,17 @@
   # Tasks: Apple Reminders (VTODO) sync via todoman, riding the calendar
   # vdirsyncer config + timer above. The laptop wires mail per-machine (no mail
   # role), so tasks is enabled here rather than in profiles/mail/home.nix.
-  hwc.mail.tasks.enable = true;
+  hwc.mail.tasks = {
+    enable = true;
+    # The two VTODO (Reminders) collections in this iCloud account. The other
+    # discovered collections are VEVENT calendars (Home/Calendar/Work/Family-cal)
+    # and must be excluded or todoman breaks on the duplicate "Family" name.
+    # Verified via supported-calendar-component-set PROPFIND (2026-06-11):
+    collections = [
+      "36BB690C-8948-4AB5-A0CB-C0596887C4E5"  # "Reminders"
+      "D788714B-EA8C-44D1-A16F-ECF1A88ADCC6"  # "Family"
+    ];
+  };
 
   hwc.mail.mbsync.enable = false;
 
