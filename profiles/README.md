@@ -34,6 +34,9 @@ mail/        home.nix             # server — hwc.mail menu (Phase C)
 
 ## Changelog
 
+- 2026-06-11: desktop/sys.nix + gaming/sys.nix — verbatim nix-ld GUI lib
+  lists replaced by the `hwc.system.core.nixld.guiLibs.enable` flag
+  (list now lives once in domains/system/core).
 - 2026-06-11: base/sys.nix — `hwc.system.users.user.ssh.enable = true`:
   every machine provisions eric's authorized keys declaratively, so the
   base hardening `passwordAuthentication = false` now wins fleet-wide

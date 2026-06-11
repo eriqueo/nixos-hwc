@@ -32,12 +32,5 @@
   programs.dconf.enable = true;
 
   # nix-ld GUI libs (extends base role set for graphical machines)
-  programs.nix-ld.libraries = with pkgs; [
-    gtk3 pango cairo gdk-pixbuf atk
-    libdrm mesa alsa-lib cups libpulseaudio
-    libx11 libxcomposite libxcursor libxdamage libxext libxfixes
-    libxi libxrandr libxrender libxtst libxcb libxscrnsaver
-    at-spi2-atk at-spi2-core
-    libgbm libxkbcommon
-  ];
+  hwc.system.core.nixld.guiLibs.enable = true;
 }
