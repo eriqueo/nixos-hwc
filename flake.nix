@@ -72,7 +72,10 @@
     };
 
     claude-desktop = {
-      url = "github:aaddrick/claude-desktop-debian";
+      # Pinned: app 1.11847.5 (repo rev e85450c9, 2026-06-10) breaks cowork —
+      # all main-process requests fail with net::ERR_FAILED at OAuth.
+      # Unpin once upstream packaging handles the new app version.
+      url = "github:aaddrick/claude-desktop-debian/4a1bbc9e958bbae485d5797dda3ce91f4630a407";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
