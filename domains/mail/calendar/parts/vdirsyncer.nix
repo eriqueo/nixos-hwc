@@ -22,6 +22,10 @@ let
   '';
 
   pairs = lib.concatStringsSep "\n" (lib.mapAttrsToList mkPair cfg.accounts);
+
+  # Pairs contributed by sibling modules (e.g. mail/tasks → VTODO/Reminders).
+  # Kept in the same config so vdirsyncer has one config file + one timer.
+  extraPairs = lib.concatStringsSep "\n" cfg.extraVdirsyncerPairs;
 in
 {
   config = ''
@@ -29,5 +33,6 @@ in
     status_path = "${dataDir}/status/"
 
     ${pairs}
+    ${extraPairs}
   '';
 }

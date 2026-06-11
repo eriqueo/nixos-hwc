@@ -26,6 +26,10 @@
       };
     };
 
+    # VTODO/Reminders sync (todoman). Shares calendar's vdirsyncer config + timer
+    # and reuses the icloud account above.
+    tasks.enable = true;
+
     health = {
       enable = true;
       # webhook.url names a concrete host — it lives in the machine one-off
