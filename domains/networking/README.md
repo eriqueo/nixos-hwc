@@ -42,6 +42,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-06-10: Remove Jobber MCP — folded into jt-mcp. Dropped the `@jobber_mcp` legacy-SSE matcher (`/sse /messages*` → :8002) from the tailnet root host in `reverseProxy/index.nix`, plus the `jobber.heartwoodcraft.me` / `jobber.api.iheartwoodcraft.com` cloudflared ingress and the `hwc.server.ai.jobberMcp` module (`domains/server/native/ai/jobber-mcp/` deleted). No secrets involved.
 - 2026-06-09: Law 9/10 — `reverseProxy.nix` → `reverseProxy/index.nix`, `hosts.nix` → `hosts/index.nix` (pure relocation).
 - 2026-06-09: Law 3 sweep — `routes.nix` static-site roots (calculator, briefing) derive from `hwc.paths.nixos` instead of hardcoding `/home/eric/.nixos`.
 - 2026-06-09: Deleted `routes-lib.nix` (dead code — `index.nix` documented it as not imported; its only references were to the also-removed `_shared/{pure,arr-config}.nix`).

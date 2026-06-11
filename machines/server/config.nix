@@ -18,7 +18,6 @@
     ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
     ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
     ../../domains/server/containers/_shared/directories.nix
-    ../../domains/server/native/ai/jobber-mcp/index.nix   # Jobber MCP Server
     ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
     ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
     ../../domains/server/native/ai/hermes/index.nix         # Hermes Agent (Nous Research)
@@ -100,9 +99,6 @@
   # System identity
   networking.hostName = "hwc-server";
   networking.hostId = "8425e349";
-
-  # Jobber MCP Server — Jobber GraphQL API as MCP tools via SSE on port 20443
-  hwc.server.ai.jobberMcp.enable = true;
 
   # Lead Scout — Facebook group lead scraper/classifier, MCP + HTTP on port 8420
   hwc.server.ai.leadScout.enable = true;
@@ -757,13 +753,11 @@
     # See wiki/nixos/iheartwoodcraft-com-backend-migration.md.
     extraIngress = {
       "mcp.heartwoodcraft.me"    = "http://localhost:6200";
-      "jobber.heartwoodcraft.me" = "http://localhost:8002";
       "leads.heartwoodcraft.me"  = "http://localhost:8420";
       "brain.heartwoodcraft.me"  = "http://localhost:9876";
 
       "n8n.api.iheartwoodcraft.com"    = "http://localhost:5678";
       "mcp.api.iheartwoodcraft.com"    = "http://localhost:6200";
-      "jobber.api.iheartwoodcraft.com" = "http://localhost:8002";
       "leads.api.iheartwoodcraft.com"  = "http://localhost:8420";
       "brain.api.iheartwoodcraft.com"  = "http://localhost:9876";
     };
