@@ -17,7 +17,8 @@ workspace/
 ├── media/           # domains/media/ — youtube-services, media scripts, cleanup tools
 ├── monitoring/      # domains/monitoring/ — health checks, status scripts
 ├── nixos-dev/       # Repo development tools (not a domain)
-└── system/          # domains/system/ — diagnostics, setup, system utilities
+├── system/          # domains/system/ — diagnostics, setup, system utilities
+└── tools/           # Repo-wide linters & meta-tools (readme-freshness.sh, web-speed.sh)
 ```
 
 ---
@@ -91,6 +92,10 @@ Tightly coupled to specific services — not promoted to workspace.
 
 ## Changelog
 
+- 2026-06-12: Added `tools/readme-freshness.sh` — Law-12 drift detector. Scans
+  every `domains/**/README.md` and flags ones whose newest commit is older than
+  the newest commit touching sibling tracked files. Exit 0 = clean, 1 = stale,
+  2 = usage error. Pure bash + git, no network.
 - 2026-06-09: `secret-manager.sh` now encrypts multi-recipient (`age -R` to all host
   pubkeys + eric) and drops the auto-declaration step; added `secrets-parity.sh`
   (generator consistency check). See `domains/secrets/README.md`.
