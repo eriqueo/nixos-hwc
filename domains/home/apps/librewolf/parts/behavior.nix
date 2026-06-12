@@ -14,15 +14,18 @@ in
   "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
 
   # Privacy: Switch from RFP to FPP to allow site-level Dark Mode
-  "privacy.resistFingerprinting" = false; 
+  "privacy.resistFingerprinting" = false;
   "privacy.fingerprintingProtection" = true;
-  # WebGLRenderCapability is excluded because +AllTargets includes a target
-  # that blocks WebGL context creation at the content-process level even when
-  # webgl.disabled=false (LibreWolf upstream issue, Codeberg #2381). Without
-  # this exclusion every WebGL page hits "WebGL supported but disabled or
-  # unavailable". Firefox is unaffected because it doesn't ship the FPP+
-  # webgl-render override LibreWolf does.
-  "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme,-WebGLRenderCapability";
+  # No +AllTargets: that flag is RFP-by-another-name — it enables EVERY FPP
+  # target including CanvasRandomization (noise on every canvas readback;
+  # freezes long-lived SPAs like claude.ai), timer-precision fuzzing (janks
+  # YouTube's adaptive player), and frame-rate spoofing (hurts WebGL). The
+  # default balanced target set keeps tracker-relevant protections without
+  # the perf-hostile ones. The two exclusions are kept as guarantees:
+  # CSSPrefersColorScheme for site-level dark mode, WebGLRenderCapability
+  # because it blocks WebGL context creation at the content-process level
+  # even with webgl.disabled=false (LibreWolf Codeberg #2381).
+  "privacy.fingerprintingProtection.overrides" = "-CSSPrefersColorScheme,-WebGLRenderCapability";
   
   # Force Dark Logic into the browser engine
   "ui.systemUsesDarkTheme" = 1; 
