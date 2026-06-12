@@ -33,7 +33,7 @@ from textual.widgets import Footer, Static
 from textual.widgets.option_list import Option
 
 import model_map
-from store import SORT_MODES, Store
+from store import SORT_MODES, ListDeleteError, Store
 from widgets import (
     ConfirmModal,
     DetailPanel,
@@ -903,36 +903,41 @@ class TasqApp(App):
     def _list_ops(self, tl) -> None:
         self._leader(tl.name, [
             ("r", "rename …", lambda: self._rename_list_flow(tl)),
-            ("d", "delete all its tasks …", lambda: self._empty_list_flow(tl)),
+            ("d", "DELETE list …", lambda: self._delete_list_flow(tl)),
         ])
 
-    def _empty_list_flow(self, tl) -> None:
-        # vdirsyncer can't delete collections — a removed local dir breaks
-        # sync and a later discover resurrects it from the server. Task
-        # deletions DO sync; the empty shell is removed in Apple Reminders.
-        todos = self.store.todos(list_name=tl.name, show_completed=True)
-        if not todos:
+    def _delete_list_flow(self, tl) -> None:
+        # Radicale gives complete control: a CalDAV DELETE removes the
+        # collection server-side (and from the phone). Not iCloud-backed
+        # lists — those have no server we own.
+        if not self.store.list_is_radicale(tl):
             self.notify(
-                f"'{tl.name}' is already empty — delete the list itself in "
-                "Apple Reminders (the server owns collections)",
-                severity="warning", timeout=10,
+                f"'{tl.name}' isn't Radicale-backed — can't delete it here",
+                severity="warning", timeout=8,
             )
             return
+        n = len(self.store.todos(list_name=tl.name, show_completed=True))
 
         def done(confirmed: bool | None) -> None:
             if not confirmed:
                 return
-            for t in todos:
-                self.store.delete(t)
+            try:
+                self.store.delete_list(tl)
+            except ListDeleteError as exc:
+                self.notify(str(exc), severity="error", timeout=10)
+                return
+            if self.current_list == tl.name:
+                self.current_list = None
+            self._sidebar_pos = None
             self.refresh_tasks(keep_cursor=False)
-            self.notify(
-                f"deleted {len(todos)} task(s) from '{tl.name}' — R syncs; "
-                "remove the empty list in Reminders to drop it everywhere",
-                timeout=10,
-            )
+            self.notify(f"deleted list '{tl.name}' from Radicale and the phone")
 
         self.push_screen(
-            ConfirmModal(f"Delete all {len(todos)} task(s) in '{tl.name}'?"), done
+            ConfirmModal(
+                f"Delete list '{tl.name}' and its {n} task(s)? Removes it from "
+                "Radicale and your phone — cannot be undone."
+            ),
+            done,
         )
 
     def action_projects_menu(self) -> None:
