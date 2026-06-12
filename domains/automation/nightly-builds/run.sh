@@ -33,6 +33,26 @@ mkdir -p "$RUNS_DIR"
 LOG_FILE="$RUNS_DIR/_launcher.log"
 log() { echo "$(date -Iseconds) $*" | tee -a "$LOG_FILE"; }
 
+# hwc-notify HTTP endpoint (loopback). Run results POST here as topic
+# "nightly-builds"; routes.nix fans that to the #nightly-builds Discord channel.
+NOTIFY_URL="${NB_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
+
+# notify <priority> <title> <body> — best-effort run-result post. Never fails
+# the run (the branch + REPORT are the durable output; a notify is a courtesy).
+# Skipped on --dry-run; degrades quietly if curl/jq or the dispatcher are absent.
+notify() {
+  local priority="$1" title="$2" body="$3" payload
+  if [ "$DRY_RUN" -eq 1 ]; then log "DRY: would notify [$priority] $title"; return 0; fi
+  command -v curl >/dev/null 2>&1 || { log "WARN: curl missing — notify skipped"; return 0; }
+  command -v jq   >/dev/null 2>&1 || { log "WARN: jq missing — notify skipped"; return 0; }
+  payload=$(jq -nc --arg t "$title" --arg b "$body" --argjson p "$priority" \
+    '{topic:"nightly-builds", title:$t, body:$b, priority:$p, source:"nightly-builds", tags:["nightly-builds"]}')
+  curl -fsS -m 8 -X POST -H 'content-type: application/json' \
+    -d "$payload" "$NOTIFY_URL" >/dev/null 2>&1 \
+    && log "notify sent: $title" \
+    || log "WARN: notify POST failed ($NOTIFY_URL)"
+}
+
 # ── Lock ─────────────────────────────────────────────────────────────────────
 if [ -f "$LOCK_FILE" ]; then
   pid=$(cat "$LOCK_FILE" 2>/dev/null || echo "")
@@ -99,8 +119,11 @@ $NEW_IDEAS"
       (cd "$NB_DIR" && timeout 1800 "$CLAUDE_BIN" -p "$SMITH_PROMPT" \
         --dangerously-skip-permissions) \
         > "$RUNS_DIR/_card-smith-$DATE.log" 2>&1 \
-        && log "PHASE A: card-smith done (log: runs/_card-smith-$DATE.log)" \
-        || log "WARN: card-smith failed — ideas left in place"
+        && { log "PHASE A: card-smith done (log: runs/_card-smith-$DATE.log)"; \
+             notify 4 "🛠 Card-smith: $COUNT idea(s) drafted" \
+               "Drafted from $COUNT new idea(s). Review _inbox/nightly_builds/ at morning review and flip draft → queued for anything ready (that flip is the Phase-4 gate)."; } \
+        || { log "WARN: card-smith failed — ideas left in place"; \
+             notify 2 "⚠️ Card-smith failed" "Card-smith pass errored on $COUNT idea(s); they were left under ## new. See runs/_card-smith-$DATE.log."; }
     fi
   else
     log "PHASE A: no new ideas"
@@ -190,9 +213,16 @@ PYEOF
     set_field "$CARD" status done
     set_field "$CARD" pr "branch \`$BRANCH\` (pushed; open PR at morning review)"
     log "PHASE B: card $SLUG done"
+    notify 5 "✅ $GOAL/$SLUG — done (${ELAPSED}s)" \
+      "Branch \`$BRANCH\` pushed to origin. Open the PR at morning review.
+Report: runs/$RUN_NAME/REPORT.md"
   else
     set_field "$CARD" status "failed: exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)"
     log "PHASE B: card $SLUG FAILED — see $RUN_DIR/agent-output.log"
+    notify 2 "❌ $GOAL/$SLUG — failed (${ELAPSED}s)" \
+      "exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)
+Any partial commits were pushed to \`$BRANCH\` (reviewable, gate 8).
+Logs: runs/$RUN_NAME/agent-output.log"
   fi
   # Worktree is left in place for morning inspection; next run recreates it.
 done

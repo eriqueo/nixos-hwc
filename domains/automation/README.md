@@ -3,13 +3,14 @@
 ## Purpose
 
 Workflow engine and event bus. Contains n8n for workflow orchestration,
-MQTT broker for event-driven automation (Frigate → n8n), and the nightly-builds
-runner that executes brain-vault gauntlet cards unattended overnight.
+MQTT broker for event-driven automation (Frigate → n8n), the nightly-builds
+runner that executes brain-vault gauntlet cards unattended overnight, and the
+readme-freshness weekly Law-12 drift report.
 
 ## Boundaries
 
-- Owns: n8n workflow automation, MQTT broker, nightly gauntlet-card runner
-- Does NOT own: notification delivery (`domains/notifications/`), alert definitions (`domains/monitoring/alerts/`)
+- Owns: n8n workflow automation, MQTT broker, nightly gauntlet-card runner, readme-freshness report
+- Does NOT own: notification delivery (`domains/notifications/`), alert definitions (`domains/monitoring/alerts/`). These modules *emit* to `hwc-notify` (loopback) but do not implement delivery.
 
 ## Structure
 
@@ -21,10 +22,14 @@ automation/
 │   └── index.nix
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
 │   ├── index.nix    # Options + systemd service/timer (hwc.automation.nightlyBuilds.*)
-│   ├── run.sh       # Launcher: card-smith pass + queued-card execution in git worktrees
+│   ├── run.sh       # Launcher: card-smith pass + queued-card execution in git worktrees;
+│   │                #   posts per-card verdict to hwc-notify (topic nightly-builds → Discord)
 │   └── prompts/
 │       ├── run-wrapper.md  # Standing rules wrapped around every card
 │       └── card-smith.md   # Drafts gated cards from _ideas.md one-liners
+├── readme-freshness/  # Weekly Law-12 drift report (hwc.automation.readmeFreshness.*)
+│   ├── index.nix      # Options + systemd service/timer (Mon 09:00)
+│   └── run.sh         # Runs workspace/tools/readme-freshness.sh; POSTs summary to hwc-notify
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
@@ -48,6 +53,8 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-12: nightly-builds run results now POST to Discord via `hwc-notify` (new `discord-webhook-nightly-builds` secret + `discord-nightly-builds` channel + `topic=nightly-builds` route in `domains/notifications/`). `run.sh` gained a best-effort `notify()` helper (per-card verdict + card-smith summary); `curl` added to the unit path.
+- 2026-06-12: Add `readme-freshness/` — weekly systemd timer (Mon 09:00, server role) runs `workspace/tools/readme-freshness.sh` and posts a Law-12 drift summary to the #nightly-builds Discord channel. Report-only; emits to `hwc-notify`, never edits a README.
 - 2026-06-12: nightly-builds hardening from 4-night sandbox rehearsal — agents must end output with `NIGHTLY-VERDICT: success|failure` and the launcher only marks a card `done` on a parsed success (a clean stop on an unsatisfiable card previously looked identical to success); card-smith receives the target repo path via launch context instead of a hardcoded `~/.nixos`.
 - 2026-06-12: Add `nightly-builds/` — systemd timer (01:30) on the server role runs headless Claude Code against `status: queued` cards in the brain vault's `_inbox/nightly_builds/`; each card executes in a disposable git worktree, pushes its branch to origin, and writes a self-verifying REPORT.md to vault `runs/`. Card-smith pre-pass drafts cards from `_ideas.md` (drafts only; human flips to queued).
 - 2026-06-09: Law 9/10 — `n8n/mcp-bridge.nix` → `n8n/mcp-bridge/index.nix` (pure relocation).

@@ -280,6 +280,11 @@
     notify.enable = true;
   };
 
+  # README freshness — weekly Law-12 drift report (Mon 09:00) → #nightly-builds
+  # Discord channel. Lives here (not the server profile) because it POSTs to
+  # hwc-notify, which is a hwc-server one-off enabled just above.
+  hwc.automation.readmeFreshness.enable = true;
+
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)

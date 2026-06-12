@@ -82,6 +82,7 @@ in
       path = [
         pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
         pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
+        pkgs.curl  # POST run results to hwc-notify (Discord)
       ];
       serviceConfig = {
         Type = "oneshot";
