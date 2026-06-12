@@ -24,4 +24,5 @@ orchestration/
 - `media-orchestrator.py` — Media pipeline event handler
 
 ## Changelog
+- 2026-06-09: Law 9/10 sweep (`aea7be73`) — option-declaring leaf modules under this domain converted to `<name>/index.nix` directory modules via `git mv` (history-preserving, no behaviour change).
 - 2026-03-26: audiobook-copier workspace path updated from workspace/hooks/ to workspace/automation/hooks/ (domain alignment)

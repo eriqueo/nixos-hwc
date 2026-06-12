@@ -79,6 +79,7 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-03-29: `5b2eaeb3` — replaced the stale `/mnt/media/pictures` read-only mount with `/mnt/media/photos/external` (new external library, 34K laptop-only photos) in both the server and ML containers. Empty pictures dir dropped. Kuma config tweaked the same week (`2e973fcb`).
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation
