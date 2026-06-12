@@ -39,6 +39,7 @@ from widgets import (
     DetailPanel,
     FilterSidebar,
     HelpModal,
+    LeaderMenu,
     LineModal,
     TaskTable,
     WeekStrip,
@@ -157,7 +158,7 @@ class TasqApp(App):
         Binding("a", "add", "Add"),
         Binding("e", "edit", "Edit"),
         Binding("x", "toggle_done", "Done"),
-        Binding("space", "toggle_done", "Done", show=False),
+        Binding("space", "leader", "Leader"),
         Binding("d", "delete", "Del"),
         Binding("p", "cycle_priority", "Pri", show=False),
         Binding("N", "new_list", "New list", show=False),
@@ -526,6 +527,17 @@ class TasqApp(App):
             tl = lists[0] if lists else None
         return tl
 
+    def _resolve_list(self, name: str):
+        """Resolve a list: token — case-insensitive exact, then unique
+        prefix (so spaced names are reachable: list:heart → Heartwood…)."""
+        lists = self.store.lists()
+        low = name.lower()
+        for tl in lists:
+            if tl.name.lower() == low:
+                return tl
+        prefixed = [tl for tl in lists if tl.name.lower().startswith(low)]
+        return prefixed[0] if len(prefixed) == 1 else None
+
     # -- events -------------------------------------------------------------------
 
     @on(FilterSidebar.OptionSelected)
@@ -586,7 +598,10 @@ class TasqApp(App):
     # -- task actions -------------------------------------------------------------
 
     def action_add(self) -> None:
-        target = self._target_list()
+        self._add_task()
+
+    def _add_task(self, target=None, prefill: str = "") -> None:
+        target = target or self._target_list()
         if target is None:
             self.notify("no task lists found in the vdir", severity="error")
             return
@@ -598,20 +613,30 @@ class TasqApp(App):
             if not fields["summary"]:
                 self.notify("task needs a summary", severity="warning")
                 return
+            todo_list = target
+            if fields["list"]:
+                todo_list = self._resolve_list(fields["list"])
+                if todo_list is None:
+                    self.notify(
+                        f"no list matching '{fields['list']}' — not added",
+                        severity="warning",
+                    )
+                    return
             self.store.add(
                 fields["summary"],
-                todo_list=target,
+                todo_list=todo_list,
                 categories=fields["categories"],
                 priority=fields["priority"],
                 due=fields["due"],
             )
             self.refresh_tasks()
-            self.notify(f"added to {target.name}")
+            self.notify(f"added to {todo_list.name}")
 
         self.push_screen(
             LineModal(
                 f"New task → {target.name}",
-                placeholder="summary +project @context (A) due:YYYY-MM-DD",
+                value=prefill,
+                placeholder="summary +project @context (A) due:… list:Name",
             ),
             done,
         )
@@ -628,6 +653,15 @@ class TasqApp(App):
             if not fields["summary"]:
                 self.notify("task needs a summary", severity="warning")
                 return
+            new_list = None
+            if fields["list"]:
+                new_list = self._resolve_list(fields["list"])
+                if new_list is None:
+                    self.notify(
+                        f"no list matching '{fields['list']}' — not saved",
+                        severity="warning",
+                    )
+                    return
             self.store.edit(
                 todo,
                 summary=fields["summary"],
@@ -635,8 +669,12 @@ class TasqApp(App):
                 priority=fields["priority"],
                 due=fields["due"],
             )
+            if new_list is not None and todo.list and new_list.path != todo.list.path:
+                self.store.move(todo, new_list)
+                self.notify(f"saved → {new_list.name}")
+            else:
+                self.notify("saved")
             self.refresh_tasks()
-            self.notify("saved")
 
         self.push_screen(LineModal("Edit task", value=model_map.render(todo)), done)
 
@@ -706,6 +744,101 @@ class TasqApp(App):
     def _new_list_worker(self, pair: str) -> None:
         code, out = self.store.discover_and_sync(pair)
         self.call_from_thread(self._sync_done, code, out)
+
+    def action_rename_list(self) -> None:
+        if not self.current_list:
+            self.notify("switch to a list first (rename needs one list)",
+                        severity="warning")
+            return
+        tl = self.store.list_named(self.current_list)
+        if tl is None:
+            return
+
+        def done(name: str | None) -> None:
+            if not name or not name.strip():
+                return
+            name = name.strip()
+            if name == tl.name:
+                return
+            if self.store.list_named(name):
+                self.notify(f"list '{name}' already exists", severity="warning")
+                return
+            self.store.rename_list(tl, name)
+            self.current_list = name
+            self._sidebar_pos = None
+            self.refresh_tasks(keep_cursor=False)
+            self.notify(f"renamed to '{name}' — R pushes it to the server")
+
+        self.push_screen(LineModal(f"Rename list '{tl.name}'", value=tl.name), done)
+
+    # -- leader key (space, which-key style) --------------------------------------
+
+    def _leader(self, title: str, entries: list[tuple[str, str, object]]) -> None:
+        """Show a LeaderMenu for (key, label, fn) entries; run the picked fn."""
+        actions = {key: fn for key, _, fn in entries}
+
+        def done(key: str | None) -> None:
+            if key is not None:
+                actions[key]()
+
+        self.push_screen(
+            LeaderMenu(title, [(key, label) for key, label, _ in entries]), done
+        )
+
+    def action_leader(self) -> None:
+        self._leader("space …", [
+            ("a", "add task …", self._leader_add),
+            ("l", "lists …", self._leader_lists),
+        ])
+
+    def _leader_add(self) -> None:
+        entries: list[tuple[str, str, object]] = [
+            ("a", f"→ {(self._target_list().name if self._target_list() else '?')}"
+                  " (current list)", self._add_task),
+        ]
+        for i, tl in enumerate(self.store.lists()[:9], start=1):
+            entries.append(
+                (str(i), f"→ {tl.name}", lambda tl=tl: self._add_task(target=tl))
+            )
+        entries.append(("p", "into a +project …",
+                        lambda: self._leader_add_category("+", "project")))
+        entries.append(("c", "into an @context …",
+                        lambda: self._leader_add_category("@", "context")))
+        self._leader("add task", entries)
+
+    def _leader_add_category(self, sigil: str, label: str) -> None:
+        cats = sorted({
+            cat
+            for t in self.store.todos(show_completed=False)
+            for cat in t.categories or []
+            if cat.startswith(sigil)
+        })
+        if not cats:
+            self.notify(f"no {sigil}{label}s in use yet — type one in the add line",
+                        severity="warning")
+            self._add_task(prefill=f"{sigil}")
+            return
+        entries = [
+            (str(i), cat, lambda cat=cat: self._add_task(prefill=f"{cat} "))
+            for i, cat in enumerate(cats[:9], start=1)
+        ]
+        self._leader(f"add into {label}", entries)
+
+    def _leader_lists(self) -> None:
+        entries: list[tuple[str, str, object]] = [
+            ("a", ALL_LISTS, lambda: self._switch_list(None)),
+        ]
+        for i, name in enumerate(self._list_names()[:9], start=1):
+            entries.append((str(i), name, lambda name=name: self._switch_list(name)))
+        entries.append(("n", "new list …", self.action_new_list))
+        entries.append(("r", "rename current list …", self.action_rename_list))
+        self._leader("lists", entries)
+
+    def _switch_list(self, name: str | None) -> None:
+        self.current_list = name
+        self.category = None
+        self._sidebar_pos = None
+        self.refresh_tasks(keep_cursor=False)
 
     # -- filters / sort / view -----------------------------------------------------
 

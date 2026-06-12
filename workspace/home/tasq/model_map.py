@@ -1,8 +1,12 @@
 """Parse/render the one-line todo.txt-style task dialect.
 
-    "Buy lumber +shop @errand (A) due:2026-06-20"
+    "Buy lumber +shop @errand (A) due:2026-06-20 list:errands"
       -> summary="Buy lumber", categories=["+shop", "@errand"],
-         priority=1, due=date(2026, 6, 20)
+         priority=1, due=date(2026, 6, 20), list="errands"
+
+The list: value is an unresolved name fragment — the app matches it against
+real lists (case-insensitive exact, then unique prefix), so spaced list
+names are reachable by prefix ("list:heartwood" -> "Heartwood Craft").
 
 Categories keep their +/@ sigils so they round-trip through iCloud and read
 well as tags in Apple Reminders (CATEGORIES survives the round-trip —
@@ -20,14 +24,16 @@ PRI_LETTERS = "ABCDEFGHI"
 
 _PRI_RE = re.compile(r"^\(([A-Za-z])\)$")
 _DUE_RE = re.compile(r"^due:(.+)$", re.IGNORECASE)
+_LIST_RE = re.compile(r"^list:(.+)$", re.IGNORECASE)
 
 
 def parse(line: str) -> dict:
-    """Parse a task line into {summary, categories, priority, due}."""
+    """Parse a task line into {summary, categories, priority, due, list}."""
     summary_words: list[str] = []
     categories: list[str] = []
     priority = 0
     due: date | None = None
+    list_name: str | None = None
 
     for tok in line.split():
         m = _PRI_RE.match(tok)
@@ -40,6 +46,10 @@ def parse(line: str) -> dict:
             if parsed is not None:
                 due = parsed
                 continue
+        m = _LIST_RE.match(tok)
+        if m:
+            list_name = m.group(1)
+            continue
         if len(tok) > 1 and tok[0] in "+@":
             categories.append(tok)
             continue
@@ -50,6 +60,7 @@ def parse(line: str) -> dict:
         "categories": categories,
         "priority": priority,
         "due": due,
+        "list": list_name,
     }
 
 
@@ -87,4 +98,7 @@ def render(todo) -> str:
         parts.append(f"({priority_letter(todo.priority)})")
     if todo.due:
         parts.append(f"due:{due_str(todo.due)}")
+    # tokens can't hold spaces; spaced list names stay reachable by prefix
+    if todo.list and todo.list.name and " " not in todo.list.name:
+        parts.append(f"list:{todo.list.name}")
     return " ".join(parts)
