@@ -41,6 +41,11 @@ todui/
 - khal + vdirsyncer are put on todui's PATH via `extraRuntimePackages`.
 
 ## Changelog
+- 2026-06-12: Launcher integration — `xdg.desktopEntries.todui` (`kitty -e
+  todui`, terminal=false) so it appears in wofi/rofi `drun`; Hyprland keybind
+  `SUPER+T` added in `domains/home/apps/hyprland/parts/behavior.nix` (gated on
+  `hwc.home.apps.todui.enable`). The `dt` (DataX TUI) keybind moved `SUPER+T`
+  → `SUPER+D` to free `T` for tasks.
 - 2026-06-12: Created. Replaces the in-tree `tasq` module and
   `workspace/home/tasq/` sources with the standalone `todui` flake input
   (live-dev `path:` input at `~/dev/todui`). Full keyboard parity (leader
