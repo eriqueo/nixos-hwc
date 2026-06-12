@@ -14,4 +14,5 @@ cloud/
 ```
 
 ## Changelog
+- 2026-06-12: Backfill — Sprint 4.3 added the cloud API infrastructure (`43a97ab9`); subsequent ai-domain refactors and the `efd7063e` dead-tree purge cleaned out re-introduced orphans + options.nix files. No behaviour change since.
 - 2026-02-28: Added README for Charter Law 12 compliance

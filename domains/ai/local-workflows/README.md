@@ -20,5 +20,6 @@ local-workflows/
 ```
 
 ## Changelog
+- 2026-06-12: Backfill — `ai refactor` reshuffles, `efd7063e` dead-tree purge (re-introduced options.nix orphans removed), and the laptop cleanup pass touched files here without behavioural change. No new workflow surface.
 - 2026-04-12: Remove journaling (restart-loop bug, replaced by morning-briefing) and HTTP API (never integrated). Keep file-cleanup, auto-doc, chat-cli.
 - 2026-02-28: Added README for Charter Law 12 compliance

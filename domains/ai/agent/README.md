@@ -142,3 +142,6 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+- 2026-06-12: Backfill changelog (was missing). Since 2025-12-02 this module has gone through the Sprint 5 integration (router+agent wiring, MCP discovery), the `hwc.ai.*` namespace consolidation, Charter Law 3 path-abstraction sweeps, the ai-domain dead-tree cleanup (`efd7063e`), and the `hwc` → `hwc-server` tailnet rename (`22bbbb48`).
