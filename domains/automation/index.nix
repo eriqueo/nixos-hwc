@@ -2,7 +2,7 @@
 #
 # Automation domain — workflow engine and event bus.
 #
-# Namespace: hwc.automation.{n8n,mqtt,nightlyBuilds}.*
+# Namespace: hwc.automation.{n8n,mqtt,nightlyBuilds,readmeFreshness}.*
 
 { lib, config, ... }:
 
@@ -11,5 +11,6 @@
     ./mqtt/index.nix
     ./n8n/index.nix
     ./nightly-builds/index.nix
+    ./readme-freshness/index.nix
   ];
 }
