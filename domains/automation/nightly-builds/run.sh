@@ -90,7 +90,9 @@ PYEOF
     else
       SMITH_PROMPT="$(cat "$AGENT_DIR/prompts/card-smith.md")
 
+## Launch context
 Today's date: $DATE
+Target repo working copy: $REPO_DIR
 
 ## Ideas to draft
 $NEW_IDEAS"
@@ -179,13 +181,17 @@ PYEOF
     log "PHASE B: no commits on $BRANCH"
   fi
 
-  # Verdict: done only if the agent exited 0 AND wrote its report
-  if [ "$AGENT_EXIT" -eq 0 ] && [ -f "$RUN_DIR/REPORT.md" ]; then
+  # Verdict: done only if the agent exited 0, wrote its report, AND declared
+  # success itself (an agent that stops cleanly on an unsatisfiable card also
+  # exits 0 — its self-verdict is what separates done from reviewable-failed)
+  VERDICT=$(rg -o 'NIGHTLY-VERDICT: (success|failure)' -r '$1' \
+    "$RUN_DIR/agent-output.log" 2>/dev/null | tail -1)
+  if [ "$AGENT_EXIT" -eq 0 ] && [ -f "$RUN_DIR/REPORT.md" ] && [ "$VERDICT" = "success" ]; then
     set_field "$CARD" status done
     set_field "$CARD" pr "branch \`$BRANCH\` (pushed; open PR at morning review)"
     log "PHASE B: card $SLUG done"
   else
-    set_field "$CARD" status "failed: exit=$AGENT_EXIT report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)"
+    set_field "$CARD" status "failed: exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)"
     log "PHASE B: card $SLUG FAILED — see $RUN_DIR/agent-output.log"
   fi
   # Worktree is left in place for morning inspection; next run recreates it.

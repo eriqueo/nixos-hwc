@@ -60,3 +60,19 @@ Branch `{{BRANCH}}`, commits: <git log --oneline of your commits>
 A cold reviewer who did not watch the run must be able to verify every claim
 from the report alone. Quote real command output — never summarize a result you
 did not actually observe.
+
+## The verdict (mandatory — the launcher parses this)
+
+After writing the report, the very LAST line of your final output must be
+exactly one of:
+
+```
+NIGHTLY-VERDICT: success
+NIGHTLY-VERDICT: failure
+```
+
+`success` only if you ran the card's done-condition and watched it pass.
+Anything else — budget exhausted, blast-radius conflict, done-condition
+unsatisfiable or failing — is `failure`, even if you stopped cleanly and the
+branch is in good shape. An honest failure is a good outcome; a false success
+poisons morning review.

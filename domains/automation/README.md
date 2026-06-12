@@ -48,6 +48,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-12: nightly-builds hardening from 4-night sandbox rehearsal — agents must end output with `NIGHTLY-VERDICT: success|failure` and the launcher only marks a card `done` on a parsed success (a clean stop on an unsatisfiable card previously looked identical to success); card-smith receives the target repo path via launch context instead of a hardcoded `~/.nixos`.
 - 2026-06-12: Add `nightly-builds/` — systemd timer (01:30) on the server role runs headless Claude Code against `status: queued` cards in the brain vault's `_inbox/nightly_builds/`; each card executes in a disposable git worktree, pushes its branch to origin, and writes a self-verifying REPORT.md to vault `runs/`. Card-smith pre-pass drafts cards from `_ideas.md` (drafts only; human flips to queued).
 - 2026-06-09: Law 9/10 — `n8n/mcp-bridge.nix` → `n8n/mcp-bridge/index.nix` (pure relocation).
 - 2026-06-09: Law 3 sweep — `n8n/mcp-bridge.nix` derives its install dir from `hwc.paths.apps.root` instead of hardcoding `/opt/n8n-mcp`.
