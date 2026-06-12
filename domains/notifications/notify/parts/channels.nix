@@ -38,6 +38,17 @@
     };
   }
 
+  {
+    id        = "discord-nightly-builds";
+    name      = "#nightly-builds (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-nightly-builds";
+    params = {
+      username  = "HWC Nightly Builds";
+      timeoutMs = 5000;
+    };
+  }
+
   # SMTP via Proton Bridge on loopback. Bridge listens on 127.0.0.1:1025
   # without TLS for local clients (per the existing msmtp config); auth
   # is PLAIN with the proton-bridge-password agenix secret.
