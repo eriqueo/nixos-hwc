@@ -45,6 +45,14 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-12: apps/librewolf perf fix — drop `+AllTargets` from
+  `privacy.fingerprintingProtection.overrides` (behavior.nix). +AllTargets is
+  RFP-by-another-name: CanvasRandomization froze long-lived SPAs (claude.ai),
+  timer fuzzing janked YouTube, frame-rate spoofing hurt WebGL. Now uses the
+  default balanced FPP target set, keeping the `-CSSPrefersColorScheme` and
+  `-WebGLRenderCapability` exclusions as explicit guarantees. Verified before
+  the change: hwc profile live with user.js applied, nothing perf-relevant
+  lockPref'd in mozilla.cfg, VA-API iHD decode working.
 - 2026-06-12: apps/claude-code gains `shareConfig` — symlinks
   `~/.claude/{skills,agents,commands,CLAUDE.md}` from a standalone
   `~/.claude-config` git repo via `mkOutOfStoreSymlink` (single source of
