@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test:golden": "node test/golden-master.test.js",
     "export-catalog": "python3 scripts/export_catalog.py"
   },
   "dependencies": {
