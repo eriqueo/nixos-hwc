@@ -24,3 +24,4 @@ core/
 - 2026-06-11: Structure section updated to reality (shell/ and development/
   are directories; namespaces moved under hwc.home.core.* per Law 2; the
   phantom options.nix/shell.nix flat files are gone).
+- 2026-06-11: `core/shell/index.nix` — `aliases` option default flipped to `{}` so per-machine definitions *merge* over the base set from `parts/aliases.nix` instead of silently replacing it (`1a78f22d`). Fixes the laptop SUPER+E aerc keybind regression that surfaced the bug.

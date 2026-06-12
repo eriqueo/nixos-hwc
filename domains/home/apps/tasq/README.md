@@ -96,6 +96,7 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
   walk-and-apply the sidebar from the table (aerc-style); `[`/`]` toggle
   sidebar/detail panes. Fixed: todoman cache returns last_modified as epoch
   float — detail panel converts before formatting.
+- 2026-06-11: Retired the dead iCloud sync pair (`8581edb6`) — Apple's Reminders 'upgrade' permanently removed CalDAV access. Tasq now derives its globs/sync pairs from `hwc.mail.tasks.{icloud,radicale}.enable` and treats Radicale (deployed same day) as the primary backend.
 - 2026-06-11: Week strip (`w`): 7-day grid across the bottom — khal events
   (◆, via `khal list --json`, recurrence expanded) merged with tasks due
   (☐, priority-colored), overdue tasks leading today's column in red;

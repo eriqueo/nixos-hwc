@@ -57,3 +57,4 @@ nvim/
 - 2026-03-12: Initial domain creation, migrated from ~/.config/nvim
 - 2026-06-02: Migrate `nvim-treesitter-textobjects` block to the new `main`-branch API (`require("nvim-treesitter-textobjects").setup` + explicit keymaps). Fixes "module 'nvim-treesitter.configs' not found" startup error caused by the v1.0 rewrite removing the legacy entry point.
 - 2026-06-09: Added `IogaMaster/tuxedo.nvim` — floating todo.txt popup, companion to the tuxedo CLI (`hwc.home.apps.tuxedo`). Lazy-loaded on `:Tuxedo` / `<leader>td`.
+- 2026-06-11: `home/lib` audit §7.9 structural cleanups (`a565f3de`) — no behaviour change in nvim itself; touched as part of the cross-domain mkSimpleApp/parts split.
