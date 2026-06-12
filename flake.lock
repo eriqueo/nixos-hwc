@@ -425,14 +425,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1781302594,
-        "narHash": "sha256-qLu992LjhWGnLeXB7Rm6fwzmR8OtLwkTM/+E+VhZWHw=",
-        "path": "/home/eric/dev/todui",
-        "type": "path"
+        "lastModified": 1781298451,
+        "narHash": "sha256-6s+dcSoQhAv7vuM5RWW3mp+XT9EIshv4UKnkAvNWa64=",
+        "ref": "refs/heads/main",
+        "rev": "f54eb3a9e08b6d5810205c279ccbc243b1e7dba2",
+        "revCount": 4,
+        "type": "git",
+        "url": "file:///home/eric/dev/todui"
       },
       "original": {
-        "path": "/home/eric/dev/todui",
-        "type": "path"
+        "type": "git",
+        "url": "file:///home/eric/dev/todui"
       }
     }
   },
