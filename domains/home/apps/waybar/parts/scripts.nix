@@ -470,7 +470,11 @@ in
       touch "$STATE"
       notify-send "Workspaces" "Mode: Linked" -i desktop -t 2000
     fi
-    pkill -RTMIN+8 waybar || true
+    # -x targets the waybar binary only (comm `.waybar-wrapped` under nix).
+    # A bare `pkill ... waybar` also matches waybar-launch — the bash wrapper
+    # that is waybar.service's MainPID — and bash dies on unhandled RT
+    # signals, so systemd fails the service and SIGKILLs its whole cgroup.
+    pkill -RTMIN+8 -x '\.waybar-wrapped|waybar' || true
   '';
 
   "lid-status" = sh "waybar-lid-status" ''
