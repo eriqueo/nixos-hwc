@@ -23,6 +23,8 @@
     qbittorrent.enable = true;
     aider.enable = true;
     claude-code.enable = true;
+    # Zero-touch receive: pull server-side ~/.claude-config edits every 15 min.
+    claude-code.shareConfig.autoPull.enable = true;
     claude-desktop.enable = true;
     scraper.enable = true;
     markitdown.enable = true;
