@@ -26,6 +26,7 @@ let
     discord-webhook-url        = { owner = "eric"; };
     discord-webhook-hwc-alerts = { owner = "eric"; };
     discord-webhook-hwc-leads  = { owner = "eric"; };
+    discord-webhook-nightly-builds = { owner = "eric"; };
     hwc-leads-hmac-secret      = { owner = "eric"; };
     slack-webhook-url          = { owner = "eric"; };
     slack-signing-secret       = { owner = "eric"; };
