@@ -120,7 +120,7 @@ in
       enable = lib.mkEnableOption ''
         second tasks pair against the self-hosted Radicale server
         (tasks.hwc.iheartwoodcraft.com). Auto-discovers collections both ways,
-        so lists created locally (tasq N) sync to the server and the phone
+        so lists created locally (todui N) sync to the server and the phone
         (via its CalDAV account). Requires the radicale-htpasswd secret and
         the server's hwc.server.services.radicale to be deployed
       '';

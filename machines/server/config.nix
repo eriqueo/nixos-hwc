@@ -119,7 +119,7 @@
   };
 
   # Radicale — self-hosted CalDAV for two-way task sync with list creation
-  # (tasq N key). Behind Caddy at tasks.hwc.iheartwoodcraft.com. Requires the
+  # (todui N key). Behind Caddy at tasks.hwc.iheartwoodcraft.com. Requires the
   # radicale-htpasswd agenix secret (domains/secrets/parts/services/).
   hwc.server.services.radicale = {
     enable = true;

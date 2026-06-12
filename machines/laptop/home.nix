@@ -50,7 +50,7 @@
     };
   };
 
-  # Tasks: VTODO sync via todoman/tasq, riding the calendar vdirsyncer
+  # Tasks: VTODO sync via todoman/todui, riding the calendar vdirsyncer
   # config + timer above. The laptop wires mail per-machine (no mail role),
   # so tasks is enabled here rather than in profiles/mail/home.nix.
   hwc.mail.tasks = {
@@ -65,7 +65,7 @@
     # stay outside todoman's tasks*/* glob).
     icloud.enable = false;
     # Primary backend: self-hosted Radicale (tasks.hwc.iheartwoodcraft.com)
-    # with two-way list creation (tasq `N`). Server deployed + secret
+    # with two-way list creation (todui `N`). Server deployed + secret
     # provisioned 2026-06-11; runbook in domains/server/services/radicale/README.md.
     radicale.enable = true;
   };

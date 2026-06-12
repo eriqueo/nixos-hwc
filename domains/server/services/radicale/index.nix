@@ -8,7 +8,7 @@
 # Purpose: full two-way task sync with collection creation. iCloud pins the
 # tasks pair to fixed collection IDs (lists can only be created on the phone);
 # Radicale allows MKCALENDAR, so vdirsyncer's "from a"/"from b" discovery
-# creates lists made in tasq on the server, and the iPhone reads them via a
+# creates lists made in todui on the server, and the iPhone reads them via a
 # native CalDAV account (Reminders + Calendar both support CalDAV).
 #
 # Auth: htpasswd file from agenix (radicale-htpasswd.age under

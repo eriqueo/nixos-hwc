@@ -4,14 +4,14 @@
 Self-hosted CalDAV server giving full two-way task sync **including list
 creation**. iCloud pins the laptop's tasks pair to fixed collection IDs (lists
 can only be created in Apple Reminders); Radicale permits MKCALENDAR, so lists
-created in `tasq` (`N`) are created server-side by vdirsyncer discovery, and
+created in `todui` (`N`) are created server-side by vdirsyncer discovery, and
 the iPhone reads/writes them through a native CalDAV account.
 
 ## Boundaries
 - Manages: the Radicale service (localhost:5232), its htpasswd auth wiring,
   and the `tasks` Caddy vhost (tasks.hwc.iheartwoodcraft.com).
 - Does NOT manage: the laptop's vdirsyncer pair (`domains/mail/tasks`,
-  `hwc.mail.tasks.radicale.*`), the tasq TUI (`domains/home/apps/tasq`), or
+  `hwc.mail.tasks.radicale.*`), the todui TUI (`domains/home/apps/todui`), or
   the phone's CalDAV account (manual, see runbook).
 - Storage: upstream default `/var/lib/radicale/collections` (StateDirectory).
 
@@ -46,9 +46,9 @@ password (`cut -d: -f2-`).
    Account → Other → Add CalDAV Account: server
    `tasks.hwc.iheartwoodcraft.com`, user `eric`, the password from step 1.
    (Phone reaches it over Tailscale.)
-5. **Verify**: `tasq` → `N` → new list → it appears on the server
+5. **Verify**: `todui` → `N` → new list → it appears on the server
    (`ls /var/lib/radicale/collections/collection-root/eric/`) and on the
-   phone; add a task on the phone in that list → sync → visible in tasq.
+   phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
 - 2026-06-11: Initial. Radicale on localhost:5232 behind the `tasks` Caddy
