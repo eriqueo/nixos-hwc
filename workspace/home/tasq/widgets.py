@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from textual import on
+from rich.text import Text
+from textual import events, on
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.screen import ModalScreen
@@ -96,6 +97,43 @@ class ConfirmModal(ModalScreen):
         self.dismiss(False)
 
 
+class LeaderMenu(ModalScreen):
+    """Which-key style leader menu (space leader, nvim/yazi/aerc-style).
+
+    Shows (key, label) rows; pressing a listed key dismisses with that key
+    string — the app maps it to an action or a deeper LeaderMenu. Escape or
+    space again cancels (dismisses None).
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", show=False),
+        Binding("space", "cancel", show=False),
+    ]
+
+    def __init__(self, title: str, entries: list[tuple[str, str]]) -> None:
+        super().__init__()
+        self._title = title
+        self._entries = entries
+        self._keys = {key for key, _ in entries}
+
+    def compose(self):
+        body = Text()
+        for key, label in self._entries:
+            body.append(f"  {key:>3}  ", style="bold")
+            body.append(f"{label}\n")
+        with Vertical(classes="modal-box leader-box"):
+            yield Label(self._title, classes="modal-title")
+            yield Static(body)
+
+    def on_key(self, event: events.Key) -> None:
+        if event.key in self._keys:
+            event.stop()
+            self.dismiss(event.key)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 HELP_TEXT = """\
  tasq — VTODO task TUI                       (q or esc closes this help)
 
@@ -108,10 +146,16 @@ HELP_TEXT = """\
  EDITING
   a        add task           "summary +project @context (A) due:YYYY-MM-DD"
   e        edit selected task (same one-line form)
-  x/space  toggle done
+           list:Name in either form targets/moves the task to that list
+           (case-insensitive; a unique prefix works: list:heart)
+  x        toggle done
   d        delete (confirm)
   p        cycle priority     none → (A) → (B) → (C) → none
   N        new list           (local-only — see WALKTHROUGH for phone sync)
+
+ LEADER (space)
+  space a  add …              a current list · 1-9 pick list · p/c +proj/@ctx
+  space l  lists …            1-9 switch · a All · n new · r rename current
 
  VIEW
   /        filter: grep summary        (empty input clears)

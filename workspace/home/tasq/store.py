@@ -157,6 +157,21 @@ class Store:
             todo.complete()  # recurring: spawns next instance into .related
         self.db.save(todo)
 
+    def move(self, todo: Todo, new_list: TodoList) -> None:
+        """Move a todo's .ics into another list's dir (db.move is an
+        os.rename between collection dirs; vdirsyncer carries it as
+        delete+create). Reload so the cache's file paths stay truthful."""
+        self.db.move(todo, new_list, from_list=todo.list)
+        self.reload()
+
+    def rename_list(self, todo_list: TodoList, name: str) -> None:
+        """Rewrite the vdir displayname file. The collection dirname (its
+        sync identity) is untouched, so this is rename-in-place; metasync
+        propagates the new name server-side."""
+        with open(os.path.join(todo_list.path, "displayname"), "w") as f:
+            f.write(name + "\n")
+        self.reload()
+
     def create_list(self, name: str, root: str | None = None) -> str:
         """Create a new vdir list dir (uuid dirname + displayname file).
 

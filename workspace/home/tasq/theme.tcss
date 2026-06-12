@@ -86,9 +86,13 @@ FooterKey .footer-key--description {
 
 /* modals */
 
-LineModal, ConfirmModal, HelpModal {
+LineModal, ConfirmModal, HelpModal, LeaderMenu {
     align: center middle;
     background: $tq-bg-dark 60%;
+}
+
+.leader-box {
+    width: 44;
 }
 
 .modal-box {
