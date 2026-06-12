@@ -1,7 +1,7 @@
 # domains/home/apps/qutebrowser/parts/keybindings.nix
 #
 # Neovim-inspired keybindings with Space as leader — same grammar as
-# yazi/parts/keymap.nix and tasq. Qutebrowser's defaults are already
+# yazi/parts/keymap.nix and todui. Qutebrowser's defaults are already
 # vim-flavored (hjkl scroll, gg/G, f hints, o/O open, / search, J/K tabs);
 # this layer adds the Space-leader menus and aligns delete with dd.
 { }:

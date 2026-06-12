@@ -1,11 +1,11 @@
 /**
  * hwc_tasks_* — task management over the self-hosted Radicale CalDAV backend
- * (the same tasks shown in tasq on the laptop and Apple Reminders on the
+ * (the same tasks shown in todui on the laptop and Apple Reminders on the
  * phone via its CalDAV account).
  *
  * Changes are visible on the phone within seconds (it talks to the same
- * server); the laptop's tasq/todoman pick them up on the next vdirsyncer
- * run (15-min timer, or `R` in tasq).
+ * server); the laptop's todui/todoman pick them up on the next vdirsyncer
+ * run (15-min timer, or `R` in todui).
  */
 
 import { randomUUID } from "node:crypto";
@@ -27,7 +27,7 @@ import {
 
 const DEFAULT_LIST = "Reminders";
 
-/* ── one-line dialect (mirrors tasq's model_map.py) ───────────────── */
+/* ── one-line dialect (mirrors todui's core/dialect.py) ───────────────── */
 
 const PRI_RE = /^\(([A-Za-z])\)$/;
 const DUE_RE = /^due:(.+)$/i;
@@ -112,7 +112,7 @@ export function tasksTools(): ToolDef[] {
     {
       name: "hwc_tasks_list",
       description:
-        "List Eric's tasks (self-hosted Radicale CalDAV — same tasks as tasq " +
+        "List Eric's tasks (self-hosted Radicale CalDAV — same tasks as todui " +
         "on the laptop and Apple Reminders on the phone). Categories follow " +
         "the todo.txt convention: +name = project (outcome), @name = context " +
         "(where/when doable). Default shows active tasks across all lists.",
@@ -161,7 +161,7 @@ export function tasksTools(): ToolDef[] {
     {
       name: "hwc_tasks_add",
       description:
-        "Add a task. The summary supports the inline tasq dialect — " +
+        "Add a task. The summary supports the inline todui dialect — " +
         "'Order hinges +hardware @shop (A) due:2026-06-20' sets project, " +
         "context, priority (A=highest..I) and due date — or pass explicit " +
         "fields. Appears in Apple Reminders within seconds.",
@@ -213,7 +213,7 @@ export function tasksTools(): ToolDef[] {
 
           return {
             status: "ok",
-            message: `Added '${parsed.summary}' to ${listName} (phone sees it now; laptop tasq on next sync)`,
+            message: `Added '${parsed.summary}' to ${listName} (phone sees it now; laptop todui on next sync)`,
             data: { uid, list: listName, summary: parsed.summary, categories, priority, due },
           };
         } catch (err) {
@@ -308,8 +308,8 @@ export function tasksTools(): ToolDef[] {
       name: "hwc_tasks_lists",
       description:
         "List or create task lists. New lists appear in Apple Reminders " +
-        "immediately; the laptop's tasq sees them after its next vdirsyncer " +
-        "discover (automatic on tasq's N flow, or `vdirsyncer discover tasks_radicale`).",
+        "immediately; the laptop's todui sees them after its next vdirsyncer " +
+        "discover (automatic on todui's N flow, or `vdirsyncer discover tasks_radicale`).",
       inputSchema: {
         type: "object",
         properties: {

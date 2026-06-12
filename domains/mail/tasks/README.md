@@ -14,7 +14,7 @@ CLI for reading/writing tasks.
   a `[pair tasks]` fragment to `hwc.mail.calendar.extraVdirsyncerPairs`, so there
   is exactly one `~/.config/vdirsyncer/config` and one `vdirsyncer.service`/timer
   (owned by `domains/mail/calendar/`). Requires `hwc.mail.calendar.enable = true`.
-- Does NOT (yet) provide a TUI — see Phase B (`tasq`) in the project plan.
+- Does NOT (yet) provide a TUI — see Phase B (`todui`) in the project plan.
 
 ## Structure
 ```
@@ -57,7 +57,7 @@ from `hwc.mail.calendar.accounts.<hwc.mail.tasks.account>` (default `icloud`).
 6. Round-trip: `todo new -l <list> "vdir test from laptop"` → `vdirsyncer sync
    tasks` → confirm it appears in Apple Reminders on the phone; add a reminder on
    the phone → sync → `todo list`.
-7. CATEGORIES check (feeds Phase B `tasq` model mapping): confirm a
+7. CATEGORIES check (feeds Phase B `todui` model mapping): confirm a
    `+project`/category survives the round-trip into Reminders. Record the result
    below — it decides whether Phase B encodes project/context via `CATEGORIES` or
    inline in the summary.
@@ -75,14 +75,14 @@ Reminders→local all work.
 - Write: `todo new` → `vdirsyncer sync` uploaded the VTODO to iCloud (visible in
   Apple Reminders). Delete propagated too.
 - **CATEGORIES round-trip: PRESERVED.** Apple stored `CATEGORIES:work,urgent` and
-  `PRIORITY:1` intact through the round-trip → Phase B (`tasq`) maps
+  `PRIORITY:1` intact through the round-trip → Phase B (`todui`) maps
   `+project/@context` to `Todo.categories` (no inline-summary fallback needed).
 
 ## Radicale backend (Phase C, optional)
 `hwc.mail.tasks.radicale.enable` adds a second pair (`tasks_radicale`) against
 the self-hosted Radicale server (`domains/server/services/radicale/`, Caddy
 vhost tasks.hwc.iheartwoodcraft.com). Unlike iCloud it auto-discovers
-collections both ways, so locally created lists (tasq `N`) are created
+collections both ways, so locally created lists (todui `N`) are created
 server-side. Local vdir: `~/.local/share/vdirsyncer/tasks-radicale/`;
 credential: the shared `radicale-htpasswd` agenix secret (password =
 `cut -d: -f2-`). todoman's path glob widens to `tasks*/*` so both backends
@@ -99,4 +99,4 @@ stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
   (it wires mail per-machine, not via the mail role). CATEGORIES confirmed to
   survive iCloud round-trip.
 - 2026-06-11: Initial Phase A — vdirsyncer VTODO pair (contributed to the shared
-  calendar config/timer) + todoman CLI and config. TUI (`tasq`) deferred to Phase B.
+  calendar config/timer) + todoman CLI and config. TUI (`todui`) deferred to Phase B.

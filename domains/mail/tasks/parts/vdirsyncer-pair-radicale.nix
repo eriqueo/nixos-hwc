@@ -5,7 +5,7 @@
 # tasks.hwc.iheartwoodcraft.com).
 #
 # Unlike the iCloud pair, collections use "from a"/"from b" discovery: Radicale
-# allows collection creation (MKCALENDAR), so lists created locally (tasq `N`)
+# allows collection creation (MKCALENDAR), so lists created locally (todui `N`)
 # are created server-side on the next `vdirsyncer discover tasks_radicale` +
 # sync, and lists created on the server/phone appear locally. The password is
 # the second field of the agenix htpasswd secret shared with the server.
@@ -20,7 +20,7 @@
   metadata = ["displayname", "color"]
   # Local wins: Radicale auto-names a collection at MKCALENDAR, which would
   # otherwise MetaSyncConflict against the real name on the first metasync
-  # (and tasq/local is the authoring side for list names anyway).
+  # (and todui/local is the authoring side for list names anyway).
   conflict_resolution = "b wins"
 
   [storage tasks_radicale_remote]

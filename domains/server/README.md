@@ -38,7 +38,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 ## Changelog
 - 2026-06-11: Added `services/radicale/` — self-hosted CalDAV server
   (localhost:5232, Caddy vhost `tasks`) for two-way task sync with list
-  creation (companion to `domains/mail/tasks` radicale pair + tasq `N`).
+  creation (companion to `domains/mail/tasks` radicale pair + todui `N`).
   htpasswd auth from the `radicale-htpasswd` agenix secret. Enabled in
   machines/server/config.nix; see its README for the deploy runbook.
 - 2026-06-09: Law 3 finish — brain-mcp (server.ts path + vaultPath default), lead-scout (projectDir), jobber-mcp (projectDir/envFile) now derive from `hwc.paths` with value-preserving fallbacks. Server drv hash unchanged.

@@ -345,16 +345,16 @@ The service runs `dist/index.js`. Editing `src/*.ts` without running `npx tsc` m
 ### Tasks (4)
 
 CalDAV against the self-hosted Radicale (tasks.hwc.iheartwoodcraft.com,
-`domains/server/services/radicale/`) — the same tasks as tasq on the laptop
+`domains/server/services/radicale/`) — the same tasks as todui on the laptop
 and Apple Reminders on the phone (native CalDAV account). Credential read
 from `/run/agenix/radicale-htpasswd`; override URL/path via
 `HWC_TASKS_CALDAV_URL` / `HWC_TASKS_HTPASSWD_PATH`. Phone sees changes
-within seconds; laptop tasq on its next vdirsyncer run.
+within seconds; laptop todui on its next vdirsyncer run.
 
 | Tool | Description |
 |------|-------------|
 | `hwc_tasks_list` | List tasks. Filters: list, status (active/completed/all), category (`+proj`/`@ctx`), grep. |
-| `hwc_tasks_add` | Add task. Summary supports the tasq inline dialect (`+proj @ctx (A) due:YYYY-MM-DD`) or explicit fields. |
+| `hwc_tasks_add` | Add task. Summary supports the todui inline dialect (`+proj @ctx (A) due:YYYY-MM-DD`) or explicit fields. |
 | `hwc_tasks_update` | By uid: edit fields / complete / reopen / delete. Property-surgical edits preserve RRULE and Apple metadata. |
 | `hwc_tasks_lists` | List the task lists (with active counts) or create a new one (MKCALENDAR). |
 
@@ -495,7 +495,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-06-11**: Added `hwc_tasks_*` (4 tools) — task CRUD + list management
   over the self-hosted Radicale CalDAV backend (new `executors/caldav.ts`:
   fetch-based PROPFIND/REPORT/PUT/DELETE/MKCALENDAR + VTODO codec with
-  property-surgical edits). Same data as tasq/Apple Reminders; works from
+  property-surgical edits). Same data as todui/Apple Reminders; works from
   both the claude.ai gateway (server) and Claude Code stdio (laptop) since
   it targets the public vhost and the everyone-readable agenix secret.
 - **2026-05-31**: Bugfix — `n8n_workflows` action `get` / `update` / `update_partial` / `delete` / `autofix` and the `n8n_workflow_status` sub-call were passing `workflowId` to the upstream n8n-mcp tools, which expect `id`. `update_partial` was also passing `updates`, which the upstream expects as `operations`. Net effect: any attempt to fetch or modify a workflow through the consolidation wrapper failed with `Missing required parameters: id` (and for partial updates `id, operations`). Fixed in `src/n8n-consolidation.ts` by renaming at the call site. Discovered while wiring Discord into the `home:admin:alert-manager` workflow; verified out-of-band via direct REST PUT to n8n.

@@ -48,7 +48,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 - 2026-06-12: apps/qutebrowser fleshed out from empty scaffold — generated
   config.py with hwc-palette theming (parts/appearance.nix: tabs, statusbar,
   completion, hints, messages, downloads), Space-leader keybindings matching
-  the yazi/tasq grammar (parts/keybindings.nix: dd=tab-close, <Space>t tabs,
+  the yazi/todui grammar (parts/keybindings.nix: dd=tab-close, <Space>t tabs,
   <Space>y yank variants, <Space>m mpv handoff), nvim-in-kitty as editor,
   adblock (hosts + Brave lib), forced dark mode. Default browser unchanged
   (chromium owns the http/https handlers).
