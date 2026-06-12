@@ -159,7 +159,9 @@ HELP_TEXT = """\
   space d  edit its due date         today · tomorrow · fri · YYYY-MM-DD
 
  MANAGE
-  L        lists                     n new · number renames
+  L        lists                     n new · pick → rename / delete its tasks
+           (the empty list itself is deleted in Apple Reminders — the
+            server owns collections; task deletions sync normally)
   P        projects                  pick → rename everywhere / remove from all
   C        contexts                  pick → rename everywhere / remove from all
   N        new list                  (shortcut for L n)
@@ -171,7 +173,6 @@ HELP_TEXT = """\
   esc      clear all filters
   s        cycle sort         priority → due → created
   c        show/hide completed tasks
-  l        cycle through lists
   ^j / ^k  step the sidebar selection (lists → projects → contexts)
   [ / ]    toggle sidebar / detail panel
   w        toggle the 7-day week strip (◆ khal events · ☐ tasks due)
