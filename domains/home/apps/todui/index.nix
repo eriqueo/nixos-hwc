@@ -82,7 +82,7 @@ in
       exec = "kitty -e todui";
       terminal = false;
       categories = [ "Utility" "Office" ];
-      keywords = [ "tasks" "todo" "vtodo" "reminders" "caldav" ];
+      settings.Keywords = "tasks;todo;vtodo;reminders;caldav;";
     };
   };
 }
