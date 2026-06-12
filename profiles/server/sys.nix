@@ -13,6 +13,7 @@
   imports = [
     ../../domains/data/index.nix
     ../../domains/notifications/index.nix
+    ../../domains/automation/index.nix
   ];
 
   # Server identity (Charter v10.3 multi-server support) — flips path
@@ -44,6 +45,10 @@
       path = lib.mkDefault "/sync"; # Match Obsidian's expected path
     };
   };
+
+  # Nightly Builds — unattended overnight gauntlet-card runner. Lives on the
+  # server role because the always-on machine is the one that runs overnight.
+  hwc.automation.nightlyBuilds.enable = lib.mkDefault true;
 
   # Gotify notification server — machine files add token/admin wiring
   hwc.notifications.gotify = {
