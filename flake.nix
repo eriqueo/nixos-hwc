@@ -78,6 +78,17 @@
       url = "github:aaddrick/claude-desktop-debian/4a1bbc9e958bbae485d5797dda3ce91f4630a407";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # todui — the standalone VTODO task TUI (extracted from the old in-tree
+    # tasq; todoman-free, its own engine). LIVE-DEV path: input: every `hms`
+    # picks up the working tree at ~/dev/todui, so source edits are one step.
+    # TRADE-OFF: not reproducible (depends on that mutable dir) and hwc-server
+    # can't build it. Pin to a git rev (git+file://…?rev=… or a GitHub URL)
+    # before this goes to another machine or once todui stabilises.
+    todui = {
+      url = "path:/home/eric/dev/todui";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================

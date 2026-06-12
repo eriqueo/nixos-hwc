@@ -1,0 +1,74 @@
+# domains/home/apps/todui/index.nix
+#
+# todui — standalone VTODO task TUI (its own repo at ~/dev/todui, consumed as
+# the `todui` flake input). This module is a THIN TRANSLATOR: it imports
+# todui's reusable Home Manager module and feeds it HWC-specific values —
+# the system theme palette, the Radicale CalDAV endpoint + agenix secret, and
+# the vdir paths. todui itself knows nothing about HWC (hexagonal: this is the
+# inbound adapter that wires our config into its generic option surface).
+#
+# NAMESPACE: hwc.home.apps.todui.*   (Charter Law 2: namespace = folder)
+# USAGE:     hwc.home.apps.todui.enable = true;   (set in profiles/desktop)
+#
+# Replaces the former in-tree `tasq` module + workspace/home/tasq sources.
+
+{ config, lib, pkgs, inputs, osConfig ? {}, ... }:
+
+let
+  cfg = config.hwc.home.apps.todui;
+
+  # Follow the enabled tasks backend (same HM eval as hwc.mail.tasks). iCloud
+  # CalDAV died 2026-06-11; Radicale is the backend. Falls back to the generic
+  # tasks vdir when radicale is off so the app still opens.
+  radicaleOn = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "enable" ] false config;
+  vdirRoot = "${config.home.homeDirectory}/.local/share/vdirsyncer";
+
+  radicaleUrl = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "url" ]
+    "https://tasks.hwc.iheartwoodcraft.com/" config;
+  radicaleUser = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "username" ]
+    "eric" config;
+  # Same osConfig.age handshake as domains/mail/tasks so it resolves under
+  # standalone HM eval too (osConfig may be {}).
+  radicalePwPath =
+    if (osConfig ? age) && ((osConfig.age.secrets or {}) ? radicale-htpasswd)
+    then osConfig.age.secrets.radicale-htpasswd.path
+    else "/run/agenix/radicale-htpasswd";
+
+  # System theme palette → todui (it derives its UI roles from these tokens).
+  paletteColors = lib.filterAttrs (_: v: builtins.isString v)
+    (((config.hwc.home.theme or {}).colors or {}));
+in
+{
+  #============================================================================
+  # OPTIONS
+  #============================================================================
+  imports = [ inputs.todui.homeManagerModules.todui ];
+
+  options.hwc.home.apps.todui = {
+    enable = lib.mkEnableOption "todui — VTODO-native keyboard task TUI";
+  };
+
+  #============================================================================
+  # IMPLEMENTATION
+  #============================================================================
+  config = lib.mkIf cfg.enable {
+    programs.todui = {
+      enable = true;
+
+      tasksGlob =
+        if radicaleOn then "${vdirRoot}/tasks-radicale/*"
+        else "${vdirRoot}/tasks/*";
+      syncPairs = lib.optional radicaleOn "tasks_radicale";
+      newListRoot = lib.optionalString radicaleOn "${vdirRoot}/tasks-radicale";
+      newListPair = lib.optionalString radicaleOn "tasks_radicale";
+
+      radicale.url = lib.optionalString radicaleOn radicaleUrl;
+      radicale.username = lib.optionalString radicaleOn radicaleUser;
+      radicale.passwordCommand =
+        lib.optionalString radicaleOn "cut -d: -f2- ${radicalePwPath}";
+
+      palette = paletteColors;
+      extraRuntimePackages = [ pkgs.khal pkgs.vdirsyncer ];
+    };
+  };
+}

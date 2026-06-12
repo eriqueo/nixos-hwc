@@ -64,7 +64,7 @@
 
       # Task management
       tuxedo.enable = lib.mkDefault true;
-      tasq.enable = lib.mkDefault true;
+      todui.enable = lib.mkDefault true;
 
       # Development & Automation
       n8n.enable = lib.mkDefault false;
