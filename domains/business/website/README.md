@@ -20,5 +20,6 @@ domains/business/website/
 Application files live at `/opt/business/heartwood-cms/` (not in the NixOS repo).
 
 ## Changelog
+- 2026-06-09: Law 9/10 + Law 3 sweep (`aea7be73`, `6001f937`) — option-declaring leaf modules converted to directory modules, remaining derivable hardcodes routed through `hwc.paths`. Server tailnet rename `22bbbb48` also swept references. No behaviour change.
 - 2026-04-01: Rename heartwood-site to site_files, update paths in index.nix
 - 2026-03-30: Initial creation — systemd service for Heartwood CMS Dashboard

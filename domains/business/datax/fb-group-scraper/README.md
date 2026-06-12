@@ -125,3 +125,6 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 │   └── session.json   ← created on login
 └── package.json
 ```
+
+## Changelog
+- 2026-05-21: HWC lead-scoring path landed (`d20220f9`) — new prompt, classifier, `promptFile` option. Login-detection hardened: poll for state and survive passkey redirects (`2553d6ca`), wait for logged-in UI not password-form-gone (`b0f85a37`), `c_user` cookie check (`6049454a`), auto-detect completion with no Enter press (`77c4cbf2`). Playwright pinned to 1.59.1 matching image (`dc5e9996`), `launchPersistentContext` + `--profile` (`be985dab`), NixOS `shell.nix` uses system chromium (`ee0b817c`).

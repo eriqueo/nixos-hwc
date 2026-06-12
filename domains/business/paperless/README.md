@@ -104,5 +104,7 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-06-02: Server tailnet rename `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` swept through paperless references (`22bbbb48`).
+- 2026-03-26: `2c59868b` — business-domain restructuring pass touched paperless wiring. Added `a8bd133f` Paperless-ngx setup script for Heartwood Craft.
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless
