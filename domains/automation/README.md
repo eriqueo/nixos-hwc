@@ -27,9 +27,11 @@ automation/
 │   └── prompts/
 │       ├── run-wrapper.md  # Standing rules wrapped around every card
 │       └── card-smith.md   # Drafts gated cards from _ideas.md one-liners
-├── readme-freshness/  # Weekly Law-12 drift report (hwc.automation.readmeFreshness.*)
-│   ├── index.nix      # Options + systemd service/timer (Mon 09:00)
-│   └── run.sh         # Runs workspace/tools/readme-freshness.sh; POSTs summary to hwc-notify
+├── readme-freshness/  # Weekly Law-12 report + autonomous fix (hwc.automation.readmeFreshness.*)
+│   ├── index.nix      # Options + systemd service/timer (Mon 09:00); autoFix opts
+│   └── run.sh         # Stage 1: lint + POST summary. Stage 2 (autoFix): headless
+│                      #   Claude runs the `readme-refresh` skill in a worktree, the
+│                      #   launcher hard-verifies READMEs-only, pushes + opens a PR
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
@@ -53,6 +55,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-12: readme-freshness gained an autonomous fix stage (`autoFix`, default on). When the weekly lint finds drift, a headless Claude agent runs the `readme-refresh` skill in a disposable worktree off origin/main, edits READMEs only, and commits; the launcher **hard-verifies the diff is READMEs-only** (blast radius enforced by the runner, not trusted to the agent), pushes the branch, and opens a PR via `gh`. PR review is the human gate — no gauntlet queue-flip. Added `gh`/`openssh`/`nodejs` to the unit path and a `fixTimeoutSec` budget.
 - 2026-06-12: nightly-builds run results now POST to Discord via `hwc-notify` (new `discord-webhook-nightly-builds` secret + `discord-nightly-builds` channel + `topic=nightly-builds` route in `domains/notifications/`). `run.sh` gained a best-effort `notify()` helper (per-card verdict + card-smith summary); `curl` added to the unit path.
 - 2026-06-12: Add `readme-freshness/` — weekly systemd timer (Mon 09:00, server role) runs `workspace/tools/readme-freshness.sh` and posts a Law-12 drift summary to the #nightly-builds Discord channel. Report-only; emits to `hwc-notify`, never edits a README.
 - 2026-06-12: nightly-builds hardening from 4-night sandbox rehearsal — agents must end output with `NIGHTLY-VERDICT: success|failure` and the launcher only marks a card `done` on a parsed success (a clean stop on an unsatisfiable card previously looked identical to success); card-smith receives the target repo path via launch context instead of a hardcoded `~/.nixos`.
