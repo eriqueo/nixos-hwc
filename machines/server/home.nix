@@ -14,7 +14,10 @@
   # Claude Code: server runs claude from an ad-hoc npm global, so do NOT enable
   # the Nix package/Obsidian-cert here. Opt into the shared, version-controlled
   # skill/agent/command/CLAUDE.md set only — symlinked from ~/.claude-config.
-  hwc.home.apps.claude-code.shareConfig.enable = true;
+  hwc.home.apps.claude-code.shareConfig = {
+    enable = true;
+    autoPull.enable = true;  # ff-pull ~/.claude-config from the bare repo (zero-touch receive)
+  };
 
   # Headless: no font deployment (overrides nothing today — the desktop
   # role is what turns fonts on — but states the intent explicitly).
