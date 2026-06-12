@@ -144,18 +144,25 @@ HELP_TEXT = """\
   Select a project/context to filter; select it again (or esc) to clear.
 
  EDITING
-  a        add task           "summary +project @context (A) due:YYYY-MM-DD"
+  a        add task           "summary +project @context (A) due:fri list:Name"
   e        edit selected task (same one-line form)
-           list:Name in either form targets/moves the task to that list
-           (case-insensitive; a unique prefix works: list:heart)
+           list:Name targets/moves the task (ci; unique prefix: list:heart)
+           due: takes today · tomorrow · mon…sun · YYYY-MM-DD
   x        toggle done
   d        delete (confirm)
   p        cycle priority     none → (A) → (B) → (C) → none
-  N        new list           (local-only — see WALKTHROUGH for phone sync)
 
- LEADER (space)
-  space a  add …              a current list · 1-9 pick list · p/c +proj/@ctx
-  space l  lists …            1-9 switch · a All · n new · r rename current
+ LEADER (space) — acts on the selected task; menus are built live
+  space l  move it to a list         (pick a number)
+  space p  set its +project          (number · n new · x clear)
+  space c  set its @context          (number · n new · x clear)
+  space d  edit its due date         today · tomorrow · fri · YYYY-MM-DD
+
+ MANAGE
+  L        lists                     n new · number renames
+  P        projects                  pick → rename everywhere / remove from all
+  C        contexts                  pick → rename everywhere / remove from all
+  N        new list                  (shortcut for L n)
 
  VIEW
   /        filter: grep summary        (empty input clears)
@@ -164,7 +171,8 @@ HELP_TEXT = """\
   esc      clear all filters
   s        cycle sort         priority → due → created
   c        show/hide completed tasks
-  l / L    next / previous list
+  l        cycle through lists
+  ^j / ^k  step the sidebar selection (lists → projects → contexts)
   [ / ]    toggle sidebar / detail panel
   w        toggle the 7-day week strip (◆ khal events · ☐ tasks due)
   j/k g/G  move cursor / jump top/bottom
@@ -172,7 +180,7 @@ HELP_TEXT = """\
  SYSTEM
   r        reload from disk (after a sync pulled phone changes)
   R        run `vdirsyncer sync tasks` now, then reload
-  C        open khal interactive (calendar view) — q returns to tasq
+  K        open khal interactive (calendar view) — q returns to tasq
 
  Changes write standard VTODO .ics into the vdir; the 15-min vdirsyncer
  timer (or R) carries them to iCloud → Apple Reminders, and back.\
