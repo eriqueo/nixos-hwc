@@ -11,6 +11,11 @@
   # hostnames out of roles; the rest of the mail menu is in the mail role).
   hwc.mail.health.webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
 
+  # Claude Code: server runs claude from an ad-hoc npm global, so do NOT enable
+  # the Nix package/Obsidian-cert here. Opt into the shared, version-controlled
+  # skill/agent/command/CLAUDE.md set only — symlinked from ~/.claude-config.
+  hwc.home.apps.claude-code.shareConfig.enable = true;
+
   # Headless: no font deployment (overrides nothing today — the desktop
   # role is what turns fonts on — but states the intent explicitly).
   hwc.home.theme.fonts.enable = false;
