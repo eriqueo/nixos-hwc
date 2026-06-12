@@ -171,7 +171,6 @@ class TasqApp(App):
         Binding("escape", "clear_filters", "Clear", show=False),
         Binding("s", "cycle_sort", "Sort"),
         Binding("c", "toggle_completed", "±Done", show=False),
-        Binding("l", "next_list", "List"),
         Binding("ctrl+j", "sidebar_next", "Sidebar ↓", show=False),
         Binding("ctrl+k", "sidebar_prev", "Sidebar ↑", show=False),
         Binding("left_square_bracket", "toggle_sidebar", "Sidebar", show=False),
@@ -896,10 +895,45 @@ class TasqApp(App):
     def action_lists_menu(self) -> None:
         entries = [("n", "new list …", self.action_new_list)]
         entries += [
-            (str(i), f"rename {tl.name} …", lambda tl=tl: self._rename_list_flow(tl))
+            (str(i), tl.name, lambda tl=tl: self._list_ops(tl))
             for i, tl in enumerate(self.store.lists()[:9], start=1)
         ]
         self._leader("lists", entries)
+
+    def _list_ops(self, tl) -> None:
+        self._leader(tl.name, [
+            ("r", "rename …", lambda: self._rename_list_flow(tl)),
+            ("d", "delete all its tasks …", lambda: self._empty_list_flow(tl)),
+        ])
+
+    def _empty_list_flow(self, tl) -> None:
+        # vdirsyncer can't delete collections — a removed local dir breaks
+        # sync and a later discover resurrects it from the server. Task
+        # deletions DO sync; the empty shell is removed in Apple Reminders.
+        todos = self.store.todos(list_name=tl.name, show_completed=True)
+        if not todos:
+            self.notify(
+                f"'{tl.name}' is already empty — delete the list itself in "
+                "Apple Reminders (the server owns collections)",
+                severity="warning", timeout=10,
+            )
+            return
+
+        def done(confirmed: bool | None) -> None:
+            if not confirmed:
+                return
+            for t in todos:
+                self.store.delete(t)
+            self.refresh_tasks(keep_cursor=False)
+            self.notify(
+                f"deleted {len(todos)} task(s) from '{tl.name}' — R syncs; "
+                "remove the empty list in Reminders to drop it everywhere",
+                timeout=10,
+            )
+
+        self.push_screen(
+            ConfirmModal(f"Delete all {len(todos)} task(s) in '{tl.name}'?"), done
+        )
 
     def action_projects_menu(self) -> None:
         self._category_menu("+", "project")
@@ -1030,18 +1064,6 @@ class TasqApp(App):
     def action_toggle_detail(self) -> None:
         panel = self.query_one(DetailPanel)
         panel.display = not panel.display
-
-    # -- lists ------------------------------------------------------------------
-
-    def _cycle_list(self, step: int) -> None:
-        names: list[str | None] = [None, *self._list_names()]
-        idx = names.index(self.current_list) if self.current_list in names else 0
-        self.current_list = names[(idx + step) % len(names)]
-        self._sidebar_pos = None
-        self.refresh_tasks(keep_cursor=False)
-
-    def action_next_list(self) -> None:
-        self._cycle_list(1)
 
     # -- navigation ----------------------------------------------------------------
 
