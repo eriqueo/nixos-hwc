@@ -53,6 +53,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-12: README-only Law 12 refresh in `n8n/`, `n8n/parts/estimator-integration/`, `n8n/parts/migrations/` — backfilled changelogs for the Law 9/10 directory-module conversion, Law 3 path sweep, server tailnet rename, the `003-notification-events.sql` and `002-calculator-leads.sql` migrations, and the estimator-integration tailnet rename. No code change.
 - 2026-06-12: nightly-builds run results now POST to Discord via `hwc-notify` (new `discord-webhook-nightly-builds` secret + `discord-nightly-builds` channel + `topic=nightly-builds` route in `domains/notifications/`). `run.sh` gained a best-effort `notify()` helper (per-card verdict + card-smith summary); `curl` added to the unit path.
 - 2026-06-12: Add `readme-freshness/` — weekly systemd timer (Mon 09:00, server role) runs `workspace/tools/readme-freshness.sh` and posts a Law-12 drift summary to the #nightly-builds Discord channel. Report-only; emits to `hwc-notify`, never edits a README.
 - 2026-06-12: nightly-builds hardening from 4-night sandbox rehearsal — agents must end output with `NIGHTLY-VERDICT: success|failure` and the launcher only marks a card `done` on a parsed success (a clean stop on an unsatisfiable card previously looked identical to success); card-smith receives the target repo path via launch context instead of a hardcoded `~/.nixos`.

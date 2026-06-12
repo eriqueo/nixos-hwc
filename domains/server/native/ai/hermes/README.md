@@ -126,6 +126,7 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-06-12** — README-only Law 12 refresh in `parts/bootstrap/` — backfilled the `59dca996` `strip-types` shorthand drop. No code change here.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at

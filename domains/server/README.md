@@ -36,6 +36,7 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-12: README-only Law 12 refresh in `native/ai/hermes/parts/bootstrap/`, `native/ai/market-intelligence/`, `native/ai/persona-daemon/` — backfilled changelogs for the `strip-types` shorthand drop and the Law 10 options-inlining of the 18 remaining `options.nix` files. No code change.
 - 2026-06-11: Added `services/radicale/` — self-hosted CalDAV server
   (localhost:5232, Caddy vhost `tasks`) for two-way task sync with list
   creation (companion to `domains/mail/tasks` radicale pair + tasq `N`).

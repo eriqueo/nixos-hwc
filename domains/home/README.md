@@ -45,6 +45,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-12: README-only Law 12 refresh in `apps/`, `apps/nvim/`, `apps/tasq/`, `core/` — backfilled changelogs for the claude-code `shareConfig` rollout, the `home/lib` audit §7.9 structural cleanup, the tasq iCloud-retirement / Radicale switch, and the core/shell `aliases` merge-default fix. No code change.
 - 2026-06-12: apps/claude-code gains `shareConfig` — symlinks
   `~/.claude/{skills,agents,commands,CLAUDE.md}` from a standalone
   `~/.claude-config` git repo via `mkOutOfStoreSymlink` (single source of

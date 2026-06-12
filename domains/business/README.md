@@ -27,6 +27,7 @@ business/
 ```
 
 ## Changelog
+- 2026-06-12: README-only Law 12 refresh in `datax/fb-group-scraper/`, `morning-briefing/`, `paperless/`, `website/` — backfilled changelogs for the HWC lead-scoring path, Playwright login-detection hardening, Law 3 path sweep, Law 9/10 directory-module conversion, and tailnet rename. No code change.
 - 2026-06-11: README rewritten — this file previously contained the AI-MCP
   domain readme by mistake. Business enables now come from the business
   role rather than machines/server/config.nix.
