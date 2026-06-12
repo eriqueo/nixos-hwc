@@ -42,7 +42,7 @@ def parse(line: str) -> dict:
             continue
         m = _DUE_RE.match(tok)
         if m:
-            parsed = _parse_due(m.group(1))
+            parsed = parse_due(m.group(1))
             if parsed is not None:
                 due = parsed
                 continue
@@ -64,12 +64,30 @@ def parse(line: str) -> dict:
     }
 
 
-def _parse_due(raw: str) -> date | None:
+_WEEKDAYS = {
+    "monday": 0, "mon": 0,
+    "tuesday": 1, "tue": 1, "tues": 1,
+    "wednesday": 2, "wed": 2,
+    "thursday": 3, "thu": 3, "thur": 3, "thurs": 3,
+    "friday": 4, "fri": 4,
+    "saturday": 5, "sat": 5,
+    "sunday": 6, "sun": 6,
+}
+
+
+def parse_due(raw: str) -> date | None:
+    """Parse a human due string: today, tomorrow, a weekday name (next
+    occurrence — 'fri' on a Friday means next week; 'today' covers now),
+    or an ISO date."""
     raw = raw.strip().lower()
     if raw == "today":
         return date.today()
     if raw in ("tomorrow", "tom"):
         return date.today() + timedelta(days=1)
+    if raw in _WEEKDAYS:
+        today = date.today()
+        ahead = (_WEEKDAYS[raw] - today.weekday()) % 7
+        return today + timedelta(days=ahead or 7)
     try:
         return date.fromisoformat(raw)
     except ValueError:
