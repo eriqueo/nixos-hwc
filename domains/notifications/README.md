@@ -43,6 +43,7 @@ notifications/
 
 ## Changelog
 
+- 2026-06-12: Propagated the nightly-builds wiring note to `notify/README.md` (`0bb92c7a`) — no code change, just bringing the sub-README in line so the freshness linter no longer marks this tree stale.
 - 2026-06-12: Added the `discord-nightly-builds` channel (`#nightly-builds`, secret `discord-webhook-nightly-builds`) and a `topic=nightly-builds` route in `notify/parts/`. The automation domain's nightly-builds runner and readme-freshness report POST here; channel + route stay Nix data, the webhook URL is an agenix secretRef.
 - 2026-06-11: `gotify/server/` — token auto-discovery (agenix secrets named `gotify-{universe}-{domain}` → `tokens."universe:domain"`) moved from machines/server/config.nix into the `tokens` option default; still overridable per machine. All 5 toplevels byte-identical (proven no-op).
 - 2026-06-09: Law 9/10 — `gotify/{igotify,bridge,server}.nix` and `send/gotify.nix` each converted to `<name>/index.nix` directory modules (pure relocation).
