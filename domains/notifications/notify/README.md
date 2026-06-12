@@ -293,6 +293,7 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 
 ## Changelog
 
+- **2026-06-12**: Added the `discord-nightly-builds` channel (`#nightly-builds`, secretRef `discord-webhook-nightly-builds`) and a `topic=nightly-builds` route in `parts/`. Used by the automation domain's nightly-builds runner (per-card verdict) and the weekly readme-freshness report.
 - **2026-05-31 (Phase 1.7)**: Shipped `hwc-notify` CLI (`pkgs.writeShellApplication`) and `hwc_notify` MCP tool (`domains/system/mcp/src/src/tools/notify.ts`). MCP gateway tool count 14 → 15.
 - **2026-05-31 (Phase 1.6)**: Added `POST /webhook/alertmanager` with Zod schema + pure converter. Alertmanager cut over from n8n to hwc-notify; `n8n-webhook` receiver removed; n8n `home:admin:alert-manager` workflow deactivated (preserved as rollback). Gotify-bridge receiver kept for iOS push.
 - **2026-05-31 (Phase 1.5)**: SQLite audit log via Node 22's built-in `node:sqlite` (no new npm dep, no native build). Per-channel `CircuitBreaker` (5 failures / 60s cool-down / half-open probe). `GET /audit/recent` and `GET /circuit/status`. `restartTriggers` on channel `.age` files so secret rotation forces a restart.
