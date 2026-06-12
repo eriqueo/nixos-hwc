@@ -466,7 +466,10 @@ class TasqApp(App):
         for i, d in enumerate(days):
             lines: list[Text] = []
             if i == 0:
-                for od, t in sorted(overdue):
+                for od, t in sorted(
+                    overdue,
+                    key=lambda x: (x[0], x[1].priority or 10, x[1].summary.lower()),
+                ):
                     lines.append(Text(
                         f"! {t.summary} ({od.strftime('%m-%d')})",
                         style=f"bold {ROLE['red']}",
