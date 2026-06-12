@@ -2,12 +2,13 @@
 
 ## Purpose
 
-Workflow engine and event bus. Contains n8n for workflow orchestration
-and MQTT broker for event-driven automation (Frigate → n8n).
+Workflow engine and event bus. Contains n8n for workflow orchestration,
+MQTT broker for event-driven automation (Frigate → n8n), and the nightly-builds
+runner that executes brain-vault gauntlet cards unattended overnight.
 
 ## Boundaries
 
-- Owns: n8n workflow automation, MQTT broker
+- Owns: n8n workflow automation, MQTT broker, nightly gauntlet-card runner
 - Does NOT own: notification delivery (`domains/notifications/`), alert definitions (`domains/monitoring/alerts/`)
 
 ## Structure
@@ -18,6 +19,12 @@ automation/
 ├── README.md    # This file
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
+├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
+│   ├── index.nix    # Options + systemd service/timer (hwc.automation.nightlyBuilds.*)
+│   ├── run.sh       # Launcher: card-smith pass + queued-card execution in git worktrees
+│   └── prompts/
+│       ├── run-wrapper.md  # Standing rules wrapped around every card
+│       └── card-smith.md   # Drafts gated cards from _ideas.md one-liners
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
@@ -41,6 +48,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-12: Add `nightly-builds/` — systemd timer (01:30) on the server role runs headless Claude Code against `status: queued` cards in the brain vault's `_inbox/nightly_builds/`; each card executes in a disposable git worktree, pushes its branch to origin, and writes a self-verifying REPORT.md to vault `runs/`. Card-smith pre-pass drafts cards from `_ideas.md` (drafts only; human flips to queued).
 - 2026-06-09: Law 9/10 — `n8n/mcp-bridge.nix` → `n8n/mcp-bridge/index.nix` (pure relocation).
 - 2026-06-09: Law 3 sweep — `n8n/mcp-bridge.nix` derives its install dir from `hwc.paths.apps.root` instead of hardcoding `/opt/n8n-mcp`.
 - 2026-05-22: Remove Tailscale Funnel from n8n — public access migrated to Cloudflare Tunnel (`n8n.heartwoodcraft.me`). Delete `funnel` options and `tailscale-funnel-n8n*` systemd services. Funnel was poisoning MagicDNS for tailnet clients (every Caddy port unreachable from laptop).
