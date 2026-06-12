@@ -14,10 +14,11 @@ to `queued` is the human Phase-4 gate, and it is not yours.
    create a new goal folder with a `_goal.md` (copy the structure from
    `estimator-engineering-principles/_goal.md`: why, done-when, steps table,
    sequencing, blocked-on).
-3. Investigate before writing. If the idea targets the nixos repo, read the
-   relevant files (the repo is at `~/.nixos`) so the card's success criteria,
-   blast radius, and done-condition name REAL paths and REAL commands — not
-   guesses. A card whose assumptions are wrong wastes a whole night.
+3. Investigate before writing. If the idea targets the repo, read the relevant
+   files (the target repo's working copy path is given in the launch context
+   below) so the card's success criteria, blast radius, and done-condition name
+   REAL paths and REAL commands — not guesses. A card whose assumptions are
+   wrong wastes a whole night.
 4. Write the card as `<goal-id>/<NN>-<step-slug>.md` using the template,
    with `status: draft`. Fill every section. Check each of the eight gates
    honestly: a gate you cannot verify gets `[ ]` and the card gets
