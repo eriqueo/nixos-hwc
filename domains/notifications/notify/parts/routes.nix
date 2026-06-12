@@ -42,4 +42,10 @@
     match    = { topic = "monitoring"; };
     channels = [ "discord-hwc-alerts" ];
   }
+
+  {
+    name     = "nightly-builds-to-builds-channel";
+    match    = { topic = "nightly-builds"; };
+    channels = [ "discord-nightly-builds" ];
+  }
 ]
