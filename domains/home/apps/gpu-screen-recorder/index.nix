@@ -27,45 +27,63 @@ let
     in if p != null then p
        else "${config.home.homeDirectory}/500_media/530_videos/recordings";
 
+  # The recording runs as its OWN transient user unit (gsr-record.service via
+  # systemd-run), never as a child of the invoker. Two hard-won reasons:
+  # - A click-started recording would otherwise live in waybar.service's
+  #   cgroup and be SIGKILLed (file unfinalized) whenever waybar restarts.
+  # - `systemctl is-active` gives exact recording state; the previous
+  #   `pgrep -f 'gpu-screen-recorder -w'` false-matched ANY process whose
+  #   cmdline contained that string (e.g. a shell running a grep for it).
+  #
+  # The waybar refresh signal MUST target only the waybar binary (comm
+  # `.waybar-wrapped` under nix, `waybar` otherwise). A bare `pkill ... waybar`
+  # also matches `waybar-launch` — the bash wrapper that is waybar.service's
+  # MainPID — and bash dies on unhandled RT signals, so systemd fails the
+  # service and SIGKILLs its whole cgroup (journal: status=43/RTMIN+9).
+  signalWaybar = ''${pkgs.procps}/bin/pkill -RTMIN+9 -x '\.waybar-wrapped|waybar' || true'';
+
   gsrToggle = pkgs.writeShellScriptBin "gsr-toggle" ''
     set -euo pipefail
 
     DIR="''${HWC_RECORDINGS_DIR:-${recordingsDir}}"
 
     # Already recording → stop (SIGINT finalizes the file), wait, notify
-    if ${pkgs.procps}/bin/pgrep -f 'gpu-screen-recorder -w' >/dev/null; then
-      ${pkgs.procps}/bin/pkill -INT -f 'gpu-screen-recorder -w'
+    if systemctl --user is-active --quiet gsr-record.service; then
+      systemctl --user kill --signal=SIGINT gsr-record.service
       for _ in $(seq 1 50); do
-        ${pkgs.procps}/bin/pgrep -f 'gpu-screen-recorder -w' >/dev/null || break
+        STATE=$(systemctl --user is-active gsr-record.service 2>/dev/null || true)
+        [[ "$STATE" == "active" || "$STATE" == "deactivating" ]] || break
         sleep 0.2
       done
       ${pkgs.libnotify}/bin/notify-send -t 4000 "⏹ Recording saved" "$DIR"
-      ${pkgs.procps}/bin/pkill -RTMIN+9 waybar || true
+      ${signalWaybar}
       exit 0
     fi
 
     # Binary comes from the system lane; fail loud if that half is missing
-    if ! command -v gpu-screen-recorder >/dev/null; then
+    BIN=$(command -v gpu-screen-recorder) || {
       ${pkgs.libnotify}/bin/notify-send -u critical "gpu-screen-recorder not found" \
         "Enable hwc.system.apps.gpu-screen-recorder and nixos-rebuild."
       exit 1
-    fi
+    }
 
     MONITOR=$(hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '.[] | select(.focused) | .name')
     mkdir -p "$DIR"
     OUT="$DIR/rec_$(date +%Y-%m-%d_%H-%M-%S).mp4"
 
-    gpu-screen-recorder -w "$MONITOR" -f ${toString cfg.fps} \
-      -a ${lib.escapeShellArg cfg.audio} -o "$OUT" >/dev/null 2>&1 &
-    disown
+    systemd-run --user --quiet --collect --unit=gsr-record \
+      --setenv=WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-}" \
+      --setenv=HYPRLAND_INSTANCE_SIGNATURE="''${HYPRLAND_INSTANCE_SIGNATURE:-}" \
+      "$BIN" -w "$MONITOR" -f ${toString cfg.fps} \
+      -a ${lib.escapeShellArg cfg.audio} -o "$OUT"
     ${pkgs.libnotify}/bin/notify-send -t 4000 "⏺ Recording $MONITOR" "$OUT"
-    ${pkgs.procps}/bin/pkill -RTMIN+9 waybar || true
+    ${signalWaybar}
   '';
 
   # Waybar JSON status (class drives the red-while-recording CSS)
   gsrStatus = pkgs.writeShellScriptBin "gsr-status" ''
     set -euo pipefail
-    if ${pkgs.procps}/bin/pgrep -f 'gpu-screen-recorder -w' >/dev/null; then
+    if systemctl --user is-active --quiet gsr-record.service; then
       printf '{"text":"Rec","class":"recording","tooltip":"Screen recording: RECORDING\\nSHIFT+PRINT or click to stop"}\n'
     else
       printf '{"text":"Rec","class":"off","tooltip":"Screen recording: off\\nSHIFT+PRINT or click to start"}\n'
