@@ -159,9 +159,9 @@ HELP_TEXT = """\
   space d  edit its due date         today · tomorrow · fri · YYYY-MM-DD
 
  MANAGE
-  L        lists                     n new · pick → rename / delete its tasks
-           (the empty list itself is deleted in Apple Reminders — the
-            server owns collections; task deletions sync normally)
+  L        lists                     n new · pick → rename / DELETE
+           (delete = CalDAV DELETE to Radicale: removes the list and its
+            tasks from the server and your phone — irreversible)
   P        projects                  pick → rename everywhere / remove from all
   C        contexts                  pick → rename everywhere / remove from all
   N        new list                  (shortcut for L n)

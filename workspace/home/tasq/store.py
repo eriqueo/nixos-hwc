@@ -13,15 +13,23 @@ collide on integer todo ids.
 
 from __future__ import annotations
 
+import base64
 import glob as globlib
 import json
 import os
 import shutil
 import subprocess
+import urllib.error
+import urllib.request
 from datetime import datetime, time, timezone
 from uuid import uuid4
 
 from todoman.model import Database, Todo, TodoList
+
+
+class ListDeleteError(RuntimeError):
+    """Raised when a list can't be hard-deleted (no Radicale backend wired,
+    or the CalDAV DELETE failed). The shell catches it and notifies."""
 
 ACTIVE_STATUS = "NEEDS-ACTION,IN-PROCESS"
 
@@ -171,6 +179,77 @@ class Store:
         with open(os.path.join(todo_list.path, "displayname"), "w") as f:
             f.write(name + "\n")
         self.reload()
+
+    # -- list deletion (CalDAV DELETE → Radicale; vdirsyncer can't) ----------
+
+    # The Radicale backend means complete control: vdirsyncer never
+    # propagates a *collection* deletion (a removed local dir is re-pulled by
+    # the next `from a` discover), so deletion goes straight to the server
+    # via a CalDAV DELETE — which Radicale honors (the collection vanishes
+    # for the phone too). These come from the HM wrapper (TASQ_RADICALE_*),
+    # mirroring the vdirsyncer pair's own url/user/password.fetch.
+    _radicale_root = os.path.expanduser(os.environ.get("TASQ_NEW_LIST_ROOT", ""))
+    _radicale_url = os.environ.get("TASQ_RADICALE_URL", "")
+    _radicale_user = os.environ.get("TASQ_RADICALE_USER", "")
+    _radicale_pw_cmd = os.environ.get("TASQ_RADICALE_PW_CMD", "")
+
+    def list_is_radicale(self, todo_list: TodoList) -> bool:
+        return bool(
+            self._radicale_root
+            and self._radicale_url
+            and os.path.abspath(todo_list.path).startswith(
+                os.path.abspath(self._radicale_root)
+            )
+        )
+
+    def _radicale_password(self) -> str:
+        out = subprocess.run(
+            self._radicale_pw_cmd, shell=True, capture_output=True, text=True
+        )
+        if out.returncode != 0:
+            raise ListDeleteError("could not read the Radicale password")
+        return out.stdout.strip()
+
+    def delete_list(self, todo_list: TodoList) -> None:
+        """Hard-delete a Radicale-backed list: CalDAV DELETE the collection
+        server-side, then drop the local vdir dir and its vdirsyncer status.
+        Irreversible — removes the list and all its tasks everywhere."""
+        if not self.list_is_radicale(todo_list):
+            raise ListDeleteError(
+                "only Radicale-backed lists can be deleted in tasq"
+            )
+        coll_id = os.path.basename(todo_list.path.rstrip("/"))
+        url = self._radicale_url.rstrip("/") + f"/{self._radicale_user}/{coll_id}/"
+        token = base64.b64encode(
+            f"{self._radicale_user}:{self._radicale_password()}".encode()
+        ).decode()
+        req = urllib.request.Request(url, method="DELETE")
+        req.add_header("Authorization", f"Basic {token}")
+        try:
+            urllib.request.urlopen(req, timeout=30)
+        except urllib.error.HTTPError as exc:
+            if exc.code != 404:  # 404 = already gone server-side; proceed
+                raise ListDeleteError(f"Radicale DELETE failed ({exc.code})") from exc
+        except urllib.error.URLError as exc:
+            raise ListDeleteError(f"Radicale unreachable: {exc.reason}") from exc
+
+        shutil.rmtree(todo_list.path, ignore_errors=True)
+        self._purge_vdirsyncer_status(coll_id)
+        self.reload()
+
+    def _purge_vdirsyncer_status(self, coll_id: str) -> None:
+        """Remove the now-orphaned per-collection vdirsyncer status files so
+        the next sync doesn't carry stale state. Best-effort: stale status is
+        inert (vdirsyncer only processes discovered collections), so any
+        failure here is non-fatal."""
+        pair = os.environ.get("TASQ_NEW_LIST_PAIR", "tasks_radicale")
+        base = os.path.dirname(os.path.abspath(self._radicale_root))
+        status_dir = os.path.join(base, "status", pair)
+        for ext in (".items", ".metadata"):
+            try:
+                os.remove(os.path.join(status_dir, coll_id + ext))
+            except OSError:
+                pass
 
     def create_list(self, name: str, root: str | None = None) -> str:
         """Create a new vdir list dir (uuid dirname + displayname file).

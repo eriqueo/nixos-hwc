@@ -35,24 +35,30 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
 ## Keymap
 | Key       | Action                                                |
 |-----------|-------------------------------------------------------|
-| `a` / `e` | add / edit task (one-line todo.txt dialect, below)    |
-| `x`/space | toggle done (reopen clears COMPLETED)                 |
-| `d`       | delete (y/n confirm)                                  |
+| `a` / `e` | add / edit task (one-line dialect, below; `list:`/`due:` tokens) |
+| `x`       | toggle done (reopen clears COMPLETED)                 |
+| `d`       | delete task (y/n confirm)                             |
 | `p`       | cycle priority none → A → B → C → none                |
-| `N`       | new list (LOCAL-ONLY — synced lists must be created in Reminders + pinned; see WALKTHROUGH) |
+| `space`   | leader — acts on the **selected task** (which-key menu): |
+| `space l` | &nbsp;&nbsp;move it to a list (numbered, live)        |
+| `space p` | &nbsp;&nbsp;set its +project (number · `n` new · `x` clear) |
+| `space c` | &nbsp;&nbsp;set its @context (number · `n` new · `x` clear) |
+| `space d` | &nbsp;&nbsp;edit its due date (today · tomorrow · mon–sun · ISO · empty clears) |
+| `L`       | lists: `n` new · pick → `r` rename / `d` **DELETE** (CalDAV DELETE to Radicale — removes list + tasks from server and phone) |
+| `P` / `C` | projects / contexts: pick → `r` rename everywhere / `d` remove from all tasks |
+| `N`       | new list (shortcut for `L n`)                         |
 | `/` `+` `@` | filter: grep summary / project / context (empty clears) |
 | `esc`     | clear all filters                                     |
 | `s`       | cycle sort: priority → due → created                  |
 | `c`       | show/hide completed                                   |
-| `l` / `L` | next / previous list (All → Reminders → Family)       |
-| `J` / `K` | walk sidebar down/up and apply (aerc-style)           |
+| `ctrl+j` / `ctrl+k` | walk sidebar down/up and apply (aerc-style) |
 | `[` / `]` | toggle sidebar / detail panel                         |
 | Tab       | focus sidebar (LISTS/PROJECTS/CONTEXTS; Enter filters, re-select clears) |
 | `j`/`k` `g`/`G` | cursor move / top / bottom                      |
 | `w`       | toggle 7-day week strip (◆ khal events · ☐ tasks due · overdue in red) |
 | `r`       | reload from disk (after a sync pulled phone changes)  |
 | `R`       | sync (`vdirsyncer sync <pairs>`) in a worker, then reload |
-| `C`       | suspend into `khal interactive` (calendar view)       |
+| `K`       | suspend into `khal interactive` (calendar view)       |
 | `?` / `q` | help / quit                                           |
 
 ## Task line dialect ↔ VTODO mapping
@@ -73,6 +79,7 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
 | `TASQ_PALETTE` | (unset → hwc fallback)                      | JSON of `hwc.home.theme.colors`, exported by the module |
 | `TASQ_SYNC_PAIRS` | `tasks`                                  | vdirsyncer pairs the `R` key syncs (`tasks tasks_radicale` with Radicale) |
 | `TASQ_NEW_LIST_ROOT` / `TASQ_NEW_LIST_PAIR` | (unset)        | where `N` creates lists + the pair to discover/sync after; set to the Radicale storage when enabled — lists then genuinely sync |
+| `TASQ_RADICALE_URL` / `TASQ_RADICALE_USER` / `TASQ_RADICALE_PW_CMD` | (unset) | Radicale CalDAV endpoint, user, and a shell command printing the password (mirrors the vdirsyncer pair). Set when Radicale is on; enable list deletion (`L` → `d`), which vdirsyncer can't do — a CalDAV DELETE removes the collection server-side |
 
 ## Changelog
 - 2026-06-11: Phase B initial. Textual TUI (textual 8.2.5) over todoman 4.7.0
@@ -103,3 +110,22 @@ workspace/home/tasq/   (git-tracked source, exec'd live)
   tasks-radicale glob, R syncs both pairs, and `N` creates lists in the
   Radicale root + discover/sync pushes them server-side (genuinely synced
   lists). All driven off hwc.mail.tasks.radicale.enable — no tasq config.
+- 2026-06-12: Week-strip overdue sort crash fixed (sorted() on (date, Todo)
+  tuples fell through to Todo<Todo when due dates tied). `list:` token in the
+  add/edit line targets (add) / moves (edit) a task to another list (ci, unique
+  prefix). Store.move (db.move) + Store.rename_list (rewrites displayname).
+- 2026-06-12: `space` is now a which-key leader acting on the selected task —
+  `space l/p/c/d` move list / set +project / set @context / edit due. Due
+  parsing gained weekday names (next occurrence) everywhere, incl. `due:`.
+  Management on capitals: `L` lists, `P` projects, `C` contexts (pick → rename
+  / delete). Rebindings: calendar `C`→`K`; sidebar step `J`/`K`→`ctrl+j/k`;
+  `l` (cycle lists) dropped — `ctrl+j/k` is the way.
+- 2026-06-12: Real list deletion (`L` → pick → `d`). vdirsyncer can't delete a
+  collection (a removed local dir is re-pulled by the next `from a` discover),
+  so tasq issues a CalDAV DELETE straight to Radicale — full control, the point
+  of the Radicale migration. Removes the collection server-side (and from the
+  phone), then the local dir + orphaned vdirsyncer status. Module injects
+  TASQ_RADICALE_URL/USER/PW_CMD mirrored from the vdirsyncer pair + agenix
+  htpasswd. Earlier "delete in Apple Reminders" advice was stale iCloud-era
+  reasoning and is gone. Verified end-to-end against the live server with
+  throwaway collections (MKCALENDAR→DELETE→404; real lists untouched).

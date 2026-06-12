@@ -26,6 +26,20 @@ let
   icloudOn = lib.attrByPath [ "hwc" "mail" "tasks" "icloud" "enable" ] true config;
   vdirRoot = "${config.home.homeDirectory}/.local/share/vdirsyncer";
 
+  # Radicale CalDAV endpoint + credential, mirrored from the vdirsyncer pair
+  # (hwc.mail.tasks.radicale.* + the shared agenix htpasswd). tasq uses these
+  # for list deletion: vdirsyncer can't delete a collection, but a CalDAV
+  # DELETE straight to Radicale can. Same osConfig.age handshake as
+  # domains/mail/tasks so it resolves under standalone HM eval too.
+  radicaleUrl = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "url" ]
+    "https://tasks.hwc.iheartwoodcraft.com/" config;
+  radicaleUser = lib.attrByPath [ "hwc" "mail" "tasks" "radicale" "username" ]
+    "eric" config;
+  radicalePwPath =
+    if (osConfig ? age) && ((osConfig.age.secrets or {}) ? radicale-htpasswd)
+    then osConfig.age.secrets.radicale-htpasswd.path
+    else "/run/agenix/radicale-htpasswd";
+
   backendGlobs =
     lib.optional icloudOn "${vdirRoot}/tasks/*"
     ++ lib.optional radicaleOn "${vdirRoot}/tasks-radicale/*";
@@ -58,6 +72,9 @@ let
     ${lib.optionalString radicaleOn ''
       export TASQ_NEW_LIST_ROOT="${vdirRoot}/tasks-radicale"
       export TASQ_NEW_LIST_PAIR="tasks_radicale"
+      export TASQ_RADICALE_URL="${radicaleUrl}"
+      export TASQ_RADICALE_USER="${radicaleUser}"
+      export TASQ_RADICALE_PW_CMD="cut -d: -f2- ${radicalePwPath}"
     ''}
     exec ${pythonEnv}/bin/python ${nixosPath}/workspace/home/tasq/app.py "$@"
   '';
