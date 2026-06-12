@@ -100,3 +100,9 @@ stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
   survive iCloud round-trip.
 - 2026-06-11: Initial Phase A — vdirsyncer VTODO pair (contributed to the shared
   calendar config/timer) + todoman CLI and config. TUI (`tasq`) deferred to Phase B.
+- 2026-06-11: Retired the dead iCloud pair (`8581edb6`) — Apple's Reminders
+  upgrade permanently removed CalDAV access (placeholder VTODOs only). New
+  `hwc.mail.tasks.icloud.enable` gate (default true, off on laptop); Radicale
+  (deployed same day) is now the primary tasks backend.
+- 2026-06-11: Radicale pair — set vdirsyncer `conflict_resolution` and force a
+  `metasync` after each sync so display-name/color edits propagate (`b4f24ce4`).

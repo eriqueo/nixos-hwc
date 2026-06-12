@@ -333,6 +333,7 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-05-21: Backfill — `3cf8ef82` and the `1f926bd1` / `22cf7e1d` / `7bbebb8d` / `8be57c2a` aerc touch-ups, the `5613c1eb` theme unify (all blues → 5e81ac, ANSI colors to semantic families), the `aa3589f1` Home Manager standalone migration, and the `e94194f7` / `149aae71` media-mail reshuffles. No behavioural change to the bindings/tag model documented above.
 - 2026-03-19: Fix act-one-delete-rest → act-dir (was deleting label file copies); fix hide_my_email query to use tag:hide instead of wrong Folders/ path
 - 2026-03-15: Add family and hwcmt tags; spam folder and bidirectional sync; hide_my_email folder; to column; symbolic flags; human-readable column layout; full sync-mail pipeline on `<C-r>`; tag exclude filters for notifications/action/aerc; single-source-of-truth tag system with derived bindings, queries, stylesets, and column templates
 - 2026-03-14: Fix compose editor (lf-editor), send (msmtp path), TLS (certcheck off); add compose review bindings; switch to dracula styleset with live switching; add tag-based message coloring across all themes; add quoted_reply HTML template; add bundled filters and multipart-converters
