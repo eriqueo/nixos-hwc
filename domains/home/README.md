@@ -45,6 +45,13 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-12: apps/qutebrowser fleshed out from empty scaffold — generated
+  config.py with hwc-palette theming (parts/appearance.nix: tabs, statusbar,
+  completion, hints, messages, downloads), Space-leader keybindings matching
+  the yazi/tasq grammar (parts/keybindings.nix: dd=tab-close, <Space>t tabs,
+  <Space>y yank variants, <Space>m mpv handoff), nvim-in-kitty as editor,
+  adblock (hosts + Brave lib), forced dark mode. Default browser unchanged
+  (chromium owns the http/https handlers).
 - 2026-06-12: apps/librewolf perf fix — drop `+AllTargets` from
   `privacy.fingerprintingProtection.overrides` (behavior.nix). +AllTargets is
   RFP-by-another-name: CanvasRandomization froze long-lived SPAs (claude.ai),
