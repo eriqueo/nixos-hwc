@@ -27,4 +27,6 @@ sudo -u postgres psql -d hwc -f 002-full-hwc-schema.sql
 ```
 
 ## Changelog
+- 2026-03-31: Added `003-notification-events.sql` (`1da0a031`).
+- 2026-03-26: Added `002-calculator-leads.sql` — `hwc` schema + `calculator_leads` table (name/phone/project, estimate_low/high, jt_account_id, jt_job_id, status) for the `work_calculator_lead` MCP /call workflow.
 - 2026-03-26: Added 002-full-hwc-schema.sql — full production schema with JT reference tables, cost catalog, project state, estimates, leads, daily logs, workflow log, and views

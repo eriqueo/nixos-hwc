@@ -59,6 +59,11 @@ README.md
 
 ## Changelog
 
+- 2026-05-31: `index.nix` — gate the persona-daemon manifest merge on
+  `options.hwc.server.ai ? personaDaemon`. Personas is imported by all
+  hosts but persona-daemon only by hwc-server, so the unconditional set
+  was failing `nix flake check` on laptop/xps even though dry-build was
+  clean.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).
