@@ -73,4 +73,5 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Minor `index.nix` adjustments (`1da0a031`).
 - 2026-03-25: Created README per Law 12

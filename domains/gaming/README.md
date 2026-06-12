@@ -42,5 +42,7 @@ hwc.gaming.webdav = {
 
 ## Changelog
 
+- 2026-03-24: `d9f3f46a` — Law 3 path sweep: hardcoded paths in retroarch/webdav replaced with `hwc.paths` abstractions.
+- 2026-03-12: `f4352f34` + `8bb19a51` — options moved; `domains/server/` deletion completed the namespace migration for retroarch/webdav under `hwc.gaming.*`.
 - 2026-03-04: Namespace migration hwc.server.native.{retroarch,webdav} → hwc.gaming.*
 - 2026-03-04: Created gaming domain, moved retroarch and webdav from domains/server/native/

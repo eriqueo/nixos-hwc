@@ -24,6 +24,7 @@ data/
 ```
 
 ## Changelog
+- 2026-06-10: `data(backup)` — absorbed profile value-defaults into `data/backup` option defaults; the base role's ~50-line `hwc.data.backup` defaults block was duplicating the module's own defaults except for three `excludePatterns` (now in the domain default) and the notifications/monitoring enables (kept in the role — those are behaviour flips). Roles are now option flips only. Drv hashes identical for all 5 toplevels.
 - 2026-06-09: Law 3 finish — databases per-DB backup outputDir default derives from `hwc.paths.user.home`. Drv hash unchanged.
 - 2026-04-12: Add syncthing module (hwc.data.syncthing.*), extracted from machine configs
 - 2026-03-18: Add CloudBeaver container for managing PostgreSQL databases, expanding data infrastructure capabilities.
