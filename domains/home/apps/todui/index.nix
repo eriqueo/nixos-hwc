@@ -70,5 +70,19 @@ in
       palette = paletteColors;
       extraRuntimePackages = [ pkgs.khal pkgs.vdirsyncer ];
     };
+
+    # Launcher entry — todui is a TUI, so host it in kitty (the session
+    # terminal). Makes it appear in wofi/rofi `drun` (terminal = false because
+    # `kitty -e` already supplies the window). Hyprland keybind SUPER+T is wired
+    # in domains/home/apps/hyprland/parts/behavior.nix (gated on this enable).
+    xdg.desktopEntries.todui = {
+      name = "todui";
+      genericName = "Task Manager";
+      comment = "VTODO task TUI (CalDAV-synced reminders)";
+      exec = "kitty -e todui";
+      terminal = false;
+      categories = [ "Utility" "Office" ];
+      keywords = [ "tasks" "todo" "vtodo" "reminders" "caldav" ];
+    };
   };
 }

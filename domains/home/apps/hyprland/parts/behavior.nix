@@ -5,6 +5,7 @@ let
   dtCfg = config.hwc.home.apps.dt or { enable = false; hyprland = { enable = false; toggleBind = null; }; };
   dtBindEnabled = (dtCfg.enable or false) && (dtCfg.hyprland.enable or false);
   dtToggleBind  = dtCfg.hyprland.toggleBind or null;
+  toduiEnabled  = config.hwc.home.apps.todui.enable or false;
   gsrCfg = config.hwc.home.apps.gpu-screen-recorder or { enable = false; };
 in
 {
@@ -23,8 +24,10 @@ in
     "${mod},N,exec,kitty -e nvim"
     "${mod},Y,exec,kitty -e yazi"
     "${mod},G,exec,gpu-toggle"
+  ] ++ lib.optionals toduiEnabled [
+    "${mod},T,exec,kitty -e todui"
   ] ++ lib.optionals dtBindEnabled [
-    "${mod},T,exec,kitty --class dt-tui -e dt tui"
+    "${mod},D,exec,kitty --class dt-tui -e dt tui"
   ] ++ lib.optionals (dtBindEnabled && dtToggleBind != null) [
     "${dtToggleBind},exec,dt toggle"
   ] ++ [
