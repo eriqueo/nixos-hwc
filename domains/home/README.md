@@ -52,6 +52,12 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
   from `enable`: hwc-server opts into `shareConfig.enable` only (npm-global
   claude, no Nix package / Obsidian cert). Optional `autoPull` systemd-user
   timer for zero-touch receive (default off). machines/server/home.nix opts in.
+- 2026-06-12: Default browser laptop change librewolf → chromium. Moved the
+  `xdg.mimeApps.defaultApplications` http(s)/html registration out of
+  `apps/librewolf/index.nix` and into `apps/chromium/index.nix` (now points at
+  `chromium-browser.desktop`) — the default-handler registration follows the
+  default browser. LibreWolf's `librewolf-hwc` desktop-entry override stays so it
+  still launches via SUPER+SHIFT+B; SUPER+B already launched chromium-hwc.
 - 2026-06-11: Fix SUPER+E mail keybind: `ssh -t hwc aerc` referenced a
   nonexistent SSH host alias (only `server` exists), so the kitty window
   died instantly — now `ssh -t server aerc` (hyprland/parts/behavior.nix).
