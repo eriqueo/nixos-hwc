@@ -49,6 +49,17 @@ in
       };
     };
 
+    # Default browser registration — wofi/portals/xdg-open resolve http(s)
+    # and html to Chromium (via the chromium-browser.desktop entry above).
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "x-scheme-handler/http" = [ "chromium-browser.desktop" ];
+        "x-scheme-handler/https" = [ "chromium-browser.desktop" ];
+        "text/html" = [ "chromium-browser.desktop" ];
+      };
+    };
+
     #==========================================================================
     # VALIDATION
     #==========================================================================
