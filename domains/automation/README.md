@@ -32,6 +32,9 @@ automation/
 │   └── run.sh         # Stage 1: lint + POST summary. Stage 2 (autoFix): headless
 │                      #   Claude runs the `readme-refresh` skill in a worktree, the
 │                      #   launcher hard-verifies READMEs-only, pushes + opens a PR
+├── sr-gauntlet/   # Daily DataX SR investigation schedule (hwc.automation.srGauntlet.*)
+│   ├── index.nix  # systemd service/timer (06:30 daily) wrapping ~/700_datax/sr_gauntlet/run.sh
+│   └── README.md  # Containment model + pointer to the pipeline repo
 └── n8n/         # n8n workflow automation
     ├── index.nix     # Options + firewall rules
     ├── sys.nix       # Container definition via mkContainer
@@ -55,6 +58,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-12: Add `sr-gauntlet/` — daily timer (06:30, 7d/wk, Persistent) launching the SR-investigation pipeline at `~/700_datax/sr_gauntlet` (its own repo): fetch open DataX SRs (SR2 phases new+engaged) from Firestore, one headless read-only Claude investigation per SR against origin/main worktrees of datax/jt-mcp with per-customer Firestore context pack + OpenSearch log access, REPORT.md per SR delivered to Eric's Discord webhook. No code changes, no customer replies — human reviews and applies. Enabled in `machines/server/config.nix` (host one-off: pipeline + creds exist only on hwc-server).
 - 2026-06-12: readme-freshness gained an autonomous fix stage (`autoFix`, default on). When the weekly lint finds drift, a headless Claude agent runs the `readme-refresh` skill in a disposable worktree off origin/main, edits READMEs only, and commits; the launcher **hard-verifies the diff is READMEs-only** (blast radius enforced by the runner, not trusted to the agent), pushes the branch, and opens a PR via `gh`. PR review is the human gate — no gauntlet queue-flip. Added `gh`/`openssh`/`nodejs` to the unit path and a `fixTimeoutSec` budget.
 - 2026-06-12: nightly-builds run results now POST to Discord via `hwc-notify` (new `discord-webhook-nightly-builds` secret + `discord-nightly-builds` channel + `topic=nightly-builds` route in `domains/notifications/`). `run.sh` gained a best-effort `notify()` helper (per-card verdict + card-smith summary); `curl` added to the unit path.
 - 2026-06-12: Add `readme-freshness/` — weekly systemd timer (Mon 09:00, server role) runs `workspace/tools/readme-freshness.sh` and posts a Law-12 drift summary to the #nightly-builds Discord channel. Report-only; emits to `hwc-notify`, never edits a README.

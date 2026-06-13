@@ -285,6 +285,12 @@
   # hwc-notify, which is a hwc-server one-off enabled just above.
   hwc.automation.readmeFreshness.enable = true;
 
+  # SR Gauntlet — daily (06:30, 7d/wk) read-only investigation of open DataX
+  # SRs → per-SR REPORT.md + Discord delivery. Lives here (not the server
+  # profile) because the pipeline checkout (~/700_datax/sr_gauntlet) and its
+  # credential sources only exist on hwc-server.
+  hwc.automation.srGauntlet.enable = true;
+
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)
