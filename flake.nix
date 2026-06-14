@@ -96,6 +96,17 @@
       url = "git+file:///home/eric/600_apps/todui";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # khalt — forked khal/ikhal (own repo at ~/600_apps/khalt). Source fork of
+    # khal v0.14.0 that will grow zoomable agenda/quarter/month views + a
+    # space-leader keybinding engine (parity with todui/yazi/nvim/aerc). Same
+    # PINNED git+file model as todui: tracks ~/600_apps/khalt's committed HEAD,
+    # locked by flake.lock. To ship a change: commit in ~/600_apps/khalt, then
+    # `nix flake update khalt`, then rebuild. Swap to "path:..." for live-edit.
+    khalt = {
+      url = "git+file:///home/eric/600_apps/khalt";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================
