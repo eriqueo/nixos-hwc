@@ -61,6 +61,7 @@
 
       # Terminal Multiplexer
       tmux.enable = lib.mkDefault true;
+      zellij.enable = lib.mkDefault true;   # workbench's pane host
 
       # Task management
       tuxedo.enable = lib.mkDefault true;
@@ -68,6 +69,11 @@
 
       # Calendar TUI (forked khal: zoom views + space-leader keys)
       khalt.enable = lib.mkDefault true;
+
+      # TUI ops stack — peer first-class panes + the host that orchestrates them
+      todui.enable = lib.mkDefault true;     # tasks (peer of khalt)
+      khalt.enable = lib.mkDefault true;     # calendar (forked ikhal, peer of todui)
+      workbench.enable = lib.mkDefault true; # Textual ops host (zellij-driven)
 
       # Development & Automation
       n8n.enable = lib.mkDefault false;
