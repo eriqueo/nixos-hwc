@@ -1,37 +1,89 @@
 # domains/home/apps/khalt/index.nix
 #
 # khalt — forked khal/ikhal calendar TUI (its own repo at ~/600_apps/khalt,
-# consumed as the `khalt` flake input). This module is a THIN TRANSLATOR (same
-# role as domains/home/apps/todui): it imports khalt's reusable Home Manager
-# module and feeds it an HWC-specific khal config.
+# consumed as the `khalt` flake input). Thin translator (same role as
+# domains/home/apps/todui): imports khalt's reusable Home Manager module and
+# feeds it an HWC-specific khal config.
 #
-# DRY: instead of re-listing calendars/locale/palette, it reuses the EXACT
-# config generator the calendar domain already ships
-# (domains/mail/calendar/parts/khal.nix), so khalt opens on the same calendars,
-# theme and view as system khal. khalt-only additions (notably a [keybindings]
-# block once the leader-key engine lands) are appended via `extraConfig`.
+# HEXAGONAL / DATA-DRIVEN (mirrors todui):
+#   * which calendars to show     -> read from the shared hwc.mail.calendar
+#     data (single source of truth), rendered into khalt's [calendars].
+#   * how the UI is coloured       -> the system theme's flat tokens
+#     (hwc.home.theme.colors) are injected as [palette_tokens]; khalt derives
+#     every ikhal/leader/grid role from them (khal/ui/khalt_theme.py). NO
+#     hardcoded [palette] block, so the theme genuinely drives the colours —
+#     change the system palette and khalt follows, exactly like todui.
+#   * keybindings (space leader, z to cycle views, hjkl) ship as khalt defaults;
+#     `extraConfig` can append a [keybindings] override block.
 #
 # NAMESPACE: hwc.home.apps.khalt.*   (Charter Law 2: namespace = folder)
-# USAGE:     hwc.home.apps.khalt.enable = true;   (set in a profile when ready)
-#
-# STATUS: scaffold. khalt currently builds and runs identically to khal v0.14.0.
-# The zoomable agenda/quarter/month views and space-leader keybindings are the
-# next implementation passes in the ~/600_apps/khalt source — see its README.
+# USAGE:     hwc.home.apps.khalt.enable = true;   (set in a profile)
 
 { config, lib, pkgs, inputs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.khalt;
-
-  # Reuse the calendar domain's khal-config generator with the live calendar
-  # cfg, so khalt's config is byte-for-byte the system khal config. Coupling to
-  # a sibling domain's parts/ generator is deliberate (single source of truth
-  # for calendar definitions); revisit if the calendar domain is restructured.
   calCfg = config.hwc.mail.calendar;
-  baseKhal = import ../../../mail/calendar/parts/khal.nix {
-    inherit lib pkgs;
-    cfg = calCfg;
+  themeColors = (config.hwc.home.theme or {}).colors or {};
+
+  dataDir = "~/.local/share/vdirsyncer";
+
+  # --- calendars: same data + rendering as domains/mail/calendar's khal.nix ---
+  mkCalendar = name: acc: ''
+    [[${name}]]
+    path = ${dataDir}/calendars/${name}/*
+    color = ${acc.color}
+    type = discover
+  '';
+  mkLocalCalendar = name: local: ''
+    [[${name}]]
+    path = ${local.path}
+    color = ${local.color}
+    type = discover
+  '';
+  calendars = lib.concatStringsSep "\n" (
+    (lib.mapAttrsToList mkCalendar (calCfg.accounts or {}))
+    ++ (lib.mapAttrsToList mkLocalCalendar (calCfg.localCalendars or {}))
+  );
+
+  # --- palette tokens: flat system-theme colours -> khalt's token vocabulary ---
+  tokenNames = [ "bg0" "bg1" "bg2" "bg3" "fg0" "fg1" "fg2" "fg3"
+                 "accent" "info" "success" "warning" "error" "purple" "aqua" ];
+  passthrough = lib.filterAttrs (n: v: (lib.elem n tokenNames) && builtins.isString v) themeColors;
+  # khalt also wants purple/aqua; map from the nearest theme tokens when absent.
+  extraTokens = lib.filterAttrs (_: v: v != null) {
+    aqua   = themeColors.aqua   or themeColors.successDim or null;
+    purple = themeColors.purple or themeColors.markedAlt  or themeColors.accentAlt or null;
   };
+  paletteTokens = passthrough // extraTokens;
+  tokensBlock = lib.concatStringsSep "\n"
+    (lib.mapAttrsToList (k: v: "${k} = ${v}") paletteTokens);
+
+  generatedConfig = ''
+    [calendars]
+    ${calendars}
+
+    [locale]
+    timeformat = %H:%M
+    dateformat = %Y-%m-%d
+    longdateformat = %Y-%m-%d %A
+    datetimeformat = %Y-%m-%d %H:%M
+    longdatetimeformat = %Y-%m-%d %H:%M %A
+
+    [default]
+    highlight_event_days = true
+
+    [view]
+    theme = dark
+    default_view = ${cfg.defaultView}
+    agenda_event_format = {calendar-color}{cancelled}{start-end-time-style} {title}{repeat-symbol}{alarm-symbol}{reset}
+    blank_line_before_day = true
+    event_view_weighting = 2
+    frame = top
+
+    [palette_tokens]
+    ${tokensBlock}
+  '';
 in
 {
   #============================================================================
@@ -42,13 +94,19 @@ in
   options.hwc.home.apps.khalt = {
     enable = lib.mkEnableOption "khalt — forked khal/ikhal TUI (zoom views + leader keys)";
 
+    defaultView = lib.mkOption {
+      type = lib.types.enum [ "agenda" "month" "quarter" ];
+      default = "agenda";
+      description = "Zoom level khalt opens in (z cycles, space→v switches).";
+    };
+
     extraConfig = lib.mkOption {
       type = lib.types.lines;
       default = "";
       description = ''
-        Extra khal-config text appended to the shared system-khal config. This
-        is where khalt-only sections live — e.g. a [keybindings] block remapping
-        ikhal commands, once the leader-key engine is implemented in the fork.
+        Extra khal-config text appended to the generated config — e.g. a
+        [keybindings] block remapping leader/zoom keys, or explicit [palette]
+        overrides that should win over the theme-derived tokens.
       '';
     };
   };
@@ -59,7 +117,7 @@ in
   config = lib.mkIf cfg.enable {
     programs.khalt = {
       enable = true;
-      configText = baseKhal.config
+      configText = generatedConfig
         + lib.optionalString (cfg.extraConfig != "") ("\n" + cfg.extraConfig);
       extraRuntimePackages = [ pkgs.vdirsyncer ];
     };

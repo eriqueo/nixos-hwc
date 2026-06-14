@@ -66,6 +66,9 @@
       tuxedo.enable = lib.mkDefault true;
       todui.enable = lib.mkDefault true;
 
+      # Calendar TUI (forked khal: zoom views + space-leader keys)
+      khalt.enable = lib.mkDefault true;
+
       # Development & Automation
       n8n.enable = lib.mkDefault false;
       # codex release-binary pin moved to domains/home/apps/codex/parts/
