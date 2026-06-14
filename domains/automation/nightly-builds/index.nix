@@ -78,11 +78,16 @@ in
         NB_VAULT_DIR = toString cfg.vaultDir;
         NB_REPO_DIR = toString cfg.repoDir;
         NB_MAX_CARDS = toString cfg.maxCards;
+        # Discord webhook for rich per-card report delivery (summary + REPORT.md
+        # attached). send-report.sh posts directly here; metadata-only fallbacks
+        # still go through hwc-notify. Same secret the discord-nightly-builds
+        # notify channel uses; readable by the eric-run service (owner).
+        NB_DISCORD_WEBHOOK_FILE = config.age.secrets."discord-webhook-nightly-builds".path;
       };
       path = [
         pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
         pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
-        pkgs.curl  # POST run results to hwc-notify (Discord)
+        pkgs.curl  # POST run results to hwc-notify + Discord webhook
       ];
       serviceConfig = {
         Type = "oneshot";
