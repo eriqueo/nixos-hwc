@@ -181,7 +181,6 @@
     firewall.extraUdpPorts = [ 56037 ];
     tailscale.enable = true;
     tailscale.extraUpFlags = [ "--accept-dns" ];
-    nfs.client.enable = true;
   };
 
   # Syncthing — bidirectional home folder sync with hwc-server
@@ -201,23 +200,6 @@
       "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-server" ]; };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-server" ]; };
     };
-  };
-
-  # NFS mount: shared folder from server over Tailscale
-  # Note: Literal path to avoid infinite recursion (fileSystems → paths → users → rpcbind → fileSystems)
-  # Matches hwc.paths.user.shared default
-  fileSystems."/home/eric/600_shared" = {
-    device = "100.114.232.124:/home/eric/600_shared";
-    fsType = "nfs";
-    options = [
-      "nfsvers=4.2"
-      "soft"                          # Return errors instead of hanging if server unreachable
-      "timeo=150"                     # 15-second timeout
-      "x-systemd.automount"          # Mount on first access, not at boot
-      "x-systemd.idle-timeout=600"   # Unmount after 10 min idle
-      "noauto"                        # Don't mount at boot (automount handles it)
-      "_netdev"                       # Network-dependent mount
-    ];
   };
 
   # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver

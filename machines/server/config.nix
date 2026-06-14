@@ -181,12 +181,6 @@
     ssh.enable = true;
     tailscale.enable = true;
     tailscale.extraUpFlags = [ "--advertise-tags=tag:server" "--accept-routes" ];
-    nfs.server = {
-      enable = true;
-      exports = ''
-        ${config.hwc.paths.user.shared} 100.64.0.0/10(rw,sync,no_subtree_check)
-      '';
-    };
     # firewall.level = "server" comes from the server role
     firewall.extraTcpPorts = [
       22000  # Syncthing sync
@@ -659,13 +653,6 @@
   };
   # X11 services disabled for headless server
   # services.xserver.enable = true;
-
-  #============================================================================
-  # SHARED DIRECTORY (NFS export for laptop access over Tailscale)
-  #============================================================================
-  systemd.tmpfiles.rules = [
-    "d ${config.hwc.paths.user.shared} 0755 eric users -"
-  ];
 
   #============================================================================
   # STORAGE PATHS
