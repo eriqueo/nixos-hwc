@@ -29,6 +29,7 @@ apps/
 ```
 
 ## Changelog
+- 2026-06-14: Added **khalt** — forked khal/ikhal (own repo `~/600_apps/khalt`, consumed as the `khalt` flake input), thin translator `domains/home/apps/khalt/` (namespace `hwc.home.apps.khalt`, **disabled by default**). Source fork of khal v0.14.0; scaffold builds + runs identically to khal today. Reuses the calendar domain's `parts/khal.nix` config generator (DRY: same calendars/theme as system khal) and isolates via `~/.config/khalt/config` (`ikhal -c`). Targets upstream-impossible features: zoomable agenda⇄quarter⇄month grid views + a space-leader keybinding engine (parity with todui/yazi/nvim/aerc). See `~/600_apps/khalt/README.hwc.md` for the implementation map.
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-14: Added calcurse and calcure TUI calendar apps with Nord theme
 - 2026-03-15: Added tmux terminal multiplexer with vi keys, C-a prefix, Gruvbox status bar
