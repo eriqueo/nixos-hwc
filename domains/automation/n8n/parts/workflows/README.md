@@ -425,7 +425,7 @@ Webhook → Extract Lead (validate) → JT: Create Account → JT: Update Accoun
 - `createAccount`, `createContact`, `createJob` do NOT accept `customFields` or `customFieldValues`
 - Must use two-step pattern: create entity → immediately update with `customFieldValues`
 - Custom field values use field IDs (e.g., `22Nm3uGRBrPX` for Email), not field names
-- See `/home/eric/600_shared/api/jobtread_api_reference.md` for full field ID reference
+- See the JobTread API reference in the brain vault for full field ID reference
 
 **Credentials Required:**
 - `JOBTREAD_GRANT_KEY`: JobTread API grant key (via n8n environment)

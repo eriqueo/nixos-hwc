@@ -288,12 +288,6 @@ in
         default = "${userHome}/.claude";
         description = "Claude Code settings directory";
       };
-
-      shared = mkOption {
-        type = types.nullOr types.path;
-        default = "${userHome}/600_shared";
-        description = "Shared folder between machines (NFS over Tailscale)";
-      };
     };
 
     # -------------------------------------------------------------------------
@@ -558,7 +552,6 @@ in
     HWC_MAIL_DIR = cfg.user.mail;
     HWC_MEDIA_DIR = cfg.user.media;
     HWC_VAULTS_DIR = cfg.user.vaults;
-    HWC_SHARED_DIR = cfg.user.shared;
 
     # Application roots
     HWC_APPS_ROOT = cfg.apps.root;
