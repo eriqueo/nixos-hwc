@@ -15,7 +15,7 @@
 # The pipeline itself (run.sh, fetch-srs.mjs, aggregate-context.mjs,
 # opensearch-query.mjs, send-report.sh) lives in its own repo at
 # ~/700_datax/sr_gauntlet — this module only provides the schedule.
-# Credentials are late-bound at runtime from ~/apps/sr_analyzer/.env
+# Credentials are late-bound at runtime from ~/600_apps/sr_analyzer/.env
 # (Firestore) and ~/700_datax/datax/.env.local (Firestore admin +
 # OpenSearch); nothing secret passes through the Nix store.
 #

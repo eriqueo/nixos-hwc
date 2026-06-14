@@ -69,7 +69,7 @@ in
 
     projectDir = lib.mkOption {
       type = lib.types.path;
-      default = "${config.hwc.paths.user.home}/apps/lead_scout";
+      default = "${config.hwc.paths.user.home}/600_apps/lead_scout";
       description = "Path to the lead_scout project directory";
     };
 
