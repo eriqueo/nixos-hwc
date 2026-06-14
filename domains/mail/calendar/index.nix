@@ -18,7 +18,12 @@ let
   vdirsyncer = import ./parts/vdirsyncer.nix {
     inherit lib pkgs cfg applePwPath;
   };
-  khal = import ./parts/khal.nix { inherit lib pkgs cfg; };
+  # khal.nix is now palette-aware: it derives its urwid [palette] hi-color
+  # fields from the active system theme (fail-soft to gruvbox literals).
+  khal = import ./parts/khal.nix {
+    inherit lib pkgs cfg;
+    colors = (config.hwc.home.theme or {}).colors or {};
+  };
   service = import ./parts/service.nix { inherit lib pkgs; };
   parser = import ./parts/parser.nix { inherit lib pkgs cfg; };
   icsWatcher = import ./parts/ics-watcher.nix { inherit lib pkgs; };
