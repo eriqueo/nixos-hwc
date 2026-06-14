@@ -213,14 +213,20 @@ PYEOF
     set_field "$CARD" status done
     set_field "$CARD" pr "branch \`$BRANCH\` (pushed; open PR at morning review)"
     log "PHASE B: card $SLUG done"
-    notify 5 "✅ $GOAL/$SLUG — done (${ELAPSED}s)" \
-      "Branch \`$BRANCH\` pushed to origin. Open the PR at morning review.
+    # Rich Discord post: verdict header + Success-criteria + full REPORT.md
+    # attached. Falls back to a metadata-only notify() if the sender can't run.
+    "$AGENT_DIR/send-report.sh" "$RUN_DIR" done "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
+      || notify 5 "✅ $GOAL/$SLUG — done (${ELAPSED}s)" \
+        "Branch \`$BRANCH\` pushed to origin. Open the PR at morning review.
 Report: runs/$RUN_NAME/REPORT.md"
   else
     set_field "$CARD" status "failed: exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)"
     log "PHASE B: card $SLUG FAILED — see $RUN_DIR/agent-output.log"
-    notify 2 "❌ $GOAL/$SLUG — failed (${ELAPSED}s)" \
-      "exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)
+    # If a (partial) REPORT.md exists, post it richly — the failure report is
+    # exactly what you want to read. Otherwise fall back to metadata notify().
+    "$AGENT_DIR/send-report.sh" "$RUN_DIR" failed "$ELAPSED" "$BRANCH" "$GOAL/$SLUG" >>"$LOG_FILE" 2>&1 \
+      || notify 2 "❌ $GOAL/$SLUG — failed (${ELAPSED}s)" \
+        "exit=$AGENT_EXIT verdict=${VERDICT:-none} report=$([ -f "$RUN_DIR/REPORT.md" ] && echo yes || echo no)
 Any partial commits were pushed to \`$BRANCH\` (reviewable, gate 8).
 Logs: runs/$RUN_NAME/agent-output.log"
   fi

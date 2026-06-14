@@ -21,9 +21,11 @@ automation/
 ├── mqtt/        # MQTT broker for event-driven automation
 │   └── index.nix
 ├── nightly-builds/  # Overnight gauntlet-card runner (headless Claude Code)
-│   ├── index.nix    # Options + systemd service/timer (hwc.automation.nightlyBuilds.*)
-│   ├── run.sh       # Launcher: card-smith pass + queued-card execution in git worktrees;
-│   │                #   posts per-card verdict to hwc-notify (topic nightly-builds → Discord)
+│   ├── index.nix    # Options + systemd service/timer (hwc.automation.nightlyBuilds.*);
+│   │                #   passes NB_DISCORD_WEBHOOK_FILE (agenix discord-webhook-nightly-builds)
+│   ├── run.sh       # Launcher: card-smith pass + queued-card execution in git worktrees
+│   ├── send-report.sh  # Per-card Discord post: verdict header + Success-criteria + full
+│   │                #   REPORT.md attached (one message). hwc-notify is the metadata fallback
 │   └── prompts/
 │       ├── run-wrapper.md  # Standing rules wrapped around every card
 │       └── card-smith.md   # Drafts gated cards from _ideas.md one-liners
@@ -58,6 +60,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-13: nightly-builds Discord delivery rewritten to match sr_gauntlet — `send-report.sh` posts ONE rich message per card (verdict header + the report's Success-criteria block inline + the full `REPORT.md` attached, readable in Discord's file viewer) directly to the `discord-webhook-nightly-builds` webhook (`NB_DISCORD_WEBHOOK_FILE` from index.nix). The old terse hwc-notify blurb is now only the fallback when no report exists (hard failures). Failure runs with a partial REPORT.md now post it too.
 - 2026-06-12: Add `sr-gauntlet/` — daily timer (06:30, 7d/wk, Persistent) launching the SR-investigation pipeline at `~/700_datax/sr_gauntlet` (its own repo): fetch open DataX SRs (SR2 phases new+engaged) from Firestore, one headless read-only Claude investigation per SR against origin/main worktrees of datax/jt-mcp with per-customer Firestore context pack + OpenSearch log access, REPORT.md per SR delivered to Eric's Discord webhook. No code changes, no customer replies — human reviews and applies. Enabled in `machines/server/config.nix` (host one-off: pipeline + creds exist only on hwc-server).
 - 2026-06-12: readme-freshness gained an autonomous fix stage (`autoFix`, default on). When the weekly lint finds drift, a headless Claude agent runs the `readme-refresh` skill in a disposable worktree off origin/main, edits READMEs only, and commits; the launcher **hard-verifies the diff is READMEs-only** (blast radius enforced by the runner, not trusted to the agent), pushes the branch, and opens a PR via `gh`. PR review is the human gate — no gauntlet queue-flip. Added `gh`/`openssh`/`nodejs` to the unit path and a `fixTimeoutSec` budget.
 - 2026-06-12: nightly-builds run results now POST to Discord via `hwc-notify` (new `discord-webhook-nightly-builds` secret + `discord-nightly-builds` channel + `topic=nightly-builds` route in `domains/notifications/`). `run.sh` gained a best-effort `notify()` helper (per-card verdict + card-smith summary); `curl` added to the unit path.
