@@ -322,7 +322,7 @@ in
     }
 
     # sr_analyzer — name-based vhost (local Kanban for DataX SR triage).
-    # Standalone Podman container at ~/apps/sr_analyzer (NOT a NixOS module).
+    # Standalone Podman container at ~/600_apps/sr_analyzer (NOT a NixOS module).
     {
       name = "sr_analyzer";
       mode = "vhost";

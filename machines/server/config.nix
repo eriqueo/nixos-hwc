@@ -247,7 +247,7 @@
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
-      "apps"         = { path = "/home/eric/apps";         devices = [ "hwc-laptop" ]; };
+      "600_apps"     = { path = "/home/eric/600_apps";     devices = [ "hwc-laptop" ]; };
       "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-laptop" "hwc-phone" ]; };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
