@@ -15,7 +15,11 @@
         add-zsh-hook precmd _hwc_hash_refresh
 
         # NixOS rebuild shortcuts (dynamic hostname)
-        # `env HOME=~root` stops Nix warning that /home/eric isn't owned by root.
+        # `env HOME=/root` stops Nix warning that /home/eric isn't owned by root.
+        # Must be the ABSOLUTE path, not `~root`: zsh doesn't tilde-expand it in
+        # an env-assignment arg, so `HOME=~root` set the literal string `~root`
+        # and made Nix create `./~root/.nix-defexpr` junk in the repo (see the
+        # detailed note at the HOME=/root line below).
         # (sudo -H / -i don't work here: this system's sudo preserves the caller's
         # environment and HOME survives both flags — verified 2026-06-10.)
         # snix/tnix auto-reload Hyprland when run inside a Hyprland session because they
@@ -27,7 +31,12 @@
         _hwc_rebuild() {
           local log rc warns
           log=$(mktemp -t nixos-rebuild-log.XXXXXX)
-          sudo env HOME=~root nixos-rebuild "$@" --flake "$HWC_NIXOS_DIR#$(hostname)" 2>&1 | tee "$log"
+          # HOME=/root (root's real home), NOT ~root: zsh does not tilde-expand
+          # `~root` in an env-assignment argument, so `HOME=~root` would set the
+          # LITERAL string "~root" — and nix then creates `./~root/.nix-defexpr`
+          # junk in the cwd (the repo). Absolute /root keeps nix's root-owned
+          # state where it belongs and silences the "$HOME not owned" warning.
+          sudo env HOME=/root nixos-rebuild "$@" --flake "$HWC_NIXOS_DIR#$(hostname)" 2>&1 | tee "$log"
           rc=''${pipestatus[1]}
           warns=$(grep -E '^(evaluation warning|warning|trace):' "$log" | sort -u)
           rm -f "$log"
