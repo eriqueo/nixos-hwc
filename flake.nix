@@ -87,13 +87,13 @@
     };
 
     # todui — the standalone VTODO task TUI (extracted from the old in-tree
-    # tasq; todoman-free, its own engine). PINNED: git+file tracks ~/dev/todui's
+    # tasq; todoman-free, its own engine). PINNED: git+file tracks ~/600_apps/todui's
     # committed HEAD, locked by flake.lock (reproducible; hwc-server can build
     # it; uncommitted edits are NOT seen). To ship a todui change: commit in
-    # ~/dev/todui, then `nix flake update todui` here, then rebuild. For a live
-    # iteration session, temporarily swap this to "path:/home/eric/dev/todui".
+    # ~/600_apps/todui, then `nix flake update todui` here, then rebuild. For a live
+    # iteration session, temporarily swap this to "path:/home/eric/600_apps/todui".
     todui = {
-      url = "git+file:///home/eric/dev/todui";
+      url = "git+file:///home/eric/600_apps/todui";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

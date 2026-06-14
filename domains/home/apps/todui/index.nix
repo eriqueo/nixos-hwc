@@ -1,6 +1,6 @@
 # domains/home/apps/todui/index.nix
 #
-# todui — standalone VTODO task TUI (its own repo at ~/dev/todui, consumed as
+# todui — standalone VTODO task TUI (its own repo at ~/600_apps/todui, consumed as
 # the `todui` flake input). This module is a THIN TRANSLATOR: it imports
 # todui's reusable Home Manager module and feeds it HWC-specific values —
 # the system theme palette, the Radicale CalDAV endpoint + agenix secret, and

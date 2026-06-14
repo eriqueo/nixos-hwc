@@ -2,7 +2,7 @@
 
 ## Purpose
 Thin HWC integration for **todui**, the standalone keyboard task TUI that
-lives in its own repo at `~/dev/todui` and is consumed here as the `todui`
+lives in its own repo at `~/600_apps/todui` and is consumed here as the `todui`
 flake input. This module translates HWC config into todui's generic Home
 Manager options: the system theme palette, the Radicale CalDAV endpoint +
 agenix secret, and the vdir paths. todui itself is todoman-free and knows
@@ -17,10 +17,10 @@ owns its own engine, tests, packaging, and release cadence.
 - Does NOT manage: the todui program (its repo/flake), the vdir, vdirsyncer,
   or the Radicale server. The vdir + sync are owned by `domains/mail/tasks/`;
   the server by `domains/server/services/radicale/`.
-- The program builds from the `todui` flake input, currently a **live-dev
-  `path:` input** (`~/dev/todui`) — source edits land on the next `hms`. Not
-  reproducible and not buildable on hwc-server until the input is pinned to a
-  git rev (see flake.nix `todui` input comment).
+- The program builds from the `todui` flake input — a **pinned `git+file`**
+  input tracking `~/600_apps/todui`'s committed HEAD (reproducible; lock holds
+  the rev). To ship a change: commit in `~/600_apps/todui`, `nix flake update
+  todui`, rebuild. Swap to `path:~/600_apps/todui` for a live-edit session.
 
 ## Structure
 ```
@@ -48,7 +48,7 @@ todui/
   → `SUPER+D` to free `T` for tasks.
 - 2026-06-12: Created. Replaces the in-tree `tasq` module and
   `workspace/home/tasq/` sources with the standalone `todui` flake input
-  (live-dev `path:` input at `~/dev/todui`). Full keyboard parity (leader
+  (live-dev `path:` input at `~/600_apps/todui`). Full keyboard parity (leader
   menus, list/project/context management, CalDAV list deletion, week strip);
   read/write VTODO parity with the prior todoman-backed engine verified
   against real data. Profile enable flipped `tasq.enable` → `todui.enable`.
