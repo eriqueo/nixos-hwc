@@ -71,11 +71,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    claude-desktop = {
-      # Pinned: app 1.11847.5 (repo rev e85450c9, 2026-06-10) breaks cowork —
-      # all main-process requests fail with net::ERR_FAILED at OAuth.
-      # Unpin once upstream packaging handles the new app version.
-      url = "github:aaddrick/claude-desktop-debian/4a1bbc9e958bbae485d5797dda3ce91f4630a407";
+    claude-cowork = {
+      # Cowork-capable Claude Desktop for Linux. Replaces aaddrick's
+      # claude-desktop-debian, whose buildFHSEnv wrapper left Electron's
+      # main-process networking dead inside the sandbox (net::ERR_FAILED on
+      # OAuth) — chat worked via the renderer's own Chromium stack, but Cowork's
+      # main-process OAuth could never start a session. This port takes a
+      # different approach: it extracts the macOS app, stubs the macOS-native
+      # modules (@ant/claude-swift, @ant/claude-native) in JS, translates VM
+      # /sessions paths to host paths in-process, and runs Claude Code directly
+      # under bubblewrap (no VM, no FHS wrapper) against nixpkgs electron_41.
+      # Research preview — may need a version bump when Claude Desktop updates.
+      url = "github:johnzfitch/claude-cowork-linux";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -129,7 +136,12 @@
         };
         overlays = [
           silenceDeprecatedAliases
-          inputs.claude-desktop.overlays.default
+          # Expose the cowork-capable Claude Desktop package (package-only flake,
+          # no overlay of its own) under pkgs for the home app module.
+          (final: prev: {
+            claude-cowork-linux =
+              inputs.claude-cowork.packages.${prev.stdenv.hostPlatform.system}.default;
+          })
         ];
       };
 
