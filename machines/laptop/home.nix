@@ -79,6 +79,13 @@
   # eXoDOS (flatpak auto-install + launcher) — domains/home/apps/exodos
   hwc.home.apps.exodos.enable = true;
 
+  # Route Electron/libsecret keyring (Claude Desktop OAuth tokens, etc.) through
+  # pass instead of the weak --password-store=basic. Root / is unencrypted here,
+  # so basic = tokens ~plaintext on disk; pass keeps them GPG-encrypted. gpg is
+  # already enabled via profiles/base; Claude Desktop's launcher auto-detects
+  # org.freedesktop.secrets and upgrades off basic on its own.
+  hwc.home.apps.gpg.secretService.enable = true;
+
   # Shell: MCP configured for laptop context
   hwc.home.core.shell = {
     enable = true;

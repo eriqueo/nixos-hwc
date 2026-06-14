@@ -9,6 +9,15 @@ in
   #==========================================================================
   options.hwc.home.apps.gpg = {
     enable = lib.mkEnableOption "GPG and gpg-agent";
+
+    # pass-secret-service exposes the existing pass store over the
+    # org.freedesktop.secrets D-Bus API, so Electron/Chromium apps (Claude
+    # Desktop, etc.) use pass (GPG-encrypted) as their keyring backend instead
+    # of the weak `--password-store=basic` fallback. Opt-in per machine: only
+    # graphical hosts with a D-Bus session want a SecretService daemon — a
+    # headless server should leave this off.
+    secretService.enable =
+      lib.mkEnableOption "pass-secret-service (org.freedesktop.secrets over pass)";
   };
 
   #==========================================================================
@@ -42,6 +51,12 @@ in
 
     # Ensure pass + gnupg tools exist
     home.packages = [ pkgs.pass pkgs.gnupg ];
+
+    # Optional: bridge the pass store to the SecretService D-Bus API. When on,
+    # apps that use libsecret/Electron safeStorage store their secrets in pass
+    # (GPG-encrypted) rather than the hardcoded-key `basic` store. gpg-agent
+    # (above) supplies the pinentry/unlock path.
+    services.pass-secret-service.enable = cfg.secretService.enable;
 
     #==========================================================================
     # VALIDATION
