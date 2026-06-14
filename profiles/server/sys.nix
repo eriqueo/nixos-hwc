@@ -50,6 +50,10 @@
   # server role because the always-on machine is the one that runs overnight.
   hwc.automation.nightlyBuilds.enable = lib.mkDefault true;
 
+  # Refinery — read-only Kanban board for the gauntlet hopper (port 8060,
+  # behind Caddy as refinery.hwc.iheartwoodcraft.com).
+  hwc.automation.refinery.enable = lib.mkDefault true;
+
   # Gotify notification server — machine files add token/admin wiring
   hwc.notifications.gotify = {
     enable = lib.mkDefault true;

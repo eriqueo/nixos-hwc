@@ -302,6 +302,15 @@ in
       root = "${nixosDir}/domains/business/morning-briefing/dashboard";
     }
 
+    # Refinery — read-only Kanban board for the gauntlet hopper, name-based
+    # vhost (refinery.hwc.iheartwoodcraft.com). Proxies the board service on
+    # :8060 (hwc.automation.refinery).
+    {
+      name = "refinery";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:8060";
+    }
+
     # lead_scout — intelligence pipeline dashboard, name-based vhost
     # (lead-scout.hwc.iheartwoodcraft.com). Proxies to the unified lead-scout
     # server on :8420 (serves SPA + REST API + chat + /mcp).
