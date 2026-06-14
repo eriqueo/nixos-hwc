@@ -390,11 +390,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781396360,
-        "narHash": "sha256-Z+odSG5oWIL4YsggxsL7iH0tduvU9sxPgpfuCqgUWRI=",
+        "lastModified": 1781397407,
+        "narHash": "sha256-afcRB+BBhbejqJnPDBYBd1XeKCaMV13kVjFOqdJ6Uys=",
         "ref": "refs/heads/main",
-        "rev": "5834efbd9b51e2200cc25ec1d6c3279f749ed5c8",
-        "revCount": 5,
+        "rev": "2a7536c17eb67e503a97721136551682d48638e7",
+        "revCount": 6,
         "type": "git",
         "url": "file:///home/eric/dev/todui"
       },
