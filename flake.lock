@@ -259,11 +259,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781420624,
-        "narHash": "sha256-nHwh6dv8UVMnP2eucFKUJXwpYQXBuAz9qi0t6idQpmc=",
+        "lastModified": 1781421497,
+        "narHash": "sha256-oLm0OZ9voo+uqqTeJNJDtlS3ZRPBCRFrZ6jw0CKzvZY=",
         "ref": "refs/heads/main",
-        "rev": "a2789a9b73223a4e258907ca103a2ebf2b5dff67",
-        "revCount": 9,
+        "rev": "527654cc26b01be290fcb1de4d20f5736cdfbbea",
+        "revCount": 11,
         "type": "git",
         "url": "file:///home/eric/600_apps/khalt"
       },
