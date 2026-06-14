@@ -728,6 +728,14 @@
       "mcp.api.iheartwoodcraft.com"    = "http://localhost:6200";
       "leads.api.iheartwoodcraft.com"  = "http://localhost:8420";
       "brain.api.iheartwoodcraft.com"  = "http://localhost:9876";
+
+      # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
+      # proxies to (machine-to-machine via an Access service token). Distinct
+      # from the bare brain./leads./mcp. names above, which stay owned by the
+      # live MCP Portal during the parallel cutover. See ~/600_apps/hwc-mcp-gateway/ORIGINS.md.
+      "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
+      "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
+      "hwc-origin.heartwoodcraft.me"   = "http://localhost:6200";
     };
   };
 
