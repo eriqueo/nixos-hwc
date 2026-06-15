@@ -82,8 +82,17 @@ export function createShell(cfg: HttpShellConfig) {
   async function intake(text: string): Promise<void> {
     const enabled = catalog.enabled();
     const options = enabled.map((p) => ({ genre: p.genre, label: p.label }));
-    const llm = cfg.triageLlm ?? resolveLlm(cfg.triageProvider);
-    const decision = await triageSentence(text, options, llm);
+    // Triage is best-effort: if the LLM is unavailable (no key, claude binary
+    // can't run in the hardened service, network down), the idea still lands in
+    // the hopper as untriaged for manual promotion on the detail page. Intake
+    // never fails.
+    let decision = { genre: UNTRIAGED, confidence: 0, reason: "not triaged" };
+    try {
+      const llm = cfg.triageLlm ?? resolveLlm(cfg.triageProvider);
+      decision = await triageSentence(text, options, llm);
+    } catch (e) {
+      decision = { genre: UNTRIAGED, confidence: 0, reason: `triage unavailable: ${(e as Error).message}` };
+    }
     const profile = catalog.get(decision.genre);
     const firstPhase = profile?.gates[0] ?? "triage";
     const id = `${slug(text)}-${Date.now()}`;

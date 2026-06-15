@@ -54,6 +54,21 @@ test("intake triages a sentence into a profile item at its first gate", async ()
   }
 });
 
+test("intake never fails — a triage LLM error drops the idea into the hopper untriaged", async () => {
+  const throwingLlm: LlmPort = { async complete() { throw new Error("claude unavailable"); } };
+  const { cfg, cleanup } = setup(throwingLlm);
+  try {
+    const shell = createShell(cfg);
+    await shell.intake("an idea the LLM can't reach");
+    const item = (await shell.store.list())[0];
+    assert.equal(item.genre, UNTRIAGED);
+    assert.equal(item.phaseStatus, "parked");
+    assert.match(item.parkedReason!, /triage unavailable: claude unavailable/);
+  } finally {
+    cleanup();
+  }
+});
+
 test("intake of an unclassifiable sentence parks an untriaged item", async () => {
   const { cfg, cleanup } = setup(triageStub("nonsense-genre", 0.99));
   try {
