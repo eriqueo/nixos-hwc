@@ -44,9 +44,25 @@ let
     type = discover
   '';
 
+  # Radicale-synced calendars (VEVENT) discovered under calendars-radicale/.
+  # When the Radicale backend is on, the iCloud accounts no longer generate
+  # vdirsyncer pairs, so this is the live calendar source.
+  radicaleCalendar = lib.optionalString cfg.radicale.enable ''
+    [[radicale]]
+    path = ${dataDir}/calendars-radicale/*
+    color = ${cfg.radicale.color}
+    type = discover
+  '';
+
+  # When Radicale is the backend, iCloud account pairs are not synced, so their
+  # stale calendars/<account>/ dirs are not surfaced (mirrors vdirsyncer.nix).
+  accountCalendars = lib.optionals (!cfg.radicale.enable)
+    (lib.mapAttrsToList mkCalendar cfg.accounts);
+
   calendars = lib.concatStringsSep "\n" (
-    (lib.mapAttrsToList mkCalendar cfg.accounts)
+    accountCalendars
     ++ (lib.mapAttrsToList mkLocalCalendar (cfg.localCalendars or {}))
+    ++ lib.optional (radicaleCalendar != "") radicaleCalendar
   );
 
   # --- palette role -> (named fallback, hi-color token) -----------------------
@@ -67,7 +83,8 @@ in
     longdatetimeformat = %Y-%m-%d %H:%M %A
 
     [default]
-    default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F
+    ${lib.optionalString (!cfg.radicale.enable)
+      "default_calendar = 06A30686-742B-4681-BBE9-BB15C7E9A54F"}
     highlight_event_days = true
 
     [view]

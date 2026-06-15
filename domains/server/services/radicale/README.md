@@ -1,11 +1,15 @@
-# Radicale — self-hosted CalDAV (tasks)
+# Radicale — self-hosted CalDAV (tasks + calendars)
 
 ## Purpose
-Self-hosted CalDAV server giving full two-way task sync **including list
-creation**. iCloud pins the laptop's tasks pair to fixed collection IDs (lists
-can only be created in Apple Reminders); Radicale permits MKCALENDAR, so lists
-created in `todui` (`N`) are created server-side by vdirsyncer discovery, and
-the iPhone reads/writes them through a native CalDAV account.
+Self-hosted CalDAV server giving full two-way sync **including collection
+creation**, for both VTODO (tasks) and VEVENT (calendars). iCloud pins the
+laptop's tasks pair to fixed collection IDs (lists can only be created in Apple
+Reminders); Radicale permits MKCALENDAR, so lists created in `todui` (`N`) and
+calendars created in khalt are created server-side by vdirsyncer discovery, and
+the iPhone reads/writes them through native CalDAV accounts. The same service,
+vhost, and `radicale-htpasswd` secret serve both component types — the VTODO
+pair (`domains/mail/tasks`) and the VEVENT pair (`domains/mail/calendar`,
+`hwc.mail.calendar.radicale.*`) just differ by `item_types`.
 
 ## Boundaries
 - Manages: the Radicale service (localhost:5232), its htpasswd auth wiring,
@@ -51,6 +55,12 @@ password (`cut -d: -f2-`).
    phone; add a task on the phone in that list → sync → visible in todui.
 
 ## Changelog
+- 2026-06-15: Now also hosts the **calendar** (VEVENT) backend, not just tasks.
+  No server-side change required (Radicale is generic CalDAV) — the laptop adds
+  a `calendar_radicale` vdirsyncer pair (`hwc.mail.calendar.radicale.enable`)
+  and the server enables it headlessly so the MCP's `hwc_calendar` has data.
+  See `domains/mail/calendar` (pair + one-time migration script) and
+  `domains/home/apps/khalt`. README purpose/title updated to tasks + calendars.
 - 2026-06-11: Initial. Radicale on localhost:5232 behind the `tasks` Caddy
   vhost; htpasswd auth from the shared agenix secret (plain encryption inside
   the encrypted file); SupplementaryGroups=secrets for the radicale user.
