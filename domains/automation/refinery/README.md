@@ -52,8 +52,22 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `app/package.json` | Dev-only deps + `test`/`typecheck` scripts (esbuild bundle stays dep-free) |
 | `app/tsconfig.json` | TS config (typecheck/editor; esbuild needs no build step) |
 | `engine/` | Engine core: Item + GateModule + Manifest contracts (Zod), stage runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
+| `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
 
 ## Changelog
+- **2026-06-15** — Slice 04: gate registry + discipline gate modules
+  (`engine/src/gates/`). Seven `GateModule`s implementing slice-03's contract —
+  stepwise-refinement, principles-create, principles-fix, chestertons-fence,
+  blast-radius, premortem, admission-gates — each with an `applies()` predicate
+  over data-driven item traits (`traits.ts`), a prompt framed from Eric's canon,
+  a Zod verdict schema, and `decide()`. LLM access is the injected `LlmPort`
+  (hexagonal; stubbed in tests). `makeGateRegistry(llm)` resolves manifest gate
+  ids; `gateList(llm)` feeds the runner. New `InvalidGateVerdictError`
+  (`E_INVALID_VERDICT`) for malformed LLM verdicts. Coverage (`node --test`, 21
+  total, +6): registry resolves all ids, `applies()` fires/skips per trait,
+  `decide()` maps the verdict, `parseVerdict` rejects non-JSON/schema-mismatch,
+  and a manifest gate list composes through the runner end-to-end (pass-through
+  + park-at-first-gate).
 - **2026-06-15** — Review-hardening pass over the consolidated branch. Engine:
   documented the `GateModule.run` idempotency contract (runner re-enters the
   parked stage on resume) and that `executeMode`/`effectors` are
