@@ -25,9 +25,12 @@ let
 in
 {
   workbenchKdl = ''
-    // workbench pane grid — peer TUIs, NONE mounted in-process.
-    // workbench occupies the host pane and orchestrates the rest via
-    // `zellij action new-pane -n <name> -- <cmd>` / `--focus`.
+    // workbench tab grid — peer TUIs, NONE mounted in-process. Home-page model:
+    // the `host` (workbench) owns its own tab as the dashboard / command center;
+    // each tool gets its own tab (peers of files/mail/edit). The host directs
+    // you to the right tab to do work — it never embeds a tool's UI.
+    // Tab names carry an emoji for at-a-glance colour; navigate by Ctrl+t then
+    // tab number, or Alt+←/→.
     layout {
         // Every tab gets a tab-bar (top, shows all tab names + which is focused)
         // and a status-bar (bottom, shows the active zellij keybinds). Without
@@ -38,33 +41,30 @@ in
             children
             pane size=1 borderless=true { plugin location="zellij:status-bar"; }
         }
-        tab name="workbench" focus=true {
-            pane size="35%" name="host" {
+        // Home = the workbench host alone (full pane). The dashboard you land on.
+        tab name="🏠 home" focus=true {
+            pane name="host" {
                 command "workbench"
             }
-            pane split_direction="vertical" {
-                // Left column: tasks + calendar (Eric's own first-class TUIs).
-                // Auto-start (no start_suspended) so they're live the moment
-                // workbench opens — they're the always-on peers.
-                pane name="todui" {
-                    command "todui"
-                }
-                pane name="khalt" {
-                    command "khalt"
-                }
-            }
         }
-        // Secondary tabs. yazi + nvim are local TUIs — auto-start, cheap to keep
-        // warm. aerc is the one heavy peer: it's `ssh -t server aerc`, a held-open
-        // connection to the server, so it stays start_suspended (press <ENTER> in
-        // the mail tab to launch) — no idle SSH lingering in a detached session.
-        tab name="files" {
+        // Tasks + calendar: Eric's first-class TUIs, auto-started (always-on peers).
+        tab name="✅ tasks" {
+            pane name="todui" { command "todui"; }
+        }
+        tab name="📆 cal" {
+            pane name="khalt" { command "khalt"; }
+        }
+        // Local TUIs — auto-start, cheap to keep warm.
+        tab name="📁 files" {
             pane name="yazi" { command "yazi"; }
         }
-        tab name="mail" {
+        // Mail is the one heavy peer: `ssh -t server aerc`, a held-open connection
+        // to the server — stays start_suspended (press <ENTER> to launch) so no
+        // idle SSH lingers in a detached session.
+        tab name="📬 mail" {
             pane name="aerc" { command "${mailBin}";${mailArgsKdl} start_suspended true; }
         }
-        tab name="edit" {
+        tab name="📝 edit" {
             pane name="nvim" { command "nvim"; }
         }
     }
