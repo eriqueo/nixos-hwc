@@ -84,8 +84,11 @@ in
         # Read-only viewer: it only ever reads the vault. Mask the whole home
         # tree, then bind just the vault back in read-only — the service sees
         # nothing else under /home (defense in depth beyond ProtectSystem).
+        # ProtectHome MUST be "tmpfs" (not true): true mounts /home read-only,
+        # so systemd can't create the bind target underneath and the vault
+        # silently disappears. "tmpfs" gives a tmpfs that bind targets mount into.
         ProtectSystem = "strict";
-        ProtectHome = lib.mkForce true;
+        ProtectHome = lib.mkForce "tmpfs";
         BindReadOnlyPaths = [ cfg.vaultDir ];
         PrivateTmp = true;
       };
