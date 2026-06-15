@@ -26,6 +26,13 @@ let
   calCfg = config.hwc.mail.calendar;
   themeColors = (config.hwc.home.theme or {}).colors or {};
 
+  # Unified keymap: list-app bare verbs (a=add, e=edit, d=delete, Enter=open),
+  # shared with todui. Generated [keybindings] block, appended below. Guarded so
+  # khalt still evaluates when the keymap module is not imported.
+  km        = (config.hwc.home.keymap or {}).grammar or {};
+  kmKhalt   = lib.optionalString (km ? listVerbs)
+    (import ../../keymap/parts/to-khalt.nix { inherit lib; grammar = km; }).keybindingsBlock;
+
   dataDir = "~/.local/share/vdirsyncer";
 
   # --- calendars: same data + rendering as domains/mail/calendar's khal.nix ---
@@ -135,6 +142,7 @@ in
     programs.khalt = {
       enable = true;
       configText = generatedConfig
+        + lib.optionalString (kmKhalt != "") ("\n" + kmKhalt)
         + lib.optionalString (cfg.extraConfig != "") ("\n" + cfg.extraConfig);
       extraRuntimePackages = [ pkgs.vdirsyncer ];
     };

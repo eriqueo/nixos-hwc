@@ -31,6 +31,14 @@ let
   # domain (on the laptop: "ssh -t server aerc"; falls back to "aerc").
   mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
   layout      = import ./parts/layout.nix { inherit lib mailCommand; };
+
+  # INTER-APP meta layer (Alt+Space). Generated from the unified keymap grammar
+  # when it is present (profiles/desktop imports domains/home/keymap). Guarded:
+  # if the keymap module is not imported, this is "" and zellij keeps its prior
+  # default keybinds — so this wiring is safe whether or not keymap is enabled.
+  km           = (config.hwc.home.keymap or {}).grammar or {};
+  metaKeybinds = lib.optionalString (km ? meta)
+    (import ../../keymap/parts/to-zellij.nix { inherit lib; grammar = km; }).keybinds;
 in
 {
   #============================================================================
@@ -59,12 +67,15 @@ in
     xdg.configFile = {
       "zellij/config.kdl".text = ''
         // Auto-generated from the ${colors.name or "system"} palette.
-        // workbench drives panes via `zellij action`; keep keybinds out of its
-        // way — the space-leader grammar lives in workbench, not here.
+        // Intra-app Space leader lives in each app; zellij owns ONLY the
+        // inter-app meta layer (Alt+Space), generated below from the unified
+        // keymap grammar (domains/home/keymap). When that grammar is absent the
+        // meta block is empty and zellij falls back to its defaults.
         theme "hwc"
         default_layout "${cfg.defaultLayout}"
         pane_frames true
         ${appearance.themeBlock}
+        ${metaKeybinds}
       '';
 
       # The workbench pane grid. workbench spawns/focuses into these panes by

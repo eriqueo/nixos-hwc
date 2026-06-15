@@ -27,6 +27,15 @@ let
   # laptop mail lives on the server, so this is "ssh -t server aerc"; elsewhere
   # it falls back to a bare "aerc". Same fact the zellij layout derives.
   aercCmd = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
+
+  # Unified keymap grammar → staged as ~/.config/workbench/keymap.json. The host
+  # has a real chord state machine but its grammar is still hard-coded; the
+  # app-side reader (feed Keymap.from_actions globals + DROP the Space t/c/m
+  # jumps, which become Alt+Space owned by zellij) is the staged prerequisite —
+  # see domains/home/keymap/README.md. Writing the file now is harmless.
+  km   = (config.hwc.home.keymap or {}).grammar or {};
+  kmWb = lib.optionalString (km ? meta)
+    (import ../../keymap/parts/to-workbench.nix { inherit lib; grammar = km; }).json;
 in
 {
   imports = [ inputs.workbench.homeManagerModules.workbench ];
@@ -85,6 +94,12 @@ in
         # Only bake a local aerc when no remote alias redirects it.
         # todui + khalt come from their own HM modules already on PATH.
       ] ++ lib.optional (aercCmd == "aerc") aerc;
+    };
+
+    # Staged unified-keymap data (see let-block note). Harmless until the
+    # app-side reader lands; written only when the keymap module is imported.
+    xdg.configFile = lib.optionalAttrs (kmWb != "") {
+      "workbench/keymap.json".text = kmWb;
     };
   };
 }

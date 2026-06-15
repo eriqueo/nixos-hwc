@@ -11,6 +11,7 @@
 {
   imports = [
     ../../domains/mail/index.nix
+    ../../domains/home/keymap/index.nix   # unified keymap source of truth (hwc.home.keymap.grammar)
   ];
 
   #======================================================================
