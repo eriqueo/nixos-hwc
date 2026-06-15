@@ -65,6 +65,10 @@ in
       environment = {
         HOME = paths.user.home;
         SRG_MAX_SRS = toString cfg.maxSrs;
+        # Late-bind Firestore creds from sr_analyzer's single .env (declare
+        # once, derive everywhere). Without this the script falls back to a
+        # stale default path and fetch FATALs with ENOENT.
+        SRG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
       };
       path = [
         pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
