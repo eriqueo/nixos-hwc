@@ -32,3 +32,17 @@ export class UnknownStageError extends RefineryError {
     this.name = "UnknownStageError";
   }
 }
+
+export class InvalidGateVerdictError extends RefineryError {
+  readonly gateId: string;
+  readonly detail: string;
+  constructor(gateId: string, detail: string) {
+    super(
+      "E_INVALID_VERDICT",
+      `gate "${gateId}" returned a verdict that failed validation: ${detail}`,
+    );
+    this.name = "InvalidGateVerdictError";
+    this.gateId = gateId;
+    this.detail = detail;
+  }
+}
