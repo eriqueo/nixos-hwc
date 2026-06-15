@@ -224,14 +224,15 @@ export function renderProjectDetail(
          </form>` : ""}`
       : `<div class="kv">No human action needed at this phase (${esc(item.phaseStatus)}).</div>`;
 
-  const body = `<div class="detail">
-  <a href="/" class="kv">← board</a>
-  <h2><span class="swatch" style="background:${esc(color)}"></span> ${esc(titleOf(item))}</h2>
-  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.genre)}`} · phase <b>${esc(item.phase)}</b> · ${esc(item.phaseStatus)} ${item.nightly ? "· 🌙 nightly" : ""}</div>
-  ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
+  const payloadObj = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+  const readonly = payloadObj.readonly === true;
+  const run = typeof payloadObj.run === "string" ? payloadObj.run : "";
+  const pr = typeof payloadObj.pr === "string" ? payloadObj.pr : "";
 
-  ${promote}
-
+  const actions = readonly
+    ? `<h2>Mirror (read-only)</h2>
+       <div class="kv">Managed by the nightly-builds overnight run — refinery shows it but doesn't edit it.${run ? ` · run: ${esc(run)}` : ""}${pr ? ` · ${esc(pr)}` : ""}</div>`
+    : `${promote}
   <h2>Human-in-the-loop</h2>
   ${parkedActions}
 
@@ -242,6 +243,21 @@ export function renderProjectDetail(
     <button type="submit">${item.nightly ? "🌙 remove from nightly" : "🌙 run overnight"}</button>
     <span class="kv">${item.nightly ? "queued for the overnight gauntlet run" : "runs only when advanced manually / on a beat"}</span>
   </form>
+
+  <h2>Danger</h2>
+  <form class="act" method="post" action="/delete">
+    <input type="hidden" name="id" value="${esc(item.id)}">
+    <button type="submit" style="border-color:#cc241d;color:#fb4934">🗑 delete</button>
+    <span class="kv">removes this ${isIdea ? "idea" : "project"} from the board</span>
+  </form>`;
+
+  const body = `<div class="detail">
+  <a href="/" class="kv">← board</a>
+  <h2><span class="swatch" style="background:${esc(color)}"></span> ${esc(titleOf(item))}</h2>
+  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.genre)}`} · phase <b>${esc(item.phase)}</b> · ${esc(item.phaseStatus)} ${item.nightly ? "· 🌙 nightly" : ""}</div>
+  ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
+
+  ${actions}
 
   <h2>Payload</h2>
   <pre>${esc(JSON.stringify(item.payload, null, 2))}</pre>

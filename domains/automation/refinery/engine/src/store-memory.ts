@@ -15,4 +15,8 @@ export class InMemoryItemStore implements ItemStore {
   async list(): Promise<Item[]> {
     return Array.from(this.items.values()).map((i) => structuredClone(i));
   }
+
+  async delete(id: string): Promise<void> {
+    this.items.delete(id);
+  }
 }

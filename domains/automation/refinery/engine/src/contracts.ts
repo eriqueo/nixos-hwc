@@ -81,6 +81,7 @@ export interface ItemStore {
   load(id: string): Promise<Item | null>;
   save(item: Item): Promise<void>;
   list(): Promise<Item[]>;
+  delete(id: string): Promise<void>;
 }
 
 // An effector performs the side-effecting phases of the pipeline (execute,

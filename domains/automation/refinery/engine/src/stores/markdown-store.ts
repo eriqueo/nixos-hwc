@@ -9,7 +9,7 @@
 // live in their own store dir (a scratch/run dir), NOT the gauntlet hopper the
 // slice-01 board currently scans — full board integration is slice 07.
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { Item, ItemSchema, ItemStore } from "../contracts.js";
 
@@ -70,6 +70,11 @@ export class MarkdownItemStore implements ItemStore {
 
   async save(item: Item): Promise<void> {
     writeFileSync(this.pathFor(item.id), render(item));
+  }
+
+  async delete(id: string): Promise<void> {
+    const path = this.pathFor(id);
+    if (existsSync(path)) rmSync(path);
   }
 
   async list(): Promise<Item[]> {
