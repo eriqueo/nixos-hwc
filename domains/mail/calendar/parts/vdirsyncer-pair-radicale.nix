@@ -8,11 +8,15 @@
 # (which carries VTODO). Same Radicale server, same htpasswd secret; the only
 # differences are item_types = ["VEVENT"] and the local storage dir.
 #
-# Collections use "from a"/"from b" discovery: Radicale allows collection
-# creation (MKCALENDAR), so calendars created locally (khal/ikhal `new`) are
-# created server-side on the next `vdirsyncer discover calendar_radicale` +
-# sync, and calendars created on the server/phone appear locally. The password
-# is the second field of the agenix htpasswd secret shared with the server.
+# Collection scoping: calendar and tasks share ONE Radicale account, and
+# vdirsyncer can't filter discovery by component type — so "from a"/"from b"
+# would make THIS (VEVENT) pair also grab the tasks_radicale VTODO collections
+# (personal/work/family/Reminders) and create empty local dirs for them. We
+# therefore pin to the single calendar collection `migrated` (displayname
+# "Calendar", created by the one-time iCloud→Radicale migration). Adding another
+# calendar = add its collection id here. (A fully clean separation would give
+# calendar its own Radicale principal; explicit scoping is the pragmatic fix.)
+# The password is field 2+ of the agenix htpasswd secret shared with the server.
 
 { url, username, secretPath, dataDir }:
 
@@ -20,7 +24,7 @@
   [pair calendar_radicale]
   a = "calendar_radicale_remote"
   b = "calendar_radicale_local"
-  collections = ["from a", "from b"]
+  collections = ["migrated"]
   metadata = ["displayname", "color"]
   # Local wins: Radicale auto-names a collection at MKCALENDAR, which would
   # otherwise MetaSyncConflict against the real name on the first metasync
