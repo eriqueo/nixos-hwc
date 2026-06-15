@@ -197,7 +197,20 @@
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-server" ]; };
       "600_apps"     = { path = "/home/eric/600_apps";     devices = [ "hwc-server" ]; };
-      "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-server" ]; };
+      "brain"        = {
+        path = "/home/eric/900_vaults/brain";
+        devices = [ "hwc-server" ];
+        # Vault is a git repo: .git MUST be excluded or Syncthing replicates
+        # git internals and a stale peer can clobber committed history.
+        ignores = [
+          ".git"
+          ".obsidian/workspace.json"
+          ".obsidian/workspace-mobile.json"
+          ".obsidian/plugins/*/data.json"
+          ".trash/"
+          ".DS_Store"
+        ];
+      };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-server" ]; };
     };
   };

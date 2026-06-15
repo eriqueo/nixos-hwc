@@ -6,7 +6,7 @@ Bidirectional file sync between HWC machines using Syncthing over Tailscale. Pro
 
 ## Boundaries
 
-- **Manages**: Syncthing service enablement, device declarations, folder sync config, versioning
+- **Manages**: Syncthing service enablement, device declarations, folder sync config, versioning, per-folder `.stignore` provisioning
 - **Does NOT manage**: Tailscale networking (-> domains/system/networking), file storage paths (-> domains/paths), backup (-> domains/data/borg)
 
 ## Structure
@@ -26,6 +26,11 @@ hwc.data.syncthing = {
   devices."hwc-laptop".id = "H3EVGHN-...";
   folders = {
     "000_inbox" = { path = "/home/eric/000_inbox"; devices = [ "hwc-laptop" ]; };
+    "brain" = {
+      path = "/home/eric/900_vaults/brain";
+      devices = [ "hwc-laptop" "hwc-phone" ];
+      ignores = [ ".git" ".trash/" ];   # written to <path>/.stignore
+    };
     # ...
   };
 };
@@ -37,7 +42,16 @@ hwc.data.syncthing = {
 - `overrideDevices = true` and `overrideFolders = true` -- fully declarative, no GUI state drift
 - Versioning defaults to staggered with 30-day retention per folder
 - Device addresses are optional -- omit for auto-discovery, specify for fixed Tailscale IPs
+- **`.stignore` is provisioned declaratively** (`folders.<name>.ignores`). Syncthing never
+  syncs `.stignore` between devices, so it cannot be relied on to propagate — a git-backed
+  vault folder MUST declare `.git` in `ignores` or Syncthing replicates `.git` internals and
+  a stale peer can silently clobber committed history. The `syncthing-stignore` oneshot writes
+  `<path>/.stignore` before `syncthing.service` starts.
 
 ## Changelog
 
 - 2026-04-12: Created module, extracted from machines/server/config.nix and machines/laptop/config.nix
+- 2026-06-15: Add declarative per-folder `.stignore` provisioning (`folders.<name>.ignores` +
+  `syncthing-stignore` oneshot). Root-cause fix for the brain-vault git/Syncthing clobber: the
+  server had no `.stignore`, so Syncthing was replicating the vault's `.git`. `brain` folder now
+  excludes `.git` on both hosts.
