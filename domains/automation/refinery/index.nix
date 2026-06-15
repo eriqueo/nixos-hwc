@@ -108,6 +108,8 @@ in
           # Per-gauntlet "max per run" caps the board edits; both run.sh files
           # read this same file (with their env value as fallback).
           "REFINERY_CAPS_FILE=/var/lib/refinery/caps.json"
+          # The Run button / write-spec effector drops developed specs here.
+          "REFINERY_SCRATCH_DIR=/var/lib/refinery/specs"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
           # claude-cli triage shells out to headless `claude`, which reads the
           # Claude subscription creds from $HOME/.claude (bound read-only below).

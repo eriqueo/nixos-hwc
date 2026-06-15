@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
@@ -10,13 +10,16 @@ import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
 import { fixedClock } from "./helpers.js";
 
-function setup(triageLlm: LlmPort): { cfg: HttpShellConfig; cleanup: () => void } {
+function setup(
+  triageLlm: LlmPort,
+  opts: { runLlm?: LlmPort; autoRun?: boolean } = {},
+): { cfg: HttpShellConfig; cleanup: () => void } {
   const root = mkdtempSync(join(tmpdir(), "refinery-shell-"));
   const profilesDir = join(root, "profiles");
   mkdirSync(profilesDir, { recursive: true });
   writeFileSync(
     join(profilesDir, "project-ideation.yaml"),
-    "genre: project-ideation\nlabel: Project Ideation\nsource: http-intake\ngates:\n  - stepwise-refinement\n  - principles-create\n  - premortem\nexecuteMode: none\neffectors:\n  - write-spec\n",
+    `genre: project-ideation\nlabel: Project Ideation\nsource: http-intake\ngates:\n  - stepwise-refinement\n  - principles-create\n  - premortem\nexecuteMode: none\neffectors:\n  - write-spec\n${opts.autoRun ? "autoRun: true\n" : ""}`,
   );
   return {
     cfg: {
@@ -25,12 +28,33 @@ function setup(triageLlm: LlmPort): { cfg: HttpShellConfig; cleanup: () => void 
       profilesDir,
       profileStatePath: join(root, "state.json"),
       capsPath: join(root, "caps.json"),
+      scratchDir: join(root, "specs"),
       triageProvider: "claude-cli",
       clock: fixedClock,
       triageLlm,
+      runLlm: opts.runLlm,
     },
     cleanup: () => rmSync(root, { recursive: true, force: true }),
   };
+}
+
+// One canned superset response satisfying every gate schema AND the spec schema
+// (same shape as the genre-ideation e2e). Lets a full pipeline run deterministically.
+function runStub(decision: "pass" | "park" = "pass"): LlmPort {
+  const body = {
+    decision,
+    reason: decision === "pass" ? "ok" : "needs a human call",
+    steps: ["scope the idea", "design the core"],
+    violations: [],
+    hypotheses: ["designed: deliberate"],
+    references: [],
+    killVectors: [{ vector: "scope creep", severity: "medium" }],
+    gates: [{ n: 1, name: "unattended", pass: true }],
+    goal: "Build the thing",
+    principlesAudit: ["hexagonal: core has no IO"],
+    deliverable: "a developed project spec markdown",
+  };
+  return { async complete() { return JSON.stringify(body); } };
 }
 
 const triageStub = (genre: string, confidence = 0.9): LlmPort => ({
@@ -305,4 +329,65 @@ test("renderGauntlet colors a parked project and links to detail; renderHopperPa
   const h = renderHopperPage(idea, profiles);
   assert.ok(h.includes('action="/intake"'));
   assert.ok(h.includes("a raw idea"));
+});
+
+test("runItem runs a pending engine item through the pipeline and writes a spec", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass") });
+  try {
+    const shell = createShell(cfg);
+    await shell.intake("an engine that refines ideas into specs");
+    const id = (await shell.store.list())[0]!.id;
+    await shell.runItem(id);
+    const item = await shell.store.load(id);
+    assert.equal(item!.phase, "premortem");
+    assert.equal(item!.phaseStatus, "passed");
+    assert.equal(item!.history.at(-1)!.phase, "write-spec");
+    assert.ok(existsSync(join(cfg.scratchDir, `${id}-spec.md`)), "developed spec written to scratch dir");
+  } finally {
+    cleanup();
+  }
+});
+
+test("kickRun marks the item running, then completes it — the Run button path", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass") });
+  try {
+    const shell = createShell(cfg);
+    await shell.intake("a fresh idea to develop");
+    const id = (await shell.store.list())[0]!.id;
+    await shell.kickRun(id); // returns the run promise in tests (prod fire-and-forgets)
+    assert.equal((await shell.store.load(id))!.phaseStatus, "passed");
+  } finally {
+    cleanup();
+  }
+});
+
+test("an autoRun genre runs the pipeline on intake — no button press (incoming SR tickets)", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass"), autoRun: true });
+  try {
+    const shell = createShell(cfg);
+    await shell.intake("a ticket that should process itself on arrival");
+    await new Promise((r) => setTimeout(r, 150)); // let the fire-and-forget run finish
+    assert.equal((await shell.store.list())[0]!.phaseStatus, "passed", "auto-ran to completion");
+  } finally {
+    cleanup();
+  }
+});
+
+test("renderProjectDetail shows a Run button for a pending engine item; running hides it", () => {
+  const profiles = [
+    { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
+      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
+  ];
+  const pending: Item = {
+    id: "r1", genre: "project-ideation", phase: "stepwise-refinement", phaseStatus: "pending",
+    payload: { title: "an idea", input: "an idea" }, history: [],
+  };
+  const d = renderProjectDetail(pending, profiles, profiles);
+  assert.ok(d.includes('action="/run"'), "pending engine item exposes the Run form");
+  assert.ok(d.includes("run pipeline now"));
+
+  const running = renderProjectDetail({ ...pending, phaseStatus: "running" }, profiles, profiles);
+  assert.ok(running.includes("running the project-ideation pipeline"), "running shows progress");
+  assert.ok(!running.includes('action="/run"'), "no second Run while already running");
 });

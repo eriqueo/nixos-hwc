@@ -32,6 +32,7 @@ function titleOf(item: Item): string {
 
 const LANES: { status: Item["phaseStatus"]; label: string }[] = [
   { status: "pending", label: "In Progress" },
+  { status: "running", label: "Running" },
   { status: "parked", label: "Needs You" },
   { status: "passed", label: "Done" },
   { status: "failed", label: "Failed" },
@@ -310,6 +311,20 @@ export function renderProjectDetail(
     ? `<a href="/report/${esc(item.id)}">📄 view REPORT</a>`
     : `<span class="kv">no REPORT yet</span>`;
 
+  // Run button — triggers the engine pipeline (gates → effector) for a triaged
+  // engine item. Read-only mirror items (nightly/SR cards) execute via their own
+  // gauntlets, so they don't get it.
+  const runBlock = (!isIdea && profile && !readonly)
+    ? item.phaseStatus === "running"
+      ? `<h2>Run</h2><div class="kv">⏳ running the ${esc(item.genre)} pipeline (${esc(profile.gates.join(" → "))})… refresh to see the result.</div>`
+      : `<h2>Run</h2>
+         <form class="act" method="post" action="/run">
+           <input type="hidden" name="id" value="${esc(item.id)}">
+           <button type="submit">▶ run pipeline now</button>
+           <span class="kv">runs ${esc(profile.gates.join(" → "))}; writes a developed spec</span>
+         </form>`
+    : "";
+
   const actions = readonly
     ? isNightlyCard
       ? // nightly-builds vault card: the Phase-4 queue gate as a button (writes
@@ -326,7 +341,7 @@ export function renderProjectDetail(
         `<h2>Investigation (read-only)</h2>
          <div class="kv">Produced by the sr_gauntlet overnight run.</div>
          <div class="act">${reportLink}</div>`
-    : `${promote}
+    : `${promote}${runBlock}
   <h2>Human-in-the-loop</h2>
   ${parkedActions}
 
