@@ -79,4 +79,5 @@ workspace/automation/
 
 - 2026-03-15: Changed port 10000 funnel to full n8n access (was webhook-only)
 - 2026-03-04: Namespace migration hwc.server.native.n8n.* → hwc.automation.n8n.*
+- 2026-06-13: Syncthing layout cleanup — drop the legacy `600_shared` NFS share (now Syncthing-only) and rename the shared `apps` folder to `600_apps`. Touches parts/workflows + sr-gauntlet path comments only; no service behavior change.
 - 2026-03-04: Created automation domain; moved n8n from domains/server/native/ (Phase 6 of DDD migration)

@@ -83,3 +83,7 @@ All webhook endpoints require `x-api-key` header matching `ESTIMATOR_API_KEY` en
 - Workflows: `/home/eric/.nixos/domains/automation/n8n/parts/workflows/`
 - Estimator App: `/home/eric/.nixos/workspace/projects/react/heartwood-assembler/`
 - Server Config: `/home/eric/.nixos/machines/server/config.nix`
+
+## Changelog
+- 2026-06-15: No code change in this dir since 2026-03-20 — only the `hwc` → `hwc-server` tailnet rename (22bbbb48) touched the workflow JSON URLs that this README references.
+- 2026-03-20: Initial estimator → n8n → JT integration docs.

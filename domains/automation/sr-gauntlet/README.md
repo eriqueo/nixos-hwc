@@ -25,6 +25,7 @@ on hwc-server).
 
 ## Changelog
 
+- **2026-06-13**: Syncthing shared folder renamed `apps` → `600_apps` (2771f0c3). Pipeline path comments and READMEs that referenced the old name swept; no service unit changes.
 - **2026-06-12**: Created. Daily 06:30 timer (7d/wk) wrapping
   `~/700_datax/sr_gauntlet/run.sh`; maxSrs=5 default; creds late-bound at
   runtime (nothing secret in the Nix store). Modeled on nightly-builds with

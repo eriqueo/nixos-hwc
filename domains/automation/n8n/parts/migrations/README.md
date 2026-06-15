@@ -28,3 +28,4 @@ sudo -u postgres psql -d hwc -f 002-full-hwc-schema.sql
 
 ## Changelog
 - 2026-03-26: Added 002-full-hwc-schema.sql — full production schema with JT reference tables, cost catalog, project state, estimates, leads, daily logs, workflow log, and views
+- 2026-03-31: Added the work_calculator_lead n8n workflow / Heartwood MCP `/call` endpoint migration (002-calculator-leads.sql) — JT + Postgres + Slack flow for bathroom-calculator leads.
