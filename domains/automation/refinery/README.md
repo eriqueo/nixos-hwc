@@ -45,7 +45,7 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | Path | Purpose |
 |---|---|
 | `index.nix` | Module: options + the `:8060` service. Builds the **engine** HTTP shell (buildNpmPackage → esbuild bundle of `serve.ts`), profiles baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). |
-| `engine/src/shells/` | HTTP shell over the core: `http.ts` (routing + intake/amend/rewind/toggle handlers over the store/catalog/triage), `render.ts` (interactive board HTML, plain form-posts), `hopper.ts` (read-only `/hopper` gauntlet view), `serve.ts` (service entry point). |
+| `engine/src/shells/` | HTTP shell over the core: `http.ts` (routes — `/` Gauntlet, `/hopper` ideas+intake, `/cards` legacy, + intake/amend/rewind handlers), `render.ts` (Gauntlet board = projects in phase lanes tinted by profile color + a profiles **legend**; Hopper page = raw ideas + intake; plain form-posts), `hopper.ts` (legacy nightly-builds card view at `/cards`), `serve.ts` (service entry). |
 | `app/` | **Superseded** by the engine shell as the `:8060` service; kept as the original read-only hopper board (slice 01/02) and its tests. The hopper view now lives at the engine's `/hopper` route. |
 | `app/src/parse.ts` | Read-only parser over the hopper (cards + ideas) |
 | `app/src/render.ts` | Server-side Kanban HTML render |
@@ -66,6 +66,15 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Vocabulary + board re-skin. Locked terminology: **Refinery**
+  (whole system) → **Hopper** (raw untriaged *ideas*) → triage → **Project**
+  (triaged, has a profile *color*) moving through **Phases** of the **Gauntlet**
+  → **Report**. Renamed `stage → phase` across the engine. Profiles now carry a
+  `color` (data-driven); the board splits into a **Gauntlet** page (projects in
+  phase lanes, tinted by profile color, amend/rewind on parked) and a **Hopper**
+  page (ideas + intake); the profiles panel is now a color **legend** (no
+  toggle — profiles are always available to triage; the human gate is per-project
+  at a phase). Legacy nightly-cards view moved to `/cards`. Engine 55/55.
 - **2026-06-15** — Slices 07+08 (board side): the `:8060` service now runs the
   **engine HTTP shell** (`engine/src/shells/`), an interactive board over the
   engine item store. Intake (`POST /intake`) triages a sentence into an enabled

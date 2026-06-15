@@ -4,6 +4,7 @@
 # into a live engine timer yet; flipping that on is a separate human-gated step.
 genre: nightly-build
 label: Nightly Builds
+color: "#fe8019"
 source: vault-queued-cards
 gates:
   - stepwise-refinement

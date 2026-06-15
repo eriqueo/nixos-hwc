@@ -9,10 +9,10 @@ import { Item } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { ProfileCatalog } from "../profiles/catalog.js";
 import { resolveLlm } from "../adapters/resolver.js";
-import { triageSentence, makeTriagedItem } from "../triage.js";
+import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { renderBoard } from "./render.js";
+import { renderGauntlet, renderHopperPage } from "./render.js";
 import { readHopperCards, renderHopper } from "./hopper.js";
 
 export interface HttpShellConfig {
@@ -106,13 +106,22 @@ export function createShell(cfg: HttpShellConfig) {
           res.end("ok");
           return;
         }
-        if (req.method === "GET" && url === "/") {
+        if (req.method === "GET" && (url === "/" || url === "/hopper")) {
           const [items, profiles] = [await store.list(), catalog.list()];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderBoard(items, profiles));
+          if (url === "/hopper") {
+            // Hopper = raw untriaged ideas + the intake box.
+            const ideas = items.filter((i) => i.genre === UNTRIAGED);
+            res.end(renderHopperPage(ideas, profiles));
+          } else {
+            // Gauntlet = triaged projects moving through phases.
+            const projects = items.filter((i) => i.genre !== UNTRIAGED);
+            res.end(renderGauntlet(projects, profiles));
+          }
           return;
         }
-        if (req.method === "GET" && url === "/hopper") {
+        if (req.method === "GET" && url === "/cards") {
+          // Legacy read-only view of the nightly-builds gauntlet cards.
           const cards = cfg.vaultDir ? readHopperCards(cfg.vaultDir) : [];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           res.end(renderHopper(cards));

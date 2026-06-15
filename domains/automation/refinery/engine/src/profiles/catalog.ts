@@ -16,9 +16,11 @@ export interface ResolvedProfile extends Profile {
   label: string;
   enabled: boolean;
   llmProvider: string;
+  color: string;
 }
 
 const DEFAULT_LLM_PROVIDER = "claude-cli";
+const DEFAULT_COLOR = "#a89984"; // gruvbox gray — used when a profile omits color
 
 interface EnabledOverlay {
   [genre: string]: { enabled: boolean };
@@ -58,6 +60,7 @@ export class ProfileCatalog {
       label: profile.label ?? profile.genre,
       enabled,
       llmProvider: profile.llmProvider ?? DEFAULT_LLM_PROVIDER,
+      color: profile.color ?? DEFAULT_COLOR,
     };
   }
 
