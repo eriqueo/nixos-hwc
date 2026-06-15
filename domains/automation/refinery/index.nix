@@ -65,6 +65,12 @@ in
       description = "HTTP port the board listens on (Caddy upstream)";
     };
 
+    vaultDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = vaultDefault;
+      description = "Brain vault root — read-only mirror of the nightly-builds cards (_inbox/nightly_builds/)";
+    };
+
     triageProvider = lib.mkOption {
       type = lib.types.str;
       default = "claude-cli";
@@ -95,14 +101,17 @@ in
           "REFINERY_PROFILE_STATE=/var/lib/refinery/profiles.json"
           "REFINERY_NIGHTLY_CONFIG=/var/lib/refinery/nightly.json"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
-        ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}";
+        ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}"
+          ++ lib.optional (cfg.vaultDir != null) "REFINERY_VAULT_DIR=${cfg.vaultDir}";
         Restart = "on-failure";
         RestartSec = 5;
         # Writes only to /var/lib/refinery (StateDirectory); reads profiles from
-        # the store. No /home access needed, so mask it entirely (tmpfs) on top of
-        # a read-only system — tighter than the old vault-bind setup.
+        # the store and the brain vault (read-only) for the nightly-builds card
+        # mirror. ProtectHome MUST be "tmpfs" (not true) so the vault bind target
+        # can be created underneath the masked home.
         ProtectSystem = "strict";
         ProtectHome = lib.mkForce "tmpfs";
+        BindReadOnlyPaths = lib.optional (cfg.vaultDir != null) cfg.vaultDir;
         PrivateTmp = true;
       };
     };

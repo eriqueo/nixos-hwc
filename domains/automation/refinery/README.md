@@ -66,6 +66,15 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Delete + nightly-cards mirror. Projects/ideas can be deleted
+  from the detail page (`ItemStore.delete`, `POST /delete`). The live
+  nightly-builds vault cards (`_inbox/nightly_builds/*/NN-*.md`) are mirrored
+  read-only into the board (`sources/nightly-cards.ts`, `nb:` id prefix): they
+  appear as orange `nightly-build` projects in the Gauntlet phase lanes and on
+  the Nightly page, with their detail page showing run/PR links but no edit
+  actions (the overnight `run.sh` owns them). Re-added a read-only vault bind for
+  this. Engine 62/62. Driving the overnight timer *from* refinery (writing card
+  status) is the next, human-gated step.
 - **2026-06-15** — Vocabulary + board re-skin. Locked terminology: **Refinery**
   (whole system) → **Hopper** (raw untriaged *ideas*) → triage → **Project**
   (triaged, has a profile *color*) moving through **Phases** of the **Gauntlet**

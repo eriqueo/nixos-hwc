@@ -176,6 +176,45 @@ test("promote turns an untriaged idea into a project at its profile's first phas
   }
 });
 
+test("deleteItem removes a project from the store", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    const p: Item = {
+      id: "del1", genre: "project-ideation", phase: "premortem", phaseStatus: "passed",
+      payload: { title: "del" }, history: [],
+    };
+    await shell.store.save(p);
+    assert.ok(await shell.store.load("del1"));
+    await shell.deleteItem("del1");
+    assert.equal(await shell.store.load("del1"), null);
+  } finally {
+    cleanup();
+  }
+});
+
+test("renderProjectDetail: editable item shows delete; read-only mirror item hides edits", () => {
+  const profiles = [
+    { genre: "nightly-build", label: "Nightly Builds", source: "vault", gates: ["stepwise-refinement"],
+      executeMode: "write", effectors: ["execute"], enabled: true, llmProvider: "claude-cli", color: "#fe8019" },
+  ];
+  const project: Item = {
+    id: "e1", genre: "nightly-build", phase: "premortem", phaseStatus: "passed",
+    payload: { title: "editable" }, history: [],
+  };
+  assert.ok(renderProjectDetail(project, profiles, profiles).includes('action="/delete"'));
+
+  const mirror: Item = {
+    id: "nb:goal/01-x", genre: "nightly-build", phase: "queued", phaseStatus: "pending",
+    payload: { title: "mirror card", readonly: true, run: "runs/2026-06-15-x/", pr: "branch x" }, history: [], nightly: true,
+  };
+  const d = renderProjectDetail(mirror, profiles, profiles);
+  assert.ok(d.includes("read-only"));
+  assert.ok(d.includes("runs/2026-06-15-x/"));
+  assert.ok(!d.includes('action="/delete"'), "mirror cards aren't deletable");
+  assert.ok(!d.includes('action="/amend"'), "mirror cards aren't editable");
+});
+
 test("renderProjectDetail shows actions + nightly toggle; renderNightly highlights the top N", () => {
   const profiles = [
     { genre: "project-ideation", label: "Project Ideation", source: "http-intake",

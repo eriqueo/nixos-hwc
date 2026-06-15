@@ -7,12 +7,14 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { Item } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { ProfileCatalog } from "../profiles/catalog.js";
 import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { LlmPort } from "../gates/llm-port.js";
+import { nightlyCardProjects } from "../sources/nightly-cards.js";
 import { renderGauntlet, renderHopperPage, renderNightly, renderProjectDetail } from "./render.js";
 
 export interface HttpShellConfig {
@@ -22,6 +24,7 @@ export interface HttpShellConfig {
   profileStatePath: string;
   nightlyConfigPath: string;
   triageProvider: string;
+  vaultDir?: string; // for the read-only nightly-builds card mirror
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
 }
@@ -36,6 +39,7 @@ export function configFromEnv(): HttpShellConfig {
     profileStatePath: process.env.REFINERY_PROFILE_STATE || `${base}/profiles.json`,
     nightlyConfigPath: process.env.REFINERY_NIGHTLY_CONFIG || `${base}/nightly.json`,
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
+    vaultDir: process.env.REFINERY_VAULT_DIR,
     clock: () => new Date().toISOString(),
   };
 }
@@ -132,6 +136,10 @@ export function createShell(cfg: HttpShellConfig) {
     await store.save({ ...item, nightlyPriority: (item.nightlyPriority ?? 0) + delta });
   }
 
+  async function deleteItem(id: string): Promise<void> {
+    await store.delete(id); // no-op for read-only mirror items (not in the store)
+  }
+
   async function promote(id: string, genre: string): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
@@ -158,28 +166,32 @@ export function createShell(cfg: HttpShellConfig) {
           res.end("ok");
           return;
         }
+        // Read-only mirror of the live nightly-builds vault cards (display only).
+        const mirror = (): Item[] => (cfg.vaultDir ? nightlyCardProjects(cfg.vaultDir) : []);
+
         if (method === "GET" && (url === "/" || url === "/hopper")) {
           const [items, profiles] = [await store.list(), catalog.list()];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           if (url === "/hopper") {
             res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles));
           } else {
-            res.end(renderGauntlet(items.filter((i) => i.genre !== UNTRIAGED), profiles));
+            const projects = [...items.filter((i) => i.genre !== UNTRIAGED), ...mirror()];
+            res.end(renderGauntlet(projects, profiles));
           }
           return;
         }
         if (method === "GET" && url === "/nightly") {
           const [items, profiles] = [await store.list(), catalog.list()];
-          const flagged = items
-            .filter((i) => i.nightly)
-            .sort((a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id));
+          const flagged = [...items.filter((i) => i.nightly), ...mirror()].sort(
+            (a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id),
+          );
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           res.end(renderNightly(flagged, readMaxPerNight(), profiles));
           return;
         }
         if (method === "GET" && url.startsWith("/project/")) {
           const id = decodeURIComponent(url.slice("/project/".length));
-          const item = await store.load(id);
+          const item = (await store.load(id)) ?? mirror().find((m) => m.id === id) ?? null;
           if (!item) {
             res.writeHead(404, { "content-type": "text/plain" });
             res.end("no such project");
@@ -210,6 +222,10 @@ export function createShell(cfg: HttpShellConfig) {
             await promote(id, body.get("genre") ?? "");
             return redirectTo(res, `/project/${encodeURIComponent(id)}`);
           }
+          if (url === "/delete") {
+            await deleteItem(id);
+            return redirectTo(res, "/");
+          }
           if (url === "/nightly/toggle") {
             await setNightly(id, body.get("nightly") === "true");
             return redirectTo(res, `/project/${encodeURIComponent(id)}`);
@@ -239,5 +255,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote };
+  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote, deleteItem };
 }
