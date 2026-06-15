@@ -24,3 +24,5 @@ core/
 - 2026-06-11: Structure section updated to reality (shell/ and development/
   are directories; namespaces moved under hwc.home.core.* per Law 2; the
   phantom options.nix/shell.nix flat files are gone).
+- 2026-06-12: Fix SUPER+E aerc keybind on the laptop — the `aerc` shell alias now `ssh -t server aerc` (vs the dead `hwc` host alias), with the parts/aliases.nix base merged over per-machine overrides (1a78f22d).
+- 2026-06-13: `_hwc_rebuild` helper now exports `HOME=/root` instead of `~root` so tilde expansion under sudo always resolves (49f292f9).

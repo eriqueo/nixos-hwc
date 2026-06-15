@@ -45,6 +45,8 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-14: `apps/khalt/` — full event CRUD in month/quarter zoom modes (14ced160). Builds on the 2026-06-13 zoom-views + leader-keys + theme-palette-inheritance pass (d6f5b422) and the initial forked khal/ikhal flake input + thin translator scaffold (64a25882).
+- 2026-06-13: `apps/gpg/` — add `pass-secret-service` so the Claude Desktop keyring uses `pass` instead of basic auth (bb7f96f3); `_hwc_rebuild` shell helper switches to `HOME=/root` rather than `~root` to avoid tilde-expansion under sudo (49f292f9); relocate the `todui` flake input from `dev/todui` to `600_apps/todui` to match the 600_apps Syncthing rename (bb921072); `apps/claude-desktop` switches to the `claude-cowork-linux` flavor so Cowork works (c246c11a).
 - 2026-06-12: apps/qutebrowser fleshed out from empty scaffold — generated
   config.py with hwc-palette theming (parts/appearance.nix: tabs, statusbar,
   completion, hints, messages, downloads), Space-leader keybindings matching
