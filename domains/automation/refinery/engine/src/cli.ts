@@ -8,7 +8,7 @@ import { parseProfile } from "./profile.js";
 import { gateList } from "./gates/index.js";
 import { makeWriteSpecEffector } from "./effectors/write-spec.js";
 import { MarkdownItemStore } from "./stores/markdown-store.js";
-import { makeClaudeLlm } from "./adapters/claude-llm.js";
+import { resolveLlm } from "./adapters/resolver.js";
 import { runGenreOnce } from "./cli/run-once.js";
 
 interface Args {
@@ -43,7 +43,8 @@ function parseArgs(argv: string[]): Args {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const profile = parseProfile(readFileSync(args.profile, "utf8"));
-  const llm = makeClaudeLlm();
+  // The profile picks its own LLM adapter (claude-cli | anthropic-api | ollama).
+  const llm = resolveLlm(profile.llmProvider);
   const result = await runGenreOnce(
     { id: args.id, input: args.input },
     {
