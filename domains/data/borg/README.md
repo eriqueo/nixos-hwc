@@ -83,3 +83,4 @@ hwc.data.borg = {
 - 2026-04-04: Update failure notification ref from `hwc.alerts.enable` to `hwc.monitoring.alerts.enable` (domain redistribution)
 - 2026-04-03: Fix backup timeout — increase to 12h (compact on 240GB repo), raise compact threshold to 25%, exclude regenerable Prometheus/Jellyfin data
 - 2026-03-25: Created README per Law 12
+- 2026-05-21: Add `ssh` + `python3` to the Claude Code session allowlist (3cf8ef82) — supports interactive borg-repo poking from Claude. No service behavior change.

@@ -74,3 +74,4 @@ hwc.data.couchdb = {
 ## Changelog
 
 - 2026-03-25: Created README per Law 12
+- 2026-03-31: Switch admin-credential lookup from the camelCase `hwc.secrets.api.couchdbAdmin{Username,Password}File` keys to the kebab-case `couchdb-admin-username` / `couchdb-admin-password` keys, with a null-safe `or null` fallback (1da0a031). Pure plumbing: matches the secrets-generator naming.

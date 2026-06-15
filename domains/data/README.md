@@ -30,3 +30,4 @@ data/
 
 - 2026-03-04: Namespace migration hwc.server.{databases,storage,native.backup,native.couchdb} → hwc.data.*
 - 2026-03-04: Created data domain; moved databases, backup, storage, couchdb from domains/server/ (Phase 5 of DDD migration)
+- 2026-06-10: `backup/` — absorb profile value-defaults into option defaults; slim the base role consumer (7522cbe0). Pure refactor: roles now flip a flag instead of restating retention values.
