@@ -27,7 +27,11 @@
   type = "caldav"
   url = "${url}"
   username = "${username}"
-  password.fetch = ["command", "sh", "-c", "cut -d: -f2- ${secretPath}"]
+  # Run cut directly (no `sh -c`): the vdirsyncer service PATH carries coreutils
+  # but NOT bash, so `sh` isn't found — and the shell wrapper buys nothing here.
+  # Mirrors the iCloud pair's direct `["command", "cat", …]`. Emits field 2+ of
+  # the htpasswd line (user:password) = the password.
+  password.fetch = ["command", "cut", "-d:", "-f2-", "${secretPath}"]
   item_types = ["VTODO"]
 
   [storage tasks_radicale_local]
