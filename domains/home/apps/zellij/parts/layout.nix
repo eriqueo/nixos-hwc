@@ -29,23 +29,33 @@ in
     // workbench occupies the host pane and orchestrates the rest via
     // `zellij action new-pane -n <name> -- <cmd>` / `--focus`.
     layout {
+        // Every tab gets a tab-bar (top, shows all tab names + which is focused)
+        // and a status-bar (bottom, shows the active zellij keybinds). Without
+        // these a custom layout renders bare panes with no way to discover the
+        // other tabs or how to move — `children` is where each tab's panes land.
+        default_tab_template {
+            pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
+            children
+            pane size=1 borderless=true { plugin location="zellij:status-bar"; }
+        }
         tab name="workbench" focus=true {
             pane size="35%" name="host" {
                 command "workbench"
             }
             pane split_direction="vertical" {
                 // Left column: tasks + calendar (Eric's own first-class TUIs).
+                // Auto-start (no start_suspended) so they're live the moment
+                // workbench opens — they're the always-on peers.
                 pane name="todui" {
                     command "todui"
-                    start_suspended true
                 }
                 pane name="khalt" {
                     command "khalt"
-                    start_suspended true
                 }
             }
         }
-        // Secondary tabs workbench focuses on demand (g f / g m / g e grammar).
+        // Secondary tabs: heavier/contextual peers, started on demand. Switch to
+        // the tab (Ctrl+t then →, or click) and press <ENTER> to launch.
         tab name="files" {
             pane name="yazi" { command "yazi"; start_suspended true; }
         }
