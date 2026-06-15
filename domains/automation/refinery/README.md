@@ -55,12 +55,21 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
 | `engine/src/effectors/` | Effectors (`ItemEffector`s): `execute` — one mode-parameterized worktree → headless-claude → verdict → report → push/pristine extract of the two `run.sh` files (git/claude/report injected); `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
 | `engine/src/stores/` | `MarkdownItemStore` (`ItemStore`): one `.md` per item — board-readable frontmatter + a canonical ```json block for lossless round-trip. |
-| `engine/src/adapters/` | `makeClaudeLlm` — production `LlmPort` via a headless `claude -p` call; binary late-bound from `$REFINERY_CLAUDE_BIN`. |
+| `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a profile's `llmProvider` to the adapter. All late-bound from env. |
+| `engine/src/profiles/` | `ProfileCatalog` — lead_scout-style registry: disk scan of `profiles/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. |
 | `engine/src/cli/run-once.ts` | `runGenreOnce` — orchestration core: load/create item → run gate pipeline → fire integrate effector on a clean pass. Fully injected (testable). |
 | `engine/src/cli.ts` | CLI shell: `refinery run --genre … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runGenreOnce`. |
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` — gates `[stepwise-refinement, principles-create, premortem]`, integrate `write-spec`, no code execution. |
 
 ## Changelog
+- **2026-06-15** — Profiles catalog + multi-LLM adapters (lead_scout patterns).
+  `ProfileCatalog` (`engine/src/profiles/`) scans `profiles/*.yaml` and merges a
+  writable `enabled` overlay (disk template vs live state, lead_scout-style) with
+  `list`/`get`/`enabled`/`setEnabled`. Two new `LlmPort` adapters —
+  `anthropic-api` (raw-fetch Messages API, `claude-opus-4-8` default) and
+  `ollama` (local daemon) — join `claude-cli`, behind `resolveLlm(provider)` that
+  maps a profile's `llmProvider`. The CLI now resolves its LLM from the profile.
+  Engine 38/38.
 - **2026-06-15** — Renamed the genre recipe concept **manifest → profile**
   throughout the engine (`ProfileSchema`/`Profile`, `parseProfile`/`loadProfile`,
   `InvalidProfileError`/`E_INVALID_PROFILE`, `src/profile.ts`, `profiles/` dir)
