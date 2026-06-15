@@ -81,9 +81,12 @@ in
         ];
         Restart = "on-failure";
         RestartSec = 5;
-        # Read-only viewer: it only ever reads the vault.
+        # Read-only viewer: it only ever reads the vault. Mask the whole home
+        # tree, then bind just the vault back in read-only — the service sees
+        # nothing else under /home (defense in depth beyond ProtectSystem).
         ProtectSystem = "strict";
-        ProtectHome = lib.mkForce false; # must read /home/eric/900_vaults/brain
+        ProtectHome = lib.mkForce true;
+        BindReadOnlyPaths = [ cfg.vaultDir ];
         PrivateTmp = true;
       };
     };
