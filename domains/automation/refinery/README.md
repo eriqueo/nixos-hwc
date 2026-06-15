@@ -66,6 +66,13 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — claude-cli triage authenticates on the Claude subscription.
+  The home-masked service (`ProtectHome=tmpfs`) couldn't reach `~/.claude`, so
+  intake items parked at `triage` (`response was not JSON` — headless `claude`
+  got no creds). Bind `~/.claude` + `~/.claude.json` **read-only** back over the
+  masked home (gated on `triageProvider == "claude-cli"`) and set `HOME`, mirroring
+  the nightly-builds runner — no API key, host refreshes the token in place. The
+  rest of home stays masked.
 - **2026-06-15** — OKF vault cross-links in rendered markdown. `shells/markdown.ts`
   now recognizes the OKF link standard — `[text](relative/path.md[#anchor])` —
   in card bodies and REPORTs (wikilinks are deprecated, so they are not special-

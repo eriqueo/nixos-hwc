@@ -109,6 +109,9 @@ in
           # read this same file (with their env value as fallback).
           "REFINERY_CAPS_FILE=/var/lib/refinery/caps.json"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
+          # claude-cli triage shells out to headless `claude`, which reads the
+          # Claude subscription creds from $HOME/.claude (bound read-only below).
+          "HOME=${paths.user.home}"
         ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}"
           ++ lib.optional (cfg.vaultDir != null) "REFINERY_VAULT_DIR=${cfg.vaultDir}"
           ++ lib.optional (cfg.srGauntletDir != null) "REFINERY_SR_GAUNTLET_DIR=${cfg.srGauntletDir}";
@@ -118,6 +121,7 @@ in
         # only the exact paths the board touches are bound back:
         #   - vault _inbox/nightly_builds: READ-WRITE (queue/unqueue flips card status)
         #   - vault runs/ + sr_gauntlet investigations/: READ-ONLY (mirror + REPORTs)
+        #   - ~/.claude + ~/.claude.json: READ-ONLY (claude-cli triage creds)
         # ProtectHome MUST be "tmpfs" (not true) so bind targets can be created
         # under the masked home.
         ProtectSystem = "strict";
@@ -126,7 +130,16 @@ in
         BindPaths = lib.optional (cfg.vaultDir != null) "-${cfg.vaultDir}/_inbox/nightly_builds";
         BindReadOnlyPaths =
           (lib.optional (cfg.vaultDir != null) "-${cfg.vaultDir}/runs")
-          ++ (lib.optional (cfg.srGauntletDir != null) "-${cfg.srGauntletDir}/investigations");
+          ++ (lib.optional (cfg.srGauntletDir != null) "-${cfg.srGauntletDir}/investigations")
+          # claude-cli triage authenticates with Eric's Claude subscription (no
+          # API key). Bind ~/.claude (creds + config) READ-ONLY back over the
+          # masked home — the host refreshes the OAuth token in place and the dir
+          # bind reflects it, so the service never needs write access. Only bound
+          # when the triage provider actually needs it.
+          ++ (lib.optionals (cfg.triageProvider == "claude-cli") [
+               "-${paths.user.home}/.claude"
+               "-${paths.user.home}/.claude.json"
+             ]);
         PrivateTmp = true;
       };
     };
