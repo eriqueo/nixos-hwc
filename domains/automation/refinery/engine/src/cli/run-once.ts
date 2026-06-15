@@ -1,7 +1,7 @@
 // Orchestration core for "run a genre one pass" — the testable heart of the
-// CLI shell. Loads-or-creates the item, runs it through the manifest's gate
+// CLI shell. Loads-or-creates the item, runs it through the profile's gate
 // pipeline (slice-03 runner + slice-04 gates), and — only if every gate passed
-// — fires the genre's integrate effector. Everything is injected (manifest,
+// — fires the genre's integrate effector. Everything is injected (profile,
 // gates, integrate effector, store, clock) so the e2e test drives it with a
 // stub LLM and tmp dirs; cli.ts wires the real adapters.
 
@@ -12,11 +12,11 @@ import {
   Item,
   ItemEffector,
   ItemStore,
-  Manifest,
+  Profile,
 } from "../contracts.js";
 
 export interface GenreDeps {
-  manifest: Manifest;
+  profile: Profile;
   gates: GateModule[];
   integrate: ItemEffector;
   store: ItemStore;
@@ -59,9 +59,9 @@ export async function runGenreOnce(
   const existing = await deps.store.load(opts.id);
   const item =
     existing ??
-    newIdeationItem(opts.id, deps.manifest.genre, opts.input, deps.manifest.gates[0]!);
+    newIdeationItem(opts.id, deps.profile.genre, opts.input, deps.profile.gates[0]!);
 
-  const result = await runPass(item, deps.manifest, deps.gates, {
+  const result = await runPass(item, deps.profile, deps.gates, {
     store: deps.store,
     clock: deps.clock,
   });

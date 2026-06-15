@@ -4,7 +4,7 @@ import { readFileSync, mkdtempSync, rmSync, existsSync, readdirSync } from "node
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { parseManifest } from "../src/manifest.js";
+import { parseProfile } from "../src/profile.js";
 import { gateList } from "../src/gates/index.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { makeWriteSpecEffector, isSpecComplete } from "../src/effectors/write-spec.js";
@@ -13,9 +13,9 @@ import { runGenreOnce } from "../src/cli/run-once.js";
 import { Item } from "../src/contracts.js";
 import { fixedClock, resetClock } from "./helpers.js";
 
-// The actual genre manifest (cwd-independent path from the compiled test file).
-const MANIFEST_PATH = fileURLToPath(
-  new URL("../../../manifests/project-ideation.yaml", import.meta.url),
+// The actual genre profile (cwd-independent path from the compiled test file).
+const PROFILE_PATH = fileURLToPath(
+  new URL("../../../profiles/project-ideation.yaml", import.meta.url),
 );
 
 // One canned superset response satisfying every gate schema AND the spec schema.
@@ -40,11 +40,11 @@ function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
-test("project-ideation manifest validates against the slice-03 Manifest schema", () => {
-  const manifest = parseManifest(readFileSync(MANIFEST_PATH, "utf8"));
-  assert.equal(manifest.genre, "project-ideation");
-  assert.deepEqual(manifest.gates, ["stepwise-refinement", "principles-create", "premortem"]);
-  assert.deepEqual(manifest.effectors, ["write-spec"]);
+test("project-ideation profile validates against the slice-03 Profile schema", () => {
+  const profile = parseProfile(readFileSync(PROFILE_PATH, "utf8"));
+  assert.equal(profile.genre, "project-ideation");
+  assert.deepEqual(profile.gates, ["stepwise-refinement", "principles-create", "premortem"]);
+  assert.deepEqual(profile.effectors, ["write-spec"]);
 });
 
 test("MarkdownItemStore round-trips an item losslessly", async () => {
@@ -77,12 +77,12 @@ test("end-to-end: a sentence runs through the genre and produces a complete spec
   const scratchDir = tmp("refinery-specs-");
   try {
     const llm = stubLlm("pass");
-    const manifest = parseManifest(readFileSync(MANIFEST_PATH, "utf8"));
+    const profile = parseProfile(readFileSync(PROFILE_PATH, "utf8"));
     const store = new MarkdownItemStore(storeDir);
     const result = await runGenreOnce(
       { id: "demo-item", input: "an engine that refines ideas into specs" },
       {
-        manifest,
+        profile,
         gates: gateList(llm),
         integrate: makeWriteSpecEffector({ scratchDir }, llm),
         store,
@@ -124,11 +124,11 @@ test("end-to-end: a parked gate stops the pass and integrate never runs", async 
   const scratchDir = tmp("refinery-specs-");
   try {
     const llm = stubLlm("park"); // first gate parks
-    const manifest = parseManifest(readFileSync(MANIFEST_PATH, "utf8"));
+    const profile = parseProfile(readFileSync(PROFILE_PATH, "utf8"));
     const result = await runGenreOnce(
       { id: "parked-item", input: "a half-baked idea" },
       {
-        manifest,
+        profile,
         gates: gateList(llm),
         integrate: makeWriteSpecEffector({ scratchDir }, llm),
         store: new MarkdownItemStore(storeDir),

@@ -7,18 +7,18 @@ export class RefineryError extends Error {
   }
 }
 
-export class InvalidManifestError extends RefineryError {
+export class InvalidProfileError extends RefineryError {
   readonly issues: unknown;
   constructor(message: string, issues: unknown) {
-    super("E_INVALID_MANIFEST", message);
-    this.name = "InvalidManifestError";
+    super("E_INVALID_PROFILE", message);
+    this.name = "InvalidProfileError";
     this.issues = issues;
   }
 }
 
 export class UnknownGateError extends RefineryError {
   constructor(gateId: string) {
-    super("E_UNKNOWN_GATE", `manifest references unregistered gate: ${gateId}`);
+    super("E_UNKNOWN_GATE", `profile references unregistered gate: ${gateId}`);
     this.name = "UnknownGateError";
   }
 }
@@ -27,7 +27,7 @@ export class UnknownStageError extends RefineryError {
   constructor(stage: string) {
     super(
       "E_UNKNOWN_STAGE",
-      `stage not present in manifest gates: ${stage}`,
+      `stage not present in profile gates: ${stage}`,
     );
     this.name = "UnknownStageError";
   }

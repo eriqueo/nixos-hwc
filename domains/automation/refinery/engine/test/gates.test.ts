@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Item, Manifest } from "../src/contracts.js";
+import { Item, Profile } from "../src/contracts.js";
 import { InMemoryItemStore } from "../src/store-memory.js";
 import { runPass } from "../src/runner.js";
 import { InvalidGateVerdictError } from "../src/errors.js";
@@ -108,12 +108,12 @@ test("parseVerdict throws InvalidGateVerdictError on non-JSON and on schema mism
   );
 });
 
-test("a manifest gate list composes through the slice-03 runner end-to-end", async () => {
+test("a profile gate list composes through the slice-03 runner end-to-end", async () => {
   resetClock();
   const store = new InMemoryItemStore();
   const llm = stubLlm("pass", "looks good");
   const gates = gateList(llm);
-  const manifest: Manifest = {
+  const profile: Profile = {
     genre: "greenfield-test",
     source: "inline://gates-test",
     gates: ["principles-create", "premortem", "admission-gates"],
@@ -125,7 +125,7 @@ test("a manifest gate list composes through the slice-03 runner end-to-end", asy
     payload: { traits: { mode: "greenfield", trivial: false } },
   });
 
-  const result = await runPass(item, manifest, gates, { store, clock: fixedClock });
+  const result = await runPass(item, profile, gates, { store, clock: fixedClock });
   assert.deepEqual(result.ran, ["principles-create", "premortem", "admission-gates"]);
   assert.equal(result.item.stage, "admission-gates");
   assert.equal(result.item.stageStatus, "passed");
@@ -143,7 +143,7 @@ test("end-to-end parks at the first gate that returns park, leaving later gates 
     makePremortemGate(parkLlm),
     makeAdmissionGatesGate(passLlm),
   ];
-  const manifest: Manifest = {
+  const profile: Profile = {
     genre: "greenfield-test",
     source: "inline://gates-test",
     gates: ["principles-create", "premortem", "admission-gates"],
@@ -154,7 +154,7 @@ test("end-to-end parks at the first gate that returns park, leaving later gates 
     stage: "principles-create",
     payload: { traits: { mode: "greenfield", trivial: false } },
   });
-  const result = await runPass(item, manifest, gates, { store, clock: fixedClock });
+  const result = await runPass(item, profile, gates, { store, clock: fixedClock });
   assert.deepEqual(result.ran, ["principles-create", "premortem"]);
   assert.deepEqual(result.stoppedBy, { stage: "premortem", reason: "parked" });
   assert.equal(result.item.parkedReason, "needs a human call");
