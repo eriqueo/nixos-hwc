@@ -126,6 +126,7 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-06-15** — Sub-README backfill — `parts/bootstrap/README.md` updated to record the Node 22 strip-types parameter-property fix (59dca996). No code change in the `hermes/` aggregator.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at

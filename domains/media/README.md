@@ -70,6 +70,7 @@ workspace/media/
 
 ## Changelog
 
+- 2026-06-15: Sub-domain README backfill — immich-container, orchestration, and youtube refreshed for the laptop external-library mount, Law 9/10 directory-module conversion, the `lots` YouTube slim (~534 lines deleted), tailnet rename, and Law 3 path sweep. No code change in the `domains/media/` aggregator.
 - 2026-06-09: Law 9/10 — `orchestration/media-orchestrator.nix` → `orchestration/media-orchestrator/index.nix` (pure relocation).
 - 2026-06-09: Law 3 finish — youtube transcripts outputDirectory derives from `hwc.paths.media.root` (null-safe); legacyApi dataDir derives from `hwc.paths.user.home`. Drv hash unchanged.
 - 2026-03-26: workspace/youtube-services/ moved to workspace/media/youtube-services/ (domain alignment); audiobook-copier path updated to workspace/automation/hooks/

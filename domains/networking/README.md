@@ -42,6 +42,7 @@ networking/
 ```
 
 ## Changelog
+- 2026-06-15: Sub-domain README backfill — `pihole/` refreshed for the Mar-2026 namespace migration, `domains/server/` deletion, `lib/` relocation, and options-move pass. No code change in the `domains/networking/` aggregator.
 - 2026-06-14: Add three cloudflared ingress rules for the hwc-mcp-gateway OAuth Worker — `brain-origin`/`leads-origin`/`hwc-origin.heartwoodcraft.me` → `localhost:9876/8420/6200` (the brain-mcp/lead_scout/hwc-sys-mcp servers). Internal origin hostnames the gateway proxies to via an Access service token; distinct from the bare `brain./leads./mcp.` names which stay owned by the live MCP Portal during the parallel cutover. APPEND only — existing portal + `*.api.iheartwoodcraft.com` rules unchanged. Origins go live once the matching DNS CNAMEs (→ `1536327b-…b0b11f9.cfargotunnel.com`) and per-host Service-Auth Access apps exist. Spec: `~/600_apps/hwc-mcp-gateway/ORIGINS.md`.
 - 2026-06-10: Remove Jobber MCP — folded into jt-mcp. Dropped the `@jobber_mcp` legacy-SSE matcher (`/sse /messages*` → :8002) from the tailnet root host in `reverseProxy/index.nix`, plus the `jobber.heartwoodcraft.me` / `jobber.api.iheartwoodcraft.com` cloudflared ingress and the `hwc.server.ai.jobberMcp` module (`domains/server/native/ai/jobber-mcp/` deleted). No secrets involved.
 - 2026-06-09: Law 9/10 — `reverseProxy.nix` → `reverseProxy/index.nix`, `hosts.nix` → `hosts/index.nix` (pure relocation).
