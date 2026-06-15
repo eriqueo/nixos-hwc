@@ -13,4 +13,5 @@ export * from "./adapters/resolver.js";
 export * from "./profiles/catalog.js";
 export * from "./profiles/gauntlet-config.js";
 export * from "./sources/ports.js";
+export * from "./triage.js";
 export * from "./cli/run-once.js";
