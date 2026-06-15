@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderProjectDetail } from "../src/shells/render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderSrDetail, renderProjectDetail } from "../src/shells/render.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
@@ -183,13 +183,35 @@ test("renderSr lists SR investigations linking to their REPORT + has a max cap f
   ];
   const srs: Item[] = [
     { id: "sr:2026-06-12-abc", genre: "datax-sr", phase: "investigated", phaseStatus: "passed",
-      payload: { title: "Customer X cannot sync", srStatus: "engaged", run: "investigations/2026-06-12-abc/", hasReport: true, readonly: true, source: "sr_gauntlet investigation" }, history: [] },
+      payload: { title: "Customer X cannot sync", customer: "Acme Co", srStatus: "engaged", run: "investigations/2026-06-12-abc/", hasReport: true, readonly: true, source: "sr_gauntlet investigation" }, history: [] },
   ];
   const html = renderSr(srs, 5, profiles);
-  assert.ok(html.includes("Customer X cannot sync"));
-  assert.ok(html.includes('href="/report/sr:2026-06-12-abc"'), "card links straight to the REPORT");
-  assert.ok(html.includes('action="/sr/config"'), "has the max-per-run cap form");
-  assert.ok(html.includes('value="5"'));
+  assert.ok(html.includes('class="srcard"'), "SR2-style card");
+  assert.ok(html.includes("Acme Co") && html.includes("Customer X cannot sync"), "customer + question, like SR2");
+  assert.ok(html.includes('href="/project/sr:2026-06-12-abc"'), "card → tabbed detail");
+  assert.ok(html.includes('action="/sr/config"') && html.includes('value="5"'));
+});
+
+test("renderSrDetail mirrors the SR2 modal — Gameplan/Thread/Details tabs, gameplan default", () => {
+  const item: Item = {
+    id: "sr:2026-06-12-abc", genre: "datax-sr", phase: "investigated", phaseStatus: "passed",
+    payload: { title: "Cannot sync inventory", customer: "Acme Co", email: "a@acme.co", srStatus: "engaged", srPhase: "engaged", run: "investigations/2026-06-12-abc/" },
+    history: [],
+  };
+  const html = renderSrDetail(item, {
+    gameplan: "## Verdict\nFixed by **reauth**.",
+    thread: "- customer: it broke\n- staff: looking",
+    context: "plan: CORE",
+  });
+  // header like the SR2 card
+  assert.ok(html.includes("Acme Co") && html.includes("Cannot sync inventory"));
+  // the three tabs, gameplan checked by default
+  assert.ok(html.includes('for="srt-gameplan"') && html.includes('for="srt-thread"') && html.includes('for="srt-details"'));
+  assert.ok(html.includes('id="srt-gameplan" checked'));
+  // gameplan rendered as HTML (the solution)
+  assert.ok(html.includes("<strong>reauth</strong>"));
+  // details tab carries customer context
+  assert.ok(html.includes("a@acme.co") && html.includes("CORE"));
 });
 
 test("deleteItem removes a project from the store", async () => {

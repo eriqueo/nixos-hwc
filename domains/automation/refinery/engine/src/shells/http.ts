@@ -15,8 +15,8 @@ import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, setCardStatus, readReport, NB_PREFIX } from "../sources/nightly-cards.js";
-import { srInvestigationProjects, SR_PREFIX } from "../sources/sr-investigations.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderProjectDetail, renderReport } from "./render.js";
+import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderSrDetail, renderProjectDetail, renderReport } from "./render.js";
 
 export interface HttpShellConfig {
   port: number;
@@ -227,7 +227,19 @@ export function createShell(cfg: HttpShellConfig) {
             return;
           }
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderProjectDetail(item, catalog.list(), catalog.enabled()));
+          if (id.startsWith(SR_PREFIX) && cfg.srGauntletDir) {
+            // SR items render in the SR2-style tabbed layout (Gameplan/Thread/Details).
+            const run = typeof (item.payload as { run?: unknown }).run === "string"
+              ? (item.payload as { run: string }).run
+              : "";
+            res.end(renderSrDetail(item, {
+              gameplan: readRunFile(cfg.srGauntletDir, run, "REPORT.md"),
+              thread: readRunFile(cfg.srGauntletDir, run, "sr.md"),
+              context: readRunFile(cfg.srGauntletDir, run, "context.md"),
+            }));
+          } else {
+            res.end(renderProjectDetail(item, catalog.list(), catalog.enabled()));
+          }
           return;
         }
         if (method === "GET" && url.startsWith("/report/")) {
