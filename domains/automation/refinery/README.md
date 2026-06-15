@@ -53,8 +53,21 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `app/tsconfig.json` | TS config (typecheck/editor; esbuild needs no build step) |
 | `engine/` | Engine core: Item + GateModule + Manifest contracts (Zod), stage runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
+| `engine/src/effectors/` | Execute effector: one mode-parameterized `ItemEffector` (worktree → headless-claude → verdict-parse → report-check → push/pristine) extracting the shared logic of nightly-builds + sr_gauntlet `run.sh`. `executeMode` (write/read-only), verdict pattern, and success verdicts are config; git + claude + report-check are injected ports. `makeExecuteEffector(cfg, ports)`. |
 
 ## Changelog
+- **2026-06-15** — Slice 06: execute-harness extract (`engine/src/effectors/`).
+  Defined the `ItemEffector` port + result contract in `contracts.ts`, then
+  implemented one mode-parameterized execute effector factoring the shared
+  worktree→headless-claude→verdict→report→push/pristine logic out of
+  `nightly-builds/run.sh` (write mode) and `sr_gauntlet/run.sh` (read-only).
+  The two axes they differ on — execute mode (commit+push vs assert-pristine)
+  and verdict token (`NIGHTLY-VERDICT` vs `SR-VERDICT`) — are config, plus
+  `successVerdicts`. git + claude + report-check are injected ports (`ports.ts`)
+  so tests spawn nothing. The live `run.sh` files are untouched (adoption is
+  slice 09). Coverage (`node --test`, 30 total, +9): prompt composition, verdict
+  parse for both patterns, write-mode push path, read-only pristine + revert,
+  timeout, worktree-add failure, and the write-mode-needs-branch guard.
 - **2026-06-15** — Slice 04: gate registry + discipline gate modules
   (`engine/src/gates/`). Seven `GateModule`s implementing slice-03's contract —
   stepwise-refinement, principles-create, principles-fix, chestertons-fence,

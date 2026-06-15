@@ -66,3 +66,25 @@ export interface ItemStore {
   save(item: Item): Promise<void>;
   list(): Promise<Item[]>;
 }
+
+// An effector performs the side-effecting stages of the pipeline (execute,
+// integrate, notify). Like gates, the core knows only this port; concrete
+// effectors (worktree+headless-claude execute, PR/brain-fold integrate, …) are
+// constructed with their own injected adapters.
+export type EffectorOutcome = "succeeded" | "failed";
+
+export interface EffectorResult {
+  outcome: EffectorOutcome;
+  verdict: string | null; // the parsed self-verdict token, if any
+  reportPresent: boolean; // did the agent write the required report
+  branch: string | null; // branch pushed (write mode) or null
+  pristine: boolean | null; // worktree clean check (read-only) or null in write mode
+  pushed: boolean;
+  detail: string; // human-readable outcome summary
+  output: unknown; // structured detail for downstream stages
+}
+
+export interface ItemEffector {
+  readonly id: string;
+  run(item: Item): Promise<EffectorResult>;
+}
