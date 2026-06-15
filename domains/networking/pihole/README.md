@@ -498,3 +498,10 @@ Pi-hole provides metrics at `http://localhost:8080/admin/api.php`
 - [Pi-hole GitHub](https://github.com/pi-hole/pi-hole)
 - Charter compliance: See `/docs/CHARTER.md`
 - Container patterns: See `domains/server/containers/README.md`
+
+## Changelog
+- 2026-03-04: Initial README under `domains/networking/pihole/` (Law 12 backfill).
+- 2026-03-04: Migrate namespace `hwc.server.containers.pihole` → `hwc.networking.pihole.*` (468993b1).
+- 2026-03-04: Delete the legacy `domains/server/` tree (8bb19a51) — Pi-hole settles under `domains/networking/`.
+- 2026-03-05: Move `lib/` → `domains/lib/` + cleanup (fd9b8952). Pi-hole inherits the new lib path.
+- 2026-03-12: `options move` pass (f4352f34) — options relocated into the Pi-hole module directory.

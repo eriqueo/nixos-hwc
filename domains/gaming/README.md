@@ -44,3 +44,6 @@ hwc.gaming.webdav = {
 
 - 2026-03-04: Namespace migration hwc.server.native.{retroarch,webdav} → hwc.gaming.*
 - 2026-03-04: Created gaming domain, moved retroarch and webdav from domains/server/native/
+- 2026-03-04: Delete the legacy `domains/server/` tree entirely (8bb19a51) — gaming swept clean of remaining server-domain refs.
+- 2026-03-12: `options move` pass (f4352f34) — relocate gaming option declarations into their module directories.
+- 2026-03-24: Charter Law 3 sweep — replace hardcoded paths with `hwc.paths.*` abstractions across 11 modules (d9f3f46a). Pure refactor.

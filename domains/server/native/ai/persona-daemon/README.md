@@ -157,3 +157,4 @@ deno task dev
   `knowledgeTopK` via `_defaults.nix` merge pattern. `hwc-llm` gains
   `--new-conversation`, `--conversation`, `--print-id` flags that route
   through the daemon.
+- 2026-06-09: Charter Law 10 completion — inline the remaining `options.nix` into `index.nix` under a `# OPTIONS` banner (056cf4d7). Pure relocation; behavior unchanged.

@@ -57,3 +57,6 @@ The actual installation runs as a one-shot systemd service
 
 Missing or invalid values produce a `CONFIG_INVALID` `HermesDeployError` with
 a clear list of which vars are missing.
+
+## Changelog
+- 2026-05-29: hermes-deploy — drop TypeScript parameter-property shorthand in constructors so Node 22's `--experimental-strip-types` (strip-only mode) doesn't hit a runtime `SyntaxError` (59dca996). Fields declared and assigned explicitly.

@@ -333,6 +333,7 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
 
 ## Changelog
 
+- 2026-05-21: Backfill since 2026-03-27 — many aerc iterations not captured: kitty/aerc styling alignment (f8e0059e, 8be57c2a, 7bbebb8d), Nord palette unification to `5e81ac` + ANSI-to-semantic-family mapping (5613c1eb), HM standalone mode (aa3589f1), media-mail tweaks (149aae71/e94194f7), morning-briefing wiring + aerc adjustments (740bfb44/22cf7e1d), website + aerc updates (1f926bd1), and the Claude Code session `ssh`/`python3` allowlist (3cf8ef82).
 - 2026-03-19: Fix act-one-delete-rest → act-dir (was deleting label file copies); fix hide_my_email query to use tag:hide instead of wrong Folders/ path
 - 2026-03-15: Add family and hwcmt tags; spam folder and bidirectional sync; hide_my_email folder; to column; symbolic flags; human-readable column layout; full sync-mail pipeline on `<C-r>`; tag exclude filters for notifications/action/aerc; single-source-of-truth tag system with derived bindings, queries, stylesets, and column templates
 - 2026-03-14: Fix compose editor (lf-editor), send (msmtp path), TLS (certcheck off); add compose review bindings; switch to dracula styleset with live switching; add tag-based message coloring across all themes; add quoted_reply HTML template; add bundled filters and multipart-converters
