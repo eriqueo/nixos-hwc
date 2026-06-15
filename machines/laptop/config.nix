@@ -205,6 +205,16 @@
     };
   };
 
+  # Brain vault git sync — Tier-2 transport on the laptop. Every 15 min: commit
+  # local vault edits (CLI / Claude Code / Obsidian), pull the hub, push back —
+  # so notes made on the laptop propagate to the server + phone automatically,
+  # no manual push and no dependence on Obsidian being open.
+  # PREREQ: the laptop vault's `origin` must be the bare hub
+  # (eric@hwc-server:/var/lib/vault-backups/git/brain.git) reachable over SSH
+  # non-interactively (passphraseless key / Tailscale SSH) for the eric-run
+  # service to push. Verify after rebuild: `systemctl start brain-vault-sync`.
+  hwc.automation.vaultSync.enable = true;
+
   # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver
   # UUID-based so it works regardless of device enumeration order (/dev/sdb vs /dev/sdc etc.)
   # noauto: not mounted at boot (USB may not be present). Mount manually: sudo mount /mnt/seagate
