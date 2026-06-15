@@ -4,7 +4,7 @@ import {
   ItemStore,
   Profile,
 } from "./contracts.js";
-import { UnknownGateError, UnknownStageError } from "./errors.js";
+import { UnknownGateError, UnknownPhaseError } from "./errors.js";
 
 export type Clock = () => string;
 const defaultClock: Clock = () => new Date().toISOString();
@@ -17,7 +17,7 @@ export interface RunnerDeps {
 export interface RunPassResult {
   item: Item;
   ran: string[];
-  stoppedBy?: { stage: string; reason: "parked" | "failed" };
+  stoppedBy?: { phase: string; reason: "parked" | "failed" };
 }
 
 function indexGates(profile: Profile, gates: GateModule[]): GateModule[] {
@@ -29,9 +29,9 @@ function indexGates(profile: Profile, gates: GateModule[]): GateModule[] {
   });
 }
 
-function startIndex(ordered: GateModule[], stage: string): number {
-  const idx = ordered.findIndex((g) => g.id === stage);
-  if (idx === -1) throw new UnknownStageError(stage);
+function startIndex(ordered: GateModule[], phase: string): number {
+  const idx = ordered.findIndex((g) => g.id === phase);
+  if (idx === -1) throw new UnknownPhaseError(phase);
   return idx;
 }
 
@@ -49,14 +49,14 @@ export async function runPass(
   };
   const ran: string[] = [];
 
-  let i = startIndex(ordered, item.stage);
+  let i = startIndex(ordered, item.phase);
   for (; i < ordered.length; i++) {
     const gate = ordered[i]!;
     if (!gate.applies(item)) continue;
     item = {
       ...item,
-      stage: gate.id,
-      stageStatus: "pending",
+      phase: gate.id,
+      phaseStatus: "pending",
       parkedReason: undefined,
     };
     ran.push(gate.id);
@@ -65,11 +65,11 @@ export async function runPass(
     if (decision === "pass") {
       item = {
         ...item,
-        stageStatus: "passed",
+        phaseStatus: "passed",
         parkedReason: undefined,
         history: [
           ...item.history,
-          { stage: gate.id, status: "passed", at: clock() },
+          { phase: gate.id, status: "passed", at: clock() },
         ],
       };
       continue;
@@ -79,15 +79,15 @@ export async function runPass(
       typeof verdict.verdict === "string" ? verdict.verdict : decision;
     item = {
       ...item,
-      stageStatus: status,
+      phaseStatus: status,
       parkedReason: reason,
       history: [
         ...item.history,
-        { stage: gate.id, status, at: clock(), note: reason },
+        { phase: gate.id, status, at: clock(), note: reason },
       ],
     };
     await deps.store.save(item);
-    return { item, ran, stoppedBy: { stage: gate.id, reason: status } };
+    return { item, ran, stoppedBy: { phase: gate.id, reason: status } };
   }
   await deps.store.save(item);
   return { item, ran };
@@ -95,30 +95,30 @@ export async function runPass(
 
 export interface RewindOpts {
   clock?: Clock;
-  // When given, rewind validates that toStage is one of the profile's gates
-  // and throws UnknownStageError at the call site instead of deferring the
+  // When given, rewind validates that toPhase is one of the profile's gates
+  // and throws UnknownPhaseError at the call site instead of deferring the
   // failure to the next runPass.
   profile?: Profile;
 }
 
 export function rewind(
   item: Item,
-  toStage: string,
+  toPhase: string,
   note: string,
   opts: RewindOpts = {},
 ): Item {
   const clock = opts.clock ?? defaultClock;
-  if (opts.profile && !opts.profile.gates.includes(toStage)) {
-    throw new UnknownStageError(toStage);
+  if (opts.profile && !opts.profile.gates.includes(toPhase)) {
+    throw new UnknownPhaseError(toPhase);
   }
   return {
     ...item,
-    stage: toStage,
-    stageStatus: "pending",
+    phase: toPhase,
+    phaseStatus: "pending",
     parkedReason: undefined,
     history: [
       ...item.history,
-      { stage: toStage, status: "rewound", at: clock(), note },
+      { phase: toPhase, status: "rewound", at: clock(), note },
     ],
   };
 }

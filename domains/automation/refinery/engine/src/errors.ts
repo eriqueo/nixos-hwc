@@ -23,13 +23,13 @@ export class UnknownGateError extends RefineryError {
   }
 }
 
-export class UnknownStageError extends RefineryError {
-  constructor(stage: string) {
+export class UnknownPhaseError extends RefineryError {
+  constructor(phase: string) {
     super(
-      "E_UNKNOWN_STAGE",
-      `stage not present in profile gates: ${stage}`,
+      "E_UNKNOWN_PHASE",
+      `phase not present in profile gates: ${phase}`,
     );
-    this.name = "UnknownStageError";
+    this.name = "UnknownPhaseError";
   }
 }
 

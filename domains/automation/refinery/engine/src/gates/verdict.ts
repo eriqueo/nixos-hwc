@@ -52,7 +52,7 @@ export function buildGatePrompt(spec: GatePromptSpec, item: Item): string {
   return [
     `You are applying the "${spec.discipline}" discipline (source: ${spec.source}).`,
     spec.guidance,
-    `Evaluate this item (genre=${item.genre}, stage=${item.stage}). Payload:`,
+    `Evaluate this item (genre=${item.genre}, phase=${item.phase}). Payload:`,
     "```json",
     JSON.stringify(item.payload, null, 2),
     "```",

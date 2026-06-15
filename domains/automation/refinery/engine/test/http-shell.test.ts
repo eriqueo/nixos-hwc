@@ -45,8 +45,8 @@ test("intake triages a sentence into a profile item at its first gate", async ()
     const items = await shell.store.list();
     assert.equal(items.length, 1);
     assert.equal(items[0].genre, "project-ideation");
-    assert.equal(items[0].stage, "stepwise-refinement");
-    assert.equal(items[0].stageStatus, "pending");
+    assert.equal(items[0].phase, "stepwise-refinement");
+    assert.equal(items[0].phaseStatus, "pending");
   } finally {
     cleanup();
   }
@@ -59,7 +59,7 @@ test("intake of an unclassifiable sentence parks an untriaged item", async () =>
     await shell.intake("???");
     const item = (await shell.store.list())[0];
     assert.equal(item.genre, "untriaged");
-    assert.equal(item.stageStatus, "parked");
+    assert.equal(item.phaseStatus, "parked");
   } finally {
     cleanup();
   }
@@ -70,13 +70,13 @@ test("amend re-arms a parked item with the note recorded", async () => {
   try {
     const shell = createShell(cfg);
     const parked: Item = {
-      id: "p1", genre: "project-ideation", stage: "premortem", stageStatus: "parked",
+      id: "p1", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
       parkedReason: "needs a call", payload: { title: "p1" }, history: [],
     };
     await shell.store.save(parked);
     await shell.amend("p1", "here is the answer");
     const item = (await shell.store.load("p1"))!;
-    assert.equal(item.stageStatus, "pending");
+    assert.equal(item.phaseStatus, "pending");
     assert.equal(item.parkedReason, undefined);
     assert.deepEqual((item.payload as { amendments: string[] }).amendments, ["here is the answer"]);
     assert.equal(item.history.at(-1)!.status, "entered");
@@ -90,14 +90,14 @@ test("rewind moves a parked item back to an earlier gate", async () => {
   try {
     const shell = createShell(cfg);
     const item: Item = {
-      id: "r1", genre: "project-ideation", stage: "premortem", stageStatus: "parked",
+      id: "r1", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
       payload: { title: "r1" }, history: [],
     };
     await shell.store.save(item);
     await shell.doRewind("r1", "stepwise-refinement", "found an upstream problem");
     const back = (await shell.store.load("r1"))!;
-    assert.equal(back.stage, "stepwise-refinement");
-    assert.equal(back.stageStatus, "pending");
+    assert.equal(back.phase, "stepwise-refinement");
+    assert.equal(back.phaseStatus, "pending");
     assert.equal(back.history.at(-1)!.status, "rewound");
   } finally {
     cleanup();
@@ -118,7 +118,7 @@ test("profile toggle flips enabled via the catalog overlay", async () => {
 
 test("renderBoard shows the intake form, profile toggle, and parked controls", () => {
   const items: Item[] = [
-    { id: "x", genre: "project-ideation", stage: "premortem", stageStatus: "parked",
+    { id: "x", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
       parkedReason: "needs a call", payload: { title: "an idea" }, history: [] },
   ];
   const profiles = [

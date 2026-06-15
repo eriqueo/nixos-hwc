@@ -37,8 +37,8 @@ function rawLlm(raw: string): LlmPort {
   return { async complete() { return raw; } };
 }
 
-function itemWithTraits(traits: Record<string, unknown>, stage = "stepwise-refinement"): Item {
-  return makeItem({ stage, payload: { traits } });
+function itemWithTraits(traits: Record<string, unknown>, phase = "stepwise-refinement"): Item {
+  return makeItem({ phase, payload: { traits } });
 }
 
 const ALL_IDS = [
@@ -121,14 +121,14 @@ test("a profile gate list composes through the slice-03 runner end-to-end", asyn
     effectors: [],
   };
   const item = makeItem({
-    stage: "principles-create",
+    phase: "principles-create",
     payload: { traits: { mode: "greenfield", trivial: false } },
   });
 
   const result = await runPass(item, profile, gates, { store, clock: fixedClock });
   assert.deepEqual(result.ran, ["principles-create", "premortem", "admission-gates"]);
-  assert.equal(result.item.stage, "admission-gates");
-  assert.equal(result.item.stageStatus, "passed");
+  assert.equal(result.item.phase, "admission-gates");
+  assert.equal(result.item.phaseStatus, "passed");
   assert.equal(result.stoppedBy, undefined);
 });
 
@@ -151,11 +151,11 @@ test("end-to-end parks at the first gate that returns park, leaving later gates 
     effectors: [],
   };
   const item = makeItem({
-    stage: "principles-create",
+    phase: "principles-create",
     payload: { traits: { mode: "greenfield", trivial: false } },
   });
   const result = await runPass(item, profile, gates, { store, clock: fixedClock });
   assert.deepEqual(result.ran, ["principles-create", "premortem"]);
-  assert.deepEqual(result.stoppedBy, { stage: "premortem", reason: "parked" });
+  assert.deepEqual(result.stoppedBy, { phase: "premortem", reason: "parked" });
   assert.equal(result.item.parkedReason, "needs a human call");
 });

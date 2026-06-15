@@ -39,12 +39,12 @@ test("makeTriagedItem: classified item starts pending at its first gate", () => 
     fixedClock,
   );
   assert.equal(item.genre, "project-ideation");
-  assert.equal(item.stage, "stepwise-refinement");
-  assert.equal(item.stageStatus, "pending");
+  assert.equal(item.phase, "stepwise-refinement");
+  assert.equal(item.phaseStatus, "pending");
   assert.equal(item.history.at(-1)!.status, "entered");
 });
 
-test("makeTriagedItem: untriaged item parks at the triage stage for human routing", () => {
+test("makeTriagedItem: untriaged item parks at the triage phase for human routing", () => {
   resetClock();
   const item = makeTriagedItem(
     "item-2",
@@ -54,7 +54,7 @@ test("makeTriagedItem: untriaged item parks at the triage stage for human routin
     fixedClock,
   );
   assert.equal(item.genre, UNTRIAGED);
-  assert.equal(item.stage, "triage");
-  assert.equal(item.stageStatus, "parked");
+  assert.equal(item.phase, "triage");
+  assert.equal(item.phaseStatus, "parked");
   assert.match(item.parkedReason!, /no clear genre/);
 });

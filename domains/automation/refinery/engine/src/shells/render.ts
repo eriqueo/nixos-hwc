@@ -1,5 +1,5 @@
 // Server-side render for the interactive board (the HTTP shell's view). Engine
-// Items grouped into lanes by stageStatus; parked items carry an amend form and
+// Items grouped into lanes by phaseStatus; parked items carry an amend form and
 // a rewind control scoped to the earlier gates of their profile. A profiles
 // panel lists each profile with an enable/disable toggle, and an intake box
 // posts a sentence to /intake. Plain HTML form-posts (POST → 303 → GET) — no
@@ -14,19 +14,19 @@ function esc(s: string): string {
   );
 }
 
-const LANES: { status: Item["stageStatus"]; label: string }[] = [
+const LANES: { status: Item["phaseStatus"]; label: string }[] = [
   { status: "pending", label: "Pending" },
   { status: "parked", label: "Parked" },
   { status: "passed", label: "Passed" },
   { status: "failed", label: "Failed" },
 ];
 
-/** Gates of the item's profile that come before its current stage — rewind targets. */
+/** Gates of the item's profile that come before its current phase — rewind targets. */
 function rewindTargets(item: Item, profiles: ResolvedProfile[]): string[] {
   const profile = profiles.find((p) => p.genre === item.genre);
   if (!profile) return [];
-  const idx = profile.gates.indexOf(item.stage);
-  return idx > 0 ? profile.gates.slice(0, idx) : profile.gates.filter((g) => g !== item.stage);
+  const idx = profile.gates.indexOf(item.phase);
+  return idx > 0 ? profile.gates.slice(0, idx) : profile.gates.filter((g) => g !== item.phase);
 }
 
 function amendRewindControls(item: Item, profiles: ResolvedProfile[]): string {
@@ -34,7 +34,7 @@ function amendRewindControls(item: Item, profiles: ResolvedProfile[]): string {
   const rewindForm = targets.length
     ? `<form method="post" action="/rewind" class="ctl">
          <input type="hidden" name="id" value="${esc(item.id)}">
-         <select name="toStage">${targets.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+         <select name="toPhase">${targets.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
          <input type="text" name="note" placeholder="why rewind?" required>
          <button type="submit">⟲ rewind</button>
        </form>`
@@ -50,13 +50,13 @@ function cardHtml(item: Item, profiles: ResolvedProfile[]): string {
   const reason = item.parkedReason
     ? `<div class="reason">${esc(item.parkedReason)}</div>`
     : "";
-  const controls = item.stageStatus === "parked" ? amendRewindControls(item, profiles) : "";
+  const controls = item.phaseStatus === "parked" ? amendRewindControls(item, profiles) : "";
   const title =
     item.payload && typeof item.payload === "object" && "title" in item.payload
       ? String((item.payload as { title: unknown }).title)
       : item.id;
-  return `<div class="card ${item.stageStatus}">
-    <div class="badges"><span class="badge genre">${esc(item.genre)}</span><span class="badge stage">${esc(item.stage)}</span></div>
+  return `<div class="card ${item.phaseStatus}">
+    <div class="badges"><span class="badge genre">${esc(item.genre)}</span><span class="badge phase">${esc(item.phase)}</span></div>
     <div class="title">${esc(title)}</div>
     ${reason}${controls}
   </div>`;
@@ -83,7 +83,7 @@ function profilesPanel(profiles: ResolvedProfile[]): string {
 
 export function renderBoard(items: Item[], profiles: ResolvedProfile[]): string {
   const lanes = LANES.map((lane) => {
-    const inLane = items.filter((i) => i.stageStatus === lane.status);
+    const inLane = items.filter((i) => i.phaseStatus === lane.status);
     const body = inLane.length
       ? inLane.map((i) => cardHtml(i, profiles)).join("")
       : `<div class="empty">—</div>`;

@@ -71,9 +71,9 @@ export function createShell(cfg: HttpShellConfig) {
     const llm = cfg.triageLlm ?? resolveLlm(cfg.triageProvider);
     const decision = await triageSentence(text, options, llm);
     const profile = catalog.get(decision.genre);
-    const firstStage = profile?.gates[0] ?? "triage";
+    const firstPhase = profile?.gates[0] ?? "triage";
     const id = `${slug(text)}-${Date.now()}`;
-    await store.save(makeTriagedItem(id, text, decision, firstStage, cfg.clock));
+    await store.save(makeTriagedItem(id, text, decision, firstPhase, cfg.clock));
   }
 
   async function amend(id: string, note: string): Promise<void> {
@@ -83,18 +83,18 @@ export function createShell(cfg: HttpShellConfig) {
     const amendments = Array.isArray(payload.amendments) ? payload.amendments : [];
     const updated: Item = {
       ...item,
-      stageStatus: "pending", // re-run the parked gate with the amendment in context
+      phaseStatus: "pending", // re-run the parked gate with the amendment in context
       parkedReason: undefined,
       payload: { ...payload, amendments: [...amendments, note] },
-      history: [...item.history, { stage: item.stage, status: "entered", at: cfg.clock(), note }],
+      history: [...item.history, { phase: item.phase, status: "entered", at: cfg.clock(), note }],
     };
     await store.save(updated);
   }
 
-  async function doRewind(id: string, toStage: string, note: string): Promise<void> {
+  async function doRewind(id: string, toPhase: string, note: string): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
-    await store.save(rewind(item, toStage, note, { clock: cfg.clock }));
+    await store.save(rewind(item, toPhase, note, { clock: cfg.clock }));
   }
 
   const server = createServer((req, res) => {
@@ -130,7 +130,7 @@ export function createShell(cfg: HttpShellConfig) {
             return redirect(res);
           }
           if (url === "/rewind") {
-            await doRewind(body.get("id") ?? "", body.get("toStage") ?? "", (body.get("note") ?? "").trim());
+            await doRewind(body.get("id") ?? "", body.get("toPhase") ?? "", (body.get("note") ?? "").trim());
             return redirect(res);
           }
           if (url === "/profiles/toggle") {
