@@ -2,11 +2,18 @@
 let
   cfg = config.hwc.mail.calendar;
 
-  # khalt supersedes plain khal: its package ships the full `khal`/`ikhal`
-  # CLI (a source fork). We install khalt's `khal` as THE khal binary so the
-  # whole calendar stack (this domain's config, waybar, todui, ics-watcher,
-  # the MCP) runs on one fork. pkgs.khal is retired.
-  khaltPkg = inputs.khalt.packages.${pkgs.system}.default;
+  # khalt supersedes plain khal: its package ships the fork's full `khal`/`ikhal`
+  # CLI. Expose ONLY `khal`/`ikhal` here — NOT `bin/khalt`, which is owned by the
+  # khalt HM module's `khalt-wrapped` (that module deliberately exposes only
+  # khalt to avoid this very buildEnv collision; installing the whole package
+  # here re-creates it). This puts the fork's `khal` on PATH for
+  # waybar/todui/ics-watcher/parser; pkgs.khal is retired.
+  khaltFull = inputs.khalt.packages.${pkgs.system}.default;
+  khalCli = pkgs.runCommand "khalt-khal-cli" { } ''
+    mkdir -p $out/bin
+    ln -s ${khaltFull}/bin/khal  $out/bin/khal
+    ln -s ${khaltFull}/bin/ikhal $out/bin/ikhal
+  '';
 
   dataDir = "~/.local/share/vdirsyncer";
 
@@ -151,7 +158,7 @@ in
       # khal); pkgs.khal is retired. The standard ~/.config/khal/config below
       # is what khaltPkg's `khal` reads, so waybar/todui/ics-watcher/the MCP
       # all run on the fork.
-      home.packages = [ pkgs.vdirsyncer khaltPkg parser.emailToKhalScript ];
+      home.packages = [ pkgs.vdirsyncer khalCli parser.emailToKhalScript ];
 
       xdg.configFile = {
           "vdirsyncer/config".text = vdirsyncer.config;
