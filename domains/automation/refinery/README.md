@@ -80,7 +80,9 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
   no longer Nix-only. New **SR page** (`/sr`): mirrors the sr_gauntlet
   investigations as blue cards that link straight to their REPORT (a click-through
   mirror of the SR2 board), with its own cap form. SR cards moved off the
-  Gauntlet onto `/sr`. Engine 63/63.
+  Gauntlet onto `/sr`. Engine 63/63. (Service env finalized: passes
+  `REFINERY_CAPS_FILE=/var/lib/refinery/caps.json`, replacing the dead
+  `REFINERY_NIGHTLY_CONFIG` the engine never read.)
 - **2026-06-15** — Delete + nightly-cards mirror. Projects/ideas can be deleted
   from the detail page (`ItemStore.delete`, `POST /delete`). The live
   nightly-builds vault cards (`_inbox/nightly_builds/*/NN-*.md`) are mirrored
