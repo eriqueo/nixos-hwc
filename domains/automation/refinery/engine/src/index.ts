@@ -14,6 +14,7 @@ export * from "./profiles/catalog.js";
 export * from "./profiles/gauntlet-config.js";
 export * from "./sources/ports.js";
 export * from "./sources/nightly-cards.js";
+export * from "./sources/sr-investigations.js";
 export * from "./triage.js";
 export * from "./shells/render.js";
 export * from "./shells/hopper.js";

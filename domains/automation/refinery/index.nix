@@ -68,7 +68,13 @@ in
     vaultDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = vaultDefault;
-      description = "Brain vault root — read-only mirror of the nightly-builds cards (_inbox/nightly_builds/)";
+      description = "Brain vault root — nightly-builds card mirror + the queue write-back (status flip)";
+    };
+
+    srGauntletDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = "/home/eric/700_datax/sr_gauntlet";
+      description = "sr_gauntlet dir — read-only mirror of its investigations/";
     };
 
     triageProvider = lib.mkOption {
@@ -102,16 +108,23 @@ in
           "REFINERY_NIGHTLY_CONFIG=/var/lib/refinery/nightly.json"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
         ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}"
-          ++ lib.optional (cfg.vaultDir != null) "REFINERY_VAULT_DIR=${cfg.vaultDir}";
+          ++ lib.optional (cfg.vaultDir != null) "REFINERY_VAULT_DIR=${cfg.vaultDir}"
+          ++ lib.optional (cfg.srGauntletDir != null) "REFINERY_SR_GAUNTLET_DIR=${cfg.srGauntletDir}";
         Restart = "on-failure";
         RestartSec = 5;
-        # Writes only to /var/lib/refinery (StateDirectory); reads profiles from
-        # the store and the brain vault (read-only) for the nightly-builds card
-        # mirror. ProtectHome MUST be "tmpfs" (not true) so the vault bind target
-        # can be created underneath the masked home.
+        # State in /var/lib/refinery (StateDirectory). Home is masked (tmpfs);
+        # only the exact paths the board touches are bound back:
+        #   - vault _inbox/nightly_builds: READ-WRITE (queue/unqueue flips card status)
+        #   - vault runs/ + sr_gauntlet investigations/: READ-ONLY (mirror + REPORTs)
+        # ProtectHome MUST be "tmpfs" (not true) so bind targets can be created
+        # under the masked home.
         ProtectSystem = "strict";
         ProtectHome = lib.mkForce "tmpfs";
-        BindReadOnlyPaths = lib.optional (cfg.vaultDir != null) cfg.vaultDir;
+        # Leading "-" → systemd ignores a missing source rather than failing.
+        BindPaths = lib.optional (cfg.vaultDir != null) "-${cfg.vaultDir}/_inbox/nightly_builds";
+        BindReadOnlyPaths =
+          (lib.optional (cfg.vaultDir != null) "-${cfg.vaultDir}/runs")
+          ++ (lib.optional (cfg.srGauntletDir != null) "-${cfg.srGauntletDir}/investigations");
         PrivateTmp = true;
       };
     };

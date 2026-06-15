@@ -7,12 +7,49 @@
 // This is SourcePort Path A (display-only). Driving the overnight timer from
 // refinery (writing card status) is a separate, human-gated step.
 
-import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Item } from "../contracts.js";
 
 export const NB_PREFIX = "nb:";
 export const NIGHTLY_BUILD_GENRE = "nightly-build";
+
+/** Parse an "nb:goal/NN-slug" mirror id back into vault coordinates. */
+export function parseNbId(id: string): { goalId: string; file: string } | null {
+  if (!id.startsWith(NB_PREFIX)) return null;
+  const rest = id.slice(NB_PREFIX.length);
+  const slash = rest.indexOf("/");
+  if (slash < 0) return null;
+  return { goalId: rest.slice(0, slash), file: `${rest.slice(slash + 1)}.md` };
+}
+
+/**
+ * Flip a card's `status:` frontmatter field in place (the Phase-4 queue gate, as
+ * a GUI action) — preserving the rest of the frontmatter and the body. This is
+ * exactly the hand-edit a human does today; run.sh @ 01:30 still does the work.
+ */
+export function setCardStatus(vaultDir: string, id: string, newStatus: string): boolean {
+  const coords = parseNbId(id);
+  if (!coords) return false;
+  const path = join(vaultDir, "_inbox", "nightly_builds", coords.goalId, coords.file);
+  if (!existsSync(path)) return false;
+  const text = readFileSync(path, "utf8");
+  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  if (!m) return false;
+  const fm = m[1];
+  const newFm = /^status:.*$/m.test(fm)
+    ? fm.replace(/^status:.*$/m, `status: ${newStatus}`)
+    : `${fm}\nstatus: ${newStatus}`;
+  writeFileSync(path, text.replace(m[1], newFm));
+  return true;
+}
+
+/** Read a REPORT.md from a run dir relative to baseDir (path traversal guarded). */
+export function readReport(baseDir: string, run: string): string | null {
+  if (!run || run.includes("..") || run.startsWith("/")) return null;
+  const path = join(baseDir, run.replace(/\/$/, ""), "REPORT.md");
+  return existsSync(path) ? readFileSync(path, "utf8") : null;
+}
 
 function frontmatter(text: string): Record<string, string> {
   const out: Record<string, string> = {};
