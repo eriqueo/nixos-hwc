@@ -43,16 +43,17 @@
     workbench.gatewayUrl = "http://hwc-server:6200";
   };
 
-  # Calendar: Apple iCloud sync via khal + vdirsyncer (CalDAV)
+  # Calendar: self-hosted Radicale (CalDAV) via khalt's khal + vdirsyncer,
+  # plumbed exactly like tasks below. iCloud retired 2026-06-15 — calendar
+  # data was migrated to Radicale (one-time import, see
+  # domains/mail/calendar/README.md "Migration"); the old iCloud vdir at
+  # ~/.local/share/vdirsyncer/calendars/icloud/ stays on disk as the import
+  # source until verified, then can be archived. With radicale.enable on, the
+  # iCloud account pairs are no longer generated.
   hwc.mail.calendar = {
     enable = true;
     icsWatch.enable = false;
-    accounts = {
-      icloud = {
-        email = "eric@iheartwoodcraft.com";
-        color = "dark green";
-      };
-    };
+    radicale.enable = true;
   };
 
   # Tasks: VTODO sync via todoman/todui, riding the calendar vdirsyncer
