@@ -60,6 +60,41 @@ let
       git push || echo "vault-sync: push failed — will retry next cycle" >&2
     '';
   };
+
+  # Event-driven companion: watch the vault tree and run the SAME sync script
+  # within `debounceSec` of any create/update/delete/move, so local edits reach
+  # the hub in seconds instead of waiting up to a full timer interval. It calls
+  # syncScript directly (not `systemctl start`) so it needs no privilege and
+  # shares the same flock — it can never race the timer or brain-mcp. The timer
+  # still runs to provide the periodic PULL (remote changes when the laptop is
+  # idle) and as a backstop if this watcher ever dies.
+  watchScript = pkgs.writeShellApplication {
+    name = "brain-vault-watch";
+    runtimeInputs = [ pkgs.inotify-tools pkgs.coreutils ];
+    text = ''
+      set -uo pipefail
+      V=${lib.escapeShellArg (toString cfg.vaultDir)}
+      cd "$V" || { echo "vault-watch: vault $V missing"; exit 1; }
+      DEBOUNCE=${toString cfg.watch.debounceSec}
+
+      # Exclude paths that must NOT trigger a sync: `.git/` (else the sync's own
+      # commits loop forever), the sync lock, and high-churn non-note state.
+      EXCLUDE='(/\.git/|\.sync\.lock|/\.obsidian/workspace|/\.stversions/|/\.stfolder/|/\.trash/)'
+
+      echo "vault-watch: watching $V (debounce ''${DEBOUNCE}s)"
+      while true; do
+        # Block until the first change anywhere in the tree.
+        inotifywait -r -q -e modify,create,delete,move \
+          --exclude "$EXCLUDE" "$V" >/dev/null || true
+        # Debounce: keep draining events until DEBOUNCE seconds pass with none,
+        # so a burst of saves coalesces into a single sync.
+        while inotifywait -r -q -t "$DEBOUNCE" -e modify,create,delete,move \
+          --exclude "$EXCLUDE" "$V" >/dev/null 2>&1; do :; done
+        echo "vault-watch: changes settled — syncing"
+        ${lib.getExe syncScript} || echo "vault-watch: sync failed — timer will retry" >&2
+      done
+    '';
+  };
 in
 {
   #==========================================================================
@@ -87,6 +122,20 @@ in
       type = lib.types.str;
       default = "*:0/15";
       description = "systemd OnCalendar expression for the sync cadence (default every 15 min)";
+    };
+
+    watch = {
+      enable = lib.mkEnableOption ''
+        an event-driven filesystem watcher that runs the sync within
+        watch.debounceSec of any vault create/update/delete/move, so local edits
+        reach the hub in seconds rather than waiting for the timer. The timer
+        stays on for the periodic pull and as a backstop'';
+
+      debounceSec = lib.mkOption {
+        type = lib.types.int;
+        default = 3;
+        description = "Seconds of filesystem quiet to wait after the last change before syncing (coalesces bursts of saves into one sync)";
+      };
     };
   };
 
@@ -120,6 +169,25 @@ in
         OnCalendar = cfg.interval;
         Persistent = true;
         RandomizedDelaySec = "30s";
+      };
+    };
+
+    # Event-driven sync: long-running watcher that triggers the sync on any
+    # vault CRUD (debounced). Runs as the vault owner and invokes syncScript
+    # directly, so it shares the flock and needs no privilege escalation.
+    systemd.services.brain-vault-watch = lib.mkIf cfg.watch.enable {
+      description = "Brain vault change watcher (event-driven git sync)";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "simple";
+        User = cfg.user;
+        Group = "users";
+        ExecStart = lib.getExe watchScript;
+        Restart = "always";
+        RestartSec = "5s";
+        Environment = "HOME=/home/${cfg.user}";
       };
     };
   };

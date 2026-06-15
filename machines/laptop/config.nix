@@ -214,6 +214,10 @@
   # non-interactively (passphraseless key / Tailscale SSH) for the eric-run
   # service to push. Verify after rebuild: `systemctl start brain-vault-sync`.
   hwc.automation.vaultSync.enable = true;
+  # Event-driven: push within ~3s of any vault CRUD (Claude Code / CLI /
+  # Obsidian), instead of waiting up to the 15-min timer. The timer stays on for
+  # the periodic pull + as a backstop.
+  hwc.automation.vaultSync.watch.enable = true;
 
   # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver
   # UUID-based so it works regardless of device enumeration order (/dev/sdb vs /dev/sdc etc.)
