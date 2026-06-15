@@ -54,16 +54,18 @@ in
                 }
             }
         }
-        // Secondary tabs: heavier/contextual peers, started on demand. Switch to
-        // the tab (Ctrl+t then →, or click) and press <ENTER> to launch.
+        // Secondary tabs: each peer auto-starts with the session (no
+        // start_suspended) so every program is live on open — switch to the tab
+        // (Ctrl+t then →, or click) and it's already running. Note: aerc opens
+        // an ssh session to the server at launch (see mailCommand).
         tab name="files" {
-            pane name="yazi" { command "yazi"; start_suspended true; }
+            pane name="yazi" { command "yazi"; }
         }
         tab name="mail" {
-            pane name="aerc" { command "${mailBin}";${mailArgsKdl} start_suspended true; }
+            pane name="aerc" { command "${mailBin}";${mailArgsKdl} }
         }
         tab name="edit" {
-            pane name="nvim" { command "nvim"; start_suspended true; }
+            pane name="nvim" { command "nvim"; }
         }
     }
   '';
