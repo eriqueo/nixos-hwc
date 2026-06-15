@@ -21,7 +21,10 @@
 # positions 1-2, 24-bit hex in positions 4-5); only the hex literals become
 # token lookups.
 
-{ lib, pkgs, cfg, colors ? {} }:
+# `viewExtra` injects extra lines into the [view] section. It exists for the
+# khalt fork (which adds keys like `default_view = month` that upstream khal's
+# config spec rejects); the mail-domain khal leaves it "".
+{ lib, pkgs, cfg, colors ? {}, viewExtra ? "" }:
 let
   dataDir = "~/.local/share/vdirsyncer";
 
@@ -77,6 +80,7 @@ in
     blank_line_before_day = true
     event_view_weighting = 2
     frame = top
+    ${viewExtra}
 
     [palette]
     # Format: foreground, background, mono, foreground_high, background_high
