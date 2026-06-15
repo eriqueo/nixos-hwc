@@ -125,3 +125,7 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 │   └── session.json   ← created on login
 └── package.json
 ```
+
+## Changelog
+- 2026-05-21: Backfill — login UX hardening (auto-detect login completion 77c4cbf2, pin playwright 1.59.1 dc5e9996, wait for logged-in UI b0f85a37, poll across passkey redirects 2553d6ca, detect via `c_user` cookie not DOM 6049454a, switch to `launchPersistentContext` + `--profile` be985dab), `shell.nix` so Playwright uses system chromium on the NixOS laptop (8131b82a/ee0b817c), HWC lead-scoring prompt + classifier + `promptFile` option (d20220f9), jobber-mcp scaffolding under `300_tech/320_projects` (aad37ad1/464efc23/2b6940f2/423c328c), and a Claude Code session allowlist tweak (3cf8ef82).
+- 2026-05-11: README created.
