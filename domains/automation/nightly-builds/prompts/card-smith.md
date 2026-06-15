@@ -23,6 +23,18 @@ to `queued` is the human Phase-4 gate, and it is not yours.
    with `status: draft`. Fill every section. Check each of the eight gates
    honestly: a gate you cannot verify gets `[ ]` and the card gets
    `status: blocked: <gate>` instead of draft-clean.
+
+   **Title + description are read by humans on the board — make them real:**
+   - The frontmatter `title:` is a **plain-English sentence**, e.g.
+     `"03 — extract the execute harness into a reusable runner"`. It is **NOT**
+     the filename slug. The `<NN>-<step-slug>` form belongs to the filename
+     only; never copy it into `title:`. Make `title:` identical to the `#`
+     heading.
+   - The `# <NN> — …` heading and `title:` must be the same sentence.
+   - `**Step toward goal:**` is the card's **description** — the board surfaces
+     it. Write 1–2 full, specific sentences a cold reader understands without
+     opening `_goal.md` (what this step delivers and why it advances the goal).
+     No bare fragments, no restating the title.
 5. Anything you could not decide goes in the card as a `CONFIRM:` line —
    open CONFIRM items mean gate 4 fails, which is correct for a draft.
 6. After drafting all ideas, edit `_ideas.md`: move each processed bullet
@@ -33,6 +45,7 @@ to `queued` is the human Phase-4 gate, and it is not yours.
 ## Hard rules
 
 - `status: draft` or `status: blocked: <gate>` only. NEVER `queued`.
+- `title:` is a human sentence (= the `#` heading), never the filename slug.
 - Cards must be honest about gates: do not check a gate to make the card look
   ready. An unmet gate with a clear unblocking task is a GOOD draft.
 - Blast radius must always forbid: prod, deploys, `nixos-rebuild`, sent
