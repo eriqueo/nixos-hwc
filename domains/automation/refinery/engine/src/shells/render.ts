@@ -111,6 +111,16 @@ const STYLE = `<style>
   #srt-gameplan:checked ~ #srp-gameplan,
   #srt-thread:checked ~ #srp-thread,
   #srt-details:checked ~ #srp-details{display:block}
+  /* project step progress */
+  .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+  .bar > span{display:block;height:100%;background:var(--done,#b8bb26)}
+  .steps{margin-top:8px}
+  .step{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+  .step .n{color:var(--dim);width:22px;flex:none}
+  .step .ti{flex:1;overflow-wrap:anywhere}
+  .step .st{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
+  .step .st.done{color:#1d2021;background:#b8bb26}
+  .step .st.queued,.step .st.running{color:#1d2021;background:var(--acc)}
   .nrow{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--line)}
   .nrow.tonight{background:rgba(254,128,25,.08)}
   .nrow .t{flex:1}
@@ -152,9 +162,16 @@ function cardLink(item: Item, profiles: ResolvedProfile[]): string {
   const badge = isIdea
     ? `<span class="badge">idea</span>`
     : `<span class="badge profile" style="background:${esc(color)}">${esc(item.genre)}</span>${goal ? `<span class="badge">${esc(goal)}</span>` : ""}<span class="badge">${esc(item.phase)}</span>`;
+  const pl = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+  const total = typeof pl.stepsTotal === "number" ? pl.stepsTotal : 0;
+  const doneN = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
+  const bar = total > 0
+    ? `<div class="bar"><span style="width:${Math.round((doneN / total) * 100)}%"></span></div><div class="kv" style="font-size:11px;margin-top:3px">${doneN}/${total} steps done</div>`
+    : "";
   return `<a class="card${item.nightly ? " nightly" : ""}" href="/project/${esc(item.id)}" style="border-left-color:${esc(color)}">
     <div class="badges">${badge}${moon}</div>
     <div class="title">${esc(titleOf(item))}</div>
+    ${bar}
     ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
   </a>`;
 }
@@ -191,28 +208,44 @@ export function renderNightly(
   maxPerNight: number,
   profiles: ResolvedProfile[],
 ): string {
-  // already sorted by caller (priority desc)
-  const rows = nightly
-    .map((item, i) => {
+  // Projects with a queued step run tonight (run.sh picks up `queued` cards).
+  // Sort: queued first, then by progress.
+  const sorted = [...nightly].sort((a, b) => {
+    const qa = ((a.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0 ? 1 : 0;
+    const qb = ((b.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0 ? 1 : 0;
+    return qb - qa || a.id.localeCompare(b.id);
+  });
+  const rows = sorted
+    .map((item) => {
       const color = colorOf(item.genre, profiles);
-      const tonight = i < maxPerNight ? " tonight" : "";
-      return `<div class="nrow${tonight}">
+      const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+      const queued = typeof p.queuedCount === "number" ? p.queuedCount : 0;
+      const done = typeof p.stepsDone === "number" ? p.stepsDone : 0;
+      const total = typeof p.stepsTotal === "number" ? p.stepsTotal : 0;
+      const hasDraft = Array.isArray(p.steps) && (p.steps as { status: string }[]).some((s) => s.status.toLowerCase().startsWith("draft"));
+      const allDone = total > 0 && done === total;
+      const btn = queued > 0
+        ? `<input type="hidden" name="to" value="draft"><button type="submit">↩ unqueue</button>`
+        : hasDraft
+          ? `<input type="hidden" name="to" value="queued"><button type="submit">✅ queue next</button>`
+          : "";
+      return `<div class="nrow${queued > 0 ? " tonight" : ""}">
         <span class="swatch" style="background:${esc(color)}"></span>
-        <a class="t" href="/project/${esc(item.id)}">${esc(titleOf(item))} <span class="kv">· ${esc(item.genre)} · ${esc(item.phase)}</span></a>
-        ${i < maxPerNight ? '<span class="badge">tonight</span>' : ""}
-        <form method="post" action="/nightly/bump" style="display:inline"><input type="hidden" name="id" value="${esc(item.id)}"><input type="hidden" name="dir" value="up"><button type="submit">▲</button></form>
-        <form method="post" action="/nightly/bump" style="display:inline"><input type="hidden" name="id" value="${esc(item.id)}"><input type="hidden" name="dir" value="down"><button type="submit">▼</button></form>
+        <a class="t" href="/project/${esc(item.id)}">${esc(titleOf(item))} <span class="kv">· ${done}/${total} steps${allDone ? " · ✓ done" : ""}</span></a>
+        ${queued > 0 ? '<span class="badge">queued tonight</span>' : ""}
+        ${btn ? `<form method="post" action="/card/queue" style="display:inline"><input type="hidden" name="id" value="${esc(item.id)}">${btn}</form>` : ""}
       </div>`;
     })
     .join("");
+  const queuedProjects = sorted.filter((i) => ((i.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0).length;
   const body = `
 <form class="intake" method="post" action="/nightly/config">
-  <label class="kv">Max projects per night:</label>
+  <label class="kv">Max cards per night:</label>
   <input type="number" name="maxPerNight" min="0" value="${maxPerNight}" style="width:90px">
   <button type="submit">save</button>
-  <span class="kv">${nightly.length} flagged · top ${Math.min(maxPerNight, nightly.length)} run tonight</span>
+  <span class="kv">${nightly.length} projects · ${queuedProjects} with a step queued · run.sh runs up to ${maxPerNight} queued cards @ 01:30</span>
 </form>
-${rows || '<div class="empty" style="padding:24px">no projects flagged nightly — open a project and toggle 🌙</div>'}`;
+${rows || '<div class="empty" style="padding:24px">no nightly-build projects</div>'}`;
   return layout("nightly", body);
 }
 
@@ -405,6 +438,73 @@ export function renderSrDetail(item: Item, files: SrFiles): string {
   <div class="panel" id="srp-details">${panel(detailsMd, "")}</div>
 </div>`;
   return layout("sr", body);
+}
+
+interface NbStepView {
+  n: string; file: string; title: string; status: string; step: string; run: string; pr: string;
+}
+function stepClass(status: string): string {
+  const s = status.toLowerCase();
+  if (s.startsWith("done")) return "done";
+  if (s.startsWith("queued") || s.startsWith("running")) return "queued";
+  return "";
+}
+
+/** Nightly-builds PROJECT detail: goal + step progress + per-step status/report. */
+export function renderNightlyProject(item: Item): string {
+  const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+  const color = "#fe8019"; // nightly-build orange
+  const steps = Array.isArray(p.steps) ? (p.steps as NbStepView[]) : [];
+  const done = typeof p.stepsDone === "number" ? p.stepsDone : 0;
+  const total = typeof p.stepsTotal === "number" ? p.stepsTotal : steps.length;
+  const queuedCount = typeof p.queuedCount === "number" ? p.queuedCount : 0;
+  const goalId = typeof p.goal === "string" ? p.goal : "";
+  const goalBody = typeof p.goalBody === "string" ? p.goalBody : "";
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  const stepRows = steps
+    .map((s) => {
+      const reportLink = s.run ? `<a class="kv" href="/report/${encodeURIComponent("nbrun:" + s.run)}" title="REPORT">📄</a>` : "";
+      return `<div class="step">
+        <span class="n">${esc(s.n)}</span>
+        <span class="ti">${esc(s.title)}${s.step ? ` <span class="kv">(${esc(s.step)})</span>` : ""}</span>
+        ${reportLink}
+        <span class="st ${stepClass(s.status)}">${esc(s.status)}</span>
+      </div>`;
+    })
+    .join("");
+
+  const hasDraft = steps.some((s) => s.status.toLowerCase().startsWith("draft"));
+  const queueAction =
+    queuedCount > 0
+      ? `<form class="act" method="post" action="/card/queue">
+           <input type="hidden" name="id" value="${esc(item.id)}"><input type="hidden" name="to" value="draft">
+           <button type="submit">↩ unqueue tonight's step</button>
+           <span class="kv">${queuedCount} step(s) queued — run.sh @ 01:30 (NB_MAX_CARDS)</span>
+         </form>`
+      : hasDraft
+        ? `<form class="act" method="post" action="/card/queue">
+             <input type="hidden" name="id" value="${esc(item.id)}"><input type="hidden" name="to" value="queued">
+             <button type="submit">✅ queue next step for tonight</button>
+             <span class="kv">queues the next draft step; run.sh @ 01:30 runs it</span>
+           </form>`
+        : `<div class="kv">no draft steps to queue (${done}/${total} done)</div>`;
+
+  const body = `<div class="detail">
+  <a href="/nightly" class="kv">← nightly</a>
+  <h2><span class="swatch" style="background:${color}"></span> ${esc(titleOf(item))}</h2>
+  <div class="kv">project · nightly-build · goal <b>${esc(goalId)}</b> · ${done}/${total} steps</div>
+  <div class="bar"><span style="width:${pct}%"></span></div>
+
+  <h2>Overnight queue</h2>
+  ${queueAction}
+
+  <h2>Steps</h2>
+  <div class="steps">${stepRows || '<div class="empty">no steps</div>'}</div>
+
+  ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}
+</div>`;
+  return layout("nightly", body);
 }
 
 /** Render a run's REPORT.md (plain — escaped <pre>). */

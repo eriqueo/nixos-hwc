@@ -14,9 +14,9 @@ import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { nightlyCardProjects, setCardStatus, readReport, NB_PREFIX } from "../sources/nightly-cards.js";
+import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, NB_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderSrDetail, renderProjectDetail, renderReport } from "./render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderSr, renderSrDetail, renderProjectDetail, renderReport } from "./render.js";
 
 export interface HttpShellConfig {
   port: number;
@@ -227,7 +227,9 @@ export function createShell(cfg: HttpShellConfig) {
             return;
           }
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          if (id.startsWith(SR_PREFIX) && cfg.srGauntletDir) {
+          if (id.startsWith(NB_PREFIX)) {
+            res.end(renderNightlyProject(item));
+          } else if (id.startsWith(SR_PREFIX) && cfg.srGauntletDir) {
             // SR items render in the SR2-style tabbed layout (Gameplan/Thread/Details).
             const run = typeof (item.payload as { run?: unknown }).run === "string"
               ? (item.payload as { run: string }).run
@@ -244,17 +246,25 @@ export function createShell(cfg: HttpShellConfig) {
         }
         if (method === "GET" && url.startsWith("/report/")) {
           const id = decodeURIComponent(url.slice("/report/".length));
-          const item = mirror().find((m) => m.id === id);
-          const run = item && typeof (item.payload as { run?: unknown }).run === "string"
-            ? (item.payload as { run: string }).run
-            : "";
           let report: string | null = null;
-          if (item && run) {
-            if (id.startsWith(NB_PREFIX) && cfg.vaultDir) report = readReport(cfg.vaultDir, run);
-            else if (id.startsWith(SR_PREFIX) && cfg.srGauntletDir) report = readReport(cfg.srGauntletDir, run);
+          let title = id;
+          if (id.startsWith("nbrun:") && cfg.vaultDir) {
+            // a nightly-build step's run dir (passed from the project detail)
+            const run = id.slice("nbrun:".length);
+            report = readReport(cfg.vaultDir, run);
+            title = run;
+          } else {
+            const item = mirror().find((m) => m.id === id);
+            const run = item && typeof (item.payload as { run?: unknown }).run === "string"
+              ? (item.payload as { run: string }).run
+              : "";
+            if (item && run && id.startsWith(SR_PREFIX) && cfg.srGauntletDir) {
+              report = readReport(cfg.srGauntletDir, run);
+            }
+            title = item ? String((item.payload as { title?: unknown }).title ?? id) : id;
           }
           res.writeHead(report ? 200 : 404, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderReport(item ? String((item.payload as { title?: unknown }).title ?? id) : id, report));
+          res.end(renderReport(title, report));
           return;
         }
 
@@ -283,10 +293,13 @@ export function createShell(cfg: HttpShellConfig) {
             return redirectTo(res, "/");
           }
           if (url === "/card/queue") {
-            // GUI for the Phase-4 gate: flip a nightly-builds card's status in
-            // the vault (draft↔queued). run.sh @ 01:30 still does the execution.
-            const to = body.get("to") === "queued" ? "queued" : "draft";
-            if (cfg.vaultDir && id.startsWith(NB_PREFIX)) setCardStatus(cfg.vaultDir, id, to);
+            // GUI for the Phase-4 gate: queue/unqueue a project's next step in the
+            // vault. run.sh @ 01:30 still does the execution.
+            const goalId = parseNbId(id);
+            if (cfg.vaultDir && goalId) {
+              if (body.get("to") === "queued") queueNextStep(cfg.vaultDir, goalId);
+              else unqueueStep(cfg.vaultDir, goalId);
+            }
             return redirectTo(res, `/project/${encodeURIComponent(id)}`);
           }
           if (url === "/nightly/toggle") {
