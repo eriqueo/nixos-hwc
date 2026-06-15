@@ -21,6 +21,12 @@ let
   # WORKBENCH_PALETTE). Identical contract to tasq's paletteJson.
   colors = lib.filterAttrs (_: v: builtins.isString v)
     (((config.hwc.home.theme or {}).colors or {}));
+
+  # Late binding: the mail peer is NOT assumed to be a local binary. Derive its
+  # launch command from the single declaration in the shell domain — on the
+  # laptop mail lives on the server, so this is "ssh -t server aerc"; elsewhere
+  # it falls back to a bare "aerc". Same fact the zellij layout derives.
+  aercCmd = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
 in
 {
   imports = [ inputs.workbench.homeManagerModules.workbench ];
@@ -67,13 +73,18 @@ in
       gatewayUrl = cfg.gatewayUrl;
       offline = cfg.offline;
       hubsDir = cfg.hubsDir;
+      # Peer launch overrides (late binding). Mail runs wherever the shell alias
+      # says — on the laptop that's the server over ssh, so DON'T bake a local
+      # aerc onto PATH; the launcher invokes `ssh -t server aerc` instead.
+      launchers.aerc = aercCmd;
       extraRuntimePackages = with pkgs; [
         zellij        # the multiplexer workbench drives
         yazi          # peer pane: files
         neovim        # peer pane: editor (nvim --listen)
-        aerc          # peer pane: mail
+        # mail (aerc) is NOT a local binary here — see launchers.aerc above.
+        # Only bake a local aerc when no remote alias redirects it.
         # todui + khalt come from their own HM modules already on PATH.
-      ];
+      ] ++ lib.optional (aercCmd == "aerc") aerc;
     };
   };
 }
