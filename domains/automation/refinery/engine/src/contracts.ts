@@ -49,17 +49,26 @@ export interface GateModule {
   decide(verdict: GateVerdict): GateDecision;
 }
 
-export const ManifestSchema = z.object({
-  genre: z.string().min(1),
+// A Profile (formerly "manifest") is the data-driven recipe for one genre of
+// work — which gates fire, in what execute mode, with which effectors and LLM.
+// New genres are new profiles; the engine core never changes. Shape mirrors
+// lead_scout's profile model (id/label/enabled/llmProvider + the pipeline).
+export const ProfileSchema = z.object({
+  genre: z.string().min(1), // identity key; links item.genre → profile
+  label: z.string().min(1).optional(), // human-facing name for the board
   source: z.string().min(1),
   gates: z.array(z.string().min(1)).min(1),
-  // executeMode + effectors are declared here for downstream slices (execute
-  // mode selection, post-pass effectors). The current stage runner only
-  // consumes `gates`; these two fields are validated but not yet acted on.
+  // executeMode + effectors are consumed by the execute/integrate effectors,
+  // not the stage runner (which only walks `gates`).
   executeMode: z.string().min(1),
   effectors: z.array(z.string().min(1)),
+  // enabled gates whether triage may route to this profile (default true).
+  enabled: z.boolean().optional(),
+  // llmProvider selects the LlmPort adapter (claude-cli | anthropic-api |
+  // ollama); default "claude-cli". Late-bound by the adapter resolver.
+  llmProvider: z.string().min(1).optional(),
 });
-export type Manifest = z.infer<typeof ManifestSchema>;
+export type Profile = z.infer<typeof ProfileSchema>;
 
 export interface ItemStore {
   load(id: string): Promise<Item | null>;

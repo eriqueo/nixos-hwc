@@ -4,7 +4,7 @@
 // from flags/env; no hardcoded paths.
 
 import { readFileSync } from "node:fs";
-import { parseManifest } from "./manifest.js";
+import { parseProfile } from "./profile.js";
 import { gateList } from "./gates/index.js";
 import { makeWriteSpecEffector } from "./effectors/write-spec.js";
 import { MarkdownItemStore } from "./stores/markdown-store.js";
@@ -15,7 +15,7 @@ interface Args {
   genre: string;
   input: string;
   id: string;
-  manifest: string;
+  profile: string;
   storeDir: string;
   scratchDir: string;
 }
@@ -34,7 +34,7 @@ function parseArgs(argv: string[]): Args {
     genre,
     input,
     id: get("--id", slug || "item"),
-    manifest: get("--manifest", `manifests/${genre}.yaml`),
+    profile: get("--profile", `profiles/${genre}.yaml`),
     storeDir: get("--store-dir", ".scratch/items"),
     scratchDir: get("--scratch-dir", ".scratch/specs"),
   };
@@ -42,12 +42,12 @@ function parseArgs(argv: string[]): Args {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const manifest = parseManifest(readFileSync(args.manifest, "utf8"));
+  const profile = parseProfile(readFileSync(args.profile, "utf8"));
   const llm = makeClaudeLlm();
   const result = await runGenreOnce(
     { id: args.id, input: args.input },
     {
-      manifest,
+      profile,
       gates: gateList(llm),
       integrate: makeWriteSpecEffector({ scratchDir: args.scratchDir }, llm),
       store: new MarkdownItemStore(args.storeDir),

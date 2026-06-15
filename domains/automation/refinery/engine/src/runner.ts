@@ -2,7 +2,7 @@ import {
   GateModule,
   Item,
   ItemStore,
-  Manifest,
+  Profile,
 } from "./contracts.js";
 import { UnknownGateError, UnknownStageError } from "./errors.js";
 
@@ -20,9 +20,9 @@ export interface RunPassResult {
   stoppedBy?: { stage: string; reason: "parked" | "failed" };
 }
 
-function indexGates(manifest: Manifest, gates: GateModule[]): GateModule[] {
+function indexGates(profile: Profile, gates: GateModule[]): GateModule[] {
   const byId = new Map(gates.map((g) => [g.id, g]));
-  return manifest.gates.map((id) => {
+  return profile.gates.map((id) => {
     const g = byId.get(id);
     if (!g) throw new UnknownGateError(id);
     return g;
@@ -37,12 +37,12 @@ function startIndex(ordered: GateModule[], stage: string): number {
 
 export async function runPass(
   itemIn: Item,
-  manifest: Manifest,
+  profile: Profile,
   gates: GateModule[],
   deps: RunnerDeps,
 ): Promise<RunPassResult> {
   const clock = deps.clock ?? defaultClock;
-  const ordered = indexGates(manifest, gates);
+  const ordered = indexGates(profile, gates);
   let item: Item = {
     ...itemIn,
     history: [...itemIn.history],
@@ -95,10 +95,10 @@ export async function runPass(
 
 export interface RewindOpts {
   clock?: Clock;
-  // When given, rewind validates that toStage is one of the manifest's gates
+  // When given, rewind validates that toStage is one of the profile's gates
   // and throws UnknownStageError at the call site instead of deferring the
   // failure to the next runPass.
-  manifest?: Manifest;
+  profile?: Profile;
 }
 
 export function rewind(
@@ -108,7 +108,7 @@ export function rewind(
   opts: RewindOpts = {},
 ): Item {
   const clock = opts.clock ?? defaultClock;
-  if (opts.manifest && !opts.manifest.gates.includes(toStage)) {
+  if (opts.profile && !opts.profile.gates.includes(toStage)) {
     throw new UnknownStageError(toStage);
   }
   return {

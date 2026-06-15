@@ -1,8 +1,8 @@
 // Gate registry — Eric's engineering canon as executable gate modules.
 //
 // Each factory takes the LLM port and returns a GateModule (slice 03's contract).
-// makeGateRegistry builds the id→module map the runner resolves manifest gate ids
-// through; gateList returns them as the array runPass consumes. A manifest's
+// makeGateRegistry builds the id→module map the runner resolves profile gate ids
+// through; gateList returns them as the array runPass consumes. A profile's
 // pipeline is the subset of these whose applies() matches the item's traits.
 
 import { GateModule } from "../contracts.js";
@@ -33,7 +33,7 @@ export function gateList(llm: LlmPort): GateModule[] {
   return GATE_FACTORIES.map((make) => make(llm));
 }
 
-/** Build the id→module registry the runner resolves manifest gate ids through. */
+/** Build the id→module registry the runner resolves profile gate ids through. */
 export function makeGateRegistry(llm: LlmPort): Map<string, GateModule> {
   const registry = new Map<string, GateModule>();
   for (const gate of gateList(llm)) {
