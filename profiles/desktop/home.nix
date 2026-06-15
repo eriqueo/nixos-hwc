@@ -69,10 +69,10 @@
 
       # Calendar TUI (forked khal: zoom views + space-leader keys)
       khalt.enable = lib.mkDefault true;
+      khalt.defaultView = lib.mkDefault "month";  # open in the month grid
 
-      # TUI ops stack — peer first-class panes + the host that orchestrates them
-      todui.enable = lib.mkDefault true;     # tasks (peer of khalt)
-      khalt.enable = lib.mkDefault true;     # calendar (forked ikhal, peer of todui)
+      # TUI ops host that orchestrates the peer panes (todui/khalt/yazi/nvim).
+      # todui + khalt are enabled above (Task management / Calendar TUI).
       workbench.enable = lib.mkDefault true; # Textual ops host (zellij-driven)
 
       # Development & Automation
