@@ -107,6 +107,16 @@
       url = "git+file:///home/eric/600_apps/khalt";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # workbench — Textual TUI ops host (own repo at ~/600_apps/workbench),
+    # zellij-orchestrated, consumed by domains/home/apps/workbench. Same PINNED
+    # git+file model as todui/khalt: tracks the committed HEAD, locked by
+    # flake.lock. To ship a change: commit in ~/600_apps/workbench, then
+    # `nix flake update workbench`, then rebuild.
+    workbench = {
+      url = "git+file:///home/eric/600_apps/workbench";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================

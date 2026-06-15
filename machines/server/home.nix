@@ -11,6 +11,17 @@
   # hostnames out of roles; the rest of the mail menu is in the mail role).
   hwc.mail.health.webhook.url = "https://hwc-server.ocelot-wahoo.ts.net:10000/webhook/mail-health";
 
+  # Calendar → Radicale (self-hosted CalDAV, same backend as tasks). Retires
+  # the iCloud account pairs the mail role declares (vdirsyncer no longer
+  # generates them once radicale is on). This gives hwc-server the
+  # calendars-radicale/ vdir the MCP's hwc_calendar tool reads.
+  hwc.mail.calendar.radicale.enable = true;
+
+  # khalt (forked khal/ikhal) — supersedes plain khal. Headless server enables
+  # it only to materialise the khalt package + ~/.config/khalt/config that the
+  # MCP gateway points HWC_KHAL_BIN / HWC_KHALT_CONFIG at. No TUI use here.
+  hwc.home.apps.khalt.enable = true;
+
   # Claude Code: server runs claude from an ad-hoc npm global, so do NOT enable
   # the Nix package/Obsidian-cert here. Opt into the shared, version-controlled
   # skill/agent/command/CLAUDE.md set only — symlinked from ~/.claude-config.

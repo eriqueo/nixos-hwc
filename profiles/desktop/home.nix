@@ -11,6 +11,7 @@
 {
   imports = [
     ../../domains/mail/index.nix
+    ../../domains/home/keymap/index.nix   # unified keymap source of truth (hwc.home.keymap.grammar)
   ];
 
   #======================================================================
@@ -61,6 +62,7 @@
 
       # Terminal Multiplexer
       tmux.enable = lib.mkDefault true;
+      zellij.enable = lib.mkDefault true;   # workbench's pane host
 
       # Task management
       tuxedo.enable = lib.mkDefault true;
@@ -68,6 +70,11 @@
 
       # Calendar TUI (forked khal: zoom views + space-leader keys)
       khalt.enable = lib.mkDefault true;
+      khalt.defaultView = lib.mkDefault "month";  # open in the month grid
+
+      # TUI ops host that orchestrates the peer panes (todui/khalt/yazi/nvim).
+      # todui + khalt are enabled above (Task management / Calendar TUI).
+      workbench.enable = lib.mkDefault true; # Textual ops host (zellij-driven)
 
       # Development & Automation
       n8n.enable = lib.mkDefault false;
