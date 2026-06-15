@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
-import { renderGauntlet, renderHopperPage } from "../src/shells/render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderProjectDetail } from "../src/shells/render.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
@@ -24,6 +24,7 @@ function setup(triageLlm: LlmPort): { cfg: HttpShellConfig; cleanup: () => void 
       itemsDir: join(root, "items"),
       profilesDir,
       profileStatePath: join(root, "state.json"),
+      nightlyConfigPath: join(root, "nightly.json"),
       triageProvider: "claude-cli",
       clock: fixedClock,
       triageLlm,
@@ -117,7 +118,78 @@ test("profile toggle flips enabled via the catalog overlay", async () => {
   }
 });
 
-test("renderGauntlet colors a parked project and shows amend/rewind; renderHopperPage shows intake", () => {
+test("setNightly flags a project; bumpNightly changes its priority", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    const p: Item = {
+      id: "n1", genre: "project-ideation", phase: "premortem", phaseStatus: "pending",
+      payload: { title: "n1" }, history: [],
+    };
+    await shell.store.save(p);
+    await shell.setNightly("n1", true);
+    let item = (await shell.store.load("n1"))!;
+    assert.equal(item.nightly, true);
+    assert.equal(item.nightlyPriority, 0);
+    await shell.bumpNightly("n1", "up");
+    item = (await shell.store.load("n1"))!;
+    assert.equal(item.nightlyPriority, 1);
+    await shell.setNightly("n1", false);
+    assert.equal((await shell.store.load("n1"))!.nightly, false);
+  } finally {
+    cleanup();
+  }
+});
+
+test("promote turns an untriaged idea into a project at its profile's first phase", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    const idea: Item = {
+      id: "idea1", genre: UNTRIAGED, phase: "triage", phaseStatus: "parked",
+      parkedReason: "no clear genre", payload: { title: "raw" }, history: [],
+    };
+    await shell.store.save(idea);
+    await shell.promote("idea1", "project-ideation");
+    const item = (await shell.store.load("idea1"))!;
+    assert.equal(item.genre, "project-ideation");
+    assert.equal(item.phase, "stepwise-refinement");
+    assert.equal(item.phaseStatus, "pending");
+    assert.equal(item.history.at(-1)!.status, "entered");
+  } finally {
+    cleanup();
+  }
+});
+
+test("renderProjectDetail shows actions + nightly toggle; renderNightly highlights the top N", () => {
+  const profiles = [
+    { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
+      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
+  ];
+  const parked: Item = {
+    id: "d1", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
+    parkedReason: "needs a call", payload: { title: "a project" }, history: [], nightly: true,
+  };
+  const detail = renderProjectDetail(parked, profiles, profiles);
+  assert.ok(detail.includes('action="/amend"'));
+  assert.ok(detail.includes('action="/rewind"'));
+  assert.ok(detail.includes('action="/nightly/toggle"'));
+  assert.ok(detail.includes("remove from nightly"), "nightly already on → offers removal");
+  assert.ok(detail.includes('value="stepwise-refinement"'));
+
+  const idea: Item = {
+    id: "d2", genre: UNTRIAGED, phase: "triage", phaseStatus: "parked",
+    payload: { title: "raw idea" }, history: [],
+  };
+  assert.ok(renderProjectDetail(idea, profiles, profiles).includes('action="/promote"'), "ideas can be promoted");
+
+  const n = renderNightly([parked], 1, profiles);
+  assert.ok(n.includes("tonight"));
+  assert.ok(n.includes('action="/nightly/config"'));
+});
+
+test("renderGauntlet colors a parked project and links to detail; renderHopperPage shows intake", () => {
   const profiles = [
     { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
@@ -130,9 +202,8 @@ test("renderGauntlet colors a parked project and shows amend/rewind; renderHoppe
   const g = renderGauntlet(parked, profiles);
   assert.ok(g.includes("a project"));
   assert.ok(g.includes("#b8bb26"), "card tinted by profile color");
-  assert.ok(g.includes('action="/amend"'));
-  assert.ok(g.includes('action="/rewind"'));
-  assert.ok(g.includes('value="stepwise-refinement"'), "rewind targets = earlier phases");
+  assert.ok(g.includes('href="/project/x"'), "card links to its detail page");
+  assert.ok(!g.includes('action="/amend"'), "actions live on the detail page, not the card");
   assert.ok(!g.includes('action="/profiles/toggle"'), "no toggle — profiles are a legend");
   // Intake lives on the Hopper page, over untriaged ideas.
   const idea: Item[] = [

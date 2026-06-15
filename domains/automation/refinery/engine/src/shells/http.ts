@@ -1,41 +1,41 @@
-// HTTP shell over the engine core (hexagonal: a shell that translates inbound
-// HTTP into core calls). Serves the interactive board and the intake/amend/
-// rewind/profile-toggle endpoints, operating on the MarkdownItemStore + the
-// ProfileCatalog + triage. Engine-only items — it never touches the live
-// gauntlet hopper. All config late-bound from the environment.
+// HTTP shell over the engine core (hexagonal: a shell translating inbound HTTP
+// into core calls). Serves the Gauntlet / Hopper / Nightly pages, a per-project
+// detail+edit page, and the intake/amend/rewind/promote/nightly endpoints,
+// operating on the MarkdownItemStore + ProfileCatalog + triage. Engine-only
+// items. All config late-bound from the environment.
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
-import { Item } from "../contracts.js";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { ProfileCatalog } from "../profiles/catalog.js";
 import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { renderGauntlet, renderHopperPage } from "./render.js";
-import { readHopperCards, renderHopper } from "./hopper.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderProjectDetail } from "./render.js";
 
 export interface HttpShellConfig {
   port: number;
   itemsDir: string;
   profilesDir: string;
   profileStatePath: string;
+  nightlyConfigPath: string;
   triageProvider: string;
   clock: () => string;
-  vaultDir?: string; // for the read-only /hopper route; optional
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
 }
 
 export function configFromEnv(): HttpShellConfig {
   const home = process.env.HOME ?? "/tmp";
+  const base = `${home}/.local/state/refinery`;
   return {
     port: Number(process.env.REFINERY_PORT || 8060),
-    itemsDir: process.env.REFINERY_ITEMS_DIR || `${home}/.local/state/refinery/items`,
+    itemsDir: process.env.REFINERY_ITEMS_DIR || `${base}/items`,
     profilesDir: process.env.REFINERY_PROFILES_DIR || "profiles",
-    profileStatePath:
-      process.env.REFINERY_PROFILE_STATE || `${home}/.local/state/refinery/profiles.json`,
+    profileStatePath: process.env.REFINERY_PROFILE_STATE || `${base}/profiles.json`,
+    nightlyConfigPath: process.env.REFINERY_NIGHTLY_CONFIG || `${base}/nightly.json`,
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
-    vaultDir: process.env.REFINERY_VAULT_DIR,
     clock: () => new Date().toISOString(),
   };
 }
@@ -56,14 +56,28 @@ function slug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "item";
 }
 
-function redirect(res: ServerResponse): void {
-  res.writeHead(303, { location: "/" });
+function redirectTo(res: ServerResponse, location: string): void {
+  res.writeHead(303, { location });
   res.end();
 }
 
 export function createShell(cfg: HttpShellConfig) {
   const store = new MarkdownItemStore(cfg.itemsDir);
   const catalog = new ProfileCatalog({ dir: cfg.profilesDir, statePath: cfg.profileStatePath });
+
+  const readMaxPerNight = (): number => {
+    if (!existsSync(cfg.nightlyConfigPath)) return 3;
+    try {
+      const v = (JSON.parse(readFileSync(cfg.nightlyConfigPath, "utf8")) as { maxPerNight?: number }).maxPerNight;
+      return typeof v === "number" && v >= 0 ? v : 3;
+    } catch {
+      return 3;
+    }
+  };
+  const writeMaxPerNight = (n: number): void => {
+    mkdirSync(dirname(cfg.nightlyConfigPath), { recursive: true });
+    writeFileSync(cfg.nightlyConfigPath, JSON.stringify({ maxPerNight: n }, null, 2));
+  };
 
   async function intake(text: string): Promise<void> {
     const enabled = catalog.enabled();
@@ -81,14 +95,13 @@ export function createShell(cfg: HttpShellConfig) {
     if (!item) return;
     const payload = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
     const amendments = Array.isArray(payload.amendments) ? payload.amendments : [];
-    const updated: Item = {
+    await store.save({
       ...item,
-      phaseStatus: "pending", // re-run the parked gate with the amendment in context
+      phaseStatus: "pending",
       parkedReason: undefined,
       payload: { ...payload, amendments: [...amendments, note] },
       history: [...item.history, { phase: item.phase, status: "entered", at: cfg.clock(), note }],
-    };
-    await store.save(updated);
+    });
   }
 
   async function doRewind(id: string, toPhase: string, note: string): Promise<void> {
@@ -97,55 +110,115 @@ export function createShell(cfg: HttpShellConfig) {
     await store.save(rewind(item, toPhase, note, { clock: cfg.clock }));
   }
 
+  async function setNightly(id: string, nightly: boolean): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    await store.save({ ...item, nightly, nightlyPriority: item.nightlyPriority ?? 0 });
+  }
+
+  async function bumpNightly(id: string, dir: "up" | "down"): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    const delta = dir === "up" ? 1 : -1;
+    await store.save({ ...item, nightlyPriority: (item.nightlyPriority ?? 0) + delta });
+  }
+
+  async function promote(id: string, genre: string): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    const profile = catalog.get(genre);
+    if (!profile) return;
+    await store.save({
+      ...item,
+      genre,
+      phase: profile.gates[0] ?? "triage",
+      phaseStatus: "pending",
+      parkedReason: undefined,
+      history: [...item.history, { phase: profile.gates[0] ?? "triage", status: "entered", at: cfg.clock(), note: `promoted to ${genre}` }],
+    });
+  }
+
   const server = createServer((req, res) => {
     void (async () => {
       try {
-        const url = req.url ?? "/";
-        if (req.method === "GET" && url === "/healthz") {
+        const url = (req.url ?? "/").split("?")[0]!;
+        const method = req.method ?? "GET";
+
+        if (method === "GET" && url === "/healthz") {
           res.writeHead(200, { "content-type": "text/plain" });
           res.end("ok");
           return;
         }
-        if (req.method === "GET" && (url === "/" || url === "/hopper")) {
+        if (method === "GET" && (url === "/" || url === "/hopper")) {
           const [items, profiles] = [await store.list(), catalog.list()];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           if (url === "/hopper") {
-            // Hopper = raw untriaged ideas + the intake box.
-            const ideas = items.filter((i) => i.genre === UNTRIAGED);
-            res.end(renderHopperPage(ideas, profiles));
+            res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles));
           } else {
-            // Gauntlet = triaged projects moving through phases.
-            const projects = items.filter((i) => i.genre !== UNTRIAGED);
-            res.end(renderGauntlet(projects, profiles));
+            res.end(renderGauntlet(items.filter((i) => i.genre !== UNTRIAGED), profiles));
           }
           return;
         }
-        if (req.method === "GET" && url === "/cards") {
-          // Legacy read-only view of the nightly-builds gauntlet cards.
-          const cards = cfg.vaultDir ? readHopperCards(cfg.vaultDir) : [];
+        if (method === "GET" && url === "/nightly") {
+          const [items, profiles] = [await store.list(), catalog.list()];
+          const flagged = items
+            .filter((i) => i.nightly)
+            .sort((a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderHopper(cards));
+          res.end(renderNightly(flagged, readMaxPerNight(), profiles));
           return;
         }
-        if (req.method === "POST") {
+        if (method === "GET" && url.startsWith("/project/")) {
+          const id = decodeURIComponent(url.slice("/project/".length));
+          const item = await store.load(id);
+          if (!item) {
+            res.writeHead(404, { "content-type": "text/plain" });
+            res.end("no such project");
+            return;
+          }
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderProjectDetail(item, catalog.list(), catalog.enabled()));
+          return;
+        }
+
+        if (method === "POST") {
           const body = await readBody(req);
+          const id = body.get("id") ?? "";
           if (url === "/intake") {
             const text = (body.get("text") ?? "").trim();
             if (text) await intake(text);
-            return redirect(res);
+            return redirectTo(res, "/hopper");
           }
           if (url === "/amend") {
-            await amend(body.get("id") ?? "", (body.get("note") ?? "").trim());
-            return redirect(res);
+            await amend(id, (body.get("note") ?? "").trim());
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
           }
           if (url === "/rewind") {
-            await doRewind(body.get("id") ?? "", body.get("toPhase") ?? "", (body.get("note") ?? "").trim());
-            return redirect(res);
+            await doRewind(id, body.get("toPhase") ?? "", (body.get("note") ?? "").trim());
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+          }
+          if (url === "/promote") {
+            await promote(id, body.get("genre") ?? "");
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+          }
+          if (url === "/nightly/toggle") {
+            await setNightly(id, body.get("nightly") === "true");
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+          }
+          if (url === "/nightly/bump") {
+            const dir = body.get("dir") === "up" ? "up" : "down";
+            await bumpNightly(id, dir);
+            return redirectTo(res, "/nightly");
+          }
+          if (url === "/nightly/config") {
+            const n = Number(body.get("maxPerNight"));
+            if (Number.isFinite(n) && n >= 0) writeMaxPerNight(Math.floor(n));
+            return redirectTo(res, "/nightly");
           }
           if (url === "/profiles/toggle") {
             const genre = body.get("genre") ?? "";
             if (genre) catalog.setEnabled(genre, body.get("enabled") === "true");
-            return redirect(res);
+            return redirectTo(res, "/");
           }
         }
         res.writeHead(404, { "content-type": "text/plain" });
@@ -157,5 +230,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, intake, amend, doRewind };
+  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote };
 }
