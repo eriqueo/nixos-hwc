@@ -93,12 +93,24 @@ export async function runPass(
   return { item, ran };
 }
 
+export interface RewindOpts {
+  clock?: Clock;
+  // When given, rewind validates that toStage is one of the manifest's gates
+  // and throws UnknownStageError at the call site instead of deferring the
+  // failure to the next runPass.
+  manifest?: Manifest;
+}
+
 export function rewind(
   item: Item,
   toStage: string,
   note: string,
-  clock: Clock = defaultClock,
+  opts: RewindOpts = {},
 ): Item {
+  const clock = opts.clock ?? defaultClock;
+  if (opts.manifest && !opts.manifest.gates.includes(toStage)) {
+    throw new UnknownStageError(toStage);
+  }
   return {
     ...item,
     stage: toStage,

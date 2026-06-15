@@ -145,7 +145,9 @@ test("rewind moves backward, sets pending, appends a 'rewound' history entry; re
   const first = await runPass(item, manifest, gates, { store, clock: fixedClock });
   assert.equal(first.item.stage, "g3");
 
-  const rewound = rewind(first.item, "g1", "found a problem upstream", fixedClock);
+  const rewound = rewind(first.item, "g1", "found a problem upstream", {
+    clock: fixedClock,
+  });
   assert.equal(rewound.stage, "g1");
   assert.equal(rewound.stageStatus, "pending");
   const last = rewound.history.at(-1)!;
@@ -166,6 +168,18 @@ test("rewind moves backward, sets pending, appends a 'rewound' history entry; re
   });
   assert.deepEqual(ranIds, ["g1", "g2", "g3"]);
   assert.deepEqual(replay.ran, ["g1", "g2", "g3"]);
+});
+
+test("rewind throws UnknownStageError when toStage isn't in the manifest (validated)", () => {
+  resetClock();
+  const item = makeItem({ stage: "g3", stageStatus: "passed" });
+  assert.throws(
+    () => rewind(item, "ghost", "typo", { clock: fixedClock, manifest }),
+    /stage not present in manifest gates: ghost/,
+  );
+  // Without a manifest, rewind stays permissive (runPass guards on next pass).
+  const lenient = rewind(item, "ghost", "deferred", { clock: fixedClock });
+  assert.equal(lenient.stage, "ghost");
 });
 
 test("runPass throws UnknownGateError when manifest references a missing gate", async () => {
