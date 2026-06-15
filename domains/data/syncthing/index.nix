@@ -8,7 +8,7 @@
 #   - machines/server/config.nix (sync with laptop)
 #   - machines/laptop/config.nix (sync with server)
 
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 let
   cfg = config.hwc.data.syncthing;
 in
@@ -45,6 +45,31 @@ in
           devices = lib.mkOption {
             type = lib.types.listOf lib.types.str;
             description = "Device names to sync this folder with";
+          };
+          type = lib.mkOption {
+            type = lib.types.enum [ "sendreceive" "sendonly" "receiveonly" ];
+            default = "sendreceive";
+            description = ''
+              Syncthing folder direction. `sendonly` = this device NEVER accepts
+              peer changes — use when this device is the canonical writer and its
+              only Syncthing role is to feed read-only mirrors (e.g. a git-managed
+              vault pushed to a receive-only phone). This is the structural guard
+              that makes it impossible for a stale peer to clobber the source.
+            '';
+          };
+          ignores = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [];
+            example = [ ".git" ".trash/" ".obsidian/workspace.json" ];
+            description = ''
+              Syncthing ignore patterns for this folder, written declaratively
+              to <path>/.stignore. Syncthing never syncs .stignore between
+              devices (it is per-device, local-only), so this is the ONLY way
+              to guarantee a folder excludes paths like .git on every machine.
+              A vault that is also a git repo MUST list .git here, or Syncthing
+              will replicate .git internals and a stale peer can corrupt history.
+              Empty (default) = no .stignore is managed for this folder.
+            '';
           };
           versioning = {
             type = lib.mkOption {
@@ -92,7 +117,7 @@ in
         ) cfg.devices;
 
         folders = lib.mapAttrs (_name: folder: {
-          inherit (folder) path devices;
+          inherit (folder) path devices type;
           versioning = {
             type = folder.versioning.type;
             params.maxAge = folder.versioning.maxAge;
@@ -100,5 +125,44 @@ in
         }) cfg.folders;
       };
     };
+
+    #========================================================================
+    # DECLARATIVE .stignore PROVISIONING
+    #
+    # Syncthing does NOT sync .stignore between devices, so a per-device file
+    # is the only place .git (and other excludes) can be guaranteed. This
+    # oneshot writes <path>/.stignore for every folder with non-empty
+    # `ignores`, before syncthing starts, so the guard is in place on first
+    # scan. Without this, a git-backed vault folder leaks .git into the sync
+    # set and a stale peer can clobber committed history.
+    #========================================================================
+    systemd.services.syncthing-stignore =
+      let
+        owner = config.services.syncthing.user;
+        foldersWithIgnores = lib.filterAttrs (_n: f: f.ignores != []) cfg.folders;
+        writeOne = name: folder:
+          let
+            content = lib.concatStringsSep "\n" folder.ignores + "\n";
+            src = pkgs.writeText "stignore-${name}" content;
+            dest = "${folder.path}/.stignore";
+          in ''
+            if [ -d ${lib.escapeShellArg folder.path} ]; then
+              install -D -m 0644 -o ${owner} -g users ${src} ${lib.escapeShellArg dest}
+              echo "syncthing-stignore: wrote ${dest}"
+            else
+              echo "syncthing-stignore: ${folder.path} missing — skipped" >&2
+            fi
+          '';
+      in
+      lib.mkIf (foldersWithIgnores != {}) {
+        description = "Provision declarative Syncthing .stignore files";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "syncthing.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = lib.concatStringsSep "\n" (lib.mapAttrsToList writeOne foldersWithIgnores);
+      };
   };
 }

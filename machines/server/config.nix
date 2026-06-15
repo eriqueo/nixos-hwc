@@ -242,7 +242,26 @@
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
       "600_apps"     = { path = "/home/eric/600_apps";     devices = [ "hwc-laptop" ]; };
-      "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-laptop" "hwc-phone" ]; };
+      "brain"        = {
+        path = "/home/eric/900_vaults/brain";
+        # Tier-2: git is the only laptop<->server vault sync (see
+        # hwc.automation.vaultSync). Syncthing's sole remaining job here is to
+        # feed the receive-only phone mirror, so the server is the sole sender
+        # (sendonly) and the laptop is NOT a peer. sendonly guarantees a stale
+        # phone can never push vault changes back and clobber the source.
+        devices = [ "hwc-phone" ];
+        type = "sendonly";
+        # Vault is a git repo: .git MUST be excluded or Syncthing replicates
+        # git internals and a stale peer can clobber committed history.
+        ignores = [
+          ".git"
+          ".obsidian/workspace.json"
+          ".obsidian/workspace-mobile.json"
+          ".obsidian/plugins/*/data.json"
+          ".trash/"
+          ".DS_Store"
+        ];
+      };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
       "inbox-mobile" = { path = "/mnt/vaults/inbox-mobile"; devices = [ "hwc-phone" ]; };
@@ -284,6 +303,12 @@
   # profile) because the pipeline checkout (~/700_datax/sr_gauntlet) and its
   # credential sources only exist on hwc-server.
   hwc.automation.srGauntlet.enable = true;
+
+  # Brain vault git sync — Tier-2 transport. Every 15 min: commit local vault
+  # changes, pull the hub (laptop's commits), push server changes up. Replaces
+  # Syncthing as the laptop<->server vault path. Serialized with brain-mcp via
+  # an flock on <vault>/.git/.sync.lock.
+  hwc.automation.vaultSync.enable = true;
 
   # Unified lead pipeline comes from the business role.
 

@@ -277,11 +277,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781421497,
-        "narHash": "sha256-oLm0OZ9voo+uqqTeJNJDtlS3ZRPBCRFrZ6jw0CKzvZY=",
+        "lastModified": 1781472540,
+        "narHash": "sha256-Ctnjd0Qy+EDzgNJIa/T56XsPZcEtA8+g7eHcCM6nT/0=",
         "ref": "refs/heads/main",
-        "rev": "527654cc26b01be290fcb1de4d20f5736cdfbbea",
-        "revCount": 11,
+        "rev": "fd622505f1ba46b1afd4ed463b504616e6ca0209",
+        "revCount": 1,
         "type": "git",
         "url": "file:///home/eric/600_apps/khalt"
       },
@@ -479,11 +479,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781397407,
+        "lastModified": 1781470884,
         "narHash": "sha256-afcRB+BBhbejqJnPDBYBd1XeKCaMV13kVjFOqdJ6Uys=",
         "ref": "refs/heads/main",
-        "rev": "2a7536c17eb67e503a97721136551682d48638e7",
-        "revCount": 6,
+        "rev": "9f938646595c05ef0b179130cfe09de005333390",
+        "revCount": 1,
         "type": "git",
         "url": "file:///home/eric/600_apps/todui"
       },
