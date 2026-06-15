@@ -66,6 +66,15 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — OKF vault cross-links in rendered markdown. `shells/markdown.ts`
+  now recognizes the OKF link standard — `[text](relative/path.md[#anchor])` —
+  in card bodies and REPORTs (wikilinks are deprecated, so they are not special-
+  cased). The board is home-masked (`ProtectHome=tmpfs`) and can't read arbitrary
+  vault paths, and a relative href would 404 against `/project/…`, so these render
+  as styled, non-navigable `.vlink` spans (path on hover) rather than dead links;
+  http(s) links still render as real `<a>`. A `/note` viewer + read-only vault
+  bind can promote them to live links once cards actually carry OKF links. Engine
+  70/70 (+2).
 - **2026-06-15** — Readable reports + self-explanatory cards. New dependency-free
   `shells/markdown.ts` (`mdToHtml`) renders REPORTs and card bodies as HTML in a
   `.md` block that **wraps** (no more clipped, raw-markdown `<pre>`). Nightly
