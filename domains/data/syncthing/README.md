@@ -47,6 +47,12 @@ hwc.data.syncthing = {
   vault folder MUST declare `.git` in `ignores` or Syncthing replicates `.git` internals and
   a stale peer can silently clobber committed history. The `syncthing-stignore` oneshot writes
   `<path>/.stignore` before `syncthing.service` starts.
+- **Folder direction** is set per folder via `folders.<name>.type`
+  (`sendreceive` default / `sendonly` / `receiveonly`). The `brain` folder is `sendonly` on
+  the server: in Tier-2 the vault syncs by git (see `domains/automation/vault-sync`), and
+  Syncthing's only job is to feed the receive-only phone mirror. `sendonly` guarantees the
+  server never accepts vault changes back from the phone, so a stale phone cannot clobber the
+  source. The laptop is no longer a `brain` peer at all (git-only).
 
 ## Changelog
 
@@ -55,3 +61,5 @@ hwc.data.syncthing = {
   `syncthing-stignore` oneshot). Root-cause fix for the brain-vault git/Syncthing clobber: the
   server had no `.stignore`, so Syncthing was replicating the vault's `.git`. `brain` folder now
   excludes `.git` on both hosts.
+- 2026-06-15: Add per-folder `folders.<name>.type`. Tier-2 cutover: `brain` is now `sendonly`
+  on the server + phone-only (laptop removed → git-only via domains/automation/vault-sync).
