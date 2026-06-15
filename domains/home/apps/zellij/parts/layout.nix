@@ -7,8 +7,22 @@
 # (todui, khalt, aerc, yazi, nvim) into the named panes below. Treating the
 # layout as data (a KDL string) keeps "adding a pane target" a manifest/layout
 # edit, not host code — consistent with the data-driven-rendering principle.
-{ lib }:
+#
+# `mailCommand` is late-bound (not assumed to be a local `aerc` binary): on the
+# laptop, mail lives on the server, so index.nix derives it from the user's
+# `hwc.home.core.shell.aliases.aerc` (e.g. "ssh -t server aerc"). Split into a
+# KDL command + args node so the suspended pane runs the right thing on <ENTER>.
+{ lib, mailCommand ? "aerc" }:
 
+let
+  mailParts = lib.splitString " " mailCommand;
+  mailBin   = builtins.head mailParts;
+  mailArgs  = builtins.tail mailParts;
+  # Trailing ';' terminates the args node so the following start_suspended is a
+  # separate KDL node, not more args. Empty when the command has no args.
+  mailArgsKdl = lib.optionalString (mailArgs != [])
+    (" args " + lib.concatMapStringsSep " " (a: "\"${a}\"") mailArgs + ";");
+in
 {
   workbenchKdl = ''
     // workbench pane grid — peer TUIs, NONE mounted in-process.
@@ -36,7 +50,7 @@
             pane name="yazi" { command "yazi"; start_suspended true; }
         }
         tab name="mail" {
-            pane name="aerc" { command "aerc"; start_suspended true; }
+            pane name="aerc" { command "${mailBin}";${mailArgsKdl} start_suspended true; }
         }
         tab name="edit" {
             pane name="nvim" { command "nvim"; start_suspended true; }

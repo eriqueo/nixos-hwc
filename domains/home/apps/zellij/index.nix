@@ -25,7 +25,12 @@ let
   colors = (config.hwc.home.theme or {}).colors or {};
 
   appearance = import ./parts/appearance.nix { inherit lib colors; };
-  layout     = import ./parts/layout.nix { inherit lib; };
+
+  # Late binding: the mail pane runs the user's actual mail command, not an
+  # assumed local `aerc`. Derived from the single declaration in the shell
+  # domain (on the laptop: "ssh -t server aerc"; falls back to "aerc").
+  mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
+  layout      = import ./parts/layout.nix { inherit lib mailCommand; };
 in
 {
   #============================================================================
