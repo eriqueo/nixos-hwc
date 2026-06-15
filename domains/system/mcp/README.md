@@ -492,6 +492,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-06-15**: Universal Result Contract — `hwc_morning_status`, `hwc_calendar`
+  (list), `hwc_tasks_list`, `hwc_leads` (recent) now attach a `view`
+  (`{kind,title,data,meta}`, new `result.ts` helper + `ResultEnvelope`/`view` in
+  `types.ts`). `backend-manager` dual-emits it as MCP `structuredContent`
+  alongside the unchanged legacy text block, so the workbench TUI tiles (and the
+  future Portal) render with no per-tool adapter; existing prose/LLM readers are
+  unaffected. Producer half of [[universal_result_contract]].
 - **2026-06-11**: Added `hwc_tasks_*` (4 tools) — task CRUD + list management
   over the self-hosted Radicale CalDAV backend (new `executors/caldav.ts`:
   fetch-based PROPFIND/REPORT/PUT/DELETE/MKCALENDAR + VTODO codec with
@@ -547,6 +554,7 @@ domains/system/mcp/
         ├── index.ts
         ├── config.ts
         ├── backend-manager.ts
+        ├── result.ts                    # Universal Result Contract helper (contract(); ResultEnvelope view)
         ├── stdio-backend.ts
         ├── cache.ts
         ├── log.ts
