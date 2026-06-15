@@ -229,4 +229,21 @@ with pkgs;
     # Display in wofi
     echo "$KEYBINDS" | ${wofi}/bin/wofi --dmenu --prompt "Keybindings:" --lines 20 --width 600
   '')
+
+  #============================================================================
+  # REFINERY INTAKE - pop a textbox, POST the sentence to the refinery /intake
+  #============================================================================
+  (writeShellScriptBin "refinery-intake" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+    URL="''${REFINERY_INTAKE_URL:-https://refinery.hwc.iheartwoodcraft.com/intake}"
+    # Empty stdin → wofi --dmenu becomes a free-text entry; Enter returns the typed line.
+    idea=$(${wofi}/bin/wofi --dmenu --prompt "Refinery intake" < /dev/null)
+    [ -n "$idea" ] || exit 0
+    if ${curl}/bin/curl -fsS -X POST --data-urlencode "text=$idea" "$URL" >/dev/null; then
+      ${libnotify}/bin/notify-send "🛠 Refinery" "Intake queued: $idea"
+    else
+      ${libnotify}/bin/notify-send -u critical "🛠 Refinery" "Intake failed (is the board up?)"
+    fi
+  '')
 ]
