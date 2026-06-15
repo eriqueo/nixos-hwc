@@ -17,8 +17,18 @@ function inline(s: string): string {
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
-    // links: [text](http...) — href already escaped; only allow http(s)
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>');
+    // External links: [text](http...) — href already escaped; only allow http(s).
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>')
+    // OKF vault cross-links: [text](relative/path.md[#anchor]) — standard
+    // markdown links into the vault (the OKF link standard; wikilinks are
+    // deprecated). The board is home-masked and can't read arbitrary vault
+    // paths, and a relative href would 404 against /project/… — so render them
+    // as styled, non-navigable spans (path on hover) rather than dead links.
+    // A vault note viewer can promote these to real links later.
+    .replace(
+      /\[([^\]]+)\]\(([^)\s]+\.md(?:#[^)\s]*)?)\)/g,
+      '<span class="vlink" title="$2">$1</span>',
+    );
 }
 
 export function mdToHtml(md: string): string {

@@ -24,6 +24,29 @@ test("mdToHtml renders headings, bold, code, lists, links and escapes HTML", () 
   assert.ok(html.includes('<a href="https://example.com">docs</a>'));
 });
 
+test("mdToHtml renders OKF vault links as styled non-navigable spans, http stays a link", () => {
+  const html = mdToHtml(
+    "See the [design](tech/development/builds/refinery/design.md) and [docs](https://x.io).",
+  );
+  assert.ok(
+    html.includes(
+      '<span class="vlink" title="tech/development/builds/refinery/design.md">design</span>',
+    ),
+    "relative .md link → styled vlink span (no dead href)",
+  );
+  assert.ok(!html.includes('href="tech/'), "vault link is not a navigable href");
+  assert.ok(html.includes('<a href="https://x.io">docs</a>'), "http link unaffected");
+});
+
+test("mdToHtml handles an OKF link with an anchor", () => {
+  const html = mdToHtml("[the open section](/_charter/vault-constitution.md#link-standard)");
+  assert.ok(
+    html.includes(
+      '<span class="vlink" title="/_charter/vault-constitution.md#link-standard">the open section</span>',
+    ),
+  );
+});
+
 test("mdToHtml leaves no raw angle brackets from input (no injection)", () => {
   const html = mdToHtml("<img src=x onerror=alert(1)>");
   assert.ok(!html.includes("<img"), "raw tags escaped");

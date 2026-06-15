@@ -89,6 +89,8 @@ const STYLE = `<style>
   .md pre.code{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
   .md blockquote{border-left:3px solid var(--line);margin:6px 0;padding-left:10px;color:var(--dim)}
   .md a{color:#83a598;overflow-wrap:anywhere}
+  /* OKF vault cross-links: styled but non-navigable (board can't resolve vault paths yet) */
+  .md .vlink{color:#83a598;border-bottom:1px dotted #83a598;cursor:help;overflow-wrap:anywhere}
   /* SR cards + tabbed detail (mirrors the SR2/datax layout) */
   .srgrid{display:flex;flex-wrap:wrap;gap:12px;padding:14px}
   .srcard{display:block;background:var(--panel);border:1px solid var(--line);border-left:4px solid #83a598;border-radius:8px;padding:10px 12px;width:310px}
