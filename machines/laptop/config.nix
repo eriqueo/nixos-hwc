@@ -197,10 +197,27 @@
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-server" ]; };
       "600_apps"     = { path = "/home/eric/600_apps";     devices = [ "hwc-server" ]; };
-      "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-server" ]; };
+      # brain: NOT a Syncthing folder on the laptop. Tier-2 = git is the only
+      # laptop<->server vault sync (clone of the bare hub; Obsidian-git or CLI
+      # pull/push). Removed from Syncthing 2026-06-15 to eliminate the
+      # git-on-a-multi-writer-tree clobber at the root.
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-server" ]; };
     };
   };
+
+  # Brain vault git sync — Tier-2 transport on the laptop. Every 15 min: commit
+  # local vault edits (CLI / Claude Code / Obsidian), pull the hub, push back —
+  # so notes made on the laptop propagate to the server + phone automatically,
+  # no manual push and no dependence on Obsidian being open.
+  # PREREQ: the laptop vault's `origin` must be the bare hub
+  # (eric@hwc-server:/var/lib/vault-backups/git/brain.git) reachable over SSH
+  # non-interactively (passphraseless key / Tailscale SSH) for the eric-run
+  # service to push. Verify after rebuild: `systemctl start brain-vault-sync`.
+  hwc.automation.vaultSync.enable = true;
+  # Event-driven: push within ~3s of any vault CRUD (Claude Code / CLI /
+  # Obsidian), instead of waiting up to the 15-min timer. The timer stays on for
+  # the periodic pull + as a backstop.
+  hwc.automation.vaultSync.watch.enable = true;
 
   # Seagate Backup Plus Drive — NTFS via ntfs3 kernel driver
   # UUID-based so it works regardless of device enumeration order (/dev/sdb vs /dev/sdc etc.)

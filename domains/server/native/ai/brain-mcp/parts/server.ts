@@ -153,8 +153,20 @@ function setFrontmatterKey(content: string, key: string, value: string): string 
 // distinct from human/Syncthing commits. Commits are LOCAL ONLY — never pushed.
 const COMMIT_PREFIX = "brain-mcp";
 
+// Shared lock with the vault-sync timer (domains/automation/vault-sync), which
+// flocks this same file around its commit/pull/push. Serializing all git access
+// through it means brain-mcp's checkpoints and the timer can never collide on
+// .git/index.lock. Lives inside .git (git-ignored, Syncthing-ignored, local).
+const GIT_LOCK = join(VAULT_ROOT, ".git", ".sync.lock");
+
 async function git(gitArgs: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
-  const cmd = new Deno.Command("git", { args: gitArgs, cwd: VAULT_ROOT, stdout: "piped", stderr: "piped" });
+  // flock(1) blocks until the lock is free, then runs git holding it. Fall back
+  // to a direct git call only when .git does not exist yet (first-run init),
+  // since the lock path lives inside .git.
+  const useLock = await exists(GIT_LOCK.replace(/\/\.sync\.lock$/, ""));
+  const cmd = useLock
+    ? new Deno.Command("flock", { args: [GIT_LOCK, "git", ...gitArgs], cwd: VAULT_ROOT, stdout: "piped", stderr: "piped" })
+    : new Deno.Command("git", { args: gitArgs, cwd: VAULT_ROOT, stdout: "piped", stderr: "piped" });
   const { code, stdout, stderr } = await cmd.output();
   return { code, stdout: new TextDecoder().decode(stdout), stderr: new TextDecoder().decode(stderr) };
 }
@@ -192,8 +204,14 @@ async function withCheckpoint<T>(
     const commit = await gitCheckpoint(label);
     return { result, commit };
   } catch (e) {
+    // Roll back tracked changes to the pre-mutation snapshot. We deliberately
+    // do NOT `git clean -fd` here: that would delete ALL untracked files in the
+    // vault (handoffs, _llm-inbox captures, run outputs, the embedded raw-import
+    // repos) on any failure — the exact silent-data-loss footgun this migration
+    // exists to kill. Tracked state is fully restored by reset; at worst a
+    // failed move_note leaves a stray (untracked) destination file, which is
+    // visible and recoverable rather than catastrophic.
     await git(["reset", "--hard", "HEAD"]);
-    await git(["clean", "-fd"]);
     throw e;
   }
 }

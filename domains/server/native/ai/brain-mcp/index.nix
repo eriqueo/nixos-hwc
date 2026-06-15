@@ -56,7 +56,7 @@ in
     #==========================================================================
     # SYSTEM PACKAGES
     #==========================================================================
-    environment.systemPackages = [ pkgs.deno pkgs.ripgrep pkgs.git ];
+    environment.systemPackages = [ pkgs.deno pkgs.ripgrep pkgs.git pkgs.util-linux ];
 
     #==========================================================================
     # SYSTEMD SERVICE
@@ -78,7 +78,7 @@ in
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${deno} run --allow-read --allow-write=${cfg.vaultPath} --allow-net=0.0.0.0:${toString cfg.port} --allow-run=rg,git --allow-env ${server}";
+        ExecStart = "${deno} run --allow-read --allow-write=${cfg.vaultPath} --allow-net=0.0.0.0:${toString cfg.port} --allow-run=rg,git,flock --allow-env ${server}";
         WorkingDirectory = cfg.vaultPath;
         User = lib.mkForce cfg.user;
         Group = "users";

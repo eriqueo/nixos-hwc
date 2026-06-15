@@ -40,6 +40,7 @@ in
     "${mod} SHIFT,H,exec,hyprland-system-health-checker"
     "${mod},comma,exec,hyprland-keybinds-viewer"
     "${mod},A,exec,proton-authenticator-toggle"
+    "${mod} SHIFT,I,exec,refinery-intake"
     "${mod},C,exec, kitty -e fend"
     "${mod},V,exec,cliphist list | wofi --dmenu | cliphist decode | wl-copy"
 

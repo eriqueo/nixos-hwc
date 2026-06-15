@@ -1,0 +1,17 @@
+# sr_gauntlet expressed as a refinery profile (strangler-fig: the live run.sh +
+# timer keep running untouched). Read-only execute mode — worktrees must stay
+# pristine, PII stays local. enabled:false until a human wires it into a live
+# engine timer. Brownfield genre, so chesterton's-fence + principles-fix apply.
+genre: datax-sr
+label: DataX SR Gauntlet
+color: "#83a598"
+source: firestore-srs
+gates:
+  - chestertons-fence
+  - principles-fix
+  - premortem
+executeMode: read-only
+effectors:
+  - execute
+llmProvider: claude-cli
+enabled: false

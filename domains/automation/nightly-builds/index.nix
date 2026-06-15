@@ -87,6 +87,7 @@ in
       path = [
         pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
         pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
+        pkgs.gawk  # send-report.sh parses REPORT.md with awk
         pkgs.curl  # POST run results to hwc-notify + Discord webhook
       ];
       serviceConfig = {

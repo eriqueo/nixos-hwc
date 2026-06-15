@@ -1,0 +1,15 @@
+# Project-ideation genre — the first proof-substance: raw idea → developed spec,
+# no code execution. The pipeline is the subset of gate modules that apply to a
+# greenfield, non-trivial item (brownfield-only gates self-skip via applies()).
+# The integrate effector (write-spec) writes the developed spec to a scratch dir.
+genre: project-ideation
+label: Project Ideation
+color: "#b8bb26"
+source: cli-input
+gates:
+  - stepwise-refinement
+  - principles-create
+  - premortem
+executeMode: none
+effectors:
+  - write-spec
