@@ -17,6 +17,15 @@ interface SrMeta {
   title?: string;
   status?: string;
   phase?: string;
+  name?: string;
+  email?: string;
+}
+
+/** Read a file from an investigation run dir relative to baseDir (traversal-guarded). */
+export function readRunFile(baseDir: string, run: string, name: string): string | null {
+  if (!run || run.includes("..") || run.startsWith("/")) return null;
+  const path = join(baseDir, run.replace(/\/$/, ""), name);
+  return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 
 /** Read completed SR investigations as read-only mirror Items. */
@@ -45,6 +54,9 @@ export function srInvestigationProjects(gauntletDir: string): Item[] {
         title: meta.title || meta.id || runName,
         srId: meta.id ?? "",
         srStatus: meta.status ?? "",
+        srPhase: meta.phase ?? "",
+        customer: meta.name ?? "",
+        email: meta.email ?? "",
         run: `investigations/${runName}/`,
         hasReport,
         readonly: true,

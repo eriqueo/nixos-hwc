@@ -89,6 +89,28 @@ const STYLE = `<style>
   .md pre.code{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
   .md blockquote{border-left:3px solid var(--line);margin:6px 0;padding-left:10px;color:var(--dim)}
   .md a{color:#83a598;overflow-wrap:anywhere}
+  /* SR cards + tabbed detail (mirrors the SR2/datax layout) */
+  .srgrid{display:flex;flex-wrap:wrap;gap:12px;padding:14px}
+  .srcard{display:block;background:var(--panel);border:1px solid var(--line);border-left:4px solid #83a598;border-radius:8px;padding:10px 12px;width:310px}
+  .srcard:hover{border-color:var(--acc)}
+  .srcard .cat{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:#83a598;font-weight:700}
+  .srcard .who{font-size:14px;font-weight:600;margin:2px 0}
+  .srcard .q{font-size:12px;color:var(--dim);overflow-wrap:anywhere}
+  .srtabs{max-width:860px;margin:0 auto;padding:0 18px}
+  .srtabs > input{display:none}
+  .srhead{padding:14px 0 4px}
+  .srhead .cat{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#83a598;font-weight:700}
+  .srhead h2{margin:2px 0;font-size:18px;border:0}
+  .srhead .q{color:var(--dim);font-size:13px}
+  .srtabbar{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:10px}
+  .srtabs label{padding:8px 14px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;font-size:13px}
+  .srtabs .panel{display:none;padding:14px 0}
+  #srt-gameplan:checked ~ .srtabbar label[for=srt-gameplan],
+  #srt-thread:checked ~ .srtabbar label[for=srt-thread],
+  #srt-details:checked ~ .srtabbar label[for=srt-details]{color:var(--ink);border-bottom-color:var(--acc)}
+  #srt-gameplan:checked ~ #srp-gameplan,
+  #srt-thread:checked ~ #srp-thread,
+  #srt-details:checked ~ #srp-details{display:block}
   .nrow{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--line)}
   .nrow.tonight{background:rgba(254,128,25,.08)}
   .nrow .t{flex:1}
@@ -308,20 +330,19 @@ export function renderProjectDetail(
   return layout("", body);
 }
 
-/** SR page: a mirror of the sr_gauntlet investigations — click a card → its REPORT. */
-export function renderSr(srs: Item[], maxPerNight: number, profiles: ResolvedProfile[]): string {
-  const rows = srs
+/** SR page: SR2-style cards (customer + question + status) → tabbed detail. */
+export function renderSr(srs: Item[], maxPerNight: number, _profiles: ResolvedProfile[]): string {
+  const cards = srs
     .map((s) => {
-      const color = colorOf(s.genre, profiles);
       const p = s.payload && typeof s.payload === "object" ? (s.payload as Record<string, unknown>) : {};
-      const srStatus = typeof p.srStatus === "string" ? p.srStatus : "";
-      const hasReport = p.hasReport === true;
-      return `<div class="nrow">
-        <span class="swatch" style="background:${esc(color)}"></span>
-        <a class="t" href="${hasReport ? `/report/${esc(s.id)}` : `/project/${esc(s.id)}`}">${esc(titleOf(s))} <span class="kv">${srStatus ? `· ${esc(srStatus)}` : ""}</span></a>
-        ${hasReport ? '<span class="badge">📄 report</span>' : '<span class="kv">no report</span>'}
-        <a href="/project/${esc(s.id)}" class="kv">details</a>
-      </div>`;
+      const customer = typeof p.customer === "string" && p.customer ? p.customer : "—";
+      const question = typeof p.title === "string" ? p.title : s.id;
+      const cat = typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
+      return `<a class="srcard" href="/project/${esc(s.id)}">
+        <div class="cat">${esc(cat)}${p.hasReport === true ? " · 📄" : ""}</div>
+        <div class="who">${esc(customer)}</div>
+        <div class="q">${esc(question)}</div>
+      </a>`;
     })
     .join("");
   const body = `
@@ -331,7 +352,58 @@ export function renderSr(srs: Item[], maxPerNight: number, profiles: ResolvedPro
   <button type="submit">save</button>
   <span class="kv">${srs.length} investigations · sr_gauntlet runs @ 06:30 (this cap)</span>
 </form>
-${rows || '<div class="empty" style="padding:24px">no SR investigations yet — the gauntlet writes them under sr_gauntlet/investigations/</div>'}`;
+<div class="srgrid">${cards || '<div class="empty" style="padding:24px">no SR investigations yet — the gauntlet writes them under sr_gauntlet/investigations/</div>'}</div>`;
+  return layout("sr", body);
+}
+
+export interface SrFiles {
+  gameplan: string | null; // REPORT.md (the solution)
+  thread: string | null; // sr.md (the conversation)
+  context: string | null; // context.md (customer pack)
+}
+
+/** SR detail: the SR2 modal layout — header (category / customer / question) +
+ *  Gameplan / Thread / Details tabs (CSS-only). The solution (REPORT) is the
+ *  default tab so it's the thing you land on. */
+export function renderSrDetail(item: Item, files: SrFiles): string {
+  const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+  const customer = typeof p.customer === "string" && p.customer ? p.customer : (typeof p.srId === "string" ? p.srId : item.id);
+  const question = typeof p.title === "string" ? p.title : "";
+  const cat = typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
+  const email = typeof p.email === "string" ? p.email : "";
+  const phase = typeof p.srPhase === "string" ? p.srPhase : "";
+
+  const detailsMd = [
+    `**Customer:** ${customer}`,
+    email ? `**Email:** ${email}` : "",
+    `**Status:** ${cat}${phase ? ` · phase ${phase}` : ""}`,
+    typeof p.run === "string" ? `**Run:** ${p.run}` : "",
+    "",
+    files.context ? `## Customer context\n\n${files.context}` : "_no context.md_",
+  ].filter(Boolean).join("\n");
+
+  const panel = (md: string | null, empty: string) =>
+    `<div class="md">${md ? mdToHtml(md) : `<p class="kv">${empty}</p>`}</div>`;
+
+  const body = `<div class="srtabs">
+  <input type="radio" name="srt" id="srt-gameplan" checked>
+  <input type="radio" name="srt" id="srt-thread">
+  <input type="radio" name="srt" id="srt-details">
+  <div class="srhead">
+    <a href="/sr" class="kv">← SR</a>
+    <div class="cat">${esc(cat)}</div>
+    <h2>${esc(customer)}</h2>
+    <div class="q">${esc(question)}</div>
+  </div>
+  <div class="srtabbar">
+    <label for="srt-gameplan">Gameplan</label>
+    <label for="srt-thread">Thread</label>
+    <label for="srt-details">Details</label>
+  </div>
+  <div class="panel" id="srp-gameplan">${panel(files.gameplan, "no REPORT.md for this investigation yet")}</div>
+  <div class="panel" id="srp-thread">${panel(files.thread, "no thread (sr.md) captured")}</div>
+  <div class="panel" id="srp-details">${panel(detailsMd, "")}</div>
+</div>`;
   return layout("sr", body);
 }
 
