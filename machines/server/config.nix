@@ -242,7 +242,20 @@
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
       "600_apps"     = { path = "/home/eric/600_apps";     devices = [ "hwc-laptop" ]; };
-      "brain"        = { path = "/home/eric/900_vaults/brain"; devices = [ "hwc-laptop" "hwc-phone" ]; };
+      "brain"        = {
+        path = "/home/eric/900_vaults/brain";
+        devices = [ "hwc-laptop" "hwc-phone" ];
+        # Vault is a git repo: .git MUST be excluded or Syncthing replicates
+        # git internals and a stale peer can clobber committed history.
+        ignores = [
+          ".git"
+          ".obsidian/workspace.json"
+          ".obsidian/workspace-mobile.json"
+          ".obsidian/plugins/*/data.json"
+          ".trash/"
+          ".DS_Store"
+        ];
+      };
       "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
       "inbox-mobile" = { path = "/mnt/vaults/inbox-mobile"; devices = [ "hwc-phone" ]; };
