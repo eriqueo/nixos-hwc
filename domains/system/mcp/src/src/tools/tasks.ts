@@ -11,6 +11,7 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { catchError, mcpError } from "../errors.js";
+import { contract } from "../result.js";
 import type { ToolDef, ToolResult } from "../types.js";
 import {
   buildVtodo,
@@ -146,10 +147,25 @@ export function tasksTools(): ToolDef[] {
           if (category) out = out.filter((t) => t.categories.includes(category));
           if (grep) out = out.filter((t) => t.summary.toLowerCase().includes(grep));
 
+          const rows = sortTasks(out).map(taskRow);
+          const listNames = lists.map((l) => l.name);
           return {
             status: "ok",
             message: `${out.length} task(s) across ${lists.length} list(s)`,
-            data: { tasks: sortTasks(out).map(taskRow), lists: lists.map((l) => l.name) },
+            data: { tasks: rows, lists: listNames },
+            // Universal Result Contract view (list): id=uid, label=summary; the
+            // rest rides along as the entity data bag (renderer reads time||due).
+            view: contract("list", "Tasks", {
+              items: rows.map((r) => ({
+                kind: "task",
+                id: r.uid,
+                label: r.summary,
+                ...(r.due ? { due: r.due } : {}),
+                list: r.list,
+                status: r.status,
+                ...(r.priority ? { priority: r.priority } : {}),
+              })),
+            }, { count: out.length, lists: listNames, source: "hwc_tasks_list" }),
           };
         } catch (err) {
           return catchError("NETWORK_ERROR", "Failed to list tasks", err,

@@ -13,6 +13,7 @@
 
 import type { ToolDef, ToolResult } from "../types.js";
 import { mcpError } from "../errors.js";
+import { contract } from "../result.js";
 
 const LEADS_BASE = "http://127.0.0.1:11650";
 
@@ -106,8 +107,45 @@ export function leadsTools(): ToolDef[] {
               if (typeof args.filter_status === "string" && args.filter_status) {
                 params.set("status", args.filter_status);
               }
-              const data = await httpGet(`/leads/recent?${params.toString()}`);
-              return { status: "ok", message: "recent leads", data };
+              const data = await httpGet(`/leads/recent?${params.toString()}`) as {
+                httpStatus?: number;
+                data?: {
+                  count?: number;
+                  rows?: Array<{
+                    id?: string;
+                    status?: string;
+                    payload?: {
+                      source?: string;
+                      contact?: { name?: string };
+                      calc?: { estimate?: { low?: number; high?: number } };
+                    };
+                  }>;
+                };
+              };
+              const leadRows = data?.data?.rows ?? [];
+              const fmtEstimate = (e?: { low?: number; high?: number }): string =>
+                e && typeof e.low === "number" && typeof e.high === "number"
+                  ? `$${Math.round(e.low / 1000)}k–${Math.round(e.high / 1000)}k`
+                  : "";
+              return {
+                status: "ok",
+                message: "recent leads",
+                data,
+                // Universal Result Contract view (table): flatten the lead
+                // service's nested rows into column-keyed cells the renderer
+                // reads via row[col]; id/kind make each row a selectable entity.
+                view: contract("table", "Leads", {
+                  columns: ["Name", "Source", "Estimate", "Status"],
+                  rows: leadRows.map((r) => ({
+                    kind: "lead",
+                    id: r.id ?? "",
+                    Name: r.payload?.contact?.name ?? "",
+                    Source: r.payload?.source ?? "",
+                    Estimate: fmtEstimate(r.payload?.calc?.estimate),
+                    Status: r.status ?? "",
+                  })),
+                }, { count: data?.data?.count ?? leadRows.length, httpStatus: data?.httpStatus, source: "hwc_leads" }),
+              };
             }
             case "get": {
               const leadId = String(args.lead_id ?? "");

@@ -7,7 +7,8 @@ import { readdir, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { catchError, mcpError } from "../errors.js";
-import type { ToolDef, ToolResult } from "../types.js";
+import { contract } from "../result.js";
+import type { ResultEnvelope, ToolDef, ToolResult } from "../types.js";
 import { log } from "../log.js";
 
 /* ════════════════════════════════════════════════════════════════ */
@@ -71,6 +72,28 @@ interface CalendarEvent {
   summary: string;
   location: string | null;
   allDay: boolean;
+}
+
+/**
+ * Universal Result Contract view (list) for a set of calendar events. id is
+ * synthesized (date+time+summary — khal exposes no stable UID via --format);
+ * label=summary, time=startTime or "all-day"; date/location ride the data bag.
+ */
+function eventsToView(
+  events: CalendarEvent[],
+  title: string,
+  meta: Record<string, unknown>,
+): ResultEnvelope {
+  return contract("list", title, {
+    items: events.map((e) => ({
+      kind: "event",
+      id: `${e.date}|${e.startTime ?? "all-day"}|${e.summary}`,
+      label: e.summary,
+      time: e.allDay ? "all-day" : (e.startTime ?? ""),
+      date: e.date,
+      ...(e.location ? { location: e.location } : {}),
+    })),
+  }, { ...meta, source: "hwc_calendar" });
 }
 
 const DAY_HEADER_RE = /^.+,\s+(\d{4}-\d{2}-\d{2})\s+\w+\s*$/;
@@ -285,6 +308,7 @@ export function calendarTools(): ToolDef[] {
                 status: "ok",
                 message: `${events.length} event${events.length !== 1 ? "s" : ""} on ${dateStr}`,
                 data: { range: "today", date: dateStr, timezone: tz, event_count: events.length, events },
+                view: eventsToView(events, "Today", { range: "today", date: dateStr, timezone: tz, event_count: events.length }),
               };
             }
 
@@ -307,6 +331,7 @@ export function calendarTools(): ToolDef[] {
                 status: "ok",
                 message: `${events.length} event${events.length !== 1 ? "s" : ""} this week`,
                 data: { range: "week", timezone: tz, event_count: events.length, by_date: byDate, events },
+                view: eventsToView(events, "This Week", { range: "week", timezone: tz, event_count: events.length }),
               };
             }
 
@@ -321,6 +346,7 @@ export function calendarTools(): ToolDef[] {
               status: "ok",
               message: `${events.length} event${events.length !== 1 ? "s" : ""} from ${start} to ${end}`,
               data: { range: "custom", start, end, event_count: events.length, events },
+              view: eventsToView(events, `${start} – ${end}`, { range: "custom", start, end, event_count: events.length }),
             };
           } catch (err) {
             return catchError("INTERNAL_ERROR", "Failed to list calendar events", err, "Check that khal is installed and vdirsyncer has synced at least once");
