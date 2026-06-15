@@ -28,6 +28,12 @@ export const ItemSchema = z.object({
   parkedReason: z.string().optional(),
   payload: z.unknown(),
   history: z.array(HistoryEntrySchema),
+  // Scheduling attributes — orthogonal to the profile (the "when", not the
+  // "what"). `nightly` flags a project for the overnight gauntlet run;
+  // `nightlyPriority` orders the nightly queue (higher = sooner). A project
+  // keeps its profile color; nightly is a skin on top.
+  nightly: z.boolean().optional(),
+  nightlyPriority: z.number().optional(),
 });
 export type Item = z.infer<typeof ItemSchema>;
 

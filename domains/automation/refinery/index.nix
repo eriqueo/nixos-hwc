@@ -65,12 +65,6 @@ in
       description = "HTTP port the board listens on (Caddy upstream)";
     };
 
-    vaultDir = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = vaultDefault;
-      description = "Brain vault root (contains _inbox/nightly_builds/ for the /hopper route)";
-    };
-
     triageProvider = lib.mkOption {
       type = lib.types.str;
       default = "claude-cli";
@@ -85,13 +79,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.vaultDir != null;
-        message = "hwc.automation.refinery.vaultDir must resolve — set hwc.paths.brain.* or override vaultDir.";
-      }
-    ];
-
     systemd.services.refinery-board = {
       description = "Refinery interactive engine board + intake";
       wantedBy = [ "multi-user.target" ];
@@ -106,19 +93,16 @@ in
           "REFINERY_PROFILES_DIR=${profilesDir}"
           "REFINERY_ITEMS_DIR=/var/lib/refinery/items"
           "REFINERY_PROFILE_STATE=/var/lib/refinery/profiles.json"
+          "REFINERY_NIGHTLY_CONFIG=/var/lib/refinery/nightly.json"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
-          "REFINERY_VAULT_DIR=${cfg.vaultDir}"
         ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}";
         Restart = "on-failure";
         RestartSec = 5;
-        # Writes only to /var/lib/refinery (StateDirectory). The vault is bound in
-        # read-only for the /hopper route. ProtectHome MUST be "tmpfs" (not true):
-        # true mounts /home read-only, so systemd can't create the bind target
-        # underneath and the vault silently disappears. "tmpfs" gives a tmpfs that
-        # bind targets mount into.
+        # Writes only to /var/lib/refinery (StateDirectory); reads profiles from
+        # the store. No /home access needed, so mask it entirely (tmpfs) on top of
+        # a read-only system — tighter than the old vault-bind setup.
         ProtectSystem = "strict";
         ProtectHome = lib.mkForce "tmpfs";
-        BindReadOnlyPaths = [ cfg.vaultDir ];
         PrivateTmp = true;
       };
     };
