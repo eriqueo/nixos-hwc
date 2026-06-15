@@ -66,6 +66,21 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Readable reports + self-explanatory cards. New dependency-free
+  `shells/markdown.ts` (`mdToHtml`) renders REPORTs and card bodies as HTML in a
+  `.md` block that **wraps** (no more clipped, raw-markdown `<pre>`). Nightly
+  mirror cards now carry the card's `goal` (shown as a badge on the board + the
+  detail header) and its full markdown **body** (rendered under a "Card" section)
+  — so a card isn't just a filename slug. The `/report` view renders markdown.
+  Engine 65/65.
+- **2026-06-15** — Configurable caps + dedicated SR page. The per-gauntlet "max
+  per run" caps now live in a runtime file (`/var/lib/refinery/caps.json`,
+  `{nightly, sr}`) the board edits — both `run.sh` files read it (env value as
+  fallback, so nothing breaks if absent), so `NB_MAX_CARDS` / `SRG_MAX_SRS` are
+  no longer Nix-only. New **SR page** (`/sr`): mirrors the sr_gauntlet
+  investigations as blue cards that link straight to their REPORT (a click-through
+  mirror of the SR2 board), with its own cap form. SR cards moved off the
+  Gauntlet onto `/sr`. Engine 63/63.
 - **2026-06-15** — Delete + nightly-cards mirror. Projects/ideas can be deleted
   from the detail page (`ItemStore.delete`, `POST /delete`). The live
   nightly-builds vault cards (`_inbox/nightly_builds/*/NN-*.md`) are mirrored

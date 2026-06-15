@@ -84,7 +84,12 @@ export function nightlyCardProjects(vaultDir: string): Item[] {
     if (!statSync(dir).isDirectory()) continue;
     for (const f of readdirSync(dir)) {
       if (!/^\d\d-/.test(f) || !f.endsWith(".md")) continue;
-      const fm = frontmatter(readFileSync(join(dir, f), "utf8"));
+      const text = readFileSync(join(dir, f), "utf8");
+      const fm = frontmatter(text);
+      // The card's markdown body (everything after the frontmatter) — this is
+      // what makes the card self-explanatory rather than just a slug.
+      const fmEnd = /^---\n[\s\S]*?\n---\n?/.exec(text);
+      const body = fmEnd ? text.slice(fmEnd[0].length).trim() : text.trim();
       const status = fm.status || "draft";
       const { phase, phaseStatus } = mapStatus(status);
       out.push({
@@ -101,6 +106,7 @@ export function nightlyCardProjects(vaultDir: string): Item[] {
           step: fm.step || "",
           run: fm.run || "",
           pr: fm.pr || "",
+          body,
           readonly: true,
           source: "nightly-builds vault card",
         },

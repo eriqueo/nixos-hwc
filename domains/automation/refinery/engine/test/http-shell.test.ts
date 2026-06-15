@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderProjectDetail } from "../src/shells/render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderProjectDetail } from "../src/shells/render.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
@@ -24,7 +24,7 @@ function setup(triageLlm: LlmPort): { cfg: HttpShellConfig; cleanup: () => void 
       itemsDir: join(root, "items"),
       profilesDir,
       profileStatePath: join(root, "state.json"),
-      nightlyConfigPath: join(root, "nightly.json"),
+      capsPath: join(root, "caps.json"),
       triageProvider: "claude-cli",
       clock: fixedClock,
       triageLlm,
@@ -174,6 +174,22 @@ test("promote turns an untriaged idea into a project at its profile's first phas
   } finally {
     cleanup();
   }
+});
+
+test("renderSr lists SR investigations linking to their REPORT + has a max cap form", () => {
+  const profiles = [
+    { genre: "datax-sr", label: "DataX SR", source: "sr", gates: ["premortem"], executeMode: "read-only",
+      effectors: ["execute"], enabled: true, llmProvider: "claude-cli", color: "#83a598" },
+  ];
+  const srs: Item[] = [
+    { id: "sr:2026-06-12-abc", genre: "datax-sr", phase: "investigated", phaseStatus: "passed",
+      payload: { title: "Customer X cannot sync", srStatus: "engaged", run: "investigations/2026-06-12-abc/", hasReport: true, readonly: true, source: "sr_gauntlet investigation" }, history: [] },
+  ];
+  const html = renderSr(srs, 5, profiles);
+  assert.ok(html.includes("Customer X cannot sync"));
+  assert.ok(html.includes('href="/report/sr:2026-06-12-abc"'), "card links straight to the REPORT");
+  assert.ok(html.includes('action="/sr/config"'), "has the max-per-run cap form");
+  assert.ok(html.includes('value="5"'));
 });
 
 test("deleteItem removes a project from the store", async () => {

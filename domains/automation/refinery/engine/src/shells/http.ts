@@ -16,14 +16,14 @@ import { rewind } from "../runner.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, setCardStatus, readReport, NB_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, SR_PREFIX } from "../sources/sr-investigations.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderProjectDetail, renderReport } from "./render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderProjectDetail, renderReport } from "./render.js";
 
 export interface HttpShellConfig {
   port: number;
   itemsDir: string;
   profilesDir: string;
   profileStatePath: string;
-  nightlyConfigPath: string;
+  capsPath: string; // per-gauntlet "max per run" caps, written by the GUI
   triageProvider: string;
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
@@ -39,7 +39,7 @@ export function configFromEnv(): HttpShellConfig {
     itemsDir: process.env.REFINERY_ITEMS_DIR || `${base}/items`,
     profilesDir: process.env.REFINERY_PROFILES_DIR || "profiles",
     profileStatePath: process.env.REFINERY_PROFILE_STATE || `${base}/profiles.json`,
-    nightlyConfigPath: process.env.REFINERY_NIGHTLY_CONFIG || `${base}/nightly.json`,
+    capsPath: process.env.REFINERY_CAPS_FILE || `${base}/caps.json`,
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
     vaultDir: process.env.REFINERY_VAULT_DIR,
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
@@ -72,18 +72,26 @@ export function createShell(cfg: HttpShellConfig) {
   const store = new MarkdownItemStore(cfg.itemsDir);
   const catalog = new ProfileCatalog({ dir: cfg.profilesDir, statePath: cfg.profileStatePath });
 
-  const readMaxPerNight = (): number => {
-    if (!existsSync(cfg.nightlyConfigPath)) return 3;
+  // Per-gauntlet "max per run" caps — the single runtime source of truth that
+  // both run.sh files read (with their env value as fallback). Refinery is the
+  // control plane; the GUI writes these.
+  type CapKind = "nightly" | "sr";
+  const CAP_DEFAULTS: Record<CapKind, number> = { nightly: 1, sr: 5 };
+  const readCaps = (): Record<string, number> => {
+    if (!existsSync(cfg.capsPath)) return {};
     try {
-      const v = (JSON.parse(readFileSync(cfg.nightlyConfigPath, "utf8")) as { maxPerNight?: number }).maxPerNight;
-      return typeof v === "number" && v >= 0 ? v : 3;
+      return JSON.parse(readFileSync(cfg.capsPath, "utf8")) as Record<string, number>;
     } catch {
-      return 3;
+      return {};
     }
   };
-  const writeMaxPerNight = (n: number): void => {
-    mkdirSync(dirname(cfg.nightlyConfigPath), { recursive: true });
-    writeFileSync(cfg.nightlyConfigPath, JSON.stringify({ maxPerNight: n }, null, 2));
+  const readCap = (kind: CapKind): number => {
+    const v = readCaps()[kind];
+    return typeof v === "number" && v >= 0 ? v : CAP_DEFAULTS[kind];
+  };
+  const writeCap = (kind: CapKind, n: number): void => {
+    mkdirSync(dirname(cfg.capsPath), { recursive: true });
+    writeFileSync(cfg.capsPath, JSON.stringify({ ...readCaps(), [kind]: n }, null, 2));
   };
 
   async function intake(text: string): Promise<void> {
@@ -182,18 +190,32 @@ export function createShell(cfg: HttpShellConfig) {
           if (url === "/hopper") {
             res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles));
           } else {
-            const projects = [...items.filter((i) => i.genre !== UNTRIAGED), ...mirror()];
+            // Gauntlet: store projects + nightly-build mirror cards (SRs have their own page).
+            const projects = [
+              ...items.filter((i) => i.genre !== UNTRIAGED),
+              ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
+            ];
             res.end(renderGauntlet(projects, profiles));
           }
           return;
         }
         if (method === "GET" && url === "/nightly") {
           const [items, profiles] = [await store.list(), catalog.list()];
-          const flagged = [...items.filter((i) => i.nightly), ...mirror()].sort(
-            (a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id),
-          );
+          const flagged = [
+            ...items.filter((i) => i.nightly),
+            ...mirror().filter((m) => m.id.startsWith(NB_PREFIX)),
+          ].sort((a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderNightly(flagged, readMaxPerNight(), profiles));
+          res.end(renderNightly(flagged, readCap("nightly"), profiles));
+          return;
+        }
+        if (method === "GET" && url === "/sr") {
+          const profiles = catalog.list();
+          const srs = mirror()
+            .filter((m) => m.id.startsWith(SR_PREFIX))
+            .sort((a, b) => b.id.localeCompare(a.id));
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderSr(srs, readCap("sr"), profiles));
           return;
         }
         if (method === "GET" && url.startsWith("/project/")) {
@@ -266,8 +288,13 @@ export function createShell(cfg: HttpShellConfig) {
           }
           if (url === "/nightly/config") {
             const n = Number(body.get("maxPerNight"));
-            if (Number.isFinite(n) && n >= 0) writeMaxPerNight(Math.floor(n));
+            if (Number.isFinite(n) && n >= 0) writeCap("nightly", Math.floor(n));
             return redirectTo(res, "/nightly");
+          }
+          if (url === "/sr/config") {
+            const n = Number(body.get("maxPerNight"));
+            if (Number.isFinite(n) && n >= 0) writeCap("sr", Math.floor(n));
+            return redirectTo(res, "/sr");
           }
           if (url === "/profiles/toggle") {
             const genre = body.get("genre") ?? "";

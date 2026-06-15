@@ -11,6 +11,7 @@
 
 import { Item } from "../contracts.js";
 import { ResolvedProfile } from "../profiles/catalog.js";
+import { mdToHtml } from "./markdown.js";
 
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
@@ -78,6 +79,16 @@ const STYLE = `<style>
   .act{display:flex;gap:6px;margin:8px 0;align-items:center;flex-wrap:wrap}
   .act input[type=text]{flex:1;min-width:200px}
   .hist{font-size:12px;color:var(--dim)}
+  /* rendered markdown (reports, card bodies) — wraps, doesn't clip */
+  .md{max-width:840px;line-height:1.55}
+  .md h2,.md h3,.md h4,.md h5{margin:16px 0 6px;font-size:14px;color:var(--ink)}
+  .md p{margin:8px 0;overflow-wrap:anywhere}
+  .md ul,.md ol{margin:6px 0 6px 20px}
+  .md li{margin:3px 0}
+  .md code{background:var(--line);padding:1px 4px;border-radius:3px;font-size:12px}
+  .md pre.code{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+  .md blockquote{border-left:3px solid var(--line);margin:6px 0;padding-left:10px;color:var(--dim)}
+  .md a{color:#83a598;overflow-wrap:anywhere}
   .nrow{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--line)}
   .nrow.tonight{background:rgba(254,128,25,.08)}
   .nrow .t{flex:1}
@@ -90,7 +101,7 @@ function layout(active: string, body: string): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refinery</title>${STYLE}</head><body>
 <header><h1>🛠 Refinery</h1><nav>
-  ${tab("/", "Gauntlet", "gauntlet")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Nightly", "nightly")}
+  ${tab("/", "Gauntlet", "gauntlet")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Nightly", "nightly")}${tab("/sr", "SR", "sr")}
 </nav></header>
 ${body}
 </body></html>`;
@@ -113,9 +124,12 @@ function cardLink(item: Item, profiles: ResolvedProfile[]): string {
   const color = colorOf(item.genre, profiles);
   const isIdea = item.genre === UNTRIAGED;
   const moon = item.nightly ? `<span class="moon" title="nightly">🌙</span>` : "";
+  const goal = item.payload && typeof item.payload === "object" && typeof (item.payload as { goal?: unknown }).goal === "string"
+    ? (item.payload as { goal: string }).goal
+    : "";
   const badge = isIdea
     ? `<span class="badge">idea</span>`
-    : `<span class="badge profile" style="background:${esc(color)}">${esc(item.genre)}</span><span class="badge">${esc(item.phase)}</span>`;
+    : `<span class="badge profile" style="background:${esc(color)}">${esc(item.genre)}</span>${goal ? `<span class="badge">${esc(goal)}</span>` : ""}<span class="badge">${esc(item.phase)}</span>`;
   return `<a class="card${item.nightly ? " nightly" : ""}" href="/project/${esc(item.id)}" style="border-left-color:${esc(color)}">
     <div class="badges">${badge}${moon}</div>
     <div class="title">${esc(titleOf(item))}</div>
@@ -228,6 +242,9 @@ export function renderProjectDetail(
   const readonly = payloadObj.readonly === true;
   const run = typeof payloadObj.run === "string" ? payloadObj.run : "";
   const pr = typeof payloadObj.pr === "string" ? payloadObj.pr : "";
+  const goal = typeof payloadObj.goal === "string" ? payloadObj.goal : "";
+  const cardBody = typeof payloadObj.body === "string" ? payloadObj.body : "";
+  const input = typeof payloadObj.input === "string" ? payloadObj.input : "";
 
   const source = typeof payloadObj.source === "string" ? payloadObj.source : "";
   const isNightlyCard = source === "nightly-builds vault card";
@@ -274,10 +291,13 @@ export function renderProjectDetail(
   const body = `<div class="detail">
   <a href="/" class="kv">← board</a>
   <h2><span class="swatch" style="background:${esc(color)}"></span> ${esc(titleOf(item))}</h2>
-  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.genre)}`} · phase <b>${esc(item.phase)}</b> · ${esc(item.phaseStatus)} ${item.nightly ? "· 🌙 nightly" : ""}</div>
+  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.genre)}`}${goal ? ` · goal: <b>${esc(goal)}</b>` : ""} · phase <b>${esc(item.phase)}</b> · ${esc(item.phaseStatus)} ${item.nightly ? "· 🌙 nightly" : ""}</div>
   ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
+  ${input ? `<div class="md"><p><em>${esc(input)}</em></p></div>` : ""}
 
   ${actions}
+
+  ${cardBody ? `<h2>Card</h2><div class="md">${mdToHtml(cardBody)}</div>` : ""}
 
   <h2>Payload</h2>
   <pre>${esc(JSON.stringify(item.payload, null, 2))}</pre>
@@ -288,12 +308,39 @@ export function renderProjectDetail(
   return layout("", body);
 }
 
+/** SR page: a mirror of the sr_gauntlet investigations — click a card → its REPORT. */
+export function renderSr(srs: Item[], maxPerNight: number, profiles: ResolvedProfile[]): string {
+  const rows = srs
+    .map((s) => {
+      const color = colorOf(s.genre, profiles);
+      const p = s.payload && typeof s.payload === "object" ? (s.payload as Record<string, unknown>) : {};
+      const srStatus = typeof p.srStatus === "string" ? p.srStatus : "";
+      const hasReport = p.hasReport === true;
+      return `<div class="nrow">
+        <span class="swatch" style="background:${esc(color)}"></span>
+        <a class="t" href="${hasReport ? `/report/${esc(s.id)}` : `/project/${esc(s.id)}`}">${esc(titleOf(s))} <span class="kv">${srStatus ? `· ${esc(srStatus)}` : ""}</span></a>
+        ${hasReport ? '<span class="badge">📄 report</span>' : '<span class="kv">no report</span>'}
+        <a href="/project/${esc(s.id)}" class="kv">details</a>
+      </div>`;
+    })
+    .join("");
+  const body = `
+<form class="intake" method="post" action="/sr/config">
+  <label class="kv">Max SRs per run:</label>
+  <input type="number" name="maxPerNight" min="0" value="${maxPerNight}" style="width:90px">
+  <button type="submit">save</button>
+  <span class="kv">${srs.length} investigations · sr_gauntlet runs @ 06:30 (this cap)</span>
+</form>
+${rows || '<div class="empty" style="padding:24px">no SR investigations yet — the gauntlet writes them under sr_gauntlet/investigations/</div>'}`;
+  return layout("sr", body);
+}
+
 /** Render a run's REPORT.md (plain — escaped <pre>). */
 export function renderReport(title: string, report: string | null): string {
   const body = `<div class="detail">
   <a href="/" class="kv">← board</a>
   <h2>📄 ${esc(title)} — REPORT</h2>
-  ${report ? `<pre>${esc(report)}</pre>` : `<div class="empty" style="padding:24px">no REPORT.md found for this run</div>`}
+  ${report ? `<div class="md">${mdToHtml(report)}</div>` : `<div class="empty" style="padding:24px">no REPORT.md found for this run</div>`}
 </div>`;
   return layout("", body);
 }
