@@ -4,9 +4,10 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
-import { renderBoard } from "../src/shells/render.js";
+import { renderGauntlet, renderHopperPage } from "../src/shells/render.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
+import { UNTRIAGED } from "../src/triage.js";
 import { fixedClock } from "./helpers.js";
 
 function setup(triageLlm: LlmPort): { cfg: HttpShellConfig; cleanup: () => void } {
@@ -116,22 +117,29 @@ test("profile toggle flips enabled via the catalog overlay", async () => {
   }
 });
 
-test("renderBoard shows the intake form, profile toggle, and parked controls", () => {
-  const items: Item[] = [
-    { id: "x", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
-      parkedReason: "needs a call", payload: { title: "an idea" }, history: [] },
-  ];
+test("renderGauntlet colors a parked project and shows amend/rewind; renderHopperPage shows intake", () => {
   const profiles = [
     { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
-      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli" },
+      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
   ];
-  const html = renderBoard(items, profiles);
-  assert.ok(html.includes('action="/intake"'));
-  assert.ok(html.includes('action="/profiles/toggle"'));
-  assert.ok(html.includes('action="/amend"'));
-  assert.ok(html.includes('action="/rewind"'));
-  assert.ok(html.includes("an idea"));
-  // rewind targets are the earlier gates of the profile
-  assert.ok(html.includes('value="stepwise-refinement"'));
+  const parked: Item[] = [
+    { id: "x", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
+      parkedReason: "needs a call", payload: { title: "a project" }, history: [] },
+  ];
+  const g = renderGauntlet(parked, profiles);
+  assert.ok(g.includes("a project"));
+  assert.ok(g.includes("#b8bb26"), "card tinted by profile color");
+  assert.ok(g.includes('action="/amend"'));
+  assert.ok(g.includes('action="/rewind"'));
+  assert.ok(g.includes('value="stepwise-refinement"'), "rewind targets = earlier phases");
+  assert.ok(!g.includes('action="/profiles/toggle"'), "no toggle — profiles are a legend");
+  // Intake lives on the Hopper page, over untriaged ideas.
+  const idea: Item[] = [
+    { id: "i", genre: UNTRIAGED, phase: "triage", phaseStatus: "parked",
+      payload: { title: "a raw idea" }, history: [] },
+  ];
+  const h = renderHopperPage(idea, profiles);
+  assert.ok(h.includes('action="/intake"'));
+  assert.ok(h.includes("a raw idea"));
 });

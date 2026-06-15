@@ -56,6 +56,7 @@ export interface GateModule {
 export const ProfileSchema = z.object({
   genre: z.string().min(1), // identity key; links item.genre → profile
   label: z.string().min(1).optional(), // human-facing name for the board
+  color: z.string().min(1).optional(), // hex tint for cards/legend (data-driven, lead_scout-style)
   source: z.string().min(1),
   gates: z.array(z.string().min(1)).min(1),
   // executeMode + effectors are consumed by the execute/integrate effectors,
