@@ -6,20 +6,20 @@ test("ItemSchema accepts a well-formed item", () => {
   const result = ItemSchema.safeParse({
     id: "x",
     genre: "leads",
-    stage: "intake",
-    stageStatus: "pending",
+    phase: "intake",
+    phaseStatus: "pending",
     payload: { any: "shape" },
     history: [],
   });
   assert.equal(result.success, true);
 });
 
-test("ItemSchema rejects unknown stageStatus", () => {
+test("ItemSchema rejects unknown phaseStatus", () => {
   const result = ItemSchema.safeParse({
     id: "x",
     genre: "leads",
-    stage: "intake",
-    stageStatus: "wat",
+    phase: "intake",
+    phaseStatus: "wat",
     payload: {},
     history: [],
   });

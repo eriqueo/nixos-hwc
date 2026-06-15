@@ -66,22 +66,22 @@ export async function triageSentence(
 
 /**
  * Build an Item from a triage decision. A confidently-classified item starts at
- * `firstStage` (its profile's first gate) pending; an untriaged item parks at
- * the synthetic `triage` stage awaiting human routing.
+ * `firstPhase` (its profile's first gate) pending; an untriaged item parks at
+ * the synthetic `triage` phase awaiting human routing.
  */
 export function makeTriagedItem(
   id: string,
   text: string,
   decision: TriageDecision,
-  firstStage: string,
+  firstPhase: string,
   clock: () => string,
 ): Item {
   const untriaged = decision.genre === UNTRIAGED;
   return {
     id,
     genre: decision.genre,
-    stage: untriaged ? "triage" : firstStage,
-    stageStatus: untriaged ? "parked" : "pending",
+    phase: untriaged ? "triage" : firstPhase,
+    phaseStatus: untriaged ? "parked" : "pending",
     parkedReason: untriaged ? `triage: ${decision.reason}` : undefined,
     payload: {
       input: text,
@@ -90,7 +90,7 @@ export function makeTriagedItem(
       traits: { mode: "greenfield", trivial: false, multiPart: true },
     },
     history: [
-      { stage: "triage", status: untriaged ? "parked" : "entered", at: clock(), note: decision.reason },
+      { phase: "triage", status: untriaged ? "parked" : "entered", at: clock(), note: decision.reason },
     ],
   };
 }

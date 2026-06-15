@@ -1,11 +1,11 @@
 // A markdown-file ItemStore (slice 03's port). Persists each Item as one .md
 // file under a directory, with board-readable YAML frontmatter (title, status,
-// stage, genre) PLUS a fenced ```json block carrying the canonical Item for
+// phase, genre) PLUS a fenced ```json block carrying the canonical Item for
 // lossless round-trip. load() reads the json block and validates it with
 // ItemSchema, so save→load is exact regardless of the human-facing rendering.
 //
 // Board-compat note: the frontmatter exposes a `status` field (the item's
-// stageStatus) and `stage`/`title` so a board could display these items. They
+// phaseStatus) and `phase`/`title` so a board could display these items. They
 // live in their own store dir (a scratch/run dir), NOT the gauntlet hopper the
 // slice-01 board currently scans — full board integration is slice 07.
 
@@ -23,8 +23,8 @@ function frontmatter(item: Item): string {
     `title: ${JSON.stringify(title)}`,
     `id: ${item.id}`,
     `genre: ${item.genre}`,
-    `stage: ${item.stage}`,
-    `status: ${item.stageStatus}`,
+    `phase: ${item.phase}`,
+    `status: ${item.phaseStatus}`,
   ];
   if (item.parkedReason) lines.push(`parkedReason: ${JSON.stringify(item.parkedReason)}`);
   lines.push("---");
@@ -35,7 +35,7 @@ function render(item: Item): string {
   return [
     frontmatter(item),
     "",
-    `# ${item.id} — ${item.genre} @ ${item.stage} (${item.stageStatus})`,
+    `# ${item.id} — ${item.genre} @ ${item.phase} (${item.phaseStatus})`,
     "",
     "<!-- canonical item (do not hand-edit) -->",
     "```json",

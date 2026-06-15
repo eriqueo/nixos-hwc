@@ -35,13 +35,13 @@ export function newIdeationItem(
   id: string,
   genre: string,
   input: string,
-  firstStage: string,
+  firstPhase: string,
 ): Item {
   return {
     id,
     genre,
-    stage: firstStage,
-    stageStatus: "pending",
+    phase: firstPhase,
+    phaseStatus: "pending",
     payload: {
       input,
       title: input.length > 80 ? `${input.slice(0, 77)}…` : input,
@@ -78,7 +78,7 @@ export async function runGenreOnce(
     history: [
       ...result.item.history,
       {
-        stage: deps.integrate.id,
+        phase: deps.integrate.id,
         status: integrated.outcome === "succeeded" ? "passed" : "failed",
         at,
         note: integrated.detail,

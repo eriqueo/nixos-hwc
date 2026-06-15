@@ -54,10 +54,10 @@ test("MarkdownItemStore round-trips an item losslessly", async () => {
     const item: Item = {
       id: "round-trip",
       genre: "project-ideation",
-      stage: "premortem",
-      stageStatus: "passed",
+      phase: "premortem",
+      phaseStatus: "passed",
       payload: { input: "an idea", title: "an idea", traits: { mode: "greenfield" } },
-      history: [{ stage: "stepwise-refinement", status: "passed", at: "2026-06-15T00:00:00Z" }],
+      history: [{ phase: "stepwise-refinement", status: "passed", at: "2026-06-15T00:00:00Z" }],
     };
     await store.save(item);
     const loaded = await store.load("round-trip");
@@ -92,8 +92,8 @@ test("end-to-end: a sentence runs through the genre and produces a complete spec
 
     assert.equal(result.parked, false);
     assert.deepEqual(result.ran, ["stepwise-refinement", "principles-create", "premortem"]);
-    assert.equal(result.item.stage, "premortem");
-    assert.equal(result.item.stageStatus, "passed");
+    assert.equal(result.item.phase, "premortem");
+    assert.equal(result.item.phaseStatus, "passed");
 
     // integrate fired and wrote a complete spec
     assert.ok(result.integrated);
@@ -108,7 +108,7 @@ test("end-to-end: a sentence runs through the genre and produces a complete spec
     // the item was persisted with the integrate step in history
     const reloaded = await store.load("demo-item");
     assert.ok(reloaded);
-    assert.equal(reloaded!.history.at(-1)!.stage, "write-spec");
+    assert.equal(reloaded!.history.at(-1)!.phase, "write-spec");
 
     // no stray files beyond the one spec
     assert.deepEqual(readdirSync(scratchDir), ["demo-item-spec.md"]);
@@ -138,7 +138,7 @@ test("end-to-end: a parked gate stops the pass and integrate never runs", async 
     assert.equal(result.parked, true);
     assert.equal(result.integrated, null);
     assert.deepEqual(result.ran, ["stepwise-refinement"]);
-    assert.equal(result.item.stageStatus, "parked");
+    assert.equal(result.item.phaseStatus, "parked");
     assert.equal(existsSync(join(scratchDir, "parked-item-spec.md")), false);
   } finally {
     rmSync(storeDir, { recursive: true, force: true });

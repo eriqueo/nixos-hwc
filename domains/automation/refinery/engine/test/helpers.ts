@@ -33,8 +33,8 @@ export function makeItem(overrides: Partial<Item> = {}): Item {
   return {
     id: "item-1",
     genre: "test-genre",
-    stage: "g1",
-    stageStatus: "pending",
+    phase: "g1",
+    phaseStatus: "pending",
     payload: { hello: "world" },
     history: [],
     ...overrides,

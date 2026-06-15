@@ -1,17 +1,17 @@
 import { z } from "zod";
 
-export const StageStatusSchema = z.enum([
+export const PhaseStatusSchema = z.enum([
   "pending",
   "passed",
   "parked",
   "failed",
 ]);
-export type StageStatus = z.infer<typeof StageStatusSchema>;
+export type PhaseStatus = z.infer<typeof PhaseStatusSchema>;
 
 export const HistoryEntrySchema = z.object({
-  stage: z.string().min(1),
+  phase: z.string().min(1),
   status: z.union([
-    StageStatusSchema,
+    PhaseStatusSchema,
     z.literal("rewound"),
     z.literal("entered"),
   ]),
@@ -23,8 +23,8 @@ export type HistoryEntry = z.infer<typeof HistoryEntrySchema>;
 export const ItemSchema = z.object({
   id: z.string().min(1),
   genre: z.string().min(1),
-  stage: z.string().min(1),
-  stageStatus: StageStatusSchema,
+  phase: z.string().min(1),
+  phaseStatus: PhaseStatusSchema,
   parkedReason: z.string().optional(),
   payload: z.unknown(),
   history: z.array(HistoryEntrySchema),
@@ -43,7 +43,7 @@ export interface GateModule {
   readonly id: string;
   applies(item: Item): boolean;
   // CONTRACT: run() MUST be idempotent. On park-and-resume the runner re-enters
-  // the parked stage and calls run() again, so a gate may execute more than once
+  // the parked phase and calls run() again, so a gate may execute more than once
   // for the same item. Gates that perform side effects must guard against repeats.
   run(item: Item): Promise<GateVerdict>;
   decide(verdict: GateVerdict): GateDecision;
@@ -59,7 +59,7 @@ export const ProfileSchema = z.object({
   source: z.string().min(1),
   gates: z.array(z.string().min(1)).min(1),
   // executeMode + effectors are consumed by the execute/integrate effectors,
-  // not the stage runner (which only walks `gates`).
+  // not the phase runner (which only walks `gates`).
   executeMode: z.string().min(1),
   effectors: z.array(z.string().min(1)),
   // enabled gates whether triage may route to this profile (default true).
@@ -76,7 +76,7 @@ export interface ItemStore {
   list(): Promise<Item[]>;
 }
 
-// An effector performs the side-effecting stages of the pipeline (execute,
+// An effector performs the side-effecting phases of the pipeline (execute,
 // integrate, notify). Like gates, the core knows only this port; concrete
 // effectors (worktree+headless-claude execute, PR/brain-fold integrate, …) are
 // constructed with their own injected adapters.
@@ -90,7 +90,7 @@ export interface EffectorResult {
   pristine: boolean | null; // worktree clean check (read-only) or null in write mode
   pushed: boolean;
   detail: string; // human-readable outcome summary
-  output: unknown; // structured detail for downstream stages
+  output: unknown; // structured detail for downstream phases
 }
 
 export interface ItemEffector {

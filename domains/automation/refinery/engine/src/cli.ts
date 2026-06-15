@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   );
 
   if (result.parked) {
-    console.log(`PARKED at ${result.item.stage}: ${result.item.parkedReason ?? "(no reason)"}`);
+    console.log(`PARKED at ${result.item.phase}: ${result.item.parkedReason ?? "(no reason)"}`);
     process.exitCode = 0;
     return;
   }
