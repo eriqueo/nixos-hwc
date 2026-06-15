@@ -1,0 +1,15 @@
+{
+  "name": "@refinery/board",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only Kanban board over the gauntlet hopper. Dev-only deps: the production bundle is built by esbuild (nix) with zero runtime dependencies — pure node:http.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test 'test/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/node": "22.7.5",
+    "typescript": "5.6.3"
+  }
+}
