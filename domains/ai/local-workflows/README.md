@@ -20,5 +20,6 @@ local-workflows/
 ```
 
 ## Changelog
+- 2026-06-15: Backfill since 2026-04-12 — README missed Charter Law 9/10 namespace alignment, Law 3 path-abstraction sweep (system.paths derived values for photos/networking), auto-doc post-rebuild service hardening (`mkForce User/Group`, shebang/permission lint fixes), laptop cleanup pass, and the ai-domain dead-tree purge / NixOS 24.11 deprecation cleanup.
 - 2026-04-12: Remove journaling (restart-loop bug, replaced by morning-briefing) and HTTP API (never integrated). Keep file-cleanup, auto-doc, chat-cli.
 - 2026-02-28: Added README for Charter Law 12 compliance

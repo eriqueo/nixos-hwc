@@ -22,6 +22,7 @@ mcp/
 - The old `workspace/projects/jt-mcp/` was removed during the 2026-03-26 workspace restructure
 
 ## Changelog
+- 2026-06-15: Backfill since 2026-03-26 — Sprint 3 MCP hardening (security + reverse proxy support, f9b7fee5/9a54f534), Sprint 4.1 model validation + health checks (9453c19e), Sprint 5 MCP/agent/discovery integration (b7862937), Charter Law 9/10 options.nix consolidation, ai-domain dead-tree cleanup.
 - 2026-03-26: jt-mcp decoupled from parent hwc.ai.mcp.enable — now standalone; enabled directly in server config
 - 2026-03-25: Added heartwood/ subdomain — JT MCP Server (Phase 1: 63 JT tools)
 - 2026-02-28: Added README for Charter Law 12 compliance

@@ -142,3 +142,7 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+- 2026-06-15: Backfill since initial drop — README missed the full feature/refactor stack. Adds Sprint 4–5 work (FastAPI agent + script, MCP/agent/discovery integration, Local Workflows HTTP API, router/agent enablement fix), Charter Law 3 path-abstraction sweep, Law 9/10 namespace + options.nix consolidation, ai-domain dead-tree cleanup, and the `hwc` → `hwc-server` tailnet rename.
+- 2025-12-02: Added README for Charter Law 12 compliance.
