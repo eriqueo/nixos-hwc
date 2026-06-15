@@ -44,7 +44,9 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 ## Structure
 | Path | Purpose |
 |---|---|
-| `index.nix` | Module: options, esbuild bundle derivation, hardened systemd service |
+| `index.nix` | Module: options + the `:8060` service. Builds the **engine** HTTP shell (buildNpmPackage → esbuild bundle of `serve.ts`), profiles baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). |
+| `engine/src/shells/` | HTTP shell over the core: `http.ts` (routing + intake/amend/rewind/toggle handlers over the store/catalog/triage), `render.ts` (interactive board HTML, plain form-posts), `hopper.ts` (read-only `/hopper` gauntlet view), `serve.ts` (service entry point). |
+| `app/` | **Superseded** by the engine shell as the `:8060` service; kept as the original read-only hopper board (slice 01/02) and its tests. The hopper view now lives at the engine's `/hopper` route. |
 | `app/src/parse.ts` | Read-only parser over the hopper (cards + ideas) |
 | `app/src/render.ts` | Server-side Kanban HTML render |
 | `app/src/server.ts` | `node:http` shell; late-bound port + vault from env |
@@ -64,6 +66,15 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Slices 07+08 (board side): the `:8060` service now runs the
+  **engine HTTP shell** (`engine/src/shells/`), an interactive board over the
+  engine item store. Intake (`POST /intake`) triages a sentence into an enabled
+  profile (or parks it untriaged); parked items get amend (re-arm with a note)
+  and rewind (to an earlier gate) controls; a profiles panel toggles profiles via
+  the catalog overlay. The read-only gauntlet hopper is folded in at `/hopper`.
+  `index.nix` repointed from the esbuild `app/` board to the engine server
+  (buildNpmPackage + esbuild bundle; profiles baked to the store; state in
+  `/var/lib/refinery`). Engine 55/55 (+7). Plain form-posts (no JS framework).
 - **2026-06-15** — Slice 08 (engine core): `triage` intake classifier
   (`engine/src/triage.ts`). `triageSentence` routes a raw sentence to one of the
   enabled profiles via the injected `LlmPort`, falling back to `untriaged` when

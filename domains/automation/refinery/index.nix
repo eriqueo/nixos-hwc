@@ -1,22 +1,24 @@
 # domains/automation/refinery/index.nix
 #
-# Refinery — read-only Kanban board for the gauntlet hopper.
+# Refinery — interactive engine board + intake (slices 01–08).
 #
-# Renders every card across the brain vault's _inbox/nightly_builds/ goal
-# folders (plus raw _ideas.md ideas) as a live board, grouped by status. This
-# is slice 01+02 of the refinery build (see brain:
-# tech/development/builds/refinery/refinery_engine_design.md) — the read-only
-# viewer; the engine + interactivity (amend/rewind) come later.
+# The :8060 service now runs the ENGINE's HTTP shell (engine/src/shells/serve.ts),
+# a node:http surface over the substance-agnostic core: it renders engine Items
+# grouped by stageStatus, takes intake sentences (triaged into the enabled
+# profiles), and supports amend / rewind / profile-toggle. The read-only gauntlet
+# hopper view is folded in as the /hopper route.
 #
-# The TypeScript app (app/src/*.ts) is bundled to a single JS file by esbuild
-# at build time (no npm / node_modules / npmDepsHash dance — zero runtime deps,
-# pure node:http). The service reads the vault read-only as eric.
+# Build: the engine carries deps (zod, yaml), so we `npm ci` via buildNpmPackage
+# (npmDepsHash dance — see project memory) and esbuild-bundle serve.ts into one
+# dep-free server.js. Profiles are baked into the store from ./profiles; mutable
+# state (items + the enabled overlay) lives in /var/lib/refinery (StateDirectory).
 #
 # NAMESPACE: hwc.automation.refinery.*
 #
 # DEPENDENCIES:
-#   - hwc.paths.brain.server-replica / .vault (Syncthing'd brain vault)
+#   - hwc.paths.brain.server-replica / .vault (brain vault — /hopper route)
 #   - Caddy route on port 8060 (domains/networking/routes.nix)
+#   - a headless `claude` binary for triage (claude-cli provider) — cfg.claudeBin
 
 { config, lib, pkgs, ... }:
 
@@ -29,22 +31,33 @@ let
     then paths.brain.server-replica
     else paths.brain.vault;
 
-  # esbuild bundles the TS entrypoint (+ its relative imports) into one CJS file.
-  # Pass the whole src/ dir (not just server.ts) so esbuild can resolve the
-  # sibling ./parse.ts / ./render.ts imports.
-  appSrc = ./app/src;
-  board = pkgs.runCommand "refinery-board" {
+  # buildNpmPackage installs deps (zod, yaml); esbuild then bundles serve.ts (and
+  # its .js-specifier imports, which esbuild resolves to the .ts sources) into one
+  # CJS file with the deps inlined, so the runtime needs only nodejs.
+  board = pkgs.buildNpmPackage {
+    pname = "refinery-engine-board";
+    version = "0.1.0";
+    src = ./engine;
+    npmDepsHash = "sha256-FM9UojLOeKWb8Rer2oBYF6Qk3v3cgFewEVzDdsxBFrA=";
     nativeBuildInputs = [ pkgs.esbuild ];
-  } ''
-    mkdir -p $out
-    esbuild ${appSrc}/server.ts \
-      --bundle --platform=node --format=cjs \
-      --outfile=$out/server.js
-  '';
+    dontNpmBuild = true; # we don't need tsc output, just the bundle
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out
+      esbuild src/shells/serve.ts \
+        --bundle --platform=node --format=cjs \
+        --outfile=$out/server.js
+      runHook postInstall
+    '';
+  };
+
+  # Profiles are data baked into the store (read-only at runtime); the enabled
+  # overlay is written to mutable state, never back to these files.
+  profilesDir = ./profiles;
 in
 {
   options.hwc.automation.refinery = {
-    enable = lib.mkEnableOption "Refinery read-only Kanban board for the gauntlet hopper";
+    enable = lib.mkEnableOption "Refinery interactive engine board + intake";
 
     port = lib.mkOption {
       type = lib.types.port;
@@ -55,7 +68,19 @@ in
     vaultDir = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = vaultDefault;
-      description = "Brain vault root (contains _inbox/nightly_builds/)";
+      description = "Brain vault root (contains _inbox/nightly_builds/ for the /hopper route)";
+    };
+
+    triageProvider = lib.mkOption {
+      type = lib.types.str;
+      default = "claude-cli";
+      description = "LlmPort provider used to triage intake sentences (claude-cli | anthropic-api | ollama)";
+    };
+
+    claudeBin = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = "/etc/profiles/per-user/eric/bin/claude";
+      description = "Headless claude binary for the claude-cli triage provider";
     };
   };
 
@@ -68,25 +93,29 @@ in
     ];
 
     systemd.services.refinery-board = {
-      description = "Refinery gauntlet hopper board (read-only)";
+      description = "Refinery interactive engine board + intake";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
       serviceConfig = {
         User = lib.mkForce "eric";
         Group = "users";
         ExecStart = "${pkgs.nodejs}/bin/node ${board}/server.js";
+        StateDirectory = "refinery"; # → /var/lib/refinery (items + enabled overlay)
         Environment = [
           "REFINERY_PORT=${toString cfg.port}"
+          "REFINERY_PROFILES_DIR=${profilesDir}"
+          "REFINERY_ITEMS_DIR=/var/lib/refinery/items"
+          "REFINERY_PROFILE_STATE=/var/lib/refinery/profiles.json"
+          "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
           "REFINERY_VAULT_DIR=${cfg.vaultDir}"
-        ];
+        ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}";
         Restart = "on-failure";
         RestartSec = 5;
-        # Read-only viewer: it only ever reads the vault. Mask the whole home
-        # tree, then bind just the vault back in read-only — the service sees
-        # nothing else under /home (defense in depth beyond ProtectSystem).
-        # ProtectHome MUST be "tmpfs" (not true): true mounts /home read-only,
-        # so systemd can't create the bind target underneath and the vault
-        # silently disappears. "tmpfs" gives a tmpfs that bind targets mount into.
+        # Writes only to /var/lib/refinery (StateDirectory). The vault is bound in
+        # read-only for the /hopper route. ProtectHome MUST be "tmpfs" (not true):
+        # true mounts /home read-only, so systemd can't create the bind target
+        # underneath and the vault silently disappears. "tmpfs" gives a tmpfs that
+        # bind targets mount into.
         ProtectSystem = "strict";
         ProtectHome = lib.mkForce "tmpfs";
         BindReadOnlyPaths = [ cfg.vaultDir ];
