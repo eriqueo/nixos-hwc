@@ -53,9 +53,25 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `app/tsconfig.json` | TS config (typecheck/editor; esbuild needs no build step) |
 | `engine/` | Engine core: Item + GateModule + Manifest contracts (Zod), stage runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
-| `engine/src/effectors/` | Execute effector: one mode-parameterized `ItemEffector` (worktree → headless-claude → verdict-parse → report-check → push/pristine) extracting the shared logic of nightly-builds + sr_gauntlet `run.sh`. `executeMode` (write/read-only), verdict pattern, and success verdicts are config; git + claude + report-check are injected ports. `makeExecuteEffector(cfg, ports)`. |
+| `engine/src/effectors/` | Effectors (`ItemEffector`s): `execute` — one mode-parameterized worktree → headless-claude → verdict → report → push/pristine extract of the two `run.sh` files (git/claude/report injected); `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
+| `engine/src/stores/` | `MarkdownItemStore` (`ItemStore`): one `.md` per item — board-readable frontmatter + a canonical ```json block for lossless round-trip. |
+| `engine/src/adapters/` | `makeClaudeLlm` — production `LlmPort` via a headless `claude -p` call; binary late-bound from `$REFINERY_CLAUDE_BIN`. |
+| `engine/src/cli/run-once.ts` | `runGenreOnce` — orchestration core: load/create item → run gate pipeline → fire integrate effector on a clean pass. Fully injected (testable). |
+| `engine/src/cli.ts` | CLI shell: `refinery run --genre … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runGenreOnce`. |
+| `manifests/` | Genre manifests (data). `project-ideation.yaml` — gates `[stepwise-refinement, principles-create, premortem]`, integrate `write-spec`, no code execution. |
 
 ## Changelog
+- **2026-06-15** — Slice 05: first genre end-to-end (project-ideation). The
+  whole engine proven on one no-code genre: a sentence → stepwise-refinement →
+  principles-create → premortem → a developed project spec. New
+  `manifests/project-ideation.yaml`, `MarkdownItemStore` (lossless `.md`
+  round-trip via a canonical json block + board-readable frontmatter), the
+  `write-spec` integrate effector (LLM → `SpecSchema` → markdown to scratch, with
+  an `isSpecComplete` section check), a `runGenreOnce` orchestration core, the
+  `refinery` CLI shell, and a late-bound `makeClaudeLlm` production adapter.
+  Coverage (`node --test`, 34 total, +4): manifest validates against the schema,
+  store round-trips, the e2e produces a complete spec, and a parked gate stops
+  the pass before integrate. CLI shell smoke-tested end-to-end with a stub binary.
 - **2026-06-15** — Slice 06: execute-harness extract (`engine/src/effectors/`).
   Defined the `ItemEffector` port + result contract in `contracts.ts`, then
   implemented one mode-parameterized execute effector factoring the shared
