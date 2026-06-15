@@ -13,6 +13,23 @@ export type McpErrorType =
   | "UNAVAILABLE"      // service or endpoint not running
   | "INTERNAL_ERROR";  // unexpected exception
 
+/**
+ * Universal Result Contract — a self-describing, render-ready view of a tool's
+ * payload. Emitted as MCP `structuredContent` (in addition to the legacy text
+ * block) so any consumer — the workbench TUI tiles, the web Portal — renders it
+ * with zero per-tool adapter. `kind` picks the renderer; `data` carries that
+ * kind's canonical fields; producer noise (status/message/etc.) lives in `meta`.
+ * Spec: brain note universal_result_contract_schema.
+ */
+export type ViewKind = "text" | "list" | "table" | "kanban" | "metric" | "status";
+
+export interface ResultEnvelope<T = unknown> {
+  kind: ViewKind;
+  title?: string;
+  data: T;
+  meta?: Record<string, unknown>;
+}
+
 /** Standard result wrapper for all tool responses */
 export interface ToolResult<T = unknown> {
   status: "ok" | "error" | "partial";
@@ -23,6 +40,13 @@ export interface ToolResult<T = unknown> {
   error_type?: McpErrorType;
   suggestion?: string;
   context?: Record<string, unknown>;
+  /**
+   * Optional Universal Result Contract view. When present, backend-manager
+   * emits it as `structuredContent` alongside the legacy text block — the
+   * dual-emit path (legacy readers unaffected; contract-aware consumers prefer
+   * structuredContent). Tools that feed a dashboard tile set this.
+   */
+  view?: ResultEnvelope;
 }
 
 /** Tool definition matching the jt-mcp pattern */
