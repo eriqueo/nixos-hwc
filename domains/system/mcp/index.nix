@@ -11,12 +11,20 @@
 #   - Node.js 22 (runtime)
 #   - agenix secrets: jobtread-grant-key, n8n-api-key
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 
 let
   cfg = config.hwc.system.mcp;
   paths = config.hwc.paths;
   inherit (lib) mkIf mkMerge;
+
+  # khalt supersedes plain khal — its package ships the full `khal`/`ikhal` CLI
+  # (source fork). The MCP's hwc_calendar tool shells out to this `khal` and
+  # reads the khalt config (calendars-radicale). Resolved from the flake input
+  # so we never hardcode a /nix/store path (precedent: agenix in
+  # domains/system/core/packages.nix).
+  khaltPkg = inputs.khalt.packages.${pkgs.system}.default;
+  khaltConfigPath = "${paths.user.home}/.config/khalt/config";
 
   srcDir = "${paths.nixos}/domains/system/mcp/src";
 
@@ -275,6 +283,11 @@ in
 
         # Node.js path for spawning child processes
         HWC_NODE_PATH = "${pkgs.nodejs_22}/bin/node";
+
+        # Calendar (hwc_calendar): khalt's `khal` binary + the khalt config that
+        # points at the Radicale-synced calendars. khalt supersedes plain khal.
+        HWC_KHAL_BIN = "${khaltPkg}/bin/khal";
+        HWC_KHALT_CONFIG = khaltConfigPath;
       };
 
       serviceConfig = mkMerge [
@@ -363,6 +376,11 @@ in
         bash
         pass
         gnupg
+      ] ++ [
+        # khalt's `khal`/`ikhal`/`vdirsyncer` for the hwc_calendar tool. khalt
+        # supersedes plain khal; HWC_KHAL_BIN points at this package's `khal`.
+        khaltPkg
+        pkgs.vdirsyncer
       ];
     };
 
