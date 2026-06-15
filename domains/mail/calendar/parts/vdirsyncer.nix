@@ -6,7 +6,12 @@ let
     [pair ${name}]
     a = "${name}_remote"
     b = "${name}_local"
-    collections = ["from a", "from b"]
+    # Server-authoritative discovery ("from a" only): iCloud can't create
+    # calendars over CalDAV, so a local-only collection (e.g. a calendar deleted
+    # on iCloud, or a dead Reminders list orphaned by Apple's 2026-06 Reminders
+    # change) can never sync up — it 404s every run and aborts the whole sync.
+    # "from a" simply ignores such stale local dirs (no data deleted).
+    collections = ["from a"]
     metadata = ["color", "displayname"]
 
     [storage ${name}_remote]
