@@ -6,6 +6,7 @@
  */
 
 import type { ToolDef, ToolResult } from "../types.js";
+import { contract } from "../result.js";
 import { executeHealthCheck } from "./monitoring.js";
 import { executeMailHealth } from "./mail.js";
 import { khalList } from "./calendar.js";
@@ -126,10 +127,19 @@ export function morningStatusTool(): ToolDef {
 
       const briefing = lines.join("\n");
 
+      // Universal Result Contract view (text): the header line is the greeting,
+      // the per-section lines (Services/Errors/Mail/Storage/Calendar) are the
+      // highlights. lines[0] is the "=== HWC Morning Status — <date> ===" header.
+      const [header, ...sections] = lines;
       return {
         status: "ok",
         message: `Morning status for ${today}`,
         data: { briefing, date: today },
+        view: contract("text", "Morning Briefing", {
+          greeting: header ?? `HWC Morning Status — ${today}`,
+          summary: `${sections.length} section${sections.length !== 1 ? "s" : ""}`,
+          highlights: sections,
+        }, { date: today, source: "hwc_morning_status" }),
       };
     },
   };

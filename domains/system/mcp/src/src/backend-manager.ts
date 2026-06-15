@@ -220,7 +220,7 @@ export class BackendManager {
   async callTool(
     name: string,
     args: Record<string, unknown>,
-  ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
+  ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean; structuredContent?: unknown }> {
     const entry = this.toolMap.get(name);
 
     if (!entry) {
@@ -241,9 +241,14 @@ export class BackendManager {
       try {
         const result = await entry.local.handler(args);
         log.debug("Local tool call completed", { tool: name, status: result.status, durationMs: Date.now() - startMs });
+        // Dual-emit: legacy text block (the full ToolResult, for prose/LLM and
+        // any existing reader) PLUS the Universal Result Contract view as MCP
+        // structuredContent when the tool set one. Contract-aware consumers
+        // (workbench, Portal) prefer structuredContent.
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           isError: result.status === "error",
+          ...(result.view ? { structuredContent: result.view } : {}),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
