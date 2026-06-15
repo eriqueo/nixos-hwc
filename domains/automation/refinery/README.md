@@ -56,12 +56,21 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `engine/src/effectors/` | Effectors (`ItemEffector`s): `execute` — one mode-parameterized worktree → headless-claude → verdict → report → push/pristine extract of the two `run.sh` files (git/claude/report injected); `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
 | `engine/src/stores/` | `MarkdownItemStore` (`ItemStore`): one `.md` per item — board-readable frontmatter + a canonical ```json block for lossless round-trip. |
 | `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a profile's `llmProvider` to the adapter. All late-bound from env. |
-| `engine/src/profiles/` | `ProfileCatalog` — lead_scout-style registry: disk scan of `profiles/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. |
+| `engine/src/profiles/` | `ProfileCatalog` — lead_scout-style registry: disk scan of `profiles/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet execute knobs (verdict token, success verdicts) not on the Profile schema. |
+| `engine/src/sources/` | `SourcePort` — inbound intake boundary (a profile's `source` field names the adapter). Concrete adapters (vault card scan, Firestore SR fetch) are a later human-gated step. |
 | `engine/src/cli/run-once.ts` | `runGenreOnce` — orchestration core: load/create item → run gate pipeline → fire integrate effector on a clean pass. Fully injected (testable). |
 | `engine/src/cli.ts` | CLI shell: `refinery run --genre … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runGenreOnce`. |
-| `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` — gates `[stepwise-refinement, principles-create, premortem]`, integrate `write-spec`, no code execution. |
+| `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Slice 09: the two gauntlets expressed as profiles
+  (`profiles/nightly-build.yaml` write-mode, `profiles/datax-sr.yaml`
+  read-only) + a parity harness proving the engine reproduces each gauntlet's
+  observable behavior through the slice-06 execute effector. `gauntlet-config.ts`
+  carries the per-gauntlet execute knobs (verdict token + success verdicts);
+  `SourcePort` defines the intake boundary. Strangler-fig: both profiles ship
+  `enabled: false`, and the live `run.sh` files + timers are untouched —
+  adopting them is a separate human-gated step. Engine 43/43 (+5 parity tests).
 - **2026-06-15** — Profiles catalog + multi-LLM adapters (lead_scout patterns).
   `ProfileCatalog` (`engine/src/profiles/`) scans `profiles/*.yaml` and merges a
   writable `enabled` overlay (disk template vs live state, lead_scout-style) with
