@@ -117,8 +117,14 @@ in
 
       username = lib.mkOption {
         type = lib.types.str;
-        default = "eric";
-        description = "Radicale username (first field of the htpasswd secret).";
+        default = "cal";
+        description = ''
+          Radicale username for the CALENDAR principal — deliberately distinct
+          from the tasks user (eric). Radicale's owner_only rights give each user
+          its own collection home-set, so calendar (cal) and tasks (eric) no
+          longer discover each other's collections. Requires a matching
+          `cal:<password>` line in the radicale-htpasswd secret.
+        '';
       };
 
       color = lib.mkOption {

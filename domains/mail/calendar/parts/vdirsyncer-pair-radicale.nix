@@ -35,11 +35,13 @@
   type = "caldav"
   url = "${url}"
   username = "${username}"
-  # Run cut directly (no `sh -c`): the vdirsyncer service PATH carries coreutils
-  # but NOT bash, so `sh` isn't found — and the shell wrapper buys nothing here.
-  # Mirrors the iCloud pair's direct `["command", "cat", …]`. Emits field 2+ of
-  # the htpasswd line (user:password) = the password.
-  password.fetch = ["command", "cut", "-d:", "-f2-", "${secretPath}"]
+  # Extract THIS user's password from the (now multi-user) htpasswd, by username:
+  # awk picks the `${username}:…` line and prints everything after the first
+  # colon (colon-safe). Keyed by username so the calendar (cal) and tasks (eric)
+  # pull their own line from the shared file. Quote-free awk program so it
+  # survives the nix→vdirsyncer→awk layers; runs directly (no shell) — gawk is on
+  # the vdirsyncer service PATH (parts/service.nix).
+  password.fetch = ["command", "awk", "-F:", "-v", "u=${username}", "$1==u{match($0,/:/);print substr($0,RSTART+1)}", "${secretPath}"]
   item_types = ["VEVENT"]
 
   [storage calendar_radicale_local]

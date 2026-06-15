@@ -9,8 +9,10 @@
     Service = {
       Type = "oneshot";
       ExecStart = "${pkgs.vdirsyncer}/bin/vdirsyncer sync";
+      # gawk is needed by the Radicale pairs' password.fetch (extract one user's
+      # line from the multi-user htpasswd by username). coreutils has no awk.
       Environment = [
-        "PATH=${lib.makeBinPath [ pkgs.coreutils ]}"
+        "PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.gawk ]}"
       ];
       TimeoutStartSec = "120";
       Nice = 10;
