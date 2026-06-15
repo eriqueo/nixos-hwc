@@ -46,6 +46,17 @@ in
             type = lib.types.listOf lib.types.str;
             description = "Device names to sync this folder with";
           };
+          type = lib.mkOption {
+            type = lib.types.enum [ "sendreceive" "sendonly" "receiveonly" ];
+            default = "sendreceive";
+            description = ''
+              Syncthing folder direction. `sendonly` = this device NEVER accepts
+              peer changes — use when this device is the canonical writer and its
+              only Syncthing role is to feed read-only mirrors (e.g. a git-managed
+              vault pushed to a receive-only phone). This is the structural guard
+              that makes it impossible for a stale peer to clobber the source.
+            '';
+          };
           ignores = lib.mkOption {
             type = lib.types.listOf lib.types.str;
             default = [];
@@ -106,7 +117,7 @@ in
         ) cfg.devices;
 
         folders = lib.mapAttrs (_name: folder: {
-          inherit (folder) path devices;
+          inherit (folder) path devices type;
           versioning = {
             type = folder.versioning.type;
             params.maxAge = folder.versioning.maxAge;
