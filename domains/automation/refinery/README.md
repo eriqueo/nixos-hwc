@@ -58,11 +58,20 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a profile's `llmProvider` to the adapter. All late-bound from env. |
 | `engine/src/profiles/` | `ProfileCatalog` — lead_scout-style registry: disk scan of `profiles/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet execute knobs (verdict token, success verdicts) not on the Profile schema. |
 | `engine/src/sources/` | `SourcePort` — inbound intake boundary (a profile's `source` field names the adapter). Concrete adapters (vault card scan, Firestore SR fetch) are a later human-gated step. |
+| `engine/src/triage.ts` | `triageSentence` — intake classifier: routes a raw sentence to one of the enabled profiles (via `LlmPort`) or `untriaged` below a confidence threshold. `makeTriagedItem` builds the Item (parked at `triage` if untriaged). |
 | `engine/src/cli/run-once.ts` | `runGenreOnce` — orchestration core: load/create item → run gate pipeline → fire integrate effector on a clean pass. Fully injected (testable). |
 | `engine/src/cli.ts` | CLI shell: `refinery run --genre … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runGenreOnce`. |
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Slice 08 (engine core): `triage` intake classifier
+  (`engine/src/triage.ts`). `triageSentence` routes a raw sentence to one of the
+  enabled profiles via the injected `LlmPort`, falling back to `untriaged` when
+  the model picks an unoffered genre or is below the confidence threshold;
+  `makeTriagedItem` builds the Item (untriaged → parked at `triage` for human
+  routing on the board). Engine 48/48 (+5). The HTTP `/intake` endpoint, keybind,
+  and agent skill are the board-integration half of slice 08 (pending the
+  board↔engine wiring decision).
 - **2026-06-15** — Slice 09: the two gauntlets expressed as profiles
   (`profiles/nightly-build.yaml` write-mode, `profiles/datax-sr.yaml`
   read-only) + a parity harness proving the engine reproduces each gauntlet's
