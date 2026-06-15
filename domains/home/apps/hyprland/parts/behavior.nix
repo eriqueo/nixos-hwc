@@ -23,6 +23,10 @@ in
     "${mod},E,exec,kitty -e ssh -t server aerc"
     "${mod},N,exec,kitty -e nvim"
     "${mod},Y,exec,kitty -e yazi"
+    # Workbench ops host. `attach -c workbench` reuses the named session if it's
+    # already running (else creates it with the default `workbench` layout), so
+    # repeated presses focus the one session instead of spawning duplicates.
+    "${mod},W,exec,kitty -e zellij attach -c workbench"
     "${mod},G,exec,gpu-toggle"
   ] ++ lib.optionals toduiEnabled [
     "${mod},T,exec,kitty -e todui"

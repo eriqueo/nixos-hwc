@@ -26,6 +26,10 @@
   "screenshots" = "cd ~/500_media/510_pictures/screenshots";
   "cameras" = "echo 'Frigate: http://100.115.126.41:5000'";
   "ls" = "eza"; "vpn" = "vpnstatus"; "which-command" = "whence"; "run-help" = "man";
+  # workbench = the full zellij ops layout (bare `workbench` is just the host
+  # pane). attach -c reuses/creates the named session; `command workbench`
+  # still reaches the raw binary (the zellij layout itself execs it directly).
+  "workbench" = "zellij attach -c workbench";
   # Workspace script aliases
   "errors" = "${ws}/monitoring/journal-errors.sh";
   "errors-hour" = "${ws}/monitoring/journal-errors.sh '1 hour ago'";
