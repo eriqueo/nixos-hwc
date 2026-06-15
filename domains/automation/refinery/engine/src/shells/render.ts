@@ -229,9 +229,29 @@ export function renderProjectDetail(
   const run = typeof payloadObj.run === "string" ? payloadObj.run : "";
   const pr = typeof payloadObj.pr === "string" ? payloadObj.pr : "";
 
+  const source = typeof payloadObj.source === "string" ? payloadObj.source : "";
+  const isNightlyCard = source === "nightly-builds vault card";
+  const cardStatus = typeof payloadObj.status === "string" ? payloadObj.status : "";
+  const reportLink = (run || payloadObj.hasReport)
+    ? `<a href="/report/${esc(item.id)}">📄 view REPORT</a>`
+    : `<span class="kv">no REPORT yet</span>`;
+
   const actions = readonly
-    ? `<h2>Mirror (read-only)</h2>
-       <div class="kv">Managed by the nightly-builds overnight run — refinery shows it but doesn't edit it.${run ? ` · run: ${esc(run)}` : ""}${pr ? ` · ${esc(pr)}` : ""}</div>`
+    ? isNightlyCard
+      ? // nightly-builds vault card: the Phase-4 queue gate as a button (writes
+        // only the status field); run.sh @ 01:30 executes. + REPORT link.
+        `<h2>Overnight queue</h2>
+         <form class="act" method="post" action="/card/queue">
+           <input type="hidden" name="id" value="${esc(item.id)}">
+           <input type="hidden" name="to" value="${cardStatus.startsWith("queued") ? "draft" : "queued"}">
+           <button type="submit">${cardStatus.startsWith("queued") ? "↩ unqueue (draft)" : "✅ queue for tonight"}</button>
+           <span class="kv">status: ${esc(cardStatus)} — run.sh @ 01:30 runs queued cards (NB_MAX_CARDS)</span>
+         </form>
+         <div class="act">${reportLink}${pr ? ` <span class="kv">· ${esc(pr)}</span>` : ""}</div>`
+      : // sr_gauntlet investigation: pure read-only + REPORT.
+        `<h2>Investigation (read-only)</h2>
+         <div class="kv">Produced by the sr_gauntlet overnight run.</div>
+         <div class="act">${reportLink}</div>`
     : `${promote}
   <h2>Human-in-the-loop</h2>
   ${parkedActions}
@@ -264,6 +284,16 @@ export function renderProjectDetail(
 
   <h2>History</h2>
   ${history}
+</div>`;
+  return layout("", body);
+}
+
+/** Render a run's REPORT.md (plain — escaped <pre>). */
+export function renderReport(title: string, report: string | null): string {
+  const body = `<div class="detail">
+  <a href="/" class="kv">← board</a>
+  <h2>📄 ${esc(title)} — REPORT</h2>
+  ${report ? `<pre>${esc(report)}</pre>` : `<div class="empty" style="padding:24px">no REPORT.md found for this run</div>`}
 </div>`;
   return layout("", body);
 }

@@ -14,8 +14,9 @@ import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { nightlyCardProjects } from "../sources/nightly-cards.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderProjectDetail } from "./render.js";
+import { nightlyCardProjects, setCardStatus, readReport, NB_PREFIX } from "../sources/nightly-cards.js";
+import { srInvestigationProjects, SR_PREFIX } from "../sources/sr-investigations.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderProjectDetail, renderReport } from "./render.js";
 
 export interface HttpShellConfig {
   port: number;
@@ -24,7 +25,8 @@ export interface HttpShellConfig {
   profileStatePath: string;
   nightlyConfigPath: string;
   triageProvider: string;
-  vaultDir?: string; // for the read-only nightly-builds card mirror
+  vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
+  srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
 }
@@ -40,6 +42,7 @@ export function configFromEnv(): HttpShellConfig {
     nightlyConfigPath: process.env.REFINERY_NIGHTLY_CONFIG || `${base}/nightly.json`,
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
     vaultDir: process.env.REFINERY_VAULT_DIR,
+    srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
     clock: () => new Date().toISOString(),
   };
 }
@@ -166,8 +169,12 @@ export function createShell(cfg: HttpShellConfig) {
           res.end("ok");
           return;
         }
-        // Read-only mirror of the live nightly-builds vault cards (display only).
-        const mirror = (): Item[] => (cfg.vaultDir ? nightlyCardProjects(cfg.vaultDir) : []);
+        // Read-only mirror of the live gauntlets: nightly-builds vault cards +
+        // sr_gauntlet investigations.
+        const mirror = (): Item[] => [
+          ...(cfg.vaultDir ? nightlyCardProjects(cfg.vaultDir) : []),
+          ...(cfg.srGauntletDir ? srInvestigationProjects(cfg.srGauntletDir) : []),
+        ];
 
         if (method === "GET" && (url === "/" || url === "/hopper")) {
           const [items, profiles] = [await store.list(), catalog.list()];
@@ -201,6 +208,21 @@ export function createShell(cfg: HttpShellConfig) {
           res.end(renderProjectDetail(item, catalog.list(), catalog.enabled()));
           return;
         }
+        if (method === "GET" && url.startsWith("/report/")) {
+          const id = decodeURIComponent(url.slice("/report/".length));
+          const item = mirror().find((m) => m.id === id);
+          const run = item && typeof (item.payload as { run?: unknown }).run === "string"
+            ? (item.payload as { run: string }).run
+            : "";
+          let report: string | null = null;
+          if (item && run) {
+            if (id.startsWith(NB_PREFIX) && cfg.vaultDir) report = readReport(cfg.vaultDir, run);
+            else if (id.startsWith(SR_PREFIX) && cfg.srGauntletDir) report = readReport(cfg.srGauntletDir, run);
+          }
+          res.writeHead(report ? 200 : 404, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderReport(item ? String((item.payload as { title?: unknown }).title ?? id) : id, report));
+          return;
+        }
 
         if (method === "POST") {
           const body = await readBody(req);
@@ -225,6 +247,13 @@ export function createShell(cfg: HttpShellConfig) {
           if (url === "/delete") {
             await deleteItem(id);
             return redirectTo(res, "/");
+          }
+          if (url === "/card/queue") {
+            // GUI for the Phase-4 gate: flip a nightly-builds card's status in
+            // the vault (draft↔queued). run.sh @ 01:30 still does the execution.
+            const to = body.get("to") === "queued" ? "queued" : "draft";
+            if (cfg.vaultDir && id.startsWith(NB_PREFIX)) setCardStatus(cfg.vaultDir, id, to);
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
           }
           if (url === "/nightly/toggle") {
             await setNightly(id, body.get("nightly") === "true");
