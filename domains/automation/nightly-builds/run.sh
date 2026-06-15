@@ -18,6 +18,13 @@ AGENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VAULT_DIR="${NB_VAULT_DIR:-$HOME/900_vaults/brain}"
 REPO_DIR="${NB_REPO_DIR:-$HOME/.nixos}"
 MAX_CARDS="${NB_MAX_CARDS:-1}"
+# Runtime override: the refinery board writes the cap to a shared caps file so it
+# can be changed from the GUI. Falls back to NB_MAX_CARDS if absent/unreadable.
+NB_CAPS_FILE="${NB_CAPS_FILE:-/var/lib/refinery/caps.json}"
+if [ -r "$NB_CAPS_FILE" ] && command -v jq >/dev/null 2>&1; then
+  _cap=$(jq -r '.nightly // empty' "$NB_CAPS_FILE" 2>/dev/null || true)
+  case "$_cap" in (''|*[!0-9]*) ;; (*) MAX_CARDS="$_cap" ;; esac
+fi
 CLAUDE_BIN="${NB_CLAUDE_BIN:-/etc/profiles/per-user/eric/bin/claude}"
 [ -x "$CLAUDE_BIN" ] || CLAUDE_BIN="$(command -v claude || true)"
 
