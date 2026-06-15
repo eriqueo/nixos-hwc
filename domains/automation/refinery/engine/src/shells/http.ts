@@ -7,12 +7,15 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { Item } from "../contracts.js";
+import { Item, ItemEffector, Profile } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { ProfileCatalog } from "../profiles/catalog.js";
 import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
+import { gateList } from "../gates/index.js";
+import { makeWriteSpecEffector } from "../effectors/write-spec.js";
+import { runGenreOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, NB_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
@@ -24,11 +27,13 @@ export interface HttpShellConfig {
   profilesDir: string;
   profileStatePath: string;
   capsPath: string; // per-gauntlet "max per run" caps, written by the GUI
+  scratchDir: string; // where the write-spec effector drops developed specs
   triageProvider: string;
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
+  runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per profile
 }
 
 export function configFromEnv(): HttpShellConfig {
@@ -40,6 +45,7 @@ export function configFromEnv(): HttpShellConfig {
     profilesDir: process.env.REFINERY_PROFILES_DIR || "profiles",
     profileStatePath: process.env.REFINERY_PROFILE_STATE || `${base}/profiles.json`,
     capsPath: process.env.REFINERY_CAPS_FILE || `${base}/caps.json`,
+    scratchDir: process.env.REFINERY_SCRATCH_DIR || `${base}/specs`,
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
     vaultDir: process.env.REFINERY_VAULT_DIR,
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
@@ -112,6 +118,60 @@ export function createShell(cfg: HttpShellConfig) {
     const firstPhase = profile?.gates[0] ?? "triage";
     const id = `${slug(text)}-${Date.now()}`;
     await store.save(makeTriagedItem(id, text, decision, firstPhase, cfg.clock));
+    // Event-driven genres (e.g. incoming SR tickets) run the pipeline on
+    // arrival; manual genres (project-ideation) wait for the board's Run button.
+    if (profile?.autoRun) void kickRun(id);
+  }
+
+  /** Resolve the genre's integrate effector. write-spec is wired; other
+   *  effectors (e.g. SR's `execute`) aren't board-runnable yet — fail loud so
+   *  the item parks with a clear reason rather than silently no-op'ing. */
+  function resolveEffector(profile: Profile, llm: LlmPort): ItemEffector {
+    if (profile.effectors.includes("write-spec")) {
+      return makeWriteSpecEffector({ scratchDir: cfg.scratchDir }, llm);
+    }
+    throw new Error(
+      `no board effector wired for genre "${profile.genre}" (effectors: ${profile.effectors.join(", ")})`,
+    );
+  }
+
+  /** Run one triaged engine item through its profile's gate pipeline + effector
+   *  (the same core the CLI uses). Read-only mirror items aren't in the store,
+   *  so load() returns null and this no-ops. Throws are surfaced by the caller. */
+  async function runItem(id: string): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    const profile = catalog.get(item.genre);
+    if (!profile) return; // untriaged / unknown genre — nothing to run
+    const payload = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
+    const input = typeof payload.input === "string" ? payload.input : "";
+    const llm = cfg.runLlm ?? resolveLlm(profile.llmProvider ?? cfg.triageProvider);
+    await runGenreOnce(
+      { id, input },
+      { profile, gates: gateList(llm), integrate: resolveEffector(profile, llm), store, clock: cfg.clock },
+    );
+  }
+
+  /** Fire-and-forget a run: mark the item running for immediate UI feedback,
+   *  then process in the background. A crash mid-run leaves it failed-reviewable
+   *  rather than stuck running. */
+  async function kickRun(id: string): Promise<void> {
+    const item = await store.load(id);
+    if (!item || !catalog.get(item.genre) || item.phaseStatus === "running") return;
+    await store.save({ ...item, phaseStatus: "running", parkedReason: undefined });
+    // Returned so tests can await completion; production calls `void kickRun(id)`
+    // so the HTTP request / intake doesn't block on the (slow) pipeline.
+    return runItem(id).catch(async (e) => {
+      const cur = await store.load(id);
+      if (cur) {
+        await store.save({
+          ...cur,
+          phaseStatus: "failed",
+          parkedReason: `run error: ${(e as Error).message}`,
+          history: [...cur.history, { phase: cur.phase, status: "failed", at: cfg.clock(), note: `run error: ${(e as Error).message}` }],
+        });
+      }
+    });
   }
 
   async function amend(id: string, note: string): Promise<void> {
@@ -288,6 +348,13 @@ export function createShell(cfg: HttpShellConfig) {
             await promote(id, body.get("genre") ?? "");
             return redirectTo(res, `/project/${encodeURIComponent(id)}`);
           }
+          if (url === "/run") {
+            // Run the item's pipeline now (gates → effector). Fire-and-forget so
+            // the request returns immediately; the board shows "running" and the
+            // result on the next refresh.
+            await kickRun(id);
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+          }
           if (url === "/delete") {
             await deleteItem(id);
             return redirectTo(res, "/");
@@ -336,5 +403,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote, deleteItem };
+  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun };
 }

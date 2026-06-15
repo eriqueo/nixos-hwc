@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const PhaseStatusSchema = z.enum([
   "pending",
+  "running", // pipeline is executing this phase now (set by the board's Run button)
   "passed",
   "parked",
   "failed",
@@ -74,6 +75,11 @@ export const ProfileSchema = z.object({
   // llmProvider selects the LlmPort adapter (claude-cli | anthropic-api |
   // ollama); default "claude-cli". Late-bound by the adapter resolver.
   llmProvider: z.string().min(1).optional(),
+  // autoRun: when an item enters this genre (via triage/intake), run the
+  // pipeline immediately instead of waiting for the board's Run button. Manual
+  // genres (project-ideation) leave this false so a human triggers each run;
+  // event-driven genres (incoming SR tickets) set it true. Default false.
+  autoRun: z.boolean().optional(),
 });
 export type Profile = z.infer<typeof ProfileSchema>;
 

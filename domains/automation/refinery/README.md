@@ -66,6 +66,17 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Run button + auto-run: the board executes engine pipelines.
+  Triaged engine items (e.g. `project-ideation`) previously parked at their first
+  gate with nothing to advance them. New `POST /run` + a Run button on the detail
+  page invoke the engine runner (`runGenreOnce`: gates → integrate effector) on
+  the item, reusing the CLI's wiring; it's fire-and-forget (item flips to a new
+  `running` status + lane; result shows on refresh). A new per-profile `autoRun`
+  flag makes a genre run automatically on intake instead of waiting for the button
+  (the mechanism for event-driven genres like incoming SR tickets). `write-spec`
+  is the wired effector; genres whose effector isn't board-runnable yet (SR's
+  `execute`) fail loud and park with a clear reason. Specs land in
+  `REFINERY_SCRATCH_DIR` (`/var/lib/refinery/specs`). Engine 74/74 (+4).
 - **2026-06-15** — claude-cli triage authenticates on the Claude subscription.
   The home-masked service (`ProtectHome=tmpfs`) couldn't reach `~/.claude`, so
   intake items parked at `triage` (`response was not JSON` — headless `claude`
