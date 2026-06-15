@@ -105,7 +105,9 @@ in
           "REFINERY_PROFILES_DIR=${profilesDir}"
           "REFINERY_ITEMS_DIR=/var/lib/refinery/items"
           "REFINERY_PROFILE_STATE=/var/lib/refinery/profiles.json"
-          "REFINERY_NIGHTLY_CONFIG=/var/lib/refinery/nightly.json"
+          # Per-gauntlet "max per run" caps the board edits; both run.sh files
+          # read this same file (with their env value as fallback).
+          "REFINERY_CAPS_FILE=/var/lib/refinery/caps.json"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
         ] ++ lib.optional (cfg.claudeBin != null) "REFINERY_CLAUDE_BIN=${cfg.claudeBin}"
           ++ lib.optional (cfg.vaultDir != null) "REFINERY_VAULT_DIR=${cfg.vaultDir}"
