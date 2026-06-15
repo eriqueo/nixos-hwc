@@ -89,4 +89,5 @@ hwc.data.databases = {
 - 2026-05-22: Promoted `package` to an option (default `postgresql_15` for server cluster safety). Assertion now checks `version` vs `package.version` for drift instead of hardcoding 15.x. Laptop runs v17, server stays on v15. Added tmpfiles rule for custom `dataDir` (NixOS module only auto-creates the default `/var/lib/postgresql`).
 - 2026-05-22: Gated Podman-specific behavior behind `containerNetwork.enable`; promoted `extensions` and `sharedPreloadLibraries` to options so non-Podman hosts (laptop) can run a vanilla local dev DB.
 - 2026-03-23: Added `backup.perDatabase` for compressed per-database backups with retention
+- 2026-06-09: Charter Law 3 path sweep — derive remaining hardcoded paths from `hwc.paths.*` (6001f937). Pure refactor.
 - 2026-02-27: Migrated from server/native/networking/ per Law 2 namespace compliance

@@ -14,4 +14,5 @@ cloud/
 ```
 
 ## Changelog
+- 2026-06-15: Backfill — Sprint 4.3 added cloud API infrastructure (43a97ab9); later picked up the broader ai-refactor, options.nix consolidation (Law 9/10), and ai-domain dead-tree cleanup.
 - 2026-02-28: Added README for Charter Law 12 compliance

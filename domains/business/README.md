@@ -27,6 +27,7 @@ business/
 ```
 
 ## Changelog
+- 2026-06-15: Sub-domain README backfill — datax/fb-group-scraper, morning-briefing, paperless, and website refreshed for Law 3/9/10 sweeps, the `hwc` → `hwc-server` tailnet rename, and Playwright-login + lead-scoring iterations. No code change in the `domains/business/` aggregator.
 - 2026-06-11: README rewritten — this file previously contained the AI-MCP
   domain readme by mistake. Business enables now come from the business
   role rather than machines/server/config.nix.

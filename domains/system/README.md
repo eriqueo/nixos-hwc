@@ -36,6 +36,9 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+- 2026-06-12: Docs sweep — stale "tasq" client references → "todui" across system READMEs/comments (abaaa5b5). Pure rename.
+- 2026-06-12: `mcp/` — new `hwc_tasks_*` tool set: task CRUD over the Radicale CalDAV server for claude.ai (bd9a1cfc).
+- 2026-06-12: `users/` — keep the hwc-phone Termius SSH key in the declarative `authorized_keys` set (96bde13d).
 - 2026-06-11: `hardware/` — new `powerScripts.enable` flag carries the perf-mode/balanced-mode CPU-governor toggle scripts (moved from machines/laptop/config.nix, closing its TODO). Laptop delta is order-only (sorted systemPackages set identical); other machines byte-identical.
 - 2026-06-11: `core/` — new `hwc.system.core.nixld.guiLibs.enable` flag carries the X11/GTK/audio nix-ld library set; desktop and gaming roles flip it instead of duplicating the 22-package list. All 5 toplevels byte-identical (proven no-op).
 - 2026-06-11: `gpu/` — CUDA binary cache (cache.nixos-cuda.org substituter + key) moved here from machines/{laptop,server}/config.nix duplication; applies to any machine with `gpu.type = "nvidia"`. nix-diff: delta is nix.conf only (substituter sets unchanged per machine).

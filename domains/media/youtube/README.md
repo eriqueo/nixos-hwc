@@ -102,3 +102,6 @@ hwc.server.native.youtube.videos = {
 - 2026-03-26: Workspace source moved from workspace/youtube-services/ to workspace/media/youtube-services/ (domain alignment); all nix refs updated
 - 2026-03-04: Namespace migration hwc.server.native.youtube.* → hwc.media.youtube.*
 - 2026-02-27: Initial domain creation with legacy API, transcripts API, and videos API
+- 2026-04-12: Major slim of `parts/yt-transcripts-api` and removal of the unused `parts/yt-videos-api/default.nix` (~534 lines deleted, 92cbf2ac); `index.nix` re-trimmed accordingly.
+- 2026-06-02: Tailnet rename `hwc` → `hwc-server` (22bbbb48) — sweep host refs in transcript service URLs.
+- 2026-06-09: Charter Law 3 path sweep — derive remaining hardcodes from `hwc.paths.*` (6001f937). Pure refactor.

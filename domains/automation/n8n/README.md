@@ -155,3 +155,6 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 - 2026-04-03: Funnel moved to :443 — Caddy :18080 backend routes `/n8n/*` to Express :6200, which proxies to bridge :6201. URLs updated from `:8443` to no port suffix.
 - 2026-04-03: Add MCP bridge — n8n-mcp HTTP bridge on port 6201 with declarative npm install, JSON response patch, Express proxy route, and Claude.ai connection via Tailscale Funnel
 - 2026-03-25: Created README per Law 12
+- 2026-06-09: Law 3 path sweep — derive worst hardcoded paths from `hwc.paths` (61f22fa3).
+- 2026-06-09: Law 9/10 — `n8n/mcp-bridge.nix` → `n8n/mcp-bridge/index.nix` directory-module conversion (pure relocation).
+- 2026-06-13: Syncthing layout cleanup — `600_shared` removed, `apps` folder renamed to `600_apps` in workflow path comments (5289d7b3).

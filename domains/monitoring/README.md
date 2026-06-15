@@ -51,6 +51,7 @@ monitoring/
 
 ## Changelog
 
+- 2026-06-09: Homepage dashboard tiles repointed at name-based vhost URLs (ee9f1f17); coordinated with the networking-side vhost-static support + clean-name migration of static dashboards (ed10482b) and the bulk port-mode → name-based vhost migration (8fdee440). Monitoring-side change is URL-only.
 - 2026-06-04: Retired the duplicate script-based disk alerter (`alerts/` `sources.diskSpace`); Prometheus is now the sole disk-alert owner. Salvaged its critical-on-data-volumes logic into `HighDiskUsage` (95% P5), which now matches `/|/mnt/.*` instead of root-only — so a full `/mnt/media` or `/mnt/hot` raises P5, not just P4.
 - 2026-06-04: Raised `ModerateDiskUsage` threshold 75% → 82% (`prometheus/parts/alerts.nix`). Root `/` baselines ~77%, so the 75% P3 alert fired permanently and Alertmanager re-sent it to Discord every 4h (repeat_interval) with no actionable signal — the dominant disk-alert spam. 82% sits above baseline, below the Elevated (85%) tier.
 - 2026-06-04: Raised `PersonaDaemonReindexStale` threshold 1h → 7h (`prometheus/parts/alerts.nix`). The daemon only reindexes on content change with a 6h backstop reconcile (`persona-daemon/index.nix`, `OnUnitActiveSec=6h`), so the old 1h threshold fired on every quiet-vault period — a guaranteed false positive. 7h = 6h backstop + 1h margin.

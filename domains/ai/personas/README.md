@@ -59,6 +59,7 @@ README.md
 
 ## Changelog
 
+- 2026-06-15: Backfill since 2026-05-29 — persona-daemon Commit 2/4 (Deno HTTP daemon + SQLite conversation memory, 9d499dee), Commit 3/4 (RAG over brain vault + indexer, a8eac402), and orphan options.nix fix that was breaking `nix flake check` (a3690f01).
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).

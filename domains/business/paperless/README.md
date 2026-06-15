@@ -105,4 +105,5 @@ hwc.business.paperless = {
 ## Changelog
 
 - 2026-03-25: Created README per Law 12
+- 2026-06-02: `hwc` → `hwc-server` tailnet rename (22bbbb48) — sweep host URLs in paperless config/comments.
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless
