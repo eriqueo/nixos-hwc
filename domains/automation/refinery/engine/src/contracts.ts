@@ -42,6 +42,9 @@ export type GateDecision = "pass" | "park" | "fail";
 export interface GateModule {
   readonly id: string;
   applies(item: Item): boolean;
+  // CONTRACT: run() MUST be idempotent. On park-and-resume the runner re-enters
+  // the parked stage and calls run() again, so a gate may execute more than once
+  // for the same item. Gates that perform side effects must guard against repeats.
   run(item: Item): Promise<GateVerdict>;
   decide(verdict: GateVerdict): GateDecision;
 }
@@ -50,6 +53,9 @@ export const ManifestSchema = z.object({
   genre: z.string().min(1),
   source: z.string().min(1),
   gates: z.array(z.string().min(1)).min(1),
+  // executeMode + effectors are declared here for downstream slices (execute
+  // mode selection, post-pass effectors). The current stage runner only
+  // consumes `gates`; these two fields are validated but not yet acted on.
   executeMode: z.string().min(1),
   effectors: z.array(z.string().min(1)),
 });
