@@ -1,4 +1,4 @@
-{ lib, pkgs, cfg, applePwPath }:
+{ lib, pkgs, cfg, applePwPath, radicalePair ? "" }:
 let
   dataDir = "~/.local/share/vdirsyncer";
 
@@ -6,7 +6,12 @@ let
     [pair ${name}]
     a = "${name}_remote"
     b = "${name}_local"
-    collections = ["from a", "from b"]
+    # Server-authoritative discovery ("from a" only): iCloud can't create
+    # calendars over CalDAV, so a local-only collection (e.g. a calendar deleted
+    # on iCloud, or a dead Reminders list orphaned by Apple's 2026-06 Reminders
+    # change) can never sync up — it 404s every run and aborts the whole sync.
+    # "from a" simply ignores such stale local dirs (no data deleted).
+    collections = ["from a"]
     metadata = ["color", "displayname"]
 
     [storage ${name}_remote]
@@ -21,7 +26,12 @@ let
     fileext = ".ics"
   '';
 
-  pairs = lib.concatStringsSep "\n" (lib.mapAttrsToList mkPair cfg.accounts);
+  # iCloud account pairs are retired when the Radicale backend is on: the
+  # calendar then lives on the self-hosted server (calendar_radicale below),
+  # exactly like the tasks backend. With radicale off, the legacy iCloud
+  # accounts still generate their pairs.
+  pairs = lib.optionalString (!cfg.radicale.enable)
+    (lib.concatStringsSep "\n" (lib.mapAttrsToList mkPair cfg.accounts));
 
   # Pairs contributed by sibling modules (e.g. mail/tasks → VTODO/Reminders).
   # Kept in the same config so vdirsyncer has one config file + one timer.
@@ -33,6 +43,7 @@ in
     status_path = "${dataDir}/status/"
 
     ${pairs}
+    ${radicalePair}
     ${extraPairs}
   '';
 }

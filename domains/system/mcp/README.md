@@ -492,6 +492,17 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-06-15**: `hwc_calendar` switched off plain khal onto **khalt** (the
+  forked khal/ikhal; `inputs.khalt` package ships the full `khal` CLI). The
+  service now exports `HWC_KHAL_BIN` (khalt's `khal`) and `HWC_KHALT_CONFIG`
+  (`~/.config/khalt/config`, which points at the Radicale-synced calendars);
+  `tools/calendar.ts` prefers `HWC_KHAL_BIN` for binary resolution and passes
+  `-c $HWC_KHALT_CONFIG` to every khal invocation. `searchIcsFiles`
+  (delete/edit) now recursively walks BOTH `calendars/` (iCloud, 2-level) and
+  `calendars-radicale/` (Radicale, 1-level). khalt is added to the service
+  `path` (with vdirsyncer). Companion to the calendar→Radicale migration
+  (`domains/mail/calendar`). Binary path is derived from the flake input, never
+  hardcoded (precedent: agenix in `domains/system/core/packages.nix`).
 - **2026-06-15**: Universal Result Contract — `hwc_morning_status`, `hwc_calendar`
   (list), `hwc_tasks_list`, `hwc_leads` (recent) now attach a `view`
   (`{kind,title,data,meta}`, new `result.ts` helper + `ResultEnvelope`/`view` in

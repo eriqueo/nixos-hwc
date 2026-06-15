@@ -27,7 +27,12 @@
   type = "caldav"
   url = "${url}"
   username = "${username}"
-  password.fetch = ["command", "sh", "-c", "cut -d: -f2- ${secretPath}"]
+  # Extract THIS user's password from the (now multi-user) htpasswd by username:
+  # the calendar backend added a `cal:` line, so a bare `cut -f2-` would emit
+  # every line. awk picks the `${username}:…` line and prints everything after
+  # the first colon (colon-safe). Quote-free program; runs directly (no shell) —
+  # gawk is on the vdirsyncer service PATH (calendar parts/service.nix).
+  password.fetch = ["command", "awk", "-F:", "-v", "u=${username}", "$1==u{match($0,/:/);print substr($0,RSTART+1)}", "${secretPath}"]
   item_types = ["VTODO"]
 
   [storage tasks_radicale_local]

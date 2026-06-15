@@ -26,6 +26,13 @@ let
   calCfg = config.hwc.mail.calendar;
   themeColors = (config.hwc.home.theme or {}).colors or {};
 
+  # Unified keymap: list-app bare verbs (a=add, e=edit, d=delete, Enter=open),
+  # shared with todui. Generated [keybindings] block, appended below. Guarded so
+  # khalt still evaluates when the keymap module is not imported.
+  km        = (config.hwc.home.keymap or {}).grammar or {};
+  kmKhalt   = lib.optionalString (km ? listVerbs)
+    (import ../../keymap/parts/to-khalt.nix { inherit lib; grammar = km; }).keybindingsBlock;
+
   dataDir = "~/.local/share/vdirsyncer";
 
   # --- calendars: same data + rendering as domains/mail/calendar's khal.nix ---
@@ -41,9 +48,26 @@ let
     color = ${local.color}
     type = discover
   '';
+  # Radicale-synced calendars (VEVENT), discovered under calendars-radicale/.
+  # When hwc.mail.calendar.radicale is on, the iCloud accounts no longer sync,
+  # so this is the live calendar source (same data the MCP's khal reads).
+  radicaleEnabled = (calCfg.radicale or {}).enable or false;
+  radicaleCalendar = lib.optionalString radicaleEnabled ''
+    [[radicale]]
+    path = ${dataDir}/calendars-radicale/*
+    color = ${(calCfg.radicale or {}).color or "dark green"}
+    type = discover
+  '';
+
+  # When Radicale is the backend, iCloud account pairs are not synced, so their
+  # stale calendars/<account>/ dirs are not surfaced (mirrors khal.nix).
+  accountCalendars = lib.optionals (!radicaleEnabled)
+    (lib.mapAttrsToList mkCalendar (calCfg.accounts or {}));
+
   calendars = lib.concatStringsSep "\n" (
-    (lib.mapAttrsToList mkCalendar (calCfg.accounts or {}))
+    accountCalendars
     ++ (lib.mapAttrsToList mkLocalCalendar (calCfg.localCalendars or {}))
+    ++ lib.optional (radicaleCalendar != "") radicaleCalendar
   );
 
   # --- palette tokens: flat system-theme colours -> khalt's token vocabulary ---
@@ -118,6 +142,7 @@ in
     programs.khalt = {
       enable = true;
       configText = generatedConfig
+        + lib.optionalString (kmKhalt != "") ("\n" + kmKhalt)
         + lib.optionalString (cfg.extraConfig != "") ("\n" + cfg.extraConfig);
       extraRuntimePackages = [ pkgs.vdirsyncer ];
     };

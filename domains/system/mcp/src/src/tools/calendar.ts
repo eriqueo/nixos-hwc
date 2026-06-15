@@ -15,7 +15,18 @@ import { log } from "../log.js";
 /*  Binary resolution                                              */
 /* ════════════════════════════════════════════════════════════════ */
 
-const KHAL_CANDIDATES = ["khal", "/etc/profiles/per-user/eric/bin/khal"];
+// khalt supersedes plain khal. The MCP module (domains/system/mcp/index.nix)
+// puts khalt's package on the service PATH and exports HWC_KHAL_BIN (the fork's
+// `khal` binary) and HWC_KHALT_CONFIG (the isolated khalt config that points at
+// the Radicale-synced calendars). We pass `-c <config>` so khal reads the same
+// khalt config the TUI uses, rather than the legacy ~/.config/khal/config.
+const KHAL_ENV_BIN = process.env.HWC_KHAL_BIN;
+const KHALT_CONFIG = process.env.HWC_KHALT_CONFIG;
+const KHAL_CANDIDATES = [
+  ...(KHAL_ENV_BIN ? [KHAL_ENV_BIN] : []),
+  "khal",
+  "/etc/profiles/per-user/eric/bin/khal",
+];
 const VDIRSYNCER_CANDIDATES = ["vdirsyncer", "/etc/profiles/per-user/eric/bin/vdirsyncer"];
 let _khal: string | null = null;
 let _vdirsyncer: string | null = null;
@@ -42,6 +53,13 @@ async function khalBin(): Promise<string> {
 async function vdirsyncerBin(): Promise<string> {
   if (!_vdirsyncer) _vdirsyncer = await resolveBin(VDIRSYNCER_CANDIDATES);
   return _vdirsyncer;
+}
+
+// Global `-c <config>` flag prepended to every khal invocation so the fork
+// reads the khalt config (Radicale calendars). Empty when unset → khal's
+// default config resolution applies.
+function khalConfigArgs(): string[] {
+  return KHALT_CONFIG ? ["-c", KHALT_CONFIG] : [];
 }
 
 /* ════════════════════════════════════════════════════════════════ */
@@ -138,6 +156,7 @@ function parseKhalOutput(raw: string): CalendarEvent[] {
 export async function khalList(start: string, end: string): Promise<CalendarEvent[]> {
   const bin = await khalBin();
   const { stdout, stderr, exitCode } = await runBin(bin, [
+    ...khalConfigArgs(),
     "list",
     "--format", "{start-time}|{end-time}|{title}|{location}",
     start,
@@ -154,7 +173,13 @@ export async function khalList(start: string, end: string): Promise<CalendarEven
 /* ════════════════════════════════════════════════════════════════ */
 
 const HOME = homedir();
-const VDIRSYNCER_CALENDARS = join(HOME, ".local/share/vdirsyncer/calendars");
+// Both the legacy iCloud calendars dir and the Radicale-synced calendars dir
+// (calendars-radicale/, written by the calendar_radicale vdirsyncer pair).
+// delete/edit scan whichever exist.
+const VDIRSYNCER_CALENDAR_ROOTS = [
+  join(HOME, ".local/share/vdirsyncer/calendars"),
+  join(HOME, ".local/share/vdirsyncer/calendars-radicale"),
+];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
@@ -175,58 +200,67 @@ function icsField(content: string, field: string): string | null {
   return match ? match[1].trim() : null;
 }
 
+// Recursively collect every *.ics path under a root (≤3 levels deep). iCloud
+// stores at calendars/<account>/<collection>/*.ics (2 levels) while Radicale
+// stores at calendars-radicale/<collection>/*.ics (1 level), so a recursive
+// walk handles both layouts uniformly.
+async function collectIcsPaths(dir: string, depth = 0): Promise<string[]> {
+  if (depth > 3) return [];
+  const out: string[] = [];
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (entry.endsWith(".ics")) {
+      out.push(full);
+    } else if (!entry.startsWith(".")) {
+      out.push(...(await collectIcsPaths(full, depth + 1)));
+    }
+  }
+  return out;
+}
+
 async function searchIcsFiles(query: string, dateFilter?: string): Promise<IcsEvent[]> {
   const results: IcsEvent[] = [];
   const lowerQuery = query.toLowerCase();
 
-  try {
-    const calDirs = await readdir(VDIRSYNCER_CALENDARS);
+  const icsPaths: string[] = [];
+  for (const root of VDIRSYNCER_CALENDAR_ROOTS) {
+    icsPaths.push(...(await collectIcsPaths(root)));
+  }
+  if (icsPaths.length === 0) {
+    log.warn("No .ics files found under vdirsyncer calendar roots");
+  }
 
-    for (const calDir of calDirs) {
-      const calPath = join(VDIRSYNCER_CALENDARS, calDir);
-      try {
-        const subDirs = await readdir(calPath);
+  for (const icsPath of icsPaths) {
+    try {
+      const content = await readFile(icsPath, "utf-8");
+      const summary = icsField(content, "SUMMARY");
+      const dtstart = icsField(content, "DTSTART");
+      const uid = icsField(content, "UID");
 
-        for (const subDir of subDirs) {
-          const subPath = join(calPath, subDir);
-          try {
-            const files = await readdir(subPath);
+      if (!summary || !uid) continue;
+      if (!summary.toLowerCase().includes(lowerQuery)) continue;
 
-            for (const file of files) {
-              if (!file.endsWith(".ics")) continue;
+      if (dateFilter && dtstart) {
+        const eventDate = dtstart.substring(0, 10).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
+        if (!eventDate.startsWith(dateFilter)) continue;
+      }
 
-              const icsPath = join(subPath, file);
-              try {
-                const content = await readFile(icsPath, "utf-8");
-                const summary = icsField(content, "SUMMARY");
-                const dtstart = icsField(content, "DTSTART");
-                const uid = icsField(content, "UID");
-
-                if (!summary || !uid) continue;
-                if (!summary.toLowerCase().includes(lowerQuery)) continue;
-
-                if (dateFilter && dtstart) {
-                  const eventDate = dtstart.substring(0, 10).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
-                  if (!eventDate.startsWith(dateFilter)) continue;
-                }
-
-                results.push({
-                  path: icsPath,
-                  uid,
-                  summary,
-                  dtstart,
-                  dtend: icsField(content, "DTEND"),
-                  location: icsField(content, "LOCATION"),
-                  description: icsField(content, "DESCRIPTION"),
-                });
-              } catch { /* file not readable */ }
-            }
-          } catch { /* subdir not readable */ }
-        }
-      } catch { /* calendar dir not readable */ }
-    }
-  } catch {
-    log.warn("Failed to read vdirsyncer calendars directory");
+      results.push({
+        path: icsPath,
+        uid,
+        summary,
+        dtstart,
+        dtend: icsField(content, "DTEND"),
+        location: icsField(content, "LOCATION"),
+        description: icsField(content, "DESCRIPTION"),
+      });
+    } catch { /* file not readable */ }
   }
 
   return results;
@@ -315,6 +349,7 @@ export function calendarTools(): ToolDef[] {
             if (range === "week") {
               const bin = await khalBin();
               const { stdout, stderr, exitCode } = await runBin(bin, [
+                ...khalConfigArgs(),
                 "list",
                 "--format", "{start-time}|{end-time}|{title}|{location}",
                 "today",
@@ -395,7 +430,7 @@ export function calendarTools(): ToolDef[] {
               return mcpError({ type: "VALIDATION_ERROR", message: `Invalid endTime format: ${endTime}. Use HH:MM.` });
             }
 
-            const khalArgs: string[] = ["new"];
+            const khalArgs: string[] = [...khalConfigArgs(), "new"];
             if (calendar) khalArgs.push("-a", calendar);
 
             if (startTime) {
@@ -555,7 +590,7 @@ export function calendarTools(): ToolDef[] {
             await unlink(event.path);
             log.debug("Deleted old .ics for edit", { path: event.path });
 
-            const khalArgs: string[] = ["new"];
+            const khalArgs: string[] = [...khalConfigArgs(), "new"];
             if (finalStartTime) {
               const end = finalEndTime || (() => {
                 const [h, m] = finalStartTime.split(":").map(Number);

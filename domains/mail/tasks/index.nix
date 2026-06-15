@@ -170,9 +170,13 @@ in
           + "(it shares the calendar vdirsyncer config and sync timer).";
       }
       {
-        assertion = hasAccount && email != "";
+        # Only the iCloud tasks pair needs the reused calendar email/Apple ID.
+        # With icloud off (Radicale-only, and once the calendar itself moves to
+        # Radicale there may be no iCloud account at all) this requirement lifts.
+        assertion = (!cfg.icloud.enable) || (hasAccount && email != "");
         message = "hwc.mail.tasks.account = \"${cfg.account}\" must name an "
-          + "existing hwc.mail.calendar.accounts.<name> entry with an email set.";
+          + "existing hwc.mail.calendar.accounts.<name> entry with an email set "
+          + "(required while hwc.mail.tasks.icloud.enable = true).";
       }
     ];
   };
