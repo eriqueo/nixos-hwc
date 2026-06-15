@@ -54,15 +54,15 @@ in
                 }
             }
         }
-        // Secondary tabs: each peer auto-starts with the session (no
-        // start_suspended) so every program is live on open — switch to the tab
-        // (Ctrl+t then →, or click) and it's already running. Note: aerc opens
-        // an ssh session to the server at launch (see mailCommand).
+        // Secondary tabs. yazi + nvim are local TUIs — auto-start, cheap to keep
+        // warm. aerc is the one heavy peer: it's `ssh -t server aerc`, a held-open
+        // connection to the server, so it stays start_suspended (press <ENTER> in
+        // the mail tab to launch) — no idle SSH lingering in a detached session.
         tab name="files" {
             pane name="yazi" { command "yazi"; }
         }
         tab name="mail" {
-            pane name="aerc" { command "${mailBin}";${mailArgsKdl} }
+            pane name="aerc" { command "${mailBin}";${mailArgsKdl} start_suspended true; }
         }
         tab name="edit" {
             pane name="nvim" { command "nvim"; }
