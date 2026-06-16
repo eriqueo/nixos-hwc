@@ -8,6 +8,7 @@ import { listServices } from "../executors/systemd.js";
 import { listContainers } from "../executors/podman.js";
 import { instantQuery, rangeQuery } from "../executors/prometheus.js";
 import { mcpError, catchError } from "../errors.js";
+import { contract } from "../result.js";
 
 interface HealthComponent {
   name: string;
@@ -36,10 +37,17 @@ export async function executeHealthCheck(components?: string[]): Promise<ToolRes
     const hasYellow = result.some((c) => c.status === "yellow");
     const overall = hasRed ? "red" : hasYellow ? "yellow" : "green";
 
+    const mapStatus = (s: string) => (s === "green" ? "ok" : s === "red" ? "error" : "warning");
+    const checks = result.map((c) => ({ status: mapStatus(c.status), name: c.name, note: c.message }));
+
     return {
       status: hasRed ? "partial" : "ok",
       message: `Overall: ${overall} — ${result.length} components checked`,
       data: { overall, components: result },
+      view: contract("status", "Monitoring", {
+        overall: mapStatus(overall),
+        checks,
+      }, { source: "hwc_monitoring", componentCount: result.length }),
     };
   } catch (err) {
     return catchError("INTERNAL_ERROR", "Health check failed", err);

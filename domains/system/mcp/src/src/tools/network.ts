@@ -8,6 +8,7 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { getStatus as getTailscaleStatus } from "../executors/tailscale.js";
 import { TtlCache } from "../cache.js";
 import { mcpError, catchError } from "../errors.js";
+import { contract } from "../result.js";
 
 const cache = new TtlCache();
 
@@ -111,7 +112,34 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
               }
             }
 
-            return { status: "ok", message: parts.join(", "), data };
+            // Universal Result Contract view (status): one check per tunnel.
+            const checks: Array<{ status: string; name: string; note?: string }> = [];
+            if (data.tailscale) {
+              const ts = data.tailscale as Record<string, unknown>;
+              if (ts.error) {
+                checks.push({ status: "down", name: "tailscale", note: String(ts.error) });
+              } else {
+                const peers = (ts.peers || []) as Array<{ hostname: string; online: boolean }>;
+                const onlineCount = peers.filter((p) => p.online).length;
+                checks.push({ status: "up", name: "tailscale", note: `${onlineCount}/${peers.length} peers online` });
+              }
+            }
+            if (data.vpn) {
+              const vpn = data.vpn as Record<string, unknown>;
+              if (vpn.error) {
+                checks.push({ status: "down", name: "vpn", note: String(vpn.error) });
+              } else {
+                checks.push({ status: "up", name: "vpn", note: "Gluetun reachable" });
+              }
+            }
+            const overall = checks.some((c) => c.status === "down") ? "warning" : "ok";
+
+            return {
+              status: "ok",
+              message: parts.join(", "),
+              data,
+              view: contract("status", "Network", { overall, checks }, { source: "hwc_network", action }),
+            };
           } catch (err) {
             return catchError("UNAVAILABLE", "Failed to get tunnel status", err);
           }
@@ -154,10 +182,15 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
                   }
                 }
 
+                const source = "admin-api";
                 return {
                   status: "ok",
                   message: `${routes.length} routes across ${Object.keys(servers || {}).length} servers (live)`,
-                  data: { source: "admin-api", routes, serverCount: Object.keys(servers || {}).length },
+                  data: { source, routes, serverCount: Object.keys(servers || {}).length },
+                  view: contract("status", "Network", {
+                    overall: "ok",
+                    checks: [{ status: "up", name: "caddy", note: `${routes.length} routes (${source})` }],
+                  }, { source: "hwc_network", action }),
                 };
               }
             } catch {
@@ -202,7 +235,16 @@ export function networkTools(runtimeTtl: number, nixosConfigPath?: string): Tool
                   return entry;
                 });
 
-                return { status: "ok", message: `${routes.length} routes from routes.nix`, data: { source: "routes.nix", routes: compact } };
+                const source = "routes.nix";
+                return {
+                  status: "ok",
+                  message: `${routes.length} routes from routes.nix`,
+                  data: { source, routes: compact },
+                  view: contract("status", "Network", {
+                    overall: "ok",
+                    checks: [{ status: "ok", name: "caddy", note: `${routes.length} routes (${source})` }],
+                  }, { source: "hwc_network", action }),
+                };
               } catch {
                 // routes.nix not readable
               }

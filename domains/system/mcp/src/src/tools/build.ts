@@ -6,6 +6,7 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { catchError } from "../errors.js";
 import { safeExec } from "../executors/shell.js";
 import { TtlCache } from "../cache.js";
+import { contract } from "../result.js";
 
 const cache = new TtlCache();
 
@@ -74,6 +75,28 @@ export function buildTools(nixosConfigPath: string, runtimeTtl: number): ToolDef
               unpushedCount,
               recentCommits,
             },
+            view: contract(
+              "status",
+              "NixOS Git",
+              {
+                overall:
+                  uncommitted.length > 0 || unpushedCount > 0 ? "warning" : "ok",
+                checks: [
+                  { status: "ok", name: "branch", note: branch },
+                  {
+                    status: uncommitted.length ? "warning" : "ok",
+                    name: "uncommitted",
+                    note: `${uncommitted.length} files`,
+                  },
+                  {
+                    status: unpushedCount ? "warning" : "ok",
+                    name: "unpushed",
+                    note: `${unpushedCount} commits`,
+                  },
+                ],
+              },
+              { source: "hwc_build_git_status" },
+            ),
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Failed to query git status", err, "Is the nixos-hwc repo accessible?");
