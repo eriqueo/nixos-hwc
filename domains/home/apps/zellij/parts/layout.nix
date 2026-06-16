@@ -12,7 +12,7 @@
 # laptop, mail lives on the server, so index.nix derives it from the user's
 # `hwc.home.core.shell.aliases.aerc` (e.g. "ssh -t server aerc"). Split into a
 # KDL command + args node so the suspended pane runs the right thing on <ENTER>.
-{ lib, mailCommand ? "aerc" }:
+{ lib, mailCommand ? "aerc", tabBar ? ''plugin location="zellij:tab-bar";'' }:
 
 let
   # Tab names come from the shared source of truth so the host's WORKBENCH_TABS
@@ -41,7 +41,7 @@ in
         // these a custom layout renders bare panes with no way to discover the
         // other tabs or how to move — `children` is where each tab's panes land.
         default_tab_template {
-            pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
+            pane size=1 borderless=true { ${tabBar} }
             children
             pane size=1 borderless=true { plugin location="zellij:status-bar"; }
         }
