@@ -51,6 +51,11 @@ domains/mail/calendar/
 
 ## Changelog
 
+- **2026-06-16**: Radicale follow-ups — `8b6335e1` separate Radicale
+  principals for calendar (`cal`) vs tasks (`eric`); `3520ab48` scope
+  `calendar_radicale` to its own collection; `0919ce66` expose only khalt's
+  `khal` CLI to avoid khalt buildEnv clash; `7a3c91a2` iCloud→Radicale
+  migration logic in khalt (rendering side).
 - **2026-06-15**: Calendar → Radicale. Added `hwc.mail.calendar.radicale.*`
   (enable/url/username/color); when on, `vdirsyncer.nix` suppresses the iCloud
   account pairs and emits `[pair calendar_radicale]` (VEVENT, "from a"/"from b",

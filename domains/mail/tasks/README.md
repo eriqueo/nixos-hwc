@@ -89,6 +89,10 @@ credential: the shared `radicale-htpasswd` agenix secret (password =
 stay CLI-visible. Deploy order + phone CalDAV setup: see the radicale README.
 
 ## Changelog
+- 2026-06-16: Radicale plumbing follow-ups — `8b6335e1` separate Radicale
+  principals for calendar (`cal`) vs tasks (`eric`); `1527ee34` repair
+  vdirsyncer (restore khalt + todui sync); `d992eb12` mail/calendar
+  Radicale (VEVENT) backend that this dir shares plumbing with.
 - 2026-06-11: Phase C plumbing — optional `radicale` sub-options + second
   vdirsyncer pair part (off by default; flip in machines/laptop/home.nix after
   the server deploy). todoman path glob parameterized (`tasks*/*` with radicale).

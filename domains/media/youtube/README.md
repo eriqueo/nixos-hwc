@@ -99,6 +99,10 @@ hwc.server.native.youtube.videos = {
 
 ## Changelog
 
+- 2026-06-16: Mechanical sweep — `6001f937` Law 3 path sweep replaces
+  remaining derivable hardcodes with `hwc.paths`; `22bbbb48` server tailnet
+  rename `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net`;
+  `92cbf2ac` "lots" general touch-up.
 - 2026-03-26: Workspace source moved from workspace/youtube-services/ to workspace/media/youtube-services/ (domain alignment); all nix refs updated
 - 2026-03-04: Namespace migration hwc.server.native.youtube.* → hwc.media.youtube.*
 - 2026-02-27: Initial domain creation with legacy API, transcripts API, and videos API

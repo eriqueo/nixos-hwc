@@ -24,4 +24,7 @@ orchestration/
 - `media-orchestrator.py` — Media pipeline event handler
 
 ## Changelog
+- 2026-06-16: Mechanical sweep — `aea7be73` Law 9/10 converts
+  option-declaring leaf modules to directory modules. No orchestration
+  behavior change.
 - 2026-03-26: audiobook-copier workspace path updated from workspace/hooks/ to workspace/automation/hooks/ (domain alignment)

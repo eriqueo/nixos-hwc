@@ -79,6 +79,9 @@ journalctl -u immich-machine-learning | grep -i "onnx\|cuda"  # CUDA provider
 
 ## Changelog
 
+- 2026-06-16: `5b2eaeb3` — mount external library for laptop photos, drop
+  the unused pictures mount. `2e973fcb` — kuma touch-up that grazed this
+  dir.
 - 2026-03-27: Fixed Prometheus metrics port mappings — added host-side port publishing for apiPort (8091) and microservicesPort (8092) which were only set as container env vars but never exposed, causing false ServiceDown alerts
 - 2026-02-26: Created README per Law 12 (migrated from docs/infrastructure/)
 - 2025-11-21: Initial GPU optimization implementation
