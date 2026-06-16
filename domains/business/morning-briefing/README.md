@@ -29,10 +29,28 @@ logs/
 | 0 | Pre-flight | Check claude binary exists at expected path |
 | 1 | Main briefing | `claude --print` queries Calendar, JobTread, system health, backup, weather via MCP |
 | 2 | Mail triage | `notmuch search` → `claude --print` classifies into urgent/review/noise |
+| 2b | Persist buckets | `notmuch tag` stamps each classified thread with `triage/<bucket>` (removes other `triage/*`) |
 | 3 | Merge | `jq` injects mail_triage into briefing.json |
 | 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
 
 Post-step-1: `generated_at` is stamped by `jq` from `date -Iseconds` (not Claude's timestamp). Validation checks for `sections.calendar` and `sections.jobs` keys. Steps 1 and 2 log elapsed seconds for performance tracking.
+
+### Tag-backed triage buckets (persisted moves)
+
+The triage bucket (urgent/review/noise) is a **notmuch tag** `triage/<bucket>`, not
+just a position in the cached JSON. This is what lets the workbench Mail-triage
+kanban "move between columns" PERSIST across a refresh:
+
+- **Step 2b** (this pipeline) writes the daily baseline: each classified thread is
+  tagged `triage/<bucket>` (other `triage/*` removed first).
+- The **workbench** moves a card by calling `hwc_mail action=tag tag_action=set-triage
+  triage=<bucket>` on the gateway, which replaces the `triage/*` tag set.
+- **`hwc_mail_triage`** re-buckets the cached threads by their *live* `triage/*` tag at
+  read time, so a move shows up on the next board refresh without re-running the briefing.
+
+The bucket→tag mapping is owned in **one place**: `TRIAGE_BUCKETS` / `triageTag()` in
+`domains/system/mcp/src/src/tools/mail.ts`. The bucket names here (`urgent review noise`
+in Step 2b) and in `mail-triage.ts` must stay in lockstep with it.
 
 ## Sections
 

@@ -32,6 +32,28 @@ const CATEGORY_TAGS = [
 const FLAG_TAGS = ["action", "pending"];
 const JUNK_TAGS = ["important", "flagged", "starred"];
 
+/* ─── Triage buckets (tag-backed) ──────────────────────────────────────────
+ * The Mail-triage kanban's "move between columns" must PERSIST, so the bucket
+ * is a notmuch tag `triage/<bucket>`. This is the SINGLE source of truth for
+ * the bucket→tag mapping, shared by:
+ *   - the morning-briefing pipeline (writes triage/<bucket> when it classifies)
+ *   - replace-triage-bucket here (remove other triage/* + add the target)
+ *   - hwc_mail_triage (re-buckets cached threads by their live triage/* tag)
+ * Keep these names in lockstep with mail-triage.ts TRIAGE_BUCKETS + the
+ * pipeline's run.sh. */
+export const TRIAGE_BUCKETS = ["urgent", "review", "noise"] as const;
+export type TriageBucket = (typeof TRIAGE_BUCKETS)[number];
+/** notmuch tag for a triage bucket, e.g. "urgent" → "triage/urgent". */
+export function triageTag(bucket: string): string {
+  return `triage/${bucket}`;
+}
+/** Tag ops that REPLACE the triage bucket: drop every triage/* then add target. */
+function replaceTriageOps(target: TriageBucket): string[] {
+  const ops = TRIAGE_BUCKETS.filter((b) => b !== target).map((b) => `-${triageTag(b)}`);
+  ops.push(`+${triageTag(target)}`);
+  return ops;
+}
+
 const SAVED_SEARCHES: Record<string, string> = {
   inbox: "tag:inbox AND NOT tag:trash",
   unread: "tag:unread AND NOT tag:trash",
@@ -432,7 +454,10 @@ export function mailTools(): ToolDef[] {
     {
       name: "hwc_mail",
       description:
-        "Mail management. Actions: search, read, send, reply, tag, sync, health, accounts, folders.",
+        "Mail management. Actions: search, read, send, reply, tag, sync, health, accounts, folders. " +
+        "Mutations route through action=tag: tag_action=archive|trash|delete (delete==trash), " +
+        "or tag_action=set-triage with triage=urgent|review|noise to REPLACE the triage bucket " +
+        "(removes other triage/* tags, adds the target) — the persisted backing for the triage kanban's move.",
       inputSchema: {
         type: "object",
         properties: {
@@ -473,8 +498,16 @@ export function mailTools(): ToolDef[] {
           // [tag] params
           tag_action: {
             type: "string",
-            enum: ["archive", "trash", "untrash", "spam", "unspam", "read", "unread", "clear-categories"],
-            description: "[tag] Named action (maps to correct tag combination)",
+            enum: [
+              "archive", "trash", "delete", "untrash", "spam", "unspam",
+              "read", "unread", "clear-categories", "set-triage",
+            ],
+            description: "[tag] Named action (maps to correct tag combination). delete==trash. set-triage requires `triage`.",
+          },
+          triage: {
+            type: "string",
+            enum: [...TRIAGE_BUCKETS],
+            description: "[tag] With tag_action=set-triage: target triage bucket. Removes other triage/* tags and adds triage/<bucket>.",
           },
           tags: {
             type: "array",
@@ -602,10 +635,20 @@ export function mailTools(): ToolDef[] {
             let ops: string[];
             let mode: string;
 
-            if (actionName) {
+            if (actionName === "set-triage") {
+              // Replace the triage bucket: needs an explicit target bucket.
+              const target = args.triage as string | undefined;
+              if (!target || !TRIAGE_BUCKETS.includes(target as TriageBucket)) {
+                return mcpError({ type: "VALIDATION_ERROR", message: `tag_action=set-triage requires triage one of: ${TRIAGE_BUCKETS.join(", ")}`, suggestion: "Pass triage=urgent|review|noise" });
+              }
+              ops = replaceTriageOps(target as TriageBucket);
+              mode = `triage:${target}`;
+            } else if (actionName) {
               const actionMap: Record<string, string[]> = {
                 archive: ["+archive", "-inbox"],
+                // delete is an alias for trash (the kanban's destructive path).
                 trash: ["+trash", "-inbox", "-unread"],
+                delete: ["+trash", "-inbox", "-unread"],
                 untrash: ["-trash", "+inbox"],
                 spam: ["+spam", "-inbox", "-unread"],
                 unspam: ["-spam", "+inbox"],
