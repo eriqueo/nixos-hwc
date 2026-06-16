@@ -492,6 +492,13 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-06-16**: Universal Result Contract extended to the **server-health
+  tools** — `hwc_services`, `hwc_storage_status`, `hwc_monitoring`,
+  `hwc_media_status`, `hwc_network`, `hwc_build_git_status` now attach a
+  `view: contract("status", …)` (per-mount/per-service/per-check `{status,name,note}`
+  with green/yellow/red `overall`; producer noise stays in `meta`). Purely
+  additive — legacy `{status,message,data}` untouched. Powers the workbench
+  **Server hub**. Deploy: `npm run build` in `src/` + restart the gateway.
 - **2026-06-15**: `hwc_calendar` switched off plain khal onto **khalt** (the
   forked khal/ikhal; `inputs.khalt` package ships the full `khal` CLI). The
   service now exports `HWC_KHAL_BIN` (khalt's `khal`) and `HWC_KHALT_CONFIG`
