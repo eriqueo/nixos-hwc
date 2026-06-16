@@ -1,4 +1,5 @@
 import { tradeRates } from '../contracts/data.js';
+import { MissingTradeRateError } from '../errors/index.js';
 
 // Material markup: ~30% target margin
 export const MAT_MARKUP = 1.4286;
@@ -10,6 +11,21 @@ export const MAT_MARKUP = 1.4286;
  */
 export function tradeRate(trade) {
   const r = tradeRates[trade] ?? tradeRates.planning;
+  const cost = Math.round(r.wage * r.burden * 100) / 100;
+  return {
+    cost,
+    price: Math.round(cost * r.markup * 100) / 100,
+  };
+}
+
+/**
+ * Strict variant — throws MissingTradeRateError when the trade isn't in
+ * tradeRates.json. Callers that need to fail loud on a stale catalog row
+ * use this instead of tradeRate() (which falls back to `planning`).
+ */
+export function tradeRateStrict(trade) {
+  const r = tradeRates[trade];
+  if (!r) throw new MissingTradeRateError(trade);
   const cost = Math.round(r.wage * r.burden * 100) / 100;
   return {
     cost,

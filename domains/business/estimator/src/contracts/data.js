@@ -14,6 +14,7 @@ import {
   JtMappingsSchema,
   TemplatesSchema,
 } from './schemas.js';
+import { SchemaValidationError } from '../errors/index.js';
 import rawCatalog from '../data/catalog.json' with { type: 'json' };
 import rawTradeRates from '../data/tradeRates.json' with { type: 'json' };
 import rawParameters from '../data/parameters.json' with { type: 'json' };
@@ -30,13 +31,10 @@ export function parseDataFile(schema, raw, file) {
   if (!result.success) {
     const first = result.error.issues[0];
     const path = first.path.length ? first.path.join('.') : '<root>';
-    const err = new Error(
+    throw new SchemaValidationError(
       `Schema validation failed for ${file} at ${path}: ${first.message}`,
+      { file, path, issues: result.error.issues },
     );
-    err.file = file;
-    err.path = path;
-    err.issues = result.error.issues;
-    throw err;
   }
   return result.data;
 }

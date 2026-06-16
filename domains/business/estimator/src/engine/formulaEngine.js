@@ -9,6 +9,7 @@
  *   State keys: bare words resolve to state values
  *   Literals: numbers, quoted strings ("yes", "full_gut")
  */
+import { UnknownFormulaTokenError } from '../errors/index.js';
 
 // ─── Tokenizer ──────────────────────────────────────────────────────────────
 
@@ -108,7 +109,12 @@ class Parser {
 
   expect(type) {
     const t = this.advance();
-    if (t.type !== type) throw new Error(`Expected ${type}, got ${t.type}`);
+    if (t.type !== type) {
+      throw new UnknownFormulaTokenError(
+        `Expected ${type}, got ${t.type}`,
+        { expected: type, actual: t.type },
+      );
+    }
     return t;
   }
 
@@ -247,7 +253,10 @@ class Parser {
       return 0; // Unknown key → 0 (safe default for arithmetic)
     }
 
-    throw new Error(`Unexpected token: ${JSON.stringify(t)}`);
+    throw new UnknownFormulaTokenError(
+      `Unexpected token: ${JSON.stringify(t)}`,
+      { token: t },
+    );
   }
 
   // ── Function calls ────────────────────────────────────────────────────────
@@ -285,6 +294,18 @@ class Parser {
  * Evaluate a quantity formula against project state.
  * Returns a number, or null if the formula fails.
  */
+/**
+ * Strict variant — parses the formula and propagates any
+ * UnknownFormulaTokenError to the caller. Used by tests + by callers that
+ * want to fail loud on a malformed expression instead of silently falling
+ * back to a default quantity.
+ */
+export function parseFormulaStrict(formula, state) {
+  const tokens = tokenize(formula);
+  const parser = new Parser(tokens, state);
+  return parser.parse();
+}
+
 export function evaluateFormula(formula, state) {
   if (!formula || typeof formula !== 'string') return null;
   try {
