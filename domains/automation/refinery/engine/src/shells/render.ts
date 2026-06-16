@@ -433,6 +433,18 @@ export function renderSrDetail(item: Item, files: SrFiles): string {
   const cat = typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
   const email = typeof p.email === "string" ? p.email : "";
   const phase = typeof p.srPhase === "string" ? p.srPhase : "";
+  const srId = typeof p.srId === "string" ? p.srId : "";
+
+  // Force a fresh investigation of this SR now (sr-gauntlet-runnow drains the
+  // spool → run.sh --id). The board only writes the request.
+  const runNow = srId
+    ? `<form method="post" action="/sr/run-now" style="margin-top:8px">
+         <input type="hidden" name="srId" value="${esc(srId)}">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <button type="submit" title="run the SR gauntlet on ${esc(srId)} now">▶ re-investigate now</button>
+         <span class="kv">forces a fresh investigation; the report updates when it finishes</span>
+       </form>`
+    : "";
 
   const detailsMd = [
     `**Customer:** ${customer}`,
@@ -455,6 +467,7 @@ export function renderSrDetail(item: Item, files: SrFiles): string {
     <div class="cat">${esc(cat)}</div>
     <h2>${esc(customer)}</h2>
     <div class="q">${esc(question)}</div>
+    ${runNow}
   </div>
   <div class="srtabbar">
     <label for="srt-gameplan">Gameplan</label>

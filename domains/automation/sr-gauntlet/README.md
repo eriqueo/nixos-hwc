@@ -15,16 +15,37 @@ replies — the human reviews each `investigations/<date>-<srId>/REPORT.md`.
 ```
 sr-gauntlet/
 └── index.nix    # hwc.automation.srGauntlet.{enable,onCalendar,maxSrs,gauntletDir}
-                 # systemd service `sr-gauntlet` (oneshot, User=eric) + daily
-                 # timer (default 06:30, Persistent=true)
+                 # systemd service `sr-gauntlet` (oneshot, User=eric) + poll
+                 # timer (default every 15 min) for auto-investigation, PLUS
+                 # the run-now drain (service + path unit) behind the refinery
+                 # board's "▶ re-investigate now" button.
 ```
 
 Enabled in `machines/server/config.nix` (host one-off: the pipeline checkout
 and its credential sources — sr_analyzer/.env, datax/.env.local — only exist
 on hwc-server).
 
+**Auto-investigation (poll).** The timer fires every 15 min; `run.sh` Phase A
+fetches waiting SRs from Firestore and the thread-hash ledger dedups, so most
+ticks find nothing and exit fast. A genuinely new/changed waiting SR is
+investigated within ~15 min of arrival. `run.sh`'s lock prevents overlap.
+
+**Run-now (board trigger).** The hardened refinery board can't run `run.sh`
+itself, so the SR page's "▶ re-investigate now" button drops an `<srId>` file in
+the shared spool `/var/lib/refinery/sr-run-now`; the `sr-gauntlet-runnow` path
+unit drains it and runs `run.sh --id <srId>` out-of-band. This mirrors the
+nightly-builds run-now pattern exactly. The board sets
+`REFINERY_SR_RUNNOW_SPOOL` to the same path.
+
 ## Changelog
 
+- **2026-06-16**: Auto-investigation + run-now. Timer changed from daily 06:30
+  to a **15-min poll** (Persistent=false) so new SR tickets are investigated on
+  arrival (the ledger makes idle ticks cheap). Added the **run-now drain**:
+  `sr-gauntlet-runnow` oneshot + a `systemd.path` watching
+  `/var/lib/refinery/sr-run-now`, executing `run.sh --id <srId>` — the executor
+  behind the refinery board's "▶ re-investigate now" button. Shared env/path
+  factored into `srgEnv`/`srgPath`. Mirrors nightly-builds run-now.
 - **2026-06-12**: Created. Daily 06:30 timer (7d/wk) wrapping
   `~/700_datax/sr_gauntlet/run.sh`; maxSrs=5 default; creds late-bound at
   runtime (nothing secret in the Nix store). Modeled on nightly-builds with

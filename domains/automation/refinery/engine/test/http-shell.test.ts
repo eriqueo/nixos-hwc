@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
@@ -31,6 +31,7 @@ function setup(
       scratchDir: join(root, "specs"),
       triageProvider: "claude-cli",
       runNowSpoolDir: join(root, "run-now"),
+      srRunNowSpoolDir: join(root, "sr-run-now"),
       clock: fixedClock,
       triageLlm,
       runLlm: opts.runLlm,
@@ -391,4 +392,45 @@ test("renderProjectDetail shows a Run button for a pending engine item; running 
   const running = renderProjectDetail({ ...pending, phaseStatus: "running" }, profiles, profiles);
   assert.ok(running.includes("running the project-ideation pipeline"), "running shows progress");
   assert.ok(!running.includes('action="/run"'), "no second Run while already running");
+});
+
+test("requestSrRunNow writes a sanitized <srId> spool file (no path traversal)", () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    shell.requestSrRunNow("../../etc/passwd");
+    const files = readdirSync(cfg.srRunNowSpoolDir);
+    assert.equal(files.length, 1);
+    assert.ok(!files[0]!.includes("/"), "sanitized to a bare filename — no traversal");
+    assert.equal(files[0], "....etcpasswd");
+  } finally {
+    cleanup();
+  }
+});
+
+test("requestSrRunNow drops a clean srId verbatim into the spool", () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    createShell(cfg).requestSrRunNow("SR-abc123");
+    assert.equal(readFileSync(join(cfg.srRunNowSpoolDir, "SR-abc123"), "utf8").trim(), "SR-abc123");
+  } finally {
+    cleanup();
+  }
+});
+
+test("renderSrDetail shows a re-investigate button only when the SR carries an srId", () => {
+  const withId: Item = {
+    id: "sr:2026-06-15-abc", genre: "datax-sr", phase: "done", phaseStatus: "passed",
+    payload: { title: "login broken", customer: "Acme", srId: "abc123", readonly: true }, history: [],
+  };
+  const html = renderSrDetail(withId, { gameplan: "## Verdict", thread: null, context: null });
+  assert.ok(html.includes('action="/sr/run-now"'), "re-investigate form present");
+  assert.ok(html.includes('value="abc123"'), "srId carried in the form");
+  assert.ok(html.includes("re-investigate now"));
+
+  const noId: Item = { ...withId, payload: { title: "x", readonly: true } };
+  assert.ok(
+    !renderSrDetail(noId, { gameplan: null, thread: null, context: null }).includes('action="/sr/run-now"'),
+    "no srId → no button",
+  );
 });
