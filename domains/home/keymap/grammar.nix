@@ -32,12 +32,19 @@
 rec {
   #--------------------------------------------------------------------------
   # The two prefixes. Change `metaLeader` here and zellij re-binds (the only
-  # place a global modifier chord is intercepted). Audited free of Hyprland
-  # (Hyprland is all SUPER; only Super+Space=wofi exists) and of every TUI
-  # (only nvim-cmp uses Ctrl+Space, which is why we use ALT+Space).
+  # place a global modifier chord is intercepted).
+  #   * `leader` (Space) is the INTRA-app prefix (handled inside each app).
+  #   * `metaLeader` is the INTER-app prefix, intercepted by zellij.
+  # metaLeader is `Ctrl b` (tmux's own prefix — the meta mode IS zellij's
+  # repurposed `tmux` mode). Ctrl-chords are encoded reliably by every terminal;
+  # `Alt Space` was NOT reliably delivered by kitty (it leaked through to the
+  # focused pane, whose Space-leader then mis-fired — the spawn-in-home bug).
+  # Ctrl+b is clear of Hyprland (all SUPER) and rarely used in the TUIs
+  # (nvim Ctrl+b = page-up, seldom vs Ctrl+u/f); swap the letter here if it ever
+  # collides with an app you care about.
   #--------------------------------------------------------------------------
   leader     = " ";          # Space
-  metaLeader = "Alt Space";   # zellij switches to `meta` mode on this chord
+  metaLeader = "Ctrl b";     # zellij switches to `meta` (tmux) mode on this chord
 
   #--------------------------------------------------------------------------
   # Group letters. The MEANING is the cross-app promise. An app omits groups it
@@ -165,9 +172,10 @@ rec {
   };
 
   #--------------------------------------------------------------------------
-  # The meta layer (Alt+Space -> zellij `meta` mode -> one key). `target` is the
-  # zellij pane/tab name to focus. Jump letters (t/c/m/f/e/h) are disjoint from
-  # the nav letters (n/p/]/[/w/z/Q) — no internal collision.
+  # The meta layer (Ctrl+b -> zellij `meta` mode -> one key). `target` is the
+  # logical pane/tab to focus (mapped to the layout's tab in to-zellij.nix).
+  # Jump letters (t/c/m/f/e/h) are disjoint from the nav/utility letters
+  # (n/p/]/[/w/z/s/d/Q) — no internal collision.
   #--------------------------------------------------------------------------
   meta = [
     { key = "t"; intent = "tasks";    desc = "Tasks (todui)";  target = "todui"; }
@@ -176,13 +184,18 @@ rec {
     { key = "f"; intent = "files";    desc = "Files (yazi)";   target = "files"; }
     { key = "e"; intent = "edit";     desc = "Edit (nvim)";    target = "edit"; }
     { key = "h"; intent = "host";     desc = "Host (workbench)"; target = "workbench"; }
-    # pane/tab navigation (zellij actions, no pane target)
-    { key = "n"; intent = "next-pane"; desc = "Next pane"; }
-    { key = "p"; intent = "prev-pane"; desc = "Prev pane"; }
+    # tab navigation (n/p AND ]/[ — every tool tab is single-pane, so next/prev
+    # *tab* is what you actually want; pane focus lives behind the pane-picker).
+    { key = "n"; intent = "next-tab"; desc = "Next tab"; }
+    { key = "p"; intent = "prev-tab"; desc = "Prev tab"; }
     { key = "bracketright"; intent = "next-tab"; desc = "Next tab"; }
     { key = "bracketleft";  intent = "prev-tab"; desc = "Prev tab"; }
     { key = "w"; intent = "pane-picker"; desc = "Pane picker"; }
     { key = "z"; intent = "zoom";        desc = "Zoom pane"; }
+    # Session lifecycle / scrollback — without these (clear-defaults strips
+    # zellij's own) a long-lived ops session can't scroll output or detach.
+    { key = "s"; intent = "scroll";      desc = "Scrollback"; }
+    { key = "d"; intent = "detach";      desc = "Detach (keep running)"; }
     { key = "Q"; intent = "kill";        desc = "Kill session"; }
   ];
 }

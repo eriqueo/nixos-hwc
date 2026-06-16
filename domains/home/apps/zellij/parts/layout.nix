@@ -15,6 +15,10 @@
 { lib, mailCommand ? "aerc" }:
 
 let
+  # Tab names come from the shared source of truth so the host's WORKBENCH_TABS
+  # (navigate-to-standing-tab) can never drift from the layout's actual names.
+  tabs = import ./tabs.nix;
+
   mailParts = lib.splitString " " mailCommand;
   mailBin   = builtins.head mailParts;
   mailArgs  = builtins.tail mailParts;
@@ -42,29 +46,29 @@ in
             pane size=1 borderless=true { plugin location="zellij:status-bar"; }
         }
         // Home = the workbench host alone (full pane). The dashboard you land on.
-        tab name="🏠 home" focus=true {
+        tab name="${tabs.host}" focus=true {
             pane name="host" {
                 command "workbench"
             }
         }
         // Tasks + calendar: Eric's first-class TUIs, auto-started (always-on peers).
-        tab name="✅ tasks" {
+        tab name="${tabs.todui}" {
             pane name="todui" { command "todui"; }
         }
-        tab name="📆 cal" {
+        tab name="${tabs.khalt}" {
             pane name="khalt" { command "khalt"; }
         }
         // Local TUIs — auto-start, cheap to keep warm.
-        tab name="📁 files" {
+        tab name="${tabs.yazi}" {
             pane name="yazi" { command "yazi"; }
         }
         // Mail is the one heavy peer: `ssh -t server aerc`, a held-open connection
         // to the server — stays start_suspended (press <ENTER> to launch) so no
         // idle SSH lingers in a detached session.
-        tab name="📬 mail" {
+        tab name="${tabs.aerc}" {
             pane name="aerc" { command "${mailBin}";${mailArgsKdl} start_suspended true; }
         }
-        tab name="📝 edit" {
+        tab name="${tabs.nvim}" {
             pane name="nvim" { command "nvim"; }
         }
     }
