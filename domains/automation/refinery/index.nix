@@ -110,6 +110,11 @@ in
           "REFINERY_CAPS_FILE=/var/lib/refinery/caps.json"
           # The Run button / write-spec effector drops developed specs here.
           "REFINERY_SCRATCH_DIR=/var/lib/refinery/specs"
+          # "▶ Run now" / IMMEDIATE mode drops a <goal> request file here; the
+          # nightly-builds-runnow path unit (domains/automation/nightly-builds)
+          # drains it and runs run.sh scoped to that project. Under the writable
+          # StateDirectory, so the hardened board can write it without a bind.
+          "REFINERY_RUNNOW_SPOOL=/var/lib/refinery/run-now"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
           # claude-cli triage shells out to headless `claude`, which reads the
           # Claude subscription creds from $HOME/.claude (bound read-only below).

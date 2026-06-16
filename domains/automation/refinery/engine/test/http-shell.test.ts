@@ -30,6 +30,7 @@ function setup(
       capsPath: join(root, "caps.json"),
       scratchDir: join(root, "specs"),
       triageProvider: "claude-cli",
+      runNowSpoolDir: join(root, "run-now"),
       clock: fixedClock,
       triageLlm,
       runLlm: opts.runLlm,

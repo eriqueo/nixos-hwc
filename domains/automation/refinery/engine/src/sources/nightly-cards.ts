@@ -66,7 +66,15 @@ function readSteps(goalDir: string): NbStep[] {
 
 function isDone(s: string): boolean { return s.toLowerCase().startsWith("done"); }
 function isQueuedish(s: string): boolean { const x = s.toLowerCase(); return x.startsWith("queued") || x.startsWith("running"); }
-function isDraft(s: string): boolean { return s.toLowerCase().startsWith("draft"); }
+/** A step that can be queued for a run: anything not already done and not
+ *  already queued/running. This deliberately includes `blocked` steps — the
+ *  board surfaces those as a "force-queue (override)" so no project can sit in
+ *  purgatory with a real pending step and no button to act on it. */
+function isPending(s: string): boolean { return !isDone(s) && !isQueuedish(s); }
+
+/** NIGHTLY (wait for the 01:30 timer) vs IMMEDIATE (a queued step kicks a
+ *  targeted run right away). Persisted in the project's _goal.md frontmatter. */
+export type NbMode = "nightly" | "immediate";
 
 /** Derive a project's (phase, phaseStatus) from its steps for lane placement. */
 function projectState(steps: NbStep[]): { phase: string; phaseStatus: Item["phaseStatus"]; parkedReason?: string } {
@@ -90,16 +98,19 @@ export function nightlyCardProjects(vaultDir: string): Item[] {
     const steps = readSteps(dir);
     if (!steps.length) continue;
 
-    // _goal.md → project title + description
+    // _goal.md → project title + description + run mode
     let title = goalId;
     let goalBody = "";
+    let mode: NbMode = "nightly";
     const goalPath = join(dir, "_goal.md");
     if (existsSync(goalPath)) {
       const gtext = readFileSync(goalPath, "utf8");
       goalBody = bodyOf(gtext);
       const h = /^#\s+(.*)$/m.exec(goalBody);
       if (h) title = h[1].trim().replace(/^Goal:\s*/i, "");
+      if (frontmatter(gtext).mode === "immediate") mode = "immediate";
     }
+    const nextPending = steps.find((s) => isPending(s.status));
 
     const { phase, phaseStatus, parkedReason } = projectState(steps);
     const done = steps.filter((s) => isDone(s.status)).length;
@@ -118,6 +129,11 @@ export function nightlyCardProjects(vaultDir: string): Item[] {
         stepsDone: done,
         stepsTotal: steps.length,
         queuedCount,
+        mode,
+        // The next actionable step (draft or blocked) + whether it's a blocked
+        // override, so the board can always render exactly one queue control.
+        nextStatus: nextPending ? nextPending.status : "",
+        nextBlocked: nextPending ? nextPending.status.toLowerCase().startsWith("blocked") : false,
         readonly: true,
         source: "nightly-builds project",
       },
@@ -144,13 +160,44 @@ function setStatus(vaultDir: string, goalId: string, file: string, newStatus: st
   return true;
 }
 
-/** Queue the next ready (draft) step of a project for tonight. Returns the file or null. */
+/** Queue the next pending step of a project (draft OR blocked — the latter is a
+ *  deliberate override so a blocked step is never a dead end). Returns the file
+ *  or null. */
 export function queueNextStep(vaultDir: string, goalId: string): string | null {
   const dir = join(vaultDir, "_inbox", "nightly_builds", goalId);
   if (!existsSync(dir)) return null;
-  const next = readSteps(dir).find((s) => isDraft(s.status));
+  const next = readSteps(dir).find((s) => isPending(s.status));
   if (!next) return null;
   return setStatus(vaultDir, goalId, next.file, "queued") ? next.file : null;
+}
+
+/** True if the project already has a queued (or running) step — used to avoid
+ *  double-queuing on a "Run now" when something is already in flight. */
+export function hasActiveStep(vaultDir: string, goalId: string): boolean {
+  const dir = join(vaultDir, "_inbox", "nightly_builds", goalId);
+  if (!existsSync(dir)) return false;
+  return readSteps(dir).some((s) => isQueuedish(s.status));
+}
+
+/** Read a project's run mode from its _goal.md frontmatter (default nightly). */
+export function readProjectMode(vaultDir: string, goalId: string): NbMode {
+  const goalPath = join(vaultDir, "_inbox", "nightly_builds", goalId, "_goal.md");
+  if (!existsSync(goalPath)) return "nightly";
+  return frontmatter(readFileSync(goalPath, "utf8")).mode === "immediate" ? "immediate" : "nightly";
+}
+
+/** Persist a project's run mode into its _goal.md frontmatter. */
+export function setProjectMode(vaultDir: string, goalId: string, mode: NbMode): boolean {
+  const goalPath = join(vaultDir, "_inbox", "nightly_builds", goalId, "_goal.md");
+  if (!existsSync(goalPath)) return false;
+  const text = readFileSync(goalPath, "utf8");
+  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  if (!m) return false;
+  const newFm = /^mode:.*$/m.test(m[1])
+    ? m[1].replace(/^mode:.*$/m, `mode: ${mode}`)
+    : `${m[1]}\nmode: ${mode}`;
+  writeFileSync(goalPath, text.replace(m[1], newFm));
+  return true;
 }
 
 /** Unqueue a project's currently-queued step (→ draft). Returns the file or null. */
