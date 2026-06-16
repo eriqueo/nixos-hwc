@@ -1,0 +1,16 @@
+# The DataX SR investigation gauntlet, described as a dispatch contract. The
+# refinery triggers the STANDALONE sr_gauntlet (its run.sh owns the Firestore
+# fetch, read-only worktrees, PII-on-disk discipline, ledger dedup) and reads
+# the per-SR REPORT back. The refinery never reimplements any of that.
+#
+# This is wiring DATA only: nothing here executes run.sh. Going live (the board
+# spawning the trigger) is a later, human-reviewed step.
+id: sr_gauntlet
+trigger:
+  command: /home/eric/700_datax/sr_gauntlet/run.sh
+  args: ["--id", "{id}"]
+  timeoutMs: 1800000 # 30 min — matches SRG_AGENT_TIMEOUT headroom
+resultsDir: /home/eric/700_datax/sr_gauntlet/investigations/{date}-{id}
+reportFile: REPORT.md
+verdictPattern: "SR-VERDICT: (investigated|inconclusive)"
+successVerdicts: ["investigated"]
