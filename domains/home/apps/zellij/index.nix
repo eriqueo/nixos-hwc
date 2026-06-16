@@ -16,7 +16,7 @@
 # as `config.hwc.home.theme.colors`; this module derives the zellij theme from
 # it. Switch hwc.home.theme.palette → zellij + workbench restyle on rebuild.
 
-{ config, lib, pkgs, osConfig ? {}, inputs ? {}, ... }:
+{ config, lib, pkgs, osConfig ? {}, ... }:
 
 let
   cfg = config.hwc.home.apps.zellij;
@@ -30,18 +30,7 @@ let
   # assumed local `aerc`. Derived from the single declaration in the shell
   # domain (on the laptop: "ssh -t server aerc"; falls back to "aerc").
   mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
-
-  # True-powerline tab bar via the zjstatus plugin (the built-in zellij:tab-bar
-  # can't do powerline segments). Themed from the active palette. Guarded: only
-  # used when cfg.powerlineTabs AND the zjstatus input is present — otherwise the
-  # layout falls back to its built-in tab-bar default, so this is safe even if
-  # the input is removed.
-  zjstatusWasm = lib.optionalString (inputs ? zjstatus)
-    "${inputs.zjstatus.packages.${pkgs.system}.default}/bin/zjstatus.wasm";
-  tabBar = lib.optionalString (cfg.powerlineTabs && inputs ? zjstatus)
-    (import ./parts/zjstatus.nix { inherit lib colors; wasm = zjstatusWasm; });
-  layout = import ./parts/layout.nix
-    ({ inherit lib mailCommand; } // lib.optionalAttrs (tabBar != "") { inherit tabBar; });
+  layout      = import ./parts/layout.nix { inherit lib mailCommand; };
 
   # INTER-APP meta layer (Alt+Space). Generated from the unified keymap grammar
   # when it is present (profiles/desktop imports domains/home/keymap). Guarded:
@@ -62,16 +51,6 @@ in
       type = lib.types.str;
       default = "workbench";
       description = "Layout zellij opens by default (the workbench KDL grid).";
-    };
-
-    powerlineTabs = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = ''
-        Use the zjstatus plugin for a themed true-powerline tab bar instead of
-        the built-in zellij:tab-bar. Requires the `zjstatus` flake input; falls
-        back to the built-in bar when off or the input is absent.
-      '';
     };
   };
 
