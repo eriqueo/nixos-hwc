@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 const STORAGE_KEY = 'hwc-estimate-state';
 
-export const DEFAULT_STATE = {
+export const DEFAULT_STATE: Record<string, any> = {
   // Job selection (for JT integration)
   mode: 'existing',           // 'existing' | 'new_job' | 'new_customer'
   customerId: '',
@@ -116,8 +116,8 @@ export function useProjectState() {
     }
   }, [state]);
 
-  const set = useCallback((key, value) => {
-    setState(prev => ({ ...prev, [key]: value }));
+  const set = useCallback((key: string, value: any) => {
+    setState((prev: any) => ({ ...prev, [key]: value }));
   }, []);
 
   const reset = useCallback(() => {
@@ -125,5 +125,5 @@ export function useProjectState() {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  return [state, set, reset];
+  return [state, set, reset] as const;
 }

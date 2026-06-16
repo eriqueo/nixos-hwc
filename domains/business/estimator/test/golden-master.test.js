@@ -25,8 +25,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 const goldenDir = join(__dirname, 'golden');
 
-// Register the hook BEFORE importing engine modules, so pricing.js's
-// attribute-less `import tradeRates from '../data/tradeRates.json'` resolves.
+// Register tsx so `node` (not just `tsx`) can resolve the engine's `.ts`
+// modules written `.js`-style. Engine data files load via contracts/data with
+// native `with { type: 'json' }`, so the JSON hook is no longer required —
+// kept registered for backward compat with any external test runner.
+const { register: registerTsx } = await import('tsx/esm/api');
+registerTsx();
 register(new URL('./json-import-hook.mjs', import.meta.url));
 
 const { assemble, computeTotals } = await import('../src/engine/assembler.js');

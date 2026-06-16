@@ -53,9 +53,17 @@ Material markup: cost x 1.429
 domains/business/estimator/
 ├── index.nix              # NixOS module: build service, Caddy, firewall
 ├── src/
+│   ├── contracts/
+│   │   ├── schemas.ts     # Zod schemas for every data file (CatalogSchema, TradeRatesSchema, …)
+│   │   └── data.ts        # Validated data-load boundary: parses src/data/*.json, throws on drift
+│   ├── errors/
+│   │   └── index.ts       # EstimatorError + SchemaValidation / UnknownFormulaToken / MissingTradeRate / JtPush
 │   ├── engine/
-│   │   ├── assembler.js   # Core: buildCatalog(), buildDeckCatalog(), geometry, parameters
-│   │   └── pricing.js     # tradeRate(), matPrice() — reads tradeRates.json
+│   │   ├── assembler.ts   # Core: buildCatalog(), buildDeckCatalog(), geometry, parameters
+│   │   ├── pricing.ts     # tradeRate(), tradeRateStrict(), matPrice()
+│   │   ├── formulaEngine.ts # Recursive-descent formula parser (typed throw sites)
+│   │   ├── geometry.ts    # enrichState() + bathroom/deck geometry derivation
+│   │   └── jtPush.ts      # n8n webhook helper — throws JtPushError on any failure
 │   ├── data/
 │   │   ├── tradeRates.json     # Exported from DB by export_estimator_data.py
 │   │   ├── templates.json      # Exported from DB
@@ -63,23 +71,26 @@ domains/business/estimator/
 │   │   ├── parameters.json     # JT parameter definitions (bathroom + deck)
 │   │   └── stateKeys.json      # State key schema (informational)
 │   ├── hooks/
-│   │   ├── useProjectState.js  # State management + localStorage persistence
-│   │   ├── useCatalog.js       # Routes to bathroom/deck catalog, applies edits
-│   │   └── useIsMobile.js      # Responsive breakpoint
+│   │   ├── useProjectState.ts  # State management + localStorage persistence
+│   │   ├── useCatalog.ts       # Routes to bathroom/deck catalog, applies edits
+│   │   └── useIsMobile.ts      # Responsive breakpoint
 │   ├── components/
-│   │   ├── ScopeTab.jsx        # Measurement form (bathroom + deck), template selector
-│   │   ├── EstimateTab.jsx     # Line item table, JT push button
-│   │   ├── DetailsTab.jsx      # Allowances and custom items
-│   │   ├── JobSelector.jsx     # JT job/customer picker
+│   │   ├── ScopeTab.tsx        # Measurement form (bathroom + deck), template selector
+│   │   ├── EstimateTab.tsx     # Line item table, JT push button
+│   │   ├── DetailsTab.tsx      # Allowances and custom items
+│   │   ├── JobSelector.tsx     # JT job/customer picker
 │   │   └── ...                 # NumInput, Select, Section
-│   ├── styles/theme.js         # Gruvbox Material Dark colors
-│   └── App.jsx                 # Main layout, tab routing
+│   ├── styles/theme.ts         # Gruvbox Material Dark colors
+│   ├── vite-env.d.ts           # Vite + import.meta.env types
+│   └── App.tsx                 # Main layout, tab routing
 ├── test/
 │   ├── golden-master.test.js   # Parity oracle: live engine vs golden snapshots (exits non-zero on diff)
+│   ├── schema-rejection.test.js # Phase-A: asserts every Zod contract rejects a malformed shape
+│   ├── error-codes.test.js     # Phase-B: asserts each structured error fires the right `code`
 │   ├── json-import-hook.mjs    # Node resolve hook so Vite-style JSON imports load under plain Node
 │   ├── golden/                 # 8 golden snapshots, one per template (npm run test:golden -- --update)
 │   └── rate-audit.test.js      # P0 rate-fix validation (self-contained)
-├── package.json, vite.config.js, index.html
+├── package.json, vite.config.js, tsconfig.json, index.html
 └── README.md
 ```
 
@@ -162,6 +173,18 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-06-16: Engineering-principles completion (card 02). **Phase A** — Zod
+  contracts in `src/contracts/` parse `catalog.json`, `tradeRates.json`,
+  `parameters.json`, `jtMappings.json`, `templates.json` at the engine load
+  boundary; a drift names the file + JSON path. **Phase B** — `src/errors/`
+  with `EstimatorError` base + coded subclasses (`SCHEMA_VALIDATION`,
+  `UNKNOWN_FORMULA_TOKEN`, `MISSING_TRADE_RATE`, `JT_PUSH_FAILED`); engine
+  throw sites swapped to the typed classes; `engine/jtPush.ts` boundary
+  helper. **Phase C** — full `src/` migrated to TypeScript with `strict:
+  true`; engine types derive from the Phase-A Zod schemas via `z.infer`;
+  `tsconfig.json` added; `tsc --noEmit` clean and `vite build` succeeds.
+  New tests `schema-rejection.test.js` (9/0) + `error-codes.test.js` (11/0)
+  green alongside the unchanged golden-master oracle (8/0).
 - 2026-06-12: Golden-master parity oracle — `test/golden/*.json` snapshots for all 8 templates captured from the live engine, strict runner `test/golden-master.test.js` (exit 1 on diff, `--update` / `--perturb` modes), `test:golden` npm script. Safety net for estimator refactor steps 02–04.
 - 2026-06-09: Access moved from the bespoke `services.caddy.extraConfig` PWA block on tailnet port `:13443` to a `vhost` route `estimator.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert. PWA cache behaviour preserved by the vhost renderer's assets-only-immutable policy. See `domains/networking/README.md`.
 - 2026-05-01: Bottom-up pricing engine — Job #306 rates, Craftsman production rates, 8 new scope items, deck assembler, templates, MCP tools, DB export pipeline

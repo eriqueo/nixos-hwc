@@ -17,9 +17,9 @@ const TABS = [
 
 export default function App() {
   const [state, set, reset] = useProjectState();
-  const [overrides, setOverrides] = useState({});
-  const [removed,   setRemoved]   = useState({});
-  const [view,      setView]      = useState('scope');
+  const [overrides, setOverrides] = useState<Record<number, number>>({});
+  const [removed,   setRemoved]   = useState<Record<number, boolean>>({});
+  const [view,      setView]      = useState<string>('scope');
   const [browserOpen, setBrowserOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -31,12 +31,12 @@ export default function App() {
     setView('estimate');
   }, []);
 
-  const handleAddPicks = useCallback((picks) => {
+  const handleAddPicks = useCallback((picks: any[]) => {
     const existing = state.catalog_picks || [];
     set('catalog_picks', [...existing, ...picks]);
   }, [state.catalog_picks, set]);
 
-  const tabLabel = id => id === 'estimate' ? `Budget (${totals.items})` : TABS.find(t => t.id === id)?.label;
+  const tabLabel = (id: string) => id === 'estimate' ? `Budget (${totals.items})` : TABS.find(t => t.id === id)?.label;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: C.bg, color: C.tx, fontFamily: mono }}>

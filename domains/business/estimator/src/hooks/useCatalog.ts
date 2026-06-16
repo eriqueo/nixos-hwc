@@ -8,7 +8,7 @@ import { enrichState } from '../engine/geometry.js';
  * Merges catalog_picks (from price book browser) into the estimate.
  * All values are memoized -- only recomputes when inputs change.
  */
-export function useCatalog(state, overrides, removed) {
+export function useCatalog(state: any, overrides: Record<number, number>, removed: Record<number, boolean>) {
   const enrichedState = useMemo(() => enrichState(state), [state]);
   const pt = (state.projectType || state.job_type || 'bathroom').toLowerCase();
   const projectType = pt === 'deck' ? 'deck' : 'bathroom';
@@ -19,8 +19,8 @@ export function useCatalog(state, overrides, removed) {
   const catalog = useMemo(() => {
     if (catalogPicks.length === 0) return assembled;
     // Start IDs after assembled items to avoid collisions
-    const maxId = assembled.reduce((mx, i) => Math.max(mx, i.id), 0);
-    const pickItems = catalogPicks.map((p, idx) => ({
+    const maxId = assembled.reduce((mx: number, i: any) => Math.max(mx, i.id), 0);
+    const pickItems = catalogPicks.map((p: any, idx: number) => ({
       id: maxId + idx + 1,
       name: p.name,
       group: p.group || 'Catalog Picks',

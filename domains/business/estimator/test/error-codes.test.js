@@ -3,6 +3,8 @@
  * from the right throw site.
  */
 import { register } from 'node:module';
+const { register: registerTsx } = await import('tsx/esm/api');
+registerTsx();
 register(new URL('./json-import-hook.mjs', import.meta.url));
 
 const { SchemaValidationError, UnknownFormulaTokenError, MissingTradeRateError, JtPushError } =

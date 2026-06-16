@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import { C, mono } from '../styles/theme.js';
 import { Box, Label } from './Section.jsx';

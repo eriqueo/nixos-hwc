@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useCallback } from 'react';
 import { C, mono } from '../styles/theme.js';
 import { Box, Label, Divider } from './Section.jsx';

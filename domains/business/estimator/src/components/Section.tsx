@@ -1,7 +1,7 @@
 import { C, mono } from '../styles/theme.js';
 
 /** Raised card container */
-export function Box({ children, style }) {
+export function Box({ children, style }: any) {
   return (
     <div style={{
       backgroundColor: C.card,
@@ -16,7 +16,7 @@ export function Box({ children, style }) {
 }
 
 /** Section header with accent bar */
-export function Label({ children, color }) {
+export function Label({ children, color }: any) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
       <div style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: color ?? C.acc }} />
@@ -36,7 +36,7 @@ export function Divider() {
 }
 
 /** Single stat display (label + value) */
-export function Stat({ label, value, color, compact = false }) {
+export function Stat({ label, value, color, compact = false }: any) {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ color: C.txD, fontSize: compact ? 8 : 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>

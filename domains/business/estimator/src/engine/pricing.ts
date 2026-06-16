@@ -4,18 +4,17 @@ import { MissingTradeRateError } from '../errors/index.js';
 // Material markup: ~30% target margin
 export const MAT_MARKUP = 1.4286;
 
+export interface PriceRate { cost: number; price: number; }
+
 /**
  * Calculate hourly cost and price for a given trade.
  * cost  = wage × burden
  * price = cost × markup
  */
-export function tradeRate(trade) {
+export function tradeRate(trade: string): PriceRate {
   const r = tradeRates[trade] ?? tradeRates.planning;
   const cost = Math.round(r.wage * r.burden * 100) / 100;
-  return {
-    cost,
-    price: Math.round(cost * r.markup * 100) / 100,
-  };
+  return { cost, price: Math.round(cost * r.markup * 100) / 100 };
 }
 
 /**
@@ -23,27 +22,26 @@ export function tradeRate(trade) {
  * tradeRates.json. Callers that need to fail loud on a stale catalog row
  * use this instead of tradeRate() (which falls back to `planning`).
  */
-export function tradeRateStrict(trade) {
+export function tradeRateStrict(trade: string): PriceRate {
   const r = tradeRates[trade];
   if (!r) throw new MissingTradeRateError(trade);
   const cost = Math.round(r.wage * r.burden * 100) / 100;
-  return {
-    cost,
-    price: Math.round(cost * r.markup * 100) / 100,
-  };
+  return { cost, price: Math.round(cost * r.markup * 100) / 100 };
 }
 
 /**
  * Apply material markup to a raw cost to get sell price.
  */
-export function matPrice(cost) {
+export function matPrice(cost: number): number {
   return Math.round(cost * MAT_MARKUP * 100) / 100;
 }
 
 /**
  * Compute extended cost and price for a line item.
  */
-export function extendItem(item) {
+export function extendItem<T extends { uc: number; up: number; qty: number }>(
+  item: T,
+): T & { extC: number; extP: number } {
   const extC = Math.round(item.uc * item.qty * 100) / 100;
   const extP = Math.round(item.up * item.qty * 100) / 100;
   return { ...item, extC, extP };

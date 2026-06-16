@@ -3,23 +3,15 @@
  *
  * Reads catalog.json (assembly rules joined to catalog items) to assemble
  * estimates from project state.
- *
- * catalog.json contains one entry per assembly rule, each linking to a
- * catalog item with pricing + JT metadata. The assembler:
- *   1. Filters rules by projectType + conditionTrigger
- *   2. Evaluates qty formulas against project state
- *   3. Applies waste factor to quantity
- *   4. Computes pricing from trade rates or catalog values
- *   5. Returns line items (snapshots, independent of source data)
- *
- * No React dependencies -- can be tested independently.
  */
 import { tradeRate, matPrice } from './pricing.js';
 import { evaluateFormula, evaluateCondition } from './formulaEngine.js';
 import { catalog, parameters } from '../contracts/data.js';
+import type { CatalogRule } from '../contracts/schemas.js';
+import type { RawState } from './geometry.js';
 
 // Allowance cost keys: allowance name -> state key for unit cost
-const ALLOWANCE_COST_KEY = {
+const ALLOWANCE_COST_KEY: Record<string, string> = {
   'Allowance | Bathtub': 'tub_allowance',
   'Allowance | Shower Trim': 'shower_trim_allowance',
   'Allowance | Toilet': 'toilet_allowance',
@@ -28,7 +20,7 @@ const ALLOWANCE_COST_KEY = {
 };
 
 // Trade name -> tradeRates key mapping
-const TRADE_RATE_KEY = {
+const TRADE_RATE_KEY: Record<string, string> = {
   'admin': 'planning',
   'finish_carpentry': 'trimwork',
   'finish carpentry': 'trimwork',
@@ -42,63 +34,86 @@ const TRADE_RATE_KEY = {
   'railing': 'framing',
 };
 
-function tradeRateKey(itemName) {
+function tradeRateKey(itemName: string): string {
   const trade = (itemName.split(' | ')[1] || '').toLowerCase();
   return TRADE_RATE_KEY[trade] || trade.replace(/ /g, '_').replace(/&/g, '');
 }
 
-/**
- * Assemble an estimate from assembly rules.
- *
- * @param {Object} state       -- enriched project state (run through enrichState first)
- * @param {string} projectType -- 'bathroom', 'deck', 'kitchen', etc.
- * @returns {Array} line items
- */
-export function assemble(state, projectType = 'bathroom') {
-  // 1. Filter to rules for this project type (or 'general' = all types)
-  //    Each entry in catalog is an assembly rule with catalog item data
-  const applicable = catalog.filter(item =>
+export interface LineItem {
+  id: number;
+  name: string;
+  group: string;
+  code: string;
+  type: string;
+  unit: string;
+  qty: number;
+  uc: number;
+  up: number;
+  extC: number;
+  extP: number;
+  trade: string | null;
+  quantityFormula: string | null;
+  wasteFactor: number;
+  _usedDefault: boolean;
+  _catalogId: number | null;
+  _ruleId: number | null;
+  _source?: string;
+  _pickIndex?: number;
+  _edited?: boolean;
+}
+
+export interface CustomItem {
+  name?: string;
+  qty?: number;
+  cost?: number;
+  trade?: string | null;
+  group?: string;
+  code?: string;
+  type?: string;
+  unit?: string;
+}
+
+export function assemble(state: RawState, projectType: string = 'bathroom'): LineItem[] {
+  const applicable = (catalog as CatalogRule[]).filter(item =>
     (item.projectType === projectType || item.projectType === 'general')
     && item.conditionTrigger && item.sortOrder
   );
 
-  // 2. Evaluate conditions -- which rules apply to this project state?
   const included = applicable.filter(item => {
     if (!item.conditionTrigger || item.conditionTrigger === 'always') return true;
     return evaluateCondition(item.conditionTrigger, state);
   });
 
-  // 3. Sort by sortOrder
   included.sort((a, b) => (a.sortOrder || 500) - (b.sortOrder || 500));
 
-  // 4. Compute qty and pricing for each item
   let id = 0;
-  const result = included.map(item => {
-    let qty;
+  const result: LineItem[] = included.map(item => {
+    let qty: number;
     let usedDefault = false;
 
     if (item.qtyFormula) {
-      qty = evaluateFormula(item.qtyFormula, state);
-      if (qty === null || qty === undefined || isNaN(qty)) {
+      const v = evaluateFormula(item.qtyFormula, state);
+      if (v === null || v === undefined || isNaN(v)) {
         qty = item.defaultQty || 1;
         usedDefault = true;
+      } else {
+        qty = v;
       }
     } else {
       qty = item.defaultQty || 1;
     }
 
-    // Apply waste factor to quantity (baked in, stored for traceability)
     const wasteFactor = item.wasteFactor || 1.0;
     qty = Math.ceil(qty * wasteFactor * 100) / 100;
 
-    // Pricing
-    let uc, up;
+    let uc: number;
+    let up: number;
     if (item.type === 'Labor' || item.type === 'Admin') {
       const r = tradeRate(tradeRateKey(item.name));
       uc = r.cost;
       up = r.price;
     } else if (ALLOWANCE_COST_KEY[item.name]) {
-      uc = state[ALLOWANCE_COST_KEY[item.name]] || 0;
+      uc = Number(state[ALLOWANCE_COST_KEY[item.name]]) || 0;
       up = matPrice(uc);
     } else if (item.name.startsWith('Allowance |') && item.qtyFormula && !item.unitCost) {
       uc = evaluateFormula(item.qtyFormula, state) || 0;
@@ -120,7 +135,7 @@ export function assemble(state, projectType = 'bathroom') {
       uc, up,
       extC: Math.round(uc * qty * 100) / 100,
       extP: Math.round(up * qty * 100) / 100,
-      trade: item.trade || null,
+      trade: (item as unknown as { trade?: string | null }).trade ?? null,
       quantityFormula: item.qtyFormula || null,
       wasteFactor,
       _usedDefault: usedDefault,
@@ -129,11 +144,11 @@ export function assemble(state, projectType = 'bathroom') {
     };
   });
 
-  // 5. Append custom line items
-  (state.custom_items ?? []).forEach(ci => {
-    if (ci.name && ci.qty > 0) {
+  ((state.custom_items as CustomItem[] | undefined) ?? []).forEach(ci => {
+    if (ci.name && (ci.qty ?? 0) > 0) {
       const uc = ci.cost || 0;
       const up = ci.trade ? tradeRate(ci.trade).price : matPrice(uc);
+      const qty = ci.qty ?? 0;
       result.push({
         id: ++id,
         name: ci.name,
@@ -141,10 +156,10 @@ export function assemble(state, projectType = 'bathroom') {
         code: ci.code ?? '3100',
         type: ci.type ?? 'Materials',
         unit: ci.unit ?? 'Each',
-        qty: ci.qty,
+        qty,
         uc, up,
-        extC: Math.round(uc * ci.qty * 100) / 100,
-        extP: Math.round(up * ci.qty * 100) / 100,
+        extC: Math.round(uc * qty * 100) / 100,
+        extP: Math.round(up * qty * 100) / 100,
         trade: ci.trade ?? null,
         quantityFormula: null,
         wasteFactor: 1.0,
@@ -158,9 +173,9 @@ export function assemble(state, projectType = 'bathroom') {
   return result;
 }
 
-// -- Geometry (kept here for backward compat -- also in geometry.js) ----------
+// -- Geometry (kept here for backward compat -- also in geometry.ts) ----------
 
-export function deriveGeometry(s) {
+export function deriveGeometry(s: RawState) {
   const fl        = s.bathroom_length_ft * s.bathroom_width_ft;
   const perim     = 2 * (s.bathroom_length_ft + s.bathroom_width_ft);
   const showerW   = s.shower_wall_1_width_ft + s.shower_wall_2_width_ft
@@ -179,7 +194,7 @@ export function deriveGeometry(s) {
   return { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, wallArea, ceilArea, paintableWalls, showerW };
 }
 
-export function deriveDeckGeometry(s) {
+export function deriveDeckGeometry(s: RawState) {
   const deckSqft   = s.deck_length_ft * s.deck_width_ft;
   const perimeter  = 2 * (s.deck_length_ft + s.deck_width_ft);
   const joistCount = Math.ceil(s.deck_length_ft / (s.joist_spacing_in / 12)) + 1;
@@ -192,8 +207,8 @@ export function deriveDeckGeometry(s) {
 
 // -- JT parameter builders (for webhook push) ---------------------------------
 
-export function buildParameters(s) {
-  const params = [];
+export function buildParameters(s: RawState) {
+  const params: Array<Record<string, unknown>> = [];
   for (const p of parameters.numeric) {
     params.push({ name: p.name, value: s[p.name] ?? p.default });
   }
@@ -206,7 +221,7 @@ export function buildParameters(s) {
   return params;
 }
 
-export function buildDeckParameters(s) {
+export function buildDeckParameters(s: RawState) {
   return [
     { name: 'd_length', value: s.deck_length_ft ?? 12 },
     { name: 'd_width', value: s.deck_width_ft ?? 8 },
@@ -223,7 +238,11 @@ export function buildDeckParameters(s) {
 
 // -- Utilities ----------------------------------------------------------------
 
-export function applyEdits(catalog, overrides, removed) {
+export function applyEdits(
+  catalog: LineItem[],
+  overrides: Record<number, number>,
+  removed: Record<number, boolean>,
+): LineItem[] {
   return catalog
     .filter(i => !removed[i.id])
     .map(i => {
@@ -237,7 +256,15 @@ export function applyEdits(catalog, overrides, removed) {
     });
 }
 
-export function computeTotals(estimate) {
+export interface Totals {
+  cost: number;
+  price: number;
+  items: number;
+  laborHrs: number;
+  margin: number;
+}
+
+export function computeTotals(estimate: LineItem[]): Totals {
   let cost = 0, price = 0, items = 0, laborHrs = 0;
   estimate.forEach(i => {
     cost  += i.extC;
@@ -251,8 +278,8 @@ export function computeTotals(estimate) {
   };
 }
 
-export function groupEstimate(estimate) {
-  const g = {};
+export function groupEstimate(estimate: LineItem[]): Record<string, LineItem[]> {
+  const g: Record<string, LineItem[]> = {};
   estimate.forEach(i => {
     if (!g[i.group]) g[i.group] = [];
     g[i.group].push(i);

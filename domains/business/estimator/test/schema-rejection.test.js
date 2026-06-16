@@ -6,13 +6,15 @@
  * These run the schemas directly (without touching real JSON), so they are
  * independent of golden-master.
  */
-import {
+const { register: registerTsx } = await import('tsx/esm/api');
+registerTsx();
+const {
   CatalogSchema,
   TradeRatesSchema,
   TemplatesSchema,
   JtMappingsSchema,
   ParametersSchema,
-} from '../src/contracts/schemas.js';
+} = await import('../src/contracts/schemas.js');
 
 const cases = [
   {

@@ -6,9 +6,11 @@
  * that catalog formulas reference.
  */
 
+export type RawState = Record<string, any>;
+
 // ─── Bathroom geometry ──────────────────────────────────────────────────────
 
-export function deriveGeometry(s) {
+export function deriveGeometry(s: RawState) {
   const fl        = s.bathroom_length_ft * s.bathroom_width_ft;
   const perim     = 2 * (s.bathroom_length_ft + s.bathroom_width_ft);
   const showerW   = s.shower_wall_1_width_ft + s.shower_wall_2_width_ft
@@ -20,16 +22,16 @@ export function deriveGeometry(s) {
     + (s.shower_curb_width_in * 2) / 12 * s.shower_curb_length_ft
   );
   const accentTile = showerW * 1.25;
-  const wallArea   = perim * s.wall_height_ft;             // total wall surface
-  const ceilArea   = fl;                                    // ceiling = floor area
-  const paintableWalls = Math.max(0, wallArea - wallTile);  // walls minus tiled shower area
-  const paintSqft  = wallArea;                              // legacy — kept for compat
+  const wallArea   = perim * s.wall_height_ft;
+  const ceilArea   = fl;
+  const paintableWalls = Math.max(0, wallArea - wallTile);
+  const paintSqft  = wallArea;
   return { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, wallArea, ceilArea, paintableWalls, showerW };
 }
 
 // ─── Deck geometry ──────────────────────────────────────────────────────────
 
-export function deriveDeckGeometry(s) {
+export function deriveDeckGeometry(s: RawState) {
   const deckSqft   = s.deck_length_ft * s.deck_width_ft;
   const perimeter  = 2 * (s.deck_length_ft + s.deck_width_ft);
   const joistCount = Math.ceil(s.deck_length_ft / (s.joist_spacing_in / 12)) + 1;
@@ -41,10 +43,9 @@ export function deriveDeckGeometry(s) {
 }
 
 // ─── Enrich state with derived geometry keys ────────────────────────────────
-// Catalog formulas reference these canonical key names.
 
-export function enrichState(state) {
-  const enriched = { ...state };
+export function enrichState(state: RawState): RawState {
+  const enriched: RawState = { ...state };
 
   if ((state.projectType || state.job_type || '').toLowerCase() === 'deck') {
     const g = deriveDeckGeometry(state);
@@ -68,7 +69,6 @@ export function enrichState(state) {
     enriched.shower_curb_tile_sqft    = g.curbTile;
     enriched.shower_accent_tile_sqft  = state.shower_accent_tile_sqft != null ? state.shower_accent_tile_sqft : g.accentTile;
 
-    // Paint area — derived from scope unless manually overridden
     if (state.bathroom_wall_paint_sqft != null) {
       enriched.bathroom_wall_paint_sqft = state.bathroom_wall_paint_sqft;
     } else {
@@ -78,7 +78,6 @@ export function enrichState(state) {
         : g.paintableWalls + g.ceilArea;
     }
 
-    // Drywall area — derived from scope unless manually overridden
     if (state.drywall_sqft != null) {
       enriched.drywall_sqft = state.drywall_sqft;
     } else {

@@ -1,22 +1,22 @@
 import { C, mono } from '../styles/theme.js';
 
 /** Feet + Inches input — stores value as decimal feet */
-export function FtInInput({ label, value, onChange, min = 0, max = 9999, show = true }) {
+export function FtInInput({ label, value, onChange, min = 0, max = 9999, show = true }: any) {
   if (!show) return null;
   const totalInches = Math.round((value || 0) * 12);
   const ft = Math.floor(totalInches / 12);
   const inches = totalInches % 12;
 
-  const handleFt = e => {
+  const handleFt = (e: any) => {
     const newFt = parseInt(e.target.value) || 0;
     onChange(Math.max(min, Math.min(max, newFt + inches / 12)));
   };
-  const handleIn = e => {
+  const handleIn = (e: any) => {
     const newIn = Math.min(11, Math.max(0, parseInt(e.target.value) || 0));
     onChange(Math.max(min, Math.min(max, ft + newIn / 12)));
   };
 
-  const inputStyle = {
+  const inputStyle: any = {
     width: 44, padding: '3px 6px', borderRadius: 3,
     border: `1px solid ${C.brd}`,
     backgroundColor: C.card2, color: C.txB,

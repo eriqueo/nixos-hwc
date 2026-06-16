@@ -1,6 +1,6 @@
 import { C, mono } from '../styles/theme.js';
 
-export function NumInput({ label, value, onChange, unit, min = 0, max = 9999, step = 1, show = true }) {
+export function NumInput({ label, value, onChange, unit, min = 0, max = 9999, step = 1, show = true }: any) {
   if (!show) return null;
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
@@ -9,7 +9,7 @@ export function NumInput({ label, value, onChange, unit, min = 0, max = 9999, st
         <input
           type="number"
           value={value ?? ''}
-          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          onChange={(e: any) => onChange(parseFloat(e.target.value) || 0)}
           min={min} max={max} step={step}
           style={{
             width: 60, padding: '3px 6px', borderRadius: 3,

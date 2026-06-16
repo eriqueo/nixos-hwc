@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import { C, GROUP_COLORS, mono } from '../styles/theme.js';
 import { Box } from './Section.jsx';

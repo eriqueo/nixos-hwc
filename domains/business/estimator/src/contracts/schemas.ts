@@ -85,3 +85,16 @@ export const ParametersSchema = z.object({
   deck_numeric: z.array(NumericParamSchema).optional(),
   deck_picklist: z.array(PicklistParamSchema).optional(),
 });
+
+// ── Inferred types — engine consumes these instead of hand-written shapes ──
+export type CatalogRule = z.infer<typeof CatalogRuleSchema>;
+export type Catalog = z.infer<typeof CatalogSchema>;
+export type TradeRate = z.infer<typeof TradeRateSchema>;
+export type TradeRates = z.infer<typeof TradeRatesSchema>;
+export type Template = z.infer<typeof TemplateSchema>;
+export type Templates = z.infer<typeof TemplatesSchema>;
+export type JtMappings = z.infer<typeof JtMappingsSchema>;
+export type NumericParam = z.infer<typeof NumericParamSchema>;
+export type FormulaParam = z.infer<typeof FormulaParamSchema>;
+export type PicklistParam = z.infer<typeof PicklistParamSchema>;
+export type Parameters = z.infer<typeof ParametersSchema>;

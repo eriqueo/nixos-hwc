@@ -1,6 +1,6 @@
 import { C, mono } from '../styles/theme.js';
 
-export function Toggle({ label, value, onChange, show = true }) {
+export function Toggle({ label, value, onChange, show = true }: any) {
   if (!show) return null;
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>

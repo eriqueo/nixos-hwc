@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { C, mono } from '../styles/theme.js';
 import { Box, Label, Divider } from './Section.jsx';
 import { NumInput } from './NumInput.jsx';

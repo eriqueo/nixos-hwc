@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from 'react';
 import { C, mono } from '../styles/theme.js';
 import { matPrice } from '../engine/pricing.js';
