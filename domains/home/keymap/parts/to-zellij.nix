@@ -16,10 +16,13 @@
 { lib, grammar }:
 
 let
-  # target pane/app -> zellij tab name (todui+khalt+host share the dashboard tab)
+  # target pane/app -> zellij tab INDEX (1-based). zellij 0.44 keybinds only
+  # support GoToTab <index>, NOT GoToTabName. Indices MUST match the tab order in
+  # domains/home/apps/zellij/parts/layout.nix:
+  #   1 home (host) · 2 tasks (todui) · 3 cal (khalt) · 4 files · 5 mail · 6 edit
   tabFor = {
-    todui = "workbench"; khalt = "workbench"; workbench = "workbench";
-    mail = "mail"; files = "files"; edit = "edit";
+    workbench = 1; todui = 2; khalt = 3;
+    files = 4; mail = 5; edit = 6;
   };
 
   # nav intent -> zellij action (jumps use GoToTabName, handled separately)
@@ -42,7 +45,7 @@ let
   bindLine = e:
     let tok = keyToken e.key; in
     if (e ? target) then
-      ''        bind "${tok}" { GoToTabName "${tabFor.${e.target}}"; SwitchToMode "Normal"; }''
+      ''        bind "${tok}" { GoToTab ${toString tabFor.${e.target}}; SwitchToMode "Normal"; }''
     # pane-picker LEAVES you in Pane mode to pick — do NOT append a return to Normal.
     else if e.intent == "pane-picker" then
       ''        bind "${tok}" { ${navAction.${e.intent}} }''

@@ -14,6 +14,23 @@
         _hwc_hash_refresh() { hash -r; }
         add-zsh-hook precmd _hwc_hash_refresh
 
+        # Rebind the running shell's prompt to a live starship binary.
+        # `starship init zsh` bakes the ABSOLUTE path of the binary that ran it
+        # into the prompt hook functions (e.g. __starship_get_time, PROMPT2). A
+        # shell that baked ~/.nix-profile/bin/starship dies on every prompt after
+        # an HM-as-module activation, because activation WIPES ~/.nix-profile —
+        # and `hash -r` can't fix it (it only re-resolves bare command names, not
+        # an absolute path literal inside a function). Re-running init after a
+        # rebuild rebakes the path via PATH, which now lands on the stable
+        # /etc/profiles/per-user/$USER/bin/starship symlink (repopulated every
+        # activation, never wiped). Guarded so hosts with starship disabled skip it.
+        _hwc_reinit_prompt() {
+          hash -r
+          if command -v starship >/dev/null 2>&1; then
+            eval "$(starship init zsh)"
+          fi
+        }
+
         # NixOS rebuild shortcuts (dynamic hostname)
         # `env HOME=/root` stops Nix warning that /home/eric isn't owned by root.
         # Must be the ABSOLUTE path, not `~root`: zsh doesn't tilde-expand it in
@@ -54,14 +71,14 @@
             print
           fi
           _hwc_rebuild switch "$@" || return $?
-          hash -r
+          _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
         }
         tnix() {
           _hwc_rebuild test "$@" || return $?
-          hash -r
+          _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
@@ -82,7 +99,7 @@
             "$HWC_NIXOS_DIR#homeConfigurations.\"eric@$(hostname)\".activationPackage" \
             "$@") || return $?
           "$activator/activate" || return $?
-          hash -r
+          _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
