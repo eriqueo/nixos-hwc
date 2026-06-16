@@ -500,11 +500,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781638881,
-        "narHash": "sha256-aUEZxHlAW62PCeZNa4IUecTipuSdM7/12j6NnGH9uyg=",
+        "lastModified": 1781640330,
+        "narHash": "sha256-HlbpZI7NWeocO8VLrRCOeym1HHXCaonV/LACjy9TNXE=",
         "ref": "refs/heads/main",
-        "rev": "620ac60fca6d7135eeaed8e0f430818009f8225e",
-        "revCount": 20,
+        "rev": "76ff597b40bdeb1a75b85e2b1cf1d043567b9e5b",
+        "revCount": 21,
         "type": "git",
         "url": "file:///home/eric/600_apps/workbench"
       },
