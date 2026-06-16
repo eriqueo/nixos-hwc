@@ -10,6 +10,7 @@ import { getContainerStats, listContainers } from "../executors/podman.js";
 import { safeExec } from "../executors/shell.js";
 import { TtlCache } from "../cache.js";
 import { mcpError, catchError } from "../errors.js";
+import { contract } from "../result.js";
 
 const cache = new TtlCache();
 
@@ -145,6 +146,19 @@ export function servicesTools(runtimeTtl: number, nixosConfigPath?: string): Too
                 unhealthy,
                 healthy: active.map((s) => s.name),
               },
+              view: contract(
+                "status",
+                "Services",
+                {
+                  overall: failed.length > 0 ? "warning" : "ok",
+                  checks: [
+                    { status: "ok", name: "active", note: `${active.length} running` },
+                    { status: failed.length ? "error" : "ok", name: "failed", note: failed.length ? failed.map((s) => s.name).join(", ") : "none" },
+                    { status: "ok", name: "other", note: `${other.length}` },
+                  ],
+                },
+                { source: "hwc_services" },
+              ),
             };
           } catch (err) {
             return catchError("INTERNAL_ERROR", "Failed to query services", err, "Check that systemctl and podman are accessible");

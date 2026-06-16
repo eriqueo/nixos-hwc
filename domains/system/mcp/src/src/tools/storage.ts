@@ -5,6 +5,7 @@
 import type { ToolDef, ToolResult } from "../types.js";
 import { safeExec } from "../executors/shell.js";
 import { catchError } from "../errors.js";
+import { contract } from "../result.js";
 
 export function storageTools(): ToolDef[] {
   return [
@@ -157,10 +158,70 @@ export function storageTools(): ToolDef[] {
             parts.push(`Backup: ${props.ActiveState || "unknown"}`);
           }
 
+          // Universal Result Contract view (additive).
+          type Check = {
+            status: "ok" | "warning" | "error";
+            name: string;
+            note?: string;
+          };
+          const rank = { ok: 0, warning: 1, error: 2 } as const;
+          const checks: Check[] = [];
+
+          const disk = data.disk as
+            | {
+                mounts: Array<{
+                  mount: string;
+                  size?: string;
+                  used?: string;
+                  percentUsed?: number;
+                  error?: string;
+                }>;
+              }
+            | undefined;
+          if (disk) {
+            for (const m of disk.mounts) {
+              if (m.error) {
+                checks.push({ status: "error", name: m.mount, note: m.error });
+                continue;
+              }
+              const pct = m.percentUsed ?? 0;
+              const cs: Check["status"] =
+                pct > 90 ? "error" : pct > 75 ? "warning" : "ok";
+              const note =
+                m.used && m.size ? `${m.used}/${m.size}` : `${pct}% used`;
+              checks.push({ status: cs, name: m.mount, note });
+            }
+          }
+
+          const backup = data.backup as
+            | { serviceState?: string; exitStatus?: string }
+            | undefined;
+          if (backup) {
+            const failed =
+              backup.serviceState === "failed" ||
+              (backup.exitStatus !== undefined && backup.exitStatus !== "0");
+            checks.push({
+              status: failed ? "error" : "ok",
+              name: "borg backup",
+              note: `service ${backup.serviceState || "unknown"}, exit ${backup.exitStatus ?? "n/a"}`,
+            });
+          }
+
+          const overall = checks.reduce<Check["status"]>(
+            (worst, c) => (rank[c.status] > rank[worst] ? c.status : worst),
+            "ok",
+          );
+
           return {
             status: hasError ? "error" : "ok",
             message: parts.join(", "),
             data,
+            view: contract(
+              "status",
+              "Storage",
+              { overall, checks },
+              { source: "hwc_storage_status" },
+            ),
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Failed to check storage status", err);
