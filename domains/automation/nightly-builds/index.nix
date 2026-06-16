@@ -52,6 +52,12 @@ let
     pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
     pkgs.gawk  # send-report.sh parses REPORT.md with awk
     pkgs.curl  # POST run results to hwc-notify + Discord webhook
+    # JS toolchain for non-nixos cards (the per-card `repo:` field): kidpix and
+    # other web repos run `yarn test`/`yarn build` as their done-condition.
+    # Yarn 1.x classic — matches kidpix's pinned `packageManager: yarn@1.22.22`
+    # and its v1 yarn.lock. (Playwright e2e additionally needs browser binaries;
+    # see the gauntlet-venue note — `yarn test` + `yarn build` work as-is.)
+    pkgs.yarn
   ];
 
   # Drains the run-now spool: for each requested goal, consume the request file
