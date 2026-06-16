@@ -298,6 +298,12 @@
   # hwc-notify, which is a hwc-server one-off enabled just above.
   hwc.automation.readmeFreshness.enable = true;
 
+  # n8n workflow export — daily 02:30 snapshot of every workflow into a local
+  # git repo (no remote in v1). Read-only against the n8n API; off-box backup
+  # is a later step toward the n8n-workflow-versioning goal. Lives here (not
+  # the server profile) because the n8n API + agenix key are hwc-server-only.
+  hwc.automation.n8n.workflowExport.enable = true;
+
   # SR Gauntlet — daily (06:30, 7d/wk) read-only investigation of open DataX
   # SRs → per-SR REPORT.md + Discord delivery. Lives here (not the server
   # profile) because the pipeline checkout (~/700_datax/sr_gauntlet) and its

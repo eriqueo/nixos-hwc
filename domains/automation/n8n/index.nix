@@ -173,6 +173,7 @@ in
   imports = [
     ./sys.nix
     ./mcp-bridge/index.nix
+    ./parts/workflow-export.nix
   ];
 
   #==========================================================================
