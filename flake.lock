@@ -479,11 +479,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781470884,
+        "lastModified": 1781397407,
         "narHash": "sha256-afcRB+BBhbejqJnPDBYBd1XeKCaMV13kVjFOqdJ6Uys=",
         "ref": "refs/heads/main",
-        "rev": "9f938646595c05ef0b179130cfe09de005333390",
-        "revCount": 1,
+        "rev": "2a7536c17eb67e503a97721136551682d48638e7",
+        "revCount": 6,
         "type": "git",
         "url": "file:///home/eric/600_apps/todui"
       },
