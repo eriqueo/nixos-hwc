@@ -107,6 +107,22 @@ open(path, 'w').write(f'---\n{fm}\n---\n' + text[m.end():])
 PYEOF
 }
 
+# Frontmatter field reader (mirrors set_field's parse — reads a `key: value` from
+# YAML frontmatter only, never the body; strips surrounding quotes/whitespace).
+get_field() { # get_field <file> <key>  -> prints value, empty if absent
+  python3 - "$1" "$2" <<'PYEOF'
+import sys, re
+path, key = sys.argv[1:3]
+text = open(path).read()
+m = re.match(r'^---\n(.*?)\n---\n', text, re.S)
+if not m:
+    sys.exit(0)
+mm = re.search(rf'^{re.escape(key)}:[ \t]*(.*)$', m.group(1), re.M)
+if mm:
+    print(mm.group(1).strip().strip('\'"'))
+PYEOF
+}
+
 # ── Phase A: card-smith ──────────────────────────────────────────────────────
 # Skipped entirely on a targeted run — "Run now" executes an existing card, it
 # does not draft new ones.
@@ -180,7 +196,19 @@ for CARD in $QUEUED; do
   BRANCH=$(rg -o -m1 'branch `([^`]+)`' -r '$1' "$CARD" 2>/dev/null || true)
   [ -n "$BRANCH" ] || BRANCH="nightly/$RUN_NAME"
 
-  log "PHASE B: card=$GOAL/$SLUG branch=$BRANCH run=$RUN_NAME"
+  # Target repo: a card may declare `repo: <path>` in its frontmatter to run
+  # against a repo other than the default ($REPO_DIR, i.e. ~/.nixos). Absent =
+  # the default, so existing cards are byte-identical. A declared-but-invalid
+  # repo fails the card here (fail-loud) rather than silently using the default.
+  CARD_REPO=$(get_field "$CARD" repo)
+  CARD_REPO="${CARD_REPO:-$REPO_DIR}"
+  if ! git -C "$CARD_REPO" rev-parse --git-dir >/dev/null 2>&1; then
+    log "ERROR: card $GOAL/$SLUG declares repo '$CARD_REPO' which is not a git repo — card marked failed"
+    set_field "$CARD" status "failed: repo"
+    continue
+  fi
+
+  log "PHASE B: card=$GOAL/$SLUG repo=$CARD_REPO branch=$BRANCH run=$RUN_NAME"
 
   if [ "$DRY_RUN" -eq 1 ]; then
     log "DRY: would run card $CARD in worktree $WT"
@@ -191,12 +219,28 @@ for CARD in $QUEUED; do
   set_field "$CARD" status running
   set_field "$CARD" run "runs/$RUN_NAME/"
 
-  # Fresh worktree from origin/main (fall back to local main if fetch fails)
-  git -C "$REPO_DIR" fetch origin 2>>"$LOG_FILE" \
-    && BASE="origin/main" || { BASE="main"; log "WARN: fetch failed, basing on local main"; }
-  git -C "$REPO_DIR" worktree remove --force "$WT" 2>/dev/null
-  if ! git -C "$REPO_DIR" worktree add -b "$BRANCH" "$WT" "$BASE" 2>>"$LOG_FILE"; then
-    log "ERROR: worktree add failed for $BRANCH — card marked failed"
+  # Fresh worktree based on the repo's default branch. Refresh remotes first
+  # (best-effort), then resolve the base from origin/HEAD with a fallback chain —
+  # don't assume "main": CARD_REPO may be any repo (kidpix is main, but other
+  # repos could be master). All candidates are local remote-tracking refs, so
+  # this still resolves if the fetch failed (matching the old offline fallback).
+  git -C "$CARD_REPO" fetch origin 2>>"$LOG_FILE" \
+    || log "WARN: fetch failed for $CARD_REPO — basing on last-known remote refs"
+  BASE=$(git -C "$CARD_REPO" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || true)
+  if [ -z "$BASE" ] || ! git -C "$CARD_REPO" rev-parse --verify -q "$BASE" >/dev/null 2>&1; then
+    BASE=""
+    for cand in origin/main origin/master main master; do
+      if git -C "$CARD_REPO" rev-parse --verify -q "$cand" >/dev/null 2>&1; then BASE="$cand"; break; fi
+    done
+  fi
+  if [ -z "$BASE" ]; then
+    log "ERROR: no base branch found in $CARD_REPO — card marked failed"
+    set_field "$CARD" status "failed: base-branch"
+    continue
+  fi
+  git -C "$CARD_REPO" worktree remove --force "$WT" 2>/dev/null
+  if ! git -C "$CARD_REPO" worktree add -b "$BRANCH" "$WT" "$BASE" 2>>"$LOG_FILE"; then
+    log "ERROR: worktree add failed for $BRANCH in $CARD_REPO — card marked failed"
     set_field "$CARD" status "failed: worktree"
     continue
   fi
@@ -204,11 +248,12 @@ for CARD in $QUEUED; do
   # Compose the prompt: wrapper (with placeholders filled) + full card body
   PROMPT_FILE="$RUN_DIR/prompt.md"
   python3 - "$AGENT_DIR/prompts/run-wrapper.md" "$CARD" "$PROMPT_FILE" \
-    "$BRANCH" "$RUN_DIR" "$DATE" <<'PYEOF'
+    "$BRANCH" "$RUN_DIR" "$DATE" "$CARD_REPO" "$BASE" <<'PYEOF'
 import sys
-wrapper, card, out, branch, run_dir, date = sys.argv[1:7]
+wrapper, card, out, branch, run_dir, date, repo, base = sys.argv[1:9]
 text = open(wrapper).read()
-text = text.replace('{{BRANCH}}', branch).replace('{{RUN_DIR}}', run_dir).replace('{{DATE}}', date)
+text = (text.replace('{{BRANCH}}', branch).replace('{{RUN_DIR}}', run_dir)
+            .replace('{{DATE}}', date).replace('{{REPO}}', repo).replace('{{BASE}}', base))
 text += '\n\n---\n\n# THE CARD\n\n' + open(card).read()
 open(out, 'w').write(text)
 PYEOF

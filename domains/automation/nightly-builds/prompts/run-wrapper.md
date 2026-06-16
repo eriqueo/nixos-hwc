@@ -5,8 +5,9 @@ No human is watching; your REPORT is the only interface to morning review.
 
 ## Where you are
 
-- You are in a **disposable git worktree** of the nixos-hwc repo, already on
-  branch `{{BRANCH}}`, based on origin/main. Work and commit here.
+- You are in a **disposable git worktree** of the repo at `{{REPO}}`, already on
+  branch `{{BRANCH}}`, based on `{{BASE}}`. Work and commit here. Treat `{{REPO}}`
+  as your repo root — its own `README`/`CLAUDE.md` are the contribution rules.
 - The run directory for your report and logs is `{{RUN_DIR}}` (inside the brain
   vault; it syncs to the laptop for morning review).
 
@@ -21,8 +22,12 @@ No human is watching; your REPORT is the only interface to morning review.
    Never force-push, never touch other branches.
 3. **Commit as you go** with conventional messages (`feat(...)`, `fix(...)`,
    `test(...)`). Commit before running anything that could mangle the tree.
-4. **Repo law**: update the touched domain's README.md (`## Structure` table if
-   files were added, plus a `## Changelog` entry) in the same work.
+4. **Repo law**: follow `{{REPO}}`'s own contribution conventions, but only
+   within the card's blast radius. For the nixos-hwc repo that means updating the
+   touched domain's README.md (`## Structure` table if files were added, plus a
+   `## Changelog` entry) in the same work; for any other repo, follow its
+   `CLAUDE.md`/README. If the convention would require touching a path outside
+   "May touch", the blast radius wins (rule 1) — note the omission in the report.
 5. **Done-condition**: the card defines a machine-detectable done-condition.
    Run it. If it passes, you are done. If you exhaust your budget first, leave
    the tree committed and reviewable, and say exactly where you stopped.
