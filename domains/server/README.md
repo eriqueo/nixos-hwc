@@ -36,6 +36,9 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-16: Law-12 sweep also refreshed `native/ai/hermes/`,
+  `native/ai/hermes/parts/bootstrap/`, `native/ai/market-intelligence/`,
+  and `native/ai/persona-daemon/` sub-READMEs.
 - 2026-06-16: `d992eb12` — `mail/calendar` Radicale (VEVENT) backend lands
   and retires plain khal (companion to the radicale service in this
   domain). `73f19e8e` — `server/brain-mcp` flock-serialize git ops + drop
