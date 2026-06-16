@@ -27,6 +27,9 @@ business/
 ```
 
 ## Changelog
+- 2026-06-16: `cc40b6a9` — land the golden-master parity oracle for
+  `business/estimator` on main (precondition for the nightly-builds
+  estimator refactor card; pre-existing parity tests were fake-green).
 - 2026-06-11: README rewritten — this file previously contained the AI-MCP
   domain readme by mistake. Business enables now come from the business
   role rather than machines/server/config.nix.

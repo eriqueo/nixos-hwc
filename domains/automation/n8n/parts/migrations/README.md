@@ -27,4 +27,8 @@ sudo -u postgres psql -d hwc -f 002-full-hwc-schema.sql
 ```
 
 ## Changelog
+- 2026-06-16: Mechanical sweep — `73e23200` added the `work_calculator_lead`
+  n8n workflow (via Heartwood MCP /call), merged in `1664824f`; then
+  `1da0a031` general `update` batch touched this tree. No schema/migration
+  file changes to call out in this dir.
 - 2026-03-26: Added 002-full-hwc-schema.sql — full production schema with JT reference tables, cost catalog, project state, estimates, leads, daily logs, workflow log, and views

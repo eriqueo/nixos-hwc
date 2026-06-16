@@ -125,3 +125,14 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 │   └── session.json   ← created on login
 └── package.json
 ```
+
+## Changelog
+- 2026-06-16: Login + auth hardening — `77c4cbf2` auto-detect login completion
+  (no Enter press), `ee0b817c` use system chromium for playwright login on
+  NixOS, `dc5e9996` pin playwright 1.59.1 to match image version, `b0f85a37`
+  wait for logged-in UI rather than just password-form-gone, `2553d6ca` poll
+  for login state through passkey redirects, `6049454a` detect login via
+  `c_user` cookie not DOM, `be985dab` switch to `launchPersistentContext`
+  with `--profile` flag. `8131b82a` adds NixOS `shell.nix` for Playwright.
+  Plus `d20220f9` HWC lead scoring (new prompt + classifier + `promptFile`
+  option) and `423c328c` retarget jobber-mcp path to `300_tech/320_projects`.
