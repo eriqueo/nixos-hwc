@@ -42,8 +42,10 @@ automation/
     ├── sys.nix       # Container definition via mkContainer
     ├── mcp-bridge.nix # n8n-mcp HTTP bridge
     └── parts/
-        ├── migrations/  # SQL migrations for workflow data
-        └── workflows/   # JSON workflow definitions + docs
+        ├── migrations/        # SQL migrations for workflow data
+        ├── workflows/         # JSON workflow definitions + docs
+        ├── workflow-export.nix  # Daily snapshot timer (hwc.automation.n8n.workflowExport.*)
+        └── workflow-export.sh   # GET all workflows → JSON files → git commit (idempotent)
 ```
 
 ### Workspace Support (`workspace/automation/`)
@@ -60,6 +62,7 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-16: Add `n8n/parts/workflow-export.{nix,sh}` — daily 02:30 systemd timer that GETs every n8n workflow via the REST API (cursor-paginated, read-only), writes one `jq -S` pretty-printed JSON file per workflow into `${paths.state}/n8n/workflow-export` (a standalone local git repo, no remote), prunes files for workflows deleted in n8n, and commits only when something changed. Step 1 of the n8n-workflow-versioning nightly-builds goal; off-box backup is a later step. Enabled in `machines/server/config.nix` (host one-off — the n8n API + `n8n-api-key` agenix secret exist only on hwc-server). Idempotent: second run with no upstream change produces zero commits.
 - 2026-06-15: refinery board — **"▶ Run now" + persistent NIGHTLY⇄IMMEDIATE mode + no-purgatory controls**. Every nightly-build project now always shows an actionable queue control: a `blocked` next step renders as **⚠ force-queue (override)** instead of the old dead-end "no draft steps to queue" (root cause: `queueNextStep` only matched `draft`). New per-project **mode** (stored in `_goal.md` frontmatter, default `nightly`): IMMEDIATE means queuing a step kicks a targeted run at once; NIGHTLY waits for 01:30. New **▶ Run now** button runs only that project immediately. Mechanism (hexagonal — the hardened board can't run `run.sh` itself): the board writes a `<goal>` request file to `/var/lib/refinery/run-now` (`REFINERY_RUNNOW_SPOOL`, under its writable `StateDirectory`); a new `systemd.path` `nightly-builds-runnow` drains it via `run.sh NB_ONLY_GOAL=<goal>`. Endpoints `/card/run-now`, `/card/mode`; `/card/queue` auto-kicks in IMMEDIATE. Needs a rebuild (board bundle + the new units).
 - 2026-06-15: nightly-builds `run.sh` — per-card agent timeout raised 3h → **5h** (`NB_CARD_TIMEOUT`, env-overridable) so a multi-phase card can finish in one run; added **targeted-run** support (`NB_ONLY_GOAL` env or `run.sh <goal>` arg) that executes ONLY one project's queued step and skips the card-smith pass. Both default-inert: unset `NB_ONLY_GOAL` is the normal nightly run. Consumed by the refinery board's "▶ Run now" / IMMEDIATE-mode triggers. `run.sh` itself runs from the repo working copy via `ExecStart` (no rebuild for run.sh edits) — but the unit's `TimeoutSec` was also raised 4h → **12h** so systemd doesn't kill a 5h card; that part needs a rebuild.
 - 2026-06-13: nightly-builds Discord delivery rewritten to match sr_gauntlet — `send-report.sh` posts ONE rich message per card (verdict header + the report's Success-criteria block inline + the full `REPORT.md` attached, readable in Discord's file viewer) directly to the `discord-webhook-nightly-builds` webhook (`NB_DISCORD_WEBHOOK_FILE` from index.nix). The old terse hwc-notify blurb is now only the fallback when no report exists (hard failures). Failure runs with a partial REPORT.md now post it too.
