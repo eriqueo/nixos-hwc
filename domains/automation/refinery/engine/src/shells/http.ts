@@ -6,7 +6,7 @@
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { Item, ItemEffector, Profile } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { ProfileCatalog } from "../profiles/catalog.js";
@@ -17,7 +17,7 @@ import { gateList } from "../gates/index.js";
 import { makeWriteSpecEffector } from "../effectors/write-spec.js";
 import { runGenreOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, NB_PREFIX } from "../sources/nightly-cards.js";
+import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
 import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderSr, renderSrDetail, renderProjectDetail, renderReport } from "./render.js";
 
@@ -31,6 +31,7 @@ export interface HttpShellConfig {
   triageProvider: string;
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
+  runNowSpoolDir: string; // "Run now" / IMMEDIATE drops a <goal> request file here; a systemd.path twin of run.sh drains it
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
   runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per profile
@@ -49,6 +50,7 @@ export function configFromEnv(): HttpShellConfig {
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
     vaultDir: process.env.REFINERY_VAULT_DIR,
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
+    runNowSpoolDir: process.env.REFINERY_RUNNOW_SPOOL || `${base}/run-now`,
     clock: () => new Date().toISOString(),
   };
 }
@@ -98,6 +100,19 @@ export function createShell(cfg: HttpShellConfig) {
   const writeCap = (kind: CapKind, n: number): void => {
     mkdirSync(dirname(cfg.capsPath), { recursive: true });
     writeFileSync(cfg.capsPath, JSON.stringify({ ...readCaps(), [kind]: n }, null, 2));
+  };
+
+  // "Run now" / IMMEDIATE mode: emit a run request as a file in the spool dir.
+  // The board is a hardened, sandboxed service and must NOT execute run.sh
+  // itself (no repo, no git push keys, no worktree perms) — so it only writes
+  // the intent. A systemd.path twin of the nightly runner watches this dir and
+  // executes `run.sh NB_ONLY_GOAL=<goal>` out-of-band. goalId is a vault folder
+  // name (a slug); sanitize hard to keep this a filename, never a path.
+  const requestRunNow = (goalId: string): void => {
+    const safe = goalId.replace(/[^A-Za-z0-9._-]/g, "");
+    if (!safe || safe === "." || safe === "..") return;
+    mkdirSync(cfg.runNowSpoolDir, { recursive: true });
+    writeFileSync(join(cfg.runNowSpoolDir, safe), `${safe}\n`);
   };
 
   async function intake(text: string): Promise<void> {
@@ -360,13 +375,40 @@ export function createShell(cfg: HttpShellConfig) {
             return redirectTo(res, "/");
           }
           if (url === "/card/queue") {
-            // GUI for the Phase-4 gate: queue/unqueue a project's next step in the
-            // vault. run.sh @ 01:30 still does the execution.
+            // GUI for the Phase-4 gate: queue/unqueue a project's next step in
+            // the vault. queueNextStep queues the next pending step (draft OR
+            // blocked — a blocked step is a deliberate force-queue override, so
+            // nothing is ever a dead end). In IMMEDIATE mode, queuing also kicks
+            // a targeted run now; in NIGHTLY mode run.sh @ 01:30 executes.
             const goalId = parseNbId(id);
             if (cfg.vaultDir && goalId) {
-              if (body.get("to") === "queued") queueNextStep(cfg.vaultDir, goalId);
-              else unqueueStep(cfg.vaultDir, goalId);
+              if (body.get("to") === "queued") {
+                queueNextStep(cfg.vaultDir, goalId);
+                if (readProjectMode(cfg.vaultDir, goalId) === "immediate") requestRunNow(goalId);
+              } else {
+                unqueueStep(cfg.vaultDir, goalId);
+              }
             }
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+          }
+          if (url === "/card/run-now") {
+            // Explicit immediate execution of one project, regardless of mode.
+            // Ensure a step is queued (queue the next pending one only if none is
+            // already in flight), then drop the run request.
+            const goalId = parseNbId(id);
+            if (cfg.vaultDir && goalId) {
+              if (!hasActiveStep(cfg.vaultDir, goalId)) queueNextStep(cfg.vaultDir, goalId);
+              if (hasActiveStep(cfg.vaultDir, goalId)) requestRunNow(goalId);
+            }
+            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+          }
+          if (url === "/card/mode") {
+            // Persistent NIGHTLY ↔ IMMEDIATE toggle (written to _goal.md). The
+            // switch itself never executes anything — it only changes what a
+            // future queue does. Run-now stays the explicit immediate trigger.
+            const goalId = parseNbId(id);
+            const mode = body.get("mode") === "immediate" ? "immediate" : "nightly";
+            if (cfg.vaultDir && goalId) setProjectMode(cfg.vaultDir, goalId, mode);
             return redirectTo(res, `/project/${encodeURIComponent(id)}`);
           }
           if (url === "/nightly/toggle") {

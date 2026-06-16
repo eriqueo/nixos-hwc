@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, NB_PREFIX } from "../src/sources/nightly-cards.js";
+import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX } from "../src/sources/nightly-cards.js";
 
 function vault(): { root: string; cleanup: () => void } {
   const root = mkdtempSync(join(tmpdir(), "refinery-nb-"));
@@ -70,6 +70,56 @@ test("an all-done project lands in the Done lane (not queued tonight)", () => {
     const proj = nightlyCardProjects(v.root)[0];
     assert.equal(proj.phaseStatus, "passed");
     assert.equal((proj.payload as { queuedCount: number }).queuedCount, 0);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("no purgatory: queueNextStep force-queues a BLOCKED next step when no draft remains", () => {
+  const v = vault();
+  try {
+    // Mimic the estimator dead-end: done, then the only pending step is blocked.
+    const b = join(v.root, "_inbox/nightly_builds/estimator/02-b.md");
+    writeFileSync(b, readFileSync(b, "utf8").replace(/^status:.*$/m, "status: done"));
+    // next pending is 03-c (blocked); the board must still be able to queue it.
+    const f = queueNextStep(v.root, "estimator");
+    assert.equal(f, "03-c.md", "a blocked step is force-queueable — never a dead end");
+    assert.match(readFileSync(join(v.root, "_inbox/nightly_builds/estimator/03-c.md"), "utf8"), /^status: queued$/m);
+    // payload surfaces the override hint when the *next* pending step is blocked
+    const b2 = join(v.root, "_inbox/nightly_builds/estimator/02-b.md");
+    writeFileSync(b2, readFileSync(b2, "utf8").replace(/^status:.*$/m, "status: draft")); // reset for nextStatus probe
+    unqueueStep(v.root, "estimator");
+    // now 02 draft is next, 03 blocked — nextStatus should be the draft (02)
+    const p = nightlyCardProjects(v.root)[0].payload as { nextStatus: string; nextBlocked: boolean };
+    assert.equal(p.nextStatus, "draft");
+    assert.equal(p.nextBlocked, false);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("hasActiveStep reflects a queued/running step", () => {
+  const v = vault();
+  try {
+    assert.equal(hasActiveStep(v.root, "estimator"), false);
+    queueNextStep(v.root, "estimator");
+    assert.equal(hasActiveStep(v.root, "estimator"), true);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("project mode round-trips through _goal.md (default nightly)", () => {
+  const v = vault();
+  try {
+    assert.equal(readProjectMode(v.root, "estimator"), "nightly", "default mode is nightly");
+    assert.equal(nightlyCardProjects(v.root)[0].payload && (nightlyCardProjects(v.root)[0].payload as { mode: string }).mode, "nightly");
+    assert.equal(setProjectMode(v.root, "estimator", "immediate"), true);
+    assert.equal(readProjectMode(v.root, "estimator"), "immediate");
+    assert.equal((nightlyCardProjects(v.root)[0].payload as { mode: string }).mode, "immediate");
+    // flip back
+    setProjectMode(v.root, "estimator", "nightly");
+    assert.equal(readProjectMode(v.root, "estimator"), "nightly");
   } finally {
     v.cleanup();
   }

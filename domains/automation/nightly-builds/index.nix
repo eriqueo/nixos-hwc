@@ -27,6 +27,51 @@ let
   cfg = config.hwc.automation.nightlyBuilds;
   paths = config.hwc.paths;
   agentDir = "${paths.nixos}/domains/automation/nightly-builds";
+
+  # Shared spool dir for the refinery board's "▶ Run now" / IMMEDIATE mode: the
+  # (sandboxed) board drops a <goal> request file here; the path-triggered
+  # drain unit below executes run.sh scoped to that one project. This MUST match
+  # the board's REFINERY_RUNNOW_SPOOL (domains/automation/refinery/index.nix).
+  spoolDir = "/var/lib/refinery/run-now";
+
+  # Env + tool path shared by the nightly run and the run-now drain (same script,
+  # same needs: git push, headless claude, jq/rg/awk/curl).
+  nbEnv = {
+    HOME = paths.user.home;
+    NB_VAULT_DIR = toString cfg.vaultDir;
+    NB_REPO_DIR = toString cfg.repoDir;
+    NB_MAX_CARDS = toString cfg.maxCards;
+    # Discord webhook for rich per-card report delivery (summary + REPORT.md
+    # attached). send-report.sh posts directly here; metadata-only fallbacks
+    # still go through hwc-notify. Same secret the discord-nightly-builds
+    # notify channel uses; readable by the eric-run service (owner).
+    NB_DISCORD_WEBHOOK_FILE = config.age.secrets."discord-webhook-nightly-builds".path;
+  };
+  nbPath = [
+    pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
+    pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
+    pkgs.gawk  # send-report.sh parses REPORT.md with awk
+    pkgs.curl  # POST run results to hwc-notify + Discord webhook
+  ];
+
+  # Drains the run-now spool: for each requested goal, consume the request file
+  # first (so a re-click during the run is captured as a fresh request and the
+  # path unit doesn't re-fire on the same file), then run run.sh scoped to that
+  # goal. run.sh's own lock serializes this against the 01:30 timer — if that's
+  # mid-run, the targeted kick logs "previous run active" and exits 0.
+  runnowDrain = pkgs.writeShellScript "nightly-builds-runnow-drain" ''
+    set -uo pipefail
+    SPOOL="${spoolDir}"
+    [ -d "$SPOOL" ] || exit 0
+    shopt -s nullglob
+    for f in "$SPOOL"/*; do
+      [ -e "$f" ] || continue
+      goal="$(basename "$f")"
+      rm -f "$f"
+      echo "run-now: executing nightly-builds for goal '$goal'"
+      NB_ONLY_GOAL="$goal" ${agentDir}/run.sh || echo "run-now: run.sh exited $? for '$goal'"
+    done
+  '';
 in
 {
   # OPTIONS
@@ -69,27 +114,18 @@ in
       }
     ];
 
+    # The run-now spool dir must exist (owned by eric, group-writable so the
+    # refinery board — also eric — drops request files there).
+    systemd.tmpfiles.rules = [
+      "d ${spoolDir} 0775 eric users - -"
+    ];
+
     systemd.services.nightly-builds = {
       description = "Nightly Builds — gauntlet card runner (headless Claude Code)";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      environment = {
-        HOME = paths.user.home;
-        NB_VAULT_DIR = toString cfg.vaultDir;
-        NB_REPO_DIR = toString cfg.repoDir;
-        NB_MAX_CARDS = toString cfg.maxCards;
-        # Discord webhook for rich per-card report delivery (summary + REPORT.md
-        # attached). send-report.sh posts directly here; metadata-only fallbacks
-        # still go through hwc-notify. Same secret the discord-nightly-builds
-        # notify channel uses; readable by the eric-run service (owner).
-        NB_DISCORD_WEBHOOK_FILE = config.age.secrets."discord-webhook-nightly-builds".path;
-      };
-      path = [
-        pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
-        pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
-        pkgs.gawk  # send-report.sh parses REPORT.md with awk
-        pkgs.curl  # POST run results to hwc-notify + Discord webhook
-      ];
+      environment = nbEnv;
+      path = nbPath;
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce "eric";
@@ -117,6 +153,43 @@ in
         # repo/vault are being actively worked on.
         Persistent = false;
         RandomizedDelaySec = "60s";
+      };
+    };
+
+    # ── Run-now: targeted, on-demand execution from the refinery board ─────────
+    # The board can't run run.sh itself (hardened/sandboxed). It drops a <goal>
+    # file in spoolDir; this path unit fires the drain service, which runs
+    # run.sh scoped to that one project. This is the executor behind the board's
+    # "▶ Run now" button and IMMEDIATE mode.
+    systemd.services.nightly-builds-runnow = {
+      description = "Nightly Builds — targeted run-now drain (refinery board trigger)";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      environment = nbEnv;
+      path = nbPath;
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce "eric";
+        Group = "users";
+        WorkingDirectory = agentDir;
+        ExecStart = "${runnowDrain}";
+        # One targeted card is bounded by run.sh's NB_CARD_TIMEOUT (5h); allow a
+        # little headroom. A queued backlog of requests drains sequentially.
+        TimeoutSec = 6 * 3600;
+        StandardOutput = "journal";
+        StandardError = "journal";
+        NoNewPrivileges = true;
+      };
+    };
+
+    systemd.paths.nightly-builds-runnow = {
+      description = "Watch the refinery run-now spool for targeted build requests";
+      wantedBy = [ "paths.target" ];
+      pathConfig = {
+        # Fires whenever the board drops a request file. The drain consumes the
+        # files; once empty, the path unit re-arms.
+        DirectoryNotEmpty = spoolDir;
+        Unit = "nightly-builds-runnow.service";
       };
     };
   };

@@ -225,18 +225,29 @@ export function renderNightly(
       const queued = typeof p.queuedCount === "number" ? p.queuedCount : 0;
       const done = typeof p.stepsDone === "number" ? p.stepsDone : 0;
       const total = typeof p.stepsTotal === "number" ? p.stepsTotal : 0;
-      const hasDraft = Array.isArray(p.steps) && (p.steps as { status: string }[]).some((s) => s.status.toLowerCase().startsWith("draft"));
       const allDone = total > 0 && done === total;
-      const btn = queued > 0
-        ? `<input type="hidden" name="to" value="draft"><button type="submit">↩ unqueue</button>`
-        : hasDraft
-          ? `<input type="hidden" name="to" value="queued"><button type="submit">✅ queue next</button>`
+      const mode = p.mode === "immediate" ? "immediate" : "nightly";
+      const nextStatus = typeof p.nextStatus === "string" ? p.nextStatus : "";
+      const nextBlocked = p.nextBlocked === true;
+      // Always render exactly one queue control for a non-finished project:
+      // unqueue (something queued), queue next (a draft is next), or force-queue
+      // (the next step is blocked — a deliberate override, never a dead end).
+      const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
+      const queueForm = (to: string, label: string) =>
+        `<form method="post" action="/card/queue" style="display:inline">${idIn}<input type="hidden" name="to" value="${to}"><button type="submit">${label}</button></form>`;
+      const queueBtn = queued > 0
+        ? queueForm("draft", "↩ unqueue")
+        : nextStatus
+          ? queueForm("queued", nextBlocked ? "⚠ force-queue" : "✅ queue next")
           : "";
+      const runBtn = allDone ? "" :
+        `<form method="post" action="/card/run-now" style="display:inline">${idIn}<button type="submit" title="run this project now (targeted)">▶ now</button></form>`;
       return `<div class="nrow${queued > 0 ? " tonight" : ""}">
         <span class="swatch" style="background:${esc(color)}"></span>
         <a class="t" href="/project/${esc(item.id)}">${esc(titleOf(item))} <span class="kv">· ${done}/${total} steps${allDone ? " · ✓ done" : ""}</span></a>
-        ${queued > 0 ? '<span class="badge">queued tonight</span>' : ""}
-        ${btn ? `<form method="post" action="/card/queue" style="display:inline"><input type="hidden" name="id" value="${esc(item.id)}">${btn}</form>` : ""}
+        <span class="badge" title="run mode">${mode === "immediate" ? "⚡ immediate" : "🌙 nightly"}</span>
+        ${queued > 0 ? '<span class="badge">queued</span>' : ""}
+        ${queueBtn}${runBtn}
       </div>`;
     })
     .join("");
@@ -491,30 +502,62 @@ export function renderNightlyProject(item: Item): string {
     })
     .join("");
 
-  const hasDraft = steps.some((s) => s.status.toLowerCase().startsWith("draft"));
-  const queueAction =
+  const allDone = total > 0 && done === total;
+  const mode = p.mode === "immediate" ? "immediate" : "nightly";
+  const nextStatus = typeof p.nextStatus === "string" ? p.nextStatus : "";
+  const nextBlocked = p.nextBlocked === true;
+  const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
+
+  // The queue control is ALWAYS actionable for an unfinished project, so a
+  // blocked-only project (the old purgatory case) is never a dead end:
+  //   • a step queued → unqueue   • next is draft → queue next
+  //   • next is blocked → force-queue (override)   • all done → just say so
+  const queueControl =
     queuedCount > 0
-      ? `<form class="act" method="post" action="/card/queue">
-           <input type="hidden" name="id" value="${esc(item.id)}"><input type="hidden" name="to" value="draft">
-           <button type="submit">↩ unqueue tonight's step</button>
-           <span class="kv">${queuedCount} step(s) queued — run.sh @ 01:30 (NB_MAX_CARDS)</span>
+      ? `<form class="act" method="post" action="/card/queue">${idIn}<input type="hidden" name="to" value="draft">
+           <button type="submit">↩ unqueue step</button>
+           <span class="kv">${queuedCount} step(s) queued${mode === "immediate" ? "" : " — run.sh @ 01:30"}</span>
          </form>`
-      : hasDraft
-        ? `<form class="act" method="post" action="/card/queue">
-             <input type="hidden" name="id" value="${esc(item.id)}"><input type="hidden" name="to" value="queued">
-             <button type="submit">✅ queue next step for tonight</button>
-             <span class="kv">queues the next draft step; run.sh @ 01:30 runs it</span>
-           </form>`
-        : `<div class="kv">no draft steps to queue (${done}/${total} done)</div>`;
+      : allDone
+        ? `<div class="kv">all ${total} steps done ✓</div>`
+        : nextStatus
+          ? `<form class="act" method="post" action="/card/queue">${idIn}<input type="hidden" name="to" value="queued">
+               <button type="submit">${nextBlocked ? "⚠ force-queue blocked step" : "✅ queue next step"}</button>
+               <span class="kv">${nextBlocked
+                 ? `next step is <b>blocked</b> (${esc(nextStatus)}) — queue anyway as an override`
+                 : `queues the next draft step${mode === "immediate" ? " and runs it now" : "; run.sh @ 01:30 runs it"}`}</span>
+             </form>`
+          : `<div class="kv">no pending steps</div>`;
+
+  // Explicit immediate run of THIS project (targeted), regardless of mode.
+  const runControl = allDone ? "" :
+    `<form class="act" method="post" action="/card/run-now">${idIn}
+       <button type="submit">▶ run now</button>
+       <span class="kv">queues the next step if needed, then runs only this project immediately (targeted run.sh)</span>
+     </form>`;
+
+  // Persistent mode toggle. IMMEDIATE = queuing a step kicks a run right away;
+  // NIGHTLY = a queued step waits for the 01:30 timer.
+  const modeControl =
+    `<form class="act" method="post" action="/card/mode">${idIn}<input type="hidden" name="mode" value="${mode === "immediate" ? "nightly" : "immediate"}">
+       <button type="submit">${mode === "immediate" ? "🌙 switch to NIGHTLY" : "⚡ switch to IMMEDIATE"}</button>
+       <span class="kv">now: <b>${mode === "immediate" ? "⚡ immediate (queue → runs now)" : "🌙 nightly (queue → waits for 01:30)"}</b></span>
+     </form>`;
 
   const body = `<div class="detail">
   <a href="/nightly" class="kv">← nightly</a>
-  <h2><span class="swatch" style="background:${color}"></span> ${esc(titleOf(item))}</h2>
+  <h2><span class="swatch" style="background:${color}"></span> ${esc(titleOf(item))} <span class="badge">${mode === "immediate" ? "⚡ immediate" : "🌙 nightly"}</span></h2>
   <div class="kv">project · nightly-build · goal <b>${esc(goalId)}</b> · ${done}/${total} steps</div>
   <div class="bar"><span style="width:${pct}%"></span></div>
 
-  <h2>Overnight queue</h2>
-  ${queueAction}
+  <h2>Queue</h2>
+  ${queueControl}
+
+  <h2>Run now</h2>
+  ${runControl || '<div class="kv">nothing to run — all steps done ✓</div>'}
+
+  <h2>Mode</h2>
+  ${modeControl}
 
   <h2>Steps</h2>
   <div class="steps">${stepRows || '<div class="empty">no steps</div>'}</div>
