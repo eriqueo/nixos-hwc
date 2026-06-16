@@ -98,7 +98,10 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
   (zellij rejects `GoToTabName` in keybinds). Added scrollback (`Ctrl+b s`, with
   a `scroll` mode block) + detach (`Ctrl+b d`) — clear-defaults had stripped
   zellij's own, leaving a long-lived session unable to scroll or detach. n/p
-  repurposed to tab-nav (every tool tab is single-pane).
+  repurposed to tab-nav (every tool tab is single-pane). khalt keybindings made
+  honest: bind add/delete/open→new/delete/view; DROP the false `e`=edit (khal has
+  no safe single-key edit — it edits via `view`/Enter — so khalt omits that verb
+  per the per-app omission rule; `e` stays khal's native export).
 - 2026-06-15 — Module created + wired. grammar.nix (source of truth) + index.nix
   (theme-mirrored options) + 7 generators + this README. WIRED & git-staged on
   `feat/workbench-zellij`: profile import, zellij meta layer, khalt list-verbs,
