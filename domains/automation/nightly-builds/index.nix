@@ -96,8 +96,12 @@ in
         Group = "users";
         WorkingDirectory = agentDir;
         ExecStart = "${agentDir}/run.sh";
-        # One card budget tops out at 150 min; card-smith + overhead on top.
-        TimeoutSec = 4 * 3600;
+        # Whole-run ceiling for the oneshot (all queued cards, sequential).
+        # Per-card execution is bounded inside run.sh by NB_CARD_TIMEOUT (5h);
+        # this must comfortably exceed one card + overhead, and give a small
+        # queue room to drain. A wedged run still can't outlive this and block
+        # the next night's timer (which also skips while the lock is held).
+        TimeoutSec = 12 * 3600;
         StandardOutput = "journal";
         StandardError = "journal";
         NoNewPrivileges = true;
