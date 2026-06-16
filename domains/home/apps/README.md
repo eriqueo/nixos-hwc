@@ -29,6 +29,8 @@ apps/
 ```
 
 ## Changelog
+- 2026-06-16: Law-12 sweep also refreshed `khalt/`, `nvim/`, and `todui/`
+  sub-READMEs.
 - 2026-06-16: workbench + keymap rollout — `a7a1a5e0` workbench TUI host
   with zellij + todui/khalt peers; `6d0f2eb4` usable layout (auto-start
   peers, tab/status bars, khalt month); `fc8ef8af` SUPER+W binding +

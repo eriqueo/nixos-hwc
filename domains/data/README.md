@@ -24,6 +24,8 @@ data/
 ```
 
 ## Changelog
+- 2026-06-16: Law-12 sweep also refreshed `borg/`, `couchdb/`, and
+  `databases/` sub-READMEs.
 - 2026-06-16: `68be8a37` — `data/syncthing` gains per-folder type option
   (sendonly/receiveonly); `8b756c8e` — declarative per-folder `.stignore`
   provisioning for syncthing; `7522cbe0` — `data/backup` absorbs profile

@@ -45,6 +45,8 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-16: Law-12 sweep also refreshed `apps/`, `apps/khalt/`,
+  `apps/nvim/`, `apps/todui/`, and `core/` sub-READMEs.
 - 2026-06-16: workbench + keymap consolidation — `a7a1a5e0` introduces the
   workbench TUI host (zellij + todui/khalt peers, palette-driven khal);
   `6d0f2eb4` usable layout (auto-start peers, tab/status bars, khalt month);

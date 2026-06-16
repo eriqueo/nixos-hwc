@@ -149,6 +149,8 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-06-16: Law-12 sweep also refreshed `parts/migrations/` and
+  `parts/estimator-integration/` sub-READMEs (see each).
 - 2026-06-16: Mechanical sweep — `5289d7b3` removes the 600_shared NFS share
   (standardize on Syncthing); `aea7be73` Law 9/10 — option-declaring leaf
   modules become directory modules; `61f22fa3` Law 3 path sweep replaces the

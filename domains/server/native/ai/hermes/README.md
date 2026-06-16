@@ -126,6 +126,9 @@ into this module is pending.
 
 ## Changelog
 
+- **2026-06-16** — `59dca996` — `hermes-deploy` (`parts/bootstrap/`)
+  drops parameter-property shorthand for TypeScript `strip-types`
+  compatibility. No service behavior change.
 - **2026-06-09** — Caddy routes migrated to name-based vhosts under the shared
   `*.hwc.iheartwoodcraft.com` wildcard cert: app at `hermes.hwc.iheartwoodcraft.com`
   (was `:25443`) and the market-trials dashboard at

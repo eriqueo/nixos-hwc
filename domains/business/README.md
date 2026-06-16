@@ -27,6 +27,8 @@ business/
 ```
 
 ## Changelog
+- 2026-06-16: Law-12 sweep also refreshed `datax/fb-group-scraper/`,
+  `morning-briefing/`, `paperless/`, and `website/` sub-READMEs.
 - 2026-06-16: `cc40b6a9` — land the golden-master parity oracle for
   `business/estimator` on main (precondition for the nightly-builds
   estimator refactor card; pre-existing parity tests were fake-green).

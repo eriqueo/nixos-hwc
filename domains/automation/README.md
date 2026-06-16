@@ -60,6 +60,9 @@ workspace/automation/
 ```
 
 ## Changelog
+- 2026-06-16: Law-12 sweep also refreshed `n8n/`, `n8n/parts/migrations/`,
+  and `n8n/parts/estimator-integration/` sub-READMEs — see each for
+  specifics. No code change at this level.
 - 2026-06-16: `ab019ab2` — refinery↔gauntlet dispatch contract: refinery
   triggers standalone nightly-builds / sr-gauntlet runs over a shared
   spool/path-unit interface (continuation of the 2026-06-15 board work).
