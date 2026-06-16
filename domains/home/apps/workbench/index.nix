@@ -82,6 +82,8 @@ in
       gatewayUrl = cfg.gatewayUrl;
       offline = cfg.offline;
       hubsDir = cfg.hubsDir;
+      defaultHub = "hwc";   # land on the HWC (woodcraft) hub, not DataX (alpha-first)
+
       # Peer launch overrides (late binding). Mail runs wherever the shell alias
       # says — on the laptop that's the server over ssh, so DON'T bake a local
       # aerc onto PATH; the launcher invokes `ssh -t server aerc` instead.
