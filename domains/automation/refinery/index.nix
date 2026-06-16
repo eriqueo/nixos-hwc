@@ -115,6 +115,10 @@ in
           # drains it and runs run.sh scoped to that project. Under the writable
           # StateDirectory, so the hardened board can write it without a bind.
           "REFINERY_RUNNOW_SPOOL=/var/lib/refinery/run-now"
+          # SR "▶ re-investigate now" drops an <srId> request file here; the
+          # sr-gauntlet-runnow path unit (domains/automation/sr-gauntlet) drains
+          # it and runs `run.sh --id <srId>`. Also under the StateDirectory.
+          "REFINERY_SR_RUNNOW_SPOOL=/var/lib/refinery/sr-run-now"
           "REFINERY_TRIAGE_PROVIDER=${cfg.triageProvider}"
           # claude-cli triage shells out to headless `claude`, which reads the
           # Claude subscription creds from $HOME/.claude (bound read-only below).

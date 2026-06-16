@@ -32,6 +32,47 @@
 let
   cfg = config.hwc.automation.srGauntlet;
   paths = config.hwc.paths;
+
+  # Shared spool dir for the refinery board's "▶ re-investigate now" button: the
+  # (sandboxed) board drops an <srId> request file here; the path-triggered drain
+  # below runs `run.sh --id <srId>` for that one SR. Mirrors the nightly-builds
+  # run-now pattern. MUST match the board's REFINERY_SR_RUNNOW_SPOOL
+  # (domains/automation/refinery/index.nix).
+  spoolDir = "/var/lib/refinery/sr-run-now";
+
+  # Env + tool path shared by the daily run and the run-now drain (same needs).
+  srgEnv = {
+    HOME = paths.user.home;
+    SRG_MAX_SRS = toString cfg.maxSrs;
+    # Late-bind Firestore creds from sr_analyzer's single .env (declare once,
+    # derive everywhere). Without this the script falls back to a stale default
+    # path and fetch FATALs with ENOENT.
+    SRG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
+  };
+  srgPath = [
+    pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
+    pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
+    pkgs.curl  # Discord webhook delivery + hwc-notify
+  ];
+
+  # Drains the run-now spool: for each requested SR, consume the request file
+  # first (so a re-click during the run re-queues cleanly and the path unit
+  # doesn't re-fire on the same file), then run run.sh forced on that one SR.
+  # run.sh's own lock serializes this against the 15-min poll timer — if that's
+  # mid-run, the targeted kick logs "already running" and exits 0.
+  runnowDrain = pkgs.writeShellScript "sr-gauntlet-runnow-drain" ''
+    set -uo pipefail
+    SPOOL="${spoolDir}"
+    [ -d "$SPOOL" ] || exit 0
+    shopt -s nullglob
+    for f in "$SPOOL"/*; do
+      [ -e "$f" ] || continue
+      srId="$(basename "$f")"
+      rm -f "$f"
+      echo "sr-run-now: investigating SR '$srId'"
+      ${cfg.gauntletDir}/run.sh --id "$srId" || echo "sr-run-now: run.sh exited $? for '$srId'"
+    done
+  '';
 in
 {
   # OPTIONS
@@ -40,8 +81,15 @@ in
 
     onCalendar = lib.mkOption {
       type = lib.types.str;
-      default = "*-*-* 06:30:00";
-      description = "systemd calendar expression for the daily run (7 days a week)";
+      default = "*:0/15";
+      description = ''
+        systemd calendar expression for the investigation poll. Default: every
+        15 minutes. run.sh Phase A fetches waiting SRs from Firestore and the
+        thread-hash ledger dedups, so most ticks find nothing new and exit fast;
+        a genuinely new/changed waiting SR is investigated within ~15 min of
+        arrival (the "auto-run on arrival" behaviour). run.sh's lock prevents
+        overlap with an in-flight run.
+      '';
     };
 
     maxSrs = lib.mkOption {
@@ -58,23 +106,18 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # The run-now spool dir must exist (owned by eric, group-writable so the
+    # refinery board — also eric — can drop request files there).
+    systemd.tmpfiles.rules = [
+      "d ${spoolDir} 0775 eric users - -"
+    ];
+
     systemd.services.sr-gauntlet = {
-      description = "SR Gauntlet — daily DataX support-request investigations (headless Claude Code)";
+      description = "SR Gauntlet — DataX support-request investigations (headless Claude Code)";
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      environment = {
-        HOME = paths.user.home;
-        SRG_MAX_SRS = toString cfg.maxSrs;
-        # Late-bind Firestore creds from sr_analyzer's single .env (declare
-        # once, derive everywhere). Without this the script falls back to a
-        # stale default path and fetch FATALs with ENOENT.
-        SRG_ENV_FILE = "${paths.user.home}/600_apps/sr_analyzer/.env";
-      };
-      path = [
-        pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
-        pkgs.nodejs_22 pkgs.python3 pkgs.jq pkgs.ripgrep
-        pkgs.curl  # Discord webhook delivery + hwc-notify
-      ];
+      environment = srgEnv;
+      path = srgPath;
       serviceConfig = {
         Type = "oneshot";
         User = lib.mkForce "eric";
@@ -90,15 +133,48 @@ in
     };
 
     systemd.timers.sr-gauntlet = {
-      description = "SR Gauntlet daily launch timer";
+      description = "SR Gauntlet investigation poll timer (every 15 min)";
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = cfg.onCalendar;
-        # Persistent: a missed morning (host down) fires on next boot —
-        # unlike nightly-builds, runs are read-only outside their own
-        # state dir, so a mid-day catch-up is harmless.
-        Persistent = true;
+        # Not Persistent: with a 15-min cadence a missed tick is irrelevant (the
+        # next is ≤15 min away), and a boot-time catch-up burst is undesirable.
+        Persistent = false;
         RandomizedDelaySec = "60s";
+      };
+    };
+
+    # ── Run-now: targeted, on-demand re-investigation from the refinery board ──
+    # The board can't run run.sh itself (hardened/sandboxed). It drops an <srId>
+    # file in spoolDir; this path unit fires the drain, which runs
+    # `run.sh --id <srId>`. This is the executor behind the SR page's
+    # "▶ re-investigate now" button. (New tickets are picked up automatically by
+    # the poll timer above; this is for forcing a specific SR immediately.)
+    systemd.services.sr-gauntlet-runnow = {
+      description = "SR Gauntlet — targeted run-now drain (refinery board trigger)";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      environment = srgEnv;
+      path = srgPath;
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce "eric";
+        Group = "users";
+        WorkingDirectory = cfg.gauntletDir;
+        ExecStart = "${runnowDrain}";
+        TimeoutSec = 3 * 3600;
+        StandardOutput = "journal";
+        StandardError = "journal";
+        NoNewPrivileges = true;
+      };
+    };
+
+    systemd.paths.sr-gauntlet-runnow = {
+      description = "Watch the refinery SR run-now spool for targeted investigations";
+      wantedBy = [ "paths.target" ];
+      pathConfig = {
+        DirectoryNotEmpty = spoolDir;
+        Unit = "sr-gauntlet-runnow.service";
       };
     };
   };

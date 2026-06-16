@@ -67,6 +67,15 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-16** — SR run-now: board parity with nightly. The SR detail page now
+  has a "▶ re-investigate now" button — `POST /sr/run-now` writes the SR's
+  Firestore `srId` to a spool (`REFINERY_SR_RUNNOW_SPOOL=/var/lib/refinery/sr-run-now`,
+  under the writable StateDirectory) which the `sr-gauntlet-runnow` path unit
+  drains as `run.sh --id <srId>`. Same hardened-board pattern as nightly run-now
+  (the board only writes the intent; a privileged path unit executes). `srId` is
+  passed via the form (SR mirror items aren't in the store) and sanitized to a
+  bare filename. New `requestSrRunNow` + `srRunNowSpoolDir`. Engine 90/90 (+3).
+  Pairs with the 15-min auto-investigation poll in `domains/automation/sr-gauntlet`.
 - **2026-06-15** — Gauntlet **dispatch contract** (refinery goal step 10): the
   modular seam. Instead of folding each gauntlet's executor *into* the engine
   (the leviathan path), the refinery *dispatches* to **standalone** gauntlets

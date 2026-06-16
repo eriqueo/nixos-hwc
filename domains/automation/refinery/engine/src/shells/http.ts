@@ -32,6 +32,7 @@ export interface HttpShellConfig {
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
   runNowSpoolDir: string; // "Run now" / IMMEDIATE drops a <goal> request file here; a systemd.path twin of run.sh drains it
+  srRunNowSpoolDir: string; // SR "re-investigate now" drops an <srId> request file here; sr-gauntlet-runnow.path drains it
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
   runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per profile
@@ -51,6 +52,7 @@ export function configFromEnv(): HttpShellConfig {
     vaultDir: process.env.REFINERY_VAULT_DIR,
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
     runNowSpoolDir: process.env.REFINERY_RUNNOW_SPOOL || `${base}/run-now`,
+    srRunNowSpoolDir: process.env.REFINERY_SR_RUNNOW_SPOOL || `${base}/sr-run-now`,
     clock: () => new Date().toISOString(),
   };
 }
@@ -113,6 +115,16 @@ export function createShell(cfg: HttpShellConfig) {
     if (!safe || safe === "." || safe === "..") return;
     mkdirSync(cfg.runNowSpoolDir, { recursive: true });
     writeFileSync(join(cfg.runNowSpoolDir, safe), `${safe}\n`);
+  };
+
+  // SR "re-investigate now": same hardened-board pattern — drop an <srId> file
+  // in the SR spool; sr-gauntlet-runnow.path runs `run.sh --id <srId>` out of
+  // band. srId is a Firestore doc id; sanitize hard to keep it a bare filename.
+  const requestSrRunNow = (srId: string): void => {
+    const safe = srId.replace(/[^A-Za-z0-9._-]/g, "");
+    if (!safe || safe === "." || safe === "..") return;
+    mkdirSync(cfg.srRunNowSpoolDir, { recursive: true });
+    writeFileSync(join(cfg.srRunNowSpoolDir, safe), `${safe}\n`);
   };
 
   async function intake(text: string): Promise<void> {
@@ -430,6 +442,15 @@ export function createShell(cfg: HttpShellConfig) {
             if (Number.isFinite(n) && n >= 0) writeCap("sr", Math.floor(n));
             return redirectTo(res, "/sr");
           }
+          if (url === "/sr/run-now") {
+            // Force a fresh investigation of one SR now. The SR mirror item
+            // carries the real Firestore srId in its payload; the form passes it
+            // directly (mirror items aren't in the store). The board only writes
+            // the spool request — sr-gauntlet-runnow.path runs run.sh --id.
+            const srId = (body.get("srId") ?? "").trim();
+            if (srId) requestSrRunNow(srId);
+            return redirectTo(res, id ? `/project/${encodeURIComponent(id)}` : "/sr");
+          }
           if (url === "/profiles/toggle") {
             const genre = body.get("genre") ?? "";
             if (genre) catalog.setEnabled(genre, body.get("enabled") === "true");
@@ -445,5 +466,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun };
+  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
 }
