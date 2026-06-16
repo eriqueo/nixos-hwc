@@ -55,7 +55,8 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `app/tsconfig.json` | TS config (typecheck/editor; esbuild needs no build step) |
 | `engine/` | Engine core: Item + GateModule + Profile contracts (Zod), stage runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
-| `engine/src/effectors/` | Effectors (`ItemEffector`s): `execute` — one mode-parameterized worktree → headless-claude → verdict → report → push/pristine extract of the two `run.sh` files (git/claude/report injected); `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
+| `engine/src/effectors/` | Effectors (`ItemEffector`s): `dispatch` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `EffectorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `execute` — the native-execution fallback (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a substance with no standalone runner. `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
+| `engine/src/gauntlets/` | The gauntlet dispatch contract: `GauntletContract` schema (`{trigger, resultsDir, reportFile, verdictPattern, successVerdicts}`, Zod) + `parseGauntletContract`; `ProcessPort`/`ResultReader` ports (real `nodeProcessPort`/`fsResultReader`, stubbed in tests); `loadGauntlets` registry over `gauntlets/*.yaml`. A standalone gauntlet becomes one YAML file. |
 | `engine/src/stores/` | `MarkdownItemStore` (`ItemStore`): one `.md` per item — board-readable frontmatter + a canonical ```json block for lossless round-trip. |
 | `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a profile's `llmProvider` to the adapter. All late-bound from env. |
 | `engine/src/profiles/` | `ProfileCatalog` — lead_scout-style registry: disk scan of `profiles/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet execute knobs (verdict token, success verdicts) not on the Profile schema. |
@@ -66,6 +67,19 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-15** — Gauntlet **dispatch contract** (refinery goal step 10): the
+  modular seam. Instead of folding each gauntlet's executor *into* the engine
+  (the leviathan path), the refinery *dispatches* to **standalone** gauntlets
+  through one data-driven port and reads the result back. New
+  `engine/src/gauntlets/` (`GauntletContract` Zod schema + `parseGauntletContract`,
+  `ProcessPort`/`ResultReader` with real `nodeProcessPort`/`fsResultReader`,
+  `loadGauntlets` registry) + `engine/src/effectors/dispatch.ts`
+  (`makeDispatchEffector`: template `{id}`/`{date}` → trigger → parse verdict →
+  `EffectorResult`; all IO injected). `gauntlets/sr_gauntlet.yaml` is the first
+  contract (data only — nothing is executed). `execute.ts` left untouched as the
+  native-execution fallback. A new gauntlet = one YAML file; parity is by
+  construction (same `run.sh`). Engine 84/84 (+10). Board wiring (live dispatch +
+  SR page) is a later, human-reviewed step.
 - **2026-06-15** — Run button + auto-run: the board executes engine pipelines.
   Triaged engine items (e.g. `project-ideation`) previously parked at their first
   gate with nothing to advance them. New `POST /run` + a Run button on the detail

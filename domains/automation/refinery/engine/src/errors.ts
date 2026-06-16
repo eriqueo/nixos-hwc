@@ -16,6 +16,15 @@ export class InvalidProfileError extends RefineryError {
   }
 }
 
+export class InvalidGauntletContractError extends RefineryError {
+  readonly issues: unknown;
+  constructor(message: string, issues: unknown) {
+    super("E_INVALID_GAUNTLET_CONTRACT", message);
+    this.name = "InvalidGauntletContractError";
+    this.issues = issues;
+  }
+}
+
 export class UnknownGateError extends RefineryError {
   constructor(gateId: string) {
     super("E_UNKNOWN_GATE", `profile references unregistered gate: ${gateId}`);
