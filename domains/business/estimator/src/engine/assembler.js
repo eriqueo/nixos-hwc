@@ -16,8 +16,7 @@
  */
 import { tradeRate, matPrice } from './pricing.js';
 import { evaluateFormula, evaluateCondition } from './formulaEngine.js';
-import catalog from '../data/catalog.json' with { type: 'json' };
-import parameters from '../data/parameters.json' with { type: 'json' };
+import { catalog, parameters } from '../contracts/data.js';
 
 // Allowance cost keys: allowance name -> state key for unit cost
 const ALLOWANCE_COST_KEY = {

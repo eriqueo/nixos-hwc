@@ -1,4 +1,4 @@
-import tradeRates from '../data/tradeRates.json';
+import { tradeRates } from '../contracts/data.js';
 
 // Material markup: ~30% target margin
 export const MAT_MARKUP = 1.4286;

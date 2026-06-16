@@ -8,11 +8,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:golden": "node test/golden-master.test.js",
+    "test:schema": "node test/schema-rejection.test.js",
+    "test:errors": "node test/error-codes.test.js",
     "export-catalog": "python3 scripts/export_catalog.py"
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
