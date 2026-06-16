@@ -241,7 +241,11 @@
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
-      "600_apps"     = { path = "/home/eric/600_apps";     devices = [ "hwc-laptop" ]; };
+      # 600_apps: removed from Syncthing 2026-06-16. Each app inside is now its
+      # own git repo (server hub for workbench/todui/khalt; GitHub for
+      # kidpix/lead_scout/sr_analyzer) — bidirectional sync over live .git trees
+      # was producing .sync-conflict corruption in lead_scout/sr_analyzer. git is
+      # the only sync now; the dir stays on disk, just unsynced.
       "brain"        = {
         path = "/home/eric/900_vaults/brain";
         # Tier-2: git is the only laptop<->server vault sync (see
