@@ -352,6 +352,15 @@ in
       upstream = "http://127.0.0.1:11501";
     }
 
+    # TRIP-PROOF: deliberate duplicate route name "jellyfin" — should make
+    # the new assertion fire under `nix eval`. This commit is reverted on
+    # the branch immediately afterwards; do NOT ship.
+    {
+      name = "jellyfin";
+      mode = "vhost";
+      upstream = "http://127.0.0.1:9999";
+    }
+
   ] ++ lib.optionals (config.hwc.secrets.vaultwarden.enable or false) [
     # Vaultwarden - name-based vhost (DOMAIN updated in vaultwarden module)
     {
