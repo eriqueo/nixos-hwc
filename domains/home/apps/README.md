@@ -29,6 +29,17 @@ apps/
 ```
 
 ## Changelog
+- 2026-06-16: workbench + keymap rollout — `a7a1a5e0` workbench TUI host
+  with zellij + todui/khalt peers; `6d0f2eb4` usable layout (auto-start
+  peers, tab/status bars, khalt month); `fc8ef8af` SUPER+W binding +
+  `workbench` shell alias; `93bfcdef`/`cd328ee5` auto-start tuning
+  (yazi/aerc/nvim, aerc lazy peer); `4c049cc1` home-page tab layout (host
+  alone, tools as peer tabs); `2923a331` late-bind aerc to server +
+  gateway → tailnet; `6ea8aeae` default to HWC hub; `60947776` reliable
+  meta leader + host navigates to tabs (no dup panes). `4a801db6` unified
+  keymap factory across apps; `64168d18` SUPER+SHIFT+I refinery-intake
+  keybind; `7a3c91a2` khalt renders Radicale calendar + iCloud→Radicale
+  migration.
 - 2026-06-14: **khalt — full event CRUD in month/quarter modes**. The grid modes now embed the *same* event column as agenda in an `outermost` NPile, so `tab`/`shift tab` move focus between grid and list; with the list focused every khal command works identically (view/edit/delete/duplicate/export/external-edit). `n` creates on the grid's selected day; `enter` hands off focus. Mutations refresh the grid cells live via a new `ClassicView.on_events_changed()` hook wired into `EventColumn.update()`/`refresh_titles()`. Removes the prior "CRUD only in agenda" limitation. Verified live (tmux): new-from-grid writes an .ics and the cell updates; quarter behaves identically; clean exit.
 - 2026-06-14: **khalt feature-complete + enabled** in `profiles/desktop`. Implemented the three upstream-impossible features in the fork (`~/600_apps/khalt`): (1) zoomable views — agenda ⇄ month grid ⇄ quarter (3-mo), `z` cycles, `space→v` switches (`khal/ui/khalt_grid.py`); (2) space-leader which-key menu w/ sub-menus, todui-style (`khalt_leader.py`); (3) palette inheritance — flat theme tokens → every ikhal/leader/grid role (`khalt_theme.py`). Translator now generates khalt's config from scratch (reusing the shared `hwc.mail.calendar` *data*) and injects `[palette_tokens]` from `hwc.home.theme.colors`, so the system theme genuinely drives khalt's colours (no hardcoded `[palette]`). HM module exposes a **bin-only** `khalt` wrapper (full package would collide with system `khal`'s python module in buildEnv). Verified: nix build + headless widget smoke test + tmux-driven live TUI. Options: `hwc.home.apps.khalt.{enable,defaultView,extraConfig}`.
 - 2026-06-14: Added **khalt** scaffold — forked khal/ikhal (own repo `~/600_apps/khalt`, consumed as the `khalt` flake input), thin translator `domains/home/apps/khalt/` (namespace `hwc.home.apps.khalt`). Source fork of khal v0.14.0. Isolates via `~/.config/khalt/config` (`ikhal -c`). See `~/600_apps/khalt/README.hwc.md`.

@@ -42,5 +42,8 @@ hwc.gaming.webdav = {
 
 ## Changelog
 
+- 2026-06-16: Mechanical sweep — `d9f3f46a` Law 3 path replacement across
+  11 modules (hwc.paths abstractions); `f4352f34` options-move pass; `8bb19a51`
+  retires `domains/server/` (predecessor namespace for these modules).
 - 2026-03-04: Namespace migration hwc.server.native.{retroarch,webdav} → hwc.gaming.*
 - 2026-03-04: Created gaming domain, moved retroarch and webdav from domains/server/native/

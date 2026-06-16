@@ -45,6 +45,23 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 
+- 2026-06-16: workbench + keymap consolidation — `a7a1a5e0` introduces the
+  workbench TUI host (zellij + todui/khalt peers, palette-driven khal);
+  `6d0f2eb4` usable layout (auto-start peers, tab/status bars, khalt month);
+  `93bfcdef` auto-start yazi/aerc/nvim; `cd328ee5` aerc lazy again (only
+  heavy peer); `fc8ef8af` SUPER+W keybind + `workbench` shell alias;
+  `62dec59a` `wb-reload` alias; `4c049cc1` home-page tab layout
+  (host alone, tools as peer tabs); `6ea8aeae` defaults to the HWC hub;
+  `60947776` reliable meta leader + host navigates to tabs (no dup panes);
+  `2923a331` late-bind aerc to server + gateway → tailnet. `4a801db6`
+  unified keymap factory — one grammar → every app; `2e5d8154` zellij meta
+  layer uses `GoToTab <index>`; `24e15049` rebind starship prompt after
+  rebuild. `64168d18` SUPER+SHIFT+I refinery-intake keybind (card 08).
+  `14ced160` khalt full event CRUD in month/quarter; `d6f5b422` zoom views
+  + leader keys + theme palette inheritance; `64a25882` scaffold forked
+  khal/ikhal as flake input + thin translator; `7a3c91a2` render
+  Radicale calendar + iCloud→Radicale migration. `bb7f96f3` gpg
+  pass-secret-service so Claude Desktop keyring uses pass not basic.
 - 2026-06-12: apps/qutebrowser fleshed out from empty scaffold — generated
   config.py with hwc-palette theming (parts/appearance.nix: tabs, statusbar,
   completion, hints, messages, downloads), Space-leader keybindings matching

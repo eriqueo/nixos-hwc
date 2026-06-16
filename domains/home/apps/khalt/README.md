@@ -35,6 +35,8 @@ domains/home/apps/khalt/
 
 ## Changelog
 
+- **2026-06-16**: `4a801db6` — picked up by the unified keymap factory sweep
+  (one grammar → every app). No khalt-specific config change.
 - **2026-06-15**: `[calendars]` now renders the Radicale-synced calendar
   (`calendars-radicale/`) when `hwc.mail.calendar.radicale.enable` is set, and
   drops the stale iCloud account calendars in that case (mirrors
