@@ -104,5 +104,9 @@ hwc.business.paperless = {
 
 ## Changelog
 
+- 2026-06-16: Mechanical sweep — `2c59868b` "business domain 1" repo-wide
+  business-domain consolidation; `a8bd133f` adds the Paperless-ngx setup
+  script for Heartwood Craft; `22bbbb48` server tailnet rename
+  `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net`.
 - 2026-03-25: Created README per Law 12
 - 2026-03-04: Namespace migration hwc.server.containers.paperless → hwc.business.paperless

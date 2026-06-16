@@ -73,4 +73,6 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-06-16: Mechanical sweep — `1da0a031` general `update` batch touched
+  this tree. No CouchDB-specific behavior change.
 - 2026-03-25: Created README per Law 12
