@@ -117,6 +117,15 @@
       url = "git+file:///home/eric/600_apps/workbench";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # zjstatus — themeable zellij status/tab bar plugin (wasm). Gives a true
+    # seamless powerline tab bar (the built-in tab-bar can't); themed from the
+    # palette in domains/home/apps/zellij. Provides packages.<system>.default
+    # = the built zjstatus.wasm.
+    zjstatus = {
+      url = "github:dj95/zjstatus";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================
