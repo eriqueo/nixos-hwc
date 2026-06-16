@@ -47,6 +47,9 @@ domains/secrets/
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+- 2026-06-16: `2baf881e` — added `radicale` secret for the calendar
+  Radicale backend (mail/calendar Radicale migration). Standard generated
+  mount; no rekey-of-everything event.
 - 2026-06-15: Added `cloudflare-api-key` — the scoped Cloudflare **API token** (`CLOUDFLARE_API_TOKEN`) used by `wrangler` to deploy the `hwc-mcp-gateway` Worker non-interactively (no OAuth login). Standard `root:secrets / 0440`, recipients = everyone. Consumed at deploy time only via a `direnv` `.envrc` in `~/600_apps/hwc-mcp-gateway` that exports it from `/run/agenix/cloudflare-api-key` (eric reads it through the `secrets` group). Not used by any running service.
 - 2026-06-15: Added `hwc-gateway-clientid` + `hwc-gateway-secret` — Cloudflare Access **service-token** credentials the `hwc-mcp-gateway` Worker uses to reach the `*-origin.heartwoodcraft.me` MCP origins. Standard `root:secrets / 0440`, recipients = everyone. Values are stored **bare** (the raw `<id>.access` / 64-char secret) — NOT prefixed with the `CF-Access-Client-Id:` / `CF-Access-Client-Secret:` header name, because the Worker (`src/api.ts`) sets those header names itself. Not consumed by any host service; mounted only for durable storage + `wrangler secret put` piping. Adding them triggered a full `agenix -r` rekey (all 110 `.age` re-encrypted to the same recipient set — plaintext unchanged, verified against live mounts).
 - 2026-06-12: Added `discord-webhook-nightly-builds` (webhook for the #nightly-builds Discord channel). Standard `eric:secrets / 0440`, recipients = everyone, `owner=eric` override in `generated.nix`. Consumed by the `discord-nightly-builds` notify channel.

@@ -57,3 +57,8 @@ The actual installation runs as a one-shot systemd service
 
 Missing or invalid values produce a `CONFIG_INVALID` `HermesDeployError` with
 a clear list of which vars are missing.
+
+## Changelog
+- 2026-06-16: `59dca996` — drop parameter-property shorthand for
+  TypeScript `strip-types` compatibility in `hermes-deploy`. No behavior
+  change.

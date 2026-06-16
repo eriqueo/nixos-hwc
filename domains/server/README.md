@@ -36,6 +36,10 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-16: `d992eb12` — `mail/calendar` Radicale (VEVENT) backend lands
+  and retires plain khal (companion to the radicale service in this
+  domain). `73f19e8e` — `server/brain-mcp` flock-serialize git ops + drop
+  the `clean -fd` footgun.
 - 2026-06-11: Added `services/radicale/` — self-hosted CalDAV server
   (localhost:5232, Caddy vhost `tasks`) for two-way task sync with list
   creation (companion to `domains/mail/tasks` radicale pair + todui `N`).
