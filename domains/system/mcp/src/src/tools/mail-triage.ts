@@ -11,9 +11,11 @@
  * result; the tool NEVER throws.
  */
 
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
+import { TRIAGE_BUCKETS, triageTag } from "./mail.js";
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -76,6 +78,72 @@ function bucketThreads(triage: MailTriage | null, bucket: Bucket): TriageThread[
   return Array.isArray(arr) ? arr : [];
 }
 
+const NOTMUCH_CANDIDATES = ["notmuch", "/etc/profiles/per-user/eric/bin/notmuch"];
+
+/** Run notmuch search returning bare thread ids (no "thread:" prefix). Empty on any failure. */
+function notmuchThreadIds(query: string): Promise<Set<string>> {
+  return new Promise((resolve) => {
+    const tryBin = (i: number): void => {
+      if (i >= NOTMUCH_CANDIDATES.length) {
+        resolve(new Set());
+        return;
+      }
+      execFile(
+        NOTMUCH_CANDIDATES[i],
+        ["search", "--output=threads", query],
+        { timeout: 5000, maxBuffer: 2 * 1024 * 1024 },
+        (err, stdout) => {
+          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+            tryBin(i + 1);
+            return;
+          }
+          if (err) {
+            resolve(new Set());
+            return;
+          }
+          const ids = new Set<string>();
+          for (const line of (stdout || "").split("\n")) {
+            const id = line.trim().replace(/^thread:/, "");
+            if (id) ids.add(id);
+          }
+          resolve(ids);
+        },
+      );
+    };
+    tryBin(0);
+  });
+}
+
+/**
+ * Re-bucket the cached triage by the LIVE notmuch `triage/<bucket>` tags so a
+ * workbench "move between columns" (which retags via hwc_mail set-triage)
+ * survives a refresh WITHOUT re-running the daily briefing. The briefing
+ * remains the content source (subject/summary/sender); the tag is the source
+ * of truth for PLACEMENT. A thread carrying no triage/* tag (never moved)
+ * keeps its cached bucket. notmuch unavailable → cached buckets unchanged.
+ */
+async function reflectLiveBuckets(
+  cached: Record<Bucket, TriageThread[]>,
+): Promise<Record<Bucket, TriageThread[]>> {
+  // thread_id → live bucket (from the triage/* tags). Only tagged threads appear.
+  const liveBucketOf = new Map<string, Bucket>();
+  for (const bucket of TRIAGE_BUCKETS) {
+    const ids = await notmuchThreadIds(`tag:${triageTag(bucket)}`);
+    if (ids.size === 0) continue;
+    for (const id of ids) liveBucketOf.set(id, bucket as Bucket);
+  }
+  if (liveBucketOf.size === 0) return cached;
+
+  const out: Record<Bucket, TriageThread[]> = { urgent: [], review: [], noise: [] };
+  for (const bucket of TRIAGE_BUCKETS) {
+    for (const thread of cached[bucket as Bucket]) {
+      const live = liveBucketOf.get(thread.thread_id) ?? (bucket as Bucket);
+      out[live].push(thread);
+    }
+  }
+  return out;
+}
+
 /** Map a thread to a kanban card. */
 function toCard(thread: TriageThread, bucket: Bucket) {
   return {
@@ -124,13 +192,22 @@ export function mailTriageTools(): ToolDef[] {
         const action = (args.action as string) || "board";
         const triage = await loadTriage(briefingPath);
 
-        const urgent = bucketThreads(triage, "urgent");
-        const review = bucketThreads(triage, "review");
-        const noise = bucketThreads(triage, "noise");
+        // Reflect any persisted moves: re-bucket cached threads by their live
+        // triage/* notmuch tag so a workbench column move survives a refresh.
+        const reflected = await reflectLiveBuckets({
+          urgent: bucketThreads(triage, "urgent"),
+          review: bucketThreads(triage, "review"),
+          noise: bucketThreads(triage, "noise"),
+        });
+        const urgent = reflected.urgent;
+        const review = reflected.review;
+        const noise = reflected.noise;
 
-        const urgentCount = triage?.stats?.urgent_count ?? urgent.length;
-        const reviewCount = triage?.stats?.review_count ?? review.length;
-        const noiseCount = triage?.stats?.noise_count ?? noise.length;
+        // Counts derive from the REFLECTED arrays (post-move), not the stale
+        // cached stats — a move shifts a thread between buckets at read time.
+        const urgentCount = urgent.length;
+        const reviewCount = review.length;
+        const noiseCount = noise.length;
         const totalUnread = triage?.total_unread ?? 0;
         const generatedAt = triage?.generated_at ?? null;
 

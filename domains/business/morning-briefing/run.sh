@@ -234,6 +234,37 @@ STEP2_END=$(date +%s)
 STEP2_ELAPSED=$((STEP2_END - STEP2_START))
 log "STEP 2: completed in ${STEP2_ELAPSED}s"
 
+# ── Step 2b: Persist triage buckets as notmuch tags ──────────────────────────
+# "Move between columns" in the Mail-triage kanban must PERSIST, so the bucket
+# is a notmuch tag `triage/<bucket>` (single source of truth: mail.ts
+# TRIAGE_BUCKETS). Stamp each classified thread with its bucket tag, removing
+# any stale triage/* first, so hwc_mail_triage reflects the daily baseline and
+# later workbench moves (hwc_mail set-triage) layer on top. Best-effort: a
+# notmuch failure here never fails the briefing.
+NOTMUCH_BIN="/etc/profiles/per-user/eric/bin/notmuch"
+command -v notmuch >/dev/null 2>&1 && NOTMUCH_BIN="$(command -v notmuch)"
+if [ -x "${NOTMUCH_BIN}" ] && [ -f "${MAIL_TRIAGE_JSON}" ]; then
+  log "STEP 2b: Persisting triage/<bucket> tags..."
+  TAGGED=0
+  for bucket in urgent review noise; do
+    # All triage tag ops for this bucket: add triage/<bucket>, remove the others.
+    case "${bucket}" in
+      urgent) OPS=(+triage/urgent -triage/review -triage/noise) ;;
+      review) OPS=(-triage/urgent +triage/review -triage/noise) ;;
+      noise)  OPS=(-triage/urgent -triage/review +triage/noise) ;;
+    esac
+    while IFS= read -r tid; do
+      [ -z "${tid}" ] && continue
+      if "${NOTMUCH_BIN}" tag "${OPS[@]}" -- "thread:${tid}" 2>/dev/null; then
+        TAGGED=$((TAGGED + 1))
+      fi
+    done < <(jq -r --arg b "${bucket}" '.buckets[$b][]?.thread_id // empty' "${MAIL_TRIAGE_JSON}" 2>/dev/null)
+  done
+  log "STEP 2b: tagged ${TAGGED} threads with triage/<bucket>"
+else
+  log "STEP 2b: SKIP (notmuch missing or no triage JSON)"
+fi
+
 # ── Step 3: Merge ─────────────────────────────────────────────────────────────
 log "STEP 3: Merging..."
 
