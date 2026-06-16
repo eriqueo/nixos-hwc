@@ -21,6 +21,12 @@ core/
 ```
 
 ## Changelog
+- 2026-06-16: Shell + workbench polish — `24e15049` rebind starship prompt
+  after rebuild (not just `hash -r`); `62dec59a` add `wb-reload` alias to
+  re-apply workbench layout edits; `fc8ef8af` add SUPER+W keybind +
+  `workbench` shell alias; `49f292f9` `_hwc_rebuild` uses `HOME=/root` not
+  `~root`; `1a78f22d` SUPER+E aerc keybind hwc→server + alias laptop aerc
+  to server aerc.
 - 2026-06-11: Structure section updated to reality (shell/ and development/
   are directories; namespaces moved under hwc.home.core.* per Law 2; the
   phantom options.nix/shell.nix flat files are gone).

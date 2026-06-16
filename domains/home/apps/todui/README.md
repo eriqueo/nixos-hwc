@@ -41,6 +41,8 @@ todui/
 - khal + vdirsyncer are put on todui's PATH via `extraRuntimePackages`.
 
 ## Changelog
+- 2026-06-16: `4a801db6` — picked up by the unified keymap factory sweep
+  (one grammar → every app). No todui-specific config change.
 - 2026-06-12: Launcher integration — `xdg.desktopEntries.todui` (`kitty -e
   todui`, terminal=false) so it appears in wofi/rofi `drun`; Hyprland keybind
   `SUPER+T` added in `domains/home/apps/hyprland/parts/behavior.nix` (gated on

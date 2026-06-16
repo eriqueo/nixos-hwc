@@ -73,6 +73,14 @@ mail/
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-06-16: Calendar migrated to Radicale — `d992eb12` `mail/calendar`
+  gains Radicale (VEVENT) backend and retires plain khal; `8b6335e1`
+  separates Radicale principals for calendar (`cal`) vs tasks (`eric`);
+  `3520ab48` scopes `calendar_radicale` to its own collection; `0919ce66`
+  exposes only khalt's `khal` CLI (avoid khalt buildEnv clash); `1527ee34`
+  repairs vdirsyncer (restore khalt + todui sync); `7a3c91a2` adds iCloud→
+  Radicale migration in khalt. `97b9b09e` post-rebase: adopt main's khalt +
+  restore month view.
 - 2026-06-11: Added `tasks/` — VTODO/Reminders sync via vdirsyncer + todoman CLI. Contributes a `[pair tasks]` (item_types=["VTODO"]) to the calendar vdirsyncer config via new `hwc.mail.calendar.extraVdirsyncerPairs`, so there's one config file and one sync timer. Reuses calendar's icloud account + apple-app-pw secret. TUI (`todui`) deferred to Phase B.
 - 2026-06-09: Removed orphan `protonmail-bridge/` (sys.nix-only clone of `bridge/sys.nix` under a different namespace, imported nowhere; flagged by audit as a latent duplicate `systemd.services.protonmail-bridge` definition). `bridge/` remains the canonical module; `protonmail-bridge-cert/` kept (unique cert-export logic).
 - 2026-04-25: Bridge restart resilience — Restart=always, StartLimitBurst=10/3600s, RestartSec=30 (was on-failure/5s with default 5/10s limit). Health check: stable cooldown fingerprints (strip numbers before hashing), auto-restart bridge on failure, purge stale cooldowns after 7 days. Fixes Apr 2-5 incident (67 spurious critical alerts, 3 days unrecovered downtime)
