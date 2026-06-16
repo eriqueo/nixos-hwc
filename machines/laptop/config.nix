@@ -196,7 +196,9 @@
       "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-server" ]; };
       "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-server" ]; };
       "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-server" ]; };
-      "600_apps"     = { path = "/home/eric/600_apps";     devices = [ "hwc-server" ]; };
+      # 600_apps: removed from Syncthing 2026-06-16 (see server config). Each app
+      # is its own git repo now; Syncthing over live .git was clobbering
+      # lead_scout/sr_analyzer. git is the only sync. Same fix as brain below.
       # brain: NOT a Syncthing folder on the laptop. Tier-2 = git is the only
       # laptop<->server vault sync (clone of the bare hub; Obsidian-git or CLI
       # pull/push). Removed from Syncthing 2026-06-15 to eliminate the
