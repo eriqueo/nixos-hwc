@@ -142,3 +142,10 @@ To register the agent as a tool in Open WebUI:
    - Headers: `Content-Type: application/json`
 
 Then users can invoke system commands through the chat interface.
+
+## Changelog
+- 2026-06-16: Mechanical sweep — carried along by repo-wide `ai refactor`/options
+  moves, Law 3 path abstraction, charter linter v10.1 fixes, Sprint 5 MCP/agent
+  discovery integration, Sprint 5.4 local-workflows HTTP API, and the
+  `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net` rename. No
+  agent-specific behavior change in this dir.
