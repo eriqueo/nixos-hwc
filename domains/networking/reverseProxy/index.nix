@@ -221,6 +221,82 @@ in
   };
 
   config = mkIf config.hwc.networking.reverseProxy.enable {
+    # Eval-time guard against route conflicts. The recurring mistake "port
+    # conflicts in routes.nix" used to ride on the author noticing the
+    # collision; these assertions move that check into the build so a
+    # duplicate makes `nix flake check` fail instead of silently shipping a
+    # broken Caddy config.
+    #
+    # NOTE on upstream ports: two routes legitimately sharing an upstream
+    # (e.g. a service exposed as both vhost and subpath, or via both a port
+    # listener and a vhost) is *not* a conflict, so we do not assert on
+    # duplicate `upstream` values. The duplicates that bite are: same route
+    # name (rendered as identical Caddy matchers/host blocks), same subpath
+    # path (overlapping `handle @<name> path ...` matchers on the root
+    # host), and same dedicated listener port (two `<host>:<port> { ... }`
+    # blocks Caddy refuses to bind).
+    assertions =
+      let
+        # Find duplicated values in a list and return the list of duplicates.
+        dups = xs:
+          lib.unique
+            (lib.filter (x: lib.count (y: y == x) xs > 1) xs);
+
+        names       = map (r: r.name) routes;
+        vhostNames  = map (r: r.name) (lib.filter (r: (r.mode or "") == "vhost") routes);
+        subpathPaths = map (r: r.path) (lib.filter (r: (r.mode or "") == "subpath") routes);
+        # Listener-port-bearing routes (mode = "port" | "static").
+        listenerPorts = map (r: r.port)
+          (lib.filter (r: (r.mode or "") == "port" || (r.mode or "") == "static") routes);
+
+        # For a value v in a given route field, list the route names that carry it.
+        # Used to make assertion messages name the specific colliding routes.
+        namesWithName = v:
+          map (r: r.name) (lib.filter (r: r.name == v) routes);
+        namesWithSubpath = v:
+          map (r: r.name) (lib.filter (r: (r.mode or "") == "subpath" && (r.path or null) == v) routes);
+        namesWithListenerPort = v:
+          map (r: r.name)
+            (lib.filter
+              (r: ((r.mode or "") == "port" || (r.mode or "") == "static")
+                  && (r.port or null) == v)
+              routes);
+
+        renderDup = label: detail: dupList:
+          concatStringsSep "; "
+            (map (v: "${label}=${toString v} used by [${concatStringsSep ", " (detail v)}]") dupList);
+
+        dupNames        = dups names;
+        dupVhostNames   = dups vhostNames;
+        dupSubpathPaths = dups subpathPaths;
+        dupListenerPorts = dups listenerPorts;
+      in [
+        {
+          assertion = dupNames == [ ];
+          message = "hwc.networking.shared.routes: duplicate route name(s) — "
+            + renderDup "name" namesWithName dupNames
+            + ". Every route must declare a unique `name` (it drives Caddy matcher labels and the vhost host).";
+        }
+        {
+          assertion = dupVhostNames == [ ];
+          message = "hwc.networking.shared.routes: duplicate vhost route name(s) — "
+            + renderDup "name" namesWithName dupVhostNames
+            + ". Two `mode = \"vhost\"` routes with the same name would emit conflicting `@<name> host <name>.<vhostDomain>` matchers under *.${config.hwc.networking.shared.vhostDomain}.";
+        }
+        {
+          assertion = dupSubpathPaths == [ ];
+          message = "hwc.networking.shared.routes: duplicate subpath path(s) — "
+            + renderDup "path" namesWithSubpath dupSubpathPaths
+            + ". Two `mode = \"subpath\"` routes sharing a `path` would render overlapping handlers under ${rootHost} and one would shadow the other.";
+        }
+        {
+          assertion = dupListenerPorts == [ ];
+          message = "hwc.networking.shared.routes: duplicate listener port(s) — "
+            + renderDup "port" namesWithListenerPort dupListenerPorts
+            + ". Two `mode = \"port\"`/`mode = \"static\"` routes sharing `port` would each try to bind `${rootHost}:<port>` and Caddy will refuse to start. Check existing assignments before picking a new port.";
+        }
+      ];
+
     services.caddy = {
       enable = true;
       # Caddy with the deSEC DNS provider compiled in, for ACME DNS-01 issuance
