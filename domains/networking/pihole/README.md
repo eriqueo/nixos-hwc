@@ -498,3 +498,10 @@ Pi-hole provides metrics at `http://localhost:8080/admin/api.php`
 - [Pi-hole GitHub](https://github.com/pi-hole/pi-hole)
 - Charter compliance: See `/docs/CHARTER.md`
 - Container patterns: See `domains/server/containers/README.md`
+
+## Changelog
+- 2026-06-16: Mechanical sweep — `f4352f34` options-move pass; `fd9b8952`
+  moves `lib/` to `domains/lib/` + cleanup; `8bb19a51` retires
+  `domains/server/` entirely; `468993b1` namespace migration
+  `hwc.server.{reverseProxy,shared,containers.gluetun,containers.pihole}`
+  → `hwc.networking.*` (this dir landed under networking as part of that).
