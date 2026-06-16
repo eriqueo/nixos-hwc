@@ -36,6 +36,16 @@ DATE="$(date +%F)"
 DRY_RUN=0
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
+# Targeted run (the refinery board's "▶ Run now" / IMMEDIATE mode): when
+# NB_ONLY_GOAL is set, this launch executes ONLY that one project's queued
+# step(s) and skips the card-smith drafting pass. Empty = the normal nightly
+# run over every queued card. The lock below still serializes targeted kicks
+# against the 01:30 timer, so the two never touch git concurrently.
+ONLY_GOAL="${NB_ONLY_GOAL:-}"
+# Allow `run.sh <goal-folder-name>` as an alternative to the env var (but not
+# the --dry-run flag, which keeps its meaning).
+if [ -n "${1:-}" ] && [ "${1:-}" != "--dry-run" ]; then ONLY_GOAL="$1"; fi
+
 mkdir -p "$RUNS_DIR"
 LOG_FILE="$RUNS_DIR/_launcher.log"
 log() { echo "$(date -Iseconds) $*" | tee -a "$LOG_FILE"; }
@@ -98,7 +108,11 @@ PYEOF
 }
 
 # ── Phase A: card-smith ──────────────────────────────────────────────────────
-if [ -f "$IDEAS_FILE" ]; then
+# Skipped entirely on a targeted run — "Run now" executes an existing card, it
+# does not draft new ones.
+if [ -n "$ONLY_GOAL" ]; then
+  log "PHASE A: skipped (targeted run for '$ONLY_GOAL')"
+elif [ -f "$IDEAS_FILE" ]; then
   # Ideas are bullet lines under the "## new" heading
   NEW_IDEAS=$(python3 - "$IDEAS_FILE" <<'PYEOF'
 import sys, re
@@ -140,7 +154,13 @@ else
 fi
 
 # ── Phase B: run queued cards ────────────────────────────────────────────────
-QUEUED=$(rg -l '^status: queued' "$NB_DIR"/*/[0-9][0-9]-*.md 2>/dev/null | sort | head -n "$MAX_CARDS")
+# Targeted run: only this project's queued step(s). Normal run: every queued
+# card across all projects, capped at MAX_CARDS.
+if [ -n "$ONLY_GOAL" ]; then
+  QUEUED=$(rg -l '^status: queued' "$NB_DIR/$ONLY_GOAL"/[0-9][0-9]-*.md 2>/dev/null | sort | head -n "$MAX_CARDS")
+else
+  QUEUED=$(rg -l '^status: queued' "$NB_DIR"/*/[0-9][0-9]-*.md 2>/dev/null | sort | head -n "$MAX_CARDS")
+fi
 if [ -z "$QUEUED" ]; then
   log "PHASE B: no queued cards"
   log "DONE"
@@ -193,9 +213,9 @@ text += '\n\n---\n\n# THE CARD\n\n' + open(card).read()
 open(out, 'w').write(text)
 PYEOF
 
-  log "PHASE B: launching agent (timeout 3h)..."
+  log "PHASE B: launching agent (timeout ${NB_CARD_TIMEOUT:-18000}s)..."
   START=$(date +%s)
-  (cd "$WT" && timeout 10800 "$CLAUDE_BIN" -p "$(cat "$PROMPT_FILE")" \
+  (cd "$WT" && timeout "${NB_CARD_TIMEOUT:-18000}" "$CLAUDE_BIN" -p "$(cat "$PROMPT_FILE")" \
     --dangerously-skip-permissions) > "$RUN_DIR/agent-output.log" 2>&1
   AGENT_EXIT=$?
   ELAPSED=$(( $(date +%s) - START ))
