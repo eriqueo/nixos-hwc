@@ -74,6 +74,11 @@ domains/business/estimator/
 │   │   └── ...                 # NumInput, Select, Section
 │   ├── styles/theme.js         # Gruvbox Material Dark colors
 │   └── App.jsx                 # Main layout, tab routing
+├── test/
+│   ├── golden-master.test.js   # Parity oracle: live engine vs golden snapshots (exits non-zero on diff)
+│   ├── json-import-hook.mjs    # Node resolve hook so Vite-style JSON imports load under plain Node
+│   ├── golden/                 # 8 golden snapshots, one per template (npm run test:golden -- --update)
+│   └── rate-audit.test.js      # P0 rate-fix validation (self-contained)
 ├── package.json, vite.config.js, index.html
 └── README.md
 ```
@@ -141,8 +146,23 @@ sudo ln -sfn /var/lib/estimator/builds/dist-$TIMESTAMP /var/lib/estimator/dist
 
 `https://estimator.hwc.iheartwoodcraft.com`
 
+## Testing
+
+```bash
+npm run test:golden                          # diff live engine vs golden snapshots; exit 1 on any drift
+node test/golden-master.test.js --update     # recapture snapshots (only after an INTENDED output change)
+node test/golden-master.test.js --perturb    # self-test: in-memory perturbation must go red
+```
+
+The golden-master oracle is the gate for estimator refactors: it runs the
+real `src/engine/*` modules (via `test/json-import-hook.mjs`) against all 8
+templates and fails the exit code on any item/qty/price/total diff beyond
+±0.01. `test_comparison.mjs` (old vs new assembler comparison) always exits 0
+and is NOT a refactor gate.
+
 ## Changelog
 
+- 2026-06-12: Golden-master parity oracle — `test/golden/*.json` snapshots for all 8 templates captured from the live engine, strict runner `test/golden-master.test.js` (exit 1 on diff, `--update` / `--perturb` modes), `test:golden` npm script. Safety net for estimator refactor steps 02–04.
 - 2026-06-09: Access moved from the bespoke `services.caddy.extraConfig` PWA block on tailnet port `:13443` to a `vhost` route `estimator.hwc.iheartwoodcraft.com` under the shared `*.hwc.iheartwoodcraft.com` wildcard cert. PWA cache behaviour preserved by the vhost renderer's assets-only-immutable policy. See `domains/networking/README.md`.
 - 2026-05-01: Bottom-up pricing engine — Job #306 rates, Craftsman production rates, 8 new scope items, deck assembler, templates, MCP tools, DB export pipeline
 - 2026-04-22: NixOS-managed build service with baked-in secrets, versioned deploys
