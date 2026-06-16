@@ -24,6 +24,12 @@ core/
 ```
 
 ## Changelog
+- 2026-06-16: `5519f201` — `nixld` `guiLibs.enable` flag in system core
+  replaces the desktop/gaming role list dup (one source of truth for the
+  X11/GTK/audio nix-ld library set). `aea7be73` Law 9/10 converts
+  option-declaring leaf modules to directory modules; `22bbbb48` server
+  tailnet rename `hwc.ocelot-wahoo.ts.net` → `hwc-server.ocelot-wahoo.ts.net`;
+  `fb75c028` `system/core/packages` — add sqlite CLI to the base bundle.
 - 2026-02-28: Added README for Charter Law 12 compliance
 - 2026-03-12: Inlined options.nix into index.nix for identity, polkit, session, shell; removed separate options.nix files
 - 2026-03-26: Added Authentik SSO/Identity Provider module
