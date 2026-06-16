@@ -36,6 +36,17 @@ The media/arr/torrent stack now lives entirely in `domains/media/` (containers +
 - `media/` and `n8n/` provide profile-level toggles that pull together the required container pieces for those stacks.
 
 ## Changelog
+- 2026-06-16: `native/ai/brain-mcp/parts/server.ts` — `lint_wiki` now strips
+  fenced code blocks (```` ``` ````/`~~~`) and inline backtick spans before the
+  `[[wikilink]]` scan, killing phantom broken-link / inbound-link counts from
+  link-shaped tokens inside code samples. Added `stripCode` /
+  `stripInlineCodeSpans` exports + `server_test.ts` (10 cases, run with
+  `deno test --allow-read parts/`). Server entrypoint guarded with
+  `import.meta.main` so the test suite imports helpers without reading the
+  agenix key or binding the socket; live `ExecStart` (`deno run ... server.ts`)
+  unchanged. Vault-wide read-only scan: broken-link count 293 → 169 (124
+  phantoms suppressed). `scanInboundLinks` / `rewriteLinks` (delete_note /
+  move_note) intentionally NOT changed — candidate follow-up.
 - 2026-06-11: Added `services/radicale/` — self-hosted CalDAV server
   (localhost:5232, Caddy vhost `tasks`) for two-way task sync with list
   creation (companion to `domains/mail/tasks` radicale pair + todui `N`).

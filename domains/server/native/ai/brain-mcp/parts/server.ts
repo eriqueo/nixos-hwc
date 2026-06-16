@@ -15,18 +15,15 @@ import { join, resolve, relative, dirname } from "jsr:@std/path@1";
 import { walk, exists } from "jsr:@std/fs@1";
 
 // ── Configuration ────────────────────────────────────────────────────────────
-const VAULT_ROOT = resolve(Deno.env.get("BRAIN_VAULT_ROOT") ?? "/home/eric/900_vaults/brain");
-const PORT = parseInt(Deno.env.get("BRAIN_MCP_PORT") ?? "9876");
-const HOST = Deno.env.get("BRAIN_MCP_HOST") ?? "0.0.0.0";
-const KEY_FILE = Deno.env.get("BRAIN_MCP_KEY_FILE") ?? "/run/agenix/brain-mcp-api-key";
-
-let API_KEY: string;
-try {
-  API_KEY = (await Deno.readTextFile(KEY_FILE)).trim();
-} catch (e) {
-  console.error(`[brain-mcp] Cannot read API key from ${KEY_FILE}: ${e}`);
-  Deno.exit(1);
+// envOr lets us run the test suite without --allow-env (the systemd unit
+// passes BRAIN_* explicitly; the test suite only needs --allow-read).
+function envOr(key: string, fallback: string): string {
+  try { return Deno.env.get(key) ?? fallback; } catch { return fallback; }
 }
+const VAULT_ROOT = resolve(envOr("BRAIN_VAULT_ROOT", "/home/eric/900_vaults/brain"));
+const PORT = parseInt(envOr("BRAIN_MCP_PORT", "9876"));
+const HOST = envOr("BRAIN_MCP_HOST", "0.0.0.0");
+const KEY_FILE = envOr("BRAIN_MCP_KEY_FILE", "/run/agenix/brain-mcp-api-key");
 
 // ── Path safety ──────────────────────────────────────────────────────────────
 function safePath(rel: string): string {
@@ -52,6 +49,46 @@ function noteBasename(p: string): string {
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// ── Code-span / fenced-code stripping ────────────────────────────────────────
+// Wikilink scans (lint_wiki) read raw markdown, so `[[link]]` tokens that live
+// inside ``` fences or `inline backticks` are false-positive "broken links".
+// stripCode blanks those regions with same-length whitespace so byte offsets
+// and line numbers used by callers stay valid.
+export function stripCode(content: string): string {
+  const lines = content.split("\n");
+  let inFence = false;
+  let fenceChar = "";
+  const out: string[] = [];
+  for (const line of lines) {
+    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const ch = fenceMatch[1][0];
+      if (!inFence) {
+        inFence = true;
+        fenceChar = ch;
+      } else if (ch === fenceChar) {
+        inFence = false;
+        fenceChar = "";
+      }
+      out.push(" ".repeat(line.length));
+      continue;
+    }
+    if (inFence) {
+      out.push(" ".repeat(line.length));
+      continue;
+    }
+    out.push(stripInlineCodeSpans(line));
+  }
+  return out.join("\n");
+}
+
+// Replace `code` / ``code with `tick`` runs with same-length whitespace. Uses a
+// backreference so opening/closing tick-runs match in length, matching the
+// CommonMark rule for inline code spans on a single line.
+export function stripInlineCodeSpans(line: string): string {
+  return line.replace(/(`+)(.+?)\1/g, (m) => " ".repeat(m.length));
 }
 
 // ── Wikilink parsing/rewriting (shared by delete_note + move_note) ─────────────
@@ -441,7 +478,10 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
           frontmatterIssues.push(`${slug}: missing frontmatter`);
         }
 
-        for (const m of content.matchAll(/\[\[([^\]|#]+)/g)) {
+        // Strip fenced + inline code so `[[link]]` tokens inside backticks
+        // don't get flagged as broken links (or counted as inbound).
+        const scanned = stripCode(content);
+        for (const m of scanned.matchAll(/\[\[([^\]|#]+)/g)) {
           const target = m[1].trim().replace(/\.md$/, "");
           if (wikiFiles.has(target)) {
             inbound.get(target)!.add(slug);
@@ -728,7 +768,19 @@ async function handleRpc(req: RpcReq): Promise<RpcResp | null> {
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
-Deno.serve({ port: PORT, hostname: HOST }, async (req: Request): Promise<Response> => {
+// Guarded by import.meta.main so tests can `import` the helpers above without
+// reading the agenix key file or binding the listening socket. The live
+// systemd unit invokes `deno run ... server.ts` directly, so this branch fires
+// in production exactly as before.
+if (import.meta.main) {
+  try {
+    (await Deno.readTextFile(KEY_FILE)).trim();
+  } catch (e) {
+    console.error(`[brain-mcp] Cannot read API key from ${KEY_FILE}: ${e}`);
+    Deno.exit(1);
+  }
+
+  Deno.serve({ port: PORT, hostname: HOST }, async (req: Request): Promise<Response> => {
   const url = new URL(req.url);
 
   // Health check — no auth required
@@ -773,7 +825,8 @@ Deno.serve({ port: PORT, hostname: HOST }, async (req: Request): Promise<Respons
     return Response.json(result, { headers: { "Content-Type": "application/json" } });
   }
 
-  return new Response("Not Found", { status: 404 });
-});
+    return new Response("Not Found", { status: 404 });
+  });
 
-console.log(`[brain-mcp] Listening on ${HOST}:${PORT} — vault: ${VAULT_ROOT}`);
+  console.log(`[brain-mcp] Listening on ${HOST}:${PORT} — vault: ${VAULT_ROOT}`);
+}
