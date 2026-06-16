@@ -20,13 +20,18 @@ let
   keyOf = name: let v = verb name; in if v == null then "" else v.key;
 
   # khal's [keybindings] uses comma-lists of keys per command. We map the shared
-  # verbs onto khal's command names; export/duplicate move under the leader menu.
+  # verbs onto khal's command names. NOTE: khal has no safe single-key "edit" —
+  # editing happens through `view` (Enter shows details, Enter again edits the
+  # event). So khalt binds add/delete/open and OMITS the unified `e`=edit
+  # (per-app omission rule, grammar.nix §DESIGN); `e` stays khal's native export
+  # and `external_edit` (raw .ics in $EDITOR) keeps its `meta E` default — we do
+  # NOT put raw-ics edit on a bare key (khal warns that path skips validation).
   keybindingsBlock = ''
     [keybindings]
     # generated from domains/home/keymap/grammar.nix (list-app verbs)
     new = ${keyOf "add"}
     delete = ${keyOf "delete"}
-    # edit/open keep Enter; khalt also accepts ${keyOf "edit"} for edit via the leader
+    view = ${keyOf "open"}
     leader = ' '
   '';
 
