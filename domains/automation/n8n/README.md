@@ -149,6 +149,10 @@ curl -s -w "HTTP: %{http_code}\n" https://mcp.heartwoodcraft.me/n8n/.well-known/
 
 ## Changelog
 
+- 2026-06-16: Mechanical sweep — `5289d7b3` removes the 600_shared NFS share
+  (standardize on Syncthing); `aea7be73` Law 9/10 — option-declaring leaf
+  modules become directory modules; `61f22fa3` Law 3 path sweep replaces the
+  worst hardcoded paths with `hwc.paths` derivations. No n8n behavior change.
 - 2026-05-31: Add `hwcLeadsHmacFile` secret option + `NODE_FUNCTION_ALLOW_BUILTIN=crypto` container env so the thin-shell `work_calculator_lead` workflow can HMAC-sign POST /leads at the n8n boundary. Phase 2.6 Move A cutover — calculator-lead workflow shrunk from 23 nodes to 4 (Webhook → Build LeadInput → POST /leads → Respond). v2 fat workflow archived at `domains/business/leads/parts/workflows/work_calculator_lead-v2-fat-archive-2026-05-31.json` as rollback.
 - 2026-05-22: Remove Tailscale Funnel — public access migrated to Cloudflare Tunnel (n8n.heartwoodcraft.me). Remove funnel options and systemd services. Caddy :18080/:10080 listeners removed.
 - 2026-04-03: Rename `n8n-mcp-bridge.service` → `hwc-n8n-mcp.service`, `n8n-mcp-bridge-env` → `hwc-n8n-mcp-env` (consistent MCP naming)

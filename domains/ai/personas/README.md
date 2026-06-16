@@ -59,6 +59,11 @@ README.md
 
 ## Changelog
 
+- 2026-06-16: Carried by sibling persona-daemon work — Commit 2/4
+  (`9d499dee`) Deno HTTP daemon + SQLite conversation memory, Commit 3/4
+  (`a8eac402`) RAG over brain vault + indexer (the Phase 2/3 roadmap items
+  above). Plus `a3690f01` cleans up orphan option-sets that broke
+  `nix flake check`.
 - 2026-05-29: Initial module. 5 personas (classifier, extractor, coder,
   assistant, thinker). Stateless CLI wrapping `llama-gpu` (port 11500)
   and `llama-cpu` (port 11501).

@@ -17,5 +17,9 @@ profiles/
 ```
 
 ## Changelog
+- 2026-06-16: Mechanical sweep — `5b53151b` drops the per-eval "AI Profile"
+  informational warning (was firing on every evaluation). Plus repo-wide
+  carries: options moves (`0f8f427c`), `ai refactor` (`5e27cd37`), and the
+  dead-tree purge (`efd7063e`).
 - 2026-02-28: Updated GPU refs for infrastructure migration
 - 2026-02-28: Added README for Charter Law 12 compliance
