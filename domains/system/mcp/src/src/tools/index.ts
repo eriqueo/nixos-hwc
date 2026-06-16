@@ -17,6 +17,7 @@ import { websiteTools } from "./website.js";
 import { cmsTools } from "./cms.js";
 import { estimatorTools } from "./estimator.js";
 import { morningStatusTool } from "./morning-status.js";
+import { mailTriageTools } from "./mail-triage.js";
 import { notifyTools } from "./notify.js";
 import { leadsTools } from "./leads.js";
 import { tasksTools } from "./tasks.js";
@@ -44,6 +45,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...estimatorTools(config.nixosConfigPath),
     ...notifyTools(),
     ...leadsTools(),
+    ...mailTriageTools(),
     // Composite tool
     morningStatusTool(),
   ];
