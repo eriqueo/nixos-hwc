@@ -5,6 +5,7 @@
 import { readFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { catchError } from "../errors.js";
+import { contract } from "../result.js";
 
 const ARR_SERVICES = [
   { name: "sonarr", port: 8989 },
@@ -190,10 +191,28 @@ export function mediaTools(): ToolDef[] {
             parts.push("downloads checked");
           }
 
+          // Universal Result Contract view — one check per arr service.
+          const arrServices = ((data.arr as Record<string, unknown> | undefined)?.services as Array<Record<string, unknown>> | undefined) ?? [];
+          const checks = arrServices.map((svc) => {
+            const running = svc.running === true;
+            const warnCount = (svc.healthWarningCount as number) ?? 0;
+            const noteParts: string[] = [];
+            if (svc.port != null) noteParts.push(`:${svc.port}`);
+            if (warnCount > 0) noteParts.push(`${warnCount} warning${warnCount === 1 ? "" : "s"}`);
+            const note = noteParts.join(" ");
+            return {
+              status: running ? "up" as const : "down" as const,
+              name: String(svc.name),
+              ...(note ? { note } : {}),
+            };
+          });
+          const overall = checks.some((c) => c.status === "down") ? "warning" as const : "ok" as const;
+
           return {
             status: "ok",
             message: parts.join(", "),
             data,
+            view: contract("status", "Media", { overall, checks }, { source: "hwc_media_status" }),
           };
         } catch (err) {
           return catchError("INTERNAL_ERROR", "Failed to check media status", err, "Are the media containers running?");
