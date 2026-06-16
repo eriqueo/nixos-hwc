@@ -12,10 +12,10 @@
 #   1 host · 2 todui · 3 khalt · 4 yazi · 5 aerc · 6 nvim
 # Rename a tab in ONE place and both the layout and the host follow on rebuild.
 {
-  host  = "🏠 home";
-  todui = "✅ tasks";
-  khalt = "📆 cal";
-  yazi  = "📁 files";
-  aerc  = "📬 mail";
-  nvim  = "📝 edit";
+  host  = "home";
+  todui = "tasks";
+  khalt = "cal";
+  yazi  = "files";
+  aerc  = "mail";
+  nvim  = "edit";
 }
