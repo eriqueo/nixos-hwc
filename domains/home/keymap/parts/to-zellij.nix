@@ -25,16 +25,21 @@ let
     files = 4; mail = 5; edit = 6;
   };
 
-  # nav intent -> zellij action (jumps use GoToTabName, handled separately)
+  # nav intent -> zellij action (tab jumps use GoToTab <index>, handled separately)
   navAction = {
     next-pane = ''FocusNextPane;'';
     prev-pane = ''FocusPreviousPane;'';
     next-tab  = ''GoToNextTab;'';
     prev-tab  = ''GoToPreviousTab;'';
-    pane-picker = ''SwitchToMode "Pane";'';   # leaves you in pane mode to pick
+    pane-picker = ''SwitchToMode "Pane";'';     # leaves you in pane mode to pick
+    scroll = ''SwitchToMode "Scroll";'';        # leaves you in scroll mode to read
     zoom = ''ToggleFocusFullscreen;'';
+    detach = ''Detach;'';
     kill = ''Quit;'';
   };
+
+  # intents that ENTER another mode — must NOT append a return to Normal.
+  modeSwitchIntents = [ "pane-picker" "scroll" ];
 
   # zellij key tokens for the few non-letter keys in the meta map
   keyToken = k:
@@ -46,8 +51,8 @@ let
     let tok = keyToken e.key; in
     if (e ? target) then
       ''        bind "${tok}" { GoToTab ${toString tabFor.${e.target}}; SwitchToMode "Normal"; }''
-    # pane-picker LEAVES you in Pane mode to pick — do NOT append a return to Normal.
-    else if e.intent == "pane-picker" then
+    # mode-switch intents LEAVE you in the target mode — do NOT return to Normal.
+    else if lib.elem e.intent modeSwitchIntents then
       ''        bind "${tok}" { ${navAction.${e.intent}} }''
     else
       ''        bind "${tok}" { ${navAction.${e.intent}} SwitchToMode "Normal"; }'';
@@ -78,6 +83,19 @@ let
             bind "Up" { MoveFocus "Up"; }
             bind "Down" { MoveFocus "Down"; }
             bind "Enter" { SwitchToMode "Normal"; }
+        }
+        // Scrollback reader (Ctrl+b s). clear-defaults strips zellij's own scroll
+        // mode, so re-supply the essentials here — without it you cannot read
+        // output that scrolled past. Esc/leader returns to Normal.
+        scroll {
+            bind "Esc" "${grammar.metaLeader}" { SwitchToMode "Normal"; }
+            bind "j" "Down" { ScrollDown; }
+            bind "k" "Up" { ScrollUp; }
+            bind "d" { HalfPageScrollDown; }
+            bind "u" { HalfPageScrollUp; }
+            bind "PageDown" { PageScrollDown; }
+            bind "PageUp" { PageScrollUp; }
+            bind "G" { ScrollToBottom; }
         }
     }
   '';

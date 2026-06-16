@@ -81,12 +81,24 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Verify before trusting (real-world checks, not eval)
 
-- `Alt+Space` survives Hyprland→kitty→zellij (Super+Space=wofi is a different mod).
+- `Ctrl+b` enters the meta (tmux) mode reliably in kitty→zellij. (We tried
+  `Alt+Space` first; kitty did NOT deliver it to zellij — it leaked through to
+  the focused pane, whose Space-leader then mis-fired. Ctrl-chords are encoded
+  reliably; that's why the meta leader is a Ctrl-chord, like tmux/screen.)
+- `zellij setup --check` reports "Config file: Well defined" — the meta block,
+  GoToTab jumps, and scroll mode all parse (a runtime check `nix build` can't do).
 - kitty keyboard protocol on, so `Ctrl+j` ≠ Enter (two-column nav, spec §3.1b).
 - todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
 
 ## Changelog
 
+- 2026-06-16 — Meta layer hardened (runtime fixes the eval missed). metaLeader
+  `Alt Space`→`Ctrl b` (kitty didn't deliver Alt+Space to zellij → it leaked to
+  the host's Space-leader and mis-spawned). Jumps now emit `GoToTab <index>`
+  (zellij rejects `GoToTabName` in keybinds). Added scrollback (`Ctrl+b s`, with
+  a `scroll` mode block) + detach (`Ctrl+b d`) — clear-defaults had stripped
+  zellij's own, leaving a long-lived session unable to scroll or detach. n/p
+  repurposed to tab-nav (every tool tab is single-pane).
 - 2026-06-15 — Module created + wired. grammar.nix (source of truth) + index.nix
   (theme-mirrored options) + 7 generators + this README. WIRED & git-staged on
   `feat/workbench-zellij`: profile import, zellij meta layer, khalt list-verbs,

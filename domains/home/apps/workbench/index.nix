@@ -28,6 +28,12 @@ let
   # it falls back to a bare "aerc". Same fact the zellij layout derives.
   aercCmd = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
 
+  # Standing-tab map (navigate-to-tab, not spawn-duplicate). Imported from the
+  # SAME source the zellij layout emits its tab names from, so the host can never
+  # navigate to a tab name the layout doesn't actually use. `host` is dropped —
+  # it isn't a launch target (it IS the host).
+  layoutTabs = removeAttrs (import ../zellij/parts/tabs.nix) [ "host" ];
+
   # Unified keymap grammar → staged as ~/.config/workbench/keymap.json. The host
   # has a real chord state machine but its grammar is still hard-coded; the
   # app-side reader (feed Keymap.from_actions globals + DROP the Space t/c/m
@@ -83,6 +89,7 @@ in
       offline = cfg.offline;
       hubsDir = cfg.hubsDir;
       defaultHub = "hwc";   # land on the HWC (woodcraft) hub, not DataX (alpha-first)
+      tabs = layoutTabs;    # plain jumps navigate to the tool's standing tab
 
       # Peer launch overrides (late binding). Mail runs wherever the shell alias
       # says — on the laptop that's the server over ssh, so DON'T bake a local
