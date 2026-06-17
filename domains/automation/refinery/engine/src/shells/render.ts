@@ -196,7 +196,7 @@ export function renderHopperPage(ideas: Item[], profiles: ResolvedProfile[]): st
     : `<div class="empty">no ideas waiting — type one above</div>`;
   const body = `
 <form class="intake" method="post" action="/intake">
-  <input type="text" name="text" placeholder="Drop an idea into the hopper — triage routes it to a profile…" required autofocus>
+  <input type="text" name="text" placeholder="Capture an idea — it lands here (and in the brain backlog); promote it to a project when ready…" required autofocus>
   <button type="submit">→ hopper</button>
 </form>
 <div class="wrap">${legend(profiles)}

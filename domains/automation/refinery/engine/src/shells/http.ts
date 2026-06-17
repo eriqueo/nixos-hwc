@@ -19,6 +19,7 @@ import { runGenreOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
+import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
 import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderSr, renderSrDetail, renderProjectDetail, renderReport } from "./render.js";
 
 export interface HttpShellConfig {
@@ -150,6 +151,29 @@ export function createShell(cfg: HttpShellConfig) {
     if (profile?.autoRun) void kickRun(id);
   }
 
+  /** Hopper intake: capture a raw idea as UNTRIAGED (no triage — it stays an
+   *  idea until promoted) and, when the vault is wired, append it to the brain's
+   *  `## backlog` so the two stay in sync. The deterministic id keeps the
+   *  round-trip (append → re-read by syncBrain) from echoing a duplicate. */
+  async function intakeIdea(text: string): Promise<void> {
+    const id = ideaId(text);
+    if (!(await store.load(id))) {
+      await store.save(makeIdeaItem({ id, text, section: "backlog", goalId: "(root)" }, cfg.clock));
+    }
+    if (cfg.vaultDir) appendBrainIdea(cfg.vaultDir, text);
+  }
+
+  /** Reconcile the store against the brain vault's ideas (best-effort, like
+   *  intake: a vault read/write hiccup must never 500 a page render). */
+  async function syncBrain(): Promise<void> {
+    if (!cfg.vaultDir) return;
+    try {
+      await syncBrainIdeas(store, cfg.vaultDir, cfg.clock);
+    } catch {
+      /* best-effort: the hopper still renders whatever is already in the store */
+    }
+  }
+
   /** Resolve the genre's integrate effector. write-spec is wired; other
    *  effectors (e.g. SR's `execute`) aren't board-runnable yet — fail loud so
    *  the item parks with a clear reason rather than silently no-op'ing. */
@@ -235,6 +259,13 @@ export function createShell(cfg: HttpShellConfig) {
   }
 
   async function deleteItem(id: string): Promise<void> {
+    const item = await store.load(id);
+    // A brain-sourced idea: remove its line from _ideas.md too, so deleting on
+    // the board reflects back into the vault (the source of truth).
+    if (item && isBrainIdea(item) && cfg.vaultDir) {
+      const text = (item.payload as { input?: unknown }).input;
+      if (typeof text === "string") removeBrainIdea(cfg.vaultDir, text);
+    }
     await store.delete(id); // no-op for read-only mirror items (not in the store)
   }
 
@@ -251,6 +282,12 @@ export function createShell(cfg: HttpShellConfig) {
       parkedReason: undefined,
       history: [...item.history, { phase: profile.gates[0] ?? "triage", status: "entered", at: cfg.clock(), note: `promoted to ${genre}` }],
     });
+    // Brain-sourced idea → record the promotion in the vault: cut it from
+    // backlog/drafted and file it under `## promoted` (annotated with the genre).
+    if (isBrainIdea(item) && cfg.vaultDir) {
+      const text = (item.payload as { input?: unknown }).input;
+      if (typeof text === "string") promoteBrainIdea(cfg.vaultDir, text, genre, cfg.clock);
+    }
   }
 
   const server = createServer((req, res) => {
@@ -272,6 +309,9 @@ export function createShell(cfg: HttpShellConfig) {
         ];
 
         if (method === "GET" && (url === "/" || url === "/hopper")) {
+          // Pull the latest brain ideas into the hopper the moment it's viewed
+          // (the interval sync in serve.ts handles the idle case).
+          if (url === "/hopper") await syncBrain();
           const [items, profiles] = [await store.list(), catalog.list()];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           if (url === "/hopper") {
@@ -360,7 +400,7 @@ export function createShell(cfg: HttpShellConfig) {
           const id = body.get("id") ?? "";
           if (url === "/intake") {
             const text = (body.get("text") ?? "").trim();
-            if (text) await intake(text);
+            if (text) await intakeIdea(text);
             return redirectTo(res, "/hopper");
           }
           if (url === "/amend") {
@@ -466,5 +506,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, intake, amend, doRewind, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
+  return { server, store, catalog, intake, intakeIdea, syncBrain, amend, doRewind, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
 }
