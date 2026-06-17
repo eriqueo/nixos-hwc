@@ -279,15 +279,15 @@
       "locked": {
         "lastModified": 1781624998,
         "narHash": "sha256-HpbLYmQfJF0SD5OJ6vhGbIlFoXuSjGDoXR29MebzBaA=",
-        "ref": "refs/heads/main",
+        "owner": "eriqueo",
+        "repo": "khalt",
         "rev": "047d08c71fb3e211bde585f2570a2b6a7dc9c4b2",
-        "revCount": 13,
-        "type": "git",
-        "url": "file:///home/eric/600_apps/khalt"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/eric/600_apps/khalt"
+        "owner": "eriqueo",
+        "repo": "khalt",
+        "type": "github"
       }
     },
     "nixpkgs": {
@@ -481,15 +481,15 @@
       "locked": {
         "lastModified": 1781397407,
         "narHash": "sha256-afcRB+BBhbejqJnPDBYBd1XeKCaMV13kVjFOqdJ6Uys=",
-        "ref": "refs/heads/main",
+        "owner": "eriqueo",
+        "repo": "todui",
         "rev": "2a7536c17eb67e503a97721136551682d48638e7",
-        "revCount": 6,
-        "type": "git",
-        "url": "file:///home/eric/600_apps/todui"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/eric/600_apps/todui"
+        "owner": "eriqueo",
+        "repo": "todui",
+        "type": "github"
       }
     },
     "workbench": {
@@ -502,15 +502,15 @@
       "locked": {
         "lastModified": 1781648379,
         "narHash": "sha256-sQANIQzp77ulCMbrkBc/bx87uVghYfxPK7F8YJO34Jo=",
-        "ref": "refs/heads/main",
+        "owner": "eriqueo",
+        "repo": "workbench",
         "rev": "1df0382d3121a3396be65558231bb7e4889edf3b",
-        "revCount": 24,
-        "type": "git",
-        "url": "file:///home/eric/600_apps/workbench"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/eric/600_apps/workbench"
+        "owner": "eriqueo",
+        "repo": "workbench",
+        "type": "github"
       }
     }
   },

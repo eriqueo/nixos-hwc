@@ -51,6 +51,15 @@ in
       auto-optimise-store = true;
       trusted-users = [ "root" "eric" ];
     };
+    # Make private first-party flake inputs (github:eriqueo/{todui,khalt,workbench})
+    # fetchable at eval time — including the root `sudo nixos-rebuild` evaluator,
+    # which reads /root's nix.conf, not eric's. The token is a scoped read+write
+    # fine-grained PAT in agenix (github-flake-token, root:secrets 0440). `!include`
+    # tolerates the file being absent (pre-activation / a host without the secret).
+    # See memory feedback_app_dev_build_pattern.
+    extraOptions = ''
+      !include ${config.age.secrets."github-flake-token".path}
+    '';
     gc = {
       automatic = true;
       dates = "weekly";
