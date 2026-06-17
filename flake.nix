@@ -86,35 +86,34 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # todui — the standalone VTODO task TUI (extracted from the old in-tree
-    # tasq; todoman-free, its own engine). PINNED: git+file tracks ~/600_apps/todui's
-    # committed HEAD, locked by flake.lock (reproducible; hwc-server can build
-    # it; uncommitted edits are NOT seen). To ship a todui change: commit in
-    # ~/600_apps/todui, then `nix flake update todui` here, then rebuild. For a live
-    # iteration session, temporarily swap this to "path:/home/eric/600_apps/todui".
+    # todui — standalone VTODO task TUI (todoman-free, own engine). Sourced from a
+    # SHARED REMOTE (private GitHub repo), NOT a local clone: a github: input pins a
+    # rev that exists on every machine, so it can't ghost-rev like the old
+    # git+file:///600_apps clone did. Ship a change: push to eriqueo/todui →
+    # `nix flake update todui` → rebuild. Iterate live via the repo's devShell
+    # (`nix develop` + `python -m todui`) — no rebuild to test code. Private fetch
+    # uses the github-flake-token (agenix, root-readable, in nix.extraOptions).
+    # See memory feedback_app_dev_build_pattern.
     todui = {
-      url = "git+file:///home/eric/600_apps/todui";
+      url = "github:eriqueo/todui";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # khalt — forked khal/ikhal (own repo at ~/600_apps/khalt). Source fork of
-    # khal v0.14.0 that will grow zoomable agenda/quarter/month views + a
-    # space-leader keybinding engine (parity with todui/yazi/nvim/aerc). Same
-    # PINNED git+file model as todui: tracks ~/600_apps/khalt's committed HEAD,
-    # locked by flake.lock. To ship a change: commit in ~/600_apps/khalt, then
-    # `nix flake update khalt`, then rebuild. Swap to "path:..." for live-edit.
+    # khalt — forked khal/ikhal calendar TUI (zoomable agenda/quarter/month views +
+    # space-leader keybindings). Same shared-remote model as todui: private GitHub
+    # repo via a github: input (no local-clone ghost-rev). Ship: push to
+    # eriqueo/khalt → `nix flake update khalt` → rebuild. Iterate via its devShell.
     khalt = {
-      url = "git+file:///home/eric/600_apps/khalt";
+      url = "github:eriqueo/khalt";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # workbench — Textual TUI ops host (own repo at ~/600_apps/workbench),
-    # zellij-orchestrated, consumed by domains/home/apps/workbench. Same PINNED
-    # git+file model as todui/khalt: tracks the committed HEAD, locked by
-    # flake.lock. To ship a change: commit in ~/600_apps/workbench, then
-    # `nix flake update workbench`, then rebuild.
+    # workbench — Textual TUI ops host, zellij-orchestrated, consumed by
+    # domains/home/apps/workbench. Same shared-remote model as todui/khalt: private
+    # GitHub repo via a github: input (no local-clone ghost-rev). Ship: push to
+    # eriqueo/workbench → `nix flake update workbench` → rebuild. Iterate via its devShell.
     workbench = {
-      url = "git+file:///home/eric/600_apps/workbench";
+      url = "github:eriqueo/workbench";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
