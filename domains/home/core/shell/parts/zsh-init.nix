@@ -24,6 +24,11 @@
         # rebuild rebakes the path via PATH, which now lands on the stable
         # /etc/profiles/per-user/$USER/bin/starship symlink (repopulated every
         # activation, never wiped). Guarded so hosts with starship disabled skip it.
+        # Call sites gate this on `[[ -o interactive ]]`: re-baking a prompt only
+        # makes sense in an interactive session. A non-interactive caller (deploy
+        # script, CI, or an agent running `hms`) has no prompt to fix, so the call
+        # is skipped — which also keeps it working where a function-snapshot might
+        # omit this "private" helper.
         _hwc_reinit_prompt() {
           hash -r
           if command -v starship >/dev/null 2>&1; then
@@ -71,14 +76,14 @@
             print
           fi
           _hwc_rebuild switch "$@" || return $?
-          _hwc_reinit_prompt
+          [[ -o interactive ]] && _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
         }
         tnix() {
           _hwc_rebuild test "$@" || return $?
-          _hwc_reinit_prompt
+          [[ -o interactive ]] && _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
@@ -99,7 +104,7 @@
             "$HWC_NIXOS_DIR#homeConfigurations.\"eric@$(hostname)\".activationPackage" \
             "$@") || return $?
           "$activator/activate" || return $?
-          _hwc_reinit_prompt
+          [[ -o interactive ]] && _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
