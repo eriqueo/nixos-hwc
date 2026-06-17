@@ -237,15 +237,12 @@ in
               "${config.xdg.configHome}"
             ];
           };
+          # git/time/fetch are Python reference servers published on PyPI, not npm.
+          # They run via uvx (uv); the old npx @modelcontextprotocol/server-* paths 404.
           git = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-git" ];
+            command = "uvx";
+            args = [ "mcp-server-git" ];
             cwd = "${config.home.homeDirectory}/.nixos";
-          };
-          brave-search = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-brave-search" ];
-            env = {};
           };
           github = {
             command = "npx";
@@ -257,12 +254,12 @@ in
             args = [ "-y" "@modelcontextprotocol/server-sequential-thinking" ];
           };
           time = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-time" ];
+            command = "uvx";
+            args = [ "mcp-server-time" ];
           };
           fetch = {
-            command = "npx";
-            args = [ "-y" "@modelcontextprotocol/server-fetch" ];
+            command = "uvx";
+            args = [ "mcp-server-fetch" ];
           };
           memory = {
             command = "npx";
