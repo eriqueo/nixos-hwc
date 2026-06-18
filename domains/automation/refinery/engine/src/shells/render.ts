@@ -76,8 +76,16 @@ const STYLE = `<style>
   .badge{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim);border:1px solid transparent}
   .badge.type{font-weight:700;text-transform:uppercase;letter-spacing:.05em}
   .moon{font-size:12px}
-  .title{font-size:13px;color:var(--ink);font-weight:600;overflow-wrap:anywhere}.reason{margin-top:5px;font-size:12px;color:var(--acc)}
+  .title{display:block;font-size:13px;color:var(--ink);font-weight:600;overflow-wrap:anywhere}
+  a.title:hover{color:var(--acc)}
+  .reason{margin-top:5px;font-size:12px;color:var(--acc)}
   .card .why{margin-top:2px;font-size:12px;color:var(--dim);overflow-wrap:anywhere}
+  /* inline per-card controls (SR2-style quick actions) */
+  .ccrow{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
+  .cc{display:inline-flex;gap:4px;margin:0}
+  .ccrow select,.cc select,.ccrow button,.cc button{font-size:11px;padding:3px 6px;border-radius:5px;line-height:1.1}
+  .ccrow select,.cc select{max-width:130px}
+  .ccrow .danger:hover,.cc .danger:hover{border-color:var(--err);color:var(--err)}
   /* detail + nightly */
   .detail{max-width:760px;margin:18px auto;padding:0 18px}
   .detail h2{font-size:15px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-top:22px}
@@ -144,10 +152,76 @@ ${body}
 // kind/type → profile color (categorical, never decoration), title (who/what),
 // why-it-matters (one-line summary), status/signal badges, and ≥1 action (the
 // card itself is the click-through; all controls live on the detail page).
-function cardLink(item: Item, profiles: ResolvedProfile[]): string {
+const STATUS_LANES = LANES.map((l) => ({ key: l.status as string, label: l.label }));
+const statusOf = (item: Item): string => item.phaseStatus;
+const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
+
+// Each board POST carries `back` so the handler redirects to the board the user
+// is on (not the detail page) — they see the card change lane in place.
+function backField(back: string): string {
+  return `<input type="hidden" name="back" value="${esc(back)}">`;
+}
+
+// Inline per-card controls (SR2 ticket-card quick actions, no-framework form
+// posts). Kind decides the controls: ideas promote; engine projects get a status
+// dropdown + run + nightly + delete; read-only nightly mirror cards get the
+// vault-backed queue/run/mode; other read-only cards (SR) get none.
+function controlsFor(item: Item, enabled: ResolvedProfile[], back: string): string {
+  const pl = obj(item.payload);
+  const isIdea = item.genre === UNTRIAGED;
+  const readonly = pl.readonly === true;
+  const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
+  const bk = backField(back);
+
+  if (readonly) {
+    // read-only nightly-build mirror: vault-backed queue / run-now / mode toggle.
+    const source = typeof pl.source === "string" ? pl.source : "";
+    if (!source.startsWith("nightly")) return ""; // SR investigations: no inline controls
+    const queued = typeof pl.queuedCount === "number" ? pl.queuedCount : 0;
+    const done = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
+    const total = typeof pl.stepsTotal === "number" ? pl.stepsTotal : 0;
+    const allDone = total > 0 && done === total;
+    const nextStatus = typeof pl.nextStatus === "string" ? pl.nextStatus : "";
+    const nextBlocked = pl.nextBlocked === true;
+    const mode = pl.mode === "immediate" ? "immediate" : "nightly";
+    const queueBtn = queued > 0
+      ? `<button type="submit" formaction="/card/queue" name="to" value="draft" title="unqueue">↩ unqueue</button>`
+      : nextStatus
+        ? `<button type="submit" formaction="/card/queue" name="to" value="queued" title="${nextBlocked ? "force-queue blocked step" : "queue next step"}">${nextBlocked ? "⚠ force-queue" : "✅ queue"}</button>`
+        : "";
+    const runBtn = allDone ? "" : `<button type="submit" formaction="/card/run-now" title="run this project now">▶ now</button>`;
+    const modeBtn = `<button type="submit" formaction="/card/mode" name="mode" value="${mode === "immediate" ? "nightly" : "immediate"}" title="now ${mode}; switch">${mode === "immediate" ? "⚡" : "🌙"}</button>`;
+    return `<form class="ccrow" method="post" action="/card/queue">${idIn}${bk}${queueBtn}${runBtn}${modeBtn}</form>`;
+  }
+
+  if (isIdea) {
+    const opts = enabled.map((p) => `<option value="${esc(p.genre)}">${esc(p.label)}</option>`).join("");
+    return `<div class="ccrow">
+      <form class="cc" method="post" action="/promote">${idIn}${bk}
+        <select name="genre" title="promote to a profile">${opts}</select>
+        <button type="submit">promote →</button>
+      </form>
+      <form class="cc" method="post" action="/delete">${idIn}${bk}<button type="submit" class="danger" title="delete idea">🗑</button></form>
+    </div>`;
+  }
+
+  // engine project: change lane (status dropdown), run, nightly toggle, delete.
+  const statusOpts = STATUS_LANES.map(
+    (l) => `<option value="${l.key}"${item.phaseStatus === l.key ? " selected" : ""}>${esc(l.label)}</option>`,
+  ).join("");
+  const statusSel = `<form class="cc" method="post" action="/status">${idIn}${bk}<select name="status" title="move to lane" onchange="this.form.submit()">${statusOpts}</select></form>`;
+  const runBtn = item.phaseStatus === "running"
+    ? `<span class="badge">running…</span>`
+    : `<form class="cc" method="post" action="/run">${idIn}${bk}<button type="submit" title="run the pipeline now">▶</button></form>`;
+  const nightlyBtn = `<form class="cc" method="post" action="/nightly/toggle">${idIn}${bk}<input type="hidden" name="nightly" value="${item.nightly ? "false" : "true"}"><button type="submit" title="${item.nightly ? "remove from nightly" : "run overnight"}">${item.nightly ? "🌙✓" : "🌙"}</button></form>`;
+  const delBtn = `<form class="cc" method="post" action="/delete">${idIn}${bk}<button type="submit" class="danger" title="delete project">🗑</button></form>`;
+  return `<div class="ccrow">${statusSel}${runBtn}${nightlyBtn}${delBtn}</div>`;
+}
+
+function cardLink(item: Item, profiles: ResolvedProfile[], enabled: ResolvedProfile[] = [], back = "/"): string {
   const color = colorOf(item.genre, profiles);
   const isIdea = item.genre === UNTRIAGED;
-  const pl = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+  const pl = obj(item.payload);
   const moon = item.nightly ? `<span class="moon" title="nightly">🌙</span>` : "";
   const goal = typeof pl.goal === "string" ? pl.goal : "";
   const customer = typeof pl.customer === "string" ? pl.customer : "";
@@ -182,13 +256,16 @@ function cardLink(item: Item, profiles: ResolvedProfile[]): string {
     ? `border-left-color:var(--dim)`
     : `border-left-color:${c};background:color-mix(in srgb,${c} 12%,var(--elev))`;
 
-  return `<a class="card${item.nightly ? " nightly" : ""}" href="/project/${esc(item.id)}" style="${skin}">
+  // Card is a container (not a link) so it can hold interactive controls; the
+  // title is the click-through to the detail page.
+  return `<div class="card${item.nightly ? " nightly" : ""}" style="${skin}">
     <div class="badges">${typeBadge}${goalBadge}${phaseBadge}${reportBadge}${moon}</div>
-    <div class="title">${esc(title)}</div>
+    <a class="title" href="/project/${esc(item.id)}">${esc(title)}</a>
     ${why}
     ${bar}
     ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
-  </a>`;
+    ${controlsFor(item, enabled, back)}
+  </div>`;
 }
 
 // Shared status-lane board: cards grouped into columns. Lane (column) = the
@@ -196,33 +273,32 @@ function cardLink(item: Item, profiles: ResolvedProfile[]): string {
 function laneBoard(
   projects: Item[],
   profiles: ResolvedProfile[],
+  enabled: ResolvedProfile[],
+  back: string,
   lanes: { key: string; label: string }[],
   keyOf: (item: Item) => string,
 ): string {
   const cols = lanes
     .map((lane) => {
       const inLane = projects.filter((p) => keyOf(p) === lane.key);
-      const body = inLane.length ? inLane.map((p) => cardLink(p, profiles)).join("") : `<div class="empty">—</div>`;
+      const body = inLane.length ? inLane.map((p) => cardLink(p, profiles, enabled, back)).join("") : `<div class="empty">—</div>`;
       return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
     })
     .join("");
   return `<div class="board">${cols}</div>`;
 }
 
-const STATUS_LANES = LANES.map((l) => ({ key: l.status as string, label: l.label }));
-const statusOf = (item: Item): string => item.phaseStatus;
-
 /** Gauntlet: triaged PROJECTS in phase-status lanes, colored by profile. */
-export function renderGauntlet(projects: Item[], profiles: ResolvedProfile[]): string {
-  return layout("gauntlet", `<div class="wrap">${laneBoard(projects, profiles, STATUS_LANES, statusOf)}</div>`);
+export function renderGauntlet(projects: Item[], profiles: ResolvedProfile[], enabled: ResolvedProfile[] = []): string {
+  return layout("gauntlet", `<div class="wrap">${laneBoard(projects, profiles, enabled, "/", STATUS_LANES, statusOf)}</div>`);
 }
 
 /** Hopper: raw untriaged IDEAS + the intake box. Ideas have no status lane, so
  *  they render as a responsive card grid (SR2 ticket-card faces) rather than a
- *  single full-width column. */
-export function renderHopperPage(ideas: Item[], profiles: ResolvedProfile[]): string {
+ *  single full-width column. Each card promotes/deletes inline. */
+export function renderHopperPage(ideas: Item[], profiles: ResolvedProfile[], enabled: ResolvedProfile[] = []): string {
   const cards = ideas.length
-    ? `<div class="grid">${ideas.map((i) => cardLink(i, profiles)).join("")}</div>`
+    ? `<div class="grid">${ideas.map((i) => cardLink(i, profiles, enabled, "/hopper")).join("")}</div>`
     : `<div class="empty" style="padding:24px">no ideas waiting — type one above</div>`;
   const body = `
 <form class="intake" method="post" action="/intake">
@@ -237,15 +313,15 @@ export function renderHopperPage(ideas: Item[], profiles: ResolvedProfile[]): st
 }
 
 /** Nightly: projects flagged nightly, as a status-lane kanban with a per-night
- *  cap. Cards are click-through; queue/run/mode controls live on the detail page
- *  (Card Standard: compact face → detail). */
+ *  cap. Each card carries its queue/run/mode controls inline. */
 export function renderNightly(
   nightly: Item[],
   maxPerNight: number,
   profiles: ResolvedProfile[],
+  enabled: ResolvedProfile[] = [],
 ): string {
   const queuedProjects = nightly.filter((i) => ((i.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0).length;
-  const board = laneBoard(nightly, profiles, STATUS_LANES, statusOf);
+  const board = laneBoard(nightly, profiles, enabled, "/nightly", STATUS_LANES, statusOf);
   const body = `
 <form class="intake" method="post" action="/nightly/config">
   <label class="kv">Max cards per night:</label>
@@ -394,7 +470,8 @@ export function renderSr(srs: Item[], maxPerNight: number, profiles: ResolvedPro
     return typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
   };
   const lanes = [...new Set(srs.map(srStatusOf))].sort().map((s) => ({ key: s, label: s }));
-  const board = laneBoard(srs, profiles, lanes, srStatusOf);
+  // SR cards are read-only mirrors (no inline controls); run-now lives on detail.
+  const board = laneBoard(srs, profiles, [], "/sr", lanes, srStatusOf);
   const body = `
 <form class="intake" method="post" action="/sr/config">
   <label class="kv">Max SRs per run:</label>

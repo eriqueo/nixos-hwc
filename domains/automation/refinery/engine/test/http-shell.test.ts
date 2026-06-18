@@ -303,9 +303,18 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly is a sta
   };
   assert.ok(renderProjectDetail(idea, profiles, profiles).includes('action="/promote"'), "ideas can be promoted");
 
-  const n = renderNightly([parked], 1, profiles);
+  // A read-only nightly-build mirror card carries its vault-backed queue control inline.
+  const mirror: Item = {
+    id: "nb:goal/01-x", genre: "nightly-build", phase: "1/3 steps", phaseStatus: "parked",
+    payload: { title: "mirror card", readonly: true, source: "nightly-builds project",
+      stepsDone: 1, stepsTotal: 3, queuedCount: 0, mode: "nightly", nextStatus: "draft" },
+    history: [], nightly: true,
+  };
+  const n = renderNightly([parked, mirror], 1, profiles, profiles);
   assert.ok(n.includes('class="board"'), "nightly is a status-lane kanban");
   assert.ok(n.includes("a project") && n.includes('href="/project/d1"'), "project as a click-through card");
+  assert.ok(n.includes('action="/card/queue"') && n.includes("✅ queue"), "mirror card queues inline");
+  assert.ok(n.includes('formaction="/card/run-now"'), "mirror card runs inline");
   assert.ok(n.includes('action="/nightly/config"'));
 });
 
@@ -319,20 +328,47 @@ test("renderGauntlet colors a parked project and links to detail; renderHopperPa
     { id: "x", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
       parkedReason: "needs a call", payload: { title: "a project" }, history: [] },
   ];
-  const g = renderGauntlet(parked, profiles);
+  const g = renderGauntlet(parked, profiles, profiles);
   assert.ok(g.includes("a project"));
   assert.ok(g.includes("#b8bb26"), "card tinted by profile color");
-  assert.ok(g.includes('href="/project/x"'), "card links to its detail page");
-  assert.ok(!g.includes('action="/amend"'), "actions live on the detail page, not the card");
-  assert.ok(!g.includes('action="/profiles/toggle"'), "no toggle — profiles are a legend");
-  // Intake lives on the Hopper page, over untriaged ideas.
+  assert.ok(g.includes('href="/project/x"'), "title links to its detail page");
+  // Inline per-card controls (SR2-style quick actions): a status/lane dropdown,
+  // a run button, and a delete — acting directly on the board.
+  assert.ok(g.includes('action="/status"') && g.includes('name="status"'), "lane dropdown on the card");
+  assert.ok(g.includes('action="/run"'), "run button on the card");
+  assert.ok(g.includes('action="/delete"'), "delete on the card");
+  assert.ok(g.includes('name="back" value="/"'), "actions redirect back to the board");
+  assert.ok(!g.includes('action="/amend"'), "amend (needs a note) stays on the detail page");
+  // Intake lives on the Hopper page, over untriaged ideas; each idea promotes inline.
   const idea: Item[] = [
     { id: "i", genre: UNTRIAGED, phase: "triage", phaseStatus: "parked",
       payload: { title: "a raw idea" }, history: [] },
   ];
-  const h = renderHopperPage(idea, profiles);
+  const h = renderHopperPage(idea, profiles, profiles);
   assert.ok(h.includes('action="/intake"'));
   assert.ok(h.includes("a raw idea"));
+  assert.ok(h.includes('action="/promote"') && h.includes('value="project-ideation"'), "inline promote dropdown");
+});
+
+test("setStatus moves an engine item to another lane (manual board override)", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    const p: Item = {
+      id: "mv1", genre: "project-ideation", phase: "premortem", phaseStatus: "pending",
+      payload: { title: "movable" }, history: [],
+    };
+    await shell.store.save(p);
+    await shell.setStatus("mv1", "parked");
+    const moved = await shell.store.load("mv1");
+    assert.equal(moved!.phaseStatus, "parked");
+    assert.equal(moved!.history.at(-1)!.note, "status set on board");
+    // invalid status is ignored (no throw, no change)
+    await shell.setStatus("mv1", "bogus");
+    assert.equal((await shell.store.load("mv1"))!.phaseStatus, "parked");
+  } finally {
+    cleanup();
+  }
 });
 
 test("runItem runs a pending engine item through the pipeline and writes a spec", async () => {

@@ -245,6 +245,23 @@ export function createShell(cfg: HttpShellConfig) {
     await store.save(rewind(item, toPhase, note, { clock: cfg.clock }));
   }
 
+  /** Manual lane move from the board: set an engine item's phaseStatus directly
+   *  (a human override of the pipeline-driven status), logged to history. No-ops
+   *  for read-only mirror items (not in the store). */
+  async function setStatus(id: string, status: string): Promise<void> {
+    const valid: Item["phaseStatus"][] = ["pending", "running", "passed", "parked", "failed"];
+    if (!valid.includes(status as Item["phaseStatus"])) return;
+    const s = status as Item["phaseStatus"];
+    const item = await store.load(id);
+    if (!item) return;
+    await store.save({
+      ...item,
+      phaseStatus: s,
+      parkedReason: s === "parked" ? (item.parkedReason ?? "manually parked on the board") : undefined,
+      history: [...item.history, { phase: item.phase, status: s, at: cfg.clock(), note: "status set on board" }],
+    });
+  }
+
   async function setNightly(id: string, nightly: boolean): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
@@ -312,28 +329,28 @@ export function createShell(cfg: HttpShellConfig) {
           // Pull the latest brain ideas into the hopper the moment it's viewed
           // (the interval sync in serve.ts handles the idle case).
           if (url === "/hopper") await syncBrain();
-          const [items, profiles] = [await store.list(), catalog.list()];
+          const [items, profiles, enabled] = [await store.list(), catalog.list(), catalog.enabled()];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           if (url === "/hopper") {
-            res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles));
+            res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles, enabled));
           } else {
             // Gauntlet: store projects + nightly-build mirror cards (SRs have their own page).
             const projects = [
               ...items.filter((i) => i.genre !== UNTRIAGED),
               ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
             ];
-            res.end(renderGauntlet(projects, profiles));
+            res.end(renderGauntlet(projects, profiles, enabled));
           }
           return;
         }
         if (method === "GET" && url === "/nightly") {
-          const [items, profiles] = [await store.list(), catalog.list()];
+          const [items, profiles, enabled] = [await store.list(), catalog.list(), catalog.enabled()];
           const flagged = [
             ...items.filter((i) => i.nightly),
             ...mirror().filter((m) => m.id.startsWith(NB_PREFIX)),
           ].sort((a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderNightly(flagged, readCap("nightly"), profiles));
+          res.end(renderNightly(flagged, readCap("nightly"), profiles, enabled));
           return;
         }
         if (method === "GET" && url === "/sr") {
@@ -398,6 +415,12 @@ export function createShell(cfg: HttpShellConfig) {
         if (method === "POST") {
           const body = await readBody(req);
           const id = body.get("id") ?? "";
+          // Cards post a `back` path so an action redirects to the board the user
+          // is on (the change is visible in place); detail-page forms omit it and
+          // fall back to the project detail. Only same-origin paths are honored.
+          const rawBack = body.get("back") ?? "";
+          const back = rawBack.startsWith("/") && !rawBack.startsWith("//") ? rawBack : "";
+          const afterEdit = back || `/project/${encodeURIComponent(id)}`;
           if (url === "/intake") {
             const text = (body.get("text") ?? "").trim();
             if (text) await intakeIdea(text);
@@ -405,26 +428,31 @@ export function createShell(cfg: HttpShellConfig) {
           }
           if (url === "/amend") {
             await amend(id, (body.get("note") ?? "").trim());
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
           }
           if (url === "/rewind") {
             await doRewind(id, body.get("toPhase") ?? "", (body.get("note") ?? "").trim());
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
+          }
+          if (url === "/status") {
+            // Manual lane move from a board card (human override of pipeline status).
+            await setStatus(id, body.get("status") ?? "");
+            return redirectTo(res, back || "/");
           }
           if (url === "/promote") {
             await promote(id, body.get("genre") ?? "");
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
           }
           if (url === "/run") {
             // Run the item's pipeline now (gates → effector). Fire-and-forget so
             // the request returns immediately; the board shows "running" and the
             // result on the next refresh.
             await kickRun(id);
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
           }
           if (url === "/delete") {
             await deleteItem(id);
-            return redirectTo(res, "/");
+            return redirectTo(res, back || "/");
           }
           if (url === "/card/queue") {
             // GUI for the Phase-4 gate: queue/unqueue a project's next step in
@@ -441,7 +469,7 @@ export function createShell(cfg: HttpShellConfig) {
                 unqueueStep(cfg.vaultDir, goalId);
               }
             }
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
           }
           if (url === "/card/run-now") {
             // Explicit immediate execution of one project, regardless of mode.
@@ -452,7 +480,7 @@ export function createShell(cfg: HttpShellConfig) {
               if (!hasActiveStep(cfg.vaultDir, goalId)) queueNextStep(cfg.vaultDir, goalId);
               if (hasActiveStep(cfg.vaultDir, goalId)) requestRunNow(goalId);
             }
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
           }
           if (url === "/card/mode") {
             // Persistent NIGHTLY ↔ IMMEDIATE toggle (written to _goal.md). The
@@ -461,11 +489,11 @@ export function createShell(cfg: HttpShellConfig) {
             const goalId = parseNbId(id);
             const mode = body.get("mode") === "immediate" ? "immediate" : "nightly";
             if (cfg.vaultDir && goalId) setProjectMode(cfg.vaultDir, goalId, mode);
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
           }
           if (url === "/nightly/toggle") {
             await setNightly(id, body.get("nightly") === "true");
-            return redirectTo(res, `/project/${encodeURIComponent(id)}`);
+            return redirectTo(res, afterEdit);
           }
           if (url === "/nightly/bump") {
             const dir = body.get("dir") === "up" ? "up" : "down";
@@ -506,5 +534,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, intake, intakeIdea, syncBrain, amend, doRewind, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
+  return { server, store, catalog, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
 }
