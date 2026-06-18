@@ -39,14 +39,27 @@ let
     version = "0.1.0";
     src = ./engine;
     npmDepsHash = "sha256-FM9UojLOeKWb8Rer2oBYF6Qk3v3cgFewEVzDdsxBFrA=";
-    nativeBuildInputs = [ pkgs.esbuild ];
+    nativeBuildInputs = [ pkgs.esbuild pkgs.makeWrapper ];
     dontNpmBuild = true; # we don't need tsc output, just the bundle
+    # Two entry points, both esbuild-bundled the same way (CJS, deps inlined):
+    #   server.js          — the :8060 HTTP board shell (serve.ts)
+    #   morning-review.js  — the morning PR-review CLI (cli/morning-review.ts)
+    # esbuild resolves the engine's `.js`-specifier imports to the `.ts` sources,
+    # so both bundles are self-contained and need only nodejs at runtime.
+    # A `refinery-morning-review` wrapper in $out/bin makes the CLI runnable from
+    # a systemd unit (the nightly-builds-review.service) without hardcoding the
+    # node/bundle paths in the unit.
     installPhase = ''
       runHook preInstall
-      mkdir -p $out
+      mkdir -p $out $out/bin
       esbuild src/shells/serve.ts \
         --bundle --platform=node --format=cjs \
         --outfile=$out/server.js
+      esbuild src/cli/morning-review.ts \
+        --bundle --platform=node --format=cjs \
+        --outfile=$out/morning-review.js
+      makeWrapper ${pkgs.nodejs}/bin/node $out/bin/refinery-morning-review \
+        --add-flags "$out/morning-review.js"
       runHook postInstall
     '';
   };
@@ -58,6 +71,19 @@ in
 {
   options.hwc.automation.refinery = {
     enable = lib.mkEnableOption "Refinery interactive engine board + intake";
+
+    # Read-only handle to the built engine package. The board service consumes it
+    # directly; OTHER domains (nightly-builds' morning-review pass) reference
+    # `${config.hwc.automation.refinery.package}/bin/refinery-morning-review`
+    # rather than rebuilding the engine — one bundle, one npmDepsHash, no
+    # duplication. Always set (independent of `enable`) so the morning-review
+    # pass can run even if the board itself is disabled on a host.
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = board;
+      readOnly = true;
+      description = "The built refinery engine package (board server.js + refinery-morning-review CLI).";
+    };
 
     port = lib.mkOption {
       type = lib.types.port;
