@@ -318,36 +318,57 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly is a sta
   assert.ok(n.includes('action="/nightly/config"'));
 });
 
-test("renderGauntlet colors a parked project and links to detail; renderHopperPage shows intake", () => {
+const DOMAINS = {
+  domains: [{ key: "datax", label: "DataX", color: "#b16286", match: ["datax"] }],
+  fallback: { key: "misc", label: "Misc", color: "#a7aaad", match: [] },
+};
+
+test("renderGauntlet: cards colored by DOMAIN, genre as a badge, inline controls", () => {
   const profiles = [
     { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
-      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
+      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#a3be8c" },
   ];
   const parked: Item[] = [
     { id: "x", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
-      parkedReason: "needs a call", payload: { title: "a project" }, history: [] },
+      parkedReason: "needs a call", payload: { title: "a project", domain: "datax" }, history: [] },
   ];
-  const g = renderGauntlet(parked, profiles, profiles);
+  const g = renderGauntlet(parked, profiles, profiles, DOMAINS);
   assert.ok(g.includes("a project"));
-  assert.ok(g.includes("#b8bb26"), "card tinted by profile color");
+  assert.ok(g.includes("#b16286"), "card colored by its DOMAIN, not the genre");
+  assert.ok(g.includes(">DataX<"), "domain tag in the card header");
+  assert.ok(g.includes(">Project Ideation<"), "genre/pipeline shown as a badge");
   assert.ok(g.includes('href="/project/x"'), "title links to its detail page");
-  // Inline per-card controls (SR2-style quick actions): a status/lane dropdown,
-  // a run button, and a delete — acting directly on the board.
+  // Inline per-card controls: status/lane dropdown, genre re-pick, run, delete.
   assert.ok(g.includes('action="/status"') && g.includes('name="status"'), "lane dropdown on the card");
   assert.ok(g.includes('action="/run"'), "run button on the card");
   assert.ok(g.includes('action="/delete"'), "delete on the card");
   assert.ok(g.includes('name="back" value="/"'), "actions redirect back to the board");
   assert.ok(!g.includes('action="/amend"'), "amend (needs a note) stays on the detail page");
-  // Intake lives on the Hopper page, over untriaged ideas; each idea promotes inline.
-  const idea: Item[] = [
-    { id: "i", genre: UNTRIAGED, phase: "triage", phaseStatus: "parked",
-      payload: { title: "a raw idea" }, history: [] },
+});
+
+test("renderHopperPage: stage-lane kanban; a Ready idea promotes inline", () => {
+  const profiles = [
+    { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement"], executeMode: "none", effectors: ["write-spec"],
+      enabled: true, llmProvider: "claude-cli", color: "#a3be8c" },
   ];
-  const h = renderHopperPage(idea, profiles, profiles);
+  // A captured idea (no promote yet) and a ready idea (promote shown).
+  const ideas: Item[] = [
+    { id: "i1", genre: UNTRIAGED, phase: "captured", phaseStatus: "parked",
+      payload: { title: "datax: raw idea", input: "datax: raw idea" }, history: [] },
+    { id: "i2", genre: UNTRIAGED, phase: "ready", phaseStatus: "parked",
+      payload: { title: "shaped idea", input: "shaped idea" }, history: [] },
+  ];
+  const h = renderHopperPage(ideas, profiles, profiles, DOMAINS);
   assert.ok(h.includes('action="/intake"'));
-  assert.ok(h.includes("a raw idea"));
-  assert.ok(h.includes('action="/promote"') && h.includes('value="project-ideation"'), "inline promote dropdown");
+  assert.ok(h.includes('class="board"') && h.includes(">Captured<") && h.includes(">Ready<"), "stage-lane kanban");
+  assert.ok(h.includes("#b16286") && h.includes(">DataX<"), "idea colored + tagged by parsed domain");
+  assert.ok(h.includes('action="/stage"'), "inline stage advancer");
+  assert.ok(h.includes('action="/domain"'), "inline domain picker");
+  // promote only on the Ready idea, into project-ideation, with immediate|nightly.
+  assert.ok(h.includes('action="/promote"') && h.includes('value="project-ideation"'), "Ready idea promotes inline");
+  assert.ok(h.includes('value="immediate"') && h.includes('value="nightly"'), "immediate vs nightly scheduling");
 });
 
 test("setStatus moves an engine item to another lane (manual board override)", async () => {
@@ -366,6 +387,60 @@ test("setStatus moves an engine item to another lane (manual board override)", a
     // invalid status is ignored (no throw, no change)
     await shell.setStatus("mv1", "bogus");
     assert.equal((await shell.store.load("mv1"))!.phaseStatus, "parked");
+  } finally {
+    cleanup();
+  }
+});
+
+test("setStage advances a hopper idea; setDomain overrides its color/tag", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    const idea: Item = {
+      id: "h1", genre: UNTRIAGED, phase: "captured", phaseStatus: "parked",
+      payload: { title: "an idea", input: "an idea" }, history: [],
+    };
+    await shell.store.save(idea);
+    await shell.setStage("h1", "ready");
+    assert.equal((await shell.store.load("h1"))!.phase, "ready", "stage advanced");
+    await shell.setStage("h1", "bogus"); // invalid stage ignored
+    assert.equal((await shell.store.load("h1"))!.phase, "ready");
+    await shell.setDomain("h1", "datax");
+    assert.equal(((await shell.store.load("h1"))!.payload as { domain?: string }).domain, "datax", "domain override stored");
+    // stage move only applies to untriaged ideas (a triaged project is unaffected)
+    const proj: Item = { id: "p1", genre: "project-ideation", phase: "premortem", phaseStatus: "pending", payload: {}, history: [] };
+    await shell.store.save(proj);
+    await shell.setStage("p1", "ready");
+    assert.equal((await shell.store.load("p1"))!.phase, "premortem", "stage move ignores triaged projects");
+  } finally {
+    cleanup();
+  }
+});
+
+test("promote(immediate) runs the pipeline now; promote(nightly) flags it", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass") });
+  try {
+    const shell = createShell(cfg);
+    const ready: Item = {
+      id: "r1", genre: UNTRIAGED, phase: "ready", phaseStatus: "parked",
+      payload: { title: "ready idea", input: "an engine that refines ideas into specs" }, history: [],
+    };
+    await shell.store.save(ready);
+    await shell.promote("r1", "project-ideation", "immediate");
+    const after = await shell.store.load("r1");
+    assert.equal(after!.genre, "project-ideation", "promoted into the pipeline");
+    // immediate → the run effector executed (spec written, passed)
+    assert.equal(after!.phaseStatus, "passed");
+    assert.ok(existsSync(join(cfg.scratchDir, "r1-spec.md")), "immediate promote ran the pipeline now");
+
+    const ready2: Item = {
+      id: "r2", genre: UNTRIAGED, phase: "ready", phaseStatus: "parked",
+      payload: { title: "later idea", input: "later idea" }, history: [],
+    };
+    await shell.store.save(ready2);
+    await shell.promote("r2", "project-ideation", "nightly");
+    const n = await shell.store.load("r2");
+    assert.equal(n!.nightly, true, "nightly promote flags for the overnight batch");
   } finally {
     cleanup();
   }

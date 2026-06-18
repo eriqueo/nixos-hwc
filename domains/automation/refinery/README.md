@@ -68,6 +68,20 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-18** — Two-axis board + domains + per-card control. The board now
+  models the Refinery as one chain with two axes (SR2 parity): **domain**
+  (identity → card color + header tag, data-driven `domains.yaml`, auto-classified
+  from the idea's `prefix:` and overridable per card) and **stage/status** (the
+  lane). The **Hopper is a maturation kanban** — Captured → Shaping → Ready
+  (stages stored in `phase` on untriaged items) — and a Ready idea promotes into
+  **project-ideation** with an **immediate vs nightly** scheduling choice (no
+  genre dropdown: project-ideation is the universal idea→spec refiner; downstream
+  gauntlet routing is a later auto-step). Color is now **domain everywhere** (the
+  genre/pipeline becomes a badge). New per-card controls: idea stage advancer +
+  domain picker + promote; project genre re-pick + domain picker (status/run/
+  nightly/delete from the prior pass). New `engine/src/domains.ts` (Zod registry
+  + `classifyDomain`/`domainOf`), `domains.yaml`, `REFINERY_DOMAINS_FILE`, and
+  `/stage` `/domain` routes (+ `schedule` on `/promote`). Engine 112/112 (+16).
 - **2026-06-17** — Morning PR-review CLI exposed. The engine `buildNpmPackage`
   now esbuild-bundles a **second** entry point (`cli/morning-review.ts` →
   `morning-review.js`) and `makeWrapper`s it into `bin/refinery-morning-review`.
