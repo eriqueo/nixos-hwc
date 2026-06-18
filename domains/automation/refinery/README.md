@@ -44,7 +44,8 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 ## Structure
 | Path | Purpose |
 |---|---|
-| `index.nix` | Module: options + the `:8060` service. Builds the **engine** HTTP shell (buildNpmPackage → esbuild bundle of `serve.ts`), profiles baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). |
+| `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Profiles baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
+| `engine/src/cli/morning-review.ts` | The morning PR-review CLI shell. Late-binds config from env (`REFINERY_VAULT_DIR`, `REFINERY_DEFAULT_REPO`, `REFINERY_REVIEWS_DIR`, `REFINERY_LLM_PROVIDER`, optional `REFINERY_REVIEW_DATE`), wires real git/gh/fs/LLM adapters, runs the orchestrator, prints a JSON summary to stdout. Driven by `nightly-builds-review.service` (timer in the **nightly-builds** domain). |
 | `engine/src/shells/` | HTTP shell over the core: `http.ts` (routes — `/` Gauntlet, `/hopper` ideas+intake, `/cards` legacy, + intake/amend/rewind handlers), `render.ts` (Gauntlet board = projects in phase lanes tinted by profile color + a profiles **legend**; Hopper page = raw ideas + intake; plain form-posts), `hopper.ts` (legacy nightly-builds card view at `/cards`), `serve.ts` (service entry). |
 | `app/` | **Superseded** by the engine shell as the `:8060` service; kept as the original read-only hopper board (slice 01/02) and its tests. The hopper view now lives at the engine's `/hopper` route. |
 | `app/src/parse.ts` | Read-only parser over the hopper (cards + ideas) |
@@ -67,6 +68,15 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-17** — Morning PR-review CLI exposed. The engine `buildNpmPackage`
+  now esbuild-bundles a **second** entry point (`cli/morning-review.ts` →
+  `morning-review.js`) and `makeWrapper`s it into `bin/refinery-morning-review`.
+  A new read-only `package` module option publishes the built engine so the
+  **nightly-builds** domain's `nightly-builds-review.service` runs the CLI
+  (env-driven: `REFINERY_VAULT_DIR` / `REFINERY_DEFAULT_REPO` /
+  `REFINERY_REVIEWS_DIR=/var/lib/refinery/reviews` / `REFINERY_LLM_PROVIDER`)
+  without rebuilding the engine. Board service untouched. NOTE: the new bundle
+  may shift `npmDepsHash` if engine deps change — rebuild centrally to capture.
 - **2026-06-16** — SR run-now: board parity with nightly. The SR detail page now
   has a "▶ re-investigate now" button — `POST /sr/run-now` writes the SR's
   Firestore `srId` to a spool (`REFINERY_SR_RUNNOW_SPOOL=/var/lib/refinery/sr-run-now`,

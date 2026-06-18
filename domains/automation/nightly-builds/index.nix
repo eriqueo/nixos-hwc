@@ -60,6 +60,138 @@ let
     pkgs.yarn
   ];
 
+  # ── Morning PR-review pass ─────────────────────────────────────────────────
+  # The refinery engine's morning-review CLI, exposed as a runnable by the
+  # refinery module (one bundle, one npmDepsHash — we don't rebuild it here).
+  reviewBin = "${config.hwc.automation.refinery.package}/bin/refinery-morning-review";
+
+  # Where the CLI writes its per-review JSON (and what the board's /morning view
+  # reads). Lives under the refinery StateDirectory so the board (also eric) can
+  # read it; created group-writable via tmpfiles below.
+  reviewsDir = "/var/lib/refinery/reviews";
+
+  # Env for the review pass: late-bound vault + repo + reviews dir + provider.
+  # HOME is set so headless `claude` (claude-cli) and `gh` find their creds.
+  reviewEnv = {
+    HOME = paths.user.home;
+    REFINERY_VAULT_DIR = toString cfg.vaultDir;
+    REFINERY_DEFAULT_REPO = toString cfg.repoDir;
+    REFINERY_REVIEWS_DIR = reviewsDir;
+    REFINERY_LLM_PROVIDER = cfg.reviewLlmProvider;
+  };
+  # PATH for the review pass: git + gh (open PRs), node (the CLI is a node
+  # bundle but the wrapper supplies node; gh/git are shelled out to), jq (parse
+  # the JSON summary), curl (POST the consolidated notify).
+  reviewPath = [
+    pkgs.bash pkgs.coreutils pkgs.git pkgs.openssh
+    pkgs.gh pkgs.nodejs_22 pkgs.jq pkgs.curl
+  ];
+
+  # Runs the review CLI, captures its JSON summary (stdout), then sends ONE
+  # consolidated hwc-notify summarizing reviewed/opened/byVerdict. The CLI's
+  # per-PR side effects (opening PRs, writing review JSON) are its own; this
+  # wrapper only adds the single morning digest — mirrors run.sh's notify().
+  reviewRun = pkgs.writeShellScript "nightly-builds-review-run" ''
+    set -uo pipefail
+    NOTIFY_URL="''${NB_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
+    OUT="$(mktemp)"; trap 'rm -f "$OUT"' EXIT
+    echo "morning-review: starting (reviews -> ${reviewsDir})"
+    ${reviewBin} > "$OUT" 2>&1
+    rc=$?
+    # The CLI prints a JSON summary to stdout and a human line to stderr (both
+    # captured above). Pull the digest fields with jq; degrade to a raw tail if
+    # the output isn't the expected JSON (e.g. an early fatal).
+    summary="$(jq -r '
+        "reviewed=\(.reviewed) opened=\(.opened) " +
+        "merge-ready=\(.byVerdict["merge-ready"] // 0) " +
+        "needs-work=\(.byVerdict["needs-work"] // 0) " +
+        "reject=\(.byVerdict.reject // 0)" +
+        (if (.errors|length) > 0 then " errors=\(.errors|length)" else "" end)
+      ' "$OUT" 2>/dev/null)" || summary=""
+    if [ -z "$summary" ]; then
+      summary="morning-review exited $rc; output: $(tail -c 400 "$OUT")"
+      prio=2; title="⚠️ Morning review — incomplete"
+    elif [ "$rc" -eq 0 ]; then
+      prio=4; title="🔎 Morning review — $summary"
+    else
+      prio=2; title="⚠️ Morning review (exit $rc) — $summary"
+    fi
+    body="$summary
+Review them in workbench → Nightly Builds hub (live: merge / requeue / rebuild)."
+    if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+      payload=$(jq -nc --arg t "$title" --arg b "$body" --argjson p "$prio" \
+        '{topic:"nightly-builds", title:$t, body:$b, priority:$p, source:"nightly-builds", tags:["nightly-builds","morning-review"]}')
+      curl -fsS -m 8 -X POST -H 'content-type: application/json' \
+        -d "$payload" "$NOTIFY_URL" >/dev/null 2>&1 \
+        && echo "morning-review: notify sent" \
+        || echo "morning-review: WARN notify POST failed ($NOTIFY_URL)"
+    fi
+    exit "$rc"
+  '';
+
+  # ── Rebuild-request consumer (PRIVILEGED) ──────────────────────────────────
+  # The workbench "rebuild" button drops a spool file named after the target
+  # host in this dir; the path unit fires a ROOT service that runs the actual
+  # `nixos-rebuild switch`. This is the ONE privileged, human-triggered action
+  # in this module — everything else is unprivileged (eric) and touches only
+  # branches/vault. Guarded hard: the host is validated against a fixed
+  # allowlist before it is ever interpolated into a command; unknown hosts are
+  # ignored and the spool file deleted. No part of the spooled file's *content*
+  # is ever evaluated — only its basename, and only after allowlist match.
+  rebuildSpoolDir = "/var/lib/refinery/rebuild-request";
+  rebuildAllowedHosts = [ "hwc-server" "hwc-laptop" ];
+
+  rebuildDrain = pkgs.writeShellScript "nightly-builds-rebuild-drain" ''
+    set -uo pipefail
+    SPOOL="${rebuildSpoolDir}"
+    NOTIFY_URL="''${NB_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
+    FLAKE="${toString cfg.repoDir}"
+    # Fixed allowlist — the ONLY hosts that may be rebuilt. Anything else is
+    # dropped without eval.
+    ALLOWED="${lib.concatStringsSep " " rebuildAllowedHosts}"
+
+    notify() { # <prio> <title> <body>
+      command -v curl >/dev/null 2>&1 || return 0
+      command -v jq   >/dev/null 2>&1 || return 0
+      local payload
+      payload=$(jq -nc --arg t "$2" --arg b "$3" --argjson p "$1" \
+        '{topic:"nightly-builds", title:$t, body:$b, priority:$p, source:"nightly-builds", tags:["nightly-builds","rebuild"]}')
+      curl -fsS -m 8 -X POST -H 'content-type: application/json' \
+        -d "$payload" "$NOTIFY_URL" >/dev/null 2>&1 || true
+    }
+
+    [ -d "$SPOOL" ] || exit 0
+    shopt -s nullglob
+    for f in "$SPOOL"/*; do
+      [ -e "$f" ] || continue
+      host="$(basename "$f")"
+      # Consume the request first so a re-click during the rebuild re-arms the
+      # path unit on a fresh file rather than racing this one.
+      rm -f "$f"
+
+      # Allowlist guard: exact match against the fixed list, nothing else runs.
+      ok=0
+      for a in $ALLOWED; do [ "$host" = "$a" ] && ok=1 && break; done
+      if [ "$ok" -ne 1 ]; then
+        echo "rebuild: IGNORING unknown host '$host' (not in allowlist: $ALLOWED)"
+        notify 3 "🚫 Rebuild ignored — unknown host" \
+          "Rejected rebuild request for '$host' (allowlist: $ALLOWED). No action taken."
+        continue
+      fi
+
+      echo "rebuild: switching $host from $FLAKE"
+      notify 4 "🔧 Rebuild started — $host" "nixos-rebuild switch --flake $FLAKE#$host"
+      if nixos-rebuild switch --flake "$FLAKE#$host" 2>&1; then
+        echo "rebuild: $host switched OK"
+        notify 5 "✅ Rebuild done — $host" "nixos-rebuild switch succeeded for $host."
+      else
+        rc=$?
+        echo "rebuild: $host FAILED (exit $rc)"
+        notify 2 "❌ Rebuild failed — $host" "nixos-rebuild switch exited $rc for $host. Check journalctl -u nightly-builds-rebuild."
+      fi
+    done
+  '';
+
   # Drains the run-now spool: for each requested goal, consume the request file
   # first (so a re-click during the run is captured as a fresh request and the
   # path unit doesn't re-fire on the same file), then run run.sh scoped to that
@@ -88,6 +220,36 @@ in
       type = lib.types.str;
       default = "*-*-* 01:30:00";
       description = "systemd calendar expression for the nightly launch";
+    };
+
+    reviewOnCalendar = lib.mkOption {
+      type = lib.types.str;
+      default = "*-*-* 07:30:00";
+      description = ''
+        systemd calendar expression for the morning PR-review pass. Must fire
+        AFTER onCalendar (default 01:30) so the night's branches exist to review.
+      '';
+    };
+
+    reviewLlmProvider = lib.mkOption {
+      type = lib.types.str;
+      default = "claude-cli";
+      description = "LLM provider for the morning-review pass (claude-cli | anthropic-api | ollama).";
+    };
+
+    # PRIVILEGED, off-by-default. Gates the root rebuild-request consumer: the
+    # .path + root nightly-builds-rebuild.service that runs `nixos-rebuild
+    # switch` for an allowlisted host when the workbench drops a spool file.
+    # Ships OFF — Eric opts in per host. See the rebuildDrain comment.
+    enableRebuildButton = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable the privileged, human-triggered rebuild-request consumer: a
+        .path unit watching ${rebuildSpoolDir} that runs `nixos-rebuild switch`
+        (as root) for a host in the fixed allowlist
+        (${lib.concatStringsSep ", " rebuildAllowedHosts}). OFF by default.
+      '';
     };
 
     maxCards = lib.mkOption {
@@ -122,9 +284,17 @@ in
 
     # The run-now spool dir must exist (owned by eric, group-writable so the
     # refinery board — also eric — drops request files there).
+    # The reviews dir holds the morning-review CLI's per-review JSON (and feeds
+    # the board's /morning view); group-writable so both the eric-run review
+    # pass and the eric-run board can read/write it.
+    # The rebuild-request spool is group-writable so the (eric-run) workbench
+    # MCP server can drop a <host> file; the ROOT consumer reads it (only when
+    # enableRebuildButton is on).
     systemd.tmpfiles.rules = [
       "d ${spoolDir} 0775 eric users - -"
-    ];
+      "d ${reviewsDir} 0775 eric users - -"
+    ] ++ lib.optional cfg.enableRebuildButton
+      "d ${rebuildSpoolDir} 0775 eric users - -";
 
     systemd.services.nightly-builds = {
       description = "Nightly Builds — gauntlet card runner (headless Claude Code)";
@@ -196,6 +366,77 @@ in
         # files; once empty, the path unit re-arms.
         DirectoryNotEmpty = spoolDir;
         Unit = "nightly-builds-runnow.service";
+      };
+    };
+
+    # ── Morning PR-review pass ─────────────────────────────────────────────────
+    # AFTER the 01:30 build pass: review each night's pushed branch (the refinery
+    # morning-review CLI), open PRs, write review JSON to /var/lib/refinery/reviews,
+    # then send ONE consolidated digest. Same eric/hardening style as the runner.
+    systemd.services.nightly-builds-review = {
+      description = "Nightly Builds — morning PR-review pass (refinery morning-review CLI)";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      environment = reviewEnv;
+      path = reviewPath;
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce "eric";
+        Group = "users";
+        WorkingDirectory = agentDir;
+        ExecStart = "${reviewRun}";
+        # Review is bounded LLM work over a handful of branches; an hour is ample
+        # headroom and keeps a wedged run from lingering.
+        TimeoutSec = 3600;
+        StandardOutput = "journal";
+        StandardError = "journal";
+        NoNewPrivileges = true;
+      };
+    };
+
+    systemd.timers.nightly-builds-review = {
+      description = "Nightly Builds morning PR-review timer";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.reviewOnCalendar;
+        # Not Persistent: a missed morning shouldn't fire mid-day and start
+        # opening PRs while the repo is being actively worked on.
+        Persistent = false;
+        RandomizedDelaySec = "120s";
+      };
+    };
+
+    # ── Rebuild-request consumer (PRIVILEGED, opt-in) ──────────────────────────
+    # !!! This is the ONLY privileged unit in this module. It runs as ROOT and
+    # !!! executes `nixos-rebuild switch` for a host in the FIXED allowlist when
+    # !!! the workbench rebuild button drops a spool file. Human-triggered only;
+    # !!! off by default (hwc.automation.nightlyBuilds.enableRebuildButton).
+    # !!! The drain validates the host against the allowlist BEFORE any
+    # !!! interpolation and never evaluates spooled file content.
+    systemd.services.nightly-builds-rebuild = lib.mkIf cfg.enableRebuildButton {
+      description = "Nightly Builds — PRIVILEGED rebuild-request consumer (nixos-rebuild switch)";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      # Root: needs the system nixos-rebuild + switch privileges. PATH carries
+      # the system rebuild tool + git (flake eval) + jq/curl (notify).
+      path = [ pkgs.nixos-rebuild pkgs.git pkgs.openssh pkgs.jq pkgs.curl pkgs.coreutils pkgs.bash ];
+      serviceConfig = {
+        Type = "oneshot";
+        # Runs as root (default) — deliberately NOT the eric/hardened profile:
+        # nixos-rebuild switch needs to activate the system.
+        ExecStart = "${rebuildDrain}";
+        TimeoutSec = 2 * 3600;
+        StandardOutput = "journal";
+        StandardError = "journal";
+      };
+    };
+
+    systemd.paths.nightly-builds-rebuild = lib.mkIf cfg.enableRebuildButton {
+      description = "Watch the refinery rebuild-request spool (workbench rebuild button)";
+      wantedBy = [ "paths.target" ];
+      pathConfig = {
+        DirectoryNotEmpty = rebuildSpoolDir;
+        Unit = "nightly-builds-rebuild.service";
       };
     };
   };

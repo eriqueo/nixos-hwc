@@ -6,7 +6,8 @@
   "description": "Substance-agnostic refinement engine core: Item state machine, contracts, profile loader, gate registry, effectors, stage runner.",
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
-    "test": "rm -rf dist && tsc -p tsconfig.json && node --test --enable-source-maps 'dist/test/**/*.test.js'"
+    "test": "rm -rf dist && tsc -p tsconfig.json && node --test --enable-source-maps 'dist/test/**/*.test.js'",
+    "morning-review": "node dist/src/cli/morning-review.js"
   },
   "dependencies": {
     "yaml": "2.5.1",

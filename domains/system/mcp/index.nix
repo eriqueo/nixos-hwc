@@ -326,6 +326,12 @@ in
             cmsAppPath
             # Calculator app editing via hwc_cms_* tools (scope: calculator)
             "${paths.nixos}/domains/business/website/calculator"
+            # hwc_nightly_review: flips review JSON status (merge/requeue) and
+            # drops the rebuild-request spool under /var/lib/refinery. ProtectHome
+            # is read-only here (not tmpfs), so the vault card-requeue write needs
+            # its own RW entry on the nightly_builds dir.
+            "/var/lib/refinery"
+            "${paths.user.home}/900_vaults/brain/_inbox/nightly_builds"
           ];
           SupplementaryGroups = [ "podman" ];
           ReadOnlyPaths = [
@@ -371,6 +377,7 @@ in
         procps
         util-linux
         nodejs_22
+        gh  # GitHub CLI for hwc_nightly_review merge/requeue (gh pr merge|close)
         postgresql  # psql binary for estimator tools (peer auth as eric)
         # msmtp passwordeval chain: sh -c 'pass show ...' → gpg → gpg-agent
         bash
