@@ -4,7 +4,7 @@
 # The integrate effector (write-spec) writes the developed spec to a scratch dir.
 genre: project-ideation
 label: Project Ideation
-color: "#b8bb26"
+color: "#a3be8c" # HWC palette: success (sage green)
 source: cli-input
 gates:
   - stepwise-refinement
