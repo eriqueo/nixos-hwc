@@ -212,8 +212,9 @@ test("renderSr lists SR investigations linking to their REPORT + has a max cap f
       payload: { title: "Customer X cannot sync", customer: "Acme Co", srStatus: "engaged", run: "investigations/2026-06-12-abc/", hasReport: true, readonly: true, source: "sr_gauntlet investigation" }, history: [] },
   ];
   const html = renderSr(srs, 5, profiles);
-  assert.ok(html.includes('class="srcard"'), "SR2-style card");
-  assert.ok(html.includes("Acme Co") && html.includes("Customer X cannot sync"), "customer + question, like SR2");
+  assert.ok(html.includes('class="board"'), "status-lane kanban");
+  assert.ok(html.includes("Acme Co") && html.includes("Customer X cannot sync"), "customer (who) + question (why)");
+  assert.ok(html.includes("engaged"), "lane labeled by SR status (data-driven)");
   assert.ok(html.includes('href="/project/sr:2026-06-12-abc"'), "card → tabbed detail");
   assert.ok(html.includes('action="/sr/config"') && html.includes('value="5"'));
 });
@@ -279,7 +280,7 @@ test("renderProjectDetail: editable item shows delete; read-only mirror item hid
   assert.ok(!d.includes('action="/amend"'), "mirror cards aren't editable");
 });
 
-test("renderProjectDetail shows actions + nightly toggle; renderNightly highlights the top N", () => {
+test("renderProjectDetail shows actions + nightly toggle; renderNightly is a status-lane kanban", () => {
   const profiles = [
     { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
@@ -303,7 +304,8 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly highligh
   assert.ok(renderProjectDetail(idea, profiles, profiles).includes('action="/promote"'), "ideas can be promoted");
 
   const n = renderNightly([parked], 1, profiles);
-  assert.ok(n.includes("tonight"));
+  assert.ok(n.includes('class="board"'), "nightly is a status-lane kanban");
+  assert.ok(n.includes("a project") && n.includes('href="/project/d1"'), "project as a click-through card");
   assert.ok(n.includes('action="/nightly/config"'));
 });
 

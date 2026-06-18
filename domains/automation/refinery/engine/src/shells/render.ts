@@ -52,12 +52,7 @@ const STYLE = `<style>
   .intake{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line)}
   .intake input[type=text]{flex:1}
   .wrap{display:flex;gap:12px;padding:14px;align-items:flex-start}
-  .legend{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:230px;padding:10px}
-  .legend h2{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
-  .prow{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid var(--line)}
-  .pname{display:flex;align-items:center;gap:6px;font-size:13px}
   .swatch{width:10px;height:10px;border-radius:50%;display:inline-block}
-  .pmeta,.pipe{color:var(--dim);font-size:11px}
   .board{display:flex;gap:12px;flex:1;overflow-x:auto}
   .col{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:230px;flex:1}
   .col h2{margin:0;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;text-transform:uppercase}
@@ -72,6 +67,7 @@ const STYLE = `<style>
   .badge.profile{color:#1d2021;font-weight:600}
   .moon{font-size:12px}
   .title{font-size:13px}.reason{margin-top:5px;font-size:12px;color:var(--acc)}
+  .card .why{margin-top:2px;font-size:12px;color:var(--dim);overflow-wrap:anywhere}
   /* detail + nightly */
   .detail{max-width:760px;margin:18px auto;padding:0 18px}
   .detail h2{font-size:15px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-top:22px}
@@ -92,13 +88,7 @@ const STYLE = `<style>
   .md a{color:#83a598;overflow-wrap:anywhere}
   /* OKF vault cross-links: styled but non-navigable (board can't resolve vault paths yet) */
   .md .vlink{color:#83a598;border-bottom:1px dotted #83a598;cursor:help;overflow-wrap:anywhere}
-  /* SR cards + tabbed detail (mirrors the SR2/datax layout) */
-  .srgrid{display:flex;flex-wrap:wrap;gap:12px;padding:14px}
-  .srcard{display:block;background:var(--panel);border:1px solid var(--line);border-left:4px solid #83a598;border-radius:8px;padding:10px 12px;width:310px}
-  .srcard:hover{border-color:var(--acc)}
-  .srcard .cat{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:#83a598;font-weight:700}
-  .srcard .who{font-size:14px;font-weight:600;margin:2px 0}
-  .srcard .q{font-size:12px;color:var(--dim);overflow-wrap:anywhere}
+  /* SR tabbed detail (mirrors the SR2/datax layout); the SR list is the shared kanban */
   .srtabs{max-width:860px;margin:0 auto;padding:0 18px}
   .srtabs > input{display:none}
   .srhead{padding:14px 0 4px}
@@ -124,9 +114,6 @@ const STYLE = `<style>
   .step .st{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
   .step .st.done{color:#1d2021;background:#b8bb26}
   .step .st.queued,.step .st.running{color:#1d2021;background:var(--acc)}
-  .nrow{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid var(--line)}
-  .nrow.tonight{background:rgba(254,128,25,.08)}
-  .nrow .t{flex:1}
 </style>`;
 
 function layout(active: string, body: string): string {
@@ -142,51 +129,74 @@ ${body}
 </body></html>`;
 }
 
-function legend(profiles: ResolvedProfile[]): string {
-  const rows = profiles
-    .map(
-      (p) => `<div class="prow">
-        <span class="pname"><span class="swatch" style="background:${esc(p.color)}"></span>${esc(p.label)}</span>
-        <span class="pmeta">${esc(p.genre)} · ${esc(p.llmProvider)} · ${esc(p.executeMode)}</span>
-        <span class="pipe">${p.gates.map(esc).join(" → ")}</span>
-      </div>`,
-    )
-    .join("");
-  return `<section class="legend"><h2>Profiles (colors)</h2>${rows || '<div class="empty">none</div>'}</section>`;
-}
-
+// ONE card renderer for every surface (Card Standard v0.1: compact face →
+// detail). Face anatomy: identity (the /project/:id URL that round-trips it),
+// kind/type → profile color (categorical, never decoration), title (who/what),
+// why-it-matters (one-line summary), status/signal badges, and ≥1 action (the
+// card itself is the click-through; all controls live on the detail page).
 function cardLink(item: Item, profiles: ResolvedProfile[]): string {
   const color = colorOf(item.genre, profiles);
   const isIdea = item.genre === UNTRIAGED;
-  const moon = item.nightly ? `<span class="moon" title="nightly">🌙</span>` : "";
-  const goal = item.payload && typeof item.payload === "object" && typeof (item.payload as { goal?: unknown }).goal === "string"
-    ? (item.payload as { goal: string }).goal
-    : "";
-  const badge = isIdea
-    ? `<span class="badge">idea</span>`
-    : `<span class="badge profile" style="background:${esc(color)}">${esc(item.genre)}</span>${goal ? `<span class="badge">${esc(goal)}</span>` : ""}<span class="badge">${esc(item.phase)}</span>`;
   const pl = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+  const moon = item.nightly ? `<span class="moon" title="nightly">🌙</span>` : "";
+  const goal = typeof pl.goal === "string" ? pl.goal : "";
+  const customer = typeof pl.customer === "string" ? pl.customer : "";
+  const question = typeof pl.title === "string" ? pl.title : "";
+  const hasReport = pl.hasReport === true;
   const total = typeof pl.stepsTotal === "number" ? pl.stepsTotal : 0;
   const doneN = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
+
+  // Kind/type badge carries the categorical color; goal/phase/report are signal
+  // badges. Lane (column) encodes phase/status, so color stays type-only.
+  const typeBadge = isIdea
+    ? `<span class="badge">idea</span>`
+    : `<span class="badge profile" style="background:${esc(color)}">${esc(item.genre)}</span>`;
+  const goalBadge = goal ? `<span class="badge">${esc(goal)}</span>` : "";
+  const phaseBadge = isIdea ? "" : `<span class="badge">${esc(item.phase)}</span>`;
+  const reportBadge = hasReport ? `<span class="badge" title="has REPORT">📄</span>` : "";
+
   const bar = total > 0
     ? `<div class="bar"><span style="width:${Math.round((doneN / total) * 100)}%"></span></div><div class="kv" style="font-size:11px;margin-top:3px">${doneN}/${total} steps done</div>`
     : "";
+
+  // Title = who/what; for an SR the customer is the "who" and the question the
+  // "why it matters". Otherwise the payload title (or id) is the title.
+  const title = customer || titleOf(item);
+  const why = customer && question ? `<div class="why">${esc(question)}</div>` : "";
+
   return `<a class="card${item.nightly ? " nightly" : ""}" href="/project/${esc(item.id)}" style="border-left-color:${esc(color)}">
-    <div class="badges">${badge}${moon}</div>
-    <div class="title">${esc(titleOf(item))}</div>
+    <div class="badges">${typeBadge}${goalBadge}${phaseBadge}${reportBadge}${moon}</div>
+    <div class="title">${esc(title)}</div>
+    ${why}
     ${bar}
     ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
   </a>`;
 }
 
+// Shared status-lane board: cards grouped into columns. Lane (column) = the
+// phase/status axis; card color = the type axis. Used by every board page.
+function laneBoard(
+  projects: Item[],
+  profiles: ResolvedProfile[],
+  lanes: { key: string; label: string }[],
+  keyOf: (item: Item) => string,
+): string {
+  const cols = lanes
+    .map((lane) => {
+      const inLane = projects.filter((p) => keyOf(p) === lane.key);
+      const body = inLane.length ? inLane.map((p) => cardLink(p, profiles)).join("") : `<div class="empty">—</div>`;
+      return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
+    })
+    .join("");
+  return `<div class="board">${cols}</div>`;
+}
+
+const STATUS_LANES = LANES.map((l) => ({ key: l.status as string, label: l.label }));
+const statusOf = (item: Item): string => item.phaseStatus;
+
 /** Gauntlet: triaged PROJECTS in phase-status lanes, colored by profile. */
 export function renderGauntlet(projects: Item[], profiles: ResolvedProfile[]): string {
-  const lanes = LANES.map((lane) => {
-    const inLane = projects.filter((p) => p.phaseStatus === lane.status);
-    const body = inLane.length ? inLane.map((p) => cardLink(p, profiles)).join("") : `<div class="empty">—</div>`;
-    return `<section class="col"><h2>${lane.label} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
-  }).join("");
-  return layout("gauntlet", `<div class="wrap">${legend(profiles)}<div class="board">${lanes}</div></div>`);
+  return layout("gauntlet", `<div class="wrap">${laneBoard(projects, profiles, STATUS_LANES, statusOf)}</div>`);
 }
 
 /** Hopper: raw untriaged IDEAS + the intake box. */
@@ -199,59 +209,22 @@ export function renderHopperPage(ideas: Item[], profiles: ResolvedProfile[]): st
   <input type="text" name="text" placeholder="Capture an idea — it lands here (and in the brain backlog); promote it to a project when ready…" required autofocus>
   <button type="submit">→ hopper</button>
 </form>
-<div class="wrap">${legend(profiles)}
+<div class="wrap">
   <div class="board"><section class="col"><h2>Ideas <span class="count">${ideas.length}</span></h2><div class="cards">${cards}</div></section></div>
 </div>`;
   return layout("hopper", body);
 }
 
-/** Nightly: projects flagged nightly, in priority order, with a per-night cap. */
+/** Nightly: projects flagged nightly, as a status-lane kanban with a per-night
+ *  cap. Cards are click-through; queue/run/mode controls live on the detail page
+ *  (Card Standard: compact face → detail). */
 export function renderNightly(
   nightly: Item[],
   maxPerNight: number,
   profiles: ResolvedProfile[],
 ): string {
-  // Projects with a queued step run tonight (run.sh picks up `queued` cards).
-  // Sort: queued first, then by progress.
-  const sorted = [...nightly].sort((a, b) => {
-    const qa = ((a.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0 ? 1 : 0;
-    const qb = ((b.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0 ? 1 : 0;
-    return qb - qa || a.id.localeCompare(b.id);
-  });
-  const rows = sorted
-    .map((item) => {
-      const color = colorOf(item.genre, profiles);
-      const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
-      const queued = typeof p.queuedCount === "number" ? p.queuedCount : 0;
-      const done = typeof p.stepsDone === "number" ? p.stepsDone : 0;
-      const total = typeof p.stepsTotal === "number" ? p.stepsTotal : 0;
-      const allDone = total > 0 && done === total;
-      const mode = p.mode === "immediate" ? "immediate" : "nightly";
-      const nextStatus = typeof p.nextStatus === "string" ? p.nextStatus : "";
-      const nextBlocked = p.nextBlocked === true;
-      // Always render exactly one queue control for a non-finished project:
-      // unqueue (something queued), queue next (a draft is next), or force-queue
-      // (the next step is blocked — a deliberate override, never a dead end).
-      const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
-      const queueForm = (to: string, label: string) =>
-        `<form method="post" action="/card/queue" style="display:inline">${idIn}<input type="hidden" name="to" value="${to}"><button type="submit">${label}</button></form>`;
-      const queueBtn = queued > 0
-        ? queueForm("draft", "↩ unqueue")
-        : nextStatus
-          ? queueForm("queued", nextBlocked ? "⚠ force-queue" : "✅ queue next")
-          : "";
-      const runBtn = allDone ? "" :
-        `<form method="post" action="/card/run-now" style="display:inline">${idIn}<button type="submit" title="run this project now (targeted)">▶ now</button></form>`;
-      return `<div class="nrow${queued > 0 ? " tonight" : ""}">
-        <span class="swatch" style="background:${esc(color)}"></span>
-        <a class="t" href="/project/${esc(item.id)}">${esc(titleOf(item))} <span class="kv">· ${done}/${total} steps${allDone ? " · ✓ done" : ""}</span></a>
-        <span class="badge" title="run mode">${mode === "immediate" ? "⚡ immediate" : "🌙 nightly"}</span>
-        ${queued > 0 ? '<span class="badge">queued</span>' : ""}
-        ${queueBtn}${runBtn}
-      </div>`;
-    })
-    .join("");
-  const queuedProjects = sorted.filter((i) => ((i.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0).length;
+  const queuedProjects = nightly.filter((i) => ((i.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0).length;
+  const board = laneBoard(nightly, profiles, STATUS_LANES, statusOf);
   const body = `
 <form class="intake" method="post" action="/nightly/config">
   <label class="kv">Max cards per night:</label>
@@ -259,7 +232,7 @@ export function renderNightly(
   <button type="submit">save</button>
   <span class="kv">${nightly.length} projects · ${queuedProjects} with a step queued · run.sh runs up to ${maxPerNight} queued cards @ 01:30</span>
 </form>
-${rows || '<div class="empty" style="padding:24px">no nightly-build projects</div>'}`;
+<div class="wrap">${nightly.length ? board : '<div class="empty" style="padding:24px">no nightly-build projects</div>'}</div>`;
   return layout("nightly", body);
 }
 
@@ -391,21 +364,16 @@ export function renderProjectDetail(
   return layout("", body);
 }
 
-/** SR page: SR2-style cards (customer + question + status) → tabbed detail. */
-export function renderSr(srs: Item[], maxPerNight: number, _profiles: ResolvedProfile[]): string {
-  const cards = srs
-    .map((s) => {
-      const p = s.payload && typeof s.payload === "object" ? (s.payload as Record<string, unknown>) : {};
-      const customer = typeof p.customer === "string" && p.customer ? p.customer : "—";
-      const question = typeof p.title === "string" ? p.title : s.id;
-      const cat = typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
-      return `<a class="srcard" href="/project/${esc(s.id)}">
-        <div class="cat">${esc(cat)}${p.hasReport === true ? " · 📄" : ""}</div>
-        <div class="who">${esc(customer)}</div>
-        <div class="q">${esc(question)}</div>
-      </a>`;
-    })
-    .join("");
+/** SR page: investigations as a status-lane kanban (cards = customer + question
+ *  → tabbed detail). Lanes are the distinct SR statuses (data-driven), so a new
+ *  status needs no renderer edit. */
+export function renderSr(srs: Item[], maxPerNight: number, profiles: ResolvedProfile[]): string {
+  const srStatusOf = (item: Item): string => {
+    const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+    return typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
+  };
+  const lanes = [...new Set(srs.map(srStatusOf))].sort().map((s) => ({ key: s, label: s }));
+  const board = laneBoard(srs, profiles, lanes, srStatusOf);
   const body = `
 <form class="intake" method="post" action="/sr/config">
   <label class="kv">Max SRs per run:</label>
@@ -413,7 +381,7 @@ export function renderSr(srs: Item[], maxPerNight: number, _profiles: ResolvedPr
   <button type="submit">save</button>
   <span class="kv">${srs.length} investigations · sr_gauntlet runs @ 06:30 (this cap)</span>
 </form>
-<div class="srgrid">${cards || '<div class="empty" style="padding:24px">no SR investigations yet — the gauntlet writes them under sr_gauntlet/investigations/</div>'}</div>`;
+<div class="wrap">${srs.length ? board : '<div class="empty" style="padding:24px">no SR investigations yet — the gauntlet writes them under sr_gauntlet/investigations/</div>'}</div>`;
   return layout("sr", body);
 }
 
