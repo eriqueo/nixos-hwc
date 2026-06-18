@@ -18,10 +18,10 @@ import { gateList } from "../gates/index.js";
 import { makeWriteSpecEffector } from "../effectors/write-spec.js";
 import { runGenreOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
-import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX } from "../sources/nightly-cards.js";
+import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, HOPPER_STAGE_KEYS } from "./render.js";
 
 export interface HttpShellConfig {
   port: number;
@@ -386,6 +386,15 @@ export function createShell(cfg: HttpShellConfig) {
           res.end(renderNightly(flagged, readCap("nightly"), profiles, enabled, domains));
           return;
         }
+        if (method === "GET" && url === "/finished") {
+          // Graduated nightly-build projects (off the gauntlet). Read straight
+          // from the same vault the /nightly mirror reads.
+          const [profiles, enabled] = [catalog.list(), catalog.enabled()];
+          const finished = cfg.vaultDir ? finishedProjects(cfg.vaultDir) : [];
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderFinished(finished, profiles, enabled, domains));
+          return;
+        }
         if (method === "GET" && url === "/sr") {
           const profiles = catalog.list();
           const srs = mirror()
@@ -397,14 +406,21 @@ export function createShell(cfg: HttpShellConfig) {
         }
         if (method === "GET" && url.startsWith("/project/")) {
           const id = decodeURIComponent(url.slice("/project/".length));
-          const item = (await store.load(id)) ?? mirror().find((m) => m.id === id) ?? null;
+          // Finished projects live off the gauntlet (own vault dir), so they're
+          // not in mirror() — look them up directly by their nbf: id.
+          const finishedItem = id.startsWith(FINISHED_PREFIX) && cfg.vaultDir
+            ? finishedProjects(cfg.vaultDir).find((m) => m.id === id) ?? null
+            : null;
+          const item = (await store.load(id)) ?? mirror().find((m) => m.id === id) ?? finishedItem;
           if (!item) {
             res.writeHead(404, { "content-type": "text/plain" });
             res.end("no such project");
             return;
           }
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          if (id.startsWith(NB_PREFIX)) {
+          if (id.startsWith(FINISHED_PREFIX)) {
+            res.end(renderFinishedProject(item));
+          } else if (id.startsWith(NB_PREFIX)) {
             res.end(renderNightlyProject(item));
           } else if (id.startsWith(SR_PREFIX) && cfg.srGauntletDir) {
             // SR items render in the SR2-style tabbed layout (Gameplan/Thread/Details).
@@ -535,6 +551,16 @@ export function createShell(cfg: HttpShellConfig) {
             const mode = body.get("mode") === "immediate" ? "immediate" : "nightly";
             if (cfg.vaultDir && goalId) setProjectMode(cfg.vaultDir, goalId, mode);
             return redirectTo(res, afterEdit);
+          }
+          if (url === "/card/sendback") {
+            // Send a finished project back to the gauntlet, optionally with an
+            // amendment (a fresh queued step). reopenProject moves the folder
+            // out of _finished/ and writes the amendment step; the project is
+            // back in flight, so we redirect to the gauntlet board (back).
+            const goalId = parseFinishedId(id) ?? id;
+            const amendment = (body.get("amendment") ?? "").trim();
+            if (cfg.vaultDir && goalId) reopenProject(cfg.vaultDir, goalId, amendment);
+            return redirectTo(res, back || "/nightly");
           }
           if (url === "/nightly/toggle") {
             await setNightly(id, body.get("nightly") === "true");

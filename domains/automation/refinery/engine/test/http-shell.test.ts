@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync,
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderSr, renderSrDetail, renderProjectDetail } from "../src/shells/render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail } from "../src/shells/render.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
@@ -316,6 +316,36 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly is a sta
   assert.ok(n.includes('action="/card/queue"') && n.includes("✅ queue"), "mirror card queues inline");
   assert.ok(n.includes('formaction="/card/run-now"'), "mirror card runs inline");
   assert.ok(n.includes('action="/nightly/config"'));
+});
+
+test("renderFinished is a plain grid of click-through cards; renderFinishedProject is read-only + send-back", () => {
+  const finished: Item = {
+    id: "nbf:my-goal", genre: "nightly-build", phase: "3/3 steps", phaseStatus: "passed",
+    payload: {
+      title: "graduated project", goal: "my-goal", readonly: true, finished: true,
+      source: "nightly-builds (finished)", stepsDone: 3, stepsTotal: 3,
+      steps: [
+        { n: "01", file: "01-x.md", title: "step one", status: "done", step: "1 of 3", run: "runs/2026-06-15-x/", pr: "branch `feat/x` (3 files)" },
+        { n: "02", file: "02-y.md", title: "step two", status: "done", step: "2 of 3", run: "", pr: "https://github.com/eriqueo/x/pull/9" },
+      ],
+    },
+    history: [], nightly: true,
+  };
+
+  const grid = renderFinished([finished], [], []);
+  assert.ok(grid.includes('class="wrap"') && !grid.includes('class="board"'), "finished is a plain grid, not a lane board");
+  assert.ok(grid.includes('href="/project/nbf:my-goal"'), "finished card clicks through to its detail");
+  assert.ok(grid.includes("1 finished project"), "header count");
+  assert.ok(renderFinished([], [], []).includes("no finished projects yet"), "empty state");
+
+  const d = renderFinishedProject(finished);
+  assert.ok(d.includes('action="/card/sendback"'), "send-back form");
+  assert.ok(d.includes('name="amendment"') && d.includes('name="back"'), "amendment + back fields");
+  assert.ok(d.includes('value="nbf:my-goal"'), "hidden id");
+  assert.ok(d.includes("← finished"), "back link");
+  assert.ok(d.includes("branch") && d.includes("feat/x"), "prose pr shown escaped");
+  assert.ok(d.includes('href="https://github.com/eriqueo/x/pull/9"'), "url pr linkified");
+  assert.ok(!d.includes('action="/card/queue"') && !d.includes('action="/card/run-now"') && !d.includes('action="/card/mode"'), "read-only: no queue/run/mode controls");
 });
 
 const DOMAINS = {
