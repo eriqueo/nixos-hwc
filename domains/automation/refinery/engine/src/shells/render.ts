@@ -113,6 +113,7 @@ const STYLE = `<style>
   pre{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;overflow-x:auto;font-size:12px}
   .act{display:flex;gap:6px;margin:8px 0;align-items:center;flex-wrap:wrap}
   .act input[type=text]{flex:1;min-width:200px}
+  .act textarea{flex:1 0 100%;min-width:200px;resize:vertical;font:inherit}
   .hist{font-size:12px;color:var(--dim)}
   /* rendered markdown (reports, card bodies) — wraps, doesn't clip */
   .md{max-width:840px;line-height:1.55}
@@ -161,7 +162,7 @@ function layout(active: string, body: string): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refinery</title>${STYLE}</head><body>
 <header><h1>🛠 Refinery</h1><nav>
-  ${tab("/", "Gauntlet", "gauntlet")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Nightly", "nightly")}${tab("/sr", "SR", "sr")}
+  ${tab("/", "Gauntlet", "gauntlet")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Nightly", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}
 </nav></header>
 ${body}
 </body></html>`;
@@ -709,6 +710,89 @@ export function renderNightlyProject(item: Item): string {
   ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}
 </div>`;
   return layout("nightly", body);
+}
+
+/** Finished: graduated projects (all steps done, off the gauntlet). They're all
+ *  "passed", so a status-lane board would dump them in one lane — a plain grid
+ *  reads better. Reuse cardLink so a finished card clicks through to its
+ *  read-only detail (/project/nbf:<goal>). */
+export function renderFinished(
+  finished: Item[],
+  profiles: ResolvedProfile[] = [],
+  enabled: ResolvedProfile[] = [],
+  domains: DomainRegistry = emptyRegistry,
+): string {
+  const ctx: CardCtx = { domains, profiles, enabled, back: "/finished" };
+  const cards = finished.map((p) => cardLink(p, ctx)).join("");
+  const body = `
+<div class="intake"><span class="kv">${finished.length} finished project${finished.length === 1 ? "" : "s"} — graduated off the gauntlet. Open one to send it back with amendments.</span></div>
+<div class="wrap">${finished.length ? cards : '<div class="empty" style="padding:24px">no finished projects yet</div>'}</div>`;
+  return layout("finished", body);
+}
+
+/** Finished-project detail: a READ-ONLY mirror of renderNightlyProject (no
+ *  queue/run/mode controls — the project is graduated). Surfaces each step's PR
+ *  link, plus a "send back with amendments" form that reopens it on the
+ *  gauntlet. */
+export function renderFinishedProject(item: Item): string {
+  const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
+  const color = "#cf995f"; // HWC palette: warning (copper) — nightly-build tint
+  const steps = Array.isArray(p.steps) ? (p.steps as NbStepView[]) : [];
+  const done = typeof p.stepsDone === "number" ? p.stepsDone : 0;
+  const total = typeof p.stepsTotal === "number" ? p.stepsTotal : steps.length;
+  const goalId = typeof p.goal === "string" ? p.goal : "";
+  const goalBody = typeof p.goalBody === "string" ? p.goalBody : "";
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  // A step's `pr` is often `branch \`x\` (...)` prose, sometimes a bare URL.
+  // Render escaped; linkify only when it's plainly an http(s) URL.
+  const prView = (pr: string): string => {
+    if (!pr) return "";
+    const url = /^https?:\/\/\S+$/.test(pr.trim());
+    const inner = url
+      ? `<a class="kv" href="${esc(pr.trim())}" rel="noreferrer">${esc(pr.trim())}</a>`
+      : `<span class="kv">${esc(pr)}</span>`;
+    return `<div class="kv" style="margin-left:30px;margin-top:-2px">${inner}</div>`;
+  };
+
+  const stepRows = steps
+    .map((s) => {
+      const reportLink = s.run ? `<a class="kv" href="/report/${encodeURIComponent("nbrun:" + s.run)}" title="REPORT">📄</a>` : "";
+      return `<div class="step">
+        <span class="n">${esc(s.n)}</span>
+        <span class="ti">${esc(s.title)}${s.step ? ` <span class="kv">(${esc(s.step)})</span>` : ""}</span>
+        ${reportLink}
+        <span class="st ${stepClass(s.status)}">${esc(s.status)}</span>
+      </div>${prView(s.pr)}`;
+    })
+    .join("");
+
+  const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
+  // Send back to the gauntlet, optionally with an amendment (a fresh queued
+  // step). Empty amendment = just reopen. back=/finished so the card is seen
+  // leaving the Finished page.
+  const sendback = `<form class="act" method="post" action="/card/sendback">${idIn}
+       <input type="hidden" name="back" value="/finished">
+       <textarea name="amendment" rows="3" placeholder="what to change / add — leave empty to just reopen"></textarea>
+       <button type="submit">↩ send back to gauntlet</button>
+       <span class="kv">reopens this project on the gauntlet; a non-empty note becomes a fresh queued step</span>
+     </form>`;
+
+  const body = `<div class="detail">
+  <a href="/finished" class="kv">← finished</a>
+  <h2><span class="swatch" style="background:${color}"></span> ${esc(titleOf(item))} <span class="badge">✓ finished</span></h2>
+  <div class="kv">project · nightly-build · goal <b>${esc(goalId)}</b> · ${done}/${total} steps</div>
+  <div class="bar"><span style="width:${pct}%"></span></div>
+
+  <h2>Steps</h2>
+  <div class="steps">${stepRows || '<div class="empty">no steps</div>'}</div>
+
+  <h2>Send back with amendments</h2>
+  ${sendback}
+
+  ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}
+</div>`;
+  return layout("finished", body);
 }
 
 /** Render a run's REPORT.md (plain — escaped <pre>). */
