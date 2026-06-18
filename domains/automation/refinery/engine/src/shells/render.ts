@@ -19,7 +19,7 @@ function esc(s: string): string {
   );
 }
 
-const NEUTRAL = "#a89984";
+const NEUTRAL = "#a7aaad"; // HWC palette fg2 (dim) — fallback for unknown genres
 const UNTRIAGED = "untriaged";
 function colorOf(genre: string, profiles: ResolvedProfile[]): string {
   return profiles.find((p) => p.genre === genre)?.color ?? NEUTRAL;
@@ -39,34 +39,44 @@ const LANES: { status: Item["phaseStatus"]; label: string }[] = [
 ];
 
 const STYLE = `<style>
-  :root{--bg:#1d2021;--panel:#282828;--ink:#ebdbb2;--dim:#a89984;--line:#3c3836;--acc:#fe8019}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 ui-sans-serif,system-ui,sans-serif}
-  a{color:var(--ink);text-decoration:none}
+  /* HWC brand palette (domains/home/theme/palettes/hwc.nix) — gruvbox-anchored,
+     blue-shifted, copper-orange accent. bg0..3 depth, fg0..3, semantic status. */
+  :root{
+    --bg:#1d2021;--panel:#282828;--elev:#2c3338;--line:#32373c;
+    --ink:#ebdbb2;--fg:#d5c4a1;--dim:#a7aaad;--muted:#50626f;
+    --acc:#d08770;--acc2:#5e81ac;--ok:#a3be8c;--warn:#cf995f;--err:#bf616a;
+  }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 ui-sans-serif,system-ui,sans-serif}
+  a{color:var(--fg);text-decoration:none}
   header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:baseline}
-  header h1{margin:0;font-size:17px}
+  header h1{margin:0;font-size:17px;color:var(--ink)}
   nav a{color:var(--dim);margin-right:14px;font-size:13px}
   nav a.active{color:var(--ink);border-bottom:2px solid var(--acc);padding-bottom:2px}
-  button{background:var(--line);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
+  button{background:var(--elev);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
   button:hover{border-color:var(--acc)}
   input[type=text],input[type=number],select,textarea{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
-  .intake{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+  .intake{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);align-items:center}
   .intake input[type=text]{flex:1}
   .wrap{display:flex;gap:12px;padding:14px;align-items:flex-start}
   .swatch{width:10px;height:10px;border-radius:50%;display:inline-block}
   .board{display:flex;gap:12px;flex:1;overflow-x:auto}
   .col{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:230px;flex:1}
-  .col h2{margin:0;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;text-transform:uppercase}
-  .count{background:var(--line);border-radius:10px;padding:0 8px;color:var(--dim)}
+  .col h2{margin:0;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+  .count{background:var(--elev);border-radius:10px;padding:0 8px;color:var(--dim);font-weight:600}
   .cards{padding:8px;display:flex;flex-direction:column;gap:8px}
-  .empty{color:var(--line);text-align:center;padding:8px}
-  .card{display:block;background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--dim);border-radius:6px;padding:8px 10px}
-  .card:hover{border-color:var(--acc)}
-  .card.nightly{border:1px dashed var(--acc);border-left:4px solid var(--dim)}
-  .badges{display:flex;gap:6px;margin-bottom:4px;flex-wrap:wrap;align-items:center}
-  .badge{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
-  .badge.profile{color:#1d2021;font-weight:600}
+  /* Hopper: ideas have no status lane → a responsive card grid (SR2-style faces) */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;padding:14px}
+  .empty{color:var(--muted);text-align:center;padding:8px}
+  /* Card — SR2 face: type-tinted fill via color-mix, type-color left edge, hover ring */
+  .card{display:block;background:var(--elev);border:1px solid var(--line);border-left:4px solid var(--dim);border-radius:8px;padding:9px 11px;transition:box-shadow .12s,border-color .12s}
+  .card:hover{border-color:var(--acc);box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 45%,transparent)}
+  .card.nightly{border:1px dashed var(--warn);border-left-width:4px}
+  .badges{display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap;align-items:center}
+  .badge{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim);border:1px solid transparent}
+  .badge.type{font-weight:700;text-transform:uppercase;letter-spacing:.05em}
   .moon{font-size:12px}
-  .title{font-size:13px}.reason{margin-top:5px;font-size:12px;color:var(--acc)}
+  .title{font-size:13px;color:var(--ink);font-weight:600;overflow-wrap:anywhere}.reason{margin-top:5px;font-size:12px;color:var(--acc)}
   .card .why{margin-top:2px;font-size:12px;color:var(--dim);overflow-wrap:anywhere}
   /* detail + nightly */
   .detail{max-width:760px;margin:18px auto;padding:0 18px}
@@ -85,14 +95,14 @@ const STYLE = `<style>
   .md code{background:var(--line);padding:1px 4px;border-radius:3px;font-size:12px}
   .md pre.code{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
   .md blockquote{border-left:3px solid var(--line);margin:6px 0;padding-left:10px;color:var(--dim)}
-  .md a{color:#83a598;overflow-wrap:anywhere}
+  .md a{color:var(--acc2);overflow-wrap:anywhere}
   /* OKF vault cross-links: styled but non-navigable (board can't resolve vault paths yet) */
-  .md .vlink{color:#83a598;border-bottom:1px dotted #83a598;cursor:help;overflow-wrap:anywhere}
-  /* SR tabbed detail (mirrors the SR2/datax layout); the SR list is the shared kanban */
+  .md .vlink{color:var(--acc2);border-bottom:1px dotted var(--acc2);cursor:help;overflow-wrap:anywhere}
+  /* SR tabbed detail (mirrors the SR2/datax ticket-editor); the SR list is the shared kanban */
   .srtabs{max-width:860px;margin:0 auto;padding:0 18px}
   .srtabs > input{display:none}
   .srhead{padding:14px 0 4px}
-  .srhead .cat{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#83a598;font-weight:700}
+  .srhead .cat{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc2);font-weight:700}
   .srhead h2{margin:2px 0;font-size:18px;border:0}
   .srhead .q{color:var(--dim);font-size:13px}
   .srtabbar{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:10px}
@@ -106,14 +116,14 @@ const STYLE = `<style>
   #srt-details:checked ~ #srp-details{display:block}
   /* project step progress */
   .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
-  .bar > span{display:block;height:100%;background:var(--done,#b8bb26)}
+  .bar > span{display:block;height:100%;background:var(--done,var(--ok))}
   .steps{margin-top:8px}
   .step{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
   .step .n{color:var(--dim);width:22px;flex:none}
   .step .ti{flex:1;overflow-wrap:anywhere}
   .step .st{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
-  .step .st.done{color:#1d2021;background:#b8bb26}
-  .step .st.queued,.step .st.running{color:#1d2021;background:var(--acc)}
+  .step .st.done{color:var(--bg);background:var(--ok)}
+  .step .st.queued,.step .st.running{color:var(--bg);background:var(--acc)}
 </style>`;
 
 function layout(active: string, body: string): string {
@@ -146,11 +156,13 @@ function cardLink(item: Item, profiles: ResolvedProfile[]): string {
   const total = typeof pl.stepsTotal === "number" ? pl.stepsTotal : 0;
   const doneN = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
 
-  // Kind/type badge carries the categorical color; goal/phase/report are signal
-  // badges. Lane (column) encodes phase/status, so color stays type-only.
+  // Kind/type badge carries the categorical color (SR2 ticket-card style: type
+  // color text on a faint color-mix fill + tinted border). Goal/phase/report are
+  // neutral signal badges. Lane (column) encodes phase/status — color stays type.
+  const c = esc(color);
   const typeBadge = isIdea
-    ? `<span class="badge">idea</span>`
-    : `<span class="badge profile" style="background:${esc(color)}">${esc(item.genre)}</span>`;
+    ? `<span class="badge type">idea</span>`
+    : `<span class="badge type" style="color:${c};background:color-mix(in srgb,${c} 18%,transparent);border-color:color-mix(in srgb,${c} 40%,transparent)">${esc(item.genre)}</span>`;
   const goalBadge = goal ? `<span class="badge">${esc(goal)}</span>` : "";
   const phaseBadge = isIdea ? "" : `<span class="badge">${esc(item.phase)}</span>`;
   const reportBadge = hasReport ? `<span class="badge" title="has REPORT">📄</span>` : "";
@@ -164,7 +176,13 @@ function cardLink(item: Item, profiles: ResolvedProfile[]): string {
   const title = customer || titleOf(item);
   const why = customer && question ? `<div class="why">${esc(question)}</div>` : "";
 
-  return `<a class="card${item.nightly ? " nightly" : ""}" href="/project/${esc(item.id)}" style="border-left-color:${esc(color)}">
+  // SR2 ticket-card edge: type-color left border + faint type-tinted fill (ideas
+  // stay neutral). color-mix over --elev so the tint reads on the dark surface.
+  const skin = isIdea
+    ? `border-left-color:var(--dim)`
+    : `border-left-color:${c};background:color-mix(in srgb,${c} 12%,var(--elev))`;
+
+  return `<a class="card${item.nightly ? " nightly" : ""}" href="/project/${esc(item.id)}" style="${skin}">
     <div class="badges">${typeBadge}${goalBadge}${phaseBadge}${reportBadge}${moon}</div>
     <div class="title">${esc(title)}</div>
     ${why}
@@ -199,18 +217,21 @@ export function renderGauntlet(projects: Item[], profiles: ResolvedProfile[]): s
   return layout("gauntlet", `<div class="wrap">${laneBoard(projects, profiles, STATUS_LANES, statusOf)}</div>`);
 }
 
-/** Hopper: raw untriaged IDEAS + the intake box. */
+/** Hopper: raw untriaged IDEAS + the intake box. Ideas have no status lane, so
+ *  they render as a responsive card grid (SR2 ticket-card faces) rather than a
+ *  single full-width column. */
 export function renderHopperPage(ideas: Item[], profiles: ResolvedProfile[]): string {
   const cards = ideas.length
-    ? ideas.map((i) => cardLink(i, profiles)).join("")
-    : `<div class="empty">no ideas waiting — type one above</div>`;
+    ? `<div class="grid">${ideas.map((i) => cardLink(i, profiles)).join("")}</div>`
+    : `<div class="empty" style="padding:24px">no ideas waiting — type one above</div>`;
   const body = `
 <form class="intake" method="post" action="/intake">
   <input type="text" name="text" placeholder="Capture an idea — it lands here (and in the brain backlog); promote it to a project when ready…" required autofocus>
   <button type="submit">→ hopper</button>
 </form>
-<div class="wrap">
-  <div class="board"><section class="col"><h2>Ideas <span class="count">${ideas.length}</span></h2><div class="cards">${cards}</div></section></div>
+<div class="col" style="margin:14px;border:0;background:transparent">
+  <h2 style="border:0;padding:0 4px 8px">Ideas <span class="count">${ideas.length}</span></h2>
+  ${cards}
 </div>`;
   return layout("hopper", body);
 }
@@ -340,7 +361,7 @@ export function renderProjectDetail(
   <h2>Danger</h2>
   <form class="act" method="post" action="/delete">
     <input type="hidden" name="id" value="${esc(item.id)}">
-    <button type="submit" style="border-color:#cc241d;color:#fb4934">🗑 delete</button>
+    <button type="submit" style="border-color:var(--err);color:var(--err)">🗑 delete</button>
     <span class="kv">removes this ${isIdea ? "idea" : "project"} from the board</span>
   </form>`;
 
@@ -462,7 +483,7 @@ function stepClass(status: string): string {
 /** Nightly-builds PROJECT detail: goal + step progress + per-step status/report. */
 export function renderNightlyProject(item: Item): string {
   const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
-  const color = "#fe8019"; // nightly-build orange
+  const color = "#cf995f"; // HWC palette: warning (copper) — nightly-build tint
   const steps = Array.isArray(p.steps) ? (p.steps as NbStepView[]) : [];
   const done = typeof p.stepsDone === "number" ? p.stepsDone : 0;
   const total = typeof p.stepsTotal === "number" ? p.stepsTotal : steps.length;

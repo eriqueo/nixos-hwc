@@ -4,7 +4,7 @@
 # engine timer. Brownfield genre, so chesterton's-fence + principles-fix apply.
 genre: datax-sr
 label: DataX SR Gauntlet
-color: "#83a598"
+color: "#5e81ac" # HWC palette: info (blue)
 source: firestore-srs
 gates:
   - chestertons-fence
