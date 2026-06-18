@@ -267,7 +267,6 @@ the app," which makes a bad pin a localized incident instead of a fleet
 outage.
 
 ## Recommendation
-
 **Adopt Option D (private `github:` inputs) plus the import-gating change.**
 
 Rationale, against the matrix:
