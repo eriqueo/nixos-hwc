@@ -95,6 +95,9 @@ let
     set -uo pipefail
     NOTIFY_URL="''${NB_NOTIFY_URL:-http://127.0.0.1:11600/notify}"
     OUT="$(mktemp)"; trap 'rm -f "$OUT"' EXIT
+    # No date window needed: the CLI skips any step that already has a review
+    # record (idempotent) and complete projects graduate off the gauntlet into
+    # _finished/, so the active board never holds stale done work to re-sweep.
     echo "morning-review: starting (reviews -> ${reviewsDir})"
     ${reviewBin} > "$OUT" 2>&1
     rc=$?
@@ -106,6 +109,7 @@ let
         "merge-ready=\(.byVerdict["merge-ready"] // 0) " +
         "needs-work=\(.byVerdict["needs-work"] // 0) " +
         "reject=\(.byVerdict.reject // 0)" +
+        (if (.graduated|length) > 0 then " graduated=\(.graduated|length)" else "" end) +
         (if (.errors|length) > 0 then " errors=\(.errors|length)" else "" end)
       ' "$OUT" 2>/dev/null)" || summary=""
     if [ -z "$summary" ]; then

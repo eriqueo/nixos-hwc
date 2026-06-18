@@ -8,12 +8,21 @@
 // `queued` step cards; refinery only reads, and flips a step's status for the
 // queue gate (setCardStatus). nb:<goal> ids identify a project.
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, renameSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { Item } from "../contracts.js";
 
 export const NB_PREFIX = "nb:";
 export const NIGHTLY_BUILD_GENRE = "nightly-build";
+
+// The exit ramp. A project is work-in-flight while it lives directly under
+// _inbox/nightly_builds/<goal>/. When every step is `done` it GRADUATES off the
+// gauntlet into _inbox/nightly_builds/_finished/<goal>/ — physically out of the
+// active board (and out of run.sh's `*/NN-*.md` queue glob, since it's now two
+// levels deeper). A finished project can be sent back with amendments
+// (reopenProject), which returns it to the gauntlet with a fresh queued step.
+// The leading underscore keeps _finished from being read as a goal folder.
+export const FINISHED_DIR = "_finished";
 
 export interface NbStep {
   n: string; // "01"
@@ -87,63 +96,146 @@ function projectState(steps: NbStep[]): { phase: string; phaseStatus: Item["phas
   return { phase, phaseStatus: "parked", parkedReason: "nothing queued — pick the next step" };
 }
 
-/** One read-only Item per nightly-builds project (goal folder), with its steps. */
+/** True once a project has nothing left to do — every step is `done`. This is
+ *  the auto-graduation signal: such a project belongs on the Finished page. */
+export function isProjectComplete(steps: NbStep[]): boolean {
+  return steps.length > 0 && steps.every((s) => isDone(s.status));
+}
+
+/** Build one read-only project Item from a goal dir. `finished` flags graduated
+ *  projects (Finished page); their id is namespaced so the two sets never
+ *  collide and the board can route actions to the right lane. */
+function buildProjectItem(dir: string, goalId: string, finished: boolean): Item | null {
+  const steps = readSteps(dir);
+  if (!steps.length) return null;
+
+  // _goal.md → project title + description + run mode
+  let title = goalId;
+  let goalBody = "";
+  let mode: NbMode = "nightly";
+  const goalPath = join(dir, "_goal.md");
+  if (existsSync(goalPath)) {
+    const gtext = readFileSync(goalPath, "utf8");
+    goalBody = bodyOf(gtext);
+    const h = /^#\s+(.*)$/m.exec(goalBody);
+    if (h) title = h[1].trim().replace(/^Goal:\s*/i, "");
+    if (frontmatter(gtext).mode === "immediate") mode = "immediate";
+  }
+  const nextPending = steps.find((s) => isPending(s.status));
+
+  const { phase, phaseStatus, parkedReason } = projectState(steps);
+  const done = steps.filter((s) => isDone(s.status)).length;
+  const queuedCount = steps.filter((s) => isQueuedish(s.status)).length;
+  return {
+    id: `${finished ? FINISHED_PREFIX : NB_PREFIX}${goalId}`,
+    genre: NIGHTLY_BUILD_GENRE,
+    phase,
+    phaseStatus: finished ? "passed" : phaseStatus,
+    parkedReason: finished ? undefined : parkedReason,
+    payload: {
+      title,
+      goal: goalId,
+      goalBody,
+      steps,
+      stepsDone: done,
+      stepsTotal: steps.length,
+      queuedCount,
+      mode,
+      // The next actionable step (draft or blocked) + whether it's a blocked
+      // override, so the board can always render exactly one queue control.
+      nextStatus: nextPending ? nextPending.status : "",
+      nextBlocked: nextPending ? nextPending.status.toLowerCase().startsWith("blocked") : false,
+      finished,
+      readonly: true,
+      source: finished ? "nightly-builds (finished)" : "nightly-builds project",
+    },
+    history: [],
+    nightly: true,
+    nightlyPriority: 0,
+  };
+}
+
+/** One read-only Item per ACTIVE nightly-builds project (goal folder). Skips
+ *  `_`-prefixed dirs (_finished, and any meta) so graduated work never shows on
+ *  the gauntlet. */
 export function nightlyCardProjects(vaultDir: string): Item[] {
   const base = join(vaultDir, "_inbox", "nightly_builds");
   if (!existsSync(base)) return [];
   const out: Item[] = [];
   for (const goalId of readdirSync(base)) {
+    if (goalId.startsWith("_")) continue; // _finished / meta — not a goal
     const dir = join(base, goalId);
     if (!statSync(dir).isDirectory()) continue;
-    const steps = readSteps(dir);
-    if (!steps.length) continue;
-
-    // _goal.md → project title + description + run mode
-    let title = goalId;
-    let goalBody = "";
-    let mode: NbMode = "nightly";
-    const goalPath = join(dir, "_goal.md");
-    if (existsSync(goalPath)) {
-      const gtext = readFileSync(goalPath, "utf8");
-      goalBody = bodyOf(gtext);
-      const h = /^#\s+(.*)$/m.exec(goalBody);
-      if (h) title = h[1].trim().replace(/^Goal:\s*/i, "");
-      if (frontmatter(gtext).mode === "immediate") mode = "immediate";
-    }
-    const nextPending = steps.find((s) => isPending(s.status));
-
-    const { phase, phaseStatus, parkedReason } = projectState(steps);
-    const done = steps.filter((s) => isDone(s.status)).length;
-    const queuedCount = steps.filter((s) => isQueuedish(s.status)).length;
-    out.push({
-      id: `${NB_PREFIX}${goalId}`,
-      genre: NIGHTLY_BUILD_GENRE,
-      phase,
-      phaseStatus,
-      parkedReason,
-      payload: {
-        title,
-        goal: goalId,
-        goalBody,
-        steps,
-        stepsDone: done,
-        stepsTotal: steps.length,
-        queuedCount,
-        mode,
-        // The next actionable step (draft or blocked) + whether it's a blocked
-        // override, so the board can always render exactly one queue control.
-        nextStatus: nextPending ? nextPending.status : "",
-        nextBlocked: nextPending ? nextPending.status.toLowerCase().startsWith("blocked") : false,
-        readonly: true,
-        source: "nightly-builds project",
-      },
-      history: [],
-      nightly: true,
-      nightlyPriority: 0,
-    });
+    const item = buildProjectItem(dir, goalId, false);
+    if (item) out.push(item);
   }
   out.sort((a, b) => a.id.localeCompare(b.id));
   return out;
+}
+
+export const FINISHED_PREFIX = "nbf:";
+
+/** nbf:<goal> → the finished goal folder name. */
+export function parseFinishedId(id: string): string | null {
+  return id.startsWith(FINISHED_PREFIX) ? id.slice(FINISHED_PREFIX.length) : null;
+}
+
+/** One read-only Item per FINISHED project (graduated off the gauntlet). */
+export function finishedProjects(vaultDir: string): Item[] {
+  const base = join(vaultDir, "_inbox", "nightly_builds", FINISHED_DIR);
+  if (!existsSync(base)) return [];
+  const out: Item[] = [];
+  for (const goalId of readdirSync(base)) {
+    if (goalId.startsWith("_")) continue;
+    const dir = join(base, goalId);
+    if (!statSync(dir).isDirectory()) continue;
+    const item = buildProjectItem(dir, goalId, true);
+    if (item) out.push(item);
+  }
+  out.sort((a, b) => a.id.localeCompare(b.id));
+  return out;
+}
+
+/** Graduate a project off the gauntlet → _finished/. Returns false if the
+ *  source is missing or a finished project of that name already exists (never
+ *  clobbers). The move is atomic (rename within one filesystem). */
+export function graduateProject(vaultDir: string, goalId: string): boolean {
+  if (goalId.startsWith("_") || goalId.includes("/")) return false;
+  const from = join(vaultDir, "_inbox", "nightly_builds", goalId);
+  const to = join(vaultDir, "_inbox", "nightly_builds", FINISHED_DIR, goalId);
+  if (!existsSync(from) || existsSync(to)) return false;
+  mkdirSync(dirname(to), { recursive: true });
+  renameSync(from, to);
+  return true;
+}
+
+/** Send a finished project back to the gauntlet, optionally with an amendment:
+ *  a fresh `NN-amendment-*.md` step (status queued) carrying the note, so the
+ *  re-opened project has something actionable to run rather than landing back
+ *  as all-done. Returns the new step file (or "" when no amendment) or null on
+ *  failure. */
+export function reopenProject(
+  vaultDir: string,
+  goalId: string,
+  amendment?: string,
+): string | null {
+  if (goalId.startsWith("_") || goalId.includes("/")) return null;
+  const from = join(vaultDir, "_inbox", "nightly_builds", FINISHED_DIR, goalId);
+  const to = join(vaultDir, "_inbox", "nightly_builds", goalId);
+  if (!existsSync(from) || existsSync(to)) return null;
+  renameSync(from, to);
+  if (!amendment || !amendment.trim()) return "";
+
+  const steps = readSteps(to);
+  const lastN = steps.reduce((max, s) => Math.max(max, Number(s.n) || 0), 0);
+  const nn = String(lastN + 1).padStart(2, "0");
+  const file = `${nn}-amendment.md`;
+  const title = `${nn} — amendment`;
+  writeFileSync(
+    join(to, file),
+    `---\ntitle: "${title}"\ngoal: "[[_goal]]"\nstep: "${nn}"\nstatus: queued\nrun: ""\npr: ""\n---\n\n# ${title}\n\n${amendment.trim()}\n`,
+  );
+  return file;
 }
 
 /** Flip one step card's status (the queue gate). goalId + step file. */

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { LlmPort } from "../src/gates/llm-port.js";
@@ -8,6 +8,13 @@ import { safeReviewId, PrReview } from "../src/review/contract.js";
 import { reviewBranch, ReviewInput } from "../src/review/reviewer.js";
 import { runMorningReview, MorningReviewConfig } from "../src/review/run.js";
 import { GitFactsPort, GitHubPort, ReviewsStore } from "../src/review/ports.js";
+import {
+  nightlyCardProjects,
+  finishedProjects,
+  graduateProject,
+  reopenProject,
+  isProjectComplete,
+} from "../src/sources/nightly-cards.js";
 
 // ── Stub ports ───────────────────────────────────────────────────────────────
 
@@ -238,6 +245,108 @@ test("runMorningReview continues past a single card error and collects it", asyn
     assert.equal(summary.reviewed, 1, "one card still reviewed despite the other failing");
     assert.equal(summary.errors.length, 1);
     assert.match(summary.errors[0].error, /llm boom/);
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("runMorningReview skips a done card that already has a review record (idempotent)", async () => {
+  const v = vaultWithDoneCards();
+  try {
+    const cfg: MorningReviewConfig = { vaultDir: v.root, defaultRepo: "/repo" };
+    const { github, calls } = stubGitHub();
+    const { store, saved } = memStore();
+    // Pre-seed a record for the first card — a prior morning already reviewed it.
+    saved.push({ id: "estimator/refactor" } as PrReview);
+    const summary = await runMorningReview(cfg, {
+      facts: stubFacts(),
+      github,
+      store,
+      llm: stubLlm(GOOD_VERDICT),
+      clock: () => "2026-06-17T08:00:00Z",
+    });
+    assert.equal(summary.skipped, 1, "the pre-reviewed card is skipped");
+    assert.equal(summary.reviewed, 1, "only the un-reviewed card is reviewed");
+    assert.deepEqual(calls.created.map((c) => c.branch), [
+      "nightly/2026-06-17-estimator-tests",
+    ]);
+  } finally {
+    v.cleanup();
+  }
+});
+
+// ── exit ramp: graduation / reopen ───────────────────────────────────────────
+
+function vaultWithCompleteProject(): { root: string; cleanup: () => void } {
+  const root = mkdtempSync(join(tmpdir(), "refinery-grad-"));
+  const g = join(root, "_inbox", "nightly_builds", "done-proj");
+  mkdirSync(g, { recursive: true });
+  writeFileSync(join(g, "_goal.md"), "---\nmode: nightly\n---\n# Done project\n");
+  writeFileSync(
+    join(g, "01-a.md"),
+    "---\ntitle: A\nstatus: done\nrun: runs/2026-06-17-done-proj-01-a/\nrepo: /repo\n---\nbranch `b1`",
+  );
+  writeFileSync(
+    join(g, "02-b.md"),
+    "---\ntitle: B\nstatus: done\nrun: runs/2026-06-17-done-proj-02-b/\nrepo: /repo\n---\nbranch `b2`",
+  );
+  return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+}
+
+test("runMorningReview graduates a project whose every step is done", async () => {
+  const v = vaultWithCompleteProject();
+  try {
+    const cfg: MorningReviewConfig = { vaultDir: v.root, defaultRepo: "/repo" };
+    const { github } = stubGitHub();
+    const { store } = memStore();
+    const summary = await runMorningReview(cfg, {
+      facts: stubFacts(),
+      github,
+      store,
+      llm: stubLlm(GOOD_VERDICT),
+      clock: () => "2026-06-17T08:00:00Z",
+    });
+    assert.equal(summary.reviewed, 2);
+    assert.deepEqual(summary.graduated, ["done-proj"]);
+    // Physically moved: gone from the gauntlet, present on the Finished page.
+    assert.equal(nightlyCardProjects(v.root).length, 0);
+    const fin = finishedProjects(v.root);
+    assert.equal(fin.length, 1);
+    assert.equal((fin[0].payload as { goal: string }).goal, "done-proj");
+    assert.equal(fin[0].phaseStatus, "passed");
+    assert.ok(
+      existsSync(join(v.root, "_inbox", "nightly_builds", "_finished", "done-proj", "01-a.md")),
+    );
+  } finally {
+    v.cleanup();
+  }
+});
+
+test("isProjectComplete is true only when every step is done", () => {
+  const done = (s: string) => ({ n: "01", file: "01.md", title: "", status: s, step: "", run: "", pr: "" });
+  assert.equal(isProjectComplete([done("done"), done("done")]), true);
+  assert.equal(isProjectComplete([done("done"), done("queued")]), false);
+  assert.equal(isProjectComplete([]), false);
+});
+
+test("reopenProject moves a finished project back and queues an amendment step", () => {
+  const v = vaultWithCompleteProject();
+  try {
+    assert.equal(graduateProject(v.root, "done-proj"), true);
+    assert.equal(nightlyCardProjects(v.root).length, 0);
+
+    const file = reopenProject(v.root, "done-proj", "also speak the prompt aloud");
+    assert.equal(file, "03-amendment.md");
+    // Back on the gauntlet with a fresh queued step.
+    const active = nightlyCardProjects(v.root);
+    assert.equal(active.length, 1);
+    assert.equal(finishedProjects(v.root).length, 0);
+    const amend = readFileSync(
+      join(v.root, "_inbox", "nightly_builds", "done-proj", "03-amendment.md"),
+      "utf8",
+    );
+    assert.match(amend, /status: queued/);
+    assert.match(amend, /also speak the prompt aloud/);
   } finally {
     v.cleanup();
   }

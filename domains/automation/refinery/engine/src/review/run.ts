@@ -13,7 +13,13 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { LlmPort } from "../gates/llm-port.js";
-import { readReport } from "../sources/nightly-cards.js";
+import {
+  readReport,
+  nightlyCardProjects,
+  isProjectComplete,
+  graduateProject,
+  type NbStep,
+} from "../sources/nightly-cards.js";
 import { PrReview } from "./contract.js";
 import { GitFactsPort, GitHubPort, ReviewsStore } from "./ports.js";
 import { reviewBranch, ReviewInput } from "./reviewer.js";
@@ -35,7 +41,13 @@ export interface MorningReviewPorts {
 
 export interface MorningReviewSummary {
   reviewed: number;
+  /** Done steps skipped because they already carry a review record (idempotent —
+   *  this is what lets the pass re-run safely without re-reviewing or re-sweeping
+   *  old work, replacing the old date-window band-aid). */
+  skipped: number;
   opened: number;
+  /** Projects that graduated off the gauntlet this pass (all steps done). */
+  graduated: string[];
   byVerdict: { "merge-ready": number; "needs-work": number; reject: number };
   errors: Array<{ id: string; error: string }>;
   items: PrReview[];
@@ -145,7 +157,9 @@ export async function runMorningReview(
 
   const summary: MorningReviewSummary = {
     reviewed: 0,
+    skipped: 0,
     opened: 0,
+    graduated: [],
     byVerdict: { "merge-ready": 0, "needs-work": 0, reject: 0 },
     errors: [],
     items: [],
@@ -153,6 +167,14 @@ export async function runMorningReview(
 
   for (const card of cards) {
     try {
+      // Idempotent skip: a step already reviewed keeps its record and PR — never
+      // re-judged. This (not a date window) is what keeps the pass from
+      // re-sweeping older done work every morning.
+      if (await ports.store.load(card.id)) {
+        summary.skipped += 1;
+        continue;
+      }
+
       const base = await ports.facts.resolveBase(card.repo);
       const [diffstat, commits, mergeable] = await Promise.all([
         ports.facts.diffstat({ repo: card.repo, base, branch: card.branch }),
@@ -205,6 +227,17 @@ export async function runMorningReview(
       summary.items.push(persisted);
     } catch (e) {
       summary.errors.push({ id: card.id, error: (e as Error).message });
+    }
+  }
+
+  // Exit ramp: a project whose every step is now done graduates off the
+  // gauntlet into _finished/ (the Finished page). Done after reviewing so each
+  // step's PR + record already exist; the move never clobbers and is reversible
+  // via reopenProject ("send back with amendments").
+  for (const proj of nightlyCardProjects(cfg.vaultDir)) {
+    const payload = proj.payload as { goal: string; steps: NbStep[] };
+    if (isProjectComplete(payload.steps) && graduateProject(cfg.vaultDir, payload.goal)) {
+      summary.graduated.push(payload.goal);
     }
   }
 
