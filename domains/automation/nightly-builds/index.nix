@@ -78,6 +78,11 @@ let
     REFINERY_DEFAULT_REPO = toString cfg.repoDir;
     REFINERY_REVIEWS_DIR = reviewsDir;
     REFINERY_LLM_PROVIDER = cfg.reviewLlmProvider;
+  } // lib.optionalAttrs (config.hwc.automation.refinery.claudeBin != null) {
+    # The claude-cli LlmPort shells out to `claude`, which is NOT on the service
+    # PATH. Point it at the same headless binary the refinery board uses, else
+    # every review fails ENOENT and no verdicts are ever produced.
+    REFINERY_CLAUDE_BIN = config.hwc.automation.refinery.claudeBin;
   };
   # PATH for the review pass: git + gh (open PRs), node (the CLI is a node
   # bundle but the wrapper supplies node; gh/git are shelled out to), jq (parse
@@ -99,7 +104,10 @@ let
     # record (idempotent) and complete projects graduate off the gauntlet into
     # _finished/, so the active board never holds stale done work to re-sweep.
     echo "morning-review: starting (reviews -> ${reviewsDir})"
-    ${reviewBin} > "$OUT" 2>&1
+    # stdout is the machine-readable JSON summary (parsed below); stderr is the
+    # CLI's human line — let it flow to the journal. Do NOT 2>&1 them together,
+    # or the trailing human line corrupts the JSON and jq yields an empty digest.
+    ${reviewBin} > "$OUT"
     rc=$?
     # The CLI prints a JSON summary to stdout and a human line to stderr (both
     # captured above). Pull the digest fields with jq; degrade to a raw tail if
