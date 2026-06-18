@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 import { Item, ItemEffector, Profile } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { ProfileCatalog } from "../profiles/catalog.js";
+import { loadDomains } from "../domains.js";
 import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
@@ -20,12 +21,13 @@ import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderSr, renderSrDetail, renderProjectDetail, renderReport } from "./render.js";
+import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, HOPPER_STAGE_KEYS } from "./render.js";
 
 export interface HttpShellConfig {
   port: number;
   itemsDir: string;
   profilesDir: string;
+  domainsFile?: string; // domains registry (color + tag identity axis); optional
   profileStatePath: string;
   capsPath: string; // per-gauntlet "max per run" caps, written by the GUI
   scratchDir: string; // where the write-spec effector drops developed specs
@@ -46,6 +48,7 @@ export function configFromEnv(): HttpShellConfig {
     port: Number(process.env.REFINERY_PORT || 8060),
     itemsDir: process.env.REFINERY_ITEMS_DIR || `${base}/items`,
     profilesDir: process.env.REFINERY_PROFILES_DIR || "profiles",
+    domainsFile: process.env.REFINERY_DOMAINS_FILE,
     profileStatePath: process.env.REFINERY_PROFILE_STATE || `${base}/profiles.json`,
     capsPath: process.env.REFINERY_CAPS_FILE || `${base}/caps.json`,
     scratchDir: process.env.REFINERY_SCRATCH_DIR || `${base}/specs`,
@@ -82,6 +85,7 @@ function redirectTo(res: ServerResponse, location: string): void {
 export function createShell(cfg: HttpShellConfig) {
   const store = new MarkdownItemStore(cfg.itemsDir);
   const catalog = new ProfileCatalog({ dir: cfg.profilesDir, statePath: cfg.profileStatePath });
+  const domains = loadDomains(cfg.domainsFile);
 
   // Per-gauntlet "max per run" caps — the single runtime source of truth that
   // both run.sh files read (with their env value as fallback). Refinery is the
@@ -286,7 +290,32 @@ export function createShell(cfg: HttpShellConfig) {
     await store.delete(id); // no-op for read-only mirror items (not in the store)
   }
 
-  async function promote(id: string, genre: string): Promise<void> {
+  /** Hopper idea stage move (Captured → Shaping → Ready). Stages live in `phase`
+   *  on untriaged items; only untriaged items have a hopper stage. */
+  async function setStage(id: string, toStage: string): Promise<void> {
+    if (!HOPPER_STAGE_KEYS.includes(toStage)) return;
+    const item = await store.load(id);
+    if (!item || item.genre !== UNTRIAGED) return;
+    await store.save({
+      ...item,
+      phase: toStage,
+      history: [...item.history, { phase: toStage, status: "entered", at: cfg.clock(), note: "stage moved on board" }],
+    });
+  }
+
+  /** Manual domain override (the color/tag identity axis). Stored in the payload;
+   *  a render-time classifier picks the default from the idea text otherwise. */
+  async function setDomain(id: string, domain: string): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    const payload = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
+    await store.save({ ...item, payload: { ...payload, domain } });
+  }
+
+  /** Promote an idea into a refinement pipeline. `schedule` chooses how it runs:
+   *  "immediate" kicks the pipeline now; "nightly" flags it for the overnight
+   *  batch (no immediate run). Anything else just promotes (manual run later). */
+  async function promote(id: string, genre: string, schedule = ""): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
     const profile = catalog.get(genre);
@@ -297,7 +326,8 @@ export function createShell(cfg: HttpShellConfig) {
       phase: profile.gates[0] ?? "triage",
       phaseStatus: "pending",
       parkedReason: undefined,
-      history: [...item.history, { phase: profile.gates[0] ?? "triage", status: "entered", at: cfg.clock(), note: `promoted to ${genre}` }],
+      nightly: schedule === "nightly" ? true : item.nightly,
+      history: [...item.history, { phase: profile.gates[0] ?? "triage", status: "entered", at: cfg.clock(), note: `promoted to ${genre}${schedule ? ` (${schedule})` : ""}` }],
     });
     // Brain-sourced idea → record the promotion in the vault: cut it from
     // backlog/drafted and file it under `## promoted` (annotated with the genre).
@@ -305,6 +335,9 @@ export function createShell(cfg: HttpShellConfig) {
       const text = (item.payload as { input?: unknown }).input;
       if (typeof text === "string") promoteBrainIdea(cfg.vaultDir, text, genre, cfg.clock);
     }
+    // Immediate scheduling: run the pipeline now (same as the /run route — the
+    // shell marks it running and processes; the redirect happens after).
+    if (schedule === "immediate") await kickRun(id);
   }
 
   const server = createServer((req, res) => {
@@ -332,14 +365,14 @@ export function createShell(cfg: HttpShellConfig) {
           const [items, profiles, enabled] = [await store.list(), catalog.list(), catalog.enabled()];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           if (url === "/hopper") {
-            res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles, enabled));
+            res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles, enabled, domains));
           } else {
             // Gauntlet: store projects + nightly-build mirror cards (SRs have their own page).
             const projects = [
               ...items.filter((i) => i.genre !== UNTRIAGED),
               ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
             ];
-            res.end(renderGauntlet(projects, profiles, enabled));
+            res.end(renderGauntlet(projects, profiles, enabled, domains));
           }
           return;
         }
@@ -350,7 +383,7 @@ export function createShell(cfg: HttpShellConfig) {
             ...mirror().filter((m) => m.id.startsWith(NB_PREFIX)),
           ].sort((a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderNightly(flagged, readCap("nightly"), profiles, enabled));
+          res.end(renderNightly(flagged, readCap("nightly"), profiles, enabled, domains));
           return;
         }
         if (method === "GET" && url === "/sr") {
@@ -359,7 +392,7 @@ export function createShell(cfg: HttpShellConfig) {
             .filter((m) => m.id.startsWith(SR_PREFIX))
             .sort((a, b) => b.id.localeCompare(a.id));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          res.end(renderSr(srs, readCap("sr"), profiles));
+          res.end(renderSr(srs, readCap("sr"), profiles, domains));
           return;
         }
         if (method === "GET" && url.startsWith("/project/")) {
@@ -384,7 +417,7 @@ export function createShell(cfg: HttpShellConfig) {
               context: readRunFile(cfg.srGauntletDir, run, "context.md"),
             }));
           } else {
-            res.end(renderProjectDetail(item, catalog.list(), catalog.enabled()));
+            res.end(renderProjectDetail(item, catalog.list(), catalog.enabled(), domains));
           }
           return;
         }
@@ -439,8 +472,20 @@ export function createShell(cfg: HttpShellConfig) {
             await setStatus(id, body.get("status") ?? "");
             return redirectTo(res, back || "/");
           }
+          if (url === "/stage") {
+            // Hopper idea maturation move (Captured → Shaping → Ready).
+            await setStage(id, body.get("toStage") ?? "");
+            return redirectTo(res, back || "/hopper");
+          }
+          if (url === "/domain") {
+            // Manual domain (color + tag) override.
+            await setDomain(id, body.get("domain") ?? "");
+            return redirectTo(res, back || "/hopper");
+          }
           if (url === "/promote") {
-            await promote(id, body.get("genre") ?? "");
+            // schedule: "immediate" runs the pipeline now; "nightly" flags it for
+            // the overnight batch; "" just promotes (manual run later).
+            await promote(id, body.get("genre") ?? "", body.get("schedule") ?? "");
             return redirectTo(res, afterEdit);
           }
           if (url === "/run") {
@@ -534,5 +579,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
+  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
 }

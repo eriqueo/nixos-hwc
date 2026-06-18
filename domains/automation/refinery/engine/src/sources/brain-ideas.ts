@@ -127,15 +127,16 @@ export function readBrainIdeas(vaultDir: string): BrainIdea[] {
   return out;
 }
 
-/** A fresh UNTRIAGED Item for a brain idea — the hopper shape (genre untriaged,
- *  parked at the synthetic `triage` phase awaiting human promotion). */
+/** A fresh UNTRIAGED Item for a brain idea — the hopper shape. Untriaged ideas
+ *  live in the Hopper's maturation stages (phase = the stage); they enter at
+ *  "captured" and advance Captured → Shaping → Ready, then promote. */
 export function makeIdeaItem(idea: BrainIdea, clock: () => string): Item {
   return {
     id: idea.id,
     genre: UNTRIAGED,
-    phase: "triage",
+    phase: "captured",
     phaseStatus: "parked",
-    parkedReason: "from the brain — promote it to start a project",
+    parkedReason: "from the brain — shape it, then promote when Ready",
     payload: {
       input: idea.text,
       title: idea.text.length > 80 ? `${idea.text.slice(0, 77)}…` : idea.text,
@@ -143,7 +144,7 @@ export function makeIdeaItem(idea: BrainIdea, clock: () => string): Item {
       brainSection: idea.section,
       brainGoal: idea.goalId,
     },
-    history: [{ phase: "triage", status: "parked", at: clock(), note: "imported from brain _ideas.md" }],
+    history: [{ phase: "captured", status: "parked", at: clock(), note: "imported from brain _ideas.md" }],
   };
 }
 

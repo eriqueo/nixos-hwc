@@ -129,6 +129,8 @@ in
         Environment = [
           "REFINERY_PORT=${toString cfg.port}"
           "REFINERY_PROFILES_DIR=${profilesDir}"
+          # Domain registry (categorical identity axis: color + tag), data-driven.
+          "REFINERY_DOMAINS_FILE=${./domains.yaml}"
           "REFINERY_ITEMS_DIR=/var/lib/refinery/items"
           "REFINERY_PROFILE_STATE=/var/lib/refinery/profiles.json"
           # Per-gauntlet "max per run" caps the board edits; both run.sh files

@@ -1,0 +1,56 @@
+# Domains — the categorical IDENTITY axis of the Refinery (color + header tag),
+# orthogonal to genre (the pipeline) and stage/phase (the lane). A domain is the
+# subject area an idea/project is *about* (kidpix, nixos, datax, …) and its color
+# persists across the whole chain: Hopper idea → Gauntlet project → Report.
+#
+# Data-driven (Charter principle: no hardcoded category→color maps in the
+# renderer). `match` lists the prefixes seen in the brain `_ideas.md` lines
+# ("kidpix:", "nixos repo:", …) used to auto-classify an idea's domain; a manual
+# picker on the card overrides it. Unknown/prefix-less ideas fall back to `misc`.
+# Colors are HWC brand palette tokens (domains/home/theme/palettes/hwc.nix).
+domains:
+  - key: kidpix
+    label: KidPix
+    color: "#cf995f" # warning / copper
+    match: [kidpix]
+  - key: nixos
+    label: NixOS
+    color: "#5e81ac" # info / blue
+    match: [nixos, "nixos repo", hwc, nix]
+  - key: datax
+    label: DataX
+    color: "#b16286" # magenta
+    match: [datax, "datax sr", sr]
+  - key: brain
+    label: Brain
+    color: "#8aab78" # cyan / sage-dim
+    match: [brain, "brain-mcp", vault, "vault hygiene", wiki]
+  - key: estimator
+    label: Estimator
+    color: "#a3be8c" # success / sage
+    match: [estimator]
+  - key: morning-briefing
+    label: Morning Briefing
+    color: "#fcbb74" # amber
+    match: [morning-briefing, "morning briefing", briefing]
+  - key: workbench
+    label: Workbench
+    color: "#81a1c1" # bright blue
+    match: [workbench, todui, khalt, aerc]
+  - key: refinery
+    label: Refinery
+    color: "#d3869b" # bright magenta
+    match: [refinery]
+  - key: leads
+    label: Leads
+    color: "#b4c89a" # bright green
+    match: [leads, lead_scout, "lead scout"]
+  - key: personal
+    label: Personal
+    color: "#928374" # gray
+    match: [personal, home, family]
+fallback:
+  key: misc
+  label: Misc
+  color: "#a7aaad" # neutral fg2
+  match: []

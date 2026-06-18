@@ -11,6 +11,7 @@
 
 import { Item } from "../contracts.js";
 import { ResolvedProfile } from "../profiles/catalog.js";
+import { DomainRegistry, domainOf } from "../domains.js";
 import { mdToHtml } from "./markdown.js";
 
 function esc(s: string): string {
@@ -19,11 +20,8 @@ function esc(s: string): string {
   );
 }
 
-const NEUTRAL = "#a7aaad"; // HWC palette fg2 (dim) — fallback for unknown genres
+const NEUTRAL = "#a7aaad"; // HWC palette fg2 (dim) — neutral fallback color
 const UNTRIAGED = "untriaged";
-function colorOf(genre: string, profiles: ResolvedProfile[]): string {
-  return profiles.find((p) => p.genre === genre)?.color ?? NEUTRAL;
-}
 function titleOf(item: Item): string {
   return item.payload && typeof item.payload === "object" && "title" in item.payload
     ? String((item.payload as { title: unknown }).title)
@@ -37,6 +35,28 @@ const LANES: { status: Item["phaseStatus"]; label: string }[] = [
   { status: "passed", label: "Done" },
   { status: "failed", label: "Failed" },
 ];
+
+// Hopper lanes = idea-maturation stages (the chain's first half, before an idea
+// is promoted into the Gauntlet). Stored in `item.phase` on untriaged items.
+export const HOPPER_STAGES: { key: string; label: string }[] = [
+  { key: "captured", label: "Captured" },
+  { key: "shaping", label: "Shaping" },
+  { key: "ready", label: "Ready" },
+];
+export const HOPPER_STAGE_KEYS = HOPPER_STAGES.map((s) => s.key);
+function stageOf(item: Item): string {
+  return HOPPER_STAGE_KEYS.includes(item.phase) ? item.phase : "captured";
+}
+
+// Render context threaded to every card: the domain registry (color/tag), all
+// profiles (for the genre label), the promote-target (enabled) profiles, and the
+// `back` path that actions redirect to.
+interface CardCtx {
+  domains: DomainRegistry;
+  profiles: ResolvedProfile[];
+  enabled: ResolvedProfile[];
+  back: string;
+}
 
 const STYLE = `<style>
   /* HWC brand palette (domains/home/theme/palettes/hwc.nix) — gruvbox-anchored,
@@ -162,16 +182,28 @@ function backField(back: string): string {
   return `<input type="hidden" name="back" value="${esc(back)}">`;
 }
 
+// A domain picker (manual override of the auto-classified color/tag). onchange
+// auto-submits → POST /domain. Lists every domain + the fallback.
+function domainPicker(item: Item, ctx: CardCtx, idIn: string, bk: string): string {
+  const cur = domainOf(item, ctx.domains).key;
+  const all = [...ctx.domains.domains, ctx.domains.fallback];
+  const opts = all
+    .map((d) => `<option value="${esc(d.key)}"${d.key === cur ? " selected" : ""}>${esc(d.label)}</option>`)
+    .join("");
+  return `<form class="cc" method="post" action="/domain">${idIn}${bk}<select name="domain" title="domain (color + tag)" onchange="this.form.submit()">${opts}</select></form>`;
+}
+
 // Inline per-card controls (SR2 ticket-card quick actions, no-framework form
-// posts). Kind decides the controls: ideas promote; engine projects get a status
-// dropdown + run + nightly + delete; read-only nightly mirror cards get the
-// vault-backed queue/run/mode; other read-only cards (SR) get none.
-function controlsFor(item: Item, enabled: ResolvedProfile[], back: string): string {
+// posts). Kind decides the controls:
+//   • read-only nightly mirror → vault-backed queue / run-now / mode
+//   • idea → domain picker + stage advance (+ promote when Ready)
+//   • engine project → status lane + genre re-pick + domain + run + nightly + delete
+function controlsFor(item: Item, ctx: CardCtx): string {
   const pl = obj(item.payload);
   const isIdea = item.genre === UNTRIAGED;
   const readonly = pl.readonly === true;
   const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
-  const bk = backField(back);
+  const bk = backField(ctx.back);
 
   if (readonly) {
     // read-only nightly-build mirror: vault-backed queue / run-now / mode toggle.
@@ -195,31 +227,51 @@ function controlsFor(item: Item, enabled: ResolvedProfile[], back: string): stri
   }
 
   if (isIdea) {
-    const opts = enabled.map((p) => `<option value="${esc(p.genre)}">${esc(p.label)}</option>`).join("");
-    return `<div class="ccrow">
-      <form class="cc" method="post" action="/promote">${idIn}${bk}
-        <select name="genre" title="promote to a profile">${opts}</select>
-        <button type="submit">promote →</button>
-      </form>
-      <form class="cc" method="post" action="/delete">${idIn}${bk}<button type="submit" class="danger" title="delete idea">🗑</button></form>
-    </div>`;
+    // Stage advance (Captured → Shaping → Ready) + domain picker. A Ready idea
+    // promotes into project-ideation, immediate or nightly (the only choice —
+    // project-ideation is THE idea→spec refiner; downstream gauntlet routing is
+    // a later auto-step). Below Ready, no promote: shape it first.
+    const stage = stageOf(item);
+    const stageOpts = HOPPER_STAGES.map(
+      (s) => `<option value="${s.key}"${stage === s.key ? " selected" : ""}>${esc(s.label)}</option>`,
+    ).join("");
+    const stageSel = `<form class="cc" method="post" action="/stage">${idIn}${bk}<select name="toStage" title="idea stage" onchange="this.form.submit()">${stageOpts}</select></form>`;
+    // Promote redirects to the Gauntlet (back=/) so the new project is seen
+    // arriving, not just leaving the Hopper.
+    const promote = stage === "ready"
+      ? `<form class="cc" method="post" action="/promote">${idIn}<input type="hidden" name="back" value="/"><input type="hidden" name="genre" value="project-ideation">
+           <button type="submit" name="schedule" value="immediate" title="refine into a spec now">→ refine now</button>
+           <button type="submit" name="schedule" value="nightly" title="queue for the overnight run">🌙 nightly</button>
+         </form>`
+      : "";
+    const delBtn = `<form class="cc" method="post" action="/delete">${idIn}${bk}<button type="submit" class="danger" title="delete idea">🗑</button></form>`;
+    return `<div class="ccrow">${stageSel}${domainPicker(item, ctx, idIn, bk)}${promote}${delBtn}</div>`;
   }
 
-  // engine project: change lane (status dropdown), run, nightly toggle, delete.
+  // engine project: change lane (status), re-pick pipeline (genre), domain, run,
+  // nightly toggle, delete.
   const statusOpts = STATUS_LANES.map(
     (l) => `<option value="${l.key}"${item.phaseStatus === l.key ? " selected" : ""}>${esc(l.label)}</option>`,
   ).join("");
   const statusSel = `<form class="cc" method="post" action="/status">${idIn}${bk}<select name="status" title="move to lane" onchange="this.form.submit()">${statusOpts}</select></form>`;
+  const genreOpts = ctx.enabled
+    .map((p) => `<option value="${esc(p.genre)}"${p.genre === item.genre ? " selected" : ""}>${esc(p.label)}</option>`)
+    .join("");
+  const genreSel = ctx.enabled.length
+    ? `<form class="cc" method="post" action="/promote">${idIn}${bk}<select name="genre" title="pipeline" onchange="this.form.submit()">${genreOpts}</select></form>`
+    : "";
   const runBtn = item.phaseStatus === "running"
     ? `<span class="badge">running…</span>`
     : `<form class="cc" method="post" action="/run">${idIn}${bk}<button type="submit" title="run the pipeline now">▶</button></form>`;
   const nightlyBtn = `<form class="cc" method="post" action="/nightly/toggle">${idIn}${bk}<input type="hidden" name="nightly" value="${item.nightly ? "false" : "true"}"><button type="submit" title="${item.nightly ? "remove from nightly" : "run overnight"}">${item.nightly ? "🌙✓" : "🌙"}</button></form>`;
   const delBtn = `<form class="cc" method="post" action="/delete">${idIn}${bk}<button type="submit" class="danger" title="delete project">🗑</button></form>`;
-  return `<div class="ccrow">${statusSel}${runBtn}${nightlyBtn}${delBtn}</div>`;
+  return `<div class="ccrow">${statusSel}${genreSel}${domainPicker(item, ctx, idIn, bk)}${runBtn}${nightlyBtn}${delBtn}</div>`;
 }
 
-function cardLink(item: Item, profiles: ResolvedProfile[], enabled: ResolvedProfile[] = [], back = "/"): string {
-  const color = colorOf(item.genre, profiles);
+function cardLink(item: Item, ctx: CardCtx): string {
+  const dom = domainOf(item, ctx.domains);
+  const color = dom.color;
+  const c = esc(color);
   const isIdea = item.genre === UNTRIAGED;
   const pl = obj(item.payload);
   const moon = item.nightly ? `<span class="moon" title="nightly">🌙</span>` : "";
@@ -230,13 +282,12 @@ function cardLink(item: Item, profiles: ResolvedProfile[], enabled: ResolvedProf
   const total = typeof pl.stepsTotal === "number" ? pl.stepsTotal : 0;
   const doneN = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
 
-  // Kind/type badge carries the categorical color (SR2 ticket-card style: type
-  // color text on a faint color-mix fill + tinted border). Goal/phase/report are
-  // neutral signal badges. Lane (column) encodes phase/status — color stays type.
-  const c = esc(color);
-  const typeBadge = isIdea
-    ? `<span class="badge type">idea</span>`
-    : `<span class="badge type" style="color:${c};background:color-mix(in srgb,${c} 18%,transparent);border-color:color-mix(in srgb,${c} 40%,transparent)">${esc(item.genre)}</span>`;
+  // Identity badge = DOMAIN (color + tag), persistent across the chain. Then the
+  // pipeline/genre as a neutral badge (projects only), plus goal/phase/report.
+  // Lane (column) encodes stage/status; color stays the domain (type) axis.
+  const domainTag = `<span class="badge type" style="color:${c};background:color-mix(in srgb,${c} 18%,transparent);border-color:color-mix(in srgb,${c} 40%,transparent)">${esc(dom.label)}</span>`;
+  const genreLabel = ctx.profiles.find((p) => p.genre === item.genre)?.label ?? item.genre;
+  const genreBadge = isIdea ? "" : `<span class="badge" title="pipeline">${esc(genreLabel)}</span>`;
   const goalBadge = goal ? `<span class="badge">${esc(goal)}</span>` : "";
   const phaseBadge = isIdea ? "" : `<span class="badge">${esc(item.phase)}</span>`;
   const reportBadge = hasReport ? `<span class="badge" title="has REPORT">📄</span>` : "";
@@ -250,65 +301,70 @@ function cardLink(item: Item, profiles: ResolvedProfile[], enabled: ResolvedProf
   const title = customer || titleOf(item);
   const why = customer && question ? `<div class="why">${esc(question)}</div>` : "";
 
-  // SR2 ticket-card edge: type-color left border + faint type-tinted fill (ideas
-  // stay neutral). color-mix over --elev so the tint reads on the dark surface.
-  const skin = isIdea
-    ? `border-left-color:var(--dim)`
-    : `border-left-color:${c};background:color-mix(in srgb,${c} 12%,var(--elev))`;
+  // SR2 ticket-card edge: domain-color left border + faint domain-tinted fill,
+  // color-mix over --elev so the tint reads on the dark surface.
+  const skin = `border-left-color:${c};background:color-mix(in srgb,${c} 12%,var(--elev))`;
 
   // Card is a container (not a link) so it can hold interactive controls; the
   // title is the click-through to the detail page.
   return `<div class="card${item.nightly ? " nightly" : ""}" style="${skin}">
-    <div class="badges">${typeBadge}${goalBadge}${phaseBadge}${reportBadge}${moon}</div>
+    <div class="badges">${domainTag}${genreBadge}${goalBadge}${phaseBadge}${reportBadge}${moon}</div>
     <a class="title" href="/project/${esc(item.id)}">${esc(title)}</a>
     ${why}
     ${bar}
     ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
-    ${controlsFor(item, enabled, back)}
+    ${controlsFor(item, ctx)}
   </div>`;
 }
 
 // Shared status-lane board: cards grouped into columns. Lane (column) = the
-// phase/status axis; card color = the type axis. Used by every board page.
+// stage/status axis; card color = the domain (identity) axis. Every board page.
 function laneBoard(
   projects: Item[],
-  profiles: ResolvedProfile[],
-  enabled: ResolvedProfile[],
-  back: string,
+  ctx: CardCtx,
   lanes: { key: string; label: string }[],
   keyOf: (item: Item) => string,
 ): string {
   const cols = lanes
     .map((lane) => {
       const inLane = projects.filter((p) => keyOf(p) === lane.key);
-      const body = inLane.length ? inLane.map((p) => cardLink(p, profiles, enabled, back)).join("") : `<div class="empty">—</div>`;
+      const body = inLane.length ? inLane.map((p) => cardLink(p, ctx)).join("") : `<div class="empty">—</div>`;
       return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
     })
     .join("");
   return `<div class="board">${cols}</div>`;
 }
 
-/** Gauntlet: triaged PROJECTS in phase-status lanes, colored by profile. */
-export function renderGauntlet(projects: Item[], profiles: ResolvedProfile[], enabled: ResolvedProfile[] = []): string {
-  return layout("gauntlet", `<div class="wrap">${laneBoard(projects, profiles, enabled, "/", STATUS_LANES, statusOf)}</div>`);
+const emptyRegistry: DomainRegistry = { domains: [], fallback: { key: "misc", label: "Misc", color: NEUTRAL, match: [] } };
+
+/** Gauntlet: triaged PROJECTS in status lanes, colored by domain. */
+export function renderGauntlet(
+  projects: Item[],
+  profiles: ResolvedProfile[],
+  enabled: ResolvedProfile[] = [],
+  domains: DomainRegistry = emptyRegistry,
+): string {
+  const ctx: CardCtx = { domains, profiles, enabled, back: "/" };
+  return layout("gauntlet", `<div class="wrap">${laneBoard(projects, ctx, STATUS_LANES, statusOf)}</div>`);
 }
 
-/** Hopper: raw untriaged IDEAS + the intake box. Ideas have no status lane, so
- *  they render as a responsive card grid (SR2 ticket-card faces) rather than a
- *  single full-width column. Each card promotes/deletes inline. */
-export function renderHopperPage(ideas: Item[], profiles: ResolvedProfile[], enabled: ResolvedProfile[] = []): string {
-  const cards = ideas.length
-    ? `<div class="grid">${ideas.map((i) => cardLink(i, profiles, enabled, "/hopper")).join("")}</div>`
-    : `<div class="empty" style="padding:24px">no ideas waiting — type one above</div>`;
+/** Hopper: untriaged IDEAS in maturation-stage lanes (Captured → Shaping →
+ *  Ready) + the intake box. Stage = lane; domain = color/tag. A Ready idea
+ *  promotes into the Gauntlet. */
+export function renderHopperPage(
+  ideas: Item[],
+  profiles: ResolvedProfile[],
+  enabled: ResolvedProfile[] = [],
+  domains: DomainRegistry = emptyRegistry,
+): string {
+  const ctx: CardCtx = { domains, profiles, enabled, back: "/hopper" };
+  const board = laneBoard(ideas, ctx, HOPPER_STAGES, stageOf);
   const body = `
 <form class="intake" method="post" action="/intake">
-  <input type="text" name="text" placeholder="Capture an idea — it lands here (and in the brain backlog); promote it to a project when ready…" required autofocus>
+  <input type="text" name="text" placeholder="Capture an idea — it lands here (and in the brain backlog); shape it, then promote it when Ready…" required autofocus>
   <button type="submit">→ hopper</button>
 </form>
-<div class="col" style="margin:14px;border:0;background:transparent">
-  <h2 style="border:0;padding:0 4px 8px">Ideas <span class="count">${ideas.length}</span></h2>
-  ${cards}
-</div>`;
+<div class="wrap">${ideas.length ? board : '<div class="empty" style="padding:24px">no ideas waiting — type one above</div>'}</div>`;
   return layout("hopper", body);
 }
 
@@ -319,9 +375,11 @@ export function renderNightly(
   maxPerNight: number,
   profiles: ResolvedProfile[],
   enabled: ResolvedProfile[] = [],
+  domains: DomainRegistry = emptyRegistry,
 ): string {
+  const ctx: CardCtx = { domains, profiles, enabled, back: "/nightly" };
   const queuedProjects = nightly.filter((i) => ((i.payload as { queuedCount?: number })?.queuedCount ?? 0) > 0).length;
-  const board = laneBoard(nightly, profiles, enabled, "/nightly", STATUS_LANES, statusOf);
+  const board = laneBoard(nightly, ctx, STATUS_LANES, statusOf);
   const body = `
 <form class="intake" method="post" action="/nightly/config">
   <label class="kv">Max cards per night:</label>
@@ -338,9 +396,10 @@ export function renderProjectDetail(
   item: Item,
   profiles: ResolvedProfile[],
   enabledProfiles: ResolvedProfile[],
+  domains: DomainRegistry = emptyRegistry,
 ): string {
   const isIdea = item.genre === UNTRIAGED;
-  const color = colorOf(item.genre, profiles);
+  const color = domainOf(item, domains).color;
   const profile = profiles.find((p) => p.genre === item.genre);
   const targets = profile
     ? (() => {
@@ -464,14 +523,20 @@ export function renderProjectDetail(
 /** SR page: investigations as a status-lane kanban (cards = customer + question
  *  → tabbed detail). Lanes are the distinct SR statuses (data-driven), so a new
  *  status needs no renderer edit. */
-export function renderSr(srs: Item[], maxPerNight: number, profiles: ResolvedProfile[]): string {
+export function renderSr(
+  srs: Item[],
+  maxPerNight: number,
+  profiles: ResolvedProfile[],
+  domains: DomainRegistry = emptyRegistry,
+): string {
   const srStatusOf = (item: Item): string => {
     const p = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
     return typeof p.srStatus === "string" && p.srStatus ? p.srStatus : "investigated";
   };
   const lanes = [...new Set(srs.map(srStatusOf))].sort().map((s) => ({ key: s, label: s }));
   // SR cards are read-only mirrors (no inline controls); run-now lives on detail.
-  const board = laneBoard(srs, profiles, [], "/sr", lanes, srStatusOf);
+  const ctx: CardCtx = { domains, profiles, enabled: [], back: "/sr" };
+  const board = laneBoard(srs, ctx, lanes, srStatusOf);
   const body = `
 <form class="intake" method="post" action="/sr/config">
   <label class="kv">Max SRs per run:</label>
