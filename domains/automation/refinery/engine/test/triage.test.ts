@@ -44,6 +44,39 @@ test("makeTriagedItem: classified item starts pending at its first gate", () => 
   assert.equal(item.history.at(-1)!.status, "entered");
 });
 
+test("makeTriagedItem: stamps the profile's defaultTraits (brownfield genre)", () => {
+  resetClock();
+  const item = makeTriagedItem(
+    "item-3",
+    "tighten the contracts in lead_scout",
+    { genre: "app-refinement", confidence: 0.9, reason: "refactor existing app" },
+    "chestertons-fence",
+    fixedClock,
+    { mode: "brownfield", touchesExistingCode: true, writeMode: true },
+  );
+  assert.deepEqual((item.payload as { traits: unknown }).traits, {
+    mode: "brownfield",
+    touchesExistingCode: true,
+    writeMode: true,
+  });
+});
+
+test("makeTriagedItem: falls back to greenfield traits when no defaultTraits given", () => {
+  resetClock();
+  const item = makeTriagedItem(
+    "item-4",
+    "build a new thing",
+    { genre: "project-ideation", confidence: 0.9, reason: "idea" },
+    "stepwise-refinement",
+    fixedClock,
+  );
+  assert.deepEqual((item.payload as { traits: unknown }).traits, {
+    mode: "greenfield",
+    trivial: false,
+    multiPart: true,
+  });
+});
+
 test("makeTriagedItem: untriaged item parks at the triage phase for human routing", () => {
   resetClock();
   const item = makeTriagedItem(
