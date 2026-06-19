@@ -23,7 +23,7 @@ WEBHOOK_FILE="${NB_DISCORD_WEBHOOK_FILE:-/run/agenix/discord-webhook-nightly-bui
 command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 || { echo "SKIP: curl/jq missing"; exit 1; }
 WEBHOOK="$(cat "$WEBHOOK_FILE")"
 
-case "$STATUS" in done|success) EMOJI="✅"; WORD="done" ;; *) EMOJI="❌"; WORD="failed" ;; esac
+case "$STATUS" in done|success) EMOJI="✅"; WORD="done" ;; blocked) EMOJI="⚠️"; WORD="blocked" ;; *) EMOJI="❌"; WORD="failed" ;; esac
 
 # Title: the report's first "# " heading (strip leading "# "), else the label.
 TITLE=$(awk '/^# /{sub(/^# /,""); print; exit}' "$RUN_DIR/REPORT.md")
