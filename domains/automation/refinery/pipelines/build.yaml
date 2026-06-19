@@ -1,0 +1,34 @@
+# Build pipeline — spec → code. The second half of the idea → spec → build
+# assembly line: it takes a developed spec (from project-ideation) and IMPLEMENTS
+# it in an existing target repo. Brownfield + native, mirroring app-refinement:
+# the worktree IS the target repo, so the prime directive is "don't break working
+# behavior" and the fixing-systems gates fire (chestertons-fence, blast-radius,
+# principles-fix). `source: chain` marks it as a chained successor — it's created
+# by the handoff helper, not by triage/intake.
+#
+# It is the terminal pipeline of the chain (no `next`): a build either ships a
+# branch or parks for a human. Scheduling is orthogonal (Run now by default;
+# flag nightly to batch into the overnight lane — same native executor).
+pipeline: build
+label: Build
+color: "#5e81ac" # HWC palette: accent (nord blue) — distinct from ideation/refine/nightly
+source: chain
+gates:
+  - chestertons-fence # understand the target repo before implementing in it
+  - blast-radius # map every reference the spec's changes would affect
+  - principles-fix # implement to the fixing-systems canon (min-viable-fix)
+  - premortem # assume the build shipped and broke — why?
+  - admission-gates # is it allowed to execute (write mode)?
+executorMode: write
+executors:
+  - native
+llmProvider: claude-cli
+# defaultTraits: a build implements a spec in an existing target repo → brownfield
+# + write, so the fixing-systems gates above actually fire.
+defaultTraits:
+  mode: brownfield
+  touchesExistingCode: true
+  writeMode: true
+# enabled: surfaced on the board (chained successors land here). Triage won't
+# route to it directly (source: chain), but the catalog still lists it.
+enabled: true

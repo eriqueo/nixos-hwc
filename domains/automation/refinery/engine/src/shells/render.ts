@@ -192,7 +192,7 @@ function layout(active: string, body: string): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refinery</title>${STYLE}</head><body>
 <header><h1>🛠 Refinery</h1><nav>
-  ${tab("/", "Flow", "flow")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
+  ${tab("/", "Board", "flow")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
 </nav></header>
 ${body}
 </body></html>`;
@@ -454,6 +454,41 @@ export function renderHopperPage(
   return layout("hopper", body);
 }
 
+/** Board: the two stacked kanbans on one page (the assembly-line view). The
+ *  intake box, then **Hopper** (untriaged IDEAS in maturation-stage lanes) on
+ *  top, then **Development** (triaged PROJECTS in state lanes) below. One page,
+ *  two boards — an idea matures in the Hopper, gets promoted, then runs through
+ *  the pipeline in Development. Each board reuses laneBoard; section headers name
+ *  them. */
+export function renderBoard(
+  ideas: Item[],
+  projects: Item[],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
+  domains: DomainRegistry = emptyRegistry,
+): string {
+  const hopperCtx: CardCtx = { domains, profiles, enabled, back: "/" };
+  const devCtx: CardCtx = { domains, profiles, enabled, back: "/" };
+  const hopperBoard = ideas.length
+    ? laneBoard(ideas, hopperCtx, HOPPER_STAGES, stageOf)
+    : '<div class="empty" style="padding:16px">no ideas waiting — capture one above</div>';
+  const devBoard = projects.length
+    ? laneBoard(projects, devCtx, STATUS_LANES, statusOf)
+    : '<div class="empty" style="padding:16px">no projects yet — promote a Ready idea from the Hopper</div>';
+  const body = `
+<form class="intake" method="post" action="/intake">
+  <input type="text" name="text" placeholder="Capture an idea — it lands in the Hopper (and the brain backlog); shape it, then promote it when Ready…" required autofocus>
+  <button type="submit">→ hopper</button>
+</form>
+<div class="wrap" style="flex-direction:column">
+  <h2 style="width:100%;margin:0 0 2px;font-size:14px;color:var(--ink)">Hopper — ideas <span class="kv" style="font-weight:400">capture → shape → promote</span></h2>
+  ${hopperBoard}
+  <h2 style="width:100%;margin:14px 0 2px;font-size:14px;color:var(--ink)">Development — projects <span class="kv" style="font-weight:400">spec → build, gate by gate</span></h2>
+  ${devBoard}
+</div>`;
+  return layout("flow", body);
+}
+
 /** Nightly: projects flagged nightly, as a status-lane kanban with a per-night
  *  cap. Each card carries its queue/run/mode controls inline. */
 export function renderNightly(
@@ -660,12 +695,34 @@ export function renderProjectDetail(
          ${specObj.deliverable ? `<p><b>Deliverable:</b> ${esc(String(specObj.deliverable))}</p>` : ""}
        </div>
        ${specPath ? `<div class="kv">spec written to <code>${esc(specPath)}</code></div>` : ""}
-       <div class="kv" style="margin-top:8px"><b>Next:</b> build it. Automatic handoff to a build pipeline isn't wired yet — take this spec to a builder (or route a new app-refinement item at the target repo).</div>`
+       <div class="kv" style="margin-top:8px"><b>Next:</b> build it — hit <b>▸ build this</b> below to hand the spec to the build pipeline, or flip auto-build on so it happens automatically when a spec is ready.</div>`
     : `<div class="kv">${execResult.detail ? esc(String(execResult.detail)) : "completed"}${branchStr ? ` · branch <code>${esc(branchStr)}</code>${execResult.pushed ? " (pushed)" : ""}` : ""}.</div>
        ${(payloadObj.hasReport || execResult.reportPresent) ? `<div class="act"><a href="/report/${esc(item.id)}">📄 view REPORT</a></div>` : ""}
        <div class="kv" style="margin-top:8px"><b>Next:</b> review the result${branchStr ? " and the pushed branch — open a PR" : ""}.</div>`;
+  // Build handoff — on a DONE spec-bearing item, offer the one-shot "▸ build
+  // this" (POST /build) and the auto-advance toggle (POST /chain). Only when the
+  // item's pipeline declares a `next` AND it produced a spec (it has somewhere to
+  // hand off to). On → the build fires automatically when the spec is ready;
+  // off → it stops at the spec for review.
+  const hasNext = !!pipeline && typeof pipeline.next === "string" && !!pipeline.next;
+  const buildBlock = (hasNext && Object.keys(specObj).length)
+    ? `<form class="act" method="post" action="/build" style="margin-top:8px">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <button type="submit">▸ build this</button>
+         <span class="kv">hands this spec to the <b>${esc(pipeline!.next!)}</b> pipeline now</span>
+       </form>
+       <form class="act" method="post" action="/chain">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <input type="hidden" name="on" value="${item.chain ? "false" : "true"}">
+         <button type="submit">${item.chain ? "⛔ turn auto-build OFF" : "⚙ turn auto-build ON"}</button>
+         <span class="kv">${item.chain
+           ? "on → when the spec is ready it builds automatically; click to stop at the spec for review"
+           : "off → stops at the spec for review; turn on → when the spec is ready it builds automatically"}</span>
+       </form>`
+    : "";
   const outcomeBlock = isDone
     ? `<h2>✓ Done — outcome</h2>${outcomeBody}
+       ${buildBlock}
        <form class="act" method="post" action="/run" style="margin-top:8px">
          <input type="hidden" name="id" value="${esc(item.id)}">
          <button type="submit">↻ re-run</button>

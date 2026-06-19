@@ -46,6 +46,11 @@ export const ItemSchema = z.object({
   // sooner). A project keeps its domain color; nightly is a skin on top.
   schedule: ScheduleSchema.optional(),
   schedulePriority: z.number().optional(),
+  // chain: per-item auto-advance switch. When a pipeline declares `next`, an
+  // item with chain=true auto-creates+kicks the successor on a clean pass (e.g.
+  // project-ideation spec → build). Off (default) stops at this pipeline's
+  // result for human review. Toggled on the board (POST /chain).
+  chain: z.boolean().optional(),
 });
 export type Item = z.infer<typeof ItemSchema>;
 
@@ -111,6 +116,10 @@ export const PipelineSchema = z.object({
   // (project-ideation) leave this false so a human triggers each run;
   // event-driven pipelines (incoming SR tickets) set it true. Default false.
   autoRun: z.boolean().optional(),
+  // next: the pipeline an item auto-advances into after a clean pass (the
+  // declarative chain link). project-ideation → build: a developed spec hands
+  // off to the builder. Per-item gated by item.chain; absent = terminal.
+  next: z.string().min(1).optional(),
   // defaultTraits stamped on every item this pipeline triages. Greenfield
   // pipelines omit it (intake's greenfield default applies); brownfield
   // pipelines (app-refinement) declare {mode:"brownfield",touchesExistingCode:true,…}

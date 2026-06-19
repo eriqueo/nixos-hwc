@@ -35,4 +35,13 @@ export const GAUNTLET_CONFIGS: Record<string, GauntletExecuteConfig> = {
     reportFile: "REPORT.md",
     branchPrefix: "app-refinement/",
   },
+  // build: spec → code. The second board-owned native pipeline; the chained
+  // successor of project-ideation (idea → spec → build).
+  "build": {
+    executorMode: "write",
+    verdictPattern: /BUILD-VERDICT: (success|blocked|failure)/,
+    successVerdicts: ["success"],
+    reportFile: "REPORT.md",
+    branchPrefix: "build/",
+  },
 };

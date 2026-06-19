@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync,
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
-import { renderFlowBoard, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReference, renderReviews } from "../src/shells/render.js";
+import { renderFlowBoard, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReference, renderReviews, renderBoard } from "../src/shells/render.js";
 import { PrReview } from "../src/review/contract.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
@@ -13,15 +13,24 @@ import { fixedClock } from "./helpers.js";
 
 function setup(
   triageLlm: LlmPort,
-  opts: { runLlm?: LlmPort; autoRun?: boolean } = {},
+  opts: { runLlm?: LlmPort; autoRun?: boolean; chain?: boolean } = {},
 ): { cfg: HttpShellConfig; cleanup: () => void } {
   const root = mkdtempSync(join(tmpdir(), "refinery-shell-"));
   const pipelinesDir = join(root, "profiles");
   mkdirSync(pipelinesDir, { recursive: true });
   writeFileSync(
     join(pipelinesDir, "project-ideation.yaml"),
-    `pipeline: project-ideation\nlabel: Project Ideation\nsource: http-intake\ngates:\n  - stepwise-refinement\n  - principles-create\n  - premortem\nexecutorMode: none\nexecutors:\n  - spec\n${opts.autoRun ? "autoRun: true\n" : ""}`,
+    `pipeline: project-ideation\nlabel: Project Ideation\nsource: http-intake\ngates:\n  - stepwise-refinement\n  - principles-create\n  - premortem\nexecutorMode: none\nexecutors:\n  - spec\n${opts.chain ? "next: build\n" : ""}${opts.autoRun ? "autoRun: true\n" : ""}`,
   );
+  if (opts.chain) {
+    // The chain successor: a brownfield native `build` pipeline. The board runs
+    // its gates in-process then spools native execution (never runs a worktree
+    // in tests), so it's safe to kick.
+    writeFileSync(
+      join(pipelinesDir, "build.yaml"),
+      `pipeline: build\nlabel: Build\nsource: chain\ngates:\n  - chestertons-fence\n  - blast-radius\n  - principles-fix\n  - premortem\n  - admission-gates\nexecutorMode: write\nexecutors:\n  - native\ndefaultTraits:\n  mode: brownfield\n  touchesExistingCode: true\n  writeMode: true\nenabled: true\n`,
+    );
+  }
   return {
     cfg: {
       port: 0,
@@ -878,4 +887,171 @@ test("renderReviews groups PrReviews into status lanes; empty state otherwise", 
 
   const empty = renderReviews([]);
   assert.ok(empty.includes("no PR reviews yet"), "empty state");
+});
+
+// ── idea → spec → build assembly line: build pipeline, chaining, two kanbans ──
+
+import { PipelineCatalog } from "../src/pipelines/catalog.js";
+import { fileURLToPath } from "node:url";
+
+const REAL_PIPELINES_DIR = fileURLToPath(new URL("../../../pipelines", import.meta.url));
+
+test("build.yaml loads via the catalog as a terminal (next-less) pipeline; project-ideation has next: build", () => {
+  const cat = new PipelineCatalog({ dir: REAL_PIPELINES_DIR });
+  const build = cat.get("build");
+  assert.ok(build, "build pipeline on disk");
+  assert.equal(build!.executorMode, "write");
+  assert.deepEqual(build!.executors, ["native"]);
+  assert.equal(build!.gates[0], "chestertons-fence");
+  assert.equal(build!.next, undefined, "build is terminal — no next");
+  assert.equal(build!.defaultTraits?.mode, "brownfield");
+
+  const ideation = cat.get("project-ideation");
+  assert.ok(ideation, "project-ideation on disk");
+  assert.equal(ideation!.next, "build", "project-ideation chains to build");
+});
+
+test("a passed spec item with chain:true auto-creates a successor build item via runItem", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass"), chain: true });
+  try {
+    const shell = createShell(cfg);
+    const ready: Item = {
+      id: "chain1", pipeline: "project-ideation", step: "stepwise-refinement", state: "pending",
+      payload: { title: "an idea to chain", input: "an engine that refines ideas into specs", repo: "/tmp/target-app", domain: "datax" },
+      chain: true, history: [],
+    };
+    await shell.store.save(ready);
+    await shell.runItem("chain1");
+
+    // The spec passed, and because chain:true + pipeline.next=build, a successor
+    // build item was created and kicked.
+    const parent = (await shell.store.load("chain1"))!;
+    assert.equal(parent.state, "passed", "spec pass");
+
+    const successor = (await shell.store.load("chain1-build"))!;
+    assert.ok(successor, "successor build item created with deterministic id");
+    assert.equal(successor.pipeline, "build");
+    const sp = successor.payload as Record<string, any>;
+    assert.equal(sp.parent, "chain1", "carries parent id");
+    assert.ok(sp.spec && sp.spec.goal, "carries the developed spec");
+    assert.equal(sp.repo, "/tmp/target-app", "carries the target repo");
+    // build is native → the board ran its gates then spooled (running), or it
+    // parked at a gate; either way it exists as a build item with the spec.
+    assert.ok(["running", "pending", "parked", "passed", "failed"].includes(successor.state));
+  } finally {
+    cleanup();
+  }
+});
+
+test("a passed spec item with chain off (default) does NOT create a successor", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass"), chain: true });
+  try {
+    const shell = createShell(cfg);
+    const ready: Item = {
+      id: "nochain1", pipeline: "project-ideation", step: "stepwise-refinement", state: "pending",
+      payload: { title: "no auto", input: "an engine that refines ideas into specs", repo: "/tmp/x" },
+      history: [], // chain undefined → off
+    };
+    await shell.store.save(ready);
+    await shell.runItem("nochain1");
+    assert.equal((await shell.store.load("nochain1"))!.state, "passed");
+    assert.equal(await shell.store.load("nochain1-build"), null, "no successor without chain:true");
+  } finally {
+    cleanup();
+  }
+});
+
+test("POST /build one-shot creates the successor build item from a completed spec", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"), { runLlm: runStub("pass"), chain: true });
+  try {
+    const shell = createShell(cfg);
+    const done: Item = {
+      id: "os1", pipeline: "project-ideation", step: "premortem", state: "passed",
+      payload: {
+        title: "a finished spec", repo: "/tmp/build-target",
+        executorResult: { outcome: "succeeded", verdict: "spec-written", detail: "wrote spec",
+          output: { specPath: "/specs/os1.md", spec: { goal: "Build it", steps: ["s1"], deliverable: "a module" } } },
+      },
+      history: [],
+    };
+    await shell.store.save(done);
+    await shell.buildNow("os1"); // the POST /build handler calls this
+    const successor = (await shell.store.load("os1-build"))!;
+    assert.ok(successor, "one-shot build created the successor");
+    assert.equal(successor.pipeline, "build");
+    assert.equal((successor.payload as Record<string, any>).repo, "/tmp/build-target");
+
+    // buildNow on an item with no spec is a no-op (nothing to build).
+    await shell.store.save({ id: "os2", pipeline: "project-ideation", step: "premortem", state: "passed", payload: { title: "nospec" }, history: [] });
+    await shell.buildNow("os2");
+    assert.equal(await shell.store.load("os2-build"), null, "no spec → no successor");
+  } finally {
+    cleanup();
+  }
+});
+
+test("/chain toggles item.chain on and off", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    await shell.store.save({ id: "tog1", pipeline: "project-ideation", step: "premortem", state: "passed", payload: { title: "x" }, history: [] });
+    await shell.setChain("tog1", true);
+    assert.equal((await shell.store.load("tog1"))!.chain, true);
+    await shell.setChain("tog1", false);
+    assert.equal((await shell.store.load("tog1"))!.chain, false);
+  } finally {
+    cleanup();
+  }
+});
+
+test("renderProjectDetail on a done spec shows 'build this' + the auto-build toggle", () => {
+  const profiles = [
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executorMode: "none",
+      executors: ["spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26", next: "build" },
+  ];
+  const done: Item = {
+    id: "bd1", pipeline: "project-ideation", step: "premortem", state: "passed",
+    payload: {
+      title: "a finished idea",
+      executorResult: { outcome: "succeeded", verdict: "spec-written", detail: "wrote spec",
+        output: { specPath: "/specs/bd1.md", spec: { goal: "Ship it", steps: ["x"], deliverable: "a module" } } },
+    },
+    history: [{ step: "spec", status: "passed", at: "t1" }],
+  };
+  const d = renderProjectDetail(done, profiles, profiles);
+  assert.ok(d.includes('action="/build"') && d.includes("build this"), "one-shot build button");
+  assert.ok(d.includes('action="/chain"'), "auto-build toggle form");
+  assert.ok(d.includes("turn auto-build ON"), "toggle reads ON when chain is off");
+  assert.ok(d.includes("stops at the spec for review"), "toggle hint explains off/on");
+
+  // With chain already on, the toggle offers to turn it off.
+  const on = renderProjectDetail({ ...done, chain: true }, profiles, profiles);
+  assert.ok(on.includes("turn auto-build OFF"), "toggle reads OFF when chain is on");
+
+  // A pipeline with no `next` (no spec successor) shows neither.
+  const noNext = renderProjectDetail(done, [{ ...profiles[0], next: undefined }], [{ ...profiles[0], next: undefined }]);
+  assert.ok(!noNext.includes('action="/build"'), "no build button when the pipeline has no next");
+});
+
+test("renderBoard shows both a Hopper section and a Development section", () => {
+  const profiles = [
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "premortem"], executorMode: "none", executors: ["spec"],
+      enabled: true, llmProvider: "claude-cli", color: "#a3be8c" },
+  ];
+  const ideas: Item[] = [
+    { id: "i1", pipeline: UNTRIAGED, stage: "captured", state: "parked", payload: { title: "raw idea", input: "raw idea" }, history: [] },
+  ];
+  const projects: Item[] = [
+    { id: "p1", pipeline: "project-ideation", step: "premortem", state: "pending", payload: { title: "a project" }, history: [] },
+  ];
+  const html = renderBoard(ideas, projects, profiles, profiles, DOMAINS);
+  assert.ok(html.includes("Hopper — ideas"), "Hopper section header");
+  assert.ok(html.includes("Development — projects"), "Development section header");
+  assert.ok(html.includes("raw idea"), "an idea card in the Hopper");
+  assert.ok(html.includes("a project") && html.includes('href="/project/p1"'), "a project card in Development");
+  assert.ok(html.includes('action="/intake"'), "intake box at the top");
+  assert.ok(html.includes(">Captured<"), "Hopper stage lanes");
+  assert.ok(html.includes(">In Pipeline<"), "Development status lanes");
 });
