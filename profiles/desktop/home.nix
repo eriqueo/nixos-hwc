@@ -76,6 +76,9 @@
       # todui + khalt are enabled above (Task management / Calendar TUI).
       workbench.enable = lib.mkDefault true; # Textual ops host (zellij-driven)
 
+      # Trap-safe Pave (JobTread API) query builder, TUI + CLI.
+      pave-query-builder.enable = lib.mkDefault true;
+
       # Development & Automation
       n8n.enable = lib.mkDefault false;
       # codex release-binary pin moved to domains/home/apps/codex/parts/
