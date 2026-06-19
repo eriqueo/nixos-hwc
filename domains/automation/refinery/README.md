@@ -49,6 +49,7 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-19** — **Completed cards show their outcome + next step (no more dead end).** A passed project-ideation card led with a pointless "▶ run pipeline now" + "No human action needed" and never showed the spec it produced. Now a done item leads with a **"✓ Done — outcome"** section that renders the developed spec inline (goal / steps / deliverable + the spec path) and states the **Next** step; re-run is demoted. Native items show branch/report + next step. Skipped middle gates (e.g. a greenfield gate that didn't apply) now render **"skipped"** instead of a misleading "pending". 135 tests pass.
 - **2026-06-19** — **Parked cards are actionable + native target-repo picker.** A gate
   that parks/fails now emits an `asks` array (added to `BaseVerdictSchema` + enforced in
   `buildGatePrompt`) — the specific, concrete decisions the human must make, not a prose
