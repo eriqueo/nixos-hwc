@@ -13,3 +13,8 @@ gates:
 executorMode: none
 executors:
   - spec
+# next: the chain link — a developed spec hands off to the `build` pipeline that
+# implements it. Per-item gated by item.chain (auto-advance toggle on the board):
+# on → builds automatically when the spec is ready; off → stops at the spec for
+# review. A one-shot "▸ build this" button (POST /build) also fires this handoff.
+next: build

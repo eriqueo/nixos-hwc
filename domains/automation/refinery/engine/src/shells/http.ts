@@ -21,7 +21,7 @@ import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderFlowBoard, renderHopperPage, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderBoard, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
 
 export interface HttpShellConfig {
@@ -213,6 +213,54 @@ export function createShell(cfg: HttpShellConfig) {
     }
   }
 
+  /** Declarative handoff: create (and kick) the successor pipeline's item from a
+   *  finished parent. The chain link is `pipeline.next`; this is the deterministic
+   *  realization of it. Idempotent by a deterministic successor id
+   *  (`${parent.id}-${nextPipelineId}`) so a re-trigger (auto + one-shot, or a
+   *  re-run) never duplicates. The successor carries the parent's developed spec,
+   *  repo, and domain so the builder has everything it needs. If the next pipeline
+   *  isn't in the catalog, or the successor already exists, this no-ops. */
+  async function chainTo(parent: Item, nextPipelineId: string): Promise<void> {
+    const next = catalog.get(nextPipelineId);
+    if (!next) return; // unknown successor pipeline — nothing to chain to
+    const successorId = `${parent.id}-${nextPipelineId}`;
+    if (await store.load(successorId)) return; // already chained — idempotent
+    const parentPayload = (parent.payload && typeof parent.payload === "object" ? parent.payload : {}) as Record<string, unknown>;
+    const execResult = (parentPayload.executorResult && typeof parentPayload.executorResult === "object" ? parentPayload.executorResult : {}) as Record<string, unknown>;
+    const output = (execResult.output && typeof execResult.output === "object" ? execResult.output : {}) as Record<string, unknown>;
+    const spec = (output.spec && typeof output.spec === "object" ? output.spec : undefined) as Record<string, unknown> | undefined;
+    // The build ask = the spec's deliverable (what to build) or its goal as a
+    // fallback; then the parent's raw input.
+    const parentTitle = typeof parentPayload.title === "string" ? parentPayload.title : parent.id;
+    const buildAsk = (spec && typeof spec.deliverable === "string" && spec.deliverable)
+      || (spec && typeof spec.goal === "string" && spec.goal)
+      || (typeof parentPayload.input === "string" ? parentPayload.input : "")
+      || parentTitle;
+    const successor: Item = {
+      id: successorId,
+      pipeline: nextPipelineId,
+      step: next.gates[0],
+      state: "pending",
+      payload: {
+        title: `build: ${parentTitle}`,
+        input: buildAsk,
+        spec,
+        repo: parentPayload.repo,
+        domain: parentPayload.domain,
+        parent: parent.id,
+        chain: parent.chain,
+        traits: next.defaultTraits,
+      },
+      chain: parent.chain,
+      history: [{ step: "triage", status: "entered", at: cfg.clock(), note: `chained from ${parent.id}` }],
+    };
+    await store.save(successor);
+    // Kick the successor: for a native `build` successor this runs the gates
+    // in-board then spools native execution (the existing native branch). A
+    // missing repo doesn't crash — the native runner fails clean asking for one.
+    await kickRun(successorId);
+  }
+
   /** Run one triaged engine item through its pipeline. The board branches on the
    *  pipeline's terminal executor:
    *   - `spec`   → run gates + the spec executor IN-PROCESS (project-ideation);
@@ -235,10 +283,20 @@ export function createShell(cfg: HttpShellConfig) {
     const llm = cfg.runLlm ?? resolveLlm(pipeline.llmProvider ?? cfg.triageProvider);
 
     if (pipeline.executors.includes("spec")) {
-      await runPipelineOnce(
+      const result = await runPipelineOnce(
         { id, input },
         { pipeline, gates: gateList(llm), integrate: makeSpecExecutor({ scratchDir: cfg.scratchDir }, llm), store, clock: cfg.clock },
       );
+      // Declarative chaining: a clean spec pass hands off to pipeline.next IFF
+      // the item opted in (item.chain). Re-load the item so we read the persisted
+      // chain flag + the executorResult the spec just wrote. Only the spec
+      // (in-board) path chains; native is terminal. A parent without payload.repo
+      // still chains (the successor fails clean asking for a repo) — it must not
+      // crash runItem.
+      if (pipeline.next && !result.parked) {
+        const saved = await store.load(id);
+        if (saved && saved.chain === true) await chainTo(saved, pipeline.next);
+      }
       return;
     }
 
@@ -388,6 +446,30 @@ export function createShell(cfg: HttpShellConfig) {
     await store.save({ ...item, payload: { ...payload, repo: trimmed || undefined } });
   }
 
+  /** Per-item auto-advance toggle. When on, a clean pass of a pipeline that
+   *  declares `next` auto-creates+kicks the successor (idea → spec → build runs
+   *  end to end). Off (default) stops at this pipeline's result for review. */
+  async function setChain(id: string, on: boolean): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    await store.save({ ...item, chain: on });
+  }
+
+  /** One-shot build: hand a completed (spec-bearing) item off to its build
+   *  pipeline now, regardless of the auto-advance toggle. No-ops if the item has
+   *  no developed spec yet (nothing to build). Uses the item's pipeline.next, or
+   *  falls back to "build". */
+  async function buildNow(id: string): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    const payload = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
+    const execResult = (payload.executorResult && typeof payload.executorResult === "object" ? payload.executorResult : {}) as Record<string, unknown>;
+    const output = (execResult.output && typeof execResult.output === "object" ? execResult.output : {}) as Record<string, unknown>;
+    if (!output.spec || typeof output.spec !== "object") return; // no spec → nothing to build
+    const nextId = catalog.get(item.pipeline)?.next ?? "build";
+    await chainTo(item, nextId);
+  }
+
   /** Promote an idea into a refinement pipeline. `schedule` chooses how it runs:
    *  "immediate" kicks the pipeline now; "nightly" flags it for the overnight
    *  batch (no immediate run). Anything else just promotes (manual run later). */
@@ -435,22 +517,25 @@ export function createShell(cfg: HttpShellConfig) {
           ...(cfg.srGauntletDir ? srInvestigationProjects(cfg.srGauntletDir) : []),
         ];
 
-        if (method === "GET" && (url === "/" || url === "/hopper")) {
-          // Pull the latest brain ideas into the hopper the moment it's viewed
-          // (the interval sync in serve.ts handles the idle case).
-          if (url === "/hopper") await syncBrain();
+        if (method === "GET" && url === "/hopper") {
+          // /hopper folded into the combined board (Hopper stacked over
+          // Development). Redirect so old links / bookmarks still land somewhere.
+          return redirectTo(res, "/");
+        }
+        if (method === "GET" && url === "/") {
+          // The combined board: Hopper (untriaged ideas) stacked over Development
+          // (triaged projects). Pull the latest brain ideas in first (the interval
+          // sync in serve.ts handles the idle case).
+          await syncBrain();
           const [items, profiles, enabled] = [await store.list(), catalog.list(), catalog.enabled()];
+          const ideas = items.filter((i) => i.pipeline === UNTRIAGED);
+          // Development: store projects + nightly-build mirror cards (SRs have their own page).
+          const projects = [
+            ...items.filter((i) => i.pipeline !== UNTRIAGED),
+            ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
+          ];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-          if (url === "/hopper") {
-            res.end(renderHopperPage(items.filter((i) => i.pipeline === UNTRIAGED), profiles, enabled, domains));
-          } else {
-            // Gauntlet: store projects + nightly-build mirror cards (SRs have their own page).
-            const projects = [
-              ...items.filter((i) => i.pipeline !== UNTRIAGED),
-              ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
-            ];
-            res.end(renderFlowBoard(projects, profiles, enabled, domains));
-          }
+          res.end(renderBoard(ideas, projects, profiles, enabled, domains));
           return;
         }
         if (method === "GET" && url === "/nightly") {
@@ -596,6 +681,16 @@ export function createShell(cfg: HttpShellConfig) {
             await setRepo(id, body.get("repo") ?? "");
             return redirectTo(res, afterEdit);
           }
+          if (url === "/chain") {
+            // Per-item auto-advance toggle (spec → build hands off automatically).
+            await setChain(id, body.get("on") === "true");
+            return redirectTo(res, afterEdit);
+          }
+          if (url === "/build") {
+            // One-shot: hand this completed spec off to its build pipeline now.
+            await buildNow(id);
+            return redirectTo(res, afterEdit);
+          }
           if (url === "/run") {
             // Run the item's pipeline now (gates → effector). Fire-and-forget so
             // the request returns immediately; the board shows "running" and the
@@ -697,5 +792,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setRepo, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
+  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setRepo, setChain, buildNow, chainTo, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
 }
