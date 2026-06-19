@@ -28,11 +28,12 @@ let
   # it falls back to a bare "aerc". Same fact the zellij layout derives.
   aercCmd = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
 
-  # Standing-tab map (navigate-to-tab, not spawn-duplicate). Imported from the
-  # SAME source the zellij layout emits its tab names from, so the host can never
-  # navigate to a tab name the layout doesn't actually use. `host` is dropped —
-  # it isn't a launch target (it IS the host).
-  layoutTabs = removeAttrs (import ../zellij/parts/tabs.nix) [ "host" ];
+  # Standing-tab map (navigate-to-tab, not spawn-duplicate): launch-target ->
+  # tab name, the TOOL tabs only. Imported from the SAME source the zellij layout
+  # emits its tab names from, so the host can never navigate to a tab name the
+  # layout doesn't use. `hubs` is dropped — hub-pages are their own tabs, not
+  # tool launch targets.
+  layoutTabs = removeAttrs (import ../zellij/parts/tabs.nix) [ "hubs" ];
 
   # Unified keymap grammar → staged as ~/.config/workbench/keymap.json. The host
   # has a real chord state machine but its grammar is still hard-coded; the
