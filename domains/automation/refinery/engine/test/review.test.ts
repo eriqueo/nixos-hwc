@@ -313,7 +313,7 @@ test("runMorningReview graduates a project whose every step is done", async () =
     const fin = finishedProjects(v.root);
     assert.equal(fin.length, 1);
     assert.equal((fin[0].payload as { goal: string }).goal, "done-proj");
-    assert.equal(fin[0].phaseStatus, "passed");
+    assert.equal(fin[0].state, "passed");
     assert.ok(
       existsSync(join(v.root, "_inbox", "nightly_builds", "_finished", "done-proj", "01-a.md")),
     );

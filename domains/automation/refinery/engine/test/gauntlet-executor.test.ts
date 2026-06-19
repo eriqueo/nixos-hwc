@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeDispatchEffector, DispatchPorts } from "../src/effectors/dispatch.js";
+import { makeGauntletExecutor, GauntletPorts } from "../src/executors/gauntlet.js";
 import { GauntletContract } from "../src/gauntlets/contract.js";
 import { ProcessRunSpec, ProcessRunResult } from "../src/gauntlets/ports.js";
 import { makeItem } from "./helpers.js";
@@ -20,9 +20,9 @@ function wire(opts: {
   result?: Partial<ProcessRunResult>;
   reportExists?: boolean;
   reportText?: string;
-}): { ports: DispatchPorts; calls: { spec?: ProcessRunSpec } } {
+}): { ports: GauntletPorts; calls: { spec?: ProcessRunSpec } } {
   const calls: { spec?: ProcessRunSpec } = {};
-  const ports: DispatchPorts = {
+  const ports: GauntletPorts = {
     process: {
       async run(spec) {
         calls.spec = spec;
@@ -44,7 +44,7 @@ function wire(opts: {
 
 test("dispatch templates {id}/{date} into args + resultsDir and invokes the trigger", async () => {
   const { ports, calls } = wire({ result: { stdout: "SR-VERDICT: investigated" } });
-  const r = await makeDispatchEffector(CONTRACT, ports).run(makeItem({ id: "SR-123" }));
+  const r = await makeGauntletExecutor(CONTRACT, ports).run(makeItem({ id: "SR-123" }));
   assert.deepEqual(calls.spec!.args, ["--id", "SR-123"], "{id} substituted in args");
   assert.equal(calls.spec!.command, "/run.sh");
   assert.equal(calls.spec!.timeoutMs, 1800000);
@@ -61,14 +61,14 @@ test("dispatch templates {id}/{date} into args + resultsDir and invokes the trig
 
 test("dispatch can read the verdict from the report when stdout is silent", async () => {
   const { ports } = wire({ result: { stdout: "" }, reportText: "...\nSR-VERDICT: investigated\n" });
-  const r = await makeDispatchEffector(CONTRACT, ports).run(makeItem({ id: "x" }));
+  const r = await makeGauntletExecutor(CONTRACT, ports).run(makeItem({ id: "x" }));
   assert.equal(r.outcome, "succeeded");
   assert.equal(r.verdict, "investigated");
 });
 
 test("dispatch fails on a non-success verdict", async () => {
   const { ports } = wire({ result: { stdout: "SR-VERDICT: inconclusive" } });
-  const r = await makeDispatchEffector(CONTRACT, ports).run(makeItem({ id: "x" }));
+  const r = await makeGauntletExecutor(CONTRACT, ports).run(makeItem({ id: "x" }));
   assert.equal(r.outcome, "failed");
   assert.equal(r.verdict, "inconclusive");
   assert.match(r.detail, /not in successVerdicts/);
@@ -76,28 +76,28 @@ test("dispatch fails on a non-success verdict", async () => {
 
 test("dispatch fails when the report is missing", async () => {
   const { ports } = wire({ result: { stdout: "SR-VERDICT: investigated" }, reportExists: false });
-  const r = await makeDispatchEffector(CONTRACT, ports).run(makeItem({ id: "x" }));
+  const r = await makeGauntletExecutor(CONTRACT, ports).run(makeItem({ id: "x" }));
   assert.equal(r.outcome, "failed");
   assert.match(r.detail, /no report at/);
 });
 
 test("dispatch fails on a non-zero exit", async () => {
   const { ports } = wire({ result: { exitCode: 2, stdout: "SR-VERDICT: investigated" } });
-  const r = await makeDispatchEffector(CONTRACT, ports).run(makeItem({ id: "x" }));
+  const r = await makeGauntletExecutor(CONTRACT, ports).run(makeItem({ id: "x" }));
   assert.equal(r.outcome, "failed");
   assert.match(r.detail, /exited 2/);
 });
 
 test("dispatch fails on a timeout", async () => {
   const { ports } = wire({ result: { timedOut: true } });
-  const r = await makeDispatchEffector(CONTRACT, ports).run(makeItem({ id: "x" }));
+  const r = await makeGauntletExecutor(CONTRACT, ports).run(makeItem({ id: "x" }));
   assert.equal(r.outcome, "failed");
   assert.match(r.detail, /timed out/);
 });
 
 test("dispatch fails when no verdict token is present", async () => {
   const { ports } = wire({ result: { stdout: "the agent said nothing parseable" } });
-  const r = await makeDispatchEffector(CONTRACT, ports).run(makeItem({ id: "x" }));
+  const r = await makeGauntletExecutor(CONTRACT, ports).run(makeItem({ id: "x" }));
   assert.equal(r.outcome, "failed");
   assert.match(r.detail, /no verdict token/);
 });

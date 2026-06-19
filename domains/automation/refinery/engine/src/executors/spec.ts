@@ -1,6 +1,6 @@
-// The project-ideation genre's `integrate` effector: synthesize a developed
+// The project-ideation pipeline's `integrate` executor: synthesize a developed
 // project spec from the item (which has already passed the gate pipeline) and
-// write it to a scratch dir. No code execution — for this genre `integrate`
+// write it to a scratch dir. No code execution — for this pipeline `integrate`
 // just writes the spec (later: fold to brain).
 //
 // The spec is a contract (Zod). The LLM port produces it from the item + its
@@ -10,7 +10,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { Item, ItemEffector, EffectorResult } from "../contracts.js";
+import { Item, Executor, ExecutorResult } from "../contracts.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { parseVerdict } from "../gates/verdict.js";
 
@@ -83,15 +83,15 @@ export interface WriteSpecConfig {
   scratchDir: string;
 }
 
-export function makeWriteSpecEffector(
+export function makeSpecExecutor(
   cfg: WriteSpecConfig,
   llm: LlmPort,
-): ItemEffector {
+): Executor {
   return {
-    id: "write-spec",
-    async run(item: Item): Promise<EffectorResult> {
+    id: "spec",
+    async run(item: Item): Promise<ExecutorResult> {
       const raw = await llm.complete(SPEC_PROMPT(item));
-      const spec = parseVerdict(raw, SpecSchema, "write-spec");
+      const spec = parseVerdict(raw, SpecSchema, "spec");
       const markdown = specToMarkdown(spec);
       mkdirSync(cfg.scratchDir, { recursive: true });
       const specPath = join(cfg.scratchDir, `${item.id}-spec.md`);

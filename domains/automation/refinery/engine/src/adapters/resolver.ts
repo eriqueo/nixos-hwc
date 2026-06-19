@@ -1,6 +1,6 @@
-// LlmPort resolver — maps a profile's `llmProvider` string to the concrete
-// adapter. This is the hexagonal payoff: the gates/effectors depend only on
-// LlmPort; which model actually answers is data on the profile. A profile can
+// LlmPort resolver — maps a pipeline's `llmProvider` string to the concrete
+// adapter. This is the hexagonal payoff: the gates/executors depend only on
+// LlmPort; which model actually answers is data on the pipeline. A pipeline can
 // run cheap gate checks on ollama while the execute effector uses claude-cli.
 
 import { LlmPort } from "../gates/llm-port.js";

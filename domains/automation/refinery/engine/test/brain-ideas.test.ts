@@ -62,7 +62,7 @@ test("syncBrainIdeas adds untriaged items and is idempotent", async () => {
     assert.equal(first.removed, 0);
     const items = await store.list();
     assert.equal(items.length, 3);
-    assert.ok(items.every((i) => i.genre === UNTRIAGED && isBrainIdea(i)));
+    assert.ok(items.every((i) => i.pipeline === UNTRIAGED && isBrainIdea(i)));
 
     // Re-running with no vault change is a pure no-op (deterministic ids).
     const second = await syncBrainIdeas(store, v.dir, CLOCK);
@@ -95,10 +95,10 @@ test("a promoted idea survives a vault line removal and is never re-created", as
     await syncBrainIdeas(store, v.dir, CLOCK);
     const id = ideaId("build a spec engine");
 
-    // Promote it (genre leaves untriaged) + move the brain line to ## promoted.
+    // Promote it (pipeline leaves untriaged) + move the brain line to ## promoted.
     const item = await store.load(id);
     assert.ok(item);
-    await store.save({ ...item!, genre: "project-ideation", phaseStatus: "pending" });
+    await store.save({ ...item!, pipeline: "project-ideation", state: "pending" });
     promoteBrainIdea(v.dir, "build a spec engine", "project-ideation", CLOCK);
 
     // The line is gone from backlog → re-sync must NOT delete the project nor
@@ -107,7 +107,7 @@ test("a promoted idea survives a vault line removal and is never re-created", as
     assert.equal(res.added, 0);
     assert.equal(res.removed, 0);
     const promoted = await store.load(id);
-    assert.equal(promoted?.genre, "project-ideation");
+    assert.equal(promoted?.pipeline, "project-ideation");
 
     const md = readFileSync(v.ideasPath, "utf8");
     assert.ok(/## promoted/.test(md), "a ## promoted section was created");

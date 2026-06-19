@@ -1,22 +1,22 @@
 // HTTP shell over the engine core (hexagonal: a shell translating inbound HTTP
 // into core calls). Serves the Gauntlet / Hopper / Nightly pages, a per-project
 // detail+edit page, and the intake/amend/rewind/promote/nightly endpoints,
-// operating on the MarkdownItemStore + ProfileCatalog + triage. Engine-only
+// operating on the MarkdownItemStore + PipelineCatalog + triage. Engine-only
 // items. All config late-bound from the environment.
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { Item, ItemEffector, Profile } from "../contracts.js";
+import { Item, Executor, Pipeline } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
-import { ProfileCatalog } from "../profiles/catalog.js";
+import { PipelineCatalog } from "../pipelines/catalog.js";
 import { loadDomains } from "../domains.js";
 import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
 import { rewind } from "../runner.js";
 import { gateList } from "../gates/index.js";
-import { makeWriteSpecEffector } from "../effectors/write-spec.js";
-import { runGenreOnce } from "../cli/run-once.js";
+import { makeSpecExecutor } from "../executors/spec.js";
+import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
@@ -26,11 +26,11 @@ import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, 
 export interface HttpShellConfig {
   port: number;
   itemsDir: string;
-  profilesDir: string;
+  pipelinesDir: string;
   domainsFile?: string; // domains registry (color + tag identity axis); optional
-  profileStatePath: string;
+  pipelineStatePath: string;
   capsPath: string; // per-gauntlet "max per run" caps, written by the GUI
-  scratchDir: string; // where the write-spec effector drops developed specs
+  scratchDir: string; // where the spec executor drops developed specs
   triageProvider: string;
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
@@ -38,7 +38,7 @@ export interface HttpShellConfig {
   srRunNowSpoolDir: string; // SR "re-investigate now" drops an <srId> request file here; sr-gauntlet-runnow.path drains it
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
-  runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per profile
+  runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per pipeline
 }
 
 export function configFromEnv(): HttpShellConfig {
@@ -47,9 +47,9 @@ export function configFromEnv(): HttpShellConfig {
   return {
     port: Number(process.env.REFINERY_PORT || 8060),
     itemsDir: process.env.REFINERY_ITEMS_DIR || `${base}/items`,
-    profilesDir: process.env.REFINERY_PROFILES_DIR || "profiles",
+    pipelinesDir: process.env.REFINERY_PIPELINES_DIR || "pipelines",
     domainsFile: process.env.REFINERY_DOMAINS_FILE,
-    profileStatePath: process.env.REFINERY_PROFILE_STATE || `${base}/profiles.json`,
+    pipelineStatePath: process.env.REFINERY_PIPELINE_STATE || `${base}/profiles.json`,
     capsPath: process.env.REFINERY_CAPS_FILE || `${base}/caps.json`,
     scratchDir: process.env.REFINERY_SCRATCH_DIR || `${base}/specs`,
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
@@ -84,7 +84,7 @@ function redirectTo(res: ServerResponse, location: string): void {
 
 export function createShell(cfg: HttpShellConfig) {
   const store = new MarkdownItemStore(cfg.itemsDir);
-  const catalog = new ProfileCatalog({ dir: cfg.profilesDir, statePath: cfg.profileStatePath });
+  const catalog = new PipelineCatalog({ dir: cfg.pipelinesDir, statePath: cfg.pipelineStatePath });
   const domains = loadDomains(cfg.domainsFile);
 
   // Per-gauntlet "max per run" caps — the single runtime source of truth that
@@ -134,27 +134,27 @@ export function createShell(cfg: HttpShellConfig) {
 
   async function intake(text: string): Promise<void> {
     const enabled = catalog.enabled();
-    const options = enabled.map((p) => ({ genre: p.genre, label: p.label }));
+    const options = enabled.map((p) => ({ pipeline: p.pipeline, label: p.label }));
     // Triage is best-effort: if the LLM is unavailable (no key, claude binary
     // can't run in the hardened service, network down), the idea still lands in
     // the hopper as untriaged for manual promotion on the detail page. Intake
     // never fails.
-    let decision = { genre: UNTRIAGED, confidence: 0, reason: "not triaged" };
+    let decision = { pipeline: UNTRIAGED, confidence: 0, reason: "not triaged" };
     try {
       const llm = cfg.triageLlm ?? resolveLlm(cfg.triageProvider);
       decision = await triageSentence(text, options, llm);
     } catch (e) {
-      decision = { genre: UNTRIAGED, confidence: 0, reason: `triage unavailable: ${(e as Error).message}` };
+      decision = { pipeline: UNTRIAGED, confidence: 0, reason: `triage unavailable: ${(e as Error).message}` };
     }
-    const profile = catalog.get(decision.genre);
-    const firstPhase = profile?.gates[0] ?? "triage";
+    const pipeline = catalog.get(decision.pipeline);
+    const firstStep = pipeline?.gates[0] ?? "triage";
     const id = `${slug(text)}-${Date.now()}`;
     await store.save(
-      makeTriagedItem(id, text, decision, firstPhase, cfg.clock, profile?.defaultTraits),
+      makeTriagedItem(id, text, decision, firstStep, cfg.clock, pipeline?.defaultTraits),
     );
-    // Event-driven genres (e.g. incoming SR tickets) run the pipeline on
-    // arrival; manual genres (project-ideation) wait for the board's Run button.
-    if (profile?.autoRun) void kickRun(id);
+    // Event-driven pipelines (e.g. incoming SR tickets) run on arrival; manual
+    // pipelines (project-ideation) wait for the board's Run button.
+    if (pipeline?.autoRun) void kickRun(id);
   }
 
   /** Hopper intake: capture a raw idea as UNTRIAGED (no triage — it stays an
@@ -180,32 +180,32 @@ export function createShell(cfg: HttpShellConfig) {
     }
   }
 
-  /** Resolve the genre's integrate effector. write-spec is wired; other
-   *  effectors (e.g. SR's `execute`) aren't board-runnable yet — fail loud so
-   *  the item parks with a clear reason rather than silently no-op'ing. */
-  function resolveEffector(profile: Profile, llm: LlmPort): ItemEffector {
-    if (profile.effectors.includes("write-spec")) {
-      return makeWriteSpecEffector({ scratchDir: cfg.scratchDir }, llm);
+  /** Resolve the pipeline's integrate executor. spec is wired; other executors
+   *  (e.g. SR's `native`) aren't board-runnable yet — fail loud so the item
+   *  parks with a clear reason rather than silently no-op'ing. */
+  function resolveExecutor(pipeline: Pipeline, llm: LlmPort): Executor {
+    if (pipeline.executors.includes("spec")) {
+      return makeSpecExecutor({ scratchDir: cfg.scratchDir }, llm);
     }
     throw new Error(
-      `no board effector wired for genre "${profile.genre}" (effectors: ${profile.effectors.join(", ")})`,
+      `no board executor wired for pipeline "${pipeline.pipeline}" (executors: ${pipeline.executors.join(", ")})`,
     );
   }
 
-  /** Run one triaged engine item through its profile's gate pipeline + effector
-   *  (the same core the CLI uses). Read-only mirror items aren't in the store,
-   *  so load() returns null and this no-ops. Throws are surfaced by the caller. */
+  /** Run one triaged engine item through its pipeline's gates + executor (the
+   *  same core the CLI uses). Read-only mirror items aren't in the store, so
+   *  load() returns null and this no-ops. Throws are surfaced by the caller. */
   async function runItem(id: string): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
-    const profile = catalog.get(item.genre);
-    if (!profile) return; // untriaged / unknown genre — nothing to run
+    const pipeline = catalog.get(item.pipeline);
+    if (!pipeline) return; // untriaged / unknown pipeline — nothing to run
     const payload = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
     const input = typeof payload.input === "string" ? payload.input : "";
-    const llm = cfg.runLlm ?? resolveLlm(profile.llmProvider ?? cfg.triageProvider);
-    await runGenreOnce(
+    const llm = cfg.runLlm ?? resolveLlm(pipeline.llmProvider ?? cfg.triageProvider);
+    await runPipelineOnce(
       { id, input },
-      { profile, gates: gateList(llm), integrate: resolveEffector(profile, llm), store, clock: cfg.clock },
+      { pipeline, gates: gateList(llm), integrate: resolveExecutor(pipeline, llm), store, clock: cfg.clock },
     );
   }
 
@@ -214,8 +214,8 @@ export function createShell(cfg: HttpShellConfig) {
    *  rather than stuck running. */
   async function kickRun(id: string): Promise<void> {
     const item = await store.load(id);
-    if (!item || !catalog.get(item.genre) || item.phaseStatus === "running") return;
-    await store.save({ ...item, phaseStatus: "running", parkedReason: undefined });
+    if (!item || !catalog.get(item.pipeline) || item.state === "running") return;
+    await store.save({ ...item, state: "running", parkedReason: undefined });
     // Returned so tests can await completion; production calls `void kickRun(id)`
     // so the HTTP request / intake doesn't block on the (slow) pipeline.
     return runItem(id).catch(async (e) => {
@@ -223,9 +223,9 @@ export function createShell(cfg: HttpShellConfig) {
       if (cur) {
         await store.save({
           ...cur,
-          phaseStatus: "failed",
+          state: "failed",
           parkedReason: `run error: ${(e as Error).message}`,
-          history: [...cur.history, { phase: cur.phase, status: "failed", at: cfg.clock(), note: `run error: ${(e as Error).message}` }],
+          history: [...cur.history, { step: cur.step ?? "run", status: "failed", at: cfg.clock(), note: `run error: ${(e as Error).message}` }],
         });
       }
     });
@@ -238,47 +238,47 @@ export function createShell(cfg: HttpShellConfig) {
     const amendments = Array.isArray(payload.amendments) ? payload.amendments : [];
     await store.save({
       ...item,
-      phaseStatus: "pending",
+      state: "pending",
       parkedReason: undefined,
       payload: { ...payload, amendments: [...amendments, note] },
-      history: [...item.history, { phase: item.phase, status: "entered", at: cfg.clock(), note }],
+      history: [...item.history, { step: item.step ?? "triage", status: "entered", at: cfg.clock(), note }],
     });
   }
 
-  async function doRewind(id: string, toPhase: string, note: string): Promise<void> {
+  async function doRewind(id: string, toStep: string, note: string): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
-    await store.save(rewind(item, toPhase, note, { clock: cfg.clock }));
+    await store.save(rewind(item, toStep, note, { clock: cfg.clock }));
   }
 
-  /** Manual lane move from the board: set an engine item's phaseStatus directly
-   *  (a human override of the pipeline-driven status), logged to history. No-ops
+  /** Manual lane move from the board: set an engine item's state directly (a
+   *  human override of the pipeline-driven status), logged to history. No-ops
    *  for read-only mirror items (not in the store). */
   async function setStatus(id: string, status: string): Promise<void> {
-    const valid: Item["phaseStatus"][] = ["pending", "running", "passed", "parked", "failed"];
-    if (!valid.includes(status as Item["phaseStatus"])) return;
-    const s = status as Item["phaseStatus"];
+    const valid: Item["state"][] = ["pending", "running", "passed", "parked", "failed"];
+    if (!valid.includes(status as Item["state"])) return;
+    const s = status as Item["state"];
     const item = await store.load(id);
     if (!item) return;
     await store.save({
       ...item,
-      phaseStatus: s,
+      state: s,
       parkedReason: s === "parked" ? (item.parkedReason ?? "manually parked on the board") : undefined,
-      history: [...item.history, { phase: item.phase, status: s, at: cfg.clock(), note: "status set on board" }],
+      history: [...item.history, { step: item.step ?? "triage", status: s, at: cfg.clock(), note: "status set on board" }],
     });
   }
 
   async function setNightly(id: string, nightly: boolean): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
-    await store.save({ ...item, nightly, nightlyPriority: item.nightlyPriority ?? 0 });
+    await store.save({ ...item, schedule: nightly ? "nightly" : "now", schedulePriority: item.schedulePriority ?? 0 });
   }
 
   async function bumpNightly(id: string, dir: "up" | "down"): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
     const delta = dir === "up" ? 1 : -1;
-    await store.save({ ...item, nightlyPriority: (item.nightlyPriority ?? 0) + delta });
+    await store.save({ ...item, schedulePriority: (item.schedulePriority ?? 0) + delta });
   }
 
   async function deleteItem(id: string): Promise<void> {
@@ -292,16 +292,16 @@ export function createShell(cfg: HttpShellConfig) {
     await store.delete(id); // no-op for read-only mirror items (not in the store)
   }
 
-  /** Hopper idea stage move (Captured → Shaping → Ready). Stages live in `phase`
+  /** Hopper idea stage move (Captured → Shaping → Ready). Stages live in `stage`
    *  on untriaged items; only untriaged items have a hopper stage. */
   async function setStage(id: string, toStage: string): Promise<void> {
     if (!HOPPER_STAGE_KEYS.includes(toStage)) return;
     const item = await store.load(id);
-    if (!item || item.genre !== UNTRIAGED) return;
+    if (!item || item.pipeline !== UNTRIAGED) return;
     await store.save({
       ...item,
-      phase: toStage,
-      history: [...item.history, { phase: toStage, status: "entered", at: cfg.clock(), note: "stage moved on board" }],
+      stage: toStage,
+      history: [...item.history, { step: toStage, status: "entered", at: cfg.clock(), note: "stage moved on board" }],
     });
   }
 
@@ -317,25 +317,26 @@ export function createShell(cfg: HttpShellConfig) {
   /** Promote an idea into a refinement pipeline. `schedule` chooses how it runs:
    *  "immediate" kicks the pipeline now; "nightly" flags it for the overnight
    *  batch (no immediate run). Anything else just promotes (manual run later). */
-  async function promote(id: string, genre: string, schedule = ""): Promise<void> {
+  async function promote(id: string, pipelineId: string, schedule = ""): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
-    const profile = catalog.get(genre);
-    if (!profile) return;
+    const pipeline = catalog.get(pipelineId);
+    if (!pipeline) return;
     await store.save({
       ...item,
-      genre,
-      phase: profile.gates[0] ?? "triage",
-      phaseStatus: "pending",
+      pipeline: pipelineId,
+      step: pipeline.gates[0] ?? "triage",
+      stage: undefined,
+      state: "pending",
       parkedReason: undefined,
-      nightly: schedule === "nightly" ? true : item.nightly,
-      history: [...item.history, { phase: profile.gates[0] ?? "triage", status: "entered", at: cfg.clock(), note: `promoted to ${genre}${schedule ? ` (${schedule})` : ""}` }],
+      schedule: schedule === "nightly" ? "nightly" : item.schedule,
+      history: [...item.history, { step: pipeline.gates[0] ?? "triage", status: "entered", at: cfg.clock(), note: `promoted to ${pipelineId}${schedule ? ` (${schedule})` : ""}` }],
     });
     // Brain-sourced idea → record the promotion in the vault: cut it from
-    // backlog/drafted and file it under `## promoted` (annotated with the genre).
+    // backlog/drafted and file it under `## promoted` (annotated with the pipeline).
     if (isBrainIdea(item) && cfg.vaultDir) {
       const text = (item.payload as { input?: unknown }).input;
-      if (typeof text === "string") promoteBrainIdea(cfg.vaultDir, text, genre, cfg.clock);
+      if (typeof text === "string") promoteBrainIdea(cfg.vaultDir, text, pipelineId, cfg.clock);
     }
     // Immediate scheduling: run the pipeline now (same as the /run route — the
     // shell marks it running and processes; the redirect happens after).
@@ -367,11 +368,11 @@ export function createShell(cfg: HttpShellConfig) {
           const [items, profiles, enabled] = [await store.list(), catalog.list(), catalog.enabled()];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           if (url === "/hopper") {
-            res.end(renderHopperPage(items.filter((i) => i.genre === UNTRIAGED), profiles, enabled, domains));
+            res.end(renderHopperPage(items.filter((i) => i.pipeline === UNTRIAGED), profiles, enabled, domains));
           } else {
             // Gauntlet: store projects + nightly-build mirror cards (SRs have their own page).
             const projects = [
-              ...items.filter((i) => i.genre !== UNTRIAGED),
+              ...items.filter((i) => i.pipeline !== UNTRIAGED),
               ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
             ];
             res.end(renderGauntlet(projects, profiles, enabled, domains));
@@ -381,9 +382,9 @@ export function createShell(cfg: HttpShellConfig) {
         if (method === "GET" && url === "/nightly") {
           const [items, profiles, enabled] = [await store.list(), catalog.list(), catalog.enabled()];
           const flagged = [
-            ...items.filter((i) => i.nightly),
+            ...items.filter((i) => i.schedule === "nightly"),
             ...mirror().filter((m) => m.id.startsWith(NB_PREFIX)),
-          ].sort((a, b) => (b.nightlyPriority ?? 0) - (a.nightlyPriority ?? 0) || a.id.localeCompare(b.id));
+          ].sort((a, b) => (b.schedulePriority ?? 0) - (a.schedulePriority ?? 0) || a.id.localeCompare(b.id));
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           res.end(renderNightly(flagged, readCap("nightly"), profiles, enabled, domains));
           return;
@@ -482,7 +483,7 @@ export function createShell(cfg: HttpShellConfig) {
             return redirectTo(res, afterEdit);
           }
           if (url === "/rewind") {
-            await doRewind(id, body.get("toPhase") ?? "", (body.get("note") ?? "").trim());
+            await doRewind(id, body.get("toStep") ?? "", (body.get("note") ?? "").trim());
             return redirectTo(res, afterEdit);
           }
           if (url === "/status") {
@@ -503,7 +504,7 @@ export function createShell(cfg: HttpShellConfig) {
           if (url === "/promote") {
             // schedule: "immediate" runs the pipeline now; "nightly" flags it for
             // the overnight batch; "" just promotes (manual run later).
-            await promote(id, body.get("genre") ?? "", body.get("schedule") ?? "");
+            await promote(id, body.get("pipeline") ?? "", body.get("schedule") ?? "");
             return redirectTo(res, afterEdit);
           }
           if (url === "/run") {
@@ -593,8 +594,8 @@ export function createShell(cfg: HttpShellConfig) {
             return redirectTo(res, id ? `/project/${encodeURIComponent(id)}` : "/sr");
           }
           if (url === "/profiles/toggle") {
-            const genre = body.get("genre") ?? "";
-            if (genre) catalog.setEnabled(genre, body.get("enabled") === "true");
+            const pipelineId = body.get("pipeline") ?? "";
+            if (pipelineId) catalog.setEnabled(pipelineId, body.get("enabled") === "true");
             return redirectTo(res, "/");
           }
         }

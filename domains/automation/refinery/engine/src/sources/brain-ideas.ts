@@ -6,13 +6,13 @@
 //     • a backlog/drafted line with no store item → saved as an UNTRIAGED Item
 //       (so it lands in the hopper, marked `source: "brain idea"`).
 //     • a brain-idea Item that is STILL untriaged and whose line vanished from
-//       the vault → deleted. (A promoted idea has a real genre, so it is never
+//       the vault → deleted. (A promoted idea has a real pipeline, so it is never
 //       deleted nor re-created — it's a project now.)
 //
 //   hopper → brain (write-back):
 //     • appendBrainIdea  — a NEW idea typed into the hopper box → `## backlog`.
 //     • promoteBrainIdea — an idea promoted to a project → its line is cut from
-//       backlog/drafted and appended to `## promoted` (annotated with genre).
+//       backlog/drafted and appended to `## promoted` (annotated with pipeline).
 //     • removeBrainIdea  — an idea deleted on the board → its line is removed.
 //
 // The keystone is a DETERMINISTIC, content-derived id (`brain-<hash>`): the same
@@ -128,14 +128,14 @@ export function readBrainIdeas(vaultDir: string): BrainIdea[] {
 }
 
 /** A fresh UNTRIAGED Item for a brain idea — the hopper shape. Untriaged ideas
- *  live in the Hopper's maturation stages (phase = the stage); they enter at
- *  "captured" and advance Captured → Shaping → Ready, then promote. */
+ *  live in the Hopper's maturation stages (stage = the maturation lane); they
+ *  enter at "captured" and advance Captured → Shaping → Ready, then promote. */
 export function makeIdeaItem(idea: BrainIdea, clock: () => string): Item {
   return {
     id: idea.id,
-    genre: UNTRIAGED,
-    phase: "captured",
-    phaseStatus: "parked",
+    pipeline: UNTRIAGED,
+    stage: "captured",
+    state: "parked",
     parkedReason: "from the brain — shape it, then promote when Ready",
     payload: {
       input: idea.text,
@@ -144,7 +144,7 @@ export function makeIdeaItem(idea: BrainIdea, clock: () => string): Item {
       brainSection: idea.section,
       brainGoal: idea.goalId,
     },
-    history: [{ phase: "captured", status: "parked", at: clock(), note: "imported from brain _ideas.md" }],
+    history: [{ step: "captured", status: "parked", at: clock(), note: "imported from brain _ideas.md" }],
   };
 }
 
@@ -169,7 +169,7 @@ export async function syncBrainIdeas(
   }
   let removed = 0;
   for (const item of existing) {
-    if (isBrainIdea(item) && item.genre === UNTRIAGED && !want.has(item.id)) {
+    if (isBrainIdea(item) && item.pipeline === UNTRIAGED && !want.has(item.id)) {
       await store.delete(item.id);
       removed++;
     }
@@ -262,11 +262,11 @@ export function removeBrainIdea(vaultDir: string, text: string): void {
 }
 
 /** Cut a promoted idea from backlog/drafted and record it under the root
- *  `## promoted` section, annotated with the genre it became. */
-export function promoteBrainIdea(vaultDir: string, text: string, genre: string, clock: () => string): void {
+ *  `## promoted` section, annotated with the pipeline it became. */
+export function promoteBrainIdea(vaultDir: string, text: string, pipeline: string, clock: () => string): void {
   removeBrainIdea(vaultDir, text);
   const root = rootIdeasPath(vaultDir);
   const cur = existsSync(root) ? readFileSync(root, "utf8") : "";
   const date = clock().slice(0, 10);
-  writeFileSync(root, appendToSection(cur, "promoted", `- ${text}  <!-- → ${genre} ${date} -->`));
+  writeFileSync(root, appendToSection(cur, "promoted", `- ${text}  <!-- → ${pipeline} ${date} -->`));
 }

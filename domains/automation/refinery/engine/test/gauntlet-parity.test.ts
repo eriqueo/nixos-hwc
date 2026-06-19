@@ -2,14 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { parseProfile } from "../src/profile.js";
-import { GAUNTLET_CONFIGS } from "../src/profiles/gauntlet-config.js";
-import { makeExecuteEffector } from "../src/effectors/execute.js";
-import { ClaudePort, GitPort, ReportPort } from "../src/effectors/ports.js";
+import { parsePipeline } from "../src/pipeline.js";
+import { GAUNTLET_CONFIGS } from "../src/pipelines/gauntlet-config.js";
+import { makeNativeExecutor } from "../src/executors/native.js";
+import { ClaudePort, GitPort, ReportPort } from "../src/executors/ports.js";
 import { makeItem } from "./helpers.js";
 
-const profilePath = (name: string) =>
-  fileURLToPath(new URL(`../../../profiles/${name}`, import.meta.url));
+const pipelinePath = (name: string) =>
+  fileURLToPath(new URL(`../../../pipelines/${name}`, import.meta.url));
 
 // Minimal stub ports recording the parity-relevant calls.
 function stubs(opts: { stdout: string; pristine?: boolean; hasCommits?: boolean }) {
@@ -30,11 +30,11 @@ function stubs(opts: { stdout: string; pristine?: boolean; hasCommits?: boolean 
   return { git, claude, report, calls };
 }
 
-test("both gauntlet profiles validate and their executeMode matches the gauntlet config", () => {
-  const nightly = parseProfile(readFileSync(profilePath("nightly-build.yaml"), "utf8"));
-  const sr = parseProfile(readFileSync(profilePath("datax-sr.yaml"), "utf8"));
-  assert.equal(nightly.executeMode, GAUNTLET_CONFIGS["nightly-build"].executeMode);
-  assert.equal(sr.executeMode, GAUNTLET_CONFIGS["datax-sr"].executeMode);
+test("both gauntlet pipelines validate and their executorMode matches the gauntlet config", () => {
+  const nightly = parsePipeline(readFileSync(pipelinePath("nightly-build.yaml"), "utf8"));
+  const sr = parsePipeline(readFileSync(pipelinePath("datax-sr.yaml"), "utf8"));
+  assert.equal(nightly.executorMode, GAUNTLET_CONFIGS["nightly-build"].executorMode);
+  assert.equal(sr.executorMode, GAUNTLET_CONFIGS["datax-sr"].executorMode);
   // strangler-fig: shipped disabled, not wired into a live engine timer.
   assert.equal(nightly.enabled, false);
   assert.equal(sr.enabled, false);
@@ -43,11 +43,11 @@ test("both gauntlet profiles validate and their executeMode matches the gauntlet
 test("parity — nightly-build (write): pushes the branch and succeeds on NIGHTLY-VERDICT: success", async () => {
   const cfg = GAUNTLET_CONFIGS["nightly-build"];
   const s = stubs({ stdout: "NIGHTLY-VERDICT: success", hasCommits: true });
-  const eff = makeExecuteEffector(
+  const eff = makeNativeExecutor(
     {
       repo: "/repo",
       worktree: "/tmp/wt",
-      executeMode: cfg.executeMode,
+      executorMode: cfg.executorMode,
       branch: `${cfg.branchPrefix}fixture`,
       promptWrapper: "WRAP",
       verdictPattern: cfg.verdictPattern,
@@ -67,9 +67,9 @@ test("parity — nightly-build (write): pushes the branch and succeeds on NIGHTL
 test("parity — nightly-build: a failure verdict does NOT count as success", async () => {
   const cfg = GAUNTLET_CONFIGS["nightly-build"];
   const s = stubs({ stdout: "NIGHTLY-VERDICT: failure", hasCommits: true });
-  const eff = makeExecuteEffector(
+  const eff = makeNativeExecutor(
     {
-      repo: "/repo", worktree: "/tmp/wt", executeMode: cfg.executeMode, branch: "nightly/x",
+      repo: "/repo", worktree: "/tmp/wt", executorMode: cfg.executorMode, branch: "nightly/x",
       promptWrapper: "W", verdictPattern: cfg.verdictPattern, successVerdicts: cfg.successVerdicts,
       timeoutMs: 1000, reportFile: cfg.reportFile,
     },
@@ -83,9 +83,9 @@ test("parity — nightly-build: a failure verdict does NOT count as success", as
 test("parity — datax-sr (read-only): detached worktree, asserts pristine, succeeds on SR-VERDICT", async () => {
   const cfg = GAUNTLET_CONFIGS["datax-sr"];
   const s = stubs({ stdout: "SR-VERDICT: investigated", pristine: true });
-  const eff = makeExecuteEffector(
+  const eff = makeNativeExecutor(
     {
-      repo: "/repo", worktree: "/tmp/wt", executeMode: cfg.executeMode,
+      repo: "/repo", worktree: "/tmp/wt", executorMode: cfg.executorMode,
       promptWrapper: "W", verdictPattern: cfg.verdictPattern, successVerdicts: cfg.successVerdicts,
       timeoutMs: 1000, reportFile: cfg.reportFile,
     },
@@ -102,9 +102,9 @@ test("parity — datax-sr (read-only): detached worktree, asserts pristine, succ
 test("parity — datax-sr: a dirtied worktree is reverted and fails (PII/pristine guard)", async () => {
   const cfg = GAUNTLET_CONFIGS["datax-sr"];
   const s = stubs({ stdout: "SR-VERDICT: investigated", pristine: false });
-  const eff = makeExecuteEffector(
+  const eff = makeNativeExecutor(
     {
-      repo: "/repo", worktree: "/tmp/wt", executeMode: cfg.executeMode,
+      repo: "/repo", worktree: "/tmp/wt", executorMode: cfg.executorMode,
       promptWrapper: "W", verdictPattern: cfg.verdictPattern, successVerdicts: cfg.successVerdicts,
       timeoutMs: 1000, reportFile: cfg.reportFile,
     },

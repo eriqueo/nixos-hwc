@@ -1,4 +1,4 @@
-// Outbound ports for the morning PR-review pass. Mirrors effectors/ports.ts:
+// Outbound ports for the morning PR-review pass. Mirrors executors/ports.ts:
 // every side-effecting operation (git facts, GitHub PR lifecycle, review
 // persistence) is an interface so the core (reviewer.ts + run.ts) is pure
 // control flow — tests inject stubs and no real git/gh/llm is ever spawned.

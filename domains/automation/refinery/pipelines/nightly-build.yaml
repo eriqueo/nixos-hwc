@@ -1,8 +1,8 @@
-# nightly-builds expressed as a refinery profile (strangler-fig: the live
+# nightly-builds expressed as a refinery pipeline (strangler-fig: the live
 # run.sh + timer keep running untouched; this is the parallel/shadow expression
 # that proves "the two gauntlets are one machine"). enabled:false — not wired
 # into a live engine timer yet; flipping that on is a separate human-gated step.
-genre: nightly-build
+pipeline: nightly-build
 label: Nightly Builds
 color: "#cf995f" # HWC palette: warning (copper)
 source: vault-queued-cards
@@ -11,8 +11,8 @@ gates:
   - principles-create
   - premortem
   - admission-gates
-executeMode: write
-effectors:
-  - execute
+executorMode: write
+executors:
+  - native
 llmProvider: claude-cli
 enabled: false
