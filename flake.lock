@@ -398,6 +398,27 @@
         "type": "github"
       }
     },
+    "pave-query-builder": {
+      "inputs": {
+        "flake-utils": "flake-utils_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1781895753,
+        "narHash": "sha256-RkqItrSvwvScQy/9TPllT+2HJjzYgDhanpoJthhSKRA=",
+        "owner": "eriqueo",
+        "repo": "pave-query-builder",
+        "rev": "9b8a7cc90a743e90b82bbcee6de34369433b417f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "eriqueo",
+        "repo": "pave-query-builder",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "aerc": "aerc",
@@ -412,6 +433,7 @@
         "nixpkgs-stable": "nixpkgs-stable",
         "nixpkgs-tailscale": "nixpkgs-tailscale",
         "nixvirt": "nixvirt",
+        "pave-query-builder": "pave-query-builder",
         "todui": "todui",
         "workbench": "workbench"
       }

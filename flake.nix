@@ -131,6 +131,16 @@
       url = "github:eriqueo/aerc/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # pave-query-builder — trap-safe Pave (JobTread API) query builder, TUI + CLI,
+    # consumed by domains/home/apps/pave-query-builder. Same shared-remote model as
+    # todui/khalt/workbench: private GitHub repo via a github: input. Ship: push to
+    # eriqueo/pave-query-builder → `nix flake update pave-query-builder` → rebuild.
+    # Iterate via its devShell (`nix develop` + `python -m pave`).
+    pave-query-builder = {
+      url = "github:eriqueo/pave-query-builder";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   #============================================================================
