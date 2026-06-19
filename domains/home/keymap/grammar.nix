@@ -191,6 +191,12 @@ rec {
     { key = "e"; intent = "edit";     desc = "Edit (nvim)";    target = "edit"; }
     # tab navigation (n/p AND ]/[ — every tool tab is single-pane, so next/prev
     # *tab* is what you actually want; pane focus lives behind the pane-picker).
+    # j/k CYCLE left/right and STAY in meta mode (press repeatedly to walk the
+    # tab bar; Esc or the leader exits) — the natural "cycle through tabs" flow,
+    # vs the letter jumps above which jump-and-exit. n/p and ]/[ stay as one-shot
+    # next/prev for muscle memory.
+    { key = "j"; intent = "cycle-prev"; desc = "◀ Tab (cycle)"; }
+    { key = "k"; intent = "cycle-next"; desc = "Tab ▶ (cycle)"; }
     { key = "n"; intent = "next-tab"; desc = "Next tab"; }
     { key = "p"; intent = "prev-tab"; desc = "Prev tab"; }
     { key = "bracketright"; intent = "next-tab"; desc = "Next tab"; }
