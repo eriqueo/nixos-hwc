@@ -14,8 +14,10 @@
 let
   cfg = config.hwc.home.apps.pave-query-builder;
 
-  # If the jt-mcp schema checkout is present, hand it to the app for the
-  # introspection fallback + enum validation (optional — the app runs without).
+  # Hand the app the jt-mcp schema for the introspection fallback + enum
+  # validation. Set unconditionally (not pathExists-guarded — that returns false
+  # under pure flake eval); the app's schema loader degrades gracefully if the
+  # file is absent, so baking the HWC path is safe even on a checkout-less host.
   schemaPath = "${config.home.homeDirectory}/700_datax/jt-mcp/schema_pretty.json";
 in
 {
@@ -34,7 +36,7 @@ in
   config = lib.mkIf cfg.enable {
     programs.pave-query-builder = {
       enable = true;
-      schemaPath = lib.mkIf (builtins.pathExists schemaPath) schemaPath;
+      inherit schemaPath;
       # Mutation guardrail: leave at the app's built-in default (HWC test org
       # only). Widen deliberately here if a real org ever needs writes.
       # mutationOrgs = [ "22Nm3uFevXMb" ];
