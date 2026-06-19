@@ -96,6 +96,12 @@ in
       # says — on the laptop that's the server over ssh, so DON'T bake a local
       # aerc onto PATH; the launcher invokes `ssh -t server aerc` instead.
       launchers.aerc = aercCmd;
+      # `opens = "url:…"` (e.g. the DataX SR2 dashboard on Enter) opens in the GUI
+      # browser. Use the SAME launcher as the SUPER+B keybind — `gpu-launch
+      # chromium-hwc` — so the page gets the GPU/ANGLE/WebGL Chromium profile, not
+      # a bare `xdg-open` that drops those flags. gpu-launch is on the session PATH
+      # (same as the Hyprland keybind in apps/hyprland/parts/behavior.nix).
+      launchers.browser = "gpu-launch chromium-hwc";
       extraRuntimePackages = with pkgs; [
         zellij        # the multiplexer workbench drives
         yazi          # peer pane: files
