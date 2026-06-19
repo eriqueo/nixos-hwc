@@ -492,6 +492,22 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- **2026-06-18**: Added **`datax_*` tools** — `datax_support_requests` (kanban)
+  and `datax_api_health` (status), which back the workbench **DataX hub**
+  (`hubs/datax.toml`). Before this the gateway had no `datax_*` tool, so both
+  tiles silently fell back to fixtures. `datax_support_requests` consumes the
+  live SR board from the **sr_analyzer** container (`GET /api/board` on
+  `127.0.0.1:8788`), groups tickets by phase (Closed/Archive hidden unless
+  `includeClosed`), and overlays the **SR gauntlet** ledger
+  (`700_datax/sr_gauntlet/state/ledger.json`, joined on `ticket.externalId` ==
+  Firestore doc id) to badge investigated SRs. `datax_api_health` reports
+  Firestore reachability via sr_analyzer's last import-poll
+  (`/api/import/datax/status`) — fresh sync ⇒ ok, stale ⇒ degraded. The gateway
+  never touches Firestore directly (no firebase-admin / creds); it is a pure
+  consumer of the two ports (`executors/sr-analyzer.ts`,
+  `executors/sr-gauntlet-ledger.ts`). New env: `HWC_DATAX_ANALYZER_URL`,
+  `HWC_DATAX_LEDGER_PATH`. Boundary validation is hand-written (no zod dep).
+  Deploy: `npm run build` in `src/` + `nixos-rebuild switch` (restarts gateway).
 - **2026-06-16**: Universal Result Contract extended to the **server-health
   tools** — `hwc_services`, `hwc_storage_status`, `hwc_monitoring`,
   `hwc_media_status`, `hwc_network`, `hwc_build_git_status` now attach a
@@ -585,10 +601,13 @@ domains/system/mcp/
         │   ├── podman.ts
         │   ├── prometheus.ts
         │   ├── tailscale.ts
-        │   └── caldav.ts
+        │   ├── caldav.ts
+        │   ├── sr-analyzer.ts        # DataX SR board port (datax_* tools)
+        │   └── sr-gauntlet-ledger.ts # SR investigation overlay (datax_* tools)
         ├── tools/
         │   ├── index.ts
         │   ├── registry.ts
+        │   ├── datax.ts
         │   ├── config.ts
         │   ├── services.ts
         │   ├── monitoring.ts

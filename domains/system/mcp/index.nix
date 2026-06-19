@@ -271,6 +271,14 @@ in
         # CMS app path for hwc_cms_* tools
         HWC_CMS_APP_PATH = cmsAppPath;
 
+        # datax_* tools (workbench DataX hub). The gateway consumes the live SR
+        # board from the sr_analyzer container (loopback) and overlays the SR
+        # gauntlet's investigation ledger — it never touches Firestore directly,
+        # so no firebase creds here. ProtectHome=read-only already permits the
+        # ledger read; loopback HTTP needs no extra grant.
+        HWC_DATAX_ANALYZER_URL = "http://127.0.0.1:8788";
+        HWC_DATAX_LEDGER_PATH = "${paths.user.home}/700_datax/sr_gauntlet/state/ledger.json";
+
         # stdio backend: jt-mcp (JT tools)
         HWC_JT_SRC_DIR = jtCfg.srcDir;
         JT_ORG_ID = jtCfg.jt.orgId;

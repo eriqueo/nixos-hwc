@@ -22,6 +22,7 @@ import { nightlyReviewTools } from "./nightly-review.js";
 import { notifyTools } from "./notify.js";
 import { leadsTools } from "./leads.js";
 import { tasksTools } from "./tasks.js";
+import { dataxTools } from "./datax.js";
 
 
 export function allTools(config: ServerConfig): ToolDef[] {
@@ -46,6 +47,7 @@ export function allTools(config: ServerConfig): ToolDef[] {
     ...estimatorTools(config.nixosConfigPath),
     ...notifyTools(),
     ...leadsTools(),
+    ...dataxTools(config.dataxAnalyzerUrl, config.dataxLedgerPath),
     ...mailTriageTools(),
     ...nightlyReviewTools(),
     // Composite tool
