@@ -794,6 +794,12 @@
       "leads.heartwoodcraft.me" = "http://localhost:8420";
       "brain.heartwoodcraft.me" = "http://localhost:9876";
 
+      # datax-monitor dashboard — shared with external DataX collaborators
+      # off-tailnet. Public DNS CNAME + Cloudflare Access policy ("datax",
+      # email allow-list) gate it; the tunnel only proxies; the app has no
+      # auth of its own. Local target is hwc.business.dataxMonitor on :4400.
+      "monitor.heartwoodcraft.me" = "http://localhost:4400";
+
       "n8n.api.iheartwoodcraft.com" = "http://localhost:5678";
       "mcp.api.iheartwoodcraft.com" = "http://localhost:6200";
       "leads.api.iheartwoodcraft.com" = "http://localhost:8420";
