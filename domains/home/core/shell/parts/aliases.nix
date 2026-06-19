@@ -30,11 +30,11 @@
   # pane). attach -c reuses/creates the named session; `command workbench`
   # still reaches the raw binary (the zellij layout itself execs it directly).
   "workbench" = "zellij attach -c workbench";
-  # wb-reload = pick up layout edits without manual force-close: kill the named
-  # session (even if running) then recreate it fresh. Run from a NON-workbench
-  # terminal (it kills the session it'd be sitting in). For daily use just press
-  # SUPER+W (reattach) — reload is only needed after the layout itself changes.
-  "wb-reload" = "zellij delete-session workbench --force 2>/dev/null; zellij attach -c workbench";
+  # wb-reload is now a REAL binary (writeShellScriptBin in apps/workbench/index.nix),
+  # NOT an alias — the SUPER+W keybind runs `kitty -e wb-reload`, and `kitty -e`
+  # can't see shell aliases. The binary kills + recreates the named session
+  # (picks up layout edits); SUPER+W reloads workbench every time, by design.
+  # Run from a NON-workbench terminal (it kills the session it'd be sitting in).
   # Workspace script aliases
   "errors" = "${ws}/monitoring/journal-errors.sh";
   "errors-hour" = "${ws}/monitoring/journal-errors.sh '1 hour ago'";
