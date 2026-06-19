@@ -2,9 +2,13 @@
 #
 # MACHINE: HWC-SERVER
 # Declares machine identity and composes profiles; states hardware reality.
-
-{ config, lib, pkgs, inputs ? null, ... }:
 {
+  config,
+  lib,
+  pkgs,
+  inputs ? null,
+  ...
+}: {
   imports = [
     ./hardware.nix
 
@@ -15,25 +19,25 @@
     ../../domains/networking/index.nix
     ../../domains/data/index.nix
     ../../domains/media/index.nix
-    ../../domains/notifications/index.nix  # Notification delivery (gotify, webhooks, CLI)
-    ../../domains/gaming/index.nix    # Retroarch emulation + WebDAV save sync
+    ../../domains/notifications/index.nix # Notification delivery (gotify, webhooks, CLI)
+    ../../domains/gaming/index.nix # Retroarch emulation + WebDAV save sync
     ../../domains/server/containers/_shared/directories.nix
-    ../../domains/server/native/ai/lead-scout/index.nix  # Lead Scout MCP + HTTP
-    ../../domains/server/native/ai/brain-mcp/index.nix      # Brain MCP Server (Deno)
-    ../../domains/server/native/ai/hermes/index.nix         # Hermes Agent (Nous Research)
+    ../../domains/server/native/ai/lead-scout/index.nix # Lead Scout MCP + HTTP
+    ../../domains/server/native/ai/brain-mcp/index.nix # Brain MCP Server (Deno)
+    ../../domains/server/native/ai/hermes/index.nix # Hermes Agent (Nous Research)
     ../../domains/server/native/ai/market-intelligence/index.nix # Market Intelligence (earnings signals + dashboard)
-    ../../domains/server/native/ai/llama-cpp/index.nix      # llama.cpp inference (GPU + CPU + embed)
+    ../../domains/server/native/ai/llama-cpp/index.nix # llama.cpp inference (GPU + CPU + embed)
     ../../domains/server/native/ai/persona-daemon/index.nix # Persona-aware HTTP daemon + SQLite memory
-    ../../domains/server/services/inbox-processor/index.nix  # Phone capture processor (Whisper + Tesseract)
-    ../../domains/server/services/radicale/index.nix  # Self-hosted CalDAV (tasks.hwc.*)
+    ../../domains/server/services/inbox-processor/index.nix # Phone capture processor (Whisper + Tesseract)
+    ../../domains/server/services/radicale/index.nix # Self-hosted CalDAV (tasks.hwc.*)
   ];
 
   assertions = [
     # Server role assertions
     {
       assertion = (
-        (config.hwc.paths.hot.root != null && lib.hasPrefix "/mnt" config.hwc.paths.hot.root) ||
-        (config.hwc.paths.media.root != null && lib.hasPrefix "/mnt" config.hwc.paths.media.root)
+        (config.hwc.paths.hot.root != null && lib.hasPrefix "/mnt" config.hwc.paths.hot.root)
+        || (config.hwc.paths.media.root != null && lib.hasPrefix "/mnt" config.hwc.paths.media.root)
       );
       message = "Server requires dedicated storage mounts (hot or media should use /mnt/* paths)";
     }
@@ -69,9 +73,11 @@
     {
       # CHARTER v9.0: PostgreSQL MUST be pinned to version 15
       # Data directory is PostgreSQL 15 format - upgrading breaks compatibility
-      assertion = !config.services.postgresql.enable || (
-        lib.hasPrefix "15." config.services.postgresql.package.version
-      );
+      assertion =
+        !config.services.postgresql.enable
+        || (
+          lib.hasPrefix "15." config.services.postgresql.package.version
+        );
       message = ''
         ============================================================
         POSTGRESQL VERSION PIN VIOLATION
@@ -111,11 +117,11 @@
   # Watches inbox-mobile/{audio,screenshots} and writes markdown to brain/inbox/
   hwc.server.services.inboxProcessor = {
     enable = true;
-    audioInboxPath       = "${config.hwc.paths.brain."inbox-mobile"}/audio";
+    audioInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/audio";
     screenshotsInboxPath = "${config.hwc.paths.brain."inbox-mobile"}/screenshots";
-    brainInboxPath       = "${config.hwc.paths.brain."server-replica"}/inbox";
-    processedPath        = "${config.hwc.paths.brain."inbox-mobile"}/processed";
-    whisperModel         = "base.en";
+    brainInboxPath = "${config.hwc.paths.brain."server-replica"}/inbox";
+    processedPath = "${config.hwc.paths.brain."inbox-mobile"}/processed";
+    whisperModel = "base.en";
   };
 
   # Radicale — self-hosted CalDAV for two-way task sync with list creation
@@ -127,14 +133,14 @@
   };
 
   # ZFS support for backup drives
-  boot.supportedFilesystems = [ "zfs" ];
+  boot.supportedFilesystems = ["zfs"];
   boot.zfs.forceImportRoot = false;
   boot.zfs.forceImportAll = false;
 
   # Note: boot.initrd.systemd.fido2 doesn't exist in stable 24.05 (added in later versions)
 
   # ZFS configuration (scrub/trim hygiene comes from the server role)
-  boot.zfs.extraPools = [ "backup-pool" ];  # Auto-import backup pool on boot
+  boot.zfs.extraPools = ["backup-pool"]; # Auto-import backup pool on boot
 
   # Charter v10.1 path configuration (hostname-based defaults)
   # Server hostname detection provides all correct defaults:
@@ -152,8 +158,8 @@
       device = "/dev/disk/by-uuid/fd7a9820-a3e2-45cb-9c97-9fd904ee459a";
       fsType = "ext4";
     };
-    media.enable = true;   # Directory management only (mount defined below)
-    backup.enable = true;  # Enable backup drive automation
+    media.enable = true; # Directory management only (mount defined below)
+    backup.enable = true; # Enable backup drive automation
   };
 
   # Media storage mount (infrastructure module manages directories only)
@@ -176,59 +182,63 @@
 
     # Safest: wait for any NetworkManager connection (no hard-coded iface names).
     waitOnline.mode = "all";
-    waitOnline.timeoutSeconds = 30;  # Reduced from 90s for faster boot
+    waitOnline.timeoutSeconds = 30; # Reduced from 90s for faster boot
 
     ssh.enable = true;
     tailscale.enable = true;
-    tailscale.extraUpFlags = [ "--advertise-tags=tag:server" "--accept-routes" ];
+    tailscale.extraUpFlags = ["--advertise-tags=tag:server" "--accept-routes"];
     # firewall.level = "server" comes from the server role
     firewall.extraTcpPorts = [
-      22000  # Syncthing sync
+      22000 # Syncthing sync
       # Media services
-      5000   # Frigate
-      8080   # qBittorrent (via Gluetun)
-      7878   # Radarr
-      8989   # Sonarr
-      8686   # Lidarr
-      8787   # Readarr
-      9696   # Prowlarr
-      5055   # Jellyseerr
-      4533   # Navidrome
-      8096   # Jellyfin
-      2283   # Immich
-      8081   # SABnzbd
-      5030   # SLSKD
+      5000 # Frigate
+      8080 # qBittorrent (via Gluetun)
+      7878 # Radarr
+      8989 # Sonarr
+      8686 # Lidarr
+      8787 # Readarr
+      9696 # Prowlarr
+      5055 # Jellyseerr
+      4533 # Navidrome
+      8096 # Jellyfin
+      2283 # Immich
+      8081 # SABnzbd
+      5030 # SLSKD
       # Business services
-      8888   # Receipt API
-      8501   # Streamlit apps
-      5432   # PostgreSQL (internal)
-      6379   # Redis (internal)
+      8888 # Receipt API
+      8501 # Streamlit apps
+      5432 # PostgreSQL (internal)
+      6379 # Redis (internal)
       # Monitoring services
-      3000   # Grafana
-      9090   # Prometheus
-      9093   # Alertmanager
+      3000 # Grafana
+      9090 # Prometheus
+      9093 # Alertmanager
       # AI services
-      11434  # Ollama
+      11434 # Ollama
       # Calibre VNC
-      5909   # Calibre desktop VNC
+      5909 # Calibre desktop VNC
       # YouTube
-      8943   # Pinchflat (YouTube subscriptions)
+      8943 # Pinchflat (YouTube subscriptions)
       # Game streaming (Sunshine)
-      47984 47989 47990  # Sunshine HTTPS, Web UI, RTSP
-      48010              # Sunshine video stream
-      7359               # Jellyfin discovery (also UDP)
+      47984
+      47989
+      47990 # Sunshine HTTPS, Web UI, RTSP
+      48010 # Sunshine video stream
+      7359 # Jellyfin discovery (also UDP)
     ];
     firewall.extraUdpPorts = [
-      22000  # Syncthing sync (QUIC)
-      21027  # Syncthing local discovery
-      7359   # Jellyfin discovery
-      50300  # SLSKD
-      8555   # Frigate
+      22000 # Syncthing sync (QUIC)
+      21027 # Syncthing local discovery
+      7359 # Jellyfin discovery
+      50300 # SLSKD
+      8555 # Frigate
       # Game streaming (Sunshine)
-      47998 47999 48000 48010
+      47998
+      47999
+      48000
+      48010
     ];
   };
-
 
   # Syncthing — bidirectional home folder sync with hwc-laptop
   hwc.data.syncthing = {
@@ -236,24 +246,39 @@
     devices."hwc-laptop".id = "H3EVGHN-DTDTMWS-INSC2RH-PBRABJX-M3FW7AM-3P2NY3M-X5XLYCK-JD2YRQG";
     devices."hwc-phone".id = "ROLZBPO-HN33OQP-E4DV5PD-34ZVSIP-I5USNNW-NHHOPKC-APNQNSH-BX7OMQN";
     folders = {
-      "000_inbox"    = { path = "/home/eric/000_inbox";    devices = [ "hwc-laptop" ]; };
-      "100_hwc"      = { path = "/home/eric/100_hwc";      devices = [ "hwc-laptop" ]; };
-      "200_personal" = { path = "/home/eric/200_personal"; devices = [ "hwc-laptop" ]; };
-      "300_tech"     = { path = "/home/eric/300_tech";     devices = [ "hwc-laptop" ]; };
-      "700_datax"    = { path = "/home/eric/700_datax";    devices = [ "hwc-laptop" ]; };
+      "000_inbox" = {
+        path = "/home/eric/000_inbox";
+        devices = ["hwc-laptop"];
+      };
+      "100_hwc" = {
+        path = "/home/eric/100_hwc";
+        devices = ["hwc-laptop"];
+      };
+      "200_personal" = {
+        path = "/home/eric/200_personal";
+        devices = ["hwc-laptop"];
+      };
+      "300_tech" = {
+        path = "/home/eric/300_tech";
+        devices = ["hwc-laptop"];
+      };
+      "700_datax" = {
+        path = "/home/eric/700_datax";
+        devices = ["hwc-laptop"];
+      };
       # 600_apps: removed from Syncthing 2026-06-16. Each app inside is now its
       # own git repo (server hub for workbench/todui/khalt; GitHub for
       # kidpix/lead_scout/sr_analyzer) — bidirectional sync over live .git trees
       # was producing .sync-conflict corruption in lead_scout/sr_analyzer. git is
       # the only sync now; the dir stays on disk, just unsynced.
-      "brain"        = {
+      "brain" = {
         path = "/home/eric/900_vaults/brain";
         # Tier-2: git is the only laptop<->server vault sync (see
         # hwc.automation.vaultSync). Syncthing's sole remaining job here is to
         # feed the receive-only phone mirror, so the server is the sole sender
         # (sendonly) and the laptop is NOT a peer. sendonly guarantees a stale
         # phone can never push vault changes back and clobber the source.
-        devices = [ "hwc-phone" ];
+        devices = ["hwc-phone"];
         type = "sendonly";
         # Vault is a git repo: .git MUST be excluded or Syncthing replicates
         # git internals and a stale peer can clobber committed history.
@@ -266,9 +291,15 @@
           ".DS_Store"
         ];
       };
-      "screenshots"  = { path = "/home/eric/500_media/510_pictures/screenshots"; devices = [ "hwc-laptop" ]; };
+      "screenshots" = {
+        path = "/home/eric/500_media/510_pictures/screenshots";
+        devices = ["hwc-laptop"];
+      };
       # Phone capture inbox (Phase 9: Mobius Sync). Phone device added after pairing.
-      "inbox-mobile" = { path = "/mnt/vaults/inbox-mobile"; devices = [ "hwc-phone" ]; };
+      "inbox-mobile" = {
+        path = "/mnt/vaults/inbox-mobile";
+        devices = ["hwc-phone"];
+      };
     };
   };
 
@@ -278,16 +309,19 @@
   # Per-app tokens: each service gets its own gotify application token
   hwc.notifications.send.gotify = {
     enable = true;
-    serverUrl = config.hwc.networking.hosts.url { server = "main"; port = 2586; };  # Self-hosted via Tailscale HTTPS
+    serverUrl = config.hwc.networking.hosts.url {
+      server = "main";
+      port = 2586;
+    }; # Self-hosted via Tailscale HTTPS
     defaultTokenFile = config.hwc.secrets.api."gotify-token-alerts" or null;
-    defaultPriority = 7;  # Higher priority for server alerts
-    hostTag = true;       # Prepends "[host: hwc-server]" to messages
+    defaultPriority = 7; # Higher priority for server alerts
+    hostTag = true; # Prepends "[host: hwc-server]" to messages
   };
 
   # Notifications delivery infrastructure
   hwc.notifications = {
     enable = true;
-    send.cli.enable = true;  # CLI tool for manual alerts
+    send.cli.enable = true; # CLI tool for manual alerts
 
     # hwc-notify — hexagonal TS dispatcher (Phase 1 complete 2026-05-31).
     # Primary alert / lead notification path. Replaces the n8n
@@ -322,7 +356,7 @@
   # vaultSync's single-writer hub). Ships dryRun=true — watch the journal, then
   # set hwc.automation.inboxJanitor.dryRun = false.
   hwc.automation.inboxJanitor.enable = true;
-
+  hwc.automation.inboxJanitor.dryRun = false;
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)
@@ -345,8 +379,8 @@
     # Backup notifications
     sources.backup = {
       enable = true;
-      onSuccess = false;  # Don't spam on success
-      onFailure = true;   # Always alert on failure
+      onSuccess = false; # Don't spam on success
+      onFailure = true; # Always alert on failure
     };
   };
 
@@ -362,9 +396,9 @@
 
     # Same sources as rsync, plus database dumps
     sources = [
-      "/mnt/media/photos"                # Immich photos (CRITICAL)
-      "/var/lib/hwc"                     # Service state directories
-      "/var/lib/backups"                 # Database dumps
+      "/mnt/media/photos" # Immich photos (CRITICAL)
+      "/var/lib/hwc" # Service state directories
+      "/var/lib/backups" # Database dumps
     ];
 
     excludePatterns = [
@@ -444,7 +478,7 @@
     enable = lib.mkForce true;
     type = "nvidia";
     nvidia = {
-      driver = "stable";  # Use stable as base, override package below
+      driver = "stable"; # Use stable as base, override package below
       containerRuntime = true;
       enableMonitoring = true;
     };
@@ -452,8 +486,8 @@
 
   # P1000 (Pascal) with driver 580 - last full-support branch before legacy transition
   hardware.nvidia = {
-    package = config.boot.kernelPackages.nvidiaPackages.stable;  # 580.95.05
-    open = lib.mkForce false;  # Pascal doesn't support open-source modules
+    package = config.boot.kernelPackages.nvidiaPackages.stable; # 580.95.05
+    open = lib.mkForce false; # Pascal doesn't support open-source modules
     modesetting.enable = true;
     powerManagement.enable = true;
   };
@@ -481,21 +515,21 @@
       # Explicit model list for 4GB VRAM GPU (Quadro P1000)
       # Note: Load one at a time due to VRAM constraints
       models = [
-        "qwen2.5-coder:3b"   # 1.9GB - Best coding model
-        "phi3:3.8b"          # 2.3GB - General purpose
-        "llama3.2:3b"        # 2.0GB - Chat, journaling
+        "qwen2.5-coder:3b" # 1.9GB - Best coding model
+        "phi3:3.8b" # 2.3GB - General purpose
+        "llama3.2:3b" # 2.0GB - Chat, journaling
       ];
 
       # Override profile defaults for server (unlimited resources)
       resourceLimits = {
         enable = true;
-        maxCpuPercent = null;         # Unlimited CPU
-        maxMemoryMB = null;           # Unlimited memory
-        maxRequestSeconds = 600;      # 10 minute timeout
+        maxCpuPercent = null; # Unlimited CPU
+        maxMemoryMB = null; # Unlimited memory
+        maxRequestSeconds = 600; # 10 minute timeout
       };
 
-      healthCheck.interval = "30min";  # Was 5min — just a ping, no need to hammer
-      idleShutdown.enable = false;    # Always-on service
+      healthCheck.interval = "30min"; # Was 5min — just a ping, no need to hammer
+      idleShutdown.enable = false; # Always-on service
       thermalProtection.enable = false; # Datacenter cooling
     };
 
@@ -506,12 +540,11 @@
       # AI-powered file cleanup agent
       fileCleanup = {
         enable = true;
-        watchDirs = [ "/mnt/hot/inbox" "/home/eric/Downloads" ];
-        schedule = "*:0/30";  # Every 30 minutes
+        watchDirs = ["/mnt/hot/inbox" "/home/eric/Downloads"];
+        schedule = "*:0/30"; # Every 30 minutes
         model = "qwen2.5-coder:3b";
-        dryRun = false;  # Set to true for testing
+        dryRun = false; # Set to true for testing
       };
-
 
       # Auto-documentation generator (CLI tool)
       autoDoc = {
@@ -522,10 +555,9 @@
       # Interactive chat CLI
       chatCli = {
         enable = true;
-        model = "llama3:8b";  # Better instruction following than qwen2.5-coder
+        model = "llama3:8b"; # Better instruction following than qwen2.5-coder
         # systemPrompt inherited from domain default
       };
-
     };
   };
 
@@ -562,11 +594,11 @@
     # Local llama-cpp rebuild with sm_61 added — required because the cached
     # CUDA binary at cache.nixos-cuda.org targets sm_75+ only and aborts on
     # the Quadro P1000 (compute 6.1) with "no kernel image is available".
-    cudaCapabilities = [ "6.1" ];
+    cudaCapabilities = ["6.1"];
     gpu.enable = true;
     cpu = {
       enable = true;
-      threads = 6;  # one per physical core on i7-8700K; HT rarely helps memory-bound inference
+      threads = 6; # one per physical core on i7-8700K; HT rarely helps memory-bound inference
       # Hermes Agent rejects models with n_ctx < 64K with a ValueError
       # ("below the minimum 64,000 required"). LFM2-24B-A2B's n_ctx_train
       # is 128K (per the GGUF metadata), and its hybrid attention keeps
@@ -577,9 +609,9 @@
       # returns 500 "tools param requires --jinja flag" without it). --alias
       # gives the endpoint a stable model name instead of the raw GGUF path,
       # so Hermes' chat completions request can use model="lfm2-24b".
-      extraArgs = [ "--jinja" "--alias" "lfm2-24b" ];
+      extraArgs = ["--jinja" "--alias" "lfm2-24b"];
     };
-    embed.enable = true;  # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
+    embed.enable = true; # powers RAG retrieval over /mnt/vaults/brain (persona-daemon, Phase 2.5)
   };
 
   # hwc-llm — persona CLI that wraps the llama-server endpoints with a
@@ -602,8 +634,8 @@
     enable = true;
     gateway.enable = true;
     gateway.discord.enable = true;
-    gateway.discord.allowedUsers = "1501391621521150075";  # Eric's Discord snowflake
-    model.provider  = "deepseek";   # native Hermes provider; base URL built in
+    gateway.discord.allowedUsers = "1501391621521150075"; # Eric's Discord snowflake
+    model.provider = "deepseek"; # native Hermes provider; base URL built in
     model.modelName = "deepseek-v4-pro";
   };
 
@@ -648,7 +680,7 @@
     # GPU acceleration for ONNX object detection (TensorRT + CUDA)
     gpu = {
       enable = true;
-      device = 0;  # NVIDIA P1000
+      device = 0; # NVIDIA P1000
     };
 
     # Storage paths
@@ -680,14 +712,14 @@
 
   # Enhanced SSH configuration for server
   services.openssh.settings = {
-    X11Forwarding = lib.mkForce false;  # Headless server doesn't need X11 forwarding
+    X11Forwarding = lib.mkForce false; # Headless server doesn't need X11 forwarding
   };
 
   # Session/sudo/permitCertUid come from the server role. This machine only
   # enables lingering so rootless podman containers run when not logged in.
   hwc.system.core.session = {
     linger.enable = true;
-    linger.users = [ "eric" ];
+    linger.users = ["eric"];
   };
   # X11 services disabled for headless server
   # services.xserver.enable = true;
@@ -696,8 +728,8 @@
   # STORAGE PATHS
   #============================================================================
   hwc.paths = {
-    hot.root = "/mnt/hot";      # SSD hot storage
-    media.root = "/mnt/media";  # HDD media storage
+    hot.root = "/mnt/hot"; # SSD hot storage
+    media.root = "/mnt/media"; # HDD media storage
   };
 
   # Container runtime (podman + autoPrune) comes from the server role.
@@ -743,7 +775,7 @@
   # Setup: cloudflared tunnel login → cloudflared tunnel create hwc-server
   #        then encrypt credentials JSON with agenix and set tunnelId below
   hwc.networking.cloudflared = {
-    enable = true;  # Enable after: tunnel created + credentials encrypted + DNS CNAME set
+    enable = true; # Enable after: tunnel created + credentials encrypted + DNS CNAME set
     tunnelId = "1536327b-2641-4706-8ad9-48c94d0b11f9";
     credentialsFile = config.age.secrets.cloudflared-tunnel-credentials.path;
     # n8n.heartwoodcraft.me handled by `domain` option default → localhost:n8nPort.
@@ -758,14 +790,14 @@
     # connections only for hostnames the public DNS actually points at it.
     # See wiki/nixos/iheartwoodcraft-com-backend-migration.md.
     extraIngress = {
-      "mcp.heartwoodcraft.me"    = "http://localhost:6200";
-      "leads.heartwoodcraft.me"  = "http://localhost:8420";
-      "brain.heartwoodcraft.me"  = "http://localhost:9876";
+      "mcp.heartwoodcraft.me" = "http://localhost:6200";
+      "leads.heartwoodcraft.me" = "http://localhost:8420";
+      "brain.heartwoodcraft.me" = "http://localhost:9876";
 
-      "n8n.api.iheartwoodcraft.com"    = "http://localhost:5678";
-      "mcp.api.iheartwoodcraft.com"    = "http://localhost:6200";
-      "leads.api.iheartwoodcraft.com"  = "http://localhost:8420";
-      "brain.api.iheartwoodcraft.com"  = "http://localhost:9876";
+      "n8n.api.iheartwoodcraft.com" = "http://localhost:5678";
+      "mcp.api.iheartwoodcraft.com" = "http://localhost:6200";
+      "leads.api.iheartwoodcraft.com" = "http://localhost:8420";
+      "brain.api.iheartwoodcraft.com" = "http://localhost:9876";
 
       # hwc-mcp-gateway origins — internal hostnames the OAuth gateway Worker
       # proxies to (machine-to-machine via an Access service token). Distinct
@@ -773,7 +805,7 @@
       # live MCP Portal during the parallel cutover. See ~/600_apps/hwc-mcp-gateway/ORIGINS.md.
       "brain-origin.heartwoodcraft.me" = "http://localhost:9876";
       "leads-origin.heartwoodcraft.me" = "http://localhost:8420";
-      "hwc-origin.heartwoodcraft.me"   = "http://localhost:6200";
+      "hwc-origin.heartwoodcraft.me" = "http://localhost:6200";
     };
   };
 
@@ -806,9 +838,9 @@
     };
     healthCheck = {
       enable = lib.mkDefault true;
-      checkInterval = 300;        # every 5 minutes
-      failuresBeforeAlert = 2;    # alert after 10 min down
-      failuresBeforeRestart = 3;  # auto-restart after 15 min down
+      checkInterval = 300; # every 5 minutes
+      failuresBeforeAlert = 2; # alert after 10 min down
+      failuresBeforeRestart = 3; # auto-restart after 15 min down
     };
   };
   hwc.media.qbittorrent.enable = lib.mkDefault true;
@@ -946,7 +978,7 @@
 
   # YouTube services
   hwc.media.youtube.legacyApi = {
-    enable = lib.mkDefault false;  # Superseded by yt-transcripts-api v2
+    enable = lib.mkDefault false; # Superseded by yt-transcripts-api v2
     port = 8099;
     dataDir = "/home/eric/01-documents/01-vaults/04-transcripts";
   };
@@ -961,12 +993,12 @@
   hwc.data.databases.postgresql = {
     enable = lib.mkDefault true;
     version = "15";
-    package = pkgs.postgresql_15;  # Cluster on-disk format is v15 — do not bump without pg_upgrade
+    package = pkgs.postgresql_15; # Cluster on-disk format is v15 — do not bump without pg_upgrade
 
     # Server-only: Immich vector search + Podman media-network integration
     containerNetwork.enable = true;
-    extensions = ps: [ ps.pgvector ps.vectorchord ];
-    sharedPreloadLibraries = [ "vchord" ];
+    extensions = ps: [ps.pgvector ps.vectorchord];
+    sharedPreloadLibraries = ["vchord"];
 
     backup.perDatabase = {
       enable = true;
