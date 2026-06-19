@@ -406,11 +406,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781900480,
-        "narHash": "sha256-Qj0DQu0yulds2w7p+OL3TuiIBQdVAqHEtMXlYXFd1BI=",
+        "lastModified": 1781902573,
+        "narHash": "sha256-NISOl+c6kI9hhte+IAn9YlkrnfqYsSCw8/TxSjrIkVk=",
         "owner": "eriqueo",
         "repo": "pave-query-builder",
-        "rev": "09f2f3e7d7c965ab82ef55a187258909bed81724",
+        "rev": "33b85b41f60e0b2714588dc6afd1fc68c4462bb3",
         "type": "github"
       },
       "original": {
