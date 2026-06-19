@@ -314,6 +314,15 @@
   # an flock on <vault>/.git/.sync.lock.
   hwc.automation.vaultSync.enable = true;
 
+  # Inbox janitor — every 30 min, drain loose files at the root of
+  # ~/000_inbox/downloads per ~/000_inbox/_inbox-routing.yaml (datax stays,
+  # business/tech/personal drain to the home PARA dirs, secrets/junk quarantine,
+  # unmatched → _review). Server-only by design: ~/000_inbox is a multi-writer
+  # Syncthing tree, so a single host owns the routing pass (same rationale as
+  # vaultSync's single-writer hub). Ships dryRun=true — watch the journal, then
+  # set hwc.automation.inboxJanitor.dryRun = false.
+  hwc.automation.inboxJanitor.enable = true;
+
   # Unified lead pipeline comes from the business role.
 
   # Alert sources — what to monitor (thresholds, triggers)
