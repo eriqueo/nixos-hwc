@@ -36,6 +36,10 @@ let
     prev-pane = ''FocusPreviousPane;'';
     next-tab  = ''GoToNextTab;'';
     prev-tab  = ''GoToPreviousTab;'';
+    # cycle-* move tabs but STAY in meta mode (see modeSwitchIntents) so j/k can
+    # be pressed repeatedly to walk the tab bar; Esc / the leader exits.
+    cycle-next = ''GoToNextTab;'';
+    cycle-prev = ''GoToPreviousTab;'';
     pane-picker = ''SwitchToMode "Pane";'';     # leaves you in pane mode to pick
     scroll = ''SwitchToMode "Scroll";'';        # leaves you in scroll mode to read
     zoom = ''ToggleFocusFullscreen;'';
@@ -43,8 +47,8 @@ let
     kill = ''Quit;'';
   };
 
-  # intents that ENTER another mode — must NOT append a return to Normal.
-  modeSwitchIntents = [ "pane-picker" "scroll" ];
+  # intents that ENTER/STAY in another mode — must NOT append a return to Normal.
+  modeSwitchIntents = [ "pane-picker" "scroll" "cycle-next" "cycle-prev" ];
 
   # zellij key tokens for the few non-letter keys in the meta map
   keyToken = k:
