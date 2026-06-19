@@ -140,6 +140,9 @@ in
           "REFINERY_CAPS_FILE=/var/lib/refinery/caps.json"
           # The Run button / spec executor drops developed specs here.
           "REFINERY_SCRATCH_DIR=/var/lib/refinery/specs"
+          # Morning PR-review records (written by the nightly-builds review pass);
+          # the board's /reviews page reads them. Same dir, under the StateDirectory.
+          "REFINERY_REVIEWS_DIR=/var/lib/refinery/reviews"
           # "▶ Run now" / IMMEDIATE mode drops a <goal> request file here; the
           # nightly-builds-runnow path unit (domains/automation/nightly-builds)
           # drains it and runs run.sh scoped to that project. Under the writable

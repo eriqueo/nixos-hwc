@@ -1,8 +1,8 @@
 // HTTP shell over the engine core (hexagonal: a shell translating inbound HTTP
-// into core calls). Serves the Gauntlet / Hopper / Nightly pages, a per-project
-// detail+edit page, and the intake/amend/rewind/promote/nightly endpoints,
-// operating on the MarkdownItemStore + PipelineCatalog + triage. Engine-only
-// items. All config late-bound from the environment.
+// into core calls). Serves the Flow / Hopper / Overnight / Finished / SR /
+// Reviews / Reference pages, a per-item pipeline detail page, and the
+// intake/amend/rewind/promote/schedule endpoints, operating on the
+// MarkdownItemStore + PipelineCatalog + triage. All config late-bound from env.
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
@@ -26,7 +26,8 @@ import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
 import { srInvestigationProjects, readRunFile, SR_PREFIX } from "../sources/sr-investigations.js";
 import { syncBrainIdeas, makeIdeaItem, ideaId, isBrainIdea, appendBrainIdea, removeBrainIdea, promoteBrainIdea } from "../sources/brain-ideas.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, HOPPER_STAGE_KEYS } from "./render.js";
+import { renderFlowBoard, renderHopperPage, renderNightly, renderNightlyProject, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReport, renderReference, renderReviews, HOPPER_STAGE_KEYS } from "./render.js";
+import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
 
 export interface HttpShellConfig {
   port: number;
@@ -39,6 +40,7 @@ export interface HttpShellConfig {
   triageProvider: string;
   vaultDir?: string; // brain vault — nightly-builds card mirror + queue write-back
   srGauntletDir?: string; // sr_gauntlet dir — SR investigation mirror
+  reviewsDir?: string; // morning PR-review records (REFINERY_REVIEWS_DIR); default under the state base
   runNowSpoolDir: string; // "Run now" / IMMEDIATE drops a <goal> request file here; a systemd.path twin of run.sh drains it
   srRunNowSpoolDir: string; // SR "re-investigate now" drops an <srId> request file here; sr-gauntlet-runnow.path drains it
   clock: () => string;
@@ -63,6 +65,7 @@ export function configFromEnv(): HttpShellConfig {
     triageProvider: process.env.REFINERY_TRIAGE_PROVIDER || "claude-cli",
     vaultDir: process.env.REFINERY_VAULT_DIR,
     srGauntletDir: process.env.REFINERY_SR_GAUNTLET_DIR,
+    reviewsDir: process.env.REFINERY_REVIEWS_DIR || `${base}/reviews`,
     runNowSpoolDir: process.env.REFINERY_RUNNOW_SPOOL || `${base}/run-now`,
     srRunNowSpoolDir: process.env.REFINERY_SR_RUNNOW_SPOOL || `${base}/sr-run-now`,
     nativeRepo: process.env.REFINERY_NATIVE_REPO,
@@ -112,6 +115,12 @@ export function createShell(cfg: HttpShellConfig) {
   const store = new MarkdownItemStore(cfg.itemsDir);
   const catalog = new PipelineCatalog({ dir: cfg.pipelinesDir, statePath: cfg.pipelineStatePath });
   const domains = loadDomains(cfg.domainsFile);
+
+  // Morning PR reviews are read-only here (the morning-review CLI writes them).
+  // Listing is lazy + dir-guarded so the page renders an empty state when the
+  // reviews dir doesn't exist yet (don't create it on a GET).
+  const reviewsDir = resolveReviewsDir(cfg.reviewsDir);
+  const listReviews = async () => (existsSync(reviewsDir) ? new FileReviewsStore(reviewsDir).list() : []);
 
   // Per-gauntlet "max per run" caps — the single runtime source of truth that
   // both run.sh files read (with their env value as fallback). Refinery is the
@@ -446,7 +455,7 @@ export function createShell(cfg: HttpShellConfig) {
               ...items.filter((i) => i.pipeline !== UNTRIAGED),
               ...mirror().filter((m) => !m.id.startsWith(SR_PREFIX)),
             ];
-            res.end(renderGauntlet(projects, profiles, enabled, domains));
+            res.end(renderFlowBoard(projects, profiles, enabled, domains));
           }
           return;
         }
@@ -467,6 +476,16 @@ export function createShell(cfg: HttpShellConfig) {
           const finished = cfg.vaultDir ? finishedProjects(cfg.vaultDir) : [];
           res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
           res.end(renderFinished(finished, profiles, enabled, domains));
+          return;
+        }
+        if (method === "GET" && url === "/reference") {
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderReference(catalog.list()));
+          return;
+        }
+        if (method === "GET" && url === "/reviews") {
+          res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+          res.end(renderReviews(await listReviews()));
           return;
         }
         if (method === "GET" && url === "/sr") {

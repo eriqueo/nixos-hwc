@@ -9,7 +9,8 @@
 // Cards are click-through; all actions live on the detail page. Plain
 // form-posts (POST → 303); no client framework.
 
-import { Item } from "../contracts.js";
+import { Item, Pipeline } from "../contracts.js";
+import { PrReview } from "../review/contract.js";
 import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
 import { mdToHtml } from "./markdown.js";
@@ -29,7 +30,7 @@ function titleOf(item: Item): string {
 }
 
 const LANES: { status: Item["state"]; label: string }[] = [
-  { status: "pending", label: "In Progress" },
+  { status: "pending", label: "In Pipeline" },
   { status: "running", label: "Running" },
   { status: "parked", label: "Needs You" },
   { status: "passed", label: "Done" },
@@ -153,6 +154,29 @@ const STYLE = `<style>
   .step .st{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--line);color:var(--dim)}
   .step .st.done{color:var(--bg);background:var(--ok)}
   .step .st.queued,.step .st.running{color:var(--bg);background:var(--acc)}
+  /* per-card gate-dot progress strip: one dot per pipeline step, in order */
+  .gate-dots{display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap}
+  .gate-dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
+  .gate-dot.passed{background:var(--ok)}
+  .gate-dot.parked{background:var(--warn)}
+  .gate-dot.failed{background:var(--err)}
+  .gate-dot.running{background:var(--acc)}
+  .gate-dot.pending{background:var(--dim)}
+  .gate-dot.current{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--ink)}
+  /* item pipeline node strip (detail page): Triage → gates → executor → Done */
+  .nodes{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .node{border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+  .node summary{display:flex;gap:8px;align-items:center;padding:8px 10px;cursor:pointer;list-style:none}
+  .node summary::-webkit-details-marker{display:none}
+  .node .nlab{flex:1;color:var(--ink);font-size:13px}
+  .node .arrow{color:var(--muted)}
+  .node .ndot{width:10px;height:10px;border-radius:50%;background:var(--dim);flex:none}
+  .node .ndot.passed{background:var(--ok)}
+  .node .ndot.parked{background:var(--warn)}
+  .node .ndot.failed{background:var(--err)}
+  .node .ndot.running{background:var(--acc)}
+  .node .nbody{padding:0 12px 10px;font-size:12px;color:var(--dim)}
+  .node .nbody b{color:var(--fg)}
 </style>`;
 
 function layout(active: string, body: string): string {
@@ -162,7 +186,7 @@ function layout(active: string, body: string): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refinery</title>${STYLE}</head><body>
 <header><h1>🛠 Refinery</h1><nav>
-  ${tab("/", "Gauntlet", "gauntlet")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Nightly", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}
+  ${tab("/", "Flow", "flow")}${tab("/hopper", "Hopper", "hopper")}${tab("/nightly", "Overnight", "nightly")}${tab("/finished", "Finished", "finished")}${tab("/sr", "SR", "sr")}${tab("/reviews", "Reviews", "reviews")}${tab("/reference", "Reference", "reference")}
 </nav></header>
 ${body}
 </body></html>`;
@@ -270,6 +294,51 @@ function controlsFor(item: Item, ctx: CardCtx): string {
   return `<div class="ccrow">${statusSel}${pipelineSel}${domainPicker(item, ctx, idIn, bk)}${runBtn}${nightlyBtn}${delBtn}</div>`;
 }
 
+// The full step sequence of a pipeline = its gates, then its terminal executor
+// id. This is the canonical ordering the gate-dot strip + the detail node strip
+// both walk.
+function pipelineSteps(p: ResolvedPipeline | Pipeline | undefined): string[] {
+  if (!p) return [];
+  return [...p.gates, ...(p.executors[0] ? [p.executors[0]] : [])];
+}
+
+// Map a history-status onto a gate-dot CSS state class. History statuses are
+// State | "rewound" | "entered"; only the State ones carry a color.
+function dotStateFromStatus(status: string): string {
+  if (status === "passed" || status === "parked" || status === "failed" || status === "running") return status;
+  return "pending"; // pending / entered / rewound → neutral
+}
+
+// Per-step state for the dot strip = the LAST matching history entry's status
+// for that step (mapped to a dot state); no history for a step → "pending".
+function stepStates(item: Item, steps: string[]): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const s of steps) m.set(s, "pending");
+  for (const h of item.history) {
+    if (m.has(h.step)) m.set(h.step, dotStateFromStatus(h.status));
+  }
+  return m;
+}
+
+/** Gate-dot progress strip — one dot per pipeline step (gates + executor id), in
+ *  order. Color = the step's last history state; the current `item.step` wears a
+ *  ring. Ideas (untriaged, no pipeline) get nothing. Pure CSS. */
+function gateDots(item: Item, ctx: CardCtx): string {
+  if (item.pipeline === UNTRIAGED) return "";
+  const pipeline = ctx.profiles.find((p) => p.pipeline === item.pipeline);
+  const steps = pipelineSteps(pipeline);
+  if (!steps.length) return "";
+  const states = stepStates(item, steps);
+  const dots = steps
+    .map((s) => {
+      const st = states.get(s) ?? "pending";
+      const cur = item.step === s ? " current" : "";
+      return `<span class="gate-dot ${st}${cur}" title="${esc(`${s}: ${st}`)}"></span>`;
+    })
+    .join("");
+  return `<div class="gate-dots" title="pipeline steps">${dots}</div>`;
+}
+
 function cardLink(item: Item, ctx: CardCtx): string {
   const dom = domainOf(item, ctx.domains);
   const color = dom.color;
@@ -315,6 +384,7 @@ function cardLink(item: Item, ctx: CardCtx): string {
     <a class="title" href="/project/${esc(item.id)}">${esc(title)}</a>
     ${why}
     ${bar}
+    ${gateDots(item, ctx)}
     ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
     ${controlsFor(item, ctx)}
   </div>`;
@@ -340,15 +410,16 @@ function laneBoard(
 
 const emptyRegistry: DomainRegistry = { domains: [], fallback: { key: "misc", label: "Misc", color: NEUTRAL, match: [] } };
 
-/** Gauntlet: triaged PROJECTS in status lanes, colored by domain. */
-export function renderGauntlet(
+/** Flow board: triaged PROJECTS in state lanes, colored by domain. Each card's
+ *  gate-dot strip makes the engine's pipeline progress visible at a glance. */
+export function renderFlowBoard(
   projects: Item[],
   profiles: ResolvedPipeline[],
   enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/" };
-  return layout("gauntlet", `<div class="wrap">${laneBoard(projects, ctx, STATUS_LANES, statusOf)}</div>`);
+  return layout("flow", `<div class="wrap">${laneBoard(projects, ctx, STATUS_LANES, statusOf)}</div>`);
 }
 
 /** Hopper: untriaged IDEAS in maturation-stage lanes (Captured → Shaping →
@@ -412,9 +483,66 @@ export function renderProjectDetail(
       })()
     : [];
 
-  const history = item.history.length
-    ? item.history.map((h) => `<div class="hist">${esc(h.at)} · <b>${esc(h.step)}</b> · ${esc(h.status)}${h.note ? ` — ${esc(h.note)}` : ""}</div>`).join("")
+  // Timeline (was "History"): each entry with a small state dot.
+  const timeline = item.history.length
+    ? item.history.map((h) => `<div class="hist"><span class="gate-dot ${dotStateFromStatus(h.status)}" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>${esc(h.at)} · <b>${esc(h.step)}</b> · ${esc(h.status)}${h.note ? ` — ${esc(h.note)}` : ""}</div>`).join("")
     : `<div class="hist">—</div>`;
+
+  // Pipeline node strip: Triage → <each gate> → <executor> → Done. Each node is
+  // a <details> that expands to its persisted verdict (gates) / executor result
+  // (terminal) / triage decision. State dot from the last matching history entry.
+  const pipelineNodes = (() => {
+    if (isIdea || !pipeline) return "";
+    const steps = pipelineSteps(pipeline); // gates + executor id
+    const states = stepStates(item, steps);
+    const pl = obj(item.payload);
+    const verdicts = obj(pl.verdicts);
+    const execResult = obj(pl.executorResult);
+    const triage = obj(pl.triage);
+    const executorId = pipeline.executors[0] ?? "";
+
+    const dot = (st: string) => `<span class="ndot ${st}"></span>`;
+    const node = (label: string, st: string, bodyHtml: string) =>
+      `<details class="node"><summary>${dot(st)}<span class="nlab">${esc(label)}</span><span class="kv">${esc(st)}</span></summary><div class="nbody">${bodyHtml}</div></details>`;
+    const arrow = `<div class="arrow" style="text-align:center;color:var(--muted)">↓</div>`;
+
+    const prettyOutput = (v: unknown): string => {
+      if (v == null) return "";
+      if (typeof v === "string") return `<div class="md">${mdToHtml(v)}</div>`;
+      return `<pre>${esc(JSON.stringify(v, null, 2))}</pre>`;
+    };
+
+    // Triage node — confidence + reason from payload.triage.
+    const triageBody = Object.keys(triage).length
+      ? `${typeof triage.confidence === "number" ? `<div><b>confidence:</b> ${triage.confidence}</div>` : ""}${typeof triage.reason === "string" ? `<div><b>reason:</b> ${esc(triage.reason)}</div>` : ""}`
+      : `<div class="kv">no triage record</div>`;
+    const triageNode = node("Triage", "passed", triageBody);
+
+    // Gate nodes — each gate's full verdict from payload.verdicts[step].
+    const gateNodes = pipeline.gates
+      .map((g) => {
+        const v = obj(verdicts[g]);
+        const st = states.get(g) ?? "pending";
+        const body = Object.keys(v).length
+          ? `${v.decision != null ? `<div><b>decision:</b> ${esc(String(v.decision))}</div>` : ""}${v.reason != null ? `<div><b>reason:</b> ${esc(String(v.reason))}</div>` : ""}${prettyOutput(v.output)}`
+          : `<div class="kv">no verdict recorded for this step</div>`;
+        return node(g, st, body);
+      })
+      .join(arrow);
+
+    // Executor node — payload.executorResult.
+    const branch = typeof execResult.branch === "string" ? execResult.branch : "";
+    const execBody = Object.keys(execResult).length
+      ? `${execResult.outcome != null ? `<div><b>outcome:</b> ${esc(String(execResult.outcome))}</div>` : ""}${execResult.verdict != null ? `<div><b>verdict:</b> ${esc(String(execResult.verdict))}</div>` : ""}${branch ? `<div><b>branch:</b> ${esc(branch)}</div>` : ""}${"pushed" in execResult ? `<div><b>pushed:</b> ${String(execResult.pushed)}</div>` : ""}${"pristine" in execResult ? `<div><b>pristine:</b> ${String(execResult.pristine)}</div>` : ""}${"reportPresent" in execResult ? `<div><b>report:</b> ${String(execResult.reportPresent)}</div>` : ""}${execResult.detail != null ? `<div><b>detail:</b> ${esc(String(execResult.detail))}</div>` : ""}${prettyOutput(execResult.output)}`
+      : `<div class="kv">not yet executed</div>`;
+    const execNode = executorId
+      ? node(`Executor · ${executorId}`, states.get(executorId) ?? "pending", execBody)
+      : "";
+
+    const doneNode = node("Done", item.state === "passed" ? "passed" : "pending", `<div class="kv">${item.state === "passed" ? "pipeline complete" : "not finished"}</div>`);
+
+    return `<h2>Pipeline</h2><div class="nodes">${triageNode}${arrow}${gateNodes}${execNode ? arrow + execNode : ""}${arrow}${doneNode}</div>`;
+  })();
 
   const promote = isIdea
     ? `<h2>Promote to a project</h2>
@@ -515,11 +643,13 @@ export function renderProjectDetail(
 
   ${cardBody ? `<h2>Card</h2><div class="md">${mdToHtml(cardBody)}</div>` : ""}
 
+  ${pipelineNodes}
+
   <h2>Payload</h2>
   <pre>${esc(JSON.stringify(item.payload, null, 2))}</pre>
 
-  <h2>History</h2>
-  ${history}
+  <h2>Timeline</h2>
+  ${timeline}
 </div>`;
   return layout("", body);
 }
@@ -796,6 +926,100 @@ export function renderFinishedProject(item: Item): string {
   ${goalBody ? `<h2>Goal</h2><div class="md">${mdToHtml(goalBody)}</div>` : ""}
 </div>`;
   return layout("finished", body);
+}
+
+// The canon glossary — the source of truth for the UI's vocabulary. Data-driven
+// (a table rendered from this list, not hardcoded rows), so a term added here
+// shows up on /reference with no template edit.
+const GLOSSARY: { term: string; def: string }[] = [
+  { term: "Pipeline", def: "The data-driven recipe for one kind of work — which steps fire, in what executor mode, with which executor and LLM." },
+  { term: "Step", def: "A single position in a pipeline: a gate, Triage, or the terminal executor id." },
+  { term: "Stage", def: "Hopper-only idea maturation: Captured → Shaping → Ready (before promotion to a project)." },
+  { term: "State", def: "An item's execution state at its current step: pending, running, passed, parked, or failed." },
+  { term: "Executor", def: "The side-effecting terminal step of a pipeline. native = in-process worktree + headless Claude; gauntlet = dispatch to an external standalone gauntlet; spec = synthesize and write a spec." },
+  { term: "executorMode", def: "How the executor runs: read-only vs write (commits/pushes a branch)." },
+  { term: "Schedule", def: "The 'when' axis, orthogonal to the pipeline: Now (on demand) or Overnight (the unattended batch)." },
+  { term: "Domain", def: "The identity axis — a card's color + tag, persistent across the pipeline." },
+  { term: "Idea / Project", def: "An Idea is untriaged (lives in the Hopper). A Project is triaged into a pipeline (lives on the Flow board)." },
+  { term: "Gate", def: "A pre-executor check that passes, parks (needs you), or fails an item at a step." },
+  { term: "Triage", def: "The classification that routes an idea into a pipeline, with a confidence + reason." },
+  { term: "Flow board", def: "The main board — triaged Projects in state lanes, each card showing its gate-dot progress." },
+];
+
+/** Reference: a static glossary of the canon + the live pipelines from the
+ *  catalog (label, gates in order, executor + mode, enabled). Data-driven. */
+export function renderReference(pipelines: ResolvedPipeline[]): string {
+  const rows = GLOSSARY.map(
+    (g) => `<tr><td style="white-space:nowrap;vertical-align:top"><b>${esc(g.term)}</b></td><td>${esc(g.def)}</td></tr>`,
+  ).join("");
+  const plRows = pipelines.length
+    ? pipelines
+        .map(
+          (p) => `<tr>
+            <td style="vertical-align:top"><b style="color:${esc(p.color)}">${esc(p.label)}</b><div class="kv">${esc(p.pipeline)}</div></td>
+            <td style="vertical-align:top">${p.gates.map((gn) => `<span class="badge">${esc(gn)}</span>`).join(" ")}</td>
+            <td style="vertical-align:top;white-space:nowrap">${esc(p.executors.join(", "))}<div class="kv">${esc(p.executorMode)}</div></td>
+            <td style="vertical-align:top">${p.enabled ? "✓" : "—"}</td>
+          </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="4" class="empty">no pipelines on disk</td></tr>`;
+  const body = `<div class="detail" style="max-width:920px">
+  <h2>Glossary</h2>
+  <table style="width:100%;border-collapse:collapse" class="ref">
+    <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--dim)">Term</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Definition</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <h2>Live pipelines</h2>
+  <table style="width:100%;border-collapse:collapse" class="ref">
+    <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--dim)">Pipeline</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Gates (in order)</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Executor</th><th style="text-align:left;padding:6px 8px;color:var(--dim)">Enabled</th></tr></thead>
+    <tbody>${plRows}</tbody>
+  </table>
+</div>`;
+  return layout("reference", body);
+}
+
+// PR-review lanes, by status (the canon set from review/contract.ts). A new
+// status would need a lane added here, but the set is closed (Zod enum).
+const REVIEW_LANES: { key: PrReview["status"]; label: string }[] = [
+  { key: "needs-you", label: "Needs You" },
+  { key: "merged", label: "Merged" },
+  { key: "requeued", label: "Requeued" },
+  { key: "rejected", label: "Rejected" },
+];
+
+function reviewCard(r: PrReview): string {
+  const prLink = r.prUrl
+    ? `<a class="md" style="color:var(--acc2)" href="${esc(r.prUrl)}" rel="noreferrer">${esc(r.prUrl)}</a>`
+    : `<span class="kv">no PR yet</span>`;
+  const risks = r.risks.length
+    ? `<ul style="margin:6px 0 0 16px;padding:0">${r.risks.map((x) => `<li class="kv">${esc(x)}</li>`).join("")}</ul>`
+    : "";
+  return `<div class="card" style="border-left-color:var(--acc2)">
+    <div class="badges">
+      <span class="badge type">${esc(r.verdict)}</span>
+      <span class="badge" title="repo">${esc(r.repo)}</span>
+    </div>
+    <a class="title" href="/project/${esc(r.id)}">${esc(r.title)}</a>
+    ${r.recommendation ? `<div class="reason">${esc(r.recommendation)}</div>` : ""}
+    <div class="why" style="margin-top:6px">${prLink}</div>
+    ${risks}
+  </div>`;
+}
+
+/** Reviews: morning PR reviews grouped into lanes by status. Each card shows
+ *  title, repo, verdict, recommendation, a PR link, and risks. Empty → an
+ *  empty state (the reviews dir may be absent / unwritten). */
+export function renderReviews(reviews: PrReview[]): string {
+  if (!reviews.length) {
+    return layout("reviews", `<div class="wrap"><div class="empty" style="padding:24px">no PR reviews yet — the morning review pass writes them after the overnight run pushes branches</div></div>`);
+  }
+  const cols = REVIEW_LANES.map((lane) => {
+    const inLane = reviews.filter((r) => r.status === lane.key);
+    const body = inLane.length ? inLane.map(reviewCard).join("") : `<div class="empty">—</div>`;
+    return `<section class="col"><h2>${esc(lane.label)} <span class="count">${inLane.length}</span></h2><div class="cards">${body}</div></section>`;
+  }).join("");
+  return layout("reviews", `<div class="wrap"><div class="board">${cols}</div></div>`);
 }
 
 /** Render a run's REPORT.md (plain — escaped <pre>). */
