@@ -54,6 +54,16 @@ domains/automation/nightly-builds/
 `reviewLlmProvider`, `maxCards`, `vaultDir`, `repoDir`, `enableRebuildButton`.
 
 ## Changelog
+- **2026-06-18** — Launcher re-run idempotency (`run.sh`). The disposable
+  worktree is now created with `git worktree add -B` (was `-b`) after a
+  `worktree prune`, so a card whose stable-named branch already exists from a
+  prior **failed** attempt resets cleanly to BASE instead of dying in ~2s with a
+  perpetual `failed: worktree` (a once-pushed card could never be re-run — the
+  launcher force-removed the worktree but never the branch). `-B` only resets a
+  disposable *local* branch; the launcher still uses a plain `push` (no
+  force-push) so remote history / open PRs are never clobbered (gate 7/8 /
+  run-wrapper rule 2). Sibling `sr_gauntlet/run.sh` uses `worktree add --detach`
+  (no named branch) and is immune — left untouched.
 - **2026-06-17** — Added the morning PR-review pass and the opt-in privileged
   rebuild consumer. New options `reviewOnCalendar` (default `*-*-* 07:30:00`,
   Persistent=false, RandomizedDelaySec=120), `reviewLlmProvider`
