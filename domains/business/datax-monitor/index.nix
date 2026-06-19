@@ -4,7 +4,7 @@
 #
 # NAMESPACE: hwc.business.dataxMonitor.*
 #
-# Native (out-of-store) Node app at ~/projects/datax-monitor, run in place with
+# Native (out-of-store) Node app at ~/600_apps/datax-monitor, run in place with
 # `node tsx` — same pattern as domains/server/native/ai/lead-scout. One Hono
 # server on :4400 serves BOTH the REST API (/api/*) and the built React SPA
 # (ui/dist via UI_DIST), so externally it is a single name-based Caddy vhost
@@ -103,7 +103,7 @@ in
 
     projectDir = lib.mkOption {
       type = lib.types.path;
-      default = "${config.hwc.paths.user.home}/projects/datax-monitor";
+      default = "${config.hwc.paths.user.home}/600_apps/datax-monitor";
       description = "Path to the datax-monitor project checkout (run in place).";
     };
 
