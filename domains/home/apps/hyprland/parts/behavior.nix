@@ -1,124 +1,142 @@
 # domains/home/apps/hyprland/parts/behavior.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
-let
-  mod = "SUPER";
-  dtCfg = config.hwc.home.apps.dt or { enable = false; hyprland = { enable = false; toggleBind = null; }; };
-  dtBindEnabled = (dtCfg.enable or false) && (dtCfg.hyprland.enable or false);
-  dtToggleBind  = dtCfg.hyprland.toggleBind or null;
-  toduiEnabled  = config.hwc.home.apps.todui.enable or false;
-  gsrCfg = config.hwc.home.apps.gpu-screen-recorder or { enable = false; };
-in
 {
+  config,
+  lib,
+  pkgs,
+  osConfig ? {},
+  ...
+}: let
+  mod = "SUPER";
+  dtCfg =
+    config.hwc.home.apps.dt or {
+      enable = false;
+      hyprland = {
+        enable = false;
+        toggleBind = null;
+      };
+    };
+  dtBindEnabled = (dtCfg.enable or false) && (dtCfg.hyprland.enable or false);
+  dtToggleBind = dtCfg.hyprland.toggleBind or null;
+  toduiEnabled = config.hwc.home.apps.todui.enable or false;
+  gsrCfg = config.hwc.home.apps.gpu-screen-recorder or {enable = false;};
+in {
   # Top-level keys only — Hyprland expects these directly.
-  bind = [
-    ## Launching commands
-    "${mod},RETURN,exec,kitty"
-    "${mod},SPACE,exec,wofi --show drun"
-    "${mod} SHIFT,R,exec,hyprctl reload"
-    "${mod} SHIFT,Q,exit"
-    "${mod},B,exec,gpu-launch chromium-hwc"
-    "${mod} SHIFT,B,exec,gpu-launch librewolf-hwc"
-    "${mod},M,exec,kitty -e btop"
-    "${mod},O,exec,gpu-launch obsidian"
-    "${mod},E,exec,kitty -e ssh -t server aerc"
-    "${mod},N,exec,kitty -e nvim"
-    "${mod},Y,exec,kitty -e yazi"
-    # Workbench ops host. `attach -c workbench` reuses the named session if it's
-    # already running (else creates it with the default `workbench` layout), so
-    # repeated presses focus the one session instead of spawning duplicates.
-    "${mod},W,exec,kitty -e zellij attach -c workbench"
-    "${mod},G,exec,gpu-toggle"
-  ] ++ lib.optionals toduiEnabled [
-    "${mod},T,exec,kitty -e todui"
-  ] ++ lib.optionals dtBindEnabled [
-    "${mod},D,exec,kitty --class dt-tui -e dt tui"
-  ] ++ lib.optionals (dtBindEnabled && dtToggleBind != null) [
-    "${dtToggleBind},exec,dt toggle"
-  ] ++ [
-    "${mod} SHIFT,M,exec,hyprland-monitor-toggle"
-    "${mod},TAB,exec,hyprland-workspace-overview"
-    "${mod} SHIFT,H,exec,hyprland-system-health-checker"
-    "${mod},comma,exec,hyprland-keybinds-viewer"
-    "${mod},A,exec,proton-authenticator-toggle"
-    "${mod} SHIFT,I,exec,refinery-intake"
-    "${mod},C,exec, kitty -e fend"
-    "${mod},V,exec,cliphist list | wofi --dmenu | cliphist decode | wl-copy"
+  bind =
+    [
+      ## Launching commands
+      "${mod},RETURN,exec,kitty"
+      "${mod},SPACE,exec,wofi --show drun"
+      "${mod} SHIFT,R,exec,hyprctl reload"
+      "${mod} SHIFT,Q,exit"
+      "${mod},B,exec,gpu-launch chromium-hwc"
+      "${mod} SHIFT,B,exec,gpu-launch librewolf-hwc"
+      "${mod},M,exec,kitty -e btop"
+      "${mod},O,exec,gpu-launch obsidian"
+      "${mod},E,exec,kitty -e ssh -t server aerc"
+      "${mod},N,exec,kitty -e nvim"
+      "${mod},Y,exec,kitty -e yazi"
+      # Workbench ops host. `wb-reload` (real binary, apps/workbench/index.nix)
+      # kills the named session then re-creates it fresh, so every SUPER+W picks
+      # up the latest layout/config instead of reattaching a stale session. NOTE:
+      # `kitty -e` execs its arg directly, so this MUST be a binary on PATH — a
+      # zsh alias named wb-reload would be invisible here.
+      "${mod},W,exec,kitty -e wb-reload"
+      "${mod},G,exec,gpu-toggle"
+    ]
+    ++ lib.optionals toduiEnabled [
+      "${mod},T,exec,kitty -e todui"
+    ]
+    ++ lib.optionals dtBindEnabled [
+      "${mod},D,exec,kitty --class dt-tui -e dt tui"
+    ]
+    ++ lib.optionals (dtBindEnabled && dtToggleBind != null) [
+      "${dtToggleBind},exec,dt toggle"
+    ]
+    ++ [
+      "${mod} SHIFT,M,exec,hyprland-monitor-toggle"
+      "${mod},TAB,exec,hyprland-workspace-overview"
+      "${mod} SHIFT,H,exec,hyprland-system-health-checker"
+      "${mod},comma,exec,hyprland-keybinds-viewer"
+      "${mod},A,exec,proton-authenticator-toggle"
+      "${mod} SHIFT,I,exec,refinery-intake"
+      "${mod},C,exec, kitty -e fend"
+      "${mod},V,exec,cliphist list | wofi --dmenu | cliphist decode | wl-copy"
 
-",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
-  ] ++ lib.optionals (gsrCfg.enable or false) [
-    # Screen recording toggle (calls) — PRINT=screenshot, SHIFT+PRINT=record
-    "SHIFT,PRINT,exec,gsr-toggle"
-  ] ++ [
+      ",PRINT,exec,hyprshot -m region -o $HWC_SCREENSHOTS_DIR/"
+    ]
+    ++ lib.optionals (gsrCfg.enable or false) [
+      # Screen recording toggle (calls) — PRINT=screenshot, SHIFT+PRINT=record
+      "SHIFT,PRINT,exec,gsr-toggle"
+    ]
+    ++ [
+      # move FOCUS in workspace (h=left, j=down, k=up, l=right)
+      "${mod},h,movefocus,l"
+      "${mod},l,movefocus,r"
+      "${mod},k,movefocus,u"
+      "${mod},j,movefocus,d"
+      "${mod},left,movefocus,l"
+      "${mod},right,movefocus,r"
+      "${mod},up,movefocus,u"
+      "${mod},down,movefocus,d"
+      # move WINDOW - smart move (within workspace, crosses monitors at edges)
+      "${mod} ALT,h,exec,hyprland-smart-move l"
+      "${mod} ALT,l,exec,hyprland-smart-move r"
+      "${mod} ALT,k,exec,hyprland-smart-move u"
+      "${mod} ALT,j,exec,hyprland-smart-move d"
+      "${mod} ALT,left,exec,hyprland-smart-move l"
+      "${mod} ALT,right,exec,hyprland-smart-move r"
+      "${mod} ALT,up,exec,hyprland-smart-move u"
+      "${mod} ALT,down,exec,hyprland-smart-move d"
+      # layout orientation
+      "${mod} CTRL,h,layoutmsg,orientationleft"
+      "${mod} CTRL,v,layoutmsg,orientationtop"
+      # SEND window TO workspace
+      "${mod} CTRL,1,exec,hyprsome move 1"
+      "${mod} CTRL,2,exec,hyprsome move 2"
+      "${mod} CTRL,3,exec,hyprsome move 3"
+      "${mod} CTRL,4,exec,hyprsome move 4"
+      "${mod} CTRL,5,exec,hyprsome move 5"
+      "${mod} CTRL,6,exec,hyprsome move 6"
+      "${mod} CTRL,7,exec,hyprsome move 7"
+      "${mod} CTRL,8,exec,hyprsome move 8"
 
-# move FOCUS in workspace (h=left, j=down, k=up, l=right)
-    "${mod},h,movefocus,l"
-    "${mod},l,movefocus,r"
-    "${mod},k,movefocus,u"
-    "${mod},j,movefocus,d"
-    "${mod},left,movefocus,l"
-    "${mod},right,movefocus,r"
-    "${mod},up,movefocus,u"
-    "${mod},down,movefocus,d"
-# move WINDOW - smart move (within workspace, crosses monitors at edges)
-    "${mod} ALT,h,exec,hyprland-smart-move l"
-    "${mod} ALT,l,exec,hyprland-smart-move r"
-    "${mod} ALT,k,exec,hyprland-smart-move u"
-    "${mod} ALT,j,exec,hyprland-smart-move d"
-    "${mod} ALT,left,exec,hyprland-smart-move l"
-    "${mod} ALT,right,exec,hyprland-smart-move r"
-    "${mod} ALT,up,exec,hyprland-smart-move u"
-    "${mod} ALT,down,exec,hyprland-smart-move d"
-# layout orientation
-    "${mod} CTRL,h,layoutmsg,orientationleft"
-    "${mod} CTRL,v,layoutmsg,orientationtop"
-# SEND window TO workspace 
-    "${mod} CTRL,1,exec,hyprsome move 1"
-    "${mod} CTRL,2,exec,hyprsome move 2"
-    "${mod} CTRL,3,exec,hyprsome move 3"
-    "${mod} CTRL,4,exec,hyprsome move 4"
-    "${mod} CTRL,5,exec,hyprsome move 5"
-    "${mod} CTRL,6,exec,hyprsome move 6"
-    "${mod} CTRL,7,exec,hyprsome move 7"
-    "${mod} CTRL,8,exec,hyprsome move 8"
+      # TOGGLE workspace link mode (also clickable via Waybar icon)
+      "${mod} CTRL ALT,minus,exec,waybar-workspace-link-toggle"
 
-# TOGGLE workspace link mode (also clickable via Waybar icon)
-    "${mod} CTRL ALT,minus,exec,waybar-workspace-link-toggle"
+      # SWITCH focus to WORKSPACE (hwc-workspace-switch handles linked-mode sync)
+      "${mod} CTRL ALT,1,exec,hwc-workspace-switch 1"
+      "${mod} CTRL ALT,2,exec,hwc-workspace-switch 2"
+      "${mod} CTRL ALT,3,exec,hwc-workspace-switch 3"
+      "${mod} CTRL ALT,4,exec,hwc-workspace-switch 4"
+      "${mod} CTRL ALT,5,exec,hwc-workspace-switch 5"
+      "${mod} CTRL ALT,6,exec,hwc-workspace-switch 6"
+      "${mod} CTRL ALT,7,exec,hwc-workspace-switch 7"
+      "${mod} CTRL ALT,8,exec,hwc-workspace-switch 8"
 
-# SWITCH focus to WORKSPACE (hwc-workspace-switch handles linked-mode sync)
-    "${mod} CTRL ALT,1,exec,hwc-workspace-switch 1"
-    "${mod} CTRL ALT,2,exec,hwc-workspace-switch 2"
-    "${mod} CTRL ALT,3,exec,hwc-workspace-switch 3"
-    "${mod} CTRL ALT,4,exec,hwc-workspace-switch 4"
-    "${mod} CTRL ALT,5,exec,hwc-workspace-switch 5"
-    "${mod} CTRL ALT,6,exec,hwc-workspace-switch 6"
-    "${mod} CTRL ALT,7,exec,hwc-workspace-switch 7"
-    "${mod} CTRL ALT,8,exec,hwc-workspace-switch 8"
+      "${mod} CTRL ALT,right,workspace,e+1"
+      "${mod} CTRL ALT,left,workspace,e-1"
+      "${mod} CTRL ALT,k,workspace,e+1"
+      "${mod} CTRL ALT,l,workspace,e+1"
+      "${mod} CTRL ALT,j,workspace,e-1"
+      "${mod} CTRL ALT,h,workspace,e-1"
 
+      ",XF86AudioRaiseVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
+      ",XF86AudioLowerVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+      ",XF86AudioMute,exec,wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+      ",XF86AudioMicMute,exec,wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
 
-    "${mod} CTRL ALT,right,workspace,e+1"
-    "${mod} CTRL ALT,left,workspace,e-1"
-    "${mod} CTRL ALT,k,workspace,e+1"
-    "${mod} CTRL ALT,l,workspace,e+1"
-    "${mod} CTRL ALT,j,workspace,e-1"
-    "${mod} CTRL ALT,h,workspace,e-1"
+      ",XF86MonBrightnessUp,exec,brightnessctl set 10%+"
+      ",XF86MonBrightnessDown,exec,brightnessctl set 10%-"
 
-    ",XF86AudioRaiseVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
-    ",XF86AudioLowerVolume,exec,wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-    ",XF86AudioMute,exec,wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-    ",XF86AudioMicMute,exec,wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+      "${mod},S,pseudo"
+      "${mod},P,pin"
 
-    ",XF86MonBrightnessUp,exec,brightnessctl set 10%+"
-    ",XF86MonBrightnessDown,exec,brightnessctl set 10%-"
+      "${mod},R,submap,resize"
+      "${mod},F,fullscreen"
+      "${mod},Q,killactive"
+    ];
 
-    "${mod},S,pseudo"
-    "${mod},P,pin"
-    
-    "${mod},R,submap,resize"
-    "${mod},F,fullscreen"
-    "${mod},Q,killactive"
-  ];
-
-  bindm = [ ];
+  bindm = [];
 
   windowrule = [
     # Chromium tiling

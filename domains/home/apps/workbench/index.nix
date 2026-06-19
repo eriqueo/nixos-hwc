@@ -43,6 +43,21 @@ let
   km   = (config.hwc.home.keymap or {}).grammar or {};
   kmWb = lib.optionalString (km ? meta)
     (import ../../keymap/parts/to-workbench.nix { inherit lib; grammar = km; }).json;
+
+  # `wb-reload` as a REAL binary on the session PATH (not just a shell alias).
+  # The SUPER+W keybind runs `kitty -e wb-reload`, and `kitty -e` execs its
+  # argument directly — it does NOT start an interactive shell, so a zsh alias
+  # named wb-reload is invisible to it. A writeShellScriptBin is the single
+  # source of truth that resolves both from the keybind and from interactive
+  # shells. Kills the named session first (picks up layout edits) then re-creates
+  # it fresh — i.e. SUPER+W now reloads workbench every time, by design. Bare
+  # `zellij` (PATH, not a pinned store path) so the reload uses the SAME zellij
+  # that owns the session. Run from a fresh terminal; never from inside the
+  # workbench session it would kill.
+  wbReload = pkgs.writeShellScriptBin "wb-reload" ''
+    zellij delete-session workbench --force 2>/dev/null || true
+    exec zellij attach -c workbench
+  '';
 in
 {
   imports = [ inputs.workbench.homeManagerModules.workbench ];
@@ -80,6 +95,10 @@ in
   # IMPLEMENTATION
   #============================================================================
   config = lib.mkIf cfg.enable {
+    # wb-reload binary on the session PATH — used by the SUPER+W Hyprland keybind
+    # (kitty -e wb-reload) and available interactively. See let-block note.
+    home.packages = [ wbReload ];
+
     # Drive the generic standalone module. It builds a wrapped `workbench` with
     # WORKBENCH_* baked in (palette JSON, gateway URL, hubs dir) and puts the
     # peer TUIs on its PATH so `zellij action` can spawn them.
