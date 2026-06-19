@@ -577,3 +577,118 @@ test("renderSrDetail shows a re-investigate button only when the SR carries an s
     "no srId → no button",
   );
 });
+
+test("app-refinement runs end-to-end via the native executor (stub ports)", async () => {
+  const root = mkdtempSync(join(tmpdir(), "refinery-native-"));
+  const pipelinesDir = join(root, "pipelines");
+  mkdirSync(pipelinesDir, { recursive: true });
+  // No prompts/ file → the executor uses the built-in default wrapper.
+  writeFileSync(
+    join(pipelinesDir, "app-refinement.yaml"),
+    [
+      "pipeline: app-refinement",
+      "label: App Refinement",
+      "source: cli-input",
+      "gates:",
+      "  - chestertons-fence",
+      "  - blast-radius",
+      "  - principles-fix",
+      "  - premortem",
+      "  - admission-gates",
+      "executorMode: write",
+      "executors:",
+      "  - native",
+      "defaultTraits:",
+      "  mode: brownfield",
+      "  touchesExistingCode: true",
+      "  writeMode: true",
+      "",
+    ].join("\n"),
+  );
+
+  // Stub native ports: a clean write-mode run that pushes a branch + writes a report.
+  const claudeCalls: { readOnly: boolean; cwd: string }[] = [];
+  const nativePorts = {
+    git: {
+      async resolveBase() { return "origin/main"; },
+      async addWorktree() {},
+      async hasCommitsBeyond() { return true; },
+      async push() {},
+      async isPristine() { return true; },
+      async revert() {},
+      async removeWorktree() {},
+    },
+    claude: {
+      async run(o: { readOnly: boolean; cwd: string }) {
+        claudeCalls.push({ readOnly: o.readOnly, cwd: o.cwd });
+        return { exitCode: 0, stdout: "did the work\nAPP-REFINEMENT-VERDICT: success\n", timedOut: false };
+      },
+    },
+    report: { async exists() { return true; } },
+  };
+
+  const cfg: HttpShellConfig = {
+    port: 0,
+    itemsDir: join(root, "items"),
+    pipelinesDir,
+    pipelineStatePath: join(root, "state.json"),
+    capsPath: join(root, "caps.json"),
+    scratchDir: join(root, "specs"),
+    triageProvider: "claude-cli",
+    runNowSpoolDir: join(root, "run-now"),
+    srRunNowSpoolDir: join(root, "sr-run-now"),
+    clock: fixedClock,
+    triageLlm: triageStub("app-refinement"),
+    runLlm: runStub("pass"),
+    nativeRepo: "/tmp/some-app",
+    nativePorts,
+  };
+
+  try {
+    const shell = createShell(cfg);
+    const item: Item = {
+      id: "ar1",
+      pipeline: "app-refinement",
+      step: "chestertons-fence",
+      state: "pending",
+      payload: { title: "refine some-app", input: "refine some-app", repo: "/tmp/some-app", traits: { mode: "brownfield", touchesExistingCode: true, writeMode: true } },
+      history: [],
+    };
+    await shell.store.save(item);
+    await shell.runItem("ar1");
+
+    const done = (await shell.store.load("ar1"))!;
+    assert.equal(done.state, "passed", "item passes after a clean native run");
+    const pl = done.payload as Record<string, any>;
+    assert.equal(pl.executorResult.outcome, "succeeded");
+    assert.equal(pl.executorResult.verdict, "success");
+    assert.ok(pl.executorResult.branch?.startsWith("app-refinement/"), "write-mode branch recorded");
+    assert.ok(pl.verdicts?.["principles-fix"], "gate verdicts persisted to payload");
+    assert.equal(claudeCalls[0]?.readOnly, false, "write mode → not read-only");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the board refuses to native-run an external-gauntlet pipeline (double-exec guard)", async () => {
+  const root = mkdtempSync(join(tmpdir(), "refinery-guard-"));
+  const pipelinesDir = join(root, "pipelines");
+  mkdirSync(pipelinesDir, { recursive: true });
+  writeFileSync(
+    join(pipelinesDir, "nightly-build.yaml"),
+    "pipeline: nightly-build\nlabel: Nightly\nsource: vault\ngates:\n  - premortem\nexecutorMode: write\nexecutors:\n  - native\nenabled: false\n",
+  );
+  const cfg: HttpShellConfig = {
+    port: 0, itemsDir: join(root, "items"), pipelinesDir, pipelineStatePath: join(root, "s.json"),
+    capsPath: join(root, "c.json"), scratchDir: join(root, "specs"), triageProvider: "claude-cli",
+    runNowSpoolDir: join(root, "rn"), srRunNowSpoolDir: join(root, "srn"), clock: fixedClock,
+    triageLlm: triageStub("nightly-build"), runLlm: runStub("pass"), nativeRepo: "/tmp/x",
+  };
+  try {
+    const shell = createShell(cfg);
+    await shell.store.save({ id: "nb1", pipeline: "nightly-build", step: "premortem", state: "pending", payload: { title: "x" }, history: [] });
+    await assert.rejects(() => shell.runItem("nb1"), /owned by an external gauntlet/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

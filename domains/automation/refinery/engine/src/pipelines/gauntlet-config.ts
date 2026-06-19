@@ -1,8 +1,10 @@
-// Per-gauntlet native-executor config — the bits that aren't on the Pipeline
-// schema (verdict token, which verdicts count as success, report file, branch
-// prefix). The Pipeline carries executorMode + the gate pipeline; this carries
-// the native executor's runtime knobs. Together they let one engine reproduce
-// both gauntlets (the slice-09 "two gauntlets are one machine" proof).
+// Per-pipeline native-executor config — the runtime knobs that aren't on the
+// Pipeline schema (verdict token, which verdicts count as success, report file,
+// branch prefix). The Pipeline carries executorMode + the gate list; this
+// carries the native executor's knobs. `nightly-build`/`datax-sr` reproduce the
+// two external gauntlets (the "two gauntlets are one machine" proof); they stay
+// external-owned at runtime (the board refuses to native-run them). `app-refinement`
+// is the first board-owned native pipeline.
 
 export interface GauntletExecuteConfig {
   executorMode: "write" | "read-only";
@@ -25,5 +27,12 @@ export const GAUNTLET_CONFIGS: Record<string, GauntletExecuteConfig> = {
     verdictPattern: /SR-VERDICT: (investigated|inconclusive)/,
     successVerdicts: ["investigated", "inconclusive"],
     reportFile: "REPORT.md",
+  },
+  "app-refinement": {
+    executorMode: "write",
+    verdictPattern: /APP-REFINEMENT-VERDICT: (success|blocked|failure)/,
+    successVerdicts: ["success"],
+    reportFile: "REPORT.md",
+    branchPrefix: "app-refinement/",
   },
 };

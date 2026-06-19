@@ -73,8 +73,17 @@ export async function runPipelineOnce(
 
   const integrated = await deps.integrate.run(result.item);
   const at = (deps.clock ?? (() => new Date().toISOString()))();
+  // Persist the full executor result (branch/pushed/pristine/verdict/detail)
+  // into the payload so the UI can surface what the executor did — history kept
+  // only the one-line detail before.
+  const basePayload =
+    result.item.payload && typeof result.item.payload === "object"
+      ? (result.item.payload as Record<string, unknown>)
+      : {};
   const done: Item = {
     ...result.item,
+    payload: { ...basePayload, executorResult: integrated },
+    state: integrated.outcome === "succeeded" ? "passed" : "failed",
     history: [
       ...result.item.history,
       {
