@@ -238,8 +238,18 @@ for CARD in $QUEUED; do
     set_field "$CARD" status "failed: base-branch"
     continue
   fi
+  # Re-run idempotency: a prior (failed) attempt leaves a stale worktree and a
+  # stable-named branch behind. Remove this run's worktree path, prune dangling
+  # registrations, then create-or-RESET the local branch to BASE with `-B`. A
+  # plain `-b` dies on a pre-existing branch — that was the old perpetual
+  # "failed: worktree" wedge (a once-pushed card could never be re-run). `-B`
+  # only ever resets a *disposable local* branch; we never force-push (the plain
+  # `push` below preserves remote history — gate 7/8 / run-wrapper rule 2).
+  # sr_gauntlet/run.sh uses `worktree add --detach` (no named branch) and is
+  # immune to this class of bug.
   git -C "$CARD_REPO" worktree remove --force "$WT" 2>/dev/null
-  if ! git -C "$CARD_REPO" worktree add -b "$BRANCH" "$WT" "$BASE" 2>>"$LOG_FILE"; then
+  git -C "$CARD_REPO" worktree prune 2>/dev/null
+  if ! git -C "$CARD_REPO" worktree add -B "$BRANCH" "$WT" "$BASE" 2>>"$LOG_FILE"; then
     log "ERROR: worktree add failed for $BRANCH in $CARD_REPO — card marked failed"
     set_field "$CARD" status "failed: worktree"
     continue
