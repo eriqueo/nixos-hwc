@@ -239,16 +239,30 @@ for CARD in $QUEUED; do
     continue
   fi
   # Re-run idempotency: a prior (failed) attempt leaves a stale worktree and a
-  # stable-named branch behind. Remove this run's worktree path, prune dangling
-  # registrations, then create-or-RESET the local branch to BASE with `-B`. A
-  # plain `-b` dies on a pre-existing branch — that was the old perpetual
-  # "failed: worktree" wedge (a once-pushed card could never be re-run). `-B`
-  # only ever resets a *disposable local* branch; we never force-push (the plain
-  # `push` below preserves remote history — gate 7/8 / run-wrapper rule 2).
-  # sr_gauntlet/run.sh uses `worktree add --detach` (no named branch) and is
-  # immune to this class of bug.
+  # stable-named branch behind. For an overnight gauntlet, failing one night and
+  # being re-queued the next morning is the *normal* lifecycle, so the re-run
+  # must succeed regardless of state a prior run left behind. Remove this run's
+  # worktree path, prune dangling registrations, then create-or-RESET the local
+  # branch to BASE with `-B`. A plain `-b` dies on a pre-existing branch — that
+  # was the old perpetual "failed: worktree" wedge (a once-pushed card could
+  # never be re-run). `-B` only ever resets a *disposable local* branch; we
+  # never force-push (the plain `push` below preserves remote history — gate 7/8
+  # / run-wrapper rule 2). sr_gauntlet/run.sh uses `worktree add --detach` (no
+  # named branch) and is immune to this class of bug.
   git -C "$CARD_REPO" worktree remove --force "$WT" 2>/dev/null
   git -C "$CARD_REPO" worktree prune 2>/dev/null
+  # Reclaim-on-rerun: a prior run (usually on an earlier date — the worktree
+  # path is date-stamped) may still hold $BRANCH checked out in its own
+  # worktree, and `-B` refuses to reset a branch that is checked out elsewhere.
+  # Reclaim ONLY that one worktree. Other date-stamped leftovers are deliberate
+  # (morning inspection of cards we are NOT re-running) and are never touched.
+  HELD_WT=$(git -C "$CARD_REPO" worktree list --porcelain 2>/dev/null \
+    | awk -v b="branch refs/heads/$BRANCH" \
+        '/^worktree /{wt=substr($0,10)} $0==b{print wt}')
+  if [ -n "$HELD_WT" ] && [ "$HELD_WT" != "$WT" ]; then
+    git -C "$CARD_REPO" worktree remove --force "$HELD_WT" 2>>"$LOG_FILE" \
+      && log "PHASE B: reclaimed stale worktree holding $BRANCH ($HELD_WT)"
+  fi
   if ! git -C "$CARD_REPO" worktree add -B "$BRANCH" "$WT" "$BASE" 2>>"$LOG_FILE"; then
     log "ERROR: worktree add failed for $BRANCH in $CARD_REPO — card marked failed"
     set_field "$CARD" status "failed: worktree"
