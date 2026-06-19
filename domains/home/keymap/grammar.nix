@@ -35,16 +35,15 @@ rec {
   # place a global modifier chord is intercepted).
   #   * `leader` (Space) is the INTRA-app prefix (handled inside each app).
   #   * `metaLeader` is the INTER-app prefix, intercepted by zellij.
-  # metaLeader is `Ctrl b` (tmux's own prefix — the meta mode IS zellij's
-  # repurposed `tmux` mode). Ctrl-chords are encoded reliably by every terminal;
-  # `Alt Space` was NOT reliably delivered by kitty (it leaked through to the
-  # focused pane, whose Space-leader then mis-fired — the spawn-in-home bug).
-  # Ctrl+b is clear of Hyprland (all SUPER) and rarely used in the TUIs
-  # (nvim Ctrl+b = page-up, seldom vs Ctrl+u/f); swap the letter here if it ever
-  # collides with an app you care about.
+  # metaLeader is `Ctrl Space` — verified (2026-06-18 `showkey -a`) to arrive as
+  # NUL (0x00), DISTINCT from a bare Space (0x20), so it can't mis-fire an app's
+  # Space-leader the way `Alt Space` did (Alt+Space = ESC+Space leaked through
+  # kitty → the spawn-in-home bug). Shift+Space was ruled out (identical to Space).
+  # If kitty's enhanced-keyboard mode ever swallows it, revert this one line to a
+  # Ctrl-letter (e.g. `Ctrl b`) — the binding generator (to-zellij.nix) is generic.
   #--------------------------------------------------------------------------
-  leader     = " ";          # Space
-  metaLeader = "Ctrl b";     # zellij switches to `meta` (tmux) mode on this chord
+  leader     = " ";            # Space
+  metaLeader = "Ctrl Space";   # zellij switches to `meta` (tmux) mode on this chord
 
   #--------------------------------------------------------------------------
   # Group letters. The MEANING is the cross-app promise. An app omits groups it
@@ -172,18 +171,24 @@ rec {
   };
 
   #--------------------------------------------------------------------------
-  # The meta layer (Ctrl+b -> zellij `meta` mode -> one key). `target` is the
-  # logical pane/tab to focus (mapped to the layout's tab in to-zellij.nix).
-  # Jump letters (t/c/m/f/e/h) are disjoint from the nav/utility letters
+  # The meta layer (metaLeader -> zellij `meta` mode -> one key). `target` is the
+  # logical hub-page/tool to focus (mapped to the layout's tab index in
+  # to-zellij.nix). HUB jumps (h/x/v/b → hwc/datax/server/brief) + TOOL jumps
+  # (t/c/m/f/e) are all disjoint from each other AND from the nav/utility letters
   # (n/p/]/[/w/z/s/d/Q) — no internal collision.
   #--------------------------------------------------------------------------
   meta = [
+    # Hub-pages (each its own workbench --hub <id> tab).
+    { key = "h"; intent = "hub-hwc";    desc = "HWC";    target = "hwc"; }
+    { key = "x"; intent = "hub-datax";  desc = "DataX";  target = "datax"; }
+    { key = "v"; intent = "hub-server"; desc = "Server"; target = "server"; }
+    { key = "b"; intent = "hub-brief";  desc = "Brief";  target = "brief"; }
+    # Tool tabs.
     { key = "t"; intent = "tasks";    desc = "Tasks (todui)";  target = "todui"; }
     { key = "c"; intent = "calendar"; desc = "Calendar (khalt)"; target = "khalt"; }
     { key = "m"; intent = "mail";     desc = "Mail (aerc)";    target = "mail"; }
     { key = "f"; intent = "files";    desc = "Files (yazi)";   target = "files"; }
     { key = "e"; intent = "edit";     desc = "Edit (nvim)";    target = "edit"; }
-    { key = "h"; intent = "host";     desc = "Host (workbench)"; target = "workbench"; }
     # tab navigation (n/p AND ]/[ — every tool tab is single-pane, so next/prev
     # *tab* is what you actually want; pane focus lives behind the pane-picker).
     { key = "n"; intent = "next-tab"; desc = "Next tab"; }

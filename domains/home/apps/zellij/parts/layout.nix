@@ -26,15 +26,23 @@ let
   # separate KDL node, not more args. Empty when the command has no args.
   mailArgsKdl = lib.optionalString (mailArgs != [])
     (" args " + lib.concatMapStringsSep " " (a: "\"${a}\"") mailArgs + ";");
+
+  # One tab per hub-page: `workbench --hub <id>` full-screen. The first hub is
+  # the landing tab (focus=true). Tab name == hub id (matches the GoToTab order
+  # in to-zellij.nix). Data-driven off tabs.hubs — adding a hub-page is a one-
+  # line edit there.
+  hubTab = i: hub: ''
+        tab name="${hub}"${lib.optionalString (i == 0) " focus=true"} {
+            pane name="${hub}" { command "workbench"; args "--hub" "${hub}"; }
+        }'';
+  hubTabs = lib.concatStringsSep "\n" (lib.imap0 hubTab tabs.hubs);
 in
 {
   workbenchKdl = ''
-    // workbench tab grid — peer TUIs, NONE mounted in-process. Home-page model:
-    // the `host` (workbench) owns its own tab as the dashboard / command center;
-    // each tool gets its own tab (peers of files/mail/edit). The host directs
-    // you to the right tab to do work — it never embeds a tool's UI.
-    // Tab names carry an emoji for at-a-glance colour; navigate by Ctrl+t then
-    // tab number, or Alt+←/→.
+    // Flat tab set — peer TUIs, NONE mounted in-process. Every workbench HUB is
+    // its own tab (`workbench --hub <id>`), and each TOOL is its own tab; uniform
+    // whether a tab is a hub-page or a tool. The old single multi-hub "home" tab
+    // is gone. Navigate with the meta-leader then a jump key, or Alt+←/→.
     layout {
         // Every tab gets a tab-bar (top, shows all tab names + which is focused)
         // and a status-bar (bottom, shows the active zellij keybinds). Without
@@ -45,12 +53,9 @@ in
             children
             pane size=1 borderless=true { plugin location="zellij:status-bar"; }
         }
-        // Home = the workbench host alone (full pane). The dashboard you land on.
-        tab name="${tabs.host}" focus=true {
-            pane name="host" {
-                command "workbench"
-            }
-        }
+        // Hub-pages (data-driven from tabs.hubs): hwc · datax · server · brief.
+        // The first is the landing tab. Each is a single-hub workbench page.
+${hubTabs}
         // Tasks + calendar: Eric's first-class TUIs, auto-started (always-on peers).
         tab name="${tabs.todui}" {
             pane name="todui" { command "todui"; }
