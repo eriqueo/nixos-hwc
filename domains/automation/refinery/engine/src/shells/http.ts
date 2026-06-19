@@ -7,20 +7,15 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { Item, Executor, Pipeline } from "../contracts.js";
+import { Item } from "../contracts.js";
 import { MarkdownItemStore } from "../stores/markdown-store.js";
 import { PipelineCatalog } from "../pipelines/catalog.js";
 import { loadDomains } from "../domains.js";
 import { resolveLlm } from "../adapters/resolver.js";
 import { triageSentence, makeTriagedItem, UNTRIAGED } from "../triage.js";
-import { rewind } from "../runner.js";
+import { rewind, runPass } from "../runner.js";
 import { gateList } from "../gates/index.js";
 import { makeSpecExecutor } from "../executors/spec.js";
-import { makeNativeExecutor, NativePorts } from "../executors/native.js";
-import { makeGitWorktree } from "../adapters/git-worktree.js";
-import { makeClaudeHeadless } from "../adapters/claude-headless.js";
-import { makeReportFs } from "../adapters/report-fs.js";
-import { GAUNTLET_CONFIGS } from "../pipelines/gauntlet-config.js";
 import { runPipelineOnce } from "../cli/run-once.js";
 import { LlmPort } from "../gates/llm-port.js";
 import { nightlyCardProjects, queueNextStep, unqueueStep, parseNbId, readReport, hasActiveStep, readProjectMode, setProjectMode, NB_PREFIX, finishedProjects, reopenProject, parseFinishedId, FINISHED_PREFIX } from "../sources/nightly-cards.js";
@@ -43,12 +38,12 @@ export interface HttpShellConfig {
   reviewsDir?: string; // morning PR-review records (REFINERY_REVIEWS_DIR); default under the state base
   runNowSpoolDir: string; // "Run now" / IMMEDIATE drops a <goal> request file here; a systemd.path twin of run.sh drains it
   srRunNowSpoolDir: string; // SR "re-investigate now" drops an <srId> request file here; sr-gauntlet-runnow.path drains it
+  nativeRunNowSpoolDir: string; // board-owned native pipelines (app-refinement): after a clean gate pass the board drops an <itemId> file here; refinery-run-native.path drains it
   clock: () => string;
   triageLlm?: LlmPort; // test override; production resolves from triageProvider
   runLlm?: LlmPort; // test override for the pipeline runner; prod resolves per pipeline
   nativeRepo?: string; // default target repo for native pipelines (REFINERY_NATIVE_REPO); payload.repo overrides
   nativeTimeoutMs?: number; // headless-claude timeout for a native run (REFINERY_NATIVE_TIMEOUT)
-  nativePorts?: NativePorts; // test override; production builds real git/claude/report adapters
 }
 
 export function configFromEnv(): HttpShellConfig {
@@ -68,22 +63,12 @@ export function configFromEnv(): HttpShellConfig {
     reviewsDir: process.env.REFINERY_REVIEWS_DIR || `${base}/reviews`,
     runNowSpoolDir: process.env.REFINERY_RUNNOW_SPOOL || `${base}/run-now`,
     srRunNowSpoolDir: process.env.REFINERY_SR_RUNNOW_SPOOL || `${base}/sr-run-now`,
+    nativeRunNowSpoolDir: process.env.REFINERY_NATIVE_RUNNOW_SPOOL || `${base}/native-run`,
     nativeRepo: process.env.REFINERY_NATIVE_REPO,
     nativeTimeoutMs: process.env.REFINERY_NATIVE_TIMEOUT ? Number(process.env.REFINERY_NATIVE_TIMEOUT) : undefined,
     clock: () => new Date().toISOString(),
   };
 }
-
-// Fallback native-executor wrapper when a pipeline ships no prompt file. The
-// item (its payload) is appended after this by the executor; the agent must
-// write the report file and end with the pipeline's verdict token.
-const DEFAULT_NATIVE_WRAPPER = [
-  "You are executing a refinery pipeline item in a disposable git worktree.",
-  "Do the work described under THE ITEM. Make the smallest correct change; do not",
-  "bundle unrelated edits. When done, write REPORT.md (what you did, why, how it",
-  "was verified) to the worktree root, and end your output with the verdict token",
-  "your pipeline expects on its own line.",
-].join("\n");
 
 // Pipelines owned by an external standalone gauntlet (their run.sh timers + spools
 // remain the executor). The board surfaces them read-only and triggers them via
@@ -167,6 +152,19 @@ export function createShell(cfg: HttpShellConfig) {
     writeFileSync(join(cfg.srRunNowSpoolDir, safe), `${safe}\n`);
   };
 
+  // Board-owned native execution: the hardened board runs the gates in-process,
+  // then drops the item id in this spool. A privileged systemd.path twin drains
+  // it by invoking `refinery-run-native --id <itemId>` (which builds + runs the
+  // native executor and finalizes the item). Same hardened-board contract as the
+  // run-now spools above — the board never spawns a worktree/git push itself.
+  // itemId is a store filename slug; sanitize hard to keep it a bare filename.
+  const requestNativeRunNow = (id: string): void => {
+    const safe = id.replace(/[^A-Za-z0-9._-]/g, "");
+    if (!safe || safe === "." || safe === "..") return;
+    mkdirSync(cfg.nativeRunNowSpoolDir, { recursive: true });
+    writeFileSync(join(cfg.nativeRunNowSpoolDir, safe), `${safe}\n`);
+  };
+
   async function intake(text: string): Promise<void> {
     const enabled = catalog.enabled();
     const options = enabled.map((p) => ({ pipeline: p.pipeline, label: p.label }));
@@ -215,66 +213,18 @@ export function createShell(cfg: HttpShellConfig) {
     }
   }
 
-  const nativeWrapperFor = (pipelineId: string): string => {
-    const f = join(cfg.pipelinesDir, "prompts", `${pipelineId}.md`);
-    return existsSync(f) ? readFileSync(f, "utf8") : DEFAULT_NATIVE_WRAPPER;
-  };
-
-  /** Resolve a pipeline's terminal executor for one item.
-   *  - `spec`   → synthesize+write a spec (project-ideation).
-   *  - `native` → in-process worktree+headless-claude (app-refinement); the
-   *    target repo is `payload.repo` or `cfg.nativeRepo`. External-gauntlet
-   *    pipelines are refused here (the double-execution guard).
-   *  Anything else fails loud so the item parks with a clear reason. */
-  function resolveExecutor(pipeline: Pipeline, llm: LlmPort, item: Item): Executor {
-    if (pipeline.executors.includes("spec")) {
-      return makeSpecExecutor({ scratchDir: cfg.scratchDir }, llm);
-    }
-    if (pipeline.executors.includes("native")) {
-      if (EXTERNAL_GAUNTLET_PIPELINES.has(pipeline.pipeline)) {
-        throw new Error(
-          `pipeline "${pipeline.pipeline}" is owned by an external gauntlet — trigger it via the run-now spool, not board native execution`,
-        );
-      }
-      const ncfg = GAUNTLET_CONFIGS[pipeline.pipeline];
-      if (!ncfg) throw new Error(`native executor has no config for pipeline "${pipeline.pipeline}"`);
-      const pl = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
-      const repo = (typeof pl.repo === "string" && pl.repo) || cfg.nativeRepo;
-      if (!repo) {
-        throw new Error(
-          `native pipeline "${pipeline.pipeline}" needs a target repo — set payload.repo on the item or REFINERY_NATIVE_REPO`,
-        );
-      }
-      const date = cfg.clock().slice(0, 10);
-      const branch =
-        ncfg.executorMode === "write"
-          ? `${ncfg.branchPrefix ?? `${pipeline.pipeline}/`}${date}-${slug(item.id)}`
-          : undefined;
-      const ports: NativePorts =
-        cfg.nativePorts ?? { git: makeGitWorktree(), claude: makeClaudeHeadless(), report: makeReportFs() };
-      return makeNativeExecutor(
-        {
-          repo,
-          worktree: join(cfg.scratchDir, "wt", item.id),
-          executorMode: ncfg.executorMode,
-          branch,
-          promptWrapper: nativeWrapperFor(pipeline.pipeline),
-          verdictPattern: ncfg.verdictPattern,
-          successVerdicts: ncfg.successVerdicts,
-          timeoutMs: cfg.nativeTimeoutMs ?? 3 * 60 * 60 * 1000,
-          reportFile: ncfg.reportFile,
-        },
-        ports,
-      );
-    }
-    throw new Error(
-      `no board executor wired for pipeline "${pipeline.pipeline}" (executors: ${pipeline.executors.join(", ")})`,
-    );
-  }
-
-  /** Run one triaged engine item through its pipeline's gates + executor (the
-   *  same core the CLI uses). Read-only mirror items aren't in the store, so
-   *  load() returns null and this no-ops. Throws are surfaced by the caller. */
+  /** Run one triaged engine item through its pipeline. The board branches on the
+   *  pipeline's terminal executor:
+   *   - `spec`   → run gates + the spec executor IN-PROCESS (project-ideation);
+   *     synthesize+write a spec. Unchanged from the CLI's run-once core.
+   *   - `native` → the hardened board must NOT spawn a worktree / git push. It
+   *     runs ONLY the gates in-process; on a clean pass it marks the item
+   *     `running`, then SPOOLS an execute request that the privileged
+   *     `refinery-run-native` unit drains. External-gauntlet pipelines are
+   *     refused here (the double-execution guard).
+   *   - anything else fails loud so the item parks with a clear reason.
+   *  Read-only mirror items aren't in the store, so load() returns null and this
+   *  no-ops. Throws are surfaced by the caller. */
   async function runItem(id: string): Promise<void> {
     const item = await store.load(id);
     if (!item) return;
@@ -283,9 +233,42 @@ export function createShell(cfg: HttpShellConfig) {
     const payload = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
     const input = typeof payload.input === "string" ? payload.input : "";
     const llm = cfg.runLlm ?? resolveLlm(pipeline.llmProvider ?? cfg.triageProvider);
-    await runPipelineOnce(
-      { id, input },
-      { pipeline, gates: gateList(llm), integrate: resolveExecutor(pipeline, llm, item), store, clock: cfg.clock },
+
+    if (pipeline.executors.includes("spec")) {
+      await runPipelineOnce(
+        { id, input },
+        { pipeline, gates: gateList(llm), integrate: makeSpecExecutor({ scratchDir: cfg.scratchDir }, llm), store, clock: cfg.clock },
+      );
+      return;
+    }
+
+    if (pipeline.executors.includes("native")) {
+      if (EXTERNAL_GAUNTLET_PIPELINES.has(pipeline.pipeline)) {
+        throw new Error(
+          `pipeline "${pipeline.pipeline}" is owned by an external gauntlet — trigger it via the run-now spool, not board native execution`,
+        );
+      }
+      // Gates only — the board never builds or runs the native executor. runPass
+      // saves the item itself, including the parked/failed case.
+      const result = await runPass(item, pipeline, gateList(llm), { store, clock: cfg.clock });
+      if (result.stoppedBy) return; // parked/failed at a gate — already saved
+      // Clean pass: mark it running and spool the execute request for the
+      // privileged runner to drain.
+      await store.save({
+        ...result.item,
+        state: "running",
+        parkedReason: undefined,
+        history: [
+          ...result.item.history,
+          { step: "native", status: "running", at: cfg.clock(), note: "queued for native execution" },
+        ],
+      });
+      requestNativeRunNow(id);
+      return;
+    }
+
+    throw new Error(
+      `no board executor wired for pipeline "${pipeline.pipeline}" (executors: ${pipeline.executors.join(", ")})`,
     );
   }
 
@@ -698,5 +681,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow };
+  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
 }

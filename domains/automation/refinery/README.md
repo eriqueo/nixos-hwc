@@ -49,6 +49,19 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-19** — **Native execution via spool → privileged runner.** The hardened
+  board (no repo/push access) no longer runs the `native` executor in-process: for a
+  `native` pipeline it runs the **gates in-process** (LLM-only, works in the sandbox)
+  and, on a clean pass, drops `<itemId>` in `/var/lib/refinery/native-run` and marks
+  the item "queued for native execution". A privileged `refinery-native-runnow`
+  path+service (runs as eric — ~/.ssh, ~/600_apps, ~/.claude; intentionally
+  unsandboxed, mirrors `nightly-builds-runnow`) drains the spool and runs the new
+  `refinery-run-native --id <id>` CLI, which builds the real native executor
+  (worktree → headless claude → push via `native-factory.ts`) and finalizes the item
+  (executorResult + passed/failed). External-gauntlet pipelines stay guarded.
+  `refinery-run-native` is a 3rd esbuild bundle in the package. NOTE: app-refinement
+  still needs `payload.repo` set to name its target app (a UI affordance is the next
+  small step); without it the runner fails the item cleanly. 131 tests pass.
 - **2026-06-19** — **UI redesign — the board mirrors the engine flow.** The main
   board is now **Flow** (retired "Gauntlet" as the board name; "Nightly" tab →
   "Overnight"). Every Project card carries a **gate-dot progress strip** (one dot

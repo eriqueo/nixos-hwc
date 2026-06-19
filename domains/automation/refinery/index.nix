@@ -58,8 +58,13 @@ let
       esbuild src/cli/morning-review.ts \
         --bundle --platform=node --format=cjs \
         --outfile=$out/morning-review.js
+      esbuild src/cli/run-native.ts \
+        --bundle --platform=node --format=cjs \
+        --outfile=$out/run-native.js
       makeWrapper ${pkgs.nodejs}/bin/node $out/bin/refinery-morning-review \
         --add-flags "$out/morning-review.js"
+      makeWrapper ${pkgs.nodejs}/bin/node $out/bin/refinery-run-native \
+        --add-flags "$out/run-native.js"
       runHook postInstall
     '';
   };
@@ -67,6 +72,27 @@ let
   # Pipelines are data baked into the store (read-only at runtime); the enabled
   # overlay is written to mutable state, never back to these files.
   pipelinesDir = ./pipelines;
+
+  # Native execution is split out of the hardened board (which has no repo
+  # access or push creds): the board runs the gate pipeline in-process, then on a
+  # clean pass drops an <itemId> file in this spool. A privileged path+service
+  # twin (below) drains it and runs the REAL native executor (worktree + headless
+  # claude + git push) out-of-band. Mirrors the nightly-builds-runnow pattern.
+  nativeSpoolDir = "/var/lib/refinery/native-run";
+  nativeRunDrain = pkgs.writeShellScript "refinery-native-runnow-drain" ''
+    set -uo pipefail
+    SPOOL="${nativeSpoolDir}"
+    [ -d "$SPOOL" ] || exit 0
+    shopt -s nullglob
+    for f in "$SPOOL"/*; do
+      [ -e "$f" ] || continue
+      id="$(basename "$f")"
+      rm -f "$f"
+      echo "native-runnow: executing $id"
+      ${board}/bin/refinery-run-native --id "$id" \
+        || echo "native-runnow: run-native exited $? for '$id'"
+    done
+  '';
 in
 {
   options.hwc.automation.refinery = {
@@ -140,6 +166,9 @@ in
           "REFINERY_CAPS_FILE=/var/lib/refinery/caps.json"
           # The Run button / spec executor drops developed specs here.
           "REFINERY_SCRATCH_DIR=/var/lib/refinery/specs"
+          # Native pipelines (app-refinement): the board runs the gates then drops
+          # an <itemId> here; the privileged refinery-native-runnow twin executes it.
+          "REFINERY_NATIVE_RUNNOW_SPOOL=${nativeSpoolDir}"
           # Morning PR-review records (written by the nightly-builds review pass);
           # the board's /reviews page reads them. Same dir, under the StateDirectory.
           "REFINERY_REVIEWS_DIR=/var/lib/refinery/reviews"
@@ -185,6 +214,57 @@ in
                "-${paths.user.home}/.claude.json"
              ]);
         PrivateTmp = true;
+      };
+    };
+
+    # The board's StateDirectory creates /var/lib/refinery; ensure the native
+    # spool + worktree base exist (owned by eric) so the path watcher arms at
+    # boot and the runner can create disposable worktrees.
+    systemd.tmpfiles.rules = [
+      "d ${nativeSpoolDir} 0775 eric users - -"
+      "d /var/lib/refinery/native 0775 eric users - -"
+    ];
+
+    # Privileged native-execution runner: drains the board's native-run spool and
+    # runs the REAL native executor (worktree → headless claude → git push) — the
+    # repo + push access the hardened board deliberately lacks. Runs as eric so
+    # ~/.ssh (push), ~/600_apps (target repos) and ~/.claude all resolve;
+    # intentionally NOT sandboxed like the board. Mirrors nightly-builds-runnow.
+    systemd.services.refinery-native-runnow = {
+      description = "Refinery — drain the native-run spool and execute (worktree + claude + push)";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      path = [ pkgs.git pkgs.openssh ];
+      environment = {
+        REFINERY_ITEMS_DIR = "/var/lib/refinery/items";
+        REFINERY_PIPELINES_DIR = "${pipelinesDir}";
+        REFINERY_PIPELINE_STATE = "/var/lib/refinery/profiles.json";
+        # Disposable native-run worktrees live here, not the board's specs dir.
+        REFINERY_SCRATCH_DIR = "/var/lib/refinery/native";
+        HOME = "${paths.user.home}";
+      } // lib.optionalAttrs (cfg.claudeBin != null) {
+        REFINERY_CLAUDE_BIN = cfg.claudeBin;
+      };
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce "eric";
+        Group = "users";
+        ExecStart = "${nativeRunDrain}";
+        # One native run is bounded by REFINERY_NATIVE_TIMEOUT (default 3h); allow
+        # headroom and let a queued backlog drain sequentially.
+        TimeoutSec = 4 * 3600;
+        StandardOutput = "journal";
+        StandardError = "journal";
+        NoNewPrivileges = true;
+      };
+    };
+
+    systemd.paths.refinery-native-runnow = {
+      description = "Watch the refinery native-run spool for app-refinement execute requests";
+      wantedBy = [ "paths.target" ];
+      pathConfig = {
+        DirectoryNotEmpty = nativeSpoolDir;
+        Unit = "refinery-native-runnow.service";
       };
     };
   };
