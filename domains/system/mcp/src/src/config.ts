@@ -22,5 +22,9 @@ export function loadConfig(): ServerConfig {
     workspace: process.env.HWC_MCP_WORKSPACE || "/home/eric/.nixos/workspace",
     hostname: process.env.HWC_HOSTNAME || "unknown",
     cmsAppPath: process.env.HWC_CMS_APP_PATH || "/opt/business/heartwood-cms",
+    dataxAnalyzerUrl: process.env.HWC_DATAX_ANALYZER_URL || "http://127.0.0.1:8788",
+    dataxLedgerPath:
+      process.env.HWC_DATAX_LEDGER_PATH ||
+      "/home/eric/700_datax/sr_gauntlet/state/ledger.json",
   };
 }

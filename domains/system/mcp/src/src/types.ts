@@ -108,6 +108,10 @@ export interface ServerConfig {
   workspace: string;
   hostname: string;
   cmsAppPath: string;
+  /** Base URL of the sr_analyzer SR-board service the datax_* tools consume. */
+  dataxAnalyzerUrl: string;
+  /** Path to the SR gauntlet's investigation ledger (verdict overlay source). */
+  dataxLedgerPath: string;
 }
 
 /** MCP Resource definition */
