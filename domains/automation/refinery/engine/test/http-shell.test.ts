@@ -320,6 +320,68 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly is a sta
   assert.ok(n.includes('action="/nightly/config"'));
 });
 
+test("a parked card surfaces the gate's `asks` as a 'to unblock, decide' list + an answer box", () => {
+  const profiles = [
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executorMode: "none",
+      executors: ["spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
+  ];
+  const parked: Item = {
+    id: "ask1", pipeline: "project-ideation", step: "premortem", state: "parked",
+    parkedReason: "high-severity vectors need a scoping call",
+    payload: {
+      title: "a project",
+      verdicts: {
+        premortem: { decision: "park", reason: "scope", output: {
+          decision: "park", reason: "scope",
+          asks: ["Decide: single .json bundle or per-slide files?", "Decide: cap the slide count?"],
+        } },
+      },
+    },
+    history: [],
+  };
+  const d = renderProjectDetail(parked, profiles, profiles);
+  assert.ok(d.includes("To unblock, decide:"), "shows the actionable header");
+  assert.ok(d.includes("single .json bundle or per-slide files?"), "renders ask 1");
+  assert.ok(d.includes("cap the slide count?"), "renders ask 2");
+  assert.ok(d.includes('action="/amend"') && d.includes("answer"), "answer box framed to answer the asks");
+});
+
+test("a native pipeline shows the Target repo picker (required when unset; set-repo route)", () => {
+  const nativeProfile = [
+    { pipeline: "app-refinement", label: "App Refinement", source: "cli-input",
+      gates: ["chestertons-fence", "premortem"], executorMode: "write",
+      executors: ["native"], enabled: true, llmProvider: "claude-cli", color: "#b48ead" },
+  ];
+  const unset: Item = {
+    id: "ar1", pipeline: "app-refinement", step: "chestertons-fence", state: "pending",
+    payload: { title: "refine some-app" }, history: [],
+  };
+  const d = renderProjectDetail(unset, nativeProfile, nativeProfile);
+  assert.ok(d.includes('action="/set-repo"'), "repo picker form present");
+  assert.ok(d.includes("Target repo") && d.includes("required"), "prominent + required when unset");
+  assert.ok(d.includes("queues native execution"), "run hint is native-aware, not spec");
+
+  const withRepo = renderProjectDetail(
+    { ...unset, payload: { title: "x", repo: "/home/eric/600_apps/transcript-formatter" } },
+    nativeProfile, nativeProfile,
+  );
+  assert.ok(withRepo.includes('value="/home/eric/600_apps/transcript-formatter"'), "current repo shown");
+  assert.ok(withRepo.includes("update repo"), "offers update when set");
+});
+
+test("setRepo binds (and clears) payload.repo on an item", async () => {
+  const { cfg, cleanup } = setup(triageStub("project-ideation"));
+  try {
+    const shell = createShell(cfg);
+    await shell.store.save({ id: "sr1", pipeline: "app-refinement", step: "chestertons-fence", state: "pending", payload: { title: "x" }, history: [] });
+    await shell.setRepo("sr1", "  /home/eric/600_apps/transcript-formatter  ");
+    assert.equal(((await shell.store.load("sr1"))!.payload as { repo?: string }).repo, "/home/eric/600_apps/transcript-formatter");
+    await shell.setRepo("sr1", "   "); // blank clears it
+    assert.equal(((await shell.store.load("sr1"))!.payload as { repo?: string }).repo, undefined);
+  } finally { cleanup(); }
+});
+
 test("renderFinished is a plain grid of click-through cards; renderFinishedProject is read-only + send-back", () => {
   const finished: Item = {
     id: "nbf:my-goal", pipeline: "nightly-build", step: "3/3 steps", state: "passed",

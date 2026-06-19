@@ -13,6 +13,11 @@ import { InvalidGateVerdictError } from "../errors.js";
 export const BaseVerdictSchema = z.object({
   decision: z.enum(["pass", "park", "fail"]),
   reason: z.string().min(1),
+  // On park/fail: the specific, concrete decisions/questions the human must
+  // resolve to unblock — each a direct, answerable ask, NOT a restatement of the
+  // risk. The board renders these as the "to unblock, decide:" checklist so a
+  // parked card is actionable instead of a vague refusal. Omitted on pass.
+  asks: z.array(z.string().min(1)).optional(),
 });
 export type BaseVerdict = z.infer<typeof BaseVerdictSchema>;
 
@@ -57,6 +62,11 @@ export function buildGatePrompt(spec: GatePromptSpec, item: Item): string {
     JSON.stringify(item.payload, null, 2),
     "```",
     spec.decisionRule,
+    // Make a park/fail actionable, not a vague refusal: force concrete asks.
+    'If decision is "park" or "fail", you MUST also include an "asks" array: the ' +
+      "specific, concrete decisions or questions the human must answer to unblock " +
+      "this — each a direct, answerable ask (e.g. \"Decide: store slides as a single " +
+      '.json bundle or per-slide files?"), NOT a restatement of the risk. Omit "asks" on pass.',
     `Respond with ONLY a JSON object, no prose, of this shape: ${spec.shapeHint}`,
   ].join("\n");
 }

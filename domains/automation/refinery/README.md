@@ -49,6 +49,15 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-19** — **Parked cards are actionable + native target-repo picker.** A gate
+  that parks/fails now emits an `asks` array (added to `BaseVerdictSchema` + enforced in
+  `buildGatePrompt`) — the specific, concrete decisions the human must make, not a prose
+  refusal. The parked card renders them as a **"To unblock, decide:"** checklist with an
+  **"answer & continue"** box (fallback note for items that ran before asks were captured).
+  Native pipelines (app-refinement) get a prominent **Target repo** picker (`POST /set-repo`
+  → `payload.repo`), required when unset — this is what lets app-refinement actually
+  execute (names the target app, e.g. `~/600_apps/<app>`); the run hint is now executor-aware.
+  134 tests pass.
 - **2026-06-19** — **Native execution via spool → privileged runner.** The hardened
   board (no repo/push access) no longer runs the `native` executor in-process: for a
   `native` pipeline it runs the **gates in-process** (LLM-only, works in the sandbox)

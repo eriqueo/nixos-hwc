@@ -377,6 +377,17 @@ export function createShell(cfg: HttpShellConfig) {
     await store.save({ ...item, payload: { ...payload, domain } });
   }
 
+  // Bind the target repo a native pipeline (app-refinement) runs against. The
+  // native runner needs this (or REFINERY_NATIVE_REPO) to build the worktree;
+  // without it the item fails cleanly with "needs a target repo".
+  async function setRepo(id: string, repo: string): Promise<void> {
+    const item = await store.load(id);
+    if (!item) return;
+    const payload = (item.payload && typeof item.payload === "object" ? item.payload : {}) as Record<string, unknown>;
+    const trimmed = repo.trim();
+    await store.save({ ...item, payload: { ...payload, repo: trimmed || undefined } });
+  }
+
   /** Promote an idea into a refinement pipeline. `schedule` chooses how it runs:
    *  "immediate" kicks the pipeline now; "nightly" flags it for the overnight
    *  batch (no immediate run). Anything else just promotes (manual run later). */
@@ -580,6 +591,11 @@ export function createShell(cfg: HttpShellConfig) {
             await promote(id, body.get("pipeline") ?? "", body.get("schedule") ?? "");
             return redirectTo(res, afterEdit);
           }
+          if (url === "/set-repo") {
+            // Bind the target repo for a native pipeline (app-refinement).
+            await setRepo(id, body.get("repo") ?? "");
+            return redirectTo(res, afterEdit);
+          }
           if (url === "/run") {
             // Run the item's pipeline now (gates → effector). Fire-and-forget so
             // the request returns immediately; the board shows "running" and the
@@ -681,5 +697,5 @@ export function createShell(cfg: HttpShellConfig) {
     })();
   });
 
-  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
+  return { server, store, catalog, domains, intake, intakeIdea, syncBrain, amend, doRewind, setStatus, setStage, setDomain, setRepo, setNightly, bumpNightly, promote, deleteItem, runItem, kickRun, requestSrRunNow, requestNativeRunNow };
 }

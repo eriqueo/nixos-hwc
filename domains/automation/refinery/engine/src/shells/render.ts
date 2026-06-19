@@ -100,6 +100,10 @@ const STYLE = `<style>
   .title{display:block;font-size:13px;color:var(--ink);font-weight:600;overflow-wrap:anywhere}
   a.title:hover{color:var(--acc)}
   .reason{margin-top:5px;font-size:12px;color:var(--acc)}
+  .asks{margin:4px 0 12px;border-left:3px solid var(--warn);padding:6px 0 6px 12px;background:color-mix(in srgb,var(--warn) 8%,transparent)}
+  .asks .askhdr{font-size:12px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
+  .asks ol{margin:6px 0 0 18px;padding:0}
+  .asks li{margin:4px 0;color:var(--ink);font-size:13px}
   .card .why{margin-top:2px;font-size:12px;color:var(--dim);overflow-wrap:anywhere}
   /* inline per-card controls (SR2-style quick actions) */
   .ccrow{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;align-items:center}
@@ -553,20 +557,31 @@ export function renderProjectDetail(
        </form>`
     : "";
 
-  const parkedActions =
-    item.state === "parked"
-      ? `<form class="act" method="post" action="/amend">
+  const parkedActions = (() => {
+    if (item.state !== "parked") {
+      return `<div class="kv">No human action needed at this step (${esc(item.state)}).</div>`;
+    }
+    // The gate that parked this step records its verdict (incl. `asks` — the
+    // concrete decisions the human must make) at payload.verdicts[step].output.
+    const pv = obj(obj(obj(item.payload).verdicts)[item.step ?? ""]);
+    const rawAsks = obj(pv.output).asks;
+    const asks = Array.isArray(rawAsks) ? rawAsks.filter((a) => typeof a === "string") as string[] : [];
+    const askList = asks.length
+      ? `<div class="asks"><div class="askhdr">To unblock, decide:</div><ol>${asks.map((a) => `<li>${esc(a)}</li>`).join("")}</ol></div>`
+      : `<div class="kv" style="margin-bottom:8px">This step needs a human call — answer below to re-arm and continue, or rewind to revisit an earlier step. (No structured asks recorded${pv.output ? "" : "; this item ran before asks were captured — re-run to get them"}.)</div>`;
+    return `${askList}
+         <form class="act" method="post" action="/amend">
            <input type="hidden" name="id" value="${esc(item.id)}">
-           <input type="text" name="note" placeholder="answer / amendment (re-arms the step)" required>
-           <button type="submit">✎ amend</button>
+           <input type="text" name="note" placeholder="${asks.length ? "your decision(s) — answering the asks above re-arms the step" : "your decision / answer (re-arms the step)"}" required>
+           <button type="submit">✎ answer &amp; continue</button>
          </form>
          ${targets.length ? `<form class="act" method="post" action="/rewind">
            <input type="hidden" name="id" value="${esc(item.id)}">
            <select name="toStep">${targets.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
            <input type="text" name="note" placeholder="why rewind?" required>
            <button type="submit">⟲ rewind</button>
-         </form>` : ""}`
-      : `<div class="kv">No human action needed at this step (${esc(item.state)}).</div>`;
+         </form>` : ""}`;
+  })();
 
   const payloadObj = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
   const readonly = payloadObj.readonly === true;
@@ -586,6 +601,25 @@ export function renderProjectDetail(
   // Run button — triggers the engine pipeline (gates → executor) for a triaged
   // engine item. Read-only mirror items (nightly/SR cards) execute via their own
   // gauntlets, so they don't get it.
+  // Native pipelines (app-refinement) execute against a target repo; the board
+  // runs the gates then spools execution. Surface a repo picker — prominent and
+  // required when unset, since the run fails cleanly without it.
+  const usesNative = !isIdea && !!pipeline && pipeline.executors.includes("native") && !readonly;
+  const curRepo = typeof payloadObj.repo === "string" ? payloadObj.repo : "";
+  const repoBlock = usesNative
+    ? `<h2>Target repo${curRepo ? "" : " ⚠"}</h2>
+       <form class="act" method="post" action="/set-repo">
+         <input type="hidden" name="id" value="${esc(item.id)}">
+         <input type="text" name="repo" value="${esc(curRepo)}" placeholder="/home/eric/600_apps/<app>" ${curRepo ? "" : "required"}>
+         <button type="submit">${curRepo ? "update repo" : "set repo"}</button>
+         <span class="kv">${curRepo ? "the app this pipeline refines (worktree + push target)" : "⚠ required — this pipeline can't execute until you bind the target app repo"}</span>
+       </form>`
+    : "";
+
+  const execId = (pipeline && pipeline.executors[0]) || "";
+  const runHint = execId === "native"
+    ? "runs the gates here, then queues native execution (worktree → claude → push)"
+    : `runs ${esc(pipeline?.gates.join(" → ") ?? "")}; writes a developed spec`;
   const runBlock = (!isIdea && pipeline && !readonly)
     ? item.state === "running"
       ? `<h2>Run</h2><div class="kv">⏳ running the ${esc(item.pipeline)} pipeline (${esc(pipeline.gates.join(" → "))})… refresh to see the result.</div>`
@@ -593,7 +627,7 @@ export function renderProjectDetail(
          <form class="act" method="post" action="/run">
            <input type="hidden" name="id" value="${esc(item.id)}">
            <button type="submit">▶ run pipeline now</button>
-           <span class="kv">runs ${esc(pipeline.gates.join(" → "))}; writes a developed spec</span>
+           <span class="kv">${runHint}</span>
          </form>`
     : "";
 
@@ -613,7 +647,7 @@ export function renderProjectDetail(
         `<h2>Investigation (read-only)</h2>
          <div class="kv">Produced by the sr_gauntlet overnight run.</div>
          <div class="act">${reportLink}</div>`
-    : `${promote}${runBlock}
+    : `${promote}${repoBlock}${runBlock}
   <h2>Human-in-the-loop</h2>
   ${parkedActions}
 
