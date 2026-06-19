@@ -21,25 +21,13 @@ The gate registry, genres, and interactivity (amend/rewind) are later slices
 - **URL:** `refinery.hwc.iheartwoodcraft.com` (Caddy vhost → `127.0.0.1:8060`)
 - **Reads:** the brain vault, read-only (`hwc.paths.brain.*`).
 
-The TypeScript board app (`app/src/*.ts`, zero runtime deps, pure `node:http`) is
-bundled to one JS file by **esbuild** at build time — no npm / node_modules /
-`npmDepsHash`. The page meta-refreshes every 10s; no client framework (htmx
-arrives with the interactive amend/rewind slice). The engine core (`engine/`) is
-a standalone TypeScript library with `node --test` unit tests, substance-agnostic
-and IO-free beyond injected ports.
-
-### Two build toolchains (intentional)
-The `app/` and `engine/` use **different** module-resolution worlds — don't
-"unify" them:
-- **`app/` (board)** — relative imports carry `.ts` extensions
-  (`./parse.ts`). It's bundled by **esbuild** (which resolves TS specifiers) and
-  has **zero runtime deps**. Tests run via Node's native type-stripping
-  (`node --test 'test/**/*.test.ts'`) — no build step. `package.json` carries
-  dev-only deps (`@types/node`, `typescript`) for typecheck/tests; they never
-  reach the bundle.
-- **`engine/` (library)** — relative imports carry `.js` extensions
-  (`./contracts.js`, ESM convention). It's compiled by **tsc** to `dist/`, and
-  tests run against the compiled output (`tsc && node --test dist/test/**`).
+The `:8060` service is the engine's own HTTP shell (`engine/src/shells/serve.ts`),
+esbuild-bundled to one dep-free JS file at build time. No client framework; plain
+form-posts (POST → 303). The engine core (`engine/`) is a standalone TypeScript
+library with `node --test` unit tests, substance-agnostic and IO-free beyond
+injected ports: relative imports carry `.js` extensions (ESM convention), it's
+compiled by **tsc** to `dist/`, and tests run against the compiled output
+(`tsc && node --test dist/test/**`).
 
 ## Structure
 | Path | Purpose |
@@ -47,13 +35,6 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Profiles baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
 | `engine/src/cli/morning-review.ts` | The morning PR-review CLI shell. Late-binds config from env (`REFINERY_VAULT_DIR`, `REFINERY_DEFAULT_REPO`, `REFINERY_REVIEWS_DIR`, `REFINERY_LLM_PROVIDER`, optional `REFINERY_REVIEW_DATE`), wires real git/gh/fs/LLM adapters, runs the orchestrator, prints a JSON summary to stdout. Driven by `nightly-builds-review.service` (timer in the **nightly-builds** domain). |
 | `engine/src/shells/` | HTTP shell over the core: `http.ts` (routes — `/` Gauntlet, `/hopper` ideas+intake, `/cards` legacy, + intake/amend/rewind handlers), `render.ts` (Gauntlet board = projects in phase lanes tinted by profile color + a profiles **legend**; Hopper page = raw ideas + intake; plain form-posts), `hopper.ts` (legacy nightly-builds card view at `/cards`), `serve.ts` (service entry). |
-| `app/` | **Superseded** by the engine shell as the `:8060` service; kept as the original read-only hopper board (slice 01/02) and its tests. The hopper view now lives at the engine's `/hopper` route. |
-| `app/src/parse.ts` | Read-only parser over the hopper (cards + ideas) |
-| `app/src/render.ts` | Server-side Kanban HTML render |
-| `app/src/server.ts` | `node:http` shell; late-bound port + vault from env |
-| `app/test/*.test.ts` | Parser + render unit tests (`node --test`, native type-strip) |
-| `app/package.json` | Dev-only deps + `test`/`typecheck` scripts (esbuild bundle stays dep-free) |
-| `app/tsconfig.json` | TS config (typecheck/editor; esbuild needs no build step) |
 | `engine/` | Engine core: Item + GateModule + Profile contracts (Zod), stage runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
 | `engine/src/effectors/` | Effectors (`ItemEffector`s): `dispatch` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `EffectorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `execute` — the native-execution fallback (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a substance with no standalone runner. `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
@@ -68,6 +49,9 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + optional `defaultTraits` + pipeline). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-19** — Removed the dead `app/` board (the original slice-01/02
+  read-only hopper). `index.nix` builds only `./engine`; nothing referenced
+  `app/`/`@refinery/board`. First step of the engine-finish + UI-redesign arc.
 - **2026-06-19** — `app-refinement` genre (brownfield app compliance) + profile
   `defaultTraits`. A profile may now declare the item traits to stamp at intake,
   so gate applicability is profile **data**, not a hardcoded intake literal —
