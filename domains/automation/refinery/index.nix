@@ -10,7 +10,7 @@
 #
 # Build: the engine carries deps (zod, yaml), so we `npm ci` via buildNpmPackage
 # (npmDepsHash dance — see project memory) and esbuild-bundle serve.ts into one
-# dep-free server.js. Profiles are baked into the store from ./profiles; mutable
+# dep-free server.js. Pipelines are baked into the store from ./pipelines; mutable
 # state (items + the enabled overlay) lives in /var/lib/refinery (StateDirectory).
 #
 # NAMESPACE: hwc.automation.refinery.*
@@ -64,9 +64,9 @@ let
     '';
   };
 
-  # Profiles are data baked into the store (read-only at runtime); the enabled
+  # Pipelines are data baked into the store (read-only at runtime); the enabled
   # overlay is written to mutable state, never back to these files.
-  profilesDir = ./profiles;
+  pipelinesDir = ./pipelines;
 in
 {
   options.hwc.automation.refinery = {
@@ -128,15 +128,17 @@ in
         StateDirectory = "refinery"; # → /var/lib/refinery (items + enabled overlay)
         Environment = [
           "REFINERY_PORT=${toString cfg.port}"
-          "REFINERY_PROFILES_DIR=${profilesDir}"
+          "REFINERY_PIPELINES_DIR=${pipelinesDir}"
           # Domain registry (categorical identity axis: color + tag), data-driven.
           "REFINERY_DOMAINS_FILE=${./domains.yaml}"
           "REFINERY_ITEMS_DIR=/var/lib/refinery/items"
-          "REFINERY_PROFILE_STATE=/var/lib/refinery/profiles.json"
+          # On-disk path stays profiles.json to preserve enable/disable toggles
+          # across the rename; only the env var name changed.
+          "REFINERY_PIPELINE_STATE=/var/lib/refinery/profiles.json"
           # Per-gauntlet "max per run" caps the board edits; both run.sh files
           # read this same file (with their env value as fallback).
           "REFINERY_CAPS_FILE=/var/lib/refinery/caps.json"
-          # The Run button / write-spec effector drops developed specs here.
+          # The Run button / spec executor drops developed specs here.
           "REFINERY_SCRATCH_DIR=/var/lib/refinery/specs"
           # "▶ Run now" / IMMEDIATE mode drops a <goal> request file here; the
           # nightly-builds-runnow path unit (domains/automation/nightly-builds)

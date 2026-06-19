@@ -1,17 +1,55 @@
 // A markdown-file ItemStore (slice 03's port). Persists each Item as one .md
-// file under a directory, with board-readable YAML frontmatter (title, status,
-// phase, genre) PLUS a fenced ```json block carrying the canonical Item for
-// lossless round-trip. load() reads the json block and validates it with
+// file under a directory, with board-readable YAML frontmatter (title, state,
+// step/stage, pipeline) PLUS a fenced ```json block carrying the canonical Item
+// for lossless round-trip. load() reads the json block and validates it with
 // ItemSchema, so save→load is exact regardless of the human-facing rendering.
 //
-// Board-compat note: the frontmatter exposes a `status` field (the item's
-// phaseStatus) and `phase`/`title` so a board could display these items. They
-// live in their own store dir (a scratch/run dir), NOT the gauntlet hopper the
-// slice-01 board currently scans — full board integration is slice 07.
+// Board-compat note: the frontmatter exposes the item's `state`, `step`/`stage`
+// and `title` so a board could display these items. They live in their own
+// store dir (a scratch/run dir).
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { Item, ItemSchema, ItemStore } from "../contracts.js";
+
+const HOPPER_STAGE_KEYS = ["captured", "shaping", "ready"];
+
+// Read-old/write-new migration. Pre-rename `.md` files carry the legacy field
+// names (genre/phase/phaseStatus/nightly) in their canonical JSON block; this
+// normalizes them to the current shape before ItemSchema.parse so existing
+// state survives the rename. save() always writes the new shape, so any item
+// touched by a board action upgrades in place; untouched items upgrade lazily
+// on each read. Idempotent — a new-shape object passes through unchanged.
+function migrateItemJson(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = { ...(raw as Record<string, unknown>) };
+  if (o.pipeline === undefined && o.genre !== undefined) o.pipeline = o.genre;
+  delete o.genre;
+  if (o.state === undefined && o.phaseStatus !== undefined) o.state = o.phaseStatus;
+  delete o.phaseStatus;
+  if (o.step === undefined && o.stage === undefined && o.phase !== undefined) {
+    const isIdea = o.pipeline === "untriaged";
+    if (isIdea) o.stage = HOPPER_STAGE_KEYS.includes(o.phase as string) ? o.phase : "captured";
+    else o.step = o.phase;
+  }
+  delete o.phase;
+  if (o.schedule === undefined && o.nightly !== undefined) o.schedule = o.nightly === true ? "nightly" : "now";
+  delete o.nightly;
+  if (o.schedulePriority === undefined && o.nightlyPriority !== undefined) o.schedulePriority = o.nightlyPriority;
+  delete o.nightlyPriority;
+  if (Array.isArray(o.history)) {
+    o.history = (o.history as unknown[]).map((h) => {
+      if (h && typeof h === "object") {
+        const e = { ...(h as Record<string, unknown>) };
+        if (e.step === undefined && e.phase !== undefined) e.step = e.phase;
+        delete e.phase;
+        return e;
+      }
+      return h;
+    });
+  }
+  return o;
+}
 
 function frontmatter(item: Item): string {
   const title =
@@ -22,20 +60,22 @@ function frontmatter(item: Item): string {
     "---",
     `title: ${JSON.stringify(title)}`,
     `id: ${item.id}`,
-    `genre: ${item.genre}`,
-    `phase: ${item.phase}`,
-    `status: ${item.phaseStatus}`,
+    `pipeline: ${item.pipeline}`,
   ];
+  if (item.step) lines.push(`step: ${item.step}`);
+  if (item.stage) lines.push(`stage: ${item.stage}`);
+  lines.push(`state: ${item.state}`);
   if (item.parkedReason) lines.push(`parkedReason: ${JSON.stringify(item.parkedReason)}`);
   lines.push("---");
   return lines.join("\n");
 }
 
 function render(item: Item): string {
+  const pos = item.step ?? item.stage ?? "—";
   return [
     frontmatter(item),
     "",
-    `# ${item.id} — ${item.genre} @ ${item.phase} (${item.phaseStatus})`,
+    `# ${item.id} — ${item.pipeline} @ ${pos} (${item.state})`,
     "",
     "<!-- canonical item (do not hand-edit) -->",
     "```json",
@@ -50,7 +90,7 @@ const JSON_BLOCK = /```json\n([\s\S]*?)\n```/;
 function parseItemFile(text: string, file: string): Item {
   const m = JSON_BLOCK.exec(text);
   if (!m) throw new Error(`markdown-store: no canonical json block in ${file}`);
-  return ItemSchema.parse(JSON.parse(m[1]));
+  return ItemSchema.parse(migrateItemJson(JSON.parse(m[1])));
 }
 
 export class MarkdownItemStore implements ItemStore {

@@ -10,7 +10,7 @@
 // form-posts (POST → 303); no client framework.
 
 import { Item } from "../contracts.js";
-import { ResolvedProfile } from "../profiles/catalog.js";
+import { ResolvedPipeline } from "../pipelines/catalog.js";
 import { DomainRegistry, domainOf } from "../domains.js";
 import { mdToHtml } from "./markdown.js";
 
@@ -28,7 +28,7 @@ function titleOf(item: Item): string {
     : item.id;
 }
 
-const LANES: { status: Item["phaseStatus"]; label: string }[] = [
+const LANES: { status: Item["state"]; label: string }[] = [
   { status: "pending", label: "In Progress" },
   { status: "running", label: "Running" },
   { status: "parked", label: "Needs You" },
@@ -37,7 +37,7 @@ const LANES: { status: Item["phaseStatus"]; label: string }[] = [
 ];
 
 // Hopper lanes = idea-maturation stages (the chain's first half, before an idea
-// is promoted into the Gauntlet). Stored in `item.phase` on untriaged items.
+// is promoted into the Gauntlet). Stored in `item.stage` on untriaged items.
 export const HOPPER_STAGES: { key: string; label: string }[] = [
   { key: "captured", label: "Captured" },
   { key: "shaping", label: "Shaping" },
@@ -45,16 +45,16 @@ export const HOPPER_STAGES: { key: string; label: string }[] = [
 ];
 export const HOPPER_STAGE_KEYS = HOPPER_STAGES.map((s) => s.key);
 function stageOf(item: Item): string {
-  return HOPPER_STAGE_KEYS.includes(item.phase) ? item.phase : "captured";
+  return item.stage && HOPPER_STAGE_KEYS.includes(item.stage) ? item.stage : "captured";
 }
 
 // Render context threaded to every card: the domain registry (color/tag), all
-// profiles (for the genre label), the promote-target (enabled) profiles, and the
-// `back` path that actions redirect to.
+// pipelines (for the pipeline label), the promote-target (enabled) pipelines, and
+// the `back` path that actions redirect to.
 interface CardCtx {
   domains: DomainRegistry;
-  profiles: ResolvedProfile[];
-  enabled: ResolvedProfile[];
+  profiles: ResolvedPipeline[];
+  enabled: ResolvedPipeline[];
   back: string;
 }
 
@@ -174,7 +174,7 @@ ${body}
 // why-it-matters (one-line summary), status/signal badges, and ≥1 action (the
 // card itself is the click-through; all controls live on the detail page).
 const STATUS_LANES = LANES.map((l) => ({ key: l.status as string, label: l.label }));
-const statusOf = (item: Item): string => item.phaseStatus;
+const statusOf = (item: Item): string => item.state;
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
 
 // Each board POST carries `back` so the handler redirects to the board the user
@@ -198,10 +198,10 @@ function domainPicker(item: Item, ctx: CardCtx, idIn: string, bk: string): strin
 // posts). Kind decides the controls:
 //   • read-only nightly mirror → vault-backed queue / run-now / mode
 //   • idea → domain picker + stage advance (+ promote when Ready)
-//   • engine project → status lane + genre re-pick + domain + run + nightly + delete
+//   • engine project → status lane + pipeline re-pick + domain + run + nightly + delete
 function controlsFor(item: Item, ctx: CardCtx): string {
   const pl = obj(item.payload);
-  const isIdea = item.genre === UNTRIAGED;
+  const isIdea = item.pipeline === UNTRIAGED;
   const readonly = pl.readonly === true;
   const idIn = `<input type="hidden" name="id" value="${esc(item.id)}">`;
   const bk = backField(ctx.back);
@@ -240,7 +240,7 @@ function controlsFor(item: Item, ctx: CardCtx): string {
     // Promote redirects to the Gauntlet (back=/) so the new project is seen
     // arriving, not just leaving the Hopper.
     const promote = stage === "ready"
-      ? `<form class="cc" method="post" action="/promote">${idIn}<input type="hidden" name="back" value="/"><input type="hidden" name="genre" value="project-ideation">
+      ? `<form class="cc" method="post" action="/promote">${idIn}<input type="hidden" name="back" value="/"><input type="hidden" name="pipeline" value="project-ideation">
            <button type="submit" name="schedule" value="immediate" title="refine into a spec now">→ refine now</button>
            <button type="submit" name="schedule" value="nightly" title="queue for the overnight run">🌙 nightly</button>
          </form>`
@@ -249,33 +249,35 @@ function controlsFor(item: Item, ctx: CardCtx): string {
     return `<div class="ccrow">${stageSel}${domainPicker(item, ctx, idIn, bk)}${promote}${delBtn}</div>`;
   }
 
-  // engine project: change lane (status), re-pick pipeline (genre), domain, run,
+  // engine project: change lane (status), re-pick pipeline, domain, run,
   // nightly toggle, delete.
+  const isNightly = item.schedule === "nightly";
   const statusOpts = STATUS_LANES.map(
-    (l) => `<option value="${l.key}"${item.phaseStatus === l.key ? " selected" : ""}>${esc(l.label)}</option>`,
+    (l) => `<option value="${l.key}"${item.state === l.key ? " selected" : ""}>${esc(l.label)}</option>`,
   ).join("");
   const statusSel = `<form class="cc" method="post" action="/status">${idIn}${bk}<select name="status" title="move to lane" onchange="this.form.submit()">${statusOpts}</select></form>`;
-  const genreOpts = ctx.enabled
-    .map((p) => `<option value="${esc(p.genre)}"${p.genre === item.genre ? " selected" : ""}>${esc(p.label)}</option>`)
+  const pipelineOpts = ctx.enabled
+    .map((p) => `<option value="${esc(p.pipeline)}"${p.pipeline === item.pipeline ? " selected" : ""}>${esc(p.label)}</option>`)
     .join("");
-  const genreSel = ctx.enabled.length
-    ? `<form class="cc" method="post" action="/promote">${idIn}${bk}<select name="genre" title="pipeline" onchange="this.form.submit()">${genreOpts}</select></form>`
+  const pipelineSel = ctx.enabled.length
+    ? `<form class="cc" method="post" action="/promote">${idIn}${bk}<select name="pipeline" title="pipeline" onchange="this.form.submit()">${pipelineOpts}</select></form>`
     : "";
-  const runBtn = item.phaseStatus === "running"
+  const runBtn = item.state === "running"
     ? `<span class="badge">running…</span>`
     : `<form class="cc" method="post" action="/run">${idIn}${bk}<button type="submit" title="run the pipeline now">▶</button></form>`;
-  const nightlyBtn = `<form class="cc" method="post" action="/nightly/toggle">${idIn}${bk}<input type="hidden" name="nightly" value="${item.nightly ? "false" : "true"}"><button type="submit" title="${item.nightly ? "remove from nightly" : "run overnight"}">${item.nightly ? "🌙✓" : "🌙"}</button></form>`;
+  const nightlyBtn = `<form class="cc" method="post" action="/nightly/toggle">${idIn}${bk}<input type="hidden" name="nightly" value="${isNightly ? "false" : "true"}"><button type="submit" title="${isNightly ? "remove from nightly" : "run overnight"}">${isNightly ? "🌙✓" : "🌙"}</button></form>`;
   const delBtn = `<form class="cc" method="post" action="/delete">${idIn}${bk}<button type="submit" class="danger" title="delete project">🗑</button></form>`;
-  return `<div class="ccrow">${statusSel}${genreSel}${domainPicker(item, ctx, idIn, bk)}${runBtn}${nightlyBtn}${delBtn}</div>`;
+  return `<div class="ccrow">${statusSel}${pipelineSel}${domainPicker(item, ctx, idIn, bk)}${runBtn}${nightlyBtn}${delBtn}</div>`;
 }
 
 function cardLink(item: Item, ctx: CardCtx): string {
   const dom = domainOf(item, ctx.domains);
   const color = dom.color;
   const c = esc(color);
-  const isIdea = item.genre === UNTRIAGED;
+  const isIdea = item.pipeline === UNTRIAGED;
+  const isNightly = item.schedule === "nightly";
   const pl = obj(item.payload);
-  const moon = item.nightly ? `<span class="moon" title="nightly">🌙</span>` : "";
+  const moon = isNightly ? `<span class="moon" title="nightly">🌙</span>` : "";
   const goal = typeof pl.goal === "string" ? pl.goal : "";
   const customer = typeof pl.customer === "string" ? pl.customer : "";
   const question = typeof pl.title === "string" ? pl.title : "";
@@ -284,13 +286,13 @@ function cardLink(item: Item, ctx: CardCtx): string {
   const doneN = typeof pl.stepsDone === "number" ? pl.stepsDone : 0;
 
   // Identity badge = DOMAIN (color + tag), persistent across the chain. Then the
-  // pipeline/genre as a neutral badge (projects only), plus goal/phase/report.
+  // pipeline as a neutral badge (projects only), plus goal/step/report.
   // Lane (column) encodes stage/status; color stays the domain (type) axis.
   const domainTag = `<span class="badge type" style="color:${c};background:color-mix(in srgb,${c} 18%,transparent);border-color:color-mix(in srgb,${c} 40%,transparent)">${esc(dom.label)}</span>`;
-  const genreLabel = ctx.profiles.find((p) => p.genre === item.genre)?.label ?? item.genre;
-  const genreBadge = isIdea ? "" : `<span class="badge" title="pipeline">${esc(genreLabel)}</span>`;
+  const pipelineLabel = ctx.profiles.find((p) => p.pipeline === item.pipeline)?.label ?? item.pipeline;
+  const pipelineBadge = isIdea ? "" : `<span class="badge" title="pipeline">${esc(pipelineLabel)}</span>`;
   const goalBadge = goal ? `<span class="badge">${esc(goal)}</span>` : "";
-  const phaseBadge = isIdea ? "" : `<span class="badge">${esc(item.phase)}</span>`;
+  const stepBadge = isIdea || !item.step ? "" : `<span class="badge">${esc(item.step)}</span>`;
   const reportBadge = hasReport ? `<span class="badge" title="has REPORT">📄</span>` : "";
 
   const bar = total > 0
@@ -308,8 +310,8 @@ function cardLink(item: Item, ctx: CardCtx): string {
 
   // Card is a container (not a link) so it can hold interactive controls; the
   // title is the click-through to the detail page.
-  return `<div class="card${item.nightly ? " nightly" : ""}" style="${skin}">
-    <div class="badges">${domainTag}${genreBadge}${goalBadge}${phaseBadge}${reportBadge}${moon}</div>
+  return `<div class="card${isNightly ? " nightly" : ""}" style="${skin}">
+    <div class="badges">${domainTag}${pipelineBadge}${goalBadge}${stepBadge}${reportBadge}${moon}</div>
     <a class="title" href="/project/${esc(item.id)}">${esc(title)}</a>
     ${why}
     ${bar}
@@ -341,8 +343,8 @@ const emptyRegistry: DomainRegistry = { domains: [], fallback: { key: "misc", la
 /** Gauntlet: triaged PROJECTS in status lanes, colored by domain. */
 export function renderGauntlet(
   projects: Item[],
-  profiles: ResolvedProfile[],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/" };
@@ -354,8 +356,8 @@ export function renderGauntlet(
  *  promotes into the Gauntlet. */
 export function renderHopperPage(
   ideas: Item[],
-  profiles: ResolvedProfile[],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/hopper" };
@@ -374,8 +376,8 @@ export function renderHopperPage(
 export function renderNightly(
   nightly: Item[],
   maxPerNight: number,
-  profiles: ResolvedProfile[],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/nightly" };
@@ -395,47 +397,48 @@ export function renderNightly(
 /** Detail + edit page for one item (project or idea). */
 export function renderProjectDetail(
   item: Item,
-  profiles: ResolvedProfile[],
-  enabledProfiles: ResolvedProfile[],
+  profiles: ResolvedPipeline[],
+  enabledProfiles: ResolvedPipeline[],
   domains: DomainRegistry = emptyRegistry,
 ): string {
-  const isIdea = item.genre === UNTRIAGED;
+  const isIdea = item.pipeline === UNTRIAGED;
   const color = domainOf(item, domains).color;
-  const profile = profiles.find((p) => p.genre === item.genre);
-  const targets = profile
+  const isNightly = item.schedule === "nightly";
+  const pipeline = profiles.find((p) => p.pipeline === item.pipeline);
+  const targets = pipeline
     ? (() => {
-        const idx = profile.gates.indexOf(item.phase);
-        return idx > 0 ? profile.gates.slice(0, idx) : profile.gates.filter((g) => g !== item.phase);
+        const idx = item.step ? pipeline.gates.indexOf(item.step) : -1;
+        return idx > 0 ? pipeline.gates.slice(0, idx) : pipeline.gates.filter((g) => g !== item.step);
       })()
     : [];
 
   const history = item.history.length
-    ? item.history.map((h) => `<div class="hist">${esc(h.at)} · <b>${esc(h.phase)}</b> · ${esc(h.status)}${h.note ? ` — ${esc(h.note)}` : ""}</div>`).join("")
+    ? item.history.map((h) => `<div class="hist">${esc(h.at)} · <b>${esc(h.step)}</b> · ${esc(h.status)}${h.note ? ` — ${esc(h.note)}` : ""}</div>`).join("")
     : `<div class="hist">—</div>`;
 
   const promote = isIdea
     ? `<h2>Promote to a project</h2>
        <form class="act" method="post" action="/promote">
          <input type="hidden" name="id" value="${esc(item.id)}">
-         <select name="genre">${enabledProfiles.map((p) => `<option value="${esc(p.genre)}">${esc(p.label)}</option>`).join("")}</select>
+         <select name="pipeline">${enabledProfiles.map((p) => `<option value="${esc(p.pipeline)}">${esc(p.label)}</option>`).join("")}</select>
          <button type="submit">promote →</button>
        </form>`
     : "";
 
   const parkedActions =
-    item.phaseStatus === "parked"
+    item.state === "parked"
       ? `<form class="act" method="post" action="/amend">
            <input type="hidden" name="id" value="${esc(item.id)}">
-           <input type="text" name="note" placeholder="answer / amendment (re-arms the phase)" required>
+           <input type="text" name="note" placeholder="answer / amendment (re-arms the step)" required>
            <button type="submit">✎ amend</button>
          </form>
          ${targets.length ? `<form class="act" method="post" action="/rewind">
            <input type="hidden" name="id" value="${esc(item.id)}">
-           <select name="toPhase">${targets.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+           <select name="toStep">${targets.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
            <input type="text" name="note" placeholder="why rewind?" required>
            <button type="submit">⟲ rewind</button>
          </form>` : ""}`
-      : `<div class="kv">No human action needed at this phase (${esc(item.phaseStatus)}).</div>`;
+      : `<div class="kv">No human action needed at this step (${esc(item.state)}).</div>`;
 
   const payloadObj = item.payload && typeof item.payload === "object" ? (item.payload as Record<string, unknown>) : {};
   const readonly = payloadObj.readonly === true;
@@ -452,17 +455,17 @@ export function renderProjectDetail(
     ? `<a href="/report/${esc(item.id)}">📄 view REPORT</a>`
     : `<span class="kv">no REPORT yet</span>`;
 
-  // Run button — triggers the engine pipeline (gates → effector) for a triaged
+  // Run button — triggers the engine pipeline (gates → executor) for a triaged
   // engine item. Read-only mirror items (nightly/SR cards) execute via their own
   // gauntlets, so they don't get it.
-  const runBlock = (!isIdea && profile && !readonly)
-    ? item.phaseStatus === "running"
-      ? `<h2>Run</h2><div class="kv">⏳ running the ${esc(item.genre)} pipeline (${esc(profile.gates.join(" → "))})… refresh to see the result.</div>`
+  const runBlock = (!isIdea && pipeline && !readonly)
+    ? item.state === "running"
+      ? `<h2>Run</h2><div class="kv">⏳ running the ${esc(item.pipeline)} pipeline (${esc(pipeline.gates.join(" → "))})… refresh to see the result.</div>`
       : `<h2>Run</h2>
          <form class="act" method="post" action="/run">
            <input type="hidden" name="id" value="${esc(item.id)}">
            <button type="submit">▶ run pipeline now</button>
-           <span class="kv">runs ${esc(profile.gates.join(" → "))}; writes a developed spec</span>
+           <span class="kv">runs ${esc(pipeline.gates.join(" → "))}; writes a developed spec</span>
          </form>`
     : "";
 
@@ -489,9 +492,9 @@ export function renderProjectDetail(
   <h2>Schedule</h2>
   <form class="act" method="post" action="/nightly/toggle">
     <input type="hidden" name="id" value="${esc(item.id)}">
-    <input type="hidden" name="nightly" value="${item.nightly ? "false" : "true"}">
-    <button type="submit">${item.nightly ? "🌙 remove from nightly" : "🌙 run overnight"}</button>
-    <span class="kv">${item.nightly ? "queued for the overnight gauntlet run" : "runs only when advanced manually / on a beat"}</span>
+    <input type="hidden" name="nightly" value="${isNightly ? "false" : "true"}">
+    <button type="submit">${isNightly ? "🌙 remove from nightly" : "🌙 run overnight"}</button>
+    <span class="kv">${isNightly ? "queued for the overnight gauntlet run" : "runs only when advanced manually / on a beat"}</span>
   </form>
 
   <h2>Danger</h2>
@@ -504,7 +507,7 @@ export function renderProjectDetail(
   const body = `<div class="detail">
   <a href="/" class="kv">← board</a>
   <h2><span class="swatch" style="background:${esc(color)}"></span> ${esc(titleOf(item))}</h2>
-  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.genre)}`}${goal ? ` · goal: <b>${esc(goal)}</b>` : ""} · phase <b>${esc(item.phase)}</b> · ${esc(item.phaseStatus)} ${item.nightly ? "· 🌙 nightly" : ""}</div>
+  <div class="kv">${isIdea ? "idea (untriaged)" : `project · ${esc(item.pipeline)}`}${goal ? ` · goal: <b>${esc(goal)}</b>` : ""} · step <b>${esc(item.step ?? item.stage ?? "—")}</b> · ${esc(item.state)} ${isNightly ? "· 🌙 nightly" : ""}</div>
   ${item.parkedReason ? `<div class="reason">${esc(item.parkedReason)}</div>` : ""}
   ${input ? `<div class="md"><p><em>${esc(input)}</em></p></div>` : ""}
 
@@ -527,7 +530,7 @@ export function renderProjectDetail(
 export function renderSr(
   srs: Item[],
   maxPerNight: number,
-  profiles: ResolvedProfile[],
+  profiles: ResolvedPipeline[],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const srStatusOf = (item: Item): string => {
@@ -718,8 +721,8 @@ export function renderNightlyProject(item: Item): string {
  *  read-only detail (/project/nbf:<goal>). */
 export function renderFinished(
   finished: Item[],
-  profiles: ResolvedProfile[] = [],
-  enabled: ResolvedProfile[] = [],
+  profiles: ResolvedPipeline[] = [],
+  enabled: ResolvedPipeline[] = [],
   domains: DomainRegistry = emptyRegistry,
 ): string {
   const ctx: CardCtx = { domains, profiles, enabled, back: "/finished" };

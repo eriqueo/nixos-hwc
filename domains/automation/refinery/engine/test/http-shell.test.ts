@@ -15,18 +15,18 @@ function setup(
   opts: { runLlm?: LlmPort; autoRun?: boolean } = {},
 ): { cfg: HttpShellConfig; cleanup: () => void } {
   const root = mkdtempSync(join(tmpdir(), "refinery-shell-"));
-  const profilesDir = join(root, "profiles");
-  mkdirSync(profilesDir, { recursive: true });
+  const pipelinesDir = join(root, "profiles");
+  mkdirSync(pipelinesDir, { recursive: true });
   writeFileSync(
-    join(profilesDir, "project-ideation.yaml"),
-    `genre: project-ideation\nlabel: Project Ideation\nsource: http-intake\ngates:\n  - stepwise-refinement\n  - principles-create\n  - premortem\nexecuteMode: none\neffectors:\n  - write-spec\n${opts.autoRun ? "autoRun: true\n" : ""}`,
+    join(pipelinesDir, "project-ideation.yaml"),
+    `pipeline: project-ideation\nlabel: Project Ideation\nsource: http-intake\ngates:\n  - stepwise-refinement\n  - principles-create\n  - premortem\nexecutorMode: none\nexecutors:\n  - spec\n${opts.autoRun ? "autoRun: true\n" : ""}`,
   );
   return {
     cfg: {
       port: 0,
       itemsDir: join(root, "items"),
-      profilesDir,
-      profileStatePath: join(root, "state.json"),
+      pipelinesDir,
+      pipelineStatePath: join(root, "state.json"),
       capsPath: join(root, "caps.json"),
       scratchDir: join(root, "specs"),
       triageProvider: "claude-cli",
@@ -59,9 +59,9 @@ function runStub(decision: "pass" | "park" = "pass"): LlmPort {
   return { async complete() { return JSON.stringify(body); } };
 }
 
-const triageStub = (genre: string, confidence = 0.9): LlmPort => ({
+const triageStub = (pipeline: string, confidence = 0.9): LlmPort => ({
   async complete() {
-    return JSON.stringify({ genre, confidence, reason: "stub" });
+    return JSON.stringify({ pipeline, confidence, reason: "stub" });
   },
 });
 
@@ -72,9 +72,9 @@ test("intake triages a sentence into a profile item at its first gate", async ()
     await shell.intake("an engine that refines ideas");
     const items = await shell.store.list();
     assert.equal(items.length, 1);
-    assert.equal(items[0].genre, "project-ideation");
-    assert.equal(items[0].phase, "stepwise-refinement");
-    assert.equal(items[0].phaseStatus, "pending");
+    assert.equal(items[0].pipeline, "project-ideation");
+    assert.equal(items[0].step, "stepwise-refinement");
+    assert.equal(items[0].state, "pending");
   } finally {
     cleanup();
   }
@@ -87,8 +87,8 @@ test("intake never fails — a triage LLM error drops the idea into the hopper u
     const shell = createShell(cfg);
     await shell.intake("an idea the LLM can't reach");
     const item = (await shell.store.list())[0];
-    assert.equal(item.genre, UNTRIAGED);
-    assert.equal(item.phaseStatus, "parked");
+    assert.equal(item.pipeline, UNTRIAGED);
+    assert.equal(item.state, "parked");
     assert.match(item.parkedReason!, /triage unavailable: claude unavailable/);
   } finally {
     cleanup();
@@ -101,8 +101,8 @@ test("intake of an unclassifiable sentence parks an untriaged item", async () =>
     const shell = createShell(cfg);
     await shell.intake("???");
     const item = (await shell.store.list())[0];
-    assert.equal(item.genre, "untriaged");
-    assert.equal(item.phaseStatus, "parked");
+    assert.equal(item.pipeline, "untriaged");
+    assert.equal(item.state, "parked");
   } finally {
     cleanup();
   }
@@ -113,13 +113,13 @@ test("amend re-arms a parked item with the note recorded", async () => {
   try {
     const shell = createShell(cfg);
     const parked: Item = {
-      id: "p1", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
+      id: "p1", pipeline: "project-ideation", step: "premortem", state: "parked",
       parkedReason: "needs a call", payload: { title: "p1" }, history: [],
     };
     await shell.store.save(parked);
     await shell.amend("p1", "here is the answer");
     const item = (await shell.store.load("p1"))!;
-    assert.equal(item.phaseStatus, "pending");
+    assert.equal(item.state, "pending");
     assert.equal(item.parkedReason, undefined);
     assert.deepEqual((item.payload as { amendments: string[] }).amendments, ["here is the answer"]);
     assert.equal(item.history.at(-1)!.status, "entered");
@@ -133,14 +133,14 @@ test("rewind moves a parked item back to an earlier gate", async () => {
   try {
     const shell = createShell(cfg);
     const item: Item = {
-      id: "r1", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
+      id: "r1", pipeline: "project-ideation", step: "premortem", state: "parked",
       payload: { title: "r1" }, history: [],
     };
     await shell.store.save(item);
     await shell.doRewind("r1", "stepwise-refinement", "found an upstream problem");
     const back = (await shell.store.load("r1"))!;
-    assert.equal(back.phase, "stepwise-refinement");
-    assert.equal(back.phaseStatus, "pending");
+    assert.equal(back.step, "stepwise-refinement");
+    assert.equal(back.state, "pending");
     assert.equal(back.history.at(-1)!.status, "rewound");
   } finally {
     cleanup();
@@ -164,19 +164,19 @@ test("setNightly flags a project; bumpNightly changes its priority", async () =>
   try {
     const shell = createShell(cfg);
     const p: Item = {
-      id: "n1", genre: "project-ideation", phase: "premortem", phaseStatus: "pending",
+      id: "n1", pipeline: "project-ideation", step: "premortem", state: "pending",
       payload: { title: "n1" }, history: [],
     };
     await shell.store.save(p);
     await shell.setNightly("n1", true);
     let item = (await shell.store.load("n1"))!;
-    assert.equal(item.nightly, true);
-    assert.equal(item.nightlyPriority, 0);
+    assert.equal(item.schedule, "nightly");
+    assert.equal(item.schedulePriority, 0);
     await shell.bumpNightly("n1", "up");
     item = (await shell.store.load("n1"))!;
-    assert.equal(item.nightlyPriority, 1);
+    assert.equal(item.schedulePriority, 1);
     await shell.setNightly("n1", false);
-    assert.equal((await shell.store.load("n1"))!.nightly, false);
+    assert.equal((await shell.store.load("n1"))!.schedule, "now");
   } finally {
     cleanup();
   }
@@ -187,15 +187,15 @@ test("promote turns an untriaged idea into a project at its profile's first phas
   try {
     const shell = createShell(cfg);
     const idea: Item = {
-      id: "idea1", genre: UNTRIAGED, phase: "triage", phaseStatus: "parked",
+      id: "idea1", pipeline: UNTRIAGED, step: "triage", state: "parked",
       parkedReason: "no clear genre", payload: { title: "raw" }, history: [],
     };
     await shell.store.save(idea);
     await shell.promote("idea1", "project-ideation");
     const item = (await shell.store.load("idea1"))!;
-    assert.equal(item.genre, "project-ideation");
-    assert.equal(item.phase, "stepwise-refinement");
-    assert.equal(item.phaseStatus, "pending");
+    assert.equal(item.pipeline, "project-ideation");
+    assert.equal(item.step, "stepwise-refinement");
+    assert.equal(item.state, "pending");
     assert.equal(item.history.at(-1)!.status, "entered");
   } finally {
     cleanup();
@@ -204,11 +204,11 @@ test("promote turns an untriaged idea into a project at its profile's first phas
 
 test("renderSr lists SR investigations linking to their REPORT + has a max cap form", () => {
   const profiles = [
-    { genre: "datax-sr", label: "DataX SR", source: "sr", gates: ["premortem"], executeMode: "read-only",
-      effectors: ["execute"], enabled: true, llmProvider: "claude-cli", color: "#83a598" },
+    { pipeline: "datax-sr", label: "DataX SR", source: "sr", gates: ["premortem"], executorMode: "read-only",
+      executors: ["native"], enabled: true, llmProvider: "claude-cli", color: "#83a598" },
   ];
   const srs: Item[] = [
-    { id: "sr:2026-06-12-abc", genre: "datax-sr", phase: "investigated", phaseStatus: "passed",
+    { id: "sr:2026-06-12-abc", pipeline: "datax-sr", step: "investigated", state: "passed",
       payload: { title: "Customer X cannot sync", customer: "Acme Co", srStatus: "engaged", run: "investigations/2026-06-12-abc/", hasReport: true, readonly: true, source: "sr_gauntlet investigation" }, history: [] },
   ];
   const html = renderSr(srs, 5, profiles);
@@ -221,7 +221,7 @@ test("renderSr lists SR investigations linking to their REPORT + has a max cap f
 
 test("renderSrDetail mirrors the SR2 modal — Gameplan/Thread/Details tabs, gameplan default", () => {
   const item: Item = {
-    id: "sr:2026-06-12-abc", genre: "datax-sr", phase: "investigated", phaseStatus: "passed",
+    id: "sr:2026-06-12-abc", pipeline: "datax-sr", step: "investigated", state: "passed",
     payload: { title: "Cannot sync inventory", customer: "Acme Co", email: "a@acme.co", srStatus: "engaged", srPhase: "engaged", run: "investigations/2026-06-12-abc/" },
     history: [],
   };
@@ -246,7 +246,7 @@ test("deleteItem removes a project from the store", async () => {
   try {
     const shell = createShell(cfg);
     const p: Item = {
-      id: "del1", genre: "project-ideation", phase: "premortem", phaseStatus: "passed",
+      id: "del1", pipeline: "project-ideation", step: "premortem", state: "passed",
       payload: { title: "del" }, history: [],
     };
     await shell.store.save(p);
@@ -260,18 +260,18 @@ test("deleteItem removes a project from the store", async () => {
 
 test("renderProjectDetail: editable item shows delete; read-only mirror item hides edits", () => {
   const profiles = [
-    { genre: "nightly-build", label: "Nightly Builds", source: "vault", gates: ["stepwise-refinement"],
-      executeMode: "write", effectors: ["execute"], enabled: true, llmProvider: "claude-cli", color: "#fe8019" },
+    { pipeline: "nightly-build", label: "Nightly Builds", source: "vault", gates: ["stepwise-refinement"],
+      executorMode: "write", executors: ["native"], enabled: true, llmProvider: "claude-cli", color: "#fe8019" },
   ];
   const project: Item = {
-    id: "e1", genre: "nightly-build", phase: "premortem", phaseStatus: "passed",
+    id: "e1", pipeline: "nightly-build", step: "premortem", state: "passed",
     payload: { title: "editable" }, history: [],
   };
   assert.ok(renderProjectDetail(project, profiles, profiles).includes('action="/delete"'));
 
   const mirror: Item = {
-    id: "nb:goal/01-x", genre: "nightly-build", phase: "queued", phaseStatus: "pending",
-    payload: { title: "mirror card", readonly: true, run: "runs/2026-06-15-x/", pr: "branch x" }, history: [], nightly: true,
+    id: "nb:goal/01-x", pipeline: "nightly-build", step: "queued", state: "pending",
+    payload: { title: "mirror card", readonly: true, run: "runs/2026-06-15-x/", pr: "branch x" }, history: [], schedule: "nightly",
   };
   const d = renderProjectDetail(mirror, profiles, profiles);
   assert.ok(d.includes("read-only"));
@@ -282,13 +282,13 @@ test("renderProjectDetail: editable item shows delete; read-only mirror item hid
 
 test("renderProjectDetail shows actions + nightly toggle; renderNightly is a status-lane kanban", () => {
   const profiles = [
-    { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
-      gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
-      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executorMode: "none",
+      executors: ["spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
   ];
   const parked: Item = {
-    id: "d1", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
-    parkedReason: "needs a call", payload: { title: "a project" }, history: [], nightly: true,
+    id: "d1", pipeline: "project-ideation", step: "premortem", state: "parked",
+    parkedReason: "needs a call", payload: { title: "a project" }, history: [], schedule: "nightly",
   };
   const detail = renderProjectDetail(parked, profiles, profiles);
   assert.ok(detail.includes('action="/amend"'));
@@ -298,17 +298,17 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly is a sta
   assert.ok(detail.includes('value="stepwise-refinement"'));
 
   const idea: Item = {
-    id: "d2", genre: UNTRIAGED, phase: "triage", phaseStatus: "parked",
+    id: "d2", pipeline: UNTRIAGED, step: "triage", state: "parked",
     payload: { title: "raw idea" }, history: [],
   };
   assert.ok(renderProjectDetail(idea, profiles, profiles).includes('action="/promote"'), "ideas can be promoted");
 
   // A read-only nightly-build mirror card carries its vault-backed queue control inline.
   const mirror: Item = {
-    id: "nb:goal/01-x", genre: "nightly-build", phase: "1/3 steps", phaseStatus: "parked",
+    id: "nb:goal/01-x", pipeline: "nightly-build", step: "1/3 steps", state: "parked",
     payload: { title: "mirror card", readonly: true, source: "nightly-builds project",
       stepsDone: 1, stepsTotal: 3, queuedCount: 0, mode: "nightly", nextStatus: "draft" },
-    history: [], nightly: true,
+    history: [], schedule: "nightly",
   };
   const n = renderNightly([parked, mirror], 1, profiles, profiles);
   assert.ok(n.includes('class="board"'), "nightly is a status-lane kanban");
@@ -320,7 +320,7 @@ test("renderProjectDetail shows actions + nightly toggle; renderNightly is a sta
 
 test("renderFinished is a plain grid of click-through cards; renderFinishedProject is read-only + send-back", () => {
   const finished: Item = {
-    id: "nbf:my-goal", genre: "nightly-build", phase: "3/3 steps", phaseStatus: "passed",
+    id: "nbf:my-goal", pipeline: "nightly-build", step: "3/3 steps", state: "passed",
     payload: {
       title: "graduated project", goal: "my-goal", readonly: true, finished: true,
       source: "nightly-builds (finished)", stepsDone: 3, stepsTotal: 3,
@@ -329,7 +329,7 @@ test("renderFinished is a plain grid of click-through cards; renderFinishedProje
         { n: "02", file: "02-y.md", title: "step two", status: "done", step: "2 of 3", run: "", pr: "https://github.com/eriqueo/x/pull/9" },
       ],
     },
-    history: [], nightly: true,
+    history: [], schedule: "nightly",
   };
 
   const grid = renderFinished([finished], [], []);
@@ -355,12 +355,12 @@ const DOMAINS = {
 
 test("renderGauntlet: cards colored by DOMAIN, genre as a badge, inline controls", () => {
   const profiles = [
-    { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
-      gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
-      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#a3be8c" },
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executorMode: "none",
+      executors: ["spec"], enabled: true, llmProvider: "claude-cli", color: "#a3be8c" },
   ];
   const parked: Item[] = [
-    { id: "x", genre: "project-ideation", phase: "premortem", phaseStatus: "parked",
+    { id: "x", pipeline: "project-ideation", step: "premortem", state: "parked",
       parkedReason: "needs a call", payload: { title: "a project", domain: "datax" }, history: [] },
   ];
   const g = renderGauntlet(parked, profiles, profiles, DOMAINS);
@@ -379,15 +379,15 @@ test("renderGauntlet: cards colored by DOMAIN, genre as a badge, inline controls
 
 test("renderHopperPage: stage-lane kanban; a Ready idea promotes inline", () => {
   const profiles = [
-    { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
-      gates: ["stepwise-refinement"], executeMode: "none", effectors: ["write-spec"],
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement"], executorMode: "none", executors: ["spec"],
       enabled: true, llmProvider: "claude-cli", color: "#a3be8c" },
   ];
   // A captured idea (no promote yet) and a ready idea (promote shown).
   const ideas: Item[] = [
-    { id: "i1", genre: UNTRIAGED, phase: "captured", phaseStatus: "parked",
+    { id: "i1", pipeline: UNTRIAGED, stage: "captured", state: "parked",
       payload: { title: "datax: raw idea", input: "datax: raw idea" }, history: [] },
-    { id: "i2", genre: UNTRIAGED, phase: "ready", phaseStatus: "parked",
+    { id: "i2", pipeline: UNTRIAGED, stage: "ready", state: "parked",
       payload: { title: "shaped idea", input: "shaped idea" }, history: [] },
   ];
   const h = renderHopperPage(ideas, profiles, profiles, DOMAINS);
@@ -406,17 +406,17 @@ test("setStatus moves an engine item to another lane (manual board override)", a
   try {
     const shell = createShell(cfg);
     const p: Item = {
-      id: "mv1", genre: "project-ideation", phase: "premortem", phaseStatus: "pending",
+      id: "mv1", pipeline: "project-ideation", step: "premortem", state: "pending",
       payload: { title: "movable" }, history: [],
     };
     await shell.store.save(p);
     await shell.setStatus("mv1", "parked");
     const moved = await shell.store.load("mv1");
-    assert.equal(moved!.phaseStatus, "parked");
+    assert.equal(moved!.state, "parked");
     assert.equal(moved!.history.at(-1)!.note, "status set on board");
     // invalid status is ignored (no throw, no change)
     await shell.setStatus("mv1", "bogus");
-    assert.equal((await shell.store.load("mv1"))!.phaseStatus, "parked");
+    assert.equal((await shell.store.load("mv1"))!.state, "parked");
   } finally {
     cleanup();
   }
@@ -427,21 +427,21 @@ test("setStage advances a hopper idea; setDomain overrides its color/tag", async
   try {
     const shell = createShell(cfg);
     const idea: Item = {
-      id: "h1", genre: UNTRIAGED, phase: "captured", phaseStatus: "parked",
+      id: "h1", pipeline: UNTRIAGED, stage: "captured", state: "parked",
       payload: { title: "an idea", input: "an idea" }, history: [],
     };
     await shell.store.save(idea);
     await shell.setStage("h1", "ready");
-    assert.equal((await shell.store.load("h1"))!.phase, "ready", "stage advanced");
+    assert.equal((await shell.store.load("h1"))!.stage, "ready", "stage advanced");
     await shell.setStage("h1", "bogus"); // invalid stage ignored
-    assert.equal((await shell.store.load("h1"))!.phase, "ready");
+    assert.equal((await shell.store.load("h1"))!.stage, "ready");
     await shell.setDomain("h1", "datax");
     assert.equal(((await shell.store.load("h1"))!.payload as { domain?: string }).domain, "datax", "domain override stored");
     // stage move only applies to untriaged ideas (a triaged project is unaffected)
-    const proj: Item = { id: "p1", genre: "project-ideation", phase: "premortem", phaseStatus: "pending", payload: {}, history: [] };
+    const proj: Item = { id: "p1", pipeline: "project-ideation", step: "premortem", state: "pending", payload: {}, history: [] };
     await shell.store.save(proj);
     await shell.setStage("p1", "ready");
-    assert.equal((await shell.store.load("p1"))!.phase, "premortem", "stage move ignores triaged projects");
+    assert.equal((await shell.store.load("p1"))!.step, "premortem", "stage move ignores triaged projects");
   } finally {
     cleanup();
   }
@@ -452,25 +452,25 @@ test("promote(immediate) runs the pipeline now; promote(nightly) flags it", asyn
   try {
     const shell = createShell(cfg);
     const ready: Item = {
-      id: "r1", genre: UNTRIAGED, phase: "ready", phaseStatus: "parked",
+      id: "r1", pipeline: UNTRIAGED, stage: "ready", state: "parked",
       payload: { title: "ready idea", input: "an engine that refines ideas into specs" }, history: [],
     };
     await shell.store.save(ready);
     await shell.promote("r1", "project-ideation", "immediate");
     const after = await shell.store.load("r1");
-    assert.equal(after!.genre, "project-ideation", "promoted into the pipeline");
+    assert.equal(after!.pipeline, "project-ideation", "promoted into the pipeline");
     // immediate → the run effector executed (spec written, passed)
-    assert.equal(after!.phaseStatus, "passed");
+    assert.equal(after!.state, "passed");
     assert.ok(existsSync(join(cfg.scratchDir, "r1-spec.md")), "immediate promote ran the pipeline now");
 
     const ready2: Item = {
-      id: "r2", genre: UNTRIAGED, phase: "ready", phaseStatus: "parked",
+      id: "r2", pipeline: UNTRIAGED, stage: "ready", state: "parked",
       payload: { title: "later idea", input: "later idea" }, history: [],
     };
     await shell.store.save(ready2);
     await shell.promote("r2", "project-ideation", "nightly");
     const n = await shell.store.load("r2");
-    assert.equal(n!.nightly, true, "nightly promote flags for the overnight batch");
+    assert.equal(n!.schedule, "nightly", "nightly promote flags for the overnight batch");
   } finally {
     cleanup();
   }
@@ -484,9 +484,9 @@ test("runItem runs a pending engine item through the pipeline and writes a spec"
     const id = (await shell.store.list())[0]!.id;
     await shell.runItem(id);
     const item = await shell.store.load(id);
-    assert.equal(item!.phase, "premortem");
-    assert.equal(item!.phaseStatus, "passed");
-    assert.equal(item!.history.at(-1)!.phase, "write-spec");
+    assert.equal(item!.step, "premortem");
+    assert.equal(item!.state, "passed");
+    assert.equal(item!.history.at(-1)!.step, "spec");
     assert.ok(existsSync(join(cfg.scratchDir, `${id}-spec.md`)), "developed spec written to scratch dir");
   } finally {
     cleanup();
@@ -500,7 +500,7 @@ test("kickRun marks the item running, then completes it — the Run button path"
     await shell.intake("a fresh idea to develop");
     const id = (await shell.store.list())[0]!.id;
     await shell.kickRun(id); // returns the run promise in tests (prod fire-and-forgets)
-    assert.equal((await shell.store.load(id))!.phaseStatus, "passed");
+    assert.equal((await shell.store.load(id))!.state, "passed");
   } finally {
     cleanup();
   }
@@ -512,7 +512,7 @@ test("an autoRun genre runs the pipeline on intake — no button press (incoming
     const shell = createShell(cfg);
     await shell.intake("a ticket that should process itself on arrival");
     await new Promise((r) => setTimeout(r, 150)); // let the fire-and-forget run finish
-    assert.equal((await shell.store.list())[0]!.phaseStatus, "passed", "auto-ran to completion");
+    assert.equal((await shell.store.list())[0]!.state, "passed", "auto-ran to completion");
   } finally {
     cleanup();
   }
@@ -520,19 +520,19 @@ test("an autoRun genre runs the pipeline on intake — no button press (incoming
 
 test("renderProjectDetail shows a Run button for a pending engine item; running hides it", () => {
   const profiles = [
-    { genre: "project-ideation", label: "Project Ideation", source: "http-intake",
-      gates: ["stepwise-refinement", "principles-create", "premortem"], executeMode: "none",
-      effectors: ["write-spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
+    { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
+      gates: ["stepwise-refinement", "principles-create", "premortem"], executorMode: "none",
+      executors: ["spec"], enabled: true, llmProvider: "claude-cli", color: "#b8bb26" },
   ];
   const pending: Item = {
-    id: "r1", genre: "project-ideation", phase: "stepwise-refinement", phaseStatus: "pending",
+    id: "r1", pipeline: "project-ideation", step: "stepwise-refinement", state: "pending",
     payload: { title: "an idea", input: "an idea" }, history: [],
   };
   const d = renderProjectDetail(pending, profiles, profiles);
   assert.ok(d.includes('action="/run"'), "pending engine item exposes the Run form");
   assert.ok(d.includes("run pipeline now"));
 
-  const running = renderProjectDetail({ ...pending, phaseStatus: "running" }, profiles, profiles);
+  const running = renderProjectDetail({ ...pending, state: "running" }, profiles, profiles);
   assert.ok(running.includes("running the project-ideation pipeline"), "running shows progress");
   assert.ok(!running.includes('action="/run"'), "no second Run while already running");
 });
@@ -563,7 +563,7 @@ test("requestSrRunNow drops a clean srId verbatim into the spool", () => {
 
 test("renderSrDetail shows a re-investigate button only when the SR carries an srId", () => {
   const withId: Item = {
-    id: "sr:2026-06-15-abc", genre: "datax-sr", phase: "done", phaseStatus: "passed",
+    id: "sr:2026-06-15-abc", pipeline: "datax-sr", step: "done", state: "passed",
     payload: { title: "login broken", customer: "Acme", srId: "abc123", readonly: true }, history: [],
   };
   const html = renderSrDetail(withId, { gameplan: "## Verdict", thread: null, context: null });

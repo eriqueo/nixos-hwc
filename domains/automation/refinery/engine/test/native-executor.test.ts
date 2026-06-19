@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ClaudePort, ClaudeRunResult, GitPort, ReportPort } from "../src/effectors/ports.js";
+import { ClaudePort, ClaudeRunResult, GitPort, ReportPort } from "../src/executors/ports.js";
 import {
-  composeExecutePrompt,
-  makeExecuteEffector,
-  parseExecuteVerdict,
-  ExecuteConfig,
-} from "../src/effectors/execute.js";
+  composeNativePrompt,
+  makeNativeExecutor,
+  parseNativeVerdict,
+  NativeConfig,
+} from "../src/executors/native.js";
 import { makeItem } from "./helpers.js";
 
 // ── Stub ports that record calls ───────────────────────────────────────────
@@ -71,10 +71,10 @@ const reportPort = (present: boolean): ReportPort => ({
   },
 });
 
-const writeCfg = (over: Partial<ExecuteConfig> = {}): ExecuteConfig => ({
+const writeCfg = (over: Partial<NativeConfig> = {}): NativeConfig => ({
   repo: "/repo",
   worktree: "/tmp/wt",
-  executeMode: "write",
+  executorMode: "write",
   branch: "refinery/test",
   promptWrapper: "WRAPPER",
   verdictPattern: /NIGHTLY-VERDICT: (success|failure)/,
@@ -84,10 +84,10 @@ const writeCfg = (over: Partial<ExecuteConfig> = {}): ExecuteConfig => ({
   ...over,
 });
 
-const readonlyCfg = (over: Partial<ExecuteConfig> = {}): ExecuteConfig => ({
+const readonlyCfg = (over: Partial<NativeConfig> = {}): NativeConfig => ({
   repo: "/repo",
   worktree: "/tmp/wt",
-  executeMode: "read-only",
+  executorMode: "read-only",
   promptWrapper: "WRAPPER",
   verdictPattern: /SR-VERDICT: (investigated|inconclusive)/,
   successVerdicts: ["investigated", "inconclusive"],
@@ -98,25 +98,25 @@ const readonlyCfg = (over: Partial<ExecuteConfig> = {}): ExecuteConfig => ({
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-test("composeExecutePrompt appends the payload after the wrapper", () => {
-  const p = composeExecutePrompt("WRAP", makeItem({ payload: { foo: 1 } }));
+test("composeNativePrompt appends the payload after the wrapper", () => {
+  const p = composeNativePrompt("WRAP", makeItem({ payload: { foo: 1 } }));
   assert.ok(p.startsWith("WRAP"));
   assert.ok(p.includes("# THE ITEM"));
   assert.ok(p.includes('"foo": 1'));
 });
 
-test("parseExecuteVerdict reads both verdict patterns and takes the last match", () => {
+test("parseNativeVerdict reads both verdict patterns and takes the last match", () => {
   const nightly = "noise\nNIGHTLY-VERDICT: failure\nNIGHTLY-VERDICT: success\n";
-  assert.equal(parseExecuteVerdict(nightly, /NIGHTLY-VERDICT: (success|failure)/), "success");
+  assert.equal(parseNativeVerdict(nightly, /NIGHTLY-VERDICT: (success|failure)/), "success");
   const sr = "SR-VERDICT: inconclusive\n";
-  assert.equal(parseExecuteVerdict(sr, /SR-VERDICT: (investigated|inconclusive)/), "inconclusive");
-  assert.equal(parseExecuteVerdict("nothing here", /SR-VERDICT: (\w+)/), null);
+  assert.equal(parseNativeVerdict(sr, /SR-VERDICT: (investigated|inconclusive)/), "inconclusive");
+  assert.equal(parseNativeVerdict("nothing here", /SR-VERDICT: (\w+)/), null);
 });
 
 test("write mode: pushes the branch when there are commits and succeeds on a success verdict", async () => {
   const { git, calls } = stubGit({ hasCommits: true });
   const { claude, seen } = stubClaude({ stdout: "NIGHTLY-VERDICT: success" });
-  const eff = makeExecuteEffector(writeCfg(), { git, claude, report: reportPort(true) });
+  const eff = makeNativeExecutor(writeCfg(), { git, claude, report: reportPort(true) });
 
   const r = await eff.run(makeItem());
   assert.equal(r.outcome, "succeeded");
@@ -132,7 +132,7 @@ test("write mode: pushes the branch when there are commits and succeeds on a suc
 test("write mode: no commits → no push; missing report → failed", async () => {
   const { git, calls } = stubGit({ hasCommits: false });
   const { claude } = stubClaude({ stdout: "NIGHTLY-VERDICT: success" });
-  const eff = makeExecuteEffector(writeCfg(), { git, claude, report: reportPort(false) });
+  const eff = makeNativeExecutor(writeCfg(), { git, claude, report: reportPort(false) });
 
   const r = await eff.run(makeItem());
   assert.equal(r.pushed, false);
@@ -144,7 +144,7 @@ test("write mode: no commits → no push; missing report → failed", async () =
 test("read-only mode: detached worktree, asserts pristine, succeeds when clean", async () => {
   const { git, calls } = stubGit({ pristine: true });
   const { claude, seen } = stubClaude({ stdout: "SR-VERDICT: investigated" });
-  const eff = makeExecuteEffector(readonlyCfg(), { git, claude, report: reportPort(true) });
+  const eff = makeNativeExecutor(readonlyCfg(), { git, claude, report: reportPort(true) });
 
   const r = await eff.run(makeItem());
   assert.equal(r.outcome, "succeeded");
@@ -159,7 +159,7 @@ test("read-only mode: detached worktree, asserts pristine, succeeds when clean",
 test("read-only mode: dirty worktree is reverted and the run fails", async () => {
   const { git, calls } = stubGit({ pristine: false });
   const { claude } = stubClaude({ stdout: "SR-VERDICT: investigated" });
-  const eff = makeExecuteEffector(readonlyCfg(), { git, claude, report: reportPort(true) });
+  const eff = makeNativeExecutor(readonlyCfg(), { git, claude, report: reportPort(true) });
 
   const r = await eff.run(makeItem());
   assert.equal(r.outcome, "failed"); // pristine violated
@@ -170,7 +170,7 @@ test("read-only mode: dirty worktree is reverted and the run fails", async () =>
 test("timeout → failed, and no push even in write mode", async () => {
   const { git, calls } = stubGit({ hasCommits: true });
   const { claude } = stubClaude({ timedOut: true, exitCode: 124, stdout: "" });
-  const eff = makeExecuteEffector(writeCfg(), { git, claude, report: reportPort(true) });
+  const eff = makeNativeExecutor(writeCfg(), { git, claude, report: reportPort(true) });
 
   const r = await eff.run(makeItem());
   assert.equal(r.outcome, "failed");
@@ -180,7 +180,7 @@ test("timeout → failed, and no push even in write mode", async () => {
 test("worktree add failure returns a clean failed result without further calls", async () => {
   const { git, calls } = stubGit({ addThrows: true });
   const { claude, seen } = stubClaude({});
-  const eff = makeExecuteEffector(writeCfg(), { git, claude, report: reportPort(true) });
+  const eff = makeNativeExecutor(writeCfg(), { git, claude, report: reportPort(true) });
 
   const r = await eff.run(makeItem());
   assert.equal(r.outcome, "failed");
@@ -190,7 +190,7 @@ test("worktree add failure returns a clean failed result without further calls",
 });
 
 test("write mode requires a branch at construction", () => {
-  assert.throws(() => makeExecuteEffector(writeCfg({ branch: undefined }), {
+  assert.throws(() => makeNativeExecutor(writeCfg({ branch: undefined }), {
     git: stubGit({}).git,
     claude: stubClaude({}).claude,
     report: reportPort(true),

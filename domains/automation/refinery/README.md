@@ -11,10 +11,10 @@ The module is being built in slices:
   `_inbox/nightly_builds/*/NN-*.md` goal folders (plus raw `_ideas.md` ideas) as
   a live, status-grouped board.
 - **Slice 03 — engine core:** the substance-agnostic engine itself — a typed
-  Item state machine driven by genre profiles, with hexagonal boundaries (the
+  Item state machine driven by pipelines, with hexagonal boundaries (the
   core knows nothing about filesystem, Firestore, or Claude).
 
-The gate registry, genres, and interactivity (amend/rewind) are later slices
+The gate registry, pipelines, and interactivity (amend/rewind) are later slices
 (cards 04–09 in the hopper).
 
 - **Namespace:** `hwc.automation.refinery.*`
@@ -32,23 +32,34 @@ compiled by **tsc** to `dist/`, and tests run against the compiled output
 ## Structure
 | Path | Purpose |
 |---|---|
-| `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Profiles baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
+| `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Pipelines baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
 | `engine/src/cli/morning-review.ts` | The morning PR-review CLI shell. Late-binds config from env (`REFINERY_VAULT_DIR`, `REFINERY_DEFAULT_REPO`, `REFINERY_REVIEWS_DIR`, `REFINERY_LLM_PROVIDER`, optional `REFINERY_REVIEW_DATE`), wires real git/gh/fs/LLM adapters, runs the orchestrator, prints a JSON summary to stdout. Driven by `nightly-builds-review.service` (timer in the **nightly-builds** domain). |
 | `engine/src/shells/` | HTTP shell over the core: `http.ts` (routes — `/` Gauntlet, `/hopper` ideas+intake, `/cards` legacy, + intake/amend/rewind handlers), `render.ts` (Gauntlet board = projects in phase lanes tinted by profile color + a profiles **legend**; Hopper page = raw ideas + intake; plain form-posts), `hopper.ts` (legacy nightly-builds card view at `/cards`), `serve.ts` (service entry). |
-| `engine/` | Engine core: Item + GateModule + Profile contracts (Zod), stage runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
+| `engine/` | Engine core: Item + GateModule + Pipeline contracts (Zod), step runner, in-memory ItemStore. TypeScript library, `node --test` unit tests. Substance-agnostic, no IO beyond injected ports. |
 | `engine/src/gates/` | Gate registry: Eric's engineering canon as `GateModule`s (stepwise-refinement, principles-create/fix, chestertons-fence, blast-radius, premortem, admission-gates). Each = `applies()` predicate over item traits + a prompt + a Zod verdict schema + `decide()`. LLM consulted via an injected `LlmPort` (stubbed in tests). `makeGateRegistry(llm)` / `gateList(llm)`. |
-| `engine/src/effectors/` | Effectors (`ItemEffector`s): `dispatch` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `EffectorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `execute` — the native-execution fallback (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a substance with no standalone runner. `write-spec` — the project-ideation `integrate` step (LLM → `SpecSchema` → markdown spec to scratch). |
+| `engine/src/executors/` | Executors (`Executor`s): `gauntlet` — the thin port to a **standalone** gauntlet (trigger via `ProcessPort`, read its report+verdict back via `ResultReader`, map to `ExecutorResult`); the modular seam that keeps the engine from absorbing each gauntlet's code. `native` — the in-process executor (mode-parameterized worktree → headless-claude → verdict → report → push/pristine; git/claude/report injected) for a pipeline with no standalone runner. `spec` — the project-ideation terminal step (LLM → `SpecSchema` → markdown spec to scratch). |
 | `engine/src/gauntlets/` | The gauntlet dispatch contract: `GauntletContract` schema (`{trigger, resultsDir, reportFile, verdictPattern, successVerdicts}`, Zod) + `parseGauntletContract`; `ProcessPort`/`ResultReader` ports (real `nodeProcessPort`/`fsResultReader`, stubbed in tests); `loadGauntlets` registry over `gauntlets/*.yaml`. A standalone gauntlet becomes one YAML file. |
 | `engine/src/stores/` | `MarkdownItemStore` (`ItemStore`): one `.md` per item — board-readable frontmatter + a canonical ```json block for lossless round-trip. |
-| `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a profile's `llmProvider` to the adapter. All late-bound from env. |
-| `engine/src/profiles/` | `ProfileCatalog` — lead_scout-style registry: disk scan of `profiles/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet execute knobs (verdict token, success verdicts) not on the Profile schema. |
-| `engine/src/sources/` | `SourcePort` — inbound intake boundary (a profile's `source` field names the adapter). Concrete adapters (vault card scan, Firestore SR fetch) are a later human-gated step. |
-| `engine/src/triage.ts` | `triageSentence` — intake classifier: routes a raw sentence to one of the enabled profiles (via `LlmPort`) or `untriaged` below a confidence threshold. `makeTriagedItem` builds the Item (parked at `triage` if untriaged). |
-| `engine/src/cli/run-once.ts` | `runGenreOnce` — orchestration core: load/create item → run gate pipeline → fire integrate effector on a clean pass. Fully injected (testable). |
-| `engine/src/cli.ts` | CLI shell: `refinery run --genre … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runGenreOnce`. |
-| `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + optional `defaultTraits` + pipeline). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
+| `engine/src/adapters/` | `LlmPort` adapters — `claude-cli` (headless `claude -p`), `anthropic-api` (raw-fetch Messages API), `ollama` (local daemon) — plus `resolveLlm(provider)` mapping a pipeline's `llmProvider` to the adapter. All late-bound from env. |
+| `engine/src/pipelines/` | `PipelineCatalog` — lead_scout-style registry: disk scan of `pipelines/*.yaml` + a writable `enabled` overlay (so toggling never rewrites a repo file). `list`/`get`/`enabled`/`setEnabled`. `gauntlet-config.ts` holds the per-gauntlet executor knobs (verdict token, success verdicts) not on the Pipeline schema. |
+| `engine/src/sources/` | `SourcePort` — inbound intake boundary (a pipeline's `source` field names the adapter). Concrete adapters (vault card scan, Firestore SR fetch) are a later human-gated step. |
+| `engine/src/triage.ts` | `triageSentence` — intake classifier: routes a raw sentence to one of the enabled pipelines (via `LlmPort`) or `untriaged` below a confidence threshold. `makeTriagedItem` builds the Item (parked at the `triage` step if untriaged). |
+| `engine/src/cli/run-once.ts` | `runPipelineOnce` — orchestration core: load/create item → run gate pipeline → fire the executor on a clean pass. Fully injected (testable). |
+| `engine/src/cli.ts` | CLI shell: `refinery run --pipeline … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runPipelineOnce`. |
+| `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-19** — **Terminology canon (full rename, code + UI + data).** Retired
+  the overloaded vocabulary: `Profile`/`genre`/`manifest` → **Pipeline** (`item.pipeline`,
+  `pipelines/*.yaml`, `PipelineCatalog`); the overloaded `phase` → **step** (pipeline
+  position) + **stage** (hopper maturation); `phaseStatus` → **state**; `effector` →
+  **Executor** (`execute`→`native`, `dispatch`→`gauntlet`, `write-spec`→`spec`);
+  `executeMode` → `executorMode`; `nightly` flag → **schedule** (`now`|`nightly`).
+  `MarkdownItemStore` carries a read-old/write-new migration shim so existing
+  `/var/lib/refinery/items` survive; the enabled-overlay file stays `profiles.json`
+  to preserve toggles. Env vars `REFINERY_PROFILES_DIR`/`_PROFILE_STATE` →
+  `REFINERY_PIPELINES_DIR`/`_PIPELINE_STATE`. 117 tests pass (+2 migration). No
+  behavior or UI-label change yet — that's the next slice.
 - **2026-06-19** — Removed the dead `app/` board (the original slice-01/02
   read-only hopper). `index.nix` builds only `./engine`; nothing referenced
   `app/`/`@refinery/board`. First step of the engine-finish + UI-redesign arc.

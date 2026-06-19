@@ -1,18 +1,25 @@
 import { z } from "zod";
 
-export const PhaseStatusSchema = z.enum([
+// State — the execution state of an Item at its current step.
+export const StateSchema = z.enum([
   "pending",
-  "running", // pipeline is executing this phase now (set by the board's Run button)
+  "running", // the pipeline is executing this step now (set by the board's Run button)
   "passed",
   "parked",
   "failed",
 ]);
-export type PhaseStatus = z.infer<typeof PhaseStatusSchema>;
+export type State = z.infer<typeof StateSchema>;
+
+// Schedule — the "when" axis, orthogonal to the pipeline (the "what"). `now`
+// runs on demand (board Run button / daytime); `nightly` defers an item to the
+// unattended overnight lane. The executor is the same; only the trigger differs.
+export const ScheduleSchema = z.enum(["now", "nightly"]);
+export type Schedule = z.infer<typeof ScheduleSchema>;
 
 export const HistoryEntrySchema = z.object({
-  phase: z.string().min(1),
+  step: z.string().min(1), // the pipeline step this entry is about (gate id / "triage" / executor id)
   status: z.union([
-    PhaseStatusSchema,
+    StateSchema,
     z.literal("rewound"),
     z.literal("entered"),
   ]),
@@ -23,18 +30,22 @@ export type HistoryEntry = z.infer<typeof HistoryEntrySchema>;
 
 export const ItemSchema = z.object({
   id: z.string().min(1),
-  genre: z.string().min(1),
-  phase: z.string().min(1),
-  phaseStatus: PhaseStatusSchema,
+  pipeline: z.string().min(1), // identity link → Pipeline.pipeline (or UNTRIAGED for an idea)
+  // `step` = position in the pipeline (a gate id, "triage", or an executor id);
+  // present once triaged. `stage` = hopper maturation (captured/shaping/ready);
+  // present while an idea is untriaged. Exactly one is meaningful at a time —
+  // the split that retired the overloaded `phase` field.
+  step: z.string().min(1).optional(),
+  stage: z.string().min(1).optional(),
+  state: StateSchema,
   parkedReason: z.string().optional(),
   payload: z.unknown(),
   history: z.array(HistoryEntrySchema),
-  // Scheduling attributes — orthogonal to the profile (the "when", not the
-  // "what"). `nightly` flags a project for the overnight gauntlet run;
-  // `nightlyPriority` orders the nightly queue (higher = sooner). A project
-  // keeps its profile color; nightly is a skin on top.
-  nightly: z.boolean().optional(),
-  nightlyPriority: z.number().optional(),
+  // Scheduling attributes — the "when", orthogonal to the pipeline. `schedule`
+  // = now | nightly; `schedulePriority` orders the nightly queue (higher =
+  // sooner). A project keeps its domain color; nightly is a skin on top.
+  schedule: ScheduleSchema.optional(),
+  schedulePriority: z.number().optional(),
 });
 export type Item = z.infer<typeof ItemSchema>;
 
@@ -75,38 +86,39 @@ export const ItemTraitsSchema = z.object({
 });
 export type ItemTraits = z.infer<typeof ItemTraitsSchema>;
 
-// A Profile (formerly "manifest") is the data-driven recipe for one genre of
-// work — which gates fire, in what execute mode, with which effectors and LLM.
-// New genres are new profiles; the engine core never changes. Shape mirrors
-// lead_scout's profile model (id/label/enabled/llmProvider + the pipeline).
-export const ProfileSchema = z.object({
-  genre: z.string().min(1), // identity key; links item.genre → profile
+// A Pipeline (formerly "profile"/"manifest") is the data-driven recipe for one
+// kind of work — which gates fire, in what executor mode, with which executor
+// and LLM. New kinds of work are new pipelines; the engine core never changes.
+// Shape mirrors lead_scout's profile model (id/label/enabled/llmProvider + the
+// gate list).
+export const PipelineSchema = z.object({
+  pipeline: z.string().min(1), // identity key; links item.pipeline → this pipeline
   label: z.string().min(1).optional(), // human-facing name for the board
   color: z.string().min(1).optional(), // hex tint for cards/legend (data-driven, lead_scout-style)
   source: z.string().min(1),
   gates: z.array(z.string().min(1)).min(1),
-  // executeMode + effectors are consumed by the execute/integrate effectors,
-  // not the phase runner (which only walks `gates`).
-  executeMode: z.string().min(1),
-  effectors: z.array(z.string().min(1)),
-  // enabled gates whether triage may route to this profile (default true).
+  // executorMode + executors are consumed by the executor (terminal step), not
+  // the runner (which only walks `gates`).
+  executorMode: z.string().min(1),
+  executors: z.array(z.string().min(1)),
+  // enabled gates whether triage may route to this pipeline (default true).
   enabled: z.boolean().optional(),
   // llmProvider selects the LlmPort adapter (claude-cli | anthropic-api |
   // ollama); default "claude-cli". Late-bound by the adapter resolver.
   llmProvider: z.string().min(1).optional(),
-  // autoRun: when an item enters this genre (via triage/intake), run the
-  // pipeline immediately instead of waiting for the board's Run button. Manual
-  // genres (project-ideation) leave this false so a human triggers each run;
-  // event-driven genres (incoming SR tickets) set it true. Default false.
+  // autoRun: when an item enters this pipeline (via triage/intake), run it
+  // immediately instead of waiting for the board's Run button. Manual pipelines
+  // (project-ideation) leave this false so a human triggers each run;
+  // event-driven pipelines (incoming SR tickets) set it true. Default false.
   autoRun: z.boolean().optional(),
-  // defaultTraits stamped on every item this profile triages. Greenfield genres
-  // omit it (intake's greenfield default applies); brownfield genres
-  // (app-refinement) declare {mode:"brownfield",touchesExistingCode:true,…} so
-  // the fixing-systems gates (chestertons-fence, principles-fix, blast-radius)
-  // actually fire. Data-driven: applicability is profile data, not intake code.
+  // defaultTraits stamped on every item this pipeline triages. Greenfield
+  // pipelines omit it (intake's greenfield default applies); brownfield
+  // pipelines (app-refinement) declare {mode:"brownfield",touchesExistingCode:true,…}
+  // so the fixing-systems gates (chestertons-fence, principles-fix, blast-radius)
+  // actually fire. Data-driven: applicability is pipeline data, not intake code.
   defaultTraits: ItemTraitsSchema.optional(),
 });
-export type Profile = z.infer<typeof ProfileSchema>;
+export type Pipeline = z.infer<typeof PipelineSchema>;
 
 export interface ItemStore {
   load(id: string): Promise<Item | null>;
@@ -115,24 +127,25 @@ export interface ItemStore {
   delete(id: string): Promise<void>;
 }
 
-// An effector performs the side-effecting phases of the pipeline (execute,
-// integrate, notify). Like gates, the core knows only this port; concrete
-// effectors (worktree+headless-claude execute, PR/brain-fold integrate, …) are
-// constructed with their own injected adapters.
-export type EffectorOutcome = "succeeded" | "failed";
+// An Executor performs the side-effecting terminal step of a pipeline (after a
+// clean gate pass). Like gates, the core knows only this port; concrete
+// executors (native = worktree+headless-claude, gauntlet = dispatch to an
+// external standalone gauntlet, spec = synthesize+write a spec) are constructed
+// with their own injected adapters.
+export type ExecutorOutcome = "succeeded" | "failed";
 
-export interface EffectorResult {
-  outcome: EffectorOutcome;
+export interface ExecutorResult {
+  outcome: ExecutorOutcome;
   verdict: string | null; // the parsed self-verdict token, if any
   reportPresent: boolean; // did the agent write the required report
   branch: string | null; // branch pushed (write mode) or null
   pristine: boolean | null; // worktree clean check (read-only) or null in write mode
   pushed: boolean;
   detail: string; // human-readable outcome summary
-  output: unknown; // structured detail for downstream phases
+  output: unknown; // structured detail for downstream steps
 }
 
-export interface ItemEffector {
+export interface Executor {
   readonly id: string;
-  run(item: Item): Promise<EffectorResult>;
+  run(item: Item): Promise<ExecutorResult>;
 }

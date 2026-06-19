@@ -1,26 +1,26 @@
-// The execute effector — one mode-parameterized implementation of the
+// The native executor — one mode-parameterized implementation of the
 // worktree → headless-claude → verdict-parse → report-check → push/pristine
 // logic that was duplicated across nightly-builds/run.sh (write mode) and
 // sr_gauntlet/run.sh (read-only mode). The two differ only on:
-//   - executeMode: write (commit+push) vs read-only (assert pristine)
+//   - executorMode: write (commit+push) vs read-only (assert pristine)
 //   - verdict token: e.g. NIGHTLY-VERDICT vs SR-VERDICT
 //   - which verdict values count as a successful run
 // so all three are config here. git + claude + the report check are injected
 // ports (./ports.ts) — this file is pure control flow.
 //
 // Scope note: this is a PARALLEL extraction. The live run.sh files are NOT
-// touched by this card; adopting the effector is slice 09.
+// touched by this card; adopting the executor is slice 09.
 
-import { Item, ItemEffector, EffectorResult } from "../contracts.js";
+import { Item, Executor, ExecutorResult } from "../contracts.js";
 import { ClaudePort, GitPort, ReportPort } from "./ports.js";
 
-export type ExecuteMode = "write" | "read-only";
+export type NativeMode = "write" | "read-only";
 
-export interface ExecuteConfig {
-  id?: string; // effector id (default "execute")
+export interface NativeConfig {
+  id?: string; // executor id (default "native")
   repo: string;
   worktree: string; // disposable worktree path the caller assigns
-  executeMode: ExecuteMode;
+  executorMode: NativeMode;
   branch?: string; // required for write mode; ignored for read-only (detached)
   promptWrapper: string; // wrapper text; the item payload is appended after a rule
   verdictPattern: RegExp; // must capture the verdict token in group 1
@@ -30,14 +30,14 @@ export interface ExecuteConfig {
   keepWorktree?: boolean; // default false — remove the worktree when done
 }
 
-export interface ExecutePorts {
+export interface NativePorts {
   git: GitPort;
   claude: ClaudePort;
   report: ReportPort;
 }
 
 /** Compose the agent prompt: wrapper, then the item payload after a separator. */
-export function composeExecutePrompt(wrapper: string, item: Item): string {
+export function composeNativePrompt(wrapper: string, item: Item): string {
   const payloadText =
     typeof item.payload === "string"
       ? item.payload
@@ -46,7 +46,7 @@ export function composeExecutePrompt(wrapper: string, item: Item): string {
 }
 
 /** Parse the last verdict token matched by the pattern, or null. */
-export function parseExecuteVerdict(stdout: string, pattern: RegExp): string | null {
+export function parseNativeVerdict(stdout: string, pattern: RegExp): string | null {
   const flags = pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g";
   const re = new RegExp(pattern.source, flags);
   let last: string | null = null;
@@ -56,20 +56,20 @@ export function parseExecuteVerdict(stdout: string, pattern: RegExp): string | n
   return last;
 }
 
-export function makeExecuteEffector(
-  cfg: ExecuteConfig,
-  ports: ExecutePorts,
-): ItemEffector {
-  if (cfg.executeMode === "write" && !cfg.branch) {
-    throw new Error("execute effector: write mode requires cfg.branch");
+export function makeNativeExecutor(
+  cfg: NativeConfig,
+  ports: NativePorts,
+): Executor {
+  if (cfg.executorMode === "write" && !cfg.branch) {
+    throw new Error("native executor: write mode requires cfg.branch");
   }
-  const id = cfg.id ?? "execute";
+  const id = cfg.id ?? "native";
 
-  const fail = (detail: string, partial: Partial<EffectorResult> = {}): EffectorResult => ({
+  const fail = (detail: string, partial: Partial<ExecutorResult> = {}): ExecutorResult => ({
     outcome: "failed",
     verdict: null,
     reportPresent: false,
-    branch: cfg.executeMode === "write" ? cfg.branch ?? null : null,
+    branch: cfg.executorMode === "write" ? cfg.branch ?? null : null,
     pristine: null,
     pushed: false,
     detail,
@@ -79,7 +79,7 @@ export function makeExecuteEffector(
 
   return {
     id,
-    async run(item: Item): Promise<EffectorResult> {
+    async run(item: Item): Promise<ExecutorResult> {
       const base = await ports.git.resolveBase(cfg.repo);
 
       let worktreeAdded = false;
@@ -89,22 +89,22 @@ export function makeExecuteEffector(
             repo: cfg.repo,
             worktree: cfg.worktree,
             base,
-            branch: cfg.executeMode === "write" ? cfg.branch : undefined,
+            branch: cfg.executorMode === "write" ? cfg.branch : undefined,
           });
           worktreeAdded = true;
         } catch (e) {
           return fail(`worktree add failed: ${(e as Error).message}`);
         }
 
-        const prompt = composeExecutePrompt(cfg.promptWrapper, item);
+        const prompt = composeNativePrompt(cfg.promptWrapper, item);
         const res = await ports.claude.run({
           prompt,
           cwd: cfg.worktree,
           timeoutMs: cfg.timeoutMs,
-          readOnly: cfg.executeMode === "read-only",
+          readOnly: cfg.executorMode === "read-only",
         });
 
-        const verdict = parseExecuteVerdict(res.stdout, cfg.verdictPattern);
+        const verdict = parseNativeVerdict(res.stdout, cfg.verdictPattern);
         const reportPresent = await ports.report.exists({
           worktree: cfg.worktree,
           reportFile: cfg.reportFile,
@@ -113,7 +113,7 @@ export function makeExecuteEffector(
         let pushed = false;
         let pristine: boolean | null = null;
 
-        if (cfg.executeMode === "write") {
+        if (cfg.executorMode === "write") {
           // Push whatever was committed — a failed run's partial branch is still
           // reviewable (gate 8). Only push if there are commits beyond base.
           if (!res.timedOut && (await ports.git.hasCommitsBeyond({ worktree: cfg.worktree, base }))) {
@@ -127,19 +127,19 @@ export function makeExecuteEffector(
         }
 
         const verdictOk = verdict !== null && cfg.successVerdicts.includes(verdict);
-        const modeOk = cfg.executeMode === "write" ? true : pristine === true;
+        const modeOk = cfg.executorMode === "write" ? true : pristine === true;
         const succeeded =
           res.exitCode === 0 && !res.timedOut && reportPresent && verdictOk && modeOk;
 
         const detail = succeeded
-          ? `${cfg.executeMode} run succeeded (verdict=${verdict})`
-          : `run failed: exit=${res.exitCode} timedOut=${res.timedOut} verdict=${verdict ?? "none"} report=${reportPresent ? "yes" : "no"}${cfg.executeMode === "read-only" ? ` pristine=${pristine}` : ""}`;
+          ? `${cfg.executorMode} run succeeded (verdict=${verdict})`
+          : `run failed: exit=${res.exitCode} timedOut=${res.timedOut} verdict=${verdict ?? "none"} report=${reportPresent ? "yes" : "no"}${cfg.executorMode === "read-only" ? ` pristine=${pristine}` : ""}`;
 
         return {
           outcome: succeeded ? "succeeded" : "failed",
           verdict,
           reportPresent,
-          branch: cfg.executeMode === "write" ? cfg.branch ?? null : null,
+          branch: cfg.executorMode === "write" ? cfg.branch ?? null : null,
           pristine,
           pushed,
           detail,

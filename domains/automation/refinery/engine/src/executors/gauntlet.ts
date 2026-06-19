@@ -1,16 +1,16 @@
-// The dispatch effector — the refinery's thin port to a STANDALONE gauntlet.
+// The gauntlet executor — the refinery's thin port to a STANDALONE gauntlet.
 // It triggers the gauntlet (which owns its own execution: worktrees, creds,
-// PII), then reads the result back and maps it to an EffectorResult. It never
-// reimplements the gauntlet — contrast src/effectors/execute.ts, which is the
+// PII), then reads the result back and maps it to an ExecutorResult. It never
+// reimplements the gauntlet — contrast src/executors/native.ts, which is the
 // native-execution fallback for a substance that has no standalone runner. All
 // IO is behind injected ports, so unit tests spawn nothing.
 
 import { join } from "node:path";
-import { Item, ItemEffector, EffectorResult } from "../contracts.js";
+import { Item, Executor, ExecutorResult } from "../contracts.js";
 import { GauntletContract } from "../gauntlets/contract.js";
 import { ProcessPort, ResultReader } from "../gauntlets/ports.js";
 
-export interface DispatchPorts {
+export interface GauntletPorts {
   process: ProcessPort;
   reader: ResultReader;
   clock?: () => string; // ISO timestamp; its date portion fills {date}
@@ -25,19 +25,19 @@ function template(s: string, vars: Record<string, string>): string {
   return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k]! : m));
 }
 
-export function makeDispatchEffector(
+export function makeGauntletExecutor(
   contract: GauntletContract,
-  ports: DispatchPorts,
-): ItemEffector {
+  ports: GauntletPorts,
+): Executor {
   return {
-    id: `dispatch:${contract.id}`,
-    async run(item: Item): Promise<EffectorResult> {
+    id: `gauntlet:${contract.id}`,
+    async run(item: Item): Promise<ExecutorResult> {
       const vars: Record<string, string> = { id: item.id, date: dateOf(ports.clock) };
       const args = contract.trigger.args.map((a) => template(a, vars));
       const resultsDir = template(contract.resultsDir, vars);
       const reportPath = join(resultsDir, contract.reportFile);
 
-      const fail = (detail: string, extra: Partial<EffectorResult> = {}): EffectorResult => ({
+      const fail = (detail: string, extra: Partial<ExecutorResult> = {}): ExecutorResult => ({
         outcome: "failed",
         verdict: null,
         reportPresent: false,

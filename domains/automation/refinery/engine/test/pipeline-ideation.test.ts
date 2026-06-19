@@ -4,18 +4,18 @@ import { readFileSync, mkdtempSync, rmSync, existsSync, readdirSync } from "node
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { parseProfile } from "../src/profile.js";
+import { parsePipeline } from "../src/pipeline.js";
 import { gateList } from "../src/gates/index.js";
 import { LlmPort } from "../src/gates/llm-port.js";
-import { makeWriteSpecEffector, isSpecComplete } from "../src/effectors/write-spec.js";
+import { makeSpecExecutor, isSpecComplete } from "../src/executors/spec.js";
 import { MarkdownItemStore } from "../src/stores/markdown-store.js";
-import { runGenreOnce } from "../src/cli/run-once.js";
+import { runPipelineOnce } from "../src/cli/run-once.js";
 import { Item } from "../src/contracts.js";
 import { fixedClock, resetClock } from "./helpers.js";
 
-// The actual genre profile (cwd-independent path from the compiled test file).
-const PROFILE_PATH = fileURLToPath(
-  new URL("../../../profiles/project-ideation.yaml", import.meta.url),
+// The actual pipeline (cwd-independent path from the compiled test file).
+const PIPELINE_PATH = fileURLToPath(
+  new URL("../../../pipelines/project-ideation.yaml", import.meta.url),
 );
 
 // One canned superset response satisfying every gate schema AND the spec schema.
@@ -40,11 +40,11 @@ function tmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
-test("project-ideation profile validates against the slice-03 Profile schema", () => {
-  const profile = parseProfile(readFileSync(PROFILE_PATH, "utf8"));
-  assert.equal(profile.genre, "project-ideation");
-  assert.deepEqual(profile.gates, ["stepwise-refinement", "principles-create", "premortem"]);
-  assert.deepEqual(profile.effectors, ["write-spec"]);
+test("project-ideation profile validates against the slice-03 Pipeline schema", () => {
+  const pipeline = parsePipeline(readFileSync(PIPELINE_PATH, "utf8"));
+  assert.equal(pipeline.pipeline, "project-ideation");
+  assert.deepEqual(pipeline.gates, ["stepwise-refinement", "principles-create", "premortem"]);
+  assert.deepEqual(pipeline.executors, ["spec"]);
 });
 
 test("MarkdownItemStore round-trips an item losslessly", async () => {
@@ -53,11 +53,11 @@ test("MarkdownItemStore round-trips an item losslessly", async () => {
     const store = new MarkdownItemStore(dir);
     const item: Item = {
       id: "round-trip",
-      genre: "project-ideation",
-      phase: "premortem",
-      phaseStatus: "passed",
+      pipeline: "project-ideation",
+      step: "premortem",
+      state: "passed",
       payload: { input: "an idea", title: "an idea", traits: { mode: "greenfield" } },
-      history: [{ phase: "stepwise-refinement", status: "passed", at: "2026-06-15T00:00:00Z" }],
+      history: [{ step: "stepwise-refinement", status: "passed", at: "2026-06-15T00:00:00Z" }],
     };
     await store.save(item);
     const loaded = await store.load("round-trip");
@@ -71,20 +71,20 @@ test("MarkdownItemStore round-trips an item losslessly", async () => {
   }
 });
 
-test("end-to-end: a sentence runs through the genre and produces a complete spec", async () => {
+test("end-to-end: a sentence runs through the pipeline and produces a complete spec", async () => {
   resetClock();
   const storeDir = tmp("refinery-items-");
   const scratchDir = tmp("refinery-specs-");
   try {
     const llm = stubLlm("pass");
-    const profile = parseProfile(readFileSync(PROFILE_PATH, "utf8"));
+    const pipeline = parsePipeline(readFileSync(PIPELINE_PATH, "utf8"));
     const store = new MarkdownItemStore(storeDir);
-    const result = await runGenreOnce(
+    const result = await runPipelineOnce(
       { id: "demo-item", input: "an engine that refines ideas into specs" },
       {
-        profile,
+        pipeline,
         gates: gateList(llm),
-        integrate: makeWriteSpecEffector({ scratchDir }, llm),
+        integrate: makeSpecExecutor({ scratchDir }, llm),
         store,
         clock: fixedClock,
       },
@@ -92,8 +92,8 @@ test("end-to-end: a sentence runs through the genre and produces a complete spec
 
     assert.equal(result.parked, false);
     assert.deepEqual(result.ran, ["stepwise-refinement", "principles-create", "premortem"]);
-    assert.equal(result.item.phase, "premortem");
-    assert.equal(result.item.phaseStatus, "passed");
+    assert.equal(result.item.step, "premortem");
+    assert.equal(result.item.state, "passed");
 
     // integrate fired and wrote a complete spec
     assert.ok(result.integrated);
@@ -108,7 +108,7 @@ test("end-to-end: a sentence runs through the genre and produces a complete spec
     // the item was persisted with the integrate step in history
     const reloaded = await store.load("demo-item");
     assert.ok(reloaded);
-    assert.equal(reloaded!.history.at(-1)!.phase, "write-spec");
+    assert.equal(reloaded!.history.at(-1)!.step, "spec");
 
     // no stray files beyond the one spec
     assert.deepEqual(readdirSync(scratchDir), ["demo-item-spec.md"]);
@@ -124,13 +124,13 @@ test("end-to-end: a parked gate stops the pass and integrate never runs", async 
   const scratchDir = tmp("refinery-specs-");
   try {
     const llm = stubLlm("park"); // first gate parks
-    const profile = parseProfile(readFileSync(PROFILE_PATH, "utf8"));
-    const result = await runGenreOnce(
+    const pipeline = parsePipeline(readFileSync(PIPELINE_PATH, "utf8"));
+    const result = await runPipelineOnce(
       { id: "parked-item", input: "a half-baked idea" },
       {
-        profile,
+        pipeline,
         gates: gateList(llm),
-        integrate: makeWriteSpecEffector({ scratchDir }, llm),
+        integrate: makeSpecExecutor({ scratchDir }, llm),
         store: new MarkdownItemStore(storeDir),
         clock: fixedClock,
       },
@@ -138,7 +138,7 @@ test("end-to-end: a parked gate stops the pass and integrate never runs", async 
     assert.equal(result.parked, true);
     assert.equal(result.integrated, null);
     assert.deepEqual(result.ran, ["stepwise-refinement"]);
-    assert.equal(result.item.phaseStatus, "parked");
+    assert.equal(result.item.state, "parked");
     assert.equal(existsSync(join(scratchDir, "parked-item-spec.md")), false);
   } finally {
     rmSync(storeDir, { recursive: true, force: true });
