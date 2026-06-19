@@ -74,6 +74,15 @@ in
         theme "hwc"
         default_layout "${cfg.defaultLayout}"
         pane_frames true
+        // Don't serialize/resurrect sessions. workbench is fully reconstructed
+        // from the KDL layout on every open (it re-spawns its peer panes), so
+        // there is nothing worth resurrecting — and a cached session could come
+        // back STALE, defeating the whole point of wb-reload (SUPER+W). With
+        // serialization off, an exited session can't linger to be resurrected;
+        // every recreate is genuinely fresh. (on_force_close left at the default
+        // "detach" on purpose: it keeps the reattach safety net for accidental
+        // window-closes; wb-reload is the explicit, intentional clean restart.)
+        session_serialization false
         ${appearance.themeBlock}
         ${metaKeybinds}
       '';
