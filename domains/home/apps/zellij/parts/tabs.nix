@@ -1,18 +1,28 @@
 # domains/home/apps/zellij/parts/tabs.nix
 #
-# Single source of truth for the workbench tab layout: launch-target -> tab name.
-# Consumed by:
-#   * parts/layout.nix            — emits the workbench KDL (the `tab name=…`s)
-#   * ../../workbench/index.nix   — WORKBENCH_TABS, so the host NAVIGATES to a
-#                                   tool's standing tab instead of spawning a
-#                                   duplicate pane (the spawn-in-home bug).
+# Single source of truth for the flat workbench tab set. The old single "home"
+# tab (one multi-hub workbench) is DISSOLVED: every workbench hub is now its OWN
+# top-level tab/page (`workbench --hub <id>`), a peer of the tool tabs — so the
+# experience is uniform whether a tab is a hub-page or a tool.
 #
-# The DECLARATION ORDER here is the zellij tab order, and MUST stay aligned with
-# the GoToTab <index> map in ../../keymap/parts/to-zellij.nix (1-based):
-#   1 host · 2 todui · 3 khalt · 4 yazi · 5 aerc · 6 nvim
-# Rename a tab in ONE place and both the layout and the host follow on rebuild.
+# Consumed by:
+#   * parts/layout.nix            — emits the KDL: one tab per hub (workbench
+#                                   --hub <id>) + one per tool.
+#   * ../../workbench/index.nix   — WORKBENCH_TABS (tool standing tabs only), so
+#                                   the host NAVIGATES to a tool's tab instead of
+#                                   spawning a duplicate pane.
+#   * ../../keymap/parts/to-zellij.nix — derives 1-based GoToTab indices from the
+#                                   tab order below (hubs first, then tools).
+#
+# TAB ORDER is hubs ++ tools:  1 hwc · 2 datax · 3 server · 4 brief ·
+#                              5 tasks · 6 cal · 7 files · 8 mail · 9 edit
+# Change a name/order in ONE place; layout, host, and keymap follow on rebuild.
 {
-  host  = "home";
+  # Hub-pages: each is `workbench --hub <id>` full-screen; tab name == hub id.
+  # Order = leftmost tabs. The first one is the landing tab (focus=true).
+  hubs = [ "hwc" "datax" "server" "brief" ];
+
+  # Tool tabs: launch-target -> tab name (the standing tab the host jumps to).
   todui = "tasks";
   khalt = "cal";
   yazi  = "files";

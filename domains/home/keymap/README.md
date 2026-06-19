@@ -92,6 +92,17 @@ the var is present-but-unread, so drift can't hide — spec premortem #6):
 
 ## Changelog
 
+- 2026-06-18 — **Flat hub-pages + `Ctrl Space` leader.** The single multi-hub
+  "home" tab is dissolved: each workbench hub is now its own zellij tab
+  (`workbench --hub <id>`), peer of the tool tabs (order: hwc · datax · server ·
+  brief · tasks · cal · files · mail · edit). The `meta` map gains hub jumps
+  (h→hwc, x→datax, v→server, b→brief) alongside the tool jumps (t/c/m/f/e); the
+  old `h→host` entry is gone. `to-zellij.nix` now derives `GoToTab` indices from
+  `apps/zellij/parts/tabs.nix` (hubs ++ tools) so layout/keymap can't drift.
+  metaLeader `Ctrl b`→**`Ctrl Space`** — verified via `showkey -a` to arrive as
+  NUL (0x00), distinct from a bare Space (0x20), so it can't mis-fire an app's
+  Space-leader (unlike `Alt Space`). Revert to a Ctrl-letter in `grammar.nix` if
+  kitty's enhanced-keyboard mode ever swallows it.
 - 2026-06-16 — Meta layer hardened (runtime fixes the eval missed). metaLeader
   `Alt Space`→`Ctrl b` (kitty didn't deliver Alt+Space to zellij → it leaked to
   the host's Space-leader and mis-spawned). Jumps now emit `GoToTab <index>`

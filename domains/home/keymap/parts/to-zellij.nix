@@ -16,14 +16,19 @@
 { lib, grammar }:
 
 let
-  # target pane/app -> zellij tab INDEX (1-based). zellij 0.44 keybinds only
-  # support GoToTab <index>, NOT GoToTabName. Indices MUST match the tab order in
-  # domains/home/apps/zellij/parts/layout.nix:
-  #   1 home (host) · 2 tasks (todui) · 3 cal (khalt) · 4 files · 5 mail · 6 edit
-  tabFor = {
-    workbench = 1; todui = 2; khalt = 3;
-    files = 4; mail = 5; edit = 6;
-  };
+  # meta `target` -> zellij tab INDEX (1-based). zellij keybinds only support
+  # GoToTab <index>, NOT GoToTabName, so the index MUST match the tab order in
+  # domains/home/apps/zellij/parts/layout.nix. Derived from the SAME tabs.nix the
+  # layout emits from (hubs first, then tools) so the two can never drift:
+  #   1 hwc · 2 datax · 3 server · 4 brief · 5 tasks · 6 cal · 7 files · 8 mail · 9 edit
+  tabs = import ../../apps/zellij/parts/tabs.nix;
+  hubCount = builtins.length tabs.hubs;
+  hubIndex = lib.listToAttrs (lib.imap1 (i: h: { name = h; value = i; }) tabs.hubs);
+  # tool meta-targets, in the order layout.nix emits the tool tabs.
+  toolTargets = [ "todui" "khalt" "files" "mail" "edit" ];
+  toolIndex = lib.listToAttrs
+    (lib.imap1 (i: t: { name = t; value = hubCount + i; }) toolTargets);
+  tabFor = hubIndex // toolIndex;
 
   # nav intent -> zellij action (tab jumps use GoToTab <index>, handled separately)
   navAction = {
