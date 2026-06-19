@@ -65,9 +65,22 @@ The `app/` and `engine/` use **different** module-resolution worlds — don't
 | `engine/src/triage.ts` | `triageSentence` — intake classifier: routes a raw sentence to one of the enabled profiles (via `LlmPort`) or `untriaged` below a confidence threshold. `makeTriagedItem` builds the Item (parked at `triage` if untriaged). |
 | `engine/src/cli/run-once.ts` | `runGenreOnce` — orchestration core: load/create item → run gate pipeline → fire integrate effector on a clean pass. Fully injected (testable). |
 | `engine/src/cli.ts` | CLI shell: `refinery run --genre … --input "<sentence>"`. Parses args, wires real adapters, delegates to `runGenreOnce`. |
-| `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + pipeline). `project-ideation.yaml` (live e2e); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
+| `profiles/` | Genre profiles (data; lead_scout-style — `genre`/`label`/`enabled`/`llmProvider` + optional `defaultTraits` + pipeline). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as profiles, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+- **2026-06-19** — `app-refinement` genre (brownfield app compliance) + profile
+  `defaultTraits`. A profile may now declare the item traits to stamp at intake,
+  so gate applicability is profile **data**, not a hardcoded intake literal —
+  fixing a latent bug where `makeTriagedItem` stamped `mode: greenfield` on every
+  item, making any brownfield genre's gates (chestertons-fence / principles-fix /
+  blast-radius) silently self-skip. `app-refinement.yaml` declares
+  `{mode: brownfield, touchesExistingCode, writeMode}` so its fixing-systems
+  pipeline (chestertons-fence → blast-radius → principles-fix → premortem →
+  admission-gates) fires; `executeMode: write`, `effectors: [execute]`. Runs
+  daytime via the board's Run button by default; flag an item `nightly` only to
+  batch it into the unattended overnight lane (the executor is not nightly-coupled).
+  `ItemTraitsSchema` moved to `contracts.ts` (core contract; `gates/traits.ts`
+  re-exports). +2 triage tests (115 pass).
 - **2026-06-18** — Two-axis board + domains + per-card control. The board now
   models the Refinery as one chain with two axes (SR2 parity): **domain**
   (identity → card color + header tag, data-driven `domains.yaml`, auto-classified
