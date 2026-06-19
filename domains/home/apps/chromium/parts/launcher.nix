@@ -44,7 +44,17 @@ let
   # pipeline, but we strip them explicitly here so a stray inherited
   # __NV_PRIME_RENDER_OFFLOAD=1 cannot cause libglvnd to attempt the
   # NVIDIA EGL vendor and trigger the cross-GPU crash described above.
-  launcher = pkgs.writeShellScriptBin "chromium-hwc" ''
+  #
+  # `profileArg` is appended verbatim to the exec line. Empty for the default
+  # wrapper (uses chromium's Default profile under ~/.config/chromium). The
+  # workbench wrapper passes a dedicated --user-data-dir so its windows get a
+  # SEPARATE profile AND a SEPARATE singleton: workbench-opened URLs can never
+  # contend with the interactive SUPER+B chromium for the Default profile's
+  # SQLite locks. (That contention — two live instances over one profile after
+  # a suspend/resume singleton race — is what stacked "Something went wrong
+  # when opening your profile" dialogs.) $HOME is resolved at runtime (late
+  # binding), so the same wrapper is correct on any host.
+  mkLauncher = { name, profileArg ? "" }: pkgs.writeShellScriptBin name ''
     set -u
 
     unset __NV_PRIME_RENDER_OFFLOAD
@@ -72,9 +82,15 @@ let
       export LIBVA_DRIVER_NAME=iHD
     fi
 
-    exec chromium ${lib.escapeShellArgs baseFlags} "$@"
+    exec chromium ${lib.escapeShellArgs baseFlags} ${profileArg} "$@"
   '';
 in
 {
-  packages = [ launcher ];
+  packages = [
+    (mkLauncher { name = "chromium-hwc"; })
+    (mkLauncher {
+      name = "chromium-hwc-workbench";
+      profileArg = ''--user-data-dir="$HOME/.config/chromium-workbench"'';
+    })
+  ];
 }
