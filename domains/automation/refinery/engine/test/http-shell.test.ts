@@ -4,7 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readdirSync,
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createShell, HttpShellConfig } from "../src/shells/http.js";
-import { renderGauntlet, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail } from "../src/shells/render.js";
+import { renderFlowBoard, renderHopperPage, renderNightly, renderFinished, renderFinishedProject, renderSr, renderSrDetail, renderProjectDetail, renderReference, renderReviews } from "../src/shells/render.js";
+import { PrReview } from "../src/review/contract.js";
 import { LlmPort } from "../src/gates/llm-port.js";
 import { Item } from "../src/contracts.js";
 import { UNTRIAGED } from "../src/triage.js";
@@ -353,7 +354,7 @@ const DOMAINS = {
   fallback: { key: "misc", label: "Misc", color: "#a7aaad", match: [] },
 };
 
-test("renderGauntlet: cards colored by DOMAIN, genre as a badge, inline controls", () => {
+test("renderFlowBoard: cards colored by DOMAIN, genre as a badge, inline controls", () => {
   const profiles = [
     { pipeline: "project-ideation", label: "Project Ideation", source: "http-intake",
       gates: ["stepwise-refinement", "principles-create", "premortem"], executorMode: "none",
@@ -363,7 +364,7 @@ test("renderGauntlet: cards colored by DOMAIN, genre as a badge, inline controls
     { id: "x", pipeline: "project-ideation", step: "premortem", state: "parked",
       parkedReason: "needs a call", payload: { title: "a project", domain: "datax" }, history: [] },
   ];
-  const g = renderGauntlet(parked, profiles, profiles, DOMAINS);
+  const g = renderFlowBoard(parked, profiles, profiles, DOMAINS);
   assert.ok(g.includes("a project"));
   assert.ok(g.includes("#b16286"), "card colored by its DOMAIN, not the genre");
   assert.ok(g.includes(">DataX<"), "domain tag in the card header");
@@ -691,4 +692,111 @@ test("the board refuses to native-run an external-gauntlet pipeline (double-exec
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+// ── Step 4 UI redesign: gate-dot strip, pipeline node strip, /reference, /reviews ──
+
+const FLOW_PROFILE = {
+  pipeline: "app-refinement", label: "App Refinement", source: "cli-input",
+  gates: ["chestertons-fence", "principles-fix", "premortem"], executorMode: "write",
+  executors: ["native"], enabled: true, llmProvider: "claude-cli", color: "#83a598",
+};
+
+test("gate-dot progress strip renders on a project card from history; ideas get none", () => {
+  const project: Item = {
+    id: "gd1", pipeline: "app-refinement", step: "premortem", state: "running",
+    payload: { title: "a refinement", domain: "datax" },
+    history: [
+      { step: "chestertons-fence", status: "passed", at: "t1" },
+      { step: "principles-fix", status: "parked", at: "t2" },
+      { step: "premortem", status: "running", at: "t3" },
+    ],
+  };
+  const g = renderFlowBoard([project], [FLOW_PROFILE], [FLOW_PROFILE], DOMAINS);
+  assert.ok(g.includes('class="gate-dots"'), "gate-dot strip present");
+  assert.ok(g.includes('class="gate-dot passed"'), "passed gate dot");
+  assert.ok(g.includes('class="gate-dot parked"'), "parked gate dot");
+  assert.ok(g.includes('gate-dot running current'), "current step ringed");
+  assert.ok(g.includes('class="gate-dot pending"'), "executor step pending (no history)");
+  assert.ok(g.includes('title="premortem: running"'), "per-dot tooltip = step: state");
+
+  // an untriaged idea has no pipeline → no strip
+  const idea: Item = { id: "i9", pipeline: UNTRIAGED, stage: "captured", state: "parked",
+    payload: { title: "raw", input: "raw" }, history: [] };
+  assert.ok(!renderHopperPage([idea], [FLOW_PROFILE], [FLOW_PROFILE], DOMAINS).includes('class="gate-dots"'),
+    "ideas get no gate-dot strip");
+});
+
+test("renderProjectDetail pipeline node strip surfaces a verdict + executor result + triage", () => {
+  const item: Item = {
+    id: "nd1", pipeline: "app-refinement", step: "premortem", state: "passed",
+    payload: {
+      title: "node strip",
+      triage: { confidence: 0.91, reason: "clearly an app refinement" },
+      verdicts: { "principles-fix": { decision: "pass", reason: "hexagonal kept", output: "no violations found" } },
+      executorResult: { outcome: "succeeded", verdict: "success", reportPresent: true, branch: "app-refinement/2026-06-19-x", pristine: null, pushed: true, detail: "pushed a branch", output: { files: 3 } },
+    },
+    history: [
+      { step: "chestertons-fence", status: "passed", at: "t1" },
+      { step: "principles-fix", status: "passed", at: "t2" },
+      { step: "premortem", status: "passed", at: "t3" },
+      { step: "native", status: "passed", at: "t4" },
+    ],
+  };
+  const d = renderProjectDetail(item, [FLOW_PROFILE], [FLOW_PROFILE], DOMAINS);
+  assert.ok(d.includes("<h2>Pipeline</h2>") && d.includes('class="nodes"'), "pipeline node strip section");
+  assert.ok(d.includes("<details class=\"node\">"), "nodes are native <details> (no JS)");
+  assert.ok(d.includes("Triage") && d.includes("clearly an app refinement"), "triage node shows reason");
+  assert.ok(d.includes("0.91"), "triage confidence surfaced");
+  assert.ok(d.includes("hexagonal kept"), "gate verdict reason surfaced");
+  assert.ok(d.includes("app-refinement/2026-06-19-x"), "executor branch surfaced");
+  assert.ok(d.includes("Executor · native"), "executor node labeled by id");
+  assert.ok(d.includes("<h2>Timeline</h2>"), "history relabeled Timeline");
+});
+
+test("renderReference renders the glossary + the live pipelines", () => {
+  const html = renderReference([FLOW_PROFILE, { ...FLOW_PROFILE, pipeline: "project-ideation", label: "Project Ideation", executors: ["spec"], executorMode: "none", enabled: false }]);
+  // glossary canon terms
+  for (const term of ["Pipeline", "Step", "Stage", "State", "Executor", "Schedule", "Domain", "Gate", "Triage", "Flow board"]) {
+    assert.ok(html.includes(term), `glossary has ${term}`);
+  }
+  assert.ok(html.includes("<h2>Glossary</h2>") && html.includes("<h2>Live pipelines</h2>"), "two sections");
+  // live pipelines: label, gates in order, executor, enabled
+  assert.ok(html.includes("App Refinement") && html.includes("Project Ideation"), "pipeline labels");
+  assert.ok(html.includes("chestertons-fence") && html.includes("premortem"), "gates listed");
+  assert.ok(html.includes(">native<") || html.includes("native"), "executor listed");
+  assert.ok(html.includes("class=\"active\">Reference"), "Reference nav active");
+});
+
+function prReviewFixture(over: Partial<PrReview> = {}): PrReview {
+  return {
+    id: "my-goal/fix-x", goal: "my-goal", cardSlug: "fix-x", title: "Fix the X bug",
+    repo: "eriqueo/x", branch: "nightly/2026-06-19-fix-x", base: "main",
+    prUrl: "https://github.com/eriqueo/x/pull/42", prNumber: 42, reviewedAt: "2026-06-19T09:00:00Z",
+    verdict: "merge-ready", mergeable: true, diffstat: { files: 2, insertions: 10, deletions: 3 },
+    commits: ["fix the bug"], whatWasDone: "fixed it", whatItMeans: "no more crash",
+    recommendation: "merge it", risks: ["touches the hot path"], status: "needs-you", reportRelPath: null,
+    ...over,
+  };
+}
+
+test("renderReviews groups PrReviews into status lanes; empty state otherwise", () => {
+  const reviews = [
+    prReviewFixture(),
+    prReviewFixture({ id: "g/2", title: "Merged change", status: "merged", verdict: "merge-ready", prUrl: "https://github.com/eriqueo/x/pull/43" }),
+    prReviewFixture({ id: "g/3", title: "Rejected change", status: "rejected", verdict: "reject", prUrl: null }),
+  ];
+  const html = renderReviews(reviews);
+  assert.ok(html.includes('class="board"'), "lane board");
+  assert.ok(html.includes(">Needs You ") && html.includes(">Merged ") && html.includes(">Rejected "), "status lanes");
+  assert.ok(html.includes("Fix the X bug") && html.includes("Merged change") && html.includes("Rejected change"), "cards");
+  assert.ok(html.includes("eriqueo/x"), "repo shown");
+  assert.ok(html.includes("merge it"), "recommendation shown");
+  assert.ok(html.includes('href="https://github.com/eriqueo/x/pull/42"'), "PR link");
+  assert.ok(html.includes("touches the hot path"), "risk shown");
+  assert.ok(html.includes("no PR yet"), "null prUrl → no-PR placeholder");
+  assert.ok(html.includes("class=\"active\">Reviews"), "Reviews nav active");
+
+  const empty = renderReviews([]);
+  assert.ok(empty.includes("no PR reviews yet"), "empty state");
 });
