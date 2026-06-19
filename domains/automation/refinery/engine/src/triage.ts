@@ -5,7 +5,7 @@
 // (the enabled profiles from the catalog), so triage stays substance-agnostic.
 
 import { z } from "zod";
-import { Item } from "./contracts.js";
+import { Item, ItemTraits } from "./contracts.js";
 import { LlmPort } from "./gates/llm-port.js";
 import { parseVerdict } from "./gates/verdict.js";
 
@@ -64,10 +64,17 @@ export async function triageSentence(
   };
 }
 
+/** Intake's greenfield default — used when a profile declares no defaultTraits. */
+const GREENFIELD_TRAITS: ItemTraits = { mode: "greenfield", trivial: false, multiPart: true };
+
 /**
  * Build an Item from a triage decision. A confidently-classified item starts at
  * `firstPhase` (its profile's first gate) pending; an untriaged item parks at
  * the synthetic `triage` phase awaiting human routing.
+ *
+ * `defaultTraits` is the routed profile's declared traits (data-driven): a
+ * brownfield genre stamps brownfield traits so its fixing-systems gates fire.
+ * Omitted (or untriaged) → the greenfield default, preserving prior behavior.
  */
 export function makeTriagedItem(
   id: string,
@@ -75,6 +82,7 @@ export function makeTriagedItem(
   decision: TriageDecision,
   firstPhase: string,
   clock: () => string,
+  defaultTraits?: ItemTraits,
 ): Item {
   const untriaged = decision.genre === UNTRIAGED;
   return {
@@ -87,7 +95,7 @@ export function makeTriagedItem(
       input: text,
       title: text.length > 80 ? `${text.slice(0, 77)}…` : text,
       triage: { confidence: decision.confidence, reason: decision.reason },
-      traits: { mode: "greenfield", trivial: false, multiPart: true },
+      traits: untriaged ? GREENFIELD_TRAITS : defaultTraits ?? GREENFIELD_TRAITS,
     },
     history: [
       { phase: "triage", status: untriaged ? "parked" : "entered", at: clock(), note: decision.reason },

@@ -56,6 +56,25 @@ export interface GateModule {
   decide(verdict: GateVerdict): GateDecision;
 }
 
+// Item traits drive gate applicability (the data-driven half of the gate
+// registry). They live on the item payload under `traits`; a profile may
+// declare `defaultTraits` to stamp on every item it triages, so which gates
+// fire is profile data rather than a hardcoded intake literal. `readTraits`
+// (gates/traits.ts) reads them back off the payload at gate time.
+export const ItemTraitsSchema = z.object({
+  // greenfield = builds something new; brownfield = modifies what exists.
+  mode: z.enum(["greenfield", "brownfield"]).optional(),
+  // touches code the author didn't write (Chesterton's Fence territory).
+  touchesExistingCode: z.boolean().optional(),
+  // a trivial item (typo, rename) skips the heavier disciplines.
+  trivial: z.boolean().optional(),
+  // multi-part work that stepwise-refinement should decompose.
+  multiPart: z.boolean().optional(),
+  // write-mode execution (commits/pushes) vs read-only.
+  writeMode: z.boolean().optional(),
+});
+export type ItemTraits = z.infer<typeof ItemTraitsSchema>;
+
 // A Profile (formerly "manifest") is the data-driven recipe for one genre of
 // work — which gates fire, in what execute mode, with which effectors and LLM.
 // New genres are new profiles; the engine core never changes. Shape mirrors
@@ -80,6 +99,12 @@ export const ProfileSchema = z.object({
   // genres (project-ideation) leave this false so a human triggers each run;
   // event-driven genres (incoming SR tickets) set it true. Default false.
   autoRun: z.boolean().optional(),
+  // defaultTraits stamped on every item this profile triages. Greenfield genres
+  // omit it (intake's greenfield default applies); brownfield genres
+  // (app-refinement) declare {mode:"brownfield",touchesExistingCode:true,…} so
+  // the fixing-systems gates (chestertons-fence, principles-fix, blast-radius)
+  // actually fire. Data-driven: applicability is profile data, not intake code.
+  defaultTraits: ItemTraitsSchema.optional(),
 });
 export type Profile = z.infer<typeof ProfileSchema>;
 

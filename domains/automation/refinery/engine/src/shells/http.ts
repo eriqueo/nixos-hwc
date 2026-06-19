@@ -149,7 +149,9 @@ export function createShell(cfg: HttpShellConfig) {
     const profile = catalog.get(decision.genre);
     const firstPhase = profile?.gates[0] ?? "triage";
     const id = `${slug(text)}-${Date.now()}`;
-    await store.save(makeTriagedItem(id, text, decision, firstPhase, cfg.clock));
+    await store.save(
+      makeTriagedItem(id, text, decision, firstPhase, cfg.clock, profile?.defaultTraits),
+    );
     // Event-driven genres (e.g. incoming SR tickets) run the pipeline on
     // arrival; manual genres (project-ideation) wait for the board's Run button.
     if (profile?.autoRun) void kickRun(id);
